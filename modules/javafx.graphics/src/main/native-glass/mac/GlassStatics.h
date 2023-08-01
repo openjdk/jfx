@@ -57,12 +57,14 @@ extern jmethodID jWindowNotifyFocusUngrab;
 extern jmethodID jWindowNotifyFocusDisabled;
 extern jmethodID jWindowNotifyDestroy;
 extern jmethodID jWindowNotifyDelegatePtr;
+extern jmethodID jWindowNotifyTitleBarInsetsChangedPtr;
 
 extern jmethodID jViewNotifyEvent;
 extern jmethodID jViewNotifyRepaint;
 extern jmethodID jViewNotifyResize;
 extern jmethodID jViewNotifyKey;
 extern jmethodID jViewNotifyMouse;
+extern jmethodID jViewHitTest;
 extern jmethodID jViewNotifyMenu;
 extern jmethodID jViewNotifyInputMethod;
 extern jmethodID jViewNotifyInputMethodMac;

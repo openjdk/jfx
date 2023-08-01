@@ -307,6 +307,11 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
+    protected boolean _supportsCombinedWindows() {
+        return false;
+    }
+
+    @Override
     public boolean hasTwoLevelFocus() {
         return deviceFlags[DEVICE_PC_KEYBOARD] == 0 && deviceFlags[DEVICE_5WAY] > 0;
     }

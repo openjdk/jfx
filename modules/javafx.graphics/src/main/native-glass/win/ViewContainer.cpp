@@ -929,6 +929,18 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     return TRUE;
 }
 
+BOOL ViewContainer::HandleViewHitTest(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    POINT pt;
+    pt.x = GET_X_LPARAM(lParam);
+    pt.y = GET_Y_LPARAM(lParam);
+    ::ScreenToClient(hwnd, &pt);
+    JNIEnv *env = GetEnv();
+    jboolean hit = env->CallBooleanMethod(GetView(), javaIDs.View.hitTest, pt.x, pt.y);
+    CheckAndClearException(env);
+    return hit;
+}
+
 void ViewContainer::NotifyCaptureChanged(HWND hwnd, HWND to)
 {
     m_mouseButtonDownCounter = 0;

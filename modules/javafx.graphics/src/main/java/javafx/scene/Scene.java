@@ -1890,6 +1890,42 @@ public class Scene implements EventTarget {
         mouseHandler.process(e, false);
     }
 
+    private static Node testHit(Node node, double sceneX, double sceneY) {
+        if (node == null) {
+            return null;
+        }
+        if (!node.isVisible()) {
+            return null;
+        }
+
+        Point2D p = node.sceneToLocal(sceneX, sceneY);
+        if (node.contains(p)) {
+            return node;
+        }
+
+        if (!(node instanceof Parent)) {
+            return null;
+        }
+
+        List<Node> children = ((Parent)node).getChildrenUnmodifiable();
+        for (int i = children.size() - 1; i >= 0; i--) {
+            Node child = children.get(i);
+            Node hit = testHit(child, sceneX, sceneY);
+            if (hit != null)
+                return hit;
+        }
+        return null;
+    }
+
+    // All we need to show is that there is some visible node
+    // containing this point. As we work our way up from bottom
+    // to top we can stop whenever we encounter a visible node
+    // that contains the point.
+    private boolean processHitTest(double x, double y) {
+        Node hit = testHit(getRoot(), x, y);
+        return hit != null;
+    }
+
     private void processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
         EventTarget eventTarget = null;
         Scene.inMousePick = true;
@@ -2708,6 +2744,10 @@ public class Scene implements EventTarget {
             processMouseEvent(mouseEvent);
         }
 
+        @Override
+        public boolean hitTest(double x, double y) {
+            return Scene.this.processHitTest(x, y);
+        }
 
         @Override
         public void keyEvent(KeyEvent keyEvent)

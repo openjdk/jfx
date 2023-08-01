@@ -461,6 +461,10 @@ final class GtkApplication extends Application implements
         return false;
     }
 
+    @Override protected boolean _supportsCombinedWindows() {
+        return false;
+    }
+
     @Override
     protected native int _getKeyCodeForChar(char c);
 

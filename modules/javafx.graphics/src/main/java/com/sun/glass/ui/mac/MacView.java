@@ -128,6 +128,16 @@ final class MacView extends View {
                           isPopupTrigger, isSynthesized);
     }
 
+    @Override
+    protected boolean hitTest(int x, int y) {
+        Window w = getWindow();
+        float sx = (w == null) ? 1.0f : w.getPlatformScaleX();
+        float sy = (w == null) ? 1.0f : w.getPlatformScaleY();
+        x = Math.round(x * sx);
+        y = Math.round(y * sy);
+        return super.hitTest(x, y);
+    }
+
     @Override protected long _getNativeView(long ptr) {
         return ptr;
     }

@@ -169,6 +169,22 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
 
     @SuppressWarnings("removal")
     @Override
+    public void handleTitleBarInsetsChangedEvent(int left, int right) {
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            AccessControlContext acc = stage.getAccessControlContext();
+            return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+                float pScaleX = 1.0f;
+                if (window != null) {
+                    pScaleX = window.getPlatformScaleX();
+                }
+                stage.stageListener.changedTitleBarInsets(left / pScaleX, right / pScaleX);
+                return null;
+            } , acc);
+        });
+    }
+
+    @SuppressWarnings("removal")
+    @Override
     public void handleWindowEvent(final Window window, final long time, final int type) {
         this.window = window;
         this.type = type;

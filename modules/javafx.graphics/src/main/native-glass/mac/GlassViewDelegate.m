@@ -1264,6 +1264,8 @@ static jstring convertNSStringToJString(id aString, int length)
             return;
         }
 
+        // To the best of my knowledge this code is never executed as we always
+        // use native fullscreen.
         [self->fullscreenWindow toggleFullScreen:self->fullscreenWindow];
 
         NSRect frame = [self->parentHost bounds];
@@ -1276,6 +1278,7 @@ static jstring convertNSStringToJString(id aString, int length)
             {
                 [self->nsView removeFromSuperviewWithoutNeedingDisplay];
                 [self->parentHost addSubview:self->nsView];
+                self->parentHost->jfxView = self->nsView;
             }
             [self->nsView release];
 

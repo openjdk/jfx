@@ -186,6 +186,10 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
 }                                                                                       \
 - (NSButton *)standardWindowButton:(NSWindowButton)type                                 \
 {                                                                                       \
+    if (gWindow->titleBar)                                                              \
+    {                                                                                   \
+        return [gWindow->titleBar standardWindowButton: type];                          \
+    }                                                                                   \
     NSButton* button = [super standardWindowButton:type];                               \
     switch (type)                                                                       \
     {                                                                                   \
@@ -315,7 +319,7 @@ GLASS_NS_WINDOW_IMPLEMENTATION
 
         if (p.y >= (frame.origin.y + contentRect.size.height))
         {
-            // Click to the titlebar
+            // Click to the title bar
             [self _ungrabFocus];
         }
 
@@ -371,7 +375,18 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     }
 }
 
-
+-(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
+{
+    if ([keyPath isEqualToString: @"insets"])
+    {
+        if (titleBar) {
+            NSEdgeInsets insets = titleBar.insets;
+            GET_MAIN_JENV;
+            (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyTitleBarInsetsChangedPtr, (jint) insets.left, (jint) insets.right);
+            GLASS_CHECK_EXCEPTION(env);
+        }
+    }
+}
 @end
 
 #pragma mark --- Dispatcher
@@ -413,6 +428,14 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
                 styleMask = styleMask|NSWindowStyleMaskTexturedBackground;
             }
 
+            if ((jStyleMask&com_sun_glass_ui_Window_COMBINED) != 0) {
+                styleMask = styleMask|NSWindowStyleMaskFullSizeContentView;
+            }
+
+            if ((jStyleMask&com_sun_glass_ui_Window_COMBINED) != 0) {
+                styleMask = styleMask|NSWindowStyleMaskFullSizeContentView;
+            }
+
             if (isUtility)
             {
                 styleMask = styleMask | NSWindowStyleMaskUtilityWindow | NSWindowStyleMaskNonactivatingPanel;
@@ -436,7 +459,14 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
 
         if ((jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0) {
             //Prevent the textured effect from disappearing on border thickness recalculation
+            window->isUnified = YES;
             [window->nsWindow setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
+        }
+
+        if ((jStyleMask&com_sun_glass_ui_Window_COMBINED) != 0) {
+            window->isCombined = YES;
+            GlassTitleBar* tb = [[GlassTitleBar alloc] initWithWindow: window->nsWindow];
+            window->titleBar = tb;
         }
 
         if ((jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0) {
@@ -617,6 +647,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
     if (jWindowNotifyDelegatePtr == NULL)
     {
         jWindowNotifyDelegatePtr = (*env)->GetMethodID(env, jWindowClass, "notifyDelegatePtr", "(J)V");
+        if ((*env)->ExceptionCheck(env)) return;
+    }
+
+    if (jWindowNotifyTitleBarInsetsChangedPtr == NULL)
+    {
+        jWindowNotifyTitleBarInsetsChangedPtr = (*env)->GetMethodID(env, jWindowClass, "notifyTitleBarInsetsChanged", "(II)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
 }
 
@@ -797,6 +834,19 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         }
 
         NSView<GlassView> *oldView = window->view;
+
+        // If present remove our custom title bar visuals from the old view.
+        if (window->titleBar) {
+            NSView* viewParent = oldView.superview;
+            if (viewParent && [viewParent isKindOfClass: [GlassHostView class]])
+            {
+                GlassHostView* hostView = (GlassHostView*) viewParent;
+                hostView->titleBar = nil;
+                [window->titleBar setHostView: nil jfxView: nil];
+                [window->titleBar removeObserver: window forKeyPath: @"insets"];
+            }
+        }
+
         window->view = getMacView(env, jview);
         //NSLog(@"        window: %@", window);
         //NSLog(@"                frame: %.2f,%.2f %.2fx%.2f", [window frame].origin.x, [window frame].origin.y, [window frame].size.width, [window frame].size.height);
@@ -819,9 +869,24 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         {
             CALayer *layer = [window->view layer];
             if (([layer isKindOfClass:[CAOpenGLLayer class]] == YES) &&
-                (([window->nsWindow styleMask] & NSWindowStyleMaskTexturedBackground) == NO))
+                (window->isUnified == NO) &&
+                (window->isCombined == NO))
             {
                 [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
+            }
+
+            if (window->titleBar) {
+                NSView* viewParent = window->view.superview;
+                if (viewParent && [viewParent isKindOfClass: [GlassHostView class]])
+                {
+                    GlassHostView* hostView = (GlassHostView*)viewParent;
+                    [window->titleBar setHostView: hostView jfxView: hostView->jfxView];
+                    hostView->titleBar = window->titleBar;
+                    [window->titleBar addObserver: window
+                                       forKeyPath: @"insets"
+                                          options: NSKeyValueObservingOptionInitial
+                                          context: nil];
+                }
             }
 
             window->suppressWindowMoveEvent = YES; // RT-11215
@@ -1126,6 +1191,29 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize
     GLASS_CHECK_EXCEPTION(env);
 
     return JNI_TRUE; // gznote: remove this return value if unused
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacWindow
+ * Method:    _setTitleBarHeight
+ * Signature: (JI)Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setTitleBarHeight
+  (JNIEnv *env, jobject jWidow, jlong jPtr, jint height)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1setTitleBarHeight");
+    if (!jPtr) return JNI_FALSE;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        GlassWindow *window = getGlassWindow(env, jPtr);
+        [window performSelectorOnMainThread:@selector(_setTitleBarHeight:) withObject: @(height) waitUntilDone:YES];
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+
+    return JNI_TRUE;
 }
 
 /*

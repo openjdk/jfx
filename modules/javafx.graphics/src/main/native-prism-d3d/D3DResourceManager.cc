@@ -553,6 +553,7 @@ D3DResourceManager::CreateSwapChain(HWND hWnd, UINT numBuffers,
 
     newParams.BackBufferWidth = width;
     newParams.BackBufferHeight = height;
+    newParams.BackBufferFormat = D3DFMT_A8R8G8B8;
     newParams.hDeviceWindow = hWnd;
     newParams.Windowed = TRUE;
     newParams.BackBufferCount = numBuffers;

@@ -38,6 +38,7 @@ public class StagePeerListener extends WindowPeerListener {
         public void setResizable(Stage stage, boolean resizable);
         public void setFullScreen(Stage stage, boolean fs);
         public void setAlwaysOnTop(Stage stage, boolean aot);
+        public void setTitleBarInsets(Stage stage, float left, float right);
     }
 
     public StagePeerListener(Stage stage, StageAccessor stageAccessor) {
@@ -72,5 +73,8 @@ public class StagePeerListener extends WindowPeerListener {
         stageAccessor.setAlwaysOnTop(stage, aot);
     }
 
-
+    @Override
+    public void changedTitleBarInsets(float left, float right) {
+        stageAccessor.setTitleBarInsets(stage, left, right);
+    }
 }

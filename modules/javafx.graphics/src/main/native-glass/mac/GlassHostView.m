@@ -25,7 +25,7 @@
 
 #import "GlassHostView.h"
 
-@implementation GlassHostView : NSView
+@implementation GlassHostView
 
 - (void)dealloc
 {
@@ -72,10 +72,11 @@
     return NO;
 }
 
-- (void)addSubview:(NSView *)aView
+- (void)mouseDown:(NSEvent*)event
 {
-    [super addSubview:aView];
-    self->view = aView;
+    if (titleBar) {
+        [titleBar handleMouseDown: event];
+    }
 }
 
 - (void)drawRect:(NSRect)rect

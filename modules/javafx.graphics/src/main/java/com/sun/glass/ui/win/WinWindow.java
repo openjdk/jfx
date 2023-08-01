@@ -275,6 +275,7 @@ class WinWindow extends Window {
     @Override native protected void _setEnabled(long ptr, boolean enabled);
     @Override native protected boolean _setMinimumSize(long ptr, int width, int height);
     @Override native protected boolean _setMaximumSize(long ptr, int width, int height);
+    @Override native protected boolean _setTitleBarHeight(long ptr, int height);
     @Override native protected void _setIcon(long ptr, Pixels pixels);
     @Override native protected void _toFront(long ptr);
     @Override native protected void _toBack(long ptr);

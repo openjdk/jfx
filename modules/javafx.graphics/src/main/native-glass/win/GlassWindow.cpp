@@ -41,6 +41,7 @@
 #include "com_sun_glass_ui_Window_Level.h"
 #include "com_sun_glass_ui_win_WinWindow.h"
 
+#include <iostream>
 
 // Helper LEAVE_MAIN_THREAD for GlassWindow
 #define LEAVE_MAIN_THREAD_WITH_hWnd  \
@@ -62,7 +63,7 @@ HHOOK GlassWindow::sm_hCBTFilter = NULL;
 HWND GlassWindow::sm_grabWindow = NULL;
 static HWND activeTouchWindow = NULL;
 
-GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, HWND parentOrOwner)
+GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isCombined, HWND parentOrOwner)
     : BaseWnd(parentOrOwner),
     ViewContainer(),
     m_winChangingReason(Unknown),
@@ -74,6 +75,7 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_isTransparent(isTransparent),
     m_isDecorated(isDecorated),
     m_isUnified(isUnified),
+    m_isCombined(isCombined),
     m_hMenu(NULL),
     m_alpha(255),
     m_isEnabled(true),
@@ -87,6 +89,7 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_grefThis = GetEnv()->NewGlobalRef(jrefThis);
     m_minSize.x = m_minSize.y = -1;   // "not set" value
     m_maxSize.x = m_maxSize.y = -1;   // "not set" value
+    m_titleBarHeight = 0;
     m_hMonitor = NULL;
     m_insets.left = m_insets.top = m_insets.right = m_insets.bottom = 0;
     m_beforeFullScreenRect.left = m_beforeFullScreenRect.top =
@@ -165,6 +168,33 @@ void GlassWindow::setMaxSize(long width, long height)
 {
     m_maxSize.x = width;
     m_maxSize.y = height;
+}
+
+void GlassWindow::SetTitleBarHeight(long height)
+{
+    if (height < 0)
+        height = 0;
+    if (height != m_titleBarHeight) {
+        m_titleBarHeight = height;
+        ::SendMessage(GetHWND(), WM_DWMCOMPOSITIONCHANGED, 0, 0);
+        UpdateTitleBarInsets();
+    }
+}
+
+void GlassWindow::UpdateTitleBarInsets()
+{
+    if (m_state == Minimized)
+        return;
+
+    RECT bounds;
+    if (SUCCEEDED(::DwmGetWindowAttribute(GetHWND(), DWMWA_CAPTION_BUTTON_BOUNDS, &bounds, sizeof(bounds)))) {
+        LONG right = bounds.right - bounds.left;
+        if (right > 0) {
+            JNIEnv* env = GetEnv();
+            env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyTitleBarInsetsChanged, 8, (jint) right);
+            CheckAndClearException(env);
+        }
+    }
 }
 
 void GlassWindow::SetFocusable(bool isFocusable)
@@ -307,6 +337,33 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         return commonResult.result;
     }
 
+    if (m_isCombined) {
+
+        if (msg == WM_NCHITTEST) {
+            // If a control is hit we always treat this as client
+            if (HandleViewHitTest(GetHWND(), msg, wParam, lParam))
+                return HTCLIENT;
+        }
+
+        LRESULT result;
+        if (::DwmDefWindowProc(GetHWND(), msg, wParam, lParam, &result))
+            return result;
+
+        if (msg == WM_NCHITTEST) {
+            result = ::DefWindowProc(GetHWND(), msg, wParam, lParam);
+            if (result == HTCLIENT) {
+                POINT p;
+                p.x = GET_X_LPARAM(lParam);
+                p.y = GET_Y_LPARAM(lParam);
+                ::MapWindowPoints(NULL, GetHWND(), &p, 1);
+                if (p.y <= m_titleBarHeight) {
+                    return HTCAPTION;
+                }
+            }
+            return result;
+        }
+    }
+
     switch (msg) {
         case WM_SHOWWINDOW:
             // It's possible that move/size events are reported by the platform
@@ -325,10 +382,13 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_DWMCOMPOSITIONCHANGED:
-            if (m_isUnified && (IS_WINVISTA)) {
+            if (m_isUnified || m_isCombined) {
                 BOOL bEnabled = FALSE;
                 if(SUCCEEDED(::DwmIsCompositionEnabled(&bEnabled)) && bEnabled) {
                     MARGINS dwmMargins = { -1, -1, -1, -1 };
+                    if (m_isCombined) {
+                        dwmMargins = { 0, 0, m_titleBarHeight, 0 };
+                    }
                     ::DwmExtendFrameIntoClientArea(GetHWND(), &dwmMargins);
                 }
             }
@@ -445,13 +505,23 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             HandleViewInputLangChange(GetHWND(), msg, wParam, lParam);
             return 0;
         case WM_NCCALCSIZE:
-// Workaround for RT-13998. It has some side effects and thus commented out
-//            if ((BOOL)wParam && !IsDecorated()) {
-//                NCCALCSIZE_PARAMS *p = (NCCALCSIZE_PARAMS *)lParam;
-//                p->rgrc[0].right++;
-//                p->rgrc[0].bottom++;
-//                return WVR_VALIDRECTS;
-//            }
+            if (wParam && m_isCombined) {
+                // Expand the client area outward to eliminate the
+                // usual title bar area in the non-client area.
+                // TO-DO: Not sure how JavaFX deals with HighDPI.
+                int frameX = ::GetSystemMetrics(SM_CXFRAME);
+                int frameY = ::GetSystemMetrics(SM_CYFRAME);
+                int padding = ::GetSystemMetrics(SM_CXPADDEDBORDER);
+
+                NCCALCSIZE_PARAMS* params = (NCCALCSIZE_PARAMS*)lParam;
+                RECT* clientRect = params->rgrc;
+
+                clientRect->right -= frameX + padding;
+                clientRect->left += frameX + padding;
+                clientRect->bottom -= frameY + padding;
+
+                return 0;
+            }
             break;
         case WM_PAINT:
             HandleViewPaintEvent(GetHWND(), msg, wParam, lParam);
@@ -740,6 +810,8 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
     env->CallVoidMethod(m_grefThis, midNotifyResize,
                         type, pRect->right-pRect->left, pRect->bottom-pRect->top);
     CheckAndClearException(env);
+
+    UpdateTitleBarInsets();
 }
 
 void GlassWindow::HandleActivateEvent(jint event)
@@ -1138,6 +1210,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
      ASSERT(midNotifyMoveToAnotherScreen);
      if (env->ExceptionCheck()) return;
 
+     javaIDs.Window.notifyTitleBarInsetsChanged = env->GetMethodID(cls, "notifyTitleBarInsetsChanged", "(II)V");
+     ASSERT(javaIDs.Window.notifyTitleBarInsetsChange);
+     if (env->ExceptionCheck()) return;
+
      javaIDs.Window.notifyDestroy = env->GetMethodID(cls, "notifyDestroy", "()V");
      ASSERT(javaIDs.Window.notifyDestroy);
      if (env->ExceptionCheck()) return;
@@ -1206,6 +1282,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
                 (mask & com_sun_glass_ui_Window_TRANSPARENT) != 0,
                 (mask & com_sun_glass_ui_Window_TITLED) != 0,
                 (mask & com_sun_glass_ui_Window_UNIFIED) != 0,
+                (mask & com_sun_glass_ui_Window_COMBINED) != 0,
                 owner);
 
         HWND hWnd = pWindow->Create(dwStyle, dwExStyle, hMonitor, owner);
@@ -1818,6 +1895,30 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setMaximumSize
 
     ARG(maxWidth) = maxWidth;
     ARG(maxHeight) = maxHeight;
+    return PERFORM_AND_RETURN();
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _setTitleBarHeight
+ * Signature: (JI)Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setTitleBarHeight
+  (JNIEnv *env, jobject jThis, jlong ptr, jint height)
+{
+    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
+    {
+        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+        if (pWindow) {
+            pWindow->SetTitleBarHeight(height);
+            return JNI_TRUE;
+        }
+        return JNI_FALSE;
+    }
+    jint height;
+    LEAVE_MAIN_THREAD_WITH_hWnd;
+
+    ARG(height) = height;
     return PERFORM_AND_RETURN();
 }
 

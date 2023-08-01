@@ -375,6 +375,19 @@
     [self->_delegate sendJavaMouseEvent:theEvent];
 }
 
+- (NSView*)hitTest:(NSPoint)point
+{
+    point = [self convertPoint: point fromView: self.superview];
+    GET_MAIN_JENV;
+    BOOL hitControl = (*env)->CallBooleanMethod(env, self->_delegate->jView, jViewHitTest,
+                                                (jint)point.x, (jint)point.y);
+    GLASS_CHECK_EXCEPTION(env);
+    if (hitControl) {
+        return self;
+    }
+    return nil;
+}
+
 - (void)mouseDown:(NSEvent *)theEvent
 {
     MOUSELOG("mouseDown");

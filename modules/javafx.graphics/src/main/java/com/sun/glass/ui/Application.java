@@ -729,6 +729,12 @@ public abstract class Application {
         return _supportsUnifiedWindows();
     }
 
+    protected abstract boolean _supportsCombinedWindows();
+    public final boolean supportsCombinedWindows() {
+        checkEventThread();
+        return _supportsCombinedWindows();
+    }
+
     protected boolean _supportsSystemMenu() {
         // Overridden in subclasses
         return false;

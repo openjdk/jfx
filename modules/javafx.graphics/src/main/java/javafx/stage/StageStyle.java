@@ -66,5 +66,12 @@ public enum StageStyle {
      * NOTE: To see the effect, the {@code Scene} covering the {@code Stage} should have {@code Color.TRANSPARENT}
      * @since JavaFX 8.0
      */
-    UNIFIED
+    UNIFIED,
+
+    /**
+     * Defines a {@code Stage} style with platform decorations and yada yada
+     * {@link javafx.application.Platform#isSupported(javafx.application.ConditionalFeature)}.
+     * If the feature is not supported by the platform, this style downgrades to {@code StageStyle.DECORATED}
+     */
+    COMBINED
 }

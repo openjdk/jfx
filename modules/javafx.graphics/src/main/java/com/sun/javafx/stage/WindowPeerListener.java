@@ -91,6 +91,11 @@ public class WindowPeerListener implements TKStageListener {
     }
 
     @Override
+    public void changedTitleBarInsets(float left, float right) {
+        // Overridden in subclasses
+    }
+
+    @Override
     public void changedScreen(Object from, Object to) {
         WindowHelper.getWindowAccessor().notifyScreenChanged(window, from, to);
     }

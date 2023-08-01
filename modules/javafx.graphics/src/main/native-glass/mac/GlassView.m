@@ -141,6 +141,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
         if ((*env)->ExceptionCheck(env)) return;
     }
 
+    if (jViewHitTest == NULL)
+    {
+        jViewHitTest = (*env)->GetMethodID(env, jViewClass, "hitTest", "(II)Z");
+        if ((*env)->ExceptionCheck(env)) return;
+    }
+
     if (jViewNotifyInputMethod == NULL)
     {
         jViewNotifyInputMethod = (*env)->GetMethodID(env, jViewClass, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
@@ -307,7 +313,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
         }
 
         // embed ourselves into GlassHostView, so we can later swap our view between windows (ex. fullscreen mode)
-        NSView *hostView = [[GlassHostView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)]; // alloc creates ref count of 1
+        GlassHostView *hostView = [[GlassHostView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)]; // alloc creates ref count of 1
         [hostView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
         [hostView setAutoresizesSubviews:YES];
 
@@ -315,6 +321,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
         [view setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
 
         [hostView addSubview:view];
+        hostView->jfxView = view;
+
         jfieldID jfID = (*env)->GetFieldID(env, jViewClass, "ptr", "J");
         GLASS_CHECK_EXCEPTION(env);
         (*env)->SetLongField(env, jView, jfID, ptr_to_jlong(view));

@@ -277,6 +277,13 @@ extern NSSize maxScreenDimensions;
     return constrained;
 }
 
+- (void)_setTitleBarHeight:(NSNumber*)height
+{
+    if (self->titleBar) {
+        self->titleBar.height = height.integerValue;
+    }
+}
+
 - (void)_setVisible
 {
     LOG("_setVisible: focusable %d enabled %d", self->isFocusable, self->isEnabled);

@@ -160,6 +160,17 @@ public enum ConditionalFeature {
     UNIFIED_WINDOW,
 
     /**
+     *  Indicates that a system supports {@link javafx.stage.StageStyle#COMBINED}
+     *  <p>
+     *  NOTE: Currently, supported on:
+     *  <ul>
+     *      <li>Mac OS X</li>
+     *  </ul>
+     * @since JavaFX 42.0
+     */
+    COMBINED_WINDOW,
+
+    /**
      * Indicates whether or not controls should use two-level focus. Two-level
      * focus is when separate operations are needed in some controls to first
      * enter a control and then to perform operations on the control. Two-level

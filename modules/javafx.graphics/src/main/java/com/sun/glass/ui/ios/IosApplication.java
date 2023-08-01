@@ -228,6 +228,10 @@ public final class IosApplication extends Application {
         return false;
     }
 
+    @Override protected boolean _supportsCombinedWindows() {
+        return false;
+    }
+
     /**
      * Hides / Shows iOS status bar.
      * @param hidden

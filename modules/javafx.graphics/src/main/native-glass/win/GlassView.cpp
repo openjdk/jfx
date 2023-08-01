@@ -179,6 +179,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1initIDs
      ASSERT(javaIDs.View.notifyMouse);
      if (env->ExceptionCheck()) return;
 
+     javaIDs.View.hitTest = env->GetMethodID(cls, "hitTest", "(II)Z");
+     ASSERT(javaIDs.View.hitTest);
+     if (env->ExceptionCheck()) return;
+
      javaIDs.View.notifyMenu = env->GetMethodID(cls, "notifyMenu", "(IIIIZ)V");
      ASSERT(javaIDs.View.notifyMenu);
      if (env->ExceptionCheck()) return;
