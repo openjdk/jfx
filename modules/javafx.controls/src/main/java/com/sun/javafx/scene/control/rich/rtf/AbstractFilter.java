@@ -24,8 +24,10 @@
  */
 package com.sun.javafx.scene.control.rich.rtf;
 
-import java.io.*;
-import java.lang.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Reader;
 
 /**
  * A generic superclass for streams which read and parse text
@@ -46,8 +48,7 @@ import java.lang.*;
  *
  * @see OutputStream
  */
-abstract class AbstractFilter extends OutputStream
-{
+abstract class AbstractFilter extends OutputStream {
     /** A table mapping bytes to characters */
     protected char[] translationTable;
     /** A table indicating which byte values should be interpreted as
@@ -62,19 +63,18 @@ abstract class AbstractFilter extends OutputStream
     static final boolean[] allSpecialsTable;
 
     static {
-      int i;
-
-      noSpecialsTable = new boolean[256];
-      for (i = 0; i < 256; i++)
-        noSpecialsTable[i] = false;
-
-      allSpecialsTable = new boolean[256];
-      for (i = 0; i < 256; i++)
-        allSpecialsTable[i] = true;
-
-      latin1TranslationTable = new char[256];
-      for (i = 0; i < 256; i++)
-        latin1TranslationTable[i] = (char)i;
+        noSpecialsTable = new boolean[256];
+        for (int i = 0; i < 256; i++) {
+            noSpecialsTable[i] = false;
+        }
+        allSpecialsTable = new boolean[256];
+        for (int i = 0; i < 256; i++) {
+            allSpecialsTable[i] = true;
+        }
+        latin1TranslationTable = new char[256];
+        for (int i = 0; i < 256; i++) {
+            latin1TranslationTable[i] = (char)i;
+        }
     }
 
     /**
@@ -90,32 +90,24 @@ abstract class AbstractFilter extends OutputStream
      *
      * @param in      An InputStream providing text.
      */
-    public void readFromStream(InputStream in)
-      throws IOException
-    {
+    public void readFromStream(InputStream in) throws IOException {
         in.transferTo(this);
     }
 
-    public void readFromReader(Reader in)
-      throws IOException
-    {
-        char[] buf;
-        int count;
-
-        buf = new char[2048];
-
-        while(true) {
-            count = in.read(buf);
-            if (count < 0)
+    public void readFromReader(Reader in) throws IOException {
+        char[] buf = new char[2048];
+        while (true) {
+            int count = in.read(buf);
+            if (count < 0) {
                 break;
+            }
             for (int i = 0; i < count; i++) {
-              this.write(buf[i]);
+                this.write(buf[i]);
             }
         }
     }
 
-    public AbstractFilter()
-    {
+    public AbstractFilter() {
         translationTable = latin1TranslationTable;
         specialsTable = noSpecialsTable;
     }
@@ -124,18 +116,16 @@ abstract class AbstractFilter extends OutputStream
      * Implements the abstract method of OutputStream, of which this class
      * is a subclass.
      */
-    public void write(int b)
-      throws IOException
-    {
-      if (b < 0)
-        b += 256;
-      if (specialsTable[b])
-        writeSpecial(b);
-      else {
-        char ch = translationTable[b];
-        if (ch != (char)0)
-          write(ch);
-      }
+    public void write(int b) throws IOException {
+        b &= 0xff;
+        if (specialsTable[b])
+            writeSpecial(b);
+        else {
+            char ch = translationTable[b];
+            if (ch != (char)0) {
+                write(ch);
+            }
+        }
     }
 
     /**
@@ -146,38 +136,33 @@ abstract class AbstractFilter extends OutputStream
      * call <code>write(byte[], int, int)</code> or is it the other way
      * around?
      */
-    public void write(byte[] buf, int off, int len)
-      throws IOException
-    {
-      StringBuilder accumulator = null;
-      while (len > 0) {
-        short b = (short)buf[off];
+    public void write(byte[] buf, int off, int len) throws IOException {
+        StringBuilder accumulator = null;
+        while (len > 0) {
+            int b = (buf[off] & 0xff);
+            if (specialsTable[b]) {
+                if (accumulator != null) {
+                    write(accumulator.toString());
+                    accumulator = null;
+                }
+                writeSpecial(b);
+            } else {
+                char ch = translationTable[b];
+                if (ch != (char)0) {
+                    if (accumulator == null) {
+                        accumulator = new StringBuilder();
+                    }
+                    accumulator.append(ch);
+                }
+            }
 
-        // stupid signed bytes
-        if (b < 0)
-            b += 256;
-
-        if (specialsTable[b]) {
-          if (accumulator != null) {
-            write(accumulator.toString());
-            accumulator = null;
-          }
-          writeSpecial(b);
-        } else {
-          char ch = translationTable[b];
-          if (ch != (char)0) {
-            if (accumulator == null)
-              accumulator = new StringBuilder();
-            accumulator.append(ch);
-          }
+            len--;
+            off++;
         }
 
-        len --;
-        off ++;
-      }
-
-      if (accumulator != null)
-        write(accumulator.toString());
+        if (accumulator != null) {
+            write(accumulator.toString());
+        }
     }
 
     /**
@@ -188,15 +173,11 @@ abstract class AbstractFilter extends OutputStream
      * @param s The string of non-special characters written to the
      *          OutputStream.
      */
-    public void write(String s)
-      throws IOException
-    {
-      int index, length;
-
-      length = s.length();
-      for(index = 0; index < length; index ++) {
-        write(s.charAt(index));
-      }
+    public void write(String s) throws IOException {
+        int length = s.length();
+        for (int i = 0; i < length; i++) {
+            write(s.charAt(i));
+        }
     }
 
     /**
