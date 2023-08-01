@@ -32,7 +32,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.After;
 import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
@@ -45,28 +44,19 @@ public class WebWorkerTest extends TestBase {
         return submit(() -> getEngine().getLoadWorker().getState());
     }
 
-    @After
-    public void after() {
-    }
-
     @Test
-    public void testWorker() {
+    public void testWorker() throws InterruptedException {
         final WebEngine webEngine = getEngine();
         webEngine.setJavaScriptEnabled(true);
         load(new File("src/test/resources/test/html/worker.html"));
         assertTrue("Load task completed successfully", getLoadState() == State.SUCCEEDED);
 
-        try {
-            // Put the thread to sleep for the specified time (in milliseconds)
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            // Handle the exception if the thread is interrupted while sleeping
-        }
+        Thread.sleep(500);
 
         submit(() -> {
             WebView view = getView();
             String res = (String) view.getEngine().executeScript("document.getElementById('result').innerText;");
-            assertEquals("4",res);
+            assertEquals("4", res);
         });
     }
 }
