@@ -52,6 +52,9 @@ public final class StepInterpolator extends Interpolator {
 
     @Override
     protected double curve(double t) {
+        // JavaFX interpolators are not usually valid outside the interval [0..1], but
+        // this implementation ensures that the output value is correct even for points
+        // on the curve that are outside of this interval.
         boolean before = t < 0;
 
         if (before) {

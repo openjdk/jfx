@@ -87,12 +87,12 @@ public final class TransitionEvent extends Event {
      * @param eventType the event type
      * @param property the {@code StyleableProperty} that is targeted by the transition
      * @param elapsedTime the time that has elapsed since the transition has entered its active period
-     * @throws NullPointerException if {@code property} or {@code elapsedTime} is {@code null}
+     * @throws NullPointerException if {@code eventType}, {@code property} or {@code elapsedTime} is {@code null}
      */
     public TransitionEvent(EventType<? extends Event> eventType,
                            StyleableProperty<?> property,
                            Duration elapsedTime) {
-        super(eventType);
+        super(Objects.requireNonNull(eventType, "eventType cannot be null"));
         this.property = Objects.requireNonNull(property, "property cannot be null");
         this.elapsedTime = Objects.requireNonNull(elapsedTime, "elapsedTime cannot be null");
     }

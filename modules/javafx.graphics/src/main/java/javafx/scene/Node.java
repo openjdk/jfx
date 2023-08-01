@@ -8971,6 +8971,8 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         for (TransitionTimer<?, ?> timer : transitionTimers) {
+            // We use an identity comparison here because we're looking for the exact property
+            // instance that was targeted by the transition timer on this node.
             if (timer.getProperty() == property) {
                 return timer;
             }

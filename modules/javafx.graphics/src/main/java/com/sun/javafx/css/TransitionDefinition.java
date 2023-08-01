@@ -49,13 +49,13 @@ public record TransitionDefinition(String propertyName, Duration duration,
      * @throws NullPointerException if any of the arguments is {@code null}
      * @throws IllegalArgumentException if the duration is negative
      */
-    public TransitionDefinition(String propertyName, Duration duration,
-                                Duration delay, Interpolator interpolator) {
+    public TransitionDefinition {
         Objects.requireNonNull(propertyName, "propertyName cannot be null");
-        this.propertyName = "all".equalsIgnoreCase(propertyName) ? "all" : propertyName;
-        this.duration = Objects.requireNonNull(duration, "duration cannot be null");
-        this.delay = Objects.requireNonNull(delay, "delay cannot be null");
-        this.interpolator = Objects.requireNonNull(interpolator, "interpolator cannot be null");
+        Objects.requireNonNull(duration, "duration cannot be null");
+        Objects.requireNonNull(delay, "delay cannot be null");
+        Objects.requireNonNull(interpolator, "interpolator cannot be null");
+
+        propertyName = "all".equalsIgnoreCase(propertyName) ? "all" : propertyName;
 
         if (duration.lessThan(Duration.ZERO)) {
             throw new IllegalArgumentException("duration cannot be negative");
