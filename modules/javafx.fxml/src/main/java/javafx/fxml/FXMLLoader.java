@@ -1098,12 +1098,11 @@ public class FXMLLoader {
                     if (loadListener != null) {
                         loadListener.readInternalAttribute(localName, value);
                     }
-                    final ResourceBundle loaderResources = FXMLLoader.this.resources;
-                    if (loaderResources == null) {
+                    if (FXMLLoader.this.resources == null) {
                         resources = ResourceBundle.getBundle(value, Locale.getDefault());
                     } else {
-                        final ClassLoader cl = loaderResources.getClass().getClassLoader();
-                        resources = cl == null ?
+                        final ClassLoader cl = FXMLLoader.this.resources.getClass().getClassLoader();
+                        resources = (cl == null) ?
                                 ResourceBundle.getBundle(value, Locale.getDefault()) :
                                 ResourceBundle.getBundle(value, Locale.getDefault(), cl);
                     }
