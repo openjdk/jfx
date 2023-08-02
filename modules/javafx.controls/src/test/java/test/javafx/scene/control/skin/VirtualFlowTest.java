@@ -34,6 +34,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -1765,6 +1766,32 @@ assertEquals(0, firstCell.getIndex());
         pulse();
         idx = flow.shim_computeCurrentIndex();
         assertEquals(29, idx);
+    }
+
+    /**
+     * Scrolling via the trough (-> {@link com.sun.javafx.scene.control.VirtualScrollBar#adjustValue(double)}) should
+     * not throw any exception.
+     * This happened in the past when scrolling up (more) when we already only see the uppermost cell with the index 0.
+     * This index was subtracted by 1, leading to an {@link IndexOutOfBoundsException}.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8311983">JDK-8311983</a>
+     */
+    @Test
+    public void testScrollBarValueAdjustmentShouldNotThrowIOOBE() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(2);
+        flow.resize(250, 300);
+
+        pulse();
+
+        // Scroll down.
+        flow.shim_getVbar().adjustValue(0.9605263157894737);
+        // Scroll up.
+        flow.shim_getVbar().adjustValue(0.05263157894736842);
+        // Scroll up again.
+        assertDoesNotThrow(() -> flow.shim_getVbar().adjustValue(0.05263157894736842));
     }
 
 }
