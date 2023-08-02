@@ -154,6 +154,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         renderScaleX = scalex;
         renderScaleY = scaley;
         entireSceneNeedsRepaint();
+        updateSceneState();
     }
 
     public float getRenderScaleX() {

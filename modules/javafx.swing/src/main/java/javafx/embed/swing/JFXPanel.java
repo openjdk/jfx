@@ -617,16 +617,14 @@ public class JFXPanel extends JComponent {
         // what JavaFX embedded scenes/stages are ready to
         pWidth = Math.max(0, getWidth());
         pHeight = Math.max(0, getHeight());
-        double newScaleFactorX = scaleFactorX;
-        double newScaleFactorY = scaleFactorY;
         Graphics g = getGraphics();
         GraphicsConfiguration config = getGraphicsConfiguration();
         if (config == null) {
             config = GraphicsEnvironment.getLocalGraphicsEnvironment().
                      getDefaultScreenDevice().getDefaultConfiguration();
         }
-        newScaleFactorX = config.getDefaultTransform().getScaleX();
-        newScaleFactorY = config.getDefaultTransform().getScaleY();
+        double newScaleFactorX = config.getDefaultTransform().getScaleX();
+        double newScaleFactorY = config.getDefaultTransform().getScaleY();
         if (oldWidth == 0 && oldHeight == 0 && pWidth == 0 && pHeight == 0) {
             return;
         }
@@ -640,12 +638,6 @@ public class JFXPanel extends JComponent {
             }
             scaleFactorX = newScaleFactorX;
             scaleFactorY = newScaleFactorY;
-            Platform.runLater(() -> {
-                if (stage != null) {
-                   stage.setRenderScaleX(scaleFactorX);
-                   stage.setRenderScaleY(scaleFactorY);
-                }
-            });
             sendResizeEventToFX();
         }
     }
@@ -825,15 +817,13 @@ public class JFXPanel extends JComponent {
             }
             gg.drawImage(pixelsIm, 0, 0, pWidth, pHeight, null);
 
-            double newScaleFactorX = scaleFactorX;
-            double newScaleFactorY = scaleFactorY;
             GraphicsConfiguration config = getGraphicsConfiguration();
             if (config == null) {
                 config = GraphicsEnvironment.getLocalGraphicsEnvironment().
                          getDefaultScreenDevice().getDefaultConfiguration();
             }
-            newScaleFactorX = config.getDefaultTransform().getScaleX();
-            newScaleFactorY = config.getDefaultTransform().getScaleY();
+            double newScaleFactorX = config.getDefaultTransform().getScaleX();
+            double newScaleFactorY = config.getDefaultTransform().getScaleY();
             if (scaleFactorX != newScaleFactorX || scaleFactorY != newScaleFactorY) {
                 createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
                 // The scene will request repaint.
@@ -841,12 +831,6 @@ public class JFXPanel extends JComponent {
                                                (float) newScaleFactorY);
                 scaleFactorX = newScaleFactorX;
                 scaleFactorY = newScaleFactorY;
-                Platform.runLater(() -> {
-                    if (stage != null) {
-                       stage.setRenderScaleX(scaleFactorX);
-                       stage.setRenderScaleY(scaleFactorY);
-                    }
-                });
             }
         } catch (Throwable th) {
             th.printStackTrace();
