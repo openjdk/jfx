@@ -70,7 +70,7 @@ public class RTFReader extends RTFParser {
      *  variable for speed. */
     private Destination rtfDestination;
     /** This holds the current document attributes. */
-    // FIX remove
+    // FIX remove?
     private AttrSet documentAttributes;
 
     /** This Dictionary maps Integer font numbers to String font names. */
@@ -78,11 +78,11 @@ public class RTFReader extends RTFParser {
     /** This array maps color indices to Color objects. */
     private Color[] colorTable;
     /** This Map maps character style numbers to Style objects. */
-    private Map<Integer, Style> characterStyles;
+    private HashMap<Integer, Style> characterStyles;
     /** This Map maps paragraph style numbers to Style objects. */
-    private Map<Integer, Style> paragraphStyles;
+    private HashMap<Integer, Style> paragraphStyles;
     /** This Map maps section style numbers to Style objects. */
-    private Map<Integer, Style> sectionStyles;
+    private HashMap<Integer, Style> sectionStyles;
 
     /** <code>true</code> to indicate that if the next keyword is unknown,
      *  the containing group should be ignored. */
@@ -556,7 +556,7 @@ public class RTFReader extends RTFParser {
 
     /** Adds a character set to the RTFReader's list
      *  of known character sets */
-    public static void defineCharacterSet(String name, char[] table) {
+    private static void defineCharacterSet(String name, char[] table) {
         if (table.length < 256) {
             throw new IllegalArgumentException("Translation table must have 256 entries.");
         }
@@ -572,11 +572,10 @@ public class RTFReader extends RTFParser {
     public static Object getCharacterSet(final String name) throws IOException {
         char[] set = characterSets.get(name);
         if (set == null) {
-            @SuppressWarnings("removal")
-            // FIX close
-            InputStream in = RTFReader.class.getResourceAsStream("charsets/" + name + ".txt");
-            set = readCharset(in);
-            defineCharacterSet(name, set);
+            try (InputStream in = RTFReader.class.getResourceAsStream("charsets/" + name + ".txt")) {
+                set = readCharset(in);
+                defineCharacterSet(name, set);
+            }
         }
         return set;
     }
@@ -590,28 +589,29 @@ public class RTFReader extends RTFParser {
     static char[] readCharset(InputStream strm) throws IOException {
         char[] values = new char[256];
 
-        // FIX close
-        StreamTokenizer in = new StreamTokenizer(new BufferedReader(new InputStreamReader(strm, StandardCharsets.ISO_8859_1)));
-        in.eolIsSignificant(false);
-        in.commentChar('#');
-        in.slashSlashComments(true);
-        in.slashStarComments(true);
-
-        int i = 0;
-        while (i < 256) {
-            int ttype;
-            try {
-                ttype = in.nextToken();
-            } catch (Exception e) {
-                throw new IOException("Unable to read from character set file (" + e + ")");
+        try (BufferedReader rd = new BufferedReader(new InputStreamReader(strm, StandardCharsets.ISO_8859_1))) {
+            StreamTokenizer in = new StreamTokenizer(rd);
+            in.eolIsSignificant(false);
+            in.commentChar('#');
+            in.slashSlashComments(true);
+            in.slashStarComments(true);
+    
+            int i = 0;
+            while (i < 256) {
+                int ttype;
+                try {
+                    ttype = in.nextToken();
+                } catch (Exception e) {
+                    throw new IOException("Unable to read from character set file (" + e + ")");
+                }
+                if (ttype != StreamTokenizer.TT_NUMBER) {
+                    //          System.out.println("Bad token: type=" + ttype + " tok=" + in.sval);
+                    throw new IOException("Unexpected token in character set file");
+                    //          continue;
+                }
+                values[i] = (char)(in.nval);
+                i++;
             }
-            if (ttype != StreamTokenizer.TT_NUMBER) {
-                //          System.out.println("Bad token: type=" + ttype + " tok=" + in.sval);
-                throw new IOException("Unexpected token in character set file");
-                //          continue;
-            }
-            values[i] = (char)(in.nval);
-            i++;
         }
 
         return values;
@@ -804,9 +804,9 @@ public class RTFReader extends RTFParser {
         }
 
         public void close() {
-            Map<Integer, Style> chrStyles = new HashMap<>();
-            Map<Integer, Style> pgfStyles = new HashMap<>();
-            Map<Integer, Style> secStyles = new HashMap<>();
+            HashMap<Integer, Style> chrStyles = new HashMap<>();
+            HashMap<Integer, Style> pgfStyles = new HashMap<>();
+            HashMap<Integer, Style> secStyles = new HashMap<>();
             for (StyleDefiningDestination style : definedStyles.values()) {
                 Style defined = style.realize();
                 //warning("Style " + style.number + " (" + style.styleName + "): " + defined);
