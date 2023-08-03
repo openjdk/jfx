@@ -141,7 +141,7 @@ public class VirtualScrollBar extends ScrollBar {
                 if (newValue < oldValue) {
                     index = Math.max(0, index - 1);
                 } else {
-                    index = Math.max(flow.getCellCount(), index + 1);
+                    index = Math.min(flow.getCellCount(), index + 1);
                 }
                 flow.scrollTo(index);
             } else {
