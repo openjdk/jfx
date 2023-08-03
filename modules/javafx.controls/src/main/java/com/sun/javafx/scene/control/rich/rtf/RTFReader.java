@@ -658,9 +658,7 @@ public class RTFReader extends RTFParser {
         private Integer fontNumberKey;
         private String nextFontFamily;
 
-        public void handleBinaryBlob(byte[] data) {
-        }
-
+        @Override
         public void handleText(String text) {
             int semicolon = text.indexOf(';');
             String fontName;
@@ -671,8 +669,6 @@ public class RTFReader extends RTFParser {
                 fontName = text;
             }
             
-            /* TODO: do something with the font family. */
-
             if (nextFontNumber == -1 && fontNumberKey != null) {
                 //font name might be broken across multiple calls
                 fontName = fontTable.get(fontNumberKey) + fontName;
@@ -685,6 +681,7 @@ public class RTFReader extends RTFParser {
             nextFontFamily = null;
         }
 
+        @Override
         public boolean handleKeyword(String keyword) {
             if (keyword.charAt(0) == 'f') {
                 nextFontFamily = keyword.substring(1);
@@ -693,21 +690,13 @@ public class RTFReader extends RTFParser {
             return false;
         }
 
+        @Override
         public boolean handleKeyword(String keyword, int parameter) {
             if (keyword.equals("f")) {
                 nextFontNumber = parameter;
                 return true;
             }
             return false;
-        }
-
-        public void begingroup() {
-        }
-
-        public void endgroup(Map<Object, Object> oldState) {
-        }
-
-        public void close() {
         }
     }
 
@@ -822,21 +811,10 @@ public class RTFReader extends RTFParser {
             private boolean sectionStyle;
             public String styleName;
             public int number;
-            private int basedOn;
-            private int nextStyle;
+            private int basedOn = STYLENUMBER_NONE;
+            private int nextStyle = STYLENUMBER_NONE;
             private boolean hidden;
             private Style realizedStyle;
-
-            public StyleDefiningDestination() {
-                additive = false;
-                characterStyle = false;
-                sectionStyle = false;
-                styleName = null;
-                number = 0;
-                basedOn = STYLENUMBER_NONE;
-                nextStyle = STYLENUMBER_NONE;
-                hidden = false;
-            }
 
             @Override
             public void handleText(String text) {
@@ -880,6 +858,7 @@ public class RTFReader extends RTFParser {
                 } else if (parameter < -32767) {
                     parameter = -32767;
                 }
+
                 if (keyword.equals("s")) {
                     characterStyle = false;
                     sectionStyle = false;
@@ -968,6 +947,7 @@ public class RTFReader extends RTFParser {
      * It is up to the subclasses to determine what is done with the actual text. 
      */
     abstract class AttributeTrackingDestination extends Destination {
+        @Override
         public abstract void handleText(String text);
 
         /** This is the "chr" element of parserState, cached for more efficient use */
@@ -1214,7 +1194,7 @@ public class RTFReader extends RTFParser {
             return false;
         }
 
-        /** Returns a new MutableAttributeSet containing the
+        /** Returns a new AttrSet containing the
          *  default character attributes */
         protected AttrSet rootCharacterAttributes() {
             AttrSet a = new AttrSet();
@@ -1226,7 +1206,7 @@ public class RTFReader extends RTFParser {
             return a;
         }
 
-        /** Returns a new MutableAttributeSet containing the
+        /** Returns a new AttrSet containing the
          *  default paragraph attributes */
         protected AttrSet rootParagraphAttributes() {
             AttrSet a = new AttrSet();
@@ -1237,7 +1217,7 @@ public class RTFReader extends RTFParser {
             return a;
         }
 
-        /** Returns a new MutableAttributeSet containing the
+        /** Returns a new AttrSet containing the
          *  default section attributes */
         protected AttrSet rootSectionAttributes() {
             AttrSet a = new AttrSet();
@@ -1248,7 +1228,7 @@ public class RTFReader extends RTFParser {
          * Calculates the current text (character) attributes in a form suitable
          * for SwingText from the current parser state.
          *
-         * @return a new MutableAttributeSet containing the text attributes.
+         * @return a new AttrSet containing the text attributes.
          */
         AttrSet currentTextAttributes() {
             AttrSet attributes = new AttrSet(characterAttributes);
@@ -1301,7 +1281,7 @@ public class RTFReader extends RTFParser {
          * Calculates the current paragraph attributes (with keys
          * as given in StyleConstants) from the current parser state.
          *
-         * @return a newly created MutableAttributeSet.
+         * @return a newly created AttrSet.
          */
         AttrSet currentParagraphAttributes() {
             /* NB if there were a mutableCopy() method we should use it */
@@ -1336,7 +1316,7 @@ public class RTFReader extends RTFParser {
          * Calculates the current section attributes
          * from the current parser state.
          *
-         * @return a newly created MutableAttributeSet.
+         * @return a newly created AttrSet.
          */
         public AttrSet currentSectionAttributes() {
             AttrSet attributes = new AttrSet(sectionAttributes);
@@ -1425,6 +1405,7 @@ public class RTFReader extends RTFParser {
         }
 
         protected void endSection() {
+            // no-op
         }
 
         @Override
