@@ -354,7 +354,7 @@ public class RTFReader extends RTFParser {
         }
 
         if (keyword.equals("info")) {
-            setRTFDestination(new InfoDestination());
+            setRTFDestination(new Destination());
             return false;
         }
 
@@ -451,7 +451,7 @@ public class RTFReader extends RTFParser {
         }
 
         if (ignoreGroupIfUnknownKeywordSave) {
-            setRTFDestination(new DiscardingDestination());
+            setRTFDestination(new Destination());
         }
 
         return false;
@@ -518,7 +518,7 @@ public class RTFReader extends RTFParser {
 
         // this point is reached only if the keyword is unrecognized
         if (ignoreGroupIfUnknownKeywordSave) {
-            setRTFDestination(new DiscardingDestination());
+            setRTFDestination(new Destination());
         }
 
         return false;
@@ -617,31 +617,13 @@ public class RTFReader extends RTFParser {
         return values;
     }
 
-    /** An interface (could be an entirely abstract class) describing
-     *  a destination. The RTF reader always has a current destination
-     *  which is where text is sent.
+    /**
+     * The base class for an RTF destination.
+     * The RTF reader always has a current destination
+     * which is where text is sent.  This class provides a discarding destination:
+     * it accepts all keywords and text but does nothing with them.
      */
-    // FIX abstract class, same as Discarding
-    interface Destination {
-        void handleBinaryBlob(byte[] data);
-
-        void handleText(String text);
-
-        boolean handleKeyword(String keyword);
-
-        boolean handleKeyword(String keyword, int parameter);
-
-        void begingroup();
-
-        void endgroup(Map<Object, Object> oldState);
-
-        void close();
-    }
-
-    /** This data-sink class is used to implement ignored destinations
-     *  (e.g. {\*\blegga blah blah blah} )
-     *  It accepts all keywords and text but does nothing with them. */
-    static class DiscardingDestination implements Destination {
+    static class Destination {
         public void handleBinaryBlob(byte[] data) {
         }
 
@@ -670,7 +652,7 @@ public class RTFReader extends RTFParser {
 
     /** Reads the fonttbl group, inserting fonts into the RTFReader's
      *  fontTable dictionary. */
-    class FonttblDestination implements Destination {
+    class FonttblDestination extends Destination {
         private int nextFontNumber;
         private Integer fontNumberKey;
         private String nextFontFamily;
@@ -730,7 +712,7 @@ public class RTFReader extends RTFParser {
 
     /** Reads the colortbl group. Upon end-of-group, the RTFReader's
      *  color table is set to an array containing the read colors. */
-    class ColortblDestination implements Destination {
+    class ColortblDestination extends Destination {
         private int red;
         private int green;
         private int blue;
@@ -792,7 +774,7 @@ public class RTFReader extends RTFParser {
 
     /** Handles the stylesheet keyword. Styles are read and sorted
      *  into the three style arrays in the RTFReader. */
-    class StylesheetDestination extends DiscardingDestination implements Destination {
+    class StylesheetDestination extends Destination {
         HashMap<Integer, StyleDefiningDestination> definedStyles;
 
         public StylesheetDestination() {
@@ -833,7 +815,7 @@ public class RTFReader extends RTFParser {
         }
 
         /** This subclass handles an individual style */
-        class StyleDefiningDestination extends AttributeTrackingDestination implements Destination {
+        class StyleDefiningDestination extends AttributeTrackingDestination {
             private static final int STYLENUMBER_NONE = 222;
             private boolean additive;
             private boolean characterStyle;
@@ -975,17 +957,12 @@ public class RTFReader extends RTFParser {
         }
     }
 
-    /** Handles the info group. Currently no info keywords are recognized
-     *  so this is a subclass of DiscardingDestination. */
-    static class InfoDestination extends DiscardingDestination implements Destination {
-    }
-
     /** RTFReader.TextHandlingDestination is an abstract RTF destination
      *  which simply tracks the attributes specified by the RTF control words
      *  in internal form and can produce acceptable AttributeSets for the
      *  current character, paragraph, and section attributes. It is up
      *  to the subclasses to determine what is done with the actual text. */
-    abstract class AttributeTrackingDestination implements Destination {
+    abstract class AttributeTrackingDestination extends Destination {
         /** This is the "chr" element of parserState, cached for
          *  more efficient use */
         private AttrSet characterAttributes;
@@ -1430,7 +1407,7 @@ public class RTFReader extends RTFParser {
      *  <dt>endSection()<dd>to end the current section
      *  </dl>
      */
-    abstract class TextHandlingDestination extends AttributeTrackingDestination implements Destination {
+    abstract class TextHandlingDestination extends AttributeTrackingDestination {
         /** <code>true</code> if the reader has not just finished
          *  a paragraph; false upon startup */
         private boolean inParagraph;
@@ -1495,7 +1472,7 @@ public class RTFReader extends RTFParser {
      *  containing RTFReader.
      */
     // TODO combine with TextHandlingDestination
-    class DocumentDestination extends TextHandlingDestination implements Destination {
+    class DocumentDestination extends TextHandlingDestination {
         public void deliverText(String text, AttrSet characterAttributes) {
             StyleAttrs a = characterAttributes.getStyleAttrs();
             StyledSegment seg = StyledSegment.of(text, a);
