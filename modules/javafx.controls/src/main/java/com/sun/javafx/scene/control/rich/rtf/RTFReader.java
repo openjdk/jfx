@@ -57,6 +57,21 @@ import com.sun.javafx.scene.control.rich.SegmentStyledInput;
  * the text acceptor.
  */
 public class RTFReader extends RTFParser {
+    /** Indicates the domain of a Style */
+    private static final Object STYLE_TYPE = new Object();
+    /** Value for StyleType indicating a section style */
+    private static final Object STYLE_SECTION = new Object();
+    /** Value for StyleType indicating a paragraph style */
+    private static final Object STYLE_PARAGRAPH = new Object();
+    /** Value for StyleType indicating a character style */
+    private static final Object STYLE_CHARACTER = new Object();
+    /** The style of the text following this style */
+    private static final Object STYLE_NEXT = new Object();
+    /** Whether the style is additive */
+    private static final Object STYLE_ADDITIVE = new Object();
+    /** Whether the style is hidden from the user */
+    private static final Object STYLE_HIDDEN = new Object();
+
     private final String text;
     private ArrayList<StyledSegment> segments;
 
@@ -91,7 +106,7 @@ public class RTFReader extends RTFParser {
      *  Unicode character. */
     private int skippingCharacters;
 
-    private final AttrSet.Holder mockery = new AttrSet.Holder();
+    private final AttrSet.Holder holder = new AttrSet.Holder();
 
     private static final String DEFAULT_STYLE = "default";
     private final HashMap<String,Style> styles = initStyles(); // TODO can init default style on demand
@@ -101,11 +116,6 @@ public class RTFReader extends RTFParser {
     /** textKeywords maps RTF keywords to single-character strings,
      *  for those keywords which simply insert some text. */
     private static final HashMap<String, String> textKeywords = initTextKeywords();
-
-    /* some entries in parserState */
-    //private static final String TabAlignmentKey = "tab_alignment";
-    //private static final String TabLeaderKey = "tab_leader";
-
     private static final HashMap<String, char[]> characterSets = initCharacterSets();
 
     /* TODO: per-font font encodings ( \fcharset control word ) ? */
@@ -766,11 +776,11 @@ public class RTFReader extends RTFParser {
             HashMap<Integer, Style> secStyles = new HashMap<>();
             for (StyleDefiningDestination style : definedStyles.values()) {
                 Style defined = style.realize();
-                String stype = (String)defined.getAttribute(Constants.StyleType);
+                String stype = (String)defined.getAttribute(STYLE_TYPE);
                 Map<Integer, Style> toMap;
-                if (stype.equals(Constants.STSection)) {
+                if (stype.equals(STYLE_SECTION)) {
                     toMap = secStyles;
-                } else if (stype.equals(Constants.STCharacter)) {
+                } else if (stype.equals(STYLE_CHARACTER)) {
                     toMap = chrStyles;
                 } else {
                     toMap = pgfStyles;
@@ -902,13 +912,13 @@ public class RTFReader extends RTFParser {
 
                 if (characterStyle) {
                     realizedStyle.addAttributes(currentTextAttributes());
-                    realizedStyle.addAttribute(Constants.StyleType, Constants.STCharacter);
+                    realizedStyle.addAttribute(STYLE_TYPE, STYLE_CHARACTER);
                 } else if (sectionStyle) {
                     realizedStyle.addAttributes(currentSectionAttributes());
-                    realizedStyle.addAttribute(Constants.StyleType, Constants.STSection);
+                    realizedStyle.addAttribute(STYLE_TYPE, STYLE_SECTION);
                 } else { /* must be a paragraph style */
                     realizedStyle.addAttributes(currentParagraphAttributes());
-                    realizedStyle.addAttribute(Constants.StyleType, Constants.STParagraph);
+                    realizedStyle.addAttribute(STYLE_TYPE, STYLE_PARAGRAPH);
                 }
 
                 if (nextStyle != STYLENUMBER_NONE) {
@@ -920,10 +930,10 @@ public class RTFReader extends RTFParser {
                 }
 
                 if (next != null) {
-                    realizedStyle.addAttribute(Constants.StyleNext, next);
+                    realizedStyle.addAttribute(STYLE_NEXT, next);
                 }
-                realizedStyle.addAttribute(Constants.StyleAdditive, Boolean.valueOf(additive));
-                realizedStyle.addAttribute(Constants.StyleHidden, Boolean.valueOf(hidden));
+                realizedStyle.addAttribute(STYLE_ADDITIVE, Boolean.valueOf(additive));
+                realizedStyle.addAttribute(STYLE_HIDDEN, Boolean.valueOf(hidden));
 
                 return realizedStyle;
             }
@@ -1005,9 +1015,9 @@ public class RTFReader extends RTFParser {
                         ok = attr.set(sectionAttributes);
                         break;
                     case RTFAttribute.D_META:
-                        mockery.backing = parserState;
-                        ok = attr.set(mockery);
-                        mockery.backing = null;
+                        holder.backing = parserState;
+                        ok = attr.set(holder);
+                        holder.backing = null;
                         break;
                     case RTFAttribute.D_DOCUMENT:
                         ok = attr.set(documentAttributes);
@@ -1072,9 +1082,9 @@ public class RTFReader extends RTFParser {
                         ok = attr.set(sectionAttributes, parameter);
                         break;
                     case RTFAttribute.D_META:
-                        mockery.backing = parserState;
-                        ok = attr.set(mockery, parameter);
-                        mockery.backing = null;
+                        holder.backing = parserState;
+                        ok = attr.set(holder, parameter);
+                        holder.backing = null;
                         break;
                     case RTFAttribute.D_DOCUMENT:
                         ok = attr.set(documentAttributes, parameter);

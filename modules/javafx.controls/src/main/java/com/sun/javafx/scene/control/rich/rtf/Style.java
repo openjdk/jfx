@@ -28,7 +28,7 @@ package com.sun.javafx.scene.control.rich.rtf;
 /**
  * Replacement for javax.swing.text.Style.
  */
-public class Style extends AttrSet {
+class Style extends AttrSet {
     /** Default constructor. */
     public Style() {
     }

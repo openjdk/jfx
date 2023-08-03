@@ -28,10 +28,10 @@ package com.sun.javafx.scene.control.rich.rtf;
 import javafx.scene.control.rich.model.StyleAttribute;
 
 /**
- * This interface describes a class which defines a 1-1 mapping between
- * an RTF keyword and a SwingText attribute.
+ * This abstract class defines a 1-1 mapping between
+ * an RTF keyword and a StyleAttribute attribute.
  */
-public abstract class  RTFAttribute {
+abstract class  RTFAttribute {
     public static final int D_CHARACTER = 0;
     public static final int D_PARAGRAPH = 1;
     public static final int D_SECTION = 2;
@@ -45,12 +45,12 @@ public abstract class  RTFAttribute {
     public abstract boolean setDefault(AttrSet target);
     
     protected final int domain;
-    protected final StyleAttribute swingName;
+    protected final StyleAttribute attribute;
     protected final String rtfName;
 
-    protected RTFAttribute(int domain, StyleAttribute swingName, String rtfName) {
+    protected RTFAttribute(int domain, StyleAttribute attribute, String rtfName) {
         this.domain = domain;
-        this.swingName = swingName;
+        this.attribute = attribute;
         this.rtfName = rtfName;
     }
 
@@ -58,8 +58,8 @@ public abstract class  RTFAttribute {
         return domain;
     }
 
-    public StyleAttribute swingName() {
-        return swingName;
+    public StyleAttribute getStyleAttribute() {
+        return attribute;
     }
 
     public String rtfName() {
