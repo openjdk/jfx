@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import java.util.List;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledSegment;
 
@@ -42,5 +43,10 @@ public class SegmentStyledInput implements StyledInput {
             return segments[index++];
         }
         return null;
+    }
+
+    public static SegmentStyledInput of(List<StyledSegment> segments) {
+        StyledSegment[] ss = segments.toArray(new StyledSegment[segments.size()]);
+        return new SegmentStyledInput(ss);
     }
 }

@@ -25,57 +25,14 @@
 
 package com.sun.javafx.scene.control.rich.rtf;
 
-import java.io.IOException;
-import java.io.StringReader;
-import javafx.scene.control.rich.model.StyledInput;
-import com.sun.javafx.scene.control.rich.D;
-
-/**
- * Produces a StyledInput from RTF input.
- */
-public class RTFReaderRich extends RTFParser {
-    private final String text;
-
-    public RTFReaderRich(String text) {
-        this.text = text;
-        System.err.println(text); // FIX
+public class Style extends MutableAttributeSet {
+    public void addAttributes(MutableAttributeSet currentTextAttributes) {
     }
 
-    @Override
-    public boolean handleKeyword(String keyword) {
-        D.p(keyword);
-        return true;
-    }
-
-    @Override
-    public boolean handleKeyword(String keyword, int parameter) {
-        D.p(keyword, parameter);
-        return true;
-    }
-
-    @Override
-    public void handleText(String text) {
-        D.p(text);
-    }
-
-    @Override
-    public void handleBinaryBlob(byte[] data) {
-        D.p(data.length);
-    }
-
-    @Override
-    public void begingroup() {
-        D.p();
-    }
-
-    @Override
-    public void endgroup() {
-        D.p();
-    }
-
-    public StyledInput generateStyledInput() throws IOException {
-        readFromReader(new StringReader(text));
-        // TODO
+    public String getAttribute(String styletype) {
         return null;
+    }
+
+    public void addAttribute(String name, Object value) {
     }
 }

@@ -51,11 +51,6 @@ abstract class RTFParser extends AbstractFilter {
     ByteArrayOutputStream binaryBuf;
     private boolean[] savedSpecials;
 
-    /** A stream to which to write warnings and debugging information
-     *  while parsing. This is set to <code>System.out</code> to log
-     *  any anomalous information to stdout. */
-    protected PrintStream warnings;
-
     // value for the 'state' variable
     private final int S_text = 0; // reading random text
     private final int S_backslashed = 1; // read a backslash, waiting for next
@@ -114,12 +109,6 @@ abstract class RTFParser extends AbstractFilter {
 
     public void writeSpecial(int b) throws IOException {
         write((char)b);
-    }
-
-    protected void warning(String s) {
-        if (warnings != null) {
-            warnings.println(s);
-        }
     }
 
     public void write(String s) throws IOException {
@@ -188,7 +177,7 @@ abstract class RTFParser extends AbstractFilter {
             if (!Character.isLetter(ch)) {
                 String kw = String.valueOf(ch);
                 if (!handleKeyword(kw)) {
-                    warning("Unknown keyword: " + kw + " (" + (byte)ch + ")");
+                    //warning("Unknown keyword: " + kw + " (" + (byte)ch + ")");
                 }
                 state = S_text;
                 pendingKeyword = null;
@@ -211,9 +200,9 @@ abstract class RTFParser extends AbstractFilter {
                     currentCharacters.append(ch);
                 } else {
                     ok = handleKeyword(pendingKeyword);
-                    if (!ok) {
-                        warning("Unknown keyword: " + pendingKeyword);
-                    }
+//                    if (!ok) {
+//                        warning("Unknown keyword: " + pendingKeyword);
+//                    }
                     pendingKeyword = null;
                     state = S_text;
 
@@ -234,7 +223,7 @@ abstract class RTFParser extends AbstractFilter {
                     try {
                         parameter = Long.parseLong(currentCharacters.toString());
                     } catch (NumberFormatException e) {
-                        warning("Illegal number format " + currentCharacters.toString() + " in \bin tag");
+                        //warning("Illegal number format " + currentCharacters.toString() + " in \bin tag");
                         pendingKeyword = null;
                         currentCharacters = new StringBuffer();
                         state = S_text;
@@ -266,11 +255,11 @@ abstract class RTFParser extends AbstractFilter {
                 try {
                     parameter = Integer.parseInt(currentCharacters.toString());
                     ok = handleKeyword(pendingKeyword, parameter);
-                    if (!ok) {
-                        warning("Unknown keyword: " + pendingKeyword + " (param " + currentCharacters + ")");
-                    }
+//                    if (!ok) {
+//                        warning("Unknown keyword: " + pendingKeyword + " (param " + currentCharacters + ")");
+//                    }
                 } catch (NumberFormatException e) {
-                    warning("Illegal number format " + currentCharacters.toString() + " in " + pendingKeyword + " tag");
+                    //warning("Illegal number format " + currentCharacters.toString() + " in " + pendingKeyword + " tag");
                 }
                 pendingKeyword = null;
                 currentCharacters = new StringBuffer();
@@ -334,7 +323,7 @@ abstract class RTFParser extends AbstractFilter {
         flush();
 
         if (state != S_text || level > 0) {
-            warning("Truncated RTF file.");
+            //warning("Truncated RTF file.");
 
             /* TODO: any sane way to handle termination in a non-S_text state? */
             /* probably not */
