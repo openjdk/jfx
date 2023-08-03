@@ -25,8 +25,8 @@
 
 package com.sun.javafx.scene.control.rich.rtf;
 
-import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Set;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
@@ -35,7 +35,7 @@ import javafx.scene.text.TextAlignment;
  * Attribute Container
  */
 public class MutableAttributeSet {
-    private final HashMap<Object,Object> attributes = new HashMap<>();
+    private final HashMap<Object,Object> attrs = new HashMap<>();
 
     public MutableAttributeSet(MutableAttributeSet a) {
     }
@@ -44,11 +44,11 @@ public class MutableAttributeSet {
     }
 
     public Object getAttribute(Object attr) {
-        return null;
+        return attrs.get(attr);
     }
 
-    public Enumeration<Object> getAttributeNames() {
-        return null;
+    public Set<Object> getAttributeNames() {
+        return attrs.keySet();
     }
     
     public void addAttribute(Object attr, Object value) {

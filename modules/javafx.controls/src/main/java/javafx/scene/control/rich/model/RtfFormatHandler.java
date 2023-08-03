@@ -51,8 +51,11 @@ public class RtfFormatHandler extends DataFormatHandler {
         if (src != null) {
             try {
                 String text = src.toString();
-                return new RTFReader(text).generateStyledInput();
+                try (RTFReader rd = new RTFReader(text)) {
+                    return rd.generateStyledInput();
+                }
             } catch (Exception e) {
+                // TODO beep?
             }
         }
         return null;

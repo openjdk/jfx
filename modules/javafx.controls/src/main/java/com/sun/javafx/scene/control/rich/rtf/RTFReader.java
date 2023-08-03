@@ -34,7 +34,6 @@ import java.io.StreamTokenizer;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -59,9 +58,6 @@ import com.sun.javafx.scene.control.rich.SegmentStyledInput;
  * This class is an indirect subclass of OutputStream. It must be closed
  * in order to guarantee that all of the text has been sent to
  * the text acceptor.
- *
- *   @see RTFParser
- *   @see java.io.OutputStream
  */
 public class RTFReader extends RTFParser {
     private final String text;
@@ -70,7 +66,7 @@ public class RTFReader extends RTFParser {
     /** Miscellaneous information about the parser's state. This
      *  dictionary is saved and restored when an RTF group begins
      *  or ends. */
-    private Dictionary<Object, Object> parserState; /* Current parser state */
+    private HashMap<Object, Object> parserState; /* Current parser state */
     /** This is the "dst" item from parserState. rtfDestination
      *  is the current rtf destination. It is cached in an instance
      *  variable for speed. */
@@ -80,7 +76,7 @@ public class RTFReader extends RTFParser {
     private MutableAttributeSet documentAttributes;
 
     /** This Dictionary maps Integer font numbers to String font names. */
-    private Dictionary<Integer, String> fontTable;
+    private HashMap<Integer, String> fontTable;
     /** This array maps color indices to Color objects. */
     private Color[] colorTable;
     /** This Map maps character style numbers to Style objects. */
@@ -132,8 +128,8 @@ public class RTFReader extends RTFParser {
         this.text = text;
         System.err.println(text); // FIX
 
-        parserState = new Hashtable<>();
-        fontTable = new Hashtable<Integer, String>();
+        parserState = new HashMap<>();
+        fontTable = new HashMap<Integer, String>();
 
         rtfversion = -1;
 
@@ -245,16 +241,19 @@ public class RTFReader extends RTFParser {
         /* we do this little dance to avoid cloning the entire state stack and
            immediately throwing it away. */
         Object oldSaveState = parserState.get("_savedState");
-        if (oldSaveState != null)
+        if (oldSaveState != null) {
             parserState.remove("_savedState");
+        }
         @SuppressWarnings("unchecked")
-        Dictionary<String, Object> saveState = (Dictionary<String, Object>)((Hashtable)parserState).clone();
-        if (oldSaveState != null)
+        HashMap<String, Object> saveState = (HashMap<String, Object>)parserState.clone();
+        if (oldSaveState != null) {
             saveState.put("_savedState", oldSaveState);
+        }
         parserState.put("_savedState", saveState);
 
-        if (rtfDestination != null)
+        if (rtfDestination != null) {
             rtfDestination.begingroup();
+        }
     }
 
     /** Called by the superclass when the current RTF group is closed.
@@ -270,23 +269,23 @@ public class RTFReader extends RTFParser {
         }
 
         @SuppressWarnings("unchecked")
-        Dictionary<Object, Object> restoredState = (Dictionary<Object, Object>)parserState.get("_savedState");
+        HashMap<Object, Object> restoredState = (HashMap<Object, Object>)parserState.get("_savedState");
         Destination restoredDestination = (Destination)restoredState.get("dst");
         if (restoredDestination != rtfDestination) {
             rtfDestination.close(); /* allow the destination to clean up */
             rtfDestination = restoredDestination;
         }
-        Dictionary<Object, Object> oldParserState = parserState;
+        HashMap<Object, Object> oldParserState = parserState;
         parserState = restoredState;
-        if (rtfDestination != null)
+        if (rtfDestination != null) {
             rtfDestination.endgroup(oldParserState);
+        }
     }
 
     protected void setRTFDestination(Destination newDestination) {
         /* Check that setting the destination won't close the
            current destination (should never happen) */
-        @SuppressWarnings("unchecked")
-        Dictionary<Object, Object> previousState = (Dictionary)parserState.get("_savedState");
+        HashMap<Object, Object> previousState = (HashMap<Object,Object>)parserState.get("_savedState");
         if (previousState != null) {
             if (rtfDestination != previousState.get("dst")) {
                 //warning("Warning, RTF destination overridden, invalid RTF.");
@@ -634,7 +633,7 @@ public class RTFReader extends RTFParser {
 
         void begingroup();
 
-        void endgroup(Dictionary<Object, Object> oldState);
+        void endgroup(Map<Object, Object> oldState);
 
         void close();
     }
@@ -666,7 +665,7 @@ public class RTFReader extends RTFParser {
                current group level as necessary */
         }
 
-        public void endgroup(Dictionary<Object, Object> oldState) {
+        public void endgroup(Map<Object, Object> oldState) {
             /* Ignore groups */
         }
 
@@ -726,30 +725,23 @@ public class RTFReader extends RTFParser {
             return false;
         }
 
-        /* Groups are irrelevant. */
         public void begingroup() {
         }
 
-        public void endgroup(Dictionary<Object, Object> oldState) {
+        public void endgroup(Map<Object, Object> oldState) {
         }
 
-        /* currently, the only thing we do when the font table ends is
-           dump its contents to the debugging log. */
         public void close() {
-            Enumeration<Integer> nums = fontTable.keys();
-            //warning("Done reading font table.");
-            while (nums.hasMoreElements()) {
-                Integer num = nums.nextElement();
-                //warning("Number " + num + ": " + fontTable.get(num));
-            }
         }
     }
 
     /** Reads the colortbl group. Upon end-of-group, the RTFReader's
      *  color table is set to an array containing the read colors. */
     class ColortblDestination implements Destination {
-        int red, green, blue;
-        Vector<Color> proTemTable;
+        private int red;
+        private int green;
+        private int blue;
+        private Vector<Color> proTemTable;
 
         public ColortblDestination() {
             red = 0;
@@ -759,9 +751,7 @@ public class RTFReader extends RTFParser {
         }
 
         public void handleText(String text) {
-            int index;
-
-            for (index = 0; index < text.length(); index++) {
+            for (int index = 0; index < text.length(); index++) {
                 if (text.charAt(index) == ';') {
                     Color newColor;
                     newColor = Color.rgb(red, green, blue);
@@ -778,15 +768,15 @@ public class RTFReader extends RTFParser {
         }
 
         public boolean handleKeyword(String keyword, int parameter) {
-            if (keyword.equals("red"))
+            if (keyword.equals("red")) {
                 red = parameter;
-            else if (keyword.equals("green"))
+            } else if (keyword.equals("green")) {
                 green = parameter;
-            else if (keyword.equals("blue"))
+            } else if (keyword.equals("blue")) {
                 blue = parameter;
-            else
+            } else { 
                 return false;
-
+            }
             return true;
         }
 
@@ -799,7 +789,7 @@ public class RTFReader extends RTFParser {
         public void begingroup() {
         }
 
-        public void endgroup(Dictionary<Object, Object> oldState) {
+        public void endgroup(Map<Object, Object> oldState) {
         }
 
         /* Shouldn't see any binary blobs ... */
@@ -810,10 +800,10 @@ public class RTFReader extends RTFParser {
     /** Handles the stylesheet keyword. Styles are read and sorted
      *  into the three style arrays in the RTFReader. */
     class StylesheetDestination extends DiscardingDestination implements Destination {
-        Dictionary<Integer, StyleDefiningDestination> definedStyles;
+        HashMap<Integer, StyleDefiningDestination> definedStyles;
 
         public StylesheetDestination() {
-            definedStyles = new Hashtable<Integer, StyleDefiningDestination>();
+            definedStyles = new HashMap<Integer, StyleDefiningDestination>();
         }
 
         public void begingroup() {
@@ -824,9 +814,7 @@ public class RTFReader extends RTFParser {
             Map<Integer, Style> chrStyles = new HashMap<>();
             Map<Integer, Style> pgfStyles = new HashMap<>();
             Map<Integer, Style> secStyles = new HashMap<>();
-            Enumeration<StyleDefiningDestination> styles = definedStyles.elements();
-            while (styles.hasMoreElements()) {
-                StyleDefiningDestination style = styles.nextElement();
+            for (StyleDefiningDestination style : definedStyles.values()) {
                 Style defined = style.realize();
                 //warning("Style " + style.number + " (" + style.styleName + "): " + defined);
                 String stype = (String)defined.getAttribute(Constants.StyleType);
@@ -853,17 +841,16 @@ public class RTFReader extends RTFParser {
 
         /** This subclass handles an individual style */
         class StyleDefiningDestination extends AttributeTrackingDestination implements Destination {
-            final int STYLENUMBER_NONE = 222;
-            boolean additive;
-            boolean characterStyle;
-            boolean sectionStyle;
+            private static final int STYLENUMBER_NONE = 222;
+            private boolean additive;
+            private boolean characterStyle;
+            private boolean sectionStyle;
             public String styleName;
             public int number;
-            int basedOn;
-            int nextStyle;
-            boolean hidden;
-
-            Style realizedStyle;
+            private int basedOn;
+            private int nextStyle;
+            private boolean hidden;
+            private Style realizedStyle;
 
             public StyleDefiningDestination() {
                 additive = false;
@@ -877,16 +864,18 @@ public class RTFReader extends RTFParser {
             }
 
             public void handleText(String text) {
-                if (styleName != null)
+                if (styleName != null) {
                     styleName = styleName + text;
-                else
+                } else {
                     styleName = text;
+                }
             }
 
             public void close() {
                 int semicolon = (styleName == null) ? 0 : styleName.indexOf(';');
-                if (semicolon > 0)
+                if (semicolon > 0) {
                     styleName = styleName.substring(0, semicolon);
+                }
                 definedStyles.put(Integer.valueOf(number), this);
                 super.close();
             }
@@ -1005,13 +994,13 @@ public class RTFReader extends RTFParser {
     abstract class AttributeTrackingDestination implements Destination {
         /** This is the "chr" element of parserState, cached for
          *  more efficient use */
-        MutableAttributeSet characterAttributes;
+        private MutableAttributeSet characterAttributes;
         /** This is the "pgf" element of parserState, cached for
          *  more efficient use */
-        MutableAttributeSet paragraphAttributes;
+        private MutableAttributeSet paragraphAttributes;
         /** This is the "sec" element of parserState, cached for
          *  more efficient use */
-        MutableAttributeSet sectionAttributes;
+        private MutableAttributeSet sectionAttributes;
 
         public AttributeTrackingDestination() {
             characterAttributes = rootCharacterAttributes();
@@ -1055,7 +1044,7 @@ public class RTFReader extends RTFParser {
             parserState.put("sec", sectionAttributes);
         }
 
-        public void endgroup(Dictionary<Object, Object> oldState) {
+        public void endgroup(Map<Object, Object> oldState) {
             characterAttributes = (MutableAttributeSet)parserState.get("chr");
             paragraphAttributes = (MutableAttributeSet)parserState.get("pgf");
             sectionAttributes = (MutableAttributeSet)parserState.get("sec");
@@ -1125,7 +1114,7 @@ public class RTFReader extends RTFParser {
             boolean booleanParameter = (parameter != 0);
 
             if (keyword.equals("fc")) {
-                keyword = "cf"; /* whatEVER, dude. */
+                keyword = "cf";
             }
 
             if (keyword.equals("f")) {
@@ -1295,14 +1284,12 @@ public class RTFReader extends RTFParser {
          */
         MutableAttributeSet currentTextAttributes() {
             MutableAttributeSet attributes = new MutableAttributeSet(characterAttributes);
-            Integer fontnum;
-            Integer stateItem;
 
             /* figure out the font name */
             /* TODO: catch exceptions for undefined attributes,
                bad font indices, etc.? (as it stands, it is the caller's
                job to clean up after corrupt RTF) */
-            fontnum = (Integer)parserState.get("f");
+            Integer fontnum = (Integer)parserState.get("f");
             /* note setFontFamily() can not handle a null font */
             String fontFamily;
             if (fontnum != null) {
@@ -1313,7 +1300,7 @@ public class RTFReader extends RTFParser {
             attributes.setFontFamily(fontFamily);
 
             if (colorTable != null) {
-                stateItem = (Integer)parserState.get("cf");
+                Integer stateItem = (Integer)parserState.get("cf");
                 if (stateItem != null) {
                     Color fg = colorTable[stateItem.intValue()];
                     attributes.setForeground(fg);
@@ -1323,7 +1310,7 @@ public class RTFReader extends RTFParser {
             }
 
             if (colorTable != null) {
-                stateItem = (Integer)parserState.get("cb");
+                Integer stateItem = (Integer)parserState.get("cb");
                 if (stateItem != null) {
                     Color bg = colorTable[stateItem.intValue()];
                     attributes.setBackground(bg);
@@ -1457,10 +1444,9 @@ public class RTFReader extends RTFParser {
     abstract class TextHandlingDestination extends AttributeTrackingDestination implements Destination {
         /** <code>true</code> if the reader has not just finished
          *  a paragraph; false upon startup */
-        boolean inParagraph;
+        private boolean inParagraph;
 
         public TextHandlingDestination() {
-            super();
             inParagraph = false;
         }
 

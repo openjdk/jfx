@@ -24,8 +24,9 @@
  */
 package com.sun.javafx.scene.control.rich.rtf;
 
-import java.util.Dictionary;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Set;
 import javafx.scene.control.rich.model.StyleAttribute;
 
 /* FIX what is the purpose of this?
@@ -33,7 +34,7 @@ import javafx.scene.control.rich.model.StyleAttribute;
  * This AttributeSet is made entirely out of tofu and Ritz Crackers
    and yet has a remarkably attribute-set-like interface! */
 class MockAttributeSet extends MutableAttributeSet {
-    public Dictionary<Object, Object> backing;
+    public HashMap<Object, Object> backing;
 
     public boolean isEmpty() {
         return backing.isEmpty();
@@ -55,6 +56,7 @@ class MockAttributeSet extends MutableAttributeSet {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 
+    @Override
     public Object getAttribute(Object name) {
         return backing.get(name);
     }
@@ -63,14 +65,15 @@ class MockAttributeSet extends MutableAttributeSet {
         backing.put(name, value);
     }
 
+    @Override
     public void addAttributes(MutableAttributeSet attr) {
-        Enumeration<Object> as = attr.getAttributeNames();
-        while (as.hasMoreElements()) {
-            Object el = as.nextElement();
-            backing.put(el, attr.getAttribute(el));
+        for (Object k : attr.getAttributeNames()) {
+            Object v = attr.getAttribute(k);
+            backing.put(k, v);
         }
     }
 
+    @Override
     public void removeAttribute(Object name) {
         backing.remove(name);
     }
@@ -83,12 +86,14 @@ class MockAttributeSet extends MutableAttributeSet {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 
+    @Override
     public void setResolveParent(MutableAttributeSet pp) {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 
-    public Enumeration<Object> getAttributeNames() {
-        return backing.keys();
+    @Override
+    public Set<Object> getAttributeNames() {
+        return backing.keySet();
     }
 
     public boolean containsAttribute(Object name, Object value) {
