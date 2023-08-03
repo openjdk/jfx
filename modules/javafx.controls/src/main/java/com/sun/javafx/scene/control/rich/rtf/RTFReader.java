@@ -650,8 +650,9 @@ public class RTFReader extends RTFParser {
         }
     }
 
-    /** Reads the fonttbl group, inserting fonts into the RTFReader's
-     *  fontTable dictionary. */
+    /**
+     * Reads the fonttbl group, inserting fonts into the RTFReader's fontTable map.
+     */
     class FonttblDestination extends Destination {
         private int nextFontNumber;
         private Integer fontNumberKey;
@@ -710,8 +711,10 @@ public class RTFReader extends RTFParser {
         }
     }
 
-    /** Reads the colortbl group. Upon end-of-group, the RTFReader's
-     *  color table is set to an array containing the read colors. */
+    /**
+     * Reads the colortbl group. Upon end-of-group, the RTFReader's
+     * color table is set to an array containing the read colors.
+     */
     class ColortblDestination extends Destination {
         private int red;
         private int green;
@@ -725,6 +728,7 @@ public class RTFReader extends RTFParser {
             proTemTable = new Vector<Color>();
         }
 
+        @Override
         public void handleText(String text) {
             for (int index = 0; index < text.length(); index++) {
                 if (text.charAt(index) == ';') {
@@ -735,6 +739,7 @@ public class RTFReader extends RTFParser {
             }
         }
 
+        @Override
         public void close() {
             int count = proTemTable.size();
             //warning("Done reading color table, " + count + " entries.");
@@ -742,6 +747,7 @@ public class RTFReader extends RTFParser {
             proTemTable.copyInto(colorTable);
         }
 
+        @Override
         public boolean handleKeyword(String keyword, int parameter) {
             if (keyword.equals("red")) {
                 red = parameter;
@@ -755,36 +761,30 @@ public class RTFReader extends RTFParser {
             return true;
         }
 
-        /* Colortbls don't understand any parameterless keywords */
+        @Override
         public boolean handleKeyword(String keyword) {
+            // Colortbls don't understand any parameterless keywords
             return false;
-        }
-
-        /* Groups are irrelevant. */
-        public void begingroup() {
-        }
-
-        public void endgroup(Map<Object, Object> oldState) {
-        }
-
-        /* Shouldn't see any binary blobs ... */
-        public void handleBinaryBlob(byte[] data) {
         }
     }
 
-    /** Handles the stylesheet keyword. Styles are read and sorted
-     *  into the three style arrays in the RTFReader. */
+    /**
+     * Handles the stylesheet keyword. Styles are read and sorted
+     * into the three style arrays in the RTFReader.
+     */
     class StylesheetDestination extends Destination {
-        HashMap<Integer, StyleDefiningDestination> definedStyles;
+        private HashMap<Integer, StyleDefiningDestination> definedStyles;
 
         public StylesheetDestination() {
-            definedStyles = new HashMap<Integer, StyleDefiningDestination>();
+            definedStyles = new HashMap<>();
         }
 
+        @Override
         public void begingroup() {
             setRTFDestination(new StyleDefiningDestination());
         }
 
+        @Override
         public void close() {
             HashMap<Integer, Style> chrStyles = new HashMap<>();
             HashMap<Integer, Style> pgfStyles = new HashMap<>();
@@ -838,6 +838,7 @@ public class RTFReader extends RTFParser {
                 hidden = false;
             }
 
+            @Override
             public void handleText(String text) {
                 if (styleName != null) {
                     styleName = styleName + text;
@@ -846,6 +847,7 @@ public class RTFReader extends RTFParser {
                 }
             }
 
+            @Override
             public void close() {
                 int semicolon = (styleName == null) ? 0 : styleName.indexOf(';');
                 if (semicolon > 0) {
@@ -855,6 +857,7 @@ public class RTFReader extends RTFParser {
                 super.close();
             }
 
+            @Override
             public boolean handleKeyword(String keyword) {
                 if (keyword.equals("additive")) {
                     additive = true;
@@ -867,6 +870,7 @@ public class RTFReader extends RTFParser {
                 return super.handleKeyword(keyword);
             }
 
+            @Override
             public boolean handleKeyword(String keyword, int parameter) {
                 // As per http://www.biblioscape.com/rtf15_spec.htm#Heading2
                 // we are restricting control word delimiter numeric value
@@ -957,20 +961,20 @@ public class RTFReader extends RTFParser {
         }
     }
 
-    /** RTFReader.TextHandlingDestination is an abstract RTF destination
-     *  which simply tracks the attributes specified by the RTF control words
-     *  in internal form and can produce acceptable AttributeSets for the
-     *  current character, paragraph, and section attributes. It is up
-     *  to the subclasses to determine what is done with the actual text. */
+    /**
+     * An abstract RTF destination which simply tracks the attributes specified by the RTF control words
+     * in internal form and can produce acceptable attribute sets for the
+     * current character, paragraph, and section attributes.
+     * It is up to the subclasses to determine what is done with the actual text. 
+     */
     abstract class AttributeTrackingDestination extends Destination {
-        /** This is the "chr" element of parserState, cached for
-         *  more efficient use */
+        public abstract void handleText(String text);
+
+        /** This is the "chr" element of parserState, cached for more efficient use */
         private AttrSet characterAttributes;
-        /** This is the "pgf" element of parserState, cached for
-         *  more efficient use */
+        /** This is the "pgf" element of parserState, cached for more efficient use */
         private AttrSet paragraphAttributes;
-        /** This is the "sec" element of parserState, cached for
-         *  more efficient use */
+        /** This is the "sec" element of parserState, cached for more efficient use */
         private AttrSet sectionAttributes;
 
         public AttributeTrackingDestination() {
@@ -982,8 +986,7 @@ public class RTFReader extends RTFParser {
             parserState.put("sec", sectionAttributes);
         }
 
-        public abstract void handleText(String text);
-
+        @Override
         public void handleBinaryBlob(byte[] data) {
             /* This should really be in TextHandlingDestination, but
              * since *nobody* does anything with binary blobs, this
@@ -991,6 +994,7 @@ public class RTFReader extends RTFParser {
             //warning("Unexpected binary data in RTF file.");
         }
 
+        @Override
         public void begingroup() {
             AttrSet characterParent = currentTextAttributes();
             AttrSet paragraphParent = currentParagraphAttributes();
@@ -1010,15 +1014,14 @@ public class RTFReader extends RTFParser {
             parserState.put("sec", sectionAttributes);
         }
 
+        @Override
         public void endgroup(Map<Object, Object> oldState) {
             characterAttributes = (AttrSet)parserState.get("chr");
             paragraphAttributes = (AttrSet)parserState.get("pgf");
             sectionAttributes = (AttrSet)parserState.get("sec");
         }
 
-        public void close() {
-        }
-
+        @Override
         public boolean handleKeyword(String keyword) {
             if (keyword.equals("ulnone")) {
                 return handleKeyword("ul", 0);
@@ -1076,9 +1079,8 @@ public class RTFReader extends RTFParser {
             return false;
         }
 
+        @Override
         public boolean handleKeyword(String keyword, int parameter) {
-            boolean booleanParameter = (parameter != 0);
-
             if (keyword.equals("fc")) {
                 keyword = "cf";
             }
@@ -1231,7 +1233,6 @@ public class RTFReader extends RTFParser {
             a.setLeftIndent(0.0);
             a.setRightIndent(0.0);
             a.setFirstLineIndent(0.0);
-            /* TODO: what should this be, really? */
             a.setResolveParent(getDefaultStyle());
             return a;
         }
@@ -1398,24 +1399,35 @@ public class RTFReader extends RTFParser {
         }
     }
 
-    /** RTFReader.TextHandlingDestination provides basic text handling
-     *  functionality. Subclasses must implement: <dl>
-     *  <dt>deliverText()<dd>to handle a run of text with the same
-     *                       attributes
-     *  <dt>finishParagraph()<dd>to end the current paragraph and
-     *                           set the paragraph's attributes
-     *  <dt>endSection()<dd>to end the current section
-     *  </dl>
+    /**
+     * This Destination accumulates the styled segments within this reader.
      */
-    abstract class TextHandlingDestination extends AttributeTrackingDestination {
-        /** <code>true</code> if the reader has not just finished
-         *  a paragraph; false upon startup */
+    class DocumentDestination extends AttributeTrackingDestination {
+        /** <code>true</code> if the reader has not just finished a paragraph; false upon startup */
         private boolean inParagraph;
-
-        public TextHandlingDestination() {
-            inParagraph = false;
+        
+        public DocumentDestination() {
+        }
+        
+        public void deliverText(String text, AttrSet characterAttributes) {
+            StyleAttrs a = characterAttributes.getStyleAttrs();
+            StyledSegment seg = StyledSegment.of(text, a);
+            segments.add(seg);
         }
 
+        public void finishParagraph(AttrSet pgfAttributes, AttrSet chrAttributes) {
+            // characterAttributes are ignored here
+            // TODO we could supply paragraph attributes either
+            // with a special StyledSegment (before the paragraph starts), or
+            // as a part of insertLineBreak.  but for now, let's ignore them all
+            // TODO pgfAttributes
+            segments.add(StyledSegment.LINE_BREAK);
+        }
+
+        protected void endSection() {
+        }
+
+        @Override
         public void handleText(String text) {
             if (!inParagraph) {
                 beginParagraph();
@@ -1423,8 +1435,7 @@ public class RTFReader extends RTFParser {
             deliverText(text, currentTextAttributes());
         }
 
-        abstract void deliverText(String text, AttrSet characterAttributes);
-
+        @Override
         public void close() {
             if (inParagraph) {
                 endParagraph();
@@ -1432,6 +1443,7 @@ public class RTFReader extends RTFParser {
             super.close();
         }
 
+        @Override
         public boolean handleKeyword(String keyword) {
             if (keyword.equals("\r") || keyword.equals("\n")) {
                 keyword = "par";
@@ -1459,36 +1471,6 @@ public class RTFReader extends RTFParser {
             AttrSet chrAttributes = currentTextAttributes();
             finishParagraph(pgfAttributes, chrAttributes);
             inParagraph = false;
-        }
-
-        abstract void finishParagraph(AttrSet pgfA, AttrSet chrA);
-
-        abstract void endSection();
-    }
-
-    /** RTFReader.DocumentDestination is a concrete subclass of
-     *  TextHandlingDestination which appends the text to the
-     *  StyledDocument given by the <code>target</code> ivar of the
-     *  containing RTFReader.
-     */
-    // TODO combine with TextHandlingDestination
-    class DocumentDestination extends TextHandlingDestination {
-        public void deliverText(String text, AttrSet characterAttributes) {
-            StyleAttrs a = characterAttributes.getStyleAttrs();
-            StyledSegment seg = StyledSegment.of(text, a);
-            segments.add(seg);
-        }
-
-        public void finishParagraph(AttrSet pgfAttributes, AttrSet chrAttributes) {
-            // characterAttributes are ignored here
-            // TODO we could supply paragraph attributes either
-            // with a special StyledSegment (before the paragraph starts), or
-            // as a part of insertLineBreak.  but for now, let's ignore them all
-            // TODO pgfAttributes
-            segments.add(StyledSegment.LINE_BREAK);
-        }
-
-        public void endSection() {
         }
     }
 }
