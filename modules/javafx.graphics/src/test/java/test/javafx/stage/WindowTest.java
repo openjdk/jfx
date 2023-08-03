@@ -33,12 +33,12 @@ import static junit.framework.Assert.assertNotNull;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-
 import javafx.collections.ObservableList;
+import javafx.scene.Scene;
+import javafx.scene.layout.Region;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
 import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.TKStage;
@@ -82,7 +82,8 @@ public final class WindowTest {
         assertEquals(1.0f, peer.opacity);
     }
 
-    @Test public void testProperties() {
+    @Test
+    public void testProperties() {
         javafx.collections.ObservableMap<Object, Object> properties = testWindow.getProperties();
 
         /* If we ask for it, we should get it.
@@ -111,7 +112,8 @@ public final class WindowTest {
         return (StubStage) unkPeer;
     }
 
-    @Test public void testGetWindowsIsObservable() {
+    @Test
+    public void testGetWindowsIsObservable() {
         ObservableList<Window> windows = Window.getWindows();
 
         final int initialWindowCount = windows.size();
@@ -152,14 +154,16 @@ public final class WindowTest {
 
     // There is no UOE here because the window being removed is not in the list of windows,
     // so no modification of the windows list occurs.
-    @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_emptyList() {
+    @Test
+    public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_emptyList() {
         Stage anotherTestWindow = new Stage();
         Window.getWindows().remove(anotherTestWindow);
     }
 
     // There is no UOE here because the window being removed is not in the list of windows,
     // so no modification of the windows list occurs.
-    @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_nonEmptyList() {
+    @Test
+    public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_nonEmptyList() {
         ObservableList<Window> windows = Window.getWindows();
 
         final int initialWindowCount = windows.size();
@@ -172,5 +176,59 @@ public final class WindowTest {
 
         windows.remove(anotherTestWindow);
         assertEquals(initialWindowCount + 1, windows.size());
+    }
+
+    @Test
+    public void testSetWidthAfterSizeToScene() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.sizeToScene();
+        testWindow.setWidth(800);
+        testWindow.show();
+        assertEquals(800, testWindow.getWidth(), 1);
+        assertEquals(500, testWindow.getHeight(), 1);
+    }
+
+    @Test
+    public void testSetHeightAfterSizeToScene() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.sizeToScene();
+        testWindow.setHeight(600);
+        testWindow.show();
+        assertEquals(400, testWindow.getWidth(), 1);
+        assertEquals(600, testWindow.getHeight(), 1);
+    }
+
+    @Test
+    public void testSetSizeAfterSizeToScene() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.sizeToScene();
+        testWindow.setWidth(800);
+        testWindow.setHeight(600);
+        testWindow.show();
+        assertEquals(800, testWindow.getWidth(), 1);
+        assertEquals(600, testWindow.getHeight(), 1);
+    }
+
+    @Test
+    public void testSizeToSceneBeforeShowing() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.sizeToScene();
+        testWindow.show();
+        assertEquals(400, testWindow.getWidth(), 1);
+        assertEquals(500, testWindow.getHeight(), 1);
+    }
+
+    @Test
+    public void testSizeToSceneAfterShowing() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.show();
+        testWindow.sizeToScene();
+        assertEquals(400, testWindow.getWidth(), 1);
+        assertEquals(500, testWindow.getHeight(), 1);
     }
 }
