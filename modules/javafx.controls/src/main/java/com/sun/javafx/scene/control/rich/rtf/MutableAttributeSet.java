@@ -36,6 +36,7 @@ import javafx.scene.text.TextAlignment;
  */
 public class MutableAttributeSet {
     private final HashMap<Object,Object> attrs = new HashMap<>();
+    private MutableAttributeSet parent;
 
     public MutableAttributeSet(MutableAttributeSet a) {
     }
@@ -44,7 +45,13 @@ public class MutableAttributeSet {
     }
 
     public Object getAttribute(Object attr) {
-        return attrs.get(attr);
+        Object v = attrs.get(attr);
+        if (v == null) {
+            if (parent != null) {
+                v = parent.getAttribute(attr);
+            }
+        }
+        return v;
     }
 
     public Set<Object> getAttributeNames() {
@@ -52,12 +59,15 @@ public class MutableAttributeSet {
     }
     
     public void addAttribute(Object attr, Object value) {
+        attrs.put(attr, value);
     }
 
     public void addAttributes(MutableAttributeSet a) {
+        attrs.putAll(a.attrs);
     }
 
-    public void removeAttribute(Object swingName) {
+    public void removeAttribute(Object attr) {
+        attrs.remove(attr);
     }
     
     /**
@@ -68,39 +78,78 @@ public class MutableAttributeSet {
      * @param parent the parent
      */
     public void setResolveParent(MutableAttributeSet parent) {
+        this.parent = parent;
     }
 
     public StyleAttrs getStyleAttrs() {
+        return
+            StyleAttrs.
+            builder().
+            set(StyleAttrs.BOLD, getBoolean(StyleAttrs.BOLD)).
+            set(StyleAttrs.ITALIC, getBoolean(StyleAttrs.ITALIC)).
+            set(StyleAttrs.FONT_FAMILY, getString(StyleAttrs.FONT_FAMILY)).
+            set(StyleAttrs.TEXT_COLOR, getColor(StyleAttrs.TEXT_COLOR)).
+            set(StyleAttrs.UNDERLINE, getBoolean(StyleAttrs.UNDERLINE)).
+            create();
+    }
+
+    private boolean getBoolean(Object attr) {
+        return Boolean.TRUE.equals(attrs.get(attr));
+    }
+
+    private String getString(Object attr) {
+        Object v = attrs.get(attr);
+        if (v instanceof String s) {
+            return s;
+        }
         return null;
     }
 
-    public void setItalic(boolean b) {
+    private Color getColor(Object attr) {
+        Object v = attrs.get(attr);
+        if (v instanceof Color c) {
+            return c;
+        }
+        return null;
     }
 
-    public void setBold(boolean b) {
+    public void setItalic(boolean on) {
+        attrs.put(StyleAttrs.ITALIC, on);
     }
 
-    public void setUnderline(boolean b) {
+    public void setBold(boolean on) {
+        attrs.put(StyleAttrs.BOLD, on);
     }
 
-    public void setForeground(Color defaultColor) {
+    public void setUnderline(boolean on) {
+        attrs.put(StyleAttrs.UNDERLINE, on);
+    }
+
+    public void setForeground(Color c) {
+        attrs.put(StyleAttrs.TEXT_COLOR, c);
     }
 
     public void setLeftIndent(double d) {
+        // TODO
     }
 
     public void setRightIndent(double d) {
+        // TODO
     }
 
     public void setFirstLineIndent(double d) {
+        // TODO
     }
 
     public void setFontFamily(String fontFamily) {
+        attrs.put(StyleAttrs.FONT_FAMILY, fontFamily);
     }
 
     public void setBackground(Color bg) {
+        // TODO
     }
 
     public void setAlignment(TextAlignment left) {
+        // TODO
     }
 }

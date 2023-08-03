@@ -34,10 +34,8 @@ import java.io.StreamTokenizer;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
@@ -86,9 +84,6 @@ public class RTFReader extends RTFParser {
     /** This Map maps section style numbers to Style objects. */
     private Map<Integer, Style> sectionStyles;
 
-    // TODO remove
-    private int rtfversion;
-
     /** <code>true</code> to indicate that if the next keyword is unknown,
      *  the containing group should be ignored. */
     private boolean ignoreGroupIfUnknownKeyword;
@@ -109,20 +104,17 @@ public class RTFReader extends RTFParser {
      *  for those keywords which simply insert some text. */
     private static final HashMap<String, String> textKeywords = initTextKeywords();
 
-    // FIX rename
     /* some entries in parserState */
-    private static final String TabAlignmentKey = "tab_alignment";
-    private static final String TabLeaderKey = "tab_leader";
+    //private static final String TabAlignmentKey = "tab_alignment";
+    //private static final String TabLeaderKey = "tab_leader";
 
     private static final HashMap<String, char[]> characterSets = initCharacterSets();
 
     /* TODO: per-font font encodings ( \fcharset control word ) ? */
 
     /**
-     * Creates a new RTFReader instance. Text will be sent to
-     * the specified TextAcceptor.
-     *
-     * @param target The TextAcceptor which is to receive the text.
+     * Creates a new RTFReader instance.
+     * @param text the RTF input string
      */
     public RTFReader(String text) {
         this.text = text;
@@ -130,11 +122,21 @@ public class RTFReader extends RTFParser {
 
         parserState = new HashMap<>();
         fontTable = new HashMap<Integer, String>();
-
-        rtfversion = -1;
-
         mockery = new MockAttributeSet();
         documentAttributes = new MutableAttributeSet();
+    }
+
+    /**
+     * Processes the RTF input and generates a StyledInput instance.
+     * @return the StyledInput
+     * @throws IOException when an I/O error occurs.
+     */
+    public StyledInput generateStyledInput() throws IOException {
+        if (segments == null) {
+            segments = new ArrayList<>();
+            readFromReader(new StringReader(text));
+        }
+        return SegmentStyledInput.of(segments);
     }
 
     private static HashMap<String, String> initTextKeywords() {
@@ -480,8 +482,9 @@ public class RTFReader extends RTFParser {
             return true;
         }
         if (keyword.equals("u")) {
-            if (parameter < 0)
+            if (parameter < 0) {
                 parameter = parameter + 65536;
+            }
             handleText((char)parameter);
             Number skip = (Number)(parserState.get("UnicodeSkip"));
             if (skip != null) {
@@ -493,13 +496,14 @@ public class RTFReader extends RTFParser {
         }
 
         if (keyword.equals("rtf")) {
-            rtfversion = parameter;
+            //rtfversion = parameter;
             setRTFDestination(new DocumentDestination());
             return true;
         }
 
-        if (keyword.startsWith("NeXT") || keyword.equals("private"))
+        if (keyword.startsWith("NeXT") || keyword.equals("private")) {
             ignoreGroupIfUnknownKeywordSave = true;
+        }
 
         if (keyword.contains("ansicpg")) {
             setCharacterSet("ansicpg");
@@ -507,12 +511,12 @@ public class RTFReader extends RTFParser {
         }
 
         if (rtfDestination != null) {
-            if (rtfDestination.handleKeyword(keyword, parameter))
+            if (rtfDestination.handleKeyword(keyword, parameter)) {
                 return true;
+            }
         }
 
-        /* this point is reached only if the keyword is unrecognized */
-
+        // this point is reached only if the keyword is unrecognized
         if (ignoreGroupIfUnknownKeywordSave) {
             setRTFDestination(new DiscardingDestination());
         }
@@ -553,8 +557,9 @@ public class RTFReader extends RTFParser {
     /** Adds a character set to the RTFReader's list
      *  of known character sets */
     public static void defineCharacterSet(String name, char[] table) {
-        if (table.length < 256)
+        if (table.length < 256) {
             throw new IllegalArgumentException("Translation table must have 256 entries.");
+        }
         characterSets.put(name, table);
     }
 
@@ -612,16 +617,11 @@ public class RTFReader extends RTFParser {
         return values;
     }
 
-    static char[] readCharset(java.net.URL href) throws IOException {
-        return readCharset(href.openStream());
-    }
-
     /** An interface (could be an entirely abstract class) describing
      *  a destination. The RTF reader always has a current destination
      *  which is where text is sent.
-     *
-     *  @see RTFReader
      */
+    // FIX abstract class, same as Discarding
     interface Destination {
         void handleBinaryBlob(byte[] data);
 
@@ -643,11 +643,9 @@ public class RTFReader extends RTFParser {
      *  It accepts all keywords and text but does nothing with them. */
     static class DiscardingDestination implements Destination {
         public void handleBinaryBlob(byte[] data) {
-            /* Discard binary blobs. */
         }
 
         public void handleText(String text) {
-            /* Discard text. */
         }
 
         public boolean handleKeyword(String text) {
@@ -661,38 +659,35 @@ public class RTFReader extends RTFParser {
         }
 
         public void begingroup() {
-            /* Ignore groups --- the RTFReader will keep track of the
-               current group level as necessary */
         }
 
         public void endgroup(Map<Object, Object> oldState) {
-            /* Ignore groups */
         }
 
         public void close() {
-            /* No end-of-destination cleanup needed */
         }
     }
 
     /** Reads the fonttbl group, inserting fonts into the RTFReader's
      *  fontTable dictionary. */
     class FonttblDestination implements Destination {
-        int nextFontNumber;
-        Integer fontNumberKey = null;
-        String nextFontFamily;
+        private int nextFontNumber;
+        private Integer fontNumberKey;
+        private String nextFontFamily;
 
         public void handleBinaryBlob(byte[] data) {
-            /* Discard binary blobs. */ }
+        }
 
         public void handleText(String text) {
             int semicolon = text.indexOf(';');
             String fontName;
 
-            if (semicolon > -1)
+            if (semicolon > -1) {
                 fontName = text.substring(0, semicolon);
-            else
+            } else {
                 fontName = text;
-
+            }
+            
             /* TODO: do something with the font family. */
 
             if (nextFontNumber == -1 && fontNumberKey != null) {
@@ -712,7 +707,6 @@ public class RTFReader extends RTFParser {
                 nextFontFamily = keyword.substring(1);
                 return true;
             }
-
             return false;
         }
 
@@ -721,7 +715,6 @@ public class RTFReader extends RTFParser {
                 nextFontNumber = parameter;
                 return true;
             }
-
             return false;
         }
 
@@ -935,8 +928,9 @@ public class RTFReader extends RTFParser {
                     alreadyMetBasisIndexSet = new HashSet<>();
                 }
 
-                if (realizedStyle != null)
+                if (realizedStyle != null) {
                     return realizedStyle;
+                }
 
                 if (basedOn != STYLENUMBER_NONE && alreadyMetBasisIndexSet.add(basedOn)) {
                     StyleDefiningDestination styleDest;
@@ -1025,11 +1019,6 @@ public class RTFReader extends RTFParser {
             MutableAttributeSet paragraphParent = currentParagraphAttributes();
             MutableAttributeSet sectionParent = currentSectionAttributes();
 
-            /* It would probably be more efficient to use the
-             * resolver property of the attributes set for
-             * implementing rtf groups,
-             * but that's needed for styles. */
-
             /* update the cached attribute dictionaries */
             characterAttributes = new MutableAttributeSet();
             characterAttributes.addAttributes(characterParent);
@@ -1082,7 +1071,7 @@ public class RTFReader extends RTFParser {
                         ok = attr.set(documentAttributes);
                         break;
                     default:
-                        /* should never happen */
+                        // should never happen
                         ok = false;
                         break;
                     }
@@ -1154,12 +1143,13 @@ public class RTFReader extends RTFParser {
                         ok = attr.set(documentAttributes, parameter);
                         break;
                     default:
-                        /* should never happen */
+                        // should never happen
                         ok = false;
                         break;
                     }
-                    if (ok)
+                    if (ok) {
                         return true;
+                    }
                 }
             }
 
@@ -1334,7 +1324,6 @@ public class RTFReader extends RTFParser {
          * as given in StyleConstants) from the current parser state.
          *
          * @return a newly created MutableAttributeSet.
-         * @see StyleConstants
          */
         MutableAttributeSet currentParagraphAttributes() {
             /* NB if there were a mutableCopy() method we should use it */
@@ -1524,18 +1513,5 @@ public class RTFReader extends RTFParser {
 
         public void endSection() {
         }
-    }
-
-    /**
-     * Processes the RTF input and generates a StyledInput instance.
-     * @return
-     * @throws IOException when an I/O error occurs.
-     */
-    public StyledInput generateStyledInput() throws IOException {
-        if (segments == null) {
-            segments = new ArrayList<>();
-            readFromReader(new StringReader(text));
-        }
-        return SegmentStyledInput.of(segments);
     }
 }
