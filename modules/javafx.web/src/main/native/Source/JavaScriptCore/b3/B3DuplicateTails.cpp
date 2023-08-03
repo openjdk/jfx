@@ -77,6 +77,15 @@ public:
             if (block->last()->type() != Void) // Demoting doesn't handle terminals with values.
                 continue;
 
+            bool canCopyBlock = true;
+            for (Value* value : *block) {
+                if (value->kind().isCloningForbidden()) {
+                    canCopyBlock = false;
+                    break;
+                }
+            }
+
+            if (canCopyBlock)
             candidates.add(block);
         }
 

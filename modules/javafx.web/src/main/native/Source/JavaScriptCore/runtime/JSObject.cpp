@@ -859,6 +859,19 @@ bool JSObject::putInlineSlow(JSGlobalObject* globalObject, PropertyName property
     return putInlineFast(globalObject, propertyName, value, slot);
 }
 
+bool JSObject::mightBeSpecialProperty(VM& vm, JSType type, UniquedStringImpl* uid)
+{
+    switch (type) {
+    case ArrayType:
+    case DerivedArrayType:
+        return uid == vm.propertyNames->length.impl();
+    case JSFunctionType:
+        return uid == vm.propertyNames->length.impl() || uid == vm.propertyNames->name.impl() || uid == vm.propertyNames->prototype.impl();
+    default:
+        return true;
+    }
+}
+
 static NEVER_INLINE bool definePropertyOnReceiverSlow(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, JSObject* receiver, bool shouldThrow)
 {
     VM& vm = globalObject->vm();
@@ -903,8 +916,8 @@ bool JSObject::definePropertyOnReceiver(JSGlobalObject* globalObject, PropertyNa
     if (receiver->type() == PureForwardingProxyType)
         receiver = jsCast<JSProxy*>(receiver)->target();
 
-    if (slot.isTaintedByOpaqueObject() || slot.context() == PutPropertySlot::ReflectSet) {
-        if (receiver->methodTable()->defineOwnProperty != JSObject::defineOwnProperty)
+    if (slot.isTaintedByOpaqueObject() || receiver->methodTable()->defineOwnProperty != JSObject::defineOwnProperty) {
+        if (mightBeSpecialProperty(vm, receiver->type(), propertyName.uid()))
             return definePropertyOnReceiverSlow(globalObject, propertyName, value, receiver, slot.isStrictMode());
     }
 
