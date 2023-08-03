@@ -25,8 +25,10 @@
 
 package com.sun.javafx.scene.control.rich.rtf;
 
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Set;
+import javafx.scene.control.rich.model.StyleAttribute;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
@@ -151,5 +153,84 @@ public class AttrSet {
 
     public void setAlignment(TextAlignment left) {
         // TODO
+    }
+
+    /**
+     * An internal AttrSet holder.  Original name: MockAttributeSet.
+     */
+    public static class Holder extends AttrSet {
+        public HashMap<Object, Object> backing;
+
+        public boolean isEmpty() {
+            return backing.isEmpty();
+        }
+
+        public int getAttributeCount() {
+            return backing.size();
+        }
+
+        public boolean isDefined(Object name) {
+            return (backing.get(name)) != null;
+        }
+
+        public boolean isEqual(AttrSet attr) {
+            throw new InternalError();
+        }
+
+        public AttrSet copyAttributes() {
+            throw new InternalError();
+        }
+
+        @Override
+        public Object getAttribute(Object name) {
+            return backing.get(name);
+        }
+
+        public void addAttribute(StyleAttribute name, Object value) {
+            backing.put(name, value);
+        }
+
+        @Override
+        public void addAttributes(AttrSet attr) {
+            for (Object k : attr.getAttributeNames()) {
+                Object v = attr.getAttribute(k);
+                backing.put(k, v);
+            }
+        }
+
+        @Override
+        public void removeAttribute(Object name) {
+            backing.remove(name);
+        }
+
+        public void removeAttributes(AttrSet attr) {
+            throw new InternalError();
+        }
+
+        public void removeAttributes(Enumeration<?> en) {
+            throw new InternalError();
+        }
+
+        @Override
+        public void setResolveParent(AttrSet pp) {
+            throw new InternalError();
+        }
+
+        @Override
+        public Set<Object> getAttributeNames() {
+            return backing.keySet();
+        }
+
+        public boolean containsAttribute(Object name, Object value) {
+            throw new InternalError();
+        }
+
+        public boolean containsAttributes(AttrSet attr) {
+            throw new InternalError();
+        }
+
+        public AttrSet getResolveParent() {
+            throw new InternalError();
+        }
     }
 }

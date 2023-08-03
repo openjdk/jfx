@@ -25,14 +25,11 @@
 
 package com.sun.javafx.scene.control.rich.rtf;
 
+/**
+ * Replacement for javax.swing.text.Style.
+ */
 public class Style extends AttrSet {
-    public void addAttributes(AttrSet currentTextAttributes) {
-    }
-
-    public String getAttribute(String styletype) {
-        return null;
-    }
-
-    public void addAttribute(String name, Object value) {
+    /** Default constructor. */
+    public Style() {
     }
 }

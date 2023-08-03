@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
+// adapted from package javax.swing.text.rtf;
 package com.sun.javafx.scene.control.rich.rtf;
 
 import java.io.BufferedReader;
@@ -69,7 +69,6 @@ public class RTFReader extends RTFParser {
      *  variable for speed. */
     private Destination rtfDestination;
     /** This holds the current document attributes. */
-    // FIX remove?
     private AttrSet documentAttributes;
 
     /** This Dictionary maps Integer font numbers to String font names. */
@@ -92,7 +91,7 @@ public class RTFReader extends RTFParser {
      *  Unicode character. */
     private int skippingCharacters;
 
-    private MockAttributeSet mockery;
+    private final AttrSet.Holder mockery = new AttrSet.Holder();
 
     private static final String DEFAULT_STYLE = "default";
     private final HashMap<String,Style> styles = initStyles(); // TODO can init default style on demand
@@ -121,7 +120,6 @@ public class RTFReader extends RTFParser {
 
         parserState = new HashMap<>();
         fontTable = new HashMap<Integer, String>();
-        mockery = new MockAttributeSet();
         documentAttributes = new AttrSet();
     }
 
@@ -180,6 +178,7 @@ public class RTFReader extends RTFParser {
 
     private Style addStyle(String nm, Style parent) {
         Style s = new Style();
+        s.setResolveParent(parent);
         styles.put(nm, s);
         return s;
     }
