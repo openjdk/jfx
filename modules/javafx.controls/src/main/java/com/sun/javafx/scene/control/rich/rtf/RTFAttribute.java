@@ -37,11 +37,11 @@ public abstract class  RTFAttribute {
     public static final int D_DOCUMENT = 3;
     public static final int D_META = 4;
     
-    public abstract boolean set(MutableAttributeSet target);
+    public abstract boolean set(AttrSet target);
 
-    public abstract boolean set(MutableAttributeSet target, int parameter);
+    public abstract boolean set(AttrSet target, int parameter);
 
-    public abstract boolean setDefault(MutableAttributeSet target);
+    public abstract boolean setDefault(AttrSet target);
     
     protected final int domain;
     protected final StyleAttribute swingName;

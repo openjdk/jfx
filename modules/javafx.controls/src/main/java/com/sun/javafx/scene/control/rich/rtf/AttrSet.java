@@ -34,14 +34,14 @@ import javafx.scene.text.TextAlignment;
 /**
  * Attribute Container
  */
-public class MutableAttributeSet {
+public class AttrSet {
     private final HashMap<Object,Object> attrs = new HashMap<>();
-    private MutableAttributeSet parent;
+    private AttrSet parent;
 
-    public MutableAttributeSet(MutableAttributeSet a) {
+    public AttrSet(AttrSet a) {
     }
     
-    public MutableAttributeSet() {
+    public AttrSet() {
     }
 
     public Object getAttribute(Object attr) {
@@ -62,7 +62,7 @@ public class MutableAttributeSet {
         attrs.put(attr, value);
     }
 
-    public void addAttributes(MutableAttributeSet a) {
+    public void addAttributes(AttrSet a) {
         attrs.putAll(a.attrs);
     }
 
@@ -77,7 +77,7 @@ public class MutableAttributeSet {
      *
      * @param parent the parent
      */
-    public void setResolveParent(MutableAttributeSet parent) {
+    public void setResolveParent(AttrSet parent) {
         this.parent = parent;
     }
 

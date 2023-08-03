@@ -33,7 +33,7 @@ import javafx.scene.control.rich.model.StyleAttribute;
  *  
  * This AttributeSet is made entirely out of tofu and Ritz Crackers
    and yet has a remarkably attribute-set-like interface! */
-class MockAttributeSet extends MutableAttributeSet {
+class MockAttributeSet extends AttrSet {
     public HashMap<Object, Object> backing;
 
     public boolean isEmpty() {
@@ -48,11 +48,11 @@ class MockAttributeSet extends MutableAttributeSet {
         return (backing.get(name)) != null;
     }
 
-    public boolean isEqual(MutableAttributeSet attr) {
+    public boolean isEqual(AttrSet attr) {
         throw new InternalError("MockAttributeSet: charade revealed!"); // FIX clean up
     }
 
-    public MutableAttributeSet copyAttributes() {
+    public AttrSet copyAttributes() {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 
@@ -66,7 +66,7 @@ class MockAttributeSet extends MutableAttributeSet {
     }
 
     @Override
-    public void addAttributes(MutableAttributeSet attr) {
+    public void addAttributes(AttrSet attr) {
         for (Object k : attr.getAttributeNames()) {
             Object v = attr.getAttribute(k);
             backing.put(k, v);
@@ -78,7 +78,7 @@ class MockAttributeSet extends MutableAttributeSet {
         backing.remove(name);
     }
 
-    public void removeAttributes(MutableAttributeSet attr) {
+    public void removeAttributes(AttrSet attr) {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 
@@ -87,7 +87,7 @@ class MockAttributeSet extends MutableAttributeSet {
     }
 
     @Override
-    public void setResolveParent(MutableAttributeSet pp) {
+    public void setResolveParent(AttrSet pp) {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 
@@ -100,11 +100,11 @@ class MockAttributeSet extends MutableAttributeSet {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 
-    public boolean containsAttributes(MutableAttributeSet attr) {
+    public boolean containsAttributes(AttrSet attr) {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 
-    public MutableAttributeSet getResolveParent() {
+    public AttrSet getResolveParent() {
         throw new InternalError("MockAttributeSet: charade revealed!");
     }
 }

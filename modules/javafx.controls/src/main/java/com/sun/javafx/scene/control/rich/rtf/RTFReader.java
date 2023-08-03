@@ -71,7 +71,7 @@ public class RTFReader extends RTFParser {
     private Destination rtfDestination;
     /** This holds the current document attributes. */
     // FIX remove
-    private MutableAttributeSet documentAttributes;
+    private AttrSet documentAttributes;
 
     /** This Dictionary maps Integer font numbers to String font names. */
     private HashMap<Integer, String> fontTable;
@@ -123,7 +123,7 @@ public class RTFReader extends RTFParser {
         parserState = new HashMap<>();
         fontTable = new HashMap<Integer, String>();
         mockery = new MockAttributeSet();
-        documentAttributes = new MutableAttributeSet();
+        documentAttributes = new AttrSet();
     }
 
     /**
@@ -988,13 +988,13 @@ public class RTFReader extends RTFParser {
     abstract class AttributeTrackingDestination implements Destination {
         /** This is the "chr" element of parserState, cached for
          *  more efficient use */
-        private MutableAttributeSet characterAttributes;
+        private AttrSet characterAttributes;
         /** This is the "pgf" element of parserState, cached for
          *  more efficient use */
-        private MutableAttributeSet paragraphAttributes;
+        private AttrSet paragraphAttributes;
         /** This is the "sec" element of parserState, cached for
          *  more efficient use */
-        private MutableAttributeSet sectionAttributes;
+        private AttrSet sectionAttributes;
 
         public AttributeTrackingDestination() {
             characterAttributes = rootCharacterAttributes();
@@ -1015,28 +1015,28 @@ public class RTFReader extends RTFParser {
         }
 
         public void begingroup() {
-            MutableAttributeSet characterParent = currentTextAttributes();
-            MutableAttributeSet paragraphParent = currentParagraphAttributes();
-            MutableAttributeSet sectionParent = currentSectionAttributes();
+            AttrSet characterParent = currentTextAttributes();
+            AttrSet paragraphParent = currentParagraphAttributes();
+            AttrSet sectionParent = currentSectionAttributes();
 
             /* update the cached attribute dictionaries */
-            characterAttributes = new MutableAttributeSet();
+            characterAttributes = new AttrSet();
             characterAttributes.addAttributes(characterParent);
             parserState.put("chr", characterAttributes);
 
-            paragraphAttributes = new MutableAttributeSet();
+            paragraphAttributes = new AttrSet();
             paragraphAttributes.addAttributes(paragraphParent);
             parserState.put("pgf", paragraphAttributes);
 
-            sectionAttributes = new MutableAttributeSet();
+            sectionAttributes = new AttrSet();
             sectionAttributes.addAttributes(sectionParent);
             parserState.put("sec", sectionAttributes);
         }
 
         public void endgroup(Map<Object, Object> oldState) {
-            characterAttributes = (MutableAttributeSet)parserState.get("chr");
-            paragraphAttributes = (MutableAttributeSet)parserState.get("pgf");
-            sectionAttributes = (MutableAttributeSet)parserState.get("sec");
+            characterAttributes = (AttrSet)parserState.get("chr");
+            paragraphAttributes = (AttrSet)parserState.get("pgf");
+            sectionAttributes = (AttrSet)parserState.get("sec");
         }
 
         public void close() {
@@ -1237,8 +1237,8 @@ public class RTFReader extends RTFParser {
 
         /** Returns a new MutableAttributeSet containing the
          *  default character attributes */
-        protected MutableAttributeSet rootCharacterAttributes() {
-            MutableAttributeSet a = new MutableAttributeSet();
+        protected AttrSet rootCharacterAttributes() {
+            AttrSet a = new AttrSet();
             /* TODO: default font */
             a.setItalic(false);
             a.setBold(false);
@@ -1249,8 +1249,8 @@ public class RTFReader extends RTFParser {
 
         /** Returns a new MutableAttributeSet containing the
          *  default paragraph attributes */
-        protected MutableAttributeSet rootParagraphAttributes() {
-            MutableAttributeSet a = new MutableAttributeSet();
+        protected AttrSet rootParagraphAttributes() {
+            AttrSet a = new AttrSet();
             a.setLeftIndent(0.0);
             a.setRightIndent(0.0);
             a.setFirstLineIndent(0.0);
@@ -1261,8 +1261,8 @@ public class RTFReader extends RTFParser {
 
         /** Returns a new MutableAttributeSet containing the
          *  default section attributes */
-        protected MutableAttributeSet rootSectionAttributes() {
-            MutableAttributeSet a = new MutableAttributeSet();
+        protected AttrSet rootSectionAttributes() {
+            AttrSet a = new AttrSet();
             return a;
         }
 
@@ -1272,8 +1272,8 @@ public class RTFReader extends RTFParser {
          *
          * @return a new MutableAttributeSet containing the text attributes.
          */
-        MutableAttributeSet currentTextAttributes() {
-            MutableAttributeSet attributes = new MutableAttributeSet(characterAttributes);
+        AttrSet currentTextAttributes() {
+            AttrSet attributes = new AttrSet(characterAttributes);
 
             /* figure out the font name */
             /* TODO: catch exceptions for undefined attributes,
@@ -1325,9 +1325,9 @@ public class RTFReader extends RTFParser {
          *
          * @return a newly created MutableAttributeSet.
          */
-        MutableAttributeSet currentParagraphAttributes() {
+        AttrSet currentParagraphAttributes() {
             /* NB if there were a mutableCopy() method we should use it */
-            MutableAttributeSet a = new MutableAttributeSet(paragraphAttributes);
+            AttrSet a = new AttrSet(paragraphAttributes);
 
             /*** Tab stops ***/
 //            TabStop[] tabs = (TabStop[])parserState.get("_tabs_immutable");
@@ -1360,8 +1360,8 @@ public class RTFReader extends RTFParser {
          *
          * @return a newly created MutableAttributeSet.
          */
-        public MutableAttributeSet currentSectionAttributes() {
-            MutableAttributeSet attributes = new MutableAttributeSet(sectionAttributes);
+        public AttrSet currentSectionAttributes() {
+            AttrSet attributes = new AttrSet(sectionAttributes);
 
             Style sectionStyle = (Style)parserState.get("sectionStyle");
             if (sectionStyle != null) {
@@ -1446,7 +1446,7 @@ public class RTFReader extends RTFParser {
             deliverText(text, currentTextAttributes());
         }
 
-        abstract void deliverText(String text, MutableAttributeSet characterAttributes);
+        abstract void deliverText(String text, AttrSet characterAttributes);
 
         public void close() {
             if (inParagraph) {
@@ -1478,13 +1478,13 @@ public class RTFReader extends RTFParser {
         }
 
         protected void endParagraph() {
-            MutableAttributeSet pgfAttributes = currentParagraphAttributes();
-            MutableAttributeSet chrAttributes = currentTextAttributes();
+            AttrSet pgfAttributes = currentParagraphAttributes();
+            AttrSet chrAttributes = currentTextAttributes();
             finishParagraph(pgfAttributes, chrAttributes);
             inParagraph = false;
         }
 
-        abstract void finishParagraph(MutableAttributeSet pgfA, MutableAttributeSet chrA);
+        abstract void finishParagraph(AttrSet pgfA, AttrSet chrA);
 
         abstract void endSection();
     }
@@ -1496,13 +1496,13 @@ public class RTFReader extends RTFParser {
      */
     // TODO combine with TextHandlingDestination
     class DocumentDestination extends TextHandlingDestination implements Destination {
-        public void deliverText(String text, MutableAttributeSet characterAttributes) {
+        public void deliverText(String text, AttrSet characterAttributes) {
             StyleAttrs a = characterAttributes.getStyleAttrs();
             StyledSegment seg = StyledSegment.of(text, a);
             segments.add(seg);
         }
 
-        public void finishParagraph(MutableAttributeSet pgfAttributes, MutableAttributeSet chrAttributes) {
+        public void finishParagraph(AttrSet pgfAttributes, AttrSet chrAttributes) {
             // characterAttributes are ignored here
             // TODO we could supply paragraph attributes either
             // with a special StyledSegment (before the paragraph starts), or

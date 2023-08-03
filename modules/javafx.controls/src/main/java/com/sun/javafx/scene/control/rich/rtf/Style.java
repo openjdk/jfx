@@ -25,8 +25,8 @@
 
 package com.sun.javafx.scene.control.rich.rtf;
 
-public class Style extends MutableAttributeSet {
-    public void addAttributes(MutableAttributeSet currentTextAttributes) {
+public class Style extends AttrSet {
+    public void addAttributes(AttrSet currentTextAttributes) {
     }
 
     public String getAttribute(String styletype) {

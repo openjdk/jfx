@@ -128,7 +128,7 @@ class RTFAttributes {
             rtfDefault = false;
         }
 
-        public boolean set(MutableAttributeSet target) {
+        public boolean set(AttrSet target) {
             /* TODO: There's some ambiguity about whether this should
                *set* or *toggle* the attribute. */
             target.addAttribute(swingName, True);
@@ -136,7 +136,7 @@ class RTFAttributes {
             return true; /* true indicates we were successful */
         }
 
-        public boolean set(MutableAttributeSet target, int parameter) {
+        public boolean set(AttrSet target, int parameter) {
             /* See above note in the case that parameter==1 */
             Boolean value = (parameter != 0 ? True : False);
 
@@ -145,7 +145,7 @@ class RTFAttributes {
             return true; /* true indicates we were successful */
         }
 
-        public boolean setDefault(MutableAttributeSet target) {
+        public boolean setDefault(AttrSet target) {
             if (swingDefault != rtfDefault || (target.getAttribute(swingName) != null))
                 target.addAttribute(swingName(), Boolean.valueOf(rtfDefault));
             return true;
@@ -170,7 +170,7 @@ class RTFAttributes {
             swingValue = Integer.valueOf(v);
         }
 
-        public boolean set(MutableAttributeSet target) {
+        public boolean set(AttrSet target) {
             if (swingValue == null)
                 target.removeAttribute(swingName);
             else
@@ -179,11 +179,11 @@ class RTFAttributes {
             return true;
         }
 
-        public boolean set(MutableAttributeSet target, int parameter) {
+        public boolean set(AttrSet target, int parameter) {
             return false;
         }
 
-        public boolean setDefault(MutableAttributeSet target) {
+        public boolean setDefault(AttrSet target) {
             target.removeAttribute(swingName);
             return true;
         }
@@ -220,11 +220,11 @@ class RTFAttributes {
 //            return new NumericAttribute(d, s, r, null, dr, 20f);
 //        }
 
-        public boolean set(MutableAttributeSet target) {
+        public boolean set(AttrSet target) {
             return false;
         }
 
-        public boolean set(MutableAttributeSet target, int parameter) {
+        public boolean set(AttrSet target, int parameter) {
             Number swingValue;
 
             if (scale == 1f)
@@ -235,7 +235,7 @@ class RTFAttributes {
             return true;
         }
 
-        public boolean setDefault(MutableAttributeSet target) {
+        public boolean setDefault(AttrSet target) {
             Number old = (Number)target.getAttribute(swingName);
             if (old == null)
                 old = swingDefault;
