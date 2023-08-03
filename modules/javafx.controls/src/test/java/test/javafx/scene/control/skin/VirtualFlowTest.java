@@ -1791,12 +1791,8 @@ assertEquals(0, firstCell.getIndex());
         // Scroll up.
         flow.shim_getVbar().adjustValue(0.05263157894736842);
 
-        try {
-            flow.shim_getVbar().adjustValue(0.05263157894736842);
-        } catch (Exception e) {
-            // This should not throw any exception. It used to throw an IndexOutOfBoundsException.
-            fail();
-        }
+        // This should not throw any exception. It used to throw an IndexOutOfBoundsException.
+        flow.shim_getVbar().adjustValue(0.05263157894736842);
     }
 
     @Test
