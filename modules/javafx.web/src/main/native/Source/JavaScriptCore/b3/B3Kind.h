@@ -198,7 +198,7 @@ public:
         ASSERT(hasCloningForbidden());
         m_cloningForbidden = isCloningForbidden;
     }
-    
+
     // Rules for adding new properties:
     // - Put the accessors here.
     // - hasBlah() should check if the opcode allows for your property.
