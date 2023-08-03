@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 1998, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2023, Oracle and/or its affiliates. All rights reserved.
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  *
  *
@@ -26,8 +26,8 @@ package com.sun.javafx.scene.control.rich.rtf;
 
 /**
    Class to hold dictionary keys used by the RTF reader/writer.
-   These should be moved into StyleConstants.
 */
+// TODO move to RTFReader?
 class Constants
 {
     /** An array of TabStops */

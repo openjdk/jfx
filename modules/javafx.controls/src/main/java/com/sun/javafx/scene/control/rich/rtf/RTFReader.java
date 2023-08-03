@@ -38,7 +38,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledSegment;
@@ -220,13 +219,6 @@ public class RTFReader extends RTFParser {
             rtfDestination.handleText(text);
             return;
         }
-
-        //warning("Text with no destination. oops.");
-    }
-
-    /** The default color for text which has no specified color. */
-    Color defaultColor() {
-        return Color.BLACK;
     }
 
     /** Called by the superclass when a new RTF group is begun.
@@ -708,13 +700,9 @@ public class RTFReader extends RTFParser {
         private int red;
         private int green;
         private int blue;
-        private Vector<Color> proTemTable;
+        private final ArrayList<Color> colors = new ArrayList<>();
 
         public ColortblDestination() {
-            red = 0;
-            green = 0;
-            blue = 0;
-            proTemTable = new Vector<Color>();
         }
 
         @Override
@@ -723,31 +711,31 @@ public class RTFReader extends RTFParser {
                 if (text.charAt(index) == ';') {
                     Color newColor;
                     newColor = Color.rgb(red, green, blue);
-                    proTemTable.addElement(newColor);
+                    colors.add(newColor);
                 }
             }
         }
 
         @Override
         public void close() {
-            int count = proTemTable.size();
-            //warning("Done reading color table, " + count + " entries.");
-            colorTable = new Color[count];
-            proTemTable.copyInto(colorTable);
+            int sz = colors.size();
+            colorTable = colors.toArray(new Color[sz]);
         }
 
         @Override
         public boolean handleKeyword(String keyword, int parameter) {
-            if (keyword.equals("red")) {
+            switch (keyword) {
+            case "red":
                 red = parameter;
-            } else if (keyword.equals("green")) {
+                return true;
+            case "green":
                 green = parameter;
-            } else if (keyword.equals("blue")) {
+                return true;
+            case "blue":
                 blue = parameter;
-            } else { 
-                return false;
+                return true;
             }
-            return true;
+            return false;
         }
 
         @Override
@@ -762,10 +750,9 @@ public class RTFReader extends RTFParser {
      * into the three style arrays in the RTFReader.
      */
     class StylesheetDestination extends Destination {
-        private HashMap<Integer, StyleDefiningDestination> definedStyles;
+        private HashMap<Integer, StyleDefiningDestination> definedStyles = new HashMap<>();
 
         public StylesheetDestination() {
-            definedStyles = new HashMap<>();
         }
 
         @Override
@@ -780,7 +767,6 @@ public class RTFReader extends RTFParser {
             HashMap<Integer, Style> secStyles = new HashMap<>();
             for (StyleDefiningDestination style : definedStyles.values()) {
                 Style defined = style.realize();
-                //warning("Style " + style.number + " (" + style.styleName + "): " + defined);
                 String stype = (String)defined.getAttribute(Constants.StyleType);
                 Map<Integer, Style> toMap;
                 if (stype.equals(Constants.STSection)) {
@@ -837,11 +823,11 @@ public class RTFReader extends RTFParser {
 
             @Override
             public boolean handleKeyword(String keyword) {
-                if (keyword.equals("additive")) {
+                switch (keyword) {
+                case "additive":
                     additive = true;
                     return true;
-                }
-                if (keyword.equals("shidden")) {
+                case "shidden":
                     hidden = true;
                     return true;
                 }
@@ -859,26 +845,31 @@ public class RTFReader extends RTFParser {
                     parameter = -32767;
                 }
 
-                if (keyword.equals("s")) {
+                switch (keyword) {
+                case "s":
                     characterStyle = false;
                     sectionStyle = false;
                     number = parameter;
-                } else if (keyword.equals("cs")) {
+                    return true;
+                case "cs":
                     characterStyle = true;
                     sectionStyle = false;
                     number = parameter;
-                } else if (keyword.equals("ds")) {
+                    return true;
+                case "ds":
                     characterStyle = false;
                     sectionStyle = true;
                     number = parameter;
-                } else if (keyword.equals("sbasedon")) {
+                    return true;
+                case "sbasedon":
                     basedOn = parameter;
-                } else if (keyword.equals("snext")) {
+                    return true;
+                case "snext":
                     nextStyle = parameter;
-                } else {
-                    return super.handleKeyword(keyword, parameter);
+                    return true;
                 }
-                return true;
+
+                return super.handleKeyword(keyword, parameter);
             }
 
             public Style realize() {
@@ -967,14 +958,6 @@ public class RTFReader extends RTFParser {
         }
 
         @Override
-        public void handleBinaryBlob(byte[] data) {
-            /* This should really be in TextHandlingDestination, but
-             * since *nobody* does anything with binary blobs, this
-             * is more convenient. */
-            //warning("Unexpected binary data in RTF file.");
-        }
-
-        @Override
         public void begingroup() {
             AttrSet characterParent = currentTextAttributes();
             AttrSet paragraphParent = currentParagraphAttributes();
@@ -1041,17 +1024,14 @@ public class RTFReader extends RTFParser {
                 }
             }
 
-            if (keyword.equals("plain")) {
+            switch (keyword) {
+            case "plain":
                 resetCharacterAttributes();
                 return true;
-            }
-
-            if (keyword.equals("pard")) {
+            case "pard":
                 resetParagraphAttributes();
                 return true;
-            }
-
-            if (keyword.equals("sectd")) {
+            case "sectd":
                 resetSectionAttributes();
                 return true;
             }
@@ -1065,15 +1045,14 @@ public class RTFReader extends RTFParser {
                 keyword = "cf";
             }
 
-            if (keyword.equals("f")) {
+            switch (keyword) {
+            case "f":
                 parserState.put(keyword, Integer.valueOf(parameter));
                 return true;
-            }
-            if (keyword.equals("cf")) {
+            case "cf":
                 parserState.put(keyword, Integer.valueOf(parameter));
                 return true;
-            }
-            if (keyword.equals("cb")) {
+            case "cb":
                 parserState.put(keyword, Integer.valueOf(parameter));
                 return true;
             }
@@ -1110,11 +1089,6 @@ public class RTFReader extends RTFParser {
                         return true;
                     }
                 }
-            }
-
-            if (keyword.equals("fs")) {
-                characterAttributes.addAttribute(StyleAttrs.FONT_SIZE, (parameter / 2));
-                return true;
             }
 
             /* TODO: superscript/subscript */
@@ -1176,6 +1150,12 @@ public class RTFReader extends RTFParser {
 //                return true;
 //            }
 
+            switch (keyword) {
+            case "fs":
+                characterAttributes.addAttribute(StyleAttrs.FONT_SIZE, (parameter / 2));
+                return true;
+            }
+
             if (keyword.equals("s") && paragraphStyles != null) {
                 parserState.put("paragraphStyle", paragraphStyles.get(parameter));
                 return true;
@@ -1202,7 +1182,7 @@ public class RTFReader extends RTFParser {
             a.setItalic(false);
             a.setBold(false);
             a.setUnderline(false);
-            a.setForeground(defaultColor());
+            a.setForeground(Color.BLACK);
             return a;
         }
 
@@ -1426,16 +1406,13 @@ public class RTFReader extends RTFParser {
 
         @Override
         public boolean handleKeyword(String keyword) {
-            if (keyword.equals("\r") || keyword.equals("\n")) {
-                keyword = "par";
-            }
-
-            if (keyword.equals("par")) {
+            switch (keyword) {
+            case "\r":
+            case "\n":
+            case "par":
                 endParagraph();
                 return true;
-            }
-
-            if (keyword.equals("sect")) {
+            case "sect":
                 endSection();
                 return true;
             }
