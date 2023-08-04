@@ -604,6 +604,15 @@ public class JFXPanel extends JComponent {
         super.processComponentEvent(e);
     }
 
+    private AffineTransform getCurrentTransform() {
+        GraphicsConfiguration config = getGraphicsConfiguration();
+        if (config == null) {
+            config = GraphicsEnvironment.getLocalGraphicsEnvironment().
+                     getDefaultScreenDevice().getDefaultConfiguration();
+        }
+        return config.getDefaultTransform();
+    }
+
     // called on EDT only
     private void updateComponentSize() {
         int oldWidth = pWidth;
@@ -618,13 +627,8 @@ public class JFXPanel extends JComponent {
         pWidth = Math.max(0, getWidth());
         pHeight = Math.max(0, getHeight());
         Graphics g = getGraphics();
-        GraphicsConfiguration config = getGraphicsConfiguration();
-        if (config == null) {
-            config = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                     getDefaultScreenDevice().getDefaultConfiguration();
-        }
-        double newScaleFactorX = config.getDefaultTransform().getScaleX();
-        double newScaleFactorY = config.getDefaultTransform().getScaleY();
+        double newScaleFactorX = getCurrentTransform().getScaleX();
+        double newScaleFactorY = getCurrentTransform().getScaleY();
         if (oldWidth == 0 && oldHeight == 0 && pWidth == 0 && pHeight == 0) {
             return;
         }
@@ -817,13 +821,8 @@ public class JFXPanel extends JComponent {
             }
             gg.drawImage(pixelsIm, 0, 0, pWidth, pHeight, null);
 
-            GraphicsConfiguration config = getGraphicsConfiguration();
-            if (config == null) {
-                config = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                         getDefaultScreenDevice().getDefaultConfiguration();
-            }
-            double newScaleFactorX = config.getDefaultTransform().getScaleX();
-            double newScaleFactorY = config.getDefaultTransform().getScaleY();
+            double newScaleFactorX = getCurrentTransform().getScaleX();
+            double newScaleFactorY = getCurrentTransform().getScaleY();
             if (scaleFactorX != newScaleFactorX || scaleFactorY != newScaleFactorY) {
                 createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
                 // The scene will request repaint.
