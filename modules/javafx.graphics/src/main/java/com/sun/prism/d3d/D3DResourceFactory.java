@@ -311,7 +311,7 @@ class D3DResourceFactory extends BaseShaderFactory {
             if (context.isLost()) {
                 System.err.println("RT Texture allocation while the device is lost");
             }
-            
+
             if (context.isHung()) {
                 System.err.println("RT Texture allocation while the device is hung");
             }
@@ -377,7 +377,7 @@ class D3DResourceFactory extends BaseShaderFactory {
             if (context.isLost()) {
                 System.err.println("SwapChain allocation while the device is lost");
             }
-            
+
             if (context.isHung()) {
                 System.err.println("SwapChain allocation while the device is hung");
             }

@@ -60,7 +60,7 @@ class D3DGraphics extends BaseShaderGraphics implements D3DContextSource {
             if (context.isLost()) {
                 System.err.println("Create graphics while the device is lost");
             }
-            
+
             if (context.isHung()) {
                 System.err.println("Create graphics while the device is hung");
             }

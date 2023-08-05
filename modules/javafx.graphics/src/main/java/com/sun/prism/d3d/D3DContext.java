@@ -50,7 +50,7 @@ class D3DContext extends BaseShaderContext {
     public static final int D3DERR_DEVICEREMOVED    = 0x88760870;
     public static final int D3DERR_DEVICEHUNG       = 0X88760874;
     public static final int D3DERR_OUTOFVIDEOMEMORY = 0x8876017c;
-    
+
     public static final int E_FAIL                  = 0x80004005;
     public static final int D3D_OK                  = 0x0;
 
@@ -127,7 +127,7 @@ class D3DContext extends BaseShaderContext {
     boolean isLost() {
         return isLost;
     }
-    
+
     /**
      * Returns whether D3DERR_DEVICEHUNG error has been occurred.
      * @return true if hung error occurred, false otherwise
@@ -152,7 +152,7 @@ class D3DContext extends BaseShaderContext {
     private void setLost() {
         isLost = true;
     }
-    
+
     /**
      * set device to hung state
      */
@@ -227,11 +227,11 @@ class D3DContext extends BaseShaderContext {
             // the resource factory and context for each adapter.
             D3DPipeline.getInstance().reinitialize();
         }
-        
+
         if (hr == D3DERR_DEVICEHUNG) {
             setHung();
         }
-        
+
         if (isHung && hr == D3D_OK) {
             isHung = false;
 
