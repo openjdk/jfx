@@ -29,8 +29,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A subscription encapsulates how to cancel it without having
- * to keep track of how it was created.
+ * A {@code Subscription} represents the encapsulation of the result of an action
+ * that can be cancelled. Subscriptions can be obtained, for example, as a result
+ * of registering a callback, starting a timer, or allocating resources. They
+ * provide a convenient way for subscribers to cancel these actions at a later time,
+ * without requiring additional information or even access to the source from where
+ * they were originally obtained.
+ *
+ * <p>Subscriptions can also be combined using {@link #combine} and {@link #and},
+ * which allows for multiple subscriptions to be unsubscribed together. This is
+ * useful when they share the same lifecycle, for example, when performing
+ * cleanup for the same object.
  *
  * @since 21
  */
