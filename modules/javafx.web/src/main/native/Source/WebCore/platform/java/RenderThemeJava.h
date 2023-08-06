@@ -118,7 +118,7 @@ private:
     bool paintWidget(int widgetIndex, const RenderObject& o,
                      const PaintInfo& i, const FloatRect& rect);
     Color getSelectionColor(int index) const;
-    MediaControlResource *mediaResource = nullptr;
+    std::unique_ptr<MediaControlResource> mediaResource;
 #if ENABLE(VIDEO)
     bool paintMediaControl(jint type, const RenderObject&, const PaintInfo&, const IntRect&);
 #endif

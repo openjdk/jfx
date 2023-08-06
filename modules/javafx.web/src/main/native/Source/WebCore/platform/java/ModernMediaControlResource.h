@@ -33,6 +33,7 @@
 class MediaControlResource {
 public:
     virtual String getValue(const String &key) = 0;
+    virtual ~MediaControlResource() { }
 };
 
 class ModernMediaControlResource : public MediaControlResource {
@@ -46,7 +47,7 @@ public:
 // Factory for creating MediaControlResource objects
 class MediaControlResourceFactory {
 public:
-    static MediaControlResource *createResource() {
-        return new ModernMediaControlResource();
+    static std::unique_ptr<MediaControlResource> createResource() {
+        return std::make_unique<ModernMediaControlResource>();
     }
 };

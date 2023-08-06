@@ -67,9 +67,8 @@ RenderTheme& RenderTheme::singleton()
     return sm_defaultInstance;
 }
 
-RenderThemeJava::RenderThemeJava()
+RenderThemeJava::RenderThemeJava() : mediaResource(MediaControlResourceFactory::createResource())
 {
-    mediaResource = MediaControlResourceFactory::createResource();
 }
 
 int RenderThemeJava::createWidgetState(const RenderObject& o)
