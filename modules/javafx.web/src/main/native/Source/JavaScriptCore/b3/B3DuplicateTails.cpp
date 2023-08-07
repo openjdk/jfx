@@ -86,7 +86,7 @@ public:
             }
 
             if (canCopyBlock)
-            candidates.add(block);
+                candidates.add(block);
         }
 
         // Collect the set of values that must be de-SSA'd.
