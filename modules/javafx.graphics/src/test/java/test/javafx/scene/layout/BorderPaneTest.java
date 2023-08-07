@@ -928,7 +928,7 @@ public class BorderPaneTest {
             "209.0, 430.0, false, true",  // flowPane 4x1, no margin, padding
             "211.0, 210.0, false, true",  // flowPane 2x2, no margin, padding
             "209.0, 430.0, true, true",   // flowPane 4x1, margin, padding
-            "211.0, 210.0, true, true",   // flowPane 2x2, margin, padding
+            "241.0, 210.0, true, true",   // flowPane 2x2, margin, padding
     })
     @ParameterizedTest
     public void testFlowPaneCenterChildWithPaddingAndMargin(double width, double minHeight, boolean useMargin, boolean usePadding) {
