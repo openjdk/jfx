@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,10 +29,15 @@ import javafx.geometry.Insets;
 import static org.junit.Assert.*;
 import javafx.geometry.Orientation;
 import javafx.scene.ParentShim;
+import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
+import javafx.stage.Stage;
 import org.junit.Before;
 
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 
 public class BorderPaneTest {
@@ -913,6 +918,56 @@ public class BorderPaneTest {
 
         assertEquals(20, center.getLayoutX(), 1e-100);
         assertEquals(5, center.getLayoutY(), 1e-100);
+    }
+
+    @CsvSource({
+            "209.0, 430.0, false, false", // flowPane 4x1, no margin, no padding
+            "211.0, 210.0, false, false", // flowPane 2x2, no margin, no padding
+            "209.0, 430.0, true, false",  // flowPane 4x1, margin, no padding
+            "211.0, 210.0, true, false",  // flowPane 2x2, margin, no padding
+            "209.0, 430.0, false, true",  // flowPane 4x1, no margin, padding
+            "211.0, 210.0, false, true",  // flowPane 2x2, no margin, padding
+            "209.0, 430.0, true, true",   // flowPane 4x1, margin, padding
+            "211.0, 210.0, true, true",   // flowPane 2x2, margin, padding
+    })
+    @ParameterizedTest
+    public void testFlowPaneCenterChildWithPaddingAndMargin(double width, double minHeight, boolean useMargin, boolean usePadding) {
+        FlowPane center = new FlowPane(10, 10);
+        for (int i = 0; i < 4; i++) {
+            center.getChildren().add(
+                    new MockResizable(10,10,100,100,200,200));
+        }
+        Insets insets = new Insets(5, 10, 30, 20);
+        double left = 0d;
+        double right = 0d;
+        double top = 0d;
+        BorderPane borderpane = new BorderPane(center);
+        if (usePadding) {
+            borderpane.setPadding(insets);
+            left += insets.getLeft();
+            right += insets.getRight();
+            top += insets.getTop();
+        }
+        if (useMargin) {
+            BorderPane.setMargin(center, insets);
+            left += insets.getLeft();
+            right += insets.getRight();
+            top += insets.getTop();
+        }
+        borderpane.setMinWidth(width);
+        borderpane.setPrefWidth(width);
+        borderpane.setMaxWidth(width);
+
+        Scene scene = new Scene(borderpane, width, 200);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        assertEquals(100,  center.minWidth(200), 1e-100);
+        assertEquals(minHeight,  center.minHeight(width), 1e-100);
+        assertEquals(width - left - right,  center.getWidth(), 1e-100);
+        assertEquals(left, center.getBoundsInParent().getMinX(), 1e-100);
+        assertEquals(top, center.getBoundsInParent().getMinY(), 1e-100);
     }
 
     @Test

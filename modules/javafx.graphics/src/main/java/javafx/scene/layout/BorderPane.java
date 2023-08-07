@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -376,6 +376,8 @@ public class BorderPane extends Pane {
     }
 
     @Override protected double computeMinWidth(double height) {
+        final Insets insets = getInsets();
+
         double topMinWidth = getAreaWidth(getTop(), -1, true);
         double bottomMinWidth = getAreaWidth(getBottom(), -1, true);
 
@@ -389,7 +391,8 @@ public class BorderPane extends Pane {
             double topPrefHeight = getAreaHeight(getTop(), -1, false);
             double bottomPrefHeight = getAreaHeight(getBottom(), -1, false);
 
-            double middleAreaHeight = Math.max(0, height - topPrefHeight - bottomPrefHeight);
+            double middleAreaHeight = Math.max(0,
+                    height - insets.getTop() - insets.getBottom() - topPrefHeight - bottomPrefHeight);
 
             leftPrefWidth = getAreaWidth(getLeft(), middleAreaHeight, false);
             rightPrefWidth = getAreaWidth(getRight(), middleAreaHeight, false);
@@ -400,7 +403,6 @@ public class BorderPane extends Pane {
             centerMinWidth = getAreaWidth(getCenter(), -1, true);
         }
 
-        final Insets insets = getInsets();
         return insets.getLeft() +
                 Math.max(leftPrefWidth + centerMinWidth + rightPrefWidth, Math.max(topMinWidth,bottomMinWidth)) +
                 insets.getRight();
@@ -408,6 +410,9 @@ public class BorderPane extends Pane {
 
     @Override protected double computeMinHeight(double width) {
         final Insets insets = getInsets();
+        if (width != -1) {
+            width -= (insets.getLeft() + insets.getRight());
+        }
 
         // Bottom and top are always at their pref height
         double topPrefHeight = getAreaHeight(getTop(), width, false);
@@ -432,6 +437,8 @@ public class BorderPane extends Pane {
     }
 
     @Override protected double computePrefWidth(double height) {
+        final Insets insets = getInsets();
+
         double topPrefWidth = getAreaWidth(getTop(), -1, false);
         double bottomPrefWidth = getAreaWidth(getBottom(), -1, false);
 
@@ -439,13 +446,14 @@ public class BorderPane extends Pane {
         double rightPrefWidth;
         double centerPrefWidth;
 
-        if ( height != -1 && (childHasContentBias(getLeft(), Orientation.VERTICAL) ||
+        if (height != -1 && (childHasContentBias(getLeft(), Orientation.VERTICAL) ||
                 childHasContentBias(getRight(), Orientation.VERTICAL) ||
             childHasContentBias(getCenter(), Orientation.VERTICAL))) {
             double topPrefHeight = getAreaHeight(getTop(), -1, false);
             double bottomPrefHeight = getAreaHeight(getBottom(), -1, false);
 
-            double middleAreaHeight = Math.max(0, height - topPrefHeight - bottomPrefHeight);
+            double middleAreaHeight = Math.max(0,
+                    height - insets.getTop() - insets.getBottom() - topPrefHeight - bottomPrefHeight);
 
             leftPrefWidth = getAreaWidth(getLeft(), middleAreaHeight, false);
             rightPrefWidth = getAreaWidth(getRight(), middleAreaHeight, false);
@@ -456,7 +464,6 @@ public class BorderPane extends Pane {
             centerPrefWidth = getAreaWidth(getCenter(), -1, false);
         }
 
-        final Insets insets = getInsets();
         return insets.getLeft() +
                 Math.max(leftPrefWidth + centerPrefWidth + rightPrefWidth, Math.max(topPrefWidth,bottomPrefWidth)) +
                 insets.getRight();
@@ -464,6 +471,9 @@ public class BorderPane extends Pane {
 
     @Override protected double computePrefHeight(double width) {
         final Insets insets = getInsets();
+        if (width != -1) {
+            width -= (insets.getLeft() + insets.getRight());
+        }
 
         double topPrefHeight = getAreaHeight(getTop(), width, false);
         double bottomPrefHeight = getAreaHeight(getBottom(), width, false);
