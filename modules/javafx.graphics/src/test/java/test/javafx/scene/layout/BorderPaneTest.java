@@ -26,25 +26,28 @@
 package test.javafx.scene.layout;
 
 import javafx.geometry.Insets;
-import static org.junit.Assert.*;
 import javafx.geometry.Orientation;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.stage.Stage;
-import org.junit.Before;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BorderPaneTest {
 
     BorderPane borderpane;
 
-    @Before public void setUp() {
+    @BeforeEach public void setUp() {
         this.borderpane = new BorderPane();
     }
 
