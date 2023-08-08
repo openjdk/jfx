@@ -41,6 +41,7 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
+import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
@@ -459,8 +460,19 @@ public class PrismTextLayout implements TextLayout {
                         }
                     }
                 }
+                int prevNodeLength = 0;
+                boolean isPrevNodeExcluded = false;
                 for (TextRun r: runs) {
+                    if (!r.getTextSpan().getText().equals(text)) {
+                        prevNodeLength += r.getWidth();
+                    }
                     if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
+                        BaseBounds textBounds = new BoxBounds();
+                        getBounds(r.getTextSpan(), textBounds);
+                        if (textBounds.getMinX() == 0 && !isPrevNodeExcluded) {
+                            x -= prevNodeLength;
+                            isPrevNodeExcluded = true;
+                        }
                         if (x > r.getWidth()) {
                             x -= r.getWidth();
                             relIndex += r.getLength();

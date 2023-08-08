@@ -201,7 +201,7 @@ public class TextCharacterIndexTest {
 
     private void addMultiLineTextNodes() {
         Util.runAndWait(() -> {
-            textOne = new Text("This is Text\nThis is Text");
+            textOne = new Text("This is Text This is Text");
             textOne.setFont(new Font(48));
             textTwo = new Text("😊💙🦋🏁🔥");
             textTwo.setFont(new Font(48));
@@ -212,7 +212,7 @@ public class TextCharacterIndexTest {
 
     private void addMultiLineEmojisInTextNodes() {
         Util.runAndWait(() -> {
-            textOne = new Text("😊💙🦋🏁🔥\n😊💙🦋🏁🔥");
+            textOne = new Text("😊💙🦋🏁🔥😊💙🦋🏁🔥😊💙🦋🏁🔥");
             textOne.setFont(new Font(48));
             textTwo = new Text("This is Text");
             textTwo.setFont(new Font(48));
