@@ -27,7 +27,7 @@
  */
 '''
 '''
-Tool to generate base64 code 
+Tool to generate base64 code
 '''
 import os
 import base64

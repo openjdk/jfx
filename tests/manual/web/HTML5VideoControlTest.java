@@ -26,6 +26,7 @@
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.HBox;
+import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
@@ -36,7 +37,7 @@ public class HTML5VideoControlTest extends Application {
         WebView webView = new WebView();
         webView.getEngine().loadContent(
             "<video width=\"320\" height=\"240\" controls>\n" +
-            "  <source src=\"your_video_url.mp4\" type=\"video/mp4\">\n" +
+            "  <source src=\"https://download.oracle.com/otndocs/products/javafx/oow2010-2.mp4\">\n" +
             "  Your browser does not support the video tag.\n" +
             "</video>"
         );
@@ -61,11 +62,10 @@ public class HTML5VideoControlTest extends Application {
         instructionsBox.setPrefWidth(400);
 
         instructionsBox.getChildren().addAll(
-            new javafx.scene.control.Label("Instructions:"),
-            new javafx.scene.control.Label("1. Click 'Play' to start the video."),
-            new javafx.scene.control.Label("2. Use the video controls to pause,"),
-            new javafx.scene.control.Label("2. controls should be visible,"),
-            new javafx.scene.control.Label("4. it works!")
+            new Label("Instructions:"),
+            new Label("1. Click 'Play' to start the video."),
+            new Label("2. The media controls should be visible once the video starts playing."),
+            new Label("2. Use the media controls to play/pause/seek the video.")
         );
 
         return instructionsBox;
@@ -75,4 +75,3 @@ public class HTML5VideoControlTest extends Application {
         launch(args);
     }
 }
-

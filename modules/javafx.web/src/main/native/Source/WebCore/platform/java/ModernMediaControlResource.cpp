@@ -23,7 +23,6 @@
  * questions.
  */
 
-
 #include "ModernMediaControlResource.h"
 
 ModernMediaControlResource::ModernMediaControlResource() {
