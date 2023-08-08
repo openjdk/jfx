@@ -82,8 +82,7 @@ public final class WindowTest {
         assertEquals(1.0f, peer.opacity);
     }
 
-    @Test
-    public void testProperties() {
+    @Test public void testProperties() {
         javafx.collections.ObservableMap<Object, Object> properties = testWindow.getProperties();
 
         /* If we ask for it, we should get it.
@@ -112,8 +111,7 @@ public final class WindowTest {
         return (StubStage) unkPeer;
     }
 
-    @Test
-    public void testGetWindowsIsObservable() {
+    @Test public void testGetWindowsIsObservable() {
         ObservableList<Window> windows = Window.getWindows();
 
         final int initialWindowCount = windows.size();
@@ -154,16 +152,14 @@ public final class WindowTest {
 
     // There is no UOE here because the window being removed is not in the list of windows,
     // so no modification of the windows list occurs.
-    @Test
-    public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_emptyList() {
+    @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_emptyList() {
         Stage anotherTestWindow = new Stage();
         Window.getWindows().remove(anotherTestWindow);
     }
 
     // There is no UOE here because the window being removed is not in the list of windows,
     // so no modification of the windows list occurs.
-    @Test
-    public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_nonEmptyList() {
+    @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_nonEmptyList() {
         ObservableList<Window> windows = Window.getWindows();
 
         final int initialWindowCount = windows.size();
