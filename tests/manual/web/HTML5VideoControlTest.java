@@ -25,7 +25,6 @@
 
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.layout.HBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebView;
@@ -45,10 +44,7 @@ public class HTML5VideoControlTest extends Application {
         VBox root = new VBox();
         root.setSpacing(20);
 
-        HBox content = new HBox();
-        content.getChildren().addAll(createInstructionsBox(), webView); // Swap the order here
-
-        root.getChildren().addAll(content);
+        root.getChildren().addAll(createInstructionsBox(), webView);
 
         Scene scene = new Scene(root, 800, 400);
         primaryStage.setScene(scene);
@@ -65,7 +61,7 @@ public class HTML5VideoControlTest extends Application {
             new Label("Instructions:"),
             new Label("1. Click 'Play' to start the video."),
             new Label("2. The media controls should be visible once the video starts playing."),
-            new Label("2. Use the media controls to play/pause/seek the video.")
+            new Label("3. Use the media controls to play/pause/seek the video.")
         );
 
         return instructionsBox;
