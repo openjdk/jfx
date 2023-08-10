@@ -42,22 +42,20 @@ namespace WGSL {
 // Step 1
 //
 
-namespace AST {
 class ShaderModule;
-}
 
 struct SuccessfulCheck {
     SuccessfulCheck() = delete;
     SuccessfulCheck(SuccessfulCheck&&);
-    SuccessfulCheck(Vector<Warning>&&, UniqueRef<AST::ShaderModule>&&);
+    SuccessfulCheck(WTF::Vector<Warning>&&, UniqueRef<ShaderModule>&&);
     ~SuccessfulCheck();
-    Vector<Warning> warnings;
-    UniqueRef<AST::ShaderModule> ast;
+    WTF::Vector<Warning> warnings;
+    UniqueRef<ShaderModule> ast;
 };
 
 struct FailedCheck {
-    Vector<Error> errors;
-    Vector<Warning> warnings;
+    WTF::Vector<Error> errors;
+    WTF::Vector<Warning> warnings;
 };
 
 struct SourceMap {
@@ -65,7 +63,11 @@ struct SourceMap {
     // https://sourcemaps.info/spec.html
 };
 
-std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&);
+struct Configuration {
+    uint32_t maxBuffersPlusVertexBuffersForVertexStage = 8;
+};
+
+std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&, const Configuration&);
 
 //
 // Step 2
@@ -144,12 +146,12 @@ struct BindGroupLayoutEntry {
 
 struct BindGroupLayout {
     // Metal's [[id(n)]] indices are equal to the index into this vector.
-    Vector<BindGroupLayoutEntry> entries;
+    WTF::Vector<BindGroupLayoutEntry> entries;
 };
 
 struct PipelineLayout {
     // Metal's [[buffer(n)]] indices are equal to the index into this vector.
-    Vector<BindGroupLayout> bindGroupLayouts;
+    WTF::Vector<BindGroupLayout> bindGroupLayouts;
 };
 
 namespace Reflection {
@@ -204,7 +206,7 @@ struct PrepareResult {
 
 // These are not allowed to fail.
 // All failures must have already been caught in check().
-PrepareResult prepare(const AST::ShaderModule&, const HashMap<String, PipelineLayout>&);
-PrepareResult prepare(const AST::ShaderModule&, const String& entryPointName, const std::optional<PipelineLayout>&);
+PrepareResult prepare(ShaderModule&, const HashMap<String, PipelineLayout>&);
+PrepareResult prepare(ShaderModule&, const String& entryPointName, const std::optional<PipelineLayout>&);
 
 } // namespace WGSL

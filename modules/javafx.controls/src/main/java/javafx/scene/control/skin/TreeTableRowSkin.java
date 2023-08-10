@@ -343,6 +343,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         unregisterInvalidationListeners(graphicProperty());
         treeItem = getSkinnable().getTreeItem();
         registerInvalidationListener(graphicProperty(), e -> updateTreeItemGraphic());
+        updateDisclosureNodeAndGraphic();
     }
 
     private TreeTableView<T> getTreeTableView() {

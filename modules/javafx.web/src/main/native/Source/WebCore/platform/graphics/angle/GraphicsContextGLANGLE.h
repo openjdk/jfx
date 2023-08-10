@@ -25,9 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEBGL) && USE(ANGLE)
+#if ENABLE(WEBGL)
 
 #include "ANGLEUtilities.h"
+#include "GCGLSpan.h"
 #include "GraphicsContextGL.h"
 #include "GraphicsContextGLState.h"
 #include <memory>
@@ -114,10 +115,10 @@ public:
     void framebufferTexture2D(GCGLenum target, GCGLenum attachment, GCGLenum textarget, PlatformGLObject, GCGLint level) final;
     void frontFace(GCGLenum mode) final;
     void generateMipmap(GCGLenum target) final;
-    bool getActiveAttrib(PlatformGLObject program, GCGLuint index, ActiveInfo&) final;
-    bool getActiveAttribImpl(PlatformGLObject program, GCGLuint index, ActiveInfo&);
-    bool getActiveUniform(PlatformGLObject program, GCGLuint index, ActiveInfo&) final;
-    bool getActiveUniformImpl(PlatformGLObject program, GCGLuint index, ActiveInfo&);
+    bool getActiveAttrib(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) final;
+    bool getActiveAttribImpl(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&);
+    bool getActiveUniform(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) final;
+    bool getActiveUniformImpl(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&);
     void getAttachedShaders(PlatformGLObject program, GCGLsizei maxCount, GCGLsizei* count, PlatformGLObject* shaders);
     GCGLint getAttribLocation(PlatformGLObject, const String& name) final;
     void getBooleanv(GCGLenum pname, GCGLSpan<GCGLboolean> value) final;
@@ -269,7 +270,7 @@ public:
     GCGLboolean isQuery(PlatformGLObject query) final;
     void beginQuery(GCGLenum target, PlatformGLObject query) final;
     void endQuery(GCGLenum target) final;
-    PlatformGLObject getQuery(GCGLenum target, GCGLenum pname) final;
+    GCGLint getQuery(GCGLenum target, GCGLenum pname) final;
     GCGLuint getQueryObjectui(PlatformGLObject query, GCGLenum pname) final;
     PlatformGLObject createSampler() final;
     void deleteSampler(PlatformGLObject sampler) final;
@@ -292,7 +293,7 @@ public:
     void beginTransformFeedback(GCGLenum primitiveMode) final;
     void endTransformFeedback() final;
     void transformFeedbackVaryings(PlatformGLObject program, const Vector<String>& varyings, GCGLenum bufferMode) final;
-    void getTransformFeedbackVarying(PlatformGLObject program, GCGLuint index, ActiveInfo&) final;
+    void getTransformFeedbackVarying(PlatformGLObject program, GCGLuint index, GraphicsContextGLActiveInfo&) final;
     void pauseTransformFeedback() final;
     void resumeTransformFeedback() final;
     void bindBufferBase(GCGLenum target, GCGLuint index, PlatformGLObject buffer) final;
@@ -312,6 +313,16 @@ public:
     bool isExtensionEnabled(const String&) override;
     void drawBuffersEXT(GCGLSpan<const GCGLenum>) override;
     String getTranslatedShaderSourceANGLE(PlatformGLObject) override;
+    PlatformGLObject createQueryEXT() final;
+    void deleteQueryEXT(PlatformGLObject query) final;
+    GCGLboolean isQueryEXT(PlatformGLObject query) final;
+    void beginQueryEXT(GCGLenum target, PlatformGLObject query) final;
+    void endQueryEXT(GCGLenum target) final;
+    void queryCounterEXT(PlatformGLObject query, GCGLenum target) final;
+    GCGLint getQueryiEXT(GCGLenum target, GCGLenum pname) final;
+    GCGLint getQueryObjectiEXT(PlatformGLObject query, GCGLenum pname) final;
+    GCGLuint64 getQueryObjectui64EXT(PlatformGLObject query, GCGLenum pname) final;
+    GCGLint64 getInteger64EXT(GCGLenum pname) final;
     void enableiOES(GCGLenum target, GCGLuint index) final;
     void disableiOES(GCGLenum target, GCGLuint index) final;
     void blendEquationiOES(GCGLuint buf, GCGLenum mode) final;
@@ -323,6 +334,7 @@ public:
     void drawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLintptr offset, GCGLsizei instanceCount, GCGLint baseVertex, GCGLuint baseInstance) final;
     void multiDrawArraysInstancedBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLint, const GCGLsizei, const GCGLsizei, const GCGLuint> firstsCountsInstanceCountsAndBaseInstances) final;
     void multiDrawElementsInstancedBaseVertexBaseInstanceANGLE(GCGLenum mode, GCGLSpanTuple<const GCGLsizei, const GCGLsizei, const GCGLsizei, const GCGLint, const GCGLuint> countsOffsetsInstanceCountsBaseVerticesAndBaseInstances, GCGLenum type) final;
+    void provokingVertexANGLE(GCGLenum provokeMode) final;
 
     PlatformGLObject createBuffer() final;
     PlatformGLObject createFramebuffer() final;
@@ -345,7 +357,8 @@ public:
 
     RefPtr<PixelBuffer> readRenderingResultsForPainting();
     RefPtr<PixelBuffer> readCompositedResultsForPainting();
-
+    // Returns true on success.
+    bool readnPixelsWithStatus(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLSpan<GCGLvoid> data);
 protected:
     GraphicsContextGLANGLE(GraphicsContextGLAttributes);
 
@@ -368,7 +381,7 @@ protected:
     void validateDepthStencil(ASCIILiteral packedDepthStencilExtension);
     void validateAttributes();
 
-    void readnPixelsImpl(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLsizei bufSize, GCGLsizei* length, GCGLsizei* columns, GCGLsizei* rows, GCGLvoid* data, bool readingToPixelBufferObject);
+    bool readnPixelsImpl(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLsizei bufSize, GCGLsizei* length, GCGLsizei* columns, GCGLsizei* rows, GCGLvoid* data, bool readingToPixelBufferObject);
 
     // Did the most recent drawing operation leave the GPU in an acceptable state?
     void checkGPUStatus();

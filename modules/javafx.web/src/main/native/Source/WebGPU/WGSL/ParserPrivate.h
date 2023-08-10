@@ -25,62 +25,83 @@
 
 #pragma once
 
-#include "AST/ShaderModule.h"
-#include "AST/Statements/ReturnStatement.h"
+#include "ASTAttribute.h"
+#include "ASTExpression.h"
+#include "ASTForward.h"
+#include "ASTStatement.h"
+#include "ASTStructure.h"
+#include "ASTTypeName.h"
+#include "ASTVariable.h"
+#include "CompilationMessage.h"
 #include "Lexer.h"
+#include <wtf/Ref.h>
 
 namespace WGSL {
+
+class ShaderModule;
 
 template<typename Lexer>
 class Parser {
 public:
-    Parser(Lexer& lexer)
-        : m_lexer(lexer)
+    Parser(ShaderModule& shaderModule, Lexer& lexer)
+        : m_shaderModule(shaderModule)
+        , m_lexer(lexer)
         , m_current(lexer.lex())
     {
     }
 
-    Expected<AST::ShaderModule, Error> parseShader();
+    Result<void> parseShader();
 
-    // UniqueRef whenever it can return multiple types.
-    Expected<UniqueRef<AST::GlobalDecl>, Error> parseGlobalDecl();
-    Expected<AST::Attributes, Error> parseAttributes();
-    Expected<UniqueRef<AST::Attribute>, Error> parseAttribute();
-    Expected<AST::StructDecl, Error> parseStructDecl(AST::Attributes&&);
-    Expected<AST::StructMember, Error> parseStructMember();
-    Expected<UniqueRef<AST::TypeDecl>, Error> parseTypeDecl();
-    Expected<UniqueRef<AST::TypeDecl>, Error> parseTypeDeclAfterIdentifier(StringView&&, SourcePosition start);
-    Expected<AST::GlobalVariableDecl, Error> parseGlobalVariableDecl(AST::Attributes&&);
-    Expected<AST::VariableQualifier, Error> parseVariableQualifier();
-    Expected<AST::StorageClass, Error> parseStorageClass();
-    Expected<AST::AccessMode, Error> parseAccessMode();
-    Expected<AST::FunctionDecl, Error> parseFunctionDecl(AST::Attributes&&);
-    Expected<AST::Parameter, Error> parseParameter();
-    Expected<UniqueRef<AST::Statement>, Error> parseStatement();
-    Expected<AST::CompoundStatement, Error> parseCompoundStatement();
-    Expected<AST::ReturnStatement, Error> parseReturnStatement();
-    Expected<UniqueRef<AST::Expression>, Error> parseShortCircuitOrExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseRelationalExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseShiftExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseAdditiveExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseMultiplicativeExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseUnaryExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseSingularExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parsePostfixExpression(UniqueRef<AST::Expression>&& base, SourcePosition startPosition);
-    Expected<UniqueRef<AST::Expression>, Error> parsePrimaryExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseLHSExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseCoreLHSExpression();
-    Expected<Vector<UniqueRef<AST::Expression>>, Error> parseArgumentExpressionList();
+    // AST::<type>::Ref whenever it can return multiple types.
+    Result<AST::Identifier> parseIdentifier();
+    Result<void> parseGlobalDecl();
+    Result<AST::Attribute::List> parseAttributes();
+    Result<AST::Attribute::Ref> parseAttribute();
+    Result<AST::Structure::Ref> parseStructure(AST::Attribute::List&&);
+    Result<AST::StructureMember> parseStructureMember();
+    Result<AST::TypeName::Ref> parseTypeName();
+    Result<AST::TypeName::Ref> parseTypeNameAfterIdentifier(AST::Identifier&&, SourcePosition start);
+    Result<AST::TypeName::Ref> parseArrayType();
+    Result<AST::Variable::Ref> parseVariable();
+    Result<AST::Variable::Ref> parseVariableWithAttributes(AST::Attribute::List&&);
+    Result<AST::VariableQualifier> parseVariableQualifier();
+    Result<AST::StorageClass> parseStorageClass();
+    Result<AST::AccessMode> parseAccessMode();
+    Result<AST::Function> parseFunction(AST::Attribute::List&&);
+    Result<AST::Parameter> parseParameter();
+    Result<AST::Statement::Ref> parseStatement();
+    Result<AST::CompoundStatement> parseCompoundStatement();
+    Result<AST::ReturnStatement> parseReturnStatement();
+    Result<AST::Expression::Ref> parseShortCircuitExpression(AST::Expression::Ref&&, TokenType, AST::BinaryOperation);
+    Result<AST::Expression::Ref> parseRelationalExpression();
+    Result<AST::Expression::Ref> parseRelationalExpressionPostUnary(AST::Expression::Ref&& lhs);
+    Result<AST::Expression::Ref> parseShiftExpression();
+    Result<AST::Expression::Ref> parseShiftExpressionPostUnary(AST::Expression::Ref&& lhs);
+    Result<AST::Expression::Ref> parseAdditiveExpressionPostUnary(AST::Expression::Ref&& lhs);
+    Result<AST::Expression::Ref> parseBitwiseExpressionPostUnary(AST::Expression::Ref&& lhs);
+    Result<AST::Expression::Ref> parseMultiplicativeExpressionPostUnary(AST::Expression::Ref&& lhs);
+    Result<AST::Expression::Ref> parseUnaryExpression();
+    Result<AST::Expression::Ref> parseSingularExpression();
+    Result<AST::Expression::Ref> parsePostfixExpression(AST::Expression::Ref&& base, SourcePosition startPosition);
+    Result<AST::Expression::Ref> parsePrimaryExpression();
+    Result<AST::Expression::Ref> parseExpression();
+    Result<AST::Expression::Ref> parseLHSExpression();
+    Result<AST::Expression::Ref> parseCoreLHSExpression();
+    Result<AST::Expression::List> parseArgumentExpressionList();
 
 private:
     Expected<Token, TokenType> consumeType(TokenType);
+    template<TokenType... TTs> Expected<Token, TokenType> consumeTypes();
+
     void consume();
 
     Token& current() { return m_current; }
 
+    ShaderModule& m_shaderModule;
     Lexer& m_lexer;
     Token m_current;
 };
+
+Result<AST::Expression::Ref> parseExpression(const String& source);
 
 } // namespace WGSL

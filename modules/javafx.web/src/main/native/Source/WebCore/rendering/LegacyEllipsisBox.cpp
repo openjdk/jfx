@@ -21,6 +21,7 @@
 #include "LegacyEllipsisBox.h"
 
 #include "Document.h"
+#include "EllipsisBoxPainter.h"
 #include "FontCascade.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
@@ -47,39 +48,9 @@ LegacyEllipsisBox::LegacyEllipsisBox(RenderBlockFlow& renderer, const AtomString
 
 void LegacyEllipsisBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom)
 {
-    GraphicsContext& context = paintInfo.context();
-    const RenderStyle& lineStyle = this->lineStyle();
-    Color textColor = lineStyle.visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor);
-    if (textColor != context.fillColor())
-        context.setFillColor(textColor);
-    bool setShadow = false;
-    if (lineStyle.textShadow()) {
-        Color shadowColor = lineStyle.colorByApplyingColorFilter(lineStyle.textShadow()->color());
-        context.setShadow(LayoutSize(lineStyle.textShadow()->x().value(), lineStyle.textShadow()->y().value()), lineStyle.textShadow()->radius().value(), shadowColor);
-        setShadow = true;
-    }
-
-    const FontCascade& font = lineStyle.fontCascade();
-    if (selectionState() != RenderObject::HighlightState::None) {
-        paintSelection(context, paintOffset, lineStyle, font);
-
-        // Select the correct color for painting the text.
-        Color foreground = paintInfo.forceTextColor() ? paintInfo.forcedTextColor() : blockFlow().selectionForegroundColor();
-        if (foreground.isValid() && foreground != textColor)
-            context.setFillColor(foreground);
-    }
-
-    // FIXME: Why is this always LTR? Fix by passing correct text run flags below.
-    context.drawText(font, RenderBlock::constructTextRun(m_str, lineStyle, ExpansionBehavior::allowRightOnly()), LayoutPoint(x() + paintOffset.x(), y() + paintOffset.y() + lineStyle.metricsOfPrimaryFont().ascent()));
-
-    // Restore the regular fill color.
-    if (textColor != context.fillColor())
-        context.setFillColor(textColor);
-
-    if (setShadow)
-        context.clearShadow();
-
-    paintMarkupBox(paintInfo, paintOffset, lineTop, lineBottom, lineStyle);
+    auto lineBox = InlineIterator::LineBox { InlineIterator::LineBoxIteratorLegacyPath { &root() } };
+    EllipsisBoxPainter { lineBox, paintInfo, paintOffset, blockFlow().selectionForegroundColor(), blockFlow().selectionBackgroundColor() }.paint();
+    paintMarkupBox(paintInfo, paintOffset, lineTop, lineBottom, lineStyle());
 }
 
 LegacyInlineBox* LegacyEllipsisBox::markupBox() const
@@ -124,27 +95,6 @@ IntRect LegacyEllipsisBox::selectionRect() const
     return enclosingIntRect(selectionRect);
 }
 
-void LegacyEllipsisBox::paintSelection(GraphicsContext& context, const LayoutPoint& paintOffset, const RenderStyle& style, const FontCascade& font)
-{
-    Color textColor = style.visitedDependentColorWithColorFilter(CSSPropertyColor);
-    Color c = blockFlow().selectionBackgroundColor();
-    if (!c.isVisible())
-        return;
-
-    // If the text color ends up being the same as the selection background, invert the selection
-    // background.
-    if (textColor == c)
-        c = c.invertedColorWithAlpha(1.0);
-
-    const LegacyRootInlineBox& rootBox = root();
-    GraphicsContextStateSaver stateSaver(context);
-    // FIXME: Why is this always LTR? Fix by passing correct text run flags below.
-    LayoutRect selectionRect { LayoutUnit(x() + paintOffset.x()), rootBox.selectionTop() + paintOffset.y(), 0_lu, rootBox.selectionHeight() };
-    TextRun run = RenderBlock::constructTextRun(m_str, style, ExpansionBehavior::allowRightOnly());
-    font.adjustSelectionRectForText(run, selectionRect);
-    context.fillRect(snapRectToDevicePixelsWithWritingDirection(selectionRect, renderer().document().deviceScaleFactor(), run.ltr()), c);
-}
-
 bool LegacyEllipsisBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction hitTestAction)
 {
     LayoutPoint adjustedLocation = accumulatedOffset + LayoutPoint(topLeft());
@@ -170,21 +120,9 @@ bool LegacyEllipsisBox::nodeAtPoint(const HitTestRequest& request, HitTestResult
     return false;
 }
 
-RenderObject::HighlightState LegacyEllipsisBox::selectionState() const
+TextRun LegacyEllipsisBox::createTextRun() const
 {
-    auto* lastSelectedBox = root().lastSelectedBox();
-    if (!is<LegacyInlineTextBox>(lastSelectedBox))
-        return RenderObject::HighlightState::None;
-
-    auto& textBox = downcast<LegacyInlineTextBox>(*lastSelectedBox);
-
-    auto truncation = textBox.truncation();
-    auto [selectionStart, selectionEnd] = textBox.selectionStartEnd();
-
-    if (truncation && selectionEnd >= *truncation && selectionStart <= *truncation)
-        return RenderObject::HighlightState::Inside;
-
-    return RenderObject::HighlightState::None;
+    return RenderBlock::constructTextRun(m_str, lineStyle(), ExpansionBehavior::allowRightOnly());
 }
 
 } // namespace WebCore

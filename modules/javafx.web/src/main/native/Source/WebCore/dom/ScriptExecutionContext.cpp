@@ -40,6 +40,7 @@
 #include "FontLoadRequest.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMExceptionHandling.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSDOMWindow.h"
 #include "JSWorkerGlobalScope.h"
 #include "JSWorkletGlobalScope.h"
@@ -48,7 +49,6 @@
 #include "Navigator.h"
 #include "Page.h"
 #include "Performance.h"
-#include "PermissionController.h"
 #include "PublicURLManager.h"
 #include "RTCDataChannelRemoteHandlerConnection.h"
 #include "RejectedPromiseTracker.h"
@@ -71,12 +71,15 @@
 #include "WorkerOrWorkletThread.h"
 #include "WorkerThread.h"
 #include "WorkletGlobalScope.h"
+#include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/DeferredWorkTimer.h>
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSPromise.h>
 #include <JavaScriptCore/ScriptCallStack.h>
+#include <JavaScriptCore/StackVisitor.h>
 #include <JavaScriptCore/StrongInlines.h>
+#include <JavaScriptCore/VM.h>
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/Ref.h>
@@ -116,9 +119,6 @@ public:
 ScriptExecutionContext::ScriptExecutionContext(ScriptExecutionContextIdentifier contextIdentifier)
     : m_identifier(contextIdentifier ? contextIdentifier : ScriptExecutionContextIdentifier::generate())
 {
-    Locker locker { allScriptExecutionContextsMapLock };
-    ASSERT(!allScriptExecutionContextsMap().contains(m_identifier));
-    allScriptExecutionContextsMap().add(m_identifier, this);
 }
 
 void ScriptExecutionContext::regenerateIdentifier()
@@ -130,6 +130,13 @@ void ScriptExecutionContext::regenerateIdentifier()
 
     m_identifier = ScriptExecutionContextIdentifier::generate();
 
+    ASSERT(!allScriptExecutionContextsMap().contains(m_identifier));
+    allScriptExecutionContextsMap().add(m_identifier, this);
+}
+
+void ScriptExecutionContext::addToContextsMap()
+{
+    Locker locker { allScriptExecutionContextsMapLock };
     ASSERT(!allScriptExecutionContextsMap().contains(m_identifier));
     allScriptExecutionContextsMap().add(m_identifier, this);
 }
@@ -182,6 +189,10 @@ ScriptExecutionContext::~ScriptExecutionContext()
     for (auto& callback : callbacks.values())
         callback();
 
+    auto postMessageCompletionHandlers = WTFMove(m_processMessageWithMessagePortsSoonHandlers);
+    for (auto& completionHandler : postMessageCompletionHandlers)
+        completionHandler();
+
 #if ENABLE(SERVICE_WORKER)
     setActiveServiceWorker(nullptr);
 #endif
@@ -194,9 +205,11 @@ ScriptExecutionContext::~ScriptExecutionContext()
 #endif
 }
 
-void ScriptExecutionContext::processMessageWithMessagePortsSoon()
+void ScriptExecutionContext::processMessageWithMessagePortsSoon(CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(isContextThread());
+    m_processMessageWithMessagePortsSoonHandlers.append(WTFMove(completionHandler));
+
     if (m_willprocessMessageWithMessagePortsSoon)
         return;
 
@@ -215,6 +228,8 @@ void ScriptExecutionContext::dispatchMessagePortEvents()
     ASSERT(m_willprocessMessageWithMessagePortsSoon);
     m_willprocessMessageWithMessagePortsSoon = false;
 
+    auto completionHandlers = std::exchange(m_processMessageWithMessagePortsSoonHandlers, Vector<CompletionHandler<void()>> { });
+
     // Make a frozen copy of the ports so we can iterate while new ones might be added or destroyed.
     for (auto* messagePort : copyToVector(m_messagePorts)) {
         // The port may be destroyed, and another one created at the same address,
@@ -223,6 +238,9 @@ void ScriptExecutionContext::dispatchMessagePortEvents()
         if (m_messagePorts.contains(messagePort) && messagePort->started())
             messagePort->dispatchMessages();
     }
+
+    for (auto& completionHandler : completionHandlers)
+        completionHandler();
 }
 
 void ScriptExecutionContext::createdMessagePort(MessagePort& messagePort)
@@ -248,7 +266,7 @@ CSSValuePool& ScriptExecutionContext::cssValuePool()
     return CSSValuePool::singleton();
 }
 
-std::unique_ptr<FontLoadRequest> ScriptExecutionContext::fontLoadRequest(String&, bool, bool, LoadedFromOpaqueSource)
+std::unique_ptr<FontLoadRequest> ScriptExecutionContext::fontLoadRequest(const String&, bool, bool, LoadedFromOpaqueSource)
 {
     return nullptr;
 }
@@ -284,6 +302,35 @@ JSC::ScriptExecutionStatus ScriptExecutionContext::jscScriptExecutionStatus() co
     if (activeDOMObjectsAreStopped())
         return JSC::ScriptExecutionStatus::Stopped;
     return JSC::ScriptExecutionStatus::Running;
+}
+
+URL ScriptExecutionContext::currentSourceURL() const
+{
+    auto* globalObject = this->globalObject();
+    if (!globalObject)
+        return { };
+
+    auto& vm = globalObject->vm();
+    auto* topCallFrame = vm.topCallFrame;
+    if (!topCallFrame)
+        return { };
+
+    URL sourceURL;
+    JSC::StackVisitor::visit(topCallFrame, vm, [&sourceURL](auto& visitor) {
+        if (visitor->isNativeFrame())
+            return IterationStatus::Continue;
+
+        auto urlString = visitor->sourceURL();
+        if (urlString.isEmpty())
+            return IterationStatus::Continue;
+
+        sourceURL = URL { WTFMove(urlString) };
+        if (sourceURL.isValid())
+            return IterationStatus::Continue;
+
+        return IterationStatus::Done;
+    });
+    return sourceURL;
 }
 
 void ScriptExecutionContext::suspendActiveDOMObjects(ReasonForSuspension why)
@@ -326,7 +373,7 @@ void ScriptExecutionContext::resumeActiveDOMObjects(ReasonForSuspension why)
 
     // In case there were pending messages at the time the script execution context entered the BackForwardCache,
     // make sure those get dispatched shortly after restoring from the BackForwardCache.
-    processMessageWithMessagePortsSoon();
+    processMessageWithMessagePortsSoon([] { });
 }
 
 void ScriptExecutionContext::stopActiveDOMObjects()
@@ -341,6 +388,7 @@ void ScriptExecutionContext::stopActiveDOMObjects()
         activeDOMObject.stop();
         return ShouldContinue::Yes;
     });
+    m_deferredPromises.clear();
 }
 
 void ScriptExecutionContext::suspendActiveDOMObjectIfNeeded(ActiveDOMObject& activeDOMObject)
@@ -377,11 +425,6 @@ void ScriptExecutionContext::didCreateDestructionObserver(ContextDestructionObse
 void ScriptExecutionContext::willDestroyDestructionObserver(ContextDestructionObserver& observer)
 {
     m_destructionObservers.remove(&observer);
-}
-
-RefPtr<PermissionController> ScriptExecutionContext::permissionController()
-{
-    return nullptr;
 }
 
 RefPtr<RTCDataChannelRemoteHandlerConnection> ScriptExecutionContext::createRTCDataChannelRemoteHandlerConnection()
@@ -574,7 +617,7 @@ bool ScriptExecutionContext::hasPendingActivity() const
     return false;
 }
 
-JSC::JSGlobalObject* ScriptExecutionContext::globalObject()
+JSC::JSGlobalObject* ScriptExecutionContext::globalObject() const
 {
     if (is<Document>(*this)) {
         auto frame = downcast<Document>(*this).frame();
@@ -749,7 +792,7 @@ static bool isOriginEquivalentToLocal(const SecurityOrigin& origin)
 ScriptExecutionContext::HasResourceAccess ScriptExecutionContext::canAccessResource(ResourceType type) const
 {
     auto* origin = securityOrigin();
-    if (!origin || origin->isUnique())
+    if (!origin || origin->isOpaque())
         return HasResourceAccess::No;
 
     switch (type) {
@@ -785,6 +828,16 @@ ScriptExecutionContext::NotificationCallbackIdentifier ScriptExecutionContext::a
 CompletionHandler<void()> ScriptExecutionContext::takeNotificationCallback(NotificationCallbackIdentifier identifier)
 {
     return m_notificationCallbacks.take(identifier);
+}
+
+void ScriptExecutionContext::addDeferredPromise(Ref<DeferredPromise>&& promise)
+{
+    m_deferredPromises.add(WTFMove(promise));
+}
+
+RefPtr<DeferredPromise> ScriptExecutionContext::takeDeferredPromise(DeferredPromise* promise)
+{
+    return m_deferredPromises.take(promise);
 }
 
 WebCoreOpaqueRoot root(ScriptExecutionContext* context)

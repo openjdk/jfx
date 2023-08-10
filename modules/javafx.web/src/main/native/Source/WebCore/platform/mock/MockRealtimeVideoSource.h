@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,9 +46,11 @@ namespace WebCore {
 class FloatRect;
 class GraphicsContext;
 
+enum class VideoFrameRotation : uint16_t;
+
 class MockRealtimeVideoSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
-    static CaptureSourceOrError create(String&& deviceID, AtomString&& name, String&& hashSalt, const MediaConstraints*, PageIdentifier);
+    static CaptureSourceOrError create(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier);
     ~MockRealtimeVideoSource();
 
     static void setIsInterrupted(bool);
@@ -56,13 +58,13 @@ public:
     ImageBuffer* imageBuffer() const;
 
 protected:
-    MockRealtimeVideoSource(String&& deviceID, AtomString&& name, String&& hashSalt, PageIdentifier);
+    MockRealtimeVideoSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, PageIdentifier);
 
     virtual void updateSampleBuffer() = 0;
 
     Seconds elapsedTime();
     void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) override;
-    VideoFrame::Rotation videoFrameRotation() const final { return m_deviceOrientation; }
+    VideoFrameRotation videoFrameRotation() const final { return m_deviceOrientation; }
     void generatePresets() override;
 
     IntSize captureSize() const;
@@ -115,14 +117,14 @@ private:
     MonotonicTime m_delayUntil;
 
     unsigned m_frameNumber { 0 };
-    RunLoop::Timer<MockRealtimeVideoSource> m_emitFrameTimer;
+    RunLoop::Timer m_emitFrameTimer;
     std::optional<RealtimeMediaSourceCapabilities> m_capabilities;
     std::optional<RealtimeMediaSourceSettings> m_currentSettings;
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
     Color m_fillColor { Color::black };
     MockMediaDevice m_device;
     RefPtr<VideoPreset> m_preset;
-    VideoFrame::Rotation m_deviceOrientation { VideoFrame::Rotation::None };
+    VideoFrameRotation m_deviceOrientation { };
 };
 
 } // namespace WebCore

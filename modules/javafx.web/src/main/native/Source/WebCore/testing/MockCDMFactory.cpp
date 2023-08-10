@@ -66,11 +66,15 @@ bool MockCDMFactory::supportsKeySystem(const String& keySystem)
 
 bool MockCDMFactory::hasSessionWithID(const String& id)
 {
+    if (id.isEmpty())
+        return false;
+
     return m_sessions.contains(id);
 }
 
 void MockCDMFactory::removeSessionWithID(const String& id)
 {
+    if (!id.isEmpty())
     m_sessions.remove(id);
 }
 

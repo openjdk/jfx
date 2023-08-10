@@ -21,6 +21,7 @@
 
 #if USE(ATSPI)
 #include "AccessibilityAtspi.h"
+#include "AccessibilityAtspiEnums.h"
 #include "AccessibilityObjectInterface.h"
 #include "IntRect.h"
 #include <wtf/OptionSet.h>
@@ -34,6 +35,8 @@ typedef struct _GVariantBuilder GVariantBuilder;
 namespace WebCore {
 class AXCoreObject;
 class AccessibilityRootAtspi;
+
+using RelationMap = HashMap<Atspi::Relation, Vector<RefPtr<AccessibilityObjectAtspi>>, IntHash<Atspi::Relation>, WTF::StrongEnumHashTraits<Atspi::Relation>>;
 
 class AccessibilityObjectAtspi final : public RefCounted<AccessibilityObjectAtspi> {
 public:
@@ -82,20 +85,20 @@ public:
     WEBCORE_EXPORT CString name() const;
     WEBCORE_EXPORT CString description() const;
     WEBCORE_EXPORT String locale() const;
-    WEBCORE_EXPORT unsigned role() const;
+    WEBCORE_EXPORT Atspi::Role role() const;
     WEBCORE_EXPORT unsigned childCount() const;
     WEBCORE_EXPORT Vector<RefPtr<AccessibilityObjectAtspi>> children() const;
     WEBCORE_EXPORT AccessibilityObjectAtspi* childAt(unsigned) const;
-    WEBCORE_EXPORT uint64_t state() const;
+    WEBCORE_EXPORT OptionSet<Atspi::State> states() const;
     bool isDefunct() const;
     void stateChanged(const char*, bool);
     WEBCORE_EXPORT HashMap<String, String> attributes() const;
-    WEBCORE_EXPORT HashMap<uint32_t, Vector<RefPtr<AccessibilityObjectAtspi>>> relationMap() const;
+    WEBCORE_EXPORT RelationMap relationMap() const;
 
-    WEBCORE_EXPORT AccessibilityObjectAtspi* hitTest(const IntPoint&, uint32_t) const;
-    WEBCORE_EXPORT IntRect elementRect(uint32_t) const;
-    WEBCORE_EXPORT void scrollToMakeVisible(uint32_t) const;
-    WEBCORE_EXPORT void scrollToPoint(const IntPoint&, uint32_t) const;
+    WEBCORE_EXPORT AccessibilityObjectAtspi* hitTest(const IntPoint&, Atspi::CoordinateType) const;
+    WEBCORE_EXPORT IntRect elementRect(Atspi::CoordinateType) const;
+    WEBCORE_EXPORT void scrollToMakeVisible(Atspi::ScrollType) const;
+    WEBCORE_EXPORT void scrollToPoint(const IntPoint&, Atspi::CoordinateType) const;
 
     WEBCORE_EXPORT String text() const;
     enum class TextGranularity {
@@ -109,7 +112,7 @@ public:
         Paragraph
     };
     WEBCORE_EXPORT IntPoint boundaryOffset(unsigned, TextGranularity) const;
-    WEBCORE_EXPORT IntRect boundsForRange(unsigned, unsigned, uint32_t) const;
+    WEBCORE_EXPORT IntRect boundsForRange(unsigned, unsigned, Atspi::CoordinateType) const;
     struct TextAttributes {
         HashMap<String, String> attributes;
         int startOffset;
@@ -166,7 +169,7 @@ private:
     void childAdded(AccessibilityObjectAtspi&);
     void childRemoved(AccessibilityObjectAtspi&);
 
-    std::optional<unsigned> effectiveRole() const;
+    std::optional<Atspi::Role> effectiveRole() const;
     String effectiveRoleName() const;
     String roleName() const;
     const char* effectiveLocalizedRoleName() const;
@@ -174,25 +177,26 @@ private:
     void buildAttributes(GVariantBuilder*) const;
     void buildRelationSet(GVariantBuilder*) const;
     void buildInterfaces(GVariantBuilder*) const;
+    void buildStates(GVariantBuilder*) const;
 
     bool focus() const;
     float opacity() const;
 
-    static TextGranularity atspiBoundaryToTextGranularity(uint32_t);
-    static TextGranularity atspiGranularityToTextGranularity(uint32_t);
+    static TextGranularity atspiBoundaryToTextGranularity(Atspi::TextBoundaryType);
+    static TextGranularity atspiGranularityToTextGranularity(Atspi::TextGranularityType);
     CString text(int, int) const;
     CString textAtOffset(int, TextGranularity, int&, int&) const;
     int characterAtOffset(int) const;
     std::optional<unsigned> characterOffset(UChar, int) const;
     std::optional<unsigned> characterIndex(UChar, unsigned) const;
-    IntRect textExtents(int, int, uint32_t) const;
-    int offsetAtPoint(const IntPoint&, uint32_t) const;
+    IntRect textExtents(int, int, Atspi::CoordinateType) const;
+    int offsetAtPoint(const IntPoint&, Atspi::CoordinateType) const;
     IntPoint boundsForSelection(const VisibleSelection&) const;
     bool selectionBounds(int&, int&) const;
     bool selectRange(int, int);
     TextAttributes textAttributesWithUTF8Offset(std::optional<int> = std::nullopt, bool = false) const;
-    bool scrollToMakeVisible(int, int, uint32_t) const;
-    bool scrollToPoint(int, int, uint32_t, int, int) const;
+    bool scrollToMakeVisible(int, int, Atspi::ScrollType) const;
+    bool scrollToPoint(int, int, Atspi::CoordinateType, int, int) const;
 
     unsigned offsetInParent() const;
 
@@ -234,26 +238,26 @@ private:
         bool matchAttributes(AccessibilityObjectAtspi&);
 
         struct {
-            uint64_t value { 0 };
-            uint16_t type { 0 };
+            OptionSet<Atspi::State> value;
+            Atspi::CollectionMatchType type;
         } states;
 
         struct {
             HashMap<String, Vector<String>> value;
-            uint16_t type { 0 };
+            Atspi::CollectionMatchType type;
         } attributes;
 
         struct {
-            Vector<unsigned> value;
-            uint16_t type { 0 };
+            Vector<Atspi::Role> value;
+            Atspi::CollectionMatchType type;
         } roles;
 
         struct {
             Vector<String> value;
-            uint16_t type { 0 };
+            Atspi::CollectionMatchType type;
         } interfaces;
     };
-    Vector<RefPtr<AccessibilityObjectAtspi>> matches(CollectionMatchRule&, uint32_t sortOrder, uint32_t maxResultCount, bool traverse);
+    Vector<RefPtr<AccessibilityObjectAtspi>> matches(CollectionMatchRule&, Atspi::CollectionSortOrder, uint32_t maxResultCount, bool traverse);
     void addMatchesInCanonicalOrder(Vector<RefPtr<AccessibilityObjectAtspi>>&, CollectionMatchRule&, uint32_t maxResultCount, bool traverse);
 
     static OptionSet<Interface> interfacesForObject(AXCoreObject&);

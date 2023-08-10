@@ -45,10 +45,12 @@ class Page;
 class RenderObject;
 
 struct InteractionRegion {
+    enum class Type : bool { Interaction, Occlusion };
+
     ElementIdentifier elementIdentifier;
     Region regionInLayerCoordinates;
-    bool hasLightBackground { false };
     float borderRadius { 0 };
+    Type type;
 
     WEBCORE_EXPORT ~InteractionRegion();
 
@@ -60,8 +62,8 @@ inline bool operator==(const InteractionRegion& a, const InteractionRegion& b)
 {
     return a.elementIdentifier == b.elementIdentifier
         && a.regionInLayerCoordinates == b.regionInLayerCoordinates
-        && a.hasLightBackground == b.hasLightBackground
-        && a.borderRadius == b.borderRadius;
+        && a.borderRadius == b.borderRadius
+        && a.type == b.type;
 }
 
 WEBCORE_EXPORT std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject&, const Region&);
@@ -73,8 +75,8 @@ void InteractionRegion::encode(Encoder& encoder) const
 {
     encoder << elementIdentifier;
     encoder << regionInLayerCoordinates;
-    encoder << hasLightBackground;
     encoder << borderRadius;
+    encoder << type;
 }
 
 template<class Decoder>
@@ -90,21 +92,21 @@ std::optional<InteractionRegion> InteractionRegion::decode(Decoder& decoder)
     if (!regionInLayerCoordinates)
         return std::nullopt;
 
-    std::optional<bool> hasLightBackground;
-    decoder >> hasLightBackground;
-    if (!hasLightBackground)
-        return std::nullopt;
-
     std::optional<float> borderRadius;
     decoder >> borderRadius;
     if (!borderRadius)
         return std::nullopt;
 
+    std::optional<Type> type;
+    decoder >> type;
+    if (!type)
+        return std::nullopt;
+
     return { {
         WTFMove(*elementIdentifier),
         WTFMove(*regionInLayerCoordinates),
-        WTFMove(*hasLightBackground),
-        WTFMove(*borderRadius)
+        WTFMove(*borderRadius),
+        WTFMove(*type)
     } };
 }
 

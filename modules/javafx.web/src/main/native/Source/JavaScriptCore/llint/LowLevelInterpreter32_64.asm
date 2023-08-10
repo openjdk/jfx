@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -350,6 +350,10 @@ macro doVMEntry(makeCall)
     loadp VMEntryRecord::m_prevTopEntryFrame[sp], t4
     storep t4, VM::topEntryFrame[t5]
 
+    # Tag is stored in r1 and payload is stored in r0 in little-endian architectures.
+    move UndefinedTag, r1
+    move 0, r0
+
     if ARMv7
         subp cfr, CalleeRegisterSaveSize, t5
         move t5, sp
@@ -429,8 +433,7 @@ macro makeHostFunctionCall(entry, protoCallFrame, temp1, temp2)
 end
 
 op(llint_handle_uncaught_exception, macro()
-    loadp Callee + PayloadOffset[cfr], t3
-    convertCalleeToVM(t3)
+    getVMFromCallFrame(t3, t0)
     restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(t3, t0)
     storep 0, VM::callFrameForCatch[t3]
 
@@ -448,6 +451,10 @@ op(llint_handle_uncaught_exception, macro()
     loadp VMEntryRecord::m_prevTopEntryFrame[sp], t5
     storep t5, VM::topEntryFrame[t3]
 
+    # Tag is stored in r1 and payload is stored in r0 in little-endian architectures.
+    move UndefinedTag, r1
+    move 0, r0
+
     if ARMv7
         subp cfr, CalleeRegisterSaveSize, t3
         move t3, sp
@@ -464,7 +471,7 @@ op(llint_get_host_call_return_value, macro ()
     functionPrologue()
     pushCalleeSaves()
     loadp Callee + PayloadOffset[cfr], t0
-    convertCalleeToVM(t0)
+    convertJSCalleeToVM(t0)
     loadi VM::encodedHostCallReturnValue + TagOffset[t0], t1
     loadi VM::encodedHostCallReturnValue + PayloadOffset[t0], t0
     popCalleeSaves()
@@ -727,13 +734,35 @@ end
 # Entrypoints into the interpreter
 
 # Expects that CodeBlock is in t1, which is what prologue() leaves behind.
-macro functionArityCheck(opcodeName, doneLabel, slowPath)
+macro functionArityCheck(opcodeName, doneLabel)
     loadi PayloadOffset + ArgumentCountIncludingThis[cfr], t0
-    biaeq t0, CodeBlock::m_numParameters[t1], doneLabel
+    loadi CodeBlock::m_numParameters[t1], t2
+    biaeq t0, t2, doneLabel
+
+    # t0 argumentCountIncludingThis
+    # t1 CodeBlock
+    # t2 numParameters
+
+    addi CallFrameHeaderSlots, t2, t3
+    btiz t3, 0x1, .arityCheck
+    addi 1, t2
+.arityCheck:
+    subi t2, t0, t2
+    addi 1, t2, t3
+    andi ~1, t3
+    lshiftp 3, t3
+    subp cfr, t3, t5
+    loadp CodeBlock::m_vm[t1], t0
+    if C_LOOP or C_LOOP_WIN
+        bpbeq VM::m_cloopStackLimit[t0], t5, .stackHeightOK
+    else
+        bpbeq VM::m_softStackLimit[t0], t5, .stackHeightOK
+    end
+
     prepareStateForCCall()
     move cfr, a0
     move PC, a1
-    cCall2(slowPath)   # This slowPath has a simple protocol: t0 = 0 => no error, t0 != 0 => error
+    cCall2(_llint_slow_path_arityCheck)   # This slowPath has a simple protocol: t0 = 0 => no error, t0 != 0 => error
     btiz r0, .noError
 
     # We're throwing before the frame is fully set up. This frame will be
@@ -744,6 +773,8 @@ macro functionArityCheck(opcodeName, doneLabel, slowPath)
     move r1, cfr   # r1 contains caller frame
     jmp _llint_throw_from_slow_path_trampoline
 
+.stackHeightOK:
+    move t2, r1
 .noError:
     move r1, t1 # r1 contains slotsToAdd.
     btiz t1, .continue
@@ -1855,7 +1886,9 @@ macro putByValOp(opcodeName, opcodeStruct, osrExitPoint)
 
         .outOfBounds:
             biaeq t3, -sizeof IndexingHeader + IndexingHeader::u.lengths.vectorLength[t0], .opPutByValOutOfBounds
-            storeb 1, %opcodeStruct%::Metadata::m_arrayProfile.m_mayStoreToHole[t5]
+            loadi %opcodeStruct%::Metadata::m_arrayProfile.m_arrayProfileFlags[t5], t2
+            ori constexpr ArrayProfileFlag::MayStoreHole, t2
+            storei t2, %opcodeStruct%::Metadata::m_arrayProfile.m_arrayProfileFlags[t5]
             addi 1, t3, t2
             storei t2, -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t0]
             jmp .storeResult
@@ -1920,7 +1953,9 @@ macro putByValOp(opcodeName, opcodeStruct, osrExitPoint)
         dispatch()
 
     .opPutByValArrayStorageEmpty:
-        storeb 1, %opcodeStruct%::Metadata::m_arrayProfile.m_mayStoreToHole[t5]
+        loadi %opcodeStruct%::Metadata::m_arrayProfile.m_arrayProfileFlags[t5], t2
+        ori constexpr ArrayProfileFlag::MayStoreHole, t2
+        storei t2, %opcodeStruct%::Metadata::m_arrayProfile.m_arrayProfileFlags[t5]
         addi 1, ArrayStorage::m_numValuesInVector[t0]
         bib t3, -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t0], .opPutByValArrayStorageStoreResult
         addi 1, t3, t1
@@ -1928,7 +1963,9 @@ macro putByValOp(opcodeName, opcodeStruct, osrExitPoint)
         jmp .opPutByValArrayStorageStoreResult
 
     .opPutByValOutOfBounds:
-        storeb 1, %opcodeStruct%::Metadata::m_arrayProfile.m_outOfBounds[t5]
+        loadi %opcodeStruct%::Metadata::m_arrayProfile.m_arrayProfileFlags[t5], t2
+        ori constexpr ArrayProfileFlag::OutOfBounds , t2
+        storei t2, %opcodeStruct%::Metadata::m_arrayProfile.m_arrayProfileFlags[t5]
     .opPutByValSlow:
         callSlowPath(_llint_slow_path_%opcodeName%)
         dispatch()
@@ -2102,7 +2139,7 @@ macro compareOp(opcodeName, opcodeStruct, integerCompareAndSet, doubleCompareAnd
         return(BooleanTag, t1)
 
     .slow:
-        callSlowPath(_slow_path_%opcodeName%)
+        callSlowPath(_llint_slow_path_%opcodeName%)
         dispatch()
     end)
 end
@@ -2425,8 +2462,7 @@ commonOp(llint_op_catch, macro() end, macro (size)
     # the interpreter's throw trampoline (see _llint_throw_trampoline).
     # The throwing code must have known that we were throwing to the interpreter,
     # and have set VM::targetInterpreterPCForThrow.
-    loadp Callee + PayloadOffset[cfr], t3
-    convertCalleeToVM(t3)
+    getVMFromCallFrame(t3, t0)
     restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(t3, t0)
     loadp VM::callFrameForCatch[t3], cfr
     storep 0, VM::callFrameForCatch[t3]
@@ -2474,8 +2510,7 @@ end)
 
 
 op(llint_throw_from_slow_path_trampoline, macro()
-    loadp Callee + PayloadOffset[cfr], t1
-    convertCalleeToVM(t1)
+    getVMFromCallFrame(t1, t2)
     copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(t1, t2)
 
     callSlowPath(_llint_slow_path_handle_exception)
@@ -2483,8 +2518,7 @@ op(llint_throw_from_slow_path_trampoline, macro()
     # When throwing from the interpreter (i.e. throwing from LLIntSlowPaths), so
     # the throw target is not necessarily interpreted code, we come to here.
     # This essentially emulates the JIT's throwing protocol.
-    loadp Callee + PayloadOffset[cfr], t1
-    convertCalleeToVM(t1)
+    getVMFromCallFrame(t1, t2)
     jmp VM::targetMachinePCForThrow[t1]
 end)
 
@@ -2600,7 +2634,7 @@ end
 macro varInjectionCheck(slowPath)
     loadp CodeBlock[cfr], t0
     loadp CodeBlock::m_globalObject[t0], t0
-    loadp JSGlobalObject::m_varInjectionWatchpoint[t0], t0
+    loadp JSGlobalObject::m_varInjectionWatchpointSet[t0], t0
     bbeq WatchpointSet::m_state[t0], IsInvalidated, slowPath
 end
 
@@ -3218,8 +3252,11 @@ end)
 
 
 op(fuzzer_return_early_from_loop_hint, macro ()
-    move UndefinedTag, r1
-    move 0, r0
+    loadp CodeBlock[cfr], t0
+    loadp CodeBlock::m_globalObject[t0], t0
+    loadp JSGlobalObject::m_globalThis[t0], t0
+    move t0, r0
+    move CellTag, r1
     doReturn()
 end)
 

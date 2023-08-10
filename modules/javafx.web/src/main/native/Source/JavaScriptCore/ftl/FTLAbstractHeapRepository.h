@@ -87,6 +87,7 @@ namespace JSC { namespace FTL {
     macro(FunctionRareData_internalFunctionAllocationProfile_structureID, FunctionRareData::offsetOfInternalFunctionAllocationProfile() + InternalFunctionAllocationProfile::offsetOfStructureID()) \
     macro(GetterSetter_getter, GetterSetter::offsetOfGetter()) \
     macro(GetterSetter_setter, GetterSetter::offsetOfSetter()) \
+    macro(JSArrayBufferView_byteOffset, JSArrayBufferView::offsetOfByteOffset()) \
     macro(JSArrayBufferView_length, JSArrayBufferView::offsetOfLength()) \
     macro(JSArrayBufferView_mode, JSArrayBufferView::offsetOfMode()) \
     macro(JSArrayBufferView_vector, JSArrayBufferView::offsetOfVector()) \
@@ -120,6 +121,7 @@ namespace JSC { namespace FTL {
     macro(JSRopeString_fiber2, JSRopeString::offsetOfFiber2()) \
     macro(JSScope_next, JSScope::offsetOfNext()) \
     macro(JSSymbolTableObject_symbolTable, JSSymbolTableObject::offsetOfSymbolTable()) \
+    macro(JSWebAssemblyInstance_moduleRecord, JSWebAssemblyInstance::offsetOfModuleRecord()) \
     macro(NativeExecutable_asString, NativeExecutable::offsetOfAsString()) \
     macro(RegExpObject_regExpAndFlags, RegExpObject::offsetOfRegExpAndFlags()) \
     macro(RegExpObject_lastIndex, RegExpObject::offsetOfLastIndex()) \
@@ -150,16 +152,22 @@ namespace JSC { namespace FTL {
     macro(StructureRareData_cachedKeys, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::Keys)) \
     macro(StructureRareData_cachedGetOwnPropertyNames, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::GetOwnPropertyNames)) \
     macro(StructureRareData_cachedPropertyNameEnumeratorAndFlag, StructureRareData::offsetOfCachedPropertyNameEnumeratorAndFlag()) \
+    macro(StructureRareData_specialPropertyCache, StructureRareData::offsetOfSpecialPropertyCache()) \
+    macro(SpecialPropertyCache_cachedToStringTagValue, SpecialPropertyCache::offsetOfCache(CachedSpecialPropertyKey::ToStringTag) + SpecialPropertyCacheEntry::offsetOfValue()) \
     macro(HashMapImpl_capacity, HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfCapacity()) \
     macro(HashMapImpl_buffer,  HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfBuffer()) \
     macro(HashMapImpl_head,  HashMapImpl<HashMapBucket<HashMapBucketDataKey>>::offsetOfHead()) \
     macro(HashMapBucket_value, HashMapBucket<HashMapBucketDataKeyValue>::offsetOfValue()) \
     macro(HashMapBucket_key, HashMapBucket<HashMapBucketDataKeyValue>::offsetOfKey()) \
     macro(HashMapBucket_next, HashMapBucket<HashMapBucketDataKeyValue>::offsetOfNext()) \
+    macro(VM_heap_barrierThreshold, VM::offsetOfHeapBarrierThreshold()) \
+    macro(VM_heap_mutatorShouldBeFenced, VM::offsetOfHeapMutatorShouldBeFenced()) \
+    macro(VM_exception, VM::exceptionOffset()) \
     macro(WeakMapImpl_capacity, WeakMapImpl<WeakMapBucket<WeakMapBucketDataKey>>::offsetOfCapacity()) \
     macro(WeakMapImpl_buffer,  WeakMapImpl<WeakMapBucket<WeakMapBucketDataKey>>::offsetOfBuffer()) \
     macro(WeakMapBucket_value, WeakMapBucket<WeakMapBucketDataKeyValue>::offsetOfValue()) \
     macro(WeakMapBucket_key, WeakMapBucket<WeakMapBucketDataKeyValue>::offsetOfKey()) \
+    macro(WebAssemblyModuleRecord_exportsObject, WebAssemblyModuleRecord::offsetOfExportsObject()) \
     macro(Symbol_symbolImpl, Symbol::offsetOfSymbolImpl()) \
 
 #define FOR_EACH_INDEXED_ABSTRACT_HEAP(macro) \

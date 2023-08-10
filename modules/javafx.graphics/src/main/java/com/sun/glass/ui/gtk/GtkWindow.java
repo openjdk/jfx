@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,9 +46,8 @@ class GtkWindow extends Window {
     @Override
     protected native boolean _setView(long ptr, View view);
 
-    // empty - not needed by this implementation
     @Override
-    protected void _updateViewSize(long ptr) {}
+    protected native void _updateViewSize(long ptr);
 
     @Override
     protected boolean _setMenubar(long ptr, long menubarPtr) {

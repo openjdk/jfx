@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -490,7 +490,7 @@ bool Path::strokeContains(const FloatPoint& p, const Function<void(GraphicsConte
 
     // Stroke style is set to SolidStroke if the path is not dashed, else it
     // is unchanged. Setting it to NoStroke enables us to detect the switch.
-    gc.setStrokeStyle(NoStroke);
+    gc.setStrokeStyle(StrokeStyle::NoStroke);
     strokeStyleApplier(gc);
 
     float thickness = gc.strokeThickness();
@@ -510,7 +510,7 @@ bool Path::strokeContains(const FloatPoint& p, const Function<void(GraphicsConte
 
     ASSERT(mid);
 
-    size_t size = strokeStyle == SolidStroke ? 0 : dashes.size();
+    size_t size = strokeStyle == StrokeStyle::SolidStroke ? 0 : dashes.size();
     JLocalRef<jdoubleArray> dashArray(env->NewDoubleArray(size));
     env->SetDoubleArrayRegion(dashArray, 0, size, dashes.data());
 

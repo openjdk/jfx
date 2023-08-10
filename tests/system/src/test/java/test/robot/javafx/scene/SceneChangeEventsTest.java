@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,9 @@
 package test.robot.javafx.scene;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import com.sun.javafx.PlatformUtil;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -129,11 +132,14 @@ public class SceneChangeEventsTest {
 
     @BeforeClass
     public static void initFX() {
+        assumeTrue(!PlatformUtil.isMac()); // See JDK-8300094
         Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Util.shutdown(stage);
+        if (stage != null) {
+            Util.shutdown(stage);
+        }
     }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-# Copyright (c) 2017-2020 Apple Inc. All rights reserved.
+# Copyright (c) 2017-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,33 +29,25 @@ require 'optparse'
 require 'yaml'
 
 options = { 
-  :additionalSettings => nil,
-  :basePreferences => nil,
-  :debugPreferences => nil,
-  :experimentalPreferences => nil,
-  :internalPreferences => nil,
   :outputDirectory => nil,
-  :templates => []
+  :templates => [],
+  :settingsFiles => []
 }
 optparse = OptionParser.new do |opts|
-  opts.banner = "Usage: #{File.basename($0)} --input file"
+  opts.banner = "Usage: #{File.basename($0)} [--outputDir <output>] --template <input> [--template <file>...] <settings> [<settings>...]"
 
   opts.separator ""
 
-  opts.on("--base input", "file to generate settings from") { |basePreferences| options[:basePreferences] = basePreferences }
-  opts.on("--debug input", "file to generate debug settings from") { |debugPreferences| options[:debugPreferences] = debugPreferences }
-  opts.on("--experimental input", "file to generate experimental settings from") { |experimentalPreferences| options[:experimentalPreferences] = experimentalPreferences }
-  opts.on("--internal input", "file to generate internal settings from") { |internalPreferences| options[:internalPreferences] = internalPreferences }
-  opts.on("--additionalSettings input", "file to generate settings from") { |additionalSettings| options[:additionalSettings] = additionalSettings }
   opts.on("--outputDir output", "directory to generate file in") { |output| options[:outputDirectory] = output }
   opts.on("--template input", "template to use for generation (may be specified multiple times)") { |template| options[:templates] << template }
 end
 
 optparse.parse!
 
-if !options[:additionalSettings] || !options[:basePreferences] || !options[:debugPreferences] || !options[:experimentalPreferences] || !options[:internalPreferences]
+options[:settingsFiles] = ARGV.shift(ARGV.size)
+if options[:settingsFiles].empty?
   puts optparse
-  exit -1
+  exit 1
 end
 
 if !options[:outputDirectory]
@@ -63,13 +55,6 @@ if !options[:outputDirectory]
 end
 
 FileUtils.mkdir_p(options[:outputDirectory])
-
-parsedSettings = begin
-  YAML.load_file(options[:additionalSettings])
-rescue ArgumentError => e
-  puts "Could not parse input file: #{e.message}"
-  exit(-1)
-end
 
 def load(path)
   parsed = begin
@@ -91,17 +76,12 @@ def load(path)
   parsed
 end
 
-parsedPreferences = {}
-parsedPreferences.merge!(load(options[:basePreferences]))
-parsedPreferences.merge!(load(options[:debugPreferences]))
-parsedPreferences.merge!(load(options[:experimentalPreferences]))
-parsedPreferences.merge!(load(options[:internalPreferences]))
-
-
 class Setting
   attr_accessor :name
   attr_accessor :options
   attr_accessor :type
+  attr_accessor :status
+  attr_accessor :category
   attr_accessor :defaultValues
   attr_accessor :excludeFromInternalSettings
   attr_accessor :condition
@@ -114,6 +94,7 @@ class Setting
     @name = normalizeNameForWebCore(name, options)
     @options = options
     @type = options["refinedType"] || options["type"]
+    @status = options["status"]
     @defaultValues = options["defaultValue"]["WebCore"]
     @excludeFromInternalSettings = options["webcoreExcludeFromInternalSettings"] || false
     @condition = options["condition"]
@@ -193,6 +174,14 @@ class Setting
   def hasInspectorOverride?
     @inspectorOverride == true
   end
+
+  def stableFeature?
+    # FIXME: Not all "embedder" settings should be considered stable, only the
+    # settings that are on by default. Assuming embedder gets split into two
+    # categories (off-by-default and on-by-default), only the latter should be
+    # considered stable.
+    !@status or %w{ embedder internal stable mature }.include? @status
+  end
 end
 
 class Conditional
@@ -260,38 +249,45 @@ end
 
 class Settings
   attr_accessor :allSettingsSet
+  attr_accessor :unstableSettings
+  attr_accessor :unstableGlobalSettings
 
-  def initialize(parsedSettingsFromWebCore, parsedSettingsFromWebPreferences)
-    settings = []
-    parsedSettingsFromWebPreferences.each do |name, options|
+  def initialize(settingsFiles)
+    settingsByName = {}
+    globalSettingsByName = {}
+    settingsFiles.each do |file|
+      parsedSettings = load(file).each do |name, options|
       # An empty "webcoreBinding" entry indicates this preference uses the default, which is bound to Settings.
       if !options["webcoreBinding"]
-        settings << Setting.new(name, options)
+          settingsByName[name] = Setting.new(name, options)
+        elsif options["webcoreBinding"] == "DeprecatedGlobalSettings"
+          globalSettingsByName[name] = Setting.new(name, options)
       end
     end
-
-    parsedSettingsFromWebCore.each do |name, options|
-      settings << Setting.new(name, options)
     end
 
-    @allSettingsSet = SettingSet.new(settings)
+    @allSettingsSet = SettingSet.new(settingsByName.values)
+    @unstableFeatures = settingsByName.values.reject(&:stableFeature?)
+    @unstableGlobalFeatures = globalSettingsByName.values.reject(&:stableFeature?)
   end
 
   def renderTemplate(template, outputDirectory)
     file = File.join(outputDirectory, File.basename(template, ".erb"))
 
     if ERB.instance_method(:initialize).parameters.assoc(:key) # Ruby 2.6+
-        output = ERB.new(File.read(template), trim_mode:"-").result(binding)
+        erb = ERB.new(File.read(template), trim_mode:"-")
     else
-        output = ERB.new(File.read(template), 0, "-").result(binding)
+        erb = ERB.new(File.read(template), 0, "-")
     end
+    erb.filename = template
+    output = erb.result(binding)
     File.open(file, "w+") do |f|
       f.write(output)
     end
   end
 end
 
-settings = Settings.new(parsedSettings, parsedPreferences)
+settings = Settings.new(options[:settingsFiles])
 
 options[:templates].each do |template|
   settings.renderTemplate(template, options[:outputDirectory])

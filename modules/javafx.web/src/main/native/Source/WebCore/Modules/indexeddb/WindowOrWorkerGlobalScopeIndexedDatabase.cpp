@@ -130,6 +130,7 @@ WorkerGlobalScopeIndexedDatabase::WorkerGlobalScopeIndexedDatabase(IDBClient::ID
 WorkerGlobalScopeIndexedDatabase* WorkerGlobalScopeIndexedDatabase::from(WorkerGlobalScope& scope)
 {
 #if PLATFORM(JAVA)
+    UNUSED_PARAM(scope);
     return nullptr;
 #else /* PLATFORM(JAVA) */
     auto* supplement = static_cast<WorkerGlobalScopeIndexedDatabase*>(Supplement<WorkerGlobalScope>::from(&scope, supplementName()));
@@ -161,6 +162,7 @@ IDBFactory* WorkerGlobalScopeIndexedDatabase::indexedDB()
 IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(WorkerGlobalScope& scope)
 {
 #if PLATFORM(JAVA)
+    UNUSED_PARAM(scope);
     return nullptr;
 #else /* PLATFORM(JAVA) */
     auto* scopeIDB = WorkerGlobalScopeIndexedDatabase::from(scope);
@@ -171,6 +173,7 @@ IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(WorkerGlobalScop
 IDBFactory* WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(DOMWindow& window)
 {
 #if PLATFORM(JAVA)
+    UNUSED_PARAM(window);
     return nullptr;
 #else /* PLATFORM(JAVA) */
     return DOMWindowIndexedDatabase::from(window)->indexedDB();

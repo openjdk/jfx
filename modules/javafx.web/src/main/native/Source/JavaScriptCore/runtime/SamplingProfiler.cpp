@@ -379,7 +379,7 @@ void SamplingProfiler::takeSample(Seconds& stackTraceProcessingTime)
                 callFrame = static_cast<CallFrame*>(machineFrame);
                 auto instructionPointer = MachineContext::instructionPointer(registers);
                 if (instructionPointer)
-                    machinePC = instructionPointer->untaggedExecutableAddress();
+                    machinePC = instructionPointer->untaggedPtr();
                 else
                     machinePC = nullptr;
                 llintPC = removeCodePtrTag(MachineContext::llintInstructionPointer(registers));
@@ -814,7 +814,7 @@ String SamplingProfiler::StackFrame::displayName(VM& vm)
     case FrameType::C:
 #if HAVE(DLADDR)
         if (frameType == FrameType::C) {
-            auto demangled = WTF::StackTrace::demangle(const_cast<void*>(cCodePC));
+            auto demangled = StackTraceSymbolResolver::demangle(const_cast<void*>(cCodePC));
             if (demangled)
                 return String::fromLatin1(demangled->demangledName() ? demangled->demangledName() : demangled->mangledName());
             WTF::dataLog("couldn't get a name");

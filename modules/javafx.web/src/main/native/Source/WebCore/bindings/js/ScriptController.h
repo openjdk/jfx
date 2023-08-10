@@ -27,6 +27,7 @@
 #include "SerializedScriptValue.h"
 #include "WindowProxy.h"
 #include <JavaScriptCore/JSBase.h>
+#include <JavaScriptCore/ScriptFetchParameters.h>
 #include <JavaScriptCore/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
@@ -107,12 +108,13 @@ public:
     JSC::JSValue evaluateInWorldIgnoringException(const ScriptSourceCode&, DOMWrapperWorld&);
 
     // This asserts that URL argument is a JavaScript URL.
+    void executeJavaScriptURL(const URL&, RefPtr<SecurityOrigin>, ShouldReplaceDocumentIfJavaScriptURL, bool& didReplaceDocument);
     void executeJavaScriptURL(const URL&, RefPtr<SecurityOrigin> = nullptr, ShouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
 
     static void initializeMainThread();
 
-    void loadModuleScriptInWorld(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&, DOMWrapperWorld&);
-    void loadModuleScript(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&);
+    void loadModuleScriptInWorld(LoadableModuleScript&, const URL& topLevelModuleURL, Ref<JSC::ScriptFetchParameters>&&, DOMWrapperWorld&);
+    void loadModuleScript(LoadableModuleScript&, const URL&, Ref<JSC::ScriptFetchParameters>&&);
     void loadModuleScriptInWorld(LoadableModuleScript&, const ScriptSourceCode&, DOMWrapperWorld&);
     void loadModuleScript(LoadableModuleScript&, const ScriptSourceCode&);
 
@@ -166,6 +168,12 @@ public:
     bool willReplaceWithResultOfExecutingJavascriptURL() const { return m_willReplaceWithResultOfExecutingJavascriptURL; }
 
     void reportExceptionFromScriptError(LoadableScript::Error, bool);
+
+    void registerImportMap(const ScriptSourceCode&, const URL& baseURL);
+    bool isAcquiringImportMaps();
+    void setAcquiringImportMaps();
+    void setPendingImportMaps();
+    void clearPendingImportMaps();
 
 private:
     ValueOrException executeScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&);

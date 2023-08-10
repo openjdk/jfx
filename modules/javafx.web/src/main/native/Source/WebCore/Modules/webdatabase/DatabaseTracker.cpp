@@ -797,6 +797,7 @@ void DatabaseTracker::deleteDatabasesModifiedSince(WallTime time)
 // taking place.
 bool DatabaseTracker::deleteOrigin(const SecurityOriginData& origin)
 {
+    UNUSED_PARAM(origin);
     //return deleteOrigin(origin, DeletionMode::Default);
     return false;
 }

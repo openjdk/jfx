@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSMathValue.h"
 #include "CSSNumericValue.h"
 
@@ -40,6 +38,8 @@ public:
     static ExceptionOr<Ref<CSSMathMax>> create(FixedVector<CSSNumberish>&&);
     static ExceptionOr<Ref<CSSMathMax>> create(Vector<Ref<CSSNumericValue>>&&);
     const CSSNumericArray& values() const;
+
+    RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const final;
 
 private:
     CSSMathOperator getOperator() const final { return CSSMathOperator::Max; }
@@ -59,5 +59,3 @@ static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue
 static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.getType() == WebCore::CSSStyleValueType::CSSMathMax; }
 static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getType() == WebCore::CSSStyleValueType::CSSMathMax; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

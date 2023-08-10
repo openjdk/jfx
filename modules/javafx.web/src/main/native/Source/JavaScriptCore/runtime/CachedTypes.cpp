@@ -30,6 +30,7 @@
 #include "BuiltinNames.h"
 #include "BytecodeCacheError.h"
 #include "BytecodeLivenessAnalysis.h"
+#include "JSCBytecodeCacheVersion.h"
 #include "JSCInlines.h"
 #include "JSImmutableButterfly.h"
 #include "JSTemplateObjectDescriptor.h"
@@ -66,11 +67,6 @@ struct SourceTypeImpl<T, std::enable_if_t<!std::is_fundamental<T>::value && !std
 
 template<typename T>
 using SourceType = typename SourceTypeImpl<T>::type;
-
-static constexpr unsigned jscBytecodeCacheVersion()
-{
-    return StringHasher::computeHash(__TIMESTAMP__);
-}
 
 class Encoder {
     WTF_MAKE_NONCOPYABLE(Encoder);
@@ -358,38 +354,29 @@ RefPtr<SourceProvider> Decoder::provider() const
 }
 
 template<typename T>
-static std::enable_if_t<std::is_same<T, SourceType<T>>::value> encode(Encoder&, T& dst, const SourceType<T>& src)
+static void encode(Encoder& encoder, T& dst, const SourceType<T>& src)
 {
+    if constexpr (std::is_same_v<T, SourceType<T>>)
     dst = src;
-}
-
-template<typename T>
-static std::enable_if_t<!std::is_same<T, SourceType<T>>::value> encode(Encoder& encoder, T& dst, const SourceType<T>& src)
-{
+    else
     dst.encode(encoder, src);
 }
 
 template<typename T, typename... Args>
-static std::enable_if_t<std::is_same<T, SourceType<T>>::value> decode(Decoder&, const T& src, SourceType<T>& dst, Args...)
+static void decode(Decoder& decoder, const T& src, SourceType<T>& dst, Args... args)
 {
+    if constexpr (std::is_same_v<T, SourceType<T>>)
     dst = src;
-}
-
-template<typename T, typename... Args>
-static std::enable_if_t<!std::is_same<T, SourceType<T>>::value> decode(Decoder& decoder, const T& src, SourceType<T>& dst, Args... args)
-{
+    else
     src.decode(decoder, dst, args...);
 }
 
 template<typename T>
-static std::enable_if_t<std::is_same<T, SourceType<T>>::value, T> decode(Decoder&, T src)
+static T decode(Decoder& decoder, T src)
 {
+    if constexpr (std::is_same_v<T, SourceType<T>>)
     return src;
-}
-
-template<typename T>
-static std::enable_if_t<!std::is_same<T, SourceType<T>>::value, SourceType<T>>&& decode(Decoder& decoder, const T& src)
-{
+    else
     return src.decode(decoder);
 }
 
@@ -1540,6 +1527,7 @@ public:
     {
         m_sourceOrigin.encode(encoder, sourceProvider.sourceOrigin());
         m_sourceURL.encode(encoder, sourceProvider.sourceURL());
+        m_preRedirectURL.encode(encoder, sourceProvider.preRedirectURL());
         m_sourceURLDirective.encode(encoder, sourceProvider.sourceURLDirective());
         m_sourceMappingURLDirective.encode(encoder, sourceProvider.sourceMappingURLDirective());
         m_startPosition.encode(encoder, sourceProvider.startPosition());
@@ -1554,6 +1542,7 @@ public:
 protected:
     CachedSourceOrigin m_sourceOrigin;
     CachedString m_sourceURL;
+    CachedString m_preRedirectURL;
     CachedString m_sourceURLDirective;
     CachedString m_sourceMappingURLDirective;
     CachedTextPosition m_startPosition;
@@ -1803,6 +1792,7 @@ public:
     SourceParseMode sourceParseMode() const { return m_sourceParseMode; }
 
     unsigned hasCapturedVariables() const { return m_mutableMetadata.m_hasCapturedVariables; }
+    ImplementationVisibility implementationVisibility() const { return static_cast<ImplementationVisibility>(m_implementationVisibility); }
     unsigned isBuiltinFunction() const { return m_isBuiltinFunction; }
     unsigned isBuiltinDefaultClassConstructor() const { return m_isBuiltinDefaultClassConstructor; }
     unsigned constructAbility() const { return m_constructAbility; }
@@ -1847,6 +1837,7 @@ private:
     unsigned m_functionMode : 2; // FunctionMode
     unsigned m_derivedContextType: 2;
     unsigned m_needsClassFieldInitializer : 1;
+    unsigned m_implementationVisibility : bitWidthOfImplementationVisibility;
 
     CachedPtr<CachedFunctionExecutableRareData> m_rareData;
 
@@ -1888,7 +1879,6 @@ public:
 
     Ref<UnlinkedMetadataTable> metadata(Decoder& decoder) const { return m_metadata.decode(decoder); }
 
-    unsigned usesCallEval() const { return m_usesCallEval; }
     unsigned isConstructor() const { return m_isConstructor; }
     unsigned hasCapturedVariables() const { return m_hasCapturedVariables; }
     unsigned isBuiltinFunction() const { return m_isBuiltinFunction; }
@@ -1925,7 +1915,6 @@ private:
     VirtualRegister m_thisRegister;
     VirtualRegister m_scopeRegister;
 
-    unsigned m_usesCallEval : 1;
     unsigned m_isConstructor : 1;
     unsigned m_hasCapturedVariables : 1;
     unsigned m_isBuiltinFunction : 1;
@@ -2127,7 +2116,6 @@ ALWAYS_INLINE UnlinkedCodeBlock::UnlinkedCodeBlock(Decoder& decoder, Structure* 
     , m_scopeRegister(cachedCodeBlock.scopeRegister())
 
     , m_numVars(cachedCodeBlock.numVars())
-    , m_usesCallEval(cachedCodeBlock.usesCallEval())
     , m_numCalleeLocals(cachedCodeBlock.numCalleeLocals())
     , m_isConstructor(cachedCodeBlock.isConstructor())
     , m_numParameters(cachedCodeBlock.numParameters())
@@ -2226,6 +2214,7 @@ ALWAYS_INLINE void CachedFunctionExecutable::encode(Encoder& encoder, const Unli
     m_superBinding = executable.m_superBinding;
     m_derivedContextType = executable.m_derivedContextType;
     m_needsClassFieldInitializer = executable.m_needsClassFieldInitializer;
+    m_implementationVisibility = executable.m_implementationVisibility;
     m_privateBrandRequirement = executable.m_privateBrandRequirement;
 
     m_rareData.encode(encoder, executable.m_rareData.get());
@@ -2273,6 +2262,7 @@ ALWAYS_INLINE UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(Decoder& de
     , m_features(cachedExecutable.features())
     , m_constructorKind(cachedExecutable.constructorKind())
     , m_sourceParseMode(cachedExecutable.sourceParseMode())
+    , m_implementationVisibility(static_cast<unsigned>(cachedExecutable.implementationVisibility()))
     , m_lexicalScopeFeatures(cachedExecutable.lexicalScopeFeatures())
     , m_functionMode(cachedExecutable.functionMode())
     , m_derivedContextType(cachedExecutable.derivedContextType())
@@ -2318,7 +2308,6 @@ ALWAYS_INLINE void CachedCodeBlock<CodeBlockType>::encode(Encoder& encoder, cons
 {
     m_thisRegister = codeBlock.m_thisRegister;
     m_scopeRegister = codeBlock.m_scopeRegister;
-    m_usesCallEval = codeBlock.m_usesCallEval;
     m_isConstructor = codeBlock.m_isConstructor;
     m_hasCapturedVariables = codeBlock.m_hasCapturedVariables;
     m_isBuiltinFunction = codeBlock.m_isBuiltinFunction;
@@ -2408,7 +2397,7 @@ protected:
 
     bool isUpToDate(Decoder& decoder) const
     {
-        if (m_cacheVersion != jscBytecodeCacheVersion())
+        if (m_cacheVersion != JSCBytecodeCacheVersion)
             return false;
         if (m_bootSessionUUID.decode(decoder) != bootSessionUUIDString())
             return false;
@@ -2416,7 +2405,7 @@ protected:
     }
 
 private:
-    uint32_t m_cacheVersion { jscBytecodeCacheVersion() };
+    uint32_t m_cacheVersion { JSCBytecodeCacheVersion };
     CachedString m_bootSessionUUID;
     CachedCodeBlockTag m_tag;
 };

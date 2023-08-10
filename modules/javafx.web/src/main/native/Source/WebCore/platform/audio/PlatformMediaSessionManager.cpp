@@ -91,6 +91,12 @@ void PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary()
         existingManager->scheduleSessionStatusUpdate();
 }
 
+void PlatformMediaSessionManager::updateAudioSessionCategoryIfNecessary()
+{
+    if (auto existingManager = PlatformMediaSessionManager::sharedManagerIfExists())
+        existingManager->scheduleUpdateSessionState();
+}
+
 PlatformMediaSessionManager::PlatformMediaSessionManager()
 #if !RELEASE_LOG_DISABLED
     : m_logger(AggregateLogger::create(this))
@@ -206,7 +212,7 @@ void PlatformMediaSessionManager::removeSession(PlatformMediaSession& session)
 
     m_sessions.remove(index);
 
-    if (hasNoSession())
+    if (hasNoSession() && !activeAudioSessionRequired())
         maybeDeactivateAudioSession();
 
 #if !RELEASE_LOG_DISABLED
@@ -437,8 +443,15 @@ void PlatformMediaSessionManager::sessionIsPlayingToWirelessPlaybackTargetChange
 void PlatformMediaSessionManager::sessionCanProduceAudioChanged()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+    if (m_alreadyScheduledSessionStatedUpdate)
+        return;
+
+    m_alreadyScheduledSessionStatedUpdate = true;
+    callOnMainThread([this] {
+        m_alreadyScheduledSessionStatedUpdate = false;
     maybeActivateAudioSession();
     updateSessionState();
+    });
 }
 
 void PlatformMediaSessionManager::processDidReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType command, const PlatformMediaSession::RemoteCommandArgument& argument)

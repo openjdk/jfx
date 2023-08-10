@@ -27,7 +27,7 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMTokenList.h"
-#include "ElementIterator.h"
+#include "ElementAncestorIterator.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "Frame.h"
@@ -409,7 +409,12 @@ std::optional<URL> HTMLAnchorElement::attributionDestinationURLForPCM() const
 std::optional<RegistrableDomain> HTMLAnchorElement::mainDocumentRegistrableDomainForPCM() const
 {
     if (auto frame = document().frame()) {
-        if (auto mainDocument = frame->mainFrame().document()) {
+
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+        if (!localFrame)
+            return std::nullopt;
+
+        if (auto mainDocument = localFrame->document()) {
             if (auto mainDocumentRegistrableDomain = RegistrableDomain { mainDocument->url() }; !mainDocumentRegistrableDomain.isEmpty())
                 return mainDocumentRegistrableDomain;
         }
@@ -419,13 +424,13 @@ std::optional<RegistrableDomain> HTMLAnchorElement::mainDocumentRegistrableDomai
     return std::nullopt;
 }
 
-std::optional<PrivateClickMeasurement::EphemeralNonce> HTMLAnchorElement::attributionSourceNonceForPCM() const
+std::optional<PCM::EphemeralNonce> HTMLAnchorElement::attributionSourceNonceForPCM() const
 {
     auto attributionSourceNonceAttr = attributeWithoutSynchronization(attributionsourcenonceAttr);
     if (attributionSourceNonceAttr.isEmpty())
         return std::nullopt;
 
-    auto ephemeralNonce = PrivateClickMeasurement::EphemeralNonce { attributionSourceNonceAttr };
+    auto ephemeralNonce = PCM::EphemeralNonce { attributionSourceNonceAttr };
     if (!ephemeralNonce.isValid()) {
         document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "attributionsourcenonce was not valid."_s);
         return std::nullopt;
@@ -440,8 +445,8 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
         return std::nullopt;
 
     using SourceID = PrivateClickMeasurement::SourceID;
-    using SourceSite = PrivateClickMeasurement::SourceSite;
-    using AttributionDestinationSite = PrivateClickMeasurement::AttributionDestinationSite;
+    using SourceSite = PCM::SourceSite;
+    using AttributionDestinationSite = PCM::AttributionDestinationSite;
 
     auto adamID = PrivateClickMeasurement::appStoreURLAdamID(hrefURL);
     if (!adamID)
@@ -471,7 +476,7 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
         AttributionDestinationSite(*attributionDestinationDomain),
         bundleID,
         WallTime::now(),
-        PrivateClickMeasurement::AttributionEphemeral::No
+        PCM::AttributionEphemeral::No
     };
     privateClickMeasurement.setEphemeralSourceNonce(WTFMove(*attributionSourceNonce));
     privateClickMeasurement.setAdamID(*adamID);
@@ -481,8 +486,8 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
 std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasurement(const URL& hrefURL) const
 {
     using SourceID = PrivateClickMeasurement::SourceID;
-    using SourceSite = PrivateClickMeasurement::SourceSite;
-    using AttributionDestinationSite = PrivateClickMeasurement::AttributionDestinationSite;
+    using SourceSite = PCM::SourceSite;
+    using AttributionDestinationSite = PCM::AttributionDestinationSite;
 
     RefPtr<Frame> frame = document().frame();
     auto* page = document().page();
@@ -513,8 +518,8 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
         return std::nullopt;
     }
 
-    if (attributionSourceID.value() > PrivateClickMeasurement::SourceID::MaxEntropy) {
-        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, makeString("attributionsourceid must have a non-negative value less than or equal to ", PrivateClickMeasurement::SourceID::MaxEntropy, " for Private Click Measurement."));
+    if (attributionSourceID.value() > std::numeric_limits<uint8_t>::max()) {
+        document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, makeString("attributionsourceid must have a non-negative value less than or equal to ", std::numeric_limits<uint8_t>::max(), " for Private Click Measurement."));
         return std::nullopt;
     }
 
@@ -525,7 +530,11 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     }
 
     RegistrableDomain mainDocumentRegistrableDomain;
-    if (auto mainDocument = frame->mainFrame().document())
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+    if (!localFrame)
+        return std::nullopt;
+
+    if (auto mainDocument = localFrame->document())
         mainDocumentRegistrableDomain = RegistrableDomain { mainDocument->url() };
     else {
         document().addConsoleMessage(MessageSource::Other, MessageLevel::Warning, "Could not find a main document to use as source site for Private Click Measurement."_s);
@@ -542,7 +551,7 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
 #else
     String bundleID;
 #endif
-    auto privateClickMeasurement = PrivateClickMeasurement { SourceID(attributionSourceID.value()), SourceSite(WTFMove(mainDocumentRegistrableDomain)), AttributionDestinationSite(destinationURL), bundleID, WallTime::now(), PrivateClickMeasurement::AttributionEphemeral::No };
+    auto privateClickMeasurement = PrivateClickMeasurement { SourceID(attributionSourceID.value()), SourceSite(WTFMove(mainDocumentRegistrableDomain)), AttributionDestinationSite(destinationURL), bundleID, WallTime::now(), PCM::AttributionEphemeral::No };
 
     if (auto ephemeralNonce = attributionSourceNonceForPCM())
         privateClickMeasurement.setEphemeralSourceNonce(WTFMove(*ephemeralNonce));
@@ -604,7 +613,7 @@ void HTMLAnchorElement::handleClick(Event& event)
 
     auto effectiveTarget = this->effectiveTarget();
     NewFrameOpenerPolicy newFrameOpenerPolicy = NewFrameOpenerPolicy::Allow;
-    if (hasRel(Relation::NoOpener) || hasRel(Relation::NoReferrer) || (!hasRel(Relation::Opener) && document().settings().blankAnchorTargetImpliesNoOpenerEnabled() && isBlankTargetFrameName(effectiveTarget) && !completedURL.protocolIsJavaScript()))
+    if (hasRel(Relation::NoOpener) || hasRel(Relation::NoReferrer) || (!hasRel(Relation::Opener) && isBlankTargetFrameName(effectiveTarget) && !completedURL.protocolIsJavaScript()))
         newFrameOpenerPolicy = NewFrameOpenerPolicy::Suppress;
 
     auto privateClickMeasurement = parsePrivateClickMeasurement(completedURL);
@@ -682,7 +691,7 @@ bool HTMLAnchorElement::willRespondToMouseClickEventsWithEditability(Editability
 
 static auto& rootEditableElementMap()
 {
-    static NeverDestroyed<WeakHashMap<HTMLAnchorElement, WeakPtr<Element>>> map;
+    static NeverDestroyed<WeakHashMap<HTMLAnchorElement, WeakPtr<Element, WeakPtrImplWithEventTargetData>, WeakPtrImplWithEventTargetData>> map;
     return map.get();
 }
 

@@ -81,7 +81,7 @@ public:
     void panScrollFromPoint(const IntPoint&);
 
     // Scrolling methods for layers that can scroll their overflow.
-    void scrollByRecursively(const IntSize& delta, ScrollableArea** scrolledArea = nullptr);
+    WEBCORE_EXPORT void scrollByRecursively(const IntSize& delta, ScrollableArea** scrolledArea = nullptr);
 
     // Attempt to scroll the given ScrollOffset, returning the real target offset after it has
     // been adjusted by scroll snapping.
@@ -138,8 +138,8 @@ public:
     // All methods in this section override ScrollableaArea methods (final).
     void availableContentSizeChanged(AvailableSizeChangeReason) final;
 
-    bool horizontalScrollbarHiddenByStyle() const final;
-    bool verticalScrollbarHiddenByStyle() const final;
+    NativeScrollbarVisibility horizontalNativeScrollbarVisibility() const final;
+    NativeScrollbarVisibility verticalNativeScrollbarVisibility() const final;
 
     bool canShowNonOverlayScrollbars() const final;
 
@@ -207,6 +207,9 @@ public:
     IntSize visibleSize() const final;
     IntSize contentsSize() const final;
     IntSize reachableTotalContentsSize() const final;
+
+    bool requestStartKeyboardScrollAnimation(const KeyboardScroll&) final;
+    bool requestStopKeyboardScrollAnimation(bool immediate) final;
 
     bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) final;
     bool requestAnimatedScrollToPosition(const ScrollPosition&, ScrollClamping = ScrollClamping::Clamped) final;

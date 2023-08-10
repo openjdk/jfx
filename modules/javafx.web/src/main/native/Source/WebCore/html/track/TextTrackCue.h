@@ -41,6 +41,7 @@
 
 namespace WebCore {
 
+class SpeechSynthesis;
 class TextTrack;
 class TextTrackCue;
 
@@ -60,10 +61,10 @@ protected:
 
 private:
 
-    WeakPtr<TextTrackCue> m_cue;
+    WeakPtr<TextTrackCue, WeakPtrImplWithEventTargetData> m_cue;
 };
 
-class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData, public ActiveDOMObject {
+class TextTrackCue : public RefCounted<TextTrackCue>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
     static ExceptionOr<Ref<TextTrackCue>> create(Document&, double start, double end, DocumentFragment&);
@@ -111,6 +112,7 @@ public:
     virtual void removeDisplayTree();
 
     virtual RefPtr<DocumentFragment> getCueAsHTML();
+    virtual const String& text() const { return emptyString(); }
 
     String toJSONString() const;
 
@@ -122,6 +124,12 @@ public:
     virtual void updateDisplayTree(const MediaTime&) { }
 
     unsigned cueIndex() const;
+
+    using SpeakCueCompletionHandler = Function<void(const TextTrackCue&)>;
+    virtual void prepareToSpeak(SpeechSynthesis&, double, double, SpeakCueCompletionHandler&&) { }
+    virtual void beginSpeaking() { }
+    virtual void pauseSpeaking() { }
+    virtual void cancelSpeaking() { }
 
 protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);

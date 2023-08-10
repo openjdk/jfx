@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2022 Apple Inc.
+ * Copyright (C) 2003-2023 Apple Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,11 +34,7 @@
 #include <pal/spi/cg/CoreGraphicsSPI.h>
 #include <wtf/MathExtras.h>
 
-#if PLATFORM(COCOA)
 #include <pal/spi/cf/CoreTextSPI.h>
-#else
-#include <pal/spi/win/CoreTextSPIWin.h>
-#endif
 
 namespace WebCore {
 
@@ -109,26 +105,6 @@ AffineTransform computeVerticalTextMatrix(const Font& font, const AffineTransfor
 {
     ASSERT_UNUSED(font, font.platformData().orientation() == FontOrientation::Vertical);
     return computeBaseVerticalTextMatrix(previousTextMatrix);
-}
-
-#if !PLATFORM(WIN)
-
-// Confusingly, even when CGFontRenderingGetFontSmoothingDisabled() returns true, CGContextSetShouldSmoothFonts() still impacts text
-// rendering, which is why this function uses the "subpixel antialiasing" rather than "smoothing" terminology.
-bool FontCascade::isSubpixelAntialiasingAvailable()
-{
-#if HAVE(CG_FONT_RENDERING_GET_FONT_SMOOTHING_DISABLED)
-    static bool subpixelAntialiasingEnabled;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&]() {
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        subpixelAntialiasingEnabled = !CGFontRenderingGetFontSmoothingDisabled();
-        ALLOW_DEPRECATED_DECLARATIONS_END
-    });
-    return subpixelAntialiasingEnabled;
-#else
-    return false;
-#endif
 }
 
 static void fillVectorWithHorizontalGlyphPositions(Vector<CGPoint, 256>& positions, CGContextRef context, const CGSize* advances, unsigned count, const FloatPoint& point)
@@ -333,11 +309,11 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
 
     CGContextRef cgContext = context.platformContext();
 
-    bool shouldAntialias = true;
-    bool shouldSmoothFonts = true;
-
     if (!font.allowsAntialiasing())
         smoothingMode = FontSmoothingMode::NoSmoothing;
+
+    bool shouldAntialias = true;
+    bool shouldSmoothFonts = true;
 
     switch (smoothingMode) {
     case FontSmoothingMode::Antialiased:
@@ -345,7 +321,6 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         break;
     case FontSmoothingMode::AutoSmoothing:
     case FontSmoothingMode::SubpixelAntialiased:
-        shouldAntialias = true;
         break;
     case FontSmoothingMode::NoSmoothing:
         shouldAntialias = false;
@@ -356,9 +331,6 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
 #if PLATFORM(IOS_FAMILY)
     UNUSED_VARIABLE(shouldSmoothFonts);
 #else
-    if (!shouldUseSmoothing())
-        shouldSmoothFonts = false;
-
     bool originalShouldUseFontSmoothing = CGContextGetShouldSmoothFonts(cgContext);
     if (shouldSmoothFonts != originalShouldUseFontSmoothing)
         CGContextSetShouldSmoothFonts(cgContext, shouldSmoothFonts);
@@ -485,7 +457,5 @@ const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characte
 
     return Font::systemFallback();
 }
-
-#endif
 
 }

@@ -22,7 +22,7 @@
 #pragma once
 
 #include "CSSCustomPropertyValue.h"
-#include <wtf/Forward.h>
+#include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -31,39 +31,31 @@
 namespace WebCore {
 
 class StyleCustomPropertyData : public RefCounted<StyleCustomPropertyData> {
+private:
+    using CustomPropertyValueMap = HashMap<AtomString, RefPtr<const CSSCustomPropertyValue>>;
+
 public:
     static Ref<StyleCustomPropertyData> create() { return adoptRef(*new StyleCustomPropertyData); }
     Ref<StyleCustomPropertyData> copy() const { return adoptRef(*new StyleCustomPropertyData(*this)); }
 
-    bool operator==(const StyleCustomPropertyData& other) const
-    {
-        if (values.size() != other.values.size())
-            return false;
-
-        for (auto& entry : values) {
-            auto otherEntry = other.values.find(entry.key);
-            if (otherEntry == other.values.end() || !entry.value->equals(*otherEntry->value))
-                return false;
-        }
-
-        return true;
-    }
-
+    bool operator==(const StyleCustomPropertyData& other) const;
     bool operator!=(const StyleCustomPropertyData& other) const { return !(*this == other); }
 
-    void setCustomPropertyValue(const AtomString& name, Ref<CSSCustomPropertyValue>&& value)
-    {
-        values.set(name, WTFMove(value));
-    }
+    const CSSCustomPropertyValue* get(const AtomString&) const;
+    void set(const AtomString&, Ref<const CSSCustomPropertyValue>&&);
 
-    CustomPropertyValueMap values;
+    unsigned size() const;
+
+    void forEach(const Function<void(const KeyValuePair<AtomString, RefPtr<const CSSCustomPropertyValue>>&)>&) const;
+    AtomString findKeyAtIndex(unsigned) const;
 
 private:
     StyleCustomPropertyData() = default;
-    StyleCustomPropertyData(const StyleCustomPropertyData& other)
-        : RefCounted<StyleCustomPropertyData>()
-        , values(other.values)
-    { }
+    StyleCustomPropertyData(const StyleCustomPropertyData&);
+
+    RefPtr<const StyleCustomPropertyData> m_parentValues;
+    CustomPropertyValueMap m_ownValues;
+    unsigned m_ownValuesSizeExcludingOverriddenParentValues { 0 };
 };
 
 } // namespace WebCore

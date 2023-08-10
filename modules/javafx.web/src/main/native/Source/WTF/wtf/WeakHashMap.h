@@ -32,12 +32,12 @@
 namespace WTF {
 
 // Value will be deleted lazily upon rehash or amortized over time. For manual cleanup, call removeNullReferences().
-template<typename KeyType, typename ValueType, typename Counter = EmptyCounter>
+template<typename KeyType, typename ValueType, typename WeakPtrImpl>
 class WeakHashMap final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
 
-    using RefType = Ref<WeakPtrImpl<Counter>>;
+    using RefType = Ref<WeakPtrImpl>;
     using KeyTraits = HashTraits<KeyType>;
     using ValueTraits = HashTraits<ValueType>;
     using WeakHashImplMap = HashMap<RefType, ValueType>;
@@ -304,10 +304,13 @@ public:
 
     bool isEmptyIgnoringNullReferences() const
     {
-        auto result = begin() == end();
-        if (UNLIKELY(result && m_map.size()))
+        if (m_map.isEmpty())
+            return true;
+
+        auto onlyContainsNullReferences = begin() == end();
+        if (UNLIKELY(onlyContainsNullReferences))
             const_cast<WeakHashMap&>(*this).clear();
-        return result;
+        return onlyContainsNullReferences;
     }
 
     bool hasNullReferences() const
@@ -318,7 +321,7 @@ public:
             return !iterator.key.get();
         });
         if (result)
-            amortizedCleanupIfNeeded(count);
+            increaseOperationCountSinceLastCleanup(count);
         else
             m_operationCountSinceLastCleanup = 0;
         return result;
@@ -364,12 +367,12 @@ private:
     }
 
     template <typename T>
-    static WeakPtrImpl<Counter>* keyImplIfExists(const T& key)
+    static WeakPtrImpl* keyImplIfExists(const T& key)
     {
         auto& weakPtrImpl = key.weakPtrFactory().m_impl;
-        if (!weakPtrImpl || !*weakPtrImpl)
+        if (auto* pointer = weakPtrImpl.pointer(); pointer && *pointer)
+            return pointer;
             return nullptr;
-        return weakPtrImpl.get();
     }
 
     WeakHashImplMap m_map;

@@ -31,6 +31,7 @@
 #include "Length.h"
 #include "SVGLengthValue.h"
 #include "ShadowData.h"
+#include "StyleColor.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
@@ -155,8 +156,8 @@ public:
     }
 
     float opacity;
-    Color paintColor;
-    Color visitedLinkPaintColor;
+    StyleColor paintColor;
+    StyleColor visitedLinkPaintColor;
     String paintUri;
     String visitedLinkPaintUri;
     SVGPaintType paintType;
@@ -167,7 +168,9 @@ private:
     StyleFillData(const StyleFillData&);
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleStrokeData);
 class StyleStrokeData : public RefCounted<StyleStrokeData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleStrokeData);
 public:
     static Ref<StyleStrokeData> create() { return adoptRef(*new StyleStrokeData); }
     Ref<StyleStrokeData> copy() const;
@@ -180,8 +183,8 @@ public:
 
     float opacity;
 
-    Color paintColor;
-    Color visitedLinkPaintColor;
+    StyleColor paintColor;
+    StyleColor visitedLinkPaintColor;
 
     String paintUri;
     String visitedLinkPaintUri;
@@ -197,7 +200,9 @@ private:
     StyleStrokeData(const StyleStrokeData&);
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleStopData);
 class StyleStopData : public RefCounted<StyleStopData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleStopData);
 public:
     static Ref<StyleStopData> create() { return adoptRef(*new StyleStopData); }
     Ref<StyleStopData> copy() const;
@@ -209,14 +214,16 @@ public:
     }
 
     float opacity;
-    Color color;
+    StyleColor color;
 
 private:
     StyleStopData();
     StyleStopData(const StyleStopData&);
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleTextData);
 class StyleTextData : public RefCounted<StyleTextData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleTextData);
 public:
     static Ref<StyleTextData> create() { return adoptRef(*new StyleTextData); }
     Ref<StyleTextData> copy() const;
@@ -235,7 +242,9 @@ private:
 };
 
 // Note: the rule for this class is, *no inheritance* of these props
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleMiscData);
 class StyleMiscData : public RefCounted<StyleMiscData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleMiscData);
 public:
     static Ref<StyleMiscData> create() { return adoptRef(*new StyleMiscData); }
     Ref<StyleMiscData> copy() const;
@@ -247,8 +256,8 @@ public:
     }
 
     float floodOpacity;
-    Color floodColor;
-    Color lightingColor;
+    StyleColor floodColor;
+    StyleColor lightingColor;
 
     // non-inherited text stuff lives here not in StyleTextData.
     SVGLengthValue baselineShiftValue;
@@ -258,7 +267,9 @@ private:
     StyleMiscData(const StyleMiscData&);
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleShadowSVGData);
 class StyleShadowSVGData : public RefCounted<StyleShadowSVGData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleShadowSVGData);
 public:
     static Ref<StyleShadowSVGData> create() { return adoptRef(*new StyleShadowSVGData); }
     Ref<StyleShadowSVGData> copy() const;
@@ -277,7 +288,9 @@ private:
 };
 
 // Inherited resources
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleInheritedResourceData);
 class StyleInheritedResourceData : public RefCounted<StyleInheritedResourceData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleInheritedResourceData);
 public:
     static Ref<StyleInheritedResourceData> create() { return adoptRef(*new StyleInheritedResourceData); }
     Ref<StyleInheritedResourceData> copy() const;
@@ -298,7 +311,9 @@ private:
 };
 
 // Positioning and sizing properties.
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleLayoutData);
 class StyleLayoutData : public RefCounted<StyleLayoutData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleLayoutData);
 public:
     static Ref<StyleLayoutData> create() { return adoptRef(*new StyleLayoutData); }
     Ref<StyleLayoutData> copy() const;

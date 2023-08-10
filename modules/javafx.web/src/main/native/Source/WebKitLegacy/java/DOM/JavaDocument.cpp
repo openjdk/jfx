@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,7 @@
 #include <WebCore/XPathResult.h>
 #include <WebCore/EventNames.h>
 #include <WebCore/JSExecState.h>
+#include <WebCore/VisibilityState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
@@ -69,6 +70,8 @@
 #include <wtf/java/JavaEnv.h>
 
 using namespace WebCore;
+
+enum class VisibilityState : bool;
 
 extern "C" {
 

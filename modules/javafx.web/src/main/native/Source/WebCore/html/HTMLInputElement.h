@@ -358,7 +358,7 @@ private:
     bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isMouseFocusable() const final;
     bool isEnumeratable() const final;
-    bool supportLabels() const final;
+    bool isLabelable() const final;
     void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode) final;
     bool shouldUseInputMethod() final;
 
@@ -453,31 +453,31 @@ private:
     String m_valueIfDirty;
     unsigned m_size { defaultSize };
     short m_maxResults { -1 };
-    bool m_isChecked : 1;
-    bool m_dirtyCheckednessFlag : 1;
-    bool m_isIndeterminate : 1;
-    bool m_hasType : 1;
-    bool m_isActivatedSubmit : 1;
-    unsigned m_autocomplete : 2; // AutoCompleteSetting
-    bool m_isAutoFilled : 1;
-    bool m_isAutoFilledAndViewable : 1;
-    bool m_isAutoFilledAndObscured : 1;
-    unsigned m_autoFillButtonType : 3 ; // AutoFillButtonType
-    unsigned m_lastAutoFillButtonType : 3; // AutoFillButtonType
-    bool m_isAutoFillAvailable : 1;
+    bool m_isChecked : 1 { false };
+    bool m_dirtyCheckednessFlag : 1 { false };
+    bool m_isIndeterminate : 1 { false };
+    bool m_hasType : 1 { false };
+    bool m_isActivatedSubmit : 1 { false };
+    unsigned m_autocomplete : 2 { Uninitialized }; // AutoCompleteSetting
+    bool m_isAutoFilled : 1 { false };
+    bool m_isAutoFilledAndViewable : 1 { false };
+    bool m_isAutoFilledAndObscured : 1 { false };
+    unsigned m_autoFillButtonType : 3 { static_cast<uint8_t>(AutoFillButtonType::None) }; // AutoFillButtonType
+    unsigned m_lastAutoFillButtonType : 3 { static_cast<uint8_t>(AutoFillButtonType::None) }; // AutoFillButtonType
+    bool m_isAutoFillAvailable : 1 { false };
 #if ENABLE(DATALIST_ELEMENT)
-    bool m_hasNonEmptyList : 1;
+    bool m_hasNonEmptyList : 1 { false };
 #endif
-    bool m_stateRestored : 1;
+    bool m_stateRestored : 1 { false };
     bool m_parsingInProgress : 1;
-    bool m_valueAttributeWasUpdatedAfterParsing : 1;
-    bool m_wasModifiedByUser : 1;
-    bool m_canReceiveDroppedFiles : 1;
+    bool m_valueAttributeWasUpdatedAfterParsing : 1 { false };
+    bool m_wasModifiedByUser : 1 { false };
+    bool m_canReceiveDroppedFiles : 1 { false };
 #if ENABLE(TOUCH_EVENTS)
-    bool m_hasTouchEventHandler : 1;
+    bool m_hasTouchEventHandler : 1 { false };
 #endif
-    bool m_isSpellcheckDisabledExceptTextReplacement : 1;
-    bool m_hasPendingUserAgentShadowTreeUpdate : 1;
+    bool m_isSpellcheckDisabledExceptTextReplacement : 1 { false };
+    bool m_hasPendingUserAgentShadowTreeUpdate : 1 { false };
     RefPtr<InputType> m_inputType;
     // The ImageLoader must be owned by this element because the loader code assumes
     // that it lives as long as its owning element lives. If we move the loader into

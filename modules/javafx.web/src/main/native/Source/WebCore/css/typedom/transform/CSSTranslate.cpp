@@ -30,9 +30,10 @@
 #include "config.h"
 #include "CSSTranslate.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSFunctionValue.h"
+#include "CSSNumericFactory.h"
 #include "CSSNumericValue.h"
+#include "CSSStyleValueFactory.h"
 #include "CSSUnitValue.h"
 #include "CSSUnits.h"
 #include "DOMMatrix.h"
@@ -51,10 +52,61 @@ ExceptionOr<Ref<CSSTranslate>> CSSTranslate::create(Ref<CSSNumericValue> x, Ref<
 
     if (!x->type().matchesTypeOrPercentage<CSSNumericBaseType::Length>()
         || !y->type().matchesTypeOrPercentage<CSSNumericBaseType::Length>()
-        || !z->type().matchesTypeOrPercentage<CSSNumericBaseType::Length>())
+        || !z->type().matches<CSSNumericBaseType::Length>())
         return Exception { TypeError };
 
     return adoptRef(*new CSSTranslate(is2D, WTFMove(x), WTFMove(y), z.releaseNonNull()));
+}
+
+ExceptionOr<Ref<CSSTranslate>> CSSTranslate::create(CSSFunctionValue& cssFunctionValue)
+{
+    auto makeTranslate = [&](const Function<ExceptionOr<Ref<CSSTranslate>>(Vector<Ref<CSSNumericValue>>&&)>& create, size_t minNumberOfComponents, std::optional<size_t> maxNumberOfComponents = std::nullopt) -> ExceptionOr<Ref<CSSTranslate>> {
+        Vector<Ref<CSSNumericValue>> components;
+        for (auto componentCSSValue : cssFunctionValue) {
+            auto valueOrException = CSSStyleValueFactory::reifyValue(componentCSSValue, std::nullopt);
+            if (valueOrException.hasException())
+                return valueOrException.releaseException();
+            if (!is<CSSNumericValue>(valueOrException.returnValue()))
+                return Exception { TypeError, "Expected a CSSNumericValue."_s };
+            components.append(downcast<CSSNumericValue>(valueOrException.releaseReturnValue().get()));
+        }
+        if (!maxNumberOfComponents)
+            maxNumberOfComponents = minNumberOfComponents;
+        auto numberOfComponents = components.size();
+        if (numberOfComponents < minNumberOfComponents || numberOfComponents > maxNumberOfComponents) {
+            ASSERT_NOT_REACHED();
+            return Exception { TypeError, "Unexpected number of values."_s };
+        }
+        return create(WTFMove(components));
+    };
+
+    switch (cssFunctionValue.name()) {
+    case CSSValueTranslateX:
+        return makeTranslate([](Vector<Ref<CSSNumericValue>>&& components) {
+            return CSSTranslate::create(components[0], CSSNumericFactory::px(0), nullptr);
+        }, 1);
+    case CSSValueTranslateY:
+        return makeTranslate([](Vector<Ref<CSSNumericValue>>&& components) {
+            return CSSTranslate::create(CSSNumericFactory::px(0), components[0], nullptr);
+        }, 1);
+    case CSSValueTranslateZ:
+        return makeTranslate([](Vector<Ref<CSSNumericValue>>&& components) {
+            return CSSTranslate::create(CSSNumericFactory::px(0), CSSNumericFactory::px(0), components[0].ptr());
+        }, 1);
+    case CSSValueTranslate:
+        return makeTranslate([](Vector<Ref<CSSNumericValue>>&& components) {
+            if (components.size() == 2)
+                return CSSTranslate::create(components[0], components[1], nullptr);
+            return CSSTranslate::create(components[0], CSSNumericFactory::px(0), nullptr);
+        }, 1, 2);
+    case CSSValueTranslate3d:
+        return makeTranslate([](Vector<Ref<CSSNumericValue>>&& components) {
+            return CSSTranslate::create(components[0], components[1], components[2].ptr());
+        }, 3);
+    default:
+        ASSERT_NOT_REACHED();
+        return CSSTranslate::create(CSSNumericFactory::px(0), CSSNumericFactory::px(0), nullptr);
+    }
 }
 
 CSSTranslate::CSSTranslate(CSSTransformComponent::Is2D is2D, Ref<CSSNumericValue> x, Ref<CSSNumericValue> y, Ref<CSSNumericValue> z)
@@ -79,12 +131,65 @@ void CSSTranslate::serialize(StringBuilder& builder) const
     builder.append(')');
 }
 
+ExceptionOr<void> CSSTranslate::setZ(Ref<CSSNumericValue> z)
+{
+    if (!z->type().matches<CSSNumericBaseType::Length>())
+        return Exception { TypeError };
+
+    m_z = WTFMove(z);
+    return { };
+}
+
 ExceptionOr<Ref<DOMMatrix>> CSSTranslate::toMatrix()
 {
-    // FIXME: Implement.
-    return DOMMatrix::fromMatrix(DOMMatrixInit { });
+    // https://drafts.css-houdini.org/css-typed-om/#dom-csstransformcomponent-tomatrix
+    // As the entries of such a matrix are defined relative to the px unit, if any <length>s
+    // in this involved in generating the matrix are not compatible units with px (such as
+    // relative lengths or percentages), throw a TypeError.
+    if (!is<CSSUnitValue>(m_x) || !is<CSSUnitValue>(m_y) || !is<CSSUnitValue>(m_z))
+        return Exception { TypeError };
+
+    auto xPx = downcast<CSSUnitValue>(m_x.get()).convertTo(CSSUnitType::CSS_PX);
+    auto yPx = downcast<CSSUnitValue>(m_y.get()).convertTo(CSSUnitType::CSS_PX);
+    auto zPx = downcast<CSSUnitValue>(m_z.get()).convertTo(CSSUnitType::CSS_PX);
+
+    if (!xPx || !yPx || !zPx)
+        return Exception { TypeError };
+
+    auto x = xPx->value();
+    auto y = yPx->value();
+    auto z = zPx->value();
+
+    TransformationMatrix matrix { };
+
+    if (is2D())
+        matrix.translate(x, y);
+    else
+        matrix.translate3d(x, y, z);
+
+    return { DOMMatrix::create(WTFMove(matrix), is2D() ? DOMMatrixReadOnly::Is2D::Yes : DOMMatrixReadOnly::Is2D::No) };
+}
+
+RefPtr<CSSValue> CSSTranslate::toCSSValue() const
+{
+    auto x = m_x->toCSSValue();
+    if (!x)
+        return nullptr;
+
+    auto y = m_y->toCSSValue();
+    if (!y)
+        return nullptr;
+
+    auto result = CSSFunctionValue::create(is2D() ? CSSValueTranslate : CSSValueTranslate3d);
+    result->append(x.releaseNonNull());
+    result->append(y.releaseNonNull());
+    if (!is2D()) {
+        auto z = m_z->toCSSValue();
+        if (!z)
+            return nullptr;
+        result->append(z.releaseNonNull());
+    }
+    return result;
 }
 
 } // namespace WebCore
-
-#endif

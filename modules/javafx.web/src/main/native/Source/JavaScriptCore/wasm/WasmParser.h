@@ -29,12 +29,14 @@
 
 #include "B3Procedure.h"
 #include "JITCompilation.h"
+#include "SIMDInfo.h"
 #include "VirtualRegister.h"
 #include "WasmFormat.h"
 #include "WasmLimits.h"
 #include "WasmModuleInformation.h"
 #include "WasmOps.h"
 #include "WasmSections.h"
+#include "Width.h"
 #include <type_traits>
 #include <wtf/Expected.h>
 #include <wtf/LEBDecoder.h>
@@ -64,6 +66,12 @@ public:
     size_t offset() const { return m_offset; }
 
 protected:
+    struct RecursionGroupInformation {
+        bool inRecursionGroup;
+        uint32_t start;
+        uint32_t end;
+    };
+
     Parser(const uint8_t*, size_t);
 
     bool WARN_UNUSED_RETURN consumeCharacter(char);
@@ -77,6 +85,8 @@ protected:
     bool WARN_UNUSED_RETURN parseUInt8(uint8_t&);
     bool WARN_UNUSED_RETURN parseUInt32(uint32_t&);
     bool WARN_UNUSED_RETURN parseUInt64(uint64_t&);
+    bool WARN_UNUSED_RETURN parseImmByteArray16(v128_t&);
+    PartialResult WARN_UNUSED_RETURN parseImmLaneIdx(uint8_t laneCount, uint8_t&);
     bool WARN_UNUSED_RETURN parseVarUInt32(uint32_t&);
     bool WARN_UNUSED_RETURN parseVarUInt64(uint64_t&);
 
@@ -113,6 +123,10 @@ private:
     size_t m_sourceLength;
     // We keep a local reference to the global table so we don't have to fetch it to find thunk types.
     const TypeInformation& m_typeInformation;
+
+protected:
+    // Used to track whether we are in a recursion group and the group's type indices, if any.
+    RecursionGroupInformation m_recursionGroupInformation;
 };
 
 template<typename SuccessType>
@@ -120,6 +134,7 @@ ALWAYS_INLINE Parser<SuccessType>::Parser(const uint8_t* sourceBuffer, size_t so
     : m_source(sourceBuffer)
     , m_sourceLength(sourceLength)
     , m_typeInformation(TypeInformation::singleton())
+    , m_recursionGroupInformation({ })
 {
 }
 
@@ -224,6 +239,25 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseUInt64(uint64_t& result)
 }
 
 template<typename SuccessType>
+ALWAYS_INLINE bool Parser<SuccessType>::parseImmByteArray16(v128_t& result)
+{
+    if (length() < 16 || m_offset > length() - 16)
+        return false;
+    std::copy(source() + m_offset, source() + m_offset + 16, result.u8x16);
+    m_offset += 16;
+    return true;
+}
+
+template<typename SuccessType>
+ALWAYS_INLINE typename Parser<SuccessType>::PartialResult Parser<SuccessType>::parseImmLaneIdx(uint8_t laneCount, uint8_t& result)
+{
+    RELEASE_ASSERT(laneCount == 2 || laneCount == 4 || laneCount == 8 || laneCount == 16 || laneCount == 32);
+    WASM_PARSER_FAIL_IF(!parseUInt8(result), "Could not parse the lane index immediate byte.");
+    WASM_PARSER_FAIL_IF(result >= laneCount, "Lane index immediate is too large, saw ", laneCount, ", expected an ImmLaneIdx", laneCount);
+    return { };
+}
+
+template<typename SuccessType>
 ALWAYS_INLINE bool Parser<SuccessType>::parseUInt8(uint8_t& result)
 {
     if (m_offset >= length())
@@ -278,7 +312,7 @@ ALWAYS_INLINE typename Parser<SuccessType>::PartialResult Parser<SuccessType>::p
 {
     int8_t typeKind;
     if (peekInt7(typeKind) && isValidTypeKind(typeKind)) {
-        Type type = {static_cast<TypeKind>(typeKind), Nullable::Yes, 0};
+        Type type = { static_cast<TypeKind>(typeKind), 0 };
         WASM_PARSER_FAIL_IF(!(isValueType(type) || type.isVoid()), "result type of block: ", makeString(type.kind), " is not a value type or Void");
         result = m_typeInformation.thunkFor(type);
         m_offset++;
@@ -312,7 +346,7 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseHeapType(const ModuleInformation& i
         return false;
     }
 
-    if (static_cast<size_t>(heapType) >= info.typeCount())
+    if (static_cast<size_t>(heapType) >= info.typeCount() && (!m_recursionGroupInformation.inRecursionGroup || !(static_cast<uint32_t>(heapType) >= m_recursionGroupInformation.start && static_cast<uint32_t>(heapType) < m_recursionGroupInformation.end)))
         return false;
 
     result = heapType;
@@ -329,20 +363,33 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseValueType(const ModuleInformation& 
         return false;
 
     TypeKind typeKind = static_cast<TypeKind>(kind);
-    bool isNullable = true;
     TypeIndex typeIndex = 0;
-    if (Options::useWebAssemblyTypedFunctionReferences() && (typeKind == TypeKind::Funcref || typeKind == TypeKind::Externref || typeKind == TypeKind::I31ref)) {
+    if (Options::useWebAssemblyTypedFunctionReferences() && isValidHeapTypeKind(typeKind)) {
         typeIndex = static_cast<TypeIndex>(typeKind);
         typeKind = TypeKind::RefNull;
     } else if (typeKind == TypeKind::Ref || typeKind == TypeKind::RefNull) {
-        isNullable = typeKind == TypeKind::RefNull;
         int32_t heapType;
         if (!parseHeapType(info, heapType))
             return false;
-        typeIndex = heapType < 0 ? static_cast<TypeIndex>(heapType) : TypeInformation::get(info.typeSignatures[heapType].get());
+        if (heapType < 0)
+            typeIndex = static_cast<TypeIndex>(heapType);
+        else {
+            // For recursive references inside recursion groups, we construct a
+            // placeholder projection with an invalid group index. These should
+            // be replaced with a real type index in expand() before use.
+            if (m_recursionGroupInformation.inRecursionGroup && static_cast<uint32_t>(heapType) >= m_recursionGroupInformation.start) {
+                ASSERT(static_cast<uint32_t>(heapType) >= info.typeCount() && static_cast<uint32_t>(heapType) < m_recursionGroupInformation.end);
+                ProjectionIndex groupIndex = static_cast<ProjectionIndex>(heapType - m_recursionGroupInformation.start);
+                RefPtr<TypeDefinition> def = TypeInformation::typeDefinitionForProjection(Projection::PlaceholderGroup, groupIndex);
+                typeIndex = def->index();
+            } else {
+                ASSERT(static_cast<uint32_t>(heapType) < info.typeCount());
+                typeIndex = TypeInformation::get(info.typeSignatures[heapType].get());
+            }
+        }
     }
 
-    Type type = { typeKind, static_cast<Nullable>(isNullable), typeIndex };
+    Type type = { typeKind, typeIndex };
     if (!isValueType(type))
         return false;
     result = type;

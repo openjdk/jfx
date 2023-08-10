@@ -32,6 +32,7 @@
 #include "CatchScope.h"
 #include "DeferredWorkTimer.h"
 #include "Exception.h"
+#include "JSArrayBufferViewInlines.h"
 #include "JSCBuiltins.h"
 #include "JSGlobalObjectInlines.h"
 #include "JSModuleNamespaceObject.h"
@@ -51,8 +52,9 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSWebAssembly);
 
+// Uses UNUSED_FUNCTION because some constructors, e.g., for Arrays are currently not exposed.
 #define DEFINE_CALLBACK_FOR_CONSTRUCTOR(capitalName, lowerName, properName, instanceType, jsName, prototypeBase, featureFlag) \
-static JSValue create##capitalName(VM&, JSObject* object) \
+static UNUSED_FUNCTION JSValue create##capitalName(VM&, JSObject* object) \
 { \
     JSWebAssembly* webAssembly = jsCast<JSWebAssembly*>(object); \
     JSGlobalObject* globalObject = webAssembly->globalObject(); \

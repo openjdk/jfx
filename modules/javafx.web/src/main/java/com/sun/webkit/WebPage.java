@@ -151,7 +151,7 @@ public final class WebPage {
             final boolean useJIT = Boolean.valueOf(System.getProperty(
                     "com.sun.webkit.useJIT", "true"));
             final boolean useDFGJIT = Boolean.valueOf(System.getProperty(
-                    "com.sun.webkit.useDFGJIT", "true"));
+                    "com.sun.webkit.useDFGJIT", "false"));
 
             // TODO: Enable CSS3D by default once it is stabilized.
             boolean useCSS3D = Boolean.valueOf(System.getProperty(

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 #include "GPUAdapter.h"
 #include "GPURequestAdapterOptions.h"
 #include "GPUTextureFormat.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include <optional>
 #include <pal/graphics/WebGPU/WebGPU.h>
 #include <wtf/Deque.h>
@@ -37,29 +37,33 @@
 
 namespace WebCore {
 
+class GPUCompositorIntegration;
+class GPUPresentationContext;
+struct GPUPresentationContextDescriptor;
+
 class GPU : public RefCounted<GPU> {
 public:
-    static Ref<GPU> create()
+    static Ref<GPU> create(Ref<PAL::WebGPU::GPU>&& backing)
     {
-        return adoptRef(*new GPU());
+        return adoptRef(*new GPU(WTFMove(backing)));
     }
+    ~GPU();
 
     using RequestAdapterPromise = DOMPromiseDeferred<IDLNullable<IDLInterface<GPUAdapter>>>;
     void requestAdapter(const std::optional<GPURequestAdapterOptions>&, RequestAdapterPromise&&);
 
     GPUTextureFormat getPreferredCanvasFormat();
 
-    void setBacking(PAL::WebGPU::GPU&);
+    Ref<GPUPresentationContext> createPresentationContext(const GPUPresentationContextDescriptor&);
+
+    Ref<GPUCompositorIntegration> createCompositorIntegration();
 
 private:
-    GPU() = default;
+    GPU(Ref<PAL::WebGPU::GPU>&&);
 
-    struct PendingRequestAdapterArguments {
-        std::optional<GPURequestAdapterOptions> options;
-        RequestAdapterPromise promise;
-    };
+    struct PendingRequestAdapterArguments;
     Deque<PendingRequestAdapterArguments> m_pendingRequestAdapterArguments;
-    RefPtr<PAL::WebGPU::GPU> m_backing;
+    Ref<PAL::WebGPU::GPU> m_backing;
 };
 
 }

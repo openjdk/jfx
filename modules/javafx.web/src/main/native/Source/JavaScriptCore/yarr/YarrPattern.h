@@ -128,6 +128,12 @@ enum class QuantifierType : uint8_t {
     NonGreedy,
 };
 
+enum MatchDirection : uint8_t {
+    // The code assumes that Forward is 0 and Backward is 1.
+    Forward = 0,
+    Backward = 1
+};
+
 struct PatternTerm {
     enum class Type : uint8_t {
         AssertionBOL,
@@ -142,8 +148,9 @@ struct PatternTerm {
         DotStarEnclosure,
     };
     Type type;
-    bool m_capture :1;
-    bool m_invert :1;
+    bool m_capture : 1;
+    bool m_invert : 1;
+    MatchDirection m_matchDirection : 1;
     QuantifierType quantityType;
     Checked<unsigned> quantityMinCount;
     Checked<unsigned> quantityMaxCount;
@@ -155,8 +162,8 @@ struct PatternTerm {
             PatternDisjunction* disjunction;
             unsigned subpatternId;
             unsigned lastSubpatternId;
-            bool isCopy;
-            bool isTerminal;
+            bool isCopy : 1;
+            bool isTerminal : 1;
         } parentheses;
         struct {
             bool bolAnchor : 1;
@@ -166,30 +173,33 @@ struct PatternTerm {
     unsigned inputPosition;
     unsigned frameLocation;
 
-    PatternTerm(UChar32 ch)
+    PatternTerm(UChar32 ch, MatchDirection matchDirection = Forward)
         : type(PatternTerm::Type::PatternCharacter)
         , m_capture(false)
         , m_invert(false)
+        , m_matchDirection(matchDirection)
     {
         patternCharacter = ch;
         quantityType = QuantifierType::FixedCount;
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(CharacterClass* charClass, bool invert)
+    PatternTerm(CharacterClass* charClass, bool invert, MatchDirection matchDirection = Forward)
         : type(PatternTerm::Type::CharacterClass)
         , m_capture(false)
         , m_invert(invert)
+        , m_matchDirection(matchDirection)
     {
         characterClass = charClass;
         quantityType = QuantifierType::FixedCount;
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(Type type, unsigned subpatternId, PatternDisjunction* disjunction, bool capture = false, bool invert = false)
+    PatternTerm(Type type, unsigned subpatternId, PatternDisjunction* disjunction, bool capture = false, bool invert = false, MatchDirection matchDirection = Forward)
         : type(type)
         , m_capture(capture)
         , m_invert(invert)
+        , m_matchDirection(matchDirection)
     {
         parentheses.disjunction = disjunction;
         parentheses.subpatternId = subpatternId;
@@ -203,6 +213,7 @@ struct PatternTerm {
         : type(type)
         , m_capture(false)
         , m_invert(invert)
+        , m_matchDirection(Forward)
     {
         quantityType = QuantifierType::FixedCount;
         quantityMinCount = quantityMaxCount = 1;
@@ -212,6 +223,7 @@ struct PatternTerm {
         : type(Type::BackReference)
         , m_capture(false)
         , m_invert(false)
+        , m_matchDirection(Forward)
     {
         backReferenceSubpatternId = spatternId;
         quantityType = QuantifierType::FixedCount;
@@ -222,6 +234,7 @@ struct PatternTerm {
         : type(Type::DotStarEnclosure)
         , m_capture(false)
         , m_invert(false)
+        , m_matchDirection(Forward)
     {
         anchors.bolAnchor = bolAnchor;
         anchors.eolAnchor = eolAnchor;
@@ -249,9 +262,25 @@ struct PatternTerm {
         return PatternTerm(Type::AssertionWordBoundary, invert);
     }
 
+    void convertToBackreference()
+    {
+        ASSERT(type == Type::ForwardReference);
+        type = Type::BackReference;
+    }
+
     bool invert() const
     {
         return m_invert;
+    }
+
+    void setMatchDirection(MatchDirection matchDirection)
+    {
+        m_matchDirection = matchDirection;
+    }
+
+    MatchDirection matchDirection() const
+    {
+        return m_matchDirection;
     }
 
     bool capture()
@@ -266,7 +295,8 @@ struct PatternTerm {
 
     bool containsAnyCaptures()
     {
-        ASSERT(this->type == Type::ParenthesesSubpattern);
+        ASSERT(this->type == Type::ParenthesesSubpattern
+            || this->type == Type::ParentheticalAssertion);
         return parentheses.lastSubpatternId >= parentheses.subpatternId;
     }
 
@@ -294,8 +324,11 @@ struct PatternTerm {
 struct PatternAlternative {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PatternAlternative(PatternDisjunction* disjunction)
+    PatternAlternative(PatternDisjunction* disjunction, unsigned firstSubpatternId, MatchDirection matchDirection = Forward)
         : m_parent(disjunction)
+        , m_firstSubpatternId(firstSubpatternId)
+        , m_lastSubpatternId(0)
+        , m_direction(matchDirection)
         , m_onceThrough(false)
         , m_hasFixedSize(false)
         , m_startsWithBOL(false)
@@ -303,10 +336,15 @@ public:
     {
     }
 
-    PatternTerm& lastTerm()
+    unsigned lastTermIndex()
     {
         ASSERT(m_terms.size());
-        return m_terms[m_terms.size() - 1];
+        return m_terms.size() - 1;
+    }
+
+    PatternTerm& lastTerm()
+    {
+        return m_terms[lastTermIndex()];
     }
 
     void removeLastTerm()
@@ -325,11 +363,37 @@ public:
         return m_onceThrough;
     }
 
+    bool needToCleanupCaptures() const
+    {
+        return !!m_lastSubpatternId;
+    }
+
+    unsigned firstCleanupSubpatternId()
+    {
+        unsigned firstSubpatternIdToClear = m_firstSubpatternId;
+
+        // We want to clear subpatterns, which start at 1.
+        if (!firstSubpatternIdToClear)
+            firstSubpatternIdToClear++;
+
+        ASSERT(firstSubpatternIdToClear <= m_lastSubpatternId);
+
+        return firstSubpatternIdToClear;
+    }
+
+    MatchDirection matchDirection() const
+    {
+        return m_direction;
+    }
+
     void dump(PrintStream&, YarrPattern*, unsigned);
 
     Vector<PatternTerm> m_terms;
     PatternDisjunction* m_parent;
     unsigned m_minimumSize;
+    unsigned m_firstSubpatternId;
+    unsigned m_lastSubpatternId;
+    MatchDirection m_direction;
     bool m_onceThrough : 1;
     bool m_hasFixedSize : 1;
     bool m_startsWithBOL : 1;
@@ -345,9 +409,9 @@ public:
     {
     }
 
-    PatternAlternative* addNewAlternative()
+    PatternAlternative* addNewAlternative(unsigned firstSubpatternId = 1, MatchDirection matchDirection = Forward)
     {
-        m_alternatives.append(makeUnique<PatternAlternative>(this));
+        m_alternatives.append(makeUnique<PatternAlternative>(this, firstSubpatternId, matchDirection));
         return static_cast<PatternAlternative*>(m_alternatives.last().get());
     }
 
@@ -396,6 +460,7 @@ struct YarrPattern {
 
         m_containsBackreferences = false;
         m_containsBOL = false;
+        m_containsLookbehinds = false;
         m_containsUnsignedLengthPattern = false;
         m_hasCopiedParenSubexpressions = false;
         m_saveInitialStartValue = false;
@@ -532,6 +597,7 @@ struct YarrPattern {
 
     bool m_containsBackreferences : 1;
     bool m_containsBOL : 1;
+    bool m_containsLookbehinds : 1;
     bool m_containsUnsignedLengthPattern : 1;
     bool m_hasCopiedParenSubexpressions : 1;
     bool m_saveInitialStartValue : 1;
@@ -627,3 +693,5 @@ private:
     };
 
 } } // namespace JSC::Yarr
+
+using JSC::Yarr::MatchDirection;

@@ -51,9 +51,11 @@ private:
     void stopProducingData() final;
     bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate) final;
     void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate) final;
+    void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) final;
     Ref<RealtimeMediaSource> clone() final;
     void endProducingData() final;
     void stopBeingObserved() final;
+    double facingModeFitnessDistanceAdjustment() const final  { return m_source->facingModeFitnessDistanceAdjustment(); }
 
     const RealtimeMediaSourceCapabilities& capabilities() final { return m_source->capabilities(); }
     const RealtimeMediaSourceSettings& settings() final { return m_currentSettings; }

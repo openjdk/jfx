@@ -120,6 +120,14 @@ bool URL::hasSpecialScheme() const
         || protocolIs("wss"_s);
 }
 
+bool URL::hasLocalScheme() const
+{
+    // https://fetch.spec.whatwg.org/#local-scheme
+    return protocolIs("about"_s)
+        || protocolIs("blob"_s)
+        || protocolIs("data"_s);
+}
+
 unsigned URL::pathStart() const
 {
     unsigned start = m_hostEnd + m_portLength;
@@ -236,6 +244,24 @@ StringView URL::fragmentIdentifier() const
         return { };
 
     return StringView(m_string).substring(m_queryEnd + 1);
+}
+
+// https://wicg.github.io/scroll-to-text-fragment/#the-fragment-directive
+String URL::consumefragmentDirective()
+{
+    ASCIILiteral fragmentDirectiveDelimiter = ":~:"_s;
+    auto fragment = fragmentIdentifier();
+
+    auto fragmentDirectiveStart = fragment.find(fragmentDirectiveDelimiter);
+
+    if (fragmentDirectiveStart == notFound)
+        return { };
+
+    auto fragmentDirective = fragment.substring(fragmentDirectiveStart + fragmentDirectiveDelimiter.length()).toString();
+
+    setFragmentIdentifier(fragment.left(fragmentDirectiveStart));
+
+    return fragmentDirective;
 }
 
 URL URL::truncatedForUseAsBase() const
@@ -466,7 +492,7 @@ void URL::setHost(StringView newHost)
     bool slashSlashNeeded = m_userStart == m_schemeEnd + 1U;
     parse(makeString(
         StringView(m_string).left(hostStart()),
-        slashSlashNeeded ? "//" : "",
+        slashSlashNeeded ? "//"_s : ""_s,
         hasSpecialScheme() ? StringView(encodedHostName.data(), encodedHostName.size()) : newHost,
         StringView(m_string).substring(m_hostEnd)
     ));
@@ -519,9 +545,9 @@ void URL::setHostAndPort(StringView hostAndPort)
     bool slashSlashNeeded = m_userStart == m_schemeEnd + 1U;
     parse(makeString(
         StringView(m_string).left(hostStart()),
-        slashSlashNeeded ? "//" : "",
+        slashSlashNeeded ? "//"_s : ""_s,
         hasSpecialScheme() ? StringView(encodedHostName.data(), encodedHostName.size()) : hostName,
-        portString.isEmpty() ? "" : ":",
+        portString.isEmpty() ? ""_s : ":"_s,
         portString,
         StringView(m_string).substring(pathStart())
     ));
@@ -531,12 +557,10 @@ template<typename StringType>
 static String percentEncodeCharacters(const StringType& input, bool(*shouldEncode)(UChar))
 {
     auto encode = [shouldEncode] (const StringType& input) {
-        CString utf8 = input.utf8();
-        auto* data = utf8.data();
+        auto result = input.tryGetUTF8([&](Span<const char> span) -> String {
         StringBuilder builder;
-        auto length = utf8.length();
-        for (unsigned j = 0; j < length; j++) {
-            auto c = data[j];
+            for (unsigned j = 0; j < span.size(); j++) {
+                auto c = span[j];
             if (shouldEncode(c)) {
                 builder.append('%');
                 builder.append(upperNibbleToASCIIHexDigit(c));
@@ -545,6 +569,9 @@ static String percentEncodeCharacters(const StringType& input, bool(*shouldEncod
                 builder.append(c);
         }
         return builder.toString();
+        });
+        RELEASE_ASSERT(result);
+        return result.value();
     };
 
     for (size_t i = 0; i < input.length(); ++i) {
@@ -584,9 +611,9 @@ void URL::setUser(StringView newUser)
         bool needSeparator = end == m_hostEnd || (end == m_passwordEnd && m_string[end] != '@');
         parse(makeString(
             StringView(m_string).left(m_userStart),
-            slashSlashNeeded ? "//" : "",
+            slashSlashNeeded ? "//"_s : ""_s,
             percentEncodeCharacters(newUser, URLParser::isInUserInfoEncodeSet),
-            needSeparator ? "@" : "",
+            needSeparator ? "@"_s : ""_s,
             StringView(m_string).substring(end)
         ));
     } else {
@@ -606,7 +633,7 @@ void URL::setPassword(StringView newPassword)
         bool needLeadingSlashes = m_userEnd == m_schemeEnd + 1U;
         parse(makeString(
             StringView(m_string).left(m_userEnd),
-            needLeadingSlashes ? "//:" : ":",
+            needLeadingSlashes ? "//:"_s : ":"_s,
             percentEncodeCharacters(newPassword, URLParser::isInUserInfoEncodeSet),
             '@',
             StringView(m_string).substring(credentialsEnd())
@@ -660,7 +687,7 @@ void URL::setQuery(StringView newQuery)
 
     parse(makeString(
         StringView(m_string).left(m_pathEnd),
-        (!newQuery.startsWith('?') && !newQuery.isNull()) ? "?" : "",
+        (!newQuery.startsWith('?') && !newQuery.isNull()) ? "?"_s : ""_s,
         newQuery,
         StringView(m_string).substring(m_queryEnd)
     ));
@@ -840,6 +867,40 @@ String URL::strippedForUseAsReferrer() const
         StringView(m_string).left(m_userStart),
         StringView(m_string).substring(end, m_queryEnd - end)
     );
+}
+
+String URL::strippedForUseAsReferrerWithExplicitPort() const
+{
+    if (!m_isValid)
+        return m_string;
+
+    // Custom ports will appear in the URL string:
+    if (m_portLength)
+        return strippedForUseAsReferrer();
+
+    auto port = defaultPortForProtocol(protocol());
+    if (!port)
+        return strippedForUseAsReferrer();
+
+    unsigned end = credentialsEnd();
+
+    if (m_userStart == end && m_queryEnd == m_string.length())
+        return makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(pathStart()));
+
+    return makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(end, m_queryEnd - end));
+}
+
+String URL::strippedForUseAsReport() const
+{
+    if (!m_isValid)
+        return m_string;
+
+    unsigned end = credentialsEnd();
+
+    if (m_userStart == end && m_pathEnd == m_string.length())
+        return m_string;
+
+    return makeString(StringView(m_string).left(m_userStart), StringView(m_string).substring(end, m_pathEnd - end));
 }
 
 bool URL::isLocalFile() const
@@ -1043,7 +1104,7 @@ String URL::stringCenterEllipsizedToLength(unsigned length) const
     if (m_string.length() <= length)
         return m_string;
 
-    return makeString(StringView(m_string).left(length / 2 - 1), "...", StringView(m_string).right(length / 2 - 2));
+    return makeString(StringView(m_string).left(length / 2 - 1), "..."_s, StringView(m_string).right(length / 2 - 2));
 }
 
 URL URL::fakeURLWithRelativePart(StringView relativePart)
@@ -1055,7 +1116,7 @@ URL URL::fileURLWithFileSystemPath(StringView path)
 {
     return URL(makeString(
         "file://"_s,
-        path.startsWith('/') ? "" : "/",
+        path.startsWith('/') ? ""_s : "/"_s,
         escapePathWithoutCopying(path)
     ));
 }
@@ -1258,18 +1319,44 @@ bool isEqualIgnoringQueryAndFragments(const URL& a, const URL& b)
     return substringIgnoringQueryAndFragments(a) == substringIgnoringQueryAndFragments(b);
 }
 
-void removeQueryParameters(URL& url, const HashSet<String>& keysToRemove)
+Vector<String> removeQueryParameters(URL& url, const HashSet<String>& keysToRemove)
 {
     if (keysToRemove.isEmpty())
-        return;
+        return { };
 
+    return removeQueryParameters(url, [&](auto& parameter) {
+        return keysToRemove.contains(parameter);
+    });
+}
+
+Vector<String> removeQueryParameters(URL& url, Function<bool(const String&)>&& shouldRemove)
+{
+    if (!url.hasQuery())
+        return { };
+
+    Vector<String> removedParameters;
     StringBuilder queryWithoutRemovalKeys;
-    for (auto& parameter : URLParser::parseURLEncodedForm(url.query())) {
-        if (!keysToRemove.contains(parameter.key))
-            queryWithoutRemovalKeys.append(queryWithoutRemovalKeys.isEmpty() ? "" : "&", parameter.key, '=', parameter.value);
+    for (auto bytes : url.query().split('&')) {
+        auto nameAndValue = URLParser::parseQueryNameAndValue(bytes);
+        if (!nameAndValue)
+            continue;
+
+        auto& key = nameAndValue->key;
+        if (key.isEmpty())
+            continue;
+
+        if (shouldRemove(key)) {
+            removedParameters.append(key);
+            continue;
     }
 
+        queryWithoutRemovalKeys.append(queryWithoutRemovalKeys.isEmpty() ? "" : "&", bytes);
+    }
+
+    if (!removedParameters.isEmpty())
     url.setQuery(queryWithoutRemovalKeys);
+
+    return removedParameters;
 }
 
 } // namespace WTF

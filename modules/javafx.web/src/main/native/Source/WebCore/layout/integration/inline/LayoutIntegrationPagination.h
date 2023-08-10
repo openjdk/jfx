@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutIntegrationInlineContent.h"
 
 namespace WebCore {
@@ -35,9 +33,14 @@ class RenderBlockFlow;
 
 namespace LayoutIntegration {
 
-std::unique_ptr<InlineContent> adjustLinePositionsForPagination(const InlineContent&, RenderBlockFlow&);
+struct LineAdjustment {
+    LayoutUnit offset { 0 };
+    bool isFirstAfterPageBreak { false };
+};
+
+Vector<LineAdjustment> computeAdjustmentsForPagination(const InlineContent&, RenderBlockFlow&);
+void adjustLinePositionsForPagination(InlineContent&, const Vector<LineAdjustment>&);
 
 }
 }
 
-#endif

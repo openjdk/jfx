@@ -219,6 +219,7 @@ void cleanHTTPRequestHeadersForAccessControl(ResourceRequest& request, OptionSet
         request.removeHTTPHeaderField(HTTPHeaderName::CacheControl);
     request.removeHTTPHeaderField(HTTPHeaderName::SecFetchDest);
     request.removeHTTPHeaderField(HTTPHeaderName::SecFetchMode);
+    request.removeHTTPHeaderField(HTTPHeaderName::SecFetchSite);
 }
 
 CrossOriginAccessControlCheckDisabler& CrossOriginAccessControlCheckDisabler::singleton()
@@ -311,7 +312,7 @@ static inline bool shouldCrossOriginResourcePolicyCancelLoad(CrossOriginEmbedder
         return true;
 
     if (policy == CrossOriginResourcePolicy::SameSite) {
-        if (origin.isUnique())
+        if (origin.isOpaque())
             return true;
 #if ENABLE(PUBLIC_SUFFIX_LIST)
         if (!RegistrableDomain::uncheckedCreateFromHost(origin.host()).matches(response.url()))

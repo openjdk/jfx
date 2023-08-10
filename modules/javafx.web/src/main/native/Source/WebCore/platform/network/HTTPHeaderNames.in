@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2014 Apple Inc. All rights reserved.
+// Copyright (C) 2014-2022 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -39,6 +39,7 @@ Access-Control-Request-Method
 Age
 Authorization
 Cache-Control
+Clear-Site-Data
 Connection
 Content-Disposition
 Content-Encoding
@@ -84,8 +85,10 @@ Referer
 Referrer-Policy
 Refresh
 Report-To
+Reporting-Endpoints
 Sec-Fetch-Dest
 Sec-Fetch-Mode
+Sec-Fetch-Site
 Sec-WebSocket-Accept
 Sec-WebSocket-Extensions
 Sec-WebSocket-Key

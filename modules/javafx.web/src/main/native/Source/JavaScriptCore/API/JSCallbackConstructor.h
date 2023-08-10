@@ -31,6 +31,9 @@
 
 namespace JSC {
 
+#define JSCALLBACK_CONSTRUCTOR_METHOD(method) \
+    WTF_VTBL_FUNCPTR_PTRAUTH_STR("JSCallbackConstructor." #method) method
+
 class JSCallbackConstructor final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
@@ -73,8 +76,10 @@ private:
     JSObjectCallAsConstructorCallback constructCallback() { return m_callback; }
 
     JSClassRef m_class;
-    JSObjectCallAsConstructorCallback m_callback;
+    JSObjectCallAsConstructorCallback JSCALLBACK_CONSTRUCTOR_METHOD(m_callback);
 };
+
+#undef JSCALLBACK_CONSTRUCTOR_METHOD
 
 } // namespace JSC
 

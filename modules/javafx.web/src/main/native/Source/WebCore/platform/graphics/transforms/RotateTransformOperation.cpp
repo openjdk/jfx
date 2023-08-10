@@ -33,6 +33,21 @@
 
 namespace WebCore {
 
+Ref<RotateTransformOperation> RotateTransformOperation::create(double x, double y, double z, double angle, TransformOperation::Type type)
+{
+    return adoptRef(*new RotateTransformOperation(x, y, z, angle, type));
+}
+
+RotateTransformOperation::RotateTransformOperation(double x, double y, double z, double angle, TransformOperation::Type type)
+    : TransformOperation(type)
+    , m_x(x)
+    , m_y(y)
+    , m_z(z)
+    , m_angle(angle)
+{
+    RELEASE_ASSERT(isRotateTransformOperationType(type));
+}
+
 bool RotateTransformOperation::operator==(const TransformOperation& other) const
 {
     if (!isSameType(other))
@@ -97,7 +112,10 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
 
     // Extract the result as a quaternion
     TransformationMatrix::Decomposed4Type decomp;
-    toT.decompose4(decomp);
+    if (!toT.decompose4(decomp)) {
+        const RotateTransformOperation* usedOperation = context.progress > 0.5 ? this : fromOp;
+        return RotateTransformOperation::create(usedOperation->x(), usedOperation->y(), usedOperation->z(), usedOperation->angle(), TransformOperation::Type::Rotate3D);
+    }
 
     // Convert that to Axis/Angle form
     double x = -decomp.quaternionX;
@@ -120,7 +138,7 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
         y = 0;
         z = 1;
     }
-    return RotateTransformOperation::create(x, y, z, angle, ROTATE_3D);
+    return RotateTransformOperation::create(x, y, z, angle, Type::Rotate3D);
 }
 
 void RotateTransformOperation::dump(TextStream& ts) const

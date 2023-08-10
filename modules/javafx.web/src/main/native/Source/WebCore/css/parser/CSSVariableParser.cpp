@@ -34,7 +34,7 @@
 #include "CSSParserContext.h"
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
-#include "CSSPropertyParserHelpers.h"
+#include "CSSPropertyParser.h"
 
 namespace WebCore {
 
@@ -43,13 +43,7 @@ bool CSSVariableParser::isValidVariableName(const CSSParserToken& token)
     if (token.type() != IdentToken)
         return false;
 
-    StringView value = token.value();
-    return value.length() >= 2 && value[0] == '-' && value[1] == '-';
-}
-
-bool CSSVariableParser::isValidVariableName(const String& string)
-{
-    return string.length() >= 2 && string[0] == '-' && string[1] == '-';
+    return isCustomPropertyName(token.value());
 }
 
 static bool isValidConstantName(const CSSParserToken& token)
@@ -181,6 +175,22 @@ RefPtr<CSSCustomPropertyValue> CSSVariableParser::parseDeclarationValue(const At
     if (type == CSSValueInternalVariableValue)
         return CSSCustomPropertyValue::createUnresolved(variableName, CSSVariableReferenceValue::create(range, parserContext));
     return CSSCustomPropertyValue::createUnresolved(variableName, type);
+}
+
+RefPtr<CSSCustomPropertyValue> CSSVariableParser::parseInitialValueForUniversalSyntax(const AtomString& variableName, CSSParserTokenRange range)
+{
+    if (range.atEnd())
+        return nullptr;
+
+    bool hasReferences;
+    CSSValueID valueID = classifyVariableRange(range, hasReferences, strictCSSParserContext());
+
+    if (hasReferences)
+        return nullptr;
+    if (valueID != CSSValueInternalVariableValue)
+        return nullptr;
+
+    return CSSCustomPropertyValue::createSyntaxAll(variableName, CSSVariableData::create(range));
 }
 
 } // namespace WebCore

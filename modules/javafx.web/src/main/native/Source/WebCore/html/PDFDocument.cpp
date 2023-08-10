@@ -108,7 +108,7 @@ private:
     bool operator==(const EventListener&) const override;
     void handleEvent(ScriptExecutionContext&, Event&) override;
 
-    WeakPtr<PDFDocument> m_document;
+    WeakPtr<PDFDocument, WeakPtrImplWithEventTargetData> m_document;
 };
 
 void PDFDocumentEventListener::handleEvent(ScriptExecutionContext&, Event& event)
@@ -144,9 +144,8 @@ Ref<DocumentParser> PDFDocument::createParser()
 void PDFDocument::createDocumentStructure()
 {
     // Description of parameters:
-    // - `#pagemode=none` prevents the sidebar from showing on load.
     // - Empty `?file=` parameter prevents default pdf from loading.
-    auto viewerURL = "webkit-pdfjs-viewer://pdfjs/web/viewer.html?file=#pagemode=none"_s;
+    auto viewerURL = "webkit-pdfjs-viewer://pdfjs/web/viewer.html?file="_s;
     auto rootElement = HTMLHtmlElement::create(*this);
     appendChild(rootElement);
     rootElement->insertedByParser();
@@ -181,32 +180,43 @@ void PDFDocument::finishedParsing()
         sendPDFArrayBuffer();
 }
 
-void PDFDocument::sendPDFArrayBuffer()
+void PDFDocument::postMessageToIframe(const String& name, JSC::JSObject* data)
 {
-    using namespace JSC;
-
-    auto* frame = m_iframe->contentFrame();
-    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=236668 - Use postMessage
-    auto openFunction = frame->script().executeScriptIgnoringException("PDFJSContentScript.open"_s).getObject();
-
     auto globalObject = this->globalObject();
     auto& vm = globalObject->vm();
+    JSC::JSLockHolder lock(vm);
 
-    JSLockHolder lock(vm);
-    auto callData = JSC::getCallData(openFunction);
-    ASSERT(callData.type != CallData::Type::None);
-    MarkedArgumentBuffer arguments;
-    auto arrayBuffer = loader()->mainResourceData()->tryCreateArrayBuffer();
-    if (!arrayBuffer) {
-        ASSERT_NOT_REACHED();
+    JSC::JSObject* message = constructEmptyObject(globalObject);
+    message->putDirect(vm, vm.propertyNames->message, JSC::jsNontrivialString(vm, name));
+    if (data)
+        message->putDirect(vm, JSC::Identifier::fromString(vm, "data"_s), data);
+
+    auto* contentFrame = dynamicDowncast<LocalFrame>(m_iframe->contentFrame());
+    if (!contentFrame)
         return;
+    auto* contentWindow = contentFrame->window();
+    auto* contentWindowGlobalObject = m_iframe->contentDocument()->globalObject();
+
+    WindowPostMessageOptions options;
+    if (data)
+        options = WindowPostMessageOptions { "/"_s, Vector { JSC::Strong<JSC::JSObject> { vm, data } } };
+    auto returnValue = contentWindow->postMessage(*contentWindowGlobalObject, *contentWindow, message, WTFMove(options));
+    if (returnValue.hasException())
+        returnValue.releaseException();
+}
+
+void PDFDocument::sendPDFArrayBuffer()
+{
+    auto* documentLoader = loader();
+    ASSERT(documentLoader);
+    if (auto mainResourceData = documentLoader->mainResourceData()) {
+        if (auto arrayBuffer = mainResourceData->tryCreateArrayBuffer()) {
+    auto& vm = globalObject()->vm();
+    JSC::JSLockHolder lock(vm);
+    auto* dataObject = JSC::JSArrayBuffer::create(vm, globalObject()->arrayBufferStructure(arrayBuffer->sharingMode()), WTFMove(arrayBuffer));
+    postMessageToIframe("open-pdf"_s, dataObject);
+        }
     }
-
-    auto sharingMode = arrayBuffer->sharingMode();
-    arguments.append(JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(sharingMode), WTFMove(arrayBuffer)));
-    ASSERT(!arguments.hasOverflowed());
-
-    call(globalObject, openFunction, callData, globalObject, arguments);
 }
 
 void PDFDocument::injectStyleAndContentScript()

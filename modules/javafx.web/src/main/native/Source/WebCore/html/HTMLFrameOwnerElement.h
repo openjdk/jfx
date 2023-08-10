@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,9 +21,10 @@
 
 #pragma once
 
-#include "Frame.h"
+#include "AbstractFrame.h"
 #include "HTMLElement.h"
 #include "ReferrerPolicy.h"
+#include "SecurityContext.h"
 #include <wtf/HashCountedSet.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -35,11 +37,11 @@ class HTMLFrameOwnerElement : public HTMLElement {
 public:
     virtual ~HTMLFrameOwnerElement();
 
-    Frame* contentFrame() const { return m_contentFrame.get(); }
+    AbstractFrame* contentFrame() const { return m_contentFrame.get(); }
     WEBCORE_EXPORT WindowProxy* contentWindow() const;
     WEBCORE_EXPORT Document* contentDocument() const;
 
-    void setContentFrame(Frame&);
+    WEBCORE_EXPORT void setContentFrame(AbstractFrame&);
     void clearContentFrame();
 
     void disconnectContentFrame();
@@ -49,13 +51,13 @@ public:
     // RenderElement when using fallback content.
     RenderWidget* renderWidget() const;
 
-    ExceptionOr<Document&> getSVGDocument() const;
+    Document* getSVGDocument() const;
 
     virtual ScrollbarMode scrollingMode() const { return ScrollbarMode::Auto; }
 
     SandboxFlags sandboxFlags() const { return m_sandboxFlags; }
 
-    void scheduleInvalidateStyleAndLayerComposition();
+    WEBCORE_EXPORT void scheduleInvalidateStyleAndLayerComposition();
 
     virtual bool canLoadScriptURL(const URL&) const = 0;
 
@@ -73,7 +75,7 @@ private:
     bool isKeyboardFocusable(KeyboardEvent*) const override;
     bool isFrameOwnerElement() const final { return true; }
 
-    WeakPtr<Frame> m_contentFrame;
+    WeakPtr<AbstractFrame> m_contentFrame;
     SandboxFlags m_sandboxFlags { SandboxNone };
 };
 

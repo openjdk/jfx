@@ -36,7 +36,7 @@ String logLevelString()
 #if defined(NDEBUG)
     return emptyString();
 #else
-    return String("all");
+    return String::fromLatin1("all");
 #endif
 }
 } // namespace WebCore

@@ -50,11 +50,11 @@ class SourceBufferList;
 class SourceBufferPrivate;
 class TimeRanges;
 
-class MediaSource final
+class MediaSource
     : public RefCounted<MediaSource>
     , public MediaSourcePrivateClient
     , public ActiveDOMObject
-    , public EventTargetWithInlineData
+    , public EventTarget
     , public URLRegistrable
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
@@ -129,9 +129,12 @@ public:
 
     void failedToCreateRenderer(RendererType) final;
 
-private:
+    virtual bool isManaged() const { return false; }
+
+protected:
     explicit MediaSource(ScriptExecutionContext&);
 
+private:
     // ActiveDOMObject.
     void stop() final;
     const char* activeDOMObjectName() const final;
@@ -161,6 +164,7 @@ private:
 
     void regenerateActiveSourceBuffers();
     void updateBufferedIfNeeded();
+    void notifyElementUpdateMediaState() const;
 
     void completeSeek();
 
@@ -171,7 +175,7 @@ private:
     RefPtr<SourceBufferList> m_activeSourceBuffers;
     std::unique_ptr<PlatformTimeRanges> m_buffered;
     std::unique_ptr<PlatformTimeRanges> m_liveSeekable;
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
     MediaTime m_duration;
     MediaTime m_pendingSeekTime;
     ReadyState m_readyState { ReadyState::Closed };
