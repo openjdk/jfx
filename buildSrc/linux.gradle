@@ -45,7 +45,7 @@ def commonFlags = [
         "-fstack-protector",
         "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=trampolines"] // warning flags
 
-if (!IS_64) {
+if (OS_ARCH == "i386") {
     commonFlags += "-m32"
 }
 
