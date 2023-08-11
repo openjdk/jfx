@@ -343,7 +343,7 @@ public interface ObservableValue<T> extends Observable {
      * Creates a {@code Subscription} on this {@code ObservableValue} which immediately
      * provides the current value to the given {@code valueSubscriber}, followed by any
      * subsequent values whenever its value changes. The {@code valueSubscriber} is called
-     * for convenience since usually the user will want to initialize a value
+     * immediately for convenience, since usually the user will want to initialize a value
      * and then update on changes.
      * <p>
      * Note that the same subscriber instance may be safely subscribed for
