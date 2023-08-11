@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a cancel or cleanup operation for an action be cancelled or
- * allocated resources. Subscriptions can be obtained, for example, as a result
+ * Represents a cancel or cleanup operation for an action that can be cancelled or
+ * that allocated resources. Subscriptions can be obtained, for example, as a result
  * of registering a callback, starting a timer, or allocating resources. They
  * provide a convenient way for subscribers to cancel these actions at a later time,
  * without requiring additional information or even access to the source from where
