@@ -34,6 +34,7 @@ import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 import javafx.scene.image.Image;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DataFormat;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -232,5 +233,15 @@ public class ClipboardContentTest {
 
         assertFalse(cc.hasFiles());
         assertNull(cc.getFiles());
+    }
+
+    @Test
+    public void invalidMimeType() {
+        ClipboardContent cc = new ClipboardContent();
+        DataFormat customFormat = new DataFormat("text/plain-invalid");
+        cc.put(customFormat, "text");
+
+        assertFalse(cc.hasString());
+        assertEquals(null, cc.getString());
     }
 }
