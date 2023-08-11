@@ -2359,6 +2359,7 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CreateBitmap)
     case com_sun_javafx_font_directwrite_OS_GUID_WICPixelFormat32bppGrayFloat: pixelFormat = GUID_WICPixelFormat32bppGrayFloat; break;
     case com_sun_javafx_font_directwrite_OS_GUID_WICPixelFormat32bppRGBA: pixelFormat = GUID_WICPixelFormat32bppRGBA; break;
     case com_sun_javafx_font_directwrite_OS_GUID_WICPixelFormat32bppPRGBA: pixelFormat = GUID_WICPixelFormat32bppPRGBA; break;
+    default: return NULL;
     }
     HRESULT hr = ((IWICImagingFactory *)arg0)->CreateBitmap(arg1, arg2, (REFWICPixelFormatGUID)pixelFormat, (WICBitmapCreateCacheOption)arg4, &result);
     return SUCCEEDED(hr) ? (jlong)result : NULL;
