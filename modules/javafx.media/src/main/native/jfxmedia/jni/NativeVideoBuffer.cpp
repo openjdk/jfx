@@ -206,7 +206,14 @@ JNIEXPORT jintArray JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_na
         }
 
         jintArray strides = env->NewIntArray(count);
-        jint *strideArray = new jint[count];
+        if (strides == NULL) {
+            return NULL;
+        }
+
+        jint *strideArray = new (std::nothrow) jint[count];
+        if (strideArray == NULL) {
+            return NULL;
+        }
 
         for (int ii=0; ii < count; ii++) {
             strideArray[ii] = frame->GetStrideForPlane(ii);

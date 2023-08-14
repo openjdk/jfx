@@ -1995,7 +1995,6 @@ public class TableViewKeyInputTest {
         assertEquals(0, rt29849_cancel_count);
 
         TableCell cell = (TableCell)VirtualFlowTestUtils.getCell(tableView, 0, 0);
-        TableCellShim.set_lockItemOnEdit(cell, false);
         assertTrue(cell.isEditable());
         assertFalse(cell.isEditing());
         assertEquals(0, cell.getIndex());
