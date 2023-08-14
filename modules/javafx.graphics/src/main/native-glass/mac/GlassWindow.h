@@ -43,7 +43,6 @@
     NSScreen            *currentScreen;
     GlassMenubar        *menubar;
     NSRect              preZoomedRect;
-    NSWindow            *fullscreenWindow;
 
     BOOL                isFocusable;
     BOOL                isEnabled;
