@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,41 +22,45 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.javafx.scene.control.input;
 
-package com.sun.javafx.scene.control.behavior;
-
-import javafx.scene.control.PasswordField;
-import javafx.scene.text.HitInfo;
+import java.util.ArrayList;
+import java.util.Iterator;
+import javafx.event.EventHandler;
 
 /**
- * Password field behavior.
+ * List of event handlers, which can be added to its head or tail.
+ * the order of handlers in the list is guaranteed to be:
+ * (first added to the head), (second added to the head), ..., (second added to the tail), (first added to the tail).
  */
-public class PasswordFieldBehavior extends TextFieldBehavior {
+public class HList implements Iterable<EventHandler<?>> {
+    private final ArrayList<EventHandler<?>> handlers = new ArrayList<>(4);
+    private int insertIndex;
 
-    public PasswordFieldBehavior() {
+    public HList() {
     }
 
-    // RT-18711 & RT-18854: Stub out word based navigation and editing
-    // for security reasons.
-    @Override
-    protected void deletePreviousWord() { }
-    @Override
-    protected void deleteNextWord() { }
-    @Override
-    protected void selectPreviousWord() { }
-    @Override
-    public void selectNextWord() { }
-    @Override
-    protected void previousWord() { }
-    @Override
-    protected void nextWord() { }
-    @Override
-    protected void selectWord() {
-        selectAll();
-    }
-    @Override
-    protected void mouseDoubleClick(HitInfo hit) {
-        getNode().selectAll();
+    public static HList from(Object x) {
+        if (x instanceof HList h) {
+            return h;
+        }
+        return new HList();
     }
 
+    public void add(EventHandler<?> h, boolean tail) {
+        if (insertIndex == handlers.size()) {
+            handlers.add(h);
+        } else {
+            handlers.add(insertIndex, h);
+        }
+
+        if (!tail) {
+            insertIndex++;
+        }
+    }
+
+    @Override
+    public Iterator<EventHandler<?>> iterator() {
+        return handlers.iterator();
+    }
 }

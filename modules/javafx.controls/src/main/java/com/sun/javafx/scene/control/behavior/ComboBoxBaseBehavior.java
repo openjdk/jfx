@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,30 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.inputmap.InputMap;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.PopupControl;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TextField;
+import javafx.scene.control.input.BehaviorBase2;
+import javafx.scene.control.input.InputMap2;
+import javafx.scene.control.input.KeyBinding2;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 import com.sun.javafx.scene.control.skin.Utils;
-import javafx.scene.input.*;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import static com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
+public class ComboBoxBaseBehavior<T> extends BehaviorBase2<ComboBoxBase<T>> {
 
-public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
-
-    private final InputMap<ComboBoxBase<T>> inputMap;
     private InvalidationListener focusListener = this::focusChanged;
 
     /***************************************************************************
@@ -62,65 +62,44 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     /**
      *
      */
-    public ComboBoxBaseBehavior(final ComboBoxBase<T> comboBox) {
-        super(comboBox);
+    public ComboBoxBaseBehavior() {
+    }
 
-        // create a map for comboBox-specific mappings (this reuses the default
-        // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
-        inputMap = createInputMap();
+    @Override
+    public void install(Skin<ComboBoxBase<T>> skin) {
+        super.install(skin);
 
-        final EventHandler<KeyEvent> togglePopup = e -> {
-            // If popup is shown, KeyEvent causes popup to close
-            showPopupOnMouseRelease = true;
-
-            if (getNode().isShowing()) hide();
-            else show();
-        };
-
-        // comboBox-specific mappings for key and mouse input
-        KeyMapping enterPressed, enterReleased;
-        addDefaultMapping(inputMap,
-            new KeyMapping(F4, KEY_RELEASED, togglePopup),
-            new KeyMapping(new KeyBinding(UP).alt(), togglePopup),
-            new KeyMapping(new KeyBinding(DOWN).alt(), togglePopup),
-
-            new KeyMapping(SPACE, KEY_PRESSED, this::keyPressed),
-            new KeyMapping(SPACE, KEY_RELEASED, this::keyReleased),
-
-            enterPressed = new KeyMapping(ENTER, KEY_PRESSED, this::keyPressed),
-            enterReleased = new KeyMapping(ENTER, KEY_RELEASED, this::keyReleased),
-
-            // The following keys are forwarded to the parent container
-            new KeyMapping(ESCAPE, KEY_PRESSED, this::cancelEdit),
-            new KeyMapping(F10,    KEY_PRESSED, this::forwardToParent),
-
-            new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
-            new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
-            new MouseMapping(MouseEvent.MOUSE_ENTERED, this::mouseEntered),
-            new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited)
-        );
-
-        // we don't want to consume events on enter press - let them carry on through
-        enterPressed.setAutoConsume(false);
-        enterReleased.setAutoConsume(false);
+        map(KeyBinding2.with(KeyCode.SPACE).build(), true, this::keyPressed);
+        map(KeyBinding2.withRelease(KeyCode.SPACE).build(), true, this::keyReleased);
+        map(KeyBinding2.with(KeyCode.ENTER).build(), false, this::keyPressed);
+        map(KeyBinding2.withRelease(KeyCode.ENTER).build(), false, this::keyReleased);
+        map(KeyBinding2.with(KeyCode.ESCAPE).build(), true, this::cancelEdit);
+        map(KeyBinding2.with(KeyCode.F10).build(), true, this::forwardToParent);
+        
+        map(MouseEvent.MOUSE_PRESSED, this::mousePressed);
+        map(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
+        map(MouseEvent.MOUSE_ENTERED, this::mouseEntered);
+        map(MouseEvent.MOUSE_EXITED, this::mouseExited);
 
         // ComboBoxBase also cares about focus
-        comboBox.focusedProperty().addListener(focusListener);
+        getNode().focusedProperty().addListener(focusListener);
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
-            tlFocus = new TwoLevelFocusComboBehavior(comboBox); // needs to be last.
+            tlFocus = new TwoLevelFocusComboBehavior(getNode()); // needs to be last.
         }
+
+        func(ComboBoxBase.TOGGLE_POPUP, this::togglePopup);
+
+        key(KeyBinding2.withRelease(KeyCode.F4).build(), ComboBoxBase.TOGGLE_POPUP);
+        key(KeyBinding2.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
+        key(KeyBinding2.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
     }
 
     @Override public void dispose() {
         if (tlFocus != null) tlFocus.dispose();
         getNode().focusedProperty().removeListener(focusListener);
         super.dispose();
-    }
-
-    @Override public InputMap<ComboBoxBase<T>> getInputMap() {
-        return inputMap;
     }
 
     /***************************************************************************
@@ -318,4 +297,14 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         }
     }
 
+    private void togglePopup() {
+        // If popup is shown, KeyEvent causes popup to close
+        showPopupOnMouseRelease = true;
+
+        if (getNode().isShowing()) {
+            hide();
+        } else {
+            show();
+        }
+    }
 }

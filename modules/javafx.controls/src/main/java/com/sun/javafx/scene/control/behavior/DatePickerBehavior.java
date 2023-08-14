@@ -42,8 +42,7 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
     /**
      *
      */
-    public DatePickerBehavior(final DatePicker datePicker) {
-        super(datePicker);
+    public DatePickerBehavior() {
     }
 
     /***************************************************************************

@@ -28,10 +28,8 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.SelectionModel;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.UP;
+import javafx.scene.control.Skin;
+import javafx.scene.input.KeyCode;
 
 public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
 
@@ -44,16 +42,18 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
     /**
      *
      */
-    public ComboBoxListViewBehavior(final ComboBox<T> comboBox) {
-        super(comboBox);
+    public ComboBoxListViewBehavior() {
+    }
 
-        // Add these bindings as a child input map, so they take precedence
-        InputMap<ComboBoxBase<T>> comboBoxListViewInputMap = new InputMap<>(comboBox);
-        comboBoxListViewInputMap.getMappings().addAll(
-            new InputMap.KeyMapping(UP, e -> selectPrevious()),
-            new InputMap.KeyMapping(DOWN, e -> selectNext())
-        );
-        addDefaultChildMap(getInputMap(), comboBoxListViewInputMap);
+    @Override
+    public void install(Skin<ComboBoxBase<T>> skin) {
+        super.install(skin);
+
+        func(ComboBox.SELECT_PREV, this::selectPrevious);
+        func(ComboBox.SELECT_NEXT, this::selectNext);
+
+        key(KeyCode.UP, ComboBox.SELECT_PREV);
+        key(KeyCode.DOWN, ComboBox.SELECT_NEXT);
     }
 
     /***************************************************************************

@@ -25,32 +25,26 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.Properties;
-import javafx.scene.control.skin.TextAreaSkin;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TextArea;
-import com.sun.javafx.scene.control.skin.Utils;
+import javafx.scene.control.input.KeyBinding2;
+import javafx.scene.control.skin.TextAreaSkin;
+import javafx.scene.control.skin.TextInputControlSkin.Direction;
+import javafx.scene.control.skin.TextInputControlSkin.TextUnit;
 import javafx.scene.input.ContextMenuEvent;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
-import javafx.scene.input.KeyEvent;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.text.HitInfo;
 import javafx.stage.Screen;
 import javafx.stage.Window;
-
-import java.util.function.Predicate;
-
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
-import static javafx.scene.control.skin.TextInputControlSkin.TextUnit;
-import static javafx.scene.control.skin.TextInputControlSkin.Direction;
-import static javafx.scene.input.KeyCode.*;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.skin.Utils;
 
 
 /**
@@ -66,76 +60,18 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      * Constructors                                                           *
      *************************************************************************/
 
-    public TextAreaBehavior(final TextArea c) {
-        super(c);
-
+    public TextAreaBehavior() {
         if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
+    }
 
-        // some of the mappings are only valid when the control is editable, or
-        // only on certain platforms, so we create the following predicates that filters out the mapping when the
-        // control is not in the correct state / on the correct platform
-        final Predicate<KeyEvent> validWhenEditable = e -> !c.isEditable();
+    @Override
+    public void install(Skin<TextArea> sk) {
+        super.install(sk);
 
-        // Add these bindings as a child input map, so they take precedence
-        InputMap<TextArea> textAreaInputMap = new InputMap<>(c);
-        textAreaInputMap.getMappings().addAll(
-            keyMapping(HOME,      e -> lineStart(false)),
-            keyMapping(END,       e -> lineEnd(false)),
-            keyMapping(UP,        e -> skin.moveCaret(TextUnit.LINE, Direction.UP,   false)),
-            keyMapping(DOWN,      e -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false)),
-            keyMapping(PAGE_UP,   e -> skin.moveCaret(TextUnit.PAGE, Direction.UP,   false)),
-            keyMapping(PAGE_DOWN, e -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false)),
-
-            keyMapping(new KeyBinding(HOME).shift(),      e -> lineStart(true)),
-            keyMapping(new KeyBinding(END).shift(),       e -> lineEnd(true)),
-            keyMapping(new KeyBinding(UP).shift(),        e -> skin.moveCaret(TextUnit.LINE, Direction.UP,   true)),
-            keyMapping(new KeyBinding(DOWN).shift(),      e -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, true)),
-            keyMapping(new KeyBinding(PAGE_UP).shift(),   e -> skin.moveCaret(TextUnit.PAGE, Direction.UP,   true)),
-            keyMapping(new KeyBinding(PAGE_DOWN).shift(), e -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, true)),
-
-            // editing-only mappings
-            keyMapping(new KeyBinding(ENTER), e -> insertNewLine(), validWhenEditable),
-            keyMapping(new KeyBinding(TAB), e -> insertTab(), validWhenEditable)
-        );
-        addDefaultChildMap(getInputMap(), textAreaInputMap);
-
-        // mac os specific mappings
-        InputMap<TextArea> macOsInputMap = new InputMap<>(c);
-        macOsInputMap.setInterceptor(e -> !PlatformUtil.isMac());
-        macOsInputMap.getMappings().addAll(
-            // Mac OS specific mappings
-            keyMapping(new KeyBinding(LEFT).shortcut(),  e -> lineStart(false)),
-            keyMapping(new KeyBinding(RIGHT).shortcut(), e -> lineEnd(false)),
-            keyMapping(new KeyBinding(UP).shortcut(),    e -> c.home()),
-            keyMapping(new KeyBinding(DOWN).shortcut(),  e -> c.end()),
-
-            keyMapping(new KeyBinding(LEFT).shortcut().shift(),  e -> lineStart(true)),
-            keyMapping(new KeyBinding(RIGHT).shortcut().shift(), e -> lineEnd(true)),
-            keyMapping(new KeyBinding(UP).shortcut().shift(),    e -> selectHomeExtend()),
-            keyMapping(new KeyBinding(DOWN).shortcut().shift(),  e -> selectEndExtend()),
-
-            keyMapping(new KeyBinding(UP).alt(),           e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP,   false)),
-            keyMapping(new KeyBinding(DOWN).alt(),         e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false)),
-            keyMapping(new KeyBinding(UP).alt().shift(),   e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP,   true)),
-            keyMapping(new KeyBinding(DOWN).alt().shift(), e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true))
-        );
-        addDefaultChildMap(textAreaInputMap, macOsInputMap);
-
-        // windows / linux specific mappings
-        InputMap<TextArea> nonMacOsInputMap = new InputMap<>(c);
-        nonMacOsInputMap.setInterceptor(e -> PlatformUtil.isMac());
-        nonMacOsInputMap.getMappings().addAll(
-            keyMapping(new KeyBinding(UP).ctrl(),           e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP,   false)),
-            keyMapping(new KeyBinding(DOWN).ctrl(),         e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false)),
-            keyMapping(new KeyBinding(UP).ctrl().shift(),   e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP,   true)),
-            keyMapping(new KeyBinding(DOWN).ctrl().shift(), e -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true))
-        );
-        addDefaultChildMap(textAreaInputMap, nonMacOsInputMap);
-
-        addKeyPadMappings(textAreaInputMap);
-
+        TextArea c = getNode();
+        
         focusListener = (src, ov, nv) -> handleFocusChange();
         // Register for change events
         c.focusedProperty().addListener(focusListener);
@@ -144,6 +80,68 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(c); // needs to be last.
         }
+
+        // functions
+        func(TextArea.DOCUMENT_END, c::end); // TODO move end() to behavior
+        func(TextArea.DOCUMENT_START, c::home); // TODO move home() to behavior
+        func(TextArea.DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false));
+        func(TextArea.LINE_START, () -> lineStart(false));
+        func(TextArea.LINE_END, () -> lineEnd(false));
+        func(TextArea.PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false));
+        func(TextArea.PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, false));
+        func(TextArea.PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false));
+        func(TextArea.PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, false));
+        func(TextArea.SELECT_DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, true));
+        //func(TextArea.SELECT_END_EXTEND, this::selectEndExtend);
+        //func(TextArea.SELECT_HOME_EXTEND, this::selectHomeExtend);
+        func(TextArea.SELECT_LINE_END, () -> lineEnd(true));
+        func(TextArea.SELECT_PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, true));
+        func(TextArea.SELECT_PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, true));
+        func(TextArea.SELECT_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true));
+        func(TextArea.SELECT_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, true));
+        func(TextArea.SELECT_LINE_START, () -> lineStart(true));
+        func(TextArea.SELECT_UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, true));
+        func(TextArea.UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, false));
+        func(TextArea.INSERT_NEW_LINE, this::insertNewLine);
+        func(TextArea.INSERT_TAB, this::insertTab);
+        
+        // common keys
+        key(KeyCode.DOWN, TextArea.DOWN);
+        key(KeyBinding2.shift(KeyCode.DOWN), TextArea.SELECT_DOWN);
+        key(KeyBinding2.shift(KeyCode.END), TextArea.SELECT_LINE_END);
+        key(KeyCode.END, TextArea.LINE_END);
+        key(KeyCode.ENTER, TextArea.INSERT_NEW_LINE);
+        key(KeyCode.HOME, TextArea.LINE_START);
+        key(KeyBinding2.shift(KeyCode.HOME), TextArea.SELECT_LINE_START);
+        key(KeyCode.PAGE_UP, TextArea.PAGE_UP);
+        key(KeyBinding2.shift(KeyCode.PAGE_UP), TextArea.SELECT_PAGE_UP);
+        key(KeyCode.PAGE_DOWN, TextArea.PAGE_DOWN);
+        key(KeyBinding2.shift(KeyCode.PAGE_DOWN), TextArea.SELECT_PAGE_DOWN);
+        key(KeyCode.TAB, TextArea.INSERT_TAB);
+        key(KeyCode.UP, TextArea.UP);
+        key(KeyBinding2.shift(KeyCode.UP), TextArea.SELECT_UP);
+        
+        // macOS specific mappings
+        key(KeyBinding2.with(KeyCode.DOWN).alt().forMac().build(), TextArea.PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
+        key(KeyBinding2.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
+        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.LINE_START);
+        key(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
+        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.LINE_END);
+        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
+        key(KeyBinding2.with(KeyCode.UP).alt().forMac().build(), TextArea.PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).shortcut().forMac().build(), TextArea.DOCUMENT_START);
+        key(KeyBinding2.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
+
+        // non-macOS specific mappings
+        key(KeyBinding2.with(KeyCode.DOWN).control().notForMac().build(), TextArea.PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.DOWN).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        key(KeyBinding2.with(KeyCode.UP).control().notForMac().build(), TextArea.PARAGRAPH_UP);
+        key(KeyBinding2.with(KeyCode.UP).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+
+        addKeyPadMappings();
     }
 
     @Override public void dispose() {
@@ -184,15 +182,19 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     private void insertNewLine() {
-        setEditing(true);
-        getNode().replaceSelection("\n");
-        setEditing(false);
+        if (isEditable()) {
+            setEditing(true);
+            getNode().replaceSelection("\n");
+            setEditing(false);
+        }
     }
 
     private void insertTab() {
-        setEditing(true);
-        getNode().replaceSelection("\t");
-        setEditing(false);
+        if (isEditable()) {
+            setEditing(true);
+            getNode().replaceSelection("\t");
+            setEditing(false);
+        }
     }
 
     @Override protected void deleteChar(boolean previous) {
@@ -290,7 +292,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     // selection, and set the mark to be the other side and
                     // the dot to be the new position.
                     // everywhere else we just move the dot.
-                    if (isMac()) {
+                    if (PlatformUtil.isMac()) {
                         textArea.extendSelection(i);
                     } else {
                         skin.positionCaret(hit, true);
@@ -403,7 +405,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     protected void mouseDoubleClick(HitInfo hit) {
         final TextArea textArea = getNode();
         textArea.previousWord();
-        if (isWindows()) {
+        if (PlatformUtil.isWindows()) {
             textArea.selectNextWord();
         } else {
             textArea.selectEndOfNextWord();

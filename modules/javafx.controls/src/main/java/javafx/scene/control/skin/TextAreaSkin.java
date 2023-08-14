@@ -25,8 +25,7 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
+import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -56,14 +55,12 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.Text;
 import javafx.scene.text.HitInfo;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
-
-import java.util.List;
-
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 /**
  * Default skin implementation for the {@link TextArea} control.
  *
@@ -94,7 +91,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     // *** NOTE: Multiple node mode is not yet fully implemented *** //
     private static final boolean USE_MULTIPLE_NODES = false;
 
-    private final TextAreaBehavior behavior;
+    private TextAreaBehavior behavior;
 
     private double computedMinWidth = Double.NEGATIVE_INFINITY;
     private double computedMinHeight = Double.NEGATIVE_INFINITY;
@@ -162,11 +159,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
      */
     public TextAreaSkin(final TextArea control) {
         super(control);
-
-        // install default input map for the text area control
-        this.behavior = new TextAreaBehavior(control);
-        this.behavior.setTextAreaSkin(this);
-//        control.setInputMap(behavior.getInputMap());
 
         this.textArea = control;
 
@@ -518,10 +510,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                         nextLine(select);
                         break;
                     case BEGINNING:
-                        lineStart(select, select && isMac());
+                        lineStart(select, select && PlatformUtil.isMac());
                         break;
                     case END:
-                        lineEnd(select, select && isMac());
+                        lineEnd(select, select && PlatformUtil.isMac());
                         break;
                     default:
                         throw new IllegalArgumentException(""+dir);
@@ -711,7 +703,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         int pos = textArea.getCaretPosition();
         int len = text.length();
         boolean wentPastInitialNewline = false;
-        boolean goPastTrailingNewline = isWindows();
+        boolean goPastTrailingNewline = PlatformUtil.isWindows();
 
         if (pos < len) {
             if (goPastInitialNewline && text.codePointAt(pos) == 0x0a) {
@@ -828,16 +820,29 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
+    
+    @Override
+    public void install() {
+        super.install();
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        if (getSkinnable() == null) return;
-        getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
-        getChildren().remove(scrollPane);
-        super.dispose();
+        // install default input map for the text area control
+        behavior = new TextAreaBehavior();
+        behavior.setTextAreaSkin(this);
+        behavior.install(this);
+    }
 
-        if (behavior != null) {
-            behavior.dispose();
+    @Override
+    public void dispose() {
+        if (getSkinnable() != null) {
+            getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
+            getChildren().remove(scrollPane);
+            
+            if (behavior != null) {
+                behavior.dispose();
+                behavior = null;
+            }
+            
+            super.dispose();
         }
     }
 
@@ -1015,11 +1020,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
      * Private implementation
      *
      **************************************************************************/
-
-    @Override
-    TextAreaBehavior getBehavior() {
-        return behavior;
-    }
 
     private void createPromptNode() {
         if (promptNode == null && usePromptText.get()) {

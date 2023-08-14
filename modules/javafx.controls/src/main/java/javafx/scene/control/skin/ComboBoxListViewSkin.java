@@ -100,7 +100,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean listSelectionLock = false;
     private boolean listViewSelectionDirty = false;
 
-    private final ComboBoxListViewBehavior behavior;
+    private ComboBoxListViewBehavior behavior;
     private IDisconnectable selectedItemWatcher;
 
 
@@ -137,9 +137,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      */
     public ComboBoxListViewSkin(final ComboBox<T> control) {
         super(control);
-
-        // install default input map for the control
-        this.behavior = new ComboBoxListViewBehavior<>(control);
 
         this.comboBox = control;
         updateComboBoxItems();
@@ -234,13 +231,21 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
+    @Override
+    public void install() {
+        super.install();
+        
+        behavior = new ComboBoxListViewBehavior<>();
+        behavior.install(this);
+    }
 
+    @Override
+    public void dispose() {
         if (behavior != null) {
             behavior.dispose();
+            behavior = null;
         }
+        super.dispose();
     }
 
     /** {@inheritDoc} */

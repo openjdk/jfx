@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,35 +22,25 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene.control.input;
+
+import javafx.event.Event;
+import javafx.event.EventType;
 
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
- *
- * @moduleGraph
- * @since 9
+ * Determines whether an event passes certain criteria.
  */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
+public interface EventCriteria<T extends Event> {
+    /**
+     * Returns the event type for which this criteria are valid.
+     * @return the event type
+     */
+    public EventType<T> getEventType();
 
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.skin;
-    exports javafx.scene.control.util;
-    exports javafx.scene.control.input;
-    exports javafx.scene.control.skin;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+    /**
+     * Returns true if the specified event matches this criteria.
+     * @param ev the event
+     * @return true if match occurs
+     */
+    public boolean isEventAcceptable(T ev);
 }
