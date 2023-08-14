@@ -56,8 +56,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Control;
-import javafx.scene.control.rich.input.FunctionTag;
-import javafx.scene.control.rich.input.KeyMap;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
@@ -162,7 +161,6 @@ public class RichTextArea extends Control {
     public static final FunctionTag UNDO = new FunctionTag();
 
     private final ConfigurationParameters config;
-    private final KeyMap inputMap = new KeyMap();
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
     private SimpleBooleanProperty editableProperty;
@@ -210,32 +208,6 @@ public class RichTextArea extends Control {
 
         if (m != null) {
             setModel(m);
-        }
-    }
-
-    /**
-     * Returns the KeyMap associated with this instance.
-     * <p>
-     * TODO this should be moved to Control.getInputMap()
-     * @return the key map
-     */
-    // TODO move to Control
-    public final KeyMap getKeyMap() {
-        return inputMap;
-    }
-
-    /**
-     * Looks up a function mapped to this {@link FunctionTag} and, if such a mapping exists,
-     * invokes the function.<p>
-     * TODO this should be moved to {@link Control} once InputMap is redesigned.
-     *
-     * @param tag function tag
-     */
-    // TODO move to Control
-    protected final void execute(FunctionTag tag) {
-        Runnable f = inputMap.getFunction(tag);
-        if (f != null) {
-            f.run();
         }
     }
 

@@ -482,6 +482,7 @@ public abstract class StyledTextModel {
      * @return the text position at the end of the inserted text, or null if the model is read only
      */
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean createUndo) {
+        // TODO check for nulls
         if (isEditable()) {
             StyleInfo si = getStyleInfo(start);
             StyledInput in = StyledInput.of(text, si);
@@ -507,6 +508,7 @@ public abstract class StyledTextModel {
      * @return the text position at the end of the inserted text, or null if the model is read only
      */
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean createUndo) {
+        // TODO check for nulls
         if (isEditable()) {
             int cmp = start.compareTo(end);
             if (cmp > 0) {

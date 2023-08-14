@@ -206,7 +206,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     public void dispose() {
         if (getSkinnable() != null) {
             listenerHelper.disconnect();
-            behavior.dispose(this);
+            behavior.dispose();
             vflow.dispose();
     
             super.dispose();
