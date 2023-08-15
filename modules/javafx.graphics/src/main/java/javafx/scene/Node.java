@@ -956,7 +956,6 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     if (oldParent != null) {
-                        clearParentsFocusWithin(oldParent);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) oldParent).localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -965,6 +964,10 @@ public abstract class Node implements EventTarget, Styleable {
                     updateDisabled();
                     computeDerivedDepthTest();
                     final Parent newParent = get();
+
+                    // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
+                    updateParentsFocusWithin(oldParent, newParent);
+
                     if (newParent != null) {
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) newParent).localToSceneTransformProperty().addListener(
@@ -8171,21 +8174,41 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Called when the current node was removed from the scene graph.
-     * If the current node has the focusWithin bit, we also need to clear the focusWithin bits of this
-     * node's parents. Note that a scene graph can have more than a single focused node, for example when
-     * a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
+     * Called when the current node was removed from or added to the scene graph.
+     * If the current node has the focusWithin bit, we also need to clear and set the focusWithin bits of this
+     * node's old and new parents. Note that a scene graph can have more than a single focused node, for example
+     * when a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
      * focus, we need to adjust the focus-within count on all parents of the node.
      */
-    private void clearParentsFocusWithin(Node oldParent) {
-        if (oldParent != null && focusWithin.get()) {
+    private void updateParentsFocusWithin(Node oldParent, Node newParent) {
+        if (!focusWithin.get()) {
+            return;
+        }
+
+        if (oldParent != null) {
             Node node = oldParent;
             while (node != null) {
                 node.focusWithin.adjust(-focusWithin.count);
                 node = node.getParent();
             }
+        }
 
+        if (newParent != null) {
+            Node node = newParent;
+            while (node != null) {
+                node.focusWithin.adjust(focusWithin.count);
+                node = node.getParent();
+            };
+        }
+
+        // Since focus changes are atomic, we only fire change notifications after
+        // all changes are committed on all old and new parents.
+        if (oldParent != null) {
             oldParent.notifyFocusListeners();
+        }
+
+        if (newParent != null) {
+            newParent.notifyFocusListeners();
         }
     }
 
