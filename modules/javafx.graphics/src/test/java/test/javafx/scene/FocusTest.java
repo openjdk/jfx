@@ -1105,4 +1105,27 @@ public class FocusTest {
         assertNotFocusWithin(node4);
     }
 
+    @Test public void testFocusWithinBitsAreSetOnParentsWhenAddedNodeIsAlreadyFocused() {
+        class N extends Group {
+            N(Node... children) { super(children); }
+            void _setFocused(boolean value) { setFocused(value); }
+        }
+
+        N node1, node2, node3 = new N();
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N()
+            ));
+
+        node3._setFocused(true);
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node2);
+
+        node2.getChildren().add(node3);
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertIsFocusWithin(node3);
+    }
+
 }
