@@ -181,8 +181,8 @@ public final class WindowTest {
         testWindow.sizeToScene();
         testWindow.setWidth(800);
         testWindow.show();
-        assertEquals(800, testWindow.getWidth(), 1);
-        assertEquals(500, testWindow.getHeight(), 1);
+        assertEquals(800.0, testWindow.getWidth());
+        assertEquals(500.0, testWindow.getHeight());
     }
 
     @Test
@@ -192,8 +192,8 @@ public final class WindowTest {
         testWindow.sizeToScene();
         testWindow.setHeight(600);
         testWindow.show();
-        assertEquals(400, testWindow.getWidth(), 1);
-        assertEquals(600, testWindow.getHeight(), 1);
+        assertEquals(400.0, testWindow.getWidth());
+        assertEquals(600.0, testWindow.getHeight());
     }
 
     @Test
@@ -204,8 +204,8 @@ public final class WindowTest {
         testWindow.setWidth(800);
         testWindow.setHeight(600);
         testWindow.show();
-        assertEquals(800, testWindow.getWidth(), 1);
-        assertEquals(600, testWindow.getHeight(), 1);
+        assertEquals(800.0, testWindow.getWidth());
+        assertEquals(600.0, testWindow.getHeight());
     }
 
     @Test
@@ -214,8 +214,8 @@ public final class WindowTest {
         testWindow.setScene(scene);
         testWindow.sizeToScene();
         testWindow.show();
-        assertEquals(400, testWindow.getWidth(), 1);
-        assertEquals(500, testWindow.getHeight(), 1);
+        assertEquals(400.0, testWindow.getWidth());
+        assertEquals(500.0, testWindow.getHeight());
     }
 
     @Test
@@ -224,7 +224,7 @@ public final class WindowTest {
         testWindow.setScene(scene);
         testWindow.show();
         testWindow.sizeToScene();
-        assertEquals(400, testWindow.getWidth(), 1);
-        assertEquals(500, testWindow.getHeight(), 1);
+        assertEquals(400.0, testWindow.getWidth());
+        assertEquals(500.0, testWindow.getHeight());
     }
 }
