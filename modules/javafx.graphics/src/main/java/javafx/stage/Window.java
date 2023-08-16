@@ -632,6 +632,7 @@ public class Window implements EventTarget {
         width.set(value);
         peerBoundsConfigurator.setWindowWidth(value);
         widthExplicit = true;
+        sizeToScene = false;
     }
     public final double getWidth() { return width.get(); }
     public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
@@ -664,6 +665,7 @@ public class Window implements EventTarget {
         height.set(value);
         peerBoundsConfigurator.setWindowHeight(value);
         heightExplicit = true;
+        sizeToScene = false;
     }
     public final double getHeight() { return height.get(); }
     public final ReadOnlyDoubleProperty heightProperty() { return height.getReadOnlyProperty(); }
