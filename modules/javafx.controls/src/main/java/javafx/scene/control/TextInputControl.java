@@ -25,7 +25,10 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.FormatterAccessor;
+import java.text.BreakIterator;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -59,18 +62,13 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.input.FunctionTag;
 import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
-
-import java.text.BreakIterator;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import com.sun.javafx.util.Utils;
+import javafx.util.StringConverter;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.scene.NodeHelper;
-import javafx.util.StringConverter;
+import com.sun.javafx.scene.control.FormatterAccessor;
+import com.sun.javafx.scene.control.TextInputControlHelper;
+import com.sun.javafx.util.Utils;
 
 /**
  * Abstract base class for text input controls.
@@ -136,6 +134,25 @@ public abstract class TextInputControl extends Control {
     public static final FunctionTag TRAVERSE_PREVIOUS = new FunctionTag();
     /** Denotes the function that undoes the last change. */
     public static final FunctionTag UNDO = new FunctionTag();
+    
+    static {
+        TextInputControlHelper.setAccessor(new TextInputControlHelper.Accessor() {
+            @Override
+            public void paste(TextInputControl c) {
+                c.localPaste();
+            }
+
+            @Override
+            public void redo(TextInputControl c) {
+                c.localRedo();
+            }
+
+            @Override
+            public void undo(TextInputControl c) {
+                c.localUndo();
+            }
+        });
+    }
 
     /**
      * Interface representing a text input's content. Since it is an ObservableStringValue,
@@ -728,22 +745,15 @@ public abstract class TextInputControl extends Control {
      * removing the current selection.
      */
     public void cut() {
-        copy();
-        IndexRange selection = getSelection();
-        deleteText(selection.getStart(), selection.getEnd());
+        execute(CUT);
     }
 
     /**
      * Transfers the currently selected range in the text to the clipboard,
      * leaving the current selection.
      */
-     public void copy() {
-        final String selectedText = getSelectedText();
-        if (selectedText.length() > 0) {
-            final ClipboardContent content = new ClipboardContent();
-            content.putString(selectedText);
-            Clipboard.getSystemClipboard().setContent(content);
-        }
+    public void copy() {
+        execute(COPY);
     }
 
     /**
@@ -752,9 +762,13 @@ public abstract class TextInputControl extends Control {
      * in the clipboard is inserted at the current caret position.
      */
     public void paste() {
-        final Clipboard clipboard = Clipboard.getSystemClipboard();
+        execute(PASTE);
+    }
+
+    private void localPaste() {
+        Clipboard clipboard = Clipboard.getSystemClipboard();
         if (clipboard.hasString()) {
-            final String text = clipboard.getString();
+            String text = clipboard.getString();
             if (text != null) {
                 createNewUndoRecord = true;
                 try {
@@ -965,7 +979,7 @@ public abstract class TextInputControl extends Control {
      * Selects all text in the text input.
      */
     public void selectAll() {
-        selectRange(0, getLength());
+        execute(SELECT_ALL);
     }
 
     /**
@@ -974,7 +988,7 @@ public abstract class TextInputControl extends Control {
      */
     public void home() {
         // user wants to go to start
-        selectRange(0, 0);
+        execute(DOCUMENT_START);
     }
 
     /**
@@ -983,10 +997,7 @@ public abstract class TextInputControl extends Control {
      */
     public void end() {
         // user wants to go to end
-        final int textLength = getLength();
-        if (textLength > 0) {
-            selectRange(textLength, textLength);
-        }
+        execute(DOCUMENT_END);
     }
 
     /**
@@ -1211,9 +1222,7 @@ public abstract class TextInputControl extends Control {
      * Clears the selection.
      */
     public void deselect() {
-        // set the anchor equal to the caret position, which clears the selection
-        // while also preserving the caret position
-        selectRange(getCaretPosition(), getCaretPosition());
+        execute(DESELECT);
     }
 
     /**
@@ -1233,6 +1242,10 @@ public abstract class TextInputControl extends Control {
      * @since JavaFX 8u40
      */
     public final void undo() {
+        execute(UNDO);
+    }
+    
+    private void localUndo() {
         if (isUndoable()) {
             // Apply reverse change here
             final int start = undoChange.start;
@@ -1267,6 +1280,10 @@ public abstract class TextInputControl extends Control {
      * @since JavaFX 8u40
      */
     public final void redo() {
+        execute(REDO);
+    }
+
+    private void localRedo() {
         if (isRedoable()) {
             // Apply change here
             undoChange = undoChange.next;
@@ -1802,4 +1819,51 @@ public abstract class TextInputControl extends Control {
             return TextInputControl.this.getAnchor();
         }
     }
+
+    // TODO add public methods that execute(...) for all of these:
+
+//    /** Denotes the function that deletes text from the line start. */
+//    public static final FunctionTag DELETE_FROM_LINE_START = new FunctionTag();
+//    /** Denotes the function that deletes the next character. */
+//    public static final FunctionTag DELETE_NEXT_CHAR = new FunctionTag();
+//    /** Denotes the function that deletes the next word. */
+//    public static final FunctionTag DELETE_NEXT_WORD = new FunctionTag();
+//    /** Denotes the function that deletes the previous character. */
+//    public static final FunctionTag DELETE_PREVIOUS_CHAR = new FunctionTag();
+//    /** Denotes the function that deletes the previous word. */
+//    public static final FunctionTag DELETE_PREVIOUS_WORD = new FunctionTag();
+//    /** Denotes the function that moves the caret to the document start. */
+//    public static final FunctionTag DOCUMENT_START = new FunctionTag();
+//    /** Denotes the function that moves the caret to the document end. */
+//    public static final FunctionTag DOCUMENT_END = new FunctionTag();
+//    /** Denotes the function that moves the caret one symbol left. */
+//    public static final FunctionTag LEFT = new FunctionTag();
+//    /** Denotes the function that moves the caret one word left. */
+//    public static final FunctionTag LEFT_WORD = new FunctionTag();
+//    /** Denotes the function that moves the caret one symbol right. */
+//    public static final FunctionTag RIGHT = new FunctionTag();
+//    /** Denotes the function that moves the caret one word right. */
+//    public static final FunctionTag RIGHT_WORD = new FunctionTag();
+//    /** Denotes the function that selects to after the last char of text. */
+//    public static final FunctionTag SELECT_END = new FunctionTag();
+//    /** Denotes the function that ?? TODO how is this different from SELECT_END?. */
+//    public static final FunctionTag SELECT_END_EXTEND = new FunctionTag();
+//    /** Denotes the function that moves the caret and extends selection to before the first char of text. */
+//    public static final FunctionTag SELECT_HOME = new FunctionTag();
+//    /** Denotes the function that moves the caret and extends selection to before the first char of text. */
+//    // TODO how is this different from SELECT_HOME?
+//    public static final FunctionTag SELECT_HOME_EXTEND = new FunctionTag();
+//    /** Denotes the function that moves the caret and extends selection one character to the left. */
+//    public static final FunctionTag SELECT_LEFT = new FunctionTag();
+//    /** Denotes the function that moves the caret to the beginning or end of the word to the left. */
+//    // TODO explain platform-specific behavior
+//    public static final FunctionTag SELECT_LEFT_WORD = new FunctionTag();
+//    /** Denotes the function that moves the caret and extends selection one character to the right. */
+//    public static final FunctionTag SELECT_RIGHT = new FunctionTag();
+//    /** Denotes the function that moves the caret to the beginning or end of the word to the right. */
+//    public static final FunctionTag SELECT_RIGHT_WORD = new FunctionTag();
+//    /** Denotes the function that moves the focus to the next focusTraversable Node. */
+//    public static final FunctionTag TRAVERSE_NEXT = new FunctionTag();
+//    /** Denotes the function that moves the focus to the previous focusTraversable Node. */
+//    public static final FunctionTag TRAVERSE_PREVIOUS = new FunctionTag();
 }
