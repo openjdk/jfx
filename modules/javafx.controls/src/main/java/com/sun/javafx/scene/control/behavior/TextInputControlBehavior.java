@@ -111,16 +111,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         c.textProperty().addListener(textListener);
 
-        func(TextInputControl.COPY, c::copy); // TODO move method to behavior
+        func(TextInputControl.COPY, c::copy);
         func(TextInputControl.CUT, this::cut);
         func(TextInputControl.DELETE_FROM_LINE_START, this::deleteFromLineStart);
         func(TextInputControl.DELETE_NEXT_CHAR, this::deleteNextChar);
         func(TextInputControl.DELETE_NEXT_WORD, this::deleteNextWord);
         func(TextInputControl.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
         func(TextInputControl.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
-        func(TextInputControl.DESELECT, c::deselect); // TODO move method to behavior
-        func(TextInputControl.DOCUMENT_START, c::home); // TODO move method to behavior
-        func(TextInputControl.DOCUMENT_END, c::end); // TODO move method to behavior
+        func(TextInputControl.DESELECT, c::deselect);
+        func(TextInputControl.DOCUMENT_START, c::home);
+        func(TextInputControl.DOCUMENT_END, c::end);
         func(TextInputControl.LEFT, () -> nextCharacterVisually(false));
         func(TextInputControl.LEFT_WORD, this::leftWord);
         func(TextInputControl.PASTE, this::paste);
@@ -299,43 +299,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             }
         }
     }
-
-    // However, we want to consume other key press / release events too, for
-    // things that would have been handled by the InputCharacter normally
-    // (TODO note: KEY_RELEASEs are not handled by this code, same as was implemented with the old input map)
-//    private void handleRemainingKeyPresses(KeyEvent ev) {
-//        if (!ev.isAltDown() && !ev.isControlDown() && !ev.isMetaDown() && !ev.isShortcutDown()) {
-//            if (!ev.getCode().isFunctionKey()) {
-//                ev.consume();
-//            }
-//        }
-//    }
-
-    /**
-     * Wraps the event handler to pause caret blinking when
-     * processing the key event.
-     */
-    protected KeyMapping keyMapping(final KeyCode keyCode, final EventHandler<KeyEvent> eventHandler) {
-        return keyMapping(new KeyBinding(keyCode), eventHandler);
-    }
-
-    protected KeyMapping keyMapping(KeyBinding keyBinding, final EventHandler<KeyEvent> eventHandler) {
-        return keyMapping(keyBinding, eventHandler, null);
-    }
-
-    protected KeyMapping keyMapping(KeyBinding keyBinding, final EventHandler<KeyEvent> eventHandler,
-                                    Predicate<KeyEvent> interceptor) {
-        return new KeyMapping(keyBinding,
-                              e -> {
-                                  setCaretAnimating(false);
-                                  eventHandler.handle(e);
-                                  setCaretAnimating(true);
-                              },
-                              interceptor);
-    }
-
-
-
 
 
     /**************************************************************************
@@ -534,7 +497,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     public void cut() {
         if (isEditable()) {
             setEditing(true);
-            getNode().cut(); // FIX move here
+            getNode().cut();
             setEditing(false);
         }
     }
@@ -542,25 +505,25 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     public void paste() {
         if (isEditable()) {
             setEditing(true);
-            getNode().paste(); // FIX move here
+            getNode().paste();
             setEditing(false);
         }
     }
 
     public void undo() {
         setEditing(true);
-        getNode().undo(); // FIX move here
+        getNode().undo();
         setEditing(false);
     }
 
     public void redo() {
         setEditing(true);
-        getNode().redo(); // FIX move here
+        getNode().redo();
         setEditing(false);
     }
 
     protected void selectPreviousWord() {
-        getNode().selectPreviousWord(); // FIX move here
+        getNode().selectPreviousWord();
     }
 
     public void selectNextWord() {
