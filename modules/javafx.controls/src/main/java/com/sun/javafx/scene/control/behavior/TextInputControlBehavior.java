@@ -30,6 +30,7 @@ import static com.sun.javafx.PlatformUtil.isWindows;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 import java.text.Bidi;
 import java.util.Set;
+import java.util.function.Predicate;
 import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ObservableList;
@@ -52,14 +53,14 @@ import javafx.scene.control.skin.TextInputControlSkin;
 import javafx.scene.control.skin.TextInputControlSkin.Direction;
 import javafx.scene.control.skin.TextInputControlSkin.TextUnit;
 import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.TextInputControlHelper;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.scene.control.skin.FXVK;
 
 /**
@@ -110,16 +111,16 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         c.textProperty().addListener(textListener);
 
-        func(TextInputControl.COPY, this::copy);
+        func(TextInputControl.COPY, c::copy); // TODO move method to behavior
         func(TextInputControl.CUT, this::cut);
         func(TextInputControl.DELETE_FROM_LINE_START, this::deleteFromLineStart);
         func(TextInputControl.DELETE_NEXT_CHAR, this::deleteNextChar);
         func(TextInputControl.DELETE_NEXT_WORD, this::deleteNextWord);
         func(TextInputControl.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
         func(TextInputControl.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
-        func(TextInputControl.DESELECT, this::deselect);
-        func(TextInputControl.DOCUMENT_START, this::documentStart);
-        func(TextInputControl.DOCUMENT_END, this::documentEnd);
+        func(TextInputControl.DESELECT, c::deselect); // TODO move method to behavior
+        func(TextInputControl.DOCUMENT_START, c::home); // TODO move method to behavior
+        func(TextInputControl.DOCUMENT_END, c::end); // TODO move method to behavior
         func(TextInputControl.LEFT, () -> nextCharacterVisually(false));
         func(TextInputControl.LEFT_WORD, this::leftWord);
         func(TextInputControl.PASTE, this::paste);
@@ -298,6 +299,43 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             }
         }
     }
+
+    // However, we want to consume other key press / release events too, for
+    // things that would have been handled by the InputCharacter normally
+    // (TODO note: KEY_RELEASEs are not handled by this code, same as was implemented with the old input map)
+//    private void handleRemainingKeyPresses(KeyEvent ev) {
+//        if (!ev.isAltDown() && !ev.isControlDown() && !ev.isMetaDown() && !ev.isShortcutDown()) {
+//            if (!ev.getCode().isFunctionKey()) {
+//                ev.consume();
+//            }
+//        }
+//    }
+
+    /**
+     * Wraps the event handler to pause caret blinking when
+     * processing the key event.
+     */
+    protected KeyMapping keyMapping(final KeyCode keyCode, final EventHandler<KeyEvent> eventHandler) {
+        return keyMapping(new KeyBinding(keyCode), eventHandler);
+    }
+
+    protected KeyMapping keyMapping(KeyBinding keyBinding, final EventHandler<KeyEvent> eventHandler) {
+        return keyMapping(keyBinding, eventHandler, null);
+    }
+
+    protected KeyMapping keyMapping(KeyBinding keyBinding, final EventHandler<KeyEvent> eventHandler,
+                                    Predicate<KeyEvent> interceptor) {
+        return new KeyMapping(keyBinding,
+                              e -> {
+                                  setCaretAnimating(false);
+                                  eventHandler.handle(e);
+                                  setCaretAnimating(true);
+                              },
+                              interceptor);
+    }
+
+
+
 
 
     /**************************************************************************
@@ -484,58 +522,41 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     public void deleteSelection() {
         setEditing(true);
-        try {
-            TextInputControl textInputControl = getNode();
-            IndexRange selection = textInputControl.getSelection();
+        TextInputControl textInputControl = getNode();
+        IndexRange selection = textInputControl.getSelection();
 
-            if (selection.getLength() > 0) {
-                deleteChar(false);
-            }
-        } finally {
-            setEditing(false);
+        if (selection.getLength() > 0) {
+            deleteChar(false);
         }
+        setEditing(false);
     }
 
     public void cut() {
         if (isEditable()) {
             setEditing(true);
-            try {
-                copy();
-                IndexRange selection = control.getSelection();
-                control.deleteText(selection.getStart(), selection.getEnd());
-            } finally {
-                setEditing(false);
-            }
+            getNode().cut(); // FIX move here
+            setEditing(false);
         }
     }
 
     public void paste() {
         if (isEditable()) {
             setEditing(true);
-            try {
-                TextInputControlHelper.paste(control);
-            } finally {
-                setEditing(false);
-            }
+            getNode().paste(); // FIX move here
+            setEditing(false);
         }
     }
 
     public void undo() {
         setEditing(true);
-        try {
-            TextInputControlHelper.undo(control);
-        } finally {
-            setEditing(false);
-        }
+        getNode().undo(); // FIX move here
+        setEditing(false);
     }
 
     public void redo() {
         setEditing(true);
-        try {
-            TextInputControlHelper.redo(control);
-        } finally {
-            setEditing(false);
-        }
+        getNode().redo(); // FIX move here
+        setEditing(false);
     }
 
     protected void selectPreviousWord() {
@@ -581,8 +602,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void selectAll() {
-        int len = control.getLength();
-        control.selectRange(0, len);
+        getNode().selectAll();
         if (SHOW_HANDLES && contextMenu.isShowing()) {
             populateContextMenu();
         }
@@ -703,32 +723,4 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private final MenuItem selectAllMI = new ContextMenuItem("SelectAll", e -> selectAll());
     private final MenuItem separatorMI = new SeparatorMenuItem();
 
-    public void copy() {
-        String selectedText = control.getSelectedText();
-        if (selectedText.length() > 0) {
-            ClipboardContent content = new ClipboardContent();
-            content.putString(selectedText);
-            Clipboard.getSystemClipboard().setContent(content);
-        }
-    }
-
-    public void deselect() {
-        // set the anchor equal to the caret position, which clears the selection
-        // while also preserving the caret position
-        int pos = control.getCaretPosition();
-        control.selectRange(pos, pos);
-    }
-    
-    public void documentStart() {
-        // user wants to go to start
-        control.selectRange(0, 0);
-    }
-
-    public void documentEnd() {
-        // user wants to go to end
-        int len = control.getLength();
-        if (len > 0) {
-            control.selectRange(len, len);
-        }
-    }
 }
