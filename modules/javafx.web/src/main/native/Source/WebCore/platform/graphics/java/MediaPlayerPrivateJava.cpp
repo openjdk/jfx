@@ -433,7 +433,7 @@ float MediaPlayerPrivate::currentTime() const
 
     // in case of hls media m3u8 format check network state
     // since jfx media do not support hls live streaming protocol
-    if ( MediaPlayerNetworkState::NetworkError == MediaPlayer::NetworkState::NetworkError)
+    if (MediaPlayerNetworkState::NetworkError == MediaPlayer::NetworkState::NetworkError)
         return MediaTime::zeroTime().toFloat();
 
     JNIEnv* env = WTF::GetJavaEnv();
