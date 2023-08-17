@@ -194,7 +194,7 @@ public class ControlPropertiesTest {
                         }
                     }
                 }
-                
+
                 String propName = name.substring(0, name.length() - "Property".length());
                 check(h, propName, "get", 0);
                 check(h, propName, "set", 1);
