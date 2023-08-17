@@ -8185,21 +8185,17 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        if (oldParent != null) {
-            Node node = oldParent;
-            while (node != null) {
-                node.focusWithin.adjust(-focusWithin.count);
-                node = node.getParent();
-            }
+        Node node = oldParent;
+        while (node != null) {
+            node.focusWithin.adjust(-focusWithin.count);
+            node = node.getParent();
         }
 
-        if (newParent != null) {
-            Node node = newParent;
-            while (node != null) {
-                node.focusWithin.adjust(focusWithin.count);
-                node = node.getParent();
-            };
-        }
+        node = newParent;
+        while (node != null) {
+            node.focusWithin.adjust(focusWithin.count);
+            node = node.getParent();
+        };
 
         // Since focus changes are atomic, we only fire change notifications after
         // all changes are committed on all old and new parents.
