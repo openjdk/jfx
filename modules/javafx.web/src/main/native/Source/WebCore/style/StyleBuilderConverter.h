@@ -1206,11 +1206,16 @@ inline Vector<GridTrackSize> BuilderConverter::convertGridTrackSizeList(BuilderS
         return trackSizes;
     }
 
-    auto& valueList = downcast<CSSValueList>(value);
     Vector<GridTrackSize> trackSizes;
+    if (is<CSSValueList>(value))  {
+        auto& valueList = downcast<CSSValueList>(value);
     trackSizes.reserveInitialCapacity(valueList.length());
     for (auto& currentValue : valueList)
         validateValueAndAppend(trackSizes, currentValue);
+    } else {
+        trackSizes.reserveInitialCapacity(1);
+        validateValueAndAppend(trackSizes, value);
+    }
     return trackSizes;
 }
 
