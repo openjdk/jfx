@@ -430,6 +430,12 @@ float MediaPlayerPrivate::currentTime() const
         LOG_TRACE1("MediaPlayerPrivate currentTime returns (seekTime): %f\n", m_seekTime);
         return m_seekTime;
     }
+
+    // in case of hls media m3u8 format check network state
+    // since jfx media do not support hls live streaming protocol
+    if (MediaPlayerNetworkState::NetworkError == MediaPlayer::NetworkState::NetworkError)
+        return MediaTime::zeroTime().toFloat();
+
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkGetCurrentTime", "()F");
