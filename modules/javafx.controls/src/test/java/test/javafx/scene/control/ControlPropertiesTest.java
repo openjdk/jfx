@@ -206,14 +206,8 @@ public class ControlPropertiesTest {
     private void check(HashMap<String, Method> map, String name, String prefix, int numArgs) {
         StringBuilder sb = new StringBuilder(64);
         sb.append(prefix);
-        for (int i = 0; i < name.length(); i++) {
-            char c = name.charAt(i);
-            if (i == 0) {
-                sb.append(Character.toUpperCase(c));
-            } else {
-                sb.append(c);
-            }
-        }
+        sb.append(Character.toUpperCase(name.charAt(0)));
+        sb.append(name, 1, name.length());
 
         String s = sb.toString();
         Method m = map.get(s);
