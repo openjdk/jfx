@@ -527,6 +527,16 @@ public class MenuItem implements EventTarget, Styleable {
         return properties;
     }
 
+    /**
+     * Tests if MenuItem has properties.
+     * @return true if node has properties.
+     *
+     * @since 22
+     */
+     public boolean hasProperties() {
+        return properties != null && !properties.isEmpty();
+    }
+
     /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
