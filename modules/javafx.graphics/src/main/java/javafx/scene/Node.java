@@ -8323,7 +8323,7 @@ public abstract class Node implements EventTarget, Styleable {
         void adjust(int change) {
             count += change;
 
-            if (count == 1) {
+            if (change > 0) {
                 set(true);
             } else if (count == 0) {
                 set(false);
