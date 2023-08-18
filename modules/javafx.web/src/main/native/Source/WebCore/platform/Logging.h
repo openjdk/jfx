@@ -38,6 +38,7 @@ namespace WebCore {
 
 #define WEBCORE_LOG_CHANNELS(M) \
     M(Accessibility) \
+    M(ActivityState) \
     M(Animations) \
     M(AppHighlights) \
     M(ApplePay) \
@@ -49,6 +50,7 @@ namespace WebCore {
     M(CompositingOverlap) \
     M(ContentFiltering) \
     M(ContentObservation) \
+    M(Crypto) \
     M(DatabaseTracker) \
     M(DisplayLink) \
     M(DisplayLists) \
@@ -74,8 +76,10 @@ namespace WebCore {
     M(IndexedDB) \
     M(IndexedDBOperations) \
     M(Inspector) \
+    M(IntersectionObserver) \
     M(Layers) \
     M(Layout) \
+    M(LazyLoading) \
     M(FormattingContextLayout) \
     M(Loading) \
     M(Media) \

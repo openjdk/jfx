@@ -102,6 +102,11 @@ public:
     WEBCORE_EXPORT bool containsMappedFileData() const;
 
 private:
+    void iterate(const Function<void(const Span<const uint8_t>&)>& apply) const;
+#if USE(FOUNDATION)
+    void iterate(CFDataRef, const Function<void(const Span<const uint8_t>&)>& apply) const;
+#endif
+
     explicit DataSegment(Vector<uint8_t>&& data)
         : m_immutableData(WTFMove(data)) { }
 #if USE(CF)
@@ -268,7 +273,7 @@ public:
             && (std::is_same_v<Args, Ref<const DataSegment>> &&...))
             return adoptRef(*new SharedBuffer(std::forward<Args>(args)...));
         else if constexpr (sizeof...(Args) == 1
-            && (std::is_same_v<std::remove_const_t<std::remove_reference_t<Args>>, DataSegment> &&...))
+            && (std::is_same_v<std::remove_cvref_t<Args>, DataSegment> &&...))
             return adoptRef(*new SharedBuffer(std::forward<Args>(args)...));
         else {
             auto buffer = FragmentedSharedBuffer::create(std::forward<Args>(args)...);
@@ -278,6 +283,7 @@ public:
 
     WEBCORE_EXPORT const uint8_t* data() const;
     const char* dataAsCharPtr() const { return reinterpret_cast<const char*>(data()); }
+    Span<const uint8_t> dataAsSpanForContiguousData() const { return  Span(data(), isContiguous() ? size() : 0); }
     WTF::Persistence::Decoder decoder() const;
 
     enum class MayUseFileMapping : bool { No, Yes };

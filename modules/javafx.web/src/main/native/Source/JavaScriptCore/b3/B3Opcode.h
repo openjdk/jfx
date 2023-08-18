@@ -54,6 +54,7 @@ enum Opcode : uint8_t {
     Const64,
     ConstDouble,
     ConstFloat,
+    Const128,
 
     // Tuple filled with zeros. This appears when Tuple Patchpoints are replaced with Bottom values.
     BottomTuple,
@@ -343,6 +344,81 @@ enum Opcode : uint8_t {
     // to be able to perform such optimizations.
     WasmBoundsCheck,
 
+    // SIMD instructions
+    VectorExtractLane,
+    VectorReplaceLane,
+
+    // Currently only some architectures support this.
+    // FIXME: Expand this to identical instructions for the other architectures as a macro.
+    VectorDupElement,
+
+    VectorSplat,
+
+    VectorEqual,
+    VectorNotEqual,
+    VectorLessThan,
+    VectorLessThanOrEqual,
+    VectorBelow,
+    VectorBelowOrEqual,
+    VectorGreaterThan,
+    VectorGreaterThanOrEqual,
+    VectorAbove,
+    VectorAboveOrEqual,
+
+    VectorAdd,
+    VectorSub,
+    VectorAddSat,
+    VectorSubSat,
+    VectorMul,
+    VectorDotProduct,
+    VectorDiv,
+    VectorMin,
+    VectorMax,
+    VectorPmin,
+    VectorPmax,
+
+    VectorNarrow,
+
+    VectorNot,
+    VectorAnd,
+    VectorAndnot,
+    VectorOr,
+    VectorXor,
+
+    VectorShl,
+    VectorShr,
+
+    VectorAbs,
+    VectorNeg,
+    VectorPopcnt,
+    VectorCeil,
+    VectorFloor,
+    VectorTrunc,
+    VectorTruncSat,
+    VectorConvert,
+    VectorConvertLow,
+    VectorNearest,
+    VectorSqrt,
+
+    VectorExtendLow,
+    VectorExtendHigh,
+
+    VectorPromote,
+    VectorDemote,
+
+    VectorAnyTrue,
+    VectorAllTrue,
+    VectorAvgRound,
+    VectorBitmask,
+    VectorBitwiseSelect,
+    VectorExtaddPairwise,
+    VectorMulSat,
+    VectorSwizzle,
+
+    // Currently only some architectures support this.
+    // FIXME: Expand this to identical instructions for the other architectures as a macro.
+    VectorMulByElement,
+
     // SSA support, in the style of DFG SSA.
     Upsilon, // This uses the UpsilonValue class.
     Phi,
@@ -398,6 +474,7 @@ inline bool isConstant(Opcode opcode)
     case Const64:
     case ConstDouble:
     case ConstFloat:
+    case Const128:
         return true;
     default:
         return false;
@@ -411,6 +488,7 @@ inline Opcode opcodeForConstant(Type type)
     case Int64: return Const64;
     case Float: return ConstFloat;
     case Double: return ConstDouble;
+    case V128: return Const128;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }

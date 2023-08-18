@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -255,7 +255,7 @@ public abstract class NGShape3D extends NGNode {
         meshView.setLight(lightIndex,
                 0, 0, 0,    // x y z
                 0, 0, 0, 0, // r g b lightOn
-                1, 0, 0, 1, 0, // ca la qa isAttenuated maxRange
+                1, 0, 0, 0, 0, // ca la qa isAttenuated maxRange
                 0, 0, 1,    // dirX Y Z
                 0, 0, 0);   // inner outer falloff
     }

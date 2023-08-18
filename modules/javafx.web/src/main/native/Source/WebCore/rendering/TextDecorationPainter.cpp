@@ -65,10 +65,8 @@ namespace WebCore {
  *             |-----------|
  *                 step
  */
-static void strokeWavyTextDecoration(GraphicsContext& context, const FloatRect& rect, float fontSize)
+static void strokeWavyTextDecoration(GraphicsContext& context, const FloatRect& rect, WavyStrokeParameters wavyStrokeParameters)
 {
-    auto wavyStrokeParameters = getWavyStrokeParameters(fontSize);
-
     FloatPoint p1 = rect.minXMinYCorner();
     FloatPoint p2 = rect.maxXMinYCorner();
 
@@ -163,22 +161,22 @@ static DashArray translateIntersectionPointsToSkipInkBoundaries(const DashArray&
 
 static StrokeStyle textDecorationStyleToStrokeStyle(TextDecorationStyle decorationStyle)
 {
-    StrokeStyle strokeStyle = SolidStroke;
+    StrokeStyle strokeStyle = StrokeStyle::SolidStroke;
     switch (decorationStyle) {
     case TextDecorationStyle::Solid:
-        strokeStyle = SolidStroke;
+        strokeStyle = StrokeStyle::SolidStroke;
         break;
     case TextDecorationStyle::Double:
-        strokeStyle = DoubleStroke;
+        strokeStyle = StrokeStyle::DoubleStroke;
         break;
     case TextDecorationStyle::Dotted:
-        strokeStyle = DottedStroke;
+        strokeStyle = StrokeStyle::DottedStroke;
         break;
     case TextDecorationStyle::Dashed:
-        strokeStyle = DashedStroke;
+        strokeStyle = StrokeStyle::DashedStroke;
         break;
     case TextDecorationStyle::Wavy:
-        strokeStyle = WavyStroke;
+        strokeStyle = StrokeStyle::WavyStroke;
         break;
     }
 
@@ -187,45 +185,35 @@ static StrokeStyle textDecorationStyleToStrokeStyle(TextDecorationStyle decorati
 
 bool TextDecorationPainter::Styles::operator==(const Styles& other) const
 {
-    return underlineColor == other.underlineColor && overlineColor == other.overlineColor && linethroughColor == other.linethroughColor
-        && underlineStyle == other.underlineStyle && overlineStyle == other.overlineStyle && linethroughStyle == other.linethroughStyle;
+    return underline.color == other.underline.color && overline.color == other.overline.color && linethrough.color == other.linethrough.color
+        && underline.decorationStyle == other.underline.decorationStyle && overline.decorationStyle == other.overline.decorationStyle && linethrough.decorationStyle == other.linethrough.decorationStyle;
 }
 
-TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, OptionSet<TextDecorationLine> decorations, const RenderText& renderer, bool isFirstLine, const FontCascade& font, InlineIterator::TextBoxIterator textBox, float width, const ShadowData* shadow, const FilterOperations* colorFilter, std::optional<Styles> styles)
-    : m_context { context }
-    , m_decorations { decorations }
-    , m_wavyOffset { wavyOffsetFromDecoration() }
-    , m_width(width)
-    , m_isPrinting { renderer.document().printing() }
-    , m_isHorizontal(textBox->isHorizontal())
+TextDecorationPainter::TextDecorationPainter(GraphicsContext& context, const FontCascade& font, const ShadowData* shadow, const FilterOperations* colorFilter, bool isPrinting, bool isHorizontal)
+    : m_context(context)
+    , m_isPrinting(isPrinting)
+    , m_isHorizontal(isHorizontal)
     , m_shadow(shadow)
     , m_shadowColorFilter(colorFilter)
-    , m_textBox(textBox)
-    , m_font { font }
-    , m_styles { styles ? *WTFMove(styles) : stylesForRenderer(renderer, decorations, isFirstLine, PseudoId::None) }
-    , m_lineStyle { isFirstLine ? renderer.firstLineStyle() : renderer.style() }
+    , m_font(font)
 {
 }
 
 // Paint text-shadow, underline, overline
-void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, const FloatPoint& textOrigin, const FloatPoint& boxOrigin)
+void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, const BackgroundDecorationGeometry& decorationGeometry, OptionSet<TextDecorationLine> decorationType, const Styles& decorationStyle)
 {
-    const auto& fontMetrics = m_lineStyle.metricsOfPrimaryFont();
-    float textDecorationThickness = m_lineStyle.textDecorationThickness().resolve(m_lineStyle.computedFontSize(), fontMetrics);
-    FloatPoint localOrigin = boxOrigin;
-
-    auto paintDecoration = [&] (TextDecorationLine decoration, TextDecorationStyle style, const Color& color, const FloatRect& rect) {
+    auto paintDecoration = [&] (auto decoration, auto style, auto& color, auto& rect) {
         m_context.setStrokeColor(color);
 
         auto strokeStyle = textDecorationStyleToStrokeStyle(style);
 
         if (style == TextDecorationStyle::Wavy)
-            strokeWavyTextDecoration(m_context, rect, m_lineStyle.computedFontPixelSize());
+            strokeWavyTextDecoration(m_context, rect, decorationGeometry.wavyStrokeParameters);
         else if (decoration == TextDecorationLine::Underline || decoration == TextDecorationLine::Overline) {
-            if ((m_lineStyle.textDecorationSkipInk() == TextDecorationSkipInk::Auto || m_lineStyle.textDecorationSkipInk() == TextDecorationSkipInk::All) && m_isHorizontal) {
+            if ((decorationStyle.skipInk == TextDecorationSkipInk::Auto || decorationStyle.skipInk == TextDecorationSkipInk::All) && m_isHorizontal) {
                 if (!m_context.paintingDisabled()) {
-                    FloatRect underlineBoundingBox = m_context.computeUnderlineBoundsForText(rect, m_isPrinting);
-                    DashArray intersections = m_font.dashesForIntersectionsWithRect(textRun, textOrigin, underlineBoundingBox);
+                    auto underlineBoundingBox = m_context.computeUnderlineBoundsForText(rect, m_isPrinting);
+                    DashArray intersections = m_font.dashesForIntersectionsWithRect(textRun, decorationGeometry.textOrigin, underlineBoundingBox);
                     DashArray boundaries = translateIntersectionPointsToSkipInkBoundaries(intersections, underlineBoundingBox.height(), rect.width());
                     ASSERT(!(boundaries.size() % 2));
                     // We don't use underlineBoundingBox here because drawLinesForText() will run computeUnderlineBoundsForText() internally.
@@ -239,68 +227,68 @@ void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, c
             ASSERT_NOT_REACHED();
     };
 
-    bool areLinesOpaque = !m_isPrinting && (!m_decorations.contains(TextDecorationLine::Underline) || m_styles.underlineColor.isOpaque())
-        && (!m_decorations.contains(TextDecorationLine::Overline) || m_styles.overlineColor.isOpaque())
-        && (!m_decorations.contains(TextDecorationLine::LineThrough) || m_styles.linethroughColor.isOpaque());
+    auto areLinesOpaque = !m_isPrinting && (!decorationType.contains(TextDecorationLine::Underline) || decorationStyle.underline.color.isOpaque())
+        && (!decorationType.contains(TextDecorationLine::Overline) || decorationStyle.overline.color.isOpaque())
+        && (!decorationType.contains(TextDecorationLine::LineThrough) || decorationStyle.linethrough.color.isOpaque());
 
-    float extraOffset = 0;
-    bool clipping = !areLinesOpaque && m_shadow && m_shadow->next();
+    float extraOffset = 0.f;
+    auto boxOrigin = decorationGeometry.boxOrigin;
+    bool clipping = m_shadow && m_shadow->next() && !areLinesOpaque;
     if (clipping) {
-        FloatRect clipRect(localOrigin, FloatSize(m_width, fontMetrics.ascent() + 2));
+        auto clipRect = FloatRect { boxOrigin, FloatSize { decorationGeometry.textBoxWidth, decorationGeometry.clippingOffset } };
         for (const ShadowData* shadow = m_shadow; shadow; shadow = shadow->next()) {
-            int shadowExtent = shadow->paintingExtent();
-            FloatRect shadowRect(localOrigin, FloatSize(m_width, fontMetrics.ascent() + 2));
+            auto shadowExtent = shadow->paintingExtent();
+            auto shadowRect = clipRect;
             shadowRect.inflate(shadowExtent);
-            float shadowX = LayoutUnit(m_isHorizontal ? shadow->x().value() : shadow->y().value());
-            float shadowY = LayoutUnit(m_isHorizontal ? shadow->y().value() : -shadow->x().value());
+            auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
+            auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
             shadowRect.move(shadowX, shadowY);
             clipRect.unite(shadowRect);
             extraOffset = std::max(extraOffset, std::max(0.f, shadowY) + shadowExtent);
         }
         m_context.save();
         m_context.clip(clipRect);
-        extraOffset += fontMetrics.ascent() + 2;
-        localOrigin.move(0, extraOffset);
+        extraOffset += decorationGeometry.clippingOffset;
+        boxOrigin.move(0.f, extraOffset);
     }
 
-    const ShadowData* shadow = m_shadow;
+    // These decorations should match the visual overflows computed in visualOverflowForDecorations().
+    auto underlineRect = FloatRect { boxOrigin, FloatSize { decorationGeometry.textBoxWidth, decorationGeometry.textDecorationThickness } };
+    auto overlineRect = underlineRect;
+    if (decorationType.contains(TextDecorationLine::Underline))
+        underlineRect.move(0.f, decorationGeometry.underlineOffset);
+    if (decorationType.contains(TextDecorationLine::Overline))
+        overlineRect.move(0.f, decorationGeometry.overlineOffset);
+
+    auto* shadow = m_shadow;
     do {
-        if (shadow) {
+        auto applyShadowIfNeeded = [&] {
+            if (!shadow)
+                return;
             if (!shadow->next()) {
                 // The last set of lines paints normally inside the clip.
-                localOrigin.move(0, -extraOffset);
+                boxOrigin.move(0, -extraOffset);
                 extraOffset = 0;
             }
-            float shadowX = LayoutUnit(m_isHorizontal ? shadow->x().value() : shadow->y().value());
-            float shadowY = LayoutUnit(m_isHorizontal ? shadow->y().value() : -shadow->x().value());
-
-            Color shadowColor = shadow->color();
+            auto shadowColor = shadow->color();
             if (m_shadowColorFilter)
                 m_shadowColorFilter->transformColor(shadowColor);
-            m_context.setShadow(FloatSize(shadowX, shadowY - extraOffset), shadow->radius().value(), shadowColor);
+
+            auto shadowX = m_isHorizontal ? shadow->x().value() : shadow->y().value();
+            auto shadowY = m_isHorizontal ? shadow->y().value() : -shadow->x().value();
+            m_context.setShadow(FloatSize { shadowX, shadowY - extraOffset }, shadow->radius().value(), shadowColor);
             shadow = shadow->next();
-        }
+        };
+        applyShadowIfNeeded();
 
-        // These decorations should match the visual overflows computed in visualOverflowForDecorations().
-        if (m_decorations.contains(TextDecorationLine::Underline)) {
-            auto offset = underlineOffsetForTextBoxPainting(m_lineStyle, m_textBox);
-            float wavyOffset = m_styles.underlineStyle == TextDecorationStyle::Wavy ? m_wavyOffset : 0;
-            FloatRect rect(localOrigin, FloatSize(m_width, textDecorationThickness));
-            rect.move(0, offset + wavyOffset);
-            paintDecoration(TextDecorationLine::Underline, m_styles.underlineStyle, m_styles.underlineColor, rect);
-        }
-        if (m_decorations.contains(TextDecorationLine::Overline)) {
-            float wavyOffset = m_styles.overlineStyle == TextDecorationStyle::Wavy ? m_wavyOffset : 0;
-            FloatRect rect(localOrigin, FloatSize(m_width, textDecorationThickness));
-            float autoTextDecorationThickness = TextDecorationThickness::createWithAuto().resolve(m_lineStyle.computedFontSize(), fontMetrics);
-            rect.move(0, autoTextDecorationThickness - textDecorationThickness - wavyOffset);
-            paintDecoration(TextDecorationLine::Overline, m_styles.overlineStyle, m_styles.overlineColor, rect);
-        }
-
+        if (decorationType.contains(TextDecorationLine::Underline))
+            paintDecoration(TextDecorationLine::Underline, decorationStyle.underline.decorationStyle, decorationStyle.underline.color, underlineRect);
+        if (decorationType.contains(TextDecorationLine::Overline))
+            paintDecoration(TextDecorationLine::Overline, decorationStyle.overline.decorationStyle, decorationStyle.overline.color, overlineRect);
         // We only want to paint the shadow, hence the transparent color, not the actual line-through,
         // which will be painted in paintForegroundDecorations().
-        if (shadow && m_decorations.contains(TextDecorationLine::LineThrough))
-            paintLineThrough(Color::transparentBlack, textDecorationThickness, localOrigin);
+        if (shadow && decorationType.contains(TextDecorationLine::LineThrough))
+            paintLineThrough({ boxOrigin, decorationGeometry.textBoxWidth, decorationGeometry.textDecorationThickness, decorationGeometry.linethroughCenter, decorationGeometry.wavyStrokeParameters }, Color::transparentBlack, decorationStyle);
     } while (shadow);
 
     if (clipping)
@@ -309,57 +297,50 @@ void TextDecorationPainter::paintBackgroundDecorations(const TextRun& textRun, c
         m_context.clearShadow();
 }
 
-void TextDecorationPainter::paintForegroundDecorations(const FloatPoint& boxOrigin)
+void TextDecorationPainter::paintForegroundDecorations(const ForegroundDecorationGeometry& foregroundDecorationGeometry, const Styles& decorationStyle)
 {
-    if (!m_decorations.contains(TextDecorationLine::LineThrough))
-        return;
-
-    float textDecorationThickness = m_lineStyle.textDecorationThickness().resolve(m_lineStyle.computedFontSize(), m_lineStyle.metricsOfPrimaryFont());
-    paintLineThrough(m_styles.linethroughColor, textDecorationThickness, boxOrigin);
+    paintLineThrough(foregroundDecorationGeometry, decorationStyle.linethrough.color, decorationStyle);
 }
 
-void TextDecorationPainter::paintLineThrough(const Color& color, float thickness, const FloatPoint& localOrigin)
+void TextDecorationPainter::paintLineThrough(const ForegroundDecorationGeometry& foregroundDecorationGeometry, const Color& color, const Styles& decorationStyle)
 {
-    const auto& fontMetrics = m_lineStyle.metricsOfPrimaryFont();
-    FloatRect rect(localOrigin, FloatSize(m_width, thickness));
-    float autoTextDecorationThickness = TextDecorationThickness::createWithAuto().resolve(m_lineStyle.computedFontSize(), fontMetrics);
-    auto center = 2 * fontMetrics.floatAscent() / 3 + autoTextDecorationThickness / 2;
-    rect.move(0, center - thickness / 2);
+    auto rect = FloatRect { foregroundDecorationGeometry.boxOrigin, FloatSize { foregroundDecorationGeometry.textBoxWidth, foregroundDecorationGeometry.textDecorationThickness } };
+    rect.move(0.f, foregroundDecorationGeometry.linethroughCenter);
 
     m_context.setStrokeColor(color);
 
-    TextDecorationStyle style = m_styles.linethroughStyle;
+    TextDecorationStyle style = decorationStyle.linethrough.decorationStyle;
     auto strokeStyle = textDecorationStyleToStrokeStyle(style);
 
     if (style == TextDecorationStyle::Wavy)
-        strokeWavyTextDecoration(m_context, rect, m_lineStyle.computedFontPixelSize());
+        strokeWavyTextDecoration(m_context, rect, foregroundDecorationGeometry.wavyStrokeParameters);
     else
         m_context.drawLineForText(rect, m_isPrinting, style == TextDecorationStyle::Double, strokeStyle);
 }
 
-static void collectStylesForRenderer(TextDecorationPainter::Styles& result, const RenderObject& renderer, OptionSet<TextDecorationLine> remainingDecorations, bool firstLineStyle, PseudoId pseudoId)
+static void collectStylesForRenderer(TextDecorationPainter::Styles& result, const RenderObject& renderer, OptionSet<TextDecorationLine> remainingDecorations, bool firstLineStyle, OptionSet<PaintBehavior> paintBehavior, PseudoId pseudoId)
 {
     auto extractDecorations = [&] (const RenderStyle& style, OptionSet<TextDecorationLine> decorations) {
         if (decorations.isEmpty())
             return;
 
-        auto color = TextDecorationPainter::decorationColor(style);
+        auto color = TextDecorationPainter::decorationColor(style, paintBehavior);
         auto decorationStyle = style.textDecorationStyle();
 
         if (decorations.contains(TextDecorationLine::Underline)) {
             remainingDecorations.remove(TextDecorationLine::Underline);
-            result.underlineColor = color;
-            result.underlineStyle = decorationStyle;
+            result.underline.color = color;
+            result.underline.decorationStyle = decorationStyle;
         }
         if (decorations.contains(TextDecorationLine::Overline)) {
             remainingDecorations.remove(TextDecorationLine::Overline);
-            result.overlineColor = color;
-            result.overlineStyle = decorationStyle;
+            result.overline.color = color;
+            result.overline.decorationStyle = decorationStyle;
         }
         if (decorations.contains(TextDecorationLine::LineThrough)) {
             remainingDecorations.remove(TextDecorationLine::LineThrough);
-            result.linethroughColor = color;
-            result.linethroughStyle = decorationStyle;
+            result.linethrough.color = color;
+            result.linethrough.decorationStyle = decorationStyle;
         }
     };
 
@@ -394,33 +375,34 @@ static void collectStylesForRenderer(TextDecorationPainter::Styles& result, cons
         extractDecorations(styleForRenderer(*current), remainingDecorations);
 }
 
-Color TextDecorationPainter::decorationColor(const RenderStyle& style)
+Color TextDecorationPainter::decorationColor(const RenderStyle& style, OptionSet<PaintBehavior> paintBehavior)
 {
-    return style.visitedDependentColorWithColorFilter(CSSPropertyTextDecorationColor);
+    return style.visitedDependentColorWithColorFilter(CSSPropertyTextDecorationColor, paintBehavior);
 }
 
-OptionSet<TextDecorationLine> TextDecorationPainter::textDecorationsInEffectForStyle(const TextDecorationPainter::Styles& style)
-{
-    OptionSet<TextDecorationLine> decorations;
-    if (style.underlineColor.isValid())
-        decorations.add(TextDecorationLine::Underline);
-    if (style.overlineColor.isValid())
-        decorations.add(TextDecorationLine::Overline);
-    if (style.linethroughColor.isValid())
-        decorations.add(TextDecorationLine::LineThrough);
-    return decorations;
-};
-
-auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, OptionSet<TextDecorationLine> requestedDecorations, bool firstLineStyle, PseudoId pseudoId) -> Styles
+auto TextDecorationPainter::stylesForRenderer(const RenderObject& renderer, OptionSet<TextDecorationLine> requestedDecorations, bool firstLineStyle, OptionSet<PaintBehavior> paintBehavior, PseudoId pseudoId) -> Styles
 {
     if (requestedDecorations.isEmpty())
         return { };
 
     Styles result;
-    collectStylesForRenderer(result, renderer, requestedDecorations, false, pseudoId);
+    collectStylesForRenderer(result, renderer, requestedDecorations, false, paintBehavior, pseudoId);
     if (firstLineStyle)
-        collectStylesForRenderer(result, renderer, requestedDecorations, true, pseudoId);
+        collectStylesForRenderer(result, renderer, requestedDecorations, true, paintBehavior, pseudoId);
+    result.skipInk = renderer.style().textDecorationSkipInk();
     return result;
+}
+
+OptionSet<TextDecorationLine> TextDecorationPainter::textDecorationsInEffectForStyle(const TextDecorationPainter::Styles& style)
+{
+    OptionSet<TextDecorationLine> decorations;
+    if (style.underline.color.isValid())
+        decorations.add(TextDecorationLine::Underline);
+    if (style.overline.color.isValid())
+        decorations.add(TextDecorationLine::Overline);
+    if (style.linethrough.color.isValid())
+        decorations.add(TextDecorationLine::LineThrough);
+    return decorations;
 }
 
 } // namespace WebCore

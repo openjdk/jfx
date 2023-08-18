@@ -88,7 +88,8 @@ int RenderTextControl::textBlockLogicalHeight() const
 int RenderTextControl::textBlockLogicalWidth() const
 {
     auto innerText = innerTextElement();
-    ASSERT(innerText);
+    if (!innerText)
+        return 0;
 
     LayoutUnit unitWidth = logicalWidth() - borderAndPaddingLogicalWidth();
     if (innerText->renderer())
@@ -106,7 +107,9 @@ int RenderTextControl::scrollbarThickness() const
 RenderBox::LogicalExtentComputedValues RenderTextControl::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const
 {
     auto innerText = innerTextElement();
-    ASSERT(innerText);
+    if (!innerText)
+        return RenderBox::computeLogicalHeight(LayoutUnit(), LayoutUnit());
+
     if (RenderBox* innerTextBox = innerText->renderBox()) {
         LayoutUnit nonContentHeight = innerTextBox->verticalBorderAndPaddingExtent() + innerTextBox->verticalMarginExtent();
         logicalHeight = computeControlLogicalHeight(innerTextBox->lineHeight(true, HorizontalLine, PositionOfInteriorLineBoxes), nonContentHeight);
@@ -161,11 +164,16 @@ float RenderTextControl::scaleEmToUnits(int x) const
 
 void RenderTextControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    if (shouldApplySizeContainment())
+    if (shouldApplySizeContainment()) {
+        if (auto width = explicitIntrinsicInnerLogicalWidth()) {
+            minLogicalWidth = width.value();
+            maxLogicalWidth = width.value();
+        }
         return;
+    }
     // Use average character width. Matches IE.
     maxLogicalWidth = preferredContentLogicalWidth(const_cast<RenderTextControl*>(this)->getAverageCharWidth());
-    if (RenderBox* innerTextRenderBox = innerTextElement()->renderBox())
+    if (RenderBox* innerTextRenderBox = innerTextElement() ? innerTextElement()->renderBox() : nullptr)
         maxLogicalWidth += innerTextRenderBox->paddingStart() + innerTextRenderBox->paddingEnd();
     if (!style().logicalWidth().isPercentOrCalculated())
         minLogicalWidth = maxLogicalWidth;
@@ -188,7 +196,7 @@ void RenderTextControl::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-void RenderTextControl::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*)
+void RenderTextControl::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*) const
 {
     if (!size().isEmpty())
         rects.append(LayoutRect(additionalOffset, size()));

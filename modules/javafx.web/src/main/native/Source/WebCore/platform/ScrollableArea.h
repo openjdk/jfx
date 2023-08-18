@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include "KeyboardScroll.h"
 #include "RectEdges.h"
 #include "ScrollAlignment.h"
 #include "ScrollSnapOffsetsInfo.h"
 #include "ScrollTypes.h"
 #include "Scrollbar.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
 
@@ -62,18 +64,21 @@ inline int offsetForOrientation(ScrollOffset offset, ScrollbarOrientation orient
     return 0;
 }
 
-class ScrollableArea : public CanMakeWeakPtr<ScrollableArea> {
+class ScrollableArea : public CanMakeWeakPtr<ScrollableArea>, public CanMakeCheckedPtr {
 public:
     virtual bool isScrollView() const { return false; }
     virtual bool isRenderLayer() const { return false; }
     virtual bool isListBox() const { return false; }
+
+    WEBCORE_EXPORT void beginKeyboardScroll(const KeyboardScroll& scrollData);
+    WEBCORE_EXPORT void endKeyboardScroll(bool);
 
     WEBCORE_EXPORT bool scroll(ScrollDirection, ScrollGranularity, unsigned stepCount = 1);
     WEBCORE_EXPORT void scrollToPositionWithAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
     WEBCORE_EXPORT void scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
 
     WEBCORE_EXPORT void scrollToOffsetWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
-    void scrollToOffsetWithoutAnimation(ScrollbarOrientation, float offset);
+    WEBCORE_EXPORT void scrollToOffsetWithoutAnimation(ScrollbarOrientation, float offset);
 
     // Should be called when the scroll position changes externally, for example if the scroll layer position
     // is updated on the scrolling thread and we need to notify the main thread.
@@ -85,6 +90,9 @@ public:
     virtual bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) { return false; }
     virtual bool requestAnimatedScrollToPosition(const ScrollPosition&, ScrollClamping = ScrollClamping::Clamped) { return false; }
     virtual void stopAsyncAnimatedScroll() { }
+
+    virtual bool requestStartKeyboardScrollAnimation(const KeyboardScroll&) { return false; }
+    virtual bool requestStopKeyboardScrollAnimation(bool) { return false; }
 
     WEBCORE_EXPORT virtual bool handleWheelEventForScrolling(const PlatformWheelEvent&, std::optional<WheelScrollGestureState>);
 
@@ -128,8 +136,8 @@ public:
     virtual ScrollbarMode verticalScrollbarMode() const { return ScrollbarMode::Auto; }
     bool canHaveScrollbars() const { return horizontalScrollbarMode() != ScrollbarMode::AlwaysOff || verticalScrollbarMode() != ScrollbarMode::AlwaysOff; }
 
-    virtual bool horizontalScrollbarHiddenByStyle() const { return false; }
-    virtual bool verticalScrollbarHiddenByStyle() const { return false; }
+    virtual NativeScrollbarVisibility horizontalNativeScrollbarVisibility() const { return NativeScrollbarVisibility::Visible; }
+    virtual NativeScrollbarVisibility verticalNativeScrollbarVisibility() const { return NativeScrollbarVisibility::Visible; }
 
     virtual OverscrollBehavior horizontalOverscrollBehavior() const { return OverscrollBehavior::Auto; }
     virtual OverscrollBehavior verticalOverscrollBehavior() const { return OverscrollBehavior::Auto; }
@@ -241,8 +249,8 @@ public:
     bool scrollOriginChanged() const { return m_scrollOriginChanged; }
 
     virtual ScrollPosition scrollPosition() const = 0;
-    virtual ScrollPosition minimumScrollPosition() const;
-    virtual ScrollPosition maximumScrollPosition() const;
+    WEBCORE_EXPORT virtual ScrollPosition minimumScrollPosition() const;
+    WEBCORE_EXPORT virtual ScrollPosition maximumScrollPosition() const;
 
     ScrollPosition constrainedScrollPosition(const ScrollPosition& position) const
     {
@@ -387,6 +395,7 @@ public:
     bool overscrollBehaviorAllowsRubberBand() const { return horizontalOverscrollBehavior() != OverscrollBehavior::None || verticalOverscrollBehavior() != OverscrollBehavior::None; }
     bool shouldBlockScrollPropagation(const FloatSize&) const;
     FloatSize deltaForPropagation(const FloatSize&) const;
+    WEBCORE_EXPORT virtual float adjustVerticalPageScrollStepForFixedContent(float step);
     virtual bool needsAnimatedScroll() const { return false; }
 
 protected:
@@ -396,7 +405,6 @@ protected:
     void setScrollOrigin(const IntPoint&);
     void resetScrollOriginChanged() { m_scrollOriginChanged = false; }
 
-    WEBCORE_EXPORT virtual float adjustVerticalPageScrollStepForFixedContent(float step);
     virtual void invalidateScrollbarRect(Scrollbar&, const IntRect&) = 0;
     virtual void invalidateScrollCornerRect(const IntRect&) = 0;
 
@@ -408,7 +416,7 @@ protected:
 
     bool hasLayerForScrollCorner() const;
 
-    LayoutRect getRectToExposeForScrollIntoView(const LayoutRect& visibleRect, const LayoutRect& exposeRect, const ScrollAlignment& alignX, const ScrollAlignment& alignY) const;
+    LayoutRect getRectToExposeForScrollIntoView(const LayoutRect& visibleBounds, const LayoutRect& exposeRect, const ScrollAlignment& alignX, const ScrollAlignment& alignY, const std::optional<LayoutRect> = std::nullopt) const;
 
 private:
     WEBCORE_EXPORT virtual IntRect visibleContentRectInternal(VisibleContentRectIncludesScrollbars, VisibleContentRectBehavior) const;
@@ -451,7 +459,6 @@ private:
     bool m_inLiveResize { false };
     bool m_scrollOriginChanged { false };
     bool m_scrollShouldClearLatchedState { false };
-    bool m_hasActiveScrollAnimation { false };
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const ScrollableArea&);

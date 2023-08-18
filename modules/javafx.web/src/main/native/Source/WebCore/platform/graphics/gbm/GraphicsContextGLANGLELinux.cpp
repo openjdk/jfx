@@ -26,7 +26,7 @@
 
 #include "config.h"
 
-#if ENABLE(WEBGL) && USE(ANGLE)
+#if ENABLE(WEBGL)
 #include "GraphicsContextGLANGLE.h"
 
 #include "ANGLEHeaders.h"
@@ -44,7 +44,7 @@ static inline bool isDMABufSupportedByNativePlatform(const PlatformDisplay::EGLE
 }
 #endif
 
-RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContextGLAttributes& attributes)
+RefPtr<GraphicsContextGL> createWebProcessGraphicsContextGL(const GraphicsContextGLAttributes& attributes, SerialFunctionDispatcher*)
 {
 #if USE(TEXTURE_MAPPER_DMABUF) && USE(EGL)
     if (isDMABufSupportedByNativePlatform(PlatformDisplay::sharedDisplayForCompositing().eglExtensions())) {
@@ -121,4 +121,4 @@ bool GraphicsContextGLANGLE::makeContextCurrent()
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(ANGLE)
+#endif // ENABLE(WEBGL)

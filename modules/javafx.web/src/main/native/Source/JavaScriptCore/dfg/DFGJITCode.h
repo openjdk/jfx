@@ -53,18 +53,40 @@ class JITCompiler;
 
 struct UnlinkedStructureStubInfo : JSC::UnlinkedStructureStubInfo {
     CodeOrigin codeOrigin;
-    RegisterSet usedRegisters;
+    ScalarRegisterSet usedRegisters;
     CallSiteIndex callSiteIndex;
     GPRReg m_baseGPR { InvalidGPRReg };
     GPRReg m_valueGPR { InvalidGPRReg };
     GPRReg m_extraGPR { InvalidGPRReg };
+    GPRReg m_extra2GPR { InvalidGPRReg };
     GPRReg m_stubInfoGPR { InvalidGPRReg };
 #if USE(JSVALUE32_64)
     GPRReg m_valueTagGPR { InvalidGPRReg };
     GPRReg m_baseTagGPR { InvalidGPRReg };
     GPRReg m_extraTagGPR { InvalidGPRReg };
+    GPRReg m_extra2TagGPR { InvalidGPRReg };
 #endif
     bool hasConstantIdentifier { false };
+};
+
+struct UnlinkedCallLinkInfo : JSC::UnlinkedCallLinkInfo {
+    void setUpCall(CallLinkInfo::CallType callType, GPRReg calleeGPR)
+    {
+        this->callType = callType;
+        this->calleeGPR = calleeGPR;
+    }
+
+    void setFrameShuffleData(const CallFrameShuffleData& shuffleData)
+    {
+        m_frameShuffleData = makeUnique<CallFrameShuffleData>(shuffleData);
+        m_frameShuffleData->shrinkToFit();
+    }
+
+    CodeOrigin codeOrigin;
+    CallLinkInfo::CallType callType { CallLinkInfo::CallType::None };
+    GPRReg callLinkInfoGPR { InvalidGPRReg };
+    GPRReg calleeGPR { InvalidGPRReg };
+    std::unique_ptr<CallFrameShuffleData> m_frameShuffleData;
 };
 
 class LinkerIR {
@@ -75,8 +97,23 @@ public:
     enum class Type : uint16_t {
         Invalid,
         StructureStubInfo,
+        CallLinkInfo,
         CellPointer,
         NonCellPointer,
+        GlobalObject,
+
+        // WatchpointSet.
+        HavingABadTimeWatchpointSet,
+        MasqueradesAsUndefinedWatchpointSet,
+        ArrayIteratorProtocolWatchpointSet,
+        NumberToStringWatchpointSet,
+        StructureCacheClearedWatchpointSet,
+        StringSymbolReplaceWatchpointSet,
+        RegExpPrimordialPropertiesWatchpointSet,
+        ArraySpeciesWatchpointSet,
+        ArrayPrototypeChainIsSaneWatchpointSet,
+        StringPrototypeChainIsSaneWatchpointSet,
+        ObjectPrototypeChainIsSaneWatchpointSet,
     };
 
     using Value = CompactPointerTuple<void*, Type>;
@@ -131,7 +168,7 @@ public:
     static ptrdiff_t offsetOfExits() { return OBJECT_OFFSETOF(JITData, m_exits); }
     static ptrdiff_t offsetOfIsInvalidated() { return OBJECT_OFFSETOF(JITData, m_isInvalidated); }
 
-    static std::unique_ptr<JITData> create(const JITCode& jitCode, ExitVector&& exits);
+    static std::unique_ptr<JITData> tryCreate(VM&, CodeBlock*, const JITCode&, ExitVector&& exits);
 
     void setExitCode(unsigned exitIndex, MacroAssemblerCodeRef<OSRExitPtrTag> code)
     {
@@ -147,11 +184,16 @@ public:
     }
 
     FixedVector<StructureStubInfo>& stubInfos() { return m_stubInfos; }
+    FixedVector<OptimizingCallLinkInfo>& callLinkInfos() { return m_callLinkInfos; }
 
 private:
     explicit JITData(const JITCode&, ExitVector&&);
 
+    bool tryInitialize(VM&, CodeBlock*, const JITCode&);
+
     FixedVector<StructureStubInfo> m_stubInfos;
+    FixedVector<OptimizingCallLinkInfo> m_callLinkInfos;
+    FixedVector<CodeBlockJettisoningWatchpoint> m_watchpoints;
     ExitVector m_exits;
     uint8_t m_isInvalidated { 0 };
 };
@@ -200,7 +242,7 @@ public:
 
     void shrinkToFit(const ConcurrentJSLocker&) final;
 
-    RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) final;
+    RegisterSetBuilder liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) final;
 #if ENABLE(FTL_JIT)
     CodeBlock* osrEntryBlock() { return m_osrEntryBlock.get(); }
     void setOSREntryBlock(VM&, const JSCell* owner, CodeBlock* osrEntryBlock);
@@ -226,6 +268,7 @@ public:
     FixedVector<SimpleJumpTable> m_switchJumpTables;
     FixedVector<StringJumpTable> m_stringSwitchJumpTables;
     FixedVector<UnlinkedStructureStubInfo> m_unlinkedStubInfos;
+    FixedVector<UnlinkedCallLinkInfo> m_unlinkedCallLinkInfos;
     DFG::VariableEventStream variableEventStream;
     DFG::MinifiedGraph minifiedDFG;
     LinkerIR m_linkerIR;
@@ -262,9 +305,12 @@ public:
 #endif // ENABLE(FTL_JIT)
 };
 
-inline std::unique_ptr<JITData> JITData::create(const JITCode& jitCode, ExitVector&& exits)
+inline std::unique_ptr<JITData> JITData::tryCreate(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode, ExitVector&& exits)
 {
-    return std::unique_ptr<JITData> { new (NotNull, fastMalloc(Base::allocationSize(jitCode.m_linkerIR.size()))) JITData(jitCode, WTFMove(exits)) };
+    auto result = std::unique_ptr<JITData> { new (NotNull, fastMalloc(Base::allocationSize(jitCode.m_linkerIR.size()))) JITData(jitCode, WTFMove(exits)) };
+    if (result->tryInitialize(vm, codeBlock, jitCode))
+        return result;
+    return nullptr;
 }
 
 } } // namespace JSC::DFG

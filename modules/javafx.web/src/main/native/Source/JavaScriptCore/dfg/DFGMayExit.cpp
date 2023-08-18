@@ -120,7 +120,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case Call:
     case Construct:
     case CallVarargs:
-    case CallEval:
+    case CallDirectEval:
     case ConstructVarargs:
     case CallForwardVarargs:
     case ConstructForwardVarargs:
@@ -140,6 +140,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case ToObject:
     case RegExpExecNonGlobalOrSticky:
     case RegExpMatchFastGlobal:
+    case CallWasm:
         result = ExitsForExceptions;
         break;
 

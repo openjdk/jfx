@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSStyleValue.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -34,12 +32,14 @@
 namespace WebCore {
 
 class CSSTransformComponent;
+class CSSTransformListValue;
 class DOMMatrix;
 template<typename> class ExceptionOr;
 
 class CSSTransformValue final : public CSSStyleValue {
     WTF_MAKE_ISO_ALLOCATED(CSSTransformValue);
 public:
+    static ExceptionOr<Ref<CSSTransformValue>> create(CSSTransformListValue&);
     static ExceptionOr<Ref<CSSTransformValue>> create(Vector<RefPtr<CSSTransformComponent>>&&);
 
     size_t length() const { return m_components.size(); }
@@ -51,6 +51,9 @@ public:
     ExceptionOr<Ref<DOMMatrix>> toMatrix();
 
     CSSStyleValueType getType() const override { return CSSStyleValueType::CSSTransformValue; }
+
+    RefPtr<CSSValue> toCSSValue() const final;
+
 private:
     CSSTransformValue(Vector<RefPtr<CSSTransformComponent>>&&);
     void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
@@ -63,5 +66,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSTransformValue)
     static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSTransformValue; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

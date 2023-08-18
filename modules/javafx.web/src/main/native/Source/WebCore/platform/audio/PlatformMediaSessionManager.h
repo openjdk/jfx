@@ -50,6 +50,7 @@ public:
     WEBCORE_EXPORT static PlatformMediaSessionManager& sharedManager();
 
     static void updateNowPlayingInfoIfNecessary();
+    static void updateAudioSessionCategoryIfNecessary();
 
     WEBCORE_EXPORT static void setShouldDeactivateAudioSession(bool);
     WEBCORE_EXPORT static bool shouldDeactivateAudioSession();
@@ -217,6 +218,7 @@ private:
     bool m_processIsSuspended { false };
     bool m_isPlayingToAutomotiveHeadUnit { false };
 
+    bool m_alreadyScheduledSessionStatedUpdate { false };
 #if USE(AUDIO_SESSION)
     bool m_becameActive { false };
 #endif

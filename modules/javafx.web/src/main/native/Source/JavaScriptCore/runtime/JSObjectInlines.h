@@ -50,7 +50,7 @@ void forEachInArrayLike(JSGlobalObject* globalObject, JSObject* arrayLikeObject,
 {
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
-    uint64_t length = static_cast<uint64_t>(toLength(globalObject, arrayLikeObject));
+    uint64_t length = toLength(globalObject, arrayLikeObject);
     RETURN_IF_EXCEPTION(scope, void());
     for (uint64_t index = 0; index < length; index++) {
         JSValue value = arrayLikeObject->getIndex(globalObject, index);
@@ -165,7 +165,7 @@ ALWAYS_INLINE bool JSObject::getNonIndexPropertySlot(JSGlobalObject* globalObjec
                 return false;
             if (object->type() == ProxyObjectType && slot.internalMethodType() == PropertySlot::InternalMethodType::HasProperty)
                 return false;
-            if (isTypedArrayType(object->type()) && isCanonicalNumericIndexString(propertyName))
+            if (isTypedArrayType(object->type()) && isCanonicalNumericIndexString(propertyName.uid()))
                 return false;
         }
         JSValue prototype;
@@ -365,9 +365,10 @@ ALWAYS_INLINE ASCIILiteral JSObject::putDirectInternal(VM& vm, PropertyName prop
 
             // FIXME: Check attributes against PropertyAttribute::CustomAccessorOrValue. Changing GetterSetter should work w/o transition.
             // https://bugs.webkit.org/show_bug.cgi?id=214342
-            if (mode == PutModeDefineOwnProperty && (attributes != currentAttributes || (attributes & PropertyAttribute::AccessorOrCustomAccessorOrValue)))
-                setStructure(vm, Structure::attributeChangeTransition(vm, structure, propertyName, attributes));
-            else {
+            if (mode == PutModeDefineOwnProperty && (attributes != currentAttributes || (attributes & PropertyAttribute::AccessorOrCustomAccessorOrValue))) {
+                DeferredStructureTransitionWatchpointFire deferred(vm, structure);
+                setStructure(vm, Structure::attributeChangeTransition(vm, structure, propertyName, attributes, &deferred));
+            } else {
                 ASSERT(!(currentAttributes & PropertyAttribute::AccessorOrCustomAccessorOrValue));
                 slot.setExistingProperty(this, offset);
             }
@@ -805,6 +806,21 @@ inline void JSObject::setPrivateBrand(JSGlobalObject* globalObject, JSValue bran
     ASSERT(newStructure->isBrandedStructure());
     ASSERT(newStructure->outOfLineCapacity() || !this->structure()->outOfLineCapacity());
     this->setStructure(vm, newStructure);
+}
+
+template<typename Functor>
+bool JSObject::fastForEachPropertyWithSideEffectFreeFunctor(VM& vm, const Functor& functor)
+{
+    if (!staticPropertiesReified())
+        return false;
+
+    Structure* structure = this->structure();
+
+    if (!structure->canPerformFastPropertyEnumeration())
+        return false;
+
+    structure->forEachProperty(vm, functor);
+    return true;
 }
 
 } // namespace JSC

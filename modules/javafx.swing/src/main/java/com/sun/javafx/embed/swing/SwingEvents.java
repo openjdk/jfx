@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,17 +80,19 @@ public class SwingEvents {
             default:
                 break;
         }
-        // Fix for RT-15457: we should report mouse buttons for mouse drags
-        if ((extModifiers & MouseEvent.BUTTON1_DOWN_MASK) != 0) {
-            abstractButton = AbstractEvents.MOUSEEVENT_PRIMARY_BUTTON;
-        } else if ((extModifiers & MouseEvent.BUTTON2_DOWN_MASK) != 0) {
-            abstractButton = AbstractEvents.MOUSEEVENT_MIDDLE_BUTTON;
-        } else if ((extModifiers & MouseEvent.BUTTON3_DOWN_MASK) != 0) {
-            abstractButton = AbstractEvents.MOUSEEVENT_SECONDARY_BUTTON;
-        } else if ((extModifiers & MouseEvent.getMaskForButton(4)) != 0) {
-            abstractButton = AbstractEvents.MOUSEEVENT_BACK_BUTTON;
-        } else if ((extModifiers & MouseEvent.getMaskForButton(5)) != 0) {
-            abstractButton = AbstractEvents.MOUSEEVENT_FORWARD_BUTTON;
+        if (abstractButton == AbstractEvents.MOUSEEVENT_NONE_BUTTON) {
+            // Fix for RT-15457: we should report mouse buttons for mouse drags
+            if ((extModifiers & MouseEvent.BUTTON1_DOWN_MASK) != 0) {
+                abstractButton = AbstractEvents.MOUSEEVENT_PRIMARY_BUTTON;
+            } else if ((extModifiers & MouseEvent.BUTTON2_DOWN_MASK) != 0) {
+                abstractButton = AbstractEvents.MOUSEEVENT_MIDDLE_BUTTON;
+            } else if ((extModifiers & MouseEvent.BUTTON3_DOWN_MASK) != 0) {
+                abstractButton = AbstractEvents.MOUSEEVENT_SECONDARY_BUTTON;
+            } else if ((extModifiers & MouseEvent.getMaskForButton(4)) != 0) {
+                abstractButton = AbstractEvents.MOUSEEVENT_BACK_BUTTON;
+            } else if ((extModifiers & MouseEvent.getMaskForButton(5)) != 0) {
+                abstractButton = AbstractEvents.MOUSEEVENT_FORWARD_BUTTON;
+            }
         }
         return abstractButton;
     }

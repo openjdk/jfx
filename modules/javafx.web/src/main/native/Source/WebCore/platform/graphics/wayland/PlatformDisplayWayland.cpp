@@ -30,12 +30,17 @@
 
 #include "GLContextEGL.h"
 #include <cstring>
+#include <wtf/Assertions.h>
+
 // These includes need to be in this order because wayland-egl.h defines WL_EGL_PLATFORM
 // and egl.h checks that to decide whether it's Wayland platform.
 #include <wayland-egl.h>
+#if USE(LIBEPOXY)
+#include <epoxy/egl.h>
+#else
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
-#include <wtf/Assertions.h>
+#endif
 
 #if PLATFORM(GTK)
 #if USE(GTK4)
@@ -123,7 +128,6 @@ void PlatformDisplayWayland::initialize()
     wl_registry_add_listener(m_registry.get(), &s_registryListener, this);
     wl_display_roundtrip(m_display);
 
-#if USE(EGL)
 #if defined(EGL_KHR_platform_wayland) || defined(EGL_EXT_platform_wayland)
     const char* extensions = eglQueryString(nullptr, EGL_EXTENSIONS);
 #if defined(EGL_KHR_platform_wayland)
@@ -143,7 +147,6 @@ void PlatformDisplayWayland::initialize()
         m_eglDisplay = eglGetDisplay(m_display);
 
     PlatformDisplay::initializeEGLDisplay();
-#endif
 }
 
 void PlatformDisplayWayland::registryGlobal(const char* interface, uint32_t name)

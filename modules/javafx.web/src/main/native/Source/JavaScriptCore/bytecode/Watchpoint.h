@@ -88,20 +88,6 @@ LazyFireDetail<Types...> createLazyFireDetail(const Types&... types)
 
 class WatchpointSet;
 
-// Really unfortunately, we do not have the way to dispatch appropriate destructor in base class' destructor
-// based on enum type. If we call destructor explicitly in the base class, it ends up calling the base destructor
-// twice. C++20 allows this by using std::std::destroying_delete_t. But we are not using C++20 right now.
-//
-// Because we cannot dispatch destructors of derived classes in the destructor of the base class, what it means is,
-// 1. Calling Watchpoint::~Watchpoint directly is illegal.
-// 2. `delete watchpoint` where watchpoint is non-final derived class is illegal. If watchpoint is final derived class, it works.
-// 3. If we really want to do (2), we need to call `watchpoint->destroy()` instead, and dispatch an appropriate destructor in Watchpoint::destroy.
-//
-// Luckily, none of our derived watchpoint classes have members which require destructors. So we do not dispatch
-// the destructor call to the drived class in the base class. If it becomes really required, we can introduce
-// a custom deleter for some classes which directly call "delete" to the allocated non-final Watchpoint class
-// (e.g. std::unique_ptr<Watchpoint>, RefPtr<Watchpoint>), and call Watchpoint::destroy instead of "delete"
-// operator. But since we do not require it for now, we are doing the simplest thing.
 #define JSC_WATCHPOINT_TYPES_WITHOUT_JIT(macro) \
     macro(AdaptiveInferredPropertyValueStructure, AdaptiveInferredPropertyValueWatchpointBase::StructureWatchpoint) \
     macro(AdaptiveInferredPropertyValueProperty, AdaptiveInferredPropertyValueWatchpointBase::PropertyWatchpoint) \
@@ -111,6 +97,7 @@ class WatchpointSet;
     macro(CachedSpecialPropertyAdaptiveStructure, CachedSpecialPropertyAdaptiveStructureWatchpoint) \
     macro(StructureChainInvalidation, StructureChainInvalidationWatchpoint) \
     macro(ObjectAdaptiveStructure, ObjectAdaptiveStructureWatchpoint) \
+    macro(Chained, ChainedWatchpoint) \
 
 #if ENABLE(JIT)
 #define JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro) \
@@ -131,10 +118,6 @@ class WatchpointSet;
     JSC_WATCHPOINT_TYPES_WITHOUT_JIT(macro)
 #endif
 
-#define JSC_WATCHPOINT_FIELD(type, member) \
-    type member; \
-    static_assert(std::is_trivially_destructible<type>::value); \
-
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
 
 class Watchpoint : public PackedRawSentinelNode<Watchpoint> {
@@ -152,6 +135,8 @@ public:
         : m_type(type)
     { }
 
+    void operator delete(Watchpoint*, std::destroying_delete_t);
+
 protected:
     ~Watchpoint();
 
@@ -160,6 +145,8 @@ private:
     // ArrayBufferViewWatchpointAdaptor can fire watchpoints if it tries to attach a watchpoint to a view but can't allocate the ArrayBuffer.
     friend struct DFG::ArrayBufferViewWatchpointAdaptor;
     void fire(VM&, const FireDetail&);
+    template<typename Func>
+    void runWithDowncast(const Func&);
 
     Type m_type;
 };
@@ -508,26 +495,22 @@ private:
     uintptr_t m_data;
 };
 
-class DeferredWatchpointFire : public FireDetail {
+class DeferredWatchpointFire {
     WTF_MAKE_NONCOPYABLE(DeferredWatchpointFire);
 public:
-    DeferredWatchpointFire(VM& vm)
-        : m_vm(vm)
-        , m_watchpointsToFire(ClearWatchpoint)
+    DeferredWatchpointFire()
+        : m_watchpointsToFire(ClearWatchpoint)
     {
     }
 
     JS_EXPORT_PRIVATE void takeWatchpointsToFire(WatchpointSet*);
-    void fireAll()
-    {
-        if (m_watchpointsToFire.state() == IsWatched)
-            fireAllSlow();
-    }
+
+protected:
+    WatchpointSet& watchpointsToFire() { return m_watchpointsToFire; }
 
 private:
     JS_EXPORT_PRIVATE void fireAllSlow();
 
-    VM& m_vm;
     WatchpointSet m_watchpointsToFire;
 };
 

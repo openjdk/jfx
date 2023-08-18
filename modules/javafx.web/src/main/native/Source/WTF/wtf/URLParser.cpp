@@ -712,11 +712,15 @@ std::optional<String> URLParser::maybeCanonicalizeScheme(StringView scheme)
     if (scheme.isEmpty())
         return std::nullopt;
 
-    if (!isASCIIAlpha(scheme[0]))
+    size_t i = 0;
+    while (i < scheme.length() && isTabOrNewline(scheme[i]))
+        ++i;
+
+    if (i >= scheme.length() || !isASCIIAlpha(scheme[i++]))
         return std::nullopt;
 
-    for (size_t i = 1; i < scheme.length(); ++i) {
-        if (isASCIIAlphanumeric(scheme[i]) || scheme[i] == '+' || scheme[i] == '-' || scheme[i] == '.')
+    for (; i < scheme.length(); ++i) {
+        if (isASCIIAlphanumeric(scheme[i]) || scheme[i] == '+' || scheme[i] == '-' || scheme[i] == '.' || isTabOrNewline(scheme[i]))
             continue;
         return std::nullopt;
     }
@@ -2323,11 +2327,9 @@ std::optional<uint32_t> URLParser::parseIPv4PieceInsideIPv6(CodePointIterator<Ch
         return std::nullopt;
     uint32_t piece = 0;
     bool leadingZeros = false;
-    size_t digitCount = 0;
     while (!iterator.atEnd()) {
         if (!isASCIIDigit(*iterator))
             return std::nullopt;
-        ++digitCount;
         if (!piece && *iterator == '0') {
             if (leadingZeros)
                 return std::nullopt;
@@ -2533,7 +2535,7 @@ void URLParser::addNonSpecialDotSlash()
 {
     auto oldPathStart = m_url.m_hostEnd + m_url.m_portLength;
     auto& oldString = m_url.m_string;
-    m_url.m_string = makeString(StringView(oldString).left(oldPathStart + 1), "./", StringView(oldString).substring(oldPathStart + 1));
+    m_url.m_string = makeString(StringView(oldString).left(oldPathStart + 1), "./"_s, StringView(oldString).substring(oldPathStart + 1));
     m_url.m_pathAfterLastSlash += 2;
     m_url.m_pathEnd += 2;
     m_url.m_queryEnd += 2;
@@ -2906,19 +2908,26 @@ auto URLParser::parseURLEncodedForm(StringView input) -> URLEncodedForm
 {
     URLEncodedForm output;
     for (StringView bytes : input.split('&')) {
-        auto equalIndex = bytes.find('=');
-        if (equalIndex == notFound) {
-            auto name = formURLDecode(makeStringByReplacingAll(bytes, '+', 0x20));
-            if (name)
-                output.append({ name.value(), emptyString() });
-        } else {
-            auto name = formURLDecode(makeStringByReplacingAll(bytes.left(equalIndex), '+', 0x20));
-            auto value = formURLDecode(makeStringByReplacingAll(bytes.substring(equalIndex + 1), '+', 0x20));
-            if (name && value)
-                output.append({ name.value(), value.value() });
-        }
+        if (auto nameAndValue = parseQueryNameAndValue(bytes))
+            output.append(WTFMove(*nameAndValue));
     }
     return output;
+}
+
+std::optional<KeyValuePair<String, String>> URLParser::parseQueryNameAndValue(StringView bytes)
+{
+        auto equalIndex = bytes.find('=');
+        if (equalIndex == notFound) {
+        auto name = formURLDecode(makeStringByReplacingAll(bytes, '+', ' '));
+            if (name)
+            return { { WTFMove(*name), emptyString() } };
+        } else {
+        auto name = formURLDecode(makeStringByReplacingAll(bytes.left(equalIndex), '+', ' '));
+        auto value = formURLDecode(makeStringByReplacingAll(bytes.substring(equalIndex + 1), '+', ' '));
+            if (name && value)
+            return { { WTFMove(*name), WTFMove(*value) } };
+    }
+    return std::nullopt;
 }
 
 static void serializeURLEncodedForm(const String& input, Vector<LChar>& output)

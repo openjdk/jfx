@@ -58,6 +58,7 @@ public:
     void setGridItemArea(const RenderBox& item, GridArea);
 
     GridSpan gridItemSpan(const RenderBox&, GridTrackSizingDirection) const;
+    GridSpan gridItemSpanIgnoringCollapsedTracks(const RenderBox&, GridTrackSizingDirection) const;
 
     const GridCell& cell(unsigned row, unsigned column) const;
 
@@ -85,6 +86,9 @@ public:
     void setNeedsItemsPlacement(bool);
     bool needsItemsPlacement() const { return m_needsItemsPlacement; };
 
+    void setupGridForMasonryLayout();
+    unsigned maxRows() const { return m_maxRows; }
+    unsigned maxColumns() const { return m_maxColumns; }
 private:
     void ensureStorageForRow(unsigned row);
 

@@ -1749,6 +1749,95 @@ assertEquals(0, firstCell.getIndex());
         assertTrue(newCounter < 100);
 
     }
+
+    @Test
+    public void testAddCellWithBigCurrentOne() {
+        int idx = flow.shim_computeCurrentIndex();
+        assertEquals(0, idx);
+        for (int i = 0; i < 20; i++) {
+            flow.scrollPixels(40);
+            pulse();
+        }
+        pulse();
+        idx = flow.shim_computeCurrentIndex();
+        assertEquals(29, idx);
+        flow.setCellCount(101);
+        pulse();
+        idx = flow.shim_computeCurrentIndex();
+        assertEquals(29, idx);
+    }
+
+    /**
+     * Scrolling via the trough (-> {@link com.sun.javafx.scene.control.VirtualScrollBar#adjustValue(double)}) should
+     * not throw any exception.
+     * This happened in the past when scrolling up (more) when we already only see the uppermost cell with the index 0.
+     * This index was subtracted by 1, leading to an {@link IndexOutOfBoundsException}.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8311983">JDK-8311983</a>
+     */
+    @Test
+    public void testScrollBarValueAdjustmentShouldNotThrowIOOBE() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(2);
+        flow.resize(250, 300);
+
+        pulse();
+
+        // Scroll down.
+        flow.shim_getVbar().adjustValue(0.9605263157894737);
+        // Scroll up.
+        flow.shim_getVbar().adjustValue(0.05263157894736842);
+
+        // This should not throw any exception. It used to throw an IndexOutOfBoundsException.
+        flow.shim_getVbar().adjustValue(0.05263157894736842);
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentShouldScrollOneDown() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(5);
+        flow.resize(250, 300);
+
+        pulse();
+
+        assertEquals(0, flow.getLastVisibleCell().getIndex());
+
+        // Scroll down.
+        flow.shim_getVbar().adjustValue(1);
+        pulse();
+
+        assertEquals(1, flow.getLastVisibleCell().getIndex());
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentShouldScrollOneUp() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(5);
+        flow.resize(250, 300);
+
+        pulse();
+
+        assertEquals(0, flow.getFirstVisibleCell().getIndex());
+
+        // Scroll completely down.
+        flow.shim_getVbar().setValue(1.0);
+        pulse();
+
+        assertEquals(4, flow.getFirstVisibleCell().getIndex());
+
+        // Scroll up.
+        flow.shim_getVbar().adjustValue(0.0);
+        pulse();
+
+        assertEquals(3, flow.getFirstVisibleCell().getIndex());
+    }
+
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {

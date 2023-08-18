@@ -33,6 +33,13 @@
 
 #include "Document.h"
 #include "DocumentFragment.h"
+#include "ElementInlines.h"
+#include "ElementRareData.h"
+#include "HTMLNames.h"
+#include "NodeTraversal.h"
+#include "ShadowRoot.h"
+#include "ShadowRootInit.h"
+#include "SlotAssignmentMode.h"
 #include "TemplateContentDocumentFragment.h"
 #include "markup.h"
 #include <wtf/IsoMallocInlines.h>
@@ -64,11 +71,45 @@ DocumentFragment* HTMLTemplateElement::contentIfAvailable() const
     return m_content.get();
 }
 
+DocumentFragment& HTMLTemplateElement::fragmentForInsertion() const
+{
+    if (m_declarativeShadowRoot)
+        return *m_declarativeShadowRoot;
+    return content();
+}
+
 DocumentFragment& HTMLTemplateElement::content() const
 {
+    ASSERT(!m_declarativeShadowRoot);
     if (!m_content)
         m_content = TemplateContentDocumentFragment::create(document().ensureTemplateDocument(), *this);
     return *m_content;
+}
+
+const AtomString& HTMLTemplateElement::shadowRootMode() const
+{
+    static MainThreadNeverDestroyed<const AtomString> open("open"_s);
+    static MainThreadNeverDestroyed<const AtomString> closed("closed"_s);
+
+    auto modeString = attributeWithoutSynchronization(HTMLNames::shadowrootmodeAttr);
+    if (equalLettersIgnoringASCIICase(modeString, "closed"_s))
+        return closed;
+    if (equalLettersIgnoringASCIICase(modeString, "open"_s))
+        return open;
+    return nullAtom();
+}
+
+void HTMLTemplateElement::setShadowRootMode(const AtomString& value)
+{
+    if (value.isNull())
+        removeAttribute(HTMLNames::shadowrootmodeAttr);
+    else
+        setAttribute(HTMLNames::shadowrootmodeAttr, value);
+}
+
+void HTMLTemplateElement::setDeclarativeShadowRoot(ShadowRoot& shadowRoot)
+{
+    m_declarativeShadowRoot = shadowRoot;
 }
 
 Ref<Node> HTMLTemplateElement::cloneNodeInternal(Document& targetDocument, CloningOperation type)
@@ -96,6 +137,45 @@ void HTMLTemplateElement::didMoveToNewDocument(Document& oldDocument, Document& 
         return;
     ASSERT_WITH_SECURITY_IMPLICATION(&document() == &newDocument);
     m_content->setTreeScopeRecursively(newDocument.ensureTemplateDocument());
+}
+
+void HTMLTemplateElement::attachAsDeclarativeShadowRootIfNeeded(Element& host)
+{
+    if (m_declarativeShadowRoot) {
+        ASSERT(host.shadowRoot());
+        return;
+    }
+
+    auto modeString = attributeWithoutSynchronization(HTMLNames::shadowrootmodeAttr);
+    std::optional<ShadowRootMode> mode;
+
+    if (equalLettersIgnoringASCIICase(modeString, "closed"_s))
+        mode = ShadowRootMode::Closed;
+    else if (equalLettersIgnoringASCIICase(modeString, "open"_s))
+        mode = ShadowRootMode::Open;
+
+    if (!mode)
+        return;
+
+    bool delegatesFocus = hasAttributeWithoutSynchronization(HTMLNames::shadowrootdelegatesfocusAttr);
+
+    auto exceptionOrShadowRoot = host.attachDeclarativeShadow(*mode, delegatesFocus);
+    if (exceptionOrShadowRoot.hasException())
+        return;
+
+    auto importedContent = document().importNode(content(), /* deep */ true).releaseReturnValue();
+    for (RefPtr<Node> node = NodeTraversal::next(importedContent), next; node; node = next) {
+        next = NodeTraversal::next(*node);
+        if (!is<HTMLTemplateElement>(*node))
+            continue;
+        if (RefPtr parentElement = node->parentElement())
+            downcast<HTMLTemplateElement>(*node).attachAsDeclarativeShadowRootIfNeeded(*parentElement);
+    }
+
+    Ref shadowRoot = exceptionOrShadowRoot.releaseReturnValue();
+    shadowRoot->appendChild(WTFMove(importedContent));
+
+    remove();
 }
 
 } // namespace WebCore

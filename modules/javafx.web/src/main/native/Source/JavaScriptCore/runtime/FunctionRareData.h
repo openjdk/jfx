@@ -177,8 +177,7 @@ public:
     void fireInternal(VM&, const FireDetail&);
 
 private:
-    // Own destructor may not be called. Keep members trivially destructible.
-    JSC_WATCHPOINT_FIELD(PackedCellPtr<FunctionRareData>, m_rareData);
+    PackedCellPtr<FunctionRareData> m_rareData;
 };
 
 inline Watchpoint* FunctionRareData::createAllocationProfileClearingWatchpoint()

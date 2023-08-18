@@ -78,8 +78,8 @@ Ref<AbortSignal> AbortSignal::timeout(ScriptExecutionContext& context, uint64_t 
 
 AbortSignal::AbortSignal(ScriptExecutionContext* context, Aborted aborted, JSC::JSValue reason)
     : ContextDestructionObserver(context)
-    , m_aborted(aborted == Aborted::Yes)
     , m_reason(reason)
+    , m_aborted(aborted == Aborted::Yes)
 {
     ASSERT(reason);
 }
@@ -104,7 +104,7 @@ void AbortSignal::signalAbort(JSC::JSValue reason)
     Ref protectedThis { *this };
     auto algorithms = std::exchange(m_algorithms, { });
     for (auto& algorithm : algorithms)
-        algorithm(reason);
+        algorithm.second(reason);
 
     // 5. Fire an event named abort at signal.
     dispatchEvent(Event::create(eventNames().abortEvent, Event::CanBubble::No, Event::IsCancelable::No));
@@ -123,7 +123,7 @@ void AbortSignal::signalFollow(AbortSignal& signal)
 
     ASSERT(!m_followingSignal);
     m_followingSignal = signal;
-    signal.addAlgorithm([weakThis = WeakPtr { this }](JSC::JSValue reason) {
+    signal.addAlgorithm([weakThis = WeakPtr<AbortSignal, WeakPtrImplWithEventTargetData> { this }](JSC::JSValue reason) {
         if (weakThis)
             weakThis->signalAbort(reason);
     });
@@ -134,16 +134,33 @@ void AbortSignal::eventListenersDidChange()
     m_hasAbortEventListener = hasEventListeners(eventNames().abortEvent);
 }
 
-bool AbortSignal::whenSignalAborted(AbortSignal& signal, Ref<AbortAlgorithm>&& algorithm)
+uint32_t AbortSignal::addAbortAlgorithmToSignal(AbortSignal& signal, Ref<AbortAlgorithm>&& algorithm)
 {
     if (signal.aborted()) {
-        algorithm->handleEvent();
-        return true;
+        algorithm->handleEvent(signal.m_reason.getValue());
+        return 0;
     }
-    signal.addAlgorithm([algorithm = WTFMove(algorithm)](JSC::JSValue) mutable {
-        algorithm->handleEvent();
+    return signal.addAlgorithm([algorithm = WTFMove(algorithm)](JSC::JSValue value) mutable {
+        algorithm->handleEvent(value);
     });
-    return false;
+}
+
+void AbortSignal::removeAbortAlgorithmFromSignal(AbortSignal& signal, uint32_t algorithmIdentifier)
+{
+    signal.removeAlgorithm(algorithmIdentifier);
+}
+
+uint32_t AbortSignal::addAlgorithm(Algorithm&& algorithm)
+{
+    m_algorithms.append(std::make_pair(++m_algorithmIdentifier, WTFMove(algorithm)));
+    return m_algorithmIdentifier;
+}
+
+void AbortSignal::removeAlgorithm(uint32_t algorithmIdentifier)
+{
+    m_algorithms.removeFirstMatching([algorithmIdentifier](auto& pair) {
+        return pair.first == algorithmIdentifier;
+    });
 }
 
 void AbortSignal::throwIfAborted(JSC::JSGlobalObject& lexicalGlobalObject)

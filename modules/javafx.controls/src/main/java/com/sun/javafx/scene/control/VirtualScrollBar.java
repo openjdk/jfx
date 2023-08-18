@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -130,28 +130,29 @@ public class VirtualScrollBar extends ScrollBar {
             adjusting = true;
             double oldValue = flow.getPosition();
             double newValue = ((getMax() - getMin()) * Utils.clamp(0, pos, 1)) + getMin();
-            /**
+            /*
              * Scroll one cell further in the direction the user has clicked if only one cell is shown.
              * Otherwise, a click on the trough would have no effect when cell height > viewport height.
              */
-            IndexedCell firstVisibleCell = flow.getFirstVisibleCell();
-            IndexedCell lastVisibleCell = flow.getLastVisibleCell();
+            IndexedCell<?> firstVisibleCell = flow.getFirstVisibleCell();
+            IndexedCell<?> lastVisibleCell = flow.getLastVisibleCell();
             if (firstVisibleCell != null && firstVisibleCell == lastVisibleCell) {
                 int index = firstVisibleCell.getIndex();
                 if (newValue < oldValue) {
-                    flow.scrollTo(index - 1);
+                    index = Math.max(0, index - 1);
                 } else {
-                    flow.scrollTo(index + 1);
+                    index = Math.min(flow.getCellCount(), index + 1);
                 }
+                flow.scrollTo(index);
             } else {
                 if (newValue < oldValue) {
-                    IndexedCell cell = firstVisibleCell;
+                    IndexedCell<?> cell = firstVisibleCell;
                     if (cell == null) {
                         return;
                     }
                     flow.scrollToBottom(cell);
                 } else if (newValue > oldValue) {
-                    IndexedCell cell = lastVisibleCell;
+                    IndexedCell<?> cell = lastVisibleCell;
                     if (cell == null) {
                         return;
                     }

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DisplayFillLayerImageGeometry.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "DisplayBox.h"
 #include "FillLayer.h"
 #include "LayoutBox.h"
@@ -93,7 +91,7 @@ static inline LayoutSize resolveAgainstIntrinsicRatio(LayoutSize size, const Lay
 static LayoutSize calculateImageIntrinsicDimensions(StyleImage* image, LayoutSize positioningAreaSize)
 {
     // A generated image without a fixed size, will always return the container size as intrinsic size.
-    if (image->isGeneratedImage() && image->usesImageContainerSize())
+    if (!image->imageHasNaturalDimensions())
         return LayoutSize(positioningAreaSize.width(), positioningAreaSize.height());
 
     // FIXME: Call computeIntrinsicDimensions().
@@ -170,11 +168,12 @@ static LayoutSize calculateFillTileSize(const FillLayer& fillLayer, LayoutSize p
 
         // If one of the values is auto we have to use the appropriate
         // scale to maintain our aspect ratio.
+        bool hasNaturalAspectRatio = image && image->imageHasNaturalDimensions();
         if (layerWidth.isAuto() && !layerHeight.isAuto()) {
-            if (imageIntrinsicSize.height())
+            if (hasNaturalAspectRatio && imageIntrinsicSize.height())
                 tileSize.setWidth(imageIntrinsicSize.width() * tileSize.height() / imageIntrinsicSize.height());
         } else if (!layerWidth.isAuto() && layerHeight.isAuto()) {
-            if (imageIntrinsicSize.width())
+            if (hasNaturalAspectRatio && imageIntrinsicSize.width())
                 tileSize.setHeight(imageIntrinsicSize.height() * tileSize.width() / imageIntrinsicSize.width());
         } else if (layerWidth.isAuto() && layerHeight.isAuto()) {
             // If both width and height are auto, use the image's intrinsic size.
@@ -288,8 +287,8 @@ static FillLayerImageGeometry geometryForLayer(const FillLayer& fillLayer, Layou
 
     LayoutSize tileSize = calculateFillTileSize(fillLayer, positioningAreaSize, pixelSnappingFactor);
 
-    FillRepeat backgroundRepeatX = fillLayer.repeatX();
-    FillRepeat backgroundRepeatY = fillLayer.repeatY();
+    FillRepeat backgroundRepeatX = fillLayer.repeat().x;
+    FillRepeat backgroundRepeatY = fillLayer.repeat().y;
     LayoutUnit availableWidth = positioningAreaSize.width() - tileSize.width();
     LayoutUnit availableHeight = positioningAreaSize.height() - tileSize.height();
 
@@ -391,4 +390,3 @@ Vector<FillLayerImageGeometry, 1> calculateFillLayerImageGeometry(const RenderSt
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

@@ -36,10 +36,10 @@ struct ProtoCallFrame;
 
 namespace LLInt {
 
-extern "C" SlowPathReturnType llint_trace_operand(CallFrame*, const JSInstruction*, int fromWhere, int operand) REFERENCED_FROM_ASM;
-extern "C" SlowPathReturnType llint_trace_value(CallFrame*, const JSInstruction*, int fromWhere, VirtualRegister operand) REFERENCED_FROM_ASM;
-extern "C" SlowPathReturnType llint_link_call(CallFrame*, JSCell*, CallLinkInfo*) REFERENCED_FROM_ASM;
-extern "C" SlowPathReturnType llint_virtual_call(CallFrame*, JSCell*, CallLinkInfo*) REFERENCED_FROM_ASM;
+extern "C" SlowPathReturnType llint_trace_operand(CallFrame*, const JSInstruction*, int fromWhere, int operand) REFERENCED_FROM_ASM WTF_INTERNAL;
+extern "C" SlowPathReturnType llint_trace_value(CallFrame*, const JSInstruction*, int fromWhere, VirtualRegister operand) REFERENCED_FROM_ASM WTF_INTERNAL;
+extern "C" SlowPathReturnType llint_link_call(CallFrame*, JSCell*, CallLinkInfo*) REFERENCED_FROM_ASM WTF_INTERNAL;
+extern "C" SlowPathReturnType llint_virtual_call(CallFrame*, JSCell*, CallLinkInfo*) REFERENCED_FROM_ASM WTF_INTERNAL;
 extern "C" void llint_write_barrier_slow(CallFrame*, JSCell*) REFERENCED_FROM_ASM WTF_INTERNAL;
 
 #define LLINT_SLOW_PATH_DECL(name) \
@@ -96,6 +96,10 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_iterator_next_get_done);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_iterator_next_get_value);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jtrue);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jfalse);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_less);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_lesseq);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_greater);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_greatereq);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jless);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jnless);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jgreater);
@@ -126,9 +130,9 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_varargs);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_tail_call_varargs);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_tail_call_forward_arguments);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_construct_varargs);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_eval);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_eval_wide16);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_eval_wide32);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_direct_eval);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_direct_eval_wide16);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_direct_eval_wide32);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_tear_off_arguments);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_strcat);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_to_primitive);
@@ -142,9 +146,8 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_retrieve_and_clear_exception_if_catchable)
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_profile_catch);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_log_shadow_chicken_prologue);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_log_shadow_chicken_tail);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_super_sampler_begin);
-LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_super_sampler_end);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_out_of_line_jump_target);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_arityCheck);
 extern "C" SlowPathReturnType llint_throw_stack_overflow_error(VM*, ProtoCallFrame*) REFERENCED_FROM_ASM WTF_INTERNAL;
 extern "C" SlowPathReturnType llint_slow_path_checkpoint_osr_exit(CallFrame* callFrame, EncodedJSValue unused) REFERENCED_FROM_ASM WTF_INTERNAL;
 extern "C" SlowPathReturnType llint_slow_path_checkpoint_osr_exit_from_inlined_call(CallFrame* callFrame, EncodedJSValue callResult) REFERENCED_FROM_ASM WTF_INTERNAL;

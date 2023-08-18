@@ -26,78 +26,79 @@
 #include "config.h"
 #include "CSSCounterStyleRule.h"
 
+#include "CSSCounterStyleDescriptors.h"
 #include "CSSPropertyParser.h"
 #include "CSSStyleSheet.h"
 #include "CSSTokenizer.h"
-#include "Pair.h"
+#include "CSSValuePair.h"
+#include "MutableStyleProperties.h"
+#include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-StyleRuleCounterStyle::StyleRuleCounterStyle(const AtomString& name, Ref<StyleProperties>&& properties)
+StyleRuleCounterStyle::StyleRuleCounterStyle(const AtomString& name, Ref<StyleProperties>&& properties, CSSCounterStyleDescriptors&& descriptors)
     : StyleRuleBase(StyleRuleType::CounterStyle)
     , m_name(name)
     , m_properties(WTFMove(properties))
+    , m_descriptors(WTFMove(descriptors))
 {
 }
 
 Ref<StyleRuleCounterStyle> StyleRuleCounterStyle::create(const AtomString& name, Ref<StyleProperties>&& properties)
 {
-    return adoptRef(*new StyleRuleCounterStyle(name, WTFMove(properties)));
+    auto descriptors = CSSCounterStyleDescriptors::create(name, properties);
+    return adoptRef(*new StyleRuleCounterStyle(name, WTFMove(properties), WTFMove(descriptors)));
 }
 
-static CounterStyleSystem toCounterStyleSystemEnum(RefPtr<CSSValue> system)
+CSSCounterStyleDescriptors::System toCounterStyleSystemEnum(const CSSValue* system)
 {
-    if (!system || !system->isPrimitiveValue())
-        return CounterStyleSystem::Symbolic;
+    if (!system)
+        return CSSCounterStyleDescriptors::System::Symbolic;
 
-    auto& primitiveSystemValue = downcast<CSSPrimitiveValue>(*system);
-    ASSERT(primitiveSystemValue.isValueID() || primitiveSystemValue.isPair());
+    ASSERT(system->isValueID() || system->isPair());
     CSSValueID systemKeyword = CSSValueInvalid;
-    if (primitiveSystemValue.isValueID())
-        systemKeyword = primitiveSystemValue.valueID();
-    else if (auto* pair = primitiveSystemValue.pairValue()) {
+    if (system->isValueID())
+        systemKeyword = system->valueID();
+    else if (system->isPair()) {
         // This value must be `fixed` or `extends`, both of which can or must have an additional component.
-        auto firstValue = pair->first();
-        ASSERT(firstValue && firstValue->isValueID());
-        if (firstValue)
-            systemKeyword = firstValue->valueID();
+        systemKeyword = system->first().valueID();
     }
-
     switch (systemKeyword) {
     case CSSValueCyclic:
-        return CounterStyleSystem::Cyclic;
+        return CSSCounterStyleDescriptors::System::Cyclic;
     case CSSValueFixed:
-        return CounterStyleSystem::Fixed;
+        return CSSCounterStyleDescriptors::System::Fixed;
     case CSSValueSymbolic:
-        return CounterStyleSystem::Symbolic;
+        return CSSCounterStyleDescriptors::System::Symbolic;
     case CSSValueAlphabetic:
-        return CounterStyleSystem::Alphabetic;
+        return CSSCounterStyleDescriptors::System::Alphabetic;
     case CSSValueNumeric:
-        return CounterStyleSystem::Numeric;
+        return CSSCounterStyleDescriptors::System::Numeric;
     case CSSValueAdditive:
-        return CounterStyleSystem::Additive;
+        return CSSCounterStyleDescriptors::System::Additive;
     case CSSValueExtends:
-        return CounterStyleSystem::Extends;
+        return CSSCounterStyleDescriptors::System::Extends;
     default:
         ASSERT_NOT_REACHED();
-        return CounterStyleSystem::Symbolic;
+        return CSSCounterStyleDescriptors::System::Symbolic;
     }
 }
 
-static bool symbolsValidForSystem(CounterStyleSystem system, RefPtr<CSSValue> symbols, RefPtr<CSSValue> additiveSymbols)
+static bool symbolsValidForSystem(CSSCounterStyleDescriptors::System system, RefPtr<CSSValue> symbols, RefPtr<CSSValue> additiveSymbols)
 {
     switch (system) {
-    case CounterStyleSystem::Cyclic:
-    case CounterStyleSystem::Fixed:
-    case CounterStyleSystem::Symbolic:
+    case CSSCounterStyleDescriptors::System::Cyclic:
+    case CSSCounterStyleDescriptors::System::Fixed:
+    case CSSCounterStyleDescriptors::System::Symbolic:
         return symbols && symbols->isValueList() && downcast<CSSValueList>(*symbols).length();
-    case CounterStyleSystem::Alphabetic:
-    case CounterStyleSystem::Numeric:
+    case CSSCounterStyleDescriptors::System::Alphabetic:
+    case CSSCounterStyleDescriptors::System::Numeric:
         return symbols && symbols->isValueList() && downcast<CSSValueList>(*symbols).length() >= 2u;
-    case CounterStyleSystem::Additive:
+    case CSSCounterStyleDescriptors::System::Additive:
         return additiveSymbols && additiveSymbols->isValueList() && downcast<CSSValueList>(*additiveSymbols).length();
-    case CounterStyleSystem::Extends:
+    case CSSCounterStyleDescriptors::System::Extends:
         return !symbols && !additiveSymbols;
     default:
         ASSERT_NOT_REACHED();
@@ -118,7 +119,7 @@ bool StyleRuleCounterStyle::newValueInvalidOrEqual(CSSPropertyID propertyID, con
         // If the attribute being set is `system`, and the new value would change the algorithm used, do nothing
         // and abort these steps.
         // (It's okay to change an aspect of the algorithm, like the first symbol value of a `fixed` system.)
-        return toCounterStyleSystemEnum(currentValue) != toCounterStyleSystemEnum(newValue);
+        return toCounterStyleSystemEnum(currentValue.get()) != toCounterStyleSystemEnum(newValue.get());
     case CSSPropertySymbols:
         symbols = newValue;
         additiveSymbols = m_properties->getPropertyCSSValue(CSSPropertyAdditiveSymbols);
@@ -131,7 +132,7 @@ bool StyleRuleCounterStyle::newValueInvalidOrEqual(CSSPropertyID propertyID, con
         return false;
     }
     auto system = m_properties->getPropertyCSSValue(CSSPropertySystem);
-    return symbolsValidForSystem(toCounterStyleSystemEnum(system), symbols, additiveSymbols);
+    return symbolsValidForSystem(toCounterStyleSystemEnum(system.get()), symbols, additiveSymbols);
 }
 
 StyleRuleCounterStyle::~StyleRuleCounterStyle() = default;
@@ -214,7 +215,7 @@ String CSSCounterStyleRule::cssText() const
 
 void CSSCounterStyleRule::reattach(StyleRuleBase& rule)
 {
-    m_counterStyleRule = static_cast<StyleRuleCounterStyle&>(rule);
+    m_counterStyleRule = downcast<StyleRuleCounterStyle>(rule);
 }
 
 // https://drafts.csswg.org/css-counter-styles-3/#dom-csscounterstylerule-name

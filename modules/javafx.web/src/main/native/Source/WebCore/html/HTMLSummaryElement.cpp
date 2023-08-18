@@ -41,20 +41,20 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLSummaryElement);
 
 using namespace HTMLNames;
 
-class SummarySlotElement final : public SlotAssignment {
+class SummarySlotAssignment final : public NamedSlotAssignment {
 private:
-    void hostChildElementDidChange(const Element&, ShadowRoot& shadowRoot) override
+    void hostChildElementDidChange(const Element&, ShadowRoot& shadowRoot) final
     {
-        didChangeSlot(SlotAssignment::defaultSlotName(), shadowRoot);
+        didChangeSlot(NamedSlotAssignment::defaultSlotName(), shadowRoot);
     }
 
-    const AtomString& slotNameForHostChild(const Node&) const override { return SlotAssignment::defaultSlotName(); }
+    const AtomString& slotNameForHostChild(const Node&) const final { return NamedSlotAssignment::defaultSlotName(); }
 };
 
 Ref<HTMLSummaryElement> HTMLSummaryElement::create(const QualifiedName& tagName, Document& document)
 {
     Ref<HTMLSummaryElement> summary = adoptRef(*new HTMLSummaryElement(tagName, document));
-    summary->addShadowRoot(ShadowRoot::create(document, makeUnique<SummarySlotElement>()));
+    summary->addShadowRoot(ShadowRoot::create(document, makeUnique<SummarySlotAssignment>()));
     return summary;
 }
 
@@ -111,12 +111,12 @@ int HTMLSummaryElement::defaultTabIndex() const
 
 bool HTMLSummaryElement::supportsFocus() const
 {
-    return isActiveSummary();
+    return isActiveSummary() || HTMLElement::supportsFocus();
 }
 
 void HTMLSummaryElement::defaultEventHandler(Event& event)
 {
-    if (isActiveSummary() && renderer()) {
+    if (isActiveSummary()) {
         auto& eventNames = WebCore::eventNames();
         if (event.type() == eventNames.DOMActivateEvent && !isClickableControl(event.target())) {
             if (RefPtr<HTMLDetailsElement> details = detailsElement())
@@ -158,10 +158,7 @@ void HTMLSummaryElement::defaultEventHandler(Event& event)
 
 bool HTMLSummaryElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
-    if (isActiveSummary() && renderer())
-        return true;
-
-    return HTMLElement::willRespondToMouseClickEventsWithEditability(editability);
+    return isActiveSummary() || HTMLElement::willRespondToMouseClickEventsWithEditability(editability);
 }
 
 }

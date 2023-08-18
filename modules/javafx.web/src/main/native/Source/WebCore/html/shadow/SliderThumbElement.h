@@ -59,9 +59,6 @@ public:
 private:
     SliderThumbElement(Document&);
     bool isSliderThumbElement() const final { return true; }
-#if PLATFORM(JAVA)
-    RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-#endif
 
     Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) final;
     bool isDisabledFormControl() const final;
@@ -76,10 +73,7 @@ private:
 #endif
     void willDetachRenderers() final;
 
-    std::optional<Style::ElementStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
-#if PLATFORM(JAVA)
-    const AtomString& shadowPseudoId() const final;
-#endif
+    std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
 
     void startDragging();
     void stopDragging();
@@ -109,19 +103,6 @@ private:
     bool m_isRegisteredAsTouchEventListener { false };
 #endif
 };
-
-#if PLATFORM(JAVA)
-class RenderSliderThumb final : public RenderBlockFlow {
-    WTF_MAKE_ISO_ALLOCATED(RenderSliderThumb);
-public:
-    RenderSliderThumb(SliderThumbElement&, RenderStyle&&);
-    void updateAppearance(const RenderStyle* parentStyle);
-
-private:
-    bool isSliderThumb() const final;
-};
-#endif
-
 // --------------------------------
 
 class SliderContainerElement final : public HTMLDivElement {
@@ -132,14 +113,7 @@ public:
 private:
     SliderContainerElement(Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-#if PLATFORM(JAVA)
-    std::optional<Style::ElementStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
-    const AtomString& shadowPseudoId() const final;
-#endif
     bool isSliderContainerElement() const final { return true; }
-#if PLATFORM(JAVA)
-    AtomString m_shadowPseudoId;
-#endif
 };
 
 } // namespace WebCore

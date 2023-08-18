@@ -50,7 +50,7 @@ static bool readUInt32(SharedBuffer& buffer, size_t& offset, uint32_t& value)
 
     return true;
 }
-
+#if !PLATFORM(JAVA)
 static bool readUInt16(SharedBuffer& buffer, size_t& offset, uint16_t& value)
 {
     ASSERT_ARG(offset, offset <= buffer.size());
@@ -74,7 +74,7 @@ static bool writeUInt16(Vector<uint8_t>& vector, uint16_t value)
     uint16_t bigEndianValue = htons(value);
     return vector.tryAppend(reinterpret_cast_ptr<uint8_t*>(&bigEndianValue), sizeof(bigEndianValue));
 }
-
+#endif
 static const uint32_t woffSignature = 0x774f4646; /* 'wOFF' */
 
 bool isWOFF(SharedBuffer& buffer)
@@ -133,6 +133,7 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
     ASSERT_ARG(sfnt, sfnt.isEmpty());
 #if PLATFORM(JAVA)
     UNUSED_PARAM(woff);
+        UNUSED_PARAM(sfnt);
     return false;
 #else
 

@@ -47,6 +47,7 @@
 #include "ClipRect.h"
 #include "GraphicsLayer.h"
 #include "LayerFragment.h"
+#include "LayoutRect.h"
 #include "PaintFrequencyTracker.h"
 #include "PaintInfo.h"
 #include "RenderBox.h"
@@ -142,6 +143,7 @@ struct ScrollRectToVisibleOptions {
     const ScrollAlignment& alignY { ScrollAlignment::alignCenterIfNeeded };
     ShouldAllowCrossOriginScrolling shouldAllowCrossOriginScrolling { ShouldAllowCrossOriginScrolling::No };
     ScrollBehavior behavior { ScrollBehavior::Auto };
+    std::optional<LayoutRect> visibilityCheckRect { std::nullopt };
 };
 
 using ScrollingScope = uint64_t;
@@ -457,7 +459,7 @@ public:
 
     // Returns the nearest enclosing layer that is scrollable.
     // FIXME: This can return the RenderView's layer when callers probably want the FrameView as a ScrollableArea.
-    RenderLayer* enclosingScrollableLayer(IncludeSelfOrNot, CrossFrameBoundaries) const;
+    WEBCORE_EXPORT RenderLayer* enclosingScrollableLayer(IncludeSelfOrNot, CrossFrameBoundaries) const;
 
     // Returns true when the layer could do touch scrolling, but doesn't look at whether there is actually scrollable overflow.
     bool canUseCompositedScrolling() const;
@@ -544,24 +546,17 @@ public:
         {
             if (hasPaintedContent == RequestState::Unknown)
                 hasPaintedContent = RequestState::Undetermined;
-
-            if (hasSubpixelAntialiasedText == RequestState::Unknown)
-                hasSubpixelAntialiasedText = RequestState::Undetermined;
         }
 
         void setHasPaintedContent() { hasPaintedContent = RequestState::True; }
-        void setHasSubpixelAntialiasedText() { hasSubpixelAntialiasedText = RequestState::True; }
 
         bool needToDeterminePaintedContentState() const { return hasPaintedContent == RequestState::Unknown; }
-        bool needToDetermineSubpixelAntialiasedTextState() const { return hasSubpixelAntialiasedText == RequestState::Unknown; }
 
         bool probablyHasPaintedContent() const { return hasPaintedContent == RequestState::True || hasPaintedContent == RequestState::Undetermined; }
-        bool probablyHasSubpixelAntialiasedText() const { return hasSubpixelAntialiasedText == RequestState::True || hasSubpixelAntialiasedText == RequestState::Undetermined; }
 
-        bool isSatisfied() const { return hasPaintedContent != RequestState::Unknown && hasSubpixelAntialiasedText != RequestState::Unknown; }
+        bool isSatisfied() const { return hasPaintedContent != RequestState::Unknown; }
 
         RequestState hasPaintedContent { RequestState::Unknown };
-        RequestState hasSubpixelAntialiasedText { RequestState::DontCare };
     };
 
     // Returns true if this layer has visible content (ignoring any child layers).
@@ -607,7 +602,7 @@ public:
     {
         // FIXME: This really needs to know if there are transforms on this layer and any of the layers
         // between it and the ancestor in question.
-        return !renderer().hasTransform() && !renderer().isSVGRootOrLegacySVGRoot();
+        return !renderer().isTransformed() && !renderer().isSVGRootOrLegacySVGRoot();
     }
 
     // FIXME: adjustForColumns allows us to position compositing layers in columns correctly, but eventually they need to be split across columns too.
@@ -645,7 +640,7 @@ public:
     // layers that intersect the point from front to back.
     void paint(GraphicsContext&, const LayoutRect& damageRect, const LayoutSize& subpixelOffset = LayoutSize(), OptionSet<PaintBehavior> = PaintBehavior::Normal,
         RenderObject* subtreePaintRoot = nullptr, OptionSet<PaintLayerFlag> = { }, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr);
-    bool hitTest(const HitTestRequest&, HitTestResult&);
+    WEBCORE_EXPORT bool hitTest(const HitTestRequest&, HitTestResult&);
     bool hitTest(const HitTestRequest&, const HitTestLocation&, HitTestResult&);
 
     enum class ClipRectsOption : uint8_t {
@@ -740,7 +735,7 @@ public:
     void setStaticInlinePosition(LayoutUnit position) { m_offsetForPosition.setWidth(position); }
     void setStaticBlockPosition(LayoutUnit position) { m_offsetForPosition.setHeight(position); }
 
-    bool hasTransform() const { return renderer().hasTransform(); }
+    bool isTransformed() const { return renderer().isTransformed(); }
     // Note that this transform has the transform-origin baked in.
     TransformationMatrix* transform() const { return m_transform.get(); }
     // updateTransformFromStyle computes a transform according to the passed options (e.g. transform-origin baked in or excluded) and the given style.
@@ -758,8 +753,10 @@ public:
     FloatPoint perspectiveOrigin() const;
     FloatPoint3D transformOriginPixelSnappedIfNeeded() const;
     bool preserves3D() const { return renderer().style().preserves3D(); }
+    bool hasPerspective() const { return renderer().style().hasPerspective(); }
     bool has3DTransform() const { return m_transform && !m_transform->isAffine(); }
     bool hasTransformedAncestor() const { return m_hasTransformedAncestor; }
+    bool participatesInPreserve3D() const;
 
     bool hasFixedContainingBlockAncestor() const { return m_hasFixedContainingBlockAncestor; }
 
@@ -787,6 +784,8 @@ public:
     }
 
     bool isolatesBlending() const { return hasNotIsolatedBlendingDescendants() && isCSSStackingContext(); }
+
+    bool shouldPaintUsingCompositeCopy() const { return m_shouldPaintUsingCompositeCopy; }
 
     // FIXME: We should ASSERT(!m_hasNotIsolatedBlendingDescendantsStatusDirty); here but we hit the same bugs as visible content above.
     bool hasNotIsolatedBlendingDescendants() const { return m_hasNotIsolatedBlendingDescendants; }
@@ -881,6 +880,8 @@ public:
 
     String debugDescription() const;
 
+    bool setIsOpportunisticStackingContext(bool);
+
 private:
 
     void setNextSibling(RenderLayer* next) { m_next = next; }
@@ -899,7 +900,6 @@ private:
     // Return true if changed.
     bool setIsNormalFlowOnly(bool);
 
-    bool setIsOpportunisticStackingContext(bool);
     bool setIsCSSStackingContext(bool);
 
     void isStackingContextChanged();
@@ -1076,7 +1076,7 @@ private:
 
     std::pair<Path, WindRule> computeClipPath(const LayoutSize& offsetFromRoot, const LayoutRect& rootRelativeBoundsForNonBoxes) const;
 
-    void setupClipPath(GraphicsContext&, GraphicsContextStateSaver&, const LayerPaintingInfo&, const LayoutSize& offsetFromRoot);
+    void setupClipPath(GraphicsContext&, GraphicsContextStateSaver&, EventRegionContextStateSaver&, const LayerPaintingInfo&, OptionSet<PaintLayerFlag>, const LayoutSize& offsetFromRoot);
 
     void ensureLayerFilters();
     void clearLayerFilters();
@@ -1112,13 +1112,17 @@ private:
     RenderLayer* transparentPaintingAncestor();
     void beginTransparencyLayers(GraphicsContext&, const LayerPaintingInfo&, const LayoutRect& dirtyRect);
 
-    RenderLayer* hitTestLayer(RenderLayer* rootLayer, RenderLayer* containerLayer, const HitTestRequest&, HitTestResult&,
+    struct HitLayer {
+        RenderLayer* layer;
+        double zOffset = 0;
+    };
+    HitLayer hitTestLayer(RenderLayer* rootLayer, RenderLayer* containerLayer, const HitTestRequest&, HitTestResult&,
         const LayoutRect& hitTestRect, const HitTestLocation&, bool appliedTransform,
         const HitTestingTransformState* = nullptr, double* zOffset = nullptr);
-    RenderLayer* hitTestLayerByApplyingTransform(RenderLayer* rootLayer, RenderLayer* containerLayer, const HitTestRequest&, HitTestResult&,
+    HitLayer hitTestLayerByApplyingTransform(RenderLayer* rootLayer, RenderLayer* containerLayer, const HitTestRequest&, HitTestResult&,
         const LayoutRect& hitTestRect, const HitTestLocation&, const HitTestingTransformState* = nullptr, double* zOffset = nullptr,
         const LayoutSize& translationOffset = LayoutSize());
-    RenderLayer* hitTestList(LayerList, RenderLayer* rootLayer, const HitTestRequest&, HitTestResult&,
+    HitLayer hitTestList(LayerList, RenderLayer* rootLayer, const HitTestRequest&, HitTestResult&,
         const LayoutRect& hitTestRect, const HitTestLocation&,
         const HitTestingTransformState*, double* zOffsetForDescendants, double* zOffset,
         const HitTestingTransformState* unflattenedTransformState, bool depthSortDescendants);
@@ -1130,7 +1134,7 @@ private:
 
     bool hitTestContents(const HitTestRequest&, HitTestResult&, const LayoutRect& layerBounds, const HitTestLocation&, HitTestFilter) const;
     bool hitTestContentsForFragments(const LayerFragments&, const HitTestRequest&, HitTestResult&, const HitTestLocation&, HitTestFilter, bool& insideClipRect) const;
-    RenderLayer* hitTestTransformedLayerInFragments(RenderLayer* rootLayer, RenderLayer* containerLayer, const HitTestRequest&, HitTestResult&,
+    HitLayer hitTestTransformedLayerInFragments(RenderLayer* rootLayer, RenderLayer* containerLayer, const HitTestRequest&, HitTestResult&,
         const LayoutRect& hitTestRect, const HitTestLocation&, const HitTestingTransformState* = nullptr, double* zOffset = nullptr);
 
     bool listBackgroundIsKnownToBeOpaqueInRect(const LayerList&, const LayoutRect&) const;
@@ -1141,6 +1145,8 @@ private:
     void setAncestorChainHasVisibleDescendant();
 
     bool computeHasVisibleContent() const;
+
+    void setShouldPaintUsingCompositeCopy(bool copy) { m_shouldPaintUsingCompositeCopy = copy; }
 
     bool has3DTransformedDescendant() const { return m_has3DTransformedDescendant; }
     bool has3DTransformedAncestor() const { return m_has3DTransformedAncestor; }
@@ -1243,6 +1249,7 @@ private:
     bool m_has3DTransformedAncestor : 1;
 
     bool m_insideSVGForeignObject : 1;
+    bool m_shouldPaintUsingCompositeCopy : 1;
 
     unsigned m_indirectCompositingReason : 4; // IndirectCompositingReason
     unsigned m_viewportConstrainedNotCompositedReason : 2; // ViewportConstrainedNotCompositedReason

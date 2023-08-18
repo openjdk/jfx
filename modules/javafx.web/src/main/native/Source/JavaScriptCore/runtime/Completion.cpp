@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2022 Apple Inc.
+ *  Copyright (C) 2003-2023 Apple Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -82,9 +82,8 @@ bool checkModuleSyntax(JSGlobalObject* globalObject, const SourceCode& source, P
         return false;
 
     PrivateName privateName(PrivateName::Description, "EntryPointModule"_s);
-    ModuleAnalyzer moduleAnalyzer(globalObject, Identifier::fromUid(privateName), source, moduleProgramNode->varDeclarations(), moduleProgramNode->lexicalVariables());
-    moduleAnalyzer.analyze(*moduleProgramNode);
-    return true;
+    ModuleAnalyzer moduleAnalyzer(globalObject, Identifier::fromUid(privateName), source, moduleProgramNode->varDeclarations(), moduleProgramNode->lexicalVariables(), moduleProgramNode->features());
+    return !!moduleAnalyzer.analyze(*moduleProgramNode);
 }
 
 RefPtr<CachedBytecode> generateProgramBytecode(VM& vm, const SourceCode& source, FileSystem::PlatformFileHandle fd, BytecodeCacheError& error)
@@ -137,7 +136,7 @@ JSValue evaluate(JSGlobalObject* globalObject, const SourceCode& source, JSValue
     JSObject* thisObj = jsCast<JSObject*>(thisValue.toThis(globalObject, ECMAMode::sloppy()));
     JSValue result = vm.interpreter.executeProgram(source, globalObject, thisObj);
 
-    if (scope.exception()) {
+    if (UNLIKELY(scope.exception())) {
         returnedException = scope.exception();
         scope.clearException();
         return jsUndefined();
@@ -220,14 +219,14 @@ JSInternalPromise* loadAndEvaluateModule(JSGlobalObject* globalObject, const Sou
     RELEASE_AND_RETURN(scope, globalObject->moduleLoader()->loadAndEvaluateModule(globalObject, key, jsUndefined(), scriptFetcher));
 }
 
-JSInternalPromise* loadModule(JSGlobalObject* globalObject, const String& moduleName, JSValue parameters, JSValue scriptFetcher)
+JSInternalPromise* loadModule(JSGlobalObject* globalObject, const Identifier& moduleKey, JSValue parameters, JSValue scriptFetcher)
 {
     VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomStringTable() == Thread::current().atomStringTable());
     RELEASE_ASSERT(!vm.isCollectorBusyOnCurrentThread());
 
-    return globalObject->moduleLoader()->loadModule(globalObject, identifierToJSValue(vm, Identifier::fromString(vm, moduleName)), parameters, scriptFetcher);
+    return globalObject->moduleLoader()->loadModule(globalObject, identifierToJSValue(vm, moduleKey), parameters, scriptFetcher);
 }
 
 JSInternalPromise* loadModule(JSGlobalObject* globalObject, const SourceCode& source, JSValue scriptFetcher)
@@ -257,14 +256,86 @@ JSValue linkAndEvaluateModule(JSGlobalObject* globalObject, const Identifier& mo
     return globalObject->moduleLoader()->linkAndEvaluateModule(globalObject, identifierToJSValue(vm, moduleKey), scriptFetcher);
 }
 
-JSInternalPromise* importModule(JSGlobalObject* globalObject, const Identifier& moduleKey, JSValue parameters, JSValue scriptFetcher)
+JSInternalPromise* importModule(JSGlobalObject* globalObject, const Identifier& moduleName, JSValue referrer, JSValue parameters, JSValue scriptFetcher)
 {
     VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomStringTable() == Thread::current().atomStringTable());
     RELEASE_ASSERT(!vm.isCollectorBusyOnCurrentThread());
 
-    return globalObject->moduleLoader()->requestImportModule(globalObject, moduleKey, parameters, scriptFetcher);
+    return globalObject->moduleLoader()->requestImportModule(globalObject, moduleName, referrer, parameters, scriptFetcher);
+}
+
+HashMap<RefPtr<UniquedStringImpl>, String> retrieveAssertionsFromDynamicImportOptions(JSGlobalObject* globalObject, JSValue options, const Vector<RefPtr<UniquedStringImpl>>& supportedAssertions)
+{
+    // https://tc39.es/proposal-import-assertions/#sec-evaluate-import-call
+
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (options.isUndefined())
+        return { };
+
+    auto* optionsObject = jsDynamicCast<JSObject*>(options);
+    if (UNLIKELY(!optionsObject)) {
+        throwTypeError(globalObject, scope, "dynamic import's options should be an object"_s);
+        return { };
+    }
+
+    JSValue assertions = optionsObject->get(globalObject, vm.propertyNames->builtinNames().assertPublicName());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    if (assertions.isUndefined())
+        return { };
+
+    auto* assertionsObject = jsDynamicCast<JSObject*>(assertions);
+    if (UNLIKELY(!assertionsObject)) {
+        throwTypeError(globalObject, scope, "dynamic import's options.assert should be an object"_s);
+        return { };
+    }
+
+    PropertyNameArray properties(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    assertionsObject->methodTable()->getOwnPropertyNames(assertionsObject, globalObject, properties, DontEnumPropertiesMode::Exclude);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    HashMap<RefPtr<UniquedStringImpl>, String> result;
+    for (auto& key : properties) {
+        JSValue value = assertionsObject->get(globalObject, key);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        if (UNLIKELY(!value.isString())) {
+            throwTypeError(globalObject, scope, "dynamic import's options.assert includes non string property"_s);
+            return { };
+        }
+
+        String valueString = value.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        if (supportedAssertions.contains(key.impl()))
+            result.add(key.impl(), WTFMove(valueString));
+    }
+
+    return result;
+}
+
+std::optional<ScriptFetchParameters::Type> retrieveTypeAssertion(JSGlobalObject* globalObject, const HashMap<RefPtr<UniquedStringImpl>, String>& assertions)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (assertions.isEmpty())
+        return { };
+
+    auto iterator = assertions.find(vm.propertyNames->type.impl());
+    if (iterator == assertions.end())
+        return { };
+
+    String value = iterator->value;
+    if (auto result = ScriptFetchParameters::parseType(value))
+        return result;
+
+    throwTypeError(globalObject, scope, makeString("Import assertion type \""_s, value, "\" is not valid"_s));
+    return { };
 }
 
 } // namespace JSC

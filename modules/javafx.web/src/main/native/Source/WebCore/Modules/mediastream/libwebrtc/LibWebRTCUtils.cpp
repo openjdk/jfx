@@ -25,7 +25,7 @@
 #include "config.h"
 #include "LibWebRTCUtils.h"
 
-#if USE(LIBWEBRTC)
+#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
 #include "RTCDtlsTransportState.h"
@@ -37,11 +37,14 @@
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/rtp_parameters.h>
 #include <webrtc/api/rtp_transceiver_interface.h>
+#include <webrtc/p2p/base/p2p_constants.h>
 #include <webrtc/pc/webrtc_sdp.h>
 
+ALLOW_COMMA_END
 ALLOW_DEPRECATED_DECLARATIONS_END
 ALLOW_UNUSED_PARAMETERS_END
 
@@ -403,13 +406,9 @@ static inline std::optional<RTCIceCandidateType> toRTCIceCandidateType(const std
     return RTCIceCandidateType::Relay;
 }
 
-std::optional<RTCIceCandidate::Fields> parseIceCandidateSDP(const String& sdp)
+RTCIceCandidateFields convertIceCandidate(const cricket::Candidate& candidate)
 {
-    cricket::Candidate candidate;
-    if (!webrtc::ParseCandidate(sdp.utf8().data(), &candidate, nullptr, true))
-        return { };
-
-    RTCIceCandidate::Fields fields;
+    RTCIceCandidateFields fields;
     fields.foundation = fromStdString(candidate.foundation());
     fields.component = toRTCIceComponent(candidate.component());
     fields.priority = candidate.priority();
@@ -447,6 +446,8 @@ static std::optional<RTCErrorDetailType> toRTCErrorDetailType(webrtc::RTCErrorDe
     case webrtc::RTCErrorDetailType::NONE:
         return { };
     };
+
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 RefPtr<RTCError> toRTCError(const webrtc::RTCError& rtcError)
@@ -459,4 +460,4 @@ RefPtr<RTCError> toRTCError(const webrtc::RTCError& rtcError)
 
 } // namespace WebCore
 
-#endif // USE(LIBWEBRTC)
+#endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

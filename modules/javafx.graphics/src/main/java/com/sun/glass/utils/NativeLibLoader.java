@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.URI;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.AccessController;
@@ -41,7 +44,6 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 
 public class NativeLibLoader {
 
@@ -301,7 +303,22 @@ public class NativeLibLoader {
         }
         if (write) {
             Path path = f.toPath();
-            Files.copy(is, path);
+            File lockFile = new File(cacheDir, ".lock");
+            try (RandomAccessFile randomAccessFile = new RandomAccessFile(lockFile, "rw");
+                 FileChannel fileChannel = randomAccessFile.getChannel();
+                 FileLock fileLock = fileChannel.lock()) {
+                try {
+                    if (!Files.exists(path)) {
+                        Files.copy(is, path);
+                    }
+                } finally {
+                    if (fileLock != null) {
+                        fileLock.release();
+                    }
+                }
+            } catch (IOException ex) {
+                throw new IOException("Error copying library " + path + " to cache: " + ex.getMessage(), ex);
+            }
         }
 
         String fp = f.getAbsolutePath();

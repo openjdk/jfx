@@ -37,7 +37,7 @@
 #include <wtf/win/Win32Handle.h>
 #endif
 
-#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(MAC_OS_X)
+#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(DARWIN)
 #include <wtf/OSObjectPtr.h>
 #endif
 
@@ -87,7 +87,6 @@ public:
 
     void setMemoryKillCallback(WTF::Function<void()>&& function) { m_memoryKillCallback = WTFMove(function); }
     void setMemoryPressureStatusChangedCallback(WTF::Function<void(MemoryPressureStatus)>&& function) { m_memoryPressureStatusChangedCallback = WTFMove(function); }
-    void setDidExceedInactiveLimitWhileActiveCallback(WTF::Function<void()>&& function) { m_didExceedInactiveLimitWhileActiveCallback = WTFMove(function); }
 
     void setLowMemoryHandler(LowMemoryHandler&& handler)
     {
@@ -109,7 +108,7 @@ public:
 
     WTF_EXPORT_PRIVATE MemoryUsagePolicy currentMemoryUsagePolicy();
 
-#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(MAC_OS_X)
+#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(DARWIN)
     WTF_EXPORT_PRIVATE void setDispatchQueue(OSObjectPtr<dispatch_queue_t>&&);
 #endif
 
@@ -223,6 +222,8 @@ public:
     WTF_EXPORT_PRIVATE void setProcessState(WebsamProcessState);
     WebsamProcessState processState() const { return m_processState; }
 
+    WTF_EXPORT_PRIVATE static ASCIILiteral processStateDescription();
+
     WTF_EXPORT_PRIVATE static void setPageCount(unsigned);
 
     void setShouldLogMemoryMemoryPressureEvents(bool shouldLog) { m_shouldLogMemoryMemoryPressureEvents = shouldLog; }
@@ -248,8 +249,6 @@ private:
     void measurementTimerFired();
     void shrinkOrDie(size_t killThreshold);
     void setMemoryUsagePolicyBasedOnFootprint(size_t);
-    void doesExceedInactiveLimitWhileActive();
-    void doesNotExceedInactiveLimitWhileActive();
 
     unsigned m_pageCount { 0 };
 
@@ -257,32 +256,30 @@ private:
     bool m_installed { false };
     bool m_isSimulatingMemoryPressure { false };
     bool m_shouldLogMemoryMemoryPressureEvents { true };
-    bool m_hasInvokedDidExceedInactiveLimitWhileActiveCallback { false };
 
     WebsamProcessState m_processState { WebsamProcessState::Inactive };
 
     MemoryUsagePolicy m_memoryUsagePolicy { MemoryUsagePolicy::Unrestricted };
 
-    std::unique_ptr<RunLoop::Timer<MemoryPressureHandler>> m_measurementTimer;
+    std::unique_ptr<RunLoop::Timer>m_measurementTimer;
     WTF::Function<void()> m_memoryKillCallback;
     WTF::Function<void(MemoryPressureStatus)> m_memoryPressureStatusChangedCallback;
-    WTF::Function<void()> m_didExceedInactiveLimitWhileActiveCallback;
     LowMemoryHandler m_lowMemoryHandler;
 
     Configuration m_configuration;
 
 #if OS(WINDOWS)
     void windowsMeasurementTimerFired();
-    RunLoop::Timer<MemoryPressureHandler> m_windowsMeasurementTimer;
+    RunLoop::Timer m_windowsMeasurementTimer;
     Win32Handle m_lowMemoryHandle;
 #endif
 
 #if OS(LINUX) || OS(FREEBSD)
-    RunLoop::Timer<MemoryPressureHandler> m_holdOffTimer;
+    RunLoop::Timer m_holdOffTimer;
     void holdOffTimerFired();
 #endif
 
-#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(MAC_OS_X)
+#if PLATFORM(COCOA) || PLATFORM(JAVA) && OS(DARWIN)
     OSObjectPtr<dispatch_queue_t> m_dispatchQueue;
 #endif
 };

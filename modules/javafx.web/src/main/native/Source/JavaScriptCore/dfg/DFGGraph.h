@@ -431,6 +431,23 @@ public:
     }
 #endif
 
+    bool variadicArithShouldSpeculateInt32(Node* node, PredictionPass pass)
+    {
+        bool result = true;
+        RareCaseProfilingSource source = AllRareCases;
+        if (pass == PrimaryPass)
+            source = DFGRareCase;
+
+        doToChildren(node, [&](Edge& child) {
+            if (!child->shouldSpeculateInt32OrBooleanForArithmetic())
+                result = false;
+            if (child->sawBooleans())
+                source = DFGRareCase;
+        });
+
+        return result && node->canSpeculateInt32(source);
+    }
+
     bool canOptimizeStringObjectAccess(const CodeOrigin&);
 
     bool getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue);
@@ -473,7 +490,7 @@ public:
     JSObject* globalThisObjectFor(CodeOrigin codeOrigin)
     {
         JSGlobalObject* object = globalObjectFor(codeOrigin);
-        return jsCast<JSObject*>(object->methodTable()->toThis(object, object, ECMAMode::sloppy()));
+        return object->globalThis();
     }
 
     CodeBlock* baselineCodeBlockFor(InlineCallFrame* inlineCallFrame)
@@ -486,13 +503,6 @@ public:
     CodeBlock* baselineCodeBlockFor(const CodeOrigin& codeOrigin)
     {
         return baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, m_profiledBlock);
-    }
-
-    bool masqueradesAsUndefinedWatchpointIsStillValid(const CodeOrigin& codeOrigin)
-    {
-        if (m_plan.isUnlinked())
-            return false;
-        return globalObjectFor(codeOrigin)->masqueradesAsUndefinedWatchpoint()->isStillValid();
     }
 
     bool hasGlobalExitSite(const CodeOrigin& codeOrigin, ExitKind exitKind)
@@ -537,6 +547,7 @@ public:
     void killUnreachableBlocks();
 
     void determineReachability();
+    void clearReachability();
     void resetReachability();
 
     void computeRefCounts();
@@ -782,18 +793,26 @@ public:
         return result;
     }
 
-    bool isWatchingHavingABadTimeWatchpoint(Node* node)
+    template<typename WatchpointSet>
+    bool isWatchingGlobalObjectWatchpoint(JSGlobalObject* globalObject, WatchpointSet& set, LinkerIR::Type type)
     {
-        if (m_plan.isUnlinked())
+        if (m_plan.isUnlinked()) {
+            if (m_codeBlock->globalObject() != globalObject)
             return false;
-        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
-        return watchpoints().isWatched(globalObject->havingABadTimeWatchpoint());
+
+            LinkerIR::Value value { nullptr, type };
+            if (m_constantPoolMap.contains(value))
+                return true;
+
+            if (set.isStillValid()) {
+                auto result = m_constantPoolMap.add(value, m_constantPoolMap.size());
+                ASSERT_UNUSED(result, result.isNewEntry);
+                m_constantPool.append(value);
+                return true;
     }
 
-    bool isWatchingGlobalObjectWatchpoint(JSGlobalObject* globalObject, InlineWatchpointSet& set)
-    {
-        if (m_plan.isUnlinked())
             return false;
+        }
 
         if (watchpoints().isWatched(set))
             return true;
@@ -811,33 +830,81 @@ public:
         return false;
     }
 
+    bool isWatchingHavingABadTimeWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        WatchpointSet& set = globalObject->havingABadTimeWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::HavingABadTimeWatchpointSet);
+    }
+
+    bool isWatchingMasqueradesAsUndefinedWatchpointSet(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        WatchpointSet& set = globalObject->masqueradesAsUndefinedWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::MasqueradesAsUndefinedWatchpointSet);
+    }
+
     bool isWatchingArrayIteratorProtocolWatchpoint(Node* node)
     {
-        if (m_plan.isUnlinked())
-            return false;
-
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
         InlineWatchpointSet& set = globalObject->arrayIteratorProtocolWatchpointSet();
-        return isWatchingGlobalObjectWatchpoint(globalObject, set);
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ArrayIteratorProtocolWatchpointSet);
     }
 
     bool isWatchingNumberToStringWatchpoint(Node* node)
     {
-        if (m_plan.isUnlinked())
-            return false;
-
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
         InlineWatchpointSet& set = globalObject->numberToStringWatchpointSet();
-        return isWatchingGlobalObjectWatchpoint(globalObject, set);
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::NumberToStringWatchpointSet);
     }
 
-    bool isWatchingStructureCacheClearedWatchpoint(JSGlobalObject* globalObject)
+    bool isWatchingStructureCacheClearedWatchpoint(Node* node)
     {
-        if (m_plan.isUnlinked())
-            return false;
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->structureCacheClearedWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StructureCacheClearedWatchpointSet);
+    }
 
-        InlineWatchpointSet& set = globalObject->structureCacheClearedWatchpoint();
-        return isWatchingGlobalObjectWatchpoint(globalObject, set);
+    bool isWatchingStringSymbolReplaceWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->stringSymbolReplaceWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringSymbolReplaceWatchpointSet);
+    }
+
+    bool isWatchingRegExpPrimordialPropertiesWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->regExpPrimordialPropertiesWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::RegExpPrimordialPropertiesWatchpointSet);
+    }
+
+    bool isWatchingArraySpeciesWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->arraySpeciesWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ArraySpeciesWatchpointSet);
+    }
+
+    bool isWatchingArrayPrototypeChainIsSaneWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->arrayPrototypeChainIsSaneWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ArrayPrototypeChainIsSaneWatchpointSet);
+    }
+
+    bool isWatchingStringPrototypeChainIsSaneWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->stringPrototypeChainIsSaneWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::StringPrototypeChainIsSaneWatchpointSet);
+    }
+
+    bool isWatchingObjectPrototypeChainIsSaneWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->objectPrototypeChainIsSaneWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ObjectPrototypeChainIsSaneWatchpointSet);
     }
 
     Profiler::Compilation* compilation() { return m_plan.compilation(); }
@@ -1005,6 +1072,9 @@ public:
     JSArrayBufferView* tryGetFoldableView(JSValue);
     JSArrayBufferView* tryGetFoldableView(JSValue, ArrayMode arrayMode);
 
+    JSValue tryGetConstantGetter(Node* getterSetter);
+    JSValue tryGetConstantSetter(Node* getterSetter);
+
     bool canDoFastSpread(Node*, const AbstractValue&);
 
     void registerFrozenValues();
@@ -1044,8 +1114,7 @@ public:
     }
     bool willCatchExceptionInMachineFrame(CodeOrigin, CodeOrigin& opCatchOriginOut, HandlerInfo*& catchHandlerOut);
 
-    bool needsScopeRegister() const { return m_hasDebuggerEnabled || m_codeBlock->usesCallEval(); }
-    bool needsFlushedThis() const { return m_codeBlock->usesCallEval(); }
+    bool needsScopeRegister() const { return m_hasDebuggerEnabled; }
 
     void clearCPSCFGData();
 
@@ -1078,12 +1147,24 @@ public:
     const UnlinkedStringJumpTable& unlinkedStringSwitchJumpTable(unsigned index) const { return *m_unlinkedStringSwitchJumpTables[index]; }
     StringJumpTable& stringSwitchJumpTable(unsigned index) { return m_stringSwitchJumpTables[index]; }
 
-    void appendCatchEntrypoint(BytecodeIndex bytecodeIndex, MacroAssemblerCodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
+    void appendCatchEntrypoint(BytecodeIndex bytecodeIndex, CodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
     {
         m_catchEntrypoints.append(CatchEntrypointData { machineCode, FixedVector<FlushFormat>(WTFMove(argumentFormats)), bytecodeIndex });
     }
 
     void freeDFGIRAfterLowering();
+
+    const BoyerMooreHorspoolTable<uint8_t>* tryAddStringSearchTable8(const String& string)
+    {
+        constexpr unsigned minPatternLength = 9;
+        if (string.length() > BoyerMooreHorspoolTable<uint8_t>::maxPatternLength)
+            return nullptr;
+        if (string.length() < minPatternLength)
+            return nullptr;
+        return m_stringSearchTable8.ensure(string, [&]() {
+            return makeUnique<BoyerMooreHorspoolTable<uint8_t>>(string);
+        }).iterator->value.get();
+    }
 
     StackCheck m_stackChecker;
     VM& m_vm;
@@ -1100,6 +1181,7 @@ public:
     Vector<SimpleJumpTable> m_switchJumpTables;
     Vector<const UnlinkedStringJumpTable*> m_unlinkedStringSwitchJumpTables;
     Vector<StringJumpTable> m_stringSwitchJumpTables;
+    HashMap<String, std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> m_stringSearchTable8;
 
     HashMap<EncodedJSValue, FrozenValue*, EncodedJSValueHash, EncodedJSValueHashTraits> m_frozenValueMap;
     Bag<FrozenValue> m_frozenValues;
@@ -1192,6 +1274,9 @@ public:
     Bag<double> m_doubleConstants;
 #endif
 
+    Vector<LinkerIR::Value> m_constantPool;
+    HashMap<LinkerIR::Value, LinkerIR::Constant, LinkerIR::ValueHash, LinkerIR::ValueTraits> m_constantPoolMap;
+
     OptimizationFixpointState m_fixpointState;
     StructureRegistrationState m_structureRegistrationState;
     GraphForm m_form;
@@ -1241,6 +1326,9 @@ private:
             return add->canSpeculateInt32(source) ? SpeculateInt32 : DontSpeculateInt32;
 
         double doubleImmediate = immediateValue.asDouble();
+        if (std::isnan(doubleImmediate))
+            return DontSpeculateInt32;
+
         const double twoToThe48 = 281474976710656.0;
         if (doubleImmediate < -twoToThe48 || doubleImmediate > twoToThe48)
             return DontSpeculateInt32;

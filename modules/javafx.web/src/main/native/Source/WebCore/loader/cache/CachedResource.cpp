@@ -65,7 +65,7 @@
 
 #undef CACHEDRESOURCE_RELEASE_LOG
 #define PAGE_ID(frame) (valueOrDefault(frame.pageID()).toUInt64())
-#define FRAME_ID(frame) (valueOrDefault(frame.frameID()).toUInt64())
+#define FRAME_ID(frame) (frame.frameID().object().toUInt64())
 #define CACHEDRESOURCE_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - CachedResource::" fmt, this, ##__VA_ARGS__)
 #define CACHEDRESOURCE_RELEASE_LOG_WITH_FRAME(fmt, frame, ...) RELEASE_LOG(Network, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 "] CachedResource::" fmt, this, PAGE_ID(frame), FRAME_ID(frame), ##__VA_ARGS__)
 
@@ -92,7 +92,7 @@ CachedResource::CachedResource(CachedResourceRequest&& request, Type type, PAL::
     , m_responseTimestamp(WallTime::now())
     , m_fragmentIdentifierForRequest(request.releaseFragmentIdentifier())
     , m_origin(request.releaseOrigin())
-    , m_initiatorName(request.initiatorName())
+    , m_initiatorType(request.initiatorType())
     , m_type(type)
     , m_preloadResult(PreloadResult::PreloadNotReferenced)
     , m_responseTainting(ResourceResponse::Tainting::Basic)
@@ -154,8 +154,10 @@ CachedResource::~CachedResource()
     ASSERT(!m_deleted);
     ASSERT(url().isNull() || !allowsCaching() || MemoryCache::singleton().resourceForRequest(resourceRequest(), sessionID()) != this);
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     m_deleted = true;
+#endif
+#ifndef NDEBUG
     cachedResourceLeakCounter.decrement();
 #endif
 }
@@ -182,7 +184,8 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
     // We query the top document because new frames may be created in pagehide event handlers
     // and their backForwardCacheState will not reflect the fact that they are about to enter page
     // cache.
-    if (auto* topDocument = frame.mainFrame().document()) {
+    if (auto* localFrame = dynamicDowncast<LocalFrame>(frame.mainFrame())) {
+        if (auto* topDocument = localFrame->document()) {
         switch (topDocument->backForwardCacheState()) {
         case Document::NotInBackForwardCache:
             break;
@@ -198,6 +201,7 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
             failBeforeStarting();
             return;
         }
+    }
     }
 
     FrameLoader& frameLoader = frame.loader();
@@ -392,6 +396,11 @@ void CachedResource::setCrossOrigin()
 bool CachedResource::isCrossOrigin() const
 {
     return m_responseTainting != ResourceResponse::Tainting::Basic;
+}
+
+bool CachedResource::isCORSCrossOrigin() const
+{
+    return m_responseTainting == ResourceResponse::Tainting::Opaque || m_responseTainting == ResourceResponse::Tainting::Opaqueredirect;
 }
 
 bool CachedResource::isCORSSameOrigin() const

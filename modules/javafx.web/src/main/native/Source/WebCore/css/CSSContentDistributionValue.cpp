@@ -26,38 +26,50 @@
 #include "config.h"
 #include "CSSContentDistributionValue.h"
 
-#include "CSSValueList.h"
+#include "CSSValueKeywords.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 CSSContentDistributionValue::CSSContentDistributionValue(CSSValueID distribution, CSSValueID position, CSSValueID overflow)
-    : CSSValue(CSSContentDistributionClass)
+    : CSSValue(ContentDistributionClass)
     , m_distribution(distribution)
     , m_position(position)
     , m_overflow(overflow)
 {
 }
 
-CSSContentDistributionValue::~CSSContentDistributionValue() = default;
+Ref<CSSContentDistributionValue> CSSContentDistributionValue::create(CSSValueID distribution, CSSValueID position, CSSValueID overflow)
+{
+    return adoptRef(*new CSSContentDistributionValue(distribution, position, overflow));
+}
 
 String CSSContentDistributionValue::customCSSText() const
 {
-    auto& cssValuePool = CSSValuePool::singleton();
-    auto list = CSSValueList::createSpaceSeparated();
-    if (m_distribution != CSSValueInvalid)
-        list->append(distribution());
-    if (m_position != CSSValueInvalid) {
-        if (m_position == CSSValueFirstBaseline || m_position == CSSValueLastBaseline) {
-            CSSValueID preference = m_position == CSSValueFirstBaseline ? CSSValueFirst : CSSValueLast;
-            list->append(cssValuePool.createIdentifierValue(preference));
-            list->append(cssValuePool.createIdentifierValue(CSSValueBaseline));
-        } else {
-            if (m_overflow != CSSValueInvalid)
-                list->append(overflow());
-            list->append(position());
-        }
+    auto word1 = m_distribution;
+    CSSValueID word2;
+    CSSValueID word3;
+    switch (m_position) {
+    case CSSValueFirstBaseline:
+        word2 = CSSValueFirst;
+        word3 = CSSValueBaseline;
+        break;
+    case CSSValueLastBaseline:
+        word2 = CSSValueLast;
+        word3 = CSSValueBaseline;
+        break;
+    default:
+        word2 = m_overflow;
+        word3 = m_position;
+        break;
     }
-    return list->customCSSText();
+    return makeString(
+        word1 == CSSValueInvalid ? ""_s : nameLiteral(word1),
+        word1 != CSSValueInvalid && word2 != CSSValueInvalid ? " "_s : ""_s,
+        word2 == CSSValueInvalid ? ""_s : nameLiteral(word2),
+        word2 != CSSValueInvalid && word3 != CSSValueInvalid ? " "_s : ""_s,
+        word3 == CSSValueInvalid ? ""_s : nameLiteral(word3)
+    );
 }
 
 bool CSSContentDistributionValue::equals(const CSSContentDistributionValue& other) const

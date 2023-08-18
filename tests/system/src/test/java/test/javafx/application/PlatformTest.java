@@ -120,7 +120,7 @@ public class PlatformTest {
                 timelineDone.countDown();
             }
         }));
-        timeline.play();
+        Platform.runLater(timeline::play);
 
         Util.await(timelineDone);
 

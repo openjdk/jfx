@@ -27,7 +27,6 @@
 
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
 #include "JSValueInWrappedObject.h"
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
@@ -40,7 +39,7 @@ class AbortAlgorithm;
 class ScriptExecutionContext;
 class WebCoreOpaqueRoot;
 
-class AbortSignal final : public RefCounted<AbortSignal>, public EventTargetWithInlineData, private ContextDestructionObserver {
+class AbortSignal final : public RefCounted<AbortSignal>, public EventTarget, private ContextDestructionObserver {
     WTF_MAKE_ISO_ALLOCATED_EXPORT(AbortSignal, WEBCORE_EXPORT);
 public:
     static Ref<AbortSignal> create(ScriptExecutionContext*);
@@ -49,7 +48,8 @@ public:
     static Ref<AbortSignal> abort(JSDOMGlobalObject&, ScriptExecutionContext&, JSC::JSValue reason);
     static Ref<AbortSignal> timeout(ScriptExecutionContext&, uint64_t milliseconds);
 
-    static bool whenSignalAborted(AbortSignal&, Ref<AbortAlgorithm>&&);
+    static uint32_t addAbortAlgorithmToSignal(AbortSignal&, Ref<AbortAlgorithm>&&);
+    static void removeAbortAlgorithmFromSignal(AbortSignal&, uint32_t algorithmIdentifier);
 
     void signalAbort(JSC::JSValue reason);
     void signalFollow(AbortSignal&);
@@ -64,7 +64,8 @@ public:
     using RefCounted::deref;
 
     using Algorithm = Function<void(JSC::JSValue reason)>;
-    void addAlgorithm(Algorithm&& algorithm) { m_algorithms.append(WTFMove(algorithm)); }
+    uint32_t addAlgorithm(Algorithm&&);
+    void removeAlgorithm(uint32_t);
 
     bool isFollowingSignal() const { return !!m_followingSignal; }
 
@@ -83,10 +84,11 @@ private:
     void derefEventTarget() final { deref(); }
     void eventListenersDidChange() final;
 
-    bool m_aborted { false };
-    Vector<Algorithm> m_algorithms;
-    WeakPtr<AbortSignal> m_followingSignal;
+    Vector<std::pair<uint32_t, Algorithm>> m_algorithms;
+    WeakPtr<AbortSignal, WeakPtrImplWithEventTargetData> m_followingSignal;
     JSValueInWrappedObject m_reason;
+    uint32_t m_algorithmIdentifier { 0 };
+    bool m_aborted { false };
     bool m_hasActiveTimeoutTimer { false };
     bool m_hasAbortEventListener { false };
 };

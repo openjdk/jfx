@@ -414,13 +414,10 @@ void WorkerThreadableWebSocketChannel::Bridge::connect(const URL& url, const Str
 
         auto& document = downcast<Document>(context);
 
-        // FIXME: make this mixed content check equivalent to the document mixed content check currently in WebSocket::connect()
-        if (auto* frame = document.frame()) {
-            if (auto errorString = MixedContentChecker::checkForMixedContentInFrameTree(*frame, url)) {
-                peer->fail(WTFMove(errorString).value());
+        if (document.frame() && !MixedContentChecker::frameAndAncestorsCanRunInsecureContent(*document.frame(), document.securityOrigin(), url, MixedContentChecker::ShouldLogWarning::No)) {
+            peer->fail(makeString("The page at ", document.url().stringCenterEllipsizedToLength(), " was blocked from connecting insecurely to ", url.stringCenterEllipsizedToLength(), " either because the protocol is insecure or the page is embedded from an insecure page."));
                 return;
             }
-        }
 
         if (peer->connect(url, protocol) == ThreadableWebSocketChannel::ConnectStatus::KO)
             peer->didReceiveMessageError(String { });
@@ -477,12 +474,12 @@ ThreadableWebSocketChannel::SendResult WorkerThreadableWebSocketChannel::Bridge:
         return ThreadableWebSocketChannel::SendFail;
     setMethodNotCompleted();
 
-    m_loaderProxy.postTaskToLoader([peer = m_peer, url = binaryData.url().isolatedCopy(), type = binaryData.type().isolatedCopy(), size = binaryData.size()](ScriptExecutionContext& context) {
+    m_loaderProxy.postTaskToLoader([peer = m_peer, url = binaryData.url().isolatedCopy(), type = binaryData.type().isolatedCopy(), size = binaryData.size(), memoryCost = binaryData.memoryCost()](ScriptExecutionContext& context) {
         ASSERT(isMainThread());
         ASSERT_UNUSED(context, context.isDocument());
         ASSERT(peer);
 
-        peer->send(Blob::deserialize(&context, url, type, size, { }));
+        peer->send(Blob::deserialize(&context, url, type, size, memoryCost, { }));
     });
 
     Ref<Bridge> protectedThis(*this);

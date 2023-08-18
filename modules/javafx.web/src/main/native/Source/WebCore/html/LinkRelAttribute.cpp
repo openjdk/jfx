@@ -40,23 +40,8 @@
 
 namespace WebCore {
 
-LinkRelAttribute::LinkRelAttribute()
-    : iconType()
-    , isStyleSheet(false)
-    , isAlternate(false)
-    , isDNSPrefetch(false)
-    , isLinkPreload(false)
-    , isLinkPreconnect(false)
-    , isLinkPrefetch(false)
-#if ENABLE(APPLICATION_MANIFEST)
-    , isApplicationManifest(false)
-#endif
-{
-}
-
 // Keep LinkRelAttribute::isSupported() in sync when updating this constructor.
-LinkRelAttribute::LinkRelAttribute(Document& document, const String& rel)
-    : LinkRelAttribute()
+LinkRelAttribute::LinkRelAttribute(Document& document, StringView rel)
 {
     if (equalLettersIgnoringASCIICase(rel, "stylesheet"_s))
         isStyleSheet = true;
@@ -83,8 +68,8 @@ LinkRelAttribute::LinkRelAttribute(Document& document, const String& rel)
 #endif
     } else {
         // Tokenize the rel attribute and set bits based on specific keywords that we find.
-        String relCopy = makeStringByReplacingAll(rel, '\n', ' ');
-        for (auto word : StringView(relCopy).split(' ')) {
+        for (auto line : rel.split('\n')) {
+            for (auto word : line.split(' ')) {
             if (equalLettersIgnoringASCIICase(word, "stylesheet"_s))
                 isStyleSheet = true;
             else if (equalLettersIgnoringASCIICase(word, "alternate"_s))
@@ -96,6 +81,7 @@ LinkRelAttribute::LinkRelAttribute(Document& document, const String& rel)
             else if (equalLettersIgnoringASCIICase(word, "apple-touch-icon-precomposed"_s))
                 iconType = LinkIconType::TouchPrecomposedIcon;
         }
+    }
     }
 }
 

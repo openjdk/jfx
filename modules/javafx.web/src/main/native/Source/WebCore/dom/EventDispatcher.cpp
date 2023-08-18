@@ -31,6 +31,7 @@
 #include "EventNames.h"
 #include "EventPath.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
 #include "HTMLInputElement.h"
@@ -50,7 +51,7 @@ namespace WebCore {
 void EventDispatcher::dispatchScopedEvent(Node& node, Event& event)
 {
     // Need to set the target here so the scoped event queue knows which node to dispatch to.
-    event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+    event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
     ScopedEventQueue::singleton().enqueueEvent(event);
 }
 
@@ -121,7 +122,11 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!frame)
         return false;
 
-    if (!frame->mainFrame().loader().shouldSuppressTextInputFromEditing())
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+    if (!localFrame)
+        return false;
+
+    if (!localFrame->loader().shouldSuppressTextInputFromEditing())
         return false;
 
     if (is<TextEvent>(event)) {
@@ -169,7 +174,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     event.resetBeforeDispatch();
 
-    event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+    event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
     if (!event.target())
         return;
 
@@ -201,10 +206,10 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     if (!event.defaultPrevented() && !event.defaultHandled() && !event.isDefaultEventHandlerIgnored()) {
         // FIXME: Not clear why we need to reset the target for the default event handlers.
         // We should research this, and remove this code if possible.
-        auto* finalTarget = event.target();
-        event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+        RefPtr finalTarget = event.target();
+        event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
         callDefaultEventHandlersInBubblingOrder(event, eventPath);
-        event.setTarget(finalTarget);
+        event.setTarget(WTFMove(finalTarget));
     }
 
     if (shouldClearTargetsAfterDispatch.value_or(false)) {
@@ -221,7 +226,7 @@ static void dispatchEventWithType(const Vector<T*>& targets, Event& event)
     ASSERT(*targets.begin());
 
     EventPath eventPath { targets };
-    event.setTarget(*targets.begin());
+    event.setTarget(RefPtr { *targets.begin() });
     event.setEventPath(eventPath);
     event.resetBeforeDispatch();
     dispatchEventInDOM(event, eventPath);

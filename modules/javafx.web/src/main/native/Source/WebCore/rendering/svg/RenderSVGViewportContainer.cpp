@@ -37,8 +37,9 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGViewportContainer);
 
-RenderSVGViewportContainer::RenderSVGViewportContainer(Document& document, RenderStyle&& style)
-    : RenderSVGContainer(document, WTFMove(style))
+RenderSVGViewportContainer::RenderSVGViewportContainer(RenderSVGRoot& parent, RenderStyle&& style)
+    : RenderSVGContainer(parent.document(), WTFMove(style))
+    , m_owningSVGRoot(parent)
 {
 }
 
@@ -50,10 +51,9 @@ RenderSVGViewportContainer::RenderSVGViewportContainer(SVGSVGElement& element, R
 SVGSVGElement& RenderSVGViewportContainer::svgSVGElement() const
 {
     if (isOutermostSVGViewportContainer()) {
-        ASSERT(is<RenderSVGRoot>(parent()));
-        return downcast<RenderSVGRoot>(*parent()).svgSVGElement();
+        ASSERT(m_owningSVGRoot);
+        return m_owningSVGRoot->svgSVGElement();
     }
-
     return downcast<SVGSVGElement>(RenderSVGContainer::element());
 }
 
@@ -83,18 +83,19 @@ bool RenderSVGViewportContainer::updateLayoutSizeIfNeeded()
 {
     auto previousViewportSize = viewportSize();
     m_viewport = { computeViewportLocation(), computeViewportSize() };
-    return selfNeedsLayout() || (svgSVGElement().hasRelativeLengths() && previousViewportSize != viewportSize());
+    return selfNeedsLayout() || previousViewportSize != viewportSize();
 }
 
-void RenderSVGViewportContainer::updateFromElement()
+bool RenderSVGViewportContainer::needsHasSVGTransformFlags() const
 {
-    RenderSVGContainer::updateFromElement();
+    auto& useSVGSVGElement = svgSVGElement();
+    if (useSVGSVGElement.hasTransformRelatedAttributes())
+        return true;
 
-    if (!parent())
-        return;
+    if (isOutermostSVGViewportContainer())
+        return !useSVGSVGElement.currentTranslateValue().isZero() || useSVGSVGElement.renderer()->style().effectiveZoom() != 1;
 
-    updateFromStyle();
-    updateLayerTransform();
+    return false;
 }
 
 void RenderSVGViewportContainer::updateFromStyle()
@@ -103,14 +104,6 @@ void RenderSVGViewportContainer::updateFromStyle()
 
     if (SVGRenderSupport::isOverflowHidden(*this))
         setHasNonVisibleOverflow();
-
-    if (hasSVGTransform() || !parent())
-        return;
-
-    if (svgSVGElement().hasTransformRelatedAttributes()) {
-        setHasTransformRelatedProperty();
-        setHasSVGTransform();
-    }
 }
 
 inline AffineTransform viewBoxToViewTransform(const SVGSVGElement& svgSVGElement, const FloatSize& viewportSize)
@@ -138,8 +131,8 @@ void RenderSVGViewportContainer::updateLayerTransform()
             m_supplementalLayerTransform.scale(scale);
             viewportSize.scale(1.0 / scale);
         }
-    } else if (auto viewportLocation = this->viewportLocation(); !viewportLocation.isZero())
-        m_supplementalLayerTransform.translate(viewportLocation);
+    } else if (!m_viewport.location().isZero())
+        m_supplementalLayerTransform.translate(m_viewport.location());
 
     if (useSVGSVGElement.hasAttribute(SVGNames::viewBoxAttr)) {
         // An empty viewBox disables the rendering -- dirty the visible descendant status!

@@ -50,7 +50,7 @@ static String agentClusterKeyOrNullIfUnique(const SecurityOrigin& origin)
 {
     auto computeKey = [&] {
         // https://html.spec.whatwg.org/multipage/webappapis.html#obtain-agent-cluster-key
-        if (origin.isUnique())
+        if (origin.isOpaque())
             return origin.toString();
         RegistrableDomain registrableDomain { origin.data() };
         if (registrableDomain.isEmpty())
@@ -111,7 +111,7 @@ bool WindowEventLoop::isContextThread() const
 MicrotaskQueue& WindowEventLoop::microtaskQueue()
 {
     if (!m_microtaskQueue)
-        m_microtaskQueue = makeUnique<MicrotaskQueue>(commonVM());
+        m_microtaskQueue = makeUnique<MicrotaskQueue>(commonVM(), *this);
     return *m_microtaskQueue;
 }
 

@@ -68,23 +68,23 @@ PolymorphicCallStubRoutine::PolymorphicCallStubRoutine(
     const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& codeRef, VM& vm, const JSCell* owner, CallFrame* callerFrame,
     CallLinkInfo& info, const Vector<PolymorphicCallCase>& cases,
     UniqueArray<uint32_t>&& fastCounts)
-    : GCAwareJITStubRoutine(codeRef)
+    : GCAwareJITStubRoutine(Type::PolymorphicCallStubRoutineType, codeRef)
     , m_variants(cases.size())
     , m_fastCounts(WTFMove(fastCounts))
 {
     for (unsigned index = 0; index < cases.size(); ++index) {
         const PolymorphicCallCase& callCase = cases[index];
         m_variants[index].set(vm, owner, callCase.variant().rawCalleeCell());
+        if (!callerFrame->isWasmFrame()) {
         if (shouldDumpDisassemblyFor(callerFrame->codeBlock()))
             dataLog("Linking polymorphic call in ", FullCodeOrigin(callerFrame->codeBlock(), callerFrame->codeOrigin()), " to ", callCase.variant(), ", codeBlock = ", pointerDump(callCase.codeBlock()), "\n");
+        }
         if (CodeBlock* codeBlock = callCase.codeBlock())
             codeBlock->linkIncomingPolymorphicCall(callerFrame, m_callNodes.add(&info));
     }
     WTF::storeStoreFence();
     makeGCAware(vm);
 }
-
-PolymorphicCallStubRoutine::~PolymorphicCallStubRoutine() { }
 
 CallVariantList PolymorphicCallStubRoutine::variants() const
 {
@@ -128,7 +128,7 @@ void PolymorphicCallStubRoutine::clearCallNodesFor(CallLinkInfo* info)
     }
 }
 
-bool PolymorphicCallStubRoutine::visitWeak(VM& vm)
+bool PolymorphicCallStubRoutine::visitWeakImpl(VM& vm)
 {
     bool isStillLive = true;
     forEachDependentCell([&](JSCell* cell) {
@@ -144,11 +144,11 @@ ALWAYS_INLINE void PolymorphicCallStubRoutine::markRequiredObjectsInternalImpl(V
         visitor.append(variant);
 }
 
-void PolymorphicCallStubRoutine::markRequiredObjectsInternal(AbstractSlotVisitor& visitor)
+void PolymorphicCallStubRoutine::markRequiredObjectsImpl(AbstractSlotVisitor& visitor)
 {
     markRequiredObjectsInternalImpl(visitor);
 }
-void PolymorphicCallStubRoutine::markRequiredObjectsInternal(SlotVisitor& visitor)
+void PolymorphicCallStubRoutine::markRequiredObjectsImpl(SlotVisitor& visitor)
 {
     markRequiredObjectsInternalImpl(visitor);
 }

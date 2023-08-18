@@ -26,11 +26,19 @@
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
+#include "NativeImage.h"
 #include "PlatformImage.h"
 #include <CoreGraphics/CoreGraphics.h>
-#elif PLATFORM(MAC)
+
+#if USE(APPKIT)
 OBJC_CLASS NSImage;
+using CocoaImage = NSImage;
+#else
+OBJC_CLASS UIImage;
+using CocoaImage = UIImage;
+#endif
+
 #elif PLATFORM(WIN)
 typedef struct HICON__* HICON;
 #elif PLATFORM(JAVA)
@@ -56,25 +64,22 @@ public:
     static Ref<Icon> create(HICON hIcon) { return adoptRef(*new Icon(hIcon)); }
 #endif
 
-#if PLATFORM(IOS_FAMILY)
-    // FIXME: Make this work for non-iOS ports and remove the PLATFORM(IOS_FAMILY)-guard.
-    WEBCORE_EXPORT static RefPtr<Icon> createIconForImage(PlatformImagePtr&&);
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT static RefPtr<Icon> create(CocoaImage *);
+    WEBCORE_EXPORT static RefPtr<Icon> create(PlatformImagePtr&&);
+
+    RetainPtr<CocoaImage> image() const { return m_image; };
 #endif
 
 #if PLATFORM(MAC)
     static RefPtr<Icon> createIconForUTI(const String&);
     static RefPtr<Icon> createIconForFileExtension(const String&);
-
-    RetainPtr<NSImage> nsImage() const { return m_nsImage; }
 #endif
 
 private:
-#if PLATFORM(IOS_FAMILY)
-    Icon(RefPtr<NativeImage>&&);
-    RefPtr<NativeImage> m_cgImage;
-#elif PLATFORM(MAC)
-    Icon(NSImage*);
-    RetainPtr<NSImage> m_nsImage;
+#if PLATFORM(COCOA)
+    Icon(CocoaImage *);
+    RetainPtr<CocoaImage> m_image;
 #elif PLATFORM(WIN)
     Icon(HICON);
     HICON m_hIcon;

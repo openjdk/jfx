@@ -50,11 +50,21 @@ def cppMacro(wasmOpcode, value, b3, inc, *extraArgs):
     extraArgsStr = ", " + ", ".join(extraArgs) if len(extraArgs) else ""
     return " \\\n    macro(" + wasm.toCpp(wasmOpcode) + ", " + hex(int(value)) + ", " + b3 + ", " + str(inc) + extraArgsStr + ")"
 
+
+def cppMacroPacked(wasmOpcode, value):
+    return " \\\n    macro(" + wasm.toCpp(wasmOpcode) + ", " + hex(int(value)) + ")"
+
+
 def typeMacroizer():
     inc = 0
     for ty in wasm.types:
-        yield cppMacro(ty, wasm.types[ty]["value"], wasm.types[ty]["b3type"], inc, ty)
+        yield cppMacro(ty, wasm.types[ty]["value"], wasm.types[ty]["b3type"], inc, ty, str(wasm.types[ty]["width"]))
         inc += 1
+
+
+def packedTypeMacroizer():
+    for ty in wasm.packed_types:
+        yield cppMacroPacked(ty, wasm.packed_types[ty]["value"])
 
 
 def typeMacroizerFiltered(filter):
@@ -64,12 +74,15 @@ def typeMacroizerFiltered(filter):
 
 type_definitions = ["#define FOR_EACH_WASM_TYPE(macro)"]
 type_definitions.extend([t for t in typeMacroizer()])
+type_definitions.extend(["\n\n#define FOR_EACH_WASM_PACKED_TYPE(macro)"])
+type_definitions.extend([t for t in packedTypeMacroizer()])
 type_definitions = "".join(type_definitions)
 
 type_definitions_except_funcref_externref = ["#define FOR_EACH_WASM_TYPE_EXCEPT_FUNCREF_AND_EXTERNREF(macro)"]
 type_definitions_except_funcref_externref.extend([t for t in typeMacroizerFiltered(lambda x: x == "funcref" or x == "externref")])
 type_definitions_except_funcref_externref = "".join(type_definitions_except_funcref_externref)
 
+min_type_value = min(wasm.types.items(), key=lambda pair: pair[1]['value'])[1]['value']
 
 def opcodeMacroizer(filter, opcodeField="value", modifier=None):
     inc = 0
@@ -160,6 +173,7 @@ defines.append("\n\n")
 defines = "".join(defines)
 
 opValueSet = set([op for op in wasm.opcodeIterator(lambda op: True, lambda op: opcodes[op]["value"])])
+opValueSet.add(0xFD)  # ExtSIMD
 maxOpValue = max(opValueSet)
 
 
@@ -208,16 +222,17 @@ contents = wasm.header + """
 #include <cstdint>
 #include <wtf/PrintStream.h>
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
-#include "B3Type.h"
-#endif
+namespace JSC {
 
-namespace JSC { namespace Wasm {
+enum class Width : uint8_t;
+
+namespace Wasm {
 
 static constexpr unsigned expectedVersionNumber = """ + wasm.expectedVersionNumber + """;
 
 static constexpr unsigned numTypes = """ + str(len(types)) + """;
 
+static constexpr int minTypeValue = """ + str(min_type_value) + """;
 """ + type_definitions + "\n" + """
 """ + type_definitions_except_funcref_externref + """
 #define CREATE_ENUM_VALUE(name, id, ...) name = id,
@@ -226,21 +241,27 @@ enum class TypeKind : int8_t {
 };
 #undef CREATE_ENUM_VALUE
 
-enum class Nullable : bool {
-  No = false,
-  Yes = true,
+#define CREATE_ENUM_VALUE(name, id) name = id,
+enum class PackedType: int8_t {
+    FOR_EACH_WASM_PACKED_TYPE(CREATE_ENUM_VALUE)
 };
+#undef CREATE_ENUM_VALUE
 
 using TypeIndex = uintptr_t;
 
+inline bool typeIndexIsType(TypeIndex index)
+{
+    auto signedIndex = static_cast<std::make_signed<TypeIndex>::type>(index);
+    return (signedIndex < 0) && (signedIndex > minTypeValue);
+}
+
 struct Type {
     TypeKind kind;
-    Nullable nullable;
     TypeIndex index;
 
     bool operator==(const Type& other) const
     {
-        return other.kind == kind && other.nullable == nullable && other.index == index;
+        return other.kind == kind && other.isNullable() == isNullable() && other.index == index;
     }
 
     bool operator!=(const Type& other) const
@@ -250,21 +271,43 @@ struct Type {
 
     bool isNullable() const
     {
-        return static_cast<bool>(nullable);
+        return kind == TypeKind::RefNull || kind == TypeKind::Externref || kind == TypeKind::Funcref;
     }
+
+    void dump(PrintStream& out) const;
+    Width width() const;
 
     // Use Wasm::isFuncref and Wasm::isExternref instead because they check againts all kind of representations of function referenes and external references.
 
     #define CREATE_PREDICATE(name, ...) bool is ## name() const { return kind == TypeKind::name; }
     FOR_EACH_WASM_TYPE_EXCEPT_FUNCREF_AND_EXTERNREF(CREATE_PREDICATE)
     #undef CREATE_PREDICATE
+
+    bool isGP64() const
+    {
+        switch(kind) {
+        case TypeKind::I64:
+        case TypeKind::Funcref:
+        case TypeKind::Externref:
+        case TypeKind::RefNull:
+        case TypeKind::Ref:
+            return true;
+        default:
+            return false;
+        }
+    }
 };
 
 namespace Types
 {
-#define CREATE_CONSTANT(name, id, ...) constexpr Type name = Type{TypeKind::name, Nullable::Yes, 0u};
+#define CREATE_CONSTANT(name, id, ...) constexpr Type name = Type{TypeKind::name, 0u};
 FOR_EACH_WASM_TYPE(CREATE_CONSTANT)
 #undef CREATE_CONSTANT
+#if USE(JSVALUE64)
+constexpr Type IPtr = I64;
+#elif USE(JSVALUE32_64)
+constexpr Type IPtr = I32;
+#endif
 } // namespace Types
 
 #define CREATE_CASE(name, id, ...) case id: return true;
@@ -280,24 +323,35 @@ inline bool isValidTypeKind(Int i)
 }
 #undef CREATE_CASE
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
-#define CREATE_CASE(name, id, b3type, ...) case TypeKind::name: return b3type;
-inline B3::Type toB3Type(Type type)
+#define CREATE_CASE(name, id, ...) case id: return true;
+template <typename Int>
+inline bool isValidPackedType(Int i)
 {
-    switch (type.kind) {
-    FOR_EACH_WASM_TYPE(CREATE_CASE)
+    switch (i) {
+    default: return false;
+    FOR_EACH_WASM_PACKED_TYPE(CREATE_CASE)
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return B3::Void;
+    return false;
 }
 #undef CREATE_CASE
-#endif
 
 #define CREATE_CASE(name, ...) case TypeKind::name: return #name;
 inline const char* makeString(TypeKind kind)
 {
     switch (kind) {
     FOR_EACH_WASM_TYPE(CREATE_CASE)
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+#undef CREATE_CASE
+
+#define CREATE_CASE(name, ...) case PackedType::name: return #name;
+inline const char* makeString(PackedType packedType)
+{
+    switch (packedType) {
+    FOR_EACH_WASM_PACKED_TYPE(CREATE_CASE)
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
@@ -335,8 +389,9 @@ inline TypeKind linearizedToType(int i)
     FOR_EACH_WASM_BINARY_OP(macro) \\
     FOR_EACH_WASM_MEMORY_LOAD_OP(macro) \\
     FOR_EACH_WASM_MEMORY_STORE_OP(macro) \\
+    macro(ExtGC,  0xFB, Oops, 0) \\
     macro(Ext1,  0xFC, Oops, 0) \\
-    macro(GCPrefix,  0xFB, Oops, 0) \\
+    macro(ExtSIMD, 0xFD, Oops, 0) \\
     macro(ExtAtomic, 0xFE, Oops, 0)
 
 #define CREATE_ENUM_VALUE(name, id, ...) name = id,
@@ -369,16 +424,18 @@ enum class StoreOpType : uint8_t {
     FOR_EACH_WASM_MEMORY_STORE_OP(CREATE_ENUM_VALUE)
 };
 
-enum class Ext1OpType : uint8_t {
+enum class Ext1OpType : uint32_t {
     FOR_EACH_WASM_TABLE_OP(CREATE_ENUM_VALUE)
     FOR_EACH_WASM_TRUNC_SATURATED_OP(CREATE_ENUM_VALUE)
 };
 
-enum class GCOpType : uint8_t {
+enum class ExtSIMDOpType : uint32_t;
+
+enum class ExtGCOpType : uint32_t {
     FOR_EACH_WASM_GC_OP(CREATE_ENUM_VALUE)
 };
 
-enum class ExtAtomicOpType : uint8_t {
+enum class ExtAtomicOpType : uint32_t {
     FOR_EACH_WASM_EXT_ATOMIC_LOAD_OP(CREATE_ENUM_VALUE)
     FOR_EACH_WASM_EXT_ATOMIC_STORE_OP(CREATE_ENUM_VALUE)
     FOR_EACH_WASM_EXT_ATOMIC_BINARY_RMW_OP(CREATE_ENUM_VALUE)
@@ -460,6 +517,20 @@ inline const char* makeString(OpType op)
 }
 #undef CREATE_CASE
 
+#define CREATE_CASE(name, ...) case ExtAtomicOpType::name: return #name;
+inline const char* makeString(ExtAtomicOpType op)
+{
+    switch (op) {
+    FOR_EACH_WASM_EXT_ATOMIC_LOAD_OP(CREATE_CASE)
+    FOR_EACH_WASM_EXT_ATOMIC_STORE_OP(CREATE_CASE)
+    FOR_EACH_WASM_EXT_ATOMIC_BINARY_RMW_OP(CREATE_CASE)
+    FOR_EACH_WASM_EXT_ATOMIC_OTHER_OP(CREATE_CASE)
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+#undef CREATE_CASE
+
 } } // namespace JSC::Wasm
 
 namespace WTF {
@@ -470,6 +541,11 @@ inline void printInternal(PrintStream& out, JSC::Wasm::TypeKind kind)
 }
 
 inline void printInternal(PrintStream& out, JSC::Wasm::OpType op)
+{
+    out.print(JSC::Wasm::makeString(op));
+}
+
+inline void printInternal(PrintStream& out, JSC::Wasm::ExtAtomicOpType op)
 {
     out.print(JSC::Wasm::makeString(op));
 }

@@ -62,7 +62,7 @@ enum class CachePolicy : uint8_t;
 // from CachedResourceClient, to get the function calls in case the requested data has arrived.
 // This class also does the actual communication with the loader to obtain the resource from the network.
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CachedResource);
-class CachedResource {
+class CachedResource : public CanMakeWeakPtr<CachedResource> {
     WTF_MAKE_NONCOPYABLE(CachedResource);
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CachedResource);
     friend class MemoryCache;
@@ -141,7 +141,7 @@ public:
 
     WEBCORE_EXPORT void addClient(CachedResourceClient&);
     WEBCORE_EXPORT void removeClient(CachedResourceClient&);
-    bool hasClients() const { return m_clients.computeSize() || m_clientsAwaitingCallback.computeSize(); }
+    bool hasClients() const { return !m_clients.isEmptyIgnoringNullReferences() || !m_clientsAwaitingCallback.isEmptyIgnoringNullReferences(); }
     bool hasClient(const CachedResourceClient& client) { return m_clients.contains(client) || m_clientsAwaitingCallback.contains(client); }
     bool deleteIfPossible();
 
@@ -227,6 +227,7 @@ public:
 
     void setCrossOrigin();
     bool isCrossOrigin() const;
+    bool isCORSCrossOrigin() const;
     bool isCORSSameOrigin() const;
     ResourceResponse::Tainting responseTainting() const { return m_responseTainting; }
 
@@ -234,7 +235,7 @@ public:
 
     const SecurityOrigin* origin() const { return m_origin.get(); }
     SecurityOrigin* origin() { return m_origin.get(); }
-    AtomString initiatorName() const { return m_initiatorName; }
+    AtomString initiatorType() const { return m_initiatorType; }
 
     bool canDelete() const { return !hasClients() && !m_loader && !m_preloadCount && !m_handleCount && !m_resourceToRevalidate && !m_proxyResource; }
     bool hasOneHandle() const { return m_handleCount == 1; }
@@ -257,7 +258,7 @@ public:
     bool isPreloaded() const { return m_preloadCount; }
     void increasePreloadCount() { ++m_preloadCount; }
     void decreasePreloadCount() { ASSERT(m_preloadCount); --m_preloadCount; }
-    bool isLinkPreload() { return m_isLinkPreload; }
+    bool isLinkPreload() const { return m_isLinkPreload; }
     void setLinkPreload() { m_isLinkPreload = true; }
     bool hasUnknownEncoding() { return m_hasUnknownEncoding; }
     void setHasUnknownEncoding(bool hasUnknownEncoding) { m_hasUnknownEncoding = hasUnknownEncoding; }
@@ -370,15 +371,15 @@ private:
 
     ResourceError m_error;
     RefPtr<SecurityOrigin> m_origin;
-    AtomString m_initiatorName;
+    AtomString m_initiatorType;
+
+    RedirectChainCacheStatus m_redirectChainCacheStatus;
 
     unsigned m_encodedSize { 0 };
     unsigned m_decodedSize { 0 };
     unsigned m_accessCount { 0 };
     unsigned m_handleCount { 0 };
     unsigned m_preloadCount { 0 };
-
-    RedirectChainCacheStatus m_redirectChainCacheStatus;
 
     Type m_type : bitWidthOfType;
 

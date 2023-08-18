@@ -59,7 +59,6 @@ public:
     bool isGroup() const override;
     bool isHeading() const override;
     bool isHovered() const override;
-    bool isImageButton() const override;
     bool isInputImage() const override;
     bool isLink() const override;
     bool isMenu() const override;
@@ -68,11 +67,9 @@ public:
     bool isMenuItem() const override;
     bool isMenuRelated() const override;
     bool isMultiSelectable() const override;
-    virtual bool isNativeCheckboxOrRadio() const;
-    bool isNativeImage() const override;
+    bool isNativeImage() const;
     bool isNativeTextControl() const override;
     bool isPasswordField() const override;
-    AccessibilityObject* passwordFieldOrContainingPasswordField() override;
     bool isProgressIndicator() const override;
     bool isSearchField() const override;
     bool isSlider() const override;
@@ -90,6 +87,8 @@ public:
     Node* node() const override { return m_node; }
     Document* document() const override;
 
+    void setFocused(bool) override;
+    bool isFocused() const override;
     bool canSetFocusAttribute() const override;
     unsigned headingLevel() const override;
 
@@ -161,15 +160,19 @@ protected:
         Yes
     };
     AccessibilityRole determineAccessibilityRoleFromNode(TreatStyleFormatGroupAsInline = TreatStyleFormatGroupAsInline::No) const;
-    void addChildren() override;
-
-    bool canHaveChildren() const override;
     AccessibilityRole ariaRoleAttribute() const override;
     virtual AccessibilityRole determineAriaRoleAttribute() const;
     AccessibilityRole remapAriaRoleDueToParent(AccessibilityRole) const;
+
+    void addChildren() override;
+    void clearChildren() override;
+    void updateChildrenIfNecessary() override;
+    bool canHaveChildren() const override;
     bool isDescendantOfBarrenParent() const override;
-    void alterSliderValue(bool increase);
-    void changeValueByStep(bool increase);
+
+    enum class StepAction : bool { Decrement, Increment };
+    void alterRangeValue(StepAction);
+    void changeValueByStep(StepAction);
     // This returns true if it's focusable but it's not content editable and it's not a control or ARIA control.
     bool isGenericFocusableElement() const;
 
@@ -208,10 +211,14 @@ private:
     bool computeAccessibilityIsIgnored() const override;
     bool usesAltTagForTextComputation() const;
     bool roleIgnoresTitle() const;
-    bool postKeyboardKeysForValueChange(bool increase);
-    void setNodeValue(bool increase, float value);
+    bool postKeyboardKeysForValueChange(StepAction);
+    void setNodeValue(StepAction, float);
     bool performDismissAction() final;
     bool hasTextAlternative() const;
+
+    void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
+    bool needsToUpdateChildren() const override { return m_childrenDirty; }
+    void setNeedsToUpdateSubtree() override { m_subtreeDirty = true; }
 
     bool isDescendantOfElementType(const HashSet<QualifiedName>&) const;
 

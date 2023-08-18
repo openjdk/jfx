@@ -25,14 +25,13 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSNumericValue.h"
 #include "CSSTransformComponent.h"
 
 namespace WebCore {
 
 template<typename> class ExceptionOr;
+class CSSFunctionValue;
 class CSSKeywordValue;
 using CSSPerspectiveValue = std::variant<RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
 
@@ -40,6 +39,7 @@ class CSSPerspective : public CSSTransformComponent {
     WTF_MAKE_ISO_ALLOCATED(CSSPerspective);
 public:
     static ExceptionOr<Ref<CSSPerspective>> create(CSSPerspectiveValue);
+    static ExceptionOr<Ref<CSSPerspective>> create(CSSFunctionValue&);
 
     const CSSPerspectiveValue& length() const { return m_length; }
     ExceptionOr<void> setLength(CSSPerspectiveValue);
@@ -48,6 +48,8 @@ public:
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
 
     CSSTransformType getType() const final { return CSSTransformType::Perspective; }
+
+    RefPtr<CSSValue> toCSSValue() const final;
 
 private:
     CSSPerspective(CSSPerspectiveValue);
@@ -62,5 +64,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSPerspective)
     static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Perspective; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

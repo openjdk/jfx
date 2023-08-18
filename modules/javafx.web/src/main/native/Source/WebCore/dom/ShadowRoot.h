@@ -34,6 +34,7 @@
 #include "HTMLVideoElement.h"
 #endif
 #include "ShadowRootMode.h"
+#include "SlotAssignmentMode.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -47,11 +48,14 @@ class ShadowRoot final : public DocumentFragment, public TreeScope {
     WTF_MAKE_ISO_ALLOCATED(ShadowRoot);
 public:
 
-    enum class DelegatesFocus : uint8_t { Yes, No };
+    enum class DelegatesFocus : bool { No, Yes };
+    enum class Cloneable : bool { No, Yes };
+    enum class AvailableToElementInternals : bool { No, Yes };
 
-    static Ref<ShadowRoot> create(Document& document, ShadowRootMode type, DelegatesFocus delegatesFocus = DelegatesFocus::No)
+    static Ref<ShadowRoot> create(Document& document, ShadowRootMode type, SlotAssignmentMode assignmentMode = SlotAssignmentMode::Named,
+        DelegatesFocus delegatesFocus = DelegatesFocus::No, Cloneable cloneable = Cloneable::No, AvailableToElementInternals availableToElementInternals = AvailableToElementInternals::No)
     {
-        return adoptRef(*new ShadowRoot(document, type, delegatesFocus));
+        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, cloneable, availableToElementInternals));
     }
 
     static Ref<ShadowRoot> create(Document& document, std::unique_ptr<SlotAssignment>&& assignment)
@@ -74,38 +78,50 @@ public:
     bool containsFocusedElement() const { return m_containsFocusedElement; }
     void setContainsFocusedElement(bool flag) { m_containsFocusedElement = flag; }
 
+    bool isCloneable() const { return m_isCloneable; }
+
+    bool isAvailableToElementInternals() const { return m_availableToElementInternals; }
+    void setIsAvailableToElementInternals(bool flag) { m_availableToElementInternals = flag; }
+    bool isDeclarativeShadowRoot() const { return m_isDeclarativeShadowRoot; }
+    void setIsDeclarativeShadowRoot(bool flag) { m_isDeclarativeShadowRoot = flag; }
+
     Element* host() const { return m_host.get(); }
-    void setHost(WeakPtr<Element>&& host) { m_host = WTFMove(host); }
+    void setHost(WeakPtr<Element, WeakPtrImplWithEventTargetData>&& host) { m_host = WTFMove(host); }
 
     String innerHTML() const;
     ExceptionOr<void> setInnerHTML(const String&);
 
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
+
     Element* activeElement() const;
 
-    ShadowRootMode mode() const { return m_type; }
-    bool shouldFireSlotchangeEvent() const { return m_type != ShadowRootMode::UserAgent && !m_hasBegunDeletingDetachedChildren; }
+    ShadowRootMode mode() const { return m_mode; }
+    bool shouldFireSlotchangeEvent() const { return m_mode != ShadowRootMode::UserAgent && !m_hasBegunDeletingDetachedChildren; }
 
     void removeAllEventListeners() override;
 
+    SlotAssignmentMode slotAssignmentMode() const { return m_slotAssignmentMode; }
     HTMLSlotElement* findAssignedSlot(const Node&);
 
     void renameSlotElement(HTMLSlotElement&, const AtomString& oldName, const AtomString& newName);
     void addSlotElementByName(const AtomString&, HTMLSlotElement&);
     void removeSlotElementByName(const AtomString&, HTMLSlotElement&, ContainerNode& oldParentOfRemovedTree);
+    void slotManualAssignmentDidChange(HTMLSlotElement&, Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>& previous, Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>& current);
+    void didRemoveManuallyAssignedNode(HTMLSlotElement&, const Node&);
     void slotFallbackDidChange(HTMLSlotElement&);
     void resolveSlotsBeforeNodeInsertionOrRemoval();
     void willRemoveAllChildren(ContainerNode&);
     void willRemoveAssignedNode(const Node&);
 
     void didRemoveAllChildrenOfShadowHost();
-    void didChangeDefaultSlot();
+    void didMutateTextNodesOfShadowHost();
     void hostChildElementDidChange(const Element&);
     void hostChildElementDidChangeSlotAttribute(Element&, const AtomString& oldValue, const AtomString& newValue);
 
-    const Vector<WeakPtr<Node>>* assignedNodesForSlot(const HTMLSlotElement&);
+    const Vector<WeakPtr<Node, WeakPtrImplWithEventTargetData>>* assignedNodesForSlot(const HTMLSlotElement&);
 
     void moveShadowRootToNewParentScope(TreeScope&, Document&);
-    void moveShadowRootToNewDocument(Document&);
+    void moveShadowRootToNewDocument(Document& oldDocument, Document& newDocument);
 
     using PartMappings = HashMap<AtomString, Vector<AtomString, 1>>;
     const PartMappings& partMappings() const;
@@ -118,25 +134,27 @@ public:
     Vector<RefPtr<WebAnimation>> getAnimations();
 
 private:
-    ShadowRoot(Document&, ShadowRootMode, DelegatesFocus);
+    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, Cloneable, AvailableToElementInternals);
     ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
 
     bool childTypeAllowed(NodeType) const override;
-
-    Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void removedFromAncestor(RemovalType, ContainerNode& insertionPoint) override;
 
     void childrenChanged(const ChildChange&) override;
 
-    bool m_resetStyleInheritance { false };
-    bool m_hasBegunDeletingDetachedChildren { false };
-    bool m_delegatesFocus { false };
-    bool m_containsFocusedElement { false };
-    ShadowRootMode m_type { ShadowRootMode::UserAgent };
+    bool m_resetStyleInheritance : 1 { false };
+    bool m_hasBegunDeletingDetachedChildren : 1 { false };
+    bool m_delegatesFocus : 1 { false };
+    bool m_isCloneable : 1 { false };
+    bool m_containsFocusedElement : 1 { false };
+    bool m_availableToElementInternals : 1 { false };
+    bool m_isDeclarativeShadowRoot : 1 { false };
+    ShadowRootMode m_mode { ShadowRootMode::UserAgent };
+    SlotAssignmentMode m_slotAssignmentMode { SlotAssignmentMode::Named };
 
-    WeakPtr<Element> m_host;
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_host;
     RefPtr<StyleSheetList> m_styleSheetList;
 
     std::unique_ptr<Style::Scope> m_styleScope;

@@ -27,7 +27,7 @@
 #include "config.h"
 #include "GBMDevice.h"
 
-#if USE(LIBGBM)
+#if USE(GBM)
 
 #include <fcntl.h>
 #include <gbm.h>
@@ -55,7 +55,7 @@ GBMDevice::GBMDevice()
         drmDevicePtr devices[64];
         memset(devices, 0, sizeof(devices));
 
-        int numDevices = drmGetDevices2(0, devices, WTF_ARRAY_LENGTH(devices));
+        int numDevices = drmGetDevices2(0, devices, std::size(devices));
         if (numDevices <= 0)
             return;
 
@@ -86,4 +86,4 @@ GBMDevice::~GBMDevice()
 
 } // namespace WebCore
 
-#endif // USE(LIBGBM)
+#endif // USE(GBM)

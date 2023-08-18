@@ -41,6 +41,7 @@
 #include "Timer.h"
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/MainThread.h>
+#include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -124,7 +125,7 @@ void PageDebugger::runEventLoopWhilePausedInternal()
 
     m_page.incrementNestedRunLoopCount();
 
-    while (!doneProcessingDebuggerEvents()) {
+    while (!m_doneProcessingDebuggerEvents) {
         if (!platformShouldContinueRunningEventLoopWhilePaused())
             break;
     }
@@ -147,8 +148,12 @@ void PageDebugger::reportException(JSGlobalObject* state, JSC::Exception* except
 void PageDebugger::setJavaScriptPaused(const PageGroup& pageGroup, bool paused)
 {
     for (auto& page : pageGroup.pages()) {
-        for (auto* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext())
-            setJavaScriptPaused(*frame, paused);
+        for (AbstractFrame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            if (!localFrame)
+                continue;
+            setJavaScriptPaused(*localFrame, paused);
+        }
 
         if (auto* frontendClient = page.inspectorController().inspectorFrontendClient()) {
             if (paused)
