@@ -1116,7 +1116,8 @@ public class FocusTest {
         scene.setRoot(
             node1 = new N(
                 node2 = new N()
-            ));
+            )
+        );
 
         node3._setFocused(true);
         assertNotFocusWithin(node1);
@@ -1139,10 +1140,12 @@ public class FocusTest {
         scene.setRoot(
             node1 = new N(
                 node2 = new N()
-            ));
+            )
+        );
 
         node3 = new N(
-            node4 = new N());
+            node4 = new N()
+        );
 
         node3._setFocused(true);
         node4._setFocused(true);
