@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -602,5 +602,19 @@ public class MenuItemTest {
 
         // Assert that key combination does not remain in the scene's list of accelerators
         assertFalse(scene.getAccelerators().containsKey(KeyCombination.keyCombination("alt+1")));
+    }
+
+    @Test
+    public void hasProperties() {
+        assertFalse(menuItem.hasProperties());
+
+        menuItem.getProperties().put(null, null);
+        assertTrue(menuItem.hasProperties());
+
+        menuItem.getProperties().remove(null);
+        assertFalse(menuItem.hasProperties());
+
+        menuItem.getProperties().put("yo", "yo");
+        assertTrue(menuItem.hasProperties());
     }
 }
