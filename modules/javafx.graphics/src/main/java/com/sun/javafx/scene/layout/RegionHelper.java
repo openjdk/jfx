@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,10 +112,6 @@ public class RegionHelper extends ParentHelper {
         regionAccessor = newAccessor;
     }
 
-    public static double snapFloorX(Region r, double x) {
-        return regionAccessor.snapFloorX(r, x);
-    }
-
     public interface RegionAccessor {
         void doUpdatePeer(Node node);
         NGNode doCreatePeer(Node node);
@@ -125,7 +121,6 @@ public class RegionHelper extends ParentHelper {
         void doNotifyLayoutBoundsChanged(Node node);
         void doPickNodeLocal(Node node, PickRay localPickRay,
                 PickResultChooser result);
-        public double snapFloorX(Region r, double x);
     }
 
 }

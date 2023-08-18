@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import javafx.beans.NamedArg;
-import com.sun.javafx.scene.layout.RegionHelper;
 
 
 /**
@@ -102,7 +101,7 @@ public abstract class ResizeFeaturesBase<S> {
           double min = c.snapSizeX(col.getMinWidth());
           // max = snapFloor()
           // TODO replace with public API once available
-          double max = RegionHelper.snapFloorX(c, col.getMaxWidth());
+          double max = c.snapInnerSpaceX(col.getMaxWidth());
           if (width < min) {
               width = min;
           } else if (width > max) {

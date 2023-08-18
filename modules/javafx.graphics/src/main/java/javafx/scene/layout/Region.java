@@ -181,11 +181,6 @@ public class Region extends Parent {
                     PickResultChooser result) {
                 ((Region) node).doPickNodeLocal(localPickRay, result);
             }
-
-            @Override
-            public double snapFloorX(Region r, double x) {
-                return r.snapFloorX(x);
-            }
         });
     }
 
@@ -1759,31 +1754,6 @@ public class Region extends Parent {
      */
     public double snapSizeY(double value) {
         return snapSizeY(value, isSnapToPixel());
-    }
-
-    /**
-     * If this region's snapToPixel property is true, returns a value floored
-     * to the nearest pixel in the horizontal direction, else returns the
-     * same value.
-     * @param value the size value to be snapped
-     * @return value ceiled to nearest pixel
-     * @since TODO
-     */
-    // TODO this method, as well as snapFloorY() should be made public
-    private double snapFloorX(double value) {
-        return snapFloorX(value, isSnapToPixel());
-    }
-
-    /**
-     * If snapToPixel is true, then the value is floor'd using Math.floor.
-     * Otherwise, the value is simply returned.
-     *
-     * @param value The value that needs to be snapped
-     * @param snapToPixel Whether to snap to pixel
-     * @return value either as passed in or floor'd based on snapToPixel
-     */
-    private double snapFloorX(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.floor(value, getSnapScaleX()) : value;
     }
 
     /**
