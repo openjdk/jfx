@@ -100,7 +100,6 @@ public abstract class ResizeFeaturesBase<S> {
           // min = snapCeil()
           double min = c.snapSizeX(col.getMinWidth());
           // max = snapFloor()
-          // TODO replace with public API once available
           double max = c.snapInnerSpaceX(col.getMaxWidth());
           if (width < min) {
               width = min;
@@ -114,6 +113,7 @@ public abstract class ResizeFeaturesBase<S> {
               width = c.snapPositionX(width);
           }
       }
-      col.doSetWidth(width);
+      // can set width directly because all constraints have been checked
+      col.setWidth(width);
   }
 }
