@@ -528,9 +528,8 @@ public class MenuItem implements EventTarget, Styleable {
     }
 
     /**
-     * Tests if MenuItem has properties.
-     * @return true if node has properties.
-     *
+     * Tests if this menu item has properties.
+     * @return {@code true} if this menu item has properties.
      * @since 22
      */
      public boolean hasProperties() {

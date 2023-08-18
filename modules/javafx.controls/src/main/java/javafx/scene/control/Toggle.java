@@ -106,8 +106,9 @@ public interface Toggle {
     ObservableMap<Object, Object> getProperties();
 
     /**
-     * Tests if Toggle has properties.
-     * @return true if node has properties.
+     * Tests if this toggle has properties.
+     * @return {@code true} if this toggle has properties.
+     * @since 22
      */
     boolean hasProperties();
 }
