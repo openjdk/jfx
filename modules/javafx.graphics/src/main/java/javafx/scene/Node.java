@@ -405,7 +405,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public abstract class Node implements EventTarget, Styleable {
+public abstract class Node implements EventTarget, Styleable, ContainsProperties {
 
     /*
      * Store the singleton instance of the NodeHelper subclass corresponding
@@ -883,7 +883,8 @@ public abstract class Node implements EventTarget, Styleable {
      *          developer should be mindful of clearing the map or overriding its values. These entries are not removed automatically
      *          if the node is removed from the layout manager, so unused entries can exist throughout the life of the node.
      */
-     public final ObservableMap<Object, Object> getProperties() {
+    @Override
+    public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
             properties = FXCollections.observableMap(new HashMap<>());
         }
@@ -894,7 +895,8 @@ public abstract class Node implements EventTarget, Styleable {
      * Tests if Node has properties.
      * @return true if node has properties.
      */
-     public boolean hasProperties() {
+    @Override
+    public final boolean hasProperties() {
         return properties != null && !properties.isEmpty();
     }
 

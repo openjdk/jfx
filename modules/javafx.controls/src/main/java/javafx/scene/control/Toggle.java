@@ -28,6 +28,7 @@ package javafx.scene.control;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableMap;
+import javafx.scene.ContainsProperties;
 
 /**
  * Represents a control that can be toggled between selected and non-selected
@@ -37,7 +38,7 @@ import javafx.collections.ObservableMap;
  * selected at any one time.
  * @since JavaFX 2.0
  */
-public interface Toggle {
+public interface Toggle extends ContainsProperties {
 
     /**
      * Returns The {@link ToggleGroup} to which this {@code Toggle} belongs.
@@ -95,20 +96,4 @@ public interface Toggle {
      *          {@code Node.getUserData()}.
      */
     void setUserData(Object value);
-
-    /**
-     * Returns an observable map of properties on this toggle for use primarily
-     * by application developers.
-     *
-     * @return An observable map of properties on this toggle for use primarily
-     * by application developers
-     */
-    ObservableMap<Object, Object> getProperties();
-
-    /**
-     * Tests if this toggle has properties.
-     * @return {@code true} if this toggle has properties.
-     * @since 22
-     */
-    boolean hasProperties();
 }

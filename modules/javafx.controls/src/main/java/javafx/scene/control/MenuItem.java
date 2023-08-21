@@ -25,40 +25,39 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.IDProperty;
-import javafx.collections.ObservableSet;
-import javafx.css.PseudoClass;
-import javafx.css.Styleable;
-import javafx.css.CssMetaData;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
+import javafx.scene.ContainsProperties;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.control.skin.ContextMenuSkin;
 import javafx.scene.input.KeyCombination;
-
+import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.scene.control.ContextMenuContent;
-import javafx.scene.control.skin.ContextMenuSkin;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.collections.ObservableMap;
-import javafx.scene.Parent;
 
 /**
  * <p>
@@ -94,7 +93,7 @@ MenuBar menuBar = new MenuBar(menu);</code></pre>
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public class MenuItem implements EventTarget, Styleable {
+public class MenuItem implements EventTarget, Styleable, ContainsProperties {
 
     /* *************************************************************************
      *                                                                         *
@@ -520,7 +519,8 @@ public class MenuItem implements EventTarget, Styleable {
      * @return an observable map of properties on this menu item for use primarily
      * by application developers
      */
-    public ObservableMap<Object, Object> getProperties() {
+    @Override
+    public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
             properties = FXCollections.observableMap(new HashMap<>());
         }
@@ -532,7 +532,8 @@ public class MenuItem implements EventTarget, Styleable {
      * @return {@code true} if this menu item has properties.
      * @since 22
      */
-     public boolean hasProperties() {
+    @Override
+    public final boolean hasProperties() {
         return properties != null && !properties.isEmpty();
     }
 
