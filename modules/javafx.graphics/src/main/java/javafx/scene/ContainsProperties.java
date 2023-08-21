@@ -37,14 +37,13 @@ public interface ContainsProperties {
 
     /**
      * Returns an observable map of properties on this object for use primarily by application developers.
-     *
      * @return an observable map of properties on this node for use primarily by application developers
      */
     public ObservableMap<Object, Object> getProperties();
 
     /**
-     * Tests if Node has properties.
-     * @return true if node has properties.
+     * Tests if this object has properties.
+     * @return true if this object has properties.
      */
     public boolean hasProperties();
 }
