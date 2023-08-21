@@ -26,7 +26,6 @@ package test.javafx.scene.control;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
 import java.util.Set;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
@@ -81,7 +80,6 @@ import javafx.scene.control.cell.ComboBoxTreeTableCell;
 import javafx.scene.control.cell.ProgressBarTreeTableCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.DoubleField;
 import com.sun.javafx.scene.control.InputField;
@@ -97,8 +95,9 @@ import com.sun.javafx.scene.control.skin.FXVK;
  */
 public class ControlPropertiesTest {
 
-    private static final boolean FAIL_FAST = true;
+    private static final boolean FAIL_FAST = !true;
 
+    // list all descendants of Control class.
     // or perhaps collect all classes in a package as described here:
     // https://stackoverflow.com/questions/28678026/how-can-i-get-all-class-files-in-a-specific-package-in-java
     private Set<Class> allControlClasses() {
@@ -177,59 +176,45 @@ public class ControlPropertiesTest {
 
     private void check(Class cls) {
         Method[] methods = cls.getMethods();
-
-        HashMap<String, Method> h = new HashMap<>();
-        for (Method m: methods) {
-            h.put(m.getName(), m);
-        }
-
         for (Method m: methods) {
             String name = m.getName();
-            if (name.endsWith("Property")) {
-                int mod = m.getModifiers();
-                if (Modifier.isPublic(mod)) {
-                    if (FAIL_FAST) {
-                        Assertions.assertTrue(Modifier.isFinal(mod), err(m, "is not final"));
-                    } else {
-                        if (!Modifier.isFinal(mod)) {
-                            System.err.println(err(m, "is not final"));
-                        }
-                    }
-                }
+            if (name.endsWith("Property") && (m.getParameterCount() == 0)) {
+                checkModifiers(m);
 
                 String propName = name.substring(0, name.length() - "Property".length());
-                check(h, propName, "get", 0);
-                check(h, propName, "set", 1);
-                check(h, propName, "is", 0);
+                check(methods, propName, "get", 0);
+                check(methods, propName, "set", 1);
+                check(methods, propName, "is", 0);
             }
         }
     }
 
-    private void check(HashMap<String, Method> map, String name, String prefix, int numArgs) {
+    private void check(Method[] methods, String propName, String prefix, int numArgs) {
         StringBuilder sb = new StringBuilder(64);
         sb.append(prefix);
-        sb.append(Character.toUpperCase(name.charAt(0)));
-        sb.append(name, 1, name.length());
+        sb.append(Character.toUpperCase(propName.charAt(0)));
+        sb.append(propName, 1, propName.length());
 
-        String s = sb.toString();
-        Method m = map.get(s);
-        if (m != null) {
+        String name = sb.toString();
+        for (Method m: methods) {
             if (m.getParameterCount() == numArgs) {
-                int mod = m.getModifiers();
-                if (Modifier.isPublic(mod)) {
-                    if (FAIL_FAST) {
-                        Assertions.assertTrue(Modifier.isFinal(mod), err(m, "is not final"));
-                    } else {
-                        if (!Modifier.isFinal(mod)) {
-                            System.err.println(err(m, "is not final"));
-                        }
-                    }
+                if (name.equals(m.getName())) {
+                    checkModifiers(m);
+                    return;
                 }
             }
         }
     }
 
-    private String err(Method method, String message) {
-        return method + " " + message;
+    private void checkModifiers(Method m) {
+        int mod = m.getModifiers();
+        if (Modifier.isPublic(mod) && !Modifier.isFinal(mod)) {
+            String msg = m + " is not final.";
+            if (FAIL_FAST) {
+                throw new AssertionError(msg);
+            } else {
+                System.err.println(msg);
+            }
+        }
     }
 }
