@@ -134,9 +134,9 @@ public class TextCharacterIndexTest {
 
     private void mouseClick(double x, double y) {
         Util.runAndWait(() -> {
-            Window st = scene.getWindow();
-            robot.mouseMove((int) (st.getX() + scene.getX() + x),
-                    (int) (st.getY() + scene.getY() + y));
+            Window w = scene.getWindow();
+            robot.mouseMove((int) (w.getX() + scene.getX() + x),
+                    (int) (w.getY() + scene.getY() + y));
             robot.mouseClick(MouseButton.PRIMARY);
         });
     }

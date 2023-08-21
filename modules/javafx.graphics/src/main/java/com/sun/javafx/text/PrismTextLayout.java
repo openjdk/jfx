@@ -779,7 +779,6 @@ public class PrismTextLayout implements TextLayout {
         return index;
     }
 
-
     private boolean copyCache() {
         int align = flags & ALIGN_MASK;
         int boundsType = flags & BOUNDS_MASK;
