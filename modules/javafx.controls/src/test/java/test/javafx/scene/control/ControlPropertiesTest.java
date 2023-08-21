@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
+import java.util.Set;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -80,8 +81,8 @@ import javafx.scene.control.cell.ComboBoxTreeTableCell;
 import javafx.scene.control.cell.ProgressBarTreeTableCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.DoubleField;
 import com.sun.javafx.scene.control.InputField;
 import com.sun.javafx.scene.control.IntegerField;
@@ -95,12 +96,13 @@ import com.sun.javafx.scene.control.skin.FXVK;
  * Perhaps the test should scan classpath and find all the Controls automagically.
  */
 public class ControlPropertiesTest {
+
     private static final boolean FAIL_FAST = true;
 
     // or perhaps collect all classes in a package as described here:
     // https://stackoverflow.com/questions/28678026/how-can-i-get-all-class-files-in-a-specific-package-in-java
-    private Class[] allControlClasses() {
-        return new Class[] {
+    private Set<Class> allControlClasses() {
+        return Set.of(
             Accordion.class,
             ButtonBar.class,
             ButtonBase.class,
@@ -160,7 +162,7 @@ public class ControlPropertiesTest {
             TreeTableRow.class,
             TreeTableView.class,
             WebColorField.class
-        };
+        );
     }
 
     /**
@@ -187,7 +189,7 @@ public class ControlPropertiesTest {
                 int mod = m.getModifiers();
                 if (Modifier.isPublic(mod)) {
                     if (FAIL_FAST) {
-                        Assert.assertTrue(err(m, "is not final"), Modifier.isFinal(mod));
+                        Assertions.assertTrue(Modifier.isFinal(mod), err(m, "is not final"));
                     } else {
                         if (!Modifier.isFinal(mod)) {
                             System.err.println(err(m, "is not final"));
@@ -216,7 +218,7 @@ public class ControlPropertiesTest {
                 int mod = m.getModifiers();
                 if (Modifier.isPublic(mod)) {
                     if (FAIL_FAST) {
-                        Assert.assertTrue(err(m, "is not final"), Modifier.isFinal(mod));
+                        Assertions.assertTrue(Modifier.isFinal(mod), err(m, "is not final"));
                     } else {
                         if (!Modifier.isFinal(mod)) {
                             System.err.println(err(m, "is not final"));
