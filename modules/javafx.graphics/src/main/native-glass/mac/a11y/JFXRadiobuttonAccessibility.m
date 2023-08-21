@@ -23,44 +23,17 @@
  * questions.
  */
 
-#import "JFXButtonAccessibility.h"
+#import "JFXRadiobuttonAccessibility.h"
 
-/*
- * Implementation of the accessibility peer for the pushbutton role
- */
-@implementation JFXButtonAccessibility
+@implementation JFXRadiobuttonAccessibility
 - (NSAccessibilityRole)accessibilityRole
 {
-    return NSAccessibilityButtonRole;
+    return NSAccessibilityRadioButtonRole;
 }
 
-- (NSString *)accessibilityLabel
+- (id) accessibilityValue
 {
-    return [super accessibilityLabel];
-}
-
-- (BOOL)accessibilityPerformPress
-{
-    return [self performAccessibleAction:@"AXPress"];
-}
-
-- (NSRect)accessibilityFrame
-{
-    return [super accessibilityFrame];
-}
-
-- (id)accessibilityParent
-{
-    return [super accessibilityParent];
-}
-
-- (id)accessibilityValue
-{
-    if ([self accessibilityRole] == NSAccessibilityButtonRole) {
-        return NULL;
-    } else {
-        return [super accessibilityValue];
-    }
+    return [super accessibilityValue];
 }
 
 @end
