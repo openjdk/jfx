@@ -199,6 +199,17 @@ public interface TextLayout {
      */
     public boolean setTabSize(int spaces);
 
+    /**
+     * Calculates character index and insertion index for the given coordinates
+     * and maps to {@link Hit} class.
+     *
+     * @param x x coordinate value.
+     * @param y y coordinate value.
+     * @param text text for which HitInfo needs to be calculated.
+     *             It is expected to be null in the case of {@link javafx.scene.text.TextFlow}
+     *             and non-null in the case of {@link javafx.scene.text.Text}
+     * @return returns a {@link Hit} object containing character index, insertion index and position of cursor on the character.
+     */
     public Hit getHitInfo(float x, float y, String text);
 
     public PathElement[] getCaretShape(int offset, boolean isLeading,

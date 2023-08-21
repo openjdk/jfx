@@ -751,32 +751,34 @@ public class PrismTextLayout implements TextLayout {
     private int getLineIndex(float y, String text) {
         int index = 0;
         float bottom = 0;
-        boolean isTextPresent = text == null ? true : false;
-        boolean isPresent = true;
+        /* Initializing textFound as true when text is null
+         * because when this function is called for TextFlow text parameter will be null */
+        boolean textFound = (text == null);
+
         int lineCount = getLineCount();
         while (index < lineCount) {
             if (text != null) {
-                for (TextRun r: lines[index].runs) {
-                    if (r.getTextSpan() == null) {
-                        isTextPresent = true;
-                        break;
-                    } else if (r.getTextSpan().getText().equals(text)) {
-                        if (isPresent) {
-                            bottom = 0;
-                            isPresent = false;
-                        }
-                        isTextPresent = true;
+                for (TextRun r : lines[index].runs) {
+                    if (r.getTextSpan() == null || r.getTextSpan().getText().equals(text)) {
+                        /* Span will present only for Rich Text.
+                         * Hence making textFound as true */
+                        textFound = true;
                         break;
                     }
                 }
             }
             bottom += lines[index].getBounds().getHeight() + spacing;
-            if (index + 1 == lineCount) bottom -= lines[index].getLeading();
-            if (bottom > y && isTextPresent) break;
+            if (index + 1 == lineCount) {
+                bottom -= lines[index].getLeading();
+            }
+            if (bottom > y && textFound) {
+                break;
+            }
             index++;
         }
         return index;
     }
+
 
     private boolean copyCache() {
         int align = flags & ALIGN_MASK;

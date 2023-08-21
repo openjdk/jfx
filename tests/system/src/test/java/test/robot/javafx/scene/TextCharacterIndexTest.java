@@ -40,6 +40,7 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.Window;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -133,8 +134,9 @@ public class TextCharacterIndexTest {
 
     private void mouseClick(double x, double y) {
         Util.runAndWait(() -> {
-            robot.mouseMove((int) (scene.getWindow().getX() + scene.getX() + x),
-                    (int) (scene.getWindow().getY() + scene.getY() + y));
+            Window st = scene.getWindow();
+            robot.mouseMove((int) (st.getX() + scene.getX() + x),
+                    (int) (st.getY() + scene.getY() + y));
             robot.mouseClick(MouseButton.PRIMARY);
         });
     }
@@ -150,7 +152,6 @@ public class TextCharacterIndexTest {
             textOne.setFont(new Font(48));
             textTwo = new Text("This is Text");
             textTwo.setFont(new Font(48));
-            textFlow.getChildren().clear();
             textFlow.getChildren().setAll(textOne, textTwo);
         });
     }
@@ -161,7 +162,6 @@ public class TextCharacterIndexTest {
             textOne.setFont(new Font(48));
             textTwo = new Text("😊😇💙🦋🏁🔥");
             textTwo.setFont(new Font(48));
-            textFlow.getChildren().clear();
             textFlow.getChildren().setAll(textOne, textTwo);
         });
     }
@@ -172,7 +172,6 @@ public class TextCharacterIndexTest {
             textOne.setFont(new Font(48));
             textTwo = new Text("Text");
             textTwo.setFont(new Font(48));
-            textFlow.getChildren().clear();
             textFlow.getChildren().setAll(textOne, textTwo);
         });
     }
@@ -183,7 +182,6 @@ public class TextCharacterIndexTest {
             textOne.setFont(new Font(48));
             textTwo = new Text("😊💙🦋🏁🔥");
             textTwo.setFont(new Font(48));
-            textFlow.getChildren().clear();
             textFlow.getChildren().setAll(textOne, textTwo);
         });
     }
@@ -194,7 +192,6 @@ public class TextCharacterIndexTest {
             textOne.setFont(new Font(48));
             textTwo = new Text("😊💙🦋🏁🔥");
             textTwo.setFont(new Font(48));
-            textFlow.getChildren().clear();
             textFlow.getChildren().setAll(textOne, textTwo);
         });
     }
@@ -205,7 +202,6 @@ public class TextCharacterIndexTest {
             textOne.setFont(new Font(48));
             textTwo = new Text("😊💙🦋🏁🔥");
             textTwo.setFont(new Font(48));
-            textFlow.getChildren().clear();
             textFlow.getChildren().setAll(textOne, textTwo);
         });
     }
@@ -216,7 +212,6 @@ public class TextCharacterIndexTest {
             textOne.setFont(new Font(48));
             textTwo = new Text("This is Text");
             textTwo.setFont(new Font(48));
-            textFlow.getChildren().clear();
             textFlow.getChildren().setAll(textOne, textTwo);
         });
     }
@@ -398,9 +393,6 @@ public class TextCharacterIndexTest {
             isSurrogatePair = Character.isSurrogate(t.getText().charAt(charIndex));
         }
 
-        // String testString = textOne.getText();
-        // testString += textTwo.getText();
-        // isSurrogatePair = Character.isSurrogate(testString.charAt(charIndex));
         Point2D point = new Point2D(event.getX(), event.getY());
         HitInfo textFlowHitInfo = textFlow.hitTest(point);
         textFlowCharIndex = textFlowHitInfo.getCharIndex();
