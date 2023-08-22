@@ -50,7 +50,7 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.scene.ContainsProperties;
+import javafx.scene.ApplicationPropertiesProvider;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.skin.ContextMenuSkin;
@@ -93,7 +93,7 @@ MenuBar menuBar = new MenuBar(menu);</code></pre>
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public class MenuItem implements EventTarget, Styleable, ContainsProperties {
+public class MenuItem implements EventTarget, Styleable, ApplicationPropertiesProvider {
 
     /* *************************************************************************
      *                                                                         *

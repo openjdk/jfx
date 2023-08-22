@@ -405,7 +405,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * @since JavaFX 2.0
  */
 @IDProperty("id")
-public abstract class Node implements EventTarget, Styleable, ContainsProperties {
+public abstract class Node implements EventTarget, Styleable, ApplicationPropertiesProvider {
 
     /*
      * Store the singleton instance of the NodeHelper subclass corresponding

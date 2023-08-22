@@ -30,10 +30,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
 
 /**
- * Indicates that the implementor contains Properties.
+ * Provides access to properties for use primarily by application developers.
  * @since 22
  */
-public interface ContainsProperties {
+public interface ApplicationPropertiesProvider {
 
     /**
      * Returns an observable map of properties on this object for use primarily by application developers.
@@ -43,7 +43,7 @@ public interface ContainsProperties {
 
     /**
      * Tests if this object has properties.
-     * @return true if this object has properties.
+     * @return {@code true} if this object has properties.
      */
     public boolean hasProperties();
 }
