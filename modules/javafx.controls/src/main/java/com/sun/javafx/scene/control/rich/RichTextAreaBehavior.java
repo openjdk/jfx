@@ -65,16 +65,6 @@ import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
  * RichTextArea Behavior.
- *
- * BehaviorBase and InputMap are not public, so had to invent my own.
- * 
- * Behavior:
- * - maps key bindings to action tags
- * - maps action tags to functions (default implementation)
- * - function: provides default implementation
- * Control:
- * - allows for re-mapping of an action tag to an alternative implementation
- * - executes code associated with an action tag (default or alternative)
  */
 public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
     private final RichTextArea control;
@@ -121,91 +111,91 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
         setOnKeyEventExit(() -> vflow.setSuppressBlink(false));
 
         // functions
-        func(RichTextArea.BACKSPACE, this::backspace);
-        func(RichTextArea.COPY, this::copy);
-        func(RichTextArea.CUT, this::cut);
-        func(RichTextArea.DELETE, this::delete);
-        func(RichTextArea.DELETE_PARAGRAPH, this::deleteParagraph);
-        func(RichTextArea.INSERT_LINE_BREAK, this::insertLineBreak);
-        func(RichTextArea.INSERT_TAB, this::insertTab);
-        func(RichTextArea.MOVE_DOCUMENT_END, this::moveDocumentEnd);
-        func(RichTextArea.MOVE_DOCUMENT_START, this::moveDocumentStart);
-        func(RichTextArea.MOVE_DOWN, this::moveDown);
-        func(RichTextArea.MOVE_LEFT, this::moveLeft);
-        func(RichTextArea.MOVE_PARAGRAPH_END, this::moveParagraphEnd);
-        func(RichTextArea.MOVE_PARAGRAPH_START, this::moveParagraphStart);
-        func(RichTextArea.MOVE_RIGHT, this::moveRight);
-        func(RichTextArea.MOVE_UP, this::moveUp);
-        func(RichTextArea.MOVE_WORD_NEXT, this::nextWord);
-        func(RichTextArea.MOVE_WORD_NEXT_END, this::endOfNextWord);
-        func(RichTextArea.MOVE_WORD_LEFT, this::leftWord);
-        func(RichTextArea.MOVE_WORD_PREVIOUS, this::previousWord);
-        func(RichTextArea.MOVE_WORD_RIGHT, this::rightWord);
-        func(RichTextArea.PAGE_DOWN, this::pageDown);
-        func(RichTextArea.PAGE_UP, this::pageUp);
-        func(RichTextArea.PASTE, this::paste);
-        func(RichTextArea.PASTE_PLAIN_TEXT, this::pastePlainText);
-        func(RichTextArea.REDO, this::redo);
-        func(RichTextArea.SELECT_ALL, this::selectAll);
-        func(RichTextArea.SELECT_DOCUMENT_END, this::selectDocumentEnd);
-        func(RichTextArea.SELECT_DOCUMENT_START, this::selectDocumentStart);
-        func(RichTextArea.SELECT_DOWN, this::selectDown);
-        func(RichTextArea.SELECT_LEFT, this::selectLeft);
-        func(RichTextArea.SELECT_PAGE_DOWN, this::selectPageDown);
-        func(RichTextArea.SELECT_PAGE_UP, this::selectPageUp);
-        func(RichTextArea.SELECT_PARAGRAPH, this::selectParagraph);
-        func(RichTextArea.SELECT_RIGHT, this::selectRight);
-        func(RichTextArea.SELECT_UP, this::selectUp);
-        func(RichTextArea.SELECT_WORD, this::selectWord);
-        func(RichTextArea.SELECT_WORD_LEFT, this::selectLeftWord);
-        func(RichTextArea.SELECT_WORD_NEXT, this::selectNextWord);
-        func(RichTextArea.SELECT_WORD_NEXT_END, this::selectEndOfNextWord);
-        func(RichTextArea.SELECT_WORD_PREVIOUS, this::selectPreviousWord);
-        func(RichTextArea.SELECT_WORD_RIGHT, this::selectRightWord);
-        func(RichTextArea.UNDO, this::undo);
+        regFunc(RichTextArea.BACKSPACE, this::backspace);
+        regFunc(RichTextArea.COPY, this::copy);
+        regFunc(RichTextArea.CUT, this::cut);
+        regFunc(RichTextArea.DELETE, this::delete);
+        regFunc(RichTextArea.DELETE_PARAGRAPH, this::deleteParagraph);
+        regFunc(RichTextArea.INSERT_LINE_BREAK, this::insertLineBreak);
+        regFunc(RichTextArea.INSERT_TAB, this::insertTab);
+        regFunc(RichTextArea.MOVE_DOCUMENT_END, this::moveDocumentEnd);
+        regFunc(RichTextArea.MOVE_DOCUMENT_START, this::moveDocumentStart);
+        regFunc(RichTextArea.MOVE_DOWN, this::moveDown);
+        regFunc(RichTextArea.MOVE_LEFT, this::moveLeft);
+        regFunc(RichTextArea.MOVE_PARAGRAPH_END, this::moveParagraphEnd);
+        regFunc(RichTextArea.MOVE_PARAGRAPH_START, this::moveParagraphStart);
+        regFunc(RichTextArea.MOVE_RIGHT, this::moveRight);
+        regFunc(RichTextArea.MOVE_UP, this::moveUp);
+        regFunc(RichTextArea.MOVE_WORD_NEXT, this::nextWord);
+        regFunc(RichTextArea.MOVE_WORD_NEXT_END, this::endOfNextWord);
+        regFunc(RichTextArea.MOVE_WORD_LEFT, this::leftWord);
+        regFunc(RichTextArea.MOVE_WORD_PREVIOUS, this::previousWord);
+        regFunc(RichTextArea.MOVE_WORD_RIGHT, this::rightWord);
+        regFunc(RichTextArea.PAGE_DOWN, this::pageDown);
+        regFunc(RichTextArea.PAGE_UP, this::pageUp);
+        regFunc(RichTextArea.PASTE, this::paste);
+        regFunc(RichTextArea.PASTE_PLAIN_TEXT, this::pastePlainText);
+        regFunc(RichTextArea.REDO, this::redo);
+        regFunc(RichTextArea.SELECT_ALL, this::selectAll);
+        regFunc(RichTextArea.SELECT_DOCUMENT_END, this::selectDocumentEnd);
+        regFunc(RichTextArea.SELECT_DOCUMENT_START, this::selectDocumentStart);
+        regFunc(RichTextArea.SELECT_DOWN, this::selectDown);
+        regFunc(RichTextArea.SELECT_LEFT, this::selectLeft);
+        regFunc(RichTextArea.SELECT_PAGE_DOWN, this::selectPageDown);
+        regFunc(RichTextArea.SELECT_PAGE_UP, this::selectPageUp);
+        regFunc(RichTextArea.SELECT_PARAGRAPH, this::selectParagraph);
+        regFunc(RichTextArea.SELECT_RIGHT, this::selectRight);
+        regFunc(RichTextArea.SELECT_UP, this::selectUp);
+        regFunc(RichTextArea.SELECT_WORD, this::selectWord);
+        regFunc(RichTextArea.SELECT_WORD_LEFT, this::selectLeftWord);
+        regFunc(RichTextArea.SELECT_WORD_NEXT, this::selectNextWord);
+        regFunc(RichTextArea.SELECT_WORD_NEXT_END, this::selectEndOfNextWord);
+        regFunc(RichTextArea.SELECT_WORD_PREVIOUS, this::selectPreviousWord);
+        regFunc(RichTextArea.SELECT_WORD_RIGHT, this::selectRightWord);
+        regFunc(RichTextArea.UNDO, this::undo);
         // keys
-        key(KeyCode.BACK_SPACE, RichTextArea.BACKSPACE);
-        key(KeyBinding2.shortcut(KeyCode.C), RichTextArea.COPY);        
-        key(KeyBinding2.shortcut(KeyCode.X), RichTextArea.CUT);
-        key(KeyCode.DELETE, RichTextArea.DELETE);
-        key(KeyBinding2.shortcut(KeyCode.D), RichTextArea.DELETE_PARAGRAPH);
-        key(KeyCode.ENTER, RichTextArea.INSERT_LINE_BREAK);
-        key(KeyCode.TAB, RichTextArea.INSERT_TAB);
-        key(KeyCode.LEFT, RichTextArea.MOVE_LEFT);
-        key(KeyCode.RIGHT, RichTextArea.MOVE_RIGHT);
-        key(KeyCode.UP, RichTextArea.MOVE_UP);
-        key(KeyCode.DOWN, RichTextArea.MOVE_DOWN);
-        key(KeyCode.HOME, RichTextArea.MOVE_PARAGRAPH_START);
-        key(KeyCode.END, RichTextArea.MOVE_PARAGRAPH_END);
-        key(KeyBinding2.with(KeyCode.HOME).control().notForMac().build(), RichTextArea.MOVE_DOCUMENT_START);
-        key(KeyBinding2.with(KeyCode.UP).shortcut().forMac().build(), RichTextArea.MOVE_DOCUMENT_START);
-        key(KeyBinding2.with(KeyCode.END).control().notForMac().build(), RichTextArea.MOVE_DOCUMENT_END);
-        key(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), RichTextArea.MOVE_DOCUMENT_END);
-        key(KeyBinding2.with(KeyCode.LEFT).control().notForMac().build(), RichTextArea.MOVE_WORD_LEFT);
-        key(KeyBinding2.with(KeyCode.LEFT).option().forMac().build(), RichTextArea.MOVE_WORD_LEFT);
-        key(KeyBinding2.with(KeyCode.RIGHT).control().notForMac().build(), RichTextArea.MOVE_WORD_RIGHT);
-        key(KeyBinding2.with(KeyCode.RIGHT).option().forMac().build(), RichTextArea.MOVE_WORD_RIGHT);
-        key(KeyCode.PAGE_DOWN, RichTextArea.PAGE_DOWN);
-        key(KeyCode.PAGE_UP, RichTextArea.PAGE_UP);
-        key(KeyBinding2.shortcut(KeyCode.V), RichTextArea.PASTE);
-        key(KeyBinding2.with(KeyCode.Z).shift().command().forMac().build(), RichTextArea.REDO);
-        key(KeyBinding2.with(KeyCode.Y).control().notForMac().build(), RichTextArea.REDO);
-        key(KeyBinding2.shortcut(KeyCode.A), RichTextArea.SELECT_ALL);
-        key(KeyBinding2.shift(KeyCode.LEFT), RichTextArea.SELECT_LEFT);
-        key(KeyBinding2.shift(KeyCode.RIGHT), RichTextArea.SELECT_RIGHT);
-        key(KeyBinding2.shift(KeyCode.UP), RichTextArea.SELECT_UP);
-        key(KeyBinding2.shift(KeyCode.DOWN), RichTextArea.SELECT_DOWN);
-        key(KeyBinding2.shift(KeyCode.PAGE_UP), RichTextArea.SELECT_PAGE_UP);
-        key(KeyBinding2.shift(KeyCode.PAGE_DOWN), RichTextArea.SELECT_PAGE_DOWN);
-        key(KeyBinding2.with(KeyCode.LEFT).shift().control().notForMac().build(), RichTextArea.SELECT_WORD_LEFT);
-        key(KeyBinding2.with(KeyCode.LEFT).shift().option().forMac().build(), RichTextArea.SELECT_WORD_LEFT);
-        key(KeyBinding2.with(KeyCode.RIGHT).shift().control().notForMac().build(), RichTextArea.SELECT_WORD_RIGHT);
-        key(KeyBinding2.with(KeyCode.RIGHT).shift().option().forMac().build(), RichTextArea.SELECT_WORD_RIGHT);
-        key(KeyBinding2.with(KeyCode.HOME).control().shift().notForMac().build(), RichTextArea.SELECT_DOCUMENT_START);
-        key(KeyBinding2.with(KeyCode.UP).shift().shortcut().forMac().build(), RichTextArea.SELECT_DOCUMENT_START);
-        key(KeyBinding2.with(KeyCode.END).control().shift().notForMac().build(), RichTextArea.SELECT_DOCUMENT_END);
-        key(KeyBinding2.with(KeyCode.DOWN).shift().shortcut().forMac().build(), RichTextArea.SELECT_DOCUMENT_END);
-        key(KeyBinding2.shortcut(KeyCode.Z), RichTextArea.UNDO);
+        regKey(KeyCode.BACK_SPACE, RichTextArea.BACKSPACE);
+        regKey(KeyBinding2.shortcut(KeyCode.C), RichTextArea.COPY);        
+        regKey(KeyBinding2.shortcut(KeyCode.X), RichTextArea.CUT);
+        regKey(KeyCode.DELETE, RichTextArea.DELETE);
+        regKey(KeyBinding2.shortcut(KeyCode.D), RichTextArea.DELETE_PARAGRAPH);
+        regKey(KeyCode.ENTER, RichTextArea.INSERT_LINE_BREAK);
+        regKey(KeyCode.TAB, RichTextArea.INSERT_TAB);
+        regKey(KeyCode.LEFT, RichTextArea.MOVE_LEFT);
+        regKey(KeyCode.RIGHT, RichTextArea.MOVE_RIGHT);
+        regKey(KeyCode.UP, RichTextArea.MOVE_UP);
+        regKey(KeyCode.DOWN, RichTextArea.MOVE_DOWN);
+        regKey(KeyCode.HOME, RichTextArea.MOVE_PARAGRAPH_START);
+        regKey(KeyCode.END, RichTextArea.MOVE_PARAGRAPH_END);
+        regKey(KeyBinding2.with(KeyCode.HOME).control().notForMac().build(), RichTextArea.MOVE_DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.UP).shortcut().forMac().build(), RichTextArea.MOVE_DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.END).control().notForMac().build(), RichTextArea.MOVE_DOCUMENT_END);
+        regKey(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), RichTextArea.MOVE_DOCUMENT_END);
+        regKey(KeyBinding2.with(KeyCode.LEFT).control().notForMac().build(), RichTextArea.MOVE_WORD_LEFT);
+        regKey(KeyBinding2.with(KeyCode.LEFT).option().forMac().build(), RichTextArea.MOVE_WORD_LEFT);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).control().notForMac().build(), RichTextArea.MOVE_WORD_RIGHT);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).option().forMac().build(), RichTextArea.MOVE_WORD_RIGHT);
+        regKey(KeyCode.PAGE_DOWN, RichTextArea.PAGE_DOWN);
+        regKey(KeyCode.PAGE_UP, RichTextArea.PAGE_UP);
+        regKey(KeyBinding2.shortcut(KeyCode.V), RichTextArea.PASTE);
+        regKey(KeyBinding2.with(KeyCode.Z).shift().command().forMac().build(), RichTextArea.REDO);
+        regKey(KeyBinding2.with(KeyCode.Y).control().notForMac().build(), RichTextArea.REDO);
+        regKey(KeyBinding2.shortcut(KeyCode.A), RichTextArea.SELECT_ALL);
+        regKey(KeyBinding2.shift(KeyCode.LEFT), RichTextArea.SELECT_LEFT);
+        regKey(KeyBinding2.shift(KeyCode.RIGHT), RichTextArea.SELECT_RIGHT);
+        regKey(KeyBinding2.shift(KeyCode.UP), RichTextArea.SELECT_UP);
+        regKey(KeyBinding2.shift(KeyCode.DOWN), RichTextArea.SELECT_DOWN);
+        regKey(KeyBinding2.shift(KeyCode.PAGE_UP), RichTextArea.SELECT_PAGE_UP);
+        regKey(KeyBinding2.shift(KeyCode.PAGE_DOWN), RichTextArea.SELECT_PAGE_DOWN);
+        regKey(KeyBinding2.with(KeyCode.LEFT).shift().control().notForMac().build(), RichTextArea.SELECT_WORD_LEFT);
+        regKey(KeyBinding2.with(KeyCode.LEFT).shift().option().forMac().build(), RichTextArea.SELECT_WORD_LEFT);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).shift().control().notForMac().build(), RichTextArea.SELECT_WORD_RIGHT);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).shift().option().forMac().build(), RichTextArea.SELECT_WORD_RIGHT);
+        regKey(KeyBinding2.with(KeyCode.HOME).control().shift().notForMac().build(), RichTextArea.SELECT_DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.UP).shift().shortcut().forMac().build(), RichTextArea.SELECT_DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.END).control().shift().notForMac().build(), RichTextArea.SELECT_DOCUMENT_END);
+        regKey(KeyBinding2.with(KeyCode.DOWN).shift().shortcut().forMac().build(), RichTextArea.SELECT_DOCUMENT_END);
+        regKey(KeyBinding2.shortcut(KeyCode.Z), RichTextArea.UNDO);
 
         Pane c = vflow.getContentPane();
         c.addEventFilter(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
@@ -214,7 +204,7 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
         c.addEventFilter(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
         c.addEventFilter(ScrollEvent.ANY, this::handleScrollEvent);
 
-        map(KeyEvent.KEY_TYPED, this::handleKeyTyped);
+        addHandler(KeyEvent.KEY_TYPED, this::handleKeyTyped);
         
         // TODO there is no way to override the default behavior, such as clear selection or select word under cursor,
         // except for adding event filter
