@@ -73,6 +73,7 @@ import static javafx.stage.WindowEvent.WINDOW_HIDDEN;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.embed.swing.SwingEvents;
 import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
+import jdk.swing.interop.LightweightFrameWrapper;
 
 /**
  * This class is used to embed a Swing content into a JavaFX application.
@@ -381,7 +382,10 @@ public class SwingNode extends Node {
             swNodeIOP.setContent(lwFrame, swNodeIOP.createSwingNodeContent(content, this));
             swNodeIOP.setVisible(lwFrame, true);
 
-            Disposer.addRecord(this, swNodeIOP.createSwingNodeDisposer(lwFrame));
+            WeakReference<LightweightFrameWrapper> lwFramePtr =
+		    new WeakReference<LightweightFrameWrapper>(
+                                             (LightweightFrameWrapper)lwFrame);
+            Disposer.addRecord(this, swNodeIOP.createSwingNodeDisposer(lwFramePtr));
 
             if (getScene() != null) {
                 notifyNativeHandle(getScene().getWindow());
