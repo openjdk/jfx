@@ -30,6 +30,7 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.GraphicsConfiguration;
 import java.awt.Graphics2D;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
@@ -38,7 +39,6 @@ import java.awt.Insets;
 import java.awt.EventQueue;
 import java.awt.SecondaryLoop;
 import java.awt.GraphicsEnvironment;
-import java.awt.GraphicsConfiguration;
 import java.awt.Rectangle;
 import java.awt.event.AWTEventListener;
 import java.awt.event.ComponentEvent;
@@ -604,6 +604,15 @@ public class JFXPanel extends JComponent {
         super.processComponentEvent(e);
     }
 
+    private AffineTransform getCurrentTransform() {
+        GraphicsConfiguration config = getGraphicsConfiguration();
+        if (config == null) {
+            config = GraphicsEnvironment.getLocalGraphicsEnvironment().
+                     getDefaultScreenDevice().getDefaultConfiguration();
+        }
+        return config.getDefaultTransform();
+    }
+
     // called on EDT only
     private void updateComponentSize() {
         int oldWidth = pWidth;
@@ -617,15 +626,10 @@ public class JFXPanel extends JComponent {
         // what JavaFX embedded scenes/stages are ready to
         pWidth = Math.max(0, getWidth());
         pHeight = Math.max(0, getHeight());
-        double newScaleFactorX = scaleFactorX;
-        double newScaleFactorY = scaleFactorY;
         Graphics g = getGraphics();
-        newScaleFactorX = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                          getDefaultScreenDevice().getDefaultConfiguration().
-                          getDefaultTransform().getScaleX();
-        newScaleFactorY = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                          getDefaultScreenDevice().getDefaultConfiguration().
-                          getDefaultTransform().getScaleY();
+        AffineTransform trnsForm = getCurrentTransform();
+        double newScaleFactorX = trnsForm.getScaleX();
+        double newScaleFactorY = trnsForm.getScaleY();
         if (oldWidth == 0 && oldHeight == 0 && pWidth == 0 && pHeight == 0) {
             return;
         }
@@ -818,14 +822,9 @@ public class JFXPanel extends JComponent {
             }
             gg.drawImage(pixelsIm, 0, 0, pWidth, pHeight, null);
 
-            double newScaleFactorX = scaleFactorX;
-            double newScaleFactorY = scaleFactorY;
-            newScaleFactorX = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                              getDefaultScreenDevice().getDefaultConfiguration().
-                              getDefaultTransform().getScaleX();
-            newScaleFactorY = GraphicsEnvironment.getLocalGraphicsEnvironment().
-                              getDefaultScreenDevice().getDefaultConfiguration().
-                              getDefaultTransform().getScaleY();
+            AffineTransform trnsForm = getCurrentTransform();
+            double newScaleFactorX = trnsForm.getScaleX();
+            double newScaleFactorY = trnsForm.getScaleY();
             if (scaleFactorX != newScaleFactorX || scaleFactorY != newScaleFactorY) {
                 createResizePixelBuffer(newScaleFactorX, newScaleFactorY);
                 // The scene will request repaint.
