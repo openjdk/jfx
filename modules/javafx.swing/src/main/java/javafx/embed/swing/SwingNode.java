@@ -383,7 +383,7 @@ public class SwingNode extends Node {
             swNodeIOP.setVisible(lwFrame, true);
 
             WeakReference<LightweightFrameWrapper> lwFramePtr =
-		    new WeakReference<LightweightFrameWrapper>(
+                    new WeakReference<LightweightFrameWrapper>(
                                              (LightweightFrameWrapper)lwFrame);
             Disposer.addRecord(this, swNodeIOP.createSwingNodeDisposer(lwFramePtr));
 
