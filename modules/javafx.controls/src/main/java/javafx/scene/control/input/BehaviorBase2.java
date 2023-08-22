@@ -91,13 +91,13 @@ public abstract class BehaviorBase2<C extends Control> {
     
     /**
      * Maps a function to the function tag.
-     * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
+     * This method will not override any previous mapping added by {@link #regFunc(FunctionTag,Runnable)}.
      *
      * @param tag the function tag
      * @param function the function
      */
-    protected void func(FunctionTag tag, Runnable function) {
-        getInputMap2().func(this, tag, function);
+    protected void regFunc(FunctionTag tag, Runnable function) {
+        getInputMap2().regFunc(this, tag, function);
     }
 
     /**
@@ -108,19 +108,19 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param k the key binding, can be null (TODO or KB.NA)
      * @param tag the function tag
      */
-    protected void key(KeyBinding2 k, FunctionTag tag) {
-        getInputMap2().key(this, k, tag);
+    protected void regKey(KeyBinding2 k, FunctionTag tag) {
+        getInputMap2().regKey(this, k, tag);
     }
 
     /**
      * Maps a key binding to the specified function tag.
-     * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #regKey(KeyBinding2,FunctionTag)}.
      *
      * @param code the key code to construct a {@link KeyBinding2}
      * @param tag the function tag
      */
-    protected void key(KeyCode code, FunctionTag tag) {
-        getInputMap2().key(this, code, tag);
+    protected void regKey(KeyCode code, FunctionTag tag) {
+        getInputMap2().regKey(this, code, tag);
     }
 
     /**
@@ -132,8 +132,8 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param type the event type
      * @param handler the event handler
      */
-    protected <T extends Event> void map(EventType<T> type, EventHandler<T> handler) {
-        getInputMap2().map(this, type, true, false, handler);
+    protected <T extends Event> void addHandler(EventType<T> type, EventHandler<T> handler) {
+        getInputMap2().addHandler(this, type, true, false, handler);
     }
     
     /**
@@ -145,8 +145,8 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void map(EventType<T> type, boolean consume, EventHandler<T> handler) {
-        getInputMap2().map(this, type, consume, false, handler);
+    protected <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
+        getInputMap2().addHandler(this, type, consume, false, handler);
     }
     
     /**
@@ -159,8 +159,8 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param type the event type
      * @param handler the event handler
      */
-    protected <T extends Event> void mapTail(EventType<T> type, EventHandler<T> handler) {
-        getInputMap2().map(this, type, true, true, handler);
+    protected <T extends Event> void addHandlerTail(EventType<T> type, EventHandler<T> handler) {
+        getInputMap2().addHandler(this, type, true, true, handler);
     }
     
     /**
@@ -173,13 +173,13 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void mapTail(EventType<T> type, boolean consume, EventHandler<T> handler) {
-        getInputMap2().map(this, type, consume, true, handler);
+    protected <T extends Event> void addHandlerTail(EventType<T> type, boolean consume, EventHandler<T> handler) {
+        getInputMap2().addHandler(this, type, consume, true, handler);
     }
 
     /**
      * Adds an event handler for the specific event criteria, in the context of this Behavior.
-     * This is a more specific version of {@link #map(EventType,EventHandler)} method.
+     * This is a more specific version of {@link #addHandler(EventType,EventHandler)} method.
      * The handler will get removed in {@link#dispose()} method.
      *
      * @param <T> the actual event type
@@ -187,8 +187,8 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void map(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
-        getInputMap2().map(this, criteria, consume, false, handler);
+    protected <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
+        getInputMap2().addHandler(this, criteria, consume, false, handler);
     }
 
     /**
@@ -201,8 +201,12 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void mapTail(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
-        getInputMap2().map(this, criteria, consume, true, handler);
+    protected <T extends Event> void addHandlerTail(
+        EventCriteria<T> criteria,
+        boolean consume,
+        EventHandler<T> handler
+    ) {
+        getInputMap2().addHandler(this, criteria, consume, true, handler);
     }
 
     /**

@@ -49,11 +49,11 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
     public void install(Skin<ComboBoxBase<T>> skin) {
         super.install(skin);
 
-        func(ComboBox.SELECT_PREV, this::selectPrevious);
-        func(ComboBox.SELECT_NEXT, this::selectNext);
+        regFunc(ComboBox.SELECT_PREV, this::selectPrevious);
+        regFunc(ComboBox.SELECT_NEXT, this::selectNext);
 
-        key(KeyCode.UP, ComboBox.SELECT_PREV);
-        key(KeyCode.DOWN, ComboBox.SELECT_NEXT);
+        regKey(KeyCode.UP, ComboBox.SELECT_PREV);
+        regKey(KeyCode.DOWN, ComboBox.SELECT_NEXT);
     }
 
     /***************************************************************************

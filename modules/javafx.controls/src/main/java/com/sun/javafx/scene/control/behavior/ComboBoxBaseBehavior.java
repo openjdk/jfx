@@ -69,17 +69,17 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase2<ComboBoxBase<T>> {
     public void install(Skin<ComboBoxBase<T>> skin) {
         super.install(skin);
 
-        map(KeyBinding2.with(KeyCode.SPACE).build(), true, this::keyPressed);
-        map(KeyBinding2.withRelease(KeyCode.SPACE).build(), true, this::keyReleased);
-        map(KeyBinding2.with(KeyCode.ENTER).build(), false, this::keyPressed);
-        map(KeyBinding2.withRelease(KeyCode.ENTER).build(), false, this::keyReleased);
-        map(KeyBinding2.with(KeyCode.ESCAPE).build(), true, this::cancelEdit);
-        map(KeyBinding2.with(KeyCode.F10).build(), true, this::forwardToParent);
+        addHandler(KeyBinding2.with(KeyCode.SPACE).build(), true, this::keyPressed);
+        addHandler(KeyBinding2.withRelease(KeyCode.SPACE).build(), true, this::keyReleased);
+        addHandler(KeyBinding2.with(KeyCode.ENTER).build(), false, this::keyPressed);
+        addHandler(KeyBinding2.withRelease(KeyCode.ENTER).build(), false, this::keyReleased);
+        addHandler(KeyBinding2.with(KeyCode.ESCAPE).build(), true, this::cancelEdit);
+        addHandler(KeyBinding2.with(KeyCode.F10).build(), true, this::forwardToParent);
         
-        map(MouseEvent.MOUSE_PRESSED, this::mousePressed);
-        map(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
-        map(MouseEvent.MOUSE_ENTERED, this::mouseEntered);
-        map(MouseEvent.MOUSE_EXITED, this::mouseExited);
+        addHandler(MouseEvent.MOUSE_PRESSED, this::mousePressed);
+        addHandler(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
+        addHandler(MouseEvent.MOUSE_ENTERED, this::mouseEntered);
+        addHandler(MouseEvent.MOUSE_EXITED, this::mouseExited);
 
         // ComboBoxBase also cares about focus
         getNode().focusedProperty().addListener(focusListener);
@@ -89,11 +89,11 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase2<ComboBoxBase<T>> {
             tlFocus = new TwoLevelFocusComboBehavior(getNode()); // needs to be last.
         }
 
-        func(ComboBoxBase.TOGGLE_POPUP, this::togglePopup);
+        regFunc(ComboBoxBase.TOGGLE_POPUP, this::togglePopup);
 
-        key(KeyBinding2.withRelease(KeyCode.F4).build(), ComboBoxBase.TOGGLE_POPUP);
-        key(KeyBinding2.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
-        key(KeyBinding2.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
+        regKey(KeyBinding2.withRelease(KeyCode.F4).build(), ComboBoxBase.TOGGLE_POPUP);
+        regKey(KeyBinding2.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
+        regKey(KeyBinding2.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
     }
 
     @Override public void dispose() {
