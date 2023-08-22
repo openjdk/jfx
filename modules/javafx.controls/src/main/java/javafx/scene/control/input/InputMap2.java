@@ -179,7 +179,13 @@ public class InputMap2<C extends Control> {
         }
     }
 
-    <T extends Event> void map(BehaviorBase2 behavior, EventType<T> type, boolean consume, boolean tail, EventHandler<T> handler) {
+    <T extends Event> void addHandler(
+        BehaviorBase2 behavior,
+        EventType<T> type,
+        boolean consume,
+        boolean tail,
+        EventHandler<T> handler
+    ) {
         if (consume) {
             extendHandlers(behavior, type, tail, new EventHandler<T>() {
                 @Override
@@ -193,7 +199,13 @@ public class InputMap2<C extends Control> {
         }
     }
     
-    <T extends Event> void map(BehaviorBase2 behavior, EventCriteria<T> criteria, boolean consume, boolean tail, EventHandler<T> handler) {
+    <T extends Event> void addHandler(
+        BehaviorBase2 behavior,
+        EventCriteria<T> criteria,
+        boolean consume,
+        boolean tail,
+        EventHandler<T> handler
+    ) {
         EventType<T> type = criteria.getEventType();
         extendHandlers(behavior, type, tail, new EventHandler<T>() {
             @Override
@@ -208,7 +220,12 @@ public class InputMap2<C extends Control> {
         });
     }
 
-    private <T extends Event> void extendHandlers(BehaviorBase2 behavior, EventType<T> t, boolean tail, EventHandler<T> h) {
+    private <T extends Event> void extendHandlers(
+        BehaviorBase2 behavior,
+        EventType<T> t,
+        boolean tail,
+        EventHandler<T> h
+    ) {
         Objects.nonNull(behavior);
         Entry en = addListenerIfNeeded(t);
 
@@ -224,7 +241,7 @@ public class InputMap2<C extends Control> {
      * @param tag the function tag
      * @param function the function
      */
-    public void func(FunctionTag tag, Runnable function) {
+    public void regFunc(FunctionTag tag, Runnable function) {
         Objects.requireNonNull(tag, "function tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
         addFunction(tag, function, null);
@@ -232,13 +249,13 @@ public class InputMap2<C extends Control> {
 
     /**
      * Maps a function to the function tag, for use by the behavior.
-     * This method will not override any previous mapping added by {@link #func(FunctionTag,Runnable)}.
+     * This method will not override any previous mapping added by {@link #regFunc(FunctionTag,Runnable)}.
      *
      * @param behavior the owner
      * @param tag the function tag
      * @param function the function
      */
-    void func(BehaviorBase2 behavior, FunctionTag tag, Runnable function) {
+    void regFunc(BehaviorBase2 behavior, FunctionTag tag, Runnable function) {
         Objects.requireNonNull(behavior, "behavior must not be null");
         Objects.requireNonNull(tag, "tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
@@ -252,7 +269,7 @@ public class InputMap2<C extends Control> {
      * @param k the key binding
      * @param tag the function tag
      */
-    public void key(KeyBinding2 k, FunctionTag tag) {
+    public void regKey(KeyBinding2 k, FunctionTag tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
         addBinding(k, tag, null);
@@ -261,13 +278,13 @@ public class InputMap2<C extends Control> {
     /**
      * Maps a key binding to the specified function tag, for use by the behavior.
      * A null key binding will result in no change to this input map.
-     * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #regKey(KeyBinding2,FunctionTag)}.
      *
      * @param behavior the owner
      * @param k the key binding, can be null TODO variant: KeyBinding.NA
      * @param tag the function tag
      */
-    void key(BehaviorBase2 behavior, KeyBinding2 k, FunctionTag tag) {
+    void regKey(BehaviorBase2 behavior, KeyBinding2 k, FunctionTag tag) {
         if (k == null) {
             return;
         }
@@ -278,14 +295,14 @@ public class InputMap2<C extends Control> {
 
     /**
      * Maps a key binding to the specified function tag, as a part of the behavior.
-     * This method will not override a user mapping added by {@link #key(KeyBinding2,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #regKey(KeyBinding2,FunctionTag)}.
      *
      * @param behavior the owner
      * @param code the key code to construct a {@link KeyBinding2}
      * @param tag the function tag
      */
-    void key(BehaviorBase2 behavior, KeyCode code, FunctionTag tag) {
-        key(behavior, KeyBinding2.of(code), tag);
+    void regKey(BehaviorBase2 behavior, KeyCode code, FunctionTag tag) {
+        regKey(behavior, KeyBinding2.of(code), tag);
     }
 
     private void addFunction(FunctionTag tag, Runnable function, BehaviorBase2 behavior) {

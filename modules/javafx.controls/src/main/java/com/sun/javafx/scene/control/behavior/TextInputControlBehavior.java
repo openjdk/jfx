@@ -111,110 +111,110 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         c.textProperty().addListener(textListener);
 
-        func(TextInputControl.COPY, c::copy);
-        func(TextInputControl.CUT, this::cut);
-        func(TextInputControl.DELETE_FROM_LINE_START, this::deleteFromLineStart);
-        func(TextInputControl.DELETE_NEXT_CHAR, this::deleteNextChar);
-        func(TextInputControl.DELETE_NEXT_WORD, this::deleteNextWord);
-        func(TextInputControl.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
-        func(TextInputControl.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
-        func(TextInputControl.DESELECT, c::deselect);
-        func(TextInputControl.DOCUMENT_START, c::home);
-        func(TextInputControl.DOCUMENT_END, c::end);
-        func(TextInputControl.LEFT, () -> nextCharacterVisually(false));
-        func(TextInputControl.LEFT_WORD, this::leftWord);
-        func(TextInputControl.PASTE, this::paste);
-        func(TextInputControl.REDO, this::redo);
-        func(TextInputControl.RIGHT, () -> nextCharacterVisually(true));
-        func(TextInputControl.RIGHT_WORD, this::rightWord);
-        func(TextInputControl.SELECT_ALL, this::selectAll);
-        func(TextInputControl.SELECT_END, this::selectEnd);
-        func(TextInputControl.SELECT_END_EXTEND, this::selectEndExtend);
-        func(TextInputControl.SELECT_HOME, this::selectHome);
-        func(TextInputControl.SELECT_HOME_EXTEND, this::selectHomeExtend);
-        func(TextInputControl.SELECT_LEFT, this::selectLeft);
-        func(TextInputControl.SELECT_LEFT_WORD, this::selectLeftWord);
-        func(TextInputControl.SELECT_RIGHT, this::selectRight);
-        func(TextInputControl.SELECT_RIGHT_WORD, this::selectRightWord);
-        func(TextInputControl.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
-        func(TextInputControl.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
-        func(TextInputControl.UNDO, this::undo);
+        regFunc(TextInputControl.COPY, c::copy);
+        regFunc(TextInputControl.CUT, this::cut);
+        regFunc(TextInputControl.DELETE_FROM_LINE_START, this::deleteFromLineStart);
+        regFunc(TextInputControl.DELETE_NEXT_CHAR, this::deleteNextChar);
+        regFunc(TextInputControl.DELETE_NEXT_WORD, this::deleteNextWord);
+        regFunc(TextInputControl.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
+        regFunc(TextInputControl.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
+        regFunc(TextInputControl.DESELECT, c::deselect);
+        regFunc(TextInputControl.DOCUMENT_START, c::home);
+        regFunc(TextInputControl.DOCUMENT_END, c::end);
+        regFunc(TextInputControl.LEFT, () -> nextCharacterVisually(false));
+        regFunc(TextInputControl.LEFT_WORD, this::leftWord);
+        regFunc(TextInputControl.PASTE, this::paste);
+        regFunc(TextInputControl.REDO, this::redo);
+        regFunc(TextInputControl.RIGHT, () -> nextCharacterVisually(true));
+        regFunc(TextInputControl.RIGHT_WORD, this::rightWord);
+        regFunc(TextInputControl.SELECT_ALL, this::selectAll);
+        regFunc(TextInputControl.SELECT_END, this::selectEnd);
+        regFunc(TextInputControl.SELECT_END_EXTEND, this::selectEndExtend);
+        regFunc(TextInputControl.SELECT_HOME, this::selectHome);
+        regFunc(TextInputControl.SELECT_HOME_EXTEND, this::selectHomeExtend);
+        regFunc(TextInputControl.SELECT_LEFT, this::selectLeft);
+        regFunc(TextInputControl.SELECT_LEFT_WORD, this::selectLeftWord);
+        regFunc(TextInputControl.SELECT_RIGHT, this::selectRight);
+        regFunc(TextInputControl.SELECT_RIGHT_WORD, this::selectRightWord);
+        regFunc(TextInputControl.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
+        regFunc(TextInputControl.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
+        regFunc(TextInputControl.UNDO, this::undo);
 
         // common key bindings
-        key(KeyBinding2.shortcut(KeyCode.C), TextInputControl.COPY);
-        key(KeyBinding2.of(KeyCode.COPY), TextInputControl.COPY);
-        key(KeyBinding2.shortcut(KeyCode.INSERT), TextInputControl.COPY);
-        key(KeyBinding2.of(KeyCode.CUT), TextInputControl.CUT);
-        key(KeyBinding2.shortcut(KeyCode.X), TextInputControl.CUT);
-        key(KeyBinding2.of(KeyCode.DELETE), TextInputControl.DELETE_NEXT_CHAR);
-        key(KeyBinding2.of(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_CHAR);
-        key(KeyBinding2.with(KeyCode.BACK_SPACE).shift().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        key(KeyBinding2.of(KeyCode.HOME), TextInputControl.DOCUMENT_START);
-        key(KeyBinding2.with(KeyCode.HOME).shortcut().build(), TextInputControl.DOCUMENT_START);
-        key(KeyBinding2.of(KeyCode.UP), TextInputControl.DOCUMENT_START);
-        key(KeyBinding2.of(KeyCode.DOWN), TextInputControl.DOCUMENT_END);
-        key(KeyBinding2.of(KeyCode.END), TextInputControl.DOCUMENT_END);
-        key(KeyBinding2.with(KeyCode.END).shortcut().build(), TextInputControl.DOCUMENT_END);
-        key(KeyBinding2.of(KeyCode.LEFT), TextInputControl.LEFT);
-        key(KeyBinding2.of(KeyCode.PASTE), TextInputControl.PASTE);
-        key(KeyBinding2.shift(KeyCode.INSERT), TextInputControl.PASTE);
-        key(KeyBinding2.shortcut(KeyCode.V), TextInputControl.PASTE);
-        key(KeyBinding2.of(KeyCode.RIGHT), TextInputControl.RIGHT);
-        key(KeyBinding2.shift(KeyCode.DOWN), TextInputControl.SELECT_END);
-        key(KeyBinding2.with(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
-        key(KeyBinding2.with(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
-        key(KeyBinding2.shift(KeyCode.UP), TextInputControl.SELECT_HOME);
-        key(KeyBinding2.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
-        key(KeyBinding2.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
-        key(KeyBinding2.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
-        key(KeyBinding2.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
-        key(KeyBinding2.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
-        key(KeyBinding2.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
-        key(KeyBinding2.shortcut(KeyCode.Z), TextInputControl.UNDO);
+        regKey(KeyBinding2.shortcut(KeyCode.C), TextInputControl.COPY);
+        regKey(KeyBinding2.of(KeyCode.COPY), TextInputControl.COPY);
+        regKey(KeyBinding2.shortcut(KeyCode.INSERT), TextInputControl.COPY);
+        regKey(KeyBinding2.of(KeyCode.CUT), TextInputControl.CUT);
+        regKey(KeyBinding2.shortcut(KeyCode.X), TextInputControl.CUT);
+        regKey(KeyBinding2.of(KeyCode.DELETE), TextInputControl.DELETE_NEXT_CHAR);
+        regKey(KeyBinding2.of(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_CHAR);
+        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).shift().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        regKey(KeyBinding2.of(KeyCode.HOME), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.HOME).shortcut().build(), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding2.of(KeyCode.UP), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding2.of(KeyCode.DOWN), TextInputControl.DOCUMENT_END);
+        regKey(KeyBinding2.of(KeyCode.END), TextInputControl.DOCUMENT_END);
+        regKey(KeyBinding2.with(KeyCode.END).shortcut().build(), TextInputControl.DOCUMENT_END);
+        regKey(KeyBinding2.of(KeyCode.LEFT), TextInputControl.LEFT);
+        regKey(KeyBinding2.of(KeyCode.PASTE), TextInputControl.PASTE);
+        regKey(KeyBinding2.shift(KeyCode.INSERT), TextInputControl.PASTE);
+        regKey(KeyBinding2.shortcut(KeyCode.V), TextInputControl.PASTE);
+        regKey(KeyBinding2.of(KeyCode.RIGHT), TextInputControl.RIGHT);
+        regKey(KeyBinding2.shift(KeyCode.DOWN), TextInputControl.SELECT_END);
+        regKey(KeyBinding2.with(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
+        regKey(KeyBinding2.with(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
+        regKey(KeyBinding2.shift(KeyCode.UP), TextInputControl.SELECT_HOME);
+        regKey(KeyBinding2.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
+        regKey(KeyBinding2.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
+        regKey(KeyBinding2.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        regKey(KeyBinding2.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        regKey(KeyBinding2.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
+        regKey(KeyBinding2.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
+        regKey(KeyBinding2.shortcut(KeyCode.Z), TextInputControl.UNDO);
 
         // macOS key bindings
-        key(KeyBinding2.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
-        key(KeyBinding2.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        key(KeyBinding2.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        key(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.DOCUMENT_START);
-        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
-        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
-        key(KeyBinding2.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
-        key(KeyBinding2.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
-        key(KeyBinding2.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
-        key(KeyBinding2.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
-        key(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
-        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
-        key(KeyBinding2.with(KeyCode.END).shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
-        key(KeyBinding2.with(KeyCode.LEFT).shift().alt().forMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        key(KeyBinding2.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
+        regKey(KeyBinding2.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        regKey(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
+        regKey(KeyBinding2.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
+        regKey(KeyBinding2.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
+        regKey(KeyBinding2.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
+        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
+        regKey(KeyBinding2.with(KeyCode.END).shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
+        regKey(KeyBinding2.with(KeyCode.LEFT).shift().alt().forMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // windows key bindings
-        key(KeyBinding2.with(KeyCode.Y).control().forWindows().build(), TextInputControl.REDO);
+        regKey(KeyBinding2.with(KeyCode.Y).control().forWindows().build(), TextInputControl.REDO);
 
         // linux key bindings
-        key(KeyBinding2.with(KeyCode.Z).control().shift().forLinux().build(), TextInputControl.REDO);
+        regKey(KeyBinding2.with(KeyCode.Z).control().shift().forLinux().build(), TextInputControl.REDO);
 
         // not-mac key bindings
-        key(KeyBinding2.with(KeyCode.DELETE).control().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        key(KeyBinding2.with(KeyCode.H).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        key(KeyBinding2.with(KeyCode.BACK_SPACE).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        key(KeyBinding2.with(KeyCode.BACK_SLASH).control().notForMac().build(), TextInputControl.DESELECT);
-        key(KeyBinding2.with(KeyCode.LEFT).control().notForMac().build(), TextInputControl.LEFT_WORD);
-        key(KeyBinding2.with(KeyCode.RIGHT).control().notForMac().build(), TextInputControl.RIGHT_WORD);
-        key(KeyBinding2.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
-        key(KeyBinding2.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
-        key(KeyBinding2.with(KeyCode.LEFT).control().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        key(KeyBinding2.with(KeyCode.RIGHT).control().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        regKey(KeyBinding2.with(KeyCode.DELETE).control().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        regKey(KeyBinding2.with(KeyCode.H).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        regKey(KeyBinding2.with(KeyCode.BACK_SLASH).control().notForMac().build(), TextInputControl.DESELECT);
+        regKey(KeyBinding2.with(KeyCode.LEFT).control().notForMac().build(), TextInputControl.LEFT_WORD);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).control().notForMac().build(), TextInputControl.RIGHT_WORD);
+        regKey(KeyBinding2.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
+        regKey(KeyBinding2.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
+        regKey(KeyBinding2.with(KeyCode.LEFT).control().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).control().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // key pad mappings
         addKeyPadMappings();
 
-        map(KeyEvent.KEY_TYPED, this::defaultKeyTyped);
+        addHandler(KeyEvent.KEY_TYPED, this::defaultKeyTyped);
 
         // However, we want to consume other key press / release events too, for
         // things that would have been handled by the InputCharacter normally
-        mapTail(
+        addHandlerTail(
             new EventCriteria<KeyEvent>() {
                 @Override
                 public EventType<KeyEvent> getEventType() {
@@ -243,17 +243,17 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-            map(KeyBinding2.builder().with(KeyCode.DIGIT9).control().shift().build(), true, (ev) -> {
+            addHandler(KeyBinding2.builder().with(KeyCode.DIGIT9).control().shift().build(), true, (ev) -> {
                 FXVK.toggleUseVK(getNode());
             });
         }
 
         // mouse and context menu mappings
-        map(MouseEvent.MOUSE_PRESSED, this::mousePressed);
-        map(MouseEvent.MOUSE_DRAGGED, this::mouseDragged);
-        map(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
+        addHandler(MouseEvent.MOUSE_PRESSED, this::mousePressed);
+        addHandler(MouseEvent.MOUSE_DRAGGED, this::mouseDragged);
+        addHandler(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
 
-        map(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested);
+        addHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested);
     }
 
     /**

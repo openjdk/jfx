@@ -82,64 +82,64 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         }
 
         // functions
-        func(TextArea.DOCUMENT_END, c::end); // TODO move end() to behavior
-        func(TextArea.DOCUMENT_START, c::home); // TODO move home() to behavior
-        func(TextArea.DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false));
-        func(TextArea.LINE_START, () -> lineStart(false));
-        func(TextArea.LINE_END, () -> lineEnd(false));
-        func(TextArea.PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false));
-        func(TextArea.PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, false));
-        func(TextArea.PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false));
-        func(TextArea.PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, false));
-        func(TextArea.SELECT_DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, true));
+        regFunc(TextArea.DOCUMENT_END, c::end); // TODO move end() to behavior
+        regFunc(TextArea.DOCUMENT_START, c::home); // TODO move home() to behavior
+        regFunc(TextArea.DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, false));
+        regFunc(TextArea.LINE_START, () -> lineStart(false));
+        regFunc(TextArea.LINE_END, () -> lineEnd(false));
+        regFunc(TextArea.PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, false));
+        regFunc(TextArea.PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, false));
+        regFunc(TextArea.PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, false));
+        regFunc(TextArea.PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, false));
+        regFunc(TextArea.SELECT_DOWN, () -> skin.moveCaret(TextUnit.LINE, Direction.DOWN, true));
         //func(TextArea.SELECT_END_EXTEND, this::selectEndExtend);
         //func(TextArea.SELECT_HOME_EXTEND, this::selectHomeExtend);
-        func(TextArea.SELECT_LINE_END, () -> lineEnd(true));
-        func(TextArea.SELECT_PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, true));
-        func(TextArea.SELECT_PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, true));
-        func(TextArea.SELECT_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true));
-        func(TextArea.SELECT_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, true));
-        func(TextArea.SELECT_LINE_START, () -> lineStart(true));
-        func(TextArea.SELECT_UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, true));
-        func(TextArea.UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, false));
-        func(TextArea.INSERT_NEW_LINE, this::insertNewLine);
-        func(TextArea.INSERT_TAB, this::insertTab);
+        regFunc(TextArea.SELECT_LINE_END, () -> lineEnd(true));
+        regFunc(TextArea.SELECT_PAGE_DOWN, () -> skin.moveCaret(TextUnit.PAGE, Direction.DOWN, true));
+        regFunc(TextArea.SELECT_PAGE_UP, () -> skin.moveCaret(TextUnit.PAGE, Direction.UP, true));
+        regFunc(TextArea.SELECT_PARAGRAPH_DOWN, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.DOWN, true));
+        regFunc(TextArea.SELECT_PARAGRAPH_UP, () -> skin.moveCaret(TextUnit.PARAGRAPH, Direction.UP, true));
+        regFunc(TextArea.SELECT_LINE_START, () -> lineStart(true));
+        regFunc(TextArea.SELECT_UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, true));
+        regFunc(TextArea.UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, false));
+        regFunc(TextArea.INSERT_NEW_LINE, this::insertNewLine);
+        regFunc(TextArea.INSERT_TAB, this::insertTab);
         
         // common keys
-        key(KeyCode.DOWN, TextArea.DOWN);
-        key(KeyBinding2.shift(KeyCode.DOWN), TextArea.SELECT_DOWN);
-        key(KeyBinding2.shift(KeyCode.END), TextArea.SELECT_LINE_END);
-        key(KeyCode.END, TextArea.LINE_END);
-        key(KeyCode.ENTER, TextArea.INSERT_NEW_LINE);
-        key(KeyCode.HOME, TextArea.LINE_START);
-        key(KeyBinding2.shift(KeyCode.HOME), TextArea.SELECT_LINE_START);
-        key(KeyCode.PAGE_UP, TextArea.PAGE_UP);
-        key(KeyBinding2.shift(KeyCode.PAGE_UP), TextArea.SELECT_PAGE_UP);
-        key(KeyCode.PAGE_DOWN, TextArea.PAGE_DOWN);
-        key(KeyBinding2.shift(KeyCode.PAGE_DOWN), TextArea.SELECT_PAGE_DOWN);
-        key(KeyCode.TAB, TextArea.INSERT_TAB);
-        key(KeyCode.UP, TextArea.UP);
-        key(KeyBinding2.shift(KeyCode.UP), TextArea.SELECT_UP);
+        regKey(KeyCode.DOWN, TextArea.DOWN);
+        regKey(KeyBinding2.shift(KeyCode.DOWN), TextArea.SELECT_DOWN);
+        regKey(KeyBinding2.shift(KeyCode.END), TextArea.SELECT_LINE_END);
+        regKey(KeyCode.END, TextArea.LINE_END);
+        regKey(KeyCode.ENTER, TextArea.INSERT_NEW_LINE);
+        regKey(KeyCode.HOME, TextArea.LINE_START);
+        regKey(KeyBinding2.shift(KeyCode.HOME), TextArea.SELECT_LINE_START);
+        regKey(KeyCode.PAGE_UP, TextArea.PAGE_UP);
+        regKey(KeyBinding2.shift(KeyCode.PAGE_UP), TextArea.SELECT_PAGE_UP);
+        regKey(KeyCode.PAGE_DOWN, TextArea.PAGE_DOWN);
+        regKey(KeyBinding2.shift(KeyCode.PAGE_DOWN), TextArea.SELECT_PAGE_DOWN);
+        regKey(KeyCode.TAB, TextArea.INSERT_TAB);
+        regKey(KeyCode.UP, TextArea.UP);
+        regKey(KeyBinding2.shift(KeyCode.UP), TextArea.SELECT_UP);
         
         // macOS specific mappings
-        key(KeyBinding2.with(KeyCode.DOWN).alt().forMac().build(), TextArea.PARAGRAPH_DOWN);
-        key(KeyBinding2.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
-        key(KeyBinding2.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
-        key(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.LINE_START);
-        key(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
-        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.LINE_END);
-        key(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
-        key(KeyBinding2.with(KeyCode.UP).alt().forMac().build(), TextArea.PARAGRAPH_UP);
-        key(KeyBinding2.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
-        key(KeyBinding2.with(KeyCode.UP).shortcut().forMac().build(), TextArea.DOCUMENT_START);
-        key(KeyBinding2.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
+        regKey(KeyBinding2.with(KeyCode.DOWN).alt().forMac().build(), TextArea.PARAGRAPH_DOWN);
+        regKey(KeyBinding2.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        regKey(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
+        regKey(KeyBinding2.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
+        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.LINE_START);
+        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.LINE_END);
+        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
+        regKey(KeyBinding2.with(KeyCode.UP).alt().forMac().build(), TextArea.PARAGRAPH_UP);
+        regKey(KeyBinding2.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+        regKey(KeyBinding2.with(KeyCode.UP).shortcut().forMac().build(), TextArea.DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
 
         // non-macOS specific mappings
-        key(KeyBinding2.with(KeyCode.DOWN).control().notForMac().build(), TextArea.PARAGRAPH_DOWN);
-        key(KeyBinding2.with(KeyCode.DOWN).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
-        key(KeyBinding2.with(KeyCode.UP).control().notForMac().build(), TextArea.PARAGRAPH_UP);
-        key(KeyBinding2.with(KeyCode.UP).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+        regKey(KeyBinding2.with(KeyCode.DOWN).control().notForMac().build(), TextArea.PARAGRAPH_DOWN);
+        regKey(KeyBinding2.with(KeyCode.DOWN).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        regKey(KeyBinding2.with(KeyCode.UP).control().notForMac().build(), TextArea.PARAGRAPH_UP);
+        regKey(KeyBinding2.with(KeyCode.UP).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
 
         addKeyPadMappings();
     }
