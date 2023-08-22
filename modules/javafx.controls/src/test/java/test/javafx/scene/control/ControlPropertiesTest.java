@@ -88,14 +88,15 @@ import com.sun.javafx.scene.control.WebColorField;
 import com.sun.javafx.scene.control.skin.FXVK;
 
 /**
- * Tests contract for properties and their accessors in the Control type hierarchy.
+ * Tests contract for properties and their accessors and mutators
+ * in the Control type hierarchy.
  *
  * Currently uses a list of classes, so any new Controls must be added manually.
  * Perhaps the test should scan classpath and find all the Controls automagically.
  */
 public class ControlPropertiesTest {
 
-    private static final boolean FAIL_FAST = !true;
+    private static final boolean FAIL_FAST = true;
 
     // list all descendants of Control class.
     // or perhaps collect all classes in a package as described here:
@@ -165,7 +166,7 @@ public class ControlPropertiesTest {
     }
 
     /**
-     * Tests for missing final keyword in Control properties and their accessors.
+     * Tests for missing final keyword in Control properties and their accessors/mutators.
      */
     @Test
     public void testMissingFinalMethods() {
@@ -176,7 +177,7 @@ public class ControlPropertiesTest {
 
     private void check(Class cls) {
         Method[] methods = cls.getMethods();
-        for (Method m: methods) {
+        for (Method m : methods) {
             String name = m.getName();
             if (name.endsWith("Property") && (m.getParameterCount() == 0)) {
                 checkModifiers(m);
@@ -196,7 +197,7 @@ public class ControlPropertiesTest {
         sb.append(propName, 1, propName.length());
 
         String name = sb.toString();
-        for (Method m: methods) {
+        for (Method m : methods) {
             if (m.getParameterCount() == numArgs) {
                 if (name.equals(m.getName())) {
                     checkModifiers(m);
