@@ -267,7 +267,7 @@ public class KeyEventFirer {
             }
         }
     }
-    
+
     private void typeChar(char c) {
         KeyCode code = getKeyCodeFor(c);
         KeyEvent ev;
@@ -369,7 +369,7 @@ public class KeyEventFirer {
         }
         return code;
     }
-    
+
     private static HashMap<Character, KeyCode> createKeyCodes(Object ... pairs) {
         HashMap<Character, KeyCode> m = new HashMap<>();
         for(int i=0; i<pairs.length; ) {

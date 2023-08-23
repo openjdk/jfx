@@ -73,7 +73,7 @@ public class TextFieldBehaviorTest {
         String s = control.getText();
         Assert.assertEquals(text, s);
     }
-    
+
     /** tests event consumption logic */
     @Test
     public void testConsume() {
