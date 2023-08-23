@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -267,7 +267,7 @@ public class KeyEventFirer {
             }
         }
     }
-    
+
     private void typeChar(char c) {
         KeyCode code = getKeyCodeFor(c);
         KeyEvent ev;
@@ -369,7 +369,7 @@ public class KeyEventFirer {
         }
         return code;
     }
-    
+
     private static HashMap<Character, KeyCode> createKeyCodes(Object ... pairs) {
         HashMap<Character, KeyCode> m = new HashMap<>();
         for(int i=0; i<pairs.length; ) {
