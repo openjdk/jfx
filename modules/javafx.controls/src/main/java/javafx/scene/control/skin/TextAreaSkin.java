@@ -61,6 +61,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
+import com.sun.javafx.scene.control.TextInputControlHelper;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
 
@@ -571,10 +572,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             moveRight = !moveRight;
         }
 
-        String text = textArea.getText();
         int pos = textArea.getCaretPosition();
-        BreakIterator bi = BreakIterator.getCharacterInstance();
-        bi.setText(text);
+        BreakIterator bi = TextInputControlHelper.charIterator(textArea);
         int next = moveRight ? bi.following(pos) : bi.preceding(pos);
         if (next != BreakIterator.DONE) {
             textArea.selectRange(next, next);
