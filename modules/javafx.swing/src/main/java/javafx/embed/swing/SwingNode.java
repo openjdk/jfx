@@ -254,6 +254,7 @@ public class SwingNode extends Node {
     private Timer deactivate; // lwFrame deactivate delay for Linux
     private SwingNodeInteropN swNodeIOP;
     private DisposerRecord rec;
+    private WeakReference disposerRecRef;
 
     {
         // To initialize the class helper at the begining each constructor of this class
@@ -365,7 +366,7 @@ public class SwingNode extends Node {
     private void setContentImpl(JComponent content) {
         if (lwFrame != null) {
             rec.dispose();
-            Disposer.removeRecord(rec);
+            Disposer.removeRecord(disposerRecRef);
             rec = null;
             lwFrame = null;
         }
@@ -387,7 +388,7 @@ public class SwingNode extends Node {
             swNodeIOP.setVisible(lwFrame, true);
 
             rec = swNodeIOP.createSwingNodeDisposer(lwFrame);
-            Disposer.addRecord(this, rec);
+            disposerRecRef = Disposer.addRecord(this, rec);
 
             if (getScene() != null) {
                 notifyNativeHandle(getScene().getWindow());

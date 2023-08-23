@@ -89,8 +89,8 @@ public class Disposer implements Runnable {
         return ref;
     }
 
-    public static void removeRecord(DisposerRecord rec) {
-        disposerInstance.records.remove(rec);
+    public static void removeRecord(WeakReference ref) {
+        disposerInstance.records.remove(ref);
     }
 
     @Override
