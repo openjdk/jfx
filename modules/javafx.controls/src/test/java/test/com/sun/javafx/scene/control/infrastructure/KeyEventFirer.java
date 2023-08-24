@@ -25,9 +25,10 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -232,7 +233,8 @@ public class KeyEventFirer {
     }
 
     private KeyEvent createEvent(KeyCode keyCode, EventType<KeyEvent> evtType, KeyModifier... modifiers) {
-        Set<KeyModifier> ml = Set.of(modifiers);
+        // WARNING: tests may pass null modifiers!
+        List<KeyModifier> ml = Arrays.asList(modifiers);
 
         return new KeyEvent(null,
             target, // EventTarget
