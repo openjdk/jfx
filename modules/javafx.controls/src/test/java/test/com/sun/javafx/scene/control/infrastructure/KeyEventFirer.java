@@ -25,10 +25,9 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -233,19 +232,19 @@ public class KeyEventFirer {
     }
 
     private KeyEvent createEvent(KeyCode keyCode, EventType<KeyEvent> evtType, KeyModifier... modifiers) {
-        List<KeyModifier> ml = Arrays.asList(modifiers);
+        Set<KeyModifier> ml = Set.of(modifiers);
 
         return new KeyEvent(null,
-                target,                            // EventTarget
-                evtType,                           // eventType
-                evtType == KeyEvent.KEY_TYPED ? keyCode.getChar() : null,  // Character (unused unless evtType == KEY_TYPED)
-                keyCode.getChar(),            // text
-                keyCode,                           // KeyCode
-                ml.contains(KeyModifier.SHIFT),    // shiftDown
-                ml.contains(KeyModifier.CTRL),     // ctrlDown
-                ml.contains(KeyModifier.ALT),      // altDown
-                ml.contains(KeyModifier.META)      // metaData
-                );
+            target, // EventTarget
+            evtType, // eventType
+            evtType == KeyEvent.KEY_TYPED ? keyCode.getChar() : null, // Character (unused unless evtType == KEY_TYPED)
+            keyCode.getChar(), // text
+            keyCode, // KeyCode
+            ml.contains(KeyModifier.SHIFT), // shiftDown
+            ml.contains(KeyModifier.CTRL), // ctrlDown
+            ml.contains(KeyModifier.ALT), // altDown
+            ml.contains(KeyModifier.META) // metaData
+        );
     }
 
     /**
