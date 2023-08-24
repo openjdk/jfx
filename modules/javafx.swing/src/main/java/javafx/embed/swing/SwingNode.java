@@ -367,7 +367,7 @@ public class SwingNode extends Node {
             if (rec != null) {
                 rec.dispose();
                 rec = null;
-	    }
+            }
             lwFrame = null;
         }
         if (content != null) {
