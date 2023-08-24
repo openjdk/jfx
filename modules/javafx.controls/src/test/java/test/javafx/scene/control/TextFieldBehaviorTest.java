@@ -52,7 +52,7 @@ public class TextFieldBehaviorTest {
     // TODO problem:
     // KeyEventFirer may not a good idea here because of the way it generates events.
     // I think we should rather emulate the keyboard, such that the events match those sent by the real thing
-    // i.e. press(SHORTCUT), hit(X), release(SHORTCUT) 
+    // i.e. press(SHORTCUT), hit(X), release(SHORTCUT)
     private KeyEventFirer kb;
     private int step;
 
@@ -134,7 +134,7 @@ public class TextFieldBehaviorTest {
             checkText("copy-cut=paste.copy-")
         );
     }
-    
+
     @Test
     public void testNavigation() {
         t(
@@ -169,7 +169,7 @@ public class TextFieldBehaviorTest {
             control.setText(text);
         };
     }
-    
+
     protected Runnable checkText(String expected) {
         return () -> {
             String v = control.getText();
@@ -191,14 +191,14 @@ public class TextFieldBehaviorTest {
             kb.keyReleased(k, KeyModifier.SHIFT);
         };
     }
-    
+
     protected Runnable shortcut(KeyCode k) {
         return () -> {
             kb.keyPressed(k, KeyModifier.getShortcutKey());
             kb.keyReleased(k, KeyModifier.getShortcutKey());
         };
     }
-    
+
     protected Runnable x(BooleanSupplier test) {
         return () -> {
             boolean result = test.getAsBoolean();
