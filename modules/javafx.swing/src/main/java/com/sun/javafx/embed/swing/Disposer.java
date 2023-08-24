@@ -89,6 +89,10 @@ public class Disposer implements Runnable {
         return ref;
     }
 
+    /**
+     * Remove the DisposerRecord object to prevent memory leak
+     * @param ref Weak reference of the object to be removed
+     */
     public static void removeRecord(WeakReference ref) {
         disposerInstance.records.remove(ref);
     }

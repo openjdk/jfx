@@ -246,7 +246,6 @@ public class SwingNodeInteropN {
                 lwFrame = null;
             }
         }
-
     }
 
     private static class SwingNodeContent extends LightweightContentWrapper {

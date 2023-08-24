@@ -74,7 +74,6 @@ import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.embed.swing.SwingEvents;
 import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
-import jdk.swing.interop.LightweightFrameWrapper;
 
 /**
  * This class is used to embed a Swing content into a JavaFX application.
@@ -365,12 +364,17 @@ public class SwingNode extends Node {
      */
     private void setContentImpl(JComponent content) {
         if (lwFrame != null) {
-            rec.dispose();
-            Disposer.removeRecord(disposerRecRef);
-            rec = null;
+            if (rec != null) {
+                rec.dispose();
+                rec = null;
+	    }
             lwFrame = null;
         }
         if (content != null) {
+            if (disposerRecRef != null) {
+                Disposer.removeRecord(disposerRecRef);
+                disposerRecRef = null;
+            }
             lwFrame = swNodeIOP.createLightweightFrame();
 
             SwingNodeWindowFocusListener snfListener =
