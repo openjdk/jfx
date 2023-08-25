@@ -364,17 +364,13 @@ public class SwingNode extends Node {
      */
     private void setContentImpl(JComponent content) {
         if (lwFrame != null) {
-            if (rec != null) {
-                rec.dispose();
-                rec = null;
-            }
+            rec.dispose();
+            Disposer.removeRecord(disposerRecRef);
+            rec = null;
+            disposerRecRef = null;
             lwFrame = null;
         }
         if (content != null) {
-            if (disposerRecRef != null) {
-                Disposer.removeRecord(disposerRecRef);
-                disposerRecRef = null;
-            }
             lwFrame = swNodeIOP.createLightweightFrame();
 
             SwingNodeWindowFocusListener snfListener =

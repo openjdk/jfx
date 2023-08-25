@@ -90,7 +90,9 @@ public class Disposer implements Runnable {
     }
 
     /**
-     * Remove the DisposerRecord object to prevent memory leak
+     * Unregisters a previously registered {@link DisposerRecord}, removing it
+     * from the list of records to dispose off when the
+     * original target goes out of scope
      * @param ref Weak reference of the object to be removed
      */
     public static void removeRecord(WeakReference ref) {
