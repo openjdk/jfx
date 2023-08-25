@@ -233,19 +233,20 @@ public class KeyEventFirer {
     }
 
     private KeyEvent createEvent(KeyCode keyCode, EventType<KeyEvent> evtType, KeyModifier... modifiers) {
+        // WARNING: tests may pass null modifiers!
         List<KeyModifier> ml = Arrays.asList(modifiers);
 
         return new KeyEvent(null,
-                target,                            // EventTarget
-                evtType,                           // eventType
-                evtType == KeyEvent.KEY_TYPED ? keyCode.getChar() : null,  // Character (unused unless evtType == KEY_TYPED)
-                keyCode.getChar(),            // text
-                keyCode,                           // KeyCode
-                ml.contains(KeyModifier.SHIFT),    // shiftDown
-                ml.contains(KeyModifier.CTRL),     // ctrlDown
-                ml.contains(KeyModifier.ALT),      // altDown
-                ml.contains(KeyModifier.META)      // metaData
-                );
+            target, // EventTarget
+            evtType, // eventType
+            evtType == KeyEvent.KEY_TYPED ? keyCode.getChar() : null, // Character (unused unless evtType == KEY_TYPED)
+            keyCode.getChar(), // text
+            keyCode, // KeyCode
+            ml.contains(KeyModifier.SHIFT), // shiftDown
+            ml.contains(KeyModifier.CTRL), // ctrlDown
+            ml.contains(KeyModifier.ALT), // altDown
+            ml.contains(KeyModifier.META) // metaData
+        );
     }
 
     /**
