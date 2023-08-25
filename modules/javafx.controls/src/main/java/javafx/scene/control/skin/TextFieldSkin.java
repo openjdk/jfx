@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import java.text.BreakIterator;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
@@ -580,24 +581,14 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             moveRight = !moveRight;
         }
 
-        Bounds caretBounds = caretPath.getLayoutBounds();
-        if (caretPath.getElements().size() == 4) {
-            // The caret is split
-            // TODO: Find a better way to get the primary caret position
-            // instead of depending on the internal implementation.
-            // See RT-25465.
-            caretBounds = new Path(caretPath.getElements().get(0), caretPath.getElements().get(1)).getLayoutBounds();
+        TextField textField = getSkinnable();
+        int pos = textField.getCaretPosition();
+        BreakIterator bi = BreakIterator.getCharacterInstance();
+        bi.setText(textField.getText());
+        int next = moveRight ? bi.following(pos) : bi.preceding(pos);
+        if (next != BreakIterator.DONE) {
+            textField.selectRange(next, next);
         }
-        double hitX = moveRight ? caretBounds.getMaxX() : caretBounds.getMinX();
-        double hitY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
-        HitInfo hit = textNode.hitTest(new Point2D(hitX, hitY));
-        boolean leading = hit.isLeading();
-        Path charShape = new Path(textNode.rangeShape(hit.getCharIndex(), hit.getCharIndex() + 1));
-        if ((moveRight && charShape.getLayoutBounds().getMaxX() > caretBounds.getMaxX()) ||
-                (!moveRight && charShape.getLayoutBounds().getMinX() < caretBounds.getMinX())) {
-            leading = !leading;
-        }
-        positionCaret(hit.getInsertionIndex(), leading, false);
     }
 
     /** {@inheritDoc} */
