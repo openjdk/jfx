@@ -80,8 +80,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     private StackPane pickerColorBox;
     private Rectangle colorRect;
     private ColorPalette popupContent;
-
-    private ColorPickerBehavior behavior;
+    private final ColorPickerBehavior behavior;
 
 
 
@@ -115,6 +114,8 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         pickerColorBox.getStyleClass().add("picker-color");
         colorRect = new Rectangle(12, 12);
         colorRect.getStyleClass().add("picker-color-rect");
+
+        behavior = new ColorPickerBehavior();
 
         updateColor();
 
@@ -261,7 +262,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         super.install();
 
         // install default input map for the control
-        behavior = new ColorPickerBehavior();
         behavior.install(this);
     }
 
@@ -269,7 +269,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     public void dispose() {
         if (behavior != null) {
             behavior.dispose();
-            behavior = null;
         }
         super.dispose();
     }

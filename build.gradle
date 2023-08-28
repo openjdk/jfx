@@ -4258,6 +4258,8 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
 
     options.addStringOption("-since").setValue((9..jfxReleaseMajorVersion.toInteger()).join(","))
     options.addStringOption("-since-label").setValue("New API since JavaFX 9")
+    options.addStringOption("Xmaxwarns").setValue("1000")
+    options.addStringOption("Xmaxerrs").setValue("1000")
 
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")

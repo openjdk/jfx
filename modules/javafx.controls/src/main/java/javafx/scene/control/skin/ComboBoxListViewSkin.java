@@ -100,7 +100,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean listSelectionLock = false;
     private boolean listViewSelectionDirty = false;
 
-    private ComboBoxListViewBehavior behavior;
+    private final ComboBoxListViewBehavior behavior;
     private IDisconnectable selectedItemWatcher;
 
 
@@ -163,6 +163,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
+
+        behavior = new ComboBoxListViewBehavior<>();
 
         lh.addChangeListener(control.itemsProperty(), e -> {
             updateComboBoxItems();
@@ -235,7 +237,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     public void install() {
         super.install();
         
-        behavior = new ComboBoxListViewBehavior<>();
         behavior.install(this);
     }
 
@@ -243,7 +244,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     public void dispose() {
         if (behavior != null) {
             behavior.dispose();
-            behavior = null;
         }
         super.dispose();
     }
