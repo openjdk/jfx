@@ -62,7 +62,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
     private final DatePicker datePicker;
     private TextField displayNode;
     private DatePickerContent datePickerContent;
-    private DatePickerBehavior behavior;
+    private final DatePickerBehavior behavior;
 
 
 
@@ -83,6 +83,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         super(control);
 
         this.datePicker = control;
+        behavior = new DatePickerBehavior();
 
         ListenerHelper lh = ListenerHelper.get(this);
 
@@ -163,7 +164,6 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
     public void install() {
         super.install();
 
-        behavior = new DatePickerBehavior();
         behavior.install(this);
     }
 
@@ -171,7 +171,6 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
     public void dispose() {
         if (behavior != null) {
             behavior.dispose();
-            behavior = null;
         }
         super.dispose();
     }
