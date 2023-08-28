@@ -38,13 +38,51 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import test.util.Util;
 
+/*
+ * Test for verifying cursor movement in TextField using keyboard.
+ * There are 4 tests in this file
+ *
+ * Steps for testCursorMovementInMixedText()
+ * 1. Create a TextField and add text which contains both RTL and LTR text.
+ *    Set TextField node orientation to RIGHT_TO_LEFT
+ * 2. Move the cursor to the left by pressing LEFT key on keyboard.
+ * 3. Keep pressing the LEFT key until end of text.
+ * 4. Verify that cursor position changes by checking the caret position.
+ * 5. Cursor movement is verified by checking that caret position
+ *    is not equal to previous position.
+ *
+ * Steps for testCursorMovementInMixedTextRTLNotSet()
+ * 1. Create a TextField and add text which contains both RTL and LTR text.
+ *    Set TextField node orientation to LEFT_TO_RIGHT
+ * 2. Move the cursor to the left by pressing LEFT key on keyboard.
+ * 3. Keep pressing the LEFT key until end of text.
+ * 4. Verify that cursor position changes by checking the caret position.
+ * 5. Cursor movement is verified by checking that caret position
+ *    is not equal to previous position.
+ *
+ * Steps for testCursorMovementInLTRText()
+ * 1. Create a TextField and add LTR text.
+ * 2. Move the cursor to the right by pressing RIGHT key on keyboard.
+ * 3. Keep pressing the RIGHT key until end of text.
+ * 4. Verify that cursor position changes by checking the caret position.
+ * 5. Cursor movement is verified by checking that caret position
+ *    is not equal to previous position.
+ *
+ * Steps for testCursorMovementInRTLText()
+ * 1. Create a TextField and add RTL text.
+ * 2. Move the cursor to the left by pressing LEFT key on keyboard.
+ * 3. Keep pressing the LEFT key until end of text.
+ * 4. Verify that cursor position changes by checking the caret position.
+ * 5. Cursor movement is verified by checking that caret position
+ *    is not equal to previous position.
+ */
 public class TextFieldCursorMovementTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch caretPositionLatch;
@@ -66,34 +104,78 @@ public class TextFieldCursorMovementTest {
         });
     }
 
+    private void moveCursorToRight() {
+        Util.runAndWait(() -> {
+            robot.keyType(KeyCode.RIGHT);
+        });
+    }
+
     private void addTextFieldContent(String text, boolean isRtl) {
         Util.runAndWait(() -> {
             textField.setText(text);
             if (isRtl) {
                 textField.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+            } else {
+                textField.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
             }
         });
     }
 
     //JDK-8242616
     @Test
-    public void testCursorMovementInRTLText() throws Exception {
-        String str = "Aracbic يشترشسيرشي";
+    public void testCursorMovementInMixedText() throws Exception {
+        String str = "Arabic يشترشسيرشي";
         addTextFieldContent(str, true);
 
         for (int i =0; i< str.length(); i++) {
             moveCursorToLeft();
-            Assert.assertNotEquals(curIndex, prevIndex);
+            Assertions.assertNotEquals(curIndex, prevIndex);
             prevIndex = curIndex;
         }
     }
 
-    @BeforeClass
+    @Test
+    public void testCursorMovementInMixedTextRTLNotSet() throws Exception {
+        String str = "Arabic يشترشسيرشي";
+        addTextFieldContent(str, false);
+
+        for (int i =0; i< str.length(); i++) {
+            moveCursorToRight();
+            Assertions.assertNotEquals(curIndex, prevIndex);
+            prevIndex = curIndex;
+        }
+    }
+
+    @Test
+    public void testCursorMovementInLTRText() throws Exception {
+        String str = "This is a text";
+        addTextFieldContent(str, false);
+
+        for (int i =0; i< str.length(); i++) {
+            moveCursorToRight();
+            Assertions.assertNotEquals(curIndex, prevIndex);
+            prevIndex = curIndex;
+        }
+    }
+
+    @Test
+    public void testCursorMovementInRTLText() throws Exception {
+        String str = "يشترشسيرشي";
+        addTextFieldContent(str, true);
+
+        for (int i =0; i< str.length(); i++) {
+            moveCursorToLeft();
+            Assertions.assertNotEquals(curIndex, prevIndex);
+            prevIndex = curIndex;
+        }
+    }
+
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown(stage);
     }
