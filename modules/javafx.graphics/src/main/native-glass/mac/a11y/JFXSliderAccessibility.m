@@ -47,13 +47,14 @@
 
 - (BOOL)accessibilityPerformIncrement
 {
+//    NSLog(@"Slider increment action invoked");
     return [self performAccessibleAction:INCREMENT];
 }
 
 - (BOOL)accessibilityPerformDecrement
 {
+//    NSLog(@"Slider decrement action invoked");
     return [self performAccessibleAction:DECREMENT];
 }
 
 @end
-

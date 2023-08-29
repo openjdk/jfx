@@ -47,13 +47,14 @@
 
 - (BOOL)accessibilityPerformIncrement
 {
+//    NSLog(@"Stepper increment action invoked");
     return [self performAccessibleAction:INCREMENT];
 }
 
 - (BOOL)accessibilityPerformDecrement
 {
+//    NSLog(@"Stepper decrement action invoked");
     return [self performAccessibleAction:DECREMENT];
 }
 
 @end
-
