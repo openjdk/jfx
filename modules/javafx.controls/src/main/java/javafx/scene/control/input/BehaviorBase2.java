@@ -124,6 +124,30 @@ public abstract class BehaviorBase2<C extends Control> {
     }
 
     /**
+     * This convenience method maps the function tag to the specified function, and at the same time
+     * maps the specified key binding to that function tag.
+     * @param tag the function tag
+     * @param k the key binding
+     * @param func the function
+     */
+    protected void reg(FunctionTag tag, KeyBinding2 k, Runnable func) {
+        getInputMap2().regFunc(tag, func);
+        getInputMap2().regKey(k, tag);
+    }
+
+    /**
+     * This convenience method maps the function tag to the specified function, and at the same time
+     * maps the specified key binding to that function tag.
+     * @param tag the function tag
+     * @param code the key code
+     * @param func the function
+     */
+    protected void reg(FunctionTag tag, KeyCode code, Runnable func) {
+        getInputMap2().regFunc(tag, func);
+        getInputMap2().regKey(KeyBinding2.of(code), tag);
+    }
+
+    /**
      * Adds an event handler for the specified event type, in the context of this Behavior.
      * The handler will get removed in {@link#dispose()} method.
      * This mapping always consumes the matching event.
