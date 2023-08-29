@@ -23,24 +23,15 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+#import "AccessibleBase.h"
+#import <AppKit/AppKit.h>
 
-#define INCREMENT @"AXIncrement"
-#define DECREMENT @"AXDecrement"
+@interface JFXStepperAccessibility : AccessibleBase <NSAccessibilityStepper> {
 
-@interface AccessibleBase : NSAccessibilityElement {
-@private
-jobject jAccessible;
-id parent;
-}
-- (id)initWithEnv:(JNIEnv*)env accessible:(jobject)jAccessible;
-- (jobject)getJAccessible;
-- (NSRect)accessibilityFrame;
-- (id)accessibilityParent;
-- (BOOL)isAccessibilityElement;
-- (BOOL)performAccessibleAction:(NSString *)actionId;
-+ (void) initializeRolesMap;
+};
+- (NSAccessibilityRole)accessibilityRole;
+- (NSString *)accessibilityLabel;
+- (id)accessibilityValue;
+- (BOOL)accessibilityPerformDecrement;
+- (BOOL)accessibilityPerformIncrement;
 @end
-
-jmethodID jAccessibilityAttributeNames;

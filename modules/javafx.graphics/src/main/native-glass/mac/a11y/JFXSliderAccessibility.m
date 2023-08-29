@@ -23,24 +23,37 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+#import "JFXSliderAccessibility.h"
 
-#define INCREMENT @"AXIncrement"
-#define DECREMENT @"AXDecrement"
+/*
+ * Implementation of the accessibility peer for the slider role
+ */
 
-@interface AccessibleBase : NSAccessibilityElement {
-@private
-jobject jAccessible;
-id parent;
+@implementation JFXSliderAccessibility
+- (NSAccessibilityRole)accessibilityRole
+{
+    return NSAccessibilitySliderRole;
 }
-- (id)initWithEnv:(JNIEnv*)env accessible:(jobject)jAccessible;
-- (jobject)getJAccessible;
-- (NSRect)accessibilityFrame;
-- (id)accessibilityParent;
-- (BOOL)isAccessibilityElement;
-- (BOOL)performAccessibleAction:(NSString *)actionId;
-+ (void) initializeRolesMap;
+
+- (NSString *)accessibilityLabel
+{
+    return [super accessibilityLabel];
+}
+
+- (id)accessibilityValue
+{
+    return [super accessibilityValue];
+}
+
+- (BOOL)accessibilityPerformIncrement
+{
+    return [self performAccessibleAction:INCREMENT];
+}
+
+- (BOOL)accessibilityPerformDecrement
+{
+    return [self performAccessibleAction:DECREMENT];
+}
+
 @end
 
-jmethodID jAccessibilityAttributeNames;
