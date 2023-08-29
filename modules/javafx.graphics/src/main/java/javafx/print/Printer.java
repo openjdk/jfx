@@ -231,6 +231,20 @@ public final class Printer {
     }
 
     /**
+     * Returns the printable area in points for a given paper.
+     * @param paper The paper to use.
+     * @return Returns the printable area in points
+     */
+    public Rectangle2D printableArea(Paper paper) {
+        Rectangle2D imgArea = impl.printableArea(paper);
+        return new Rectangle2D(
+                imgArea.getMinX() * 72,
+                imgArea.getMinY() * 72,
+                imgArea.getWidth() * 72,
+                imgArea.getHeight() * 72);
+    }
+
+    /**
      * Obtain a new PageLayout instance for this printer using the specified
      * parameters.
      * The paper should be one of the supported papers and
