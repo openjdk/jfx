@@ -27,6 +27,9 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -49,7 +52,9 @@ import javafx.scene.control.rich.SideDecorator;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyleAttrs;
+import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
@@ -711,22 +716,61 @@ public class VFlow extends Pane implements StyleResolver {
     public TextCell getCell(int modelIndex) {
         TextCell cell = cellCache.get(modelIndex);
         if (cell == null) {
-            cell = control.getModel().createTextCell(modelIndex);
-            
-            // a bit of a hack: avoid TextCells with an empty TextFlow,
-            // as it makes the caret collapse to a single point
-            {
-                Region r = cell.getContent();
-                if (r instanceof TextFlow f) {
-                    if (f.getChildren().size() == 0) {
-                        f.getChildren().add(new Text(""));
-                    }
-                }
-            }
-
+            RichParagraph rp = control.getModel().getParagraph(modelIndex);
+            cell = createTextCell(modelIndex, rp);
             cellCache.add(cell.getIndex(), cell);
         }
         return cell;
+    }
+
+    private TextCell createTextCell(int index, RichParagraph rp) {
+        // is this a paragraph node?
+        Supplier<Region> gen = rp.getParagraphRegion();
+        if (gen != null) {
+            Region content = gen.get();
+            return new TextCell(index, content);
+        }
+
+        // it's a regular text cell
+        TextCell cell = new TextCell(index);
+
+        // highlights
+        List<Consumer<TextCell>> highlights = rp.getHighlights();
+        if (highlights != null) {
+            for (Consumer<TextCell> h : highlights) {
+                h.accept(cell);
+            }
+        }
+
+        // segments
+        List<StyledSegment> segments = rp.getSegments();
+        if ((segments == null) || segments.isEmpty()) {
+            // a bit of a hack: avoid TextCells with an empty TextFlow,
+            // as it makes the caret collapse to a single point
+            cell.add(new Text(""));
+        } else {
+            for (StyledSegment seg : segments) {
+                if (seg.isText()) {
+                    // TODO if has css styles, use that
+                    // otherwise - generate style string and set that
+                    // (or apply attributes individually??)
+                    Text t = createTextNode(seg);
+                    cell.add(t);
+                } else if (seg.isInlineNode()) {
+                    Node n = seg.getInlineNodeGenerator().get();
+                    cell.add(n);
+                }
+            }
+        }
+
+        return cell;
+    }
+
+    private Text createTextNode(StyledSegment seg) {
+        String text = seg.getText();
+        Text t = new Text(text);
+        // TODO attributes
+        return t;
     }
 
     private double computeSideWidth(SideDecorator d) {
@@ -852,9 +896,12 @@ public class VFlow extends Pane implements StyleResolver {
             Region r = cell.getContent();
             content.getChildren().add(r);
             r.setManaged(false);
-            r.setMaxWidth(maxWidth);
+            if (!r.maxWidthProperty().isBound()) {
+                r.setMaxWidth(maxWidth);
+            }
             r.setMaxHeight(USE_COMPUTED_SIZE);
             if(r instanceof TextFlow f) {
+                // TODO or bind?
                 f.setTabSize(tabSize);
                 f.setLineSpacing(lineSpacing);
             }
@@ -970,7 +1017,9 @@ public class VFlow extends Pane implements StyleResolver {
             Region r = cell.getContent();
             content.getChildren().add(r);
             r.setManaged(false);
-            r.setMaxWidth(maxWidth);
+            if (!r.maxWidthProperty().isBound()) {
+                r.setMaxWidth(maxWidth);
+            }
             r.setMaxHeight(USE_COMPUTED_SIZE);
             if(r instanceof TextFlow f) {
                 f.setTabSize(tabSize);

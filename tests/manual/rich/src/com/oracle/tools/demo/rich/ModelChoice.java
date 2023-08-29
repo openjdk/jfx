@@ -24,10 +24,10 @@
  */
 package com.oracle.tools.demo.rich;
 
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.BasePlainTextModel;
 import javafx.scene.control.rich.model.EditableRichTextModel;
+import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledInput;
@@ -89,9 +89,9 @@ public enum ModelChoice {
                     private static final String DIGITS = "-fx-fill:magenta;";
 
                     @Override
-                    public TextCell createTextCell(int index) {
+                    public RichParagraph getParagraph(int index) {
                         String text = getPlainText(index);
-                        TextCell cell = new TextCell(index);
+                        RichParagraph p = new RichParagraph();
                         int start = 0;
                         int sz = text.length();
                         boolean num = false;
@@ -101,7 +101,7 @@ public enum ModelChoice {
                                 if (i > start) {
                                     String s = text.substring(start, i);
                                     String style = num ? DIGITS : null;
-                                    cell.addSegment(s, style, null);
+                                    p.addSegment(s, style, null);
                                     start = i;
                                 }
                                 num = !num;
@@ -110,9 +110,9 @@ public enum ModelChoice {
                         if (start < sz) {
                             String s = text.substring(start);
                             String style = num ? DIGITS : null;
-                            cell.addSegment(s, style, null);
+                            p.addSegment(s, style, null);
                         }
-                        return cell;
+                        return p;
                     }
                 };
                 return m;

@@ -36,11 +36,12 @@ import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.layout.Region;
 
 /**
  * A simple, editable, in-memory StyledTextModel which manages plain text paragraphs.
  * <p>
- * This class provides no styling.  Subclasses might override {@link #createTextCell(int)} to provide
+ * This class provides no styling.  Subclasses might override {@link #getParagraph(int)} to provide
  * syntax highlighting based on the model content.
  */
 public class BasePlainTextModel extends StyledTextModel {
@@ -69,11 +70,11 @@ public class BasePlainTextModel extends StyledTextModel {
         return "";
     }
 
-    public TextCell createTextCell(int index) {
+    public RichParagraph getParagraph(int index) {
         String text = getPlainText(index);
-        TextCell c = new TextCell(index);
-        c.addSegment(text);
-        return c;
+        RichParagraph p = new RichParagraph();
+        p.addSegment(text);
+        return p;
     }
 
     @Override
@@ -162,7 +163,7 @@ public class BasePlainTextModel extends StyledTextModel {
     }
 
     @Override
-    protected void insertParagraph(int index, Supplier<Node> generator) {
+    protected void insertParagraph(int index, Supplier<Region> generator) {
         // no-op
     }
 

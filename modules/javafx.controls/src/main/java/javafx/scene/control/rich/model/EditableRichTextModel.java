@@ -30,11 +30,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.input.DataFormat;
+import javafx.scene.layout.Region;
 import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
 
 /**
@@ -77,16 +76,15 @@ public class EditableRichTextModel extends StyledTextModel {
     }
 
     @Override
-    public TextCell createTextCell(int index) {
-        // TODO empty paragraph?
-        TextCell c = new TextCell(index);
+    public RichParagraph getParagraph(int index) {
+        RichParagraph par = new RichParagraph();
         RParagraph p = paragraphs.get(index);
         for (RSegment seg: p) {
             String text = seg.text();
             String style = seg.attrs().getStyle();
-            c.addSegment(text, style, null);
+            par.addSegment(text, style, null);
         }
-        return c;
+        return par;
     }
 
     @Override
@@ -141,7 +139,7 @@ public class EditableRichTextModel extends StyledTextModel {
     }
 
     @Override
-    protected void insertParagraph(int index, Supplier<Node> generator) {
+    protected void insertParagraph(int index, Supplier<Region> generator) {
         // TODO
     }
 

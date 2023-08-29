@@ -28,6 +28,7 @@ package javafx.scene.control.rich.model;
 import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
+import javafx.scene.layout.Region;
 
 /**
  * Data structure used to modify the styled text model.
@@ -37,7 +38,7 @@ import javafx.scene.control.rich.StyleResolver;
  * <li> a single text segment with direct style and/or style names
  * <li> a line break
  * <li> an inline Node
- * <li> a paragraph containing a single Node
+ * <li> a paragraph containing a single Region
  * </ol>
  */
 // TODO in addition to is*(), add getType() returning an enum { TEXT, PARAGRAPH, INLINE_NODE, LINE_BREAK }
@@ -51,7 +52,7 @@ public abstract class StyledSegment {
     public boolean isText() { return false; }
 
     /**
-     * Returns true if this segment is a paragraph which contains a single Node.
+     * Returns true if this segment is a paragraph which contains a single Region.
      * @return true for a paragraph segment
      */
     public boolean isParagraph() { return false; }
@@ -78,12 +79,18 @@ public abstract class StyledSegment {
     public String getText() { return null; }
 
     /**
-     * This method must return a non-null value when {@link isParagraph()} is true, 
+     * This method must return a non-null value when {@link isInlineNode()} is true, 
      * or null in any other case.
-     * TODO inline node?
      * @return code that creates a Node instance, or null
      */
-    public Supplier<Node> getParagraphNodeGenerator() { return null; }
+    public Supplier<Node> getInlineNodeGenerator() { return null; }
+
+    /**
+     * This method must return a non-null value when {@link isParagraph()} is true, 
+     * or null in any other case.
+     * @return code that creates a Region instance, or null
+     */
+    public Supplier<Region> getParagraphNodeGenerator() { return null; }
 
     /**
      * This method returns StyleAttrs (or null) for this segment.
@@ -95,6 +102,14 @@ public abstract class StyledSegment {
      * @return style attributes
      */
     public StyleAttrs getStyleAttrs(StyleResolver resolver) { return null; }
+
+    /**
+     * Creates a sub-segment of this segment.
+     * @param start the start offset
+     * @param end the end offset
+     * @return the StyledSegment
+     */
+    public abstract StyledSegment subSegment(int start, int end);
 
     private StyledSegment() {
     }
@@ -110,6 +125,11 @@ public abstract class StyledSegment {
         public String toString() {
             return "LINE_BREAK";
         }
+
+        @Override
+        public StyledSegment subSegment(int start, int end) {
+            return this;
+        }
     };
 
     /** 
@@ -119,6 +139,7 @@ public abstract class StyledSegment {
      * @param si the segment style info object
      * @return a new StyledSegment instance
      */
+    // TODO guarded of() ?
     public static StyledSegment of(String text, StyleInfo si) {
         return new StyledSegment() {
             @Override
@@ -134,6 +155,11 @@ public abstract class StyledSegment {
             @Override
             public StyleAttrs getStyleAttrs(StyleResolver r) {
                 return si.getStyleAttrs(r);
+            }
+
+            @Override
+            public StyledSegment subSegment(int start, int end) {
+                return StyledSegment.of(substring(text, start, end), si);
             }
 
             @Override
@@ -176,6 +202,11 @@ public abstract class StyledSegment {
             @Override
             public StyleAttrs getStyleAttrs(StyleResolver r) {
                 return attrs;
+            }
+            
+            @Override
+            public StyledSegment subSegment(int start, int end) {
+                return StyledSegment.of(substring(text, start, end), attrs);
             }
             
             @Override
@@ -254,20 +285,25 @@ public abstract class StyledSegment {
             public String getText() {
                 return " ";
             }
+            
+            @Override
+            public Supplier<Node> getInlineNodeGenerator() {
+                return generator;
+            }
 
             @Override
-            public Supplier<Node> getParagraphNodeGenerator() {
-                return generator;
+            public StyledSegment subSegment(int start, int end) {
+                return this;
             }
         };
     }
     
     /**
-     * Creates a StyledSegment for a paragraph that contains a Node.
-     * @param generator the code to create a Node instance
+     * Creates a StyledSegment for a paragraph that contains a Region.
+     * @param generator the code to create a Region instance
      * @return a new StyledSegment instance
      */
-    public static StyledSegment nodeParagraph(Supplier<Node> generator) {
+    public static StyledSegment nodeParagraph(Supplier<Region> generator) {
         return new StyledSegment() {
             @Override
             public boolean isParagraph() {
@@ -275,9 +311,23 @@ public abstract class StyledSegment {
             }
 
             @Override
-            public Supplier<Node> getParagraphNodeGenerator() {
+            public Supplier<Region> getParagraphNodeGenerator() {
                 return generator;
             }
+
+            @Override
+            public StyledSegment subSegment(int start, int end) {
+                return this;
+            }
         };
+    }
+
+    private static String substring(String text, int start, int end) {
+        int len = text.length();
+        if ((start <= 0) && (end >= len)) {
+            return text;
+        } else {
+            return text.substring(Math.max(0, start), Math.min(end, len));
+        }
     }
 }

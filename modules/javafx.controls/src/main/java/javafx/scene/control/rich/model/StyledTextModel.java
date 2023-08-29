@@ -41,6 +41,7 @@ import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.input.DataFormat;
+import javafx.scene.layout.Region;
 import com.sun.javafx.scene.control.rich.Markers;
 import com.sun.javafx.scene.control.rich.RichUtils;
 import com.sun.javafx.scene.control.rich.UndoableChange;
@@ -109,17 +110,12 @@ public abstract class StyledTextModel {
     public abstract String getPlainText(int index);
 
     /**
-     * Creates a {@link TextCell} which provides a visual representation of the paragraph.
-     * This method must create new instance each time, in order to support multiple RichTextArea instances
-     * connected to the same model.
-     * <p>
-     * The nodes are not reused, and might be created repeatedly,
-     * so the model must not keep strong references to these nodes.
+     * Returns a {@link RichParagraph} at the given model index.
      *
      * @param index paragraph index in the range (0...{@link #size()})
      * @return a new instance of TextCell created
      */
-    public abstract TextCell createTextCell(int index);
+    public abstract RichParagraph getParagraph(int index);
     
     /**
      * This method gets called only if the model is editable.
@@ -153,7 +149,7 @@ public abstract class StyledTextModel {
      * @param index model index
      * @param generator code that will be used to create a Node instance
      */
-    protected abstract void insertParagraph(int index, Supplier<Node> generator);
+    protected abstract void insertParagraph(int index, Supplier<Region> generator);
     
     /**
      * Exports part of the paragraph as a sequence of styled segments.
@@ -534,7 +530,7 @@ public abstract class StyledTextModel {
                     offset = 0;
                     btm = 0;
                     index++;
-                    Supplier<Node> gen = seg.getParagraphNodeGenerator();
+                    Supplier<Region> gen = seg.getParagraphNodeGenerator();
                     insertParagraph(index, gen);
                 } else if (seg.isText()) {
                     int len = insertTextSegment(resolver, index, offset, seg);

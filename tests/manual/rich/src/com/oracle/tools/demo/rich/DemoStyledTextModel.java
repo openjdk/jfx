@@ -26,8 +26,8 @@ package com.oracle.tools.demo.rich;
 
 import java.text.DecimalFormat;
 import javafx.scene.Node;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModelReadOnlyBase;
 import javafx.scene.text.Text;
@@ -59,9 +59,8 @@ public class DemoStyledTextModel extends StyledTextModelReadOnlyBase {
 
     @Override
     public String getPlainText(int index) {
-        TextCell c = createTextCell(index);
-        TextFlow f = ((TextFlow)c.getContent());
-        return getText(f);
+        RichParagraph p = getParagraph(index);
+        return p.getPlainText();
     }
 
     private static String getText(TextFlow f) {
@@ -75,24 +74,24 @@ public class DemoStyledTextModel extends StyledTextModelReadOnlyBase {
     }
 
     @Override
-    public TextCell createTextCell(int ix) {
-        TextCell c = new TextCell(ix);
+    public RichParagraph getParagraph(int ix) {
+        RichParagraph p = new RichParagraph();
         String s = format.format(ix + 1);
         String sz = format.format(size);
         String[] css = monospaced ? new String[] { "monospaced" } : null;
 
-        c.addSegment(s, "-fx-fill:darkgreen;", css);
-        c.addSegment(" / ", null, css);
-        c.addSegment(sz, "-fx-fill:black;", css);
+        p.addSegment(s, "-fx-fill:darkgreen;", css);
+        p.addSegment(" / ", null, css);
+        p.addSegment(sz, "-fx-fill:black;", css);
         if (monospaced) {
-            c.addSegment(" (monospaced)", null, css);
+            p.addSegment(" (monospaced)", null, css);
         }
 
         if ((ix % 10) == 9) {
             String words = generateWords(ix);
-            c.addSegment(words, null, css);
+            p.addSegment(words, null, css);
         }
-        return c;
+        return p;
     }
 
     private String generateWords(int ix) {

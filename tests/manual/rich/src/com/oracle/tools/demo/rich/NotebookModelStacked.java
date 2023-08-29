@@ -28,18 +28,18 @@ package com.oracle.tools.demo.rich;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import javafx.scene.Node;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.BasePlainTextModel;
+import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.model.StyledTextModel;
+import javafx.scene.layout.Region;
 
 public class NotebookModelStacked extends StyledTextModel {
     enum Type {
@@ -70,22 +70,22 @@ public class NotebookModelStacked extends StyledTextModel {
         case CODE:
             m = new BasePlainTextModel() {
                 @Override
-                public TextCell createTextCell(int index) {
+                public RichParagraph getParagraph(int index) {
                     String text = getPlainText(index);
-                    TextCell c = new TextCell(index);
-                    c.addSegment(text, "-fx-text-fill:darkgreen; -fx-font-family:Monospace;", null);
-                    return c;
+                    RichParagraph p = new RichParagraph();
+                    p.addSegment(text, "-fx-text-fill:darkgreen; -fx-font-family:Monospace;", null);
+                    return p;
                 }
             };
             break;
         case COMMENT:
             m = new BasePlainTextModel() {
                 @Override
-                public TextCell createTextCell(int index) {
+                public RichParagraph getParagraph(int index) {
                     String text = getPlainText(index);
-                    TextCell c = new TextCell(index);
-                    c.addSegment(text, "-fx-text-fill:gray;", null);
-                    return c;
+                    RichParagraph p = new RichParagraph();
+                    p.addSegment(text, "-fx-text-fill:gray;", null);
+                    return p;
                 }
             };
             break;
@@ -115,21 +115,25 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     @Override
-    public TextCell createTextCell(int index) {
+    public RichParagraph getParagraph(int index) {
         Object x = paragraphs.get(index);
         if(x instanceof StyledTextModel m) {
-            RichTextArea t = new RichTextArea(m);
-            t.setMaxWidth(Double.POSITIVE_INFINITY);
-            t.setWrapText(true);
-            t.setUseContentHeight(true);
-            return new TextCell(index, t);
+            return RichParagraph.of(() -> {
+                RichTextArea t = new RichTextArea(m);
+                t.setMaxWidth(Double.POSITIVE_INFINITY);
+                t.setWrapText(true);
+                t.setUseContentHeight(true);
+                return t;
+            });
         } else if(x instanceof Type type) {
             switch(type) {
             case TEXTAREA:
-                TextArea t = new TextArea();
-                t.setMaxWidth(Double.POSITIVE_INFINITY);
-                t.setWrapText(true);
-                return new TextCell(index, t);
+                return RichParagraph.of(() -> {
+                    TextArea t = new TextArea();
+                    t.setMaxWidth(Double.POSITIVE_INFINITY);
+                    t.setWrapText(true);
+                    return t;
+                });
             }
         }
         throw new Error("?" + x);
@@ -149,7 +153,7 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     @Override
-    protected void insertParagraph(int index, Supplier<Node> generator) {
+    protected void insertParagraph(int index, Supplier<Region> generator) {
     }
 
     @Override

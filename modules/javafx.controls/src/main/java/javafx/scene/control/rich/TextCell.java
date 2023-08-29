@@ -132,18 +132,18 @@ public final class TextCell {
      * @param css array of style names, or null
      * @return {@link Text} node added
      */
-    public Text addSegment(String text, String style, String[] css) {
-        Objects.nonNull(text);
-        Text t = new Text(text);
-        if (style != null) {
-            t.setStyle(style);
-        }
-        if (css != null) {
-            t.getStyleClass().addAll(css);
-        }
-        flow().getChildren().add(t);
-        return t;
-    }
+//    public Text addSegment(String text, String style, String[] css) {
+//        Objects.nonNull(text);
+//        Text t = new Text(text);
+//        if (style != null) {
+//            t.setStyle(style);
+//        }
+//        if (css != null) {
+//            t.getStyleClass().addAll(css);
+//        }
+//        flow().getChildren().add(t);
+//        return t;
+//    }
 
     /**
      * Adds a text segment with no styling (i.e. using default style).
@@ -152,11 +152,11 @@ public final class TextCell {
      * @param text segment text
      * @return {@link Text} node added
      */
-    public Text addSegment(String text) {
-        Text t = new Text(text);
-        flow().getChildren().add(t);
-        return t;
-    }
+//    public Text addSegment(String text) {
+//        Text t = new Text(text);
+//        flow().getChildren().add(t);
+//        return t;
+//    }
 
     /**
      * Adds an inline node to a {@link TextFlow}-based text cell.
@@ -165,9 +165,17 @@ public final class TextCell {
      * @param node node to add
      * @return added {@code Node}
      */
-    public <T extends Node> T addInlineNode(T node) {
+//    public <T extends Node> T addInlineNode(T node) {
+//        flow().getChildren().add(node);
+//        return node;
+//    }
+
+    /**
+     * Adds a node to the text flow.
+     * @param node the node to add
+     */
+    public void add(Node node) {
         flow().getChildren().add(node);
-        return node;
     }
 
     /**

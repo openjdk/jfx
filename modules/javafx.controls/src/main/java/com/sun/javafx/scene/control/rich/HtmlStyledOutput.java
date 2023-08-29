@@ -64,7 +64,7 @@ public class HtmlStyledOutput implements StyledOutput {
     @Override
     public void append(StyledSegment seg) throws IOException {
         if (seg.isLineBreak()) {
-            // TODO perhaps use a boolean flag to mit separate p and /p tags
+            // TODO perhaps use a boolean flag to emit separate p and /p tags
             wr.write("<p/>\n");
         } else if (seg.isText()) {
             StyleAttrs a = seg.getStyleAttrs(resolver);

@@ -27,9 +27,9 @@ package javafx.scene.control.rich.model;
 
 import java.io.IOException;
 import java.util.function.Supplier;
-import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.layout.Region;
 
 /**
  * A base class for read-only {@link StyledTextModel}s.
@@ -61,7 +61,7 @@ public abstract class StyledTextModelReadOnlyBase extends StyledTextModel {
     }
 
     @Override
-    protected void insertParagraph(int index, Supplier<Node> generator) {
+    protected void insertParagraph(int index, Supplier<Region> generator) {
         throw new UnsupportedOperationException();
     }
 

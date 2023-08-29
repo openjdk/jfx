@@ -43,6 +43,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.rich.RichTextArea;
@@ -285,7 +286,11 @@ public class RichTextAreaDemoPane extends BorderPane {
 //        } else {
             setCenter(vsplit);
 //        }
-        setRight(op);
+
+        ScrollPane sp = new ScrollPane(op);
+        sp.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
+        sp.setHbarPolicy(ScrollBarPolicy.NEVER);
+        setRight(sp);
 
         modelField.getSelectionModel().selectFirst();
         contentPadding.getSelectionModel().selectFirst();

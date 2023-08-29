@@ -38,6 +38,7 @@ import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.RtfFormatHandler;
 import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledOutput;
@@ -51,7 +52,7 @@ import javafx.scene.paint.Color;
  * A simple, read-only, in-memory, styled text model.
  */
 public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
-    private final ArrayList<StyledParagraph> paragraphs = new ArrayList<>();
+    private final ArrayList<RichParagraph> paragraphs = new ArrayList<>();
 
     public SimpleReadOnlyStyledModel() {
         registerDataFormatHandler(new RtfFormatHandler(), 1000);
@@ -84,12 +85,12 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
     @Override
     public String getPlainText(int index) {
-        return paragraphs.get(index).getText();
+        return paragraphs.get(index).getPlainText();
     }
 
     @Override
-    public TextCell createTextCell(int index) {
-        return paragraphs.get(index).createTextCell(index);
+    public RichParagraph getParagraph(int index) {
+        return paragraphs.get(index);
     }
 
     public SimpleReadOnlyStyledModel addSegment(String text) {
@@ -97,68 +98,57 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     }
 
     public SimpleReadOnlyStyledModel addSegment(String text, String style, String... css) {
-        if (paragraphs.size() == 0) {
-            paragraphs.add(new SParagraph());
-        }
-
-        SParagraph p = lastSegmentStyledTextParagraph();
+        RichParagraph p = lastSegmentStyledTextParagraph();
         p.addSegment(text, style, css);
         return this;
     }
 
     public SimpleReadOnlyStyledModel highlight(int start, int length, Color c) {
         int end = start + length;
-        SParagraph p = lastSegmentStyledTextParagraph();
+        RichParagraph p = lastSegmentStyledTextParagraph();
         p.addHighlight((cell) -> cell.addHighlight(start, end, c));
         return this;
     }
 
     public SimpleReadOnlyStyledModel squiggly(int start, int length, Color c) {
         int end = start + length;
-        SParagraph p = lastSegmentStyledTextParagraph();
+        RichParagraph p = lastSegmentStyledTextParagraph();
         p.addHighlight((cell) -> cell.addSquiggly(start, end, c));
         return this;
     }
 
-    protected StyledParagraph lastParagraph() {
+    protected RichParagraph lastSegmentStyledTextParagraph() {
         int sz = paragraphs.size();
         if (sz == 0) {
-            return null;
+            RichParagraph p = new RichParagraph();
+            paragraphs.add(p);
+            return p;
         }
         return paragraphs.get(sz - 1);
     }
 
-    protected SParagraph lastSegmentStyledTextParagraph() {
-        StyledParagraph last = lastParagraph();
-        if (last instanceof SParagraph ss) {
-            return ss;
-        } else {
-            int ix = paragraphs.size();
-            SParagraph p = new SParagraph();
-            paragraphs.add(p);
-            return p;
-        }
-    }
-
+    /** adds a paragraph containing an image */
     public SimpleReadOnlyStyledModel addImage(InputStream in) {
-        int ix = paragraphs.size();
         Image im = new Image(in);
-        SimpleStyledImageParagraph p = new SimpleStyledImageParagraph(im);
+        RichParagraph p = RichParagraph.of(() -> {
+            return new ImageCellPane(im);
+        });
         paragraphs.add(p);
         return this;
     }
 
     public SimpleReadOnlyStyledModel addParagraph(Supplier<Region> generator) {
-        int ix = paragraphs.size();
-        NodeStyledParagraph p = new NodeStyledParagraph(generator);
+        RichParagraph p = RichParagraph.of(() -> {
+            return generator.get();
+        });
         paragraphs.add(p);
         return this;
     }
 
     /** adds inline node segment */
     public SimpleReadOnlyStyledModel addNodeSegment(Supplier<Node> generator) {
-        SParagraph p = lastSegmentStyledTextParagraph();
-        p.addSegment(generator);
+        RichParagraph p = lastSegmentStyledTextParagraph();
+        p.addInlineNode(generator);
         return this;
     }
 
@@ -169,7 +159,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     public SimpleReadOnlyStyledModel nl(int count) {
         for (int i = 0; i < count; i++) {
             int ix = paragraphs.size();
-            paragraphs.add(new SParagraph());
+            paragraphs.add(new RichParagraph());
         }
         return this;
     }
@@ -182,120 +172,114 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
     @Override
     protected void exportParagraph(int index, int start, int end, StyledOutput out) throws IOException {
-        StyledParagraph par = paragraphs.get(index);
-        if (par instanceof SParagraph p) {
-            p.export(start, end, out);
-        } else if (par instanceof SimpleStyledImageParagraph p) {
-            StyledSegment s = StyledSegment.nodeParagraph(() -> p.createTextCell(index).getContent());
-            out.append(s);
-        } else if (par instanceof NodeStyledParagraph p) {
-            StyledSegment s = StyledSegment.nodeParagraph(() -> p.createTextCell(index).getContent());
-            out.append(s);
-        }
-    }
-
-    /** Base Class */
-    protected abstract static class StyledParagraph {
-        public abstract String getText();
-
-        public abstract TextCell createTextCell(int index);
+        RichParagraph p = paragraphs.get(index);
+        p.export(start, end, out);
+//        if (par instanceof SParagraph p) {
+//            p.export(start, end, out);
+//        } else if (par instanceof SimpleStyledImageParagraph p) {
+//            StyledSegment s = StyledSegment.nodeParagraph(() -> p.getRichParagraph(index).getContent());
+//            out.append(s);
+//        } else if (par instanceof NodeStyledParagraph p) {
+//            StyledSegment s = StyledSegment.nodeParagraph(() -> p.getRichParagraph(index).getContent());
+//            out.append(s);
+//        }
     }
 
     /** Styled Paragraph Based on SSegments */
-    protected static class SParagraph extends StyledParagraph {
+    @Deprecated
+    protected static class SParagraph {
         private ArrayList<SSegment> segments;
         private ArrayList<Consumer<TextCell>> highlighters;
 
-        @Override
-        public TextCell createTextCell(int ix) {
-            TextCell cell = new TextCell(ix);
+//        public RichParagraph getRichParagraph(int ix) {
+//            RichParagraph p = new RichParagraph();
+//
+//            if (highlighters != null) {
+//                for (Consumer<TextCell> hl : highlighters) {
+//                    hl.accept(p);
+//                }
+//            }
+//
+//            if (segments == null) {
+//                // avoid zero height
+//                p.addSegment("");
+//            } else {
+//                for (SSegment s : segments) {
+//                    // TODO Segment.createNode()
+//                    if (s instanceof TextSSegment t) {
+//                        p.addSegment(t.text, t.direct, t.css);
+//                    } else if (s instanceof NodeSSegment n) {
+//                        p.addInlineNode(n.generator);
+//                    }
+//                }
+//            }
+//            return p;
+//        }
 
-            if (highlighters != null) {
-                for (Consumer<TextCell> hl : highlighters) {
-                    hl.accept(cell);
-                }
-            }
+//        public void export(int start, int end, StyledOutput out) throws IOException {
+//            if (segments == null) {
+//                out.append(StyledSegment.of(""));
+//            } else {
+//                int off = 0;
+//                int ct = size();
+//                for (int i = 0; i < ct; i++) {
+//                    if (off >= end) {
+//                        return;
+//                    }
+//
+//                    SSegment seg = segments.get(i);
+//                    String text = seg.getText();
+//                    int len = (text == null ? 0 : text.length());
+//                    if (start <= (off + len)) {
+//                        int ix0 = Math.max(0, start - off);
+//                        int ix1 = Math.min(len, end - off);
+//                        StyledSegment ss = seg.createStyledSegment(ix0, ix1);
+//                        out.append(ss);
+//                    }
+//                    off += len;
+//                }
+//            }
+//        }
 
-            if (segments == null) {
-                // avoid zero height
-                cell.addSegment("");
-            } else {
-                for (SSegment s : segments) {
-                    // TODO Segment.createNode()
-                    if (s instanceof TextSSegment t) {
-                        cell.addSegment(t.text, t.direct, t.css);
-                    } else if (s instanceof NodeSSegment n) {
-                        cell.addInlineNode(n.generator.get());
-                    }
-                }
-            }
-            return cell;
-        }
+//        @Override
+//        public String getText() {
+//            if (segments == null) {
+//                return null;
+//            }
+//
+//            StringBuilder sb = new StringBuilder(64);
+//            for (SSegment s : segments) {
+//                sb.append(s.getText());
+//            }
+//            return sb.toString();
+//        }
 
-        public void export(int start, int end, StyledOutput out) throws IOException {
-            if (segments == null) {
-                out.append(StyledSegment.of(""));
-            } else {
-                int off = 0;
-                int ct = size();
-                for (int i = 0; i < ct; i++) {
-                    if (off >= end) {
-                        return;
-                    }
+//        protected List<SSegment> segments() {
+//            if (segments == null) {
+//                segments = new ArrayList<>();
+//            }
+//            return segments;
+//        }
+//
+//        protected int size() {
+//            return segments == null ? 0 : segments.size();
+//        }
 
-                    SSegment seg = segments.get(i);
-                    String text = seg.getText();
-                    int len = (text == null ? 0 : text.length());
-                    if (start <= (off + len)) {
-                        int ix0 = Math.max(0, start - off);
-                        int ix1 = Math.min(len, end - off);
-                        StyledSegment ss = seg.createStyledSegment(ix0, ix1);
-                        out.append(ss);
-                    }
-                    off += len;
-                }
-            }
-        }
+//        public void addSegment(String text, String style, String[] css) {
+//            // TODO check for newlines/formfeed chars
+//            segments().add(new TextSSegment(text, style, css));
+//        }
+//
+//        public void addSegment(Supplier<Node> generator) {
+//            segments().add(new NodeSSegment(generator));
+//        }
 
-        @Override
-        public String getText() {
-            if (segments == null) {
-                return null;
-            }
-
-            StringBuilder sb = new StringBuilder(64);
-            for (SSegment s : segments) {
-                sb.append(s.getText());
-            }
-            return sb.toString();
-        }
-
-        protected List<SSegment> segments() {
-            if (segments == null) {
-                segments = new ArrayList<>();
-            }
-            return segments;
-        }
-
-        protected int size() {
-            return segments == null ? 0 : segments.size();
-        }
-
-        public void addSegment(String text, String style, String[] css) {
-            // TODO check for newlines/formfeed chars
-            segments().add(new TextSSegment(text, style, css));
-        }
-
-        public void addSegment(Supplier<Node> generator) {
-            segments().add(new NodeSSegment(generator));
-        }
-
-        public void addHighlight(Consumer<TextCell> highlighter) {
-            if (highlighters == null) {
-                highlighters = new ArrayList<>();
-            }
-            highlighters.add(highlighter);
-        }
+//        public void addHighlight(Consumer<TextCell> highlighter) {
+//            if (highlighters == null) {
+//                highlighters = new ArrayList<>();
+//            }
+//            highlighters.add(highlighter);
+//        }
     }
 
     /** base class */
@@ -338,60 +322,23 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         }
     }
 
-    public class NodeStyledParagraph extends StyledParagraph {
-        private final Supplier<Region> generator;
-
-        public NodeStyledParagraph(Supplier<Region> generator) {
-            this.generator = generator;
-        }
-
-        @Override
-        public TextCell createTextCell(int index) {
-            Region n = generator.get();
-            return new TextCell(index, new RegionCellPane(n));
-        }
-
-        @Override
-        public String getText() {
-            return "";
-        }
-    }
-
-    public class SimpleStyledImageParagraph extends StyledParagraph {
-        private final Image image;
-
-        public SimpleStyledImageParagraph(Image image) {
-            this.image = image;
-        }
-
-        @Override
-        public TextCell createTextCell(int index) {
-            return new TextCell(index, new ImageCellPane(image));
-        }
-
-        @Override
-        public String getText() {
-            return "";
-        }
-    }
-
     /** inline node segment */
-    protected static class NodeSSegment extends SSegment {
-        public final Supplier<Node> generator;
-
-        public NodeSSegment(Supplier<Node> generator) {
-            this.generator = generator;
-        }
-
-        @Override
-        public String getText() {
-            // must be one character
-            return " ";
-        }
-
-        @Override
-        protected StyledSegment createStyledSegment(int start, int end) {
-            return StyledSegment.inlineNode(generator);
-        }
-    }
+//    protected static class NodeSSegment extends SSegment {
+//        public final Supplier<Node> generator;
+//
+//        public NodeSSegment(Supplier<Node> generator) {
+//            this.generator = generator;
+//        }
+//
+//        @Override
+//        public String getText() {
+//            // must be one character
+//            return " ";
+//        }
+//
+//        @Override
+//        protected StyledSegment createStyledSegment(int start, int end) {
+//            return StyledSegment.inlineNode(generator);
+//        }
+//    }
 }

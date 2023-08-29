@@ -33,6 +33,7 @@ import javafx.scene.control.rich.StyleResolver;
  * 
  * Objects of this class are immutable.
  */
+// TODO consider packing css styles into a StyleAttrs attribute instead.
 public abstract class StyleInfo {
     /**
      * Returns the actual style attributes for the given {@link StyleResolver}.
