@@ -751,9 +751,6 @@ public class VFlow extends Pane implements StyleResolver {
         } else {
             for (StyledSegment seg : segments) {
                 if (seg.isText()) {
-                    // TODO if has css styles, use that
-                    // otherwise - generate style string and set that
-                    // (or apply attributes individually??)
                     Text t = createTextNode(seg);
                     cell.add(t);
                 } else if (seg.isInlineNode()) {
@@ -769,7 +766,11 @@ public class VFlow extends Pane implements StyleResolver {
     private Text createTextNode(StyledSegment seg) {
         String text = seg.getText();
         Text t = new Text(text);
-        // TODO attributes
+        StyleAttrs a = seg.getStyleAttrs(this);
+        if (a != null) {
+            String style = a.getStyle();
+            t.setStyle(style);
+        }
         return t;
     }
 
