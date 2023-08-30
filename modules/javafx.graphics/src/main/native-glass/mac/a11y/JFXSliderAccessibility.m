@@ -57,4 +57,14 @@
     return [self performAccessibleAction:DECREMENT];
 }
 
+- (NSRect)accessibilityFrame
+{
+    return [super accessibilityFrame];
+}
+
+- (id)accessibilityParent
+{
+    return [super accessibilityParent];
+}
+
 @end
