@@ -912,7 +912,7 @@ public class JFXPanel extends JComponent {
             }
             gg.drawImage(pixelsIm, 0, 0, lWidth, lHeight, null);
 
-            AffineTransform trnsForm = getCurrentTransform();	    
+            AffineTransform trnsForm = getCurrentTransform();
             double newScaleFactorX = trnsForm.getScaleX();
             double newScaleFactorY = trnsForm.getScaleY();
             if (lScaleFactorX != newScaleFactorX || lScaleFactorY != newScaleFactorY) {
