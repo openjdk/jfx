@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,37 @@ package javafx.scene.control;
 
 public class TreeTableCellShim<S,T> extends TreeTableCell<S,T> {
 
+    /**
+     * Flag which is only used in conjunction with {@link #lockItemOnStartEdit} to lock the item when
+     * the {@link #startEdit()} method is called.
+     */
+    private boolean isStartEdit = false;
+    /**
+     * Flag to lock the item value when an edit process is started.
+     * While normally the {@link #updateItem(Object, boolean)} will change the underlying item,
+     * when locked the item will not be changed.
+     */
+    private boolean lockItemOnStartEdit = false;
+
+    @Override
+    public void startEdit() {
+        isStartEdit = true;
+        super.startEdit();
+    }
+
     @Override
     public void updateItem(T item, boolean empty) {
+        // startEdit() was called and wants to update the cell. When locked, we will ignore the update request.
+        if (lockItemOnStartEdit && isStartEdit) {
+            isStartEdit = false;
+            return;
+        }
+
         super.updateItem(item, empty);
     }
 
-    public static <S, T> void set_lockItemOnEdit(TreeTableCell<S, T> tc, boolean b) {
-        tc.lockItemOnEdit = b;
+    public void setLockItemOnStartEdit(boolean lockItemOnEdit) {
+        this.lockItemOnStartEdit = lockItemOnEdit;
     }
 
     public static <S, T> TreeTablePosition<S, T> getEditingCellAtStartEdit(TreeTableCell<S, T> cell) {

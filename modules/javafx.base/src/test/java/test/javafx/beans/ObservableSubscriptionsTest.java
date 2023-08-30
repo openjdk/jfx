@@ -32,9 +32,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
-import javafx.beans.Subscription;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.util.Subscription;
 
 public class ObservableSubscriptionsTest {
     private final StringProperty value = new SimpleStringProperty("Initial");

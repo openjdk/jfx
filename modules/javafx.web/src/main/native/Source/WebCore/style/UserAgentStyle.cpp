@@ -29,8 +29,10 @@
 #include "config.h"
 #include "UserAgentStyle.h"
 
+#include "CSSValuePool.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ElementInlines.h"
 #include "FullscreenManager.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLAttachmentElement.h"
@@ -44,7 +46,9 @@
 #include "HTMLHtmlElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
+#include "HTMLMeterElement.h"
 #include "HTMLObjectElement.h"
+#include "HTMLProgressElement.h"
 #include "HTMLSpanElement.h"
 #include "MathMLElement.h"
 #include "MediaQueryEvaluator.h"
@@ -72,12 +76,16 @@ StyleSheetContents* UserAgentStyle::dialogStyleSheet;
 StyleSheetContents* UserAgentStyle::svgStyleSheet;
 StyleSheetContents* UserAgentStyle::mathMLStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaControlsStyleSheet;
-StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
+StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
+StyleSheetContents* UserAgentStyle::popoverStyleSheet;
 StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
+StyleSheetContents* UserAgentStyle::horizontalFormControlsStyleSheet;
+#if ENABLE(FULLSCREEN_API)
+StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
+#endif
 #if ENABLE(SERVICE_CONTROLS)
 StyleSheetContents* UserAgentStyle::imageControlsStyleSheet;
 #endif
-StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
 #if ENABLE(ATTACHMENT_ELEMENT)
 StyleSheetContents* UserAgentStyle::attachmentStyleSheet;
 #endif
@@ -94,15 +102,15 @@ StyleSheetContents* UserAgentStyle::legacyFormControlsIOSStyleSheet;
 StyleSheetContents* UserAgentStyle::alternateFormControlDesignStyleSheet;
 #endif
 
-static const MediaQueryEvaluator& screenEval()
+static const MQ::MediaQueryEvaluator& screenEval()
 {
-    static NeverDestroyed<const MediaQueryEvaluator> staticScreenEval(String(MAKE_STATIC_STRING_IMPL("screen")));
+    static NeverDestroyed<const MQ::MediaQueryEvaluator> staticScreenEval(screenAtom());
     return staticScreenEval;
 }
 
-static const MediaQueryEvaluator& printEval()
+static const MQ::MediaQueryEvaluator& printEval()
 {
-    static NeverDestroyed<const MediaQueryEvaluator> staticPrintEval(String(MAKE_STATIC_STRING_IMPL("print")));
+    static NeverDestroyed<const MQ::MediaQueryEvaluator> staticPrintEval(printAtom());
     return staticPrintEval;
 }
 
@@ -128,9 +136,9 @@ void UserAgentStyle::addToDefaultStyle(StyleSheetContents& sheet)
             continue;
         auto& mediaRule = downcast<StyleRuleMedia>(*rule);
         auto& mediaQuery = mediaRule.mediaQueries();
-        if (screenEval().evaluate(mediaQuery, nullptr))
+        if (screenEval().evaluate(mediaQuery))
             continue;
-        if (printEval().evaluate(mediaQuery, nullptr))
+        if (printEval().evaluate(mediaQuery))
             continue;
         mediaQueryStyleSheet->parserAppendRule(mediaRule.copy());
     }
@@ -227,6 +235,11 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
     }
 #endif // ENABLE(MATHML)
 
+    if (!popoverStyleSheet && element.document().settings().popoverAttributeEnabled() && element.hasAttributeWithoutSynchronization(popoverAttr)) {
+        popoverStyleSheet = parseUASheet(StringImpl::createWithoutCopying(popoverUserAgentStyleSheet, sizeof(popoverUserAgentStyleSheet)));
+        addToDefaultStyle(*popoverStyleSheet);
+    }
+
 #if ENABLE(FULLSCREEN_API)
     if (!fullscreenStyleSheet && element.document().fullscreenManager().isFullscreen()) {
         fullscreenStyleSheet = parseUASheet(StringImpl::createWithoutCopying(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet)));
@@ -247,6 +260,13 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
         addToDefaultStyle(*alternateFormControlDesignStyleSheet);
     }
 #endif
+
+    if ((is<HTMLFormControlElement>(element) || is<HTMLMeterElement>(element) || is<HTMLProgressElement>(element)) && !element.document().settings().verticalFormControlsEnabled()) {
+        if (!horizontalFormControlsStyleSheet) {
+            horizontalFormControlsStyleSheet = parseUASheet(StringImpl::createWithoutCopying(horizontalFormControlsUserAgentStyleSheet, sizeof(horizontalFormControlsUserAgentStyleSheet)));
+            addToDefaultStyle(*horizontalFormControlsStyleSheet);
+        }
+    }
 
     ASSERT(defaultStyle->features().idsInRules.isEmpty());
     ASSERT(mathMLStyleSheet || defaultStyle->features().siblingRules.isEmpty());

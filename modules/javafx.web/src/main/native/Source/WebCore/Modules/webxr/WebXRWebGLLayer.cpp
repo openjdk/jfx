@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
+ * Copyright (C) 2023 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,20 +29,12 @@
 
 #if ENABLE(WEBXR)
 
-#if !USE(ANGLE)
-#include "GraphicsContextGL.h"
-#endif
 #include "HTMLCanvasElement.h"
 #include "IntSize.h"
 #include "OffscreenCanvas.h"
-#if !USE(ANGLE)
-#include "TemporaryOpenGLSetting.h"
-#endif
+#include "WebGL2RenderingContext.h"
 #include "WebGLFramebuffer.h"
 #include "WebGLRenderingContext.h"
-#if ENABLE(WEBGL2)
-#include "WebGL2RenderingContext.h"
-#endif
 #include "WebGLRenderingContextBase.h"
 #include "WebXRFrame.h"
 #include "WebXROpaqueFramebuffer.h"

@@ -26,6 +26,7 @@
 #include "Range.h"
 
 #include "Comment.h"
+#include "CustomElementReactionQueue.h"
 #include "DOMRect.h"
 #include "DOMRectList.h"
 #include "DocumentFragment.h"
@@ -44,6 +45,7 @@
 #include "ProcessingInstruction.h"
 #include "ScopedEventQueue.h"
 #include "TextIterator.h"
+#include "TypedElementDescendantIterator.h"
 #include "VisibleUnits.h"
 #include "markup.h"
 #include <stdio.h>
@@ -317,13 +319,17 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
         return fragment;
     }
 
+    Vector<Ref<Element>> elementsToUpgrade;
+    {
+        CustomElementReactionStack customElementsReactionHoldingTank(commonRoot->document().globalObject());
+
     // Since mutation events can modify the range during the process, the boundary points need to be saved.
     RangeBoundaryPoint originalStart(m_start);
     RangeBoundaryPoint originalEnd(m_end);
 
     // what is the highest node that partially selects the start / end of the range?
-    RefPtr<Node> partialStart = highestAncestorUnderCommonRoot(&originalStart.container(), commonRoot.get());
-    RefPtr<Node> partialEnd = highestAncestorUnderCommonRoot(&originalEnd.container(), commonRoot.get());
+        RefPtr partialStart = highestAncestorUnderCommonRoot(&originalStart.container(), commonRoot.get());
+        RefPtr partialEnd = highestAncestorUnderCommonRoot(&originalEnd.container(), commonRoot.get());
 
     // Start and end containers are different.
     // There are three possibilities here:
@@ -346,7 +352,7 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
     // after any DOM mutation event, at various stages below. See webkit bug 60350.
 
     RefPtr<Node> leftContents;
-    if (&originalStart.container() != commonRoot && commonRoot->contains(&originalStart.container())) {
+        if (&originalStart.container() != commonRoot && commonRoot->contains(originalStart.container())) {
         auto firstResult = processContentsBetweenOffsets(action, nullptr, &originalStart.container(), originalStart.offset(), originalStart.container().length());
         auto secondResult = processAncestorsAndTheirSiblings(action, &originalStart.container(), ProcessContentsForward, WTFMove(firstResult), commonRoot.get());
         // FIXME: A bit peculiar that we silently ignore the exception here, but we do have at least some regression tests that rely on this behavior.
@@ -355,7 +361,7 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
     }
 
     RefPtr<Node> rightContents;
-    if (&endContainer() != commonRoot && commonRoot->contains(&originalEnd.container())) {
+        if (&endContainer() != commonRoot && commonRoot->contains(originalEnd.container())) {
         auto firstResult = processContentsBetweenOffsets(action, nullptr, &originalEnd.container(), 0, originalEnd.offset());
         auto secondResult = processAncestorsAndTheirSiblings(action, &originalEnd.container(), ProcessContentsBackward, WTFMove(firstResult), commonRoot.get());
         // FIXME: A bit peculiar that we silently ignore the exception here, but we do have at least some regression tests that rely on this behavior.
@@ -364,18 +370,18 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
     }
 
     // delete all children of commonRoot between the start and end container
-    RefPtr<Node> processStart = childOfCommonRootBeforeOffset(&originalStart.container(), originalStart.offset(), commonRoot.get());
+        RefPtr processStart = childOfCommonRootBeforeOffset(&originalStart.container(), originalStart.offset(), commonRoot.get());
     if (processStart && &originalStart.container() != commonRoot) // processStart contains nodes before m_start.
         processStart = processStart->nextSibling();
-    RefPtr<Node> processEnd = childOfCommonRootBeforeOffset(&originalEnd.container(), originalEnd.offset(), commonRoot.get());
+        RefPtr processEnd = childOfCommonRootBeforeOffset(&originalEnd.container(), originalEnd.offset(), commonRoot.get());
 
     // Collapse the range, making sure that the result is not within a node that was partially selected.
     if (action == Extract || action == Delete) {
-        if (partialStart && commonRoot->contains(partialStart.get())) {
+            if (partialStart && commonRoot->contains(*partialStart)) {
             auto result = setStart(*partialStart->parentNode(), partialStart->computeNodeIndex() + 1);
             if (result.hasException())
                 return result.releaseException();
-        } else if (partialEnd && commonRoot->contains(partialEnd.get())) {
+            } else if (partialEnd && commonRoot->contains(*partialEnd)) {
             auto result = setStart(*partialEnd->parentNode(), partialEnd->computeNodeIndex());
             if (result.hasException())
                 return result.releaseException();
@@ -406,6 +412,18 @@ ExceptionOr<RefPtr<DocumentFragment>> Range::processContents(ActionType action)
         if (result.hasException())
             return result.releaseException();
     }
+
+        HashSet<Ref<Element>> elementSet;
+        for (auto& element : customElementsReactionHoldingTank.takeElements())
+            elementSet.add(element.get());
+        if (!elementSet.isEmpty()) {
+            for (auto& element : descendantsOfType<Element>(*fragment)) {
+                if (elementSet.contains(element))
+                    elementsToUpgrade.append(element);
+            }
+        }
+    }
+    CustomElementReactionQueue::enqueueElementsOnAppropriateElementQueue(elementsToUpgrade);
 
     return fragment;
 }
@@ -703,7 +721,7 @@ ExceptionOr<Ref<DocumentFragment>> Range::createContextualFragment(const String&
         element = node.parentElement();
     if (!element || (element->document().isHTMLDocument() && is<HTMLHtmlElement>(*element)))
         element = HTMLBodyElement::create(node.document());
-    return WebCore::createContextualFragment(*element, markup, AllowScriptingContentAndDoNotMarkAlreadyStarted);
+    return WebCore::createContextualFragment(*element, markup, { ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent, ParserContentPolicy::DoNotMarkAlreadyStarted });
 }
 
 ExceptionOr<Node*> Range::checkNodeOffsetPair(Node& node, unsigned offset)

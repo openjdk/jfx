@@ -35,6 +35,7 @@
 #include "Logging.h"
 #include "NicosiaPlatformLayer.h"
 #include "ScrollingStateFrameScrollingNode.h"
+#include "ScrollingTreeScrollingNodeDelegateNicosia.h"
 #include "ThreadedScrollingTree.h"
 
 namespace WebCore {
@@ -46,15 +47,24 @@ Ref<ScrollingTreeFrameScrollingNode> ScrollingTreeFrameScrollingNodeNicosia::cre
 
 ScrollingTreeFrameScrollingNodeNicosia::ScrollingTreeFrameScrollingNodeNicosia(ScrollingTree& scrollingTree, ScrollingNodeType nodeType, ScrollingNodeID nodeID)
     : ScrollingTreeFrameScrollingNode(scrollingTree, nodeType, nodeID)
-    , m_delegate(*this, downcast<ThreadedScrollingTree>(scrollingTree).scrollAnimatorEnabled())
 {
+    m_delegate = makeUnique<ScrollingTreeScrollingNodeDelegateNicosia>(*this, downcast<ThreadedScrollingTree>(scrollingTree).scrollAnimatorEnabled());
 }
 
 ScrollingTreeFrameScrollingNodeNicosia::~ScrollingTreeFrameScrollingNodeNicosia() = default;
 
-void ScrollingTreeFrameScrollingNodeNicosia::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
+ScrollingTreeScrollingNodeDelegateNicosia& ScrollingTreeFrameScrollingNodeNicosia::delegate() const
 {
-    ScrollingTreeFrameScrollingNode::commitStateBeforeChildren(stateNode);
+    return *static_cast<ScrollingTreeScrollingNodeDelegateNicosia*>(m_delegate.get());
+}
+
+bool ScrollingTreeFrameScrollingNodeNicosia::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
+{
+    if (!ScrollingTreeFrameScrollingNode::commitStateBeforeChildren(stateNode))
+        return false;
+
+    if (!is<ScrollingStateFrameScrollingNode>(stateNode))
+        return false;
 
     const auto& scrollingStateNode = downcast<ScrollingStateFrameScrollingNode>(stateNode);
 
@@ -83,37 +93,18 @@ void ScrollingTreeFrameScrollingNodeNicosia::commitStateBeforeChildren(const Scr
         m_footerLayer = downcast<Nicosia::CompositionLayer>(layer);
     }
 
-    m_delegate.updateFromStateNode(scrollingStateNode);
+    m_delegate->updateFromStateNode(scrollingStateNode);
+    return true;
 }
 
 WheelEventHandlingResult ScrollingTreeFrameScrollingNodeNicosia::handleWheelEvent(const PlatformWheelEvent& wheelEvent, EventTargeting eventTargeting)
 {
-    return m_delegate.handleWheelEvent(wheelEvent, eventTargeting);
-}
+    if (!canHandleWheelEvent(wheelEvent, eventTargeting))
+        return WheelEventHandlingResult::unhandled();
 
-bool ScrollingTreeFrameScrollingNodeNicosia::startAnimatedScrollToPosition(FloatPoint destinationPosition)
-{
-    bool started = m_delegate.startAnimatedScrollToPosition(destinationPosition);
-    if (started)
-        willStartAnimatedScroll();
-
-    return started;
-}
-
-void ScrollingTreeFrameScrollingNodeNicosia::stopAnimatedScroll()
-{
-    m_delegate.stopAnimatedScroll();
-}
-
-void ScrollingTreeFrameScrollingNodeNicosia::serviceScrollAnimation(MonotonicTime currentTime)
-{
-    m_delegate.serviceScrollAnimation(currentTime);
-}
-
-FloatPoint ScrollingTreeFrameScrollingNodeNicosia::adjustedScrollPosition(const FloatPoint& position, ScrollClamping clamping) const
-{
-    FloatPoint scrollPosition(roundf(position.x()), roundf(position.y()));
-    return ScrollingTreeFrameScrollingNode::adjustedScrollPosition(scrollPosition, clamping);
+    bool handled = delegate().handleWheelEvent(wheelEvent);
+    delegate().updateSnapScrollState();
+    return WheelEventHandlingResult::result(handled);
 }
 
 void ScrollingTreeFrameScrollingNodeNicosia::currentScrollPositionChanged(ScrollType scrollType, ScrollingLayerPositionAction action)
@@ -131,7 +122,7 @@ void ScrollingTreeFrameScrollingNodeNicosia::repositionScrollingLayers()
 
     auto scrollPosition = currentScrollPosition();
 
-    compositionLayer.updateState(
+    compositionLayer.accessPending(
         [&scrollPosition](Nicosia::CompositionLayer::LayerState& state)
         {
             state.position = -scrollPosition;
@@ -149,7 +140,7 @@ void ScrollingTreeFrameScrollingNodeNicosia::repositionRelatedLayers()
     auto applyLayerPosition =
         [](auto& layer, auto&& position)
         {
-            layer.updateState(
+            layer.accessPending(
                 [&position](Nicosia::CompositionLayer::LayerState& state)
                 {
                     state.position = position;
@@ -162,7 +153,7 @@ void ScrollingTreeFrameScrollingNodeNicosia::repositionRelatedLayers()
 
     float topContentInset = this->topContentInset();
     if (m_insetClipLayer && m_rootContentsLayer) {
-        m_insetClipLayer->updateState(
+        m_insetClipLayer->accessPending(
             [&scrollPosition, &topContentInset](Nicosia::CompositionLayer::LayerState& state)
             {
                 state.position = { state.position.x(), FrameView::yPositionForInsetClipLayer(scrollPosition, topContentInset) };
@@ -186,7 +177,7 @@ void ScrollingTreeFrameScrollingNodeNicosia::repositionRelatedLayers()
             applyLayerPosition(*m_footerLayer, FloatPoint(horizontalScrollOffsetForBanner, FrameView::yPositionForFooterLayer(scrollPosition, topContentInset, totalContentsSize().height(), footerHeight())));
     }
 
-    m_delegate.updateVisibleLengths();
+    delegate().updateVisibleLengths();
 }
 
 } // namespace WebCore

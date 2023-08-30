@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005, 2006, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -179,7 +180,8 @@ void ApplyStyleCommand::updateStartEnd(const Position& newStart, const Position&
         m_useEndingSelection = true;
 
     bool wasBaseFirst = startingSelection().isBaseFirst() || !startingSelection().isDirectional();
-    setEndingSelection(VisibleSelection(wasBaseFirst ? newStart : newEnd, wasBaseFirst ? newEnd : newStart, VisiblePosition::defaultAffinity, endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(VisiblePosition(wasBaseFirst ? newStart : newEnd), VisiblePosition(wasBaseFirst ? newEnd : newStart),
+        endingSelection().isDirectional()));
     m_start = newStart;
     m_end = newEnd;
 }
@@ -265,7 +267,7 @@ void ApplyStyleCommand::applyBlockStyle(EditingStyle& style)
                 if (newBlock)
                     block = newBlock;
             }
-            ASSERT(!block || is<HTMLElement>(*block));
+            ASSERT(!block || is<Element>(*block));
             if (is<HTMLElement>(block)) {
                 removeCSSStyle(style, downcast<HTMLElement>(*block));
                 if (!m_removeOnly)
@@ -425,7 +427,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
             currentFontSize = computedFontSize(node.get());
         }
         if (currentFontSize != desiredFontSize) {
-            inlineStyle->setProperty(CSSPropertyFontSize, CSSValuePool::singleton().createValue(desiredFontSize, CSSUnitType::CSS_PX), false);
+            inlineStyle->setProperty(CSSPropertyFontSize, CSSPrimitiveValue::create(desiredFontSize, CSSUnitType::CSS_PX), false);
             setNodeAttribute(*element, styleAttr, inlineStyle->asTextAtom());
         }
         if (inlineStyle->isEmpty()) {
@@ -1148,7 +1150,7 @@ void ApplyStyleCommand::removeInlineStyle(EditingStyle& style, const Position& s
                 if (s.deprecatedNode() == element.ptr()) {
                     // Since elem must have been fully selected, and it is at the start
                     // of the selection, it is clear we can set the new s offset to 0.
-                    ASSERT(s.anchorType() == Position::PositionIsBeforeAnchor || s.offsetInContainerNode() <= 0);
+                    ASSERT(s.anchorType() == Position::PositionIsBeforeAnchor || s.anchorType() == Position::PositionIsBeforeChildren || s.offsetInContainerNode() <= 0);
                     s = firstPositionInOrBeforeNode(next.get());
                 }
                 if (e.deprecatedNode() == element.ptr()) {

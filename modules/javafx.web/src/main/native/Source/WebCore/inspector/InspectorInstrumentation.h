@@ -42,6 +42,7 @@
 #include "EventTarget.h"
 #include "FormData.h"
 #include "Frame.h"
+#include "FrameView.h"
 #include "HitTestResult.h"
 #include "InspectorInstrumentationPublic.h"
 #include "Page.h"
@@ -124,6 +125,8 @@ public:
     static void didRemoveDOMNode(Document&, Node&);
     static void willDestroyDOMNode(Node&);
     static void didChangeRendererForDOMNode(Node&);
+    static void didAddOrRemoveScrollbars(FrameView&);
+    static void didAddOrRemoveScrollbars(RenderObject&);
     static void willModifyDOMAttr(Document&, Element&, const AtomString& oldValue, const AtomString& newValue);
     static void didModifyDOMAttr(Document&, Element&, const AtomString& name, const AtomString& value);
     static void didRemoveDOMAttr(Document&, Element&, const AtomString& name);
@@ -189,7 +192,7 @@ public:
     static void didRecalculateStyle(Document&);
     static void didScheduleStyleRecalculation(Document&);
     static void applyUserAgentOverride(Frame&, String&);
-    static void applyEmulatedMedia(Frame&, String&);
+    static void applyEmulatedMedia(Frame&, AtomString&);
 
     static void flexibleBoxRendererBeganLayout(const RenderObject&);
     static void flexibleBoxRendererWrappedToNextLine(const RenderObject&, size_t lineStartItemIndex);
@@ -232,8 +235,9 @@ public:
     static void frameStoppedLoading(Frame&);
     static void frameScheduledNavigation(Frame&, Seconds delay);
     static void frameClearedScheduledNavigation(Frame&);
+    static void accessibilitySettingsDidChange(Page&);
 #if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-    static void defaultAppearanceDidChange(Page&, bool useDarkAppearance);
+    static void defaultAppearanceDidChange(Page&);
 #endif
     static void willDestroyCachedResource(CachedResource&);
 
@@ -304,7 +308,7 @@ public:
     static bool isWebGLProgramHighlighted(WebGLRenderingContextBase&, WebGLProgram&);
 #endif
 
-    static void willApplyKeyframeEffect(const Styleable&, KeyframeEffect&, ComputedEffectTiming);
+    static void willApplyKeyframeEffect(const Styleable&, KeyframeEffect&, const ComputedEffectTiming&);
     static void didChangeWebAnimationName(WebAnimation&);
     static void didSetWebAnimationEffect(WebAnimation&);
     static void didChangeWebAnimationEffectTiming(WebAnimation&);
@@ -346,6 +350,8 @@ private:
     static void didRemoveDOMNodeImpl(InstrumentingAgents&, Node&);
     static void willDestroyDOMNodeImpl(InstrumentingAgents&, Node&);
     static void didChangeRendererForDOMNodeImpl(InstrumentingAgents&, Node&);
+    static void didAddOrRemoveScrollbarsImpl(InstrumentingAgents&, FrameView&);
+    static void didAddOrRemoveScrollbarsImpl(InstrumentingAgents&, RenderObject&);
     static void willModifyDOMAttrImpl(InstrumentingAgents&, Element&, const AtomString& oldValue, const AtomString& newValue);
     static void didModifyDOMAttrImpl(InstrumentingAgents&, Element&, const AtomString& name, const AtomString& value);
     static void didRemoveDOMAttrImpl(InstrumentingAgents&, Element&, const AtomString& name);
@@ -411,7 +417,7 @@ private:
     static void didRecalculateStyleImpl(InstrumentingAgents&);
     static void didScheduleStyleRecalculationImpl(InstrumentingAgents&, Document&);
     static void applyUserAgentOverrideImpl(InstrumentingAgents&, String&);
-    static void applyEmulatedMediaImpl(InstrumentingAgents&, String&);
+    static void applyEmulatedMediaImpl(InstrumentingAgents&, AtomString&);
 
     static void flexibleBoxRendererBeganLayoutImpl(InstrumentingAgents&, const RenderObject&);
     static void flexibleBoxRendererWrappedToNextLineImpl(InstrumentingAgents&, const RenderObject&, size_t lineStartItemIndex);
@@ -440,8 +446,9 @@ private:
     static void frameStoppedLoadingImpl(InstrumentingAgents&, Frame&);
     static void frameScheduledNavigationImpl(InstrumentingAgents&, Frame&, Seconds delay);
     static void frameClearedScheduledNavigationImpl(InstrumentingAgents&, Frame&);
+    static void accessibilitySettingsDidChangeImpl(InstrumentingAgents&);
 #if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-    static void defaultAppearanceDidChangeImpl(InstrumentingAgents&, bool useDarkAppearance);
+    static void defaultAppearanceDidChangeImpl(InstrumentingAgents&);
 #endif
     static void willDestroyCachedResourceImpl(CachedResource&);
 
@@ -510,7 +517,7 @@ private:
     static bool isWebGLProgramHighlightedImpl(InstrumentingAgents&, WebGLProgram&);
 #endif
 
-    static void willApplyKeyframeEffectImpl(InstrumentingAgents&, const Styleable&, KeyframeEffect&, ComputedEffectTiming);
+    static void willApplyKeyframeEffectImpl(InstrumentingAgents&, const Styleable&, KeyframeEffect&, const ComputedEffectTiming&);
     static void didChangeWebAnimationNameImpl(InstrumentingAgents&, WebAnimation&);
     static void didSetWebAnimationEffectImpl(InstrumentingAgents&, WebAnimation&);
     static void didChangeWebAnimationEffectTimingImpl(InstrumentingAgents&, WebAnimation&);
@@ -603,6 +610,21 @@ inline void InspectorInstrumentation::didChangeRendererForDOMNode(Node& node)
     ASSERT(InspectorInstrumentationPublic::hasFrontends());
     if (auto* agents = instrumentingAgents(node.document()))
         didChangeRendererForDOMNodeImpl(*agents, node);
+}
+
+inline void InspectorInstrumentation::didAddOrRemoveScrollbars(FrameView& frameView)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    auto* localFrame = dynamicDowncast<LocalFrame>(frameView.frame());
+    if (auto* agents = localFrame ? instrumentingAgents(localFrame->document()) : nullptr)
+        didAddOrRemoveScrollbarsImpl(*agents, frameView);
+}
+
+inline void InspectorInstrumentation::didAddOrRemoveScrollbars(RenderObject& renderer)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (auto* agents = instrumentingAgents(renderer))
+        didAddOrRemoveScrollbarsImpl(*agents, renderer);
 }
 
 inline void InspectorInstrumentation::willModifyDOMAttr(Document& document, Element& element, const AtomString& oldValue, const AtomString& newValue)
@@ -1039,7 +1061,7 @@ inline void InspectorInstrumentation::applyUserAgentOverride(Frame& frame, Strin
         applyUserAgentOverrideImpl(*agents, userAgent);
 }
 
-inline void InspectorInstrumentation::applyEmulatedMedia(Frame& frame, String& media)
+inline void InspectorInstrumentation::applyEmulatedMedia(Frame& frame, AtomString& media)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(frame))
@@ -1266,11 +1288,17 @@ inline void InspectorInstrumentation::frameClearedScheduledNavigation(Frame& fra
         frameClearedScheduledNavigationImpl(*agents, frame);
 }
 
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-inline void InspectorInstrumentation::defaultAppearanceDidChange(Page& page, bool useDarkAppearance)
+inline void InspectorInstrumentation::accessibilitySettingsDidChange(Page& page)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
-    defaultAppearanceDidChangeImpl(instrumentingAgents(page), useDarkAppearance);
+    accessibilitySettingsDidChangeImpl(instrumentingAgents(page));
+}
+
+#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
+inline void InspectorInstrumentation::defaultAppearanceDidChange(Page& page)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    defaultAppearanceDidChangeImpl(instrumentingAgents(page));
 }
 #endif
 
@@ -1477,7 +1505,7 @@ inline bool InspectorInstrumentation::isWebGLProgramHighlighted(WebGLRenderingCo
 }
 #endif
 
-inline void InspectorInstrumentation::willApplyKeyframeEffect(const Styleable& target, KeyframeEffect& effect, ComputedEffectTiming computedTiming)
+inline void InspectorInstrumentation::willApplyKeyframeEffect(const Styleable& target, KeyframeEffect& effect, const ComputedEffectTiming& computedTiming)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (auto* agents = instrumentingAgents(target.element.document()))
@@ -1737,18 +1765,18 @@ inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgents(Worker
 inline void InspectorInstrumentation::frontendCreated()
 {
     ASSERT(isMainThread());
-    ++InspectorInstrumentationPublic::s_frontendCounter;
+    int frontendCount = ++InspectorInstrumentationPublic::s_frontendCounter;
 
-    if (InspectorInstrumentationPublic::s_frontendCounter == 1)
+    if (frontendCount == 1)
         InspectorInstrumentation::firstFrontendCreated();
 }
 
 inline void InspectorInstrumentation::frontendDeleted()
 {
     ASSERT(isMainThread());
-    --InspectorInstrumentationPublic::s_frontendCounter;
+    int frontendCount = --InspectorInstrumentationPublic::s_frontendCounter;
 
-    if (!InspectorInstrumentationPublic::s_frontendCounter)
+    if (!frontendCount)
         InspectorInstrumentation::lastFrontendDeleted();
 }
 

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DisplayTextBox.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
@@ -39,7 +37,7 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TextBox);
 TextBox::TextBox(Tree& tree, UnadjustedAbsoluteFloatRect borderBox, Style&& displayStyle, const InlineDisplay::Box& box)
     : Box(tree, borderBox, WTFMove(displayStyle), { TypeFlags::TextBox })
     , m_expansion(box.expansion())
-    , m_text(box.text().value())
+    , m_text(box.text())
 {
 }
 
@@ -69,4 +67,3 @@ String TextBox::debugDescription() const
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

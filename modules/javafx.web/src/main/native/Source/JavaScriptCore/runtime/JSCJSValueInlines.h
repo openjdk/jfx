@@ -81,7 +81,7 @@ inline uint32_t JSValue::toIndex(JSGlobalObject* globalObject, const char* error
     RELEASE_AND_RETURN(scope, JSC::toInt32(d));
 }
 
-inline size_t JSValue::toTypedArrayIndex(JSGlobalObject* globalObject, const char* errorName) const
+inline size_t JSValue::toTypedArrayIndex(JSGlobalObject* globalObject, ASCIILiteral errorName) const
 {
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -881,6 +881,9 @@ ALWAYS_INLINE JSValue JSValue::toNumeric(JSGlobalObject* globalObject) const
     if (isInt32() || isDouble() || isBigInt())
         return *this;
 
+    if (isString())
+        RELEASE_AND_RETURN(scope, jsNumber(asString(*this)->toNumber(globalObject)));
+
     JSValue primValue = this->toPrimitive(globalObject, PreferNumber);
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -1013,7 +1016,20 @@ inline const ClassInfo* JSValue::classInfoOrNull() const
 
 inline JSValue JSValue::toThis(JSGlobalObject* globalObject, ECMAMode ecmaMode) const
 {
-    return isCell() ? asCell()->methodTable()->toThis(asCell(), globalObject, ecmaMode) : toThisSlowCase(globalObject, ecmaMode);
+    if (isObject()) {
+        if (asObject(*this)->inherits<JSScope>())
+            return ecmaMode.isStrict() ? jsUndefined() : globalObject->globalThis();
+        return *this;
+    }
+
+    if (ecmaMode.isStrict())
+        return *this;
+
+    ASSERT(!ecmaMode.isStrict());
+    if (isUndefinedOrNull())
+        return globalObject->globalThis();
+
+    return toThisSloppySlowCase(globalObject);
 }
 
 ALWAYS_INLINE JSValue JSValue::get(JSGlobalObject* globalObject, PropertyName propertyName) const

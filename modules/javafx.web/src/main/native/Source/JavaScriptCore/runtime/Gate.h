@@ -37,6 +37,7 @@ namespace JSC {
     v(loopOSREntry, NoPtrTag) \
     v(entryOSREntry, NoPtrTag) \
     v(wasmOSREntry, NoPtrTag) \
+    v(wasmTailCallJSEntrySlowPathPtrTag, NoPtrTag) \
     v(exceptionHandler, NoPtrTag) \
     v(returnFromLLInt, NoPtrTag) \
     v(llint_function_for_call_arity_checkUntag, NoPtrTag) \
@@ -61,17 +62,14 @@ namespace JSC {
     v(op_tail_call_varargs_slow, JSEntryPtrTag) \
     v(op_tail_call_forward_arguments_slow, JSEntryPtrTag) \
     v(op_construct_varargs_slow, JSEntryPtrTag) \
-    v(op_call_eval_slow, JSEntrySlowPathPtrTag) \
+    v(op_call_direct_eval_slow, JSEntrySlowPathPtrTag) \
 
 #if ENABLE(WEBASSEMBLY)
 
 #define JSC_WASM_GATE_OPCODES(v) \
     v(wasm_call, JSEntrySlowPathPtrTag) \
-    v(wasm_call_no_tls, JSEntrySlowPathPtrTag) \
     v(wasm_call_indirect, JSEntrySlowPathPtrTag) \
-    v(wasm_call_indirect_no_tls, JSEntrySlowPathPtrTag) \
     v(wasm_call_ref, JSEntrySlowPathPtrTag) \
-    v(wasm_call_ref_no_tls, JSEntrySlowPathPtrTag) \
 
 #else
 #define JSC_WASM_GATE_OPCODES(v)

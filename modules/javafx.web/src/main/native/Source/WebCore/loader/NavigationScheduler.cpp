@@ -53,6 +53,7 @@
 #include "Page.h"
 #include "PolicyChecker.h"
 #include "ScriptController.h"
+#include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
 #include <wtf/Ref.h>
 
@@ -124,11 +125,9 @@ protected:
         : ScheduledNavigation(delay, lockHistory, lockBackForwardList, duringLoad, isLocationChange, initiatingDocument.shouldOpenExternalURLsPolicyToPropagate())
         , m_initiatingDocument { initiatingDocument }
         , m_securityOrigin { securityOrigin }
-        , m_url { url }
+        , m_url { url, initiatingDocument.topOrigin().data() }
         , m_referrer { referrer }
     {
-        if (m_url.protocolIsBlob())
-            m_blobURLLifetimeExtender = m_url;
     }
 
     void didStartTimer(Frame& frame, Timer& timer) override
@@ -164,8 +163,7 @@ protected:
 private:
     Ref<Document> m_initiatingDocument;
     RefPtr<SecurityOrigin> m_securityOrigin;
-    URL m_url;
-    BlobURLHandle m_blobURLLifetimeExtender;
+    URLKeepingBlobAlive m_url;
     String m_referrer;
     bool m_haveToldClient { false };
 };
@@ -198,7 +196,7 @@ public:
         bool refresh = equalIgnoringFragmentIdentifier(frame.document()->url(), url());
         ResourceRequest resourceRequest { url(), referrer(), refresh ? ResourceRequestCachePolicy::ReloadIgnoringCacheData : ResourceRequestCachePolicy::UseProtocolCachePolicy };
         if (initiatedByMainFrame() == InitiatedByMainFrame::Yes)
-            resourceRequest.setRequester(ResourceRequest::Requester::Main);
+            resourceRequest.setRequester(ResourceRequestRequester::Main);
         FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), initiatedByMainFrame() };
         frameLoadRequest.setLockHistory(lockHistory());
         frameLoadRequest.setLockBackForwardList(lockBackForwardList());
@@ -465,9 +463,12 @@ LockBackForwardList NavigationScheduler::mustLockBackForwardList(Frame& targetFr
     // Navigation of a subframe during loading of an ancestor frame does not create a new back/forward item.
     // The definition of "during load" is any time before all handlers for the load event have been run.
     // See https://bugs.webkit.org/show_bug.cgi?id=14957 for the original motivation for this.
-    for (Frame* ancestor = targetFrame.tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
-        Document* document = ancestor->document();
-        if (!ancestor->loader().isComplete() || (document && document->processingLoadEvent()))
+    for (auto* ancestor = targetFrame.tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
+        auto* localAncestor = dynamicDowncast<LocalFrame>(ancestor);
+        if (!localAncestor)
+            continue;
+        Document* document = localAncestor->document();
+        if (!localAncestor->loader().isComplete() || (document && document->processingLoadEvent()))
             return LockBackForwardList::Yes;
     }
     return LockBackForwardList::No;

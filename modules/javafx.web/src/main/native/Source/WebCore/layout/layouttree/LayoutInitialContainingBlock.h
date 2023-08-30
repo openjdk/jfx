@@ -25,22 +25,20 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 namespace Layout {
 
-class InitialContainingBlock final : public ContainerBox {
+class InitialContainingBlock final : public ElementBox {
     WTF_MAKE_ISO_ALLOCATED(InitialContainingBlock);
 public:
     InitialContainingBlock(RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr);
     virtual ~InitialContainingBlock() = default;
 
 private:
-    const ContainerBox& parent() const = delete;
+    const ElementBox& parent() const = delete;
     const Box* nextSibling() const = delete;
     const Box* nextInFlowSibling() const = delete;
     const Box* nextInFlowOrFloatingSibling() const = delete;
@@ -55,4 +53,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_BOX(InitialContainingBlock, isInitialContainingBlock())
 
-#endif

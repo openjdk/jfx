@@ -93,7 +93,7 @@ NetworkStorageSession::~NetworkStorageSession()
 {
 }
 
-void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldAskITP, const String& value, ShouldRelaxThirdPartyCookieBlocking) const
+void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, const String& value, ShouldRelaxThirdPartyCookieBlocking) const
 {
     using namespace CookieInternalJava;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -107,13 +107,13 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const S
     WTF::CheckAndClearException(env);
 }
 
-std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const
+std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking) const
 {
     // 'HttpOnly' cookies should no be accessible from scripts, so we filter them out here.
     return { CookieInternalJava::getCookies(url, false), false };
 }
 
-std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking) const
+std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, IncludeSecureCookies, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking) const
 {
     return { CookieInternalJava::getCookies(url, true), true };
 }
@@ -123,7 +123,7 @@ std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(con
     return { CookieInternalJava::getCookies(headerFieldProxy.firstParty, true), true };
 }
 
-bool NetworkStorageSession::getRawCookies(const URL& /*firstParty*/, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ShouldAskITP, ShouldRelaxThirdPartyCookieBlocking, Vector<Cookie>&) const
+bool NetworkStorageSession::getRawCookies(const URL& /*firstParty*/, const SameSiteInfo&, const URL&, std::optional<FrameIdentifier>, std::optional<PageIdentifier>, ApplyTrackingPrevention, ShouldRelaxThirdPartyCookieBlocking, Vector<Cookie>&) const
 {
     notImplemented();
     return false;
@@ -141,6 +141,8 @@ void NetworkStorageSession::setCookies(const Vector<Cookie>&, const URL&, const 
 
 void NetworkStorageSession::deleteCookiesForHostnames(const Vector<String>& hostnames, IncludeHttpOnlyCookies includeHttpOnlyCookies, ScriptWrittenCookiesOnly, CompletionHandler<void()>&& completionHandler)
 {
+    UNUSED_PARAM(hostnames);
+        UNUSED_PARAM(includeHttpOnlyCookies);
      // FIXME: Implement for WebKit to use.
     completionHandler();
 }

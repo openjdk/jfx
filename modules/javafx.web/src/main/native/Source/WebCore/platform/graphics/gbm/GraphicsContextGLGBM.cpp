@@ -27,7 +27,7 @@
 #include "config.h"
 #include "GraphicsContextGLGBM.h"
 
-#if ENABLE(WEBGL) && USE(LIBGBM) && USE(ANGLE)
+#if ENABLE(WEBGL) && USE(GBM)
 
 #include "ANGLEHeaders.h"
 #include "DMABufEGLUtilities.h"
@@ -97,9 +97,7 @@ void GraphicsContextGLGBM::prepareForDisplay()
 
 bool GraphicsContextGLGBM::platformInitializeContext()
 {
-#if ENABLE(WEBGL2)
     m_isForWebGL2 = contextAttributes().webGLVersion == GraphicsContextGLWebGLVersion::WebGL2;
-#endif
 
     Vector<EGLint> displayAttributes {
         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,
@@ -146,6 +144,7 @@ bool GraphicsContextGLGBM::platformInitializeContext()
 
     EGLint configAttributes[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
@@ -299,6 +298,8 @@ void GraphicsContextGLGBM::allocateDrawBufferObject()
             .height = std::clamp<uint32_t>(size.height(), 0, UINT_MAX),
             .flags = GBMBufferSwapchain::BufferDescription::NoFlags,
         });
+    if (!m_swapchain.drawBO)
+        return;
 
     GLenum textureTarget = drawingBufferTextureTarget();
     ScopedRestoreTextureBinding restoreBinding(drawingBufferTextureTargetQueryForDrawingTarget(textureTarget), textureTarget, textureTarget != TEXTURE_RECTANGLE_ARB);
@@ -330,4 +331,4 @@ GraphicsContextGLGBM::Swapchain::~Swapchain()
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(LIBGBM) && USE(ANGLE)
+#endif // ENABLE(WEBGL) && USE(GBM)

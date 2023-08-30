@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 
 #include "JSCJSValue.h"
 #include "MacroAssemblerCodeRef.h"
+#include "NativeFunction.h"
 #include "Opcode.h"
 #include <variant>
 #include <wtf/HashMap.h>
@@ -63,6 +64,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
     class Exception;
     class FunctionExecutable;
     class VM;
+    class JSBoundFunction;
     class JSFunction;
     class JSGlobalObject;
     class JSModuleEnvironment;
@@ -109,7 +111,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
         bool m_valid { false };
         HandlerType m_type;
 #if ENABLE(JIT)
-        MacroAssemblerCodePtr<ExceptionHandlerPtrTag> m_nativeCode;
+        CodePtr<ExceptionHandlerPtrTag> m_nativeCode;
 #endif
 
         JSOrWasmInstruction m_catchPCForInterpreter;
@@ -143,7 +145,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
         JSValue executeModuleProgram(JSModuleRecord*, ModuleProgramExecutable*, JSGlobalObject*, JSModuleEnvironment*, JSValue sentValue, JSValue resumeMode);
         JSValue executeCall(JSGlobalObject*, JSObject* function, const CallData&, JSValue thisValue, const ArgList&);
         JSObject* executeConstruct(JSGlobalObject*, JSObject* function, const CallData&, const ArgList&, JSValue newTarget);
-        JSValue execute(EvalExecutable*, JSGlobalObject*, JSValue thisValue, JSScope*);
+        JSValue executeEval(EvalExecutable*, JSGlobalObject*, JSValue thisValue, JSScope*);
 
         void getArgumentsData(CallFrame*, JSFunction*&, ptrdiff_t& firstParameterIndex, Register*& argv, int& argc);
 
@@ -157,21 +159,11 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
     private:
         enum ExecutionFlag { Normal, InitializeAndReturn };
 
-        static JSValue checkedReturn(JSValue returnValue)
-        {
-            ASSERT(returnValue);
-            return returnValue;
-        }
+        CallFrameClosure prepareForRepeatCall(FunctionExecutable*, ProtoCallFrame*, JSFunction*, int argumentCountIncludingThis, JSScope*, const ArgList&);
 
-        static JSObject* checkedReturn(JSObject* returnValue)
-        {
-            ASSERT(returnValue);
-            return returnValue;
-        }
-
-        CallFrameClosure prepareForRepeatCall(FunctionExecutable*, CallFrame*, ProtoCallFrame*, JSFunction*, int argumentCountIncludingThis, JSScope*, const ArgList&);
-
-        JSValue execute(CallFrameClosure&);
+        JSValue executeCachedCall(CallFrameClosure&);
+        JSValue executeBoundCall(VM&, JSBoundFunction*, const ArgList&);
+        JSValue executeCallImpl(VM&, JSObject*, const CallData&, JSValue, const ArgList&);
 
         inline VM& vm();
 #if ENABLE(C_LOOP)
@@ -185,7 +177,7 @@ using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruc
 #endif // ENABLE(COMPUTED_GOTO_OPCODES)
     };
 
-    JSValue eval(JSGlobalObject*, CallFrame*, ECMAMode);
+    JSValue eval(CallFrame*, JSValue thisValue, JSScope*, ECMAMode);
 
     inline CallFrame* calleeFrameForVarargs(CallFrame*, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis);
 

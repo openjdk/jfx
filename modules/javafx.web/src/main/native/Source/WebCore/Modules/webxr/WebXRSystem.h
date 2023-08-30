@@ -30,7 +30,7 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "HTMLCanvasElement.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "WebGLContextAttributes.h"
 #include "WebGLRenderingContextBase.h"
 #include "XRReferenceSpaceType.h"
@@ -51,10 +51,10 @@ class DOMWindow;
 class Navigator;
 class ScriptExecutionContext;
 class WebXRSession;
-struct SecurityOriginData;
+class SecurityOriginData;
 struct XRSessionInit;
 
-class WebXRSystem final : public RefCounted<WebXRSystem>, public EventTargetWithInlineData, public ActiveDOMObject {
+class WebXRSystem final : public RefCounted<WebXRSystem>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(WebXRSystem);
 public:
     using IsSessionSupportedPromise = DOMPromiseDeferred<IDLBoolean>;

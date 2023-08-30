@@ -54,7 +54,6 @@ public:
     void forceLayoutForNonHTML() override;
 
     std::optional<PageIdentifier> pageID() const final;
-    std::optional<FrameIdentifier> frameID() const final;
 
     void setCopiesOnScroll() override;
 
@@ -83,8 +82,8 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>) override;
-    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
+    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>, std::optional<WasPrivateRelayed>) override;
+    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading,WillInternallyHandleFailure) override;
     void dispatchDidFailLoad(const ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;
@@ -110,9 +109,9 @@ public:
 
     RefPtr<Frame> createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually);
+    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually) override;
     void redirectDataToPlugin(Widget&) override;
-    String overrideMediaType() const override;
+    AtomString overrideMediaType() const override;
 
     void setMainFrameDocumentReady(bool) override;
 
@@ -137,7 +136,6 @@ public:
     // script) from an insecure source.  Note that the insecure content can
     // spread to other frames in the same origin.
     void didRunInsecureContent(SecurityOrigin&, const URL&) override;
-    void didDetectXSS(const URL&, bool) override;
 
     ResourceError cancelledError(const ResourceRequest&) const override;
     ResourceError blockedByContentBlockerError(const ResourceRequest& request) const override;

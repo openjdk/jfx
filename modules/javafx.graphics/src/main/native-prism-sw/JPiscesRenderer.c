@@ -34,6 +34,8 @@
 
 #include <PiscesRenderer.inl>
 
+#include <limits.h>
+
 #define RENDERER_NATIVE_PTR 0
 #define RENDERER_SURFACE 1
 #define RENDERER_LAST RENDERER_SURFACE
@@ -684,10 +686,33 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMaskImpl
     jint maskOffset;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
 
+    if (x <= -(INT_MAX - maskWidth) || y <= -(INT_MAX - maskHeight)) {
+        return;
+    }
+
+    if (x >= INT_MAX - maskWidth || y >= INT_MAX - maskHeight) {
+        return;
+    }
+
     minX = MAX(x, rdr->_clip_bbMinX);
     minY = MAX(y, rdr->_clip_bbMinY);
     maxX = MIN(x + maskWidth - 1, rdr->_clip_bbMaxX);
     maxY = MIN(y + maskHeight - 1, rdr->_clip_bbMaxY);
+
+    // offset, width, height and stride cannot be negative - checked in Java code.
+    // below checks might be a bit excessive (probably won't happen because fillMaskAlpha()
+    // min/max check will make maskOffset not be used at all) but better to be safe than sorry
+    if (maskWidth > 0 && (minY - y) >= (INT_MAX / maskWidth)) {
+        return;
+    }
+
+    if ((minX - x) >= INT_MAX - ((minY - y) * maskWidth)) {
+        return;
+    }
+
+    if (offset >= INT_MAX - ((minY - y) * maskWidth + minX - x)) {
+        return;
+    }
 
     maskOffset = offset + (minY - y) * maskWidth + minX - x;
 
@@ -721,10 +746,34 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillLCDAlphaMaskImpl
     jint maskOffset;
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
 
+    if (x < -(INT_MAX - maskWidth/3) || y < -(INT_MAX - maskHeight)) {
+        return;
+    }
+
+    if (x >= INT_MAX - (maskWidth/3) || y >= INT_MAX - maskHeight) {
+        return;
+    }
+
     minX = MAX(x, rdr->_clip_bbMinX);
     minY = MAX(y, rdr->_clip_bbMinY);
     maxX = MIN(x + (maskWidth/3) - 1, rdr->_clip_bbMaxX);
     maxY = MIN(y + maskHeight - 1, rdr->_clip_bbMaxY);
+
+    if (maskWidth > 0 && (minY - y) >= (INT_MAX / maskWidth)) {
+        return;
+    }
+
+    if ((minX - x) >= INT_MAX / 3) {
+        return;
+    }
+
+    if (((minX - x) * 3) >= INT_MAX - ((minY - y) * maskWidth)) {
+        return;
+    }
+
+    if (offset >= INT_MAX - ((minY - y) * maskWidth + (minX - x) * 3)) {
+        return;
+    }
 
     maskOffset = offset + (minY - y) * maskWidth + (minX - x) * 3;
 

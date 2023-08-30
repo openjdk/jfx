@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -121,6 +122,7 @@ public:
     virtual void setShouldRetainAutocorrectionIndicator(bool);
     virtual bool shouldStopCaretBlinking() const { return false; }
     virtual AtomString inputEventTypeName() const;
+    virtual bool isInputMethodComposing() const;
     virtual String inputEventData() const { return { }; }
     virtual bool isBeforeInputEventCancelable() const { return true; }
     virtual bool shouldDispatchInputEvents() const { return true; }
@@ -164,6 +166,7 @@ protected:
     void rebalanceWhitespaceAt(const Position&);
     void rebalanceWhitespaceOnTextSubstring(Text&, int startOffset, int endOffset);
     void prepareWhitespaceAtPositionForSplit(Position&);
+    void replaceCollapsibleWhitespaceWithNonBreakingSpaceIfNeeded(const VisiblePosition&);
     RefPtr<Text> textNodeForRebalance(const Position&) const;
     bool shouldRebalanceLeadingWhitespaceFor(const String&) const;
     void removeNodeAttribute(Element&, const QualifiedName& attribute);

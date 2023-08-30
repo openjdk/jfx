@@ -95,6 +95,7 @@ public:
     void remove(const_iterator&);
 
     template<typename Func> size_t removeAllMatching(const Func&);
+    template<typename Func> bool removeFirstMatching(const Func&);
 
     // This is a priority enqueue. The callback is given a value, and if it returns true, then this
     // will put the appended value before that value. It will keep bubbling until the callback returns
@@ -152,7 +153,7 @@ protected:
 
     void assign(const DequeIteratorBase& other) { *this = other; }
 
-    void increment();
+    void increment(std::ptrdiff_t count = 1);
     void decrement();
 
     T* before() const;
@@ -207,6 +208,10 @@ public:
     // postfix ++ intentionally omitted
     Iterator& operator--() { Base::decrement(); return *this; }
     // postfix -- intentionally omitted
+
+    // Only forwarding + unsigned is supported.
+    Iterator& operator+=(size_t count) { Base::increment(count); return *this; }
+    Iterator operator+(size_t count) const { Iterator result(*this); result += count; return result; }
 };
 
 template<typename T, size_t inlineCapacity = 0>
@@ -242,6 +247,10 @@ public:
     // postfix ++ intentionally omitted
     Iterator& operator--() { Base::decrement(); return *this; }
     // postfix -- intentionally omitted
+
+    // Only forwarding + unsigned is supported.
+    Iterator& operator+=(size_t count) { Base::increment(count); return *this; }
+    Iterator operator+(size_t count) const { Iterator result(*this); result += count; return result; }
 };
 
 #ifdef NDEBUG
@@ -573,6 +582,19 @@ inline size_t Deque<T, inlineCapacity>::removeAllMatching(const Func& func)
 }
 
 template<typename T, size_t inlineCapacity>
+template<typename Func>
+inline bool Deque<T, inlineCapacity>::removeFirstMatching(const Func& func)
+{
+    for (auto iter = begin(); iter != end(); ++iter) {
+        if (func(*iter)) {
+            remove(iter);
+            return true;
+        }
+    }
+    return false;
+}
+
+template<typename T, size_t inlineCapacity>
 template<typename U, typename Func>
 inline void Deque<T, inlineCapacity>::appendAndBubble(U&& value, const Func& func)
 {
@@ -742,15 +764,20 @@ inline bool DequeIteratorBase<T, inlineCapacity>::isEqual(const DequeIteratorBas
 }
 
 template<typename T, size_t inlineCapacity>
-inline void DequeIteratorBase<T, inlineCapacity>::increment()
+inline void DequeIteratorBase<T, inlineCapacity>::increment(std::ptrdiff_t count)
 {
     checkValidity();
+    if (!count)
+        return;
     ASSERT(m_index != m_deque->m_end);
-    ASSERT(m_deque->m_buffer.capacity());
-    if (m_index == m_deque->m_buffer.capacity() - 1)
-        m_index = 0;
-    else
-        ++m_index;
+    size_t capacity = m_deque->m_buffer.capacity();
+    ASSERT(capacity);
+    m_index += count;
+    do {
+        if (m_index < capacity)
+            break;
+        m_index -= capacity;
+    } while (true);
     checkValidity();
 }
 

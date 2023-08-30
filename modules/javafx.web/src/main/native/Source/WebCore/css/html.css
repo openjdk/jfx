@@ -2,7 +2,7 @@
  * The default style sheet used to render HTML.
  *
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003-2011, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -30,8 +30,9 @@ html {
 #endif
 }
 
-/* children of the <head> element all have display:none */
-head, link, meta, script, style, title {
+/* children of the <head> element all have display:none as below */
+area, base, basefont, datalist, head, link, meta, noembed, noframes,
+param, rp, script, style, template, title {
     display: none;
 }
 
@@ -56,6 +57,7 @@ address, article, aside, div, footer, header, hgroup, main, nav, section {
 
 marquee {
     display: inline-block;
+    text-align: initial;
 }
 
 blockquote {
@@ -98,6 +100,8 @@ center {
 
 hr {
     display: block;
+    overflow: hidden;
+    unicode-bidi: isolate;
     margin-block-start: 0.5em;
     margin-block-end: 0.5em;
     margin-inline-start: auto;
@@ -109,6 +113,15 @@ hr {
 abbr[title], acronym[title] {
     text-decoration: dotted underline;
 }
+
+/* ::backdrop */
+
+::backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+}
+
 
 /* media elements */
 
@@ -127,6 +140,10 @@ video {
 audio {
     width: 200px;
     height: 25px;
+}
+
+audio:not([controls]) {
+    display: none !important;
 }
 
 /* heading elements */
@@ -228,6 +245,7 @@ table {
     border-spacing: 2px;
     border-color: gray;
     text-indent: initial;
+    box-sizing: border-box;
 }
 
 thead {
@@ -361,7 +379,6 @@ label {
 }
 
 legend {
-    display: block;
     padding-inline-start: 2px;
     padding-inline-end: 2px;
     border: none;
@@ -376,15 +393,15 @@ fieldset {
     padding-inline-end: 0.75em;
     padding-block-end: 0.625em;
     border: 2px groove ThreeDFace;
-    min-width: min-content;
+    min-inline-size: min-content;
 }
 
 button {
     appearance: auto;
 }
 
-/* Form controls don't go vertical. */
-input, textarea, select, button, meter, progress {
+/* Every time a new control is supported in vertical writing mode, it should be removed from here and added in the horizontalFormControls.css rule */
+select, button, meter, progress, input:is([type="button"], [type="submit"], [type="reset"], [type="file"]) {
     writing-mode: horizontal-tb !important;
 }
 
@@ -765,7 +782,10 @@ textarea {
 ::placeholder {
     -webkit-text-security: none;
     color: darkGray;
+    direction: inherit !important;
     pointer-events: none !important;
+    text-orientation: inherit !important;
+    writing-mode: inherit !important;
 }
 
 input::placeholder {
@@ -773,6 +793,10 @@ input::placeholder {
     word-wrap: normal;
     overflow: hidden;
     line-height: initial !important;
+}
+
+input:disabled, textarea:disabled {
+    color: color-mix(in hsl, CanvasText 66%, Canvas);
 }
 
 input:is([type="hidden"], [type="image"], [type="file"]) {
@@ -870,7 +894,7 @@ button[type="menu"], button[type="menu"]:active {
 #endif
 
 input[type="range"] {
-    /*This is needed for PLATFORM(JAVA)*/
+//Needed for PLATFORM(JAVA)
     -webkit-appearance: slider-horizontal;
     appearance: slider-horizontal;
     padding: initial;
@@ -896,7 +920,7 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 input[type="range"]::-webkit-slider-thumb, input[type="range"]::-webkit-media-slider-thumb {
-    /*This is needed for PLATFORM(JAVA)*/
+//Needed for PLATFORM(JAVA)
     -webkit-appearance: sliderthumb-horizontal;
     appearance: sliderthumb-horizontal;
     box-sizing: border-box;
@@ -960,10 +984,6 @@ select:disabled {
 }
 
 #endif
-
-area, param {
-    display: none;
-}
 
 input[type="checkbox"] {
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
@@ -1032,7 +1052,8 @@ input[type="color"]::-webkit-color-swatch-wrapper {
     border-radius: inherit;
     padding: 2px;
 #else
-    padding: 4px 2px 5px;
+    padding-inline: 2px;
+    padding-block: 4px 5px;
 #endif
     box-sizing: border-box;
     width: 100%;
@@ -1239,8 +1260,8 @@ pre, xmp, plaintext, listing {
 }
 
 mark {
-    background-color: yellow;
-    color: black;
+    background-color: Mark;
+    color: MarkText;
 }
 
 big {
@@ -1328,10 +1349,6 @@ ruby > rp {
 
 /* other elements */
 
-noframes {
-    display: none;
-}
-
 frameset, frame {
     display: block;
 }
@@ -1356,11 +1373,7 @@ summary::-webkit-details-marker {
     display: inline-block;
     width: 0.66em;
     height: 0.66em;
-    margin-right: 0.4em;
-}
-
-template {
-    display: none;
+    margin-inline-end: 0.4em;
 }
 
 bdi, output {

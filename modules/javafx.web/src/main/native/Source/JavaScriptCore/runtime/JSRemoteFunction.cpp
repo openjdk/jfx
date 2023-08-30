@@ -132,9 +132,17 @@ JSC_DEFINE_HOST_FUNCTION(remoteFunctionCallGeneric, (JSGlobalObject* globalObjec
     JSGlobalObject* targetGlobalObject = targetFunction->globalObject();
 
     MarkedArgumentBuffer args;
+    auto clearArgOverflowCheckAndReturnAbortValue = [&] () -> EncodedJSValue {
+        // This is only called because we'll be imminently returning due to an
+        // exception i.e. we won't be using the args, and we don't care if they
+        // overflowed. However, we still need to call overflowCheckNotNeeded()
+        // to placate an ASSERT in the MarkedArgumentBuffer destructor.
+        args.overflowCheckNotNeeded();
+        return { };
+    };
     for (unsigned i = 0; i < callFrame->argumentCount(); ++i) {
         JSValue wrappedValue = wrapArgument(globalObject, targetGlobalObject, callFrame->uncheckedArgument(i));
-        RETURN_IF_EXCEPTION(scope, { });
+        RETURN_IF_EXCEPTION(scope, clearArgOverflowCheckAndReturnAbortValue());
         args.append(wrappedValue);
     }
     if (UNLIKELY(args.hasOverflowed())) {
@@ -207,12 +215,16 @@ void JSRemoteFunction::copyNameAndLength(JSGlobalObject* globalObject)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    PropertySlot slot(m_targetFunction.get(), PropertySlot::InternalMethodType::Get);
+    PropertySlot slot(m_targetFunction.get(), PropertySlot::InternalMethodType::GetOwnProperty);
     bool targetHasLength = m_targetFunction->getOwnPropertySlotInline(globalObject, vm.propertyNames->length, slot);
     RETURN_IF_EXCEPTION(scope, void());
 
     if (targetHasLength) {
-        JSValue targetLength = slot.getValue(globalObject, vm.propertyNames->length);
+        JSValue targetLength;
+        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+            targetLength = slot.getValue(globalObject, vm.propertyNames->length);
+        else
+            targetLength = m_targetFunction->get(globalObject, vm.propertyNames->length);
         RETURN_IF_EXCEPTION(scope, void());
         double targetLengthAsInt = targetLength.toIntegerOrInfinity(globalObject);
         RETURN_IF_EXCEPTION(scope, void());

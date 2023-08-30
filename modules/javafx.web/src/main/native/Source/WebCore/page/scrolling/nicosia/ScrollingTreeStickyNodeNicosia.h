@@ -30,13 +30,10 @@
 
 #if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
 
+#include "NicosiaPlatformLayer.h"
 #include "ScrollingConstraints.h"
 #include "ScrollingTreeStickyNode.h"
 #include <wtf/RefPtr.h>
-
-namespace Nicosia {
-class CompositionLayer;
-}
 
 namespace WebCore {
 
@@ -50,9 +47,10 @@ public:
 private:
     ScrollingTreeStickyNodeNicosia(ScrollingTree&, ScrollingNodeID);
 
-    void commitStateBeforeChildren(const ScrollingStateNode&) override;
+    bool commitStateBeforeChildren(const ScrollingStateNode&) override;
     void applyLayerPositions() override;
     FloatPoint layerTopLeft() const override;
+    Nicosia::CompositionLayer* layer() const override { return m_layer.get(); }
 
     RefPtr<Nicosia::CompositionLayer> m_layer;
 };

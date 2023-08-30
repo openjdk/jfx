@@ -1,5 +1,7 @@
 /*
  * Copyright (C) Research In Motion Limited 2010-2012. All rights reserved.
+ * Copyright (C) Apple 2023. All rights reserved.
+ * Copyright (C) Google 2014-2017. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -204,9 +206,10 @@ void SVGTextLayoutEngine::beginTextPathLayout(RenderSVGTextPath& textPath, SVGTe
     float totalLength = lineLayout.m_chunkLayoutBuilder.totalLength();
     unsigned totalCharacters = lineLayout.m_chunkLayoutBuilder.totalCharacters();
 
-    if (textContentElement->lengthAdjust() == SVGLengthAdjustSpacing)
-        m_textPathSpacing = (desiredTextLength - totalLength) / totalCharacters;
-    else
+    if (textContentElement->lengthAdjust() == SVGLengthAdjustSpacing) {
+        if (totalCharacters > 1)
+            m_textPathSpacing = (desiredTextLength - totalLength) / (totalCharacters - 1);
+    } else
         m_textPathScaling = desiredTextLength / totalLength;
 }
 
@@ -268,28 +271,23 @@ static inline void dumpTextBoxes(Vector<SVGInlineTextBox*>& boxes)
 }
 #endif
 
-void SVGTextLayoutEngine::finalizeTransformMatrices(Vector<SVGInlineTextBox*>& boxes)
+void SVGTextLayoutEngine::finalizeTransformMatrices(Vector<SVGInlineTextBox*>& textBoxes)
 {
-    unsigned boxCount = boxes.size();
-    if (!boxCount)
+    if (textBoxes.isEmpty())
         return;
 
-    AffineTransform textBoxTransformation;
-    for (unsigned boxPosition = 0; boxPosition < boxCount; ++boxPosition) {
-        SVGInlineTextBox* textBox = boxes.at(boxPosition);
-        Vector<SVGTextFragment>& fragments = textBox->textFragments();
-
-        unsigned fragmentCount = fragments.size();
-        for (unsigned i = 0; i < fragmentCount; ++i) {
-            textBoxTransformation = m_chunkLayoutBuilder.transformationForTextBox(textBox);
+    for (auto textBox : textBoxes) {
+        auto textBoxTransformation = m_chunkLayoutBuilder.transformationForTextBox(textBox);
             if (textBoxTransformation.isIdentity())
                 continue;
-            ASSERT(fragments[i].lengthAdjustTransform.isIdentity());
-            fragments[i].lengthAdjustTransform = textBoxTransformation;
+
+        for (auto& fragment : textBox->textFragments()) {
+            ASSERT(fragment.lengthAdjustTransform.isIdentity());
+            fragment.lengthAdjustTransform = textBoxTransformation;
         }
     }
 
-    boxes.clear();
+    textBoxes.clear();
 }
 
 void SVGTextLayoutEngine::finishLayout()

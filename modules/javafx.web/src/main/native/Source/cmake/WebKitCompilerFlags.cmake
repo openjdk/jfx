@@ -87,6 +87,20 @@ macro(WEBKIT_ADD_TARGET_CXX_FLAGS _target)
 endmacro()
 
 
+option(DEVELOPER_MODE_FATAL_WARNINGS "Build with warnings as errors if DEVELOPER_MODE is also enabled" ON)
+if (DEVELOPER_MODE AND DEVELOPER_MODE_FATAL_WARNINGS)
+    if (MSVC)
+        set(FATAL_WARNINGS_FLAG /WX)
+    else ()
+        set(FATAL_WARNINGS_FLAG -Werror)
+    endif ()
+
+    check_cxx_compiler_flag(${FATAL_WARNINGS_FLAG} CXX_COMPILER_SUPPORTS_WERROR)
+    if (CXX_COMPILER_SUPPORTS_WERROR)
+        #set(DEVELOPER_MODE_CXX_FLAGS ${FATAL_WARNINGS_FLAG})
+    endif ()
+endif ()
+
 if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-fno-strict-aliasing)
 
@@ -118,8 +132,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
                                          -Wformat-security
                                          -Wmissing-format-attribute
                                          -Wpointer-arith
-                                         -Wundef
-                                         -Wwrite-strings)
+                                         -Wundef)
 
     # Warnings to be disabled
     # FIXME: We should probably not be disabling -Wno-maybe-uninitialized?
@@ -128,6 +141,12 @@ if (COMPILER_IS_GCC_OR_CLANG)
                                          -Wno-parentheses-equality
                                          -Wno-misleading-indentation
                                          -Wno-psabi)
+
+    # GCC < 12.0 gives false warnings for mismatched-new-delete <https://webkit.org/b/241516>
+    if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0.0"))
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-mismatched-new-delete)
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-uninitialized)
+    endif ()
 
     WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-noexcept-type)
 
@@ -152,6 +171,10 @@ if (COMPILER_IS_GCC_OR_CLANG)
     # -Wodr trips over our bindings integrity feature when LTO is enabled.
     # https://bugs.webkit.org/show_bug.cgi?id=229867
         WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-odr)
+
+        # Match Clang's behavor and exit after emitting 20 errors.
+        # https://bugs.webkit.org/show_bug.cgi?id=244621
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-fmax-errors=20)
     endif ()
 
     # Force SSE2 fp on x86 builds.
@@ -421,3 +444,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     check_cxx_source_compiles("${REMOVE_CVREF_TEST_SOURCE}" STD_REMOVE_CVREF_IS_AVAILABLE)
     unset(CMAKE_REQUIRED_FLAGS)
 endif ()
+
+if (COMPILER_IS_GCC_OR_CLANG)
+    set(COMPILE_C_AS_CXX "-xc++;-std=c++2a")
+endif ()
+
+# FIXME: Enable pre-compiled headers for all ports <https://webkit.org/b/139438>
+set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)

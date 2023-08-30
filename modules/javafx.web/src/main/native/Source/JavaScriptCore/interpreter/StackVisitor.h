@@ -65,6 +65,7 @@ public:
         size_t argumentCountIncludingThis() const { return m_argumentCountIncludingThis; }
         bool callerIsEntryFrame() const { return m_callerIsEntryFrame; }
         CallFrame* callerFrame() const { return m_callerFrame; }
+        EntryFrame* entryFrame() const { return m_entryFrame; }
         CalleeBits callee() const { return m_callee; }
         CodeBlock* codeBlock() const { return m_codeBlock; }
         BytecodeIndex bytecodeIndex() const { return m_bytecodeIndex; }
@@ -87,6 +88,7 @@ public:
 
         JS_EXPORT_PRIVATE String functionName() const;
         JS_EXPORT_PRIVATE String sourceURL() const;
+        JS_EXPORT_PRIVATE String preRedirectURL() const;
         JS_EXPORT_PRIVATE String toString() const;
 
         JS_EXPORT_PRIVATE SourceID sourceID();

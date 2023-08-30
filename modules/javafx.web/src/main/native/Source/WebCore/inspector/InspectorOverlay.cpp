@@ -95,6 +95,15 @@ static constexpr UChar emSpace = 0x2003;
 
 enum class Flip : bool { No, Yes };
 
+static bool isInNodeList(const Node& node, const NodeList& list)
+{
+    for (unsigned i = 0; i < list.length(); ++i) {
+        if (&node == list.item(i))
+            return true;
+    }
+    return false;
+}
+
 static void truncateWithEllipsis(String& string, size_t length)
 {
     if (string.length() > length)
@@ -421,6 +430,16 @@ void InspectorOverlay::paint(GraphicsContext& context)
             if (auto* node = m_highlightNodeList->item(i)) {
                 auto nodeRulerExclusion = drawNodeHighlight(context, *node);
                 rulerExclusion.bounds.unite(nodeRulerExclusion.bounds);
+
+                if (m_nodeGridOverlayConfig) {
+                    if (auto gridHighlightOverlay = buildGridOverlay({ *node, *m_nodeGridOverlayConfig }))
+                        drawGridOverlay(context, *gridHighlightOverlay);
+                }
+
+                if (m_nodeFlexOverlayConfig) {
+                    if (auto flexHighlightOverlay = buildFlexOverlay({ *node, *m_nodeFlexOverlayConfig }))
+                        drawFlexOverlay(context, *flexHighlightOverlay);
+                }
             }
         }
     }
@@ -429,14 +448,38 @@ void InspectorOverlay::paint(GraphicsContext& context)
         auto nodeRulerExclusion = drawNodeHighlight(context, *m_highlightNode);
         rulerExclusion.bounds.unite(nodeRulerExclusion.bounds);
         rulerExclusion.titlePath = nodeRulerExclusion.titlePath;
+
+        if (m_nodeGridOverlayConfig) {
+            if (auto gridHighlightOverlay = buildGridOverlay({ *m_highlightNode, *m_nodeGridOverlayConfig }))
+                drawGridOverlay(context, *gridHighlightOverlay);
+        }
+
+        if (m_nodeFlexOverlayConfig) {
+            if (auto flexHighlightOverlay = buildFlexOverlay({ *m_highlightNode, *m_nodeFlexOverlayConfig }))
+                drawFlexOverlay(context, *flexHighlightOverlay);
+        }
     }
 
     for (const InspectorOverlay::Grid& gridOverlay : m_activeGridOverlays) {
+        if (m_nodeGridOverlayConfig && gridOverlay.gridNode) {
+            if (m_highlightNodeList && isInNodeList(*gridOverlay.gridNode, *m_highlightNodeList))
+                continue;
+            if (gridOverlay.gridNode == m_highlightNode.get())
+                continue;
+        }
+
         if (auto gridHighlightOverlay = buildGridOverlay(gridOverlay))
             drawGridOverlay(context, *gridHighlightOverlay);
     }
 
     for (const InspectorOverlay::Flex& flexOverlay : m_activeFlexOverlays) {
+        if (m_nodeFlexOverlayConfig && flexOverlay.flexNode) {
+            if (m_highlightNodeList && isInNodeList(*flexOverlay.flexNode, *m_highlightNodeList))
+                continue;
+            if (flexOverlay.flexNode == m_highlightNode.get())
+                continue;
+        }
+
         if (auto flexHighlightOverlay = buildFlexOverlay(flexOverlay))
             drawFlexOverlay(context, *flexHighlightOverlay);
     }
@@ -444,7 +487,7 @@ void InspectorOverlay::paint(GraphicsContext& context)
     if (!m_paintRects.isEmpty())
         drawPaintRects(context, m_paintRects);
 
-    if (m_showRulers || m_showRulersDuringElementSelection)
+    if (m_showRulers || m_showRulersForNodeHighlight)
         drawRulers(context, rulerExclusion);
 }
 
@@ -453,29 +496,67 @@ void InspectorOverlay::getHighlight(InspectorOverlay::Highlight& highlight, Insp
     if (!m_highlightNode && !m_highlightQuad && !m_highlightNodeList && !m_activeGridOverlays.size() && !m_activeFlexOverlays.size())
         return;
 
+    constexpr bool offsetBoundsByScroll = true;
+
     highlight.type = InspectorOverlay::Highlight::Type::None;
-    if (m_highlightNode)
+    if (m_highlightNode) {
         buildNodeHighlight(*m_highlightNode, m_nodeHighlightConfig, highlight, coordinateSystem);
-    else if (m_highlightNodeList) {
+
+        if (m_nodeGridOverlayConfig) {
+            if (auto gridHighlightOverlay = buildGridOverlay({ *m_highlightNode, *m_nodeGridOverlayConfig }, offsetBoundsByScroll))
+                highlight.gridHighlightOverlays.append(*gridHighlightOverlay);
+        }
+
+        if (m_nodeFlexOverlayConfig) {
+            if (auto flexHighlightOverlay = buildFlexOverlay({ *m_highlightNode, *m_nodeFlexOverlayConfig }))
+                highlight.flexHighlightOverlays.append(*flexHighlightOverlay);
+        }
+    } else if (m_highlightNodeList) {
         highlight.setDataFromConfig(m_nodeHighlightConfig);
         for (unsigned i = 0; i < m_highlightNodeList->length(); ++i) {
+            auto* node = m_highlightNodeList->item(i);
+
             InspectorOverlay::Highlight nodeHighlight;
-            buildNodeHighlight(*(m_highlightNodeList->item(i)), m_nodeHighlightConfig, nodeHighlight, coordinateSystem);
+            buildNodeHighlight(*node, m_nodeHighlightConfig, nodeHighlight, coordinateSystem);
             if (nodeHighlight.type == InspectorOverlay::Highlight::Type::Node)
                 highlight.quads.appendVector(nodeHighlight.quads);
+
+            if (m_nodeGridOverlayConfig) {
+                if (auto gridHighlightOverlay = buildGridOverlay({ *node, *m_nodeGridOverlayConfig }, offsetBoundsByScroll))
+                    highlight.gridHighlightOverlays.append(*gridHighlightOverlay);
+            }
+
+            if (m_nodeFlexOverlayConfig) {
+                if (auto flexHighlightOverlay = buildFlexOverlay({ *node, *m_nodeFlexOverlayConfig }))
+                    highlight.flexHighlightOverlays.append(*flexHighlightOverlay);
+            }
         }
         highlight.type = InspectorOverlay::Highlight::Type::NodeList;
     } else if (m_highlightQuad) {
         highlight.type = InspectorOverlay::Highlight::Type::Rects;
         buildQuadHighlight(*m_highlightQuad, m_quadHighlightConfig, highlight);
     }
-    constexpr bool offsetBoundsByScroll = true;
+
     for (const InspectorOverlay::Grid& gridOverlay : m_activeGridOverlays) {
+        if (m_nodeGridOverlayConfig && gridOverlay.gridNode) {
+            if (m_highlightNodeList && isInNodeList(*gridOverlay.gridNode, *m_highlightNodeList))
+                continue;
+            if (gridOverlay.gridNode == m_highlightNode.get())
+                continue;
+        }
+
         if (auto gridHighlightOverlay = buildGridOverlay(gridOverlay, offsetBoundsByScroll))
             highlight.gridHighlightOverlays.append(*gridHighlightOverlay);
     }
 
     for (const InspectorOverlay::Flex& flexOverlay : m_activeFlexOverlays) {
+        if (m_nodeFlexOverlayConfig && flexOverlay.flexNode) {
+            if (m_highlightNodeList && isInNodeList(*flexOverlay.flexNode, *m_highlightNodeList))
+                continue;
+            if (flexOverlay.flexNode == m_highlightNode.get())
+                continue;
+        }
+
         if (auto flexHighlightOverlay = buildFlexOverlay(flexOverlay))
             highlight.flexHighlightOverlays.append(*flexHighlightOverlay);
     }
@@ -485,23 +566,36 @@ void InspectorOverlay::hideHighlight()
 {
     m_highlightNode = nullptr;
     m_highlightNodeList = nullptr;
+    m_nodeHighlightConfig = { };
+    m_nodeGridOverlayConfig = std::nullopt;
+    m_nodeFlexOverlayConfig = std::nullopt;
+    m_showRulersForNodeHighlight = false;
+
     m_highlightQuad = nullptr;
+    m_quadHighlightConfig = { };
+
     update();
 }
 
-void InspectorOverlay::highlightNodeList(RefPtr<NodeList>&& nodes, const InspectorOverlay::Highlight::Config& highlightConfig)
+void InspectorOverlay::highlightNodeList(RefPtr<NodeList>&& nodes, const InspectorOverlay::Highlight::Config& highlightConfig, const std::optional<Grid::Config>& gridOverlayConfig, const std::optional<Flex::Config>& flexOverlayConfig, bool showRulers)
 {
-    m_nodeHighlightConfig = highlightConfig;
-    m_highlightNodeList = WTFMove(nodes);
     m_highlightNode = nullptr;
+    m_highlightNodeList = WTFMove(nodes);
+    m_nodeHighlightConfig = highlightConfig;
+    m_nodeGridOverlayConfig = gridOverlayConfig;
+    m_nodeFlexOverlayConfig = flexOverlayConfig;
+    m_showRulersForNodeHighlight = showRulers;
     update();
 }
 
-void InspectorOverlay::highlightNode(Node* node, const InspectorOverlay::Highlight::Config& highlightConfig)
+void InspectorOverlay::highlightNode(Node* node, const InspectorOverlay::Highlight::Config& highlightConfig, const std::optional<Grid::Config>& gridOverlayConfig, const std::optional<Flex::Config>& flexOverlayConfig, bool showRulers)
 {
-    m_nodeHighlightConfig = highlightConfig;
     m_highlightNode = node;
     m_highlightNodeList = nullptr;
+    m_nodeHighlightConfig = highlightConfig;
+    m_nodeGridOverlayConfig = gridOverlayConfig;
+    m_nodeFlexOverlayConfig = flexOverlayConfig;
+    m_showRulersForNodeHighlight = showRulers;
     update();
 }
 
@@ -537,9 +631,14 @@ void InspectorOverlay::setIndicating(bool indicating)
 
 bool InspectorOverlay::shouldShowOverlay() const
 {
-    // Don't show the overlay when m_showRulersDuringElementSelection is true, as it's only supposed
-    // to have an effect when element selection is active (e.g. a node is hovered).
-    return m_highlightNode || m_highlightNodeList || m_highlightQuad || m_indicating || m_showPaintRects || m_showRulers || m_activeGridOverlays.size() || m_activeFlexOverlays.size();
+    return m_highlightNode
+        || m_highlightNodeList
+        || m_highlightQuad
+        || m_activeGridOverlays.size()
+        || m_activeFlexOverlays.size()
+        || m_indicating
+        || m_showPaintRects
+        || m_showRulers;
 }
 
 void InspectorOverlay::update()
@@ -601,7 +700,7 @@ void InspectorOverlay::setShowRulers(bool showRulers)
 
 bool InspectorOverlay::removeGridOverlayForNode(Node& node)
 {
-    // Try to remove `node`. Also clear any grid overlays whose WeakPtr<Node> has been cleared.
+    // Try to remove `node`. Also clear any grid overlays whose WeakPtr<Node, WeakPtrImplWithEventTargetData> has been cleared.
     return m_activeGridOverlays.removeAllMatching([&] (const InspectorOverlay::Grid& gridOverlay) {
         return !gridOverlay.gridNode || gridOverlay.gridNode.get() == &node;
     });
@@ -641,7 +740,7 @@ void InspectorOverlay::clearAllGridOverlays()
 
 bool InspectorOverlay::removeFlexOverlayForNode(Node& node)
 {
-    // Try to remove `node`. Also clear any grid overlays whose WeakPtr<Node> has been cleared.
+    // Try to remove `node`. Also clear any grid overlays whose WeakPtr<Node, WeakPtrImplWithEventTargetData> has been cleared.
     return m_activeFlexOverlays.removeAllMatching([&] (const InspectorOverlay::Flex& flexOverlay) {
         return !flexOverlay.flexNode || flexOverlay.flexNode.get() == &node;
     });
@@ -703,7 +802,7 @@ InspectorOverlay::RulerExclusion InspectorOverlay::drawNodeHighlight(GraphicsCon
     if (m_nodeHighlightConfig.showInfo)
         drawShapeHighlight(context, node, rulerExclusion.bounds);
 
-    if (m_showRulers || m_showRulersDuringElementSelection)
+    if (m_showRulers || m_showRulersForNodeHighlight)
         drawBounds(context, rulerExclusion.bounds);
 
     // Ensure that the title information is drawn after the bounds.
@@ -726,7 +825,7 @@ InspectorOverlay::RulerExclusion InspectorOverlay::drawQuadHighlight(GraphicsCon
     if (highlight.quads.size() >= 1) {
         drawOutlinedQuad(context, highlight.quads[0], highlight.contentColor, highlight.contentOutlineColor, rulerExclusion.bounds);
 
-        if (m_showRulers || m_showRulersDuringElementSelection)
+        if (m_showRulers || m_showRulersForNodeHighlight)
             drawBounds(context, rulerExclusion.bounds);
     }
 
@@ -803,7 +902,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
     IntPoint scrollOffset;
 
     FrameView* pageView = m_page.mainFrame().view();
-    if (!pageView->delegatesScrolling())
+    if (!pageView->delegatesScrollingToNativeView())
         scrollOffset = pageView->visibleContentRect().location();
 
     FloatSize viewportSize = pageView->sizeForVisibleContent();
@@ -1145,7 +1244,7 @@ Path InspectorOverlay::drawElementTitle(GraphicsContext& context, Node& node, co
 
     FloatSize viewportSize = pageView->sizeForVisibleContent();
     FloatSize contentInset(0, pageView->topContentInset(ScrollView::TopContentInsetType::WebCoreOrPlatformContentInset));
-    if (m_showRulers || m_showRulersDuringElementSelection)
+    if (m_showRulers || m_showRulersForNodeHighlight)
         contentInset.expand(rulerSize, rulerSize);
 
     auto expectedLabelSize = InspectorOverlayLabel::expectedSize(labelContents, InspectorOverlayLabel::Arrow::Direction::Up);
@@ -1296,7 +1395,9 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
 
     auto element = downcast<StyledElement>(node);
     auto directionCSSPropertyID = direction == GridTrackSizingDirection::ForColumns ? CSSPropertyID::CSSPropertyGridTemplateColumns : CSSPropertyID::CSSPropertyGridTemplateRows;
-    RefPtr<CSSValue> cssValue = element->cssomStyle().getPropertyCSSValueInternal(directionCSSPropertyID);
+    RefPtr<CSSValue> cssValue;
+    if (auto* inlineStyle = element->inlineStyle())
+        cssValue = inlineStyle->getPropertyCSSValue(directionCSSPropertyID);
 
     if (!cssValue) {
         auto styleRules = element->styleResolver().styleRulesForElement(element);
@@ -1311,7 +1412,7 @@ static Vector<String> authoredGridTrackSizes(Node* node, GridTrackSizingDirectio
         }
     }
 
-    if (!cssValue || !is<CSSValueList>(cssValue))
+    if (!is<CSSValueList>(cssValue))
         return { };
 
     Vector<String> trackSizes;

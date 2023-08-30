@@ -34,11 +34,13 @@ class GraphicsContext;
 
 enum class SystemImageType : uint8_t {
 #if ENABLE(APPLE_PAY)
-    ApplePayButton,
     ApplePayLogo,
 #endif
 #if USE(SYSTEM_PREVIEW)
     ARKitBadge,
+#endif
+#if USE(APPKIT)
+    AppKitControl,
 #endif
 };
 
@@ -69,11 +71,13 @@ template<> struct EnumTraits<WebCore::SystemImageType> {
     using values = EnumValues<
         WebCore::SystemImageType
 #if ENABLE(APPLE_PAY)
-        , WebCore::SystemImageType::ApplePayButton,
-        WebCore::SystemImageType::ApplePayLogo
+        , WebCore::SystemImageType::ApplePayLogo
 #endif
 #if USE(SYSTEM_PREVIEW)
         , WebCore::SystemImageType::ARKitBadge
+#endif
+#if USE(APPKIT)
+        , WebCore::SystemImageType::AppKitControl
 #endif
     >;
 };

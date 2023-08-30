@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/AccessibleAddress.h>
 #include <wtf/Assertions.h>
 #include <wtf/Lock.h>
 
@@ -96,18 +97,14 @@ private:
 
 ALWAYS_INLINE static bool isSanePointer(const void* pointer)
 {
-#if CPU(ADDRESS64)
     uintptr_t pointerAsInt = bitwise_cast<uintptr_t>(pointer);
-#if OS(DARWIN)
-    constexpr uintptr_t oneAbove4G = (static_cast<uintptr_t>(1) << 32);
-    if (pointerAsInt < oneAbove4G)
+    if (pointerAsInt < lowestAccessibleAddress())
         return false;
-#endif
+#if CPU(ADDRESS64)
     uintptr_t canonicalPointerBits = pointerAsInt << (64 - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH));
     uintptr_t nonCanonicalPointerBits = pointerAsInt >> OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
     return !nonCanonicalPointerBits && canonicalPointerBits;
 #else
-    UNUSED_PARAM(pointer);
     return true;
 #endif // CPU(ADDRESS64)
 }
@@ -173,7 +170,7 @@ ALWAYS_INLINE void auditCell(VM&, JSValue);
 ALWAYS_INLINE void auditStructureID(StructureID);
 
 #if ENABLE(EXTRA_INTEGRITY_CHECKS) && USE(JSVALUE64)
-template<typename T> ALWAYS_INLINE T audit(T value) { return doAudit(value); }
+template<typename T> ALWAYS_INLINE T audit(T value) { return bitwise_cast<T>(doAudit(value)); }
 #else
 template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
 #endif

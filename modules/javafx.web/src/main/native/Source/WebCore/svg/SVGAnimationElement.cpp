@@ -2,10 +2,11 @@
  * Copyright (C) 2004, 2005 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -52,33 +53,32 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAnimationElement);
 
 SVGAnimationElement::SVGAnimationElement(const QualifiedName& tagName, Document& document)
-    : SVGSMILElement(tagName, document)
+    : SVGSMILElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGTests(this)
 {
 }
 
-static void parseKeyTimes(StringView parse, Vector<float>& result, bool verifyOrder)
+static Vector<float> parseKeyTimes(StringView value, bool verifyOrder)
 {
-    result.clear();
-    bool isFirst = true;
-    for (auto timeString : parse.split(';')) {
+    auto keyTimes = value.split(';');
+    Vector<float> result;
+
+    for (auto keyTime : keyTimes) {
+        keyTime = keyTime.stripWhiteSpace();
+
         bool ok;
-        float time = timeString.toFloat(ok);
+        float time = keyTime.toFloat(ok);
+
         if (!ok || time < 0 || time > 1)
-            goto fail;
-        if (verifyOrder) {
-            if (isFirst) {
-                if (time)
-                    goto fail;
-                isFirst = false;
-            } else if (time < result.last())
-                goto fail;
-        }
+            return { };
+
+        if (verifyOrder && (result.isEmpty() ? time : time < result.last()))
+            return { };
+
         result.append(time);
     }
-    return;
-fail:
-    result.clear();
+
+    return result;
 }
 
 static std::optional<Vector<UnitBezier>> parseKeySplines(StringView string)
@@ -179,7 +179,7 @@ void SVGAnimationElement::parseAttribute(const QualifiedName& name, const AtomSt
     }
 
     if (name == SVGNames::keyTimesAttr) {
-        parseKeyTimes(value, m_keyTimesFromAttribute, true);
+        m_keyTimesFromAttribute = parseKeyTimes(value, true);
         return;
     }
 
@@ -187,7 +187,7 @@ void SVGAnimationElement::parseAttribute(const QualifiedName& name, const AtomSt
         if (hasTagName(SVGNames::animateMotionTag)) {
             // This is specified to be an animateMotion attribute only but it is simpler to put it here
             // where the other timing calculatations are.
-            parseKeyTimes(value, m_keyPoints, false);
+            m_keyPoints = parseKeyTimes(value, false);
         }
         return;
     }
@@ -404,10 +404,12 @@ unsigned SVGAnimationElement::calculateKeyTimesIndex(float percent) const
     const auto& keyTimes = this->keyTimes();
     unsigned index;
     unsigned keyTimesCount = keyTimes.size();
-    // Compare index + 1 to keyTimesCount because the last keyTimes entry is
-    // required to be 1, and percent can never exceed 1; i.e., the second last
-    // keyTimes entry defines the beginning of the final interval
-    for (index = 1; index + 1 < keyTimesCount; ++index) {
+    // For linear and spline animations, the last value must be '1'. In those
+    // cases we don't need to consider the last value, since |percent| is never
+    // greater than one.
+    if (keyTimesCount && calcMode() != CalcMode::Discrete)
+        --keyTimesCount;
+    for (index = 1; index < keyTimesCount; ++index) {
         if (keyTimes[index] > percent)
             break;
     }
@@ -438,14 +440,15 @@ float SVGAnimationElement::calculatePercentFromKeyPoints(float percent) const
         return m_keyPoints[m_keyPoints.size() - 1];
 
     unsigned index = calculateKeyTimesIndex(percent);
-    float fromPercent = keyTimes[index];
-    float toPercent = keyTimes[index + 1];
     float fromKeyPoint = m_keyPoints[index];
-    float toKeyPoint = m_keyPoints[index + 1];
 
     if (calcMode() == CalcMode::Discrete)
         return fromKeyPoint;
 
+    ASSERT(index + 1 < keyTimes.size());
+    float fromPercent = keyTimes[index];
+    float toPercent = keyTimes[index + 1];
+    float toKeyPoint = m_keyPoints[index + 1];
     float keyPointPercent = (percent - fromPercent) / (toPercent - fromPercent);
 
     if (calcMode() == CalcMode::Spline) {
@@ -569,15 +572,15 @@ void SVGAnimationElement::startedActiveInterval()
         && (hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) && hasAttributeWithoutSynchronization(SVGNames::keyTimesAttr) && (keyTimes.size() < 2 || keyTimes.size() != m_keyPoints.size())))
         return;
     if (animationMode == AnimationMode::FromTo)
-        m_animationValid = calculateFromAndToValues(from, to);
+        m_animationValid = setFromAndToValues(from, to);
     else if (animationMode == AnimationMode::To) {
         // For to-animations the from value is the current accumulated value from lower priority animations.
         // The value is not static and is determined during the animation.
-        m_animationValid = calculateFromAndToValues(emptyString(), to);
+        m_animationValid = setFromAndToValues(emptyString(), to);
     } else if (animationMode == AnimationMode::FromBy)
-        m_animationValid = calculateFromAndByValues(from, by);
+        m_animationValid = setFromAndByValues(from, by);
     else if (animationMode == AnimationMode::By)
-        m_animationValid = calculateFromAndByValues(emptyString(), by);
+        m_animationValid = setFromAndByValues(emptyString(), by);
     else if (animationMode == AnimationMode::Values) {
         m_animationValid = m_values.size() >= 1
             && (calcMode == CalcMode::Paced || !hasAttributeWithoutSynchronization(SVGNames::keyTimesAttr) || hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) || (m_values.size() == keyTimes.size()))
@@ -585,7 +588,7 @@ void SVGAnimationElement::startedActiveInterval()
             && (calcMode != CalcMode::Spline || ((m_keySplines.size() && (m_keySplines.size() == m_values.size() - 1)) || m_keySplines.size() == m_keyPoints.size() - 1))
             && (!hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) || (keyTimes.size() > 1 && keyTimes.size() == m_keyPoints.size()));
         if (m_animationValid)
-            m_animationValid = calculateToAtEndOfDurationValue(m_values.last());
+            m_animationValid = setToAtEndOfDurationValue(m_values.last());
         if (calcMode == CalcMode::Paced && m_animationValid)
             calculateKeyTimesForCalcModePaced();
     } else if (animationMode == AnimationMode::Path)
@@ -605,7 +608,7 @@ void SVGAnimationElement::updateAnimation(float percent, unsigned repeatCount)
         String to;
         currentValuesForValuesAnimation(percent, effectivePercent, from, to);
         if (from != m_lastValuesAnimationFrom || to != m_lastValuesAnimationTo) {
-            m_animationValid = calculateFromAndToValues(from, to);
+            m_animationValid = setFromAndToValues(from, to);
             if (!m_animationValid)
                 return;
             m_lastValuesAnimationFrom = from;

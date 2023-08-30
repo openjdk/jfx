@@ -28,6 +28,7 @@
 #include "config.h"
 #include "Settings.h"
 
+#include "DeprecatedGlobalSettings.h"
 #include "InspectorInstrumentation.h"
 #include "Page.h"
 
@@ -146,6 +147,32 @@ Settings::Values Settings::Values::isolatedCopy() const
 
 Settings::~Settings()
 {
+}
+
+void Settings::disableUnstableFeaturesForModernWebKit()
+{
+<%- for @setting in @unstableFeatures do -%>
+<%-   if @setting.condition -%>
+#if <%= @setting.condition %>
+<%-   end -%>
+    <%= @setting.setterFunctionName %>(false);
+<%-   if @setting.condition -%>
+#endif
+<%-   end -%>
+<%- end -%>
+}
+
+void Settings::disableGlobalUnstableFeaturesForModernWebKit()
+{
+<%- for @setting in @unstableGlobalFeatures do -%>
+<%-   if @setting.condition -%>
+#if <%= @setting.condition %>
+<%-   end -%>
+    <%= @setting.options["webcoreBinding"] %>::<%= @setting.setterFunctionName %>(false);
+<%-   if @setting.condition -%>
+#endif
+<%-   end -%>
+<%- end -%>
 }
 
 <%- for @condition in @allSettingsSet.conditions do -%>

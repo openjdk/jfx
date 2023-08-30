@@ -41,7 +41,7 @@ public:
     static size_t calculateMemoryCost(const Parameters&);
     void transformToColorSpace(const DestinationColorSpace&) override { }
 
-    static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const ImageBuffer::CreationContext&);
+    static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const ImageBufferCreationContext&);
     static std::unique_ptr<ImageBufferJavaBackend> create(const Parameters&, const GraphicsContext&);
 
     JLObject getWCImage() const;

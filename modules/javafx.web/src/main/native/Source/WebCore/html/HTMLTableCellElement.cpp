@@ -101,7 +101,7 @@ bool HTMLTableCellElement::hasPresentationalHintsForAttribute(const QualifiedNam
 void HTMLTableCellElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == nowrapAttr)
-        addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValueWebkitNowrap);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValueNowrap);
     else if (name == widthAttr) {
         // width="0" is not allowed for compatibility with WinIE.
         addHTMLLengthToStyle(style, CSSPropertyWidth, value, AllowZeroValue::No);
@@ -124,7 +124,7 @@ void HTMLTableCellElement::parseAttribute(const QualifiedName& name, const AtomS
         HTMLTablePartElement::parseAttribute(name, value);
 }
 
-const StyleProperties* HTMLTableCellElement::additionalPresentationalHintStyle() const
+const MutableStyleProperties* HTMLTableCellElement::additionalPresentationalHintStyle() const
 {
     if (auto table = findParentTable())
         return table->additionalCellStyle();

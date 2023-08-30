@@ -28,12 +28,12 @@
 
 namespace WTF {
 
-ThreadGroup::~ThreadGroup()
+Ref<ThreadGroup> ThreadGroup::create()
 {
-    Locker locker { m_lock };
-    for (auto& thread : m_threads)
-        thread->removeFromThreadGroup(locker, *this);
+    return adoptRef(*new ThreadGroup);
 }
+
+ThreadGroup::~ThreadGroup() = default;
 
 ThreadGroupAddResult ThreadGroup::add(const AbstractLocker& locker, Thread& thread)
 {

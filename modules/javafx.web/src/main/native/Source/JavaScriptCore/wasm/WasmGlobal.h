@@ -34,7 +34,11 @@
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-namespace JSC { namespace Wasm {
+namespace JSC {
+
+class JSWebAssemblyGlobal;
+
+namespace Wasm {
 
 class Instance;
 
@@ -43,12 +47,19 @@ class Global final : public ThreadSafeRefCounted<Global> {
     WTF_MAKE_FAST_ALLOCATED(Global);
 public:
     union Value {
+        v128_t m_vector { };
         uint64_t m_primitive;
         WriteBarrierBase<Unknown> m_externref;
         Value* m_pointer;
     };
+    static_assert(sizeof(Value) == 16, "Update LLInt if this changes");
 
     static Ref<Global> create(Wasm::Type type, Wasm::Mutability mutability, uint64_t initialValue = 0)
+    {
+        return adoptRef(*new Global(type, mutability, initialValue));
+    }
+
+    static Ref<Global> create(Wasm::Type type, Wasm::Mutability mutability, v128_t initialValue)
     {
         return adoptRef(*new Global(type, mutability, initialValue));
     }
@@ -57,18 +68,19 @@ public:
     Wasm::Mutability mutability() const { return m_mutability; }
     JSValue get(JSGlobalObject*) const;
     uint64_t getPrimitive() const { return m_value.m_primitive; }
+    v128_t getVector() const { return m_value.m_vector; }
     void set(JSGlobalObject*, JSValue);
     DECLARE_VISIT_AGGREGATE;
 
-    template<typename T> T* owner() const { return reinterpret_cast<T*>(m_owner); }
-    void setOwner(JSObject* owner)
+    JSWebAssemblyGlobal* owner() const { return m_owner; }
+    void setOwner(JSWebAssemblyGlobal* owner)
     {
         ASSERT(!m_owner);
         ASSERT(owner);
         m_owner = owner;
     }
 
-    static ptrdiff_t offsetOfValue() { return OBJECT_OFFSETOF(Global, m_value); }
+    static ptrdiff_t offsetOfValue() { ASSERT(!OBJECT_OFFSETOF(Value, m_primitive)); ASSERT(!OBJECT_OFFSETOF(Value, m_externref)); return OBJECT_OFFSETOF(Global, m_value); }
     static ptrdiff_t offsetOfOwner() { return OBJECT_OFFSETOF(Global, m_owner); }
 
     static Global& fromBinding(Value& value)
@@ -82,14 +94,22 @@ private:
     Global(Wasm::Type type, Wasm::Mutability mutability, uint64_t initialValue)
         : m_type(type)
         , m_mutability(mutability)
-        , m_value()
     {
+        ASSERT(m_type != Types::V128);
         m_value.m_primitive = initialValue;
+    }
+
+    Global(Wasm::Type type, Wasm::Mutability mutability, v128_t initialValue)
+        : m_type(type)
+        , m_mutability(mutability)
+    {
+        ASSERT(m_type == Types::V128);
+        m_value.m_vector = initialValue;
     }
 
     Wasm::Type m_type;
     Wasm::Mutability m_mutability;
-    JSObject* m_owner { nullptr };
+    JSWebAssemblyGlobal* m_owner { nullptr };
     Value m_value;
 };
 

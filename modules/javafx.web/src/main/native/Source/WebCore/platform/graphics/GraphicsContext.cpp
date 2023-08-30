@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "FloatRoundedRect.h"
 #include "Gradient.h"
 #include "ImageBuffer.h"
+#include "ImageOrientation.h"
 #include "IntRect.h"
 #include "MediaPlayer.h"
 #include "MediaPlayerPrivate.h"
@@ -40,6 +41,7 @@
 #include "RoundedRect.h"
 #include "SystemImage.h"
 #include "TextBoxIterator.h"
+#include "VideoFrame.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -81,9 +83,15 @@ void GraphicsContext::restore()
         m_stack.clear();
 }
 
-void GraphicsContext::updateState(GraphicsContextState& state, const std::optional<GraphicsContextState>& lastDrawingState)
+void GraphicsContext::mergeLastChanges(const GraphicsContextState& state, const std::optional<GraphicsContextState>& lastDrawingState)
 {
-    m_state.mergeChanges(state, lastDrawingState);
+    m_state.mergeLastChanges(state, lastDrawingState);
+    didUpdateState(m_state);
+}
+
+void GraphicsContext::mergeAllChanges(const GraphicsContextState& state)
+{
+    m_state.mergeAllChanges(state);
     didUpdateState(m_state);
 }
 
@@ -267,6 +275,11 @@ RefPtr<ImageBuffer> GraphicsContext::createAlignedImageBuffer(const FloatRect& r
     return createScaledImageBuffer(rect, scaleFactor(), colorSpace, renderingMode(), renderingMethod);
 }
 
+void GraphicsContext::drawNativeImage(NativeImage& image, const FloatSize& imageSize, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
+{
+    image.draw(*this, imageSize, destination, source, options);
+}
+
 void GraphicsContext::drawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
 {
     systemImage.draw(*this, destinationRect);
@@ -367,6 +380,11 @@ void GraphicsContext::drawPattern(ImageBuffer& image, const FloatRect& destRect,
     image.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, options);
 }
 
+void GraphicsContext::drawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
+{
+    part.draw(*this, borderRect, deviceScaleFactor, style);
+}
+
 void GraphicsContext::clipRoundedRect(const FloatRoundedRect& rect)
 {
     Path path;
@@ -450,7 +468,7 @@ void GraphicsContext::adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2
     // works out.  For example, with a border width of 3, WebKit will pass us (y1+y2)/2, e.g.,
     // (50+53)/2 = 103/2 = 51 when we want 51.5.  It is always true that an even width gave
     // us a perfect position, but an odd width gave us a position that is off by exactly 0.5.
-    if (penStyle == DottedStroke || penStyle == DashedStroke) {
+    if (penStyle == StrokeStyle::DottedStroke || penStyle == StrokeStyle::DashedStroke) {
         if (p1.x() == p2.x()) {
             p1.setY(p1.y() + strokeWidth);
             p2.setY(p2.y() - strokeWidth);
@@ -547,13 +565,13 @@ FloatRect GraphicsContext::computeLineBoundsAndAntialiasingModeForText(const Flo
 float GraphicsContext::dashedLineCornerWidthForStrokeWidth(float strokeWidth) const
 {
     float thickness = strokeThickness();
-    return strokeStyle() == DottedStroke ? thickness : std::min(2.0f * thickness, std::max(thickness, strokeWidth / 3.0f));
+    return strokeStyle() == StrokeStyle::DottedStroke ? thickness : std::min(2.0f * thickness, std::max(thickness, strokeWidth / 3.0f));
 }
 
 float GraphicsContext::dashedLinePatternWidthForStrokeWidth(float strokeWidth) const
 {
     float thickness = strokeThickness();
-    return strokeStyle() == DottedStroke ? thickness : std::min(3.0f * thickness, std::max(thickness, strokeWidth / 3.0f));
+    return strokeStyle() == StrokeStyle::DottedStroke ? thickness : std::min(3.0f * thickness, std::max(thickness, strokeWidth / 3.0f));
 }
 
 float GraphicsContext::dashedLinePatternOffsetForPatternAndStrokeWidth(float patternWidth, float strokeWidth) const
@@ -599,6 +617,11 @@ Vector<FloatPoint> GraphicsContext::centerLineAndCutOffCorners(bool isVerticalLi
 void GraphicsContext::paintFrameForMedia(MediaPlayer& player, const FloatRect& destination)
 {
     player.playerPrivate()->paintCurrentFrameInContext(*this, destination);
+}
+
+void GraphicsContext::paintVideoFrame(VideoFrame& frame, const FloatRect& destination, bool shouldDiscardAlpha)
+{
+    frame.paintInContext(*this, destination, ImageOrientation::Orientation::None, shouldDiscardAlpha);
 }
 #endif
 

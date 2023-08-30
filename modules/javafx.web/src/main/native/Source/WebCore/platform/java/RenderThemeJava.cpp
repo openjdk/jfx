@@ -67,7 +67,7 @@ RenderTheme& RenderTheme::singleton()
     return sm_defaultInstance;
 }
 
-RenderThemeJava::RenderThemeJava()
+RenderThemeJava::RenderThemeJava() : mediaResource(MediaControlResourceFactory::createResource())
 {
 }
 
@@ -131,7 +131,7 @@ bool RenderThemeJava::paintWidget(
 
         extParams.grow(sizeof(jint) + 3 * sizeof(jfloat));
         jbyte *data = extParams.data();
-        auto isVertical = jint((object.style().appearance() == SliderHorizontalPart)
+        auto isVertical = jint((object.style().appearance() == StyleAppearance::SliderHorizontal)
             ? 0
             : 1);
         memcpy(data, &isVertical, sizeof(isVertical));
@@ -244,12 +244,12 @@ bool RenderThemeJava::paintProgressBar(const RenderObject&o, const PaintInfo& i,
     return paintWidget(JNI_EXPAND(PROGRESS_BAR), o, i, rect);
 }
 
-bool RenderThemeJava::supportsMeter(ControlPart part, const HTMLMeterElement&) const
+bool RenderThemeJava::supportsMeter(StyleAppearance part, const HTMLMeterElement&) const
 {
-    if (part == ProgressBarPart) {
+    if (part == StyleAppearance::ProgressBar) {
         return true;
     }
-    return (part == MeterPart);
+    return (part == StyleAppearance::Meter);
 }
 
 bool RenderThemeJava::paintMeter(const RenderObject&o, const PaintInfo& i, const IntRect& rect)
@@ -337,7 +337,7 @@ bool RenderThemeJava::paintTextArea(const RenderObject&o, const PaintInfo& i, co
 
 void RenderThemeJava::adjustButtonStyle(RenderStyle& style, const Element*) const
 {
-    if (style.appearance() == PushButtonPart) {
+    if (style.appearance() == StyleAppearance::PushButton) {
         // Ignore line-height.
         style.setLineHeight(RenderStyle::initialLineHeight());
     }
@@ -349,12 +349,15 @@ enum JavaControlSize {
     JavaMiniControlSize     // The control has a smaller size than JavaSmallControlSize.
 };
 
+#if !PLATFORM(JAVA)
 static float systemFontSizeForControlSize(JavaControlSize controlSize)
 {
     static float sizes[] = { 16.0f, 13.0f, 10.0f };
 
     return sizes[controlSize];
 }
+#endif
+
 void RenderThemeJava::adjustSliderTrackStyle(RenderStyle& style, const Element* element) const
 {
     //utatodo: we need to measure the control in Java theme.
@@ -387,33 +390,14 @@ const int sliderThumbHeight = 17;
 
 void RenderThemeJava::adjustSliderThumbSize(RenderStyle& style, const Element*) const
 {
-    ControlPart part = style.appearance();
+    StyleAppearance part = style.appearance();
 #if ENABLE(VIDEO)
-    if (part == SliderThumbVerticalPart || part == SliderThumbHorizontalPart)
+    if (part == StyleAppearance::SliderThumbVertical || part == StyleAppearance::SliderThumbHorizontal)
 #endif
     {
         style.setWidth(Length(sliderThumbHeight, LengthType::Fixed));
         style.setHeight(Length(sliderThumbWidth, LengthType::Fixed));
     }
-#if ENABLE(VIDEO)
-    else if (part == MediaSliderThumbPart) {
-        static int timeWidth = 0;
-        static int timeHeight;
-        if (timeWidth == 0) {
-            getSliderThumbSize(JNI_EXPAND_MEDIA(SLIDER_TYPE_TIME), &timeWidth, &timeHeight);
-        }
-        style.setWidth(Length(timeWidth, LengthType::Fixed));
-        style.setHeight(Length(timeHeight, LengthType::Fixed));
-    } else if (part == MediaVolumeSliderThumbPart) {
-        static int volumeWidth = 0;
-        static int volumeHeight;
-        if (volumeWidth == 0) {
-            getSliderThumbSize(JNI_EXPAND_MEDIA(SLIDER_TYPE_VOLUME), &volumeWidth, &volumeHeight);
-        }
-        style.setWidth(Length(volumeWidth, LengthType::Fixed));
-        style.setHeight(Length(volumeHeight, LengthType::Fixed));
-    }
-#endif
 }
 
 bool RenderThemeJava::paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&)
@@ -452,12 +436,12 @@ bool RenderThemeJava::supportsFocusRing(const RenderStyle& style) const
         return false;
 
     switch (style.appearance()) {
-    case TextFieldPart:
-    case TextAreaPart:
-    case ButtonPart:
-    case CheckboxPart:
-    case RadioPart:
-    case MenulistPart:
+    case StyleAppearance::TextField:
+    case StyleAppearance::TextArea:
+    case StyleAppearance::Button:
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::Radio:
+    case StyleAppearance::Menulist:
         return true;
     default:
         return RenderTheme::supportsFocusRing(style);
@@ -503,20 +487,15 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 #if ENABLE(VIDEO)
 Vector<String, 2> RenderThemeJava::mediaControlsScripts()
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
+
     return { String(ModernMediaControlsJavaScript, sizeof(ModernMediaControlsJavaScript)) };
-#else
-    return { String(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript)) };
-#endif
+
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
 {
-#if ENABLE(MODERN_MEDIA_CONTROLS)
-    return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
-#else
-    return String(mediaControlsAdwaitaUserAgentStyleSheet, sizeof(mediaControlsAdwaitaUserAgentStyleSheet));
-#endif
+    return emptyString();
+
 }
 
 static RefPtr<HTMLMediaElement> parentMediaElement(const Node* node)
@@ -573,7 +552,15 @@ bool RenderThemeJava::paintMediaControl(jint type, const RenderObject&, const Pa
     return true;
 }
 
+String RenderThemeJava::mediaControlsStyleSheet()
+{
+    return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+}
 
+String RenderThemeJava::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
+{
+    return mediaResource->getValue(iconName);
+}
 #undef JNI_EXPAND_MEDIA
 
 #endif  // ENABLE(VIDEO)

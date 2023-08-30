@@ -30,6 +30,7 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "LineSelection.h"
 #include "RenderCombineText.h"
+#include "SVGInlineTextBox.h"
 
 namespace WebCore {
 namespace InlineIterator {
@@ -41,30 +42,51 @@ TextBoxIterator TextBox::nextTextBox() const
 
 LayoutRect TextBox::selectionRect(unsigned rangeStart, unsigned rangeEnd) const
 {
+    if (is<SVGInlineTextBox>(legacyInlineBox()))
+        return downcast<SVGInlineTextBox>(*legacyInlineBox()).localSelectionRect(rangeStart, rangeEnd);
+
+    bool isCaretCase = rangeStart == rangeEnd;
+
     auto [clampedStart, clampedEnd] = selectableRange().clamp(rangeStart, rangeEnd);
 
-    if (clampedStart >= clampedEnd && !(rangeStart == rangeEnd && rangeStart >= start() && rangeStart <= end()))
+    if (clampedStart >= clampedEnd) {
+        if (isCaretCase) {
+            // handle unitary range, e.g.: representing caret position
+            bool isCaretWithinTextBox = rangeStart >= start() && rangeStart < end();
+            // For last text box in a InlineTextBox chain, we allow the caret to move to a position 'after' the end of the last text box.
+            bool isCaretWithinLastTextBox = rangeStart >= start() && rangeStart <= end();
+
+            auto itEnd = TextBoxRange(TextBoxIterator(*this)).end();
+            auto isLastTextBox = nextTextBox() == itEnd;
+
+            if ((isLastTextBox && !isCaretWithinLastTextBox) || (!isLastTextBox && !isCaretWithinTextBox))
+                return { };
+        } else {
+            bool isRangeWithinTextBox = (rangeStart >= start() && rangeStart <= end());
+            if (!isRangeWithinTextBox)
         return { };
+        }
+    }
 
     auto lineSelectionRect = LineSelection::logicalRect(*lineBox());
-    auto selectionRect = LayoutRect { logicalLeft(), lineSelectionRect.y(), logicalWidth(), lineSelectionRect.height() };
+    auto selectionRect = LayoutRect { logicalLeftIgnoringInlineDirection(), lineSelectionRect.y(), logicalWidth(), lineSelectionRect.height() };
 
-    TextRun textRun = createTextRun();
+    auto textRun = this->textRun();
     if (clampedStart || clampedEnd != textRun.length())
         fontCascade().adjustSelectionRectForText(textRun, selectionRect, clampedStart, clampedEnd);
 
-    return snappedSelectionRect(selectionRect, logicalRight(), lineSelectionRect.y(), lineSelectionRect.height(), isHorizontal());
+    return snappedSelectionRect(selectionRect, logicalRightIgnoringInlineDirection(), lineSelectionRect.y(), lineSelectionRect.height(), isHorizontal());
 }
 
 unsigned TextBox::offsetForPosition(float x, bool includePartialGlyphs) const
 {
     if (isLineBreak())
         return 0;
-    if (x - logicalLeft() > logicalWidth())
+    if (x - logicalLeftIgnoringInlineDirection() > logicalWidth())
         return isLeftToRightDirection() ? length() : 0;
-    if (x - logicalLeft() < 0)
+    if (x - logicalLeftIgnoringInlineDirection() < 0)
         return isLeftToRightDirection() ? 0 : length();
-    return fontCascade().offsetForPosition(createTextRun(CreateTextRunMode::Editing), x - logicalLeft(), includePartialGlyphs);
+    return fontCascade().offsetForPosition(textRun(TextRunMode::Editing), x - logicalLeftIgnoringInlineDirection(), includePartialGlyphs);
 }
 
 float TextBox::positionForOffset(unsigned offset) const
@@ -73,7 +95,7 @@ float TextBox::positionForOffset(unsigned offset) const
     ASSERT(offset <= end());
 
     if (isLineBreak())
-        return logicalLeft();
+        return logicalLeftIgnoringInlineDirection();
 
     auto [startOffset, endOffset] = [&] {
         if (direction() == TextDirection::RTL)
@@ -81,9 +103,9 @@ float TextBox::positionForOffset(unsigned offset) const
         return std::pair { 0u, selectableRange().clamp(offset) };
     }();
 
-    auto selectionRect = LayoutRect(logicalLeft(), 0, 0, 0);
+    auto selectionRect = LayoutRect(logicalLeftIgnoringInlineDirection(), 0, 0, 0);
 
-    auto textRun = createTextRun(CreateTextRunMode::Editing);
+    auto textRun = this->textRun(TextRunMode::Editing);
     fontCascade().adjustSelectionRectForText(textRun, selectionRect, startOffset, endOffset);
     return snapRectToDevicePixelsWithWritingDirection(selectionRect, renderer().document().deviceScaleFactor(), textRun.ltr()).maxX();
 }
@@ -122,10 +144,8 @@ TextBoxIterator& TextBoxIterator::traverseNextTextBox()
 
 TextBoxIterator firstTextBoxFor(const RenderText& text)
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(text))
         return lineLayout->textBoxesFor(text);
-#endif
 
     return { BoxLegacyPath { text.firstTextBox() } };
 }
@@ -135,7 +155,6 @@ TextBoxIterator textBoxFor(const LegacyInlineTextBox* legacyInlineTextBox)
     return { BoxLegacyPath { legacyInlineTextBox } };
 }
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, const InlineDisplay::Box& box)
 {
     return textBoxFor(content, content.indexForBox(box));
@@ -143,10 +162,9 @@ TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, cons
 
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent& content, size_t boxIndex)
 {
-    ASSERT(content.boxes[boxIndex].text());
+    ASSERT(content.boxes[boxIndex].isTextOrSoftLineBreak());
     return { BoxModernPath { content, boxIndex } };
 }
-#endif
 
 TextBoxRange textBoxesFor(const RenderText& text)
 {

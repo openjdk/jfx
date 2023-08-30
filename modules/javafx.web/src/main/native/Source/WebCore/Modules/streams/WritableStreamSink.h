@@ -26,7 +26,9 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include "JSDOMPromiseDeferred.h"
+#include "ScriptExecutionContext.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 

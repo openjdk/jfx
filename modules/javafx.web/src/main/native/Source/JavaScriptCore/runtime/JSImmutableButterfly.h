@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,10 @@
 #include "VirtualRegister.h"
 
 namespace JSC {
+
+class ClonedArguments;
+class DirectArguments;
+class ScopedArguments;
 
 class JSImmutableButterfly : public JSCell {
     using Base = JSCell;
@@ -100,6 +104,7 @@ public:
         }
 
         if (indexingType == DoubleShape) {
+            ASSERT(Options::allowDoubleShape());
             for (unsigned i = 0; i < length; i++) {
                 double d = array->butterfly()->contiguousDouble().at(array, i);
                 JSValue value = std::isnan(d) ? jsUndefined() : JSValue(JSValue::EncodeAsDouble, d);
@@ -127,6 +132,11 @@ public:
         }
         return result;
     }
+
+    static JSImmutableButterfly* createFromClonedArguments(JSGlobalObject*, ClonedArguments*);
+    static JSImmutableButterfly* createFromDirectArguments(JSGlobalObject*, DirectArguments*);
+    static JSImmutableButterfly* createFromScopedArguments(JSGlobalObject*, ScopedArguments*);
+    static JSImmutableButterfly* createFromString(JSGlobalObject*, JSString*);
 
     unsigned publicLength() const { return m_header.publicLength(); }
     unsigned vectorLength() const { return m_header.vectorLength(); }

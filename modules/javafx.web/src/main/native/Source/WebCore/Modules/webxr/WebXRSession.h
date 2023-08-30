@@ -29,7 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "WebXRFrame.h"
 #include "WebXRInputSourceArray.h"
 #include "WebXRRenderState.h"
@@ -53,7 +53,7 @@ class WebXRView;
 class WebXRViewerSpace;
 struct XRRenderStateInit;
 
-class WebXRSession final : public RefCounted<WebXRSession>, public EventTargetWithInlineData, public ActiveDOMObject, public PlatformXR::TrackingAndRenderingClient {
+class WebXRSession final : public RefCounted<WebXRSession>, public EventTarget, public ActiveDOMObject, public PlatformXR::TrackingAndRenderingClient {
     WTF_MAKE_ISO_ALLOCATED(WebXRSession);
 public:
     using RequestReferenceSpacePromise = DOMPromiseDeferred<IDLInterface<WebXRReferenceSpace>>;
@@ -67,7 +67,8 @@ public:
     using RefCounted<WebXRSession>::deref;
 
     using TrackingAndRenderingClient::weakPtrFactory;
-    using WeakValueType = TrackingAndRenderingClient::WeakValueType;
+    using TrackingAndRenderingClient::WeakValueType;
+    using TrackingAndRenderingClient::WeakPtrImplType;
 
     XREnvironmentBlendMode environmentBlendMode() const;
     XRInteractionMode interactionMode() const;
@@ -137,7 +138,7 @@ private:
     XRVisibilityState m_visibilityState { XRVisibilityState::Visible };
     UniqueRef<WebXRInputSourceArray> m_inputSources;
     bool m_ended { false };
-    std::optional<EndPromise> m_endPromise;
+    std::unique_ptr<EndPromise> m_endPromise;
 
     WebXRSystem& m_xrSystem;
     XRSessionMode m_mode;

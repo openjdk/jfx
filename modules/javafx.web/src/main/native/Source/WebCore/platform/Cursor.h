@@ -152,7 +152,7 @@ public:
     explicit Cursor(Type);
 
     Type type() const;
-    Image* image() const { return m_image.get(); }
+    RefPtr<Image> image() const { return m_image; }
     const IntPoint& hotSpot() const { return m_hotSpot; }
 
 #if ENABLE(MOUSE_CURSOR_SCALE)

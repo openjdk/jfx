@@ -237,7 +237,6 @@ public:
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    void elementsForRange(unsigned location, unsigned length, Vector<AccessibilityUIElement>& elements);
     JSRetainPtr<JSStringRef> stringForSelection();
     void increaseTextSelection();
     void decreaseTextSelection();
@@ -303,6 +302,7 @@ public:
     bool attributedStringForTextMarkerRangeContainsAttribute(JSStringRef, AccessibilityTextMarkerRange*);
     int indexForTextMarker(AccessibilityTextMarker*);
     bool isTextMarkerValid(AccessibilityTextMarker*);
+    bool isTextMarkerNull(AccessibilityTextMarker*);
     AccessibilityTextMarker textMarkerForIndex(int);
 
     void scrollToMakeVisible();
@@ -326,6 +326,8 @@ public:
 
     bool isTextArea() const;
     bool isSearchField() const;
+
+    bool isMarkAnnotation() const;
 
     AccessibilityTextMarkerRange textMarkerRangeMatchesTextNearMarkers(JSStringRef, AccessibilityTextMarker*, AccessibilityTextMarker*);
 #endif // PLATFORM(IOS_FAMILY)

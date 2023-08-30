@@ -34,7 +34,7 @@
 #include "JITOpaqueByproducts.h"
 #include "PCToCodeOriginMap.h"
 #include "WasmCompilationMode.h"
-#include "WasmEmbedder.h"
+#include "WasmJS.h"
 #include "WasmMemory.h"
 #include "WasmModuleInformation.h"
 #include "WasmTierUpCount.h"
@@ -50,14 +50,14 @@ namespace Wasm {
 class MemoryInformation;
 
 struct CompilationContext {
-    std::unique_ptr<CCallHelpers> embedderEntrypointJIT;
+    std::unique_ptr<CCallHelpers> jsEntrypointJIT;
     std::unique_ptr<CCallHelpers> wasmEntrypointJIT;
     std::unique_ptr<OpaqueByproducts> wasmEntrypointByproducts;
     std::unique_ptr<B3::Procedure> procedure;
     Box<PCToCodeOriginMap> pcToCodeOriginMap;
 };
 
-Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileB3(CompilationContext&, const FunctionData&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>&, const ModuleInformation&, MemoryMode, CompilationMode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, uint32_t loopIndexForOSREntry, TierUpCount* = nullptr);
+Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileB3(CompilationContext&, Callee&, const FunctionData&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>&, const ModuleInformation&, MemoryMode, CompilationMode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, uint32_t loopIndexForOSREntry, TierUpCount* = nullptr);
 
 void computePCToCodeOriginMap(CompilationContext&, LinkBuffer&);
 

@@ -39,33 +39,36 @@ namespace JSC { namespace FTL {
 static constexpr size_t wordSize = 8;
 
 SlowPathCallContext::SlowPathCallContext(
-    RegisterSet usedRegisters, CCallHelpers& jit, unsigned numArgs, GPRReg returnRegister, GPRReg indirectCallTargetRegister)
+    ScalarRegisterSet originalUsedRegisters, CCallHelpers& jit, unsigned numArgs, GPRReg returnRegister, GPRReg indirectCallTargetRegister)
     : m_jit(jit)
     , m_numArgs(numArgs)
     , m_returnRegister(returnRegister)
 {
+    RegisterSetBuilder usedRegisters = originalUsedRegisters.toRegisterSet();
     // We don't care that you're using callee-save, stack, or hardware registers.
-    usedRegisters.exclude(RegisterSet::stackRegisters());
-    usedRegisters.exclude(RegisterSet::reservedHardwareRegisters());
-    usedRegisters.exclude(RegisterSet::calleeSaveRegisters());
+    usedRegisters.exclude(RegisterSetBuilder::stackRegisters());
+    usedRegisters.exclude(RegisterSetBuilder::reservedHardwareRegisters());
+    usedRegisters.exclude(RegisterSetBuilder::calleeSaveRegisters().includeWholeRegisterWidth());
 
     // The return register doesn't need to be saved.
     if (m_returnRegister != InvalidGPRReg)
-        usedRegisters.clear(m_returnRegister);
+        usedRegisters.remove(m_returnRegister);
 
     size_t stackBytesNeededForReturnAddress = wordSize;
 
     m_offsetToSavingArea =
         (std::max(m_numArgs, NUMBER_OF_ARGUMENT_REGISTERS) - NUMBER_OF_ARGUMENT_REGISTERS) * wordSize;
 
+    RegisterSetBuilder callingConventionRegisters = m_callingConventionRegisters.toRegisterSet();
     for (unsigned i = std::min(NUMBER_OF_ARGUMENT_REGISTERS, numArgs); i--;)
-        m_argumentRegisters.set(GPRInfo::toArgumentRegister(i));
-    m_callingConventionRegisters.merge(m_argumentRegisters);
+        callingConventionRegisters.add(GPRInfo::toArgumentRegister(i), IgnoreVectors);
+    callingConventionRegisters.merge(m_argumentRegisters.toRegisterSet());
     if (returnRegister != InvalidGPRReg)
-        m_callingConventionRegisters.set(GPRInfo::returnValueGPR);
+        callingConventionRegisters.add(GPRInfo::returnValueGPR, IgnoreVectors);
     if (indirectCallTargetRegister != InvalidGPRReg)
-        m_callingConventionRegisters.set(indirectCallTargetRegister);
-    m_callingConventionRegisters.filter(usedRegisters);
+        callingConventionRegisters.add(indirectCallTargetRegister, IgnoreVectors);
+    callingConventionRegisters.filter(usedRegisters);
+    m_callingConventionRegisters = callingConventionRegisters.buildScalarRegisterSet();
 
     unsigned numberOfCallingConventionRegisters =
         m_callingConventionRegisters.numberOfSetRegisters();
@@ -83,18 +86,17 @@ SlowPathCallContext::SlowPathCallContext(
 
     m_jit.subPtr(CCallHelpers::TrustedImm32(m_stackBytesNeeded), CCallHelpers::stackPointerRegister);
 
-    m_thunkSaveSet = usedRegisters;
-
     // This relies on all calling convention registers also being temp registers.
     unsigned stackIndex = 0;
     for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
         GPRReg reg = GPRInfo::toRegister(i);
-        if (!m_callingConventionRegisters.get(reg))
+        if (!m_callingConventionRegisters.contains(reg, IgnoreVectors))
             continue;
         m_jit.storePtr(reg, CCallHelpers::Address(CCallHelpers::stackPointerRegister, m_offsetToSavingArea + (stackIndex++) * wordSize));
-        m_thunkSaveSet.clear(reg);
+        usedRegisters.remove(reg);
     }
 
+    m_thunkSaveSet = usedRegisters.buildScalarRegisterSet();
     m_offset = offsetToThunkSavingArea;
 }
 
@@ -106,7 +108,7 @@ SlowPathCallContext::~SlowPathCallContext()
     unsigned stackIndex = 0;
     for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
         GPRReg reg = GPRInfo::toRegister(i);
-        if (!m_callingConventionRegisters.get(reg))
+        if (!m_callingConventionRegisters.contains(reg, IgnoreVectors))
             continue;
         m_jit.loadPtr(CCallHelpers::Address(CCallHelpers::stackPointerRegister, m_offsetToSavingArea + (stackIndex++) * wordSize), reg);
     }
@@ -114,7 +116,7 @@ SlowPathCallContext::~SlowPathCallContext()
     m_jit.addPtr(CCallHelpers::TrustedImm32(m_stackBytesNeeded), CCallHelpers::stackPointerRegister);
 }
 
-SlowPathCallKey SlowPathCallContext::keyWithTarget(FunctionPtr<CFunctionPtrTag> callTarget) const
+SlowPathCallKey SlowPathCallContext::keyWithTarget(CodePtr<CFunctionPtrTag> callTarget) const
 {
     uint8_t numberOfUsedArgumentRegistersIfClobberingCheckIsEnabled = 0;
     if (UNLIKELY(Options::clobberAllRegsInFTLICSlowPath()))
@@ -130,7 +132,7 @@ SlowPathCallKey SlowPathCallContext::keyWithTarget(CCallHelpers::Address address
     return SlowPathCallKey(m_thunkSaveSet, nullptr, numberOfUsedArgumentRegistersIfClobberingCheckIsEnabled, m_offset, address.offset);
 }
 
-SlowPathCall SlowPathCallContext::makeCall(VM& vm, FunctionPtr<CFunctionPtrTag> callTarget)
+SlowPathCall SlowPathCallContext::makeCall(VM& vm, CodePtr<CFunctionPtrTag> callTarget)
 {
     SlowPathCallKey key = keyWithTarget(callTarget);
     SlowPathCall result = SlowPathCall(m_jit.call(JITThunkPtrTag), key);

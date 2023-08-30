@@ -29,18 +29,21 @@
 #if ENABLE(GAMEPAD)
 
 #include "GamepadButton.h"
+#include "GamepadHapticActuator.h"
 #include "PlatformGamepad.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-Gamepad::Gamepad(const PlatformGamepad& platformGamepad)
+Gamepad::Gamepad(Document* document, const PlatformGamepad& platformGamepad)
     : m_id(platformGamepad.id())
     , m_index(platformGamepad.index())
     , m_connected(true)
     , m_timestamp(platformGamepad.lastUpdateTime())
     , m_mapping(platformGamepad.mapping())
+    , m_supportedEffectTypes(platformGamepad.supportedEffectTypes())
     , m_axes(platformGamepad.axisValues().size(), 0.0)
+    , m_vibrationActuator(platformGamepad.supportedEffectTypes().contains(GamepadHapticEffectType::DualRumble) ? RefPtr { GamepadHapticActuator::create(document, GamepadHapticActuator::Type::DualRumble, *this) } : nullptr)
 {
     unsigned buttonCount = platformGamepad.buttonValues().size();
     m_buttons.reserveInitialCapacity(buttonCount);

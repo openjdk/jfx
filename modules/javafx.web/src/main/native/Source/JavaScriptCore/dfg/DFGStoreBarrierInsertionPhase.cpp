@@ -262,7 +262,9 @@ private:
             case ArrayPush: {
                 switch (m_node->arrayMode().type()) {
                 case Array::Contiguous:
-                case Array::ArrayStorage: {
+                case Array::ArrayStorage:
+                case Array::SlowPutArrayStorage:
+                case Array::ForceExit: {
                     unsigned elementOffset = 2;
                     unsigned elementCount = m_node->numChildren() - elementOffset;
                     Edge& arrayEdge = m_graph.varArgChild(m_node, 1);
@@ -383,7 +385,7 @@ private:
             case CreateDirectArguments:
             case CreateScopedArguments:
             case CreateClonedArguments:
-            case CreateArgumentsButterfly:
+            case CreateArgumentsButterflyExcludingThis:
             case NewFunction:
             case NewGeneratorFunction:
             case NewAsyncGeneratorFunction:

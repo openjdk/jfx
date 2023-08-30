@@ -30,6 +30,7 @@
 #include "CSSValuePool.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
@@ -167,7 +168,7 @@ bool HTMLFontElement::cssValueFromFontSizeNumber(const String& s, CSSValueID& si
         size = CSSValueXxLarge;
         break;
     case 7:
-        size = CSSValueWebkitXxxLarge;
+        size = CSSValueXxxLarge;
         break;
     default:
         ASSERT_NOT_REACHED();

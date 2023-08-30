@@ -725,7 +725,7 @@ void Graph::determineReachability()
     }
 }
 
-void Graph::resetReachability()
+void Graph::clearReachability()
 {
     for (BlockIndex blockIndex = m_blocks.size(); blockIndex--;) {
         BasicBlock* block = m_blocks[blockIndex].get();
@@ -734,7 +734,11 @@ void Graph::resetReachability()
         block->isReachable = false;
         block->predecessors.clear();
     }
+}
 
+void Graph::resetReachability()
+{
+    clearReachability();
     determineReachability();
 }
 
@@ -1298,7 +1302,7 @@ JSValue Graph::tryGetConstantProperty(
         ASSERT(structure->isValidOffset(offset));
         ASSERT(!structure->isUncacheableDictionary());
 
-        watchpoints().addLazily(set);
+        watchpoints().addLazily(*set);
     }
 
     // What follows may require some extra thought. We need this load to load a valid JSValue. If
@@ -1322,11 +1326,12 @@ JSValue Graph::tryGetConstantProperty(
     // incompatible with the getDirect we're trying to do. The easiest way to do that is to
     // determine if the structure belongs to the proven set.
 
+    Locker cellLock { object->cellLock() };
     Structure* structure = object->structure();
     if (!structureSet.toStructureSet().contains(structure))
         return JSValue();
 
-    return object->getDirectConcurrently(structure, offset);
+    return object->getDirectConcurrently(cellLock, structure, offset);
 }
 
 JSValue Graph::tryGetConstantProperty(JSValue base, Structure* structure, PropertyOffset offset)
@@ -1402,7 +1407,7 @@ JSValue Graph::tryGetConstantClosureVar(JSValue base, ScopeOffset offset)
             return JSValue();
     }
 
-    watchpoints().addLazily(set);
+    watchpoints().addLazily(*set);
 
     return value;
 }
@@ -1441,6 +1446,22 @@ JSArrayBufferView* Graph::tryGetFoldableView(JSValue value, ArrayMode arrayMode)
     if (arrayMode.type() != Array::AnyTypedArray && arrayMode.typedArrayType() == NotTypedArray)
         return nullptr;
     return tryGetFoldableView(value);
+}
+
+JSValue Graph::tryGetConstantGetter(Node* getterSetter)
+{
+    auto* cell = getterSetter->dynamicCastConstant<GetterSetter*>();
+    if (!cell)
+        return JSValue();
+    return cell->getterConcurrently();
+}
+
+JSValue Graph::tryGetConstantSetter(Node* getterSetter)
+{
+    auto* cell = getterSetter->dynamicCastConstant<GetterSetter*>();
+    if (!cell)
+        return JSValue();
+    return cell->setterConcurrently();
 }
 
 void Graph::registerFrozenValues()

@@ -38,12 +38,18 @@ static NSMutableDictionary * rolesMap;
     /*
      * Here we should keep all the mapping between the accessibility roles and implementing classes
      */
-    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:4];
+    rolesMap = [[NSMutableDictionary alloc] initWithCapacity:8];
 
-    [rolesMap setObject:@"ButtonAccessibility" forKey:@"BUTTON"];
-    [rolesMap setObject:@"ButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
-    [rolesMap setObject:@"ButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
-    [rolesMap setObject:@"ButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"BUTTON"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"DECREMENT_BUTTON"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"INCREMENT_BUTTON"];
+    [rolesMap setObject:@"JFXButtonAccessibility" forKey:@"SPLIT_MENU_BUTTON"];
+    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"RADIO_BUTTON"];
+//  Requires TAB_GROUP to be implemented first
+//  [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"TAB_ITEM"];
+    [rolesMap setObject:@"JFXRadiobuttonAccessibility" forKey:@"PAGE_ITEM"];
+    [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"CHECK_BOX"];
+    [rolesMap setObject:@"JFXCheckboxAccessibility" forKey:@"TOGGLE_BUTTON"];
 
 }
 
@@ -160,6 +166,27 @@ static NSMutableDictionary * rolesMap;
 - (void)clearParent
 {
     parent = nil;
+}
+
+- (BOOL)isAccessibilityFocused
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NO;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)@"AXFocused");
+    GLASS_CHECK_EXCEPTION(env);
+
+    return [variantToID(env, jresult) boolValue];
+}
+
+- (void)setAccessibilityFocused:(BOOL)value
+{
+    GET_MAIN_JENV;
+    if (env == NULL) return;
+    (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilitySetValue,
+                           (jlong)[NSNumber numberWithBool:value],
+                           (jlong)@"AXFocused");
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 @end

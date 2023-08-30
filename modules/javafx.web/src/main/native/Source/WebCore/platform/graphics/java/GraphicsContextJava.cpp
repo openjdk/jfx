@@ -181,6 +181,7 @@ void GraphicsContextJava::restorePlatformState()
 // Draws a filled rectangle with a stroked border.
 void GraphicsContextJava::drawRect(const FloatRect& rect, float borderThickness = 1) // todo tav rect changed from IntRect to FloatRect
 {
+    UNUSED_PARAM(borderThickness);
     if (paintingDisabled())
         return;
 
@@ -192,7 +193,7 @@ void GraphicsContextJava::drawRect(const FloatRect& rect, float borderThickness 
 // This is only used to draw borders.
 void GraphicsContextJava::drawLine(const FloatPoint& point1, const FloatPoint& point2) // todo tav points changed from IntPoint to FloatPoint
 {
-    if (paintingDisabled() || strokeStyle() == NoStroke)
+    if (paintingDisabled() || strokeStyle() == StrokeStyle::NoStroke)
         return;
 
     platformContext()->rq().freeSpace(20)
@@ -287,12 +288,12 @@ IntRect GraphicsContextJava::clipBounds() const
                                 .mapRect(m_state.clipBounds));
 }
 
-void GraphicsContextJava::drawFocusRing(const Path&, float, float, const Color&)
+void GraphicsContextJava::drawFocusRing(const Path&, float, const Color&)
 {
     //utaTODO: IMPLEMENT!!!
 }
 
-void GraphicsContextJava::drawFocusRing(const Vector<FloatRect>& rects, float, float offset, const Color& color)
+void GraphicsContextJava::drawFocusRing(const Vector<FloatRect>& rects, float offset, float, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -450,13 +451,13 @@ void GraphicsContextJava::drawDotsForDocumentMarker(const FloatRect& rect, Docum
 {
     savePlatformState(); //fake stroke
     switch (style.mode) { // TODO-java: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
-        case DocumentMarkerLineStyle::Mode::Spelling:
+        case DocumentMarkerLineStyleMode::Spelling:
         {
             static Color red = SRGBA<uint8_t> { 255, 0, 0 };
             setStrokeColor(red);
         }
         break;
-        case DocumentMarkerLineStyle::Mode::Grammar:
+        case DocumentMarkerLineStyleMode::Grammar:
         {
             static Color green = SRGBA<uint8_t> { 0, 255, 0 };
             setStrokeColor(green);
@@ -468,16 +469,6 @@ void GraphicsContextJava::drawDotsForDocumentMarker(const FloatRect& rect, Docum
     }
     drawErrorUnderline(*this, rect.x(), rect.y(), rect.width(), rect.height());
     restorePlatformState(); //fake stroke
-}
-
-FloatRect GraphicsContextJava::roundToDevicePixels(const FloatRect& frect, RoundingMode)
-{
-    FloatRect result;
-    result.setX(static_cast<float>(round(frect.x())));
-    result.setY(static_cast<float>(round(frect.y())));
-    result.setWidth(static_cast<float>(round(frect.width())));
-    result.setHeight(static_cast<float>(round(frect.height())));
-    return result;
 }
 
 void GraphicsContextJava::translate(float x, float y)
@@ -603,11 +594,6 @@ void GraphicsContextJava::setPlatformShadow(const FloatSize& s, float blur, cons
     platformContext()->rq().freeSpace(32)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
     << width << height << blur << r << g << b << a;;
-}
-
-bool GraphicsContextJava::supportsTransparencyLayers() const
-{
-    return true;
 }
 
 void GraphicsContextJava::beginTransparencyLayer(float opacity)
@@ -809,7 +795,7 @@ void GraphicsContextJava::drawPlatformImage(const PlatformImagePtr& image, const
     FloatRect adjustedSrcRect(srcRect);
     FloatRect adjustedDestRect(destRect);
 
-    if (options.orientation() != ImageOrientation::None) {
+    if (options.orientation() != ImageOrientation::Orientation::None) {
         // ImageOrientation expects the origin to be at (0, 0).
         translate(destRect.x(), destRect.y());
         adjustedDestRect.setLocation(FloatPoint());
@@ -925,6 +911,7 @@ void GraphicsContextJava::scale(const FloatSize& size)
 
 void GraphicsContextJava::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode blendMode) // todo tav Int to Float
 {
+    UNUSED_PARAM(blendMode);
     if (paintingDisabled())
         return;
 
@@ -1033,7 +1020,7 @@ void GraphicsContextJava::fillRoundedRectImpl(const FloatRoundedRect& rect, cons
     fillRoundedRect(rect, color, BlendMode::Normal);
 }
 
-void GraphicsContextJava::drawNativeImage(NativeImage& image, const FloatSize& selfSize, const FloatRect& destRect,
+void GraphicsContextJava::drawNativeImageInternal(NativeImage& image, const FloatSize& selfSize, const FloatRect& destRect,
                             const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     /* flush ImageRq  to decode previous recorded  command buffer */

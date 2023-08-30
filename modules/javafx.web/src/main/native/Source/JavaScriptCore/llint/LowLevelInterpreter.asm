@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -333,11 +333,14 @@ const OpcodeIDWide16SizeWasm = 2 # Wide16 Prefix + OpcodeID(1 byte)
 const OpcodeIDWide32SizeWasm = 2 # Wide32 Prefix + OpcodeID(1 byte)
 
 if X86_64_WIN or C_LOOP_WIN
+    const WTFConfig = _g_wtfConfig
     const GigacageConfig = _g_gigacageConfig
     const JSCConfig = _g_jscConfig
 else
+    const WTFConfig = _g_config + constexpr WTF::startOffsetOfWTFConfig
     const GigacageConfig = _g_config + constexpr Gigacage::startOffsetOfGigacageConfig
-    const JSCConfig = _g_config + constexpr WTF::offsetOfWTFConfigExtension
+    const JSCConfigOffset = constexpr WTF::offsetOfWTFConfigExtension
+    const JSCConfigGateMapOffset = JSCConfigOffset + constexpr JSC::offsetOfJSCConfigGateMap
 end
 
 macro nextInstruction()
@@ -403,6 +406,15 @@ macro dispatchOp(size, opcodeName)
     genericDispatchOpJS(dispatch, size, opcodeName)
 end
 
+macro superSamplerBegin(scratch)
+    leap _g_superSamplerCount, scratch
+    addi 1, [scratch]
+end
+
+macro superSamplerEnd(scratch)
+    leap _g_superSamplerCount, scratch
+    subi 1, [scratch]
+end
 
 macro getu(size, opcodeStruct, fieldName, dst)
     size(getuOperandNarrow, getuOperandWide16JS, getuOperandWide32JS, macro (getu)
@@ -640,7 +652,7 @@ const NotInitialization = constexpr InitializationMode::NotInitialization
 
 const MarkedBlockSize = constexpr MarkedBlock::blockSize
 const MarkedBlockMask = ~(MarkedBlockSize - 1)
-const MarkedBlockFooterOffset = constexpr MarkedBlock::offsetOfFooter
+const MarkedBlockHeaderOffset = constexpr MarkedBlock::offsetOfHeader
 const PreciseAllocationHeaderSize = constexpr (PreciseAllocation::headerSize())
 const PreciseAllocationVMOffset = (PreciseAllocation::m_weakSet + WeakSet::m_vm - PreciseAllocationHeaderSize)
 
@@ -779,8 +791,8 @@ const CalleeRegisterSaveSize = CalleeSaveRegisterCount * MachineRegisterSize
 const VMEntryTotalFrameSize = (CalleeRegisterSaveSize + sizeof VMEntryRecord + StackAlignment - 1) & ~StackAlignmentMask
 
 macro pushCalleeSaves()
-    # Note: Only registers that are in RegisterSet::calleeSaveRegisters(),
-    # but are not in RegisterSet::vmCalleeSaveRegisters() need to be saved here,
+    # Note: Only registers that are in RegisterSetBuilder::calleeSaveRegisters(),
+    # but are not in RegisterSetBuilder::vmCalleeSaveRegisters() need to be saved here,
     # i.e.: only those registers that are callee save in the C ABI, but are not
     # callee save in the JIT ABI.
     if C_LOOP or C_LOOP_WIN or ARM64 or ARM64E or X86_64 or X86_64_WIN or RISCV64
@@ -1153,22 +1165,22 @@ macro callTargetFunction(opcodeName, size, opcodeStruct, valueProfileName, dstVi
         cloopCallJSFunction callee
     elsif ARM64E
         macro callNarrow()
-            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::%opcodeName%) * PtrSize, a7
-            jmp [a7], NativeToJITGatePtrTag # callPtrTag
+            leap _g_config, a7
+            jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%) * PtrSize[a7], NativeToJITGatePtrTag # callPtrTag
             _js_trampoline_%opcodeName%:
             call t5, callPtrTag
         end
 
         macro callWide16()
-            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::%opcodeName%_wide16) * PtrSize, a7
-            jmp [a7], NativeToJITGatePtrTag # callPtrTag
+            leap _g_config, a7
+            jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%_wide16) * PtrSize[a7], NativeToJITGatePtrTag # callPtrTag
             _js_trampoline_%opcodeName%_wide16:
             call t5, callPtrTag
         end
 
         macro callWide32()
-            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::%opcodeName%_wide32) * PtrSize, a7
-            jmp [a7], NativeToJITGatePtrTag # callPtrTag
+            leap _g_config, a7
+            jmp JSCConfigGateMapOffset + (constexpr Gate::%opcodeName%_wide32) * PtrSize[a7], NativeToJITGatePtrTag # callPtrTag
             _js_trampoline_%opcodeName%_wide32:
             call t5, callPtrTag
         end
@@ -1291,8 +1303,8 @@ macro invokeForTailCall(opcodeName, size, opcodeStruct, valueProfileName, dstVir
     if ARM64E
         move maybeOldCFR, a2
         move callee, a7
-        leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::tailCall%callPtrTag%) * PtrSize, a1
-        jmp [a1], NativeToJITGatePtrTag # %callPtrTag%
+        leap _g_config, a1
+        jmp JSCConfigGateMapOffset + (constexpr Gate::tailCall%callPtrTag%) * PtrSize[a1], NativeToJITGatePtrTag # %callPtrTag%
     else
         jmp callee, callPtrTag
     end
@@ -1302,8 +1314,8 @@ end
 macro prepareForPolymorphicTailCall(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, callPtrTag)
     if ARM64E
         loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_monomorphicCallDestination[t5], a7
-        leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::tailCallWithoutUntag%callPtrTag%) * PtrSize, a1
-        jmp [a1], NativeToJITGatePtrTag # %callPtrTag%
+        leap _g_config, a1
+        jmp JSCConfigGateMapOffset + (constexpr Gate::tailCallWithoutUntag%callPtrTag%) * PtrSize[a1], NativeToJITGatePtrTag # %callPtrTag%
     else
         loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_monomorphicCallDestination[t5], a1
         jmp a1, callPtrTag
@@ -1357,32 +1369,23 @@ macro getByValTypedArray(base, index, finishIntGetByVal, finishDoubleGetByVal, s
     
     # Sweet, now we know that we have a typed array. Do some basic things now.
 
-    if ARM64E
-        const length = t6
-        const scratch = t7
-        if LARGE_TYPED_ARRAYS
-            loadq JSArrayBufferView::m_length[base], length
-            bqaeq index, length, slowPath
-        else
-            loadi JSArrayBufferView::m_length[base], length
-            biaeq index, length, slowPath
-        end
-    else
-        # length and scratch are intentionally undefined on this branch because they are not used on other platforms.
+    btbnz JSArrayBufferView::m_mode[base], (constexpr isResizableOrGrowableSharedMode), slowPath
         if LARGE_TYPED_ARRAYS
             bqaeq index, JSArrayBufferView::m_length[base], slowPath
-        else
-            biaeq index, JSArrayBufferView::m_length[base], slowPath
-        end
-    end
-
-    if LARGE_TYPED_ARRAYS
         bqbeq index, SmallTypedArrayMaxLength, .smallTypedArray
-        setLargeTypedArray()
+        setLargeTypedArray(t3)
 .smallTypedArray:
+    else
+        biaeq index, JSArrayBufferView::m_length[base], slowPath
     end
 
     loadp JSArrayBufferView::m_vector[base], t3
+    # length and scratch are intentionally undefined on this branch because they are not used on other platforms.
+    if ARM64E
+        const length = t6
+        const scratch = t7
+        loadq JSArrayBufferView::m_length[base], length
+    end
     cagedPrimitive(t3, length, base, scratch)
 
     # Now bisect through the various types:
@@ -1478,7 +1481,7 @@ end
 macro varReadOnlyCheck(slowPath, scratch)
     loadp CodeBlock[cfr], scratch
     loadp CodeBlock::m_globalObject[scratch], scratch
-    loadp JSGlobalObject::m_varReadOnlyWatchpoint[scratch], scratch
+    loadp JSGlobalObject::m_varReadOnlyWatchpointSet[scratch], scratch
     bbeq WatchpointSet::m_state[scratch], IsInvalidated, slowPath
 end
 
@@ -1504,14 +1507,38 @@ macro assertNotConstant(size, index)
     end)
 end
 
-macro convertCalleeToVM(callee)
+macro convertJSCalleeToVM(callee)
     btpnz callee, (constexpr PreciseAllocation::halfAlignment), .preciseAllocation
     andp MarkedBlockMask, callee
-    loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[callee], callee
+    loadp MarkedBlockHeaderOffset + MarkedBlock::Header::m_vm[callee], callee
     jmp .done
 .preciseAllocation:
     loadp PreciseAllocationVMOffset[callee], callee
 .done:
+end
+
+macro getVMFromCallFrame(vm, scratch)
+if WEBASSEMBLY
+        if JSVALUE64
+            loadq Callee[cfr], vm
+            move vm, scratch
+            andq (constexpr JSValue::WasmMask), scratch
+            bqeq scratch, (constexpr JSValue::WasmTag), .isWasmCallee
+        else
+            loadi Callee + TagOffset[cfr], scratch
+            bieq scratch, (constexpr JSValue::WasmTag), .isWasmCallee
+            loadp Callee + PayloadOffset[cfr], vm
+        end
+        convertJSCalleeToVM(vm)
+        jmp .loaded
+    .isWasmCallee:
+        loadp CodeBlock + PayloadOffset[cfr], vm
+        loadp Wasm::Instance::m_vm[vm], vm
+    .loaded:
+else
+    loadp Callee + PayloadOffset[cfr], vm
+    convertJSCalleeToVM(vm)
+end
 end
 
 # Do the bare minimum required to execute code. Sets up the PC, leave the CodeBlock*
@@ -1559,8 +1586,8 @@ macro prologue(osrSlowPath, traceSlowPath)
 
         if ARM64E
             move r0, a0
-            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::entryOSREntry) * PtrSize, a2
-            jmp [a2], NativeToJITGatePtrTag # JSEntryPtrTag
+            leap _g_config, a2
+            jmp JSCConfigGateMapOffset + (constexpr Gate::entryOSREntry) * PtrSize[a2], NativeToJITGatePtrTag # JSEntryPtrTag
         else
             jmp r0, JSEntryPtrTag
         end
@@ -1671,8 +1698,8 @@ macro doReturn()
     restoreCalleeSavesUsedByLLInt()
     restoreCallerPCAndCFR()
     if ARM64E
-        leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::returnFromLLInt) * PtrSize, a2
-        jmp [a2], NativeToJITGatePtrTag
+        leap _g_config, a2
+        jmp JSCConfigGateMapOffset + (constexpr Gate::returnFromLLInt) * PtrSize[a2], NativeToJITGatePtrTag
     else
         ret
     end
@@ -1776,11 +1803,29 @@ if not (C_LOOP or C_LOOP_WIN)
         bpbeq sp, address, .zeroFillDone
         move address, sp
 
+        # Filling stack space from |address| to sp (stored in |a0| now).
+        if (ARM64 or ARM64E) and ADDRESS64
+            # Because of ARM64 calling convention, stack-pointer is already 16-byte aligned.
+            # Let's check address is aligned or not to use 16-byte zero-fill.
+            assert(macro (ok)  btpz a0, (PtrSize * 2 - 1), ok end)
+            btpz address, (PtrSize * 2 - 1), .zeroFillLoop
+            # If it is not aligned, then store pointer-size and increment.
+            emit "str xzr, [x1], #8" # address is a1, thus x1
+            bpbeq a0, address, .zeroFillDone
+            assert(macro (ok)  btpz address, (PtrSize * 2 - 1), ok end)
+        .zeroFillLoop:
+            # Use non-temporal store-pair (stnp) since these stack values are meaningless to the execution.
+            # Avoid polluting CPU cache by using stnp.
+            emit "stnp xzr, xzr, [x1]" # address is a1, thus x1
+            addp PtrSize * 2, address
+            bpa a0, address, .zeroFillLoop
+        else
         move 0, scratch
     .zeroFillLoop:
         storep scratch, [address]
         addp PtrSize, address
         bpa a0, address, .zeroFillLoop
+        end
 
     .zeroFillDone:
         move a0, sp
@@ -1803,8 +1848,8 @@ if ARM64E
     emit ".globl _jitCagePtr"
     emit "_jitCagePtr:"
         tagReturnAddress sp
-        leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::jitCagePtr) * PtrSize, t2
-        jmp [t2], NativeToJITGatePtrTag
+        leap _g_config, t2
+        jmp JSCConfigGateMapOffset + (constexpr Gate::jitCagePtr) * PtrSize[t2], NativeToJITGatePtrTag
         global _jitCagePtrGateAfter
         _jitCagePtrGateAfter:
         ret
@@ -1964,8 +2009,13 @@ macro entry(kind, initialize)
         # Include generated bytecode initialization file.
         includeEntriesAtOffset(kind, initialize)
 
+        if X86_64_WIN or C_LOOP_WIN
         leap JSCConfig + constexpr JSC::offsetOfJSCConfigInitializeHasBeenCalled, t3
         bbeq [t3], 0, .notFrozen
+        else
+            leap _g_config, t3
+            bbeq JSCConfigOffset + constexpr JSC::offsetOfJSCConfigInitializeHasBeenCalled[t3], 0, .notFrozen
+        end
         crash()
     .notFrozen:
 
@@ -2033,7 +2083,7 @@ end)
 
 op(llint_function_for_call_arity_check, macro ()
     prologue(_llint_entry_osr_function_for_call_arityCheck, _llint_trace_arityCheck_for_call)
-    functionArityCheck(llint_function_for_call_arity_check, .functionForCallBegin, _slow_path_call_arityCheck)
+    functionArityCheck(llint_function_for_call_arity_check, .functionForCallBegin)
 .functionForCallBegin:
     functionInitialization(0)
     dispatch(0)
@@ -2041,7 +2091,7 @@ end)
 
 op(llint_function_for_construct_arity_check, macro ()
     prologue(_llint_entry_osr_function_for_construct_arityCheck, _llint_trace_arityCheck_for_construct)
-    functionArityCheck(llint_function_for_construct_arity_check, .functionForConstructBegin, _slow_path_construct_arityCheck)
+    functionArityCheck(llint_function_for_construct_arity_check, .functionForConstructBegin)
 .functionForConstructBegin:
     functionInitialization(1)
     dispatch(0)
@@ -2075,7 +2125,7 @@ macro slowPathOp(opcodeName)
 end
 
 slowPathOp(create_cloned_arguments)
-slowPathOp(create_arguments_butterfly)
+slowPathOp(create_arguments_butterfly_excluding_this)
 slowPathOp(create_direct_arguments)
 slowPathOp(create_lexical_environment)
 slowPathOp(create_rest)
@@ -2097,6 +2147,7 @@ slowPathOp(is_callable)
 slowPathOp(is_constructor)
 slowPathOp(new_array_buffer)
 slowPathOp(new_array_with_spread)
+slowPathOp(new_array_with_species)
 slowPathOp(push_with_scope)
 slowPathOp(put_by_id_with_this)
 slowPathOp(put_by_val_with_this)
@@ -2143,8 +2194,6 @@ llintSlowPathOp(put_getter_setter_by_id)
 llintSlowPathOp(put_setter_by_id)
 llintSlowPathOp(put_setter_by_val)
 llintSlowPathOp(set_function_name)
-llintSlowPathOp(super_sampler_begin)
-llintSlowPathOp(super_sampler_end)
 llintSlowPathOp(throw)
 llintSlowPathOp(get_by_id_with_this)
 
@@ -2407,37 +2456,37 @@ end)
 # and a PC to call, and that PC may be a dummy thunk that just
 # returns the JS value that the eval returned.
 
-_llint_op_call_eval:
+_llint_op_call_direct_eval:
     slowPathForCommonCall(
-        op_call_eval,
+        op_call_direct_eval,
         narrow,
-        OpCallEval,
-        macro () dispatchOp(narrow, op_call_eval) end,
-        _llint_slow_path_call_eval,
+        OpCallDirectEval,
+        macro () dispatchOp(narrow, op_call_direct_eval) end,
+        _llint_slow_path_call_direct_eval,
         prepareForRegularCall)
 
-_llint_op_call_eval_wide16:
+_llint_op_call_direct_eval_wide16:
     slowPathForCommonCall(
-        op_call_eval,
+        op_call_direct_eval,
         wide16,
-        OpCallEval,
-        macro () dispatchOp(wide16, op_call_eval) end,
-        _llint_slow_path_call_eval_wide16,
+        OpCallDirectEval,
+        macro () dispatchOp(wide16, op_call_direct_eval) end,
+        _llint_slow_path_call_direct_eval_wide16,
         prepareForRegularCall)
 
-_llint_op_call_eval_wide32:
+_llint_op_call_direct_eval_wide32:
     slowPathForCommonCall(
-        op_call_eval,
+        op_call_direct_eval,
         wide32,
-        OpCallEval,
-        macro () dispatchOp(wide32, op_call_eval) end,
-        _llint_slow_path_call_eval_wide32,
+        OpCallDirectEval,
+        macro () dispatchOp(wide32, op_call_direct_eval) end,
+        _llint_slow_path_call_direct_eval_wide32,
         prepareForRegularCall)
 
 
 commonOp(llint_generic_return_point, macro () end, macro (size)
-    dispatchAfterCall(size, OpCallEval, m_profile, m_dst, macro ()
-        dispatchOp(size, op_call_eval)
+    dispatchAfterCall(size, OpCallDirectEval, m_profile, m_dst, macro ()
+        dispatchOp(size, op_call_direct_eval)
     end)
 end)
 
@@ -2466,6 +2515,16 @@ llintOp(op_debug, OpDebug, macro (unused, unused, dispatch)
     dispatch()
 end)
 
+
+llintOp(op_super_sampler_begin, OpSuperSamplerBegin, macro (unused, unused, dispatch)
+    superSamplerBegin(t1)
+    dispatch()
+end)
+
+llintOp(op_super_sampler_end, OpSuperSamplerEnd, macro (unused, unused, dispatch)
+    superSamplerEnd(t1)
+    dispatch()
+end)
 
 op(llint_native_call_trampoline, macro ()
     nativeCallTrampoline(NativeExecutable::m_function)
@@ -2633,8 +2692,8 @@ op(checkpoint_osr_exit_from_inlined_call_trampoline, macro ()
 
         if ARM64E
             move r1, a0
-            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::loopOSREntry) * PtrSize, a2
-            jmp [a2], NativeToJITGatePtrTag # JSEntryPtrTag
+            leap _g_config, a2
+            jmp JSCConfigGateMapOffset + (constexpr Gate::loopOSREntry) * PtrSize[a2], NativeToJITGatePtrTag # JSEntryPtrTag
         else
             jmp r1, JSEntryPtrTag
         end
@@ -2657,8 +2716,8 @@ op(checkpoint_osr_exit_trampoline, macro ()
         branchIfException(_llint_throw_from_slow_path_trampoline)
         if ARM64E
             move r1, a0
-            leap JSCConfig + constexpr JSC::offsetOfJSCConfigGateMap + (constexpr Gate::loopOSREntry) * PtrSize, a2
-            jmp [a2], NativeToJITGatePtrTag # JSEntryPtrTag
+            leap _g_config, a2
+            jmp JSCConfigGateMapOffset + (constexpr Gate::loopOSREntry) * PtrSize[a2], NativeToJITGatePtrTag # JSEntryPtrTag
         else
             jmp r1, JSEntryPtrTag
         end
@@ -2736,31 +2795,28 @@ op(wasm_function_prologue, macro ()
     crash()
 end)
 
-op(wasm_function_prologue_no_tls, macro ()
+op(wasm_function_prologue_simd, macro ()
     crash()
 end)
 
 _wasm_trampoline_wasm_call:
-_wasm_trampoline_wasm_call_no_tls:
 _wasm_trampoline_wasm_call_indirect:
-_wasm_trampoline_wasm_call_indirect_no_tls:
 _wasm_trampoline_wasm_call_ref:
-_wasm_trampoline_wasm_call_ref_no_tls:
 _wasm_trampoline_wasm_call_wide16:
-_wasm_trampoline_wasm_call_no_tls_wide16:
 _wasm_trampoline_wasm_call_indirect_wide16:
-_wasm_trampoline_wasm_call_indirect_no_tls_wide16:
 _wasm_trampoline_wasm_call_ref_wide16:
-_wasm_trampoline_wasm_call_ref_no_tls_wide16:
 _wasm_trampoline_wasm_call_wide32:
-_wasm_trampoline_wasm_call_no_tls_wide32:
 _wasm_trampoline_wasm_call_indirect_wide32:
-_wasm_trampoline_wasm_call_indirect_no_tls_wide32:
 _wasm_trampoline_wasm_call_ref_wide32:
-_wasm_trampoline_wasm_call_ref_no_tls_wide32:
+_wasm_trampoline_wasm_tail_call:
+_wasm_trampoline_wasm_tail_call_indirect:
+_wasm_trampoline_wasm_tail_call_wide16:
+_wasm_trampoline_wasm_tail_call_indirect_wide16:
+_wasm_trampoline_wasm_tail_call_wide32:
+_wasm_trampoline_wasm_tail_call_indirect_wide32:
     crash()
 
-end
+end # WEBASSEMBLY and not X86_64_WIN
 
 include? LowLevelInterpreterAdditions
 

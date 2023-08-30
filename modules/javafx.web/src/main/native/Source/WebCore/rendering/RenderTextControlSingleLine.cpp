@@ -1,7 +1,7 @@
 /**
- * Copyright (C) 2006, 2007, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  *           (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
- * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2010-2014 Google Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  *
  * This library is free software; you can redistribute it and/or
@@ -102,7 +102,7 @@ void RenderTextControlSingleLine::layout()
     // and type=search if the text height is taller than the contentHeight()
     // because of compability.
 
-    RenderTextControlInnerBlock* innerTextRenderer = innerTextElement()->renderer();
+    RenderTextControlInnerBlock* innerTextRenderer = innerTextElement() ? innerTextElement()->renderer() : nullptr;
     RenderBox* innerBlockRenderer = innerBlockElement() ? innerBlockElement()->renderBox() : nullptr;
     HTMLElement* container = containerElement();
     RenderBox* containerRenderer = container ? container->renderBox() : nullptr;
@@ -198,10 +198,15 @@ void RenderTextControlSingleLine::layout()
         // Here the container box indicates the renderer that the placeholder content is aligned with (no parent and/or containing block relationship).
         auto* containerBox = innerTextRenderer ? innerTextRenderer : innerBlockRenderer ? innerBlockRenderer : containerRenderer;
         if (containerBox) {
+            auto placeholderHeight = [&] {
+                if (auto* blockFlow = dynamicDowncast<RenderBlockFlow>(*placeholderBox)) {
+                    if (auto placeholderLineBox = InlineIterator::firstLineBoxFor(*blockFlow))
+                        return LayoutUnit { std::max(placeholderLineBox->logicalHeight(), placeholderLineBox->contentLogicalHeight()) };
+                }
+                return placeholderBox->logicalHeight();
+            };
             // Center vertical align the placeholder content.
-            auto placeholderLineBox = InlineIterator::firstLineBoxFor(downcast<RenderBlockFlow>(*placeholderBox));
-            auto placeholderLineLogicalHeight = placeholderLineBox ? LayoutUnit { std::max(placeholderLineBox->height(), placeholderLineBox->contentLogicalHeight()) } : placeholderBox->logicalHeight();
-            auto logicalTop = placeholderTopLeft.y() + (containerBox->logicalHeight() / 2 - placeholderLineLogicalHeight / 2);
+            auto logicalTop = placeholderTopLeft.y() + (containerBox->logicalHeight() / 2 - placeholderHeight() / 2);
             placeholderBox->setLogicalTop(logicalTop);
         }
         if (!placeholderBoxHadLayout && placeholderBox->checkForRepaintDuringLayout()) {
@@ -338,7 +343,7 @@ LayoutUnit RenderTextControlSingleLine::preferredContentLogicalWidth(float charW
     if (includesDecoration)
         result += inputElement().decorationWidth();
 
-    if (auto* innerRenderer = innerTextElement()->renderer())
+    if (auto* innerRenderer = innerTextElement() ? innerTextElement()->renderer() : nullptr)
         result += innerRenderer->endPaddingWidthForCaret();
 
     return result;
@@ -361,15 +366,21 @@ void RenderTextControlSingleLine::autoscroll(const IntPoint& position)
 
 int RenderTextControlSingleLine::scrollWidth() const
 {
-    if (auto innerTextElement = this->innerTextElement(); innerTextElement && innerTextElement->renderer())
-        return innerTextElement->renderer()->scrollWidth();
+    if (auto* innerTextRenderer = innerTextElement() ? innerTextElement()->renderer() : nullptr) {
+        // Adjust scrollWidth to inculde input element horizontal paddings and decoration width.
+        auto adjustment = clientWidth() - innerTextRenderer->clientWidth();
+        return innerTextRenderer->scrollWidth() + adjustment;
+    }
     return RenderBlockFlow::scrollWidth();
 }
 
 int RenderTextControlSingleLine::scrollHeight() const
 {
-    if (auto innerTextElement = this->innerTextElement(); innerTextElement && innerTextElement->renderer())
-        return innerTextElement->renderer()->scrollHeight();
+    if (auto* innerTextRenderer = innerTextElement() ? innerTextElement()->renderer() : nullptr) {
+        // Adjust scrollHeight to inculde input element vertical paddings and decoration height.
+        auto adjustment = clientHeight() - innerTextRenderer->clientHeight();
+        return innerTextRenderer->scrollHeight() + adjustment;
+    }
     return RenderBlockFlow::scrollHeight();
 }
 

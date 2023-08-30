@@ -50,6 +50,12 @@ JNI_OnLoad_javafx_font_pango(JavaVM * vm, void * reserved) {
 
 #define OS_NATIVE(func) Java_com_sun_javafx_font_freetype_OSPango_##func
 
+#define SAFE_FREE(PTR)  \
+    if ((PTR) != NULL) {  \
+        free(PTR);     \
+        (PTR) = NULL;     \
+    }
+
 extern jboolean checkAndClearException(JNIEnv *env);
 
 #ifndef STATIC_BUILD // can't have this twice in a static build
@@ -159,15 +165,28 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
     jobject result = NULL;
     pango_shape(text, item->length, &analysis, glyphString);
     int count = glyphString->num_glyphs;
-    if(count == 0) goto fail;
+    jint *glyphs = NULL;
+    jint *widths = NULL;
+    jint *cluster = NULL;
+    if (count <= 0) goto fail;
+    if ((size_t)count >= INT_MAX / sizeof(jint)) {
+        fprintf(stderr, "OS_NATIVE error: large glyph count value in pango_1shape\n");
+        goto fail;
+    }
 
     jintArray glyphsArray = (*env)->NewIntArray(env, count);
     jintArray widthsArray = (*env)->NewIntArray(env, count);
     jintArray clusterArray = (*env)->NewIntArray(env, count);
     if (glyphsArray && widthsArray && clusterArray) {
-        jint glyphs[count];
-        jint widths[count];
-        jint cluster[count];
+        glyphs = (jint*) malloc(count * sizeof(jint));
+        widths = (jint*) malloc(count * sizeof(jint));
+        cluster = (jint*) malloc(count * sizeof(jint));
+        if (glyphs == NULL ||
+            widths == NULL ||
+            cluster == NULL) {
+            fprintf(stderr, "OS_NATIVE error: Unable to allocate memory in pango_1shape\n");
+            goto fail;
+        }
         int i;
         for (i = 0; i < count; i++) {
             glyphs[i] = glyphString->glyphs[i].glyph;
@@ -206,6 +225,9 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
 
 fail:
     pango_glyph_string_free(glyphString);
+    SAFE_FREE(glyphs);
+    SAFE_FREE(widths);
+    SAFE_FREE(cluster);
     return result;
 }
 

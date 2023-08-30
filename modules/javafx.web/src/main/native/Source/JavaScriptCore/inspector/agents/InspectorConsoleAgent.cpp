@@ -31,6 +31,7 @@
 #include "InspectorHeapAgent.h"
 #include "ScriptArguments.h"
 #include "ScriptCallStackFactory.h"
+#include <wtf/SetForScope.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
 namespace Inspector {
@@ -247,11 +248,14 @@ void InspectorConsoleAgent::addConsoleMessage(std::unique_ptr<ConsoleMessage> co
         if (m_enabled)
             previousMessage->updateRepeatCountInConsole(*m_frontendDispatcher);
     } else {
-        ConsoleMessage* newMessage = consoleMessage.get();
-        m_consoleMessages.append(WTFMove(consoleMessage));
-        if (m_enabled)
-            newMessage->addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, true);
+        if (m_enabled) {
+            auto generatePreview = !m_isAddingMessageToFrontend;
+            SetForScope isAddingMessageToFrontend(m_isAddingMessageToFrontend, true);
 
+            consoleMessage->addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, generatePreview);
+        }
+
+        m_consoleMessages.append(WTFMove(consoleMessage));
         if (m_consoleMessages.size() >= maximumConsoleMessages) {
             m_expiredConsoleMessageCount += expireConsoleMessagesStep;
             m_consoleMessages.remove(0, expireConsoleMessagesStep);

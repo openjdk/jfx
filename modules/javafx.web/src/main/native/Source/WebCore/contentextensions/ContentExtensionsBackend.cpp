@@ -67,6 +67,11 @@ static void makeSecureIfNecessary(ContentRuleListResults& results, const URL& ur
         || url.host() == "download"_s)
         results.summary.madeHTTPS = true;
 }
+
+std::optional<String> customLoadBlockingMessageForConsole(const ContentRuleListResults&, const URL&, const URL&)
+{
+    return std::nullopt;
+}
 #endif
 
 bool ContentExtensionsBackend::shouldBeMadeSecure(const URL& url)
@@ -150,7 +155,7 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
     return actionsStruct;
 }
 
-auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& resourceLoadInfo) const -> Vector<ActionsFromContentRuleList>
+auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& resourceLoadInfo, const RuleListFilter& ruleListFilter) const -> Vector<ActionsFromContentRuleList>
 {
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
     MonotonicTime addedTimeStart = MonotonicTime::now();
@@ -167,8 +172,11 @@ auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& re
     actionsVector.reserveInitialCapacity(m_contentExtensions.size());
     ASSERT(!(resourceLoadInfo.getResourceFlags() & ActionConditionMask));
     const ResourceFlags flags = resourceLoadInfo.getResourceFlags() | ActionConditionMask;
-    for (auto& contentExtension : m_contentExtensions.values())
+    for (auto& [identifier, contentExtension] : m_contentExtensions) {
+        if (ruleListFilter(identifier) == ShouldSkipRuleList::Yes)
+            continue;
         actionsVector.uncheckedAppend(actionsFromContentRuleList(contentExtension.get(), urlString, resourceLoadInfo, flags));
+    }
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
     MonotonicTime addedTimeEnd = MonotonicTime::now();
     dataLogF("Time added: %f microseconds %s \n", (addedTimeEnd - addedTimeStart).microseconds(), resourceLoadInfo.resourceURL.string().utf8().data());
@@ -188,7 +196,7 @@ StyleSheetContents* ContentExtensionsBackend::globalDisplayNoneStyleSheet(const 
     return contentExtension ? contentExtension->globalDisplayNoneStyleSheet() : nullptr;
 }
 
-ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom)
+ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter& ruleListFilter)
 {
     Document* currentDocument = nullptr;
     URL mainDocumentURL;
@@ -203,8 +211,10 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             && frame->isMainFrame()
             && resourceType == ResourceType::Document)
             mainDocumentURL = url;
-        else if (auto* mainDocument = frame->mainFrame().document())
+        else if (auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame())) {
+            if (auto* mainDocument = localFrame->document())
             mainDocumentURL = mainDocument->url();
+    }
     }
     if (currentDocument)
         frameURL = currentDocument->url();
@@ -212,7 +222,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
         frameURL = url;
 
     ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType, mainFrameContext };
-    auto actions = actionsForResourceLoad(resourceLoadInfo);
+    auto actions = actionsForResourceLoad(resourceLoadInfo, ruleListFilter);
 
     ContentRuleListResults results;
     if (page.httpsUpgradeEnabled())
@@ -276,7 +286,12 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Promoted URL from ", url.string(), " to ", newProtocol));
         }
         if (results.summary.blockedLoad) {
-            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Content blocker prevented frame displaying ", mainDocumentURL.string(), " from loading a resource from ", url.string()));
+            String consoleMessage;
+            if (auto message = customLoadBlockingMessageForConsole(results, url, mainDocumentURL))
+                consoleMessage = WTFMove(*message);
+            else
+                consoleMessage = makeString("Content blocker prevented frame displaying ", mainDocumentURL.string(), " from loading a resource from ", url.string());
+            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, WTFMove(consoleMessage));
 
             // Quirk for content-blocker interference with Google's anti-flicker optimization (rdar://problem/45968770).
             // https://developers.google.com/optimize/
@@ -347,8 +362,14 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
         request.setURL(newURL);
     }
 
+    std::sort(results.summary.modifyHeadersActions.begin(), results.summary.modifyHeadersActions.end(),
+        [] (const ModifyHeadersAction& a, const ModifyHeadersAction& b) {
+        return a.priority > b.priority;
+    });
+
+    HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType> headerNameToFirstOperationApplied;
     for (auto& action : results.summary.modifyHeadersActions)
-        action.applyToRequest(request);
+        action.applyToRequest(request, headerNameToFirstOperationApplied);
 
     for (auto& pair : results.summary.redirectActions)
         pair.first.applyToRequest(request, pair.second);

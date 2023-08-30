@@ -202,6 +202,7 @@ bool doesGC(Graph& graph, Node* node)
     case GetTypedArrayByteOffset:
     case GetTypedArrayByteOffsetAsInt52:
     case GetPrototypeOf:
+    case GetWebAssemblyInstanceExports:
     case PutStructure:
     case GetByOffset:
     case GetGetterSetterByOffset:
@@ -269,9 +270,9 @@ bool doesGC(Graph& graph, Node* node)
     case CreateDirectArguments:
     case CreateScopedArguments:
     case CreateClonedArguments:
-    case CreateArgumentsButterfly:
+    case CreateArgumentsButterflyExcludingThis:
     case Call:
-    case CallEval:
+    case CallDirectEval:
     case CallForwardVarargs:
     case CallObjectConstructor:
     case CallVarargs:
@@ -289,6 +290,7 @@ bool doesGC(Graph& graph, Node* node)
     case DirectConstruct:
     case DirectTailCall:
     case DirectTailCallInlinedCaller:
+    case CallWasm:
     case ForceOSRExit:
     case FunctionToString:
     case GetById:
@@ -341,6 +343,7 @@ bool doesGC(Graph& graph, Node* node)
     case ResolveScopeForHoistingFuncDeclInEval:
     case Return:
     case StringCharAt:
+    case StringLocaleCompare:
     case TailCall:
     case TailCallForwardVarargs:
     case TailCallForwardVarargsInlinedCaller:
@@ -363,6 +366,7 @@ bool doesGC(Graph& graph, Node* node)
     case ObjectCreate:
     case ObjectKeys:
     case ObjectGetOwnPropertyNames:
+    case ObjectToString:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case Arrayify:
@@ -375,6 +379,7 @@ bool doesGC(Graph& graph, Node* node)
     case NewInternalFieldObject:
     case Spread:
     case NewArrayWithSize:
+    case NewArrayWithSpecies:
     case NewArrayBuffer:
     case NewRegexp:
     case NewStringObject:
@@ -398,7 +403,9 @@ bool doesGC(Graph& graph, Node* node)
     case StrCat:
     case StringReplace:
     case StringReplaceRegExp:
+    case StringReplaceString:
     case StringSlice:
+    case StringSubstring:
     case StringValueOf:
     case CreateRest:
     case ToLowerCase:
@@ -409,6 +416,7 @@ bool doesGC(Graph& graph, Node* node)
     case ParseInt: // We might resolve a rope even though we don't clobber anything.
     case SetAdd:
     case MapSet:
+    case MapOrSetDelete:
     case ValueBitAnd:
     case ValueBitOr:
     case ValueBitXor:

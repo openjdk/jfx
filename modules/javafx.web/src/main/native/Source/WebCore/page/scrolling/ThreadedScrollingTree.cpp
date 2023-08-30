@@ -252,21 +252,21 @@ void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingTreeScrollingNod
 
     addPendingScrollUpdate(WTFMove(scrollUpdate));
 
-    auto deferrer = WheelEventTestMonitorCompletionDeferrer { wheelEventTestMonitor(), reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(node.scrollingNodeID()), WheelEventTestMonitor::ScrollingThreadSyncNeeded };
+    auto deferrer = ScrollingTreeWheelEventTestMonitorCompletionDeferrer { *this, node.scrollingNodeID(), WheelEventTestMonitor::ScrollingThreadSyncNeeded };
     RunLoop::main().dispatch([strongThis = Ref { *this }, deferrer = WTFMove(deferrer)] {
         if (auto* scrollingCoordinator = strongThis->m_scrollingCoordinator.get())
             scrollingCoordinator->scrollingThreadAddedPendingUpdate();
     });
 }
 
-void ThreadedScrollingTree::scrollingTreeNodeDidStopAnimatedScroll(ScrollingTreeScrollingNode& node)
+void ThreadedScrollingTree::scrollingTreeNodeScrollUpdated(ScrollingTreeScrollingNode& node, const ScrollUpdateType& scrollUpdateType)
 {
     if (!m_scrollingCoordinator)
         return;
 
-    LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingTree::scrollingTreeNodeDidStopAnimatedScroll " << node.scrollingNodeID());
+    LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingTree::scrollingTreeNodeScrollUpdated " << node.scrollingNodeID() << " update type " << scrollUpdateType);
 
-    auto scrollUpdate = ScrollUpdate { node.scrollingNodeID(), { }, { }, ScrollUpdateType::AnimatedScrollDidEnd };
+    auto scrollUpdate = ScrollUpdate { node.scrollingNodeID(), { }, { }, scrollUpdateType };
 
     if (RunLoop::isMain()) {
         m_scrollingCoordinator->applyScrollUpdate(WTFMove(scrollUpdate));
@@ -279,6 +279,26 @@ void ThreadedScrollingTree::scrollingTreeNodeDidStopAnimatedScroll(ScrollingTree
         if (auto* scrollingCoordinator = strongThis->m_scrollingCoordinator.get())
             scrollingCoordinator->scrollingThreadAddedPendingUpdate();
     });
+}
+
+void ThreadedScrollingTree::scrollingTreeNodeWillStartAnimatedScroll(ScrollingTreeScrollingNode& node)
+{
+    scrollingTreeNodeScrollUpdated(node, ScrollUpdateType::AnimatedScrollWillStart);
+}
+
+void ThreadedScrollingTree::scrollingTreeNodeDidStopAnimatedScroll(ScrollingTreeScrollingNode& node)
+{
+    scrollingTreeNodeScrollUpdated(node, ScrollUpdateType::AnimatedScrollDidEnd);
+}
+
+void ThreadedScrollingTree::scrollingTreeNodeWillStartWheelEventScroll(ScrollingTreeScrollingNode& node)
+{
+    scrollingTreeNodeScrollUpdated(node, ScrollUpdateType::WheelEventScrollWillStart);
+}
+
+void ThreadedScrollingTree::scrollingTreeNodeDidStopWheelEventScroll(ScrollingTreeScrollingNode& node)
+{
+    scrollingTreeNodeScrollUpdated(node, ScrollUpdateType::WheelEventScrollDidEnd);
 }
 
 void ThreadedScrollingTree::reportSynchronousScrollingReasonsChanged(MonotonicTime timestamp, OptionSet<SynchronousScrollingReason> reasons)
@@ -326,6 +346,7 @@ void ThreadedScrollingTree::handleWheelEventPhase(ScrollingNodeID nodeID, Platfo
         scrollingCoordinator->handleWheelEventPhase(nodeID, phase);
     });
 }
+#endif
 
 void ThreadedScrollingTree::setActiveScrollSnapIndices(ScrollingNodeID nodeID, std::optional<unsigned> horizontalIndex, std::optional<unsigned> verticalIndex)
 {
@@ -337,7 +358,16 @@ void ThreadedScrollingTree::setActiveScrollSnapIndices(ScrollingNodeID nodeID, s
         scrollingCoordinator->setActiveScrollSnapIndices(nodeID, horizontalIndex, verticalIndex);
     });
 }
-#endif
+
+void ThreadedScrollingTree::lockLayersForHitTesting()
+{
+    m_layerHitTestMutex.lock();
+}
+
+void ThreadedScrollingTree::unlockLayersForHitTesting()
+{
+    m_layerHitTestMutex.unlock();
+}
 
 void ThreadedScrollingTree::lockLayersForHitTesting()
 {
@@ -406,19 +436,6 @@ void ThreadedScrollingTree::hasNodeWithAnimatedScrollChanged(bool hasNodeWithAni
     });
 }
 
-void ThreadedScrollingTree::serviceScrollAnimations(MonotonicTime currentTime)
-{
-    ASSERT(ScrollingThread::isCurrentThread());
-
-    for (auto nodeID : nodesWithActiveScrollAnimations()) {
-        RefPtr targetNode = nodeForID(nodeID);
-        if (!is<ScrollingTreeScrollingNode>(targetNode))
-            continue;
-
-        downcast<ScrollingTreeScrollingNode>(*targetNode).serviceScrollAnimation(currentTime);
-    }
-}
-
 // This code allows the main thread about half a frame to complete its rendering udpate. If the main thread
 // is responsive (i.e. managing to render every frame), then we expect to get a didCompletePlatformRenderingUpdate()
 // within 8ms of willStartRenderingUpdate(). We time this via m_stateCondition, which blocks the scrolling
@@ -482,7 +499,7 @@ void ThreadedScrollingTree::scheduleDelayedRenderingUpdateDetectionTimer(Seconds
     ASSERT(m_treeLock.isLocked());
 
     if (!m_delayedRenderingUpdateDetectionTimer)
-        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer<ThreadedScrollingTree>>(RunLoop::current(), this, &ThreadedScrollingTree::delayedRenderingUpdateDetectionTimerFired);
+        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &ThreadedScrollingTree::delayedRenderingUpdateDetectionTimerFired);
 
     m_delayedRenderingUpdateDetectionTimer->startOneShot(delay);
 }
@@ -553,6 +570,45 @@ void ThreadedScrollingTree::removePendingScrollAnimationForNode(ScrollingNodeID 
 bool ThreadedScrollingTree::isScrollingSynchronizedWithMainThread()
 {
     return m_state != SynchronizationState::Desynchronized;
+}
+
+void ThreadedScrollingTree::receivedWheelEventWithPhases(PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase)
+{
+    auto scrollingCoordinator = m_scrollingCoordinator;
+    if (!scrollingCoordinator)
+        return;
+
+    RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), phase, momentumPhase] {
+        scrollingCoordinator->receivedWheelEventWithPhases(phase, momentumPhase);
+    });
+}
+
+void ThreadedScrollingTree::deferWheelEventTestCompletionForReason(ScrollingNodeID nodeID, WheelEventTestMonitor::DeferReason reason)
+{
+    if (!isMonitoringWheelEvents())
+        return;
+
+    auto scrollingCoordinator = m_scrollingCoordinator;
+    if (!scrollingCoordinator)
+        return;
+
+    RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), nodeID, reason] {
+        scrollingCoordinator->deferWheelEventTestCompletionForReason(nodeID, reason);
+    });
+}
+
+void ThreadedScrollingTree::removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID nodeID, WheelEventTestMonitor::DeferReason reason)
+{
+    if (!isMonitoringWheelEvents())
+        return;
+
+    auto scrollingCoordinator = m_scrollingCoordinator;
+    if (!scrollingCoordinator)
+        return;
+
+    RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), nodeID, reason] {
+        scrollingCoordinator->removeWheelEventTestCompletionDeferralForReason(nodeID, reason);
+    });
 }
 
 } // namespace WebCore

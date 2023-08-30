@@ -97,9 +97,9 @@ public:
 
     // This is the set of registers that Air is allowed to emit code to mutate. It's derived from
     // regsInPriorityOrder. Any registers not in this set are said to be "pinned".
-    const RegisterSet& mutableRegs() const { return m_mutableRegs; }
+    RegisterSet mutableRegs() const { return m_mutableRegs.toRegisterSet().includeWholeRegisterWidth(); }
 
-    bool isPinned(Reg reg) const { return !mutableRegs().get(reg); }
+    bool isPinned(Reg reg) const { return !mutableRegs().contains(reg, IgnoreVectors); }
     void pinRegister(Reg);
 
     void setOptLevel(unsigned optLevel) { m_optLevel = optLevel; }
@@ -162,12 +162,18 @@ public:
             static_cast<unsigned>(WTF::roundUpToMultipleOf(stackAlignmentBytes(), size)));
     }
 
-    unsigned frameSize() const { return m_frameSize; }
+    unsigned frameSize() const
+    {
+        ASSERT(!((m_frameSize + sizeof(CallerFrameAndPC)) % stackAlignmentBytes()));
+        return m_frameSize;
+    }
 
     // Only phases that do stack allocation are allowed to set this. Currently, only
     // Air::allocateStack() does this.
     void setFrameSize(unsigned frameSize)
     {
+        // 'aligned SP' + 'functionPrologue' + 'm_frameSize' should yield an aligned SP.
+        ASSERT(!((frameSize + sizeof(CallerFrameAndPC)) % stackAlignmentBytes()));
         m_frameSize = frameSize;
     }
 
@@ -228,7 +234,7 @@ public:
     RegisterAtOffsetList calleeSaveRegisterAtOffsetList() const;
 
     // This just tells you what the callee saves are.
-    RegisterSet calleeSaveRegisters() const { return m_calleeSaveRegisters; }
+    RegisterSetBuilder calleeSaveRegisters() const { return m_calleeSaveRegisters; }
 
     // Recomputes predecessors and deletes unreachable blocks.
     JS_EXPORT_PRIVATE void resetReachability();
@@ -344,6 +350,8 @@ public:
     bool shouldPreserveB3Origins() const { return m_preserveB3Origins; }
     void forcePreservationOfB3Origins() { m_preserveB3Origins = true; }
 
+    bool usesSIMD() const;
+
     void setDisassembler(std::unique_ptr<Disassembler>&& disassembler)
     {
         m_disassembler = WTFMove(disassembler);
@@ -352,8 +360,7 @@ public:
     Disassembler* disassembler() { return m_disassembler.get(); }
 
     RegisterSet mutableGPRs();
-    RegisterSet mutableFPRs();
-    RegisterSet pinnedRegisters() const { return m_pinnedRegs; }
+    ScalarRegisterSet pinnedRegisters() const { return m_pinnedRegs; }
 
     void emitDefaultPrologue(CCallHelpers&);
     void emitEpilogue(CCallHelpers&);
@@ -385,8 +392,8 @@ private:
     Procedure& m_proc; // Some meta-data, like byproducts, is stored in the Procedure.
     Vector<Reg> m_gpRegsInPriorityOrder;
     Vector<Reg> m_fpRegsInPriorityOrder;
-    RegisterSet m_mutableRegs;
-    RegisterSet m_pinnedRegs;
+    ScalarRegisterSet m_mutableRegs;
+    ScalarRegisterSet m_pinnedRegs;
     SparseCollection<StackSlot> m_stackSlots;
     Vector<std::unique_ptr<BasicBlock>> m_blocks;
     SparseCollection<Special> m_specials;
@@ -395,14 +402,14 @@ private:
     CCallSpecial* m_cCallSpecial { nullptr };
     unsigned m_numGPTmps { 0 };
     unsigned m_numFPTmps { 0 };
-    unsigned m_frameSize { 0 };
+    unsigned m_frameSize { stackAdjustmentForAlignment() };
     unsigned m_callArgAreaSize { 0 };
     unsigned m_optLevel { defaultOptLevel() };
     bool m_stackIsAllocated { false };
     bool m_preserveB3Origins { true };
     bool m_forceIRC { false };
     RegisterAtOffsetList m_uncorrectedCalleeSaveRegisterAtOffsetList;
-    RegisterSet m_calleeSaveRegisters;
+    RegisterSetBuilder m_calleeSaveRegisters;
     StackSlot* m_calleeSaveStackSlot { nullptr };
     Vector<FrequentedBlock> m_entrypoints; // This is empty until after lowerEntrySwitch().
     Vector<MacroAssembler::Label> m_entrypointLabels; // This is empty until code generation.

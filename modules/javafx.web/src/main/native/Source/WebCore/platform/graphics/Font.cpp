@@ -301,13 +301,13 @@ static std::optional<size_t> codePointSupportIndex(UChar32 codePoint)
         zeroWidthNoBreakSpace
     };
     bool found = false;
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(codePointOrder); ++i) {
+    for (size_t i = 0; i < std::size(codePointOrder); ++i) {
         if (codePointOrder[i] == codePoint) {
             ASSERT(i == result);
             found = true;
         }
     }
-    ASSERT(found == static_cast<bool>(result));
+    ASSERT_UNUSED(found, found == static_cast<bool>(result));
 #endif
     return result;
 }
@@ -560,7 +560,7 @@ RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontD
 }
 
 #if !PLATFORM(COCOA) && !USE(FREETYPE)
-bool Font::variantCapsSupportsCharacterForSynthesis(FontVariantCaps fontVariantCaps, UChar32) const
+bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) const
 {
     switch (fontVariantCaps) {
     case FontVariantCaps::Small:
@@ -597,8 +597,6 @@ bool Font::supportsCodePoint(UChar32 character) const
 
 bool Font::canRenderCombiningCharacterSequence(const UChar* characters, size_t length) const
 {
-    ASSERT(isMainThread());
-
     auto codePoints = StringView(characters, length).codePoints();
     auto it = codePoints.begin();
     auto end = codePoints.end();
@@ -622,14 +620,18 @@ bool Font::canRenderCombiningCharacterSequence(const UChar* characters, size_t l
     return true;
 }
 
-// Don't store the result of this! The hash map is free to rehash at any point, leaving this reference dangling.
-const Path& Font::pathForGlyph(Glyph glyph) const
+Path Font::pathForGlyph(Glyph glyph) const
 {
-    if (const auto& path = m_glyphPathMap.existingMetricsForGlyph(glyph))
+    if (m_glyphPathMap) {
+        if (const auto& path = m_glyphPathMap->existingMetricsForGlyph(glyph))
         return *path;
+    }
     auto path = platformPathForGlyph(glyph);
-    m_glyphPathMap.setMetricsForGlyph(glyph, path);
-    return *m_glyphPathMap.existingMetricsForGlyph(glyph);
+    if (!m_glyphPathMap)
+        m_glyphPathMap = makeUnique<GlyphMetricsMap<std::optional<Path>>>();
+
+    m_glyphPathMap->setMetricsForGlyph(glyph, path);
+    return *m_glyphPathMap->existingMetricsForGlyph(glyph);
 }
 
 #if !LOG_DISABLED

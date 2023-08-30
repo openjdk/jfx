@@ -34,10 +34,17 @@
 
 namespace JSC {
 
-ModuleAnalyzer::ModuleAnalyzer(JSGlobalObject* globalObject, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
+ModuleAnalyzer::ModuleAnalyzer(JSGlobalObject* globalObject, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables, CodeFeatures features)
     : m_vm(globalObject->vm())
-    , m_moduleRecord(m_vm, JSModuleRecord::create(globalObject, m_vm, globalObject->moduleRecordStructure(), moduleKey, sourceCode, declaredVariables, lexicalVariables))
+    , m_moduleRecord(JSModuleRecord::create(globalObject, m_vm, globalObject->moduleRecordStructure(), moduleKey, sourceCode, declaredVariables, lexicalVariables, features))
 {
+}
+
+void ModuleAnalyzer::appendRequestedModule(const Identifier& specifier, RefPtr<ScriptFetchParameters>&& assertions)
+{
+    auto result = m_requestedModules.add(specifier.impl());
+    if (result.isNewEntry)
+        moduleRecord()->appendRequestedModule(specifier, WTFMove(assertions));
 }
 
 void ModuleAnalyzer::exportVariable(ModuleProgramNode& moduleProgramNode, const RefPtr<UniquedStringImpl>& localName, const VariableEnvironmentEntry& variable)
@@ -90,14 +97,15 @@ void ModuleAnalyzer::exportVariable(ModuleProgramNode& moduleProgramNode, const 
 
 
 
-JSModuleRecord* ModuleAnalyzer::analyze(ModuleProgramNode& moduleProgramNode)
+Expected<JSModuleRecord*, String> ModuleAnalyzer::analyze(ModuleProgramNode& moduleProgramNode)
 {
     // Traverse the module AST and collect
     // * Import entries
     // * Export entries that have FromClause (e.g. export { a } from "mod")
     // * Export entries that have star (e.g. export * from "mod")
     // * Aliased export names (e.g. export { a as b })
-    moduleProgramNode.analyzeModule(*this);
+    if (!moduleProgramNode.analyzeModule(*this))
+        return makeUnexpected(m_errorMessage);
 
     // Based on the collected information, categorize export entries into 3 types.
     // 1. Local export entries
@@ -142,7 +150,7 @@ JSModuleRecord* ModuleAnalyzer::analyze(ModuleProgramNode& moduleProgramNode)
     if (UNLIKELY(Options::dumpModuleRecord()))
         m_moduleRecord->dump();
 
-    return m_moduleRecord.get();
+    return m_moduleRecord;
 }
 
 } // namespace JSC

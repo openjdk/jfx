@@ -223,7 +223,7 @@ public:
         m_openGroups.append(Term(Term::GroupTerm));
     }
 
-    void atomParentheticalAssertionBegin(bool = false)
+    void atomParentheticalAssertionBegin(bool, MatchDirection)
     {
         fail(URLFilterParser::Group);
     }
@@ -239,7 +239,7 @@ public:
         m_floatingTerm = m_openGroups.takeLast();
     }
 
-    void disjunction()
+    void disjunction(JSC::Yarr::CreateDisjunctionPurpose)
     {
         fail(URLFilterParser::Disjunction);
     }

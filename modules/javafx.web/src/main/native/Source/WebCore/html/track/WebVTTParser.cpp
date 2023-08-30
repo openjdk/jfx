@@ -40,7 +40,7 @@
 #include "HTMLParserIdioms.h"
 #include "ISOVTTCue.h"
 #include "ProcessingInstruction.h"
-#include "StyleRule.h"
+#include "StylePropertiesInlines.h"
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
 #include "Text.h"
@@ -119,6 +119,10 @@ void WebVTTParser::parseFileHeader(String&& data)
     m_lineReader.reset();
     m_lineReader.append(WTFMove(data));
     parse();
+    if (!m_regionList.isEmpty())
+        m_client.newRegionsParsed();
+    if (!m_styleSheets.isEmpty())
+        m_client.newStyleSheetsParsed();
 }
 
 void WebVTTParser::parseBytes(const uint8_t* data, unsigned length)
@@ -322,7 +326,7 @@ bool WebVTTParser::checkAndCreateRegion(StringView line)
         return false;
     // line starts with the substring "REGION" and remaining characters
     // zero or more U+0020 SPACE characters or U+0009 CHARACTER TABULATION
-    // (tab) characters expected other than these charecters it is invalid.
+    // (tab) characters expected other than these characters it is invalid.
     if (line.startsWith("REGION"_s) && line.substring(regionIdentifierLength).isAllSpecialCharacters<isASpace>()) {
         m_currentRegion = VTTRegion::create(m_document);
         return true;
@@ -351,7 +355,7 @@ bool WebVTTParser::checkStyleSheet(StringView line)
         return false;
     // line starts with the substring "STYLE" and remaining characters
     // zero or more U+0020 SPACE characters or U+0009 CHARACTER TABULATION
-    // (tab) characters expected other than these charecters it is invalid.
+    // (tab) characters expected other than these characters it is invalid.
     if (line.startsWith("STYLE"_s) && line.substring(styleIdentifierLength).isAllSpecialCharacters<isASpace>())
         return true;
 

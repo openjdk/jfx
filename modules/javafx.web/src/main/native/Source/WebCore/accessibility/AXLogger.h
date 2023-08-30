@@ -52,29 +52,34 @@ public:
     AXLogger() = default;
     AXLogger(const String& methodName);
     ~AXLogger();
-    static void log(const String&);
-    static void log(const char*);
-    static void log(RefPtr<AXCoreObject>);
-    static void log(const Vector<RefPtr<AXCoreObject>>&);
-    static void log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>&);
-    static void log(const AccessibilitySearchCriteria&);
-    static void log(AccessibilityObjectInclusion);
+    void log(const String&);
+    void log(const char*);
+    void log(const AXCoreObject&);
+    void log(RefPtr<AXCoreObject>);
+    void log(const Vector<RefPtr<AXCoreObject>>&);
+    void log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>&);
+    void log(const AccessibilitySearchCriteria&);
+    void log(AccessibilityObjectInclusion);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    static void log(AXIsolatedTree&);
+    void log(AXIsolatedTree&);
 #endif
-    static void log(AXObjectCache&);
+    void log(AXObjectCache&);
     static void add(TextStream&, const RefPtr<AXCoreObject>&, bool recursive = false);
+    void log(const String&, const AXObjectCache::DeferredCollection&);
 private:
+    bool shouldLog();
     String m_methodName;
 };
 
 #define AXTRACE(methodName) AXLogger axLogger(methodName)
-#define AXLOG(x) AXLogger::log(x)
+#define AXLOG(x) axLogger.log(x)
+#define AXLOGDeferredCollection(name, collection) axLogger.log(name, collection)
 
 #else
 
 #define AXTRACE(methodName) (void)0
 #define AXLOG(x) (void)0
+#define AXLOGDeferredCollection(name, collection) (void)0
 
 #endif // !LOG_DISABLED
 

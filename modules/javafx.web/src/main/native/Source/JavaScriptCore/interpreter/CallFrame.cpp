@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 #include "LLIntPCRanges.h"
 #include "VMEntryRecord.h"
 #include "VMEntryScope.h"
-#include "WasmContextInlines.h"
+#include "WasmContext.h"
 #include "WasmInstance.h"
 #include <wtf/StringPrintStream.h>
 
@@ -160,19 +160,6 @@ Register* CallFrame::topOfFrameInternal()
     return registers() + codeBlock->stackPointerOffset();
 }
 
-bool CallFrame::isAnyWasmCallee()
-{
-    CalleeBits callee = this->callee();
-    if (callee.isWasm())
-        return true;
-
-    ASSERT(callee.isCell());
-    if (!!callee.rawPtr() && isWebAssemblyModule(callee.asCell()))
-        return true;
-
-    return false;
-}
-
 CallFrame* CallFrame::callerFrame(EntryFrame*& currEntryFrame) const
 {
     if (callerFrameOrEntryFrame() == currEntryFrame) {
@@ -264,6 +251,9 @@ JSGlobalObject* CallFrame::globalObjectOfClosestCodeBlock(VM& vm, CallFrame* cal
 
 String CallFrame::friendlyFunctionName()
 {
+    if (this->isWasmFrame())
+        return emptyString();
+
     CodeBlock* codeBlock = this->codeBlock();
     if (!codeBlock)
         return emptyString();
@@ -287,6 +277,17 @@ String CallFrame::friendlyFunctionName()
 
 void CallFrame::dump(PrintStream& out) const
 {
+    if (this->isWasmFrame()) {
+#if ENABLE(WEBASSEMBLY)
+        Wasm::Callee* wasmCallee = callee().asWasmCallee();
+        out.print(Wasm::makeString(wasmCallee->indexOrName()), " [", Wasm::makeString(wasmCallee->compilationMode()), "]");
+        out.print("(Wasm::Instance: ", RawPointer(wasmInstance()), ")");
+#else
+        out.print(RawPointer(returnPCForInspection()));
+#endif
+        return;
+    }
+
     if (CodeBlock* codeBlock = this->codeBlock()) {
         out.print(codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
 
@@ -304,7 +305,7 @@ void CallFrame::dump(PrintStream& out) const
         return;
     }
 
-    out.print(returnPC());
+    out.print(RawPointer(returnPCForInspection()));
 }
 
 const char* CallFrame::describeFrame()
@@ -346,9 +347,9 @@ void CallFrame::convertToStackOverflowFrame(VM& vm, CodeBlock* codeBlockToKeepAl
 }
 
 #if ENABLE(WEBASSEMBLY)
-JSGlobalObject* CallFrame::lexicalGlobalObjectFromWasmCallee(VM& vm) const
+JSGlobalObject* CallFrame::lexicalGlobalObjectFromWasmCallee(VM&) const
 {
-    return vm.wasmContext.load()->owner<JSWebAssemblyInstance>()->globalObject();
+    return wasmInstance()->globalObject();
 }
 #endif
 

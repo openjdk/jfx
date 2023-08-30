@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineFormattingContext.h"
 #include "InlineFormattingGeometry.h"
 
@@ -52,6 +50,7 @@ private:
     void computeRootInlineBoxVerticalPosition(LineBox&, const LineBoxAlignmentContent&) const;
     void alignInlineLevelBoxes(LineBox&, InlineLayoutUnit lineBoxLogicalHeight) const;
     InlineLayoutUnit adjustForAnnotationIfNeeded(LineBox&, InlineLayoutUnit lineBoxHeight) const;
+    InlineLevelBox::LayoutBounds layoutBoundsForInlineBoxSubtree(const LineBox::InlineLevelBoxList& nonRootInlineLevelBoxes, size_t inlineBoxIndex) const;
 
     const InlineFormattingGeometry& formattingGeometry() const { return m_inlineFormattingGeometry; }
     const InlineFormattingContext& formattingContext() const { return m_inlineFormattingContext; }
@@ -65,4 +64,3 @@ private:
 }
 }
 
-#endif

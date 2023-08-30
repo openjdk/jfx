@@ -33,7 +33,7 @@
 
 namespace JSC {
 
-bool tryToDisassemble(const MacroAssemblerCodePtr<DisassemblyPtrTag>& codePtr, size_t size, void*, void*, const char* prefix, PrintStream& out)
+bool tryToDisassemble(const CodePtr<DisassemblyPtrTag>& codePtr, size_t size, void*, void*, const char* prefix, PrintStream& out)
 {
     csh handle;
     cs_insn* instructions;
@@ -46,6 +46,8 @@ bool tryToDisassemble(const MacroAssemblerCodePtr<DisassemblyPtrTag>& codePtr, s
         return false;
 #elif CPU(ARM_THUMB2)
     if (cs_open(CS_ARCH_ARM, CS_MODE_THUMB, &handle) != CS_ERR_OK)
+        return false;
+    if (cs_option(handle, CS_OPT_SYNTAX, CS_OPT_SYNTAX_NOREGNAME) != CS_ERR_OK)
         return false;
 #elif CPU(ARM64)
     if (cs_open(CS_ARCH_ARM64, CS_MODE_ARM, &handle) != CS_ERR_OK)
@@ -68,7 +70,11 @@ bool tryToDisassemble(const MacroAssemblerCodePtr<DisassemblyPtrTag>& codePtr, s
     if (count > 0) {
         for (size_t i = 0; i < count; ++i) {
             auto& instruction = instructions[i];
-            out.printf("%s%#16llx: %s %s\n", prefix, static_cast<unsigned long long>(instruction.address), instruction.mnemonic, instruction.op_str);
+            out.printf("%s%#16llx: %s %s", prefix, static_cast<unsigned long long>(instruction.address), instruction.mnemonic, instruction.op_str);
+            if (auto str = AssemblyCommentRegistry::singleton().comment(reinterpret_cast<void *>(static_cast<uintptr_t>(instruction.address))))
+                out.printf("; %s\n", str->ascii().data());
+            else
+                out.printf("\n");
         }
         cs_free(instructions, count);
     }
