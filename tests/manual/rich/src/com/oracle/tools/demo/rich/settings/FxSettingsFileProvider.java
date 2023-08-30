@@ -56,14 +56,11 @@ public class FxSettingsFileProvider implements ISettingsProvider {
     @Override
     public void load() throws IOException {
         if (file.exists() && file.isFile()) {
-            BufferedReader rd = new BufferedReader(
-                new InputStreamReader(new FileInputStream(file), Charset.forName("utf-8")));
-            try {
+            Charset cs = Charset.forName("utf-8");
+            try (BufferedReader rd = new BufferedReader(new InputStreamReader(new FileInputStream(file), cs))) {
                 synchronized (data) {
                     read(rd);
                 }
-            } finally {
-                rd.close();
             }
         }
     }
@@ -74,13 +71,11 @@ public class FxSettingsFileProvider implements ISettingsProvider {
             file.getParentFile().mkdirs();
         }
 
-        Writer wr = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), Charset.forName("utf-8")));
-        try {
+        Charset cs = Charset.forName("utf-8");
+        try (Writer wr = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), cs))) {
             synchronized (data) {
                 write(wr);
             }
-        } finally {
-            wr.close();
         }
     }
 
@@ -112,6 +107,9 @@ public class FxSettingsFileProvider implements ISettingsProvider {
 
     @Override
     public void set(String key, String value) {
+        if (FxSettings.LOG) {
+            System.out.println("FxSettingsFileProvider.set key=" + key + " value=" + value);
+        }
         synchronized (data) {
             if (value == null) {
                 data.remove(key);
@@ -122,12 +120,15 @@ public class FxSettingsFileProvider implements ISettingsProvider {
     }
 
     @Override
-    public void set(String key, SStream s) {
+    public void set(String key, SStream stream) {
+        if (FxSettings.LOG) {
+            System.out.println("FxSettingsFileProvider.set key=" + key + " stream=" + stream);
+        }
         synchronized (data) {
-            if (s == null) {
+            if (stream == null) {
                 data.remove(key);
             } else {
-                data.put(key, s.toArray());
+                data.put(key, stream.toArray());
             }
         }
     }
@@ -145,6 +146,10 @@ public class FxSettingsFileProvider implements ISettingsProvider {
         } else {
             s = null;
         }
+
+        if (FxSettings.LOG) {
+            System.out.println("FxSettingsFileProvider.get key=" + key + " value=" + s);
+        }
         return s;
     }
 
@@ -161,6 +166,10 @@ public class FxSettingsFileProvider implements ISettingsProvider {
             } else {
                 s = null;
             }
+        }
+
+        if (FxSettings.LOG) {
+            System.out.println("FxSettingsFileProvider.get key=" + key + " stream=" + s);
         }
         return s;
     }

@@ -40,14 +40,15 @@ import javafx.util.Duration;
 
 /**
  * This facility coordinates saving UI settings to and from persistent media.
- * All the calls, excepr useProvider(), are expected to happen in an FX application thread.
- * 
+ * All the calls, except useProvider(), are expected to happen in an FX application thread.
+ *
  * When using {@link FxSettingsFileProvider}, the settings file "ui-settings.properties"
  * is placed in the specified directory in the user home.
- * 
+ *
  * TODO handle i/o errors - set handler?
  */
 public class FxSettings {
+    public static final boolean LOG = Boolean.getBoolean("FxSettings.LOG");
     private static final Duration SAVE_DELAY = Duration.millis(100);
     private static ISettingsProvider provider;
     private static boolean save;
@@ -61,7 +62,6 @@ public class FxSettings {
 
         provider = p;
 
-        // TODO once, in FX thread - later?
         Window.getWindows().addListener((ListChangeListener.Change<? extends Window> ch) -> {
             while (ch.next()) {
                 if (ch.wasAdded()) {
@@ -81,7 +81,7 @@ public class FxSettings {
         } catch (IOException e) {
             throw new Error(e);
         }
-        
+
         saveTimer = new Timeline(new KeyFrame(SAVE_DELAY, (ev) -> save()));
     }
 
@@ -112,7 +112,7 @@ public class FxSettings {
         WindowMonitor m = WindowMonitor.getFor(w);
         if (m != null) {
             FxSettingsSchema.restoreWindow(m, w);
-    
+
             Node p = w.getScene().getRoot();
             FxSettingsSchema.restoreNode(p);
         }
@@ -138,9 +138,9 @@ public class FxSettings {
         WindowMonitor m = WindowMonitor.getFor(w);
         if (m != null) {
             FxSettingsSchema.storeWindow(m, w);
-    
+
             Node p = w.getScene().getRoot();
-            FxSettingsSchema.storeNode(m, p);
+            FxSettingsSchema.storeNode(p);
         }
     }
 
@@ -210,7 +210,7 @@ public class FxSettings {
             saveTimer.play();
         }
     }
-    
+
     private static void save() {
         try {
             save = false;
@@ -225,9 +225,6 @@ public class FxSettings {
     }
 
     public static void store(Node n) {
-        WindowMonitor m = WindowMonitor.getFor(n);
-        if (m != null) {
-            FxSettingsSchema.storeNode(m, n);
-        }
+        FxSettingsSchema.storeNode(n);
     }
 }
