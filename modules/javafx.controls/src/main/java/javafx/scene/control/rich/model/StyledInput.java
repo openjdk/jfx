@@ -49,11 +49,11 @@ public interface StyledInput {
     /**
      * Creates a plain text styled input with the specified style.
      * @param text the source text
-     * @param si the source style info
+     * @param attrs the source style attributes
      * @return the StyledInput instance
      */
-    public static StyledInput of(String text, StyleAttrs a) {
-        return new StringStyledInput(text, a);
+    public static StyledInput of(String text, StyleAttrs attrs) {
+        return new StringStyledInput(text, attrs);
     }
     
     /**

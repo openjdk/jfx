@@ -237,21 +237,23 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     private void handleFontChange() {
         Font f = getSkinnable().getFont();
-        String family = f.getFamily();
-        double size = f.getSize();
-        String name = f.getName().toLowerCase();
-        // FIX once JDK-8092191 is in
-        String style = RichUtils.guessFontStyle(name);
-        String weight = RichUtils.guessFontWeight(name);
-        String s =
-            "-fx-font-family:'" + family +
-            "'; -fx-font-size:" + size +
-            "; -fx-font-style:" + style +
-            "; -fx-font-weight:" + weight +
-            ";";
-        mainPane.setStyle(s);
-        getSkinnable().requestLayout();
-        vflow.requestLayout();
+        if (f != null) {
+            String family = f.getFamily();
+            double size = f.getSize();
+            String name = f.getName().toLowerCase();
+            // FIX once JDK-8092191 is in
+            String style = RichUtils.guessFontStyle(name);
+            String weight = RichUtils.guessFontWeight(name);
+            String s =
+                "-fx-font-family:'" + family +
+                "'; -fx-font-size:" + size +
+                "; -fx-font-style:" + style +
+                "; -fx-font-weight:" + weight +
+                ";";
+            mainPane.setStyle(s);
+            getSkinnable().requestLayout();
+            vflow.requestLayout();
+        }
     }
 
     // TODO is this needed?
