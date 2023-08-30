@@ -35,6 +35,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import com.sun.javafx.scene.control.rich.D;
 import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
@@ -53,6 +54,13 @@ public class StyleAttrs {
             } else {
                 sb.append("-fx-font-weight:normal; ");
             }
+        }
+    };
+
+    public static final StyleAttribute CSS = new StyleAttribute("CSS", CssStyles.class) {
+        @Override
+        public void buildStyle(StringBuilder sb, Object value) {
+            D.p(); // FIX
         }
     };
 
@@ -125,10 +133,26 @@ public class StyleAttrs {
      * Convenience method creates an instance with a single attribute.
      * @param attribute the attribute
      * @param value the attribute value
-     * @return a new instance of StyleAttrs
+     * @return the new instance
      */
     public static StyleAttrs of(StyleAttribute attribute, Object value) {
         return new Builder().set(attribute, value).create();
+    }
+
+    /**
+     * Convenience method creates an instance from a direct style and a number of
+     * CSS style names.
+     * @param style the direct style, can be null
+     * @param names style names
+     * @return the new instance
+     */
+    public static StyleAttrs fromCss(String style, String... names) {
+        if ((style == null) && (names == null)) {
+            throw new IllegalArgumentException("both style and style names cannot be null");
+        } else if (names == null) {
+            names = new String[0];
+        }
+        return new Builder().set(CSS, new CssStyles(style, names)).create();
     }
 
     @Override
@@ -240,6 +264,14 @@ public class StyleAttrs {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    /**
+     * This convenience method returns the value of {@link #CSS} attribute, or null.
+     * @return the css style attribute value
+     */
+    public final CssStyles getCssStyles() {
+        return (CssStyles)get(CSS);
     }
 
     /**

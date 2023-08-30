@@ -52,8 +52,8 @@ public interface StyledInput {
      * @param si the source style info
      * @return the StyledInput instance
      */
-    public static StyledInput of(String text, StyleInfo si) {
-        return new StringStyledInput(text, si);
+    public static StyledInput of(String text, StyleAttrs a) {
+        return new StringStyledInput(text, a);
     }
     
     /**
@@ -62,6 +62,6 @@ public interface StyledInput {
      * @return the StyledInput instance
      */
     public static StyledInput of(String text) {
-        return new StringStyledInput(text, StyleInfo.NONE);
+        return new StringStyledInput(text, StyleAttrs.EMPTY);
     }
 }

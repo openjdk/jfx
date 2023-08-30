@@ -25,19 +25,19 @@
 
 package com.sun.javafx.scene.control.rich;
 
-import javafx.scene.control.rich.model.StyleInfo;
+import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledSegment;
 
 public class StringStyledInput implements StyledInput {
     private final String text;
-    private final StyleInfo style;
+    private final StyleAttrs attrs;
     private int offset;
 
     // TODO check for illegal chars (<0x20 except for \r \n \t)
-    public StringStyledInput(String text, StyleInfo style) {
+    public StringStyledInput(String text, StyleAttrs a) {
         this.text = (text == null ? "" : text);
-        this.style = style;
+        this.attrs = a;
     }
 
     @Override
@@ -63,11 +63,11 @@ public class StringStyledInput implements StyledInput {
             if (ix < 0) {
                 String s = text.substring(offset);
                 offset = text.length();
-                return StyledSegment.of(s, style);
+                return StyledSegment.of(s, attrs);
             } else {
                 String s = text.substring(offset, ix);
                 offset = ix;
-                return StyledSegment.of(s, style);
+                return StyledSegment.of(s, attrs);
             }
         }
         return null;

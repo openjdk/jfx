@@ -29,7 +29,6 @@ import javafx.scene.control.rich.model.BasePlainTextModel;
 import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.paint.Color;
@@ -167,16 +166,14 @@ public enum ModelChoice {
     }
     
     private static StyledTextModel writingSystems() {
-        StyleAttrs a = StyleAttrs.builder().
+        StyleAttrs name = StyleAttrs.builder().
             set(StyleAttrs.FONT_SIZE, 200).
             set(StyleAttrs.TEXT_COLOR, Color.gray(0.5)).
             create();
-        StyleInfo name = StyleInfo.of(a);
         
-        a = StyleAttrs.builder().
+        StyleAttrs value = StyleAttrs.builder().
             set(StyleAttrs.FONT_SIZE, 200).
             create();
-        StyleInfo value = StyleInfo.of(a);
         
         EditableRichTextModel m = new EditableRichTextModel();
         String[] ss = WritingSystemsDemo.PAIRS;
@@ -193,7 +190,7 @@ public enum ModelChoice {
     }
     
     // TODO add to StyledModel
-    private static void append(StyledTextModel m, String text, StyleInfo style) {
+    private static void append(StyledTextModel m, String text, StyleAttrs style) {
         TextPos p = m.getEndTextPos();
         m.replace(null, p, p, StyledInput.of(text, style), false);
     }

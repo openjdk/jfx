@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.rich;
 import java.util.HashMap;
 import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
+import javafx.scene.control.rich.model.CssStyles;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.image.WritableImage;
 
@@ -36,28 +37,30 @@ import javafx.scene.image.WritableImage;
  */
 public class CachingStyleResolver implements StyleResolver {
     private final StyleResolver resolver;
-    private final HashMap<Key, StyleAttrs> attrs = new HashMap<>();
+    private final HashMap<CssStyles, StyleAttrs> cache = new HashMap<>();
 
     public CachingStyleResolver(StyleResolver r) {
         this.resolver = r;
     }
 
     @Override
-    public StyleAttrs convert(String directStyle, String[] css) {
-        Key k = new Key(directStyle, css);
-        StyleAttrs a = attrs.get(k);
+    public StyleAttrs resolveStyles(StyleAttrs attrs) {
+        CssStyles css = attrs.getCssStyles();
+        if (css != null) {
+            // no conversion is needed
+            return attrs;
+        }
+
+        StyleAttrs a = cache.get(css);
         if (a == null) {
-            a = resolver.convert(directStyle, css);
-            attrs.put(k, a);
+            a = resolver.resolveStyles(attrs);
+            cache.put(css, a);
         }
         return a;
     }
-    
+
     @Override
     public WritableImage snapshot(Node node) {
         return resolver.snapshot(node);
     }
-
-    /** composite key */
-    private static record Key(String style, String[] css) { }
 }

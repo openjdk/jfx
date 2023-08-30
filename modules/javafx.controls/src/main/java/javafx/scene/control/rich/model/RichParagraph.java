@@ -98,8 +98,8 @@ public class RichParagraph {
      * @param css array of style names, or null
      */
     public void addSegment(String text, String style, String[] css) {
-        StyleInfo si = StyleInfo.of(style, css);
-        StyledSegment seg = StyledSegment.of(text, si);
+        StyleAttrs a = StyleAttrs.fromCss(style, css);
+        StyledSegment seg = StyledSegment.of(text, a);
         segments().add(seg);
     }
 

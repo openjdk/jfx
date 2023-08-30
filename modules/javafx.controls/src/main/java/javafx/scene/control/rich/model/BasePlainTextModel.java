@@ -29,12 +29,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.scene.Node;
 import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.layout.Region;
 
@@ -190,8 +186,8 @@ public class BasePlainTextModel extends StyledTextModel {
     }
 
     @Override
-    public StyleInfo getStyleInfo(TextPos pos) {
-        return StyleInfo.NONE;
+    public StyleAttrs getStyleInfo(TextPos pos) {
+        return StyleAttrs.EMPTY;
     }
 
     /**

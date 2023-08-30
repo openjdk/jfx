@@ -35,7 +35,6 @@ import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.BasePlainTextModel;
 import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.model.StyledTextModel;
@@ -166,7 +165,7 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     @Override
-    public StyleInfo getStyleInfo(TextPos pos) {
-        return null;
+    public StyleAttrs getStyleInfo(TextPos pos) {
+        return StyleAttrs.EMPTY;
     }
 }

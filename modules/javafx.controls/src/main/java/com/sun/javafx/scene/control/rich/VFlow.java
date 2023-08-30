@@ -52,6 +52,7 @@ import javafx.scene.control.rich.SideDecorator;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
+import javafx.scene.control.rich.model.CssStyles;
 import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledSegment;
@@ -768,8 +769,17 @@ public class VFlow extends Pane implements StyleResolver {
         Text t = new Text(text);
         StyleAttrs a = seg.getStyleAttrs(this);
         if (a != null) {
-            String style = a.getStyle();
-            t.setStyle(style);
+            CssStyles css = a.getCssStyles();
+            if (css == null) {
+                String style = a.getStyle();
+                t.setStyle(style);
+            } else {
+                t.setStyle(css.style());
+                String[] names = css.names();
+                if (names != null) {
+                    t.getStyleClass().addAll(names);
+                }
+            }
         }
         return t;
     }
@@ -1283,14 +1293,23 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     @Override
-    public StyleAttrs convert(String directStyle, String[] css) {
+    public StyleAttrs resolveStyles(StyleAttrs attrs) {
+        CssStyles css = attrs.getCssStyles();
+        if (css == null) {
+            // no conversion is needed
+            return attrs;
+        }
+
+        String directStyle = css.style();
+        String[] names = css.names();
+
         getChildren().add(measurer);
         try {
             measurer.setStyle(directStyle);
-            if (css == null) {
+            if (names == null) {
                 measurer.getStyleClass().clear();
             } else {
-                measurer.getStyleClass().setAll(css);
+                measurer.getStyleClass().setAll(names);
             }
             measurer.applyCss();
         } finally {

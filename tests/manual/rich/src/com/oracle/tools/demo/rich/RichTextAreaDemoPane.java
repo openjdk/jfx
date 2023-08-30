@@ -96,13 +96,13 @@ public class RichTextAreaDemoPane extends BorderPane {
         SplitPane hsplit = new SplitPane(contentNode, pane());
         FX.name(hsplit, "hsplit");
         hsplit.setBorder(null);
-        hsplit.setDividerPositions(0.9);
+        hsplit.setDividerPositions(1.0);
         hsplit.setOrientation(Orientation.HORIZONTAL);
         
         SplitPane vsplit = new SplitPane(hsplit, pane());
         FX.name(vsplit, "vsplit");
         vsplit.setBorder(null);
-        vsplit.setDividerPositions(0.9);
+        vsplit.setDividerPositions(1.0);
         vsplit.setOrientation(Orientation.VERTICAL);
         
         modelField = new ComboBox<>();

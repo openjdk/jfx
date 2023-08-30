@@ -185,14 +185,14 @@ public class EditableRichTextModel extends StyledTextModel {
     }
 
     @Override
-    public StyleInfo getStyleInfo(TextPos pos) {
+    public StyleAttrs getStyleInfo(TextPos pos) {
         int index = pos.index();
         if(index < paragraphs.size()) {
             int off = pos.offset();
             RParagraph par = paragraphs.get(index);
             return par.getStyleInfo(off);
         }
-        return StyleInfo.NONE;
+        return StyleAttrs.EMPTY;
     }
 
     /**
@@ -219,9 +219,10 @@ public class EditableRichTextModel extends StyledTextModel {
         private void setAttrs(StyleAttrs a) {
             attrs = a;
         }
-        
-        private StyleInfo getStyleInfo() {
-            return StyleInfo.of(attrs);
+
+        // FIX rename
+        private StyleAttrs getStyleInfo() {
+            return attrs;
         }
         
         private int length() {
@@ -293,7 +294,7 @@ public class EditableRichTextModel extends StyledTextModel {
          * @param offset the offset
          * @return the style info
          */
-        private StyleInfo getStyleInfo(int offset) {
+        private StyleAttrs getStyleInfo(int offset) {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
@@ -304,7 +305,7 @@ public class EditableRichTextModel extends StyledTextModel {
                 }
                 off += len;
             }
-            return StyleInfo.NONE;
+            return StyleAttrs.EMPTY;
         }
 
         /**

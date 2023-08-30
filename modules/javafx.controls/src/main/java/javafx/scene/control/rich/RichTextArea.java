@@ -57,9 +57,9 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Control;
 import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.rich.model.CssStyles;
 import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.util.Util;
@@ -1223,15 +1223,7 @@ public class RichTextArea extends Control {
         return false;
     }
 
-    /**
-     * When selection exists, returns the style of the first selected character.
-     * When no selection exists, returns the style of a character immediately preceding the caret.
-     * When at the beginning of the document, returns the style of the first character.
-     *
-     * @return non-null {@link StyleInfo}
-     */
-    // TODO could this be made private?
-    public StyleInfo getActiveStyleInfo() {
+    private StyleAttrs getActiveStyleInfo() {
         StyledTextModel m = getModel();
         if (m != null) {
             TextPos pos = getCaretPosition();
@@ -1248,27 +1240,28 @@ public class RichTextArea extends Control {
                 return m.getStyleInfo(pos);
             }
         }
-        return StyleInfo.NONE;
+        return StyleAttrs.EMPTY;
     }
 
     /**
-     * When selection exists, returns the attributes (resolved for this instance of {@code RichTextArea}
-     * of the first selected character.
+     * When selection exists, returns the attributes of the first selected character.
      * When no selection exists, returns the attributes of a character immediately preceding the caret.
      * When at the beginning of the document, returns the attributes of the first character.
+     * If the model uses CSS styles, this method resolves individual attributes (bold, font size, etc.)
+     * according to the stylesheet for this instance of {@code RichTextArea}.
      *
-     * @return {@link StyleAttrs}, or null if no style is defined.
+     * @return non-null {@link StyleAttrs}.
      */
     public StyleAttrs getActiveStyleAttrs() {
+        StyleAttrs a = getActiveStyleInfo();
         RichTextAreaSkin skin = richTextAreaSkin();
         if (skin != null) {
             StyleResolver resolver = skin.getStyleResolver();
             if (resolver != null) {
-                StyleInfo s = getActiveStyleInfo();
-                return s.getStyleAttrs(resolver);
+                return resolver.resolveStyles(a);
             }
         }
-        return null;
+        return a;
     }
 
     /**

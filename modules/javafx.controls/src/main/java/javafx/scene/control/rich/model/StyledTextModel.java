@@ -174,13 +174,14 @@ public abstract class StyledTextModel {
     protected abstract boolean applyStyleImpl(TextPos start, TextPos end, StyleAttrs attrs);
     
     /**
-     * Returns the {@link StyleInfo} of the first character at the specified position.
+     * Returns the {@link StyleAttrs} of the first character at the specified position.
      * When at the end of the document, returns the attributes of the last character.
      *
      * @param pos text position
-     * @return non-null {@link StyleInfo}
+     * @return the style attributes, non-null
      */
-    public abstract StyleInfo getStyleInfo(TextPos pos);
+    // TODO rename
+    public abstract StyleAttrs getStyleInfo(TextPos pos);
     
     /** stores the handler and its priority */
     private static record FHPriority(DataFormatHandler handler, int priority) implements Comparable<FHPriority>{
@@ -480,8 +481,8 @@ public abstract class StyledTextModel {
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean createUndo) {
         // TODO check for nulls
         if (isEditable()) {
-            StyleInfo si = getStyleInfo(start);
-            StyledInput in = StyledInput.of(text, si);
+            StyleAttrs a = getStyleInfo(start);
+            StyledInput in = StyledInput.of(text, a);
             return replace(resolver, start, end, in, createUndo);
         }
         return null;

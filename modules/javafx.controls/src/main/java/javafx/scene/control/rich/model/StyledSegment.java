@@ -131,43 +131,6 @@ public abstract class StyledSegment {
             return this;
         }
     };
-
-    /** 
-     * Creates a StyleSegment from a non-null text and non-null attributes.
-     * Important: text must not contain any characters &lt; 0x20, except for TAB.
-     * @param text the segment text
-     * @param si the segment style info object
-     * @return a new StyledSegment instance
-     */
-    // TODO guarded of() ?
-    public static StyledSegment of(String text, StyleInfo si) {
-        return new StyledSegment() {
-            @Override
-            public boolean isText() {
-                return true;
-            }
-            
-            @Override
-            public String getText() {
-                return text;
-            }
-
-            @Override
-            public StyleAttrs getStyleAttrs(StyleResolver r) {
-                return si.getStyleAttrs(r);
-            }
-
-            @Override
-            public StyledSegment subSegment(int start, int end) {
-                return StyledSegment.of(substring(text, start, end), si);
-            }
-
-            @Override
-            public String toString() {
-                return "StyledSegment{text=" + getText() + ", style=" + si + "}";
-            }
-        };
-    }
     
     /** 
      * Creates a StyleSegment from a non-null plain text.
@@ -175,8 +138,9 @@ public abstract class StyledSegment {
      * @param text the segment text
      * @return a new StyledSegment instance
      */
+    // TODO guarded of() ?
     public static StyledSegment of(String text) {
-        return of(text, StyleInfo.NONE);
+        return of(text, StyleAttrs.EMPTY);
     }
     
     /**
@@ -187,6 +151,7 @@ public abstract class StyledSegment {
      * @param attrs the segment style attributes
      * @return a new StyledSegment instance
      */
+    // TODO guarded of() ?
     public static StyledSegment of(String text, StyleAttrs attrs) {
         return new StyledSegment() {
             @Override

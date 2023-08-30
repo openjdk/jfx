@@ -25,7 +25,6 @@
 package test.javafx.scene.control.rich.model;
 
 import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyleInfo;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledSegment;
 
@@ -49,7 +48,7 @@ public class TStyledInput implements StyledInput {
             }
 
             StyleAttrs a = (StyleAttrs)items[index++];
-            return StyledSegment.of(text, StyleInfo.of(a));
+            return StyledSegment.of(text, a);
         }
         return null;
     }

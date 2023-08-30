@@ -23,32 +23,11 @@
  * questions.
  */
 
-package javafx.scene.control.rich;
-
-import javafx.scene.Node;
-import javafx.scene.control.rich.model.StyleAttribute;
-import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.image.WritableImage;
+package javafx.scene.control.rich.model;
 
 /**
- * Enables conversion of CSS styles to {@link StyleAttribute}s.
- * <p>
- * Whenever the {@code StyledTextModel} contains logical class names instead of actual attributes,
- * a separate CSS style resolution step is required.  The resulting attributes might depend on the view that
- * originated an operation (such as copying to RTF, for example).
+ * Attribute represents CSS styles: a combination of a direct style (-fx-...)
+ * and a number of style names.
  */
-public interface StyleResolver {
-    /**
-     * Resolves CSS styles (when present) to the individual attributes declared in {@link StyleAttrs}.
-     * @param attrs the style attributes
-     * @return the resolved style attributes
-     */
-    public StyleAttrs resolveStyles(StyleAttrs attrs);
-
-    /**
-     * Creates a snapshot of the specified Node.
-     * @param node the {@link Node} to make a snapshot of
-     * @return snapshot the generated {@link WritableImage}
-     */
-    public WritableImage snapshot(Node node);
+public final record CssStyles(String style, String[] names) {
 }

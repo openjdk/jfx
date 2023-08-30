@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.scene.Node;
@@ -40,7 +39,7 @@ import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.RtfFormatHandler;
-import javafx.scene.control.rich.model.StyleInfo;
+import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.model.StyledTextModelReadOnlyBase;
@@ -165,9 +164,9 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     }
 
     @Override
-    public StyleInfo getStyleInfo(TextPos pos) {
+    public StyleAttrs getStyleInfo(TextPos pos) {
         // TODO use segments
-        return StyleInfo.NONE;
+        return StyleAttrs.EMPTY;
     }
 
     @Override
@@ -294,13 +293,13 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
         public final String text;
         public final String direct;
         public final String[] css;
-        private final StyleInfo style;
+        private final StyleAttrs style;
 
         public TextSSegment(String text, String direct, String[] css) {
             this.text = text;
             this.direct = direct;
             this.css = css;
-            this.style = StyleInfo.of(direct, css);
+            this.style = StyleAttrs.fromCss(direct, css);
         }
 
         @Override

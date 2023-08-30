@@ -28,7 +28,7 @@ import java.text.DecimalFormat;
 import javafx.scene.Node;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.RichParagraph;
-import javafx.scene.control.rich.model.StyleInfo;
+import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledTextModelReadOnlyBase;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -53,8 +53,8 @@ public class DemoStyledTextModel extends StyledTextModelReadOnlyBase {
     }
 
     @Override
-    public StyleInfo getStyleInfo(TextPos pos) {
-        return StyleInfo.NONE;
+    public StyleAttrs getStyleInfo(TextPos pos) {
+        return StyleAttrs.EMPTY;
     }
 
     @Override
