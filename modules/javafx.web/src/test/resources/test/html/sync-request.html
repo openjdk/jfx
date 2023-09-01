@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h2 id="target">fail</h2>
+    <script>
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("GET", "data.xml", false);
+        xhttp.send();
+        document.getElementById("target").innerHTML = xhttp.responseText;
+    </script>
+</body>
+</html>
