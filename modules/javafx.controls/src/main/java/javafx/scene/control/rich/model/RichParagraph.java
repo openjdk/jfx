@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.rich.TextCell;
 import javafx.scene.layout.Region;
+import com.sun.javafx.scene.control.rich.RichParagraphHelper;
 
 /**
  * Represents a paragraph with rich text inside the StyledModel.
@@ -40,6 +41,20 @@ import javafx.scene.layout.Region;
 public class RichParagraph {
     private ArrayList<StyledSegment> segments;
     private ArrayList<Consumer<TextCell>> highlights;
+
+    static {
+        RichParagraphHelper.setAccessor(new RichParagraphHelper.Accessor() {
+            @Override
+            public List<StyledSegment> getSegments(RichParagraph p) {
+                return p.getSegments();
+            }
+
+            @Override
+            public List<Consumer<TextCell>> getHighlights(RichParagraph p) {
+                return p.getHighlights();
+            }
+        });
+    }
 
     public RichParagraph() {
     }
@@ -135,13 +150,11 @@ public class RichParagraph {
         return segments;
     }
 
-    // TODO via helper
-    public List<Consumer<TextCell>> getHighlights() {
+    private List<Consumer<TextCell>> getHighlights() {
         return highlights;
     }
 
-    // TODO via helper
-    public List<StyledSegment> getSegments() {
+    private List<StyledSegment> getSegments() {
         return segments;
     }
     

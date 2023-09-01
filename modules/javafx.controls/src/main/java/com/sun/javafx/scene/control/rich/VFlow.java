@@ -736,7 +736,7 @@ public class VFlow extends Pane implements StyleResolver {
         TextCell cell = new TextCell(index);
 
         // highlights
-        List<Consumer<TextCell>> highlights = rp.getHighlights();
+        List<Consumer<TextCell>> highlights = RichParagraphHelper.getHighlights(rp);
         if (highlights != null) {
             for (Consumer<TextCell> h : highlights) {
                 h.accept(cell);
@@ -744,7 +744,7 @@ public class VFlow extends Pane implements StyleResolver {
         }
 
         // segments
-        List<StyledSegment> segments = rp.getSegments();
+        List<StyledSegment> segments = RichParagraphHelper.getSegments(rp);
         if ((segments == null) || segments.isEmpty()) {
             // a bit of a hack: avoid TextCells with an empty TextFlow,
             // as it makes the caret collapse to a single point

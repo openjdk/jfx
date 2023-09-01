@@ -688,9 +688,9 @@ public class RichTextArea extends Control {
      * The size of a tab stop in spaces.
      *
      * @return the {@code tabSize} property
-     *
      * @defaultValue 8
      */
+    // FIX this makes sense only in the context of CodeArea
     public final ReadOnlyIntegerProperty tabSizeProperty() {
         return tabSizePropertyPrivate().getReadOnlyProperty();
     }
@@ -1361,6 +1361,7 @@ public class RichTextArea extends Control {
      * Determines the spacing between text lines, in pixels.
      * @return the line spacing property
      */
+    // TODO this is a paragraph style property
     public final DoubleProperty lineSpacingProperty() {
         if (lineSpacing == null) {
             lineSpacing = new SimpleStyleableDoubleProperty(
