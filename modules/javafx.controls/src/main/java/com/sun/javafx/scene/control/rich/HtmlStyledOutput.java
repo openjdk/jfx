@@ -37,6 +37,7 @@ import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.util.Util;
 import javafx.scene.image.WritableImage;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 
 /**
@@ -81,11 +82,11 @@ public class HtmlStyledOutput implements StyledOutput {
                 wr.write("</span>");
             }
         } else if (seg.isInlineNode()) {
-            Node n = seg.getParagraphNodeGenerator().get();
+            Node n = seg.getInlineNodeGenerator().get();
             writeInlineNode(n);
         } else if (seg.isParagraph()) {
-            Node n = seg.getParagraphNodeGenerator().get();
-            writeParagraph(n);
+            Region r = seg.getParagraphNodeGenerator().get();
+            writeParagraph(r);
         }
     }
 
@@ -131,7 +132,7 @@ public class HtmlStyledOutput implements StyledOutput {
         return new Key(a, v);
     }
 
-    private void writeParagraph(Node n) throws IOException {
+    private void writeParagraph(Region n) throws IOException {
         WritableImage im = resolver.snapshot(n);
         byte[] bytes = Util.writePNG(im);
         int w = (int)im.getWidth();
@@ -297,6 +298,8 @@ public class HtmlStyledOutput implements StyledOutput {
             return  "font-weight: bold;";
         } else if (a == StyleAttrs.FONT_FAMILY) {
             // TODO might need to provide an alias "XXX, Times, serif", or let the browser decide
+            // TODO also replace FX generic names with their HTML equivalents
+            // system, cursove
             return "font-family: \"" + encode(v.toString()) + "\";";
         } else if (a == StyleAttrs.FONT_SIZE) {
             return "font-size: " + v + "%;";
@@ -313,6 +316,28 @@ public class HtmlStyledOutput implements StyledOutput {
         } else {
             return null;
         }
+    }
+
+    // TODO use this + encode
+    // (copied from RtfStyledOutput)
+    private String lookupFontFamily(String name) {
+        try {
+            switch (name.toLowerCase()) {
+            case "monospaced":
+                return "\\fmodern Courier New";
+            case "system":
+            case "sans-serif":
+                return "\\fswiss Helvetica";
+            case "serif":
+                return "\\froman Times New Roman";
+            case "cursive":
+                return "\\fscript Brush Script";
+            case "fantasy":
+                return "\\fdecor ITC Zapf Chancery";
+            }
+        } catch (Exception e) {
+        }
+        return null;
     }
 
     public void writePrologue() throws IOException {

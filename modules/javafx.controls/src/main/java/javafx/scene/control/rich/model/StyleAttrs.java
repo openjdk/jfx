@@ -148,7 +148,7 @@ public class StyleAttrs {
      */
     public static StyleAttrs fromCss(String style, String... names) {
         if ((style == null) && (names == null)) {
-            throw new IllegalArgumentException("both style and style names cannot be null");
+            return StyleAttrs.EMPTY;
         } else if (names == null) {
             names = new String[0];
         }

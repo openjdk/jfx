@@ -38,12 +38,10 @@ import javafx.scene.Node;
 import javafx.scene.control.rich.Marker;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.input.DataFormat;
 import javafx.scene.layout.Region;
 import com.sun.javafx.scene.control.rich.Markers;
-import com.sun.javafx.scene.control.rich.RichUtils;
 import com.sun.javafx.scene.control.rich.UndoableChange;
 
 /**
@@ -152,19 +150,6 @@ public abstract class StyledTextModel {
     protected abstract void insertParagraph(int index, Supplier<Region> generator);
     
     /**
-     * Exports part of the paragraph as a sequence of styled segments.
-     * The caller guarantees that the start position precedes the end.
-     * 
-     * @param index paragraph's model index
-     * @param startOffset start offset
-     * @param endOffset end offset (may exceed the paragraph text length)
-     * @param out receiving StyledOutput
-     * @throws IOException when an I/O error occurs
-     */
-    // TODO since we now have RichParagraph, the export code can be universal
-    protected abstract void exportParagraph(int index, int startOffset, int endOffset, StyledOutput out) throws IOException;
-    
-    /**
      * Applies a style to the specified text range, where {@code start} is guaranteed to precede {@code end}.
      * 
      * @param start start position
@@ -181,6 +166,7 @@ public abstract class StyledTextModel {
      * @param pos text position
      * @return the style attributes, non-null
      */
+    // TODO move implementation here
     public abstract StyleAttrs getStyleAttrs(TextPos pos);
     
     /** stores the handler and its priority */
@@ -382,6 +368,23 @@ public abstract class StyledTextModel {
     }
 
     /**
+     * Exports part of the paragraph as a sequence of styled segments.
+     * The caller guarantees that the start position precedes the end.
+     * The subclass may override this method to provide a more performant implementation.
+     * 
+     * @param index paragraph's model index
+     * @param start start offset
+     * @param end end offset (may exceed the paragraph text length)
+     * @param out receiving StyledOutput
+     * @throws IOException when an I/O error occurs
+     */
+    protected void exportParagraph(int index, int start, int end, StyledOutput out) throws IOException {
+        // TODO it's unclear what to do with the highlights and the paragraph attributes
+        RichParagraph par = getParagraph(index);
+        par.export(start, end, out);
+    }
+
+    /**
      * Returns a {@link Marker} at the specified position.
      *
      * @param pos text position
@@ -421,22 +424,6 @@ public abstract class StyledTextModel {
                 return new TextPos(ct - 1, len);
             }
         }
-    }
-
-    /**
-     * Convenience method exports plain text segments within a single paragraph.
-     *
-     * @param index paragraph index
-     * @param start start offset
-     * @param end end offset
-     * @param out receiving {@link StyledOutput}
-     * @throws IOException when an I/O error occurs
-     */
-    protected void exportPlaintextSegments(int index, int start, int end, StyledOutput out) throws IOException {
-        String text = getPlainText(index);
-        text = RichUtils.substring(text, start, end);
-        StyledSegment seg = StyledSegment.of(text);
-        out.append(seg);
     }
 
     /**
@@ -497,7 +484,7 @@ public abstract class StyledTextModel {
      * <p>
      * After the model applies the requested changes, an event is sent to all the registered ChangeListeners.
      * </p>
-     * @param resolver the StyleResolver to use
+     * @param resolver the StyleResolver to use, can be null
      * @param start start text position
      * @param end end text position
      * @param input StyledInput

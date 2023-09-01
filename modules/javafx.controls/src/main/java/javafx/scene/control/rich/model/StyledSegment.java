@@ -131,7 +131,7 @@ public abstract class StyledSegment {
             return this;
         }
     };
-    
+
     /** 
      * Creates a StyleSegment from a non-null plain text.
      * Important: text must not contain any characters &lt; 0x20, except for TAB.
@@ -142,7 +142,7 @@ public abstract class StyledSegment {
     public static StyledSegment of(String text) {
         return of(text, StyleAttrs.EMPTY);
     }
-    
+
     /**
      * Creates a StyleSegment from a non-null plain text and style attributes.
      * Important: text must not contain any characters &lt; 0x20, except for TAB.
@@ -158,81 +158,34 @@ public abstract class StyledSegment {
             public boolean isText() {
                 return true;
             }
-            
+
             @Override
             public String getText() {
                 return text;
             }
-            
+
             @Override
-            public StyleAttrs getStyleAttrs(StyleResolver r) {
+            public StyleAttrs getStyleAttrs(StyleResolver resolver) {
+                if (resolver != null) {
+                    return resolver.resolveStyles(attrs);
+                }
                 return attrs;
             }
-            
+
             @Override
             public StyledSegment subSegment(int start, int end) {
+                if ((start == 0) && (end == text.length())) {
+                    return this;
+                }
                 return StyledSegment.of(substring(text, start, end), attrs);
             }
-            
+
             @Override
             public String toString() {
                 return "StyledSegment{text=" + getText() + ", attrs=" + attrs + "}";
             }
         };
     }
-    
-    // TODO
-    /** 
-     * Creates a StyleSegment from a non-null text with direct and stylesheet styles.
-     * Important: text must not contain any characters < 0x20, except for TAB.
-     */
-//    public static StyledSegment of(String text, String direct, String[] css) {
-//        StyleInfo si
-//        return new StyledSegment() {
-//            @Override
-//            public boolean isText() {
-//                return true;
-//            }
-//
-//            @Override
-//            public String getText() {
-//                return text;
-//            }
-//
-//            @Override
-//            public String getDirectStyle() {
-//                return direct;
-//            }
-//
-//            @Override
-//            public String[] getStyles() {
-//                return css;
-//            }
-//
-//            @Override
-    // TODO move to StyleInfo
-//            public String toString() {
-//                StringBuilder sb = new StringBuilder(32);
-//                sb.append("StyledSegment{text=").append(text);
-//                sb.append(", direct=").append(direct);
-//                if (css != null) {
-//                    sb.append(", css=[");
-//                    boolean sep = false;
-//                    for (String s : css) {
-//                        if (sep) {
-//                            sb.append(',');
-//                        } else {
-//                            sep = true;
-//                        }
-//                        sb.append(s);
-//                    }
-//                    sb.append("]");
-//                }
-//                sb.append("}");
-//                return sb.toString();
-//            }
-//        };
-//    }
 
     /**
      * Creates a StyledSegment which consists of a single inline Node.
@@ -250,7 +203,7 @@ public abstract class StyledSegment {
             public String getText() {
                 return " ";
             }
-            
+
             @Override
             public Supplier<Node> getInlineNodeGenerator() {
                 return generator;
@@ -262,7 +215,7 @@ public abstract class StyledSegment {
             }
         };
     }
-    
+
     /**
      * Creates a StyledSegment for a paragraph that contains a Region.
      * @param generator the code to create a Region instance

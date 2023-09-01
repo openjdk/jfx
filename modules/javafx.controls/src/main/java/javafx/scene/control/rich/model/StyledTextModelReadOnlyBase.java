@@ -25,7 +25,6 @@
 
 package javafx.scene.control.rich.model;
 
-import java.io.IOException;
 import java.util.function.Supplier;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
@@ -37,6 +36,8 @@ import javafx.scene.layout.Region;
 public abstract class StyledTextModelReadOnlyBase extends StyledTextModel {
     /** The constructor. */
     public StyledTextModelReadOnlyBase() {
+        registerDataFormatHandler(new RtfFormatHandler(), true, 1000);
+        registerDataFormatHandler(new HtmlExportFormatHandler(), true, 100);
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
     }
 
@@ -68,10 +69,5 @@ public abstract class StyledTextModelReadOnlyBase extends StyledTextModel {
     @Override
     protected boolean applyStyleImpl(TextPos start, TextPos end, StyleAttrs attrs) {
         throw new UnsupportedOperationException();
-    }
-    
-    @Override
-    protected void exportParagraph(int index, int start, int end, StyledOutput out) throws IOException {
-        exportPlaintextSegments(index, start, end, out);
     }
 }

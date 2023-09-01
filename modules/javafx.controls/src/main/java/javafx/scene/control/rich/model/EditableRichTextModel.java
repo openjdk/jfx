@@ -25,7 +25,6 @@
 
 package javafx.scene.control.rich.model;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Function;
@@ -81,8 +80,8 @@ public class EditableRichTextModel extends StyledTextModel {
         RParagraph p = paragraphs.get(index);
         for (RSegment seg: p) {
             String text = seg.text();
-            String style = seg.attrs().getStyle();
-            par.addSegment(text, style, null);
+            StyleAttrs a = seg.attrs();
+            par.addSegment(text, a);
         }
         return par;
     }
@@ -141,12 +140,6 @@ public class EditableRichTextModel extends StyledTextModel {
     @Override
     protected void insertParagraph(int index, Supplier<Region> generator) {
         // TODO
-    }
-
-    @Override
-    protected void exportParagraph(int index, int start, int end, StyledOutput out) throws IOException {
-        RParagraph par = paragraphs.get(index);
-        par.export(start, end, out);
     }
 
     @Override
@@ -305,33 +298,6 @@ public class EditableRichTextModel extends StyledTextModel {
                 off += len;
             }
             return StyleAttrs.EMPTY;
-        }
-
-        /**
-         * Exports the text range in this paragraph. 
-         * @param start the start of the range
-         * @param end the end of the range
-         * @param out the receiving StyledOutput
-         * @throws IOException when an I/O error occurs
-         */
-        private void export(int start, int end, StyledOutput out) throws IOException {
-            int off = 0;
-            int ct = size();
-            for (int i = 0; i < ct; i++) {
-                if(off >= end) {
-                    return;
-                }
-                
-                RSegment seg = get(i);
-                int len = seg.length();
-                if(start <= (off + len)) {
-                    int ix0 = Math.max(0, start - off);
-                    int ix1 = Math.min(len, end - off);
-                    StyledSegment ss = seg.createStyledSegment(ix0, ix1);
-                    out.append(ss);
-                }
-                off += len;
-            }
         }
 
         /**

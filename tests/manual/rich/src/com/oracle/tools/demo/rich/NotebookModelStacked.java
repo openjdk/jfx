@@ -25,7 +25,6 @@
 
 package com.oracle.tools.demo.rich;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import javafx.scene.control.TextArea;
@@ -35,7 +34,6 @@ import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.BasePlainTextModel;
 import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.layout.Region;
@@ -153,10 +151,6 @@ public class NotebookModelStacked extends StyledTextModel {
 
     @Override
     protected void insertParagraph(int index, Supplier<Region> generator) {
-    }
-
-    @Override
-    protected void exportParagraph(int index, int startOffset, int endOffset, StyledOutput out) throws IOException {
     }
 
     @Override

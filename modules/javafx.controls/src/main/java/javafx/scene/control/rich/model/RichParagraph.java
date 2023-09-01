@@ -99,7 +99,16 @@ public class RichParagraph {
      */
     public void addSegment(String text, String style, String[] css) {
         StyleAttrs a = StyleAttrs.fromCss(style, css);
-        StyledSegment seg = StyledSegment.of(text, a);
+        addSegment(text, a);
+    }
+
+    /**
+     * Adds a styled text segment.
+     * @param text the non-null text string
+     * @param attrs the styled attributes
+     */
+    public void addSegment(String text, StyleAttrs attrs) {
+        StyledSegment seg = StyledSegment.of(text, attrs);
         segments().add(seg);
     }
 
