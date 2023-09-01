@@ -25,7 +25,6 @@
 
 package javafx.scene.control.rich.model;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import javafx.beans.property.BooleanProperty;
@@ -33,7 +32,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.rich.StyleResolver;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.layout.Region;
-import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
  * A simple, editable, in-memory StyledTextModel which manages plain text paragraphs.
@@ -162,15 +160,6 @@ public class BasePlainTextModel extends StyledTextModel {
     @Override
     protected void insertParagraph(int index, Supplier<Region> generator) {
         // no-op
-    }
-
-    // this is a faster implementation than in the base class
-    @Override
-    protected void exportParagraph(int index, int startOffset, int endOffset, StyledOutput out) throws IOException {
-        String text = getPlainText(index);
-        String s = RichUtils.substring(text, startOffset, endOffset);
-        StyledSegment seg = StyledSegment.of(s);
-        out.append(seg);
     }
 
     @Override

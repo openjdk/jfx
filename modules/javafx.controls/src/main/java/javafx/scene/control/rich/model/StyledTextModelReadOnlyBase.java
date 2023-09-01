@@ -36,9 +36,6 @@ import javafx.scene.layout.Region;
 public abstract class StyledTextModelReadOnlyBase extends StyledTextModel {
     /** The constructor. */
     public StyledTextModelReadOnlyBase() {
-        registerDataFormatHandler(new RtfFormatHandler(), true, 1000);
-        registerDataFormatHandler(new HtmlExportFormatHandler(), true, 100);
-        registerDataFormatHandler(new PlainTextFormatHandler(), 0);
     }
 
     @Override

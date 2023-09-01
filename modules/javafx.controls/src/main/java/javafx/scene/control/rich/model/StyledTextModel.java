@@ -193,6 +193,9 @@ public abstract class StyledTextModel {
 
     /** The constructor. */
     public StyledTextModel() {
+        registerDataFormatHandler(new RtfFormatHandler(), true, 1000);
+        registerDataFormatHandler(new HtmlExportFormatHandler(), true, 100);
+        registerDataFormatHandler(new PlainTextFormatHandler(), true, 0);
     }
 
     /**

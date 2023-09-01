@@ -73,9 +73,9 @@ public class HtmlStyledOutput implements StyledOutput {
             StyleAttrs a = seg.getStyleAttrs(resolver);
             boolean div = ((a != null) && (!a.isEmpty()));
             if(div) {
-                wr.write("<span style=\"");
+                wr.write("<span style='");
                 writeAttributes(a);
-                wr.write("\">");
+                wr.write("'>");
             }
             String text = seg.getText();
             String encoded = encode(text);
