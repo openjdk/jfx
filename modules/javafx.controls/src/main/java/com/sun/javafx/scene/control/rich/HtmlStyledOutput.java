@@ -43,6 +43,8 @@ import javafx.scene.paint.Color;
 /**
  * A {@link StyledOutput} which generates HTML output.
  */
+// TODO should 'monospaced' paragraphs use <pre> ?
+// TODO should we size down font on windows?
 public class HtmlStyledOutput implements StyledOutput {
     // a synthetic attribute used only in Key
     private static final StyleAttribute STRIKE_THROUGH_AND_UNDERLINE = 
@@ -297,10 +299,7 @@ public class HtmlStyledOutput implements StyledOutput {
         if (a == StyleAttrs.BOLD) {
             return  "font-weight: bold;";
         } else if (a == StyleAttrs.FONT_FAMILY) {
-            // TODO might need to provide an alias "XXX, Times, serif", or let the browser decide
-            // TODO also replace FX generic names with their HTML equivalents
-            // system, cursove
-            return "font-family: \"" + encode(v.toString()) + "\";";
+            return "font-family: \"" + encodeFontFamily(v.toString()) + "\";";
         } else if (a == StyleAttrs.FONT_SIZE) {
             return "font-size: " + v + "%;";
         } else if (a == StyleAttrs.ITALIC) {
@@ -318,26 +317,21 @@ public class HtmlStyledOutput implements StyledOutput {
         }
     }
 
-    // TODO use this + encode
-    // (copied from RtfStyledOutput)
-    private String lookupFontFamily(String name) {
-        try {
-            switch (name.toLowerCase()) {
-            case "monospaced":
-                return "\\fmodern Courier New";
-            case "system":
-            case "sans-serif":
-                return "\\fswiss Helvetica";
-            case "serif":
-                return "\\froman Times New Roman";
-            case "cursive":
-                return "\\fscript Brush Script";
-            case "fantasy":
-                return "\\fdecor ITC Zapf Chancery";
-            }
-        } catch (Exception e) {
+    private static String encodeFontFamily(String name) {
+        switch (name.toLowerCase()) {
+        case "monospaced":
+            return "monospace";
+        case "system":
+        case "sans-serif":
+            return "sans-serif";
+        case "serif":
+            return "serif";
+        case "cursive":
+            return "cursive";
+        case "fantasy":
+            return "fantasy";
         }
-        return null;
+        return encode(name);
     }
 
     public void writePrologue() throws IOException {
