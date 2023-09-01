@@ -62,7 +62,7 @@ public class SwingNodeContentMemoryLeakTest {
     private int count = 0;
     private int fail = 0;
     private SwingNode node;
-    
+
     @BeforeClass
     public static void setupOnce() {
         Util.launch(launchLatch, 50, MyApp.class);
@@ -76,15 +76,15 @@ public class SwingNodeContentMemoryLeakTest {
     @Test
     public void testSwingNodeContentMemoryLeak() throws InterruptedException,
                                                         InvocationTargetException {
-        Util.runAndWait(() -> {	  
+        Util.runAndWait(() -> {
             node = new SwingNode();
             Pane root = new Pane();
             root.getChildren().add(node);
-        
+
             Stage stage = new Stage();
             Scene scene = new Scene(root, 150, 100);
             stage.setScene(scene);
-	});
+        });
 
         //Kick off a thread that repeatedly creates new JPanels and resets the swing node's content
         new Thread(() -> {
@@ -95,39 +95,43 @@ public class SwingNodeContentMemoryLeakTest {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                
+
                 SwingUtilities.invokeLater(() -> {
                     JPanel panel = new JPanel();
                     panels.add(new WeakReference<>(panel));
                     node.setContent(panel);
                 });
-                
+
                 long panelCount = panels.stream().filter(ref ->
                                                      ref.get() != null).count();
+                // Sometimes panel count can shoot upto more than 3 once or twice
+                // due to gc not being guranteed so this check prevents false failure
+                // Without fix, the panel count will increase continuosly so it will
+                // always be more 3 after 1-2 iterations
                 if (panelCount > 3) {
                     fail++;
-                }    
+                }
                 System.out.println("iteration " + count + " Panels in memory: "
                                                + panelCount + " fail " + fail);
                 assertFalse(fail > 2);
-                
+
                 //I know this doesn't guarantee anything, but prompting a GC gives me more confidence that this
                 //truly is a bug.
                 System.gc();
                 count++;
             }
-            
+
         }).start();
-        
-	// Invoke a noop on EDT thread and wait for a bit to make sure EDT processed node objects
+
+        // Invoke a noop on EDT thread and wait for a bit to make sure EDT processed node objects
         SwingUtilities.invokeAndWait(() -> {});
         Util.sleep(5000);
     }
-    
+
     public static class MyApp extends Application {
         @Override
         public void start(Stage stage) throws Exception {
             launchLatch.countDown();
         }
     }
-} 
+}
