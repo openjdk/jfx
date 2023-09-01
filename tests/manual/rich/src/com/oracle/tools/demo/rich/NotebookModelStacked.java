@@ -165,7 +165,7 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     @Override
-    public StyleAttrs getStyleInfo(TextPos pos) {
+    public StyleAttrs getStyleAttrs(TextPos pos) {
         return StyleAttrs.EMPTY;
     }
 }

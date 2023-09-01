@@ -161,6 +161,7 @@ public abstract class StyledTextModel {
      * @param out receiving StyledOutput
      * @throws IOException when an I/O error occurs
      */
+    // TODO since we now have RichParagraph, the export code can be universal
     protected abstract void exportParagraph(int index, int startOffset, int endOffset, StyledOutput out) throws IOException;
     
     /**
@@ -180,8 +181,7 @@ public abstract class StyledTextModel {
      * @param pos text position
      * @return the style attributes, non-null
      */
-    // TODO rename
-    public abstract StyleAttrs getStyleInfo(TextPos pos);
+    public abstract StyleAttrs getStyleAttrs(TextPos pos);
     
     /** stores the handler and its priority */
     private static record FHPriority(DataFormatHandler handler, int priority) implements Comparable<FHPriority>{
@@ -481,7 +481,7 @@ public abstract class StyledTextModel {
     public TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text, boolean createUndo) {
         // TODO check for nulls
         if (isEditable()) {
-            StyleAttrs a = getStyleInfo(start);
+            StyleAttrs a = getStyleAttrs(start);
             StyledInput in = StyledInput.of(text, a);
             return replace(resolver, start, end, in, createUndo);
         }

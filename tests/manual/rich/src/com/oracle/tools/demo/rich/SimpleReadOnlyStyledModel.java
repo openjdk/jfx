@@ -164,7 +164,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     }
 
     @Override
-    public StyleAttrs getStyleInfo(TextPos pos) {
+    public StyleAttrs getStyleAttrs(TextPos pos) {
         // TODO use segments
         return StyleAttrs.EMPTY;
     }

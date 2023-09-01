@@ -185,7 +185,7 @@ public class EditableRichTextModel extends StyledTextModel {
     }
 
     @Override
-    public StyleAttrs getStyleInfo(TextPos pos) {
+    public StyleAttrs getStyleAttrs(TextPos pos) {
         int index = pos.index();
         if(index < paragraphs.size()) {
             int off = pos.offset();
@@ -220,8 +220,7 @@ public class EditableRichTextModel extends StyledTextModel {
             attrs = a;
         }
 
-        // FIX rename
-        private StyleAttrs getStyleInfo() {
+        private StyleAttrs getStyleAttrs() {
             return attrs;
         }
         
@@ -265,7 +264,7 @@ public class EditableRichTextModel extends StyledTextModel {
             } else {
                 s = text.substring(start, end);
             }
-            return StyledSegment.of(s, getStyleInfo());
+            return StyledSegment.of(s, getStyleAttrs());
         }
     }
 
@@ -301,7 +300,7 @@ public class EditableRichTextModel extends StyledTextModel {
                 RSegment seg = get(i);
                 int len = seg.length();
                 if (offset < (off + len) || (i == ct - 1)) {
-                    return seg.getStyleInfo();
+                    return seg.getStyleAttrs();
                 }
                 off += len;
             }

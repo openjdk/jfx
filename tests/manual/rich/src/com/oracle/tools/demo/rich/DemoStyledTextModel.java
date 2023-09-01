@@ -53,7 +53,7 @@ public class DemoStyledTextModel extends StyledTextModelReadOnlyBase {
     }
 
     @Override
-    public StyleAttrs getStyleInfo(TextPos pos) {
+    public StyleAttrs getStyleAttrs(TextPos pos) {
         return StyleAttrs.EMPTY;
     }
 

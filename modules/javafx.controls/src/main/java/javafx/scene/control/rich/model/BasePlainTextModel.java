@@ -186,7 +186,7 @@ public class BasePlainTextModel extends StyledTextModel {
     }
 
     @Override
-    public StyleAttrs getStyleInfo(TextPos pos) {
+    public StyleAttrs getStyleAttrs(TextPos pos) {
         return StyleAttrs.EMPTY;
     }
 

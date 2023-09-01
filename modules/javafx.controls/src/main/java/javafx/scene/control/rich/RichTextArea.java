@@ -1237,7 +1237,7 @@ public class RichTextArea extends Control {
                     int ix = pos.offset() - 1;
                     pos = new TextPos(pos.index(), ix);
                 }
-                return m.getStyleInfo(pos);
+                return m.getStyleAttrs(pos);
             }
         }
         return StyleAttrs.EMPTY;
