@@ -29,8 +29,8 @@ import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.EditableRichTextModel;
 import javafx.scene.control.rich.model.StyleAttribute;
 import javafx.scene.control.rich.model.StyleAttrs;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.rich.StringBuilderStyledOutput;
 
 public class TestStyledRuns {
@@ -39,20 +39,27 @@ public class TestStyledRuns {
     private final Object[] SEG1 = { "abcdefgh", PLAIN };
     private final Object[] SEG2 = { "abcdefgh", PLAIN, "ijklmnop", BOLD };
     private final Object[] SEG3 = { "abcdefgh", PLAIN, "ijklmnop", BOLD, "qrstuvwx", PLAIN };
-    private final Object[] INSERT = { "01", BOLD };
     
     @Test
     public void testReplace() throws IOException {
         replace(
-            new Object[] { },
-            INSERT,
             new Object[] {
-                
+                "1122", PLAIN
+            },
+            new TextPos(0, 2),
+            new TextPos(0, 2),
+            new Object[] {
+                "aa", BOLD
+            },
+            new Object[] {
+                "11", PLAIN,
+                "aa", BOLD,
+                "22", PLAIN
             }
         );
     }
 
-    // TODO @Test
+    @Test
     public void testApplyStyle() throws IOException {
         t(
             SEG1,
@@ -87,15 +94,11 @@ public class TestStyledRuns {
         return b.create();
     }
 
-    // FIX does not work (yet)
     private void t(Object[] initial, int ix1, int off1, int ix2, int off2, StyleAttrs a, Object[] expected) throws IOException {
-        EditableRichTextModel m = new EditableRichTextModel();
-        TStyledInput in = new TStyledInput(initial);
-        TextPos fin = m.getEndTextPos();
-        m.replace(null, TextPos.ZERO, fin, in, false);
+        EditableRichTextModel m = createModel(initial);
         
         {
-            fin = m.getEndTextPos();
+            TextPos fin = m.getEndTextPos();
             StringBuilderStyledOutput out = new StringBuilderStyledOutput();
             m.exportText(TextPos.ZERO, fin, out);
             Object chk = out.getOutput();
@@ -107,24 +110,37 @@ public class TestStyledRuns {
         m.applyStyle(start, end, a);
         
         {
-            TStyledOutput out = new TStyledOutput(null); // TODO resolver
+            TStyledOutput out = new TStyledOutput(null);
             TextPos last = m.getEndTextPos();
             m.exportText(TextPos.ZERO, last, out);
             Object[] result = out.getResult();
-            Assert.assertArrayEquals(expected, result);
+            Assertions.assertArrayEquals(expected, result);
         }
     }
     
-    private void replace(Object[] initial, Object[] text, Object[] expected) throws IOException {
+    private EditableRichTextModel createModel(Object[] initial) {
         EditableRichTextModel m = new EditableRichTextModel();
+        TextPos end = m.getEndTextPos();
         TStyledInput in = new TStyledInput(initial);
-        TextPos fin = m.getEndTextPos();
-        m.replace(null, TextPos.ZERO, fin, in, false);
-        
-        TStyledOutput out = new TStyledOutput(null); // TODO resolver
+        m.replace(null, TextPos.ZERO, end, in, false);
+        return m;
+    }
+
+    // start - not null
+    // end - null for end of document
+    private void replace(Object[] initial, TextPos start, TextPos end, Object[] input, Object[] expected) throws IOException {
+        EditableRichTextModel m = createModel(initial);
+        TStyledInput in = new TStyledInput(input);
+
+        if(end == null) {
+            end = m.getEndTextPos();
+        }
+        m.replace(null, start, end, in, false);
+
+        TStyledOutput out = new TStyledOutput(null);
         TextPos last = m.getEndTextPos();
         m.exportText(TextPos.ZERO, last, out);
         Object[] result = out.getResult();
-        Assert.assertArrayEquals(expected, result);
+        Assertions.assertArrayEquals(expected, result);
     }
 }
