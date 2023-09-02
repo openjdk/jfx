@@ -72,6 +72,7 @@ class ControlContractTest {
         stage.renderScaleXProperty().bind(renderScaleProperty);
         stage.renderScaleYProperty().bind(renderScaleProperty);
 
+        control.setMinSize(200, 300);
         control.setPadding(new Insets(4, 5, 6, 7));
 
         AtomicBoolean layoutChildrenCalled = new AtomicBoolean(false);
@@ -118,6 +119,9 @@ class ControlContractTest {
         stage.show();
 
         assertTrue(layoutChildrenCalled.get());
+
+        assertEquals(200, control.getWidth());
+        assertEquals(300, control.getHeight());
     }
 
 }
