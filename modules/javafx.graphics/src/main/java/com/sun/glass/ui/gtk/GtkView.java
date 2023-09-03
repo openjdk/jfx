@@ -105,20 +105,16 @@ final class GtkView extends View {
         //nothing
     }
 
-    protected void notifyInputMethodLinux(String str, int attrib, int length, int cursor) {
-        if (attrib == 4) {
-            // attrib == 4 means we are going to commit changes, so commitLength should be non-zero
+    protected void notifyInputMethodLinux(String str, boolean commit, int length, int cursor, byte[] attr) {
+        if (commit) {
             notifyInputMethod(str, null, null, null, length, cursor, 0);
         } else {
             int[] boundary = new int[length + 1];
-            byte[] values = new byte[length + 1];
-
             for (int i = 0; i < boundary.length; i++) {
                 boundary[i] = i;
-                values[i] = IME_ATTR_TARGET_NOTCONVERTED;
             }
 
-            notifyInputMethod(str, boundary, boundary, values, 0, cursor, 0);
+            notifyInputMethod(str, boundary, boundary, attr, 0, cursor, 0);
         }
     }
 }

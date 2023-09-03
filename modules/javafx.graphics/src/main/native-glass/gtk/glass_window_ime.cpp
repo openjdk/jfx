@@ -33,37 +33,52 @@
 void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->setOnPreEdit(true);
-    g_print("on_preedit_start\n");
 }
 
 void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     gchar *preedit_text;
     WindowContext *ctx = (WindowContext *) user_data;
+    jbyteArray attr = NULL;
 
     gtk_im_context_get_preedit_string(im_context, &preedit_text, NULL, NULL);
     ctx->updateCaretPos();
 
     jstring jstr = mainEnv->NewStringUTF(preedit_text);
     EXCEPTION_OCCURED(mainEnv);
-    g_free(preedit_text);
 
     jsize slen = mainEnv->GetStringLength(jstr);
 
-    g_print("on_preedit_changed: %s - %d\n", preedit_text, slen);
+    attr = mainEnv->NewByteArray(slen);
+    CHECK_JNI_EXCEPTION(mainEnv)
+    jbyte v[slen];
+    for (int i = 0; i < slen; i++) {
+        gunichar chr = g_utf8_get_char(&preedit_text[i]);
+
+        if (g_unichar_type(chr) == G_UNICODE_MODIFIER_SYMBOL) {
+            v[i] = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
+        } else {
+            v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
+        }
+    }
+
+    g_free(preedit_text);
+
+    mainEnv->SetByteArrayRegion(attr, 0, slen, v);
+    CHECK_JNI_EXCEPTION(mainEnv)
 
     mainEnv->CallVoidMethod(ctx->get_jview(),
             jViewNotifyInputMethodLinux,
             jstr,
-            0,
+            false,
             slen,
-            0);
+            0,
+            attr);
     LOG_EXCEPTION(mainEnv)
 }
 
 void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->setOnPreEdit(false);
-    g_print("on_preedit_end\n");
 }
 
 void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
@@ -72,9 +87,7 @@ void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
 }
 
 void WindowContextBase::commitIME(gchar *str) {
-    g_print("commitIME: %s\n", str);
     if (!im_ctx.on_preedit) {
-        g_print("not on preedit: %s\n", str);
         jchar key = g_utf8_get_char(str);
         guint key_val = gdk_unicode_to_keyval(key);
 
@@ -102,13 +115,13 @@ void WindowContextBase::commitIME(gchar *str) {
         EXCEPTION_OCCURED(mainEnv);
         jsize slen = mainEnv->GetStringLength(jstr);
 
-        g_print("jViewNotifyInputMethodLinux: %s\n", str);
         mainEnv->CallVoidMethod(jview,
                 jViewNotifyInputMethodLinux,
                 jstr,
-                4,
+                true,
                 slen,
-                slen);
+                slen,
+                NULL);
         LOG_EXCEPTION(mainEnv)
     }
 }
@@ -137,7 +150,6 @@ void WindowContextBase::updateCaretPos() {
                                       0);
 
     nativePos = mainEnv->GetDoubleArrayElements(pos, NULL);
-    g_print("updateCaretPos POS: %f, %f\n", nativePos[0], nativePos[1]);
 
     GdkRectangle rect;
     if (nativePos) {
