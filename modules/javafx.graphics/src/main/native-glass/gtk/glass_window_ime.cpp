@@ -56,7 +56,7 @@ void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
             jstr,
             0,
             slen,
-            slen);
+            0);
     LOG_EXCEPTION(mainEnv)
 }
 
