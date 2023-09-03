@@ -342,17 +342,21 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         if (control.getInputMethodRequests() == null) {
             inputMethodRequests = new ExtendedInputMethodRequests() {
                 @Override public Point2D getTextLocation(int offset) {
+                    Point2D p = getTextLocationRelative(offset);
                     Scene scene = control.getScene();
                     Window window = scene != null ? scene.getWindow() : null;
                     if (window == null) {
                         return new Point2D(0, 0);
                     }
-                    // Don't use imstart here because it isn't initialized yet.
-                    Rectangle2D characterBounds = getCharacterBounds(control.getSelection().getStart() + offset);
-                    Point2D p = control.localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
                     Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
                             window.getY() + scene.getY() + p.getY());
                     return location;
+                }
+
+                @Override public Point2D getTextLocationRelative(int offset) {
+                    // Don't use imstart here because it isn't initialized yet.
+                    Rectangle2D characterBounds = getCharacterBounds(control.getSelection().getStart() + offset);
+                    return control.localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
                 }
 
                 @Override public int getLocationOffset(int x, int y) {

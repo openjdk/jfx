@@ -133,10 +133,24 @@ public final class InputMethodClientImpl
             return new Point2D(point.getIntX(), point.getIntY());
         });
 
-        Invoker.getInvoker().invokeOnEventThread(f);
+        return getPoint2DTextLocationFuture(f);
+    }
+
+    @Override
+    public Point2D getTextLocationRelative(int offset) {
+        FutureTask<Point2D> f = new FutureTask<>(() -> {
+            int[] loc = webPage.getClientTextLocation(offset);
+            return new Point2D(loc[0], loc[1] + loc[3]);
+        });
+
+        return getPoint2DTextLocationFuture(f);
+    }
+
+    private Point2D getPoint2DTextLocationFuture(FutureTask<Point2D> future) {
+        Invoker.getInvoker().invokeOnEventThread(future);
         Point2D result = null;
         try {
-            result = f.get();
+            result = future.get();
         } catch (ExecutionException ex) {
             log.severe("InputMethodClientImpl.getTextLocation " + ex);
         } catch (InterruptedException ex) {

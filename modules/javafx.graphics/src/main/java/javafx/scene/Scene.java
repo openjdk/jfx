@@ -4173,6 +4173,16 @@ public class Scene implements EventTarget {
         }
 
         @Override
+        public Point2D getTextLocationRelative(int offset) {
+            InputMethodRequests requests = getClientRequests();
+            if (requests != null) {
+                return requests.getTextLocationRelative(offset);
+            } else {
+                return new Point2D(0, 0);
+            }
+        }
+
+        @Override
         public int getLocationOffset(int x, int y) {
             InputMethodRequests requests = getClientRequests();
             if (requests != null) {

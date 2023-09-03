@@ -133,10 +133,11 @@ void WindowContextBase::updateCaretPos() {
     double *nativePos;
 
     jdoubleArray pos = (jdoubleArray)mainEnv->CallObjectMethod(get_jview(),
-                                      jViewNotifyInputMethodCandidatePosRequest,
+                                      jViewNotifyInputMethodCandidateRelativePosRequest,
                                       0);
 
     nativePos = mainEnv->GetDoubleArrayElements(pos, NULL);
+    g_print("updateCaretPos POS: %f, %f\n", nativePos[0], nativePos[1]);
 
     GdkRectangle rect;
     if (nativePos) {

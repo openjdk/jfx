@@ -126,6 +126,11 @@ public final class Node_properties_Test extends PropertiesTestBase {
                        }
 
                        @Override
+                       public Point2D getTextLocationRelative(int offset) {
+                           return new Point2D(0, 0);
+                       }
+
+                       @Override
                        public int getLocationOffset(final int x, final int y) {
                            return 0;
                        }

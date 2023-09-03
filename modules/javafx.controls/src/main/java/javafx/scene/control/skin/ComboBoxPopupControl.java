@@ -35,7 +35,6 @@ import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
-import javafx.beans.InvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
@@ -393,6 +392,11 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             comboBoxBase.setInputMethodRequests(new ExtendedInputMethodRequests() {
                 @Override public Point2D getTextLocation(int offset) {
                     return newTextField.getInputMethodRequests().getTextLocation(offset);
+                }
+
+                @java.lang.Override
+                public Point2D getTextLocationRelative(int offset) {
+                    return newTextField.getInputMethodRequests().getTextLocationRelative(offset);
                 }
 
                 @Override public int getLocationOffset(int x, int y) {

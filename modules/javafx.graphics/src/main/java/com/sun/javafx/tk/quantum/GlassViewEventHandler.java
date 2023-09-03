@@ -675,6 +675,12 @@ class GlassViewEventHandler extends View.EventHandler {
         return ret;
     }
 
+    @Override
+    public double[] getInputMethodCandidateRelativePos(int offset) {
+        Point2D p2d = scene.inputMethodRequests.getTextLocationRelative(offset);
+        return new double[] { p2d.getX(), p2d.getY() };
+    }
+
     private static TransferMode actionToTransferMode(int dropActions) {
         if (dropActions == Clipboard.ACTION_NONE) {
             return null;
