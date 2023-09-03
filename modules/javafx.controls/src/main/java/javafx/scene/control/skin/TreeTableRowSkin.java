@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
@@ -48,7 +47,6 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
-
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
@@ -74,8 +72,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private Node graphic;
     private final BehaviorBase<TreeTableRow<T>> behavior;
     private boolean childrenDirty = false;
-
-
 
     /* *************************************************************************
      *                                                                         *
@@ -116,30 +112,29 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
-        ListenerHelper lh = ListenerHelper.get(this);
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
-            lh.addInvalidationListener(getSkinnable().treeTableViewProperty(), (ev) -> {
+            registerInvalidationListener(getSkinnable().treeTableViewProperty(), (x) -> {
                 unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
                 setupTreeTableViewListeners();
             });
         } else {
-            lh.addChangeListener(treeTableView.treeColumnProperty(), (ev) -> {
+            registerChangeListener(treeTableView.treeColumnProperty(), (x) -> {
                 // Fix for RT-27782: Need to set isDirty to true, rather than the
                 // cheaper updateCells, as otherwise the text indentation will not
                 // be recalculated in TreeTableCellSkin.calculateIndentation()
                 isDirty = true;
-                getSkinnable().requestLayout();
+                if (getSkinnable() != null) {
+                    getSkinnable().requestLayout();
+                }
             });
 
             DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
             if (fixedCellSizeProperty != null) {
-                lh.addChangeListener(fixedCellSizeProperty, (ev) -> {
-                    fixedCellSize = fixedCellSizeProperty.get();
-                    fixedCellSizeEnabled = fixedCellSize > 0;
+                registerChangeListener(fixedCellSizeProperty, (x) -> {
+                    updateCachedFixedSize();
                 });
-                fixedCellSize = fixedCellSizeProperty.get();
-                fixedCellSizeEnabled = fixedCellSize > 0;
+                updateCachedFixedSize();
 
                 // JDK-8144500:
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
@@ -147,12 +142,26 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // be required (because we remove all cells that are not visible).
                 VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
                 if (virtualFlow != null) {
-                    lh.addChangeListener(getVirtualFlow().widthProperty(), (ev) -> treeTableView.requestLayout());
+                    registerChangeListener(getVirtualFlow().widthProperty(), (x) -> {
+                        if (getSkinnable() != null) {
+                            TreeTableView<T> t = getSkinnable().getTreeTableView();
+                            t.requestLayout();
+                        }
+                    });
                 }
             }
         }
     }
 
+    private void updateCachedFixedSize() {
+        if (getSkinnable() != null) {
+            TreeTableView<T> t = getSkinnable().getTreeTableView();
+            if (t != null) {
+                fixedCellSize = t.getFixedCellSize();
+                fixedCellSizeEnabled = fixedCellSize > 0.0;
+            }
+        }
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -334,6 +343,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         unregisterInvalidationListeners(graphicProperty());
         treeItem = getSkinnable().getTreeItem();
         registerInvalidationListener(graphicProperty(), e -> updateTreeItemGraphic());
+        updateDisclosureNodeAndGraphic();
     }
 
     private TreeTableView<T> getTreeTableView() {

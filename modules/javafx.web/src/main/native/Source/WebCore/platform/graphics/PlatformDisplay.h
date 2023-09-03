@@ -92,7 +92,7 @@ public:
         bool EXT_image_dma_buf_import { false };
         bool EXT_image_dma_buf_import_modifiers { false };
     };
-    const EGLExtensions& eglExtensions() const { return m_eglExtensions; }
+    const EGLExtensions& eglExtensions() const;
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
@@ -137,7 +137,7 @@ protected:
 #endif
 
 #if USE(ATSPI)
-    virtual String plartformAccessibilityBusAddress() const { return { }; }
+    virtual String platformAccessibilityBusAddress() const { return { }; }
 
     mutable std::optional<String> m_accessibilityBusAddress;
 #endif

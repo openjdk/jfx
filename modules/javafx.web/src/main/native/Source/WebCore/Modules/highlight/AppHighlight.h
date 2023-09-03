@@ -42,57 +42,7 @@ struct AppHighlight {
     std::optional<String> text;
     CreateNewGroupForHighlight isNewGroup;
     HighlightRequestOriginatedInApp requestOriginatedInApp;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<AppHighlight> decode(Decoder&);
 };
-
-
-template<class Encoder>
-void AppHighlight::encode(Encoder& encoder) const
-{
-    encoder << static_cast<size_t>(highlight->size());
-    encoder.encodeFixedLengthData(highlight->makeContiguous()->data(), highlight->size(), 1);
-
-    encoder << text;
-
-    encoder << isNewGroup;
-
-    encoder << requestOriginatedInApp;
-}
-
-template<class Decoder>
-std::optional<AppHighlight> AppHighlight::decode(Decoder& decoder)
-{
-
-    std::optional<size_t> length;
-    decoder >> length;
-    if (!length)
-        return std::nullopt;
-
-    if (!decoder.template bufferIsLargeEnoughToContain<uint8_t>(length.value()))
-        return std::nullopt;
-
-    Vector<uint8_t> highlight;
-    highlight.grow(*length);
-    if (!decoder.decodeFixedLengthData(highlight.data(), highlight.size(), 1))
-        return std::nullopt;
-
-    std::optional<std::optional<String>> text;
-    decoder >> text;
-    if (!text)
-        return std::nullopt;
-
-    CreateNewGroupForHighlight isNewGroup;
-    if (!decoder.decode(isNewGroup))
-        return std::nullopt;
-
-    HighlightRequestOriginatedInApp requestOriginatedInApp;
-    if (!decoder.decode(requestOriginatedInApp))
-        return std::nullopt;
-
-    return {{ SharedBuffer::create(WTFMove(highlight)), WTFMove(*text), isNewGroup, requestOriginatedInApp }};
-}
 
 }
 

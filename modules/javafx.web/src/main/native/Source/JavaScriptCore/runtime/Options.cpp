@@ -30,6 +30,7 @@
 #include "CPU.h"
 #include "JITOperationValidation.h"
 #include "LLIntCommon.h"
+#include "MacroAssembler.h"
 #include "MinimumReservedZoneSize.h"
 #include <algorithm>
 #include <limits>
@@ -463,9 +464,9 @@ static void overrideDefaults()
     Options::usePollingTraps() = true;
 #endif
 
-#if !ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
+#if !ENABLE(WEBASSEMBLY)
     Options::useWebAssemblyFastMemory() = false;
-    Options::useSharedArrayBuffer() = false;
+    Options::useWasmFaultSignalHandler() = false;
 #endif
 
 #if !HAVE(MACH_EXCEPTIONS)
@@ -478,14 +479,7 @@ static void overrideDefaults()
     }
 }
 
-static void correctOptions()
-{
-    unsigned thresholdForGlobalLexicalBindingEpoch = Options::thresholdForGlobalLexicalBindingEpoch();
-    if (thresholdForGlobalLexicalBindingEpoch == 0 || thresholdForGlobalLexicalBindingEpoch == 1)
-        Options::thresholdForGlobalLexicalBindingEpoch() = UINT_MAX;
-}
-
-static void disableAllJITOptions()
+static inline void disableAllJITOptions()
 {
     Options::useLLInt() = true;
     Options::useJIT() = false;
@@ -497,15 +491,67 @@ static void disableAllJITOptions()
     Options::useDOMJIT() = false;
     Options::useRegExpJIT() = false;
     Options::useJITCage() = false;
+    Options::useConcurrentJIT() = false;
+    Options::useSigillCrashAnalyzer() = false;
+
+    Options::useWebAssembly() = false;
+
+    Options::usePollingTraps() = true;
+    Options::useLLInt() = true;
+
+    Options::dumpDisassembly() = false;
+    Options::asyncDisassembly() = false;
+    Options::dumpDFGDisassembly() = false;
+    Options::dumpFTLDisassembly() = false;
+    Options::dumpRegExpDisassembly() = false;
+    Options::dumpWasmDisassembly() = false;
+    Options::dumpBBQDisassembly() = false;
+    Options::dumpOMGDisassembly() = false;
+    Options::needDisassemblySupport() = false;
 }
 
-void Options::recomputeDependentOptions()
+inline void Options::dumpOptionsIfNeeded()
 {
+    if (LIKELY(!Options::dumpOptions()))
+        return;
+
+    DumpLevel level = static_cast<DumpLevel>(Options::dumpOptions());
+    if (level > DumpLevel::Verbose)
+        level = DumpLevel::Verbose;
+
+    const char* title = nullptr;
+    switch (level) {
+    case DumpLevel::None:
+        break;
+    case DumpLevel::Overridden:
+        title = "Overridden JSC options:";
+        break;
+    case DumpLevel::All:
+        title = "All JSC options:";
+        break;
+    case DumpLevel::Verbose:
+        title = "All JSC options with descriptions:";
+        break;
+    }
+
+    StringBuilder builder;
+    dumpAllOptions(builder, level, title, nullptr, "   ", "\n", DumpDefaults);
+    dataLog(builder.toString());
+}
+
+void Options::notifyOptionsChanged()
+{
+    AllowUnfinalizedAccessScope scope;
+
+    unsigned thresholdForGlobalLexicalBindingEpoch = Options::thresholdForGlobalLexicalBindingEpoch();
+    if (thresholdForGlobalLexicalBindingEpoch == 0 || thresholdForGlobalLexicalBindingEpoch == 1)
+        Options::thresholdForGlobalLexicalBindingEpoch() = UINT_MAX;
+
 #if !defined(NDEBUG)
     Options::validateDFGExceptionHandling() = true;
 #endif
 #if !ENABLE(JIT)
-    disableAllJITOptions();
+    Options::useJIT() = false;
 #endif
 #if !ENABLE(CONCURRENT_JS)
     Options::useConcurrentJIT() = false;
@@ -532,30 +578,23 @@ void Options::recomputeDependentOptions()
 #if !CPU(X86_64) && !CPU(ARM64)
     Options::useConcurrentGC() = false;
     Options::forceUnlinkedDFG() = false;
+    Options::useWebAssemblySIMD() = false;
 #endif
+
+    if (!Options::allowDoubleShape())
+        Options::useJIT() = false; // We don't support JIT with !allowDoubleShape. So disable it.
 
     // At initialization time, we may decide that useJIT should be false for any
     // number of reasons (including failing to allocate JIT memory), and therefore,
     // will / should not be able to enable any JIT related services.
-    if (!Options::useJIT()) {
+    if (!Options::useJIT())
         disableAllJITOptions();
-        Options::useConcurrentJIT() = false;
-        Options::useSigillCrashAnalyzer() = false;
-        Options::useWebAssembly() = false;
-        Options::usePollingTraps() = true;
-    }
-
-    if (!jitEnabledByDefault() && !Options::useJIT())
-        Options::useLLInt() = true;
-
-    if (WTF::isX86BinaryRunningOnARM() && Options::useJIT()) {
+    else {
+        if (WTF::isX86BinaryRunningOnARM()) {
         Options::useBaselineJIT() = false;
         Options::useDFGJIT() = false;
         Options::useFTLJIT() = false;
     }
-
-    if (!Options::useWebAssembly())
-        Options::useFastTLSForWasmContext() = false;
 
     if (Options::dumpDisassembly()
         || Options::asyncDisassembly()
@@ -589,12 +628,8 @@ void Options::recomputeDependentOptions()
         || Options::logPhaseTimes()
         || Options::verboseCFA()
         || Options::verboseDFGFailure()
-        || Options::verboseFTLFailure()
-        || Options::dumpFuzzerAgentPredictions())
+            || Options::verboseFTLFailure())
         Options::alwaysComputeHash() = true;
-
-    if (!Options::useConcurrentGC())
-        Options::collectContinuously() = false;
 
     if (Options::jitPolicyScale() != Options::jitPolicyScaleDefault())
         scaleJITPolicy();
@@ -611,12 +646,6 @@ void Options::recomputeDependentOptions()
         Options::useConcurrentJIT() = false;
     }
 
-    if (Options::useProfiler())
-        Options::useConcurrentJIT() = false;
-
-    if (Options::alwaysUseShadowChicken())
-        Options::maximumInliningDepth() = 1;
-
     // Compute the maximum value of the reoptimization retry counter. This is simply
     // the largest value at which we don't overflow the execute counter, when using it
     // to left-shift the execution counter by this amount. Currently the value ends
@@ -628,6 +657,36 @@ void Options::recomputeDependentOptions()
 
     ASSERT((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << Options::reoptimizationRetryCounterMax()) > 0);
     ASSERT((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << Options::reoptimizationRetryCounterMax()) <= static_cast<int64_t>(std::numeric_limits<int32_t>::max()));
+
+        if (!Options::useBBQJIT() && Options::useOMGJIT())
+            Options::wasmLLIntTiersUpToBBQ() = false;
+
+#if CPU(X86_64) && ENABLE(JIT)
+        if (!MacroAssembler::supportsAVX())
+            Options::useWebAssemblySIMD() = false;
+#endif
+
+        if (Options::forceAllFunctionsToUseSIMD() && !Options::useWebAssemblySIMD())
+            Options::forceAllFunctionsToUseSIMD() = false;
+
+        if (Options::useWebAssemblySIMD() && !Options::useWasmLLInt()) {
+            // The LLInt is responsible for discovering if functions use SIMD.
+            // If we can't run using it, then we should be conservative.
+            Options::forceAllFunctionsToUseSIMD() = true;
+        }
+    }
+
+    if (Options::dumpFuzzerAgentPredictions())
+        Options::alwaysComputeHash() = true;
+
+    if (!Options::useConcurrentGC())
+        Options::collectContinuously() = false;
+
+    if (Options::useProfiler())
+        Options::useConcurrentJIT() = false;
+
+    if (Options::alwaysUseShadowChicken())
+        Options::maximumInliningDepth() = 1;
 
 #if !defined(NDEBUG)
     if (Options::maxSingleAllocationSize())
@@ -676,6 +735,35 @@ void Options::recomputeDependentOptions()
 
     if (Options::verboseVerifyGC())
         Options::verifyGC() = true;
+
+#if ASAN_ENABLED && OS(LINUX)
+    if (Options::useWasmFaultSignalHandler()) {
+        const char* asanOptions = getenv("ASAN_OPTIONS");
+        bool okToUseWebAssemblyFastMemory = asanOptions
+            && (strstr(asanOptions, "allow_user_segv_handler=1") || strstr(asanOptions, "handle_segv=0"));
+        if (!okToUseWebAssemblyFastMemory) {
+            dataLogLn("WARNING: ASAN interferes with JSC signal handlers; useWebAssemblyFastMemory and useWasmFaultSignalHandler will be disabled.");
+            Options::useWasmFaultSignalHandler() = false;
+        }
+    }
+#endif
+
+    if (!Options::useWasmFaultSignalHandler())
+        Options::useWebAssemblyFastMemory() = false;
+
+#if CPU(ADDRESS32)
+    Options::useWebAssemblyFastMemory() = false;
+#endif
+
+    // Do range checks where needed and make corrections to the options:
+    ASSERT(Options::thresholdForOptimizeAfterLongWarmUp() >= Options::thresholdForOptimizeAfterWarmUp());
+    ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= 0);
+    ASSERT(Options::criticalGCMemoryThreshold() > 0.0 && Options::criticalGCMemoryThreshold() < 1.0);
+
+    // The following should only be done at the end after all options
+    // have been initialized.
+    dumpOptionsIfNeeded();
+    assertOptionsAreCoherent();
 }
 
 inline void* Options::addressOfOption(Options::ID id)
@@ -762,72 +850,22 @@ void Options::initialize()
                 ; // Deconfuse editors that do auto indentation
 #endif
 
-            correctOptions();
-
-            recomputeDependentOptions();
-
-            // Do range checks where needed and make corrections to the options:
-            ASSERT(Options::thresholdForOptimizeAfterLongWarmUp() >= Options::thresholdForOptimizeAfterWarmUp());
-            ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= Options::thresholdForOptimizeSoon());
-            ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= 0);
-            ASSERT(Options::criticalGCMemoryThreshold() > 0.0 && Options::criticalGCMemoryThreshold() < 1.0);
-
-#if HAVE(MACH_EXCEPTIONS)
-            if (Options::useMachForExceptions())
-                handleSignalsWithMach();
-#endif
-
-#if ASAN_ENABLED && OS(LINUX) && ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
-            if (Options::useWebAssemblyFastMemory() || Options::useSharedArrayBuffer()) {
-                const char* asanOptions = getenv("ASAN_OPTIONS");
-                bool okToUseWebAssemblyFastMemory = asanOptions
-                    && (strstr(asanOptions, "allow_user_segv_handler=1") || strstr(asanOptions, "handle_segv=0"));
-                if (!okToUseWebAssemblyFastMemory) {
-                    dataLogLn("WARNING: ASAN interferes with JSC signal handlers; useWebAssemblyFastMemory and useSharedArrayBuffer will be disabled.");
-                    Options::useWebAssemblyFastMemory() = false;
-                    Options::useSharedArrayBuffer() = false;
-                }
-            }
-#endif
-
 #if CPU(X86_64) && OS(DARWIN)
             Options::dumpZappedCellCrashData() =
                 (hwPhysicalCPUMax() >= 4) && (hwL3CacheSize() >= static_cast<int64_t>(6 * MB));
 #endif
 
-            // The following should only be done at the end after all options
-            // have been initialized.
-            dumpOptionsIfNeeded();
-            ensureOptionsAreCoherent();
+            // No more options changes after this point. notifyOptionsChanged() will
+            // do sanity checks and fix up options as needed.
+            notifyOptionsChanged();
+
+            // The code below acts on options that have been finalized.
+            // Do not change any options here.
+#if HAVE(MACH_EXCEPTIONS)
+            if (Options::useMachForExceptions())
+                handleSignalsWithMach();
+#endif
     });
-}
-
-void Options::dumpOptionsIfNeeded()
-{
-    if (Options::dumpOptions()) {
-        DumpLevel level = static_cast<DumpLevel>(Options::dumpOptions());
-        if (level > DumpLevel::Verbose)
-            level = DumpLevel::Verbose;
-
-        const char* title = nullptr;
-        switch (level) {
-        case DumpLevel::None:
-            break;
-        case DumpLevel::Overridden:
-            title = "Overridden JSC options:";
-            break;
-        case DumpLevel::All:
-            title = "All JSC options:";
-            break;
-        case DumpLevel::Verbose:
-            title = "All JSC options with descriptions:";
-            break;
-        }
-
-        StringBuilder builder;
-        dumpAllOptions(builder, level, title, nullptr, "   ", "\n", DumpDefaults);
-        dataLog(builder.toString());
-    }
 }
 
 void Options::finalize()
@@ -912,14 +950,7 @@ bool Options::setOptions(const char* optionsStr)
         }
     }
 
-    correctOptions();
-
-    recomputeDependentOptions();
-
-    dumpOptionsIfNeeded();
-
-    ensureOptionsAreCoherent();
-
+    notifyOptionsChanged();
     WTF::fastFree(optionsStrCopy);
 
     return success;
@@ -927,7 +958,7 @@ bool Options::setOptions(const char* optionsStr)
 
 // Parses a single command line option in the format "<optionName>=<value>"
 // (no spaces allowed) and set the specified option if appropriate.
-bool Options::setOptionWithoutAlias(const char* arg)
+bool Options::setOptionWithoutAlias(const char* arg, bool verify)
 {
     // arg should look like this:
     //   <jscOptionName>=<appropriate value>
@@ -949,8 +980,7 @@ bool Options::setOptionWithoutAlias(const char* arg)
         value = parse<OptionsStorage::type_>(valueStr);            \
         if (value) {                                               \
             name_() = value.value();                               \
-            correctOptions();                                      \
-            recomputeDependentOptions();                           \
+            if (verify) notifyOptionsChanged();                    \
             return true;                                           \
         }                                                          \
         return false;                                              \
@@ -971,7 +1001,7 @@ static const char* invertBoolOptionValue(const char* valueStr)
 }
 
 
-bool Options::setAliasedOption(const char* arg)
+bool Options::setAliasedOption(const char* arg, bool verify)
 {
     // arg should look like this:
     //   <jscOptionName>=<appropriate value>
@@ -996,7 +1026,7 @@ bool Options::setAliasedOption(const char* arg)
                 return false;                                           \
             unaliasedOption = unaliasedOption + "=" + invertedValueStr; \
         }                                                               \
-        return setOptionWithoutAlias(unaliasedOption.utf8().data());    \
+        return setOptionWithoutAlias(unaliasedOption.utf8().data(), verify);    \
     }
 
     FOR_EACH_JSC_ALIASED_OPTION(FOR_EACH_OPTION)
@@ -1007,13 +1037,13 @@ bool Options::setAliasedOption(const char* arg)
     return false; // No option matched.
 }
 
-bool Options::setOption(const char* arg)
+bool Options::setOption(const char* arg, bool verify)
 {
     AllowUnfinalizedAccessScope scope;
-    bool success = setOptionWithoutAlias(arg);
+    bool success = setOptionWithoutAlias(arg, verify);
     if (success)
         return true;
-    return setAliasedOption(arg);
+    return setAliasedOption(arg, verify);
 }
 
 
@@ -1122,7 +1152,7 @@ void Options::dumpOption(StringBuilder& builder, DumpLevel level, Options::ID id
     builder.append(footer);
 }
 
-void Options::ensureOptionsAreCoherent()
+void Options::assertOptionsAreCoherent()
 {
     AllowUnfinalizedAccessScope scope;
     bool coherent = true;

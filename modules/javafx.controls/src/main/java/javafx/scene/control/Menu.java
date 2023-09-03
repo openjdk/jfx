@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
+import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -39,7 +40,6 @@ import com.sun.javafx.scene.control.Logging;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.event.EventDispatchChain;
 
 /**
  * <p>
@@ -429,18 +429,8 @@ public class Menu extends MenuItem {
         setShowing(false);
     }
 
-    /** {@inheritDoc} */
-    @Override public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler);
-    }
-
-    /** {@inheritDoc} */
-    @Override public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
-        eventHandlerManager.removeEventHandler(eventType, eventHandler);
-    }
-
-     /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
     }
 

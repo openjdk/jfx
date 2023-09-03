@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,12 @@ JNIEXPORT jobject JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_nati
     if (frame) {
         void *dataPtr = frame->GetDataForPlane((int)plane);
         jlong capacity = (jlong)frame->GetSizeForPlane((int)plane);
-        return env->NewDirectByteBuffer(dataPtr, capacity);
+        jobject buffer = env->NewDirectByteBuffer(dataPtr, capacity);
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+            return NULL;
+        }
+        return buffer;
     }
     return NULL;
 }
@@ -201,7 +206,14 @@ JNIEXPORT jintArray JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_na
         }
 
         jintArray strides = env->NewIntArray(count);
-        jint *strideArray = new jint[count];
+        if (strides == NULL) {
+            return NULL;
+        }
+
+        jint *strideArray = new (std::nothrow) jint[count];
+        if (strideArray == NULL) {
+            return NULL;
+        }
 
         for (int ii=0; ii < count; ii++) {
             strideArray[ii] = frame->GetStrideForPlane(ii);
@@ -209,6 +221,11 @@ JNIEXPORT jintArray JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_na
 
         env->SetIntArrayRegion(strides, 0, count, strideArray);
         delete [] strideArray;
+
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+            return NULL;
+        }
 
         return strides;
     }

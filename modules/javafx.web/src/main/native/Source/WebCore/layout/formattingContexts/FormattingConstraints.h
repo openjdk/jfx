@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutUnit.h"
 #include <wtf/OptionSet.h>
 
@@ -45,7 +43,6 @@ struct VerticalConstraints {
     LayoutUnit logicalHeight;
 };
 
-// FIXME: Move the vertical bits to a dedicated ConstraintsForBlockContent class.
 struct ConstraintsForInFlowContent {
     ConstraintsForInFlowContent(HorizontalConstraints, LayoutUnit logicalTop);
 
@@ -54,9 +51,11 @@ struct ConstraintsForInFlowContent {
 
     enum BaseTypeFlag : uint8_t {
         GenericContent = 1 << 0,
-        TableContent   = 1 << 1,
-        FlexContent    = 1 << 2
+        InlineContent  = 1 << 1,
+        TableContent   = 1 << 2,
+        FlexContent    = 1 << 3
     };
+    bool isConstraintsForInlineContent() const { return baseTypeFlags().contains(InlineContent); }
     bool isConstraintsForTableContent() const { return baseTypeFlags().contains(TableContent); }
     bool isConstraintsForFlexContent() const { return baseTypeFlags().contains(FlexContent); }
 
@@ -146,4 +145,3 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Layout::ToValueTypeName) \
     static bool isType(const WebCore::Layout::ConstraintsForInFlowContent& constraints) { return constraints.predicate; } \
 SPECIALIZE_TYPE_TRAITS_END()
 
-#endif

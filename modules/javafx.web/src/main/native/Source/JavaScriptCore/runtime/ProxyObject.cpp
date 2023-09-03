@@ -27,6 +27,7 @@
 #include "ProxyObject.h"
 
 #include "JSCInlines.h"
+#include "JSInternalFieldObjectImplInlines.h"
 #include "ObjectConstructor.h"
 #include "VMInlines.h"
 #include <wtf/NoTailCalls.h>
@@ -77,8 +78,8 @@ void ProxyObject::finishCreation(VM& vm, JSGlobalObject* globalObject, JSValue t
 
     m_isConstructible = targetAsObject->isConstructor();
 
-    m_target.set(vm, this, targetAsObject);
-    m_handler.set(vm, this, handler);
+    internalField(Field::Target).set(vm, this, targetAsObject);
+    internalField(Field::Handler).set(vm, this, handler);
 }
 
 static const ASCIILiteral s_proxyAlreadyRevokedErrorMessage { "Proxy has already been revoked. No more operations are allowed to be performed on it"_s };
@@ -536,6 +537,7 @@ CallData ProxyObject::getCallData(JSCell* cell)
     if (proxy->m_isCallable) {
         callData.type = CallData::Type::Native;
         callData.native.function = performProxyCall;
+        callData.native.isBoundFunction = false;
     }
     return callData;
 }
@@ -587,6 +589,7 @@ CallData ProxyObject::getConstructData(JSCell* cell)
     if (proxy->m_isConstructible) {
         constructData.type = CallData::Type::Native;
         constructData.native.function = performProxyConstruct;
+        constructData.native.isBoundFunction = false;
     }
     return constructData;
 }
@@ -1145,8 +1148,8 @@ JSValue ProxyObject::getPrototype(JSObject* object, JSGlobalObject* globalObject
 void ProxyObject::revoke(VM& vm)
 {
     // This should only ever be called once and we should strictly transition from Object to null.
-    RELEASE_ASSERT(!m_handler.get().isNull() && m_handler.get().isObject());
-    m_handler.set(vm, this, jsNull());
+    RELEASE_ASSERT(!handler().isNull() && handler().isObject());
+    internalField(Field::Handler).set(vm, this, jsNull());
 }
 
 bool ProxyObject::isRevoked() const
@@ -1157,12 +1160,9 @@ bool ProxyObject::isRevoked() const
 template<typename Visitor>
 void ProxyObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
-    ProxyObject* thisObject = jsCast<ProxyObject*>(cell);
+    auto* thisObject = jsCast<ProxyObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
-
-    visitor.append(thisObject->m_target);
-    visitor.append(thisObject->m_handler);
 }
 
 DEFINE_VISIT_CHILDREN(ProxyObject);

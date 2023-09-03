@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-void AXObjectCache::attachWrapper(AXCoreObject* axObject)
+void AXObjectCache::attachWrapper(AccessibilityObject* axObject)
 {
     auto wrapper = AccessibilityObjectAtspi::create(axObject, document().page()->accessibilityRootObject());
     axObject->setWrapper(wrapper.ptr());
@@ -76,6 +76,7 @@ void AXObjectCache::postPlatformNotification(AXCoreObject* coreObject, AXNotific
         if (coreObject->isCheckboxOrRadio() || coreObject->isSwitch())
             wrapper->stateChanged("checked", coreObject->isChecked());
         break;
+    case AXSelectedCellChanged:
     case AXSelectedStateChanged:
         wrapper->stateChanged("selected", coreObject->isSelected());
         break;

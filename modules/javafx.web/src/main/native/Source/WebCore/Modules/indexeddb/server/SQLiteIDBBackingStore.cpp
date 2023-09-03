@@ -929,6 +929,7 @@ String SQLiteIDBBackingStore::decodeDatabaseName(const String& encodedName)
 
 String SQLiteIDBBackingStore::fullDatabasePathForDirectory(const String& fullDatabaseDirectory)
 {
+    UNUSED_PARAM(fullDatabaseDirectory);
    // return FileSystem::pathByAppendingComponent(fullDatabaseDirectory, "IndexedDB.sqlite3"_s);
    return nullString();
 }

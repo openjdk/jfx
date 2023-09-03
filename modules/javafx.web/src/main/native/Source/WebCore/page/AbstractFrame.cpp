@@ -26,13 +26,28 @@
 #include "config.h"
 #include "AbstractFrame.h"
 
+#include "DocumentInlines.h"
+#include "Frame.h"
+#include "HTMLFrameOwnerElement.h"
+#include "Page.h"
 #include "WindowProxy.h"
 
 namespace WebCore {
 
-AbstractFrame::AbstractFrame()
-    : m_windowProxy(WindowProxy::create(*this))
+static AbstractFrame* parentFrame(HTMLFrameOwnerElement* ownerElement)
 {
+    return ownerElement ? ownerElement->document().frame() : nullptr;
+}
+
+AbstractFrame::AbstractFrame(Page& page, FrameIdentifier frameID, HTMLFrameOwnerElement* ownerElement)
+    : m_page(page)
+    , m_frameID(frameID)
+    , m_treeNode(*this, parentFrame(ownerElement))
+    , m_windowProxy(WindowProxy::create(*this))
+    , m_ownerElement(ownerElement)
+{
+    if (auto* parent = parentFrame(ownerElement))
+        parent->tree().appendChild(*this);
 }
 
 AbstractFrame::~AbstractFrame()
@@ -44,6 +59,33 @@ void AbstractFrame::resetWindowProxy()
 {
     m_windowProxy->detachFromFrame();
     m_windowProxy = WindowProxy::create(*this);
+}
+
+Page* AbstractFrame::page() const
+{
+    return m_page.get();
+}
+
+HTMLFrameOwnerElement* AbstractFrame::ownerElement() const
+{
+    return m_ownerElement.get();
+}
+
+void AbstractFrame::detachFromPage()
+{
+    m_page = nullptr;
+}
+
+void AbstractFrame::disconnectOwnerElement()
+{
+    if (m_ownerElement) {
+        m_ownerElement->clearContentFrame();
+        m_ownerElement = nullptr;
+    }
+
+    // FIXME: This is a layering violation. Move this code so AbstractFrame doesn't do anything with its Document.
+    if (auto* document = is<LocalFrame>(*this) ? downcast<LocalFrame>(*this).document() : nullptr)
+        document->frameWasDisconnectedFromOwner();
 }
 
 } // namespace WebCore

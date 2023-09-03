@@ -29,6 +29,7 @@
 #if ENABLE(APPLE_PAY)
 
 #include "ApplePayCouponCodeUpdate.h"
+#include "ApplePayPaymentAuthorizationResult.h"
 #include "ApplePayPaymentMethodUpdate.h"
 #include "ApplePayShippingContactUpdate.h"
 #include "ApplePayShippingMethod.h"
@@ -75,7 +76,7 @@ bool PaymentCoordinator::canMakePayments()
 
 void PaymentCoordinator::canMakePaymentsWithActiveCard(Document& document, const String& merchantIdentifier, Function<void(bool)>&& completionHandler)
 {
-    m_client.canMakePaymentsWithActiveCard(merchantIdentifier, document.domain(), [this, weakThis = WeakPtr { *this }, document = WeakPtr { document }, completionHandler = WTFMove(completionHandler)](bool canMakePayments) {
+    m_client.canMakePaymentsWithActiveCard(merchantIdentifier, document.domain(), [this, weakThis = WeakPtr { *this }, document = WeakPtr<Document, WeakPtrImplWithEventTargetData> { document }, completionHandler = WTFMove(completionHandler)](bool canMakePayments) {
         if (!weakThis)
             return completionHandler(false);
 

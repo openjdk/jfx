@@ -25,6 +25,8 @@
 
 #include "config.h"
 #include "RenderTableSection.h"
+
+#include "BorderPainter.h"
 #include "Document.h"
 #include "HitTestResult.h"
 #include "HTMLNames.h"
@@ -53,12 +55,10 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTableSection);
 static const unsigned gMinTableSizeToUseFastPaintPathWithOverflowingCell = 75 * 75;
 static const float gMaxAllowedOverflowingCellRatioForFastPaintPath = 0.1f;
 
-static inline void setRowLogicalHeightToRowStyleLogicalHeightIfNotRelative(RenderTableSection::RowStruct& row)
+static inline void setRowLogicalHeightToRowStyleLogicalHeight(RenderTableSection::RowStruct& row)
 {
     ASSERT(row.rowRenderer);
     row.logicalHeight = row.rowRenderer->style().logicalHeight();
-    if (row.logicalHeight.isRelative())
-        row.logicalHeight = Length();
 }
 
 static inline void updateLogicalHeightForCell(RenderTableSection::RowStruct& row, const RenderTableCell* cell)
@@ -68,7 +68,7 @@ static inline void updateLogicalHeightForCell(RenderTableSection::RowStruct& row
         return;
 
     Length logicalHeight = cell->style().logicalHeight();
-    if (logicalHeight.isPositive() || (logicalHeight.isRelative() && logicalHeight.value() >= 0)) {
+    if (logicalHeight.isPositive()) {
         Length cRowLogicalHeight = row.logicalHeight;
         switch (logicalHeight.type()) {
         case LengthType::Percent:
@@ -80,7 +80,6 @@ static inline void updateLogicalHeightForCell(RenderTableSection::RowStruct& row
                 || (cRowLogicalHeight.isFixed() && cRowLogicalHeight.value() < logicalHeight.value()))
                 row.logicalHeight = logicalHeight;
             break;
-        case LengthType::Relative:
         default:
             break;
         }
@@ -136,7 +135,7 @@ void RenderTableSection::willInsertTableRow(RenderTableRow& child, RenderObject*
     child.setRowIndex(insertionRow);
 
     if (!beforeChild)
-        setRowLogicalHeightToRowStyleLogicalHeightIfNotRelative(m_grid[insertionRow]);
+        setRowLogicalHeightToRowStyleLogicalHeight(m_grid[insertionRow]);
 }
 
 void RenderTableSection::ensureRows(unsigned numRows)
@@ -233,7 +232,7 @@ LayoutUnit RenderTableSection::calcRowLogicalHeight()
     if (this == table()->topSection())
         spacing = table()->vBorderSpacing();
 
-    LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
 
     m_rowPos.resize(m_grid.size() + 1);
     m_rowPos[0] = spacing;
@@ -244,8 +243,13 @@ LayoutUnit RenderTableSection::calcRowLogicalHeight()
         m_grid[r].baseline = 0;
         LayoutUnit baselineDescent;
 
+        if (m_grid[r].logicalHeight.isSpecified()) {
         // Our base size is the biggest logical height from our cells' styles (excluding row spanning cells).
         m_rowPos[r + 1] = std::max(m_rowPos[r] + resolveLogicalHeightForRow(m_grid[r].logicalHeight), 0_lu);
+        } else {
+        // Non-specified lengths are ignored because the row already accounts for the cells intrinsic logical height.
+            m_rowPos[r + 1] = std::max(m_rowPos[r], 0_lu);
+        }
 
         Row& row = m_grid[r].row;
         unsigned totalCols = row.size();
@@ -337,7 +341,7 @@ void RenderTableSection::layout()
     // can be called in a loop (e.g during parsing). Doing it now ensures we have a stable-enough structure.
     m_grid.shrinkToFit();
 
-    LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
     bool paginated = view().frameView().layoutContext().layoutState()->isPaginated();
 
     const Vector<LayoutUnit>& columnPos = table()->columnPositions();
@@ -549,14 +553,15 @@ void RenderTableSection::layoutRows()
     LayoutUnit vspacing = table()->vBorderSpacing();
     unsigned nEffCols = table()->numEffCols();
 
-    LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || style().isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(*this, locationOffset(), isTransformed() || style().isFlippedBlocksWritingMode());
 
     for (unsigned r = 0; r < totalRows; r++) {
         // Set the row's x/y position and width/height.
         if (RenderTableRow* rowRenderer = m_grid[r].rowRenderer) {
             // FIXME: the x() position of the row should be table()->hBorderSpacing() so that it can
             // report the correct offsetLeft. However, that will require a lot of rebaselining of test results.
-            rowRenderer->setLocation(LayoutPoint(0_lu, m_rowPos[r]));
+            rowRenderer->setLogicalLeft(0_lu);
+            rowRenderer->setLogicalTop(m_rowPos[r]);
             rowRenderer->setLogicalWidth(logicalWidth());
             rowRenderer->setLogicalHeight(m_rowPos[r + 1] - m_rowPos[r] - vspacing);
             rowRenderer->updateLayerTransform();
@@ -625,6 +630,8 @@ void RenderTableSection::layoutRows()
     ASSERT(!needsLayout());
 
     setLogicalHeight(m_rowPos[totalRows]);
+
+    updateLayerTransform();
 
     computeOverflowFromCells(totalRows, nEffCols);
 }
@@ -876,10 +883,28 @@ std::optional<LayoutUnit> RenderTableSection::firstLineBaseline() const
     if (firstLineBaseline)
         return firstLineBaseline + m_rowPos[0];
 
+    return baselineFromCellContentEdges(ItemPosition::Baseline);
+}
+
+std::optional<LayoutUnit> RenderTableSection::lastLineBaseline() const
+{
+    if (!m_grid.size())
+        return  { };
+
+    if (auto lastLineBaseline = m_grid[m_grid.size() - 1].baseline)
+        return lastLineBaseline + m_rowPos[m_grid.size() - 1];
+
+    return baselineFromCellContentEdges(ItemPosition::LastBaseline);
+}
+
+std::optional<LayoutUnit> RenderTableSection::baselineFromCellContentEdges(ItemPosition alignment) const
+{
+    ASSERT(alignment == ItemPosition::Baseline || alignment == ItemPosition::LastBaseline);
+    auto row = alignment == ItemPosition::Baseline ? m_grid[0].row : m_grid[m_grid.size() - 1].row;
+
     std::optional<LayoutUnit> result;
-    const Row& firstRow = m_grid[0].row;
-    for (size_t i = 0; i < firstRow.size(); ++i) {
-        const CellStruct& cs = firstRow.at(i);
+    for (size_t i = 0; i < row.size(); ++i) {
+        const CellStruct& cs = row.at(i);
         const RenderTableCell* cell = cs.primaryCell();
         // Only cells with content have a baseline
         if (cell && cell->contentLogicalHeight()) {
@@ -887,7 +912,6 @@ std::optional<LayoutUnit> RenderTableSection::firstLineBaseline() const
             result = std::max(result.value_or(candidate), candidate);
         }
     }
-
     return result;
 }
 
@@ -1078,7 +1102,7 @@ void RenderTableSection::paintRowGroupBorder(const PaintInfo& paintInfo, bool an
     rect.intersect(paintInfo.rect);
     if (rect.isEmpty())
         return;
-    drawLineForBoxSide(paintInfo.context(), rect, side, style().visitedDependentColorWithColorFilter(borderColor), borderStyle, 0, 0, antialias);
+    BorderPainter::drawLineForBoxSide(paintInfo.context(), document(), rect, side, style().visitedDependentColorWithColorFilter(borderColor), borderStyle, 0, 0, antialias);
 }
 
 LayoutUnit RenderTableSection::offsetLeftForRowGroupBorder(RenderTableCell* cell, const LayoutRect& rowGroupRect, unsigned row)
@@ -1131,7 +1155,7 @@ void RenderTableSection::paintRowGroupBorderIfRequired(const PaintInfo& paintInf
         return;
 
     const RenderStyle& style = this->style();
-    bool antialias = shouldAntialiasLines(paintInfo.context());
+    bool antialias = BorderPainter::shouldAntialiasLines(paintInfo.context());
     LayoutRect rowGroupRect = LayoutRect(paintOffset, size());
     rowGroupRect.moveBy(-LayoutPoint(outerBorderLeft(&style), (borderSide == BoxSide::Right) ? 0_lu : outerBorderTop(&style)));
 
@@ -1250,7 +1274,7 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
             }
         } else {
             // The overflowing cells should be scarce to avoid adding a lot of cells to the HashSet.
-#ifndef NDEBUG
+#if ASSERT_ENABLED
             unsigned totalRows = m_grid.size();
             unsigned totalCols = table()->columns().size();
             ASSERT(m_overflowingCells.size() < totalRows * totalCols * gMaxAllowedOverflowingCellRatioForFastPaintPath);
@@ -1328,7 +1352,7 @@ void RenderTableSection::recalcCells()
 
         m_grid[insertionRow].rowRenderer = row;
         row->setRowIndex(insertionRow);
-        setRowLogicalHeightToRowStyleLogicalHeightIfNotRelative(m_grid[insertionRow]);
+        setRowLogicalHeightToRowStyleLogicalHeight(m_grid[insertionRow]);
 
         for (RenderTableCell* cell = row->firstCell(); cell; cell = cell->nextCell())
             addCell(cell, row);
@@ -1354,7 +1378,7 @@ void RenderTableSection::rowLogicalHeightChanged(unsigned rowIndex)
     if (needsCellRecalc())
         return;
 
-    setRowLogicalHeightToRowStyleLogicalHeightIfNotRelative(m_grid[rowIndex]);
+    setRowLogicalHeightToRowStyleLogicalHeight(m_grid[rowIndex]);
 
     for (RenderTableCell* cell = m_grid[rowIndex].rowRenderer->firstCell(); cell; cell = cell->nextCell())
         updateLogicalHeightForCell(m_grid[rowIndex], cell);

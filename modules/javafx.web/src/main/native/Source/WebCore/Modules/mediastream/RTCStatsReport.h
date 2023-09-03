@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "LibWebRTCStatsCollector.h"
 #include "RTCIceCandidateType.h"
 
 namespace WebCore {
@@ -90,7 +89,7 @@ public:
     struct InboundRtpStreamStats : ReceivedRtpStreamStats {
         InboundRtpStreamStats() { type = RTCStatsReport::Type::InboundRtp; }
 
-        String receiverId;
+        String trackIdentifier;
         String remoteId;
         std::optional<uint32_t> framesDecoded;
         std::optional<uint32_t> keyFramesDecoded;
@@ -201,6 +200,7 @@ public:
         MediaStreamTrackStats() { type = RTCStatsReport::Type::Track; }
 
         String trackIdentifier;
+        String kind;
         std::optional<bool> remoteSource;
         std::optional<bool> ended;
         std::optional<bool> detached;

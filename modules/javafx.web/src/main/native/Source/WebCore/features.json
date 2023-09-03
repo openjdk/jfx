@@ -420,7 +420,7 @@
     {
         "name": "Compression Streams",
         "status": {
-            "status": "In Development"
+            "status": "Supported"
         },
         "url": "https://wicg.github.io/compression/",
         "keywords": ["compression", "streams", "compression streams"],
@@ -804,6 +804,20 @@
         "url": "https://www.w3.org/TR/proximity/",
         "keywords": ["proximity", "security", "privacy"],
         "description": "A sensor API to monitor the presence of nearby physical objects without physical contact."
+    },
+    {
+        "name": "Reporting API",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://w3c.github.io/reporting/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=189365",
+        "keywords": ["reporting", "reporting-endpoints"],
+        "description": "A generic reporting framework to associate a set of named reporting endpoints with an origin.",
+        "contact": {
+            "name": "Brent Fulgham",
+            "email": "bfulgham@apple.com"
+        }
     },
     {
         "name": "Resize Observer",
@@ -1590,6 +1604,17 @@
             "email": "web-evangelist@apple.com",
             "twitter": "@jonathandavis"
         }
+    },
+    {
+        "name": "Imperative Slot API",
+        "status": {
+            "status": "Supported"
+        },
+        "specification": "Web Components",
+        "category": "webapps",
+        "description": "An API to manually assign nodes to a slot.",
+        "url": "https://dom.spec.whatwg.org/#enumdef-slotassignmentmode",
+        "webkit-url": "https://webkit.org/b/218692"
     },
     {
         "name": "Initial Letter",

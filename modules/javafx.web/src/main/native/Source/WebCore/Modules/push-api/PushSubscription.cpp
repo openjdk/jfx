@@ -30,9 +30,11 @@
 
 #include "EventLoop.h"
 #include "Exception.h"
+#include "JSDOMPromiseDeferred.h"
 #include "PushSubscriptionOptions.h"
 #include "ScriptExecutionContext.h"
 #include "ServiceWorkerContainer.h"
+#include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/Base64.h>
 

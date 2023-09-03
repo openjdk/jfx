@@ -35,7 +35,6 @@
 #include "ReferrerPolicy.h"
 #include "SecurityOriginData.h"
 #include <wtf/Forward.h>
-#include <wtf/JSONValues.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
@@ -45,12 +44,8 @@ class Frame;
 class HTTPHeaderMap;
 class ResourceRequest;
 
-enum class ViolationReportType : uint8_t {
-    ContentSecurityPolicy,
-    StandardReportingAPIViolation // https://www.w3.org/TR/reporting/#try-delivery
-};
-
 enum class ContentSecurityPolicyImposition : uint8_t;
+enum class ViolationReportType : uint8_t;
 
 class PingLoader {
 public:

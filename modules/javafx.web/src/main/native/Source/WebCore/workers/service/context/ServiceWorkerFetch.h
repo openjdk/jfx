@@ -28,6 +28,7 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "FetchIdentifier.h"
+#include "ResourceResponse.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -40,7 +41,6 @@ class FormData;
 class NetworkLoadMetrics;
 class ResourceError;
 class ResourceRequest;
-class ResourceResponse;
 class ServiceWorkerGlobalScope;
 class ServiceWorkerGlobalScope;
 class SharedBuffer;
@@ -62,7 +62,7 @@ public:
     virtual void continueDidReceiveResponse() = 0;
     virtual void convertFetchToDownload() = 0;
     virtual void setFetchEvent(Ref<FetchEvent>&&) = 0;
-    virtual void navigationPreloadIsReady(ResourceResponse&&) = 0;
+    virtual void navigationPreloadIsReady(ResourceResponse::CrossThreadData&&) = 0;
     virtual void navigationPreloadFailed(ResourceError&&) = 0;
     virtual void usePreload() = 0;
 };

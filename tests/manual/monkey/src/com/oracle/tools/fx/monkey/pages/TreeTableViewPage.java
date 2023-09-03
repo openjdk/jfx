@@ -39,6 +39,8 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableView.ResizeFeatures;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.util.Callback;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -114,6 +116,8 @@ public class TreeTableViewPage extends TestPaneBase {
     protected final ComboBox<ResizePolicy> policySelector;
     protected final ComboBox<Selection> selectionSelector;
     protected final CheckBox nullFocusModel;
+    protected final CheckBox addGraphics;
+    protected final CheckBox addSubNodes;
     protected TreeTableView<String> tree;
 
     public TreeTableViewPage() {
@@ -150,6 +154,18 @@ public class TreeTableViewPage extends TestPaneBase {
             updatePane();
         });
 
+        addGraphics = new CheckBox("add graphics");
+        addGraphics.setId("addGraphics");
+        addGraphics.selectedProperty().addListener((s, p, c) -> {
+            updatePane();
+        });
+
+        addSubNodes = new CheckBox("add sub-nodes");
+        addSubNodes.setId("addSubNodes");
+        addSubNodes.selectedProperty().addListener((s, p, c) -> {
+            updatePane();
+        });
+
         Button clearButton = new Button("Clear Items");
         clearButton.setOnAction((ev) -> {
             tree.setRoot(new TreeItem(null));
@@ -167,6 +183,8 @@ public class TreeTableViewPage extends TestPaneBase {
         p.label("Selection Model:");
         p.option(selectionSelector);
         p.option(nullFocusModel);
+        p.option(addGraphics);
+        p.option(addSubNodes);
         setOptions(p);
 
         demoSelector.getSelectionModel().selectFirst();
@@ -563,8 +581,20 @@ public class TreeTableViewPage extends TestPaneBase {
                 case ROWS:
                     {
                         int n = (int)(spec[i++]);
+                        TreeItem subNodeTreeItem = null;
                         for (int j = 0; j < n; j++) {
-                            tree.getRoot().getChildren().add(new TreeItem(newItem()));
+                            TreeItem treeItem = new TreeItem(newItem());
+                            if (addSubNodes.isSelected()) {
+                                subNodeTreeItem = new TreeItem(newItem());
+                                treeItem.getChildren().add(subNodeTreeItem);
+                            }
+                            if (addGraphics.isSelected()) {
+                                treeItem.setGraphic(new Rectangle(10, 10, Color.RED));
+                                if (subNodeTreeItem != null) {
+                                    subNodeTreeItem.setGraphic(new Rectangle(10, 10));
+                                }
+                            }
+                            tree.getRoot().getChildren().add(treeItem);
                         }
                     }
                     break;

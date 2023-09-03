@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,14 @@
 #include "GPUQueue.h"
 
 #include "GPUBuffer.h"
+#include "GPUDevice.h"
+#include "GPUImageCopyExternalImage.h"
+#include "GPUTexture.h"
+#include "GPUTextureDescriptor.h"
+#include "ImageBuffer.h"
+#include "JSDOMPromiseDeferred.h"
+#include "OffscreenCanvas.h"
+#include "PixelBuffer.h"
 
 namespace WebCore {
 
@@ -78,12 +86,41 @@ void GPUQueue::writeTexture(
     m_backing->writeTexture(destination.convertToBacking(), data.data(), data.length(), imageDataLayout.convertToBacking(), convertToBacking(size));
 }
 
+static ImageBuffer* imageBufferForSource(const auto& source)
+{
+    return WTF::switchOn(source, [] (const RefPtr<ImageBitmap>& imageBitmap) {
+        return imageBitmap->buffer();
+    }, [] (const RefPtr<HTMLCanvasElement>& canvasElement) {
+        return canvasElement->buffer();
+    }
+#if ENABLE(OFFSCREEN_CANVAS)
+    , [] (const RefPtr<OffscreenCanvas>& offscreenCanvasElement) {
+        return offscreenCanvasElement->buffer();
+    }
+#endif
+    );
+}
+
 void GPUQueue::copyExternalImageToTexture(
     const GPUImageCopyExternalImage& source,
     const GPUImageCopyTextureTagged& destination,
     const GPUExtent3D& copySize)
 {
-    m_backing->copyExternalImageToTexture(source.convertToBacking(), destination.convertToBacking(), convertToBacking(copySize));
+    auto imageBuffer = imageBufferForSource(source.source);
+    if (!imageBuffer)
+        return;
+
+    auto size = imageBuffer->truncatedLogicalSize();
+    if (!size.width() || !size.height())
+        return;
+
+    auto pixelBuffer = imageBuffer->getPixelBuffer({ AlphaPremultiplication::Unpremultiplied, PixelFormat::BGRA8, DestinationColorSpace::SRGB() }, { { }, size });
+    ASSERT(pixelBuffer);
+
+    auto sizeInBytes = pixelBuffer->sizeInBytes();
+    auto rows = size.height();
+    GPUImageDataLayout dataLayout { 0, sizeInBytes / rows, rows };
+    m_backing->writeTexture(destination.convertToBacking(), pixelBuffer->bytes(), sizeInBytes, dataLayout.convertToBacking(), convertToBacking(copySize));
 }
 
-}
+} // namespace WebCore

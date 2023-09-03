@@ -58,6 +58,7 @@ static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
         worklet.identifier(),
         *document->sessionID(),
         document->settingsValues(),
+        document->referrerPolicy(),
         worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false
     };
 }
@@ -95,6 +96,11 @@ RefPtr<RTCDataChannelRemoteHandlerConnection> AudioWorkletMessagingProxy::create
     if (!m_document->page())
         return nullptr;
     return m_document->page()->webRTCProvider().createRTCDataChannelRemoteHandlerConnection();
+}
+
+ScriptExecutionContextIdentifier AudioWorkletMessagingProxy::loaderContextIdentifier() const
+{
+    return m_document->identifier();
 }
 
 void AudioWorkletMessagingProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)

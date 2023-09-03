@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if USE(THEME_ADWAITA)
+
 #include "Color.h"
 #include "StyleColor.h"
 #include "Theme.h"
@@ -48,10 +50,10 @@ public:
     void setAccentColor(const Color&);
     Color accentColor();
 private:
-    LengthSize controlSize(ControlPart, const FontCascade&, const LengthSize&, float) const final;
-    LengthSize minimumControlSize(ControlPart, const FontCascade&, const LengthSize&, float) const final;
-    LengthBox controlBorder(ControlPart, const FontCascade&, const LengthBox&, float) const final;
-    void paint(ControlPart, ControlStates&, GraphicsContext&, const FloatRect&, float, ScrollView*, float, float, bool, bool, const Color&) final;
+    LengthSize controlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const final;
+    LengthSize minimumControlSize(StyleAppearance, const FontCascade&, const LengthSize&, float) const final;
+    LengthBox controlBorder(StyleAppearance, const FontCascade&, const LengthBox&, float) const final;
+    void paint(StyleAppearance, ControlStates&, GraphicsContext&, const FloatRect&, float, ScrollView*, float, float, bool, bool, const Color&) final;
 
     void paintCheckbox(ControlStates&, GraphicsContext&, const FloatRect&, bool, const Color&);
     void paintRadio(ControlStates&, GraphicsContext&, const FloatRect&, bool, const Color&);
@@ -64,3 +66,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif // USE(THEME_ADWAITA)

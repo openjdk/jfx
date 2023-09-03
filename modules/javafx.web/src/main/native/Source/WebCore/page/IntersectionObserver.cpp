@@ -37,6 +37,7 @@
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
 #include "JSNodeCustom.h"
+#include "Logging.h"
 #include "Performance.h"
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/AbstractSlotVisitorInlines.h>
@@ -129,10 +130,14 @@ IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionO
     } else if (root) {
         auto& observerData = downcast<Element>(*root).ensureIntersectionObserverData();
         observerData.observers.append(*this);
-    } else if (auto* frame = document.frame())
-        m_implicitRootDocument = frame->mainFrame().document();
+    } else if (auto* frame = document.frame()) {
+        if (auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame()))
+            m_implicitRootDocument = localFrame->document();
+    }
 
     std::sort(m_thresholds.begin(), m_thresholds.end());
+
+    LOG_WITH_STREAM(IntersectionObserver, stream << "Created IntersectionObserver " << this << " root " << root << " root margin " << m_rootMargin << " thresholds " << m_thresholds);
 }
 
 IntersectionObserver::~IntersectionObserver()
@@ -300,6 +305,14 @@ void IntersectionObserver::notify()
     auto* context = m_callback->scriptExecutionContext();
     if (!context)
         return;
+
+#if !LOG_DISABLED
+    if (LogIntersectionObserver.state == WTFLogChannelState::On) {
+        TextStream recordsStream(TextStream::LineMode::MultipleLine);
+        recordsStream << takenRecords.records;
+        LOG_WITH_STREAM(IntersectionObserver, stream << "IntersectionObserver " << this << " notify - records " << recordsStream.release());
+    }
+#endif
 
     InspectorInstrumentation::willFireObserverCallback(*context, "IntersectionObserver"_s);
     m_callback->handleEvent(*this, WTFMove(takenRecords.records), *this);

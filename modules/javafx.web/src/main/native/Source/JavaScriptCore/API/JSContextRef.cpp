@@ -141,8 +141,7 @@ JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClass
     if (!globalObjectClass) {
         JSGlobalObject* globalObject = JSAPIGlobalObject::create(vm.get(), JSAPIGlobalObject::createStructure(vm.get(), jsNull()));
 #if ENABLE(REMOTE_INSPECTOR)
-        if (JSRemoteInspectorGetInspectionEnabledByDefault())
-            globalObject->setRemoteDebuggingEnabled(true);
+        globalObject->setInspectable(JSRemoteInspectorGetInspectionEnabledByDefault());
 #endif
         return JSGlobalContextRetain(toGlobalRef(globalObject));
     }
@@ -153,8 +152,7 @@ JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClass
         prototype = jsNull();
     globalObject->resetPrototype(vm.get(), prototype);
 #if ENABLE(REMOTE_INSPECTOR)
-    if (JSRemoteInspectorGetInspectionEnabledByDefault())
-        globalObject->setRemoteDebuggingEnabled(true);
+    globalObject->setInspectable(JSRemoteInspectorGetInspectionEnabledByDefault());
 #endif
     return JSGlobalContextRetain(toGlobalRef(globalObject));
 }
@@ -192,7 +190,7 @@ JSObjectRef JSContextGetGlobalObject(JSContextRef ctx)
     VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
-    return toRef(jsCast<JSObject*>(globalObject->methodTable()->toThis(globalObject, globalObject, ECMAMode::sloppy())));
+    return toRef(jsCast<JSObject*>(JSValue(globalObject).toThis(globalObject, ECMAMode::sloppy())));
 }
 
 JSContextGroupRef JSContextGetGroup(JSContextRef ctx)
@@ -247,6 +245,34 @@ void JSGlobalContextSetName(JSGlobalContextRef ctx, JSStringRef name)
     JSLockHolder locker(vm);
 
     globalObject->setName(name ? name->string() : String());
+}
+
+bool JSGlobalContextIsInspectable(JSGlobalContextRef ctx)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+
+    return globalObject->inspectable();
+}
+
+void JSGlobalContextSetInspectable(JSGlobalContextRef ctx, bool inspectable)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+
+    globalObject->setInspectable(inspectable);
 }
 
 void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef ctx, JSObjectRef function, JSValueRef* exception)
@@ -341,37 +367,19 @@ JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
 
     ASSERT(maxStackSize);
     BacktraceFunctor functor(builder, maxStackSize);
-    frame->iterate(vm, functor);
+    StackVisitor::visit(frame, vm, functor);
 
     return OpaqueJSString::tryCreate(builder.toString()).leakRef();
 }
 
 bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx)
 {
-    if (!ctx) {
-        ASSERT_NOT_REACHED();
-        return false;
-    }
-
-    JSGlobalObject* globalObject = toJS(ctx);
-    VM& vm = globalObject->vm();
-    JSLockHolder lock(vm);
-
-    return globalObject->remoteDebuggingEnabled();
+    return JSGlobalContextIsInspectable(ctx);
 }
 
 void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enabled)
 {
-    if (!ctx) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    JSGlobalObject* globalObject = toJS(ctx);
-    VM& vm = globalObject->vm();
-    JSLockHolder lock(vm);
-
-    globalObject->setRemoteDebuggingEnabled(enabled);
+    JSGlobalContextSetInspectable(ctx, enabled);
 }
 
 bool JSGlobalContextGetIncludesNativeCallStackWhenReportingExceptions(JSGlobalContextRef ctx)

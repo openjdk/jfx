@@ -53,12 +53,17 @@ ScrollingTreeStickyNode::~ScrollingTreeStickyNode()
     scrollingTree().fixedOrStickyNodeRemoved();
 }
 
-void ScrollingTreeStickyNode::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
+bool ScrollingTreeStickyNode::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
 {
-    auto& stickyStateNode = downcast<ScrollingStateStickyNode>(stateNode);
+    if (!is<ScrollingStateStickyNode>(stateNode))
+        return false;
+
+    const auto& stickyStateNode = downcast<ScrollingStateStickyNode>(stateNode);
 
     if (stickyStateNode.hasChangedProperty(ScrollingStateNode::Property::ViewportConstraints))
         m_constraints = stickyStateNode.viewportConstraints();
+
+    return true;
 }
 
 void ScrollingTreeStickyNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
@@ -87,7 +92,7 @@ FloatPoint ScrollingTreeStickyNode::computeLayerPosition() const
         return m_constraints.layerPositionForConstrainingRect(constrainingRect);
     };
 
-    for (auto* ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
+    for (RefPtr ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
         if (is<ScrollingTreeOverflowScrollProxyNode>(*ancestor)) {
             auto& overflowProxyNode = downcast<ScrollingTreeOverflowScrollProxyNode>(*ancestor);
             auto overflowNode = scrollingTree().nodeForID(overflowProxyNode.overflowScrollingNodeID());

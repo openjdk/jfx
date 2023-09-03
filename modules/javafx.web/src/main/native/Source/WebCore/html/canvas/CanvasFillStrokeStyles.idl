@@ -23,16 +23,19 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// FIXME: This should include SVGImageElement.
-typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap
-#if defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
+typedef (HTMLImageElement
+    or SVGImageElement
+    or HTMLCanvasElement
+    or ImageBitmap
     or CSSStyleImageValue
-#endif
 #if defined(ENABLE_OFFSCREEN_CANVAS) && ENABLE_OFFSCREEN_CANVAS
     or OffscreenCanvas
 #endif
 #if defined(ENABLE_VIDEO) && ENABLE_VIDEO
     or HTMLVideoElement
+#endif
+#if defined(ENABLE_WEB_CODECS) && ENABLE_WEB_CODECS
+    or WebCodecsVideoFrame
 #endif
 ) CanvasImageSource;
 

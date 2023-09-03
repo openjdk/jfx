@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ namespace DisplayList {
 class ImageBuffer final : public WebCore::ImageBuffer {
 public:
     template<typename BackendType>
-    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const WebCore::ImageBuffer::CreationContext& creationContext)
+    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const WebCore::ImageBufferCreationContext& creationContext)
     {
         return WebCore::ImageBuffer::create<BackendType, ImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
     }
@@ -48,7 +48,7 @@ public:
 
     ImageBuffer(const ImageBufferBackend::Parameters& parameters, const ImageBufferBackend::Info& info, std::unique_ptr<ImageBufferBackend>&& backend)
         : WebCore::ImageBuffer(parameters, info, WTFMove(backend))
-        , m_drawingContext(logicalSize(), baseTransform())
+        , m_drawingContext(logicalSize(), baseTransform(), colorSpace())
         , m_writingClient(makeUnique<InMemoryDisplayList::WritingClient>())
         , m_readingClient(makeUnique<InMemoryDisplayList::ReadingClient>())
     {
@@ -58,7 +58,7 @@ public:
 
     ImageBuffer(const ImageBufferBackend::Parameters& parameters, const ImageBufferBackend::Info& info)
         : WebCore::ImageBuffer(parameters, info)
-        , m_drawingContext(logicalSize(), baseTransform())
+        , m_drawingContext(logicalSize(), baseTransform(), colorSpace())
         , m_writingClient(makeUnique<InMemoryDisplayList::WritingClient>())
         , m_readingClient(makeUnique<InMemoryDisplayList::ReadingClient>())
     {
@@ -76,18 +76,10 @@ public:
         return m_drawingContext.context();
     }
 
-    GraphicsContext* drawingContext() override { return &m_drawingContext.context(); }
-
     void flushDrawingContext() final
     {
         if (!m_drawingContext.displayList().isEmpty())
             m_drawingContext.replayDisplayList(WebCore::ImageBuffer::context());
-    }
-
-    void clearBackend() final
-    {
-        m_drawingContext.displayList().clear();
-        WebCore::ImageBuffer::clearBackend();
     }
 
 protected:

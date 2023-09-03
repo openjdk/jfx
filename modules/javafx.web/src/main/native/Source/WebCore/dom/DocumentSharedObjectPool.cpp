@@ -29,19 +29,46 @@
 
 #include "Element.h"
 #include "ElementData.h"
+#include <wtf/UnalignedAccess.h>
 
 namespace WebCore {
 
-inline bool hasSameAttributes(const Vector<Attribute>& attributes, ShareableElementData& elementData)
+// Do comparisons 8 bytes-at-a-time on architectures where it's safe.
+#if (CPU(X86_64) || CPU(ARM64)) && !ASAN_ENABLED
+ALWAYS_INLINE bool equalAttributes(const uint8_t* a, const uint8_t* b, unsigned bytes)
+{
+    unsigned length = bytes >> 3;
+    for (unsigned i = 0; i != length; ++i) {
+        if (WTF::unalignedLoad<uint64_t>(a) != WTF::unalignedLoad<uint64_t>(b))
+            return false;
+
+        a += sizeof(uint64_t);
+        b += sizeof(uint64_t);
+    }
+
+    ASSERT(!(bytes & 4));
+    ASSERT(!(bytes & 2));
+    ASSERT(!(bytes & 1));
+
+    return true;
+}
+#else
+ALWAYS_INLINE bool equalAttributes(const uint8_t* a, const uint8_t* b, unsigned bytes)
+{
+    return !memcmp(a, b, bytes);
+}
+#endif
+
+inline bool hasSameAttributes(Span<const Attribute> attributes, ShareableElementData& elementData)
 {
     if (attributes.size() != elementData.length())
         return false;
-    return !memcmp(attributes.data(), elementData.m_attributeArray, attributes.size() * sizeof(Attribute));
+    return equalAttributes(reinterpret_cast<const uint8_t*>(attributes.data()), reinterpret_cast<const uint8_t*>(elementData.m_attributeArray), attributes.size() * sizeof(Attribute));
 }
 
-Ref<ShareableElementData> DocumentSharedObjectPool::cachedShareableElementDataWithAttributes(const Vector<Attribute>& attributes)
+Ref<ShareableElementData> DocumentSharedObjectPool::cachedShareableElementDataWithAttributes(Span<const Attribute> attributes)
 {
-    ASSERT(!attributes.isEmpty());
+    ASSERT(!attributes.empty());
 
     auto& cachedData = m_shareableElementDataCache.add(computeHash(attributes), nullptr).iterator->value;
 

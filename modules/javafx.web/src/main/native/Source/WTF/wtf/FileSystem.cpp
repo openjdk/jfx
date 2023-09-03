@@ -29,6 +29,7 @@
 
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HexNumber.h>
+#include <wtf/Logging.h>
 #include <wtf/Scope.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -38,11 +39,6 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#endif
-
-#if USE(GLIB)
-#include <gio/gfiledescriptorbased.h>
-#include <gio/gio.h>
 #endif
 
 #if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
@@ -129,20 +125,17 @@ static inline bool shouldEscapeUChar(UChar character, UChar previousCharacter, U
 
 #if HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
 
-template<typename ClockType, typename = void> struct has_to_time_t : std::false_type { };
-template<typename ClockType> struct has_to_time_t<ClockType, std::void_t<
+template<typename, typename = void> inline constexpr bool HasToTimeT = false;
+template<typename ClockType> inline constexpr bool HasToTimeT<ClockType, std::void_t<
     std::enable_if_t<std::is_same_v<std::time_t, decltype(ClockType::to_time_t(std::filesystem::file_time_type()))>>
->> : std::true_type { };
+>> = true;
 
 template <typename FileTimeType>
-typename std::enable_if_t<has_to_time_t<typename FileTimeType::clock>::value, std::time_t> toTimeT(FileTimeType fileTime)
+typename std::time_t toTimeT(FileTimeType fileTime)
 {
+    if constexpr (HasToTimeT<typename FileTimeType::clock>)
     return decltype(fileTime)::clock::to_time_t(fileTime);
-}
-
-template <typename FileTimeType>
-typename std::enable_if_t<!has_to_time_t<typename FileTimeType::clock>::value, std::time_t> toTimeT(FileTimeType fileTime)
-{
+    else
     return std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<std::chrono::system_clock::duration>(fileTime - decltype(fileTime)::clock::now() + std::chrono::system_clock::now()));
 }
 
@@ -331,14 +324,7 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
     if (!isHandleValid(handle))
         return false;
 
-    int fd;
-#if USE(GLIB)
-    auto* inputStream = g_io_stream_get_input_stream(G_IO_STREAM(handle));
-    fd = g_file_descriptor_based_get_fd(G_FILE_DESCRIPTOR_BASED(inputStream));
-#else
-    // FIXME: jfx2.26 compilation failure
-    // fd = handle;
-#endif
+    int fd = posixFileDescriptor(handle);
 
     struct stat fileStat;
     if (fstat(fd, &fileStat)) {
@@ -358,7 +344,7 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
     case FileOpenMode::Read:
         pageProtection = PROT_READ;
         break;
-    case FileOpenMode::Write:
+    case FileOpenMode::Truncate:
         pageProtection = PROT_WRITE;
         break;
     case FileOpenMode::ReadWrite:
@@ -431,38 +417,49 @@ bool setExcludedFromBackup(const String&, bool)
     return false;
 }
 
+bool markPurgeable(const String&)
+{
+    return false;
+}
+
 #endif
 
-MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(Span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+MappedFileData createMappedFileData(const String& path, size_t bytesSize, PlatformFileHandle* outputHandle)
 {
     constexpr bool failIfFileExists = true;
     auto handle = FileSystem::openFile(path, FileSystem::FileOpenMode::ReadWrite, FileSystem::FileAccessPermission::User, failIfFileExists);
-    if (!FileSystem::isHandleValid(handle) || !FileSystem::truncateFile(handle, bytesSize)) {
+
+    auto fileCloser = WTF::makeScopeExit([&handle]() {
         FileSystem::closeFile(handle);
+    });
+
+    if (!FileSystem::isHandleValid(handle))
+        return { };
+
+    if (!FileSystem::truncateFile(handle, bytesSize)) {
+        RELEASE_LOG_FAULT(MemoryPressure, "Unable to truncate file");
         return { };
     }
 
-    if (!FileSystem::makeSafeToUseMemoryMapForPath(path)) {
-        FileSystem::closeFile(handle);
+    if (!FileSystem::makeSafeToUseMemoryMapForPath(path))
         return { };
-    }
 
     bool success;
     FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
-    if (!success) {
-        FileSystem::closeFile(handle);
+    if (!success)
         return { };
+
+    if (outputHandle) {
+        fileCloser.release();
+        *outputHandle = handle;
     }
 
-    void* map = const_cast<void*>(mappedFile.data());
-    uint8_t* mapData = static_cast<uint8_t*>(map);
+    return mappedFile;
+}
 
-    apply([&mapData](Span<const uint8_t> chunk) {
-        memcpy(mapData, chunk.data(), chunk.size());
-        mapData += chunk.size();
-        return true;
-    });
-
+void finalizeMappedFileData(MappedFileData& mappedFileData, size_t bytesSize)
+{
+    void* map = const_cast<void*>(mappedFileData.data());
 #if OS(WINDOWS)
     DWORD oldProtection;
     VirtualProtect(map, bytesSize, FILE_MAP_READ, &oldProtection);
@@ -474,11 +471,24 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
     // Flush (asynchronously) to file, turning this into clean memory.
     msync(map, bytesSize, MS_ASYNC);
 #endif
+}
 
-    if (outputHandle)
-        *outputHandle = handle;
-    else
-        FileSystem::closeFile(handle);
+MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(const Function<bool(Span<const uint8_t>)>&)>&& apply, PlatformFileHandle* outputHandle)
+{
+    auto mappedFile = createMappedFileData(path, bytesSize, outputHandle);
+    if (!mappedFile)
+        return { };
+
+    void* map = const_cast<void*>(mappedFile.data());
+    uint8_t* mapData = static_cast<uint8_t*>(map);
+
+    apply([&mapData](Span<const uint8_t> chunk) {
+        memcpy(mapData, chunk.data(), chunk.size());
+        mapData += chunk.size();
+        return true;
+    });
+
+    finalizeMappedFileData(mappedFile, bytesSize);
 
     return mappedFile;
 }
@@ -486,9 +496,7 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
 static Salt makeSalt()
 {
     Salt salt;
-    static_assert(salt.size() == 8, "Salt size");
-    *reinterpret_cast_ptr<uint32_t*>(&salt[0]) = cryptographicallyRandomNumber();
-    *reinterpret_cast_ptr<uint32_t*>(&salt[4]) = cryptographicallyRandomNumber();
+    cryptographicallyRandomValues(&salt, sizeof(Salt));
     return salt;
 }
 
@@ -507,7 +515,7 @@ std::optional<Salt> readOrMakeSalt(const String& path)
 
     Salt salt = makeSalt();
     FileSystem::makeAllDirectories(FileSystem::parentPath(path));
-    auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Write, FileSystem::FileAccessPermission::User);
+    auto file = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate, FileSystem::FileAccessPermission::User);
     if (!FileSystem::isHandleValid(file))
         return { };
 
@@ -554,6 +562,19 @@ std::optional<Vector<uint8_t>> readEntireFile(const String& path)
     FileSystem::closeFile(handle);
 
     return contents;
+}
+
+int overwriteEntireFile(const String& path, Span<uint8_t> span)
+{
+    auto fileHandle = FileSystem::openFile(path, FileSystem::FileOpenMode::Truncate);
+    auto closeFile = makeScopeExit([&] {
+        FileSystem::closeFile(fileHandle);
+    });
+
+    if (!FileSystem::isHandleValid(fileHandle))
+        return -1;
+
+    return FileSystem::writeToFile(fileHandle, span.data(), span.size());
 }
 
 void deleteAllFilesModifiedSince(const String& directory, WallTime time)
@@ -644,6 +665,32 @@ std::optional<uint64_t> fileSize(const String& path)
     auto size = std::filesystem::file_size(toStdFileSystemPath(path), ec);
     if (ec)
         return std::nullopt;
+    return size;
+}
+
+std::optional<uint64_t> directorySize(const String& path)
+{
+    if (path.isEmpty())
+        return std::nullopt;
+
+    std::error_code ec;
+    auto stdPath = toStdFileSystemPath(path);
+    if (!std::filesystem::is_directory(stdPath, ec))
+        return std::nullopt;
+
+    CheckedUint64 size = 0;
+    for (auto& entry : std::filesystem::recursive_directory_iterator(stdPath, ec)) {
+        if (ec)
+            return std::nullopt;
+        auto filePath = fromStdFileSystemPath(entry.path());
+        if (entry.is_regular_file(ec) && !ec)
+            size += entry.file_size(ec);
+        if (ec)
+            return std::nullopt;
+        if (size.hasOverflowed())
+            return std::nullopt;
+    }
+
     return size;
 }
 

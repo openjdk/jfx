@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DisplayTreeBuilder.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "DisplayBoxFactory.h"
 #include "DisplayContainerBox.h"
 #include "DisplayStackingItem.h"
@@ -36,8 +34,8 @@
 #include "InlineFormattingState.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
-#include "LayoutContainerBox.h"
-#include "LayoutReplacedBox.h"
+#include "LayoutElementBox.h"
+#include "LayoutInitialContainingBlock.h"
 #include "LayoutState.h"
 #include "LayoutTreeBuilder.h" // Just for showLayoutTree.
 #include "Logging.h"
@@ -122,7 +120,7 @@ std::unique_ptr<Tree> TreeBuilder::build(const Layout::LayoutState& layoutState)
     auto& rootLayoutBox = layoutState.root();
 
 #if ENABLE(TREE_DEBUGGING)
-    LOG_WITH_STREAM(FormattingContextLayout, stream << "Building display tree for:\n" << layoutTreeAsText(rootLayoutBox, &layoutState));
+    LOG_WITH_STREAM(FormattingContextLayout, stream << "Building display tree for:\n" << layoutTreeAsText(downcast<Layout::InitialContainingBlock>(rootLayoutBox), &layoutState));
 #endif
 
     ASSERT(!m_tree);
@@ -149,7 +147,7 @@ std::unique_ptr<Tree> TreeBuilder::build(const Layout::LayoutState& layoutState)
     return WTFMove(m_tree);
 }
 
-void TreeBuilder::pushStateForBoxDescendants(const Layout::ContainerBox& layoutContainerBox, const Layout::BoxGeometry& layoutGeometry, const ContainerBox& displayBox, StackingItem* boxStackingItem)
+void TreeBuilder::pushStateForBoxDescendants(const Layout::ElementBox& layoutContainerBox, const Layout::BoxGeometry& layoutGeometry, const ContainerBox& displayBox, StackingItem* boxStackingItem)
 {
     auto& positioningContext = m_stateStack->last().positioningContext;
 
@@ -299,7 +297,7 @@ StackingItem* TreeBuilder::insertIntoTree(std::unique_ptr<Box>&& box, InsertionP
     return nullptr;
 }
 
-void TreeBuilder::buildInlineDisplayTree(const Layout::LayoutState& layoutState, const Layout::ContainerBox& inlineFormattingRoot, InsertionPosition& insertionPosition)
+void TreeBuilder::buildInlineDisplayTree(const Layout::LayoutState& layoutState, const Layout::ElementBox& inlineFormattingRoot, InsertionPosition& insertionPosition)
 {
     auto& inlineFormattingState = layoutState.formattingStateForInlineFormattingContext(inlineFormattingRoot);
 
@@ -309,7 +307,7 @@ void TreeBuilder::buildInlineDisplayTree(const Layout::LayoutState& layoutState,
             continue;
         }
 
-        if (box.text()) {
+        if (box.isTextOrSoftLineBreak()) {
             auto& lineGeometry = inlineFormattingState.lines().at(box.lineIndex());
             auto textBox = m_boxFactory.displayBoxForTextRun(box, lineGeometry, positioningContext().inFlowContainingBlockContext());
             insert(WTFMove(textBox), insertionPosition);
@@ -317,7 +315,7 @@ void TreeBuilder::buildInlineDisplayTree(const Layout::LayoutState& layoutState,
             continue;
         }
 
-        if (is<Layout::ContainerBox>(box.layoutBox())) {
+        if (is<Layout::ElementBox>(box.layoutBox())) {
             recursiveBuildDisplayTree(layoutState, box.layoutBox(), insertionPosition);
             continue;
         }
@@ -345,12 +343,12 @@ void TreeBuilder::recursiveBuildDisplayTree(const Layout::LayoutState& layoutSta
 
     Box& currentBox = *displayBox;
 
-    auto willTraverseDescendants = (is<Layout::ContainerBox>(layoutBox) && downcast<Layout::ContainerBox>(layoutBox).hasChild()) ? WillTraverseDescendants::Yes : WillTraverseDescendants::No;
+    auto willTraverseDescendants = (is<Layout::ElementBox>(layoutBox) && downcast<Layout::ElementBox>(layoutBox).hasChild()) ? WillTraverseDescendants::Yes : WillTraverseDescendants::No;
     auto* stackingItem = insertIntoTree(WTFMove(displayBox), insertionPosition, willTraverseDescendants);
     if (willTraverseDescendants == WillTraverseDescendants::No)
         return;
 
-    auto& layoutContainerBox = downcast<Layout::ContainerBox>(layoutBox);
+    auto& layoutContainerBox = downcast<Layout::ElementBox>(layoutBox);
 
     ContainerBox& currentContainerBox = downcast<ContainerBox>(currentBox);
     pushStateForBoxDescendants(layoutContainerBox, geometry, currentContainerBox, stackingItem);
@@ -361,7 +359,7 @@ void TreeBuilder::recursiveBuildDisplayTree(const Layout::LayoutState& layoutSta
     auto boxInclusion = DescendantBoxInclusion::AllBoxes;
 
     if (layoutContainerBox.establishesInlineFormattingContext()) {
-        buildInlineDisplayTree(layoutState, downcast<Layout::ContainerBox>(layoutContainerBox), insertionPositionForChildren);
+        buildInlineDisplayTree(layoutState, downcast<Layout::ElementBox>(layoutContainerBox), insertionPositionForChildren);
         boxInclusion = DescendantBoxInclusion::OutOfFlowOnly;
     }
 
@@ -452,4 +450,3 @@ void showDisplayTree(const StackingItem& stackingItem)
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

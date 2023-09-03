@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 import javafx.beans.value.ObservableValue;
+import javafx.util.Subscription;
 
 public class MappedBinding<S, T> extends LazyObjectBinding<T> {
 
@@ -49,6 +50,6 @@ public class MappedBinding<S, T> extends LazyObjectBinding<T> {
 
     @Override
     protected Subscription observeSources() {
-        return Subscription.subscribeInvalidations(source, this::invalidate); // start observing source
+        return source.subscribe(this::invalidate); // start observing source
     }
 }

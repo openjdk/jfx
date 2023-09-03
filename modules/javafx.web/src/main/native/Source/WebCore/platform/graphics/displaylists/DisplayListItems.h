@@ -43,6 +43,7 @@
 #include "SharedBuffer.h"
 #include "SystemImage.h"
 #include <variant>
+#include <wtf/ArgumentCoder.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/TypeCasts.h>
 
@@ -196,8 +197,11 @@ public:
         : m_colorData(colorData)
     {
     }
+    SetInlineFillColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
+        : SetInlineFillColor(SRGBA<uint8_t> { red, green, blue, alpha }) { }
 
     Color color() const { return { m_colorData }; }
+    const SRGBA<uint8_t>& colorData() const { return m_colorData; }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
 private:
@@ -215,9 +219,11 @@ public:
         : m_colorData(colorData)
     {
     }
+    SetInlineStrokeColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
+        : SetInlineStrokeColor(SRGBA<uint8_t> { red, green, blue, alpha }) { }
 
     Color color() const { return { m_colorData }; }
-
+    const SRGBA<uint8_t>& colorData() const { return m_colorData; }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
 private:
@@ -581,6 +587,7 @@ public:
     RenderingResourceIdentifier fontIdentifier() { return m_fontIdentifier; }
     const FloatPoint& localAnchor() const { return m_positionedGlyphs.localAnchor; }
     FloatPoint anchorPoint() const { return m_positionedGlyphs.localAnchor; }
+    FontSmoothingMode fontSmoothingMode() const { return m_positionedGlyphs.smoothingMode; }
     const Vector<GlyphBufferGlyph>& glyphs() const { return m_positionedGlyphs.glyphs; }
 
     template<class Encoder> void encode(Encoder&) const;
@@ -947,7 +954,7 @@ public:
     static constexpr bool isInlineItem = true;
     static constexpr bool isDrawingItem = true;
 
-    using UnderlyingDocumentMarkerLineStyleType = std::underlying_type<DocumentMarkerLineStyle::Mode>::type;
+    using UnderlyingDocumentMarkerLineStyleType = std::underlying_type<DocumentMarkerLineStyleMode>::type;
 
     DrawDotsForDocumentMarker(const FloatRect& rect, const DocumentMarkerLineStyle& style)
         : m_rect(rect)
@@ -963,13 +970,12 @@ public:
     {
     }
 
-    bool isValid() const { return isValidEnum<DocumentMarkerLineStyle::Mode>(m_styleMode); }
-
     FloatRect rect() const { return m_rect; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
 private:
+    friend struct IPC::ArgumentCoder<DrawDotsForDocumentMarker, void>;
     FloatRect m_rect;
     UnderlyingDocumentMarkerLineStyleType m_styleMode { 0 };
     bool m_styleShouldUseDarkAppearance { false };
@@ -1044,25 +1050,22 @@ public:
     static constexpr bool isInlineItem = false;
     static constexpr bool isDrawingItem = true;
 
-    DrawFocusRingPath(Path&& path, float width, float offset, Color color)
-        : m_path(WTFMove(path))
-        , m_width(width)
-        , m_offset(offset)
+    DrawFocusRingPath(const Path& path, float outlineWidth, const Color& color)
+        : m_path(path)
+        , m_outlineWidth(outlineWidth)
         , m_color(color)
     {
     }
 
-    DrawFocusRingPath(const Path& path, float width, float offset, Color color)
-        : m_path(path)
-        , m_width(width)
-        , m_offset(offset)
+    DrawFocusRingPath(Path&& path, float outlineWidth, const Color& color)
+        : m_path(WTFMove(path))
+        , m_outlineWidth(outlineWidth)
         , m_color(color)
     {
     }
 
     const Path& path() const { return m_path; }
-    float width() const { return m_width; }
-    float offset() const { return m_offset; }
+    float outlineWidth() const { return m_outlineWidth; }
     const Color& color() const { return m_color; }
 
     template<class Encoder> void encode(Encoder&) const;
@@ -1072,8 +1075,7 @@ public:
 
 private:
     Path m_path;
-    float m_width;
-    float m_offset;
+    float m_outlineWidth;
     Color m_color;
 };
 
@@ -1081,8 +1083,7 @@ template<class Encoder>
 void DrawFocusRingPath::encode(Encoder& encoder) const
 {
     encoder << m_path;
-    encoder << m_width;
-    encoder << m_offset;
+    encoder << m_outlineWidth;
     encoder << m_color;
 }
 
@@ -1094,14 +1095,9 @@ std::optional<DrawFocusRingPath> DrawFocusRingPath::decode(Decoder& decoder)
     if (!path)
         return std::nullopt;
 
-    std::optional<float> width;
-    decoder >> width;
-    if (!width)
-        return std::nullopt;
-
-    std::optional<float> offset;
-    decoder >> offset;
-    if (!offset)
+    std::optional<float> outlineWidth;
+    decoder >> outlineWidth;
+    if (!outlineWidth)
         return std::nullopt;
 
     std::optional<Color> color;
@@ -1109,7 +1105,7 @@ std::optional<DrawFocusRingPath> DrawFocusRingPath::decode(Decoder& decoder)
     if (!color)
         return std::nullopt;
 
-    return {{ WTFMove(*path), *width, *offset, *color }};
+    return { { WTFMove(*path), *outlineWidth, *color } };
 }
 
 class DrawFocusRingRects {
@@ -1118,22 +1114,36 @@ public:
     static constexpr bool isInlineItem = false;
     static constexpr bool isDrawingItem = true;
 
-    WEBCORE_EXPORT DrawFocusRingRects(const Vector<FloatRect>&, float width, float offset, const Color&);
+    DrawFocusRingRects(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color)
+        : m_rects(rects)
+        , m_outlineOffset(outlineOffset)
+        , m_outlineWidth(outlineWidth)
+        , m_color(color)
+    {
+    }
 
-    const Vector<FloatRect> rects() const { return m_rects; }
-    float width() const { return m_width; }
-    float offset() const { return m_offset; }
+    DrawFocusRingRects(Vector<FloatRect>&& rects, float outlineOffset, float outlineWidth, Color color)
+        : m_rects(WTFMove(rects))
+        , m_outlineOffset(outlineOffset)
+        , m_outlineWidth(outlineWidth)
+        , m_color(color)
+    {
+    }
+
+    const Vector<FloatRect>& rects() const { return m_rects; }
+    float outlineOffset() const { return m_outlineOffset; }
+    float outlineWidth() const { return m_outlineWidth; }
     const Color& color() const { return m_color; }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<DrawFocusRingRects> decode(Decoder&);
 
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+
 private:
     Vector<FloatRect> m_rects;
-    float m_width;
-    float m_offset;
+    float m_outlineOffset;
+    float m_outlineWidth;
     Color m_color;
 };
 
@@ -1141,8 +1151,8 @@ template<class Encoder>
 void DrawFocusRingRects::encode(Encoder& encoder) const
 {
     encoder << m_rects;
-    encoder << m_width;
-    encoder << m_offset;
+    encoder << m_outlineOffset;
+    encoder << m_outlineWidth;
     encoder << m_color;
 }
 
@@ -1154,14 +1164,14 @@ std::optional<DrawFocusRingRects> DrawFocusRingRects::decode(Decoder& decoder)
     if (!rects)
         return std::nullopt;
 
-    std::optional<float> width;
-    decoder >> width;
-    if (!width)
+    std::optional<float> outlineOffset;
+    decoder >> outlineOffset;
+    if (!outlineOffset)
         return std::nullopt;
 
-    std::optional<float> offset;
-    decoder >> offset;
-    if (!offset)
+    std::optional<float> outlineWidth;
+    decoder >> outlineWidth;
+    if (!outlineWidth)
         return std::nullopt;
 
     std::optional<Color> color;
@@ -1169,7 +1179,7 @@ std::optional<DrawFocusRingRects> DrawFocusRingRects::decode(Decoder& decoder)
     if (!color)
         return std::nullopt;
 
-    return {{ *rects, *width, *offset, *color }};
+    return { { WTFMove(*rects), *outlineOffset, *outlineWidth, *color } };
 }
 
 class FillRect {
@@ -1275,11 +1285,12 @@ std::optional<FillRectWithGradient> FillRectWithGradient::decode(Decoder& decode
     if (!rect)
         return std::nullopt;
 
-    auto gradient = Gradient::decode(decoder);
+    std::optional<Ref<Gradient>> gradient;
+    decoder >> gradient;
     if (!gradient)
         return std::nullopt;
 
-    return {{ *rect, gradient->get() }};
+    return { { *rect, WTFMove(*gradient) } };
 }
 
 class FillCompositedRect {
@@ -1804,6 +1815,28 @@ private:
     FloatRect m_rect;
 };
 
+class DrawControlPart {
+public:
+    static constexpr ItemType itemType = ItemType::DrawControlPart;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    WEBCORE_EXPORT DrawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&);
+
+    StyleAppearance type() const { return m_part->type(); }
+    FloatRoundedRect borderRect() const { return m_borderRect; }
+    float deviceScaleFactor() const { return m_deviceScaleFactor; }
+    const ControlStyle& style() const { return m_style; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&);
+
+private:
+    Ref<ControlPart> m_part;
+    FloatRoundedRect m_borderRect;
+    float m_deviceScaleFactor;
+    ControlStyle m_style;
+};
+
 #if USE(CG)
 
 class ApplyStrokePattern {
@@ -1856,6 +1889,7 @@ using DisplayListItem = std::variant
     , ClipPath
     , ClipToImageBuffer
     , ConcatenateCTM
+    , DrawControlPart
     , DrawDotsForDocumentMarker
     , DrawEllipse
     , DrawFilteredImageBuffer
@@ -1941,6 +1975,7 @@ WEBCORE_EXPORT void dumpItem(TextStream&, const ClipOut&, OptionSet<AsTextFlag>)
 WEBCORE_EXPORT void dumpItem(TextStream&, const ClipToImageBuffer&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const ClipOutToPath&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const ClipPath&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawControlPart&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const DrawFilteredImageBuffer&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const DrawGlyphs&, OptionSet<AsTextFlag>);
 WEBCORE_EXPORT void dumpItem(TextStream&, const DrawDecomposedGlyphs&, OptionSet<AsTextFlag>);

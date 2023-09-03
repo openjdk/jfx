@@ -311,8 +311,7 @@ void WTFReportBacktrace()
 
 void WTFPrintBacktraceWithPrefixAndPrintStream(PrintStream& out, void** stack, int size, const char* prefix)
 {
-    StackTrace stackTrace(stack, size, prefix);
-    out.print(stackTrace);
+    out.print(StackTracePrinter { { stack, static_cast<size_t>(size) }, prefix });
 }
 
 void WTFPrintBacktrace(void** stack, int size)
@@ -606,25 +605,21 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
 #if !RELEASE_LOG_DISABLED
 void WTFReleaseLogStackTrace(WTFLogChannel* channel)
 {
-    auto stackTrace = WTF::StackTrace::captureStackTrace(30, 0);
-    if (stackTrace && stackTrace->stack()) {
-        auto stack = stackTrace->stack();
-        for (int frameNumber = 1; frameNumber < stackTrace->size(); ++frameNumber) {
-            auto stackFrame = stack[frameNumber];
-            auto demangled = WTF::StackTrace::demangle(stackFrame);
+    static constexpr int framesToShow = 32;
+    static constexpr int framesToSkip = 2;
+    void* stack[framesToShow + framesToSkip];
+    int frames = framesToShow + framesToSkip;
+    WTFGetBacktrace(stack, &frames);
+    StackTraceSymbolResolver { { stack, static_cast<size_t>(frames) } }.forEach([&](int frameNumber, void* stackFrame, const char* name) {
 #if USE(OS_LOG)
-            if (demangled && demangled->demangledName())
-                os_log(channel->osLogChannel, "%-3d %p %{public}s", frameNumber, stackFrame, demangled->demangledName());
-            else if (demangled && demangled->mangledName())
-                os_log(channel->osLogChannel, "%-3d %p %{public}s", frameNumber, stackFrame, demangled->mangledName());
+        if (name)
+            os_log(channel->osLogChannel, "%-3d %p %{public}s", frameNumber, stackFrame, name);
             else
                 os_log(channel->osLogChannel, "%-3d %p", frameNumber, stackFrame);
 #else
             StringPrintStream out;
-            if (demangled && demangled->demangledName())
-                out.printf("%-3d %p %s", frameNumber, stackFrame, demangled->demangledName());
-            else if (demangled && demangled->mangledName())
-                out.printf("%-3d %p %s", frameNumber, stackFrame, demangled->mangledName());
+        if (name)
+            out.printf("%-3d %p %s", frameNumber, stackFrame, name);
             else
                 out.printf("%-3d %p", frameNumber, stackFrame);
 #if ENABLE(JOURNALD_LOG)
@@ -633,8 +628,7 @@ void WTFReleaseLogStackTrace(WTFLogChannel* channel)
             fprintf(stderr, "[%s:%s:-] %s\n", channel->subsystem, channel->name, out.toCString().data());
 #endif
 #endif
-        }
-    }
+    });
 }
 #endif
 

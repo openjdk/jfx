@@ -296,12 +296,8 @@ ALWAYS_INLINE bool equal(const LChar* a, const UChar* b, unsigned length)
 ALWAYS_INLINE bool equal(const UChar* a, const LChar* b, unsigned length) { return equal(b, a, length); }
 
 template<typename StringClassA, typename StringClassB>
-ALWAYS_INLINE bool equalCommon(const StringClassA& a, const StringClassB& b)
+ALWAYS_INLINE bool equalCommon(const StringClassA& a, const StringClassB& b, unsigned length)
 {
-    unsigned length = a.length();
-    if (length != b.length())
-        return false;
-
     if (a.is8Bit()) {
         if (b.is8Bit())
             return equal(a.characters8(), b.characters8(), length);
@@ -313,6 +309,16 @@ ALWAYS_INLINE bool equalCommon(const StringClassA& a, const StringClassB& b)
         return equal(a.characters16(), b.characters8(), length);
 
     return equal(a.characters16(), b.characters16(), length);
+}
+
+template<typename StringClassA, typename StringClassB>
+ALWAYS_INLINE bool equalCommon(const StringClassA& a, const StringClassB& b)
+{
+    unsigned length = a.length();
+    if (length != b.length())
+        return false;
+
+    return equalCommon(a, b, length);
 }
 
 template<typename StringClassA, typename StringClassB>
@@ -405,7 +411,7 @@ inline size_t findIgnoringASCIICaseWithoutLength(const char* source, const char*
     unsigned searchLength = strlen(source);
     unsigned matchLength = strlen(matchCharacters);
 
-    return matchLength < searchLength ? findIgnoringASCIICase(source, matchCharacters, 0, searchLength, matchLength) : notFound;
+    return matchLength <= searchLength ? findIgnoringASCIICase(source, matchCharacters, 0, searchLength, matchLength) : notFound;
 }
 
 template <typename SearchCharacterType, typename MatchCharacterType>
@@ -680,7 +686,7 @@ inline size_t find(const CharacterType* characters, unsigned length, CharacterTy
         if (index >= length)
             return notFound;
         auto* result = reinterpret_cast<const CharacterType*>(find8(bitwise_cast<const uint8_t*>(characters + index), matchCharacter, length - index));
-        ASSERT(!result || (result - characters) >= index);
+        ASSERT(!result || static_cast<unsigned>(result - characters) >= index);
         if (result)
             return result - characters;
         return notFound;
@@ -690,7 +696,7 @@ inline size_t find(const CharacterType* characters, unsigned length, CharacterTy
         if (index >= length)
             return notFound;
         auto* result = reinterpret_cast<const CharacterType*>(find16(bitwise_cast<const uint16_t*>(characters + index), matchCharacter, length - index));
-        ASSERT(!result || (result - characters) >= index);
+        ASSERT(!result || static_cast<unsigned>(result - characters) >= index);
         if (result)
             return result - characters;
         return notFound;

@@ -25,14 +25,12 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
+#include <optional>
 
 namespace WebCore {
 
 struct CSSMatrixComponentOptions {
-    bool is2D { false };
+    std::optional<bool> is2D;
 };
 
 } // namespace WebCore
-
-#endif

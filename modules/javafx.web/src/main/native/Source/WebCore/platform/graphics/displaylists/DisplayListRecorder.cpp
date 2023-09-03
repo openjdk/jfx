@@ -46,9 +46,10 @@
 namespace WebCore {
 namespace DisplayList {
 
-Recorder::Recorder(const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, DrawGlyphsMode drawGlyphsMode)
+Recorder::Recorder(const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, const DestinationColorSpace& colorSpace, DrawGlyphsMode drawGlyphsMode)
     : GraphicsContext(state)
     , m_initialScale(initialCTM.xScale())
+    , m_colorSpace(colorSpace)
     , m_drawGlyphsMode(drawGlyphsMode)
 {
     ASSERT(!state.changes());
@@ -112,7 +113,7 @@ const GraphicsContextState& Recorder::state() const
 
 void Recorder::didUpdateState(GraphicsContextState& state)
 {
-    currentState().state.mergeChanges(state, currentState().lastDrawingState);
+    currentState().state.mergeLastChanges(state, currentState().lastDrawingState);
     state.didApplyChanges();
 }
 
@@ -221,7 +222,7 @@ void Recorder::drawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRe
     recordDrawImageBuffer(imageBuffer, destRect, srcRect, options);
 }
 
-void Recorder::drawNativeImage(NativeImage& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
+void Recorder::drawNativeImageInternal(NativeImage& image, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     appendStateChangeItemIfNecessary();
     recordResourceUse(image);
@@ -324,6 +325,8 @@ void Recorder::beginTransparencyLayer(float opacity)
 
     appendStateChangeItemIfNecessary();
     recordBeginTransparencyLayer(opacity);
+
+    GraphicsContext::save();
     m_stateStack.append(m_stateStack.last().cloneForTransparencyLayer());
 
     m_state.didBeginTransparencyLayer();
@@ -335,9 +338,9 @@ void Recorder::endTransparencyLayer()
 
     appendStateChangeItemIfNecessary();
     recordEndTransparencyLayer();
-    m_stateStack.removeLast();
 
-    m_state.didEndTransparencyLayer(currentState().state.alpha());
+    m_stateStack.removeLast();
+    GraphicsContext::restore();
 }
 
 void Recorder::drawRect(const FloatRect& rect, float borderThickness)
@@ -376,29 +379,17 @@ void Recorder::drawPath(const Path& path)
     recordDrawPath(path);
 }
 
-void Recorder::drawFocusRing(const Path& path, float width, float offset, const Color& color)
+void Recorder::drawFocusRing(const Path& path, float outlineWidth, const Color& color)
 {
     appendStateChangeItemIfNecessary();
-    recordDrawFocusRingPath(path, width, offset, color);
+    recordDrawFocusRingPath(path, outlineWidth, color);
 }
 
-void Recorder::drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
+void Recorder::drawFocusRing(const Vector<FloatRect>& rects, float outlineOffset, float outlineWidth, const Color& color)
 {
     appendStateChangeItemIfNecessary();
-    recordDrawFocusRingRects(rects, width, offset, color);
+    recordDrawFocusRingRects(rects, outlineOffset, outlineWidth, color);
 }
-
-#if PLATFORM(MAC)
-void Recorder::drawFocusRing(const Path&, double, bool&, const Color&)
-{
-    notImplemented();
-}
-
-void Recorder::drawFocusRing(const Vector<FloatRect>&, double, bool&, const Color&)
-{
-    notImplemented();
-}
-#endif
 
 void Recorder::fillRect(const FloatRect& rect)
 {
@@ -473,6 +464,8 @@ void Recorder::strokePath(const Path& path)
     auto& state = currentState().state;
     if (state.changes() && state.containsOnlyInlineChanges() && !state.changes().contains(GraphicsContextState::Change::FillBrush) && path.hasInlineData() && path.hasInlineData<LineData>()) {
         recordStrokeLineWithColorAndThickness(*strokeColor().tryGetAsSRGBABytes(), strokeThickness(), path.inlineData<LineData>());
+        state.didApplyChanges();
+        currentState().lastDrawingState = state;
         return;
     }
 
@@ -520,6 +513,12 @@ void Recorder::applyFillPattern()
     recordApplyFillPattern();
 }
 #endif
+
+void Recorder::drawControlPart(ControlPart& part, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle& style)
+{
+    appendStateChangeItemIfNecessary();
+    recordDrawControlPart(part, borderRect, deviceScaleFactor, style);
+}
 
 void Recorder::clip(const FloatRect& rect)
 {
@@ -574,6 +573,11 @@ void Recorder::paintFrameForMedia(MediaPlayer& player, const FloatRect& destinat
     ASSERT(player.identifier());
     recordPaintFrameForMedia(player, destination);
 }
+
+void Recorder::paintVideoFrame(VideoFrame& frame, const FloatRect& destination, bool shouldDiscardAlpha)
+{
+    recordPaintVideoFrame(frame, destination, shouldDiscardAlpha);
+}
 #endif
 
 void Recorder::applyDeviceScaleFactor(float deviceScaleFactor)
@@ -585,12 +589,6 @@ void Recorder::applyDeviceScaleFactor(float deviceScaleFactor)
     // FIXME: this changes the baseCTM, which will invalidate all of our cached extents.
     // Assert that it's only called early on?
     recordApplyDeviceScaleFactor(deviceScaleFactor);
-}
-
-FloatRect Recorder::roundToDevicePixels(const FloatRect& rect, GraphicsContext::RoundingMode)
-{
-    WTFLogAlways("GraphicsContext::roundToDevicePixels() is not yet compatible with DisplayList::Recorder.");
-    return rect;
 }
 
 const Recorder::ContextState& Recorder::currentState() const

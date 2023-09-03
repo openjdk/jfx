@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "DOMMatrix.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
@@ -61,10 +59,10 @@ public:
     virtual ~CSSTransformComponent() = default;
     virtual CSSTransformType getType() const = 0;
 
+    virtual RefPtr<CSSValue> toCSSValue() const = 0;
+
 private:
     Is2D m_is2D;
 };
 
 } // namespace WebCore
-
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -132,23 +132,49 @@ public class ControlAcceleratorSupport {
         return sceneChangeListener;
     }
 
+    /* It's okay to have the value Weak, because we only remember it to remove the listener later on */
+    private static Map<ListChangeListener<MenuItem>, WeakReference<ListChangeListener<MenuItem>>>
+            menuListChangeListenerMap = new WeakHashMap<>();
+
     private static void doAcceleratorInstall(final ObservableList<MenuItem> items, final Scene scene) {
         // we're given an observable list of menu items, which we will add an observer to
         // so that when menu items are added or removed we can properly handle
         // the addition or removal of accelerators into the scene.
-        items.addListener((ListChangeListener<MenuItem>) c -> {
-            while (c.next()) {
-                if (c.wasRemoved()) {
-                    // remove accelerators from the scene
-                    removeAcceleratorsFromScene(c.getRemoved(), scene);
-                }
+        // We need to store the ListChangeListener for later so that we can clean up, so ideally we'd use the items
+        // list as a key in a WeakHashMap with the ListChangeListener as the value. Unfortunately items can't be used
+        // as a key as is because its equals method compares the list contents which breaks immediately for empty
+        // lists.
+        // Instead we have to use an identity wrapper over the items as a key, but since the HashMap is weak, we also
+        // have to retain a reference to the identity wrapper class. This could be avoided if there was a
+        // WeakIdentityHashMap class available.
+        // One way is to use the ListChangeListener itself as the identity wrapper: IdentityWrapperListChangeListener
+        // since the items list will have a reference to it. We can create temporary instances of the
+        // IdentityWrapperListChangeListener when we need to retrieve items from the WeakHashMap to get the real one.
+        ListChangeListener<MenuItem> listChangeListener = new IdentityWrapperListChangeListener(items) {
+            @Override
+            public void onChanged(Change<? extends MenuItem> c) {
+                while (c.next()) {
+                    if (c.wasRemoved()) {
+                        removeAcceleratorsFromScene(c.getRemoved(), scene);
+                    }
 
-                if (c.wasAdded()) {
-                    ControlAcceleratorSupport.doAcceleratorInstall(c.getAddedSubList(), scene);
+                    if (c.wasAdded()) {
+                        doAcceleratorInstall(c.getAddedSubList(), scene);
+                    }
                 }
             }
-        });
+        };
 
+        // There should only ever be one ListChangeListener from ControlAcceleratorSupport on each items list
+        // If there is one somehow, this removes it from the list, and replaces the entry in the HashMap.
+        WeakReference<ListChangeListener<MenuItem>> previousW = menuListChangeListenerMap.get(listChangeListener);
+        ListChangeListener<MenuItem> previous = previousW == null ? null : previousW.get();
+        if (previous != null) {
+            items.removeListener(previous);
+        }
+
+        menuListChangeListenerMap.put(listChangeListener, new WeakReference<>(listChangeListener));
+        items.addListener(listChangeListener);
         doAcceleratorInstall((List<MenuItem>)items, scene);
     }
 
@@ -225,7 +251,7 @@ public class ControlAcceleratorSupport {
 
     // --- Remove
 
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Tab anchor) {
+    public static void removeAcceleratorsFromScene(ObservableList<? extends MenuItem> items, Tab anchor) {
         TabPane tabPane = anchor.getTabPane();
         if (tabPane == null) return;
 
@@ -233,7 +259,7 @@ public class ControlAcceleratorSupport {
         removeAcceleratorsFromScene(items, scene);
     }
 
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, TableColumnBase<?,?> anchor) {
+    public static void removeAcceleratorsFromScene(ObservableList<? extends MenuItem> items, TableColumnBase<?,?> anchor) {
         ReadOnlyObjectProperty<? extends Control> controlProperty = getControlProperty(anchor);
         if (controlProperty == null) return;
 
@@ -244,7 +270,7 @@ public class ControlAcceleratorSupport {
         removeAcceleratorsFromScene(items, scene);
     }
 
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Node anchor) {
+    public static void removeAcceleratorsFromScene(ObservableList<? extends MenuItem> items, Node anchor) {
         Scene scene = anchor.getScene();
         if (scene == null) {
             // The Node is not part of a Scene: Remove the Scene listener that was added
@@ -261,7 +287,20 @@ public class ControlAcceleratorSupport {
         removeAcceleratorsFromScene(items, scene);
     }
 
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Scene scene) {
+    public static void removeAcceleratorsFromScene(ObservableList<? extends MenuItem> items, Scene scene) {
+        // use a temporary IdentityWrapperListChangeListener to get the actual one that's listening to items
+        WeakReference<ListChangeListener<MenuItem>> listenerW =
+                menuListChangeListenerMap.get(new IdentityWrapperListChangeListener(items));
+        if (listenerW != null) {
+            ListChangeListener<MenuItem> listChangeListener = listenerW.get();
+            if (listChangeListener != null) {
+                items.removeListener(listChangeListener);
+            }
+        }
+        removeAcceleratorsFromScene((List<MenuItem>)items, scene);
+    }
+
+    private static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Scene scene) {
         if (scene == null) {
             return;
         }
@@ -311,4 +350,50 @@ public class ControlAcceleratorSupport {
 
         return null;
     }
+
+    /**
+     * We need to store all the listeners added to each ObservableList so that we can remove them. For this we need
+     * a map mapping ObservableList to various listeners such as ListChangeListeners, but the map needs to be a
+     * WeakHashMap.
+     * The ideal key to the WeakHashMap would be the ObservableList itself, except for the fact that its equals method
+     * compares the list contents. If a WeakIdentityHashMap existed, we could use that instead with the ObservableList
+     * as the key.
+     * We can't use an IdentityWrapper as the key to the HashMap because we need a strong reference (ideally from the
+     * ObservableList itself) to the IdentityWrapper else it'll be garbage collected.
+     * Since every ObservableList gets a ListChangeListener, we can use that as an IdentityWrapper and rely on the fact
+     * ObservableList has a strong reference to the ListChangeListener.
+     */
+    static class IdentityWrapperListChangeListener implements ListChangeListener<MenuItem> {
+
+        ObservableList<? extends MenuItem> innerList;
+
+        public IdentityWrapperListChangeListener(ObservableList<? extends MenuItem> list) {
+            this.innerList = list;
+        }
+
+        @Override
+        public void onChanged(Change<? extends MenuItem> c) {
+            // In some cases this class is used as a key to fetch an item in a HashMap only, and then discarded
+            // In other cases the onChanged method is overridden and this is used as a ListChangeListener
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(innerList);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof IdentityWrapperListChangeListener)) {
+                return false;
+            }
+            IdentityWrapperListChangeListener that = (IdentityWrapperListChangeListener) o;
+            return innerList == that.innerList;
+        }
+    };
 }
+
+

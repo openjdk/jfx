@@ -5,13 +5,14 @@ useNamespaceAsSuffix=false
 Event
 Events interfaceName=Event
 HTMLEvents interfaceName=Event
-AnimationEvent
 AnimationPlaybackEvent
 BeforeLoadEvent interfaceName=Event
 BeforeUnloadEvent
 ClipboardEvent
 CloseEvent
 CompositionEvent
+CSSAnimationEvent
+CSSTransitionEvent
 CustomEvent
 DragEvent
 ExtendableEvent conditional=SERVICE_WORKER
@@ -39,8 +40,8 @@ PromiseRejectionEvent
 PushEvent conditional=SERVICE_WORKER
 PushSubscriptionChangeEvent conditional=SERVICE_WORKER
 SubmitEvent
+ToggleEvent
 TextEvent
-TransitionEvent
 UIEvent
 UIEvents interfaceName=UIEvent
 WheelEvent
@@ -75,8 +76,6 @@ SpeechSynthesisEvent conditional=SPEECH_SYNTHESIS
 WebGLContextEvent conditional=WEBGL
 StorageEvent
 SVGEvents interfaceName=Event
-SVGZoomEvent
-SVGZoomEvents interfaceName=SVGZoomEvent
 IDBVersionChangeEvent
 TouchEvent conditional=TOUCH_EVENTS
 DeviceMotionEvent conditional=DEVICE_ORIENTATION
@@ -87,7 +86,7 @@ WebKitMediaKeyNeededEvent conditional=LEGACY_ENCRYPTED_MEDIA
 TrackEvent conditional=VIDEO
 SecurityPolicyViolationEvent
 GestureEvent conditional=IOS_GESTURE_EVENTS|MAC_GESTURE_EVENTS
-WebKitPlaybackTargetAvailabilityEvent conditional=WIRELESS_PLAYBACK_TARGET
+WebKitPlaybackTargetAvailabilityEvent conditional=WIRELESS_PLAYBACK_TARGET_AVAILABILITY_API
 GamepadEvent conditional=GAMEPAD
 OverconstrainedErrorEvent conditional=MEDIA_STREAM
 MediaEncryptedEvent conditional=ENCRYPTED_MEDIA

@@ -36,10 +36,10 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMFormData.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Editor.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -362,7 +362,7 @@ void TextFieldInputType::createShadowSubtree()
         return;
     }
 
-    createContainer();
+    createContainer(PreserveSelectionRange::No);
     updatePlaceholderText();
 
     if (shouldHaveSpinButton) {
@@ -507,14 +507,14 @@ bool TextFieldInputType::shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited
 
 #endif // ENABLE(DATALIST_ELEMENT)
 
-static String limitLength(const String& string, unsigned maxNumGraphemeClusters)
+static String limitLength(const String& string, unsigned maxLength)
 {
-    StringView stringView { string };
-
-    if (!stringView.is8Bit())
-        maxNumGraphemeClusters = numCodeUnitsInGraphemeClusters(stringView, maxNumGraphemeClusters);
-
-    return string.left(maxNumGraphemeClusters);
+    unsigned newLength = std::min(maxLength, string.length());
+    if (newLength == string.length())
+        return string;
+    if (newLength > 0 && U16_IS_LEAD(string[newLength - 1]))
+        --newLength;
+    return string.left(newLength);
 }
 
 static String autoFillButtonTypeToAccessibilityLabel(AutoFillButtonType autoFillButtonType)
@@ -606,7 +606,7 @@ void TextFieldInputType::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent& 
     // because they can be mismatched by sanitizeValue() in
     // HTMLInputElement::subtreeHasChanged() in some cases.
     String innerText = element()->innerTextValue();
-    unsigned oldLength = numGraphemeClusters(innerText);
+    unsigned oldLength = innerText.length();
 
     // selectionLength represents the selection length of this text field to be
     // removed by this insertion.
@@ -618,8 +618,7 @@ void TextFieldInputType::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent& 
         ASSERT(enclosingTextFormControl(element()->document().frame()->selection().selection().start()) == element());
         unsigned selectionStart = element()->selectionStart();
         ASSERT(selectionStart <= element()->selectionEnd());
-        int selectionCodeUnitCount = element()->selectionEnd() - selectionStart;
-        selectionLength = selectionCodeUnitCount ? numGraphemeClusters(StringView(innerText).substring(selectionStart, selectionCodeUnitCount)) : 0;
+        selectionLength = element()->selectionEnd() - selectionStart;
     }
     ASSERT(oldLength >= selectionLength);
 
@@ -643,7 +642,7 @@ void TextFieldInputType::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent& 
 bool TextFieldInputType::shouldRespectListAttribute()
 {
 #if ENABLE(DATALIST_ELEMENT)
-    return DeprecatedGlobalSettings::dataListElementEnabled();
+    return element() && element()->document().settings().dataListElementEnabled();
 #else
     return InputType::themeSupportsDataListUI(this);
 #endif
@@ -819,7 +818,7 @@ void TextFieldInputType::autoFillButtonElementWasClicked()
     page->chrome().client().handleAutoFillButtonClick(*element());
 }
 
-void TextFieldInputType::createContainer()
+void TextFieldInputType::createContainer(PreserveSelectionRange preserveSelection)
 {
     ASSERT(!m_container);
     ASSERT(element());
@@ -828,6 +827,11 @@ void TextFieldInputType::createContainer()
 
     ScriptDisallowedScope::EventAllowedScope allowedScope(*element()->userAgentShadowRoot());
 
+    // FIXME: <https://webkit.org/b/245977> Suppress selectionchange events during subtree modification.
+    std::optional<std::tuple<unsigned, unsigned, TextFieldSelectionDirection>> selectionState;
+    if (preserveSelection == PreserveSelectionRange::Yes && enclosingTextFormControl(element()->document().selection().selection().start()) == element())
+        selectionState = { element()->selectionStart(), element()->selectionEnd(), element()->computeSelectionDirection() };
+
     m_container = TextControlInnerContainer::create(element()->document());
     element()->userAgentShadowRoot()->appendChild(*m_container);
     m_container->setPseudo(ShadowPseudoIds::webkitTextfieldDecorationContainer());
@@ -835,6 +839,20 @@ void TextFieldInputType::createContainer()
     m_innerBlock = TextControlInnerElement::create(element()->document());
     m_container->appendChild(*m_innerBlock);
     m_innerBlock->appendChild(*m_innerText);
+
+    if (selectionState) {
+        element()->document().eventLoop().queueTask(TaskSource::DOMManipulation, [selectionState = *selectionState, element = WeakPtr { element() }] {
+            if (!element || !element->focused())
+                return;
+
+            auto selection = element->document().selection().selection();
+            if (selection.start().deprecatedNode() != element->userAgentShadowRoot())
+                return;
+
+            auto& [selectionStart, selectionEnd, selectionDirection] = selectionState;
+            element->setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+        });
+    }
 }
 
 void TextFieldInputType::createAutoFillButton(AutoFillButtonType autoFillButtonType)

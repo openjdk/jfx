@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002, 2006, 2008, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2002-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,32 +23,35 @@
 
 #include "CachedResourceHandle.h"
 #include "CachedStyleSheetClient.h"
+#include "MediaQuery.h"
 #include "StyleRule.h"
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
 class CachedCSSStyleSheet;
-class MediaQuerySet;
 class StyleSheetContents;
 
 class StyleRuleImport final : public StyleRuleBase {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<StyleRuleImport> create(const String& href, Ref<MediaQuerySet>&&, std::optional<CascadeLayerName>&&);
-
+    static Ref<StyleRuleImport> create(const String& href, MQ::MediaQueryList&&, std::optional<CascadeLayerName>&&);
     ~StyleRuleImport();
+
+    Ref<StyleRuleImport> copy() const { RELEASE_ASSERT_NOT_REACHED(); }
 
     StyleSheetContents* parentStyleSheet() const { return m_parentStyleSheet; }
     void setParentStyleSheet(StyleSheetContents* sheet) { ASSERT(sheet); m_parentStyleSheet = sheet; }
-    void clearParentStyleSheet() { m_parentStyleSheet = 0; }
+    void clearParentStyleSheet() { m_parentStyleSheet = nullptr; }
     void cancelLoad();
 
     String href() const { return m_strHref; }
     StyleSheetContents* styleSheet() const { return m_styleSheet.get(); }
 
     bool isLoading() const;
-    MediaQuerySet* mediaQueries() const { return m_mediaQueries.get(); }
+
+    const MQ::MediaQueryList& mediaQueries() const { return m_mediaQueries; }
+    void setMediaQueries(MQ::MediaQueryList&& queries) { m_mediaQueries = WTFMove(queries); }
 
     void requestStyleSheet();
     const CachedCSSStyleSheet* cachedCSSStyleSheet() const { return m_cachedSheet.get(); }
@@ -73,13 +76,13 @@ private:
     void setCSSStyleSheet(const String& href, const URL& baseURL, const String& charset, const CachedCSSStyleSheet*);
     friend class ImportedStyleSheetClient;
 
-    StyleRuleImport(const String& href, Ref<MediaQuerySet>&&, std::optional<CascadeLayerName>&&);
+    StyleRuleImport(const String& href, MQ::MediaQueryList&&, std::optional<CascadeLayerName>&&);
 
     StyleSheetContents* m_parentStyleSheet { nullptr };
 
     ImportedStyleSheetClient m_styleSheetClient;
     String m_strHref;
-    RefPtr<MediaQuerySet> m_mediaQueries;
+    MQ::MediaQueryList m_mediaQueries;
     RefPtr<StyleSheetContents> m_styleSheet;
     std::optional<CascadeLayerName> m_cascadeLayerName;
     CachedResourceHandle<CachedCSSStyleSheet> m_cachedSheet;

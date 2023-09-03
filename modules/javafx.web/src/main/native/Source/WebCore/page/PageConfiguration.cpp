@@ -30,6 +30,7 @@
 #include "ApplicationCacheStorage.h"
 #include "AttachmentElementClient.h"
 #include "BackForwardClient.h"
+#include "BadgeClient.h"
 #include "BroadcastChannelRegistry.h"
 #include "CacheStorageProvider.h"
 #include "CookieJar.h"
@@ -38,13 +39,12 @@
 #include "DragClient.h"
 #include "EditorClient.h"
 #include "FrameLoaderClient.h"
-#include "LibWebRTCProvider.h"
 #include "MediaRecorderProvider.h"
 #include "ModelPlayerProvider.h"
 #include "PerformanceLoggingClient.h"
-#include "PermissionController.h"
 #include "PluginInfoProvider.h"
 #include "ProgressTrackerClient.h"
+#include "ScreenOrientationManager.h"
 #include "SocketProvider.h"
 #include "SpeechRecognitionProvider.h"
 #include "SpeechSynthesisClient.h"
@@ -64,7 +64,7 @@
 
 namespace WebCore {
 
-PageConfiguration::PageConfiguration(PAL::SessionID sessionID, UniqueRef<EditorClient>&& editorClient, Ref<SocketProvider>&& socketProvider, UniqueRef<WebRTCProvider>&& webRTCProvider, Ref<CacheStorageProvider>&& cacheStorageProvider, Ref<UserContentProvider>&& userContentProvider, Ref<BackForwardClient>&& backForwardClient, Ref<CookieJar>&& cookieJar, UniqueRef<ProgressTrackerClient>&& progressTrackerClient, UniqueRef<FrameLoaderClient>&& loaderClientForMainFrame, UniqueRef<SpeechRecognitionProvider>&& speechRecognitionProvider, UniqueRef<MediaRecorderProvider>&& mediaRecorderProvider, Ref<BroadcastChannelRegistry>&& broadcastChannelRegistry, Ref<PermissionController>&& permissionController, UniqueRef<StorageProvider>&& storageProvider, UniqueRef<ModelPlayerProvider>&& modelPlayerProvider)
+PageConfiguration::PageConfiguration(PAL::SessionID sessionID, UniqueRef<EditorClient>&& editorClient, Ref<SocketProvider>&& socketProvider, UniqueRef<WebRTCProvider>&& webRTCProvider, Ref<CacheStorageProvider>&& cacheStorageProvider, Ref<UserContentProvider>&& userContentProvider, Ref<BackForwardClient>&& backForwardClient, Ref<CookieJar>&& cookieJar, UniqueRef<ProgressTrackerClient>&& progressTrackerClient, UniqueRef<FrameLoaderClient>&& loaderClientForMainFrame, UniqueRef<SpeechRecognitionProvider>&& speechRecognitionProvider, UniqueRef<MediaRecorderProvider>&& mediaRecorderProvider, Ref<BroadcastChannelRegistry>&& broadcastChannelRegistry, UniqueRef<StorageProvider>&& storageProvider, UniqueRef<ModelPlayerProvider>&& modelPlayerProvider, Ref<BadgeClient>&& badgeClient)
     : sessionID(sessionID)
     , editorClient(WTFMove(editorClient))
     , socketProvider(WTFMove(socketProvider))
@@ -78,9 +78,9 @@ PageConfiguration::PageConfiguration(PAL::SessionID sessionID, UniqueRef<EditorC
     , broadcastChannelRegistry(WTFMove(broadcastChannelRegistry))
     , speechRecognitionProvider(WTFMove(speechRecognitionProvider))
     , mediaRecorderProvider(WTFMove(mediaRecorderProvider))
-    , permissionController(WTFMove(permissionController))
     , storageProvider(WTFMove(storageProvider))
     , modelPlayerProvider(WTFMove(modelPlayerProvider))
+    , badgeClient(WTFMove(badgeClient))
 {
 }
 

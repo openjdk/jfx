@@ -30,10 +30,13 @@
 #include "config.h"
 #include "CSSUnitValue.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSCalcOperationNode.h"
+#include "CSSCalcPrimitiveValueNode.h"
+#include "CSSCalcValue.h"
+#include "CSSParserFastPaths.h"
 #include "CSSParserToken.h"
 #include "CSSPrimitiveValue.h"
+#include <cmath>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -46,14 +49,6 @@ CSSUnitType CSSUnitValue::parseUnit(const String& unit)
         return CSSUnitType::CSS_NUMBER;
     if (unit == "percent"_s)
         return CSSUnitType::CSS_PERCENTAGE;
-
-    // FIXME: Remove these when LineHeightUnitsEnabled is changed back to true or removed
-    // https://bugs.webkit.org/show_bug.cgi?id=211351
-    if (unit == "lh"_s)
-        return CSSUnitType::CSS_LHS;
-    if (unit == "rlh"_s)
-        return CSSUnitType::CSS_RLHS;
-
     return CSSParserToken::stringToUnitType(unit);
 }
 
@@ -152,21 +147,10 @@ RefPtr<CSSUnitValue> CSSUnitValue::convertTo(CSSUnitType unit) const
 auto CSSUnitValue::toSumValue() const -> std::optional<SumValue>
 {
     // https://drafts.css-houdini.org/css-typed-om/#create-a-sum-value
-    auto canonicalUnit = [] (CSSUnitType unit) {
-        // FIXME: We probably want to change the definition of canonicalUnitTypeForCategory so this lambda isn't necessary.
-        auto category = unitCategory(unit);
-        switch (category) {
-        case CSSUnitCategory::Percent:
-            return CSSUnitType::CSS_PERCENTAGE;
-        case CSSUnitCategory::Other:
-            if (unit == CSSUnitType::CSS_FR)
-                return CSSUnitType::CSS_FR;
-            break;
-        default:
-            break;
-        }
-        return canonicalUnitTypeForCategory(category);
-    } (m_unit);
+    auto canonicalUnit = canonicalUnitTypeForUnitType(m_unit);
+    if (canonicalUnit == CSSUnitType::CSS_UNKNOWN)
+        canonicalUnit = m_unit;
+
     auto convertedValue = m_value * conversionToCanonicalUnitsScaleFactor(unitEnum()) / conversionToCanonicalUnitsScaleFactor(canonicalUnit);
 
     if (m_unit == CSSUnitType::CSS_NUMBER)
@@ -183,6 +167,111 @@ bool CSSUnitValue::equals(const CSSNumericValue& other) const
     return m_value == otherUnitValue->m_value && m_unit == otherUnitValue->m_unit;
 }
 
-} // namespace WebCore
+RefPtr<CSSValue> CSSUnitValue::toCSSValue() const
+{
+    return CSSPrimitiveValue::create(m_value, m_unit);
+}
 
-#endif
+// FIXME: This function could be mostly generated from CSSProperties.json.
+static bool isValueOutOfRangeForProperty(CSSPropertyID propertyID, double value, CSSUnitType unit)
+{
+    bool acceptsNegativeNumbers = true;
+    if (CSSParserFastPaths::isSimpleLengthPropertyID(propertyID, acceptsNegativeNumbers) && !acceptsNegativeNumbers && value < 0)
+        return true;
+
+    switch (propertyID) {
+    case CSSPropertyOrder:
+    case CSSPropertyZIndex:
+        return round(value) != value;
+    case CSSPropertyTabSize:
+        return value < 0 || (unit == CSSUnitType::CSS_NUMBER && round(value) != value);
+    case CSSPropertyOrphans:
+    case CSSPropertyWidows:
+    case CSSPropertyColumnCount:
+        return round(value) != value || value < 1;
+    case CSSPropertyAnimationDuration:
+    case CSSPropertyAnimationIterationCount:
+    case CSSPropertyBackgroundSize:
+    case CSSPropertyBlockSize:
+    case CSSPropertyBorderBlockEndWidth:
+    case CSSPropertyBorderBlockStartWidth:
+    case CSSPropertyBorderBottomLeftRadius:
+    case CSSPropertyBorderBottomRightRadius:
+    case CSSPropertyBorderBottomWidth:
+    case CSSPropertyBorderImageOutset:
+    case CSSPropertyBorderImageSlice:
+    case CSSPropertyBorderImageWidth:
+    case CSSPropertyBorderInlineEndWidth:
+    case CSSPropertyBorderInlineStartWidth:
+    case CSSPropertyBorderLeftWidth:
+    case CSSPropertyBorderRightWidth:
+    case CSSPropertyBorderTopLeftRadius:
+    case CSSPropertyBorderTopRightRadius:
+    case CSSPropertyBorderTopWidth:
+    case CSSPropertyColumnGap:
+    case CSSPropertyColumnRuleWidth:
+    case CSSPropertyColumnWidth:
+    case CSSPropertyFlexBasis:
+    case CSSPropertyFlexGrow:
+    case CSSPropertyFlexShrink:
+    case CSSPropertyFontSize:
+    case CSSPropertyFontSizeAdjust:
+    case CSSPropertyFontStretch:
+    case CSSPropertyGridAutoColumns:
+    case CSSPropertyGridAutoRows:
+    case CSSPropertyGridTemplateColumns:
+    case CSSPropertyGridTemplateRows:
+    case CSSPropertyInlineSize:
+    case CSSPropertyLineHeight:
+    case CSSPropertyMaxBlockSize:
+    case CSSPropertyMaxInlineSize:
+    case CSSPropertyMaxHeight:
+    case CSSPropertyMaxWidth:
+    case CSSPropertyMinBlockSize:
+    case CSSPropertyMinInlineSize:
+    case CSSPropertyOutlineWidth:
+    case CSSPropertyPerspective:
+    case CSSPropertyR:
+    case CSSPropertyRowGap:
+    case CSSPropertyRx:
+    case CSSPropertyRy:
+    case CSSPropertyScrollPaddingBlockEnd:
+    case CSSPropertyScrollPaddingBlockStart:
+    case CSSPropertyScrollPaddingBottom:
+    case CSSPropertyScrollPaddingInlineEnd:
+    case CSSPropertyScrollPaddingInlineStart:
+    case CSSPropertyScrollPaddingLeft:
+    case CSSPropertyScrollPaddingRight:
+    case CSSPropertyScrollPaddingTop:
+    case CSSPropertyStrokeDasharray:
+    case CSSPropertyStrokeMiterlimit:
+    case CSSPropertyStrokeWidth:
+    case CSSPropertyTransitionDuration:
+        return value < 0;
+    case CSSPropertyFontWeight:
+        return value < 1 || value > 1000;
+    default:
+        return false;
+    }
+}
+
+RefPtr<CSSValue> CSSUnitValue::toCSSValueWithProperty(CSSPropertyID propertyID) const
+{
+    if (isValueOutOfRangeForProperty(propertyID, m_value, m_unit)) {
+        // Wrap out of range values with a calc.
+        auto node = toCalcExpressionNode();
+        ASSERT(node);
+        auto sumNode = CSSCalcOperationNode::createSum(Vector { node.releaseNonNull() });
+        if (!sumNode)
+            return nullptr;
+        return CSSPrimitiveValue::create(CSSCalcValue::create(sumNode.releaseNonNull()));
+    }
+    return toCSSValue();
+}
+
+RefPtr<CSSCalcExpressionNode> CSSUnitValue::toCalcExpressionNode() const
+{
+    return CSSCalcPrimitiveValueNode::create(CSSPrimitiveValue::create(m_value, m_unit));
+}
+
+} // namespace WebCore

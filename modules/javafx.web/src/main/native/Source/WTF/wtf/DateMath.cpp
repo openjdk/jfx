@@ -279,15 +279,13 @@ static int32_t calculateUTCOffset()
 #if !HAVE(TM_GMTOFF)
 
 #if OS(WINDOWS)
-// Code taken from http://support.microsoft.com/kb/167296
+// Code taken from <https://learn.microsoft.com/en-us/windows/win32/sysinfo/converting-a-time-t-value-to-a-file-time>
 static void UnixTimeToFileTime(time_t t, LPFILETIME pft)
 {
-    // Note that LONGLONG is a 64-bit value
-    LONGLONG ll;
-
-    ll = Int32x32To64(t, 10000000) + 116444736000000000;
-    pft->dwLowDateTime = (DWORD)ll;
-    pft->dwHighDateTime = ll >> 32;
+    ULARGE_INTEGER timeValue;
+    timeValue.QuadPart = (t * 10000000LL) + 116444736000000000LL;
+    pft->dwLowDateTime = timeValue.LowPart;
+    pft->dwHighDateTime = timeValue.HighPart;
 }
 #endif
 
@@ -1039,11 +1037,10 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
 
 static std::optional<Vector<UChar, 32>> validateTimeZone(StringView timeZone)
 {
-    Vector<UChar, 32> buffer(timeZone.length());
-    timeZone.getCharactersWithUpconvert(buffer.data());
-
+    auto buffer = timeZone.upconvertedCharacters();
+    const UChar* characters = buffer;
     Vector<UChar, 32> canonicalBuffer;
-    auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, buffer.data(), buffer.size(), canonicalBuffer, nullptr);
+    auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, characters, timeZone.length(), canonicalBuffer, nullptr);
     if (!U_SUCCESS(status))
         return std::nullopt;
     return canonicalBuffer;

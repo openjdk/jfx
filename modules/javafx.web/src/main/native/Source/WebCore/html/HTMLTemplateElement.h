@@ -43,8 +43,15 @@ public:
     static Ref<HTMLTemplateElement> create(const QualifiedName&, Document&);
     virtual ~HTMLTemplateElement();
 
+    DocumentFragment& fragmentForInsertion() const;
     DocumentFragment& content() const;
     DocumentFragment* contentIfAvailable() const;
+
+    const AtomString& shadowRootMode() const;
+    void setShadowRootMode(const AtomString&);
+
+    void setDeclarativeShadowRoot(ShadowRoot&);
+    void attachAsDeclarativeShadowRootIfNeeded(Element&);
 
 private:
     HTMLTemplateElement(const QualifiedName&, Document&);
@@ -53,6 +60,7 @@ private:
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
     mutable RefPtr<TemplateContentDocumentFragment> m_content;
+    WeakPtr<ShadowRoot, WeakPtrImplWithEventTargetData> m_declarativeShadowRoot;
 };
 
 } // namespace WebCore

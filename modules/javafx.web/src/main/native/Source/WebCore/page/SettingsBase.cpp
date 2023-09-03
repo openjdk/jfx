@@ -52,6 +52,9 @@
 #if ENABLE(MEDIA_STREAM)
 #include "MockRealtimeMediaSourceCenter.h"
 #endif
+#if HAVE(AVCONTENTKEYSPECIFIER)
+#include "MediaSessionManagerCocoa.h"
+#endif
 
 namespace WebCore {
 
@@ -181,9 +184,12 @@ void SettingsBase::setMinimumDOMTimerInterval(Seconds interval)
     if (!m_page)
         return;
 
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (frame->document())
-            frame->document()->adjustMinimumDOMTimerInterval(oldTimerInterval);
+    for (AbstractFrame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        if (localFrame->document())
+            localFrame->document()->adjustMinimumDOMTimerInterval(oldTimerInterval);
     }
 }
 
@@ -305,10 +311,13 @@ void SettingsBase::setNeedsRelayoutAllFrames()
     if (!m_page)
         return;
 
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (!frame->ownerRenderer())
+    for (AbstractFrame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
             continue;
-        frame->ownerRenderer()->setNeedsLayoutAndPrefWidthsRecalc();
+        if (!localFrame->ownerRenderer())
+            continue;
+        localFrame->ownerRenderer()->setNeedsLayoutAndPrefWidthsRecalc();
     }
 }
 
@@ -319,7 +328,7 @@ void SettingsBase::mediaTypeOverrideChanged()
 
     FrameView* view = m_page->mainFrame().view();
     if (view)
-        view->setMediaType(m_page->settings().mediaTypeOverride());
+        view->setMediaType(AtomString(m_page->settings().mediaTypeOverride()));
 
     m_page->setNeedsRecalcStyleInAllFrames();
 }
@@ -341,11 +350,14 @@ void SettingsBase::imageLoadingSettingsTimerFired()
     if (!m_page)
         return;
 
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (!frame->document())
+    for (AbstractFrame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
             continue;
-        frame->document()->cachedResourceLoader().setImagesEnabled(m_page->settings().areImagesEnabled());
-        frame->document()->cachedResourceLoader().setAutoLoadImages(m_page->settings().loadsImagesAutomatically());
+        if (!localFrame->document())
+            continue;
+        localFrame->document()->cachedResourceLoader().setImagesEnabled(m_page->settings().areImagesEnabled());
+        localFrame->document()->cachedResourceLoader().setAutoLoadImages(m_page->settings().loadsImagesAutomatically());
     }
 }
 
@@ -409,8 +421,11 @@ void SettingsBase::layerBasedSVGEngineEnabledChanged()
     if (!m_page)
         return;
 
-    for (auto* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        auto* document = frame->document();
+    for (AbstractFrame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        if (!localFrame)
+            continue;
+        auto* document = localFrame->document();
         if (!document)
             continue;
 
@@ -483,5 +498,13 @@ void SettingsBase::resourceUsageOverlayVisibleChanged()
         m_page->setResourceUsageOverlayVisible(m_page->settings().resourceUsageOverlayVisible());
 #endif
 }
+
+#if HAVE(AVCONTENTKEYSPECIFIER)
+void SettingsBase::sampleBufferContentKeySessionSupportEnabledChanged()
+{
+    if (m_page)
+        MediaSessionManagerCocoa::setSampleBufferContentKeySessionSupportEnabled(m_page->settings().sampleBufferContentKeySessionSupportEnabled());
+}
+#endif
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.robot.javafx.scene;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -44,6 +45,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SceneChangeShouldNotFocusStageTest {
     static Stage stage;
@@ -57,12 +59,15 @@ public class SceneChangeShouldNotFocusStageTest {
 
     @BeforeAll
     public static void initFX() throws Exception {
+        assumeTrue(!PlatformUtil.isMac()); // See JDK-8305675
         Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        if (stage != null) {
+            Util.shutdown(stage);
+        }
     }
 
     public static class TestApp extends Application {

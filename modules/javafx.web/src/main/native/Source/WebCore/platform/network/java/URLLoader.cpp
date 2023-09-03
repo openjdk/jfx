@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -201,7 +201,7 @@ JLObject URLLoader::load(bool asynchronous,
             (jstring) request.url().string().toJavaString(env),
             (jstring) request.httpMethod().toJavaString(env),
             (jstring) headerString.toJavaString(env),
-            (jobjectArray) toJava(request.httpBody()),
+            (jobjectArray) toJava(request.httpBody().get()),
             ptr_to_jlong(target));
     WTF::CheckAndClearException(env);
 
@@ -365,7 +365,7 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
 
 void URLLoader::SynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
-    m_data.append(*data->data());
+    m_data.append(data->data(), (size_t)length);
 }
 
 void URLLoader::SynchronousTarget::didFinishLoading()

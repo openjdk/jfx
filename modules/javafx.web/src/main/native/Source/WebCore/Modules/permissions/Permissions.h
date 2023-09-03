@@ -34,28 +34,35 @@ namespace JSC {
 class JSObject;
 } // namespace JSC
 
+namespace WTF {
+class String;
+}
+
 namespace WebCore {
 
-class Navigator;
-class PermissionController;
+class NavigatorBase;
 class PermissionStatus;
+class ScriptExecutionContext;
+enum class PermissionName : uint8_t;
+enum class PermissionQuerySource : uint8_t;
 
 template<typename IDLType> class DOMPromiseDeferred;
 
 class Permissions : public RefCounted<Permissions> {
     WTF_MAKE_ISO_ALLOCATED(Permissions);
 public:
-    static Ref<Permissions> create(Navigator&);
+    static Ref<Permissions> create(NavigatorBase&);
     ~Permissions();
 
-    Navigator* navigator();
+    NavigatorBase* navigator();
     void query(JSC::Strong<JSC::JSObject>, DOMPromiseDeferred<IDLInterface<PermissionStatus>>&&);
+    WEBCORE_EXPORT static std::optional<PermissionQuerySource> sourceFromContext(const ScriptExecutionContext&);
+    WEBCORE_EXPORT static std::optional<PermissionName> toPermissionName(const String&);
 
 private:
-    explicit Permissions(Navigator&);
+    explicit Permissions(NavigatorBase&);
 
-    WeakPtr<Navigator> m_navigator;
-    RefPtr<PermissionController> m_controller;
+    WeakPtr<NavigatorBase> m_navigator;
 };
 
 } // namespace WebCore

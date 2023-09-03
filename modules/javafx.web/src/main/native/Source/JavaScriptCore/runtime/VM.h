@@ -48,6 +48,7 @@
 #include "Microtask.h"
 #include "NativeFunction.h"
 #include "NumericStrings.h"
+#include "SlotVisitorMacros.h"
 #include "SmallStrings.h"
 #include "Strong.h"
 #include "SubspaceAccess.h"
@@ -122,6 +123,7 @@ class JSPropertyNameEnumerator;
 class JITSizeStatistics;
 class JITThunks;
 class NativeExecutable;
+class Debugger;
 class DeferredWorkTimer;
 class RegExp;
 class RegExpCache;
@@ -142,6 +144,7 @@ class TypeProfiler;
 class TypeProfilerLog;
 class Watchdog;
 class WatchpointSet;
+class Waiter;
 
 #if ENABLE(DFG_JIT) && ASSERT_ENABLED
 #define ENABLE_DFG_DOES_GC_VALIDATION 1
@@ -165,21 +168,69 @@ class Signature;
 
 struct EntryFrame;
 
+class MicrotaskQueue;
 class QueuedTask {
-    WTF_MAKE_NONCOPYABLE(QueuedTask);
     WTF_MAKE_FAST_ALLOCATED;
+    friend class MicrotaskQueue;
 public:
-    void run();
+    static constexpr unsigned maxArguments = 4;
 
-    QueuedTask(VM& vm, JSGlobalObject* globalObject, Ref<Microtask>&& microtask)
-        : m_globalObject(vm, globalObject)
-        , m_microtask(WTFMove(microtask))
+    QueuedTask(MicrotaskIdentifier identifier, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
+        : m_identifier(identifier)
+        , m_job(job)
+        , m_arguments { argument0, argument1, argument2, argument3 }
     {
     }
 
+    void run();
+
+    MicrotaskIdentifier identifier() const { return m_identifier; }
+
 private:
-    Strong<JSGlobalObject> m_globalObject;
-    Ref<Microtask> m_microtask;
+    MicrotaskIdentifier m_identifier;
+    JSValue m_job;
+    JSValue m_arguments[maxArguments];
+};
+
+class MicrotaskQueue {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(MicrotaskQueue);
+public:
+    MicrotaskQueue() = default;
+
+    QueuedTask dequeue()
+    {
+        if (m_markedBefore)
+            --m_markedBefore;
+        return m_queue.takeFirst();
+    }
+
+    void enqueue(QueuedTask&& task)
+    {
+        m_queue.append(WTFMove(task));
+    }
+
+    bool isEmpty() const
+    {
+        return m_queue.isEmpty();
+    }
+
+    void clear()
+    {
+        m_queue.clear();
+        m_markedBefore = 0;
+    }
+
+    void beginMarking()
+    {
+        m_markedBefore = 0;
+    }
+
+    DECLARE_VISIT_AGGREGATE;
+
+private:
+    Deque<QueuedTask> m_queue;
+    unsigned m_markedBefore { 0 };
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(VM);
@@ -234,7 +285,11 @@ private:
     ScratchBuffer* m_scratchBuffer;
 };
 
+enum VMIdentifierType { };
+using VMIdentifier = ObjectIdentifier<VMIdentifierType>;
+
 class VM : public ThreadSafeRefCounted<VM>, public DoublyLinkedListNode<VM> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(VM);
 public:
     // WebCore has a one-to-one mapping of threads to VMs;
     // create() should only be called once
@@ -280,8 +335,7 @@ public:
     FuzzerAgent* fuzzerAgent() const { return m_fuzzerAgent.get(); }
     void setFuzzerAgent(std::unique_ptr<FuzzerAgent>&&);
 
-    static unsigned numberOfIDs() { return s_numberOfIDs.load(); }
-    unsigned id() const { return m_id; }
+    VMIdentifier identifier() const { return m_identifier; }
     bool isEntered() const { return !!entryScope; }
 
     inline CallFrame* topJSCallFrame() const;
@@ -329,13 +383,15 @@ public:
 #endif
 
 private:
-    unsigned nextID();
-
-    static Atomic<unsigned> s_numberOfIDs;
-
-    unsigned m_id;
+    VMIdentifier m_identifier;
     RefPtr<JSLock> m_apiLock;
     Ref<WTF::RunLoop> m_runLoop;
+
+    // Keep super frequently accessed fields top in VM.
+    void* m_softStackLimit { nullptr };
+    Exception* m_exception { nullptr };
+    Exception* m_terminationException { nullptr };
+    Exception* m_lastException { nullptr };
 
     WeakRandom m_random;
     WeakRandom m_heapRandom;
@@ -571,7 +627,7 @@ public:
     NativeExecutable* getBoundFunction(bool isJSFunction, bool canConstruct);
     NativeExecutable* getRemoteFunction(bool isJSFunction);
 
-    MacroAssemblerCodePtr<JSEntryPtrTag> getCTIInternalFunctionTrampolineFor(CodeSpecializationKind);
+    CodePtr<JSEntryPtrTag> getCTIInternalFunctionTrampolineFor(CodeSpecializationKind);
     MacroAssemblerCodeRef<JSEntryPtrTag> getCTILinkCall();
     MacroAssemblerCodeRef<JSEntryPtrTag> getCTIThrowExceptionFromCallSlowPath();
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> getCTIVirtualCall(CallMode);
@@ -584,11 +640,6 @@ public:
     static ptrdiff_t callFrameForCatchOffset()
     {
         return OBJECT_OFFSETOF(VM, callFrameForCatch);
-    }
-
-    static ptrdiff_t calleeForWasmCatchOffset()
-    {
-        return OBJECT_OFFSETOF(VM, calleeForWasmCatch);
     }
 
     static ptrdiff_t topEntryFrameOffset()
@@ -609,6 +660,11 @@ public:
     static ptrdiff_t offsetOfHeapMutatorShouldBeFenced()
     {
         return OBJECT_OFFSETOF(VM, heap) + OBJECT_OFFSETOF(Heap, m_mutatorShouldBeFenced);
+    }
+
+    static ptrdiff_t offsetOfSoftStackLimit()
+    {
+        return OBJECT_OFFSETOF(VM, m_softStackLimit);
     }
 
     void clearLastException() { m_lastException = nullptr; }
@@ -656,7 +712,6 @@ public:
         return isSafeToRecurse(m_stackLimit);
     }
 
-    void** addressOfLastStackTop() { return &m_lastStackTop; }
     void* lastStackTop() { return m_lastStackTop; }
     void setLastStackTop(const Thread&);
 
@@ -671,7 +726,6 @@ public:
     EncodedJSValue encodedHostCallReturnValue { };
     CallFrame* newCallFrameReturnValue;
     CallFrame* callFrameForCatch { nullptr };
-    CalleeBits calleeForWasmCatch;
     void* targetMachinePCForThrow;
     JSOrWasmInstruction targetInterpreterPCForThrow;
     unsigned varargsLength;
@@ -786,7 +840,7 @@ public:
     bool enableControlFlowProfiler();
     bool disableControlFlowProfiler();
 
-    void queueMicrotask(JSGlobalObject&, Ref<Microtask>&&);
+    void queueMicrotask(QueuedTask&&);
     JS_EXPORT_PRIVATE void drainMicrotasks();
     void setOnEachMicrotaskTick(WTF::Function<void(VM&)>&& func) { m_onEachMicrotaskTick = WTFMove(func); }
     void finalizeSynchronousJSExecution() { ASSERT(currentThreadIsHoldingAPILock()); m_currentWeakRefVersion++; }
@@ -857,6 +911,16 @@ public:
     void verifyCanGC() { }
 #endif
 
+    void beginMarking();
+    DECLARE_VISIT_AGGREGATE;
+
+    void addDebugger(Debugger&);
+    void removeDebugger(Debugger&);
+    template<typename Func>
+    void forEachDebugger(const Func&);
+
+    Ref<Waiter> syncWaiter();
+
 private:
     VM(VMType, HeapType, WTF::RunLoop* = nullptr, bool* success = nullptr);
     static VM*& sharedInstanceInternal();
@@ -911,15 +975,11 @@ private:
     void* m_stackPointerAtVMEntry { nullptr };
     size_t m_currentSoftReservedZoneSize;
     void* m_stackLimit { nullptr };
-    void* m_softStackLimit { nullptr };
 #if ENABLE(C_LOOP)
     void* m_cloopStackLimit { nullptr };
 #endif
     void* m_lastStackTop { nullptr };
 
-    Exception* m_exception { nullptr };
-    Exception* m_terminationException { nullptr };
-    Exception* m_lastException { nullptr };
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
     ExceptionScope* m_topExceptionScope { nullptr };
     ExceptionEventLocation m_simulatedThrowPointLocation;
@@ -955,7 +1015,7 @@ private:
     FunctionHasExecutedCache m_functionHasExecutedCache;
     std::unique_ptr<ControlFlowProfiler> m_controlFlowProfiler;
     unsigned m_controlFlowProfilerEnabledCount { 0 };
-    Deque<std::unique_ptr<QueuedTask>> m_microtaskQueue;
+    MicrotaskQueue m_microtaskQueue;
     MallocPtr<EncodedJSValue, VMMalloc> m_exceptionFuzzBuffer;
     VMTraps m_traps;
     RefPtr<Watchdog> m_watchdog;
@@ -980,9 +1040,13 @@ private:
     Lock m_loopHintExecutionCountLock;
     HashMap<const JSInstruction*, std::pair<unsigned, std::unique_ptr<uintptr_t>>> m_loopHintExecutionCounts;
 
+    Ref<Waiter> m_syncWaiter;
+
 #if ENABLE(DFG_DOES_GC_VALIDATION)
     DoesGCCheck m_doesGC;
 #endif
+
+    DoublyLinkedList<Debugger> m_debuggers;
 
     VM* m_prev; // Required by DoublyLinkedListNode.
     VM* m_next; // Required by DoublyLinkedListNode.

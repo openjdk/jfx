@@ -38,7 +38,6 @@
 #include "RenderGeometryMap.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
-#include "RenderSVGImage.h"
 #include "RenderSVGResourceClipper.h"
 #include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceMarker.h"
@@ -156,7 +155,7 @@ void SVGRenderSupport::computeContainerBoundingBoxes(const RenderElement& contai
     // the resources applied to the children (such as clips and filters). This allows filters applied to containers to correctly bound
     // the children, and also improves inlining of SVG content, as the stroke bound is used in that situation also.
     for (auto& current : childrenOfType<RenderObject>(container)) {
-        if (current.isSVGHiddenContainer())
+        if (current.isLegacySVGHiddenContainer())
             continue;
 
         // Don't include elements in the union that do not render.
@@ -306,7 +305,7 @@ bool SVGRenderSupport::isOverflowHidden(const RenderElement& renderer)
     // LegacyRenderSVGRoot should never query for overflow state - it should always clip itself to the initial viewport size.
     ASSERT(!renderer.isDocumentElementRenderer());
 
-    return renderer.style().overflowX() == Overflow::Hidden || renderer.style().overflowX() == Overflow::Scroll;
+    return isNonVisibleOverflow(renderer.style().overflowX());
 }
 
 void SVGRenderSupport::intersectRepaintRectWithResources(const RenderElement& renderer, FloatRect& repaintRect)
@@ -450,7 +449,7 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
 
     const Vector<SVGLengthValue>& dashes = svgStyle.strokeDashArray();
     if (dashes.isEmpty())
-        context.setStrokeStyle(SolidStroke);
+        context.setStrokeStyle(StrokeStyle::SolidStroke);
     else {
         DashArray dashArray;
         dashArray.reserveInitialCapacity(dashes.size());
@@ -479,7 +478,7 @@ void SVGRenderSupport::applyStrokeStyleToContext(GraphicsContext& context, const
         if (canSetLineDash)
             context.setLineDash(dashArray, lengthContext.valueForLength(svgStyle.strokeDashOffset()) * scaleFactor);
         else
-            context.setStrokeStyle(SolidStroke);
+            context.setStrokeStyle(StrokeStyle::SolidStroke);
     }
 }
 
@@ -539,7 +538,7 @@ WeakHashSet<RenderElement>& SVGHitTestCycleDetectionScope::visitedElements()
 
 bool SVGHitTestCycleDetectionScope::isEmpty()
 {
-    return visitedElements().computesEmpty();
+    return visitedElements().isEmptyIgnoringNullReferences();
 }
 
 bool SVGHitTestCycleDetectionScope::isVisiting(const RenderElement& element)

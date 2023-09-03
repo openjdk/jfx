@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2011, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006, 2007 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
@@ -21,10 +21,9 @@
 typedef (
 #if defined(ENABLE_WEBGL) && ENABLE_WEBGL
     WebGLRenderingContext or
-#endif
-#if defined(ENABLE_WEBGL2) && ENABLE_WEBGL2
     WebGL2RenderingContext or
 #endif
+    GPUCanvasContext or
     ImageBitmapRenderingContext or 
     CanvasRenderingContext2D) RenderingContext;
 
@@ -84,10 +83,6 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     readonly attribute DOMString? xmlEncoding;
     attribute DOMString? xmlVersion;
     attribute boolean xmlStandalone;
-
-    // Non standard: Blink has already dropped this (https://groups.google.com/a/chromium.org/forum/#!topic/blink-dev/s3ezjTuC8ig).
-    // And it's just a stub that always returns null, so we can probably remove it some time soon.
-    CSSStyleDeclaration? getOverrideStyle(optional Element? element = null, optional DOMString pseudoElement = "undefined");
 
     // Non standard: It has been superseeded by caretPositionFromPoint which we do not implement yet.
     Range caretRangeFromPoint(optional long x = 0, optional long y = 0);

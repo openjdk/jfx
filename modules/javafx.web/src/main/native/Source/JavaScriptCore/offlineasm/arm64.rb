@@ -47,6 +47,8 @@ require "risc"
 #  x7  => t7, a7, wa7
 #  x9  => ws0
 # x10  => ws1
+# x11  => ws2
+# x12  => ws3
 # x13  =>                  (scratch)
 # x16  =>                  (scratch)
 # x17  =>                  (scratch)
@@ -103,6 +105,8 @@ def arm64FPRName(name, kind)
         "s" + name[1..-1]
     when :vector
         "v" + name[1..-1]
+    when :vector_with_interpretation
+        "q" + name[1..-1]
     else
         raise "bad FPR kind #{kind}"
     end
@@ -147,6 +151,10 @@ class RegisterID
           arm64GPRName('x9', kind)
         when 'ws1'
           arm64GPRName('x10', kind)
+        when 'ws2'
+          arm64GPRName('x11', kind)
+        when 'ws3'
+          arm64GPRName('x12', kind)
         when 'cfr'
             arm64GPRName('x29', kind)
         when 'csr0'
@@ -378,7 +386,7 @@ def arm64LowerLabelReferences(list)
         | node |
         if node.is_a? Instruction
             case node.opcode
-            when "loadi", "loadis", "loadp", "loadq", "loadb", "loadbsi", "loadbsq", "loadh", "loadhsi", "loadhsq", "leap"
+            when "loadi", "loadis", "loadp", "loadq", "loadb", "loadbsi", "loadbsq", "loadh", "loadhsi", "loadhsq", "leap", "loadv"
                 labelRef = node.operands[0]
                 if labelRef.is_a? LabelReference
                     dest = node.operands[1]
@@ -438,6 +446,10 @@ end
 
 class Sequence
     def getModifiedListARM64(result = @list)
+        result = riscDropTags(result)
+        getModifiedListARM64Common(result)
+    end
+    def getModifiedListARM64Common(result = @list)
         result = riscLowerNot(result)
         result = riscLowerSimpleBranchOps(result)
 
@@ -461,7 +473,7 @@ class Sequence
             when "loadp", "storep", "loadq", "storeq", "loadd", "stored", "lshiftp", "lshiftq", "negp", "negq", "rshiftp", "rshiftq",
                 "urshiftp", "urshiftq", "addp", "addq", "mulp", "mulq", "andp", "andq", "orp", "orq", "subp", "subq", "xorp", "xorq", "addd",
                 "divd", "subd", "muld", "sqrtd", /^bp/, /^bq/, /^btp/, /^btq/, /^cp/, /^cq/, /^tp/, /^tq/, /^bd/,
-                "jmp", "call", "leap", "leaq", "loadlinkacqq", "storecondrelq", /^atomic[a-z]+q$/
+                "jmp", "call", "leap", "leaq", "loadlinkacqq", "storecondrelq", /^atomic[a-z]+q$/, "loadv", "storev"
                 size = $currentSettings["ADDRESS64"] ? 8 : 4
             when "loadpairq", "storepairq", "loadpaird", "storepaird"
                 size = 16
@@ -908,6 +920,10 @@ class Instruction
             emitARM64Access("ldr", "ldur", operands[1], operands[0], :double)
         when "stored"
             emitARM64Unflipped("str", operands, :double)
+        when "loadv"
+            emitARM64Access("ldr", "ldur", operands[1], operands[0], :vector_with_interpretation)
+        when "storev"
+            emitARM64Unflipped("str", operands, :vector_with_interpretation)
         when "addd"
             emitARM64TAC("fadd", operands, :double)
         when "divd"

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FlexFormattingConstraints.h"
 #include "FlexFormattingState.h"
 #include "FlexRect.h"
@@ -39,7 +37,7 @@ namespace Layout {
 // https://www.w3.org/TR/css-flexbox-1/
 class FlexLayout {
 public:
-    FlexLayout(const ContainerBox& flexBox);
+    FlexLayout(const ElementBox& flexBox);
 
     struct LogicalFlexItem {
     public:
@@ -52,7 +50,7 @@ public:
             LengthType topMargin { LengthType::Auto };
             LengthType bottomMargin { LengthType::Auto };
         };
-        LogicalFlexItem(LayoutSize marginBoxSize, LogicalTypes, IntrinsicWidthConstraints, const ContainerBox&);
+        LogicalFlexItem(LayoutSize marginBoxSize, LogicalTypes, IntrinsicWidthConstraints, const ElementBox&);
         LogicalFlexItem() = default;
 
         LayoutUnit flexBasis() const { return m_marginBoxSize.width(); }
@@ -71,13 +69,13 @@ public:
         LayoutUnit maximumSize() const { return m_intrinsicWidthConstraints.maximum; }
 
         const RenderStyle& style() const { return m_layoutBox->style(); }
-        const ContainerBox& layoutBox() const { return *m_layoutBox; }
+        const ElementBox& layoutBox() const { return *m_layoutBox; }
 
     private:
         LayoutSize m_marginBoxSize;
         LogicalTypes m_logicalTypes { };
         IntrinsicWidthConstraints m_intrinsicWidthConstraints { };
-        CheckedPtr<const ContainerBox> m_layoutBox;
+        CheckedPtr<const ElementBox> m_layoutBox;
     };
     using LogicalFlexItems = Vector<LogicalFlexItem>;
     struct LogicalConstraints {
@@ -121,13 +119,13 @@ private:
     using LineHeightList = Vector<LayoutUnit>;
     LineHeightList computeAvailableLogicalVerticalSpace(const LogicalFlexItems&, const WrappingPositions&, const LogicalConstraints&) const;
 
-    const ContainerBox& flexBox() const { return m_flexBox; }
+    const ElementBox& flexBox() const { return m_flexBox; }
     const RenderStyle& flexBoxStyle() const { return flexBox().style(); }
 
-    const ContainerBox& m_flexBox;
+    const ElementBox& m_flexBox;
 };
 
-inline FlexLayout::LogicalFlexItem::LogicalFlexItem(LayoutSize marginBoxSize, LogicalTypes logicalTypes, IntrinsicWidthConstraints intrinsicWidthConstraints, const ContainerBox& layoutBox)
+inline FlexLayout::LogicalFlexItem::LogicalFlexItem(LayoutSize marginBoxSize, LogicalTypes logicalTypes, IntrinsicWidthConstraints intrinsicWidthConstraints, const ElementBox& layoutBox)
     : m_marginBoxSize(marginBoxSize)
     , m_logicalTypes(logicalTypes)
     , m_intrinsicWidthConstraints(intrinsicWidthConstraints)
@@ -138,4 +136,3 @@ inline FlexLayout::LogicalFlexItem::LogicalFlexItem(LayoutSize marginBoxSize, Lo
 }
 }
 
-#endif

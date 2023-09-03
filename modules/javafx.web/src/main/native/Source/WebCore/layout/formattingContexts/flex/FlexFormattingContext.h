@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FlexFormattingConstraints.h"
 #include "FlexFormattingGeometry.h"
 #include "FlexFormattingState.h"
@@ -43,7 +41,7 @@ namespace Layout {
 class FlexFormattingContext final : public FormattingContext {
     WTF_MAKE_ISO_ALLOCATED(FlexFormattingContext);
 public:
-    FlexFormattingContext(const ContainerBox& formattingContextRoot, FlexFormattingState&);
+    FlexFormattingContext(const ElementBox& formattingContextRoot, FlexFormattingState&);
     void layoutInFlowContent(const ConstraintsForInFlowContent&) override;
     IntrinsicWidthConstraints computedIntrinsicWidthConstraints() override;
     LayoutUnit usedContentHeight() const override;
@@ -75,4 +73,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_CONTEXT(FlexFormattingContext, isFlexFormattingContext())
 
-#endif

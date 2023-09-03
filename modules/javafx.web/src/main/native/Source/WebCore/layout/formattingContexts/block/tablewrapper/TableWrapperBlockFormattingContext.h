@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BlockFormattingContext.h"
 #include "BlockFormattingQuirks.h"
 #include "TableWrapperBlockFormattingQuirks.h"
@@ -40,7 +38,7 @@ namespace Layout {
 class TableWrapperBlockFormattingContext final : public BlockFormattingContext {
     WTF_MAKE_ISO_ALLOCATED(TableWrapperBlockFormattingContext);
 public:
-    TableWrapperBlockFormattingContext(const ContainerBox& formattingContextRoot, BlockFormattingState&);
+    TableWrapperBlockFormattingContext(const ElementBox& formattingContextRoot, BlockFormattingState&);
 
     void layoutInFlowContent(const ConstraintsForInFlowContent&) final;
 
@@ -49,11 +47,11 @@ public:
     const TableWrapperQuirks& formattingQuirks() const final { return m_tableWrapperFormattingQuirks; }
 
 private:
-    void layoutTableBox(const ContainerBox& tableBox, const ConstraintsForInFlowContent&);
+    void layoutTableBox(const ElementBox& tableBox, const ConstraintsForInFlowContent&);
 
-    void computeBorderAndPaddingForTableBox(const ContainerBox&, const HorizontalConstraints&);
-    void computeWidthAndMarginForTableBox(const ContainerBox&, const HorizontalConstraints&);
-    void computeHeightAndMarginForTableBox(const ContainerBox&, const ConstraintsForInFlowContent&);
+    void computeBorderAndPaddingForTableBox(const ElementBox&, const HorizontalConstraints&);
+    void computeWidthAndMarginForTableBox(const ElementBox&, const HorizontalConstraints&);
+    void computeHeightAndMarginForTableBox(const ElementBox&, const ConstraintsForInFlowContent&);
 
     HorizontalConstraints m_horizontalConstraintsIgnoringFloats;
     const TableWrapperQuirks m_tableWrapperFormattingQuirks;
@@ -64,4 +62,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_CONTEXT(TableWrapperBlockFormattingContext, isTableWrapperBlockFormattingContext())
 
-#endif

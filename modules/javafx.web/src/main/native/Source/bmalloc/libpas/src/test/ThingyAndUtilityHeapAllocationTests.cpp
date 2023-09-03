@@ -771,7 +771,7 @@ void testFreeListRefillSpans(unsigned prewarmObjectSize,
             objectsInThisSpan.push_back(ptr);
             actualNumberOfObjects++;
         }
-        objects.push_back(move(objectsInThisSpan));
+        objects.push_back(std::move(objectsInThisSpan));
     }
 
 #if PAS_ENABLE_TESTING
@@ -782,11 +782,9 @@ void testFreeListRefillSpans(unsigned prewarmObjectSize,
     CHECK_EQUAL(objects.size(), numberOfSpans);
     CHECK_EQUAL(actualNumberOfObjects, numberOfObjects);
 
-    unsigned numberOfSpansFreed = 0;
     unsigned numberOfObjectsFreed = 0;
     set<void*> freedObject;
     for (unsigned span = firstSpanToFree; span < objects.size(); span += 2) {
-        numberOfSpansFreed++;
         for (void* object : objects[span]) {
             thingy_deallocate(object);
             freedObject.insert(object);

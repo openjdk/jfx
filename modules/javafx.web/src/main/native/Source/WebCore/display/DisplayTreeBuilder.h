@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "DisplayBoxFactory.h"
 #include <wtf/IsoMalloc.h>
 
@@ -41,7 +39,7 @@ class LayoutSize;
 namespace Layout {
 class Box;
 class BoxGeometry;
-class ContainerBox;
+class ElementBox;
 class LayoutState;
 }
 
@@ -69,7 +67,7 @@ private:
     };
 
     void recursiveBuildDisplayTree(const Layout::LayoutState&, const Layout::Box&, InsertionPosition&);
-    void buildInlineDisplayTree(const Layout::LayoutState&, const Layout::ContainerBox&, InsertionPosition&);
+    void buildInlineDisplayTree(const Layout::LayoutState&, const Layout::ElementBox&, InsertionPosition&);
 
     enum class WillTraverseDescendants { Yes, No };
     StackingItem* insertIntoTree(std::unique_ptr<Box>&&, InsertionPosition&, WillTraverseDescendants);
@@ -77,7 +75,7 @@ private:
 
     void accountForBoxPaintingExtent(const Box&);
 
-    void pushStateForBoxDescendants(const Layout::ContainerBox&, const Layout::BoxGeometry&, const ContainerBox&, StackingItem*);
+    void pushStateForBoxDescendants(const Layout::ElementBox&, const Layout::BoxGeometry&, const ContainerBox&, StackingItem*);
     void popState(const BoxModelBox& currentBox);
 
     void didAppendNonContainerStackingItem(StackingItem&);
@@ -105,4 +103,3 @@ void showDisplayTree(const StackingItem&);
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

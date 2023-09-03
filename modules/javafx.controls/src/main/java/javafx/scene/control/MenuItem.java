@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -459,37 +459,8 @@ public class MenuItem implements EventTarget, Styleable {
         Event.fireEvent(this, new ActionEvent(this, this));
     }
 
-    /**
-     * Registers an event handler to this MenuItem. The handler is called when the
-     * menu item receives an {@code Event} of the specified type during the bubbling
-     * phase of event delivery.
-     *
-     * @param <E> the specific event class of the handler
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
-     */
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler);
-    }
-
-    /**
-     * Unregisters a previously registered event handler from this MenuItem. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <E> the specific event class of the handler
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
-     */
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
-        eventHandlerManager.removeEventHandler(eventType, eventHandler);
-    }
-
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         // FIXME review that these are configure properly
         if (getParentPopup() != null) {
             getParentPopup().buildEventDispatchChain(tail);
@@ -500,6 +471,26 @@ public class MenuItem implements EventTarget, Styleable {
         }
 
         return tail.prepend(eventHandlerManager);
+    }
+
+    @Override
+    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler);
+    }
+
+    @Override
+    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.removeEventHandler(eventType, eventHandler);
+    }
+
+    @Override
+    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        eventHandlerManager.addEventFilter(eventType, eventFilter);
+    }
+
+    @Override
+    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
+        eventHandlerManager.removeEventFilter(eventType, eventFilter);
     }
 
     /**

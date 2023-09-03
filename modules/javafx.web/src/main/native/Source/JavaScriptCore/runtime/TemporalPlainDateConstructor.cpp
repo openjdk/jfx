@@ -75,7 +75,7 @@ TemporalPlainDateConstructor::TemporalPlainDateConstructor(VM& vm, Structure* st
 
 void TemporalPlainDateConstructor::finishCreation(VM& vm, TemporalPlainDatePrototype* plainDatePrototype)
 {
-    Base::finishCreation(vm, 0, "PlainDate"_s, PropertyAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 3, "PlainDate"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, plainDatePrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     plainDatePrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
@@ -159,7 +159,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalPlainDateConstructorFuncCompare, (JSGlobalObjec
     auto* two = TemporalPlainDate::from(globalObject, callFrame->argument(1), std::nullopt);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return JSValue::encode(jsNumber(TemporalPlainDate::compare(one, two)));
+    return JSValue::encode(jsNumber(TemporalCalendar::isoDateCompare(one->plainDate(), two->plainDate())));
 }
 
 } // namespace JSC

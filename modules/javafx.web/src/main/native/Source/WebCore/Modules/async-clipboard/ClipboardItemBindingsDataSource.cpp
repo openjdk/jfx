@@ -30,6 +30,7 @@
 #include "Blob.h"
 #include "Clipboard.h"
 #include "ClipboardItem.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "ExceptionCode.h"
 #include "FileReaderLoader.h"
@@ -39,6 +40,7 @@
 #include "JSBlob.h"
 #include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
+#include "Page.h"
 #include "PasteboardCustomData.h"
 #include "SharedBuffer.h"
 #include "markup.h"
@@ -123,16 +125,24 @@ void ClipboardItemBindingsDataSource::getType(const String& type, Ref<DeferredPr
     });
 }
 
+void ClipboardItemBindingsDataSource::clearItemTypeLoaders()
+{
+    for (auto& itemTypeLoader : m_itemTypeLoaders)
+        itemTypeLoader->invokeCompletionHandler();
+
+    m_itemTypeLoaders.clear();
+}
+
 void ClipboardItemBindingsDataSource::collectDataForWriting(Clipboard& destination, CompletionHandler<void(std::optional<PasteboardCustomData>)>&& completion)
 {
-    m_itemTypeLoaders.clear();
+    clearItemTypeLoaders();
     ASSERT(!m_completionHandler);
     m_completionHandler = WTFMove(completion);
     m_writingDestination = destination;
     m_numberOfPendingClipboardTypes = m_itemPromises.size();
     m_itemTypeLoaders = m_itemPromises.map([&] (auto& typeAndItem) {
         auto type = typeAndItem.key;
-        auto itemTypeLoader = ClipboardItemTypeLoader::create(type, [this, protectedItem = Ref { m_item }] {
+        auto itemTypeLoader = ClipboardItemTypeLoader::create(destination, type, [this, protectedItem = Ref { m_item }] {
             ASSERT(m_numberOfPendingClipboardTypes);
             if (!--m_numberOfPendingClipboardTypes)
                 invokeCompletionHandler();
@@ -228,9 +238,10 @@ void ClipboardItemBindingsDataSource::invokeCompletionHandler()
     completionHandler(WTFMove(customData));
 }
 
-ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::ClipboardItemTypeLoader(const String& type, CompletionHandler<void()>&& completionHandler)
+ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::ClipboardItemTypeLoader(Clipboard& writingDestination, const String& type, CompletionHandler<void()>&& completionHandler)
     : m_type(type)
     , m_completionHandler(WTFMove(completionHandler))
+    , m_writingDestination(writingDestination)
 {
 }
 
@@ -239,7 +250,7 @@ ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::~ClipboardItemTypeLoad
     if (m_blobLoader)
         m_blobLoader->cancel();
 
-    invokeCompletionHandler();
+    ASSERT(!m_completionHandler);
 }
 
 void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didFinishLoading()
@@ -261,16 +272,39 @@ void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::didFail(Exception
     invokeCompletionHandler();
 }
 
-void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::sanitizeDataIfNeeded()
+String ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::dataAsString() const
 {
-    if (m_type == "text/html"_s) {
-        String markupToSanitize;
         if (std::holds_alternative<Ref<SharedBuffer>>(m_data)) {
             auto& buffer = std::get<Ref<SharedBuffer>>(m_data);
-            markupToSanitize = String::fromUTF8(buffer->data(), buffer->size());
-        } else if (std::holds_alternative<String>(m_data))
-            markupToSanitize = std::get<String>(m_data);
+        return String::fromUTF8(buffer->data(), buffer->size());
+    }
 
+    if (std::holds_alternative<String>(m_data))
+        return std::get<String>(m_data);
+
+    return { };
+}
+
+void ClipboardItemBindingsDataSource::ClipboardItemTypeLoader::sanitizeDataIfNeeded()
+{
+    if (m_type == textPlainContentTypeAtom() || m_type == "text/uri-list"_s) {
+        RefPtr document = documentFromClipboard(m_writingDestination.get());
+        if (!document)
+            return;
+
+        auto* page = document->page();
+        if (!page)
+            return;
+
+        auto urlStringToSanitize = dataAsString();
+        if (urlStringToSanitize.isEmpty())
+            return;
+
+        m_data = { page->sanitizeLookalikeCharacters(urlStringToSanitize, LookalikeCharacterSanitizationTrigger::Copy) };
+    }
+
+    if (m_type == "text/html"_s) {
+        auto markupToSanitize = dataAsString();
         if (markupToSanitize.isEmpty())
             return;
 

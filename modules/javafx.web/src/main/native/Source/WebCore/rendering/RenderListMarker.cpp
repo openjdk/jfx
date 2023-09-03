@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  * Copyright (C) 2010 Daniel Bates (dbates@intudata.com)
  *
@@ -25,6 +25,7 @@
 #include "config.h"
 #include "RenderListMarker.h"
 
+#include "CSSCounterStyleRegistry.h"
 #include "Document.h"
 #include "FontCascade.h"
 #include "GraphicsContext.h"
@@ -34,6 +35,7 @@
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderView.h"
+#include "StyleScope.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -302,6 +304,8 @@ static ListStyleType effectiveListMarkerType(ListStyleType type, int value)
 {
     // Note, the following switch statement has been explicitly grouped by list-style-type ordinal range.
     switch (type) {
+    // FIXME: handle counter-style: rdar://102988393.
+    case ListStyleType::CustomCounterStyle:
     case ListStyleType::ArabicIndic:
     case ListStyleType::Bengali:
     case ListStyleType::Binary:
@@ -418,6 +422,9 @@ static ListStyleType effectiveListMarkerType(ListStyleType type, int value)
 static StringView listMarkerSuffix(ListStyleType type)
 {
     switch (type) {
+    // FIXME: handle counter-style: rdar://102988393.
+    case ListStyleType::CustomCounterStyle:
+        return { };
     case ListStyleType::Asterisks:
     case ListStyleType::Circle:
     case ListStyleType::Disc:
@@ -530,7 +537,7 @@ static StringView listMarkerSuffix(ListStyleType type)
     return ". "_s;
 }
 
-String listMarkerText(ListStyleType type, int value)
+String listMarkerText(ListStyleType type, int value, CSSCounterStyle* counterStyle)
 {
     switch (effectiveListMarkerType(type, value)) {
     case ListStyleType::None:
@@ -560,6 +567,11 @@ String listMarkerText(ListStyleType type, int value)
     case ListStyleType::DisclosureOpen:
         return { &blackDownPointingSmallTriangle, 1 };
 
+    // FIXME: handle counter-style: rdar://102988393.
+    case ListStyleType::CustomCounterStyle:
+        if (!counterStyle)
+            return String::number(value);
+        return counterStyle->text(value);
     case ListStyleType::Decimal:
         return String::number(value);
 
@@ -1616,20 +1628,19 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
 
     auto color = style().visitedDependentColorWithColorFilter(CSSPropertyColor);
     context.setStrokeColor(color);
-    context.setStrokeStyle(SolidStroke);
+    context.setStrokeStyle(StrokeStyle::SolidStroke);
     context.setStrokeThickness(1.0f);
     context.setFillColor(color);
 
     switch (style().listStyleType()) {
     case ListStyleType::Disc:
-        context.drawEllipse(markerRect);
+        context.fillEllipse(markerRect);
         return;
     case ListStyleType::Circle:
-        context.setFillColor(Color::transparentBlack);
-        context.drawEllipse(markerRect);
+        context.strokeEllipse(markerRect);
         return;
     case ListStyleType::Square:
-        context.drawRect(markerRect);
+        context.fillRect(markerRect);
         return;
     default:
         break;
@@ -1769,10 +1780,9 @@ void RenderListMarker::layout()
     LayoutUnit blockOffset;
     for (auto* ancestor = parentBox(*this); ancestor && ancestor != m_listItem.get(); ancestor = parentBox(*ancestor))
         blockOffset += ancestor->logicalTop();
-    if (style().isLeftToRightDirection())
-        m_lineOffsetForListItem = m_listItem->logicalLeftOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
-    else
-        m_lineOffsetForListItem = m_listItem->logicalRightOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
+
+    m_lineLogicalOffsetForListItem = m_listItem->logicalLeftOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
+    m_lineOffsetForListItem = style().isLeftToRightDirection() ? m_lineLogicalOffsetForListItem : m_listItem->logicalRightOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
 
     if (isImage()) {
         updateMarginsAndContent();
@@ -1832,6 +1842,8 @@ void RenderListMarker::updateContent()
 
     auto type = style().listStyleType();
     switch (type) {
+    // FIXME: handle CSSCounterStyle case rdar://102988393.
+    case ListStyleType::CustomCounterStyle:
     case ListStyleType::String:
         m_textWithSuffix = style().listStyleStringValue();
         m_textWithoutSuffixLength = m_textWithSuffix.length();
@@ -1950,6 +1962,11 @@ bool RenderListMarker::isInside() const
     return m_listItem->notInList() || style().listStylePosition() == ListStylePosition::Inside;
 }
 
+const RenderListItem* RenderListMarker::listItem() const
+{
+    return m_listItem.get();
+}
+
 FloatRect RenderListMarker::relativeMarkerRect()
 {
     if (isImage())
@@ -2001,6 +2018,11 @@ LayoutRect RenderListMarker::selectionRectForRepaint(const RenderLayerModelObjec
 StringView RenderListMarker::textWithoutSuffix() const
 {
     return StringView { m_textWithSuffix }.left(m_textWithoutSuffixLength);
+}
+
+CSSCounterStyle* RenderListMarker::counterStyle() const
+{
+    return document().counterStyleRegistry().resolvedCounterStyle(style().listStyleStringValue()).get();
 }
 
 } // namespace WebCore

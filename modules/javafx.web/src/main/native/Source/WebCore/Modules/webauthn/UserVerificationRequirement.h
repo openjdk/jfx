@@ -27,29 +27,14 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include <wtf/EnumTraits.h>
-
 namespace WebCore {
 
-enum class UserVerificationRequirement {
+enum class UserVerificationRequirement : uint8_t {
     Required,
     Preferred,
     Discouraged
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::UserVerificationRequirement> {
-    using values = EnumValues<
-        WebCore::UserVerificationRequirement,
-        WebCore::UserVerificationRequirement::Required,
-        WebCore::UserVerificationRequirement::Preferred,
-        WebCore::UserVerificationRequirement::Discouraged
-    >;
-};
-
-} // namespace WTF
 
 #endif // ENABLE(WEB_AUTHN)

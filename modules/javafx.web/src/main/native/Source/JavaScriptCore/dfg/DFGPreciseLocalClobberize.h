@@ -184,20 +184,26 @@ private:
         case CreateDirectArguments:
         case CreateScopedArguments:
         case CreateClonedArguments:
-        case CreateArgumentsButterfly:
+        case CreateArgumentsButterflyExcludingThis:
         case PhantomDirectArguments:
         case PhantomClonedArguments:
         case GetRestLength:
         case CreateRest: {
             bool isForwardingNode = false;
             bool isPhantomNode = false;
+            bool mayReadArguments = false;
             switch (m_node->op()) {
             case ForwardVarargs:
+            // This is used iff allInlineFramesAreTailCalls, so we will
+            // actually do a real tail call and destroy our frame.
+            case TailCallForwardVarargs:
+                isForwardingNode = true;
+                break;
             case CallForwardVarargs:
             case ConstructForwardVarargs:
-            case TailCallForwardVarargs:
             case TailCallForwardVarargsInlinedCaller:
                 isForwardingNode = true;
+                mayReadArguments = true;
                 break;
             case PhantomDirectArguments:
             case PhantomClonedArguments:
@@ -209,6 +215,9 @@ private:
 
             if (isPhantomNode && m_graph.m_plan.isFTL())
                 break;
+
+            if (mayReadArguments)
+                readWorld(m_node);
 
             if (isForwardingNode && m_node->hasArgumentsChild() && m_node->argumentsChild()
                 && (m_node->argumentsChild()->op() == PhantomNewArrayWithSpread || m_node->argumentsChild()->op() == PhantomSpread)) {

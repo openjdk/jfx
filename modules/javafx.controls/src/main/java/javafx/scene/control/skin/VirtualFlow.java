@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -858,7 +858,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             int oldIndex = computeCurrentIndex(oldCount);
             double oldOffset = computeViewportOffset(getPosition(), oldCount);
             int cellCount = get();
+            if (oldIndex > cellCount) {
+                oldIndex = cellCount;
+            }
             resetSizeEstimates();
+            getOrCreateCellSize(oldIndex);
             recalculateAndImproveEstimatedSize(DEFAULT_IMPROVEMENT, oldIndex, oldOffset);
 
             boolean countChanged = oldCount != cellCount;
@@ -1117,7 +1121,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (needsCellsLayout) {
             for (int i = 0, max = cells.size(); i < max; i++) {
-                Cell<?> cell = cells.get(i);
+                T cell = cells.get(i);
                 if (cell != null) {
                     cell.requestLayout();
                 }
@@ -1161,7 +1165,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (!cellNeedsLayout) {
             for (int i = 0; i < cells.size(); i++) {
-                Cell<?> cell = cells.get(i);
+                T cell = cells.get(i);
                 cellNeedsLayout = cell.isNeedsLayout();
                 if (cellNeedsLayout) break;
             }
@@ -1668,8 +1672,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // Add any necessary leading cells
             if (firstCell != null) {
                 int firstIndex = getCellIndex(firstCell);
-                double prevIndexSize = getCellLength(firstIndex - 1);
-                addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
+                int index = Math.max(0, firstIndex - 1);
+
+                double prevIndexSize = getCellLength(index);
+                addLeadingCells(index, getCellPosition(firstCell) - prevIndexSize);
             } else {
                 int currentIndex = computeCurrentIndex();
 
@@ -1951,7 +1957,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Gets the breadth of a specific cell
      */
-    double getCellBreadth(Cell cell) {
+    double getCellBreadth(T cell) {
         return isVertical() ?
                 cell.prefWidth(-1)
                 : cell.prefHeight(-1);
@@ -1991,12 +1997,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     protected void resizeCell(T cell) {
         if (cell == null) return;
 
+        double size = Math.max(getMaxPrefBreadth(), getViewportBreadth());
         if (isVertical()) {
-            double width = Math.max(getMaxPrefBreadth(), getViewportBreadth());
-            cell.resize(width, fixedCellSizeEnabled ? getFixedCellSize() : Utils.boundedSize(cell.prefHeight(width), cell.minHeight(width), cell.maxHeight(width)));
+            cell.resize(size, fixedCellSizeEnabled ? getFixedCellSize() : Utils.boundedSize(cell.prefHeight(size), cell.minHeight(size), cell.maxHeight(size)));
         } else {
-            double height = Math.max(getMaxPrefBreadth(), getViewportBreadth());
-            cell.resize(fixedCellSizeEnabled ? getFixedCellSize() : Utils.boundedSize(cell.prefWidth(height), cell.minWidth(height), cell.maxWidth(height)), height);
+            cell.resize(fixedCellSizeEnabled ? getFixedCellSize() : Utils.boundedSize(cell.prefWidth(size), cell.minWidth(size), cell.maxWidth(size)), size);
         }
     }
 
@@ -2693,18 +2698,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * offset.
      */
     private void fitCells() {
-        double size = Math.max(getMaxPrefBreadth(), getViewportBreadth());
-        boolean isVertical = isVertical();
-
         // Note: Do not optimise this loop by pre-calculating the cells size and
         // storing that into a int value - this can lead to RT-32828
         for (int i = 0; i < cells.size(); i++) {
-            Cell<?> cell = cells.get(i);
-            if (isVertical) {
-                cell.resize(size, cell.prefHeight(size));
-            } else {
-                cell.resize(cell.prefWidth(size), size);
-            }
+            T cell = cells.get(i);
+            resizeCell(cell);
         }
     }
 
@@ -2823,7 +2821,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
     }
 
-    private boolean doesCellContainFocus(Cell<?> c) {
+    private boolean doesCellContainFocus(T c) {
         Scene scene = c.getScene();
         final Node focusOwner = scene == null ? null : scene.getFocusOwner();
 
@@ -2996,7 +2994,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return baseOffset;
     }
 
-    private int computeCurrentIndex() {
+    /**
+     * Compute the index of the first visible cell
+     * This has package access ONLY FOR TESTING.
+     */
+    int computeCurrentIndex() {
         return computeCurrentIndex(getCellCount());
     }
 
@@ -3070,12 +3072,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 doRelease = true;
             }
 
-            // if we have a valid cell, we can populate the cache
-            if (isVertical()) {
-                answer = cell.getLayoutBounds().getHeight();
-            } else {
-                answer = cell.getLayoutBounds().getWidth();
-            }
+            answer = getCellLength(cell);
             itemSizeCache.set(idx, answer);
 
             if (doRelease) { // we need to release the accumcell
@@ -3103,7 +3100,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (itemSizeCache.size() > cellIndex) {
             Double oldSize = itemSizeCache.get(cellIndex);
-            double newSize = isVertical() ? cell.getLayoutBounds().getHeight() : cell.getLayoutBounds().getWidth();
+            double newSize = getCellLength(cell);
             itemSizeCache.set(cellIndex, newSize);
             if ((oldSize != null) && !oldSize.equals(newSize)) {
                 int currentIndex = computeCurrentIndex();
