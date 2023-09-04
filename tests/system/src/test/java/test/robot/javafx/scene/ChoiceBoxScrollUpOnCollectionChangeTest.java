@@ -28,7 +28,6 @@ package test.robot.javafx.scene;
 import java.util.concurrent.CountDownLatch;
 
 import com.sun.javafx.scene.control.ContextMenuContentShim;
-import com.sun.javafx.tk.Toolkit;
 
 import javafx.application.Application;
 import javafx.collections.FXCollections;
@@ -95,11 +94,11 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
         Util.runAndWait(() -> {
             for (int i = 0; i < scrollAmt; i++) {
                 robot.keyType(KeyCode.DOWN);
-                Toolkit.getToolkit().firePulse();
             }
             scrollLatch.countDown();
         });
 
+        Util.waitForIdle(scene);
         Util.waitForLatch(scrollLatch, 5, "Timeout waiting for choicebox to be hidden.");
         Thread.sleep(400); // Wait for up arrow to get loaded in UI
 

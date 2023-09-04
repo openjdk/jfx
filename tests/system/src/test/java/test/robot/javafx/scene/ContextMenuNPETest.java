@@ -48,7 +48,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.tk.Toolkit;
 
 import test.util.Util;
 
@@ -101,9 +100,8 @@ public class ContextMenuNPETest {
             robot.keyType(KeyCode.DOWN);
             robot.keyType(KeyCode.RIGHT);
             robot.keyType(KeyCode.ENTER);
-            Toolkit.getToolkit().firePulse();
-
         });
+        Util.waitForIdle(scene);
         Thread.sleep(200); // Small delay to wait for context menu to close.
         Util.waitForLatch(onHiddenLatch, 10, "Failed to hide context menu.");
     }
