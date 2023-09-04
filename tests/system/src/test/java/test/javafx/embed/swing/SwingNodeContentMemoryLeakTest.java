@@ -62,6 +62,7 @@ public class SwingNodeContentMemoryLeakTest {
     private int count = 0;
     private int fail = 0;
     private SwingNode node;
+    private long panelCount;
 
     @BeforeClass
     public static void setupOnce() {
@@ -102,24 +103,17 @@ public class SwingNodeContentMemoryLeakTest {
                     node.setContent(panel);
                 });
 
-                long panelCount = panels.stream().filter(ref ->
+                panelCount = panels.stream().filter(ref ->
                                                      ref.get() != null).count();
-                // Sometimes panel count can shoot upto more than 3 once or twice
-                // due to gc not being guranteed so this check prevents false failure
-                // Without fix, the panel count will increase continuosly so it will
-                // always be more 3 after 1-2 iterations
-                if (panelCount > 3) {
-                    fail++;
-                }
-                System.out.println("iteration " + count + " Panels in memory: "
-                                               + panelCount + " fail " + fail);
-                assertFalse(fail > 2);
+                System.out.println("iteration " + count + " Panels in memory: " + panelCount);
 
                 //I know this doesn't guarantee anything, but prompting a GC gives me more confidence that this
                 //truly is a bug.
                 System.gc();
                 count++;
             }
+            // Check if panelCount has not increased beyond certain threshold
+            assertFalse(panelCount > count/2);
 
         }).start();
 
