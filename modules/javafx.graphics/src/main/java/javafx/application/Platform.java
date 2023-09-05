@@ -446,6 +446,7 @@ public final class Platform {
      * by JavaFX when the operating system reports that a platform preference has changed.
      *
      * @return the {@code Preferences} instance
+     * @see <a href="Platform.Preferences.html#preferences-table">List of platform preferences</a>
      * @since 22
      */
     public static Preferences getPreferences() {
@@ -464,9 +465,8 @@ public final class Platform {
      * so applications should not assume that a particular preference is always available.
      * <p>
      * The following list contains all preferences that are potentially available on the specified platforms:
-     *
-     * <table>
-     *     <caption></caption>
+     * <table id="preferences-table">
+     *     <caption>List of platform preferences</caption>
      *     <tbody>
      *         <tr><th colspan="2" scope="colgroup">Windows</th></tr>
      *         <tr><td>{@code Windows.SPI.HighContrast}</td><td>{@link Boolean}</td></tr>
