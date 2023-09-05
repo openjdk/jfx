@@ -99,6 +99,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     @SuppressWarnings("unchecked")
     public <T> Optional<T> getValue(String key, Class<T> type) {
         Objects.requireNonNull(key, "key cannot be null");
+        Objects.requireNonNull(key, "type cannot be null");
         Object value = effectivePreferences.get(key);
 
         if (value == null) {

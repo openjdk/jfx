@@ -32,7 +32,6 @@ import java.util.Map;
 import javafx.application.Preloader.PreloaderNotification;
 import javafx.css.Stylesheet;
 import javafx.scene.Scene;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 import com.sun.javafx.application.LauncherImpl;

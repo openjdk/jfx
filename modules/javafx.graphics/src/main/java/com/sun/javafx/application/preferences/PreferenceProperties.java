@@ -115,7 +115,7 @@ final class PreferenceProperties {
             }
         }
 
-        fireValueChangedEvent();
+        fireValueChangedIfNecessary();
     }
 
     private void updateColorProperty(ColorProperty property, Object value) {
@@ -134,9 +134,9 @@ final class PreferenceProperties {
         }
     }
 
-    private void fireValueChangedEvent() {
+    private void fireValueChangedIfNecessary() {
         for (ColorProperty colorProperty : allColors) {
-            colorProperty.fireValueChangedEvent();
+            colorProperty.fireValueChangedIfNecessary();
         }
     }
 
@@ -200,11 +200,10 @@ final class PreferenceProperties {
                 defaultValue);
         }
 
-        @Override
-        public void fireValueChangedEvent() {
+        void fireValueChangedIfNecessary() {
             if (!Objects.equals(lastEffectiveValue, effectiveValue)) {
                 lastEffectiveValue = effectiveValue;
-                super.fireValueChangedEvent();
+                fireValueChangedEvent();
             }
         }
     }

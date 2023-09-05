@@ -110,5 +110,4 @@ public class PlatformPreferencesTest extends Application {
 
         return "{\r\n\t" + entries + "\r\n}\r\n";
     }
-
 }
