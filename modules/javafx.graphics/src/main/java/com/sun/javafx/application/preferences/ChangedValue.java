@@ -39,6 +39,10 @@ public record ChangedValue(Object oldValue, Object newValue) {
      * Returns a map that contains the new or changed mappings of {@code current} compared to {@code old}.
      * A value has changed if {@link Objects#equals(Object, Object)} or {@link Arrays#equals(Object[], Object[])}
      * returns {@code false} when invoked with the old and new value.
+     *
+     * @param old the old mappings
+     * @param current the current mappings
+     * @return a mapping of keys to changed values
      */
     public static Map<String, ChangedValue> getEffectiveChanges(Map<String, Object> old, Map<String, Object> current) {
         Map<String, ChangedValue> changed = null;

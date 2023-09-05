@@ -50,10 +50,14 @@ import java.util.Optional;
  */
 public class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
 
-    final PreferenceProperties properties = new PreferenceProperties(this);
+    /**
+     * Contains mappings from platform-specific keys to well-known keys, which are used
+     * in the implementation of the property-based API in {@link PreferenceProperties}.
+     */
+    final Map<String, String> wellKnownKeys;
     final Map<String, Object> effectivePreferences = new HashMap<>();
     final Map<String, Object> unmodifiableEffectivePreferences = Collections.unmodifiableMap(effectivePreferences);
-    final Map<String, String> wellKnownKeys;
+    final PreferenceProperties properties = new PreferenceProperties(this);
 
     private MapListenerHelper<String, Object> helper;
 
@@ -183,6 +187,8 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     /**
      * Updates this map of preferences with a new set of platform preferences.
      * The specified preferences may include all available preferences, or only the changed preferences.
+     *
+     * @param preferences the new preference mappings
      */
     public void update(Map<String, Object> preferences) {
         Map<String, Object> currentPreferences = Map.copyOf(effectivePreferences);

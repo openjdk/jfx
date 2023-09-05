@@ -444,13 +444,7 @@ public final class Platform {
      * be added, removed, or updated. Calling any mutator method on the map will always cause
      * {@code UnsupportedOperationException} to be thrown. However, the mappings will be updated
      * by JavaFX when the operating system reports that a platform preference has changed.
-     * <p>
-     * Applications and libraries are encouraged to use {@link Application#getPreferences()} instead,
-     * which allows applications to override preference mappings with custom values. For example,
-     * an application might override {@link Application.Preferences#appearanceProperty()} to switch
-     * between dark or light mode independent of the operating system setting.
      *
-     * @see Application#getPreferences()
      * @return the {@code Preferences} instance
      * @since 22
      */

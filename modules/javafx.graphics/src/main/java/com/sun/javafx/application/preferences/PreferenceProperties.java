@@ -41,7 +41,7 @@ import java.util.Objects;
 /**
  * Contains {@link Property}-based preference implementations.
  */
-public final class PreferenceProperties {
+final class PreferenceProperties {
 
     private final ColorProperty backgroundColor = new ColorProperty("backgroundColor", Color.WHITE);
     private final ColorProperty foregroundColor = new ColorProperty("foregroundColor", Color.BLACK);
@@ -50,7 +50,7 @@ public final class PreferenceProperties {
     private final AppearanceProperty appearance = new AppearanceProperty();
     private final Object bean;
 
-    public PreferenceProperties(Object bean) {
+    PreferenceProperties(Object bean) {
         this.bean = bean;
     }
 

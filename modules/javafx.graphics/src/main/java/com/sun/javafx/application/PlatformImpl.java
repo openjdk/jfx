@@ -27,7 +27,6 @@ package com.sun.javafx.application;
 
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.application.preferences.ApplicationPreferences;
 import com.sun.javafx.application.preferences.PlatformPreferences;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.tk.TKListener;
@@ -1050,21 +1049,11 @@ public class PlatformImpl {
     private static PlatformPreferences platformPreferences;
 
     public static PlatformPreferences getPlatformPreferences() {
-        if (applicationPreferences == null) {
+        if (platformPreferences == null) {
             throw new IllegalStateException("Toolkit not initialized");
         }
 
         return platformPreferences;
-    }
-
-    private static ApplicationPreferences applicationPreferences;
-
-    public static ApplicationPreferences getApplicationPreferences() {
-        if (applicationPreferences == null) {
-            throw new IllegalStateException("Toolkit not initialized");
-        }
-
-        return applicationPreferences;
     }
 
     /**
@@ -1076,9 +1065,6 @@ public class PlatformImpl {
     public static void initPreferences(Map<String, String> wellKnownKeys, Map<String, Object> preferences) {
         platformPreferences = new PlatformPreferences(wellKnownKeys);
         platformPreferences.update(preferences);
-
-        applicationPreferences = new ApplicationPreferences(wellKnownKeys);
-        applicationPreferences.update(preferences);
     }
 
     /**
@@ -1094,7 +1080,6 @@ public class PlatformImpl {
         if (isFxApplicationThread()) {
             checkHighContrastThemeChanged(preferences);
             platformPreferences.update(preferences);
-            applicationPreferences.update(preferences);
         } else {
             // Make a defensive copy in case the caller of this method decides to re-use or
             // modify its preferences map after the method returns. Don't use Map.copyOf
