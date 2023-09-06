@@ -30,7 +30,7 @@
 class PlatformSupport final
 {
 public:
-    PlatformSupport(JNIEnv* env) : env(env) {}
+    PlatformSupport(JNIEnv*, jobject);
     ~PlatformSupport();
     PlatformSupport(PlatformSupport const&) = delete;
     PlatformSupport& operator=(PlatformSupport const&) = delete;
@@ -44,9 +44,10 @@ public:
      * Collect all platform preferences and notify the JavaFX application when a preference has changed.
      * The change notification includes all preferences, not only the changed preferences.
      */
-    void updatePreferences(jobject application) const;
+    void updatePreferences() const;
 
 private:
     JNIEnv* env;
+    jobject application;
     mutable jobject preferences;
 };

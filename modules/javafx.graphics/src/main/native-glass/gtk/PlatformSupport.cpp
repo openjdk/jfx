@@ -52,7 +52,12 @@ namespace
     }
 }
 
+PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
+    : env(env), application(env->NewGlobalRef(application)) {}
+
 PlatformSupport::~PlatformSupport() {
+    env->DeleteGlobalRef(application);
+
     if (preferences) {
         env->DeleteGlobalRef(preferences);
     }
@@ -84,19 +89,16 @@ jobject PlatformSupport::collectPreferences() const {
     g_object_unref(style);
 
     GtkSettings* settings = gtk_settings_get_default();
-    gchar* themeName;
-    g_object_get(settings, "gtk-theme-name", &themeName, NULL);
-    putString(env, prefs, "GTK.theme_name", themeName);
-    g_object_unref(settings);
+    if (settings != NULL) {
+        gchar* themeName;
+        g_object_get(settings, "gtk-theme-name", &themeName, NULL);
+        putString(env, prefs, "GTK.theme_name", themeName);
+    }
 
     return prefs;
 }
 
-void PlatformSupport::updatePreferences(jobject application) const {
-    if (application == NULL) {
-        return;
-    }
-
+void PlatformSupport::updatePreferences() const {
     jobject newPreferences = collectPreferences();
 
     jboolean preferencesChanged =
