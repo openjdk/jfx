@@ -130,6 +130,9 @@ public class PlatformPreferencesTest {
         assertEquals(1, count[0]);
 
         prefs.update(Map.of("qux", "quux", "quz", "quuz"));
+        assertEquals(2, count[0]);
+
+        prefs.update(Map.of("qux", "quux", "quz", "quuz", "abc", "def"));
         assertEquals(3, count[0]);
     }
 

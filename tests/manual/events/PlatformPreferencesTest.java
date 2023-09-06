@@ -90,13 +90,11 @@ public class PlatformPreferencesTest extends Application {
                         .filter(entry -> !Objects.equals(entry.getValue(), cachedPreferences.get(entry.getKey())))
                         .collect(Collectors.toSet());
 
-                if (changed.size() > 0) {
-                    double scrollTop = textArea.getScrollTop();
-                    textArea.setText(textArea.getText() + "changed = " + formatPrefs(changed));
-                    textArea.setScrollTop(scrollTop);
+                double scrollTop = textArea.getScrollTop();
+                textArea.setText(textArea.getText() + "changed = " + formatPrefs(changed));
+                textArea.setScrollTop(scrollTop);
 
-                    cachedPreferences = new HashMap<>(Platform.getPreferences());
-                }
+                cachedPreferences = new HashMap<>(Platform.getPreferences());
             });
 
         stage.setScene(new Scene(root));
