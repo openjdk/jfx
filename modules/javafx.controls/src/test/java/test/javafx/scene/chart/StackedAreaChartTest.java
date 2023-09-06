@@ -411,6 +411,11 @@ public class StackedAreaChartTest extends XYChartTestBase {
         assertEquals(15, ValueAxisShim.get_dataMaxValue(yAxis), 1e-100);
     }
 
+    /*
+     * JDK-8314779
+     * The test checks if the line and path element of the chart
+     * are removed when series data is cleared.
+     */
     @Test
     public void testChartLineAndAreaRemovedOnClearingSeries() {
         startApp();
