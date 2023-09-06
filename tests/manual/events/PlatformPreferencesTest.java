@@ -37,6 +37,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
@@ -80,18 +81,21 @@ public class PlatformPreferencesTest extends Application {
         BorderPane.setMargin(textArea, new Insets(20, 0, 0, 0));
 
         cachedPreferences = new HashMap<>(Platform.getPreferences());
-        textArea.setText("preferences = " + formatPrefs(cachedPreferences.entrySet().stream()));
+        textArea.setText("preferences = " + formatPrefs(cachedPreferences.entrySet()));
 
         Platform.getPreferences().addListener(
             (InvalidationListener)observable -> {
-                Stream<Map.Entry<String, Object>> changed = Platform.getPreferences().entrySet().stream()
-                        .filter(entry -> !Objects.equals(entry.getValue(), cachedPreferences.get(entry.getKey())));
+                Set<Map.Entry<String, Object>> changed = Platform.getPreferences().entrySet().stream()
+                        .filter(entry -> !Objects.equals(entry.getValue(), cachedPreferences.get(entry.getKey())))
+                        .collect(Collectors.toSet());
 
-                double scrollTop = textArea.getScrollTop();
-                textArea.setText(textArea.getText() + "changed = " + formatPrefs(changed));
-                textArea.setScrollTop(scrollTop);
+                if (changed.size() > 0) {
+                    double scrollTop = textArea.getScrollTop();
+                    textArea.setText(textArea.getText() + "changed = " + formatPrefs(changed));
+                    textArea.setScrollTop(scrollTop);
 
-                cachedPreferences = new HashMap<>(Platform.getPreferences());
+                    cachedPreferences = new HashMap<>(Platform.getPreferences());
+                }
             });
 
         stage.setScene(new Scene(root));
@@ -102,8 +106,8 @@ public class PlatformPreferencesTest extends Application {
         Application.launch(args);
     }
 
-    private static String formatPrefs(Stream<Map.Entry<String, Object>> prefs) {
-        String entries = prefs
+    private static String formatPrefs(Set<Map.Entry<String, Object>> prefs) {
+        String entries = prefs.stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(Object::toString)
                 .collect(Collectors.joining("\r\n\t"));
