@@ -756,7 +756,11 @@ public abstract class Application {
 
     /**
      * Returns the current set of platform properties as a map of platform-specific keys to
-     * arbitrary values.
+     * arbitrary values. Callers should assume that the returned map is immutable, while
+     * implementations should either return an immutable map, or give up ownership of the
+     * returned map.
+     *
+     * @return the current set of platform preferences
      */
     public Map<String, Object> getPlatformPreferences() {
         return Map.of();
@@ -769,15 +773,15 @@ public abstract class Application {
      * well-known key "foregroundColor", which makes it easier to write shared code without
      * depending on platform-specific details.
      * <p>
-     * The following well-known keys are currently supported, which correspond to the names
-     * of color properties on the PreferenceProperties class:
+     * The following well-known keys are currently supported, which correspond to the names of color
+     * properties on the {@link com.sun.javafx.application.preferences.PreferenceProperties} class:
      * <ul>
      *     <li>foregroundColor
      *     <li>backgroundColor
      *     <li>accentColor
      * </ul>
      *
-     * @see com.sun.javafx.application.preferences.PreferenceProperties
+     * @return a map of platform-specific keys to well-known keys
      */
     public Map<String, String> getWellKnownPlatformPreferenceKeys() {
         return Map.of();
