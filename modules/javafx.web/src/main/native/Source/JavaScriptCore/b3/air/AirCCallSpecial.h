@@ -44,7 +44,7 @@ namespace JSC { namespace B3 { namespace Air {
 
 class CCallSpecial final : public Special {
 public:
-    CCallSpecial();
+    CCallSpecial(bool isSIMDContext);
     ~CCallSpecial() final;
 
     // You cannot use this register to pass arguments. It just so happens that this register is not
@@ -57,10 +57,10 @@ private:
     bool isValid(Inst&) final;
     bool admitsStack(Inst&, unsigned argIndex) final;
     bool admitsExtendedOffsetAddr(Inst&, unsigned) final;
-    void reportUsedRegisters(Inst&, const RegisterSet&) final;
+    void reportUsedRegisters(Inst&, const RegisterSetBuilder&) final;
     MacroAssembler::Jump generate(Inst&, CCallHelpers&, GenerationContext&) final;
-    RegisterSet extraEarlyClobberedRegs(Inst&) final;
-    RegisterSet extraClobberedRegs(Inst&) final;
+    RegisterSetBuilder extraEarlyClobberedRegs(Inst&) final;
+    RegisterSetBuilder extraClobberedRegs(Inst&) final;
 
     void dumpImpl(PrintStream&) const final;
     void deepDumpImpl(PrintStream&) const final;
@@ -76,8 +76,8 @@ private:
     static constexpr unsigned argArgOffset =
         numSpecialArgs + numCalleeArgs + numReturnGPArgs + numReturnFPArgs;
 
-    RegisterSet m_clobberedRegs;
-    RegisterSet m_emptyRegs;
+    RegisterSetBuilder m_clobberedRegs;
+    bool m_isSIMDContext { false };
 };
 
 } } } // namespace JSC::B3::Air

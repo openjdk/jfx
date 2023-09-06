@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 #ifndef WEBGPUEXT_H_
 #define WEBGPUEXT_H_
 
+#include <IOSurface/IOSurfaceRef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -44,9 +46,8 @@ typedef void (^WGPUWorkItem)(void);
 typedef void (^WGPUScheduleWorkBlock)(WGPUWorkItem workItem);
 
 typedef enum WGPUSTypeExtended {
-    WGPUSTypeExtended_ShaderModuleDescriptorHints = 0x348970F3, // Random
-    WGPUSTypeExtended_TextureDescriptorViewFormats = 0x1D5BC57, // Random
     WGPUSTypeExtended_InstanceCocoaDescriptor = 0x151BBC00, // Random
+    WGPUSTypeExtended_SurfaceDescriptorCocoaSurfaceBacking = 0x017E9710, // Random
     WGPUSTypeExtended_Force32 = 0x7FFFFFFF
 } WGPUSTypeExtended;
 
@@ -62,27 +63,13 @@ typedef struct WGPUInstanceCocoaDescriptor {
     __unsafe_unretained WGPUScheduleWorkBlock scheduleWorkBlock;
 } WGPUInstanceCocoaDescriptor;
 
-typedef struct WGPUShaderModuleCompilationHint {
-    WGPUPipelineLayout layout;
-} WGPUShaderModuleCompilationHint;
-
-typedef struct WGPUShaderModuleCompilationHintEntry {
-    WGPUChainedStruct const * nextInChain;
-    char const * key;
-    WGPUShaderModuleCompilationHint hint;
-} WGPUShaderModuleCompilationHintEntry;
-
-typedef struct WGPUShaderModuleDescriptorHints {
+typedef void (^WGPURenderBuffersWereRecreatedBlockCallback)(CFArrayRef ioSurfaces);
+typedef void (^WGPUOnSubmittedWorkScheduledCallback)(WGPUWorkItem);
+typedef void (^WGPUCompositorIntegrationRegisterBlockCallback)(WGPURenderBuffersWereRecreatedBlockCallback renderBuffersWereRecreated, WGPUOnSubmittedWorkScheduledCallback onSubmittedWorkScheduledCallback);
+typedef struct WGPUSurfaceDescriptorCocoaCustomSurface {
     WGPUChainedStruct chain;
-    uint32_t hintsCount;
-    WGPUShaderModuleCompilationHintEntry const * hints;
-} WGPUShaderModuleDescriptorHints;
-
-typedef struct WGPUTextureDescriptorViewFormats {
-    WGPUChainedStruct chain;
-    uint32_t viewFormatsCount;
-    WGPUTextureFormat const * viewFormats;
-} WGPUTextureDescriptorViewFormats;
+    WGPUCompositorIntegrationRegisterBlockCallback compositorIntegrationRegister;
+} WGPUSurfaceDescriptorCocoaCustomSurface;
 
 #if !defined(WGPU_SKIP_PROCS)
 
@@ -138,6 +125,9 @@ typedef void (*WGPUProcInstanceRequestAdapterWithBlock)(WGPUInstance instance, W
 typedef void (*WGPUProcQueueOnSubmittedWorkDoneWithBlock)(WGPUQueue queue, uint64_t signalValue, WGPUQueueWorkDoneBlockCallback callback);
 typedef void (*WGPUProcShaderModuleGetCompilationInfoWithBlock)(WGPUShaderModule shaderModule, WGPUCompilationInfoBlockCallback callback);
 
+// FIXME: https://github.com/webgpu-native/webgpu-headers/issues/89 is about moving this from WebGPUExt.h to WebGPU.h
+typedef WGPUTexture (*WGPUProcSwapChainGetCurrentTexture)(WGPUSwapChain swapChain);
+
 #endif  // !defined(WGPU_SKIP_PROCS)
 
 #if !defined(WGPU_SKIP_DECLARATIONS)
@@ -192,8 +182,11 @@ WGPU_EXPORT bool wgpuDevicePopErrorScopeWithBlock(WGPUDevice device, WGPUErrorBl
 WGPU_EXPORT void wgpuDeviceSetDeviceLostCallbackWithBlock(WGPUDevice device, WGPUDeviceLostBlockCallback callback);
 WGPU_EXPORT void wgpuDeviceSetUncapturedErrorCallbackWithBlock(WGPUDevice device, WGPUErrorBlockCallback callback);
 WGPU_EXPORT void wgpuInstanceRequestAdapterWithBlock(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterBlockCallback callback);
-WGPU_EXPORT void wgpuQueueOnSubmittedWorkDoneWithBlock(WGPUQueue queue, uint64_t signalValue, WGPUQueueWorkDoneBlockCallback callback);
+WGPU_EXPORT void wgpuQueueOnSubmittedWorkDoneWithBlock(WGPUQueue queue, WGPUQueueWorkDoneBlockCallback callback);
 WGPU_EXPORT void wgpuShaderModuleGetCompilationInfoWithBlock(WGPUShaderModule shaderModule, WGPUCompilationInfoBlockCallback callback);
+
+// FIXME: https://github.com/webgpu-native/webgpu-headers/issues/89 is about moving this from WebGPUExt.h to WebGPU.h
+WGPU_EXPORT WGPUTexture wgpuSwapChainGetCurrentTexture(WGPUSwapChain swapChain);
 
 #endif  // !defined(WGPU_SKIP_DECLARATIONS)
 

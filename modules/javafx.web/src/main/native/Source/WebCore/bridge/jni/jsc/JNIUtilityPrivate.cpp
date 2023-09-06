@@ -78,8 +78,6 @@ jvalue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject
 {
     JSLockHolder lock(globalObject);
 
-    VM& vm = globalObject->vm();
-
     jvalue result;
     memset(&result, 0, sizeof(jvalue));
 

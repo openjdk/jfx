@@ -36,7 +36,7 @@ static JSC_DECLARE_HOST_FUNCTION(stringFromCodePoint);
 
 namespace JSC {
 
-const ClassInfo StringConstructor::s_info = { "Function"_s, &InternalFunction::s_info, &stringConstructorTable, nullptr, CREATE_METHOD_TABLE(StringConstructor) };
+const ClassInfo StringConstructor::s_info = { "Function"_s, &Base::s_info, &stringConstructorTable, nullptr, CREATE_METHOD_TABLE(StringConstructor) };
 
 /* Source for StringConstructor.lut.h
 @begin stringConstructorTable
@@ -52,15 +52,26 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(StringConstructor);
 static JSC_DECLARE_HOST_FUNCTION(callStringConstructor);
 static JSC_DECLARE_HOST_FUNCTION(constructWithStringConstructor);
 
-StringConstructor::StringConstructor(VM& vm, Structure* structure)
-    : InternalFunction(vm, structure, callStringConstructor, constructWithStringConstructor)
+StringConstructor::StringConstructor(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure)
+    : Base(vm, executable, globalObject, structure)
 {
 }
 
 void StringConstructor::finishCreation(VM& vm, StringPrototype* stringPrototype)
 {
-    Base::finishCreation(vm, 1, vm.propertyNames->String.string(), PropertyAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, stringPrototype, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->name, jsString(vm, vm.propertyNames->String.string()), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+}
+
+StringConstructor* StringConstructor::create(VM& vm, Structure* structure, StringPrototype* stringPrototype, GetterSetter*)
+{
+    JSGlobalObject* globalObject = structure->globalObject();
+    NativeExecutable* executable = vm.getHostFunction(callStringConstructor, ImplementationVisibility::Public, StringConstructorIntrinsic, constructWithStringConstructor, nullptr, vm.propertyNames->String.string());
+    StringConstructor* constructor = new (NotNull, allocateCell<StringConstructor>(vm)) StringConstructor(vm, executable, globalObject, structure);
+    constructor->finishCreation(vm, stringPrototype);
+    return constructor;
 }
 
 // ------------------------------ Functions --------------------------------
@@ -73,7 +84,7 @@ JSC_DEFINE_HOST_FUNCTION(stringFromCharCode, (JSGlobalObject* globalObject, Call
     unsigned length = callFrame->argumentCount();
     if (LIKELY(length == 1)) {
         scope.release();
-        unsigned code = callFrame->uncheckedArgument(0).toUInt32(globalObject);
+        UChar code = callFrame->uncheckedArgument(0).toUInt32(globalObject);
         // Not checking for an exception here is ok because jsSingleCharacterString will just fetch an unused string if there's an exception.
         return JSValue::encode(jsSingleCharacterString(vm, code));
     }
@@ -102,7 +113,7 @@ JSC_DEFINE_HOST_FUNCTION(stringFromCharCode, (JSGlobalObject* globalObject, Call
 
 JSString* stringFromCharCode(JSGlobalObject* globalObject, int32_t arg)
 {
-    return jsSingleCharacterString(globalObject->vm(), arg);
+    return jsSingleCharacterString(globalObject->vm(), static_cast<UChar>(arg));
 }
 
 JSC_DEFINE_HOST_FUNCTION(stringFromCodePoint, (JSGlobalObject* globalObject, CallFrame* callFrame))

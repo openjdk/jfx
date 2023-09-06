@@ -33,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEDiffuseLightingElement);
 
 inline SVGFEDiffuseLightingElement::SVGFEDiffuseLightingElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feDiffuseLightingTag));
 
@@ -86,7 +86,8 @@ bool SVGFEDiffuseLightingElement::setFilterEffectAttribute(FilterEffect& effect,
     if (attrName == SVGNames::lighting_colorAttr) {
         RenderObject* renderer = this->renderer();
         ASSERT(renderer);
-        Color color = renderer->style().colorByApplyingColorFilter(renderer->style().svgStyle().lightingColor());
+        auto& style = renderer->style();
+        Color color = style.colorWithColorFilter(style.svgStyle().lightingColor());
         return feDiffuseLighting.setLightingColor(color);
     }
     if (attrName == SVGNames::surfaceScaleAttr)
@@ -94,7 +95,7 @@ bool SVGFEDiffuseLightingElement::setFilterEffectAttribute(FilterEffect& effect,
     if (attrName == SVGNames::diffuseConstantAttr)
         return feDiffuseLighting.setDiffuseConstant(diffuseConstant());
 
-    auto& lightSource = const_cast<LightSource&>(feDiffuseLighting.lightSource());
+    auto& lightSource = feDiffuseLighting.lightSource().get();
     const SVGFELightElement* lightElement = SVGFELightElement::findLightElement(this);
     ASSERT(lightElement);
 
@@ -160,8 +161,9 @@ RefPtr<FilterEffect> SVGFEDiffuseLightingElement::createFilterEffect(const Filte
         return nullptr;
 
     auto lightSource = lightElement->lightSource();
+    auto& style = renderer->style();
 
-    Color color = renderer->style().colorByApplyingColorFilter(renderer->style().svgStyle().lightingColor());
+    Color color = style.colorWithColorFilter(style.svgStyle().lightingColor());
 
     return FEDiffuseLighting::create(color, surfaceScale(), diffuseConstant(), kernelUnitLengthX(), kernelUnitLengthY(), WTFMove(lightSource));
 }

@@ -33,8 +33,11 @@
 #include "FloatRoundedRect.h"
 #include "FloatSize.h"
 #include "GraphicsLayerClient.h"
+#include "LayerHostingContextIdentifier.h"
 #include "Path.h"
 #include "PlatformLayer.h"
+#include "ProcessIdentifier.h"
+#include "ProcessQualified.h"
 #include "Region.h"
 #include "ScrollableArea.h"
 #include "ScrollTypes.h"
@@ -59,6 +62,7 @@ class Animation;
 class GraphicsContext;
 class GraphicsLayerFactory;
 class GraphicsLayerContentsDisplayDelegate;
+class GraphicsLayerAsyncContentsDisplayDelegate;
 class Image;
 class Model;
 class TiledBacking;
@@ -199,7 +203,7 @@ private:
 // FIXME: Should be moved to its own header file.
 class KeyframeValueList {
 public:
-    explicit KeyframeValueList(AnimatedPropertyID property)
+    explicit KeyframeValueList(AnimatedProperty property)
         : m_property(property)
     {
     }
@@ -229,7 +233,7 @@ public:
         m_values.swap(other.m_values);
     }
 
-    AnimatedPropertyID property() const { return m_property; }
+    AnimatedProperty property() const { return m_property; }
 
     size_t size() const { return m_values.size(); }
     const AnimationValue& at(size_t i) const { return *m_values.at(i); }
@@ -239,7 +243,7 @@ public:
 
 protected:
     Vector<std::unique_ptr<const AnimationValue>> m_values;
-    AnimatedPropertyID m_property;
+    AnimatedProperty m_property;
 };
 
 // GraphicsLayer is an abstraction for a rendering surface with backing store,
@@ -274,15 +278,16 @@ public:
 
     virtual void initialize(Type) { }
 
-    using PlatformLayerID = uint64_t;
-    virtual PlatformLayerID primaryLayerID() const { return 0; }
+    enum PlatformLayerIDType { };
+    using PlatformLayerID = ProcessQualified<ObjectIdentifier<PlatformLayerIDType>>;
+    virtual PlatformLayerID primaryLayerID() const { return { }; }
 
     GraphicsLayerClient& client() const { return *m_client; }
 
     // Layer name. Only used to identify layers in debug output
     const String& name() const { return m_name; }
     virtual void setName(const String& name) { m_name = name; }
-    virtual String debugName() const;
+    WEBCORE_EXPORT virtual String debugName() const;
 
     GraphicsLayer* parent() const { return m_parent; };
     void setParent(GraphicsLayer*); // Internal use only.
@@ -308,7 +313,7 @@ public:
 
     // The parent() of a maskLayer is set to the layer being masked.
     GraphicsLayer* maskLayer() const { return m_maskLayer.get(); }
-    virtual void setMaskLayer(RefPtr<GraphicsLayer>&&);
+    WEBCORE_EXPORT virtual void setMaskLayer(RefPtr<GraphicsLayer>&&);
 
     void setIsMaskLayer(bool isMask) { m_isMaskLayer = isMask; }
     bool isMaskLayer() const { return m_isMaskLayer; }
@@ -368,22 +373,22 @@ public:
     // For platforms that move underlying platform layers on a different thread for scrolling; just update the GraphicsLayer state.
     virtual void syncBoundsOrigin(const FloatPoint& origin) { m_boundsOrigin = origin; }
 
-    const TransformationMatrix& transform() const;
-    virtual void setTransform(const TransformationMatrix&);
+    WEBCORE_EXPORT const TransformationMatrix& transform() const;
+    WEBCORE_EXPORT virtual void setTransform(const TransformationMatrix&);
     bool hasNonIdentityTransform() const { return m_transform && !m_transform->isIdentity(); }
 
-    const TransformationMatrix& childrenTransform() const;
-    virtual void setChildrenTransform(const TransformationMatrix&);
+    WEBCORE_EXPORT const TransformationMatrix& childrenTransform() const;
+    WEBCORE_EXPORT virtual void setChildrenTransform(const TransformationMatrix&);
     bool hasNonIdentityChildrenTransform() const { return m_childrenTransform && !m_childrenTransform->isIdentity(); }
 
     bool preserves3D() const { return m_preserves3D; }
-    virtual void setPreserves3D(bool);
+    WEBCORE_EXPORT virtual void setPreserves3D(bool);
 
     bool masksToBounds() const { return m_masksToBounds; }
-    virtual void setMasksToBounds(bool);
+    WEBCORE_EXPORT virtual void setMasksToBounds(bool);
 
     bool drawsContent() const { return m_drawsContent; }
-    virtual void setDrawsContent(bool);
+    WEBCORE_EXPORT virtual void setDrawsContent(bool);
 
     bool contentsAreVisible() const { return m_contentsVisible; }
     virtual void setContentsVisible(bool b) { m_contentsVisible = b; }
@@ -419,9 +424,6 @@ public:
     bool contentsOpaque() const { return m_contentsOpaque; }
     virtual void setContentsOpaque(bool b) { m_contentsOpaque = b; }
 
-    bool supportsSubpixelAntialiasedText() const { return m_supportsSubpixelAntialiasedText; }
-    virtual void setSupportsSubpixelAntialiasedText(bool b) { m_supportsSubpixelAntialiasedText = b; }
-
     bool backfaceVisibility() const { return m_backfaceVisibility; }
     virtual void setBackfaceVisibility(bool b) { m_backfaceVisibility = b; }
 
@@ -430,7 +432,7 @@ public:
 
     const FilterOperations& filters() const { return m_filters; }
     // Returns true if filter can be rendered by the compositor.
-    virtual bool setFilters(const FilterOperations&);
+    WEBCORE_EXPORT virtual bool setFilters(const FilterOperations&);
 
     const FilterOperations& backdropFilters() const { return m_backdropFilters; }
     virtual bool setBackdropFilters(const FilterOperations& filters) { m_backdropFilters = filters; return true; }
@@ -479,16 +481,16 @@ public:
     virtual void setContentsRectClipsDescendants(bool b) { m_contentsRectClipsDescendants = b; }
 
     Path shapeLayerPath() const;
-    virtual void setShapeLayerPath(const Path&);
+    WEBCORE_EXPORT virtual void setShapeLayerPath(const Path&);
 
     WindRule shapeLayerWindRule() const;
-    virtual void setShapeLayerWindRule(WindRule);
+    WEBCORE_EXPORT virtual void setShapeLayerWindRule(WindRule);
 
     const EventRegion& eventRegion() const { return m_eventRegion; }
-    virtual void setEventRegion(EventRegion&&);
+    WEBCORE_EXPORT virtual void setEventRegion(EventRegion&&);
 
     // Transitions are identified by a special animation name that cannot clash with a keyframe identifier.
-    static String animationNameForTransition(AnimatedPropertyID);
+    static String animationNameForTransition(AnimatedProperty);
 
     // Return true if the animation is handled by the compositing system.
     virtual bool addAnimation(const KeyframeValueList&, const FloatSize& /*boxSize*/, const Animation*, const String& /*animationName*/, double /*timeOffset*/)  { return false; }
@@ -514,22 +516,25 @@ public:
         Canvas,
         BackgroundColor,
         Plugin,
-        Model
+        Model,
+        Host,
     };
 
     // Pass an invalid color to remove the contents layer.
     virtual void setContentsToSolidColor(const Color&) { }
     virtual void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) { }
+    virtual void setContentsToPlatformLayerHost(LayerHostingContextIdentifier) { }
     virtual void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose);
+    WEBCORE_EXPORT virtual RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> createAsyncContentsDisplayDelegate();
 #if ENABLE(MODEL_ELEMENT)
     enum class ModelInteraction : uint8_t { Enabled, Disabled };
     virtual void setContentsToModel(RefPtr<Model>&&, ModelInteraction) { }
-    virtual PlatformLayerID contentsLayerIDForModel() const { return 0; }
+    virtual PlatformLayerID contentsLayerIDForModel() const { return { }; }
 #endif
     virtual bool usesContentsLayer() const { return false; }
 
     // Callback from the underlying graphics system to draw layer contents.
-    void paintGraphicsLayerContents(GraphicsContext&, const FloatRect& clip, GraphicsLayerPaintBehavior = GraphicsLayerPaintNormal);
+    WEBCORE_EXPORT void paintGraphicsLayerContents(GraphicsContext&, const FloatRect& clip, GraphicsLayerPaintBehavior = GraphicsLayerPaintNormal);
 
     // For hosting this GraphicsLayer in a native layer hierarchy.
     virtual PlatformLayer* platformLayer() const { return nullptr; }
@@ -632,18 +637,20 @@ public:
     virtual TiledBacking* tiledBacking() const { return 0; }
 
     void resetTrackedRepaints();
-    void addRepaintRect(const FloatRect&);
+    WEBCORE_EXPORT void addRepaintRect(const FloatRect&);
 
     static bool supportsLayerType(Type);
     static bool supportsContentsTiling();
-    static bool supportsSubpixelAntialiasedLayerText();
 
-    void updateDebugIndicators();
+    WEBCORE_EXPORT void updateDebugIndicators();
 
     virtual bool isGraphicsLayerCA() const { return false; }
     virtual bool isGraphicsLayerCARemote() const { return false; }
     virtual bool isGraphicsLayerTextureMapper() const { return false; }
     virtual bool isCoordinatedGraphicsLayer() const { return false; }
+
+    bool shouldPaintUsingCompositeCopy() const { return m_shouldPaintUsingCompositeCopy; }
+    void setShouldPaintUsingCompositeCopy(bool copy) { m_shouldPaintUsingCompositeCopy = copy; }
 
     const std::optional<FloatRect>& animationExtent() const { return m_animationExtent; }
     void setAnimationExtent(std::optional<FloatRect> animationExtent) { m_animationExtent = animationExtent; }
@@ -731,7 +738,6 @@ protected:
 
     bool m_beingDestroyed : 1;
     bool m_contentsOpaque : 1;
-    bool m_supportsSubpixelAntialiasedText : 1;
     bool m_preserves3D: 1;
     bool m_backfaceVisibility : 1;
     bool m_masksToBounds : 1;
@@ -749,6 +755,7 @@ protected:
     bool m_isTrackingDisplayListReplay : 1;
     bool m_userInteractionEnabled : 1;
     bool m_canDetachBackingStore : 1;
+    bool m_shouldPaintUsingCompositeCopy : 1;
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     bool m_isSeparated : 1;
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)

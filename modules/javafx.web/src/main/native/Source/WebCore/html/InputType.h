@@ -154,7 +154,7 @@ public:
         Type::Submit,
     };
 
-    static Ref<InputType> create(HTMLInputElement&, const AtomString&);
+    static RefPtr<InputType> createIfDifferent(HTMLInputElement&, const AtomString&, InputType* currentInputType = nullptr);
     static Ref<InputType> createText(HTMLInputElement&);
     virtual ~InputType();
 
@@ -206,7 +206,7 @@ public:
     Type type() const { return m_type; }
 
     bool isInteractiveContent() const;
-    bool supportLabels() const;
+    bool isLabelable() const;
     bool isEnumeratable() const;
     bool needsShadowSubtree() const { return !nonShadowRootTypes.contains(m_type); }
     bool hasCreatedShadowSubtree() const { return m_hasCreatedShadowSubtree; }
@@ -419,7 +419,7 @@ private:
     const Type m_type;
     bool m_hasCreatedShadowSubtree { false };
     // m_element is null if this InputType is no longer associated with an element (either the element died or changed input type).
-    WeakPtr<HTMLInputElement> m_element;
+    WeakPtr<HTMLInputElement, WeakPtrImplWithEventTargetData> m_element;
 };
 
 template<typename DowncastedType>

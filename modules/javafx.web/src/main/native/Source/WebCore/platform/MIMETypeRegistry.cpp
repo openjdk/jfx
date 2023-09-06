@@ -40,14 +40,10 @@
 
 #if USE(CG)
 #include "ImageBufferUtilitiesCG.h"
-#include "ImageSourceCG.h"
 #include "UTIRegistry.h"
+#include "UTIUtilities.h"
 #include <ImageIO/ImageIO.h>
 #include <wtf/RetainPtr.h>
-#endif
-
-#if USE(CG) && PLATFORM(COCOA)
-#include "UTIUtilities.h"
 #endif
 
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
@@ -545,12 +541,16 @@ bool MIMETypeRegistry::isTextMediaPlaylistMIMEType(const String& mimeType)
     return false;
 }
 
+// https://mimesniff.spec.whatwg.org/#json-mime-type
 bool MIMETypeRegistry::isSupportedJSONMIMEType(const String& mimeType)
 {
     if (mimeType.isEmpty())
         return false;
 
     if (equalLettersIgnoringASCIICase(mimeType, "application/json"_s))
+        return true;
+
+    if (equalLettersIgnoringASCIICase(mimeType, "text/json"_s))
         return true;
 
     // When detecting +json ensure there is a non-empty type / subtype preceeding the suffix.

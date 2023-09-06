@@ -48,6 +48,7 @@
 #include "RenderVTTCue.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
+#include "SpeechSynthesis.h"
 #include "Text.h"
 #include "TextTrack.h"
 #include "TextTrackCueGeneric.h"
@@ -57,6 +58,7 @@
 #include "WebVTTElement.h"
 #include "WebVTTParser.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/Language.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -72,12 +74,12 @@ constexpr double DEFAULTCAPTIONFONTSIZEPERCENTAGE = 5;
 static const CSSValueID displayWritingModeMap[] = {
     CSSValueHorizontalTb, CSSValueVerticalRl, CSSValueVerticalLr
 };
-static_assert(WTF_ARRAY_LENGTH(displayWritingModeMap) == VTTCue::NumberOfWritingDirections, "displayWritingModeMap has wrong size");
+static_assert(std::size(displayWritingModeMap) == VTTCue::NumberOfWritingDirections, "displayWritingModeMap has wrong size");
 
 static const CSSValueID displayAlignmentMap[] = {
     CSSValueStart, CSSValueCenter, CSSValueEnd, CSSValueLeft, CSSValueRight
 };
-static_assert(WTF_ARRAY_LENGTH(displayAlignmentMap) == VTTCue::NumberOfAlignments, "displayAlignmentMap has wrong size");
+static_assert(std::size(displayAlignmentMap) == VTTCue::NumberOfAlignments, "displayAlignmentMap has wrong size");
 
 static const String& startKeyword()
 {
@@ -949,7 +951,7 @@ void VTTCue::updateDisplayTree(const MediaTime& movieTime)
     // The display tree may contain WebVTT timestamp objects representing
     // timestamps (processing instructions), along with displayable nodes.
 
-    if (!track()->isRendered())
+    if (!track() || !track()->isRendered())
         return;
 
     // Mutating the VTT contents is safe because it's never exposed to author scripts.
@@ -971,8 +973,10 @@ void VTTCue::updateDisplayTree(const MediaTime& movieTime)
 
 RefPtr<TextTrackCueBox> VTTCue::getDisplayTree(const IntSize& videoSize, int fontSize)
 {
+    ASSERT(track());
+
     RefPtr displayTree = displayTreeInternal();
-    if (!displayTree || !m_displayTreeShouldChange || !track()->isRendered())
+    if (!displayTree || !m_displayTreeShouldChange || !track() || !track()->isRendered())
         return displayTree;
 
     // 10.1 - 10.10
@@ -1024,10 +1028,8 @@ RefPtr<TextTrackCueBox> VTTCue::getDisplayTree(const IntSize& videoSize, int fon
 
     m_displayTreeShouldChange = false;
 
-    if (track()) {
         if (m_region)
             m_region->cueStyleChanged();
-    }
 
     // 10.15. Let cue's text track cue display state have the CSS boxes in
     // boxes.
@@ -1330,11 +1332,7 @@ void VTTCue::toJSON(JSON::Object& object) const
 {
     TextTrackCue::toJSON(object);
 
-    // FIXME: Seems dangerous to include this based on LOG_DISABLED. Can we just include it unconditionally?
-#if !LOG_DISABLED
     object.setString("text"_s, text());
-#endif
-
     object.setString("vertical"_s, vertical());
     object.setBoolean("snapToLines"_s, snapToLines());
     if (m_linePosition)
@@ -1347,6 +1345,90 @@ void VTTCue::toJSON(JSON::Object& object) const
         object.setString("position"_s, autoAtom());
     object.setInteger("size"_s, m_cueSize);
     object.setString("align"_s, align());
+}
+
+#if ENABLE(SPEECH_SYNTHESIS)
+static float mapVideoRateToSpeechRate(float rate)
+{
+    // WebSpeech says to go from .1 -> 10 (default 1)
+    // Video rate is 0 -> 2 (default 1). [The spec has no maximum rate, but the default controls only go to 2x, so use that]
+    // 1 -> (1 + (0 * 9)) => 1
+    // 2 -> (1 + (1 * 9)) => 10
+    if (rate > 1)
+        rate = 1.0 + ((rate - 1.0) * (10 - 1));
+
+    return rate;
+}
+#endif
+
+void VTTCue::prepareToSpeak(SpeechSynthesis& speechSynthesis, double rate, double volume, SpeakCueCompletionHandler&& completion)
+{
+#if ENABLE(SPEECH_SYNTHESIS)
+    ASSERT(!m_speechSynthesis);
+    ASSERT(!m_speechUtterance);
+    ASSERT(rate);
+    ASSERT(track());
+    if (m_content.isEmpty() || !track()) {
+        completion(*this);
+        return;
+    }
+
+    auto& track = *this->track();
+    m_speechSynthesis = &speechSynthesis;
+    m_speechUtterance = SpeechSynthesisUtterance::create(track.document(), m_content, [protectedThis = Ref { *this }, completion = WTFMove(completion)](const SpeechSynthesisUtterance&) {
+        protectedThis->m_speechUtterance = nullptr;
+        protectedThis->m_speechSynthesis = nullptr;
+        completion(protectedThis.get());
+    });
+
+    auto trackLanguage = track.validBCP47Language();
+    if (trackLanguage.isEmpty())
+        trackLanguage = track.language();
+
+    m_speechUtterance->setLang(trackLanguage);
+    m_speechUtterance->setVolume(volume);
+    m_speechUtterance->setRate(mapVideoRateToSpeechRate(rate));
+#else
+    UNUSED_PARAM(speechSynthesis);
+    UNUSED_PARAM(rate);
+    UNUSED_PARAM(volume);
+    UNUSED_PARAM(completion);
+#endif
+}
+
+void VTTCue::beginSpeaking()
+{
+#if ENABLE(SPEECH_SYNTHESIS)
+    ASSERT(m_speechSynthesis);
+    ASSERT(m_speechUtterance);
+
+    if (m_speechSynthesis->paused())
+        m_speechSynthesis->resume();
+    else
+        m_speechSynthesis->speak(*m_speechUtterance);
+#endif
+}
+
+void VTTCue::pauseSpeaking()
+{
+#if ENABLE(SPEECH_SYNTHESIS)
+    if (!m_speechSynthesis)
+        return;
+
+    m_speechSynthesis->pause();
+#endif
+}
+
+void VTTCue::cancelSpeaking()
+{
+#if ENABLE(SPEECH_SYNTHESIS)
+    if (!m_speechSynthesis)
+        return;
+
+    m_speechSynthesis->cancel();
+    m_speechSynthesis = nullptr;
+    m_speechUtterance = nullptr;
+#endif
 }
 
 } // namespace WebCore

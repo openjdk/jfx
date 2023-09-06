@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -467,6 +467,18 @@ public:
         lshift32(imm, dest);
     }
 
+    void lshift32(Address src, RegisterID shiftAmount, RegisterID dest)
+    {
+        if (shiftAmount == dest) {
+            move(shiftAmount, scratchRegister());
+            load32(src, dest);
+            lshift32(scratchRegister(), dest);
+        } else {
+            load32(src, dest);
+            lshift32(shiftAmount, dest);
+        }
+    }
+
     void mul32(RegisterID src, RegisterID dest)
     {
         m_assembler.imull_rr(src, dest);
@@ -804,6 +816,20 @@ public:
         }
     }
 
+    void rotateRight32(RegisterID src, TrustedImm32 shift_amount, RegisterID dest)
+    {
+        move32IfNeeded(src, dest);
+        rotateRight32(shift_amount, dest);
+    }
+
+    void rotateRight32(RegisterID src, RegisterID shift_amount, RegisterID dest)
+    {
+        ASSERT(shift_amount != dest);
+
+        move32IfNeeded(src, dest);
+        rotateRight32(shift_amount, dest);
+    }
+
     void rotateLeft32(TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.roll_i8r(imm.m_value, dest);
@@ -821,6 +847,20 @@ public:
             m_assembler.roll_CLr(dest == X86Registers::ecx ? src : dest);
             swap(src, X86Registers::ecx);
         }
+    }
+
+    void rotateLeft32(RegisterID src, TrustedImm32 shift_amount, RegisterID dest)
+    {
+        move32IfNeeded(src, dest);
+        rotateLeft32(shift_amount, dest);
+    }
+
+    void rotateLeft32(RegisterID src, RegisterID shift_amount, RegisterID dest)
+    {
+        ASSERT(shift_amount != dest);
+
+        move32IfNeeded(src, dest);
+        rotateLeft32(shift_amount, dest);
     }
 
     void sub32(RegisterID src, RegisterID dest)
@@ -1101,21 +1141,33 @@ public:
 
     void sqrtDouble(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vsqrtsd_rrr(src, dst, dst);
+        else
         m_assembler.sqrtsd_rr(src, dst);
     }
 
     void sqrtDouble(Address src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vsqrtsd_mrr(src.offset, src.base, dst, dst);
+        else
         m_assembler.sqrtsd_mr(src.offset, src.base, dst);
     }
 
     void sqrtFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vsqrtss_rrr(src, dst, dst);
+        else
         m_assembler.sqrtss_rr(src, dst);
     }
 
     void sqrtFloat(Address src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vsqrtss_mrr(src.offset, src.base, dst, dst);
+        else
         m_assembler.sqrtss_mr(src.offset, src.base, dst);
     }
 
@@ -1124,6 +1176,9 @@ public:
         ASSERT(src != dst);
         static constexpr double negativeZeroConstant = -0.0;
         loadDouble(TrustedImmPtr(&negativeZeroConstant), dst);
+        if (supportsAVX())
+            m_assembler.vandnpd_rrr(src, dst, dst);
+        else
         m_assembler.andnpd_rr(src, dst);
     }
 
@@ -1132,76 +1187,121 @@ public:
         ASSERT(src != dst);
         static constexpr double negativeZeroConstant = -0.0;
         loadDouble(TrustedImmPtr(&negativeZeroConstant), dst);
+        if (supportsAVX())
+            m_assembler.vxorpd_rrr(src, dst, dst);
+        else
         m_assembler.xorpd_rr(src, dst);
     }
 
     void ceilDouble(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundsd_i8rrr(X86Assembler::RoundingType::TowardInfiniti, src, dst, dst);
+        else
         m_assembler.roundsd_rr(src, dst, X86Assembler::RoundingType::TowardInfiniti);
     }
 
     void ceilDouble(Address src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundsd_i8mrr(X86Assembler::RoundingType::TowardInfiniti, src.offset, src.base, dst, dst);
+        else
         m_assembler.roundsd_mr(src.offset, src.base, dst, X86Assembler::RoundingType::TowardInfiniti);
     }
 
     void ceilFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundss_i8rrr(X86Assembler::RoundingType::TowardInfiniti, src, dst, dst);
+        else
         m_assembler.roundss_rr(src, dst, X86Assembler::RoundingType::TowardInfiniti);
     }
 
     void ceilFloat(Address src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundss_i8mrr(X86Assembler::RoundingType::TowardInfiniti, src.offset, src.base, dst, dst);
+        else
         m_assembler.roundss_mr(src.offset, src.base, dst, X86Assembler::RoundingType::TowardInfiniti);
     }
 
     void floorDouble(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundsd_i8rrr(X86Assembler::RoundingType::TowardNegativeInfiniti, src, dst, dst);
+        else
         m_assembler.roundsd_rr(src, dst, X86Assembler::RoundingType::TowardNegativeInfiniti);
     }
 
     void floorDouble(Address src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundsd_i8mrr(X86Assembler::RoundingType::TowardNegativeInfiniti, src.offset, src.base, dst, dst);
+        else
         m_assembler.roundsd_mr(src.offset, src.base, dst, X86Assembler::RoundingType::TowardNegativeInfiniti);
     }
 
     void floorFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundss_i8rrr(X86Assembler::RoundingType::TowardNegativeInfiniti, src, dst, dst);
+        else
         m_assembler.roundss_rr(src, dst, X86Assembler::RoundingType::TowardNegativeInfiniti);
     }
 
     void floorFloat(Address src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundss_i8mrr(X86Assembler::RoundingType::TowardNegativeInfiniti, src.offset, src.base, dst, dst);
+        else
         m_assembler.roundss_mr(src.offset, src.base, dst, X86Assembler::RoundingType::TowardNegativeInfiniti);
     }
 
     void roundTowardNearestIntDouble(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundsd_i8rrr(X86Assembler::RoundingType::ToNearestWithTiesToEven, src, dst, dst);
+        else
         m_assembler.roundsd_rr(src, dst, X86Assembler::RoundingType::ToNearestWithTiesToEven);
     }
 
     void roundTowardNearestIntFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundss_i8rrr(X86Assembler::RoundingType::ToNearestWithTiesToEven, src, dst, dst);
+        else
         m_assembler.roundss_rr(src, dst, X86Assembler::RoundingType::ToNearestWithTiesToEven);
     }
 
     void roundTowardZeroDouble(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundsd_i8rrr(X86Assembler::RoundingType::TowardZero, src, dst, dst);
+        else
         m_assembler.roundsd_rr(src, dst, X86Assembler::RoundingType::TowardZero);
     }
 
     void roundTowardZeroDouble(Address src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundsd_i8mrr(X86Assembler::RoundingType::TowardZero, src.offset, src.base, dst, dst);
+        else
         m_assembler.roundsd_mr(src.offset, src.base, dst, X86Assembler::RoundingType::TowardZero);
     }
 
     void roundTowardZeroFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundss_i8rrr(X86Assembler::RoundingType::TowardZero, src, dst, dst);
+        else
         m_assembler.roundss_rr(src, dst, X86Assembler::RoundingType::TowardZero);
     }
 
     void roundTowardZeroFloat(Address src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vroundss_i8mrr(X86Assembler::RoundingType::TowardZero, src.offset, src.base, dst, dst);
+        else
         m_assembler.roundss_mr(src.offset, src.base, dst, X86Assembler::RoundingType::TowardZero);
     }
 
@@ -1447,7 +1547,11 @@ public:
     //
     void moveDouble(FPRegisterID src, FPRegisterID dest)
     {
-        if (src != dest)
+        if (src == dest)
+            return;
+        if (supportsAVX())
+            m_assembler.vmovaps_rr(src, dest);
+        else
             m_assembler.movaps_rr(src, dest);
     }
 
@@ -1463,11 +1567,17 @@ public:
 
     void loadDouble(Address address, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vmovsd_mr(address.offset, address.base, dest);
+        else
         m_assembler.movsd_mr(address.offset, address.base, dest);
     }
 
     void loadDouble(BaseIndex address, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vmovsd_mr(address.offset, address.base, address.index, address.scale, dest);
+        else
         m_assembler.movsd_mr(address.offset, address.base, address.index, address.scale, dest);
     }
 
@@ -1483,51 +1593,81 @@ public:
 
     void loadFloat(Address address, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vmovss_mr(address.offset, address.base, dest);
+        else
         m_assembler.movss_mr(address.offset, address.base, dest);
     }
 
     void loadFloat(BaseIndex address, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vmovss_mr(address.offset, address.base, address.index, address.scale, dest);
+        else
         m_assembler.movss_mr(address.offset, address.base, address.index, address.scale, dest);
     }
 
     void storeDouble(FPRegisterID src, Address address)
     {
+        if (supportsAVX())
+            m_assembler.vmovsd_rm(src, address.offset, address.base);
+        else
         m_assembler.movsd_rm(src, address.offset, address.base);
     }
 
     void storeDouble(FPRegisterID src, BaseIndex address)
     {
+        if (supportsAVX())
+            m_assembler.vmovsd_rm(src, address.offset, address.base, address.index, address.scale);
+        else
         m_assembler.movsd_rm(src, address.offset, address.base, address.index, address.scale);
     }
 
     void storeFloat(FPRegisterID src, Address address)
     {
+        if (supportsAVX())
+            m_assembler.vmovss_rm(src, address.offset, address.base);
+        else
         m_assembler.movss_rm(src, address.offset, address.base);
     }
 
     void storeFloat(FPRegisterID src, BaseIndex address)
     {
+        if (supportsAVX())
+            m_assembler.vmovss_rm(src, address.offset, address.base, address.index, address.scale);
+        else
         m_assembler.movss_rm(src, address.offset, address.base, address.index, address.scale);
     }
 
     void convertDoubleToFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vcvtsd2ss_rrr(src, dst, dst);
+        else
         m_assembler.cvtsd2ss_rr(src, dst);
     }
 
     void convertDoubleToFloat(Address address, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vcvtsd2ss_mrr(address.offset, address.base, dst, dst);
+        else
         m_assembler.cvtsd2ss_mr(address.offset, address.base, dst);
     }
 
     void convertFloatToDouble(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vcvtss2sd_rrr(src, dst, dst);
+        else
         m_assembler.cvtss2sd_rr(src, dst);
     }
 
     void convertFloatToDouble(Address address, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vcvtss2sd_mrr(address.offset, address.base, dst, dst);
+        else
         m_assembler.cvtss2sd_mr(address.offset, address.base, dst);
     }
 
@@ -1539,7 +1679,7 @@ public:
     void addDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vaddsd_rr(op1, op2, dest);
+            m_assembler.vaddsd_rrr(op1, op2, dest);
         else {
             if (op1 == dest)
                 m_assembler.addsd_rr(op2, dest);
@@ -1558,7 +1698,7 @@ public:
     void addDouble(Address op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vaddsd_mr(op1.offset, op1.base, op2, dest);
+            m_assembler.vaddsd_mrr(op1.offset, op1.base, op2, dest);
         else {
             if (op2 == dest) {
                 m_assembler.addsd_mr(op1.offset, op1.base, dest);
@@ -1578,7 +1718,7 @@ public:
     void addDouble(BaseIndex op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vaddsd_mr(op1.offset, op1.base, op1.index, op1.scale, op2, dest);
+            m_assembler.vaddsd_mrr(op1.offset, op1.base, op1.index, op1.scale, op2, dest);
         else {
             if (op2 == dest) {
                 m_assembler.addsd_mr(op1.offset, op1.base, op1.index, op1.scale, dest);
@@ -1602,7 +1742,7 @@ public:
     void addFloat(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vaddss_rr(op1, op2, dest);
+            m_assembler.vaddss_rrr(op1, op2, dest);
         else {
             if (op1 == dest)
                 m_assembler.addss_rr(op2, dest);
@@ -1616,7 +1756,7 @@ public:
     void addFloat(Address op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vaddss_mr(op1.offset, op1.base, op2, dest);
+            m_assembler.vaddss_mrr(op1.offset, op1.base, op2, dest);
         else {
             if (op2 == dest) {
                 m_assembler.addss_mr(op1.offset, op1.base, dest);
@@ -1636,7 +1776,7 @@ public:
     void addFloat(BaseIndex op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vaddss_mr(op1.offset, op1.base, op1.index, op1.scale, op2, dest);
+            m_assembler.vaddss_mrr(op1.offset, op1.base, op1.index, op1.scale, op2, dest);
         else {
             if (op2 == dest) {
                 m_assembler.addss_mr(op1.offset, op1.base, op1.index, op1.scale, dest);
@@ -1649,31 +1789,65 @@ public:
 
     void divDouble(FPRegisterID src, FPRegisterID dest)
     {
+        // dest = dest / src
+        // https://www.felixcloutier.com/x86/divsd
+        // VEX.LIG.F2.0F.WIG 5E /r VDIVSD xmm1, xmm2, xmm3/m64
+        // B   NA   ModRM:reg (w)   VEX.vvvv (r)   ModRM:r/m (r)   NA
+        if (supportsAVX())
+            m_assembler.vdivsd_rrr(src, dest, dest);
+        else
         m_assembler.divsd_rr(src, dest);
     }
 
     void divDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
     {
+        // dest = op1 / op2
+        if (supportsAVX())
+            m_assembler.vdivsd_rrr(op2, op1, dest);
+        else {
         // B := A / B is invalid.
         ASSERT(op1 == dest || op2 != dest);
-
         moveDouble(op1, dest);
         divDouble(op2, dest);
+    }
     }
 
     void divDouble(Address src, FPRegisterID dest)
     {
+        // dest = dest / src
+        if (supportsAVX())
+            m_assembler.vdivsd_mrr(src.offset, src.base, dest, dest);
+        else
         m_assembler.divsd_mr(src.offset, src.base, dest);
     }
 
     void divFloat(FPRegisterID src, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vdivss_rrr(src, dest, dest);
+        else
         m_assembler.divss_rr(src, dest);
     }
 
     void divFloat(Address src, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vdivss_mrr(src.offset, src.base, dest, dest);
+        else
         m_assembler.divss_mr(src.offset, src.base, dest);
+    }
+
+    void divFloat(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        // dest = op1 / op2
+        if (supportsAVX())
+            m_assembler.vdivss_rrr(op2, op1, dest);
+        else {
+            // B := A / B is invalid.
+            ASSERT(op1 == dest || op2 != dest);
+            moveDouble(op1, dest);
+            divFloat(op2, dest);
+        }
     }
 
     void subDouble(FPRegisterID src, FPRegisterID dest)
@@ -1683,8 +1857,9 @@ public:
 
     void subDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
     {
+        // dest = op1 - op2
         if (supportsAVX())
-            m_assembler.vsubsd_rr(op1, op2, dest);
+            m_assembler.vsubsd_rrr(op2, op1, dest);
         else {
             // B := A - B is invalid.
             ASSERT(op1 == dest || op2 != dest);
@@ -1695,8 +1870,9 @@ public:
 
     void subDouble(FPRegisterID op1, Address op2, FPRegisterID dest)
     {
+        // dest = op1 - op2
         if (supportsAVX())
-            m_assembler.vsubsd_mr(op1, op2.offset, op2.base, dest);
+            m_assembler.vsubsd_mrr(op2.offset, op2.base, op1, dest);
         else {
             moveDouble(op1, dest);
             m_assembler.subsd_mr(op2.offset, op2.base, dest);
@@ -1705,8 +1881,9 @@ public:
 
     void subDouble(FPRegisterID op1, BaseIndex op2, FPRegisterID dest)
     {
+        // dest = op1 - op2
         if (supportsAVX())
-            m_assembler.vsubsd_mr(op1, op2.offset, op2.base, op2.index, op2.scale, dest);
+            m_assembler.vsubsd_mrr(op2.offset, op2.base, op2.index, op2.scale, op1, dest);
         else {
             moveDouble(op1, dest);
             m_assembler.subsd_mr(op2.offset, op2.base, op2.index, op2.scale, dest);
@@ -1726,7 +1903,7 @@ public:
     void subFloat(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vsubss_rr(op1, op2, dest);
+            m_assembler.vsubss_rrr(op2, op1, dest);
         else {
             // B := A - B is invalid.
             ASSERT(op1 == dest || op2 != dest);
@@ -1738,7 +1915,7 @@ public:
     void subFloat(FPRegisterID op1, Address op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vsubss_mr(op1, op2.offset, op2.base, dest);
+            m_assembler.vsubss_mrr(op2.offset, op2.base, op1, dest);
         else {
             moveDouble(op1, dest);
             m_assembler.subss_mr(op2.offset, op2.base, dest);
@@ -1748,7 +1925,7 @@ public:
     void subFloat(FPRegisterID op1, BaseIndex op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vsubss_mr(op1, op2.offset, op2.base, op2.index, op2.scale, dest);
+            m_assembler.vsubss_mrr(op2.offset, op2.base, op2.index, op2.scale, op1, dest);
         else {
             moveDouble(op1, dest);
             m_assembler.subss_mr(op2.offset, op2.base, op2.index, op2.scale, dest);
@@ -1768,7 +1945,7 @@ public:
     void mulDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vmulsd_rr(op1, op2, dest);
+            m_assembler.vmulsd_rrr(op1, op2, dest);
         else {
             if (op1 == dest)
                 m_assembler.mulsd_rr(op2, dest);
@@ -1787,7 +1964,7 @@ public:
     void mulDouble(Address op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vmulsd_mr(op1.offset, op1.base, op2, dest);
+            m_assembler.vmulsd_mrr(op1.offset, op1.base, op2, dest);
         else {
             if (op2 == dest) {
                 m_assembler.mulsd_mr(op1.offset, op1.base, dest);
@@ -1806,7 +1983,7 @@ public:
     void mulDouble(BaseIndex op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vmulsd_mr(op1.offset, op1.base, op1.index, op1.scale, op2, dest);
+            m_assembler.vmulsd_mrr(op1.offset, op1.base, op1.index, op1.scale, op2, dest);
         else {
             if (op2 == dest) {
                 m_assembler.mulsd_mr(op1.offset, op1.base, op1.index, op1.scale, dest);
@@ -1830,7 +2007,7 @@ public:
     void mulFloat(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vmulss_rr(op1, op2, dest);
+            m_assembler.vmulss_rrr(op1, op2, dest);
         else {
             if (op1 == dest)
                 m_assembler.mulss_rr(op2, dest);
@@ -1844,7 +2021,7 @@ public:
     void mulFloat(Address op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vmulss_mr(op1.offset, op1.base, op2, dest);
+            m_assembler.vmulss_mrr(op1.offset, op1.base, op2, dest);
         else {
             if (op2 == dest) {
                 m_assembler.mulss_mr(op1.offset, op1.base, dest);
@@ -1863,7 +2040,7 @@ public:
     void mulFloat(BaseIndex op1, FPRegisterID op2, FPRegisterID dest)
     {
         if (supportsAVX())
-            m_assembler.vmulss_mr(op1.offset, op1.base, op1.index, op1.scale, op2, dest);
+            m_assembler.vmulss_mrr(op1.offset, op1.base, op1.index, op1.scale, op2, dest);
         else {
             if (op2 == dest) {
                 m_assembler.mulss_mr(op1.offset, op1.base, op1.index, op1.scale, dest);
@@ -1877,11 +2054,17 @@ public:
     void andDouble(FPRegisterID src, FPRegisterID dst)
     {
         // ANDPS is defined on 128bits and is shorter than ANDPD.
+        if (supportsAVX())
+            m_assembler.vandps_rrr(src, dst, dst);
+        else
         m_assembler.andps_rr(src, dst);
     }
 
     void andDouble(FPRegisterID src1, FPRegisterID src2, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vandps_rrr(src2, src1, dst);
+        else {
         if (src1 == dst)
             andDouble(src2, dst);
         else {
@@ -1889,14 +2072,21 @@ public:
             andDouble(src1, dst);
         }
     }
+    }
 
     void andFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vandps_rrr(src, dst, dst);
+        else
         m_assembler.andps_rr(src, dst);
     }
 
     void andFloat(FPRegisterID src1, FPRegisterID src2, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vandps_rrr(src2, src1, dst);
+        else {
         if (src1 == dst)
             andFloat(src2, dst);
         else {
@@ -1904,14 +2094,21 @@ public:
             andFloat(src1, dst);
         }
     }
+    }
 
     void orDouble(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vorps_rrr(src, dst, dst);
+        else
         m_assembler.orps_rr(src, dst);
     }
 
     void orDouble(FPRegisterID src1, FPRegisterID src2, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vorps_rrr(src2, src1, dst);
+        else {
         if (src1 == dst)
             orDouble(src2, dst);
         else {
@@ -1919,14 +2116,21 @@ public:
             orDouble(src1, dst);
         }
     }
+    }
 
     void orFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vorps_rrr(src, dst, dst);
+        else
         m_assembler.orps_rr(src, dst);
     }
 
     void orFloat(FPRegisterID src1, FPRegisterID src2, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vorps_rrr(src2, src1, dst);
+        else {
         if (src1 == dst)
             orFloat(src2, dst);
         else {
@@ -1934,14 +2138,21 @@ public:
             orFloat(src1, dst);
         }
     }
+    }
 
     void xorDouble(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vxorps_rrr(src, dst, dst);
+        else
         m_assembler.xorps_rr(src, dst);
     }
 
     void xorDouble(FPRegisterID src1, FPRegisterID src2, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vxorps_rrr(src2, src1, dst);
+        else {
         if (src1 == dst)
             xorDouble(src2, dst);
         else {
@@ -1949,14 +2160,21 @@ public:
             xorDouble(src1, dst);
         }
     }
+    }
 
     void xorFloat(FPRegisterID src, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vxorps_rrr(src, dst, dst);
+        else
         m_assembler.xorps_rr(src, dst);
     }
 
     void xorFloat(FPRegisterID src1, FPRegisterID src2, FPRegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vxorps_rrr(src2, src1, dst);
+        else {
         if (src1 == dst)
             xorFloat(src2, dst);
         else {
@@ -1964,48 +2182,78 @@ public:
             xorFloat(src1, dst);
         }
     }
+    }
 
     void convertInt32ToDouble(RegisterID src, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vcvtsi2sd_rrr(src, dest, dest);
+        else
         m_assembler.cvtsi2sd_rr(src, dest);
     }
 
     void convertInt32ToDouble(Address src, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vcvtsi2sd_mrr(src.offset, src.base, dest, dest);
+        else
         m_assembler.cvtsi2sd_mr(src.offset, src.base, dest);
     }
 
     void convertInt32ToFloat(RegisterID src, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vcvtsi2ss_rrr(src, dest, dest);
+        else
         m_assembler.cvtsi2ss_rr(src, dest);
     }
 
     void convertInt32ToFloat(Address src, FPRegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vcvtsi2ss_mrr(src.offset, src.base, dest, dest);
+        else
         m_assembler.cvtsi2ss_mr(src.offset, src.base, dest);
     }
 
     Jump branchDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right)
     {
-        if (cond & DoubleConditionBitInvert)
+        if (cond & DoubleConditionBitInvert) {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(left, right);
+            else
             m_assembler.ucomisd_rr(left, right);
+        } else {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(right, left);
         else
             m_assembler.ucomisd_rr(right, left);
+        }
         return jumpAfterFloatingPointCompare(cond, left, right);
     }
 
     Jump branchFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right)
     {
-        if (cond & DoubleConditionBitInvert)
+        if (cond & DoubleConditionBitInvert) {
+            if (supportsAVX())
+                m_assembler.vucomiss_rr(left, right);
+            else
             m_assembler.ucomiss_rr(left, right);
+        } else {
+            if (supportsAVX())
+                m_assembler.vucomiss_rr(right, left);
         else
             m_assembler.ucomiss_rr(right, left);
+        }
         return jumpAfterFloatingPointCompare(cond, left, right);
     }
 
     void compareDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
     {
         floatingPointCompare(cond, left, right, dest, [this] (FPRegisterID arg1, FPRegisterID arg2) {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(arg1, arg2);
+            else
             m_assembler.ucomisd_rr(arg1, arg2);
         });
     }
@@ -2013,6 +2261,9 @@ public:
     void compareFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
     {
         floatingPointCompare(cond, left, right, dest, [this] (FPRegisterID arg1, FPRegisterID arg2) {
+            if (supportsAVX())
+                m_assembler.vucomiss_rr(arg1, arg2);
+            else
             m_assembler.ucomiss_rr(arg1, arg2);
         });
     }
@@ -2024,17 +2275,26 @@ public:
     enum BranchTruncateType { BranchIfTruncateFailed, BranchIfTruncateSuccessful };
     Jump branchTruncateDoubleToInt32(FPRegisterID src, RegisterID dest, BranchTruncateType branchType = BranchIfTruncateFailed)
     {
+        if (supportsAVX())
+            m_assembler.vcvttsd2si_rr(src, dest);
+        else
         m_assembler.cvttsd2si_rr(src, dest);
         return branch32(branchType ? NotEqual : Equal, dest, TrustedImm32(0x80000000));
     }
 
     void truncateDoubleToInt32(FPRegisterID src, RegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vcvttsd2si_rr(src, dest);
+        else
         m_assembler.cvttsd2si_rr(src, dest);
     }
 
     void truncateFloatToInt32(FPRegisterID src, RegisterID dest)
     {
+        if (supportsAVX())
+            m_assembler.vcvttss2si_rr(src, dest);
+        else
         m_assembler.cvttss2si_rr(src, dest);
     }
 
@@ -2044,12 +2304,18 @@ public:
     // (specifically, in this case, 0).
     void branchConvertDoubleToInt32(FPRegisterID src, RegisterID dest, JumpList& failureCases, FPRegisterID fpTemp, bool negZeroCheck = true)
     {
+        if (supportsAVX())
+            m_assembler.vcvttsd2si_rr(src, dest);
+        else
         m_assembler.cvttsd2si_rr(src, dest);
 
         // If the result is zero, it might have been -0.0, and the double comparison won't catch this!
 #if CPU(X86_64)
         if (negZeroCheck) {
             Jump valueIsNonZero = branchTest32(NonZero, dest);
+            if (supportsAVX())
+                m_assembler.vmovmskpd_rr(src, scratchRegister());
+            else
             m_assembler.movmskpd_rr(src, scratchRegister());
             failureCases.append(branchTest32(NonZero, scratchRegister(), TrustedImm32(1)));
             valueIsNonZero.link(this);
@@ -2061,6 +2327,9 @@ public:
 
         // Convert the integer result back to float & compare to the original value - if not equal or unordered (NaN) then jump.
         convertInt32ToDouble(dest, fpTemp);
+        if (supportsAVX())
+            m_assembler.vucomisd_rr(fpTemp, src);
+        else
         m_assembler.ucomisd_rr(fpTemp, src);
         failureCases.append(m_assembler.jp());
         failureCases.append(m_assembler.jne());
@@ -2068,43 +2337,51 @@ public:
 
     void moveZeroToDouble(FPRegisterID reg)
     {
+        if (supportsAVX())
+            m_assembler.vxorps_rrr(reg, reg, reg);
+        else
+            m_assembler.xorps_rr(reg, reg);
+    }
+
+    void moveZeroToFloat(FPRegisterID reg)
+    {
+        if (supportsAVX())
+            m_assembler.vxorps_rrr(reg, reg, reg);
+        else
         m_assembler.xorps_rr(reg, reg);
     }
 
     Jump branchDoubleNonZero(FPRegisterID reg, FPRegisterID scratch)
     {
+        if (supportsAVX())
+            m_assembler.vxorpd_rrr(scratch, scratch, scratch);
+        else
         m_assembler.xorpd_rr(scratch, scratch);
         return branchDouble(DoubleNotEqualAndOrdered, reg, scratch);
     }
 
     Jump branchDoubleZeroOrNaN(FPRegisterID reg, FPRegisterID scratch)
     {
+        if (supportsAVX())
+            m_assembler.vxorpd_rrr(scratch, scratch, scratch);
+        else
         m_assembler.xorpd_rr(scratch, scratch);
         return branchDouble(DoubleEqualOrUnordered, reg, scratch);
     }
 
-    void lshiftPacked(TrustedImm32 imm, XMMRegisterID reg)
+    void move32ToFloat(RegisterID src, FPRegisterID dst)
     {
-        m_assembler.psllq_i8r(imm.m_value, reg);
-    }
-
-    void rshiftPacked(TrustedImm32 imm, XMMRegisterID reg)
-    {
-        m_assembler.psrlq_i8r(imm.m_value, reg);
-    }
-
-    void orPacked(XMMRegisterID src, XMMRegisterID dst)
-    {
-        m_assembler.por_rr(src, dst);
-    }
-
-    void move32ToFloat(RegisterID src, XMMRegisterID dst)
-    {
+        if (supportsAVX())
+            m_assembler.vmovd_rr(src, dst);
+        else
         m_assembler.movd_rr(src, dst);
     }
 
-    void moveFloatTo32(XMMRegisterID src, RegisterID dst)
+    void moveFloatTo32(FPRegisterID src, RegisterID dst)
     {
+        if (supportsAVX())
+            m_assembler.vmovd_rr(src, dst);
+        else
         m_assembler.movd_rr(src, dst);
     }
 
@@ -2189,10 +2466,17 @@ public:
 
     void moveConditionallyDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID src, RegisterID dest)
     {
-        if (cond & DoubleConditionBitInvert)
+        if (cond & DoubleConditionBitInvert) {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(left, right);
+            else
             m_assembler.ucomisd_rr(left, right);
+        } else {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(right, left);
         else
             m_assembler.ucomisd_rr(right, left);
+        }
         moveConditionallyAfterFloatingPointCompare(cond, left, right, src, dest);
     }
 
@@ -2211,19 +2495,33 @@ public:
             src = elseCase;
         }
 
-        if (cond & DoubleConditionBitInvert)
+        if (cond & DoubleConditionBitInvert) {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(left, right);
+            else
             m_assembler.ucomisd_rr(left, right);
+        } else {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(right, left);
         else
             m_assembler.ucomisd_rr(right, left);
+        }
         moveConditionallyAfterFloatingPointCompare(cond, left, right, src, dest);
     }
 
     void moveConditionallyFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID src, RegisterID dest)
     {
-        if (cond & DoubleConditionBitInvert)
+        if (cond & DoubleConditionBitInvert) {
+            if (supportsAVX())
+                m_assembler.vucomiss_rr(left, right);
+            else
             m_assembler.ucomiss_rr(left, right);
+        } else {
+            if (supportsAVX())
+                m_assembler.vucomiss_rr(right, left);
         else
             m_assembler.ucomiss_rr(right, left);
+        }
         moveConditionallyAfterFloatingPointCompare(cond, left, right, src, dest);
     }
 
@@ -2242,10 +2540,17 @@ public:
             src = elseCase;
         }
 
-        if (cond & DoubleConditionBitInvert)
+        if (cond & DoubleConditionBitInvert) {
+            if (supportsAVX())
+                m_assembler.vucomiss_rr(left, right);
+            else
             m_assembler.ucomiss_rr(left, right);
+        } else {
+            if (supportsAVX())
+                m_assembler.vucomiss_rr(right, left);
         else
             m_assembler.ucomiss_rr(right, left);
+        }
         moveConditionallyAfterFloatingPointCompare(cond, left, right, src, dest);
     }
 
@@ -2313,10 +2618,17 @@ public:
 
     void moveConditionallyDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID src, RegisterID dest)
     {
-        if (cond & DoubleConditionBitInvert)
+        if (cond & DoubleConditionBitInvert) {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(left, right);
+            else
             m_assembler.ucomisd_rr(left, right);
+        } else {
+            if (supportsAVX())
+                m_assembler.vucomisd_rr(right, left);
         else
             m_assembler.ucomisd_rr(right, left);
+        }
 
         if (cond == DoubleEqualAndOrdered) {
             if (left == right) {
@@ -3893,6 +4205,16 @@ public:
         m_assembler.xchgl_rm(reg, address.offset, address.base, address.index, address.scale);
     }
 
+    void atomicLoad32(Address address, RegisterID dest)
+    {
+        load32(address, dest);
+    }
+
+    void atomicLoad32(BaseIndex address, RegisterID dest)
+    {
+        load32(address, dest);
+    }
+
     // We take this to mean that it prevents motion of normal stores. So, it's a no-op on x86.
     void storeFence()
     {
@@ -3931,13 +4253,13 @@ public:
     template<PtrTag tag>
     static void replaceWithVMHalt(CodeLocationLabel<tag> instructionStart)
     {
-        X86Assembler::replaceWithHlt(instructionStart.executableAddress());
+        X86Assembler::replaceWithHlt(instructionStart.taggedPtr());
     }
 
     template<PtrTag startTag, PtrTag destTag>
     static void replaceWithJump(CodeLocationLabel<startTag> instructionStart, CodeLocationLabel<destTag> destination)
     {
-        X86Assembler::replaceWithJump(instructionStart.executableAddress(), destination.executableAddress());
+        X86Assembler::replaceWithJump(instructionStart.taggedPtr(), destination.taggedPtr());
     }
 
     static ptrdiff_t maxJumpReplacementSize()
@@ -3948,6 +4270,13 @@ public:
     static ptrdiff_t patchableJumpSize()
     {
         return X86Assembler::patchableJumpSize();
+    }
+
+    static bool supportsSSE4_1()
+    {
+        if (s_sse4_1CheckState == CPUIDCheckState::NotChecked)
+            collectCPUFeatures();
+        return s_sse4_1CheckState == CPUIDCheckState::Set;
     }
 
     static bool supportsFloatingPointRounding()
@@ -3964,10 +4293,32 @@ public:
         return s_popcntCheckState == CPUIDCheckState::Set;
     }
 
+    static bool supportsSSE3()
+    {
+        if (s_sse3CheckState == CPUIDCheckState::NotChecked)
+            collectCPUFeatures();
+        return s_sse3CheckState == CPUIDCheckState::Set;
+    }
+
+    static bool supportsSupplementalSSE3()
+    {
+        if (s_supplementalSSE3CheckState == CPUIDCheckState::NotChecked)
+            collectCPUFeatures();
+        return s_supplementalSSE3CheckState == CPUIDCheckState::Set;
+    }
+
     static bool supportsAVX()
     {
-        // AVX still causes mysterious regressions and those regressions can be massive.
-        return false;
+        if (s_avxCheckState == CPUIDCheckState::NotChecked)
+            collectCPUFeatures();
+        return s_avxCheckState == CPUIDCheckState::Set;
+    }
+
+    static bool supportsAVX2()
+    {
+        if (s_avx2CheckState == CPUIDCheckState::NotChecked)
+            collectCPUFeatures();
+        return s_avx2CheckState == CPUIDCheckState::Set;
     }
 
     void lfence()
@@ -4252,9 +4603,12 @@ private:
     static CPUID getCPUIDEx(unsigned level, unsigned count);
     JS_EXPORT_PRIVATE static void collectCPUFeatures();
 
+    JS_EXPORT_PRIVATE static CPUIDCheckState s_sse3CheckState;
+    JS_EXPORT_PRIVATE static CPUIDCheckState s_supplementalSSE3CheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_sse4_1CheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_sse4_2CheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_avxCheckState;
+    JS_EXPORT_PRIVATE static CPUIDCheckState s_avx2CheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_lzcntCheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_bmi1CheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_popcntCheckState;

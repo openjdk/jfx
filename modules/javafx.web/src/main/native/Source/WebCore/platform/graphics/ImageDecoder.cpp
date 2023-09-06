@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,11 @@
 
 #if USE(CG)
 #include "ImageDecoderCG.h"
-#elif USE(DIRECT2D)
-#include "ImageDecoderDirect2D.h"
 #elif PLATFORM(JAVA)
 #include "ImageDecoderJava.h"
-#else
+#endif
+
+#if !PLATFORM(JAVA) && (!USE(CG) || USE(AVIF))
 #include "ScalableImageDecoder.h"
 #endif
 
@@ -108,6 +108,11 @@ RefPtr<ImageDecoder> ImageDecoder::create(FragmentedSharedBuffer& data, const St
 #endif
 
 #if USE(CG)
+#if USE(AVIF)
+    // ScalableImageDecoder is used on CG ports for some specific image formats which the platform doesn't support directly.
+    if (auto imageDecoder = ScalableImageDecoder::create(data, alphaOption, gammaAndColorProfileOption))
+        return imageDecoder;
+#endif
     return ImageDecoderCG::create(data, alphaOption, gammaAndColorProfileOption);
 #elif USE(DIRECT2D)
     return ImageDecoderDirect2D::create(data, alphaOption, gammaAndColorProfileOption);

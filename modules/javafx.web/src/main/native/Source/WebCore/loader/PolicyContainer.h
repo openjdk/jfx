@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "CrossOriginOpenerPolicy.h"
 
@@ -32,44 +33,24 @@ namespace WebCore {
 
 // https://html.spec.whatwg.org/multipage/origin.html#policy-container
 struct PolicyContainer {
+    // This acts as the CSP List. It will need to be parsed by a ContentSecurityPolicy object.
+    ContentSecurityPolicyResponseHeaders contentSecurityPolicyResponseHeaders;
     CrossOriginEmbedderPolicy crossOriginEmbedderPolicy;
     CrossOriginOpenerPolicy crossOriginOpenerPolicy;
-    // FIXME: CSP list and referrer policy should be part of the PolicyContainer.
+    ReferrerPolicy referrerPolicy = ReferrerPolicy::Default;
 
-    PolicyContainer isolatedCopy() const & { return { crossOriginEmbedderPolicy.isolatedCopy(), crossOriginOpenerPolicy.isolatedCopy() }; }
-    PolicyContainer isolatedCopy() && { return { WTFMove(crossOriginEmbedderPolicy).isolatedCopy(), WTFMove(crossOriginOpenerPolicy).isolatedCopy() }; }
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<PolicyContainer> decode(Decoder&);
+    PolicyContainer isolatedCopy() const & { return { contentSecurityPolicyResponseHeaders.isolatedCopy(), crossOriginEmbedderPolicy.isolatedCopy(), crossOriginOpenerPolicy.isolatedCopy(), referrerPolicy }; }
+    PolicyContainer isolatedCopy() && { return { WTFMove(contentSecurityPolicyResponseHeaders).isolatedCopy(), WTFMove(crossOriginEmbedderPolicy).isolatedCopy(), WTFMove(crossOriginOpenerPolicy).isolatedCopy(), referrerPolicy }; }
 };
 
 inline bool operator==(const PolicyContainer& a, const PolicyContainer& b)
 {
-    return a.crossOriginEmbedderPolicy == b.crossOriginEmbedderPolicy && a.crossOriginOpenerPolicy == b.crossOriginOpenerPolicy;
+    return a.contentSecurityPolicyResponseHeaders == b.contentSecurityPolicyResponseHeaders
+        && a.crossOriginEmbedderPolicy == b.crossOriginEmbedderPolicy
+        && a.crossOriginOpenerPolicy == b.crossOriginOpenerPolicy
+        && a.referrerPolicy == b.referrerPolicy;
 }
 
-template<class Encoder>
-void PolicyContainer::encode(Encoder& encoder) const
-{
-    encoder << crossOriginEmbedderPolicy << crossOriginOpenerPolicy;
-}
-
-template<class Decoder>
-std::optional<PolicyContainer> PolicyContainer::decode(Decoder& decoder)
-{
-    std::optional<CrossOriginEmbedderPolicy> crossOriginEmbedderPolicy;
-    decoder >> crossOriginEmbedderPolicy;
-    if (!crossOriginEmbedderPolicy)
-        return std::nullopt;
-
-    std::optional<CrossOriginOpenerPolicy> crossOriginOpenerPolicy;
-    decoder >> crossOriginOpenerPolicy;
-    if (!crossOriginOpenerPolicy)
-        return std::nullopt;
-
-    return {{
-        WTFMove(*crossOriginEmbedderPolicy),
-        WTFMove(*crossOriginOpenerPolicy)
-    }};
-}
+WEBCORE_EXPORT void addPolicyContainerHeaders(ResourceResponse&, const PolicyContainer&);
 
 } // namespace WebCore

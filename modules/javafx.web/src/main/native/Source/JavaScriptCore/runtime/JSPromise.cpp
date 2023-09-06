@@ -154,6 +154,7 @@ JSPromise* JSPromise::resolvedPromise(JSGlobalObject* globalObject, JSValue valu
 
     MarkedArgumentBuffer arguments;
     arguments.append(value);
+    ASSERT(!arguments.hasOverflowed());
     auto result = call(globalObject, function, callData, globalObject->promiseConstructor(), arguments);
     RETURN_IF_EXCEPTION(scope, nullptr);
     ASSERT(result.inherits<JSPromise>());
@@ -263,6 +264,7 @@ void JSPromise::performPromiseThen(JSGlobalObject* globalObject, JSFunction* onF
     arguments.append(onFulFilled);
     arguments.append(onRejected);
     arguments.append(resultCapability);
+    arguments.append(jsUndefined());
     ASSERT(!arguments.hasOverflowed());
     call(globalObject, performPromiseThenFunction, callData, jsUndefined(), arguments);
 }

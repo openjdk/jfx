@@ -40,6 +40,7 @@
 #include "Logging.h"
 #include "MockGamepadProvider.h"
 #include "Page.h"
+#include "ProcessWarming.h"
 #include "SWContextManager.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "WheelEventTestMonitor.h"
@@ -58,6 +59,11 @@
 namespace WebCoreTestSupport {
 using namespace JSC;
 using namespace WebCore;
+
+void initializeNames()
+{
+    ProcessWarming::initializeNames();
+}
 
 void injectInternalsObject(JSContextRef context)
 {
@@ -148,6 +154,11 @@ void setAllowsAnySSLCertificate(bool allowAnySSLCertificate)
     DeprecatedGlobalSettings::setAllowsAnySSLCertificate(allowAnySSLCertificate);
 }
 
+bool allowsAnySSLCertificate()
+{
+    return DeprecatedGlobalSettings::allowsAnySSLCertificate();
+}
+
 void setLinkedOnOrAfterEverythingForTesting()
 {
 #if PLATFORM(COCOA)
@@ -180,16 +191,17 @@ void disconnectMockGamepad(unsigned gamepadIndex)
 #endif
 }
 
-void setMockGamepadDetails(unsigned gamepadIndex, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount)
+void setMockGamepadDetails(unsigned gamepadIndex, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble)
 {
 #if ENABLE(GAMEPAD)
-    MockGamepadProvider::singleton().setMockGamepadDetails(gamepadIndex, gamepadID, mapping, axisCount, buttonCount);
+    MockGamepadProvider::singleton().setMockGamepadDetails(gamepadIndex, gamepadID, mapping, axisCount, buttonCount, supportsDualRumble);
 #else
     UNUSED_PARAM(gamepadIndex);
     UNUSED_PARAM(gamepadID);
     UNUSED_PARAM(mapping);
     UNUSED_PARAM(axisCount);
     UNUSED_PARAM(buttonCount);
+    UNUSED_PARAM(supportsDualRumble);
 #endif
 }
 

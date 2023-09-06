@@ -41,6 +41,7 @@ namespace WebCore {
 
 class Blob;
 class CanvasBase;
+class CSSStyleImageValue;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
@@ -53,7 +54,10 @@ class OffscreenCanvas;
 #endif
 class PendingImageBitmap;
 class ScriptExecutionContext;
-class CSSStyleImageValue;
+#if ENABLE(WEB_CODECS)
+class WebCodecsVideoFrame;
+#endif
+
 struct ImageBitmapOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
@@ -71,8 +75,9 @@ public:
 #if ENABLE(OFFSCREEN_CANVAS)
         RefPtr<OffscreenCanvas>,
 #endif
-#if ENABLE(CSS_TYPED_OM)
         RefPtr<CSSStyleImageValue>,
+#if ENABLE(WEB_CODECS)
+        RefPtr<WebCodecsVideoFrame>,
 #endif
         RefPtr<Blob>,
         RefPtr<ImageData>
@@ -84,6 +89,7 @@ public:
     static void createPromise(ScriptExecutionContext&, Source&&, ImageBitmapOptions&&, int sx, int sy, int sw, int sh, Promise&&);
 
     static RefPtr<ImageBuffer> createImageBuffer(ScriptExecutionContext&, const FloatSize&, RenderingMode, DestinationColorSpace, float resolutionScale = 1);
+    static RefPtr<ImageBuffer> createImageBuffer(ScriptExecutionContext&, const FloatSize&, DestinationColorSpace, float resolutionScale = 1);
 
     static Ref<ImageBitmap> create(ScriptExecutionContext&, const IntSize&, DestinationColorSpace);
     static Ref<ImageBitmap> create(std::optional<ImageBitmapBacking>&&);
@@ -126,6 +132,9 @@ private:
     static void createPromise(ScriptExecutionContext&, RefPtr<HTMLCanvasElement>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
 #if ENABLE(OFFSCREEN_CANVAS)
     static void createPromise(ScriptExecutionContext&, RefPtr<OffscreenCanvas>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+#endif
+#if ENABLE(WEB_CODECS)
+    static void createPromise(ScriptExecutionContext&, RefPtr<WebCodecsVideoFrame>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
 #endif
     static void createPromise(ScriptExecutionContext&, CanvasBase&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
     static void createPromise(ScriptExecutionContext&, RefPtr<Blob>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);

@@ -43,22 +43,55 @@
 #include "RealtimeMediaSourceCenter.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
+#include <wtf/MediaTime.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
-RealtimeMediaSource::RealtimeMediaSource(Type type, AtomString&& name, String&& deviceID, String&& hashSalt, PageIdentifier pageIdentifier)
-    : m_pageIdentifier(pageIdentifier)
-    , m_idHashSalt(WTFMove(hashSalt))
-    , m_persistentID(WTFMove(deviceID))
-    , m_type(type)
-    , m_name(WTFMove(name))
+static RealtimeMediaSource::Type toSourceType(CaptureDevice::DeviceType type)
 {
-    if (m_persistentID.isEmpty())
-        m_persistentID = createVersion4UUIDString();
+    switch (type) {
+    case CaptureDevice::DeviceType::Microphone:
+    case CaptureDevice::DeviceType::SystemAudio:
+        return RealtimeMediaSource::Type::Audio;
+    case CaptureDevice::DeviceType::Camera:
+    case CaptureDevice::DeviceType::Screen:
+    case CaptureDevice::DeviceType::Window:
+        return RealtimeMediaSource::Type::Video;
+    case CaptureDevice::DeviceType::Unknown:
+    case CaptureDevice::DeviceType::Speaker:
+        ASSERT_NOT_REACHED();
+        return RealtimeMediaSource::Type::Audio;
+    }
+    ASSERT_NOT_REACHED();
+    return RealtimeMediaSource::Type::Audio;
+}
 
-    m_hashedID = AtomString { RealtimeMediaSourceCenter::singleton().hashStringWithSalt(m_persistentID, m_idHashSalt) };
+RealtimeMediaSource::RealtimeMediaSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, PageIdentifier pageIdentifier)
+    : m_pageIdentifier(pageIdentifier)
+    , m_idHashSalts(WTFMove(hashSalts))
+    , m_type(toSourceType(device.type()))
+    , m_name({ device.label() })
+    , m_device(device)
+{
+    initializePersistentId();
+}
+
+void RealtimeMediaSource::setPersistentId(const String& persistentID)
+{
+    m_device.setPersistentId(persistentID);
+    initializePersistentId();
+}
+
+void RealtimeMediaSource::initializePersistentId()
+{
+    if (m_device.persistentId().isEmpty())
+        m_device.setPersistentId(createVersion4UUIDString());
+
+    auto& center = RealtimeMediaSourceCenter::singleton();
+    m_hashedID = AtomString { center.hashStringWithSalt(m_device.persistentId(), m_idHashSalts.persistentDeviceSalt) };
+    m_ephemeralHashedID = AtomString { center.hashStringWithSalt(m_device.persistentId(), m_idHashSalts.ephemeralDeviceSalt) };
 }
 
 void RealtimeMediaSource::addAudioSampleObserver(AudioSampleObserver& observer)
@@ -99,7 +132,7 @@ void RealtimeMediaSource::removeObserver(Observer& observer)
 {
     ASSERT(isMainThread());
     m_observers.remove(observer);
-    if (m_observers.computesEmpty())
+    if (m_observers.isEmptyIgnoringNullReferences())
         stopBeingObserved();
 }
 
@@ -476,7 +509,7 @@ double RealtimeMediaSource::fitnessDistance(const MediaConstraint& constraint)
         auto supportedModes = capabilities.facingMode().map([](auto& mode) {
             return RealtimeMediaSourceSettings::facingMode(mode);
         });
-        return downcast<StringConstraint>(constraint).fitnessDistance(supportedModes);
+        return downcast<StringConstraint>(constraint).fitnessDistance(supportedModes) + facingModeFitnessDistanceAdjustment();
         break;
     }
 
@@ -492,8 +525,8 @@ double RealtimeMediaSource::fitnessDistance(const MediaConstraint& constraint)
 
     case MediaConstraintType::DeviceId:
         ASSERT(constraint.isString());
-        ASSERT(!m_hashedID.isEmpty());
-        return downcast<StringConstraint>(constraint).fitnessDistance(m_hashedID);
+        ASSERT(!hashedId().isEmpty());
+        return downcast<StringConstraint>(constraint).fitnessDistance(hashedId());
         break;
 
     case MediaConstraintType::GroupId: {
@@ -979,24 +1012,23 @@ const IntSize RealtimeMediaSource::size() const
             size.setHeight(size.width() * (m_intrinsicSize.height() / static_cast<double>(m_intrinsicSize.width())));
         else if (size.height())
             size.setWidth(size.height() * (m_intrinsicSize.width() / static_cast<double>(m_intrinsicSize.height())));
+
+        if (m_aspectRatio)
+            size.setHeight(static_cast<int>(static_cast<float>(size.width()) / m_aspectRatio));
     }
 
     return size;
 }
 
-void RealtimeMediaSource::setIntrinsicSize(const IntSize& size, bool notifyObservers)
+void RealtimeMediaSource::setIntrinsicSize(const IntSize& intrinsicSize, bool notifyObservers)
 {
-    if (m_intrinsicSize == size)
+    if (m_intrinsicSize == intrinsicSize)
         return;
 
-    ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, size);
+    ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, intrinsicSize);
 
-    auto currentSize = this->size();
-    m_intrinsicSize = size;
-    if (!notifyObservers)
-        return;
-
-    if (currentSize != this->size()) {
+    m_intrinsicSize = intrinsicSize;
+    if (notifyObservers) {
         scheduleDeferredTask([this] {
             notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
         });
@@ -1027,8 +1059,14 @@ void RealtimeMediaSource::setAspectRatio(double ratio)
     ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, ratio);
 
     m_aspectRatio = ratio;
-    m_size.setHeight(m_size.width() / ratio);
-    notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::AspectRatio, RealtimeMediaSourceSettings::Flag::Height });
+
+    auto size = m_size;
+    if (!size.isEmpty()) {
+        size.setHeight(static_cast<int>(static_cast<float>(size.width()) / ratio));
+        setSize(size);
+    }
+
+    notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::AspectRatio });
 }
 
 void RealtimeMediaSource::setFacingMode(RealtimeMediaSourceSettings::VideoFacingMode mode)
@@ -1105,15 +1143,18 @@ void RealtimeMediaSource::scheduleDeferredTask(Function<void()>&& function)
 
 const AtomString& RealtimeMediaSource::hashedId() const
 {
-#ifndef NDEBUG
     ASSERT(!m_hashedID.isEmpty());
-#endif
+    ASSERT(!m_ephemeralHashedID.isEmpty());
+
+    if (isEphemeral())
+        return m_ephemeralHashedID;
+
     return m_hashedID;
 }
 
-String RealtimeMediaSource::deviceIDHashSalt() const
+const MediaDeviceHashSalts& RealtimeMediaSource::deviceIDHashSalts() const
 {
-    return m_idHashSalt;
+    return m_idHashSalts;
 }
 
 void RealtimeMediaSource::setType(Type type)
@@ -1139,7 +1180,7 @@ void RealtimeMediaSource::setLogger(const Logger& newLogger, const void* newLogI
 {
     m_logger = &newLogger;
     m_logIdentifier = newLogIdentifier;
-    ALWAYS_LOG(LOGIDENTIFIER, m_type, ", ", m_name, ", ", m_hashedID);
+    ALWAYS_LOG(LOGIDENTIFIER, m_type, ", ", name(), ", ", m_hashedID, ", ", m_ephemeralHashedID);
 }
 
 WTFLogChannel& RealtimeMediaSource::logChannel() const
@@ -1156,7 +1197,7 @@ String convertEnumerationToString(RealtimeMediaSource::Type enumerationValue)
     };
     static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Audio) == 0, "RealtimeMediaSource::Type::Audio is not 0 as expected");
     static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Video) == 1, "RealtimeMediaSource::Type::Video is not 1 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 

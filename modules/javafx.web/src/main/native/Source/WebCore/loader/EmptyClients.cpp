@@ -31,6 +31,7 @@
 #include "AppHighlight.h"
 #include "ApplicationCacheStorage.h"
 #include "BackForwardClient.h"
+#include "BadgeClient.h"
 #include "BroadcastChannelRegistry.h"
 #include "CacheStorageProvider.h"
 #include "ColorChooser.h"
@@ -50,6 +51,7 @@
 #include "DummyStorageProvider.h"
 #include "EditorClient.h"
 #include "EmptyAttachmentElementClient.h"
+#include "EmptyBadgeClient.h"
 #include "EmptyFrameLoaderClient.h"
 #include "FormState.h"
 #include "Frame.h"
@@ -59,7 +61,6 @@
 #include "HistoryItem.h"
 #include "IDBConnectionToServer.h"
 #include "InspectorClient.h"
-#include "LibWebRTCAudioModule.h"
 #include "MediaRecorderPrivate.h"
 #include "MediaRecorderProvider.h"
 #include "ModalContainerTypes.h"
@@ -67,7 +68,6 @@
 #include "Page.h"
 #include "PageConfiguration.h"
 #include "PaymentCoordinatorClient.h"
-#include "PermissionController.h"
 #include "PluginInfoProvider.h"
 #include "ProgressTrackerClient.h"
 #include "SecurityOriginData.h"
@@ -102,13 +102,13 @@ namespace WebCore {
 class UserMessageHandlerDescriptor;
 
 class EmptyBackForwardClient final : public BackForwardClient {
-    void addItem(Ref<HistoryItem>&&) { }
-    void goToItem(HistoryItem&) { }
-    RefPtr<HistoryItem> itemAtIndex(int) { return nullptr; }
-    unsigned backListCount() const { return 0; }
-    unsigned forwardListCount() const { return 0; }
-    bool containsItem(const HistoryItem&) const  { return false; }
-    void close() { }
+    void addItem(Ref<HistoryItem>&&) final { }
+    void goToItem(HistoryItem&) final { }
+    RefPtr<HistoryItem> itemAtIndex(int) final { return nullptr; }
+    unsigned backListCount() const final { return 0; }
+    unsigned forwardListCount() const final { return 0; }
+    bool containsItem(const HistoryItem&) const final { return false; }
+    void close() final { }
 };
 
 #if ENABLE(CONTEXT_MENUS)
@@ -333,6 +333,8 @@ private:
     void uppercaseWord() final { }
     void lowercaseWord() final { }
     void capitalizeWord() final { }
+
+    void setCaretDecorationVisibility(bool) final { }
 #endif
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
@@ -493,6 +495,9 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
             : m_sessionID(sessionID)
         {
         }
+
+        const SecurityOrigin* topLevelOrigin() const final { return nullptr; };
+
     private:
         Ref<StorageArea> storageArea(const SecurityOrigin&) final { return adoptRef(*new EmptyStorageArea); }
         Ref<StorageNamespace> copy(Page&) final { return adoptRef(*new EmptyStorageNamespace { m_sessionID }); }
@@ -502,10 +507,11 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
         PAL::SessionID m_sessionID;
     };
 
-    Ref<StorageNamespace> createSessionStorageNamespace(Page&, unsigned) final;
     Ref<StorageNamespace> createLocalStorageNamespace(unsigned, PAL::SessionID) final;
     Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned, PAL::SessionID) final;
 
+    void copySessionStorageNamespace(Page&, Page&) final { };
+    RefPtr<StorageNamespace> sessionStorageNamespace(const SecurityOrigin&, Page&, ShouldCreateNamespace) final;
 };
 
 class EmptyUserContentProvider final : public UserContentProvider {
@@ -631,11 +637,6 @@ RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const AtomString&, HTMLFrameOw
 RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool)
 {
     return nullptr;
-}
-
-std::optional<FrameIdentifier> EmptyFrameLoaderClient::frameID() const
-{
-    return std::nullopt;
 }
 
 std::optional<PageIdentifier> EmptyFrameLoaderClient::pageID() const
@@ -789,11 +790,11 @@ void EmptyFrameLoaderClient::dispatchDidReceiveTitle(const StringWithDirection&)
 {
 }
 
-void EmptyFrameLoaderClient::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<UsedLegacyTLS>)
+void EmptyFrameLoaderClient::dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<UsedLegacyTLS>, std::optional<WasPrivateRelayed>)
 {
 }
 
-void EmptyFrameLoaderClient::dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading)
+void EmptyFrameLoaderClient::dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading, WillInternallyHandleFailure)
 {
 }
 
@@ -1046,18 +1047,15 @@ void EmptyFrameLoaderClient::didRunInsecureContent(SecurityOrigin&, const URL&)
 {
 }
 
-void EmptyFrameLoaderClient::didDetectXSS(const URL&, bool)
-{
-}
 
 ObjectContentType EmptyFrameLoaderClient::objectContentType(const URL&, const String&)
 {
     return ObjectContentType::None;
 }
 
-String EmptyFrameLoaderClient::overrideMediaType() const
+AtomString EmptyFrameLoaderClient::overrideMediaType() const
 {
-    return { };
+    return nullAtom();
 }
 
 void EmptyFrameLoaderClient::redirectDataToPlugin(Widget&)
@@ -1082,15 +1080,6 @@ void EmptyFrameLoaderClient::willCacheResponse(DocumentLoader*, ResourceLoaderId
 
 #endif
 
-#if USE(CFURLCONNECTION)
-
-bool EmptyFrameLoaderClient::shouldCacheResponse(DocumentLoader*, ResourceLoaderIdentifier, const ResourceResponse&, const unsigned char*, unsigned long long)
-{
-    return true;
-}
-
-#endif
-
 bool EmptyFrameLoaderClient::isEmptyFrameLoaderClient() const
 {
     return true;
@@ -1109,7 +1098,7 @@ RefPtr<LegacyPreviewLoaderClient> EmptyFrameLoaderClient::createPreviewLoaderCli
 
 #endif
 
-#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+#if ENABLE(TRACKING_PREVENTION)
 
 bool EmptyFrameLoaderClient::hasFrameSpecificStorageAccess()
 {
@@ -1146,7 +1135,7 @@ void EmptyEditorClient::registerRedoStep(UndoStep&)
 {
 }
 
-Ref<StorageNamespace> EmptyStorageNamespaceProvider::createSessionStorageNamespace(Page& page, unsigned)
+RefPtr<StorageNamespace> EmptyStorageNamespaceProvider::sessionStorageNamespace(const SecurityOrigin&, Page& page, ShouldCreateNamespace)
 {
     return adoptRef(*new EmptyStorageNamespace { page.sessionID() });
 }
@@ -1204,9 +1193,9 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         makeUniqueRef<DummySpeechRecognitionProvider>(),
         makeUniqueRef<EmptyMediaRecorderProvider>(),
         EmptyBroadcastChannelRegistry::create(),
-        DummyPermissionController::create(),
         makeUniqueRef<DummyStorageProvider>(),
-        makeUniqueRef<DummyModelPlayerProvider>()
+        makeUniqueRef<DummyModelPlayerProvider>(),
+        EmptyBadgeClient::create()
     };
 
     static NeverDestroyed<EmptyChromeClient> dummyChromeClient;

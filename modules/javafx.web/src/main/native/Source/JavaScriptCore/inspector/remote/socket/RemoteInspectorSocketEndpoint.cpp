@@ -30,6 +30,7 @@
 
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
 
 namespace Inspector {
@@ -138,7 +139,7 @@ void RemoteInspectorSocketEndpoint::workerThread()
 
     while (!m_shouldAbortWorkerThread) {
 #if USE(GENERIC_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
-        RunLoop::iterate();
+        RunLoop::cycle();
 #endif
 
         Vector<PollingDescriptor> pollfds;
@@ -190,12 +191,10 @@ void RemoteInspectorSocketEndpoint::workerThread()
 ConnectionID RemoteInspectorSocketEndpoint::generateConnectionID()
 {
     ASSERT(m_connectionsLock.isLocked());
-
     ConnectionID id;
     do {
-        id = cryptographicallyRandomNumber();
-    } while (!id || m_clients.contains(id) || m_listeners.contains(id));
-
+        id = cryptographicallyRandomNumber<ConnectionID>();
+    } while (!m_clients.isValidKey(id) || m_clients.contains(id) || m_listeners.contains(id));
     return id;
 }
 

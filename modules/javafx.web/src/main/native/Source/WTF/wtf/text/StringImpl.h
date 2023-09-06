@@ -31,7 +31,6 @@
 #include <wtf/Expected.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Packed.h>
-#include <wtf/Span.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/text/ASCIIFastPath.h>
@@ -42,6 +41,10 @@
 #include <wtf/text/StringHasher.h>
 #include <wtf/text/UTF8ConversionError.h>
 #include <wtf/unicode/UTF8Conversion.h>
+
+#if CPU(ARM64)
+#include <arm_neon.h>
+#endif
 
 #if USE(CF)
 typedef const struct __CFString * CFStringRef;
@@ -71,6 +74,7 @@ struct CStringTranslator;
 struct HashAndUTF8CharactersTranslator;
 struct HashTranslatorASCIILiteral;
 struct LCharBufferTranslator;
+struct StringViewHashTranslator;
 struct SubstringTranslator;
 struct UCharBufferTranslator;
 
@@ -190,6 +194,7 @@ class StringImpl : private StringImplShape {
     friend struct WTF::HashAndUTF8CharactersTranslator;
     friend struct WTF::HashTranslatorASCIILiteral;
     friend struct WTF::LCharBufferTranslator;
+    friend struct WTF::StringViewHashTranslator;
     friend struct WTF::SubstringTranslator;
     friend struct WTF::UCharBufferTranslator;
 
@@ -322,16 +327,19 @@ public:
 
     static WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> utf8ForCharacters(const LChar* characters, unsigned length);
     static WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> utf8ForCharacters(const UChar* characters, unsigned length, ConversionMode = LenientConversion);
+    static WTF_EXPORT_PRIVATE Expected<size_t, UTF8ConversionError> utf8ForCharactersIntoBuffer(const UChar* characters, unsigned length, ConversionMode, Vector<char, 1024>&);
 
     template<typename Func>
-    Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUtf8ForRange(const Func&, unsigned offset, unsigned length, ConversionMode = LenientConversion) const;
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8ForRange(unsigned offset, unsigned length, ConversionMode = LenientConversion) const;
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8(ConversionMode = LenientConversion) const;
+    static Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8ForCharacters(const Func&, const LChar* characters, unsigned length);
+    template<typename Func>
+    static Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8ForCharacters(const Func&, const UChar* characters, unsigned length, ConversionMode = LenientConversion);
+
+    template<typename Func>
+    Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
+    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
 
 private:
-    static WTF_EXPORT_PRIVATE UTF8ConversionError utf8Impl(const UChar* characters, unsigned length, char*& buffer, size_t bufferSize, ConversionMode);
-
     // The high bits of 'hash' are always empty, but we prefer to store our flags
     // in the low bits because it makes them slightly more efficient to access.
     // So, we shift left and right when setting and getting our hash code.
@@ -389,16 +397,18 @@ public:
         //       StringImpl::hash() only sets a new hash iff !hasHash().
         //       Additionally, StringImpl::setHash() asserts hasHash() and !isStatic().
 
-        template<unsigned characterCount> constexpr StaticStringImpl(const char (&characters)[characterCount], StringKind = StringNormal);
-        template<unsigned characterCount> constexpr StaticStringImpl(const char16_t (&characters)[characterCount], StringKind = StringNormal);
+        template<unsigned characterCount> explicit constexpr StaticStringImpl(const char (&characters)[characterCount], StringKind = StringNormal);
+        template<unsigned characterCount> explicit constexpr StaticStringImpl(const char16_t (&characters)[characterCount], StringKind = StringNormal);
         operator StringImpl&();
     };
 
     WTF_EXPORT_PRIVATE static StaticStringImpl s_emptyAtomString;
     ALWAYS_INLINE static StringImpl* empty() { return reinterpret_cast<StringImpl*>(&s_emptyAtomString); }
 
-    // FIXME: Does this really belong in StringImpl?
-    template<typename SourceCharacterType, typename DestinationCharacterType> static void copyCharacters(DestinationCharacterType* destination, const SourceCharacterType* source, unsigned numCharacters);
+    // FIXME: Do these functions really belong in StringImpl?
+    template<typename CharacterType> static void copyCharacters(CharacterType* destination, const CharacterType* source, unsigned length);
+    static void copyCharacters(UChar* destination, const LChar* source, unsigned length);
+    static void copyCharacters(LChar* destination, const UChar* source, unsigned length);
 
     // Some string features, like reference counting and the atomicity flag, are not
     // thread-safe. We achieve thread safety by isolation, giving each thread
@@ -473,7 +483,7 @@ public:
     WTF_EXPORT_PRIVATE Ref<StringImpl> replace(StringView, StringView);
     WTF_EXPORT_PRIVATE Ref<StringImpl> replace(unsigned start, unsigned length, StringView);
 
-    WTF_EXPORT_PRIVATE UCharDirection defaultWritingDirection(bool* hasStrongDirectionality = nullptr);
+    WTF_EXPORT_PRIVATE std::optional<UCharDirection> defaultWritingDirection();
 
 #if USE(CF)
     RetainPtr<CFStringRef> createCFString();
@@ -621,6 +631,8 @@ int codePointCompare(const StringImpl*, const StringImpl*);
 // Most WebKit callers don't want that would use isASCIISpace or isHTMLSpace instead.
 bool isSpaceOrNewline(UChar32);
 bool isNotSpaceOrNewline(UChar32);
+// FIXME: rdar://99002825 (Investigate if isSpaceOrNewline should be including 0xA0 non-breaking space in check.)
+bool isUnicodeWhitespace(UChar32);
 
 // StringHash is the default hash for StringImpl* and RefPtr<StringImpl>
 template<typename> struct DefaultHash;
@@ -787,6 +799,12 @@ inline bool isNotSpaceOrNewline(UChar32 character)
     return !isSpaceOrNewline(character);
 }
 
+// FIXME: For LChar, isASCIISpace(character) || character == noBreakSpace would be enough
+inline bool isUnicodeWhitespace(UChar32 character)
+{
+    return isASCII(character) ? isASCIISpace(character) : u_isUWhiteSpace(character);
+}
+
 inline StringImplShape::StringImplShape(unsigned refCount, unsigned length, const LChar* data8, unsigned hashAndFlags)
     : m_refCount(refCount)
     , m_length(length)
@@ -844,10 +862,10 @@ inline bool StringImpl::isAllLatin1() const
     if (is8Bit())
         return true;
     auto* characters = characters16();
-    UChar ored = 0;
-    for (size_t i = 0; i < length(); ++i)
-        ored |= characters[i];
-    return !(ored & 0xFF00);
+    UChar mergedCharacterBits = 0;
+    for (unsigned i = 0; i < length(); ++i)
+        mergedCharacterBits |= characters[i];
+    return isLatin1(mergedCharacterBits);
 }
 
 template<bool isSpecialCharacter(UChar), typename CharacterType> inline bool isAllSpecialCharacters(const CharacterType* characters, size_t length)
@@ -1124,24 +1142,126 @@ inline void StringImpl::deref()
     m_refCount = tempRefCount;
 }
 
-template<typename SourceCharacterType, typename DestinationCharacterType>
-inline void StringImpl::copyCharacters(DestinationCharacterType* destination, const SourceCharacterType* source, unsigned numCharacters)
+template<typename CharacterType> inline void StringImpl::copyCharacters(CharacterType* destination, const CharacterType* source, unsigned length)
 {
-    ASSERT(destination || !numCharacters); // Workaround for clang static analyzer (<rdar://problem/82475719>).
-    static_assert(std::is_same_v<SourceCharacterType, LChar> || std::is_same_v<SourceCharacterType, UChar>);
-    static_assert(std::is_same_v<DestinationCharacterType, LChar> || std::is_same_v<DestinationCharacterType, UChar>);
-    if constexpr (std::is_same_v<SourceCharacterType, DestinationCharacterType>) {
-        if (numCharacters == 1) {
+    if (length == 1)
             *destination = *source;
-            return;
+    else if (length)
+        std::memcpy(destination, source, length * sizeof(CharacterType));
+}
+
+inline void StringImpl::copyCharacters(UChar* destination, const LChar* source, unsigned length)
+{
+#if CPU(ARM64)
+    // SIMD Upconvert.
+    const auto* end = destination + length;
+    constexpr uintptr_t memoryAccessSize = 64;
+
+    if (length >= memoryAccessSize) {
+        constexpr uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        const auto* simdEnd = destination + (length & ~memoryAccessMask);
+        uint8x16_t zeros = vdupq_n_u8(0);
+        do {
+            uint8x16x4_t bytes = vld1q_u8_x4(bitwise_cast<const uint8_t*>(source));
+            source += memoryAccessSize;
+
+            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[0], zeros }));
+            destination += memoryAccessSize / 4;
+            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[1], zeros }));
+            destination += memoryAccessSize / 4;
+            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[2], zeros }));
+            destination += memoryAccessSize / 4;
+            vst2q_u8(bitwise_cast<uint8_t*>(destination), (uint8x16x2_t { bytes.val[3], zeros }));
+            destination += memoryAccessSize / 4;
+        } while (destination != simdEnd);
         }
-        memcpy(destination, source, numCharacters * sizeof(DestinationCharacterType));
-    } else {
-        // FIXME: We should ensure that UChar -> LChar copying happens when UChar only contains Latin-1.
-        // https://bugs.webkit.org/show_bug.cgi?id=205355
-        for (unsigned i = 0; i < numCharacters; ++i)
+
+    while (destination != end)
+        *destination++ = *source++;
+#else
+    for (unsigned i = 0; i < length; ++i)
+        destination[i] = source[i];
+#endif
+}
+
+inline void StringImpl::copyCharacters(LChar* destination, const UChar* source, unsigned length)
+{
+#if ASSERT_ENABLED
+    for (unsigned i = 0; i < length; ++i)
+        ASSERT(isLatin1(source[i]));
+#endif
+
+#if CPU(X86_SSE2)
+    const uintptr_t memoryAccessSize = 16; // Memory accesses on 16 byte (128 bit) alignment
+    const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+
+    unsigned i = 0;
+    for (; i < length && !isAlignedTo<memoryAccessMask>(&source[i]); ++i)
             destination[i] = source[i];
+
+    const uintptr_t sourceLoadSize = 32; // Process 32 bytes (16 UChars) each iteration
+    const unsigned ucharsPerLoop = sourceLoadSize / sizeof(UChar);
+    if (length > ucharsPerLoop) {
+        const unsigned endLength = length - ucharsPerLoop + 1;
+        for (; i < endLength; i += ucharsPerLoop) {
+            __m128i first8UChars = _mm_load_si128(reinterpret_cast<const __m128i*>(&source[i]));
+            __m128i second8UChars = _mm_load_si128(reinterpret_cast<const __m128i*>(&source[i+8]));
+            __m128i packedChars = _mm_packus_epi16(first8UChars, second8UChars);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(&destination[i]), packedChars);
+        }
     }
+
+    for (; i < length; ++i)
+        destination[i] = source[i];
+#elif COMPILER(GCC_COMPATIBLE) && CPU(ARM64) && !defined(__ILP32__) && defined(NDEBUG)
+    const LChar* const end = destination + length;
+    const uintptr_t memoryAccessSize = 16;
+
+    if (length >= memoryAccessSize) {
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+
+        // Vector interleaved unpack, we only store the lower 8 bits.
+        const uintptr_t lengthLeft = end - destination;
+        const LChar* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
+        do {
+            asm("ld2   { v0.16B, v1.16B }, [%[SOURCE]], #32\n\t"
+                "st1   { v0.16B }, [%[DESTINATION]], #16\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "v0", "v1");
+        } while (destination != simdEnd);
+    }
+
+    while (destination != end)
+        *destination++ = static_cast<LChar>(*source++);
+#elif COMPILER(GCC_COMPATIBLE) && CPU(ARM_NEON) && !(CPU(BIG_ENDIAN) || CPU(MIDDLE_ENDIAN)) && defined(NDEBUG)
+    const LChar* const end = destination + length;
+    const uintptr_t memoryAccessSize = 8;
+
+    if (length >= (2 * memoryAccessSize) - 1) {
+        // Prefix: align dst on 64 bits.
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+        while (!isAlignedTo<memoryAccessMask>(destination))
+            *destination++ = static_cast<LChar>(*source++);
+
+        // Vector interleaved unpack, we only store the lower 8 bits.
+        const uintptr_t lengthLeft = end - destination;
+        const LChar* const simdEnd = end - (lengthLeft % memoryAccessSize);
+        do {
+            asm("vld2.8   { d0-d1 }, [%[SOURCE]] !\n\t"
+                "vst1.8   { d0 }, [%[DESTINATION],:64] !\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "d0", "d1");
+        } while (destination != simdEnd);
+    }
+
+    while (destination != end)
+        *destination++ = static_cast<LChar>(*source++);
+#else
+    for (unsigned i = 0; i < length; ++i)
+        destination[i] = static_cast<LChar>(source[i]);
+#endif
 }
 
 inline UChar StringImpl::at(unsigned i) const
@@ -1297,7 +1417,6 @@ template<typename CharacterType, typename Predicate> ALWAYS_INLINE Ref<StringImp
     auto* to = data.characters();
     unsigned outc = from - characters;
 
-    if (outc)
         copyCharacters(to, characters, outc);
 
     do {
@@ -1359,18 +1478,23 @@ inline Ref<StringImpl> StringImpl::createByReplacingInCharacters(const UChar* ch
 }
 
 template<typename Func>
-inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> StringImpl::tryGetUtf8ForRange(const Func& function, unsigned offset, unsigned length, ConversionMode mode) const
+inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8(const Func& function, ConversionMode mode) const
 {
-    ASSERT(offset <= this->length());
-    ASSERT(offset + length <= this->length());
+    if (is8Bit())
+        return tryGetUTF8ForCharacters(function, characters8(), length());
+    return tryGetUTF8ForCharacters(function, characters16(), length(), mode);
+}
 
+template<typename Func>
+inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8ForCharacters(const Func& function, const LChar* characters, unsigned length)
+{
     if (!length) {
-        const char* const emptyString = "";
-        return function(Span<const char> { emptyString, emptyString });
+        constexpr const char* emptyString = "";
+        return function(Span { emptyString, emptyString });
     }
 
     // Allocate a buffer big enough to hold all the characters
-    // (an individual UTF-16 UChar can only expand to 3 UTF-8 bytes).
+    // (an individual LChar can only expand to 2 UTF-8 bytes).
     // Optimization ideas, if we find this function is hot:
     //  * We could speculatively create a CStringBuffer to contain 'length'
     //    characters, and resize if necessary (i.e. if the buffer contains
@@ -1379,16 +1503,15 @@ inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionErro
     //  * We could allocate a CStringBuffer with an appropriate size to
     //    have a good chance of being able to write the string into the
     //    buffer without reallocing (say, 1.5 x length).
-    if (length > MaxLength / 3)
+    if (length > MaxLength / 2)
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
-    if (is8Bit()) {
-        const LChar* characters = this->characters8() + offset;
 #if CPU(ARM64)
         if (const LChar* nonASCII = find8NonASCII(characters, length)) {
             size_t prefixLength = nonASCII - characters;
             size_t remainingLength = length - prefixLength;
-            Vector<char, 1024> bufferVector(prefixLength + remainingLength * 3);
+
+        Vector<char, 1024> bufferVector(prefixLength + remainingLength * 2);
             char* buffer = bufferVector.data();
 
             memcpy(buffer, characters, prefixLength);
@@ -1396,24 +1519,35 @@ inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionErro
 
             auto success = Unicode::convertLatin1ToUTF8(&nonASCII, characters + length, &buffer, buffer + (bufferVector.size() - prefixLength));
             ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
-            return function(Span<const char> { bufferVector.data(), buffer });
-        } else
-            return function(Span<const char> { bitwise_cast<const char*>(characters), bitwise_cast<const char*>(characters + length) });
-#else
-        Vector<char, 1024> bufferVector(length * 3);
-        char* buffer = bufferVector.data();
-        auto success = Unicode::convertLatin1ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size());
-        ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
-        return function(Span<const char> { bufferVector.data(), buffer });
-#endif
+        return function(Span { bufferVector.data(), buffer });
     }
+    return function(Span { bitwise_cast<const char*>(characters), bitwise_cast<const char*>(characters + length) });
+#else
+    Vector<char, 1024> bufferVector(length * 2);
+        char* buffer = bufferVector.data();
+    const LChar* source = characters;
+    bool success = Unicode::convertLatin1ToUTF8(&source, source + length, &buffer, buffer + bufferVector.size());
+    ASSERT_UNUSED(success, success); // (length * 2) should be sufficient for any conversion from Latin1
+    return function(Span { bufferVector.data(), buffer });
+#endif
+}
 
-    Vector<char, 1024> bufferVector(length * 3);
-    char* buffer = bufferVector.data();
-    UTF8ConversionError error = utf8Impl(this->characters16() + offset, length, buffer, bufferVector.size(), mode);
-    if (error != UTF8ConversionError::None)
-        return makeUnexpected(error);
-    return function(Span<const char> { bufferVector.data(), buffer });
+template<typename Func>
+inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8ForCharacters(const Func& function, const UChar* characters, unsigned length, ConversionMode mode)
+{
+    if (!length) {
+        constexpr const char* emptyString = "";
+        return function(Span { emptyString, emptyString });
+    }
+    if (length > MaxLength / 3)
+        return makeUnexpected(UTF8ConversionError::OutOfMemory);
+
+    size_t bufferSize = length * 3;
+    Vector<char, 1024> bufferVector(bufferSize);
+    auto convertedSize = utf8ForCharactersIntoBuffer(characters, length, mode, bufferVector);
+    if (!convertedSize)
+        return makeUnexpected(convertedSize.error());
+    return function(Span { bufferVector.data(), *convertedSize });
 }
 
 } // namespace WTF
@@ -1423,3 +1557,4 @@ using WTF::StringImpl;
 using WTF::equal;
 using WTF::isNotSpaceOrNewline;
 using WTF::isSpaceOrNewline;
+using WTF::isUnicodeWhitespace;

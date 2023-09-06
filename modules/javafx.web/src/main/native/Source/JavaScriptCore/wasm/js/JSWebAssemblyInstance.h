@@ -78,7 +78,7 @@ public:
         m_memory.set(vm, this, value);
         instance().setMemory(memory()->memory());
     }
-    Wasm::MemoryMode memoryMode() { return memory()->memory().mode(); }
+    MemoryMode memoryMode() { return memory()->memory().mode(); }
 
     JSWebAssemblyTable* table(unsigned i) { return m_tables[i].get(); }
     void setTable(VM& vm, uint32_t index, JSWebAssemblyTable* value)
@@ -91,7 +91,7 @@ public:
 
     void linkGlobal(VM& vm, uint32_t index, JSWebAssemblyGlobal* value)
     {
-        ASSERT(value == value->global()->owner<JSWebAssemblyGlobal>());
+        ASSERT(value == value->global()->owner());
         instance().linkGlobal(index, *value->global());
         vm.writeBarrier(this, value);
     }
@@ -99,10 +99,11 @@ public:
     JSGlobalObject* globalObject() const { return m_globalObject.get(); }
     JSWebAssemblyModule* module() const { return m_module.get(); }
 
-    static size_t offsetOfInstance() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_instance); }
-    static size_t offsetOfModule() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_module); }
-    static size_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_globalObject); }
-    static size_t offsetOfVM() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_vm); }
+    static ptrdiff_t offsetOfInstance() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_instance); }
+    static ptrdiff_t offsetOfModule() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_module); }
+    static ptrdiff_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_globalObject); }
+    static ptrdiff_t offsetOfVM() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_vm); }
+    static ptrdiff_t offsetOfModuleRecord() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_moduleRecord); }
 
 private:
     JSWebAssemblyInstance(VM&, Structure*, Ref<Wasm::Instance>&&);

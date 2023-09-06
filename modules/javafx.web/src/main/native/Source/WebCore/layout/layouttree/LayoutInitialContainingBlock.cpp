@@ -26,8 +26,6 @@
 #include "config.h"
 #include "LayoutInitialContainingBlock.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "RenderStyle.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -37,11 +35,10 @@ namespace Layout {
 WTF_MAKE_ISO_ALLOCATED_IMPL(InitialContainingBlock);
 
 InitialContainingBlock::InitialContainingBlock(RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle)
-    : ContainerBox({ }, WTFMove(style), WTFMove(firstLineStyle), Box::InitialContainingBlockFlag)
+    : ElementBox({ }, WTFMove(style), WTFMove(firstLineStyle), Box::InitialContainingBlockFlag)
 {
 }
 
 }
 }
 
-#endif

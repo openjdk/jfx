@@ -31,7 +31,7 @@ namespace WebCore {
 class RadioButtonGroup {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    bool isEmpty() const { return m_members.computesEmpty(); }
+    bool isEmpty() const { return m_members.isEmptyIgnoringNullReferences(); }
     bool isRequired() const { return m_requiredCount; }
     RefPtr<HTMLInputElement> checkedButton() const { return m_checkedButton.get(); }
     void add(HTMLInputElement&);
@@ -47,8 +47,8 @@ private:
     bool isValid() const;
     void setCheckedButton(HTMLInputElement*);
 
-    WeakHashSet<HTMLInputElement> m_members;
-    WeakPtr<HTMLInputElement> m_checkedButton;
+    WeakHashSet<HTMLInputElement, WeakPtrImplWithEventTargetData> m_members;
+    WeakPtr<HTMLInputElement, WeakPtrImplWithEventTargetData> m_checkedButton;
     size_t m_requiredCount { 0 };
 };
 
@@ -153,7 +153,7 @@ void RadioButtonGroup::remove(HTMLInputElement& button)
         }
     }
 
-    if (m_members.computesEmpty()) {
+    if (m_members.isEmptyIgnoringNullReferences()) {
         ASSERT(!m_requiredCount);
         ASSERT(!m_checkedButton);
     } else if (wasValid != isValid())

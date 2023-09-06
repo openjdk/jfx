@@ -32,7 +32,6 @@
 #include "ThreadableWebSocketChannel.h"
 
 #include "ContentRuleListResults.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
@@ -56,7 +55,7 @@ Ref<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(Document& doc
 #if USE(CURL) || USE(SOUP)
     bool enabled = true;
 #elif HAVE(NSURLSESSION_WEBSOCKET)
-    bool enabled = DeprecatedGlobalSettings::isNSURLSessionWebSocketEnabled();
+    bool enabled = document.settings().isNSURLSessionWebSocketEnabled();
 #else
     bool enabled = false;
 #endif
@@ -136,6 +135,21 @@ std::optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectReque
     // these headers.
     request.addHTTPHeaderField(HTTPHeaderName::Pragma, HTTPHeaderValues::noCache());
     request.addHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::noCache());
+
+    auto httpURL = request.url();
+    httpURL.setProtocol(url.protocolIs("ws"_s) ? "http"_s : "https"_s);
+    auto requestOrigin = SecurityOrigin::create(httpURL);
+    if (document.settings().fetchMetadataEnabled() && requestOrigin->isPotentiallyTrustworthy()) {
+        request.addHTTPHeaderField(HTTPHeaderName::SecFetchDest, "websocket"_s);
+        request.addHTTPHeaderField(HTTPHeaderName::SecFetchMode, "websocket"_s);
+
+        if (document.securityOrigin().isSameOriginAs(requestOrigin.get()))
+            request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "same-origin"_s);
+        else if (document.securityOrigin().isSameSiteAs(requestOrigin))
+            request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "same-site"_s);
+        else
+            request.addHTTPHeaderField(HTTPHeaderName::SecFetchSite, "cross-site"_s);
+    }
 
     return request;
 }

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "GraphicsStyle.h"
 #include "GraphicsTypes.h"
 #include "SourceBrush.h"
 #include "WindRule.h"
@@ -46,18 +47,19 @@ public:
 
         CompositeMode               = 1 << 5,
         DropShadow                  = 1 << 6,
+        Style                       = 1 << 7,
 
-        Alpha                       = 1 << 7,
-        TextDrawingMode             = 1 << 8,
-        ImageInterpolationQuality   = 1 << 9,
+        Alpha                       = 1 << 8,
+        TextDrawingMode             = 1 << 9,
+        ImageInterpolationQuality   = 1 << 10,
 
-        ShouldAntialias             = 1 << 10,
-        ShouldSmoothFonts           = 1 << 11,
-        ShouldSubpixelQuantizeFonts = 1 << 12,
-        ShadowsIgnoreTransforms     = 1 << 13,
-        DrawLuminanceMask           = 1 << 14,
+        ShouldAntialias             = 1 << 11,
+        ShouldSmoothFonts           = 1 << 12,
+        ShouldSubpixelQuantizeFonts = 1 << 13,
+        ShadowsIgnoreTransforms     = 1 << 14,
+        DrawLuminanceMask           = 1 << 15,
 #if HAVE(OS_DARK_MODE_SUPPORT)
-        UseDarkAppearance           = 1 << 15,
+        UseDarkAppearance           = 1 << 16,
 #endif
     };
     using ChangeFlags = OptionSet<Change>;
@@ -98,6 +100,9 @@ public:
     const DropShadow& dropShadow() const { return m_dropShadow; }
     void setDropShadow(const DropShadow& dropShadow) { setProperty(Change::DropShadow, &GraphicsContextState::m_dropShadow, dropShadow); }
 
+    const std::optional<GraphicsStyle>& style() const { return m_style; }
+    void setStyle(const std::optional<GraphicsStyle>& style) { setProperty(Change::Style, &GraphicsContextState::m_style, style); }
+
     float alpha() const { return m_alpha; }
     void setAlpha(float alpha) { setProperty(Change::Alpha, &GraphicsContextState::m_alpha, alpha); }
 
@@ -128,10 +133,10 @@ public:
 #endif
 
     bool containsOnlyInlineChanges() const;
-    void mergeChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+    void mergeLastChanges(const GraphicsContextState&, const std::optional<GraphicsContextState>& lastDrawingState = std::nullopt);
+    void mergeAllChanges(const GraphicsContextState&);
 
     void didBeginTransparencyLayer();
-    void didEndTransparencyLayer(float originalOpacity);
 
     WTF::TextStream& dump(WTF::TextStream&) const;
 #if PLATFORM(JAVA)
@@ -171,10 +176,11 @@ private:
 
     SourceBrush m_strokeBrush { Color::black };
     float m_strokeThickness { 0 };
-    StrokeStyle m_strokeStyle { SolidStroke };
+    StrokeStyle m_strokeStyle { StrokeStyle::SolidStroke };
 
     CompositeMode m_compositeMode { CompositeOperator::SourceOver, BlendMode::Normal };
     DropShadow m_dropShadow;
+    std::optional<GraphicsStyle> m_style;
 
     float m_alpha { 1 };
     InterpolationQuality m_imageInterpolationQuality { InterpolationQuality::Default };
@@ -209,6 +215,7 @@ void GraphicsContextState::encode(Encoder& encoder) const
 
     encode(Change::CompositeMode,                   &GraphicsContextState::m_compositeMode);
     encode(Change::DropShadow,                      &GraphicsContextState::m_dropShadow);
+    encode(Change::Style,                           &GraphicsContextState::m_style);
 
     encode(Change::Alpha,                           &GraphicsContextState::m_alpha);
     encode(Change::ImageInterpolationQuality,       &GraphicsContextState::m_imageInterpolationQuality);
@@ -264,6 +271,8 @@ std::optional<GraphicsContextState> GraphicsContextState::decode(Decoder& decode
         return std::nullopt;
     if (!decode(state, Change::DropShadow,                  &GraphicsContextState::m_dropShadow))
         return std::nullopt;
+    if (!decode(state, Change::Style,                       &GraphicsContextState::m_style))
+        return std::nullopt;
 
     if (!decode(state, Change::Alpha,                       &GraphicsContextState::m_alpha))
         return std::nullopt;
@@ -309,6 +318,7 @@ template<> struct EnumTraits<WebCore::GraphicsContextState::Change> {
 
         WebCore::GraphicsContextState::Change::CompositeMode,
         WebCore::GraphicsContextState::Change::DropShadow,
+        WebCore::GraphicsContextState::Change::Style,
 
         WebCore::GraphicsContextState::Change::Alpha,
         WebCore::GraphicsContextState::Change::TextDrawingMode,

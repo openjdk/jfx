@@ -41,6 +41,7 @@
 #include "Editing.h"
 #include "EditingBehavior.h"
 #include "ElementIterator.h"
+#include "ElementName.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -63,7 +64,7 @@
 #include "ScriptElement.h"
 #include "SimplifyMarkupCommand.h"
 #include "SmartReplace.h"
-#include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include "Text.h"
 #include "TextIterator.h"
 #include "VisibleUnits.h"
@@ -435,8 +436,11 @@ inline void ReplaceSelectionCommand::InsertedNodes::willRemoveNode(Node* node)
         m_lastNodeInserted = nullptr;
     } else if (m_firstNodeInserted == node)
         m_firstNodeInserted = NodeTraversal::nextSkippingChildren(*m_firstNodeInserted);
-    else if (m_lastNodeInserted == node)
+    else if (m_lastNodeInserted == node) {
         m_lastNodeInserted = NodeTraversal::previousSkippingChildren(*m_lastNodeInserted);
+        if (!m_lastNodeInserted)
+            m_lastNodeInserted = m_firstNodeInserted;
+    }
 }
 
 inline void ReplaceSelectionCommand::InsertedNodes::didReplaceNode(Node* node, Node* newNode)
@@ -569,7 +573,7 @@ static bool fragmentNeedsColorTransformed(ReplacementFragment& fragment, const P
 
         const auto& colorFilter = editableRootRenderer->style().appleColorFilter();
         for (const auto& colorFilterOperation : colorFilter.operations()) {
-            if (colorFilterOperation->type() != FilterOperation::APPLE_INVERT_LIGHTNESS)
+            if (colorFilterOperation->type() != FilterOperation::Type::AppleInvertLightness)
                 return false;
         }
     }
@@ -724,67 +728,65 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
     }
 }
 
-static bool isProhibitedParagraphChild(const AtomString& name)
+static bool isProhibitedParagraphChild(const QualifiedName& name)
 {
-    static NeverDestroyed localNames = [] {
+    using namespace ElementNames;
+
         // https://dvcs.w3.org/hg/editing/raw-file/57abe6d3cb60/editing.html#prohibited-paragraph-child
-        static constexpr std::array tags {
-            &addressTag,
-            &articleTag,
-            &asideTag,
-            &blockquoteTag,
-            &captionTag,
-            &centerTag,
-            &colTag,
-            &colgroupTag,
-            &ddTag,
-            &detailsTag,
-            &dirTag,
-            &divTag,
-            &dlTag,
-            &dtTag,
-            &fieldsetTag,
-            &figcaptionTag,
-            &figureTag,
-            &footerTag,
-            &formTag,
-            &h1Tag,
-            &h2Tag,
-            &h3Tag,
-            &h4Tag,
-            &h5Tag,
-            &h6Tag,
-            &headerTag,
-            &hgroupTag,
-            &hrTag,
-            &liTag,
-            &listingTag,
-            &mainTag, // Missing in the specification.
-            &menuTag,
-            &navTag,
-            &olTag,
-            &pTag,
-            &plaintextTag,
-            &preTag,
-            &sectionTag,
-            &summaryTag,
-            &tableTag,
-            &tbodyTag,
-            &tdTag,
-            &tfootTag,
-            &thTag,
-            &theadTag,
-            &trTag,
-            &ulTag,
-            &xmpTag,
-        };
-        MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
-        set.reserveInitialCapacity(std::size(tags));
-        for (auto& tag : tags)
-            set.add(tag->get().localName());
-        return set;
-    }();
-    return localNames.get().contains(name);
+    switch (name.elementName()) {
+    case HTML::address:
+    case HTML::article:
+    case HTML::aside:
+    case HTML::blockquote:
+    case HTML::caption:
+    case HTML::center:
+    case HTML::col:
+    case HTML::colgroup:
+    case HTML::dd:
+    case HTML::details:
+    case HTML::dir:
+    case HTML::div:
+    case HTML::dl:
+    case HTML::dt:
+    case HTML::fieldset:
+    case HTML::figcaption:
+    case HTML::figure:
+    case HTML::footer:
+    case HTML::form:
+    case HTML::h1:
+    case HTML::h2:
+    case HTML::h3:
+    case HTML::h4:
+    case HTML::h5:
+    case HTML::h6:
+    case HTML::header:
+    case HTML::hgroup:
+    case HTML::hr:
+    case HTML::li:
+    case HTML::listing:
+    case HTML::main: // Missing in the specification.
+    case HTML::menu:
+    case HTML::nav:
+    case HTML::ol:
+    case HTML::p:
+    case HTML::plaintext:
+    case HTML::pre:
+    case HTML::section:
+    case HTML::summary:
+    case HTML::table:
+    case HTML::tbody:
+    case HTML::td:
+    case HTML::tfoot:
+    case HTML::th:
+    case HTML::thead:
+    case HTML::tr:
+    case HTML::ul:
+    case HTML::xmp:
+        return true;
+    default:
+        break;
+    }
+    return false;
 }
 
 void ReplaceSelectionCommand::makeInsertedContentRoundTrippableWithHTMLTreeBuilder(InsertedNodes& insertedNodes)
@@ -800,7 +802,7 @@ void ReplaceSelectionCommand::makeInsertedContentRoundTrippableWithHTMLTreeBuild
         if (!node->isConnected())
             continue;
 
-        if (isProhibitedParagraphChild(downcast<HTMLElement>(*node).localName())) {
+        if (isProhibitedParagraphChild(downcast<HTMLElement>(*node).tagQName())) {
             if (RefPtr paragraphElement = enclosingElementWithTag(positionInParentBeforeNode(node.get()), pTag)) {
                 RefPtr parent { paragraphElement->parentNode() };
                 if (parent && parent->hasEditableStyle()) {
@@ -1357,7 +1359,7 @@ void ReplaceSelectionCommand::doApply()
     if (!startOfInsertedContent.isNull() && insertionBlock && insertionPos.deprecatedNode() == insertionBlock->parentNode() && (unsigned)insertionPos.deprecatedEditingOffset() < insertionBlock->computeNodeIndex() && !isStartOfParagraph(startOfInsertedContent))
         insertNodeAt(HTMLBRElement::create(document()), startOfInsertedContent.deepEquivalent());
 
-    if (endBR && (plainTextFragment || shouldRemoveEndBR(endBR.get(), originalVisPosBeforeEndBR))) {
+    if (endBR && (plainTextFragment || (shouldRemoveEndBR(endBR.get(), originalVisPosBeforeEndBR) && !(fragment.hasInterchangeNewlineAtEnd() && selectionIsPlainText)))) {
         RefPtr parent { endBR->parentNode() };
         insertedNodes.willRemoveNode(endBR.get());
         removeNode(*endBR);

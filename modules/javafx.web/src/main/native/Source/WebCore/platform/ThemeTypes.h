@@ -25,95 +25,13 @@
 
 #pragma once
 
+#include "StyleAppearance.h"
+
 namespace WTF {
 class TextStream;
 }
 
 namespace WebCore {
-
-// Must follow CSSValueKeywords.in order
-enum ControlPart {
-    NoControlPart,
-    AutoPart,
-    CheckboxPart,
-    RadioPart,
-    PushButtonPart,
-    SquareButtonPart,
-    ButtonPart,
-    DefaultButtonPart,
-    ListboxPart,
-    MenulistPart,
-    MenulistButtonPart,
-    MeterPart,
-    ProgressBarPart,
-    SliderHorizontalPart,
-    SliderVerticalPart,
-#if PLATFORM(JAVA)
-    SliderThumbHorizontalPart,
-    SliderThumbVerticalPart,
-    MediaControlsBackgroundPart,
-    MediaControlsDarkBarBackgroundPart,
-    MediaControlsFullscreenBackground,
-    MediaControlsLightBarBackgroundPart,
-    MediaCurrentTimePart,
-    MediaEnterFullscreenButtonPart,
-    MediaExitFullscreenButtonPart,
-    MediaFullScreenVolumeSliderPart,
-    MediaFullScreenVolumeSliderThumbPart,
-    MediaMuteButtonPart,
-    MediaOverlayPlayButtonPart,
-    MediaPlayButtonPart,
-    MediaReturnToRealtimeButtonPart,
-    MediaRewindButtonPart,
-    MediaSeekBackButtonPart,
-    MediaSeekForwardButtonPart,
-    MediaSliderPart,
-    MediaSliderThumbPart,
-    MediaTimeRemainingPart,
-    MediaToggleClosedCaptionsButtonPart,
-    MediaVolumeSliderPart,
-    MediaVolumeSliderContainerPart,
-    MediaVolumeSliderMuteButtonPart,
-    MediaVolumeSliderThumbPart,
-#endif
-    SearchFieldPart,
-#if ENABLE(APPLE_PAY)
-    ApplePayButtonPart,
-#endif
-#if ENABLE(ATTACHMENT_ELEMENT)
-    AttachmentPart,
-    BorderlessAttachmentPart,
-#endif
-    TextAreaPart,
-    TextFieldPart,
-    // Internal-only Values
-    CapsLockIndicatorPart,
-#if ENABLE(INPUT_TYPE_COLOR)
-    ColorWellPart,
-#endif
-#if ENABLE(SERVICE_CONTROLS)
-    ImageControlsButtonPart,
-#endif
-    InnerSpinButtonPart,
-#if ENABLE(DATALIST_ELEMENT)
-    ListButtonPart,
-#endif
-    SearchFieldDecorationPart,
-    SearchFieldResultsDecorationPart,
-    SearchFieldResultsButtonPart,
-    SearchFieldCancelButtonPart,
-#if !PLATFORM(JAVA)
-    SliderThumbHorizontalPart,
-    SliderThumbVerticalPart
-#endif
-};
-
-#if ENABLE(SERVICE_CONTROLS)
-constexpr ControlPart largestControlPart = ImageControlsButtonPart;
-#else
-constexpr ControlPart largestControlPart = CapsLockIndicatorPart;
-#endif
-
 
 enum SelectionPart {
     SelectionBackground,
@@ -171,7 +89,6 @@ enum ThemeColor {
     FocusRingColor
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, ControlPart);
 WTF::TextStream& operator<<(WTF::TextStream&, SelectionPart);
 WTF::TextStream& operator<<(WTF::TextStream&, ThemeFont);
 WTF::TextStream& operator<<(WTF::TextStream&, ThemeColor);

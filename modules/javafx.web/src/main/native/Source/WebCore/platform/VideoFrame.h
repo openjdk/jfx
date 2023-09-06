@@ -28,7 +28,11 @@
 #if ENABLE(VIDEO)
 
 #include "FloatSize.h"
+#include "PlaneLayout.h"
+#include "PlatformVideoColorSpace.h"
+#include "VideoPixelFormat.h"
 #include <JavaScriptCore/TypedArrays.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/MediaTime.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -36,22 +40,43 @@ typedef struct __CVBuffer *CVPixelBufferRef;
 
 namespace WebCore {
 
+class FloatRect;
+class GraphicsContext;
+struct ImageOrientation;
+class NativeImage;
 class ProcessIdentity;
 #if USE(AVFOUNDATION) && PLATFORM(COCOA)
 class VideoFrameCV;
 #endif
+
+struct ComputedPlaneLayout {
+    size_t destinationOffset { 0 };
+    size_t destinationStride { 0 };
+    size_t sourceTop { 0 };
+    size_t sourceHeight { 0 };
+    size_t sourceLeftBytes { 0 };
+    size_t sourceWidthBytes { 0 };
+};
+
+enum class VideoFrameRotation : uint16_t {
+        None = 0,
+        UpsideDown = 180,
+        Right = 90,
+        Left = 270,
+};
 
 // A class representing a video frame from a decoder, capture source, or similar.
 class VideoFrame : public ThreadSafeRefCounted<VideoFrame> {
 public:
     virtual ~VideoFrame() = default;
 
-    enum class Rotation {
-        None = 0,
-        UpsideDown = 180,
-        Right = 90,
-        Left = 270,
-    };
+    static RefPtr<VideoFrame> fromNativeImage(NativeImage&);
+    static RefPtr<VideoFrame> createNV12(Span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+    static RefPtr<VideoFrame> createRGBA(Span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+    static RefPtr<VideoFrame> createBGRA(Span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+    static RefPtr<VideoFrame> createI420(Span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+
+    using Rotation = VideoFrameRotation;
 
     MediaTime presentationTime() const { return m_presentationTime; }
     Rotation rotation() const { return m_rotation; }
@@ -61,6 +86,9 @@ public:
     WEBCORE_EXPORT RefPtr<VideoFrameCV> asVideoFrameCV();
 #endif
     WEBCORE_EXPORT RefPtr<JSC::Uint8ClampedArray> getRGBAImageData() const;
+
+    using CopyCallback = CompletionHandler<void(std::optional<Vector<PlaneLayout>>&&)>;
+    void copyTo(Span<uint8_t>, VideoPixelFormat, Vector<ComputedPlaneLayout>&&, CopyCallback&&);
 
     virtual FloatSize presentationSize() const = 0;
     virtual uint32_t pixelFormat() const = 0;
@@ -78,27 +106,18 @@ public:
 
     void initializeCharacteristics(MediaTime presentationTime, bool isMirrored, Rotation);
 
+    void paintInContext(GraphicsContext&, const FloatRect&, const ImageOrientation&, bool shouldDiscardAlpha);
+
+    const PlatformVideoColorSpace& colorSpace() const { return m_colorSpace; }
+
 protected:
-    WEBCORE_EXPORT VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation);
+    WEBCORE_EXPORT VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation, PlatformVideoColorSpace&& = { });
 
 private:
     const MediaTime m_presentationTime;
     const bool m_isMirrored;
     const Rotation m_rotation;
-};
-
-}
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::VideoFrame::Rotation> {
-    using values = EnumValues<
-        WebCore::VideoFrame::Rotation,
-        WebCore::VideoFrame::Rotation::None,
-        WebCore::VideoFrame::Rotation::UpsideDown,
-        WebCore::VideoFrame::Rotation::Right,
-        WebCore::VideoFrame::Rotation::Left
-    >;
+    const PlatformVideoColorSpace m_colorSpace;
 };
 
 }

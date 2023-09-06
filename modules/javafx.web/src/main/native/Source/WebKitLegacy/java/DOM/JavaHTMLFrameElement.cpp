@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -158,25 +158,22 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getContentW
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getLocationImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->location().string());
+    return nullptr;
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_setLocationImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
-    WebCore::JSMainThreadNullState state;
-    IMPL->setLocation(AtomString {String(env, value)});
+    return;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getWidthImpl(JNIEnv*, jclass, jlong peer)
 {
-    WebCore::JSMainThreadNullState state;
-    return IMPL->width();
+    return 0;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getHeightImpl(JNIEnv*, jclass, jlong peer)
 {
-    WebCore::JSMainThreadNullState state;
-    return IMPL->height();
+    return 0;
 }
 
 }

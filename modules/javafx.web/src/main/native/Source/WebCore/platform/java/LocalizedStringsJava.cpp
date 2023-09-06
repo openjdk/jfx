@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -747,7 +747,8 @@ String pluginTooSmallText()
 #if USE(CF) && !PLATFORM(WIN)
 String localizedString(CFStringRef key)
 {
-     notImplemented();
+     UNUSED_PARAM(key);
+         notImplemented();
      return String::fromUTF8("localizedString(CFStringRef key)"); //Need to add implementation
 }
 #else
@@ -756,5 +757,15 @@ String localizedString(const char* key)
     return String::fromUTF8(key, strlen(key));
 }
 #endif
+
+String pdfDocumentTypeDescription()
+{
+    return WEB_UI_STRING("Portable Document Format", "Description of the primary type supported by the PDF pseudo plug-in.");
+}
+
+String contextMenuItemTagShowMediaStats()
+{
+    return WEB_UI_STRING("Show Media Stats", "Media stats context menu item");
+}
 
 } // namespace WebCore

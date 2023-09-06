@@ -24,11 +24,14 @@
 #include "RenderWidget.h"
 
 #include "AXObjectCache.h"
+#include "BackgroundPainter.h"
 #include "DocumentInlines.h"
 #include "FloatRoundedRect.h"
 #include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HitTestResult.h"
+#include "RemoteFrame.h"
+#include "RemoteFrameView.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerScrollableArea.h"
@@ -324,10 +327,10 @@ void RenderWidget::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         paintInfo.context().save();
         FloatRoundedRect roundedInnerRect = FloatRoundedRect(style().getRoundedInnerBorderFor(borderRect,
             paddingTop() + borderTop(), paddingBottom() + borderBottom(), paddingLeft() + borderLeft(), paddingRight() + borderRight(), true, true));
-        clipRoundedInnerRect(paintInfo.context(), borderRect, roundedInnerRect);
+        BackgroundPainter::clipRoundedInnerRect(paintInfo.context(), borderRect, roundedInnerRect);
     }
 
-    if (m_widget)
+    if (m_widget && !shouldSkipContent())
         paintContents(paintInfo, paintOffset);
 
     if (style().hasBorderRadius())
@@ -370,7 +373,11 @@ RenderWidget::ChildWidgetState RenderWidget::updateWidgetPosition()
     if (is<FrameView>(*m_widget)) {
         FrameView& frameView = downcast<FrameView>(*m_widget);
         // Check the frame's page to make sure that the frame isn't in the process of being destroyed.
-        if ((widgetSizeChanged || frameView.needsLayout()) && frameView.frame().page() && frameView.frame().document())
+        auto* localFrame = dynamicDowncast<LocalFrame>(frameView.frame());
+        if ((widgetSizeChanged || frameView.needsLayout())
+            && localFrame
+            && localFrame->page()
+            && localFrame->document())
             frameView.layoutContext().layout();
     }
     return ChildWidgetState::Valid;
@@ -408,7 +415,10 @@ bool RenderWidget::nodeAtPoint(const HitTestRequest& request, HitTestResult& res
         HitTestRequest newHitTestRequest(request.type() | HitTestRequest::Type::ChildFrameHitTest);
         HitTestResult childFrameResult(newHitTestLocation);
 
-        auto* document = childFrameView.frame().document();
+        auto* localFrame = dynamicDowncast<LocalFrame>(childFrameView.frame());
+        if (!localFrame)
+            return false;
+        auto* document = localFrame->document();
         if (!document)
             return false;
         bool isInsideChildFrame = document->hitTest(newHitTestRequest, newHitTestLocation, childFrameResult);
@@ -444,7 +454,15 @@ bool RenderWidget::requiresAcceleratedCompositing() const
             return view->usesCompositing();
     }
 
+    if (is<RemoteFrameView>(widget()))
+        return true;
+
     return false;
+}
+
+RemoteFrame* RenderWidget::remoteFrame() const
+{
+    return dynamicDowncast<RemoteFrame>(frameOwnerElement().contentFrame());
 }
 
 bool RenderWidget::needsPreferredWidthsRecalculation() const

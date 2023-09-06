@@ -29,14 +29,16 @@
 
 namespace WebCore {
 
-class NullGraphicsContext : public GraphicsContext {
-public:
-    enum class PaintInvalidationReasons : uint8_t {
+enum class NullGraphicsContextPaintInvalidationReasons : uint8_t {
         None,
         InvalidatingControlTints,
         InvalidatingImagesWithAsyncDecodes,
         DetectingContentfulPaint
-    };
+};
+
+class NullGraphicsContext : public GraphicsContext {
+public:
+    using PaintInvalidationReasons = NullGraphicsContextPaintInvalidationReasons;
 
     NullGraphicsContext() = default;
 
@@ -63,7 +65,7 @@ private:
     void setIsAcceleratedContext(bool) final { }
 #endif
 
-    void drawNativeImage(NativeImage&, const FloatSize&, const FloatRect&, const FloatRect&, const ImagePaintingOptions&) final { }
+    void drawNativeImageInternal(NativeImage&, const FloatSize&, const FloatRect&, const FloatRect&, const ImagePaintingOptions&) final { }
 
     void drawSystemImage(SystemImage&, const FloatRect&) final { };
 
@@ -87,8 +89,7 @@ private:
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final { }
     void strokeRect(const FloatRect&, float) final { }
     void clipPath(const Path&, WindRule = WindRule::EvenOdd) final { }
-    FloatRect roundToDevicePixels(const FloatRect& rect, RoundingMode = RoundAllSides) final { return rect; }
-    void drawLinesForText(const FloatPoint&, float, const DashArray&, bool, bool = false, StrokeStyle = SolidStroke) final { }
+    void drawLinesForText(const FloatPoint&, float, const DashArray&, bool, bool = false, StrokeStyle = StrokeStyle::SolidStroke) final { }
     void setLineCap(LineCap) final { }
     void setLineDash(const DashArray&, float) final { }
     void setLineJoin(LineJoin) final { }
@@ -118,17 +119,13 @@ private:
 
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final { }
 
-    ImageDrawResult drawImage(Image&, const FloatRect&, const FloatRect&, const ImagePaintingOptions& = { ImageOrientation::FromImage }) final { return ImageDrawResult::DidNothing; }
+    ImageDrawResult drawImage(Image&, const FloatRect&, const FloatRect&, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage }) final { return ImageDrawResult::DidNothing; }
 
     ImageDrawResult drawTiledImage(Image&, const FloatRect&, const FloatPoint&, const FloatSize&, const FloatSize&, const ImagePaintingOptions& = { }) final { return ImageDrawResult::DidNothing; }
     ImageDrawResult drawTiledImage(Image&, const FloatRect&, const FloatRect&, const FloatSize&, Image::TileRule, Image::TileRule, const ImagePaintingOptions& = { }) final { return ImageDrawResult::DidNothing; }
 
+    void drawFocusRing(const Path&, float, const Color&) final { }
     void drawFocusRing(const Vector<FloatRect>&, float, float, const Color&) final { }
-    void drawFocusRing(const Path&, float, float, const Color&) final { }
-#if PLATFORM(MAC)
-    void drawFocusRing(const Path&, double, bool&, const Color&) final { }
-    void drawFocusRing(const Vector<FloatRect>&, double, bool&, const Color&) final { }
-#endif
 
     void drawImageBuffer(ImageBuffer&, const FloatRect&, const FloatRect&, const ImagePaintingOptions& = { }) final { }
     void drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect&, const FloatRect&, const ImagePaintingOptions& = { }) final;

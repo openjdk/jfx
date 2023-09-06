@@ -26,8 +26,6 @@
 #include "config.h"
 #include "InlineFormattingState.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -35,8 +33,8 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(InlineFormattingState);
 
-InlineFormattingState::InlineFormattingState(Ref<FloatingState>&& floatingState, LayoutState& layoutState)
-    : FormattingState(WTFMove(floatingState), Type::Inline, layoutState)
+InlineFormattingState::InlineFormattingState(LayoutState& layoutState)
+    : FormattingState(Type::Inline, layoutState)
 {
 }
 
@@ -46,4 +44,3 @@ InlineFormattingState::~InlineFormattingState()
 
 }
 }
-#endif

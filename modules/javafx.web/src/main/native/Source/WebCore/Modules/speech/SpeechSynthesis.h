@@ -42,7 +42,7 @@ class Document;
 class PlatformSpeechSynthesizerClient;
 class SpeechSynthesisVoice;
 
-class SpeechSynthesis : public PlatformSpeechSynthesizerClient, public SpeechSynthesisClientObserver, public RefCounted<SpeechSynthesis>, public ContextDestructionObserver, public EventTargetWithInlineData {
+class SpeechSynthesis : public PlatformSpeechSynthesizerClient, public SpeechSynthesisClientObserver, public RefCounted<SpeechSynthesis>, public ContextDestructionObserver, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(SpeechSynthesis);
 public:
     static Ref<SpeechSynthesis> create(ScriptExecutionContext&);
@@ -63,7 +63,17 @@ public:
     const Vector<Ref<SpeechSynthesisVoice>>& getVoices();
 
     // Used in testing to use a mock platform synthesizer
-    WEBCORE_EXPORT void setPlatformSynthesizer(std::unique_ptr<PlatformSpeechSynthesizer>);
+    WEBCORE_EXPORT void setPlatformSynthesizer(Ref<PlatformSpeechSynthesizer>&&);
+
+    // Restrictions to change default behaviors.
+    enum BehaviorRestrictionFlags {
+        NoRestrictions = 0,
+        RequireUserGestureForSpeechStartRestriction = 1 << 0,
+    };
+    typedef unsigned BehaviorRestrictions;
+
+    bool userGestureRequiredForSpeechStart() const { return m_restrictions & RequireUserGestureForSpeechStartRestriction; }
+    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
 
 private:
     SpeechSynthesis(ScriptExecutionContext&);
@@ -88,18 +98,6 @@ private:
 
     void startSpeakingImmediately(SpeechSynthesisUtterance&);
     void handleSpeakingCompleted(SpeechSynthesisUtterance&, bool errorOccurred);
-    void fireEvent(const AtomString& type, SpeechSynthesisUtterance&, unsigned long charIndex, unsigned long charLength, const String& name) const;
-    void fireErrorEvent(const AtomString& type, SpeechSynthesisUtterance&, SpeechSynthesisErrorCode) const;
-
-    // Restrictions to change default behaviors.
-    enum BehaviorRestrictionFlags {
-        NoRestrictions = 0,
-        RequireUserGestureForSpeechStartRestriction = 1 << 0,
-    };
-    typedef unsigned BehaviorRestrictions;
-
-    bool userGestureRequiredForSpeechStart() const { return m_restrictions & RequireUserGestureForSpeechStartRestriction; }
-    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
 
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
     EventTargetInterface eventTargetInterface() const final { return SpeechSynthesisEventTargetInterfaceType; }
@@ -108,7 +106,7 @@ private:
 
     PlatformSpeechSynthesizer& ensurePlatformSpeechSynthesizer();
 
-    std::unique_ptr<PlatformSpeechSynthesizer> m_platformSpeechSynthesizer;
+    RefPtr<PlatformSpeechSynthesizer> m_platformSpeechSynthesizer;
     Vector<Ref<SpeechSynthesisVoice>> m_voiceList;
     RefPtr<SpeechSynthesisUtterance> m_currentSpeechUtterance;
     Deque<Ref<SpeechSynthesisUtterance>> m_utteranceQueue;

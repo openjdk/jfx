@@ -37,6 +37,8 @@ class JSCustomElementInterface;
 class HTMLDocumentParser;
 class ScriptElement;
 
+enum class TagName : uint16_t;
+
 struct CustomElementConstructionData {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
@@ -51,8 +53,8 @@ struct CustomElementConstructionData {
 class HTMLTreeBuilder {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    HTMLTreeBuilder(HTMLDocumentParser&, HTMLDocument&, ParserContentPolicy, const HTMLParserOptions&);
-    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element& contextElement, ParserContentPolicy, const HTMLParserOptions&);
+    HTMLTreeBuilder(HTMLDocumentParser&, HTMLDocument&, OptionSet<ParserContentPolicy>, const HTMLParserOptions&);
+    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element& contextElement, OptionSet<ParserContentPolicy>, const HTMLParserOptions&);
     void setShouldSkipLeadingNewline(bool);
 
     ~HTMLTreeBuilder();
@@ -109,7 +111,7 @@ private:
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION) && PLATFORM(IOS_FAMILY)
     void insertPhoneNumberLink(const String&);
-    void linkifyPhoneNumbers(const String&, WhitespaceMode);
+    void linkifyPhoneNumbers(const String&);
 #endif
 
     void processToken(AtomHTMLToken&&);
@@ -142,9 +144,9 @@ private:
     void processCharacterBuffer(ExternalCharacterTokenBuffer&);
     inline void processCharacterBufferForInBody(ExternalCharacterTokenBuffer&);
 
-    void processFakeStartTag(const QualifiedName&, Vector<Attribute>&& attributes = Vector<Attribute>());
-    void processFakeEndTag(const QualifiedName&);
-    void processFakeEndTag(const AtomString&);
+    void processFakeStartTag(TagName, Vector<Attribute>&& attributes = Vector<Attribute>());
+    void processFakeEndTag(TagName);
+    void processFakeEndTag(const HTMLStackItem&);
     void processFakeCharacters(const String&);
     void processFakePEndTagIfPInButtonScope();
 

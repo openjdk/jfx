@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingConstraints.h"
 #include "LayoutUnits.h"
 #include "RenderStyle.h"
@@ -81,15 +79,17 @@ public:
     // see https://drafts.csswg.org/css-text-3/#line-break-details
     struct ContinuousContent {
         InlineLayoutUnit logicalWidth() const { return m_logicalWidth; }
-        std::optional<InlineLayoutUnit> leadingCollapsibleWidth() const { return m_leadingCollapsibleWidth; }
-        std::optional<InlineLayoutUnit> trailingCollapsibleWidth() const { return m_trailingCollapsibleWidth; }
-        bool hasCollapsibleContent() const { return trailingCollapsibleWidth() || leadingCollapsibleWidth(); }
-        bool isFullyCollapsible() const;
-        bool isHangingContent() const { return m_trailingHangingContentWidth && logicalWidth() == *m_trailingHangingContentWidth; }
+        InlineLayoutUnit leadingTrimmableWidth() const { return m_leadingTrimmableWidth; }
+        InlineLayoutUnit trailingTrimmableWidth() const { return m_trailingTrimmableWidth; }
+        InlineLayoutUnit hangingContentWidth() const { return m_hangingContentWidth; }
+        bool hasTrimmableContent() const { return trailingTrimmableWidth() || leadingTrimmableWidth(); }
+        bool hasHangingContent() const { return hangingContentWidth(); }
+        bool isFullyTrimmable() const;
+        bool isHangingContent() const { return hangingContentWidth() == logicalWidth(); }
 
         void append(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
-        void append(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, std::optional<InlineLayoutUnit> collapsibleWidth);
-        void append(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit hangingWidth);
+        void appendTextContent(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, std::optional<InlineLayoutUnit> trimmableWidth);
+        void setHangingContentWidth(InlineLayoutUnit logicalWidth) { m_hangingContentWidth = logicalWidth; }
         void reset();
 
         struct Run {
@@ -106,22 +106,22 @@ public:
 
     private:
         void appendToRunList(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
-        void resetTrailingWhitespace();
+        void resetTrailingTrimmableContent();
 
         RunList m_runs;
-        InlineLayoutUnit m_logicalWidth { 0 };
-        std::optional<InlineLayoutUnit> m_leadingCollapsibleWidth { };
-        std::optional<InlineLayoutUnit> m_trailingCollapsibleWidth { };
-        std::optional<InlineLayoutUnit> m_trailingHangingContentWidth { };
+        InlineLayoutUnit m_logicalWidth { 0.f };
+        InlineLayoutUnit m_leadingTrimmableWidth { 0.f };
+        InlineLayoutUnit m_trailingTrimmableWidth { 0.f };
+        InlineLayoutUnit m_hangingContentWidth { 0.f };
     };
 
     struct LineStatus {
         InlineLayoutUnit contentLogicalRight { 0 };
         InlineLayoutUnit availableWidth { 0 };
         // Both of these types of trailing content may be ignored when checking for content fit.
-        InlineLayoutUnit collapsibleOrHangingWidth { 0 };
+        InlineLayoutUnit trimmableOrHangingWidth { 0 };
         std::optional<InlineLayoutUnit> trailingSoftHyphenWidth;
-        bool hasFullyCollapsibleTrailingContent { false };
+        bool hasFullyTrimmableTrailingContent { false };
         bool hasContent { false };
         bool hasWrapOpportunityAtPreviousPosition { false };
     };
@@ -179,16 +179,10 @@ inline InlineContentBreaker::ContinuousContent::Run::Run(const Run& other)
 {
 }
 
-inline bool InlineContentBreaker::ContinuousContent::isFullyCollapsible() const
+inline bool InlineContentBreaker::ContinuousContent::isFullyTrimmable() const
 {
-    auto collapsibleWidth = std::optional<InlineLayoutUnit> { };
-    if (m_leadingCollapsibleWidth)
-        collapsibleWidth = *m_leadingCollapsibleWidth;
-    if (m_trailingCollapsibleWidth)
-        collapsibleWidth = collapsibleWidth.value_or(0.f) + *m_trailingCollapsibleWidth;
-    return collapsibleWidth && *collapsibleWidth == logicalWidth();
+    return m_leadingTrimmableWidth + m_trailingTrimmableWidth == logicalWidth();
 }
 
 }
 }
-#endif

@@ -30,13 +30,10 @@
 #include "config.h"
 #include "CSSStyleValue.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSParser.h"
 #include "CSSPropertyParser.h"
 #include "CSSStyleValueFactory.h"
 #include "CSSUnitValue.h"
-#include "CSSValueList.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringView.h>
 
@@ -96,5 +93,3 @@ void CSSStyleValue::serialize(StringBuilder& builder, OptionSet<SerializationArg
 }
 
 } // namespace WebCore
-
-#endif

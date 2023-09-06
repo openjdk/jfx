@@ -54,7 +54,6 @@ typedef (HTMLCanvasElement) WebGLCanvas;
     Conditional=WEBGL,
     CustomIsReachable,
     CustomToJSObject,
-    DoNotCheckConstants,
     JSCustomMarkFunction,
     ExportMacro=WEBCORE_EXPORT,
 ] interface mixin WebGLRenderingContextBase {
@@ -482,6 +481,10 @@ typedef (HTMLCanvasElement) WebGLCanvas;
     readonly attribute GLsizei drawingBufferWidth;
     readonly attribute GLsizei drawingBufferHeight;
 
+#if defined(ENABLE_PREDEFINED_COLOR_SPACE_DISPLAY_P3) && ENABLE_PREDEFINED_COLOR_SPACE_DISPLAY_P3
+    [EnabledBySetting=CanvasColorSpaceEnabled] attribute PredefinedColorSpace drawingBufferColorSpace;
+#endif
+
     undefined activeTexture(GLenum texture);
     undefined attachShader(WebGLProgram program, WebGLShader shader);
     undefined bindAttribLocation(WebGLProgram program, GLuint index, DOMString name);
@@ -609,7 +612,7 @@ typedef (HTMLCanvasElement) WebGLCanvas;
     undefined pixelStorei(GLenum pname, GLint param);
     undefined polygonOffset(GLfloat factor, GLfloat units);
 
-    undefined readPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, [AllowShared] ArrayBufferView pixels);
+    undefined readPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, [AllowShared] ArrayBufferView? pixels);
     
     undefined renderbufferStorage(GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
     undefined sampleCoverage(GLclampf value, GLboolean invert);

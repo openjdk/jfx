@@ -43,33 +43,41 @@ namespace WebCore {
 static AtomString serializeANPlusB(const std::pair<int, int>&);
 static bool consumeANPlusB(CSSParserTokenRange&, std::pair<int, int>&);
 
-std::optional<CSSSelectorList> parseCSSSelector(CSSParserTokenRange range, const CSSParserContext& context, StyleSheetContents* styleSheet)
+std::optional<CSSSelectorList> parseCSSSelector(CSSParserTokenRange range, const CSSParserContext& context, StyleSheetContents* styleSheet, CSSSelectorParser::IsNestedContext isNestedContext)
 {
-    CSSSelectorParser parser(context, styleSheet);
+    CSSSelectorParser parser(context, styleSheet, isNestedContext);
     range.consumeWhitespace();
-    CSSSelectorList result = parser.consumeComplexSelectorList(range);
+    auto consume = [&] () {
+        if (context.cssNestingEnabled && isNestedContext == CSSSelectorParser::IsNestedContext::Yes)
+            return parser.consumeNestedSelectorList(range);
+
+        return parser.consumeComplexSelectorList(range);
+    };
+    CSSSelectorList result = consume();
     if (result.isEmpty() || !range.atEnd())
         return { };
     return result;
 }
 
-CSSSelectorParser::CSSSelectorParser(const CSSParserContext& context, StyleSheetContents* styleSheet)
+CSSSelectorParser::CSSSelectorParser(const CSSParserContext& context, StyleSheetContents* styleSheet, CSSSelectorParser::IsNestedContext isNestedContext)
     : m_context(context)
     , m_styleSheet(styleSheet)
+    , m_isNestedContext(isNestedContext)
 {
 }
 
-CSSSelectorList CSSSelectorParser::consumeComplexSelectorList(CSSParserTokenRange& range)
+template <typename ConsumeSelector>
+CSSSelectorList CSSSelectorParser::consumeSelectorList(CSSParserTokenRange& range, ConsumeSelector&& consumeSelector)
 {
     Vector<std::unique_ptr<CSSParserSelector>> selectorList;
-    auto selector = consumeComplexSelector(range);
+    auto selector = consumeSelector(range);
     if (!selector)
         return { };
 
     selectorList.append(WTFMove(selector));
     while (!range.atEnd() && range.peek().type() == CommaToken) {
         range.consumeIncludingWhitespace();
-        selector = consumeComplexSelector(range);
+        selector = consumeSelector(range);
         if (!selector)
             return { };
         selectorList.append(WTFMove(selector));
@@ -79,6 +87,32 @@ CSSSelectorList CSSSelectorParser::consumeComplexSelectorList(CSSParserTokenRang
         return { };
 
     return CSSSelectorList { WTFMove(selectorList) };
+}
+
+CSSSelectorList CSSSelectorParser::consumeComplexSelectorList(CSSParserTokenRange& range)
+{
+    return consumeSelectorList(range, [&] (CSSParserTokenRange& range) {
+        return consumeComplexSelector(range);
+    });
+}
+
+CSSSelectorList CSSSelectorParser::consumeRelativeSelectorList(CSSParserTokenRange& range)
+{
+    return consumeSelectorList(range, [&](CSSParserTokenRange& range) {
+        return consumeRelativeScopeSelector(range);
+    });
+}
+
+CSSSelectorList CSSSelectorParser::consumeNestedSelectorList(CSSParserTokenRange& range)
+{
+    return consumeSelectorList(range, [&] (CSSParserTokenRange& range) {
+        auto selector = consumeComplexSelector(range);
+        if (selector)
+            return selector;
+
+        selector = consumeRelativeNestedSelector(range);
+        return selector;
+    });
 }
 
 template<typename ConsumeSelector>
@@ -92,7 +126,7 @@ CSSSelectorList CSSSelectorParser::consumeForgivingSelectorList(CSSParserTokenRa
     auto consumeForgiving = [&] {
         auto selector = consumeSelector(range);
 
-        if (m_failedParsing) {
+        if (m_failedParsing && !m_disableForgivingParsing) {
             selector = { };
             m_failedParsing = false;
         }
@@ -112,8 +146,11 @@ CSSSelectorList CSSSelectorParser::consumeForgivingSelectorList(CSSParserTokenRa
         consumeForgiving();
     }
 
-    if (selectorList.isEmpty())
+    if (selectorList.isEmpty()) {
+        if (m_disableForgivingParsing)
+            m_failedParsing = true;
         return { };
+    }
 
     return CSSSelectorList { WTFMove(selectorList) };
 }
@@ -125,17 +162,13 @@ CSSSelectorList CSSSelectorParser::consumeForgivingComplexSelectorList(CSSParser
     });
 }
 
-CSSSelectorList CSSSelectorParser::consumeForgivingRelativeSelectorList(CSSParserTokenRange& range)
-{
-    return consumeForgivingSelectorList(range, [&](CSSParserTokenRange& range) {
-        return consumeRelativeSelector(range);
-    });
-}
-
 bool CSSSelectorParser::supportsComplexSelector(CSSParserTokenRange range, const CSSParserContext& context)
 {
     range.consumeWhitespace();
     CSSSelectorParser parser(context, nullptr);
+
+    // @supports requires that all arguments parse.
+    parser.m_disableForgivingParsing = true;
 
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=215635
     // Unknown css selector combinator is not addressed correctly in |CSSSelectorParser::consumeComplexSelector|.
@@ -168,26 +201,32 @@ CSSSelectorList CSSSelectorParser::consumeCompoundSelectorList(CSSParserTokenRan
     return CSSSelectorList { WTFMove(selectorList) };
 }
 
-static bool consumeLangArgumentList(std::unique_ptr<Vector<AtomString>>& argumentList, CSSParserTokenRange& range)
+static PossiblyQuotedIdentifier consumePossiblyQuotedIdentifier(CSSParserTokenRange& range)
 {
-    const CSSParserToken& ident = range.consumeIncludingWhitespace();
-    if (ident.type() != IdentToken && ident.type() != StringToken)
-        return false;
-    StringView string = ident.value();
+    auto& token = range.consumeIncludingWhitespace();
+    if (token.type() != IdentToken && token.type() != StringToken)
+        return { };
+    auto string = token.value();
     if (string.startsWith("--"_s))
-        return false;
-    argumentList->append(string.toAtomString());
+        return { };
+    return { string.toAtomString(), token.type() == StringToken };
+}
+
+static FixedVector<PossiblyQuotedIdentifier> consumeLangArgumentList(CSSParserTokenRange& range)
+{
+    Vector<PossiblyQuotedIdentifier> list;
+    auto item = consumePossiblyQuotedIdentifier(range);
+    if (item.isNull())
+        return { };
+    list.append(WTFMove(item));
     while (!range.atEnd() && range.peek().type() == CommaToken) {
         range.consumeIncludingWhitespace();
-        const CSSParserToken& ident = range.consumeIncludingWhitespace();
-        if (ident.type() != IdentToken && ident.type() != StringToken)
-            return false;
-        StringView string = ident.value();
-        if (string.startsWith("--"_s))
-            return false;
-        argumentList->append(string.toAtomString());
+        item = consumePossiblyQuotedIdentifier(range);
+        if (item.isNull())
+            return { };
+        list.append(WTFMove(item));
     }
-    return range.atEnd();
+    return FixedVector<PossiblyQuotedIdentifier> { WTFMove(list) };
 }
 
 enum class CompoundSelectorFlag {
@@ -246,7 +285,7 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeComplexSelector(CSS
     return selector;
 }
 
-std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeRelativeSelector(CSSParserTokenRange& range)
+std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeRelativeScopeSelector(CSSParserTokenRange& range)
 {
     auto scopeCombinator = consumeCombinator(range);
 
@@ -279,6 +318,29 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeRelativeSelector(CS
         end->setRelation(scopeCombinator);
         end->setTagHistory(WTFMove(scopeSelector));
     }
+
+    return selector;
+}
+
+std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeRelativeNestedSelector(CSSParserTokenRange& range)
+{
+    auto scopeCombinator = consumeCombinator(range);
+
+    // Nesting should only work with ~ > + combinators in this function.
+    // The descendant combinator is handled in another code path.
+    if (scopeCombinator != CSSSelector::DirectAdjacent && scopeCombinator != CSSSelector::IndirectAdjacent && scopeCombinator != CSSSelector::Child)
+        return nullptr;
+
+    auto selector = consumeComplexSelector(range);
+    if (!selector)
+        return nullptr;
+
+    auto last = selector->leftmostSimpleSelector();
+    auto parentSelector = makeUnique<CSSParserSelector>();
+    parentSelector->setMatch(CSSSelector::Match::PseudoClass);
+    parentSelector->setPseudoClassType(CSSSelector::PseudoClassType::PseudoClassNestingParent);
+    last->setRelation(scopeCombinator);
+    last->setTagHistory(WTFMove(parentSelector));
 
     return selector;
 }
@@ -447,6 +509,8 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeSimpleSelector(CSSP
         selector = consumeId(range);
     else if (token.type() == DelimiterToken && token.delimiter() == '.')
         selector = consumeClass(range);
+    else if (token.type() == DelimiterToken && token.delimiter() == '&' && m_context.cssNestingEnabled && m_isNestedContext == IsNestedContext::Yes) // FIXME: handle top-level nesting selector
+        selector = consumeNesting(range);
     else if (token.type() == LeftBracketToken)
         selector = consumeAttribute(range);
     else if (token.type() == ColonToken)
@@ -538,6 +602,19 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeClass(CSSParserToke
     // to be compatible for now.
     CSSParserToken token = range.consume();
     selector->setValue(token.value().toAtomString(), m_context.mode == HTMLQuirksMode);
+
+    return selector;
+}
+
+std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumeNesting(CSSParserTokenRange& range)
+{
+    ASSERT(range.peek().type() == DelimiterToken);
+    ASSERT(range.peek().delimiter() == '&');
+    range.consume();
+
+    auto selector = makeUnique<CSSParserSelector>();
+    selector->setMatch(CSSSelector::PseudoClass);
+    selector->setPseudoClassType(CSSSelector::PseudoClassNestingParent);
 
     return selector;
 }
@@ -702,12 +779,13 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
             // FIXME: We should be able to do this lazily. See: https://bugs.webkit.org/show_bug.cgi?id=217149
             selector->setArgument(serializeANPlusB(ab));
             if (!block.atEnd()) {
+                auto type = selector->pseudoClassType();
+                if (type == CSSSelector::PseudoClassNthOfType || type == CSSSelector::PseudoClassNthLastOfType)
+                    return nullptr;
                 if (block.peek().type() != IdentToken)
                     return nullptr;
                 const CSSParserToken& ident = block.consume();
                 if (!equalLettersIgnoringASCIICase(ident.value(), "of"_s))
-                    return nullptr;
-                if (block.peek().type() != WhitespaceToken)
                     return nullptr;
                 block.consumeWhitespace();
                 auto selectorList = makeUnique<CSSSelectorList>();
@@ -720,11 +798,10 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
             return selector;
         }
         case CSSSelector::PseudoClassLang: {
-            // FIXME: CSS Selectors Level 4 allows :lang(*-foo)
-            auto argumentList = makeUnique<Vector<AtomString>>();
-            if (!consumeLangArgumentList(argumentList, block))
+            auto list = consumeLangArgumentList(block);
+            if (list.isEmpty() || !block.atEnd())
                 return nullptr;
-            selector->setArgumentList(WTFMove(argumentList));
+            selector->setArgumentList(WTFMove(list));
             return selector;
         }
         case CSSSelector::PseudoClassIs:
@@ -753,7 +830,7 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
             SetForScope resistDefaultNamespace(m_resistDefaultNamespace, true);
             SetForScope disallowNestedHas(m_disallowHasPseudoClass, true);
             auto selectorList = makeUnique<CSSSelectorList>();
-            *selectorList = consumeForgivingRelativeSelectorList(block);
+            *selectorList = consumeRelativeSelectorList(block);
             if (selectorList->isEmpty() || !block.atEnd())
                 return nullptr;
             selector->setSelectorList(WTFMove(selectorList));
@@ -787,23 +864,18 @@ std::unique_ptr<CSSParserSelector> CSSSelectorParser::consumePseudo(CSSParserTok
             auto& ident = block.consumeIncludingWhitespace();
             if (ident.type() != IdentToken || !block.atEnd())
                 return nullptr;
-
-            auto argumentList = makeUnique<Vector<AtomString>>();
-            argumentList->append(ident.value().toAtomString());
-            selector->setArgumentList(WTFMove(argumentList));
-
+            selector->setArgumentList({ { ident.value().toAtomString() } });
             return selector;
         }
         case CSSSelector::PseudoElementPart: {
-            auto argumentList = makeUnique<Vector<AtomString>>();
+            Vector<PossiblyQuotedIdentifier> argumentList;
             do {
                 auto& ident = block.consumeIncludingWhitespace();
                 if (ident.type() != IdentToken)
                     return nullptr;
-                argumentList->append(ident.value().toAtomString());
+                argumentList.append({ ident.value().toAtomString() });
             } while (!block.atEnd());
-
-            selector->setArgumentList(WTFMove(argumentList));
+            selector->setArgumentList(FixedVector<PossiblyQuotedIdentifier> { WTFMove(argumentList) });
             return selector;
         }
         case CSSSelector::PseudoElementSlotted: {
@@ -1090,6 +1162,54 @@ bool CSSSelectorParser::containsUnknownWebKitPseudoElements(const CSSSelector& c
     }
 
     return false;
+}
+
+CSSSelectorList CSSSelectorParser::resolveNestingParent(const CSSSelectorList& nestedSelectorList, const CSSSelectorList* parentResolvedSelectorList)
+{
+    Vector<std::unique_ptr<CSSParserSelector>> result;
+    CSSSelectorList copiedSelectorList { nestedSelectorList };
+    auto selector = copiedSelectorList.first();
+    while (selector) {
+        if (selector->hasExplicitNestingParent()) {
+            if (parentResolvedSelectorList) {
+                // FIXME: We should build a new CSSParserSelector from this selector and resolve it
+                const_cast<CSSSelector*>(selector)->resolveNestingParentSelectors(*parentResolvedSelectorList);
+            } else {
+                // It's top-level, the nesting parent selector should be replace by not(*)
+                const_cast<CSSSelector*>(selector)->replaceNestingParentByNotAll();
+            }
+            auto parserSelector = makeUnique<CSSParserSelector>(*selector);
+            result.append(WTFMove(parserSelector));
+        } else {
+            auto parserSelector = makeUnique<CSSParserSelector>(*selector);
+            if (parentResolvedSelectorList) {
+                // We add the implicit parent selector at the beginning of the selector
+                auto lastSelector = parserSelector->leftmostSimpleSelector()->selector();
+                ASSERT(lastSelector);
+                bool isLastInSelectorList = lastSelector->isLastInSelectorList();
+                lastSelector->setNotLastInTagHistory();
+                lastSelector->setNotLastInSelectorList();
+                CSSSelector parentIsSelector;
+                parentIsSelector.setMatch(CSSSelector::Match::PseudoClass);
+                parentIsSelector.setPseudoClassType(CSSSelector::PseudoClassType::PseudoClassIs);
+                parentIsSelector.setSelectorList(makeUnique<CSSSelectorList>(*parentResolvedSelectorList));
+                parentIsSelector.setLastInTagHistory();
+                if (isLastInSelectorList)
+                    parentIsSelector.setLastInSelectorList();
+                else
+                    parentIsSelector.setNotLastInSelectorList();
+
+                auto uniqueParentIsSelector = makeUnique<CSSParserSelector>(parentIsSelector);
+                parserSelector->appendTagHistory(CSSSelector::RelationType::DescendantSpace, WTFMove(uniqueParentIsSelector));
+            }
+            // Otherwise, no nesting parent selector and top-level, do nothing to this selector
+            result.append(WTFMove(parserSelector));
+        }
+        selector = copiedSelectorList.next(selector);
+    }
+
+    auto final = CSSSelectorList { WTFMove(result) };
+    return final;
 }
 
 } // namespace WebCore

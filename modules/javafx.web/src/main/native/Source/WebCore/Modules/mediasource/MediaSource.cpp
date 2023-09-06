@@ -42,6 +42,8 @@
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
 #include "Logging.h"
+#include "ManagedMediaSource.h"
+#include "ManagedSourceBuffer.h"
 #include "MediaSourcePrivate.h"
 #include "MediaSourceRegistry.h"
 #include "Quirks.h"
@@ -69,7 +71,7 @@ String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue
     static_assert(static_cast<size_t>(MediaSourcePrivate::AddStatus::Ok) == 0, "MediaSourcePrivate::AddStatus::Ok is not 0 as expected");
     static_assert(static_cast<size_t>(MediaSourcePrivate::AddStatus::NotSupported) == 1, "MediaSourcePrivate::AddStatus::NotSupported is not 1 as expected");
     static_assert(static_cast<size_t>(MediaSourcePrivate::AddStatus::ReachedIdLimit) == 2, "MediaSourcePrivate::AddStatus::ReachedIdLimit is not 2 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -83,7 +85,7 @@ String convertEnumerationToString(MediaSourcePrivate::EndOfStreamStatus enumerat
     static_assert(static_cast<size_t>(MediaSourcePrivate::EndOfStreamStatus::EosNoError) == 0, "MediaSourcePrivate::EndOfStreamStatus::EosNoError is not 0 as expected");
     static_assert(static_cast<size_t>(MediaSourcePrivate::EndOfStreamStatus::EosNetworkError) == 1, "MediaSourcePrivate::EndOfStreamStatus::EosNetworkError is not 1 as expected");
     static_assert(static_cast<size_t>(MediaSourcePrivate::EndOfStreamStatus::EosDecodeError) == 2, "MediaSourcePrivate::EndOfStreamStatus::EosDecodeError is not 2 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -514,10 +516,10 @@ ExceptionOr<void> MediaSource::setDurationInternal(const MediaTime& duration)
 
     // 5. Update duration to new duration.
     m_duration = newDuration;
-    ALWAYS_LOG(LOGIDENTIFIER, duration);
+    ALWAYS_LOG(LOGIDENTIFIER, newDuration);
 
     // 6. Update the media duration to new duration and run the HTMLMediaElement duration change algorithm.
-    m_private->durationChanged(duration);
+    m_private->durationChanged(newDuration);
 
     return { };
 }
@@ -697,7 +699,13 @@ ExceptionOr<Ref<SourceBuffer>> MediaSource::addSourceBuffer(const String& type)
         return sourceBufferPrivate.releaseException();
     }
 
-    auto buffer = SourceBuffer::create(sourceBufferPrivate.releaseReturnValue(), this);
+    Ref<SourceBuffer> buffer =
+#if ENABLE(MANAGED_MEDIA_SOURCE)
+        isManaged() ? ManagedSourceBuffer::create(sourceBufferPrivate.releaseReturnValue(), downcast<ManagedMediaSource>(*this)).get() : SourceBuffer::create(sourceBufferPrivate.releaseReturnValue(), *this).get();
+#else
+        SourceBuffer::create(sourceBufferPrivate.releaseReturnValue(), *this);
+#endif
+
     DEBUG_LOG(LOGIDENTIFIER, "created SourceBuffer");
 
     // 6. Set the generate timestamps flag on the new object to the value in the "Generate Timestamps Flag"
@@ -867,6 +875,8 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
 
     // 12. Destroy all resources for sourceBuffer.
     buffer.removedFromMediaSource();
+
+    notifyElementUpdateMediaState();
 
     return { };
 }
@@ -1117,7 +1127,16 @@ void MediaSource::regenerateActiveSourceBuffers()
     for (auto& sourceBuffer : *m_activeSourceBuffers)
         sourceBuffer->setBufferedDirty(true);
 
+    notifyElementUpdateMediaState();
+
     updateBufferedIfNeeded();
+}
+
+void MediaSource::notifyElementUpdateMediaState() const
+{
+    if (!mediaElement())
+        return;
+    mediaElement()->updateMediaState();
 }
 
 void MediaSource::updateBufferedIfNeeded()

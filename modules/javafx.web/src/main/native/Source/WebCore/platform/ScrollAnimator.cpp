@@ -54,7 +54,7 @@ std::unique_ptr<ScrollAnimator> ScrollAnimator::create(ScrollableArea& scrollabl
 ScrollAnimator::ScrollAnimator(ScrollableArea& scrollableArea)
     : m_scrollableArea(scrollableArea)
     , m_scrollController(*this)
-    , m_keyboardScrollingAnimator(makeUnique<KeyboardScrollingAnimator>(*this, m_scrollController))
+    , m_keyboardScrollingAnimator(makeUnique<KeyboardScrollingAnimator>(scrollableArea))
 {
 }
 
@@ -160,6 +160,10 @@ void ScrollAnimator::resnapAfterLayout()
 
 bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
 {
+#if !PLATFORM(MAC)
+    m_scrollController.updateGestureInProgressState(wheelEvent);
+#endif
+
     if (processWheelEventForScrollSnap(wheelEvent))
         return false;
 

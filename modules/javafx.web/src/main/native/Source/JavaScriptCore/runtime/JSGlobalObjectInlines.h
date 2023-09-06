@@ -34,6 +34,7 @@
 #include "JSFunction.h"
 #include "LinkTimeConstant.h"
 #include "ObjectPrototype.h"
+#include "StrongInlines.h"
 #include <wtf/Hasher.h>
 
 namespace JSC {
@@ -62,20 +63,27 @@ ALWAYS_INLINE bool JSGlobalObject::stringPrototypeChainIsSaneConcurrently(Struct
         && objectPrototypeIsSaneConcurrently(objectPrototypeStructure);
 }
 
+ALWAYS_INLINE bool JSGlobalObject::objectPrototypeChainIsSane()
+{
+    ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+    return m_objectPrototypeChainIsSaneWatchpointSet.isStillValid();
+}
+
 ALWAYS_INLINE bool JSGlobalObject::arrayPrototypeChainIsSane()
 {
     ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
-    Structure* arrayPrototypeStructure = arrayPrototype()->structure();
-    Structure* objectPrototypeStructure = objectPrototype()->structure();
-    return arrayPrototypeChainIsSaneConcurrently(arrayPrototypeStructure, objectPrototypeStructure);
+    return m_arrayPrototypeChainIsSaneWatchpointSet.isStillValid();
 }
 
 ALWAYS_INLINE bool JSGlobalObject::stringPrototypeChainIsSane()
 {
     ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
-    Structure* stringPrototypeStructure = stringPrototype()->structure();
-    Structure* objectPrototypeStructure = objectPrototype()->structure();
-    return stringPrototypeChainIsSaneConcurrently(stringPrototypeStructure, objectPrototypeStructure);
+    return m_stringPrototypeChainIsSaneWatchpointSet.isStillValid();
+}
+
+inline void JSGlobalObject::setUnhandledRejectionCallback(VM& vm, JSObject* function)
+{
+    m_unhandledRejectionCallback.set(vm, function);
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObservable()
@@ -89,6 +97,23 @@ ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObs
     // executing concurrently.
 
     return arrayIteratorProtocolWatchpointSet().isStillValid() && !isHavingABadTime() && arrayPrototypeChainIsSane();
+}
+
+ALWAYS_INLINE bool JSGlobalObject::isArgumentsPrototypeIteratorProtocolFastAndNonObservable()
+{
+    // Since Arguments iteration uses ArrayIterator, we need to check the state of ArrayIteratorProtocolWatchpointSet.
+    // But we do not need to check isHavingABadTime() and array prototype's chain.
+    if (!arrayIteratorProtocolWatchpointSet().isStillValid())
+        return false;
+
+    if (isHavingABadTime())
+        return false;
+
+    // Since [[Prototype]] of arguments is Object.prototype, we do not need to check Array.prototype.
+    if (!objectPrototypeChainIsSane())
+        return false;
+
+    return true;
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isTypedArrayPrototypeIteratorProtocolFastAndNonObservable(TypedArrayType typedArrayType)
@@ -166,6 +191,9 @@ inline JSFunction* JSGlobalObject::rejectPromiseFunction() const { return jsCast
 inline JSFunction* JSGlobalObject::promiseProtoThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::defaultPromiseThen)); }
 inline JSFunction* JSGlobalObject::performPromiseThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performPromiseThen)); }
 inline JSFunction* JSGlobalObject::regExpProtoExecFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::regExpBuiltinExec)); }
+inline JSFunction* JSGlobalObject::stringProtoSubstringFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::stringSubstring)); }
+inline JSFunction* JSGlobalObject::performProxyObjectGetFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performProxyObjectGet)); }
+inline JSFunction* JSGlobalObject::performProxyObjectGetFunctionConcurrently() const { return linkTimeConstantConcurrently<JSFunction*>(LinkTimeConstant::performProxyObjectGet); }
 inline GetterSetter* JSGlobalObject::regExpProtoGlobalGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoGlobalGetter)); }
 inline GetterSetter* JSGlobalObject::regExpProtoUnicodeGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeGetter)); }
 

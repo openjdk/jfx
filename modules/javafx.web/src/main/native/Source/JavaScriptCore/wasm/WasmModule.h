@@ -28,7 +28,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "WasmCalleeGroup.h"
-#include "WasmEmbedder.h"
+#include "WasmJS.h"
 #include "WasmMemory.h"
 #include "WasmOps.h"
 #include <wtf/Expected.h>
@@ -71,13 +71,16 @@ public:
 
     void copyInitialCalleeGroupToAllMemoryModes(MemoryMode);
 
+    WasmToJSCallee& wasmToJSCallee() { return m_wasmToJSCallee.get(); }
+
 private:
     Ref<CalleeGroup> getOrCreateCalleeGroup(VM&, MemoryMode);
 
     Module(LLIntPlan&);
     Ref<ModuleInformation> m_moduleInformation;
-    RefPtr<CalleeGroup> m_calleeGroups[Wasm::NumberOfMemoryModes];
+    RefPtr<CalleeGroup> m_calleeGroups[numberOfMemoryModes];
     Ref<LLIntCallees> m_llintCallees;
+    Ref<WasmToJSCallee> m_wasmToJSCallee;
     MacroAssemblerCodeRef<JITCompilationPtrTag> m_llintEntryThunks;
     Lock m_lock;
 };

@@ -23,11 +23,13 @@
 #include "FontCustomPlatformData.h"
 
 #include "CairoUtilities.h"
+#include "Font.h"
 #include "FontCacheFreeType.h"
 #include "FontCreationContext.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
 #include "SharedBuffer.h"
+#include "StyleFontSizeFunctions.h"
 #include <cairo-ft.h>
 #include <cairo.h>
 #include <ft2build.h>
@@ -56,6 +58,8 @@ FontCustomPlatformData::FontCustomPlatformData(FT_Face freeTypeFace, FragmentedS
     cairo_font_face_set_user_data(m_fontFace.get(), &freeTypeFaceKey, freeTypeFace,
         reinterpret_cast<cairo_destroy_func_t>(reinterpret_cast<void(*)(void)>(FT_Done_Face)));
 }
+
+FontCustomPlatformData::~FontCustomPlatformData() = default;
 
 static RefPtr<FcPattern> defaultFontconfigOptions()
 {
@@ -92,12 +96,17 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
     }
 
 #if ENABLE(VARIATION_FONTS)
-    auto variants = buildVariationSettings(freeTypeFace, description);
+    auto variants = buildVariationSettings(freeTypeFace, description, fontCreationContext);
     if (!variants.isEmpty()) {
         FcPatternAddString(pattern.get(), FC_FONT_VARIATIONS, reinterpret_cast<const FcChar8*>(variants.utf8().data()));
     }
 #endif
-    return FontPlatformData(m_fontFace.get(), WTFMove(pattern), description.computedPixelSize(), freeTypeFace->face_flags & FT_FACE_FLAG_FIXED_WIDTH, bold, italic, description.orientation());
+
+    auto size = description.computedPixelSize();
+    FontPlatformData platformData(m_fontFace.get(), WTFMove(pattern), size, freeTypeFace->face_flags & FT_FACE_FLAG_FIXED_WIDTH, bold, italic, description.orientation());
+
+    platformData.updateSizeWithFontSizeAdjust(description.fontSizeAdjust());
+    return platformData;
 }
 
 static bool initializeFreeTypeLibrary(FT_Library& library)

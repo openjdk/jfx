@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "AppHighlight.h"
 #include "AppHighlightRangeData.h"
+#include "EventTarget.h"
 #include <wtf/Forward.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/OptionSet.h>
@@ -63,7 +64,7 @@ public:
 private:
     bool attemptToRestoreHighlightAndScroll(AppHighlightRangeData&, ScrollToHighlight);
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     MonotonicTime m_timeAtLastRangeSearch;
     Vector<AppHighlightRangeData> m_unrestoredHighlights;
     std::optional<AppHighlightRangeData> m_unrestoredScrollHighlight;

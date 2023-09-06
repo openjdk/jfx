@@ -121,7 +121,7 @@ public:
 
     WEBCORE_EXPORT virtual void setFocus(bool);
 
-    void setCursor(const Cursor&);
+    WEBCORE_EXPORT void setCursor(const Cursor&);
 
     WEBCORE_EXPORT virtual void show();
     WEBCORE_EXPORT virtual void hide();
@@ -134,6 +134,7 @@ public:
     void setIsSelected(bool);
 
     virtual bool isFrameView() const { return false; }
+    virtual bool isRemoteFrameView() const { return false; }
     virtual bool isPluginViewBase() const { return false; }
     virtual bool isScrollbar() const { return false; }
     virtual bool isScrollView() const { return false; }

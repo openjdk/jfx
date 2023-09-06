@@ -41,13 +41,13 @@ HTMLFormattingElementList::HTMLFormattingElementList() = default;
 
 HTMLFormattingElementList::~HTMLFormattingElementList() = default;
 
-Element* HTMLFormattingElementList::closestElementInScopeWithName(const AtomString& targetName)
+Element* HTMLFormattingElementList::closestElementInScopeWithName(ElementName targetElement)
 {
     for (unsigned i = 1; i <= m_entries.size(); ++i) {
         const Entry& entry = m_entries[m_entries.size() - i];
         if (entry.isMarker())
             return nullptr;
-        if (entry.stackItem().matchesHTMLTag(targetName))
+        if (entry.stackItem().elementName() == targetElement)
             return &entry.element();
     }
     return nullptr;
@@ -85,8 +85,8 @@ void HTMLFormattingElementList::swapTo(Element& oldElement, HTMLStackItem&& newI
         return;
     }
     size_t index = &bookmark.mark() - &first();
-    ASSERT_WITH_SECURITY_IMPLICATION(index < size());
-    m_entries.insert(index + 1, WTFMove(newItem));
+    ASSERT_WITH_SECURITY_IMPLICATION(index <= size());
+    m_entries.insert(index, WTFMove(newItem));
     remove(oldElement);
 }
 
@@ -103,6 +103,20 @@ void HTMLFormattingElementList::remove(Element& element)
         m_entries.remove(index);
 }
 
+void HTMLFormattingElementList::removeUpdatingBookmark(Element& element, Bookmark& bookmark)
+{
+    size_t index = m_entries.reverseFind(&element);
+    if (index != notFound) {
+        size_t bookmarkIndex = &bookmark.mark() - &first();
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(bookmarkIndex <= size());
+        m_entries.remove(index);
+        // Removing an element from the list can change the position of the bookmarked
+        // item. Update the address pointed by the bookmark, when needed.
+        if (bookmarkIndex > index)
+            bookmark.m_mark--;
+    }
+}
+
 void HTMLFormattingElementList::appendMarker()
 {
     m_entries.append(Entry::MarkerEntry);
@@ -117,6 +131,17 @@ void HTMLFormattingElementList::clearToLastMarker()
         if (shouldStop)
             break;
     }
+}
+
+static bool itemsHaveMatchingNames(const HTMLStackItem& a, const HTMLStackItem& b)
+{
+    if (a.elementName() != b.elementName())
+        return false;
+
+    if (a.elementName() != ElementName::Unknown)
+        return true;
+
+    return a.localName() == b.localName() && a.namespaceURI() == b.namespaceURI();
 }
 
 Vector<const HTMLStackItem*> HTMLFormattingElementList::tryToEnsureNoahsArkConditionQuickly(HTMLStackItem& newItem)
@@ -137,7 +162,7 @@ Vector<const HTMLStackItem*> HTMLFormattingElementList::tryToEnsureNoahsArkCondi
 
         // Quickly reject obviously non-matching candidates.
         auto& candidate = entry.stackItem();
-        if (newItem.localName() != candidate.localName() || newItem.namespaceURI() != candidate.namespaceURI())
+        if (!itemsHaveMatchingNames(newItem, candidate))
             continue;
         if (candidate.attributes().size() != newItemAttributeCount)
             continue;
@@ -165,7 +190,7 @@ void HTMLFormattingElementList::ensureNoahsArkCondition(HTMLStackItem& newItem)
         for (auto* candidate : candidates) {
             // These properties should already have been checked by tryToEnsureNoahsArkConditionQuickly.
             ASSERT(newItem.attributes().size() == candidate->attributes().size());
-            ASSERT(newItem.localName() == candidate->localName() && newItem.namespaceURI() == candidate->namespaceURI());
+            ASSERT(itemsHaveMatchingNames(newItem, *candidate));
 
             auto* candidateAttribute = candidate->findAttribute(attribute.name());
             if (candidateAttribute && candidateAttribute->value() == attribute.value())

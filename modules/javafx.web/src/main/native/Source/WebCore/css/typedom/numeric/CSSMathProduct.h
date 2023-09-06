@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSMathValue.h"
 #include "CSSNumericValue.h"
 
@@ -40,6 +38,8 @@ public:
     static ExceptionOr<Ref<CSSMathProduct>> create(FixedVector<CSSNumberish>);
     static ExceptionOr<Ref<CSSMathProduct>> create(Vector<Ref<CSSNumericValue>>);
     const CSSNumericArray& values() const { return m_values.get(); }
+
+    RefPtr<CSSCalcExpressionNode> toCalcExpressionNode() const final;
 
 private:
     CSSMathOperator getOperator() const final { return CSSMathOperator::Product; }
@@ -59,6 +59,3 @@ static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue
 static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.getType() == WebCore::CSSStyleValueType::CSSMathProduct; }
 static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getType() == WebCore::CSSStyleValueType::CSSMathProduct; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-
-#endif

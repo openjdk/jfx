@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ namespace WebCore {
 
 class FunctionCall {
 public:
-    FunctionCall(JSC::MacroAssembler& assembler, RegisterAllocator& registerAllocator, StackAllocator& stackAllocator, Vector<std::pair<JSC::MacroAssembler::Call, JSC::FunctionPtr<JSC::OperationPtrTag>>, 32>& callRegistry)
+    FunctionCall(JSC::MacroAssembler& assembler, RegisterAllocator& registerAllocator, StackAllocator& stackAllocator, Vector<std::pair<JSC::MacroAssembler::Call, CodePtr<JSC::OperationPtrTag>>, 32>& callRegistry)
         : m_assembler(assembler)
         , m_registerAllocator(registerAllocator)
         , m_stackAllocator(stackAllocator)
@@ -48,7 +48,7 @@ public:
     {
     }
 
-    void setFunctionAddress(JSC::FunctionPtr<JSC::OperationPtrTag> functionAddress)
+    void setFunctionAddress(CodePtr<JSC::OperationPtrTag> functionAddress)
     {
         m_functionAddress = functionAddress;
     }
@@ -110,7 +110,7 @@ private:
 
     void prepareAndCall()
     {
-        ASSERT(m_functionAddress.executableAddress());
+        ASSERT(m_functionAddress.taggedPtr());
         ASSERT(!m_firstArgument || (m_firstArgument && !m_secondArgument) || (m_firstArgument && m_secondArgument));
 
         saveAllocatedCallerSavedRegisters();
@@ -179,12 +179,12 @@ private:
     JSC::MacroAssembler& m_assembler;
     RegisterAllocator& m_registerAllocator;
     StackAllocator& m_stackAllocator;
-    Vector<std::pair<JSC::MacroAssembler::Call, JSC::FunctionPtr<JSC::OperationPtrTag>>, 32>& m_callRegistry;
+    Vector<std::pair<JSC::MacroAssembler::Call, CodePtr<JSC::OperationPtrTag>>, 32>& m_callRegistry;
 
     RegisterVector m_savedRegisters;
     StackAllocator::StackReferenceVector m_savedRegisterStackReferences;
 
-    JSC::FunctionPtr<JSC::OperationPtrTag> m_functionAddress;
+    CodePtr<JSC::OperationPtrTag> m_functionAddress;
     unsigned m_argumentCount;
     JSC::MacroAssembler::RegisterID m_firstArgument;
     JSC::MacroAssembler::RegisterID m_secondArgument;

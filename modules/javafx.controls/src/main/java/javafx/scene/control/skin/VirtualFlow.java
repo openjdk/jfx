@@ -858,7 +858,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             int oldIndex = computeCurrentIndex(oldCount);
             double oldOffset = computeViewportOffset(getPosition(), oldCount);
             int cellCount = get();
+            if (oldIndex > cellCount) {
+                oldIndex = cellCount;
+            }
             resetSizeEstimates();
+            getOrCreateCellSize(oldIndex);
             recalculateAndImproveEstimatedSize(DEFAULT_IMPROVEMENT, oldIndex, oldOffset);
 
             boolean countChanged = oldCount != cellCount;
@@ -1668,8 +1672,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // Add any necessary leading cells
             if (firstCell != null) {
                 int firstIndex = getCellIndex(firstCell);
-                double prevIndexSize = getCellLength(firstIndex - 1);
-                addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
+                int index = Math.max(0, firstIndex - 1);
+
+                double prevIndexSize = getCellLength(index);
+                addLeadingCells(index, getCellPosition(firstCell) - prevIndexSize);
             } else {
                 int currentIndex = computeCurrentIndex();
 
@@ -2988,7 +2994,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return baseOffset;
     }
 
-    private int computeCurrentIndex() {
+    /**
+     * Compute the index of the first visible cell
+     * This has package access ONLY FOR TESTING.
+     */
+    int computeCurrentIndex() {
         return computeCurrentIndex(getCellCount());
     }
 

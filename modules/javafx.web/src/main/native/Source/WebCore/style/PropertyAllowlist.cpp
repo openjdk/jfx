@@ -43,15 +43,20 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     switch (id) {
     case CSSPropertyColor:
     case CSSPropertyContent:
+    case CSSPropertyCustom:
     case CSSPropertyDirection:
     case CSSPropertyFont:
     case CSSPropertyFontFamily:
     case CSSPropertyFontFeatureSettings:
     case CSSPropertyFontKerning:
     case CSSPropertyFontSize:
+    case CSSPropertyFontSizeAdjust:
     case CSSPropertyFontStretch:
     case CSSPropertyFontStyle:
     case CSSPropertyFontSynthesis:
+    case CSSPropertyFontSynthesisWeight:
+    case CSSPropertyFontSynthesisStyle:
+    case CSSPropertyFontSynthesisSmallCaps:
     case CSSPropertyFontVariantAlternates:
     case CSSPropertyFontVariantCaps:
     case CSSPropertyFontVariantEastAsian:
@@ -118,6 +123,7 @@ bool isValidCueStyleProperty(CSSPropertyID id)
     case CSSPropertyBackgroundRepeat:
     case CSSPropertyBackgroundSize:
     case CSSPropertyColor:
+    case CSSPropertyCustom:
     case CSSPropertyFont:
     case CSSPropertyFontFamily:
     case CSSPropertyFontSize:

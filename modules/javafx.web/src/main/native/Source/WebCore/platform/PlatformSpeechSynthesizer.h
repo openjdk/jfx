@@ -29,6 +29,7 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "PlatformSpeechSynthesisVoice.h"
+#include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
 #if PLATFORM(COCOA)
@@ -43,6 +44,9 @@ enum class SpeechBoundary : uint8_t {
     SpeechSentenceBoundary
 };
 
+#if USE(GSTREAMER)
+class GstSpeechSynthesisWrapper;
+#endif
 class PlatformSpeechSynthesisUtterance;
 
 class PlatformSpeechSynthesizerClient {
@@ -58,10 +62,10 @@ protected:
     virtual ~PlatformSpeechSynthesizerClient() = default;
 };
 
-class WEBCORE_EXPORT PlatformSpeechSynthesizer {
+class WEBCORE_EXPORT PlatformSpeechSynthesizer : public RefCounted<PlatformSpeechSynthesizer> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT explicit PlatformSpeechSynthesizer(PlatformSpeechSynthesizerClient*);
+    WEBCORE_EXPORT static Ref<PlatformSpeechSynthesizer> create(PlatformSpeechSynthesizerClient&);
 
     // FIXME: We have multiple virtual functions just so we can support a mock for testing.
     // Seems wasteful. Would be nice to find a better way.
@@ -74,19 +78,22 @@ public:
     virtual void cancel();
     virtual void resetState();
 
-    PlatformSpeechSynthesizerClient* client() const { return m_speechSynthesizerClient; }
+    PlatformSpeechSynthesizerClient& client() const { return m_speechSynthesizerClient; }
 
 protected:
+    explicit PlatformSpeechSynthesizer(PlatformSpeechSynthesizerClient&);
     Vector<RefPtr<PlatformSpeechSynthesisVoice>> m_voiceList;
 
 private:
     virtual void initializeVoiceList();
 
     bool m_voiceListIsInitialized { false };
-    PlatformSpeechSynthesizerClient* m_speechSynthesizerClient;
+    PlatformSpeechSynthesizerClient& m_speechSynthesizerClient;
 
 #if PLATFORM(COCOA)
     RetainPtr<WebSpeechSynthesisWrapper> m_platformSpeechWrapper;
+#elif USE(GSTREAMER)
+    std::unique_ptr<GstSpeechSynthesisWrapper> m_platformSpeechWrapper { nullptr };
 #endif
 };
 
