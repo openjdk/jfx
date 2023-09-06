@@ -35,6 +35,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -109,7 +110,12 @@ public class PlatformPreferencesTest extends Application {
     private static String formatPrefs(Set<Map.Entry<String, Object>> prefs) {
         String entries = prefs.stream()
                 .sorted(Map.Entry.comparingByKey())
-                .map(Object::toString)
+                .map(entry -> {
+                    if (entry.getValue() instanceof Object[] array) {
+                        return entry.getKey() + "=" + Arrays.toString(array);
+                    }
+                    return entry.getKey() + "=" + entry.getValue();
+                })
                 .collect(Collectors.joining("\r\n\t"));
 
         return "{\r\n\t" + entries + "\r\n}\r\n";
