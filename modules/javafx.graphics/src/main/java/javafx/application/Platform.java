@@ -575,11 +575,6 @@ public final class Platform {
          */
         ReadOnlyObjectProperty<Appearance> appearanceProperty();
 
-        /**
-         * Gets the value of the {@link #appearanceProperty() appearance} property.
-         *
-         * @return the platform appearance
-         */
         Appearance getAppearance();
 
         /**
@@ -592,11 +587,6 @@ public final class Platform {
          */
         ReadOnlyObjectProperty<Color> backgroundColorProperty();
 
-        /**
-         * Gets the value of the {@link #backgroundColorProperty() backgroundColor} property.
-         *
-         * @return the background color
-         */
         Color getBackgroundColor();
 
         /**
@@ -609,11 +599,6 @@ public final class Platform {
          */
         ReadOnlyObjectProperty<Color> foregroundColorProperty();
 
-        /**
-         * Gets the value of the {@link #foregroundColorProperty() foregroundColor} property.
-         *
-         * @return the foreground color
-         */
         Color getForegroundColor();
 
         /**
@@ -626,15 +611,10 @@ public final class Platform {
          */
         ReadOnlyObjectProperty<Color> accentColorProperty();
 
-        /**
-         * Gets the value of the {@link #accentColorProperty() accentColor} property.
-         *
-         * @return the accent color
-         */
         Color getAccentColor();
 
         /**
-         * Returns the {@link Integer} instance to which the specified key is mapped.
+         * Returns the {@code Integer} instance to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
@@ -645,7 +625,7 @@ public final class Platform {
         Optional<Integer> getInteger(String key);
 
         /**
-         * Returns the {@link Double} instance to which the specified key is mapped.
+         * Returns the {@code Double} instance to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
@@ -656,7 +636,7 @@ public final class Platform {
         Optional<Double> getDouble(String key);
 
         /**
-         * Returns the {@link Boolean} instance to which the specified key is mapped.
+         * Returns the {@code Boolean} instance to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
@@ -667,7 +647,7 @@ public final class Platform {
         Optional<Boolean> getBoolean(String key);
 
         /**
-         * Returns the {@link String} instance to which the specified key is mapped.
+         * Returns the {@code String} instance to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
@@ -678,7 +658,7 @@ public final class Platform {
         Optional<String> getString(String key);
 
         /**
-         * Returns the {@link Color} instance to which the specified key is mapped.
+         * Returns the {@code Color} instance to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
@@ -689,7 +669,7 @@ public final class Platform {
         Optional<Color> getColor(String key);
 
         /**
-         * Returns the {@link Paint} instance to which the specified key is mapped.
+         * Returns the {@code Paint} instance to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
