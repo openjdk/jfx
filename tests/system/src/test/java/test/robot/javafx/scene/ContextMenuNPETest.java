@@ -102,7 +102,6 @@ public class ContextMenuNPETest {
             robot.keyType(KeyCode.ENTER);
         });
         Util.waitForIdle(scene);
-        Thread.sleep(200); // Small delay to wait for context menu to close.
         Util.waitForLatch(onHiddenLatch, 10, "Failed to hide context menu.");
     }
 
