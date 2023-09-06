@@ -43,7 +43,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
-public class PlatformPreferencesTest extends Application {
+public class PlatformPreferencesChangedTest extends Application {
 
     private Map<String, Object> cachedPreferences;
 
