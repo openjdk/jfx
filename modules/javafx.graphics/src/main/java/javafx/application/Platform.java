@@ -544,14 +544,14 @@ public final class Platform {
      *         <tr><td>{@code GTK.theme_base_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.theme_selected_bg_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.theme_selected_fg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code GTK.insensitive_bg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code GTK.insensitive_fg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code GTK.insensitive_base_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.theme_unfocused_fg_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.theme_unfocused_bg_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.theme_unfocused_base_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.theme_unfocused_selected_bg_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.theme_unfocused_selected_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_base_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.borders}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.unfocused_borders}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.warning_color}</td><td>{@link Color}</td></tr>
