@@ -1803,36 +1803,24 @@ public class Region extends Parent {
     }
 
     /**
-     * If this region's snapToPixel property is true, then the value is either floored (positive values) or
-     * ceiled (negative values) with a scale. When the absolute value of the given value
-     * multiplied by the current scale is less than 10^15, then this method guarantees that:
-     *
-     * <pre>snapInnerSpaceX(snapInnerSpaceX(value)) == snapInnerSpaceX(value)</pre>
-     *
-     * The limit is about 10^15 because double values will no longer be able to represent
-     * larger integers with exact precision beyond this limit.
-     *
+     * If this region's snapToPixel property is true, returns the value of the nearest
+     * pixel in the horizontal direction with the same or smaller value, else returns the
+     * same value.
+     * @param value the size value to be snapped
+     * @return value adjusted to nearest pixel
      * @since 22
-     * @param value The value that needs to be snapped
-     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel property
      */
     public double snapInnerSpaceX(double value) {
         return snapPortionX(value, isSnapToPixel());
     }
 
     /**
-     * If this region's snapToPixel property is true, then the value is either floored (positive values) or
-     * ceiled (negative values) with a scale. When the absolute value of the given value
-     * multiplied by the current scale is less than 10^15, then this method guarantees that:
-     *
-     * <pre>snapInnerSpaceY(snapInnerSpaceY(value)) == snapInnerSpaceY(value)</pre>
-     *
-     * The limit is about 10^15 because double values will no longer be able to represent
-     * larger integers with exact precision beyond this limit.
-     *
+     * If this region's snapToPixel property is true, returns the value of the nearest
+     * pixel in the vertical direction with the same or smaller value, else returns the
+     * same value.
+     * @param value the size value to be snapped
+     * @return value adjusted to nearest pixel
      * @since 22
-     * @param value The value that needs to be snapped
-     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel property
      */
     public double snapInnerSpaceY(double value) {
         return snapPortionY(value, isSnapToPixel());

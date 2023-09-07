@@ -1347,7 +1347,7 @@ public class RegionTest {
 
         // test snapSizeX/snapSizeY methods
 
-        String failMessage = "Seed was: " + seed;
+        String failMessage = "snappingASnappedValueGivesTheSameValueTest: seed=" + seed;
 
         random.setSeed(seed);
 
