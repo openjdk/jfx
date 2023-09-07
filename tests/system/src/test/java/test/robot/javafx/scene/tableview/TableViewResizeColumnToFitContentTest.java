@@ -56,7 +56,6 @@ public class TableViewResizeColumnToFitContentTest {
     static volatile Scene scene;
     static final int SCENE_WIDTH = 450;
     static final int SCENE_HEIGHT = 100;
-    private static final double EPSILON = 1e-10;
     static CountDownLatch startupLatch = new CountDownLatch(1);
 
     public static void main(String[] args) {
@@ -67,15 +66,13 @@ public class TableViewResizeColumnToFitContentTest {
 
     @Test
     public void resizeColumnToFitContentTest() {
-        double colOneWidth = table.getColumns().get(0).getWidth();
-        double colTwoWidth = table.getColumns().get(1).getWidth();
-        double colThreeWidth = table.getColumns().get(2).getWidth();
-        double colsWidthBeforeResize = colOneWidth + colTwoWidth + colThreeWidth;
+        double wid0 = table.getColumns().get(0).getWidth();
+        double wid1 = table.getColumns().get(1).getWidth();
+        double wid2 = table.getColumns().get(2).getWidth();
+        double colsWidthBeforeResize = wid0 + wid1 + wid2;
         double colHeaderHeight = 25;
-        double posX = scene.getWindow().getX() + table.getLayoutX() +
-                colOneWidth + colTwoWidth;
-        double posY = scene.getWindow().getY() + table.getLayoutY() +
-                colHeaderHeight / 2;
+        double posX = scene.getWindow().getX() + table.getLayoutX() + wid0 + wid1;
+        double posY = scene.getWindow().getY() + table.getLayoutY() + colHeaderHeight / 2;
 
         CountDownLatch latch = new CountDownLatch(1);
         Platform.runLater(() -> {
@@ -86,23 +83,19 @@ public class TableViewResizeColumnToFitContentTest {
             robot.mouseRelease(MouseButton.PRIMARY);
             latch.countDown();
         });
-        Util.waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
-        try {
-            Thread.sleep(1000); // Delay for table resizing of table columns.
-        } catch (Exception e) {
-            fail("Thread was interrupted." + e);
-        }
-        Assert.assertTrue("resizeColumnToFitContent failed",
-                (colTwoWidth != table.getColumns().get(1).getWidth()));
 
-        // Skip this check on platforms with fractional scale until JDK-8299753 gets implemented
-        if (!Util.isFractionalScaleX(table)) {
-            colTwoWidth = table.getColumns().get(1).getWidth();
-            colThreeWidth = table.getColumns().get(2).getWidth();
-            double colsWidthAfterResize = colOneWidth + colTwoWidth + colThreeWidth;
-            Assert.assertEquals("TableView.CONSTRAINED_RESIZE_POLICY ignored.",
-                    colsWidthBeforeResize, colsWidthAfterResize, EPSILON);
-        }
+        Util.waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
+        Util.waitForIdle(scene);
+
+        Assert.assertTrue("resizeColumnToFitContent failed",
+            (wid1 != table.getColumns().get(1).getWidth()));
+
+        wid1 = table.getColumns().get(1).getWidth();
+        wid2 = table.getColumns().get(2).getWidth();
+        double colsWidthAfterResize = wid0 + wid1 + wid2;
+        double tolerance = getTolerance(stage);
+        Assert.assertEquals("TableView.CONSTRAINED_RESIZE_POLICY ignored.",
+            colsWidthBeforeResize, colsWidthAfterResize, tolerance);
     }
 
     @BeforeClass
@@ -162,5 +155,17 @@ public class TableViewResizeColumnToFitContentTest {
             this.lastNameProperty = new SimpleObjectProperty<>(lastName);
             this.descriptionProperty = new SimpleObjectProperty<>(description);
         }
+    }
+
+    // FIX move to util
+    public static double getTolerance(Stage stage) {
+        // x and y usually have the same scale, so we'll use x
+        double scale = stage.getRenderScaleX();
+        if (scale == 1.0) {
+            return 0.0;
+        }
+        double r = 1.0 / scale;
+        r += Math.ulp(r);
+        return r;
     }
 }
