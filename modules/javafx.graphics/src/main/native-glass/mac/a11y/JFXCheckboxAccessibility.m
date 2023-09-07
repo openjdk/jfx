@@ -23,44 +23,17 @@
  * questions.
  */
 
-#import "JFXButtonAccessibility.h"
+#import "JFXCheckboxAccessibility.h"
 
-/*
- * Implementation of the accessibility peer for the pushbutton role
- */
-@implementation JFXButtonAccessibility
+@implementation JFXCheckboxAccessibility
 - (NSAccessibilityRole)accessibilityRole
 {
-    return NSAccessibilityButtonRole;
+    return NSAccessibilityCheckBoxRole;
 }
 
-- (NSString *)accessibilityLabel
+- (id) accessibilityValue
 {
-    return [super accessibilityLabel];
-}
-
-- (BOOL)accessibilityPerformPress
-{
-    return [self performAccessibleAction:@"AXPress"];
-}
-
-- (NSRect)accessibilityFrame
-{
-    return [super accessibilityFrame];
-}
-
-- (id)accessibilityParent
-{
-    return [super accessibilityParent];
-}
-
-- (id)accessibilityValue
-{
-    if ([self accessibilityRole] == NSAccessibilityButtonRole) {
-        return NULL;
-    } else {
-        return [super accessibilityValue];
-    }
+    return [super accessibilityValue];
 }
 
 @end

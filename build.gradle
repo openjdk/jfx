@@ -367,7 +367,7 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 // some changes on assumptions on what should be built (like SWT / Swing) and
 // such and we could probably make it work.
 if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) fail("Unsupported build OS ${OS_NAME}")
-if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
+if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64" && !IS_AARCH64) {
     logger.warn("Unknown and unsupported build architecture: $OS_ARCH")
 } else if (IS_MAC && OS_ARCH != "x86_64" && OS_ARCH != "aarch64") {
     logger.warn("Unknown and unsupported build architecture: $OS_ARCH")
@@ -4258,6 +4258,8 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
 
     options.addStringOption("-since").setValue((9..jfxReleaseMajorVersion.toInteger()).join(","))
     options.addStringOption("-since-label").setValue("New API since JavaFX 9")
+    options.addStringOption("Xmaxwarns").setValue("1000")
+    options.addStringOption("Xmaxerrs").setValue("1000")
 
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
