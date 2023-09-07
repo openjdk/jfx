@@ -45,7 +45,7 @@ import javafx.scene.input.KeyCode;
  * The base class adds a dispose() method (called from Skin.dispose()),
  * which undoes the mapping done in install().
  * <p>
- * TODO rename BehaviorBase and remove IBehavior
+ * TODO rename BehaviorBase
  */
 public abstract class BehaviorBase2<C extends Control> {
     private C control;
