@@ -25,7 +25,6 @@
 
 package test.robot.javafx.scene.tableview;
 
-import static org.junit.Assert.fail;
 import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -56,6 +55,7 @@ public class TableViewResizeColumnToFitContentTest {
     static volatile Scene scene;
     static final int SCENE_WIDTH = 450;
     static final int SCENE_HEIGHT = 100;
+    private static final double EPSILON = 1e-10;
     static CountDownLatch startupLatch = new CountDownLatch(1);
 
     public static void main(String[] args) {
@@ -93,9 +93,14 @@ public class TableViewResizeColumnToFitContentTest {
         wid1 = table.getColumns().get(1).getWidth();
         wid2 = table.getColumns().get(2).getWidth();
         double colsWidthAfterResize = wid0 + wid1 + wid2;
-        double tolerance = getTolerance(stage);
-        Assert.assertEquals("TableView.CONSTRAINED_RESIZE_POLICY ignored.",
-            colsWidthBeforeResize, colsWidthAfterResize, tolerance);
+        double tolerance = Util.getTolerance(table);
+        String message = "TableView.CONSTRAINED_RESIZE_POLICY ignored" +
+            ", before=" + colsWidthBeforeResize +
+            ", after=" + colsWidthAfterResize +
+            ", diff=" + Math.abs(colsWidthBeforeResize - colsWidthAfterResize) +
+            ", tolerance=" + tolerance +
+            ", tol+eps=" + (tolerance + EPSILON);
+        Assert.assertEquals(message, colsWidthBeforeResize, colsWidthAfterResize, tolerance + EPSILON);
     }
 
     @BeforeClass
@@ -155,17 +160,5 @@ public class TableViewResizeColumnToFitContentTest {
             this.lastNameProperty = new SimpleObjectProperty<>(lastName);
             this.descriptionProperty = new SimpleObjectProperty<>(description);
         }
-    }
-
-    // FIX move to util
-    public static double getTolerance(Stage stage) {
-        // x and y usually have the same scale, so we'll use x
-        double scale = stage.getRenderScaleX();
-        if (scale == 1.0) {
-            return 0.0;
-        }
-        double r = 1.0 / scale;
-        r += Math.ulp(r);
-        return r;
     }
 }
