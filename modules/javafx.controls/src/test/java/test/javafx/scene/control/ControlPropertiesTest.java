@@ -92,15 +92,13 @@ import com.sun.javafx.scene.control.skin.FXVK;
  * in the Control type hierarchy.
  *
  * Currently uses a list of classes, so any new Controls must be added manually.
- * Perhaps the test should scan classpath and find all the Controls automagically.
+ * Perhaps the test should scan modulepath and find all the Controls automagically.
  */
 public class ControlPropertiesTest {
 
     private static final boolean FAIL_FAST = true;
 
-    // list all descendants of Control class.
-    // or perhaps collect all classes in a package as described here:
-    // https://stackoverflow.com/questions/28678026/how-can-i-get-all-class-files-in-a-specific-package-in-java
+    // list all current descendants of Control class.
     private Set<Class> allControlClasses() {
         return Set.of(
             Accordion.class,
@@ -170,7 +168,7 @@ public class ControlPropertiesTest {
      */
     @Test
     public void testMissingFinalMethods() {
-        for (Class c: allControlClasses()) {
+        for (Class c : allControlClasses()) {
             check(c);
         }
     }
@@ -209,7 +207,13 @@ public class ControlPropertiesTest {
 
     private void checkModifiers(Method m) {
         int mod = m.getModifiers();
-        if (Modifier.isPublic(mod) && !Modifier.isFinal(mod)) {
+        if (
+            !Modifier.isFinal(mod) &&
+            (
+                Modifier.isPublic(mod) ||
+                Modifier.isProtected(mod)
+            )
+        ) {
             String msg = m + " is not final.";
             if (FAIL_FAST) {
                 throw new AssertionError(msg);
