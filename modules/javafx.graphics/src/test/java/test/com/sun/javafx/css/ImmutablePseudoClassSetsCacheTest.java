@@ -26,9 +26,9 @@
 package test.com.sun.javafx.css;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -63,18 +63,18 @@ public class ImmutablePseudoClassSetsCacheTest {
         assertNotEquals(set3, set5);
         assertNotEquals(set4, set5);
 
-        assertTrue(set1 == set2);
-        assertTrue(set2 == set3);
-        assertTrue(set3 == set4);
+        assertSame(set1, set2);
+        assertSame(set2, set3);
+        assertSame(set3, set4);
 
         assertEquals(myOwnSet, set1);
 
         // this does not need to be true if this set was not the first one cached
-        assertFalse(myOwnSet == set1);
+        assertNotSame(myOwnSet, set1);
 
         // tests if hashCode/equals of BitSet respects contract...
         assertEquals(myOwnSet.hashCode(), pseudoClassState.hashCode());
-        assertTrue(myOwnSet.equals(pseudoClassState));
-        assertTrue(pseudoClassState.equals(myOwnSet));
+        assertEquals(myOwnSet, pseudoClassState);
+        assertEquals(pseudoClassState, myOwnSet);
     }
 }
