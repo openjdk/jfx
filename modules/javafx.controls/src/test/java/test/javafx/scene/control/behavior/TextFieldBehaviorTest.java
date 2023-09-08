@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.javafx.scene.control;
+package test.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.A;
 import static javafx.scene.input.KeyCode.BACK_SPACE;
@@ -38,31 +38,21 @@ import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.V;
 import static javafx.scene.input.KeyCode.X;
-import javafx.event.EventType;
-import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.tk.Toolkit;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
  * Tests the TextField behavior using public APIs.
  */
-public class TextFieldBehaviorTest extends BehaviorTestBase<TextField> {
-    private static final EventType<KeyEvent> PRE = KeyEvent.KEY_PRESSED;
-    private static final EventType<KeyEvent> TYP = KeyEvent.KEY_TYPED;
-    private static final EventType<KeyEvent> REL = KeyEvent.KEY_RELEASED;
-    private TextField control;
+public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
 
     @BeforeEach
     public void beforeEach() {
-        control = new TextField();
-        initStage(control);
+        initStage(new TextField());
     }
 
     @AfterEach
@@ -74,8 +64,8 @@ public class TextFieldBehaviorTest extends BehaviorTestBase<TextField> {
      * Tests basic typing.
      */
     @Test
-    public void testTyping2() {
-        t(
+    public void testTyping() {
+        execute(
             "hello",
             checkText("hello"),
             BACK_SPACE, BACK_SPACE, "f",
@@ -117,7 +107,7 @@ public class TextFieldBehaviorTest extends BehaviorTestBase<TextField> {
      */
     @Test
     public void testCopyCutPaste() {
-        t(
+        execute(
             setText("copy-cut=paste."),
             HOME, checkSelection(0, 0),
             shift(RIGHT), shift(RIGHT), shift(RIGHT), shift(RIGHT), shift(RIGHT),
@@ -134,16 +124,17 @@ public class TextFieldBehaviorTest extends BehaviorTestBase<TextField> {
 
     @Test
     public void testNavigation() {
-        t(
+        execute(
             "abc", checkSelection(3, 3),
             LEFT, LEFT, checkSelection(1, 1),
             "0", checkText("a0bc")
         );
     }
 
-    //@Test // FIX JDK-8296266
+    @Disabled("JDK-8296266") // FIX
+    @Test
     public void testRTL() {
-        t(
+        execute(
             setText("العربية"),
             checkSelection(0, 0),
             RIGHT, checkSelection(1, 1)
@@ -152,31 +143,10 @@ public class TextFieldBehaviorTest extends BehaviorTestBase<TextField> {
 
     @Test
     public void testLTR() {
-        t(
+        execute(
             setText("abc"),
             checkSelection(0, 0),
             RIGHT, checkSelection(1, 1)
         );
-    }
-
-    protected Runnable setText(String text) {
-        return () -> {
-            control.setText(text);
-        };
-    }
-
-    protected Runnable checkText(String expected) {
-        return () -> {
-            String v = control.getText();
-            Assertions.assertEquals(expected, v, errorMessage());
-        };
-    }
-
-    protected Runnable checkSelection(int start, int end) {
-        return () -> {
-            IndexRange v = control.getSelection();
-            IndexRange expected = new IndexRange(start, end);
-            Assertions.assertEquals(expected, v, errorMessage());
-        };
     }
 }

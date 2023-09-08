@@ -22,12 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.javafx.scene.control;
+package test.javafx.scene.control.behavior;
 
 import java.util.function.BooleanSupplier;
 import javafx.scene.control.Control;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import com.sun.javafx.tk.Toolkit;
@@ -40,25 +41,46 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
  */
 public abstract class BehaviorTestBase<C extends Control> {
 
+    protected C control;
     protected StageLoader stageLoader;
     // TODO problem:
     // KeyEventFirer may not a good idea here because of the way it generates events.
     // I think we should rather emulate the keyboard, such that the events match those sent by the real thing
     // i.e. press(SHORTCUT), hit(X), release(SHORTCUT)
     protected KeyEventFirer kb;
-    protected int step;
-    protected C control;
+    private int step;
 
     protected BehaviorTestBase() {
     }
-    
+
+    /**
+     * Must be called in each test's <code>&#x40;BeforeEach</code> method:
+     * <pre>
+     *     &#x40;BeforeEach
+     *     public void beforeEach() {
+     *         initStage(new ACTUAL_CONTROL());
+     *     }
+     * <pre>
+     * @param control the control being tested
+     */
     protected void initStage(C control) {
+        this.control = control;
         stageLoader = new StageLoader(control);
         kb = new KeyEventFirer(control);
         control.requestFocus();
         Toolkit.getToolkit().firePulse();
     }
 
+    /**
+     * Must be called in each test's <code>&#x40;AfterEach</code> method:
+     * <pre>
+     *     &#x40;AfterEach
+     *     public void afterEach() {
+     *         closeStage();
+     *     }
+     * <pre>
+     * @param control the control being tested
+     */
     protected void closeStage() {
         if (stageLoader != null) {
             stageLoader.dispose();
@@ -103,7 +125,7 @@ public abstract class BehaviorTestBase<C extends Control> {
      * Executes a test by emulating key press / key releases and various operations upon control.
      * @param items the sequence of KeyCodes/Runnables
      */
-    protected void t(Object ... items) {
+    protected void execute(Object ... items) {
         step = 0;
         for(Object x: items) {
             if(x instanceof Runnable r) {
