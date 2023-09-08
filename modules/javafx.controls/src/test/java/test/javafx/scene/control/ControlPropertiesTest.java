@@ -95,11 +95,14 @@ import com.sun.javafx.scene.control.skin.FXVK;
  * Perhaps the test should scan modulepath and find all the Controls automagically.
  */
 public class ControlPropertiesTest {
-
+    /**
+     * controls whether the test fails with assertion (true, default) or
+     * outputs all violations to stderr (false).
+     */
     private static final boolean FAIL_FAST = true;
 
     // list all current descendants of Control class.
-    private Set<Class> allControlClasses() {
+    private Set<Class<?>> allControlClasses() {
         return Set.of(
             Accordion.class,
             ButtonBar.class,
@@ -168,12 +171,12 @@ public class ControlPropertiesTest {
      */
     @Test
     public void testMissingFinalMethods() {
-        for (Class c : allControlClasses()) {
+        for (Class<?> c : allControlClasses()) {
             check(c);
         }
     }
 
-    private void check(Class cls) {
+    private void check(Class<?> cls) {
         Method[] publicMethods = cls.getMethods();
         for (Method m : publicMethods) {
             String name = m.getName();
