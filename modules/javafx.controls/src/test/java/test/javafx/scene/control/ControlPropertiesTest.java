@@ -174,16 +174,16 @@ public class ControlPropertiesTest {
     }
 
     private void check(Class cls) {
-        Method[] methods = cls.getMethods();
-        for (Method m : methods) {
+        Method[] publicMethods = cls.getMethods();
+        for (Method m : publicMethods) {
             String name = m.getName();
             if (name.endsWith("Property") && (m.getParameterCount() == 0)) {
                 checkModifiers(m);
 
                 String propName = name.substring(0, name.length() - "Property".length());
-                check(methods, propName, "get", 0);
-                check(methods, propName, "set", 1);
-                check(methods, propName, "is", 0);
+                check(publicMethods, propName, "get", 0);
+                check(publicMethods, propName, "set", 1);
+                check(publicMethods, propName, "is", 0);
             }
         }
     }
@@ -207,13 +207,7 @@ public class ControlPropertiesTest {
 
     private void checkModifiers(Method m) {
         int mod = m.getModifiers();
-        if (
-            !Modifier.isFinal(mod) &&
-            (
-                Modifier.isPublic(mod) ||
-                Modifier.isProtected(mod)
-            )
-        ) {
+        if (Modifier.isPublic(mod) && !Modifier.isFinal(mod)) {
             String msg = m + " is not final.";
             if (FAIL_FAST) {
                 throw new AssertionError(msg);
