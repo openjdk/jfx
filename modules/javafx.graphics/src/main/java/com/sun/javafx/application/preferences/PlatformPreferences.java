@@ -195,14 +195,14 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
      */
     public void update(Map<String, Object> preferences) {
         Map<String, Object> currentPreferences = Map.copyOf(effectivePreferences);
-
-        // The given preference map may contain null values, which indicates that a mapping was removed.
         effectivePreferences.putAll(preferences);
-        effectivePreferences.entrySet().removeIf(entry -> entry.getValue() == null);
 
         // Only fire change notifications if any preference has effectively changed.
         Map<String, ChangedValue> effectivelyChangedPreferences =
             ChangedValue.getEffectiveChanges(currentPreferences, effectivePreferences);
+
+        // The new mappings may contain null values, which indicates that a mapping was removed.
+        effectivePreferences.entrySet().removeIf(entry -> entry.getValue() == null);
 
         if (!effectivelyChangedPreferences.isEmpty()) {
             properties.update(effectivelyChangedPreferences, wellKnownKeys);

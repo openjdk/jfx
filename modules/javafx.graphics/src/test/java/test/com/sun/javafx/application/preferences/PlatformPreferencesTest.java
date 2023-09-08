@@ -31,6 +31,7 @@ import javafx.beans.InvalidationListener;
 import javafx.collections.MapChangeListener;
 import javafx.scene.paint.Color;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -121,6 +122,25 @@ public class PlatformPreferencesTest {
     }
 
     @Test
+    void testUpdatePreferencesWithNullValueRemovesMapping() {
+        var content = Map.of(
+            "red", Color.RED,
+            "blue", Color.BLUE,
+            "str", "foo",
+            "bool", true);
+        prefs.update(content);
+        assertEquals(content, prefs);
+
+        prefs.update(new HashMap<>() {{ put("red", null); }});
+        assertEquals(
+            Map.of(
+                "blue", Color.BLUE,
+                "str", "foo",
+                "bool", true),
+            prefs);
+    }
+
+    @Test
     void testPlatformPreferencesInvalidationListener() {
         int[] count = new int[1];
         InvalidationListener listener = observable -> count[0]++;
@@ -143,18 +163,21 @@ public class PlatformPreferencesTest {
 
         // Two added keys are included in the change notification
         prefs.update(Map.of("foo", "bar", "baz", "qux"));
+        assertEquals(2, observer.getCallsNumber());
         observer.assertAdded(0, tup("foo", "bar"));
         observer.assertAdded(1, tup("baz", "qux"));
         observer.clear();
 
         // Mappings that haven't changed are not included in the change notification (baz=qux)
         prefs.update(Map.of("foo", "bar2", "baz", "qux"));
+        assertEquals(1, observer.getCallsNumber());
         observer.assertRemoved(0, tup("foo", "bar"));
         observer.assertAdded(0, tup("foo", "bar2"));
         observer.clear();
 
         // Change the second mapping
         prefs.update(Map.of("baz", "qux2"));
+        assertEquals(1, observer.getCallsNumber());
         observer.assertRemoved(0, tup("baz", "qux"));
         observer.assertAdded(0, tup("baz", "qux2"));
         observer.clear();
@@ -162,6 +185,12 @@ public class PlatformPreferencesTest {
         // If no mapping was changed, no change notification is fired
         prefs.update(Map.of("foo", "bar2", "baz", "qux2"));
         observer.check0();
+        observer.clear();
+
+        // If a key is mapped to null, the mapping is removed
+        prefs.update(new HashMap<>() {{ put("foo", null); }});
+        assertEquals(1, observer.getCallsNumber());
+        observer.assertRemoved(0, tup("foo", "bar2"));
         observer.clear();
     }
 
