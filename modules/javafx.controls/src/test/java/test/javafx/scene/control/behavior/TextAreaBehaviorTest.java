@@ -25,7 +25,7 @@
 package test.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.*;
-import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,13 +33,16 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests the TextField behavior using public APIs.
+ * Tests the TextArea behavior using public APIs.
+ *
+ * Note: some aspects of behavior (navigation, selection) require a fully functional skin,
+ * so it is impossible to test with a headless environment.
  */
-public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
+public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
 
     @BeforeEach
     public void beforeEach() {
-        initStage(new TextField());
+        initStage(new TextArea());
     }
 
     @AfterEach
@@ -76,8 +79,8 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
         Assertions.assertFalse(kb.keyPressed(ESCAPE));
         Assertions.assertFalse(kb.keyReleased(ESCAPE));
 
-        Assertions.assertFalse(kb.keyPressed(ENTER));
-        Assertions.assertFalse(kb.keyReleased(ENTER));
+//        Assertions.assertFalse(kb.keyPressed(ENTER));
+//        Assertions.assertFalse(kb.keyReleased(ENTER));
 
         Assertions.assertTrue(kb.keyPressed(SPACE));
         Assertions.assertTrue(kb.keyTyped(SPACE, " "));
@@ -134,52 +137,52 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
         );
     }
 
-    @Test
-    public void testNavigation() {
-        execute(
-            "0123456789", checkSelection(10),
-            LEFT, LEFT, checkSelection(8),
-            RIGHT, checkSelection(9),
-            UP, checkSelection(0),
-            DOWN, checkSelection(10),
-            HOME, checkSelection(0),
-            END, checkSelection(10),
-            shortcut(HOME), checkSelection(0),
-            shortcut(END), checkSelection(10)
-        );
-    }
+//    @Test
+//    public void testNavigation() {
+//        execute(
+//            "0123456789", checkSelection(10),
+//            LEFT, LEFT, checkSelection(8),
+//            RIGHT, checkSelection(9),
+//            UP, checkSelection(0),
+//            DOWN, checkSelection(10),
+//            HOME, checkSelection(0),
+//            END, checkSelection(10),
+//            shortcut(HOME), checkSelection(0),
+//            shortcut(END), checkSelection(10)
+//        );
+//    }
     
-    @Test
-    public void testDeletion() {
-        execute(
-            setText("0123456789"),
-            END, BACK_SPACE, checkText("012345678"),
-            shift(BACK_SPACE), checkText("01234567"),
-            HOME, DELETE, checkText("1234567")
-        );
+//    @Test
+//    public void testDeletion() {
+//        execute(
+//            setText("0123456789"),
+//            END, BACK_SPACE, checkText("012345678"),
+//            shift(BACK_SPACE), checkText("01234567"),
+//            HOME, DELETE, checkText("1234567")
+//        );
+//
+//        control.setEditable(false);
+//        execute(
+//            setText("0123456789"),
+//            END, BACK_SPACE, checkText("0123456789"),
+//            shift(BACK_SPACE), checkText("0123456789"),
+//            HOME, DELETE, checkText("0123456789")
+//        );
+//    }
 
-        control.setEditable(false);
-        execute(
-            setText("0123456789"),
-            END, BACK_SPACE, checkText("0123456789"),
-            shift(BACK_SPACE), checkText("0123456789"),
-            HOME, DELETE, checkText("0123456789")
-        );
-    }
-
-    @Test
-    public void testSelection() {
-        execute(
-            setText("abc"),
-            HOME, shift(RIGHT), checkSelection(0, 1),
-            END, shift(LEFT), checkSelection(2, 3),
-            HOME, shift(DOWN), checkSelection(0, 3),
-            END, checkSelection(3), shift(UP), checkSelection(0, 3),
-            HOME, checkSelection(0), shift(END), checkSelection(0, 3),
-            END, checkSelection(3), shift(HOME), checkSelection(0, 3),
-            HOME, checkSelection(0), shortcut(A), checkSelection(0, 3)
-        );
-    }
+//    @Test
+//    public void testSelection() {
+//        execute(
+//            setText("abc"),
+//            HOME, shift(RIGHT), checkSelection(0, 1),
+//            END, shift(LEFT), checkSelection(2, 3),
+//            HOME, shift(DOWN), checkSelection(0, 3),
+//            END, checkSelection(3), shift(UP), checkSelection(0, 3),
+//            HOME, checkSelection(0), shift(END), checkSelection(0, 3),
+//            END, checkSelection(3), shift(HOME), checkSelection(0, 3),
+//            HOME, checkSelection(0), shortcut(A), checkSelection(0, 3)
+//        );
+//    }
 
     @Disabled("JDK-8296266") // FIX
     @Test
