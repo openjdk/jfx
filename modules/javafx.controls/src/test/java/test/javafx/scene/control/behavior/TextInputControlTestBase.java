@@ -35,12 +35,22 @@ public class TextInputControlTestBase<T extends TextInputControl> extends Behavi
     public TextInputControlTestBase() {
     }
 
+    /**
+     * Returns a Runnable that sets the specified text on the control.
+     * @param text the text to set
+     * @return the Runnable
+     */
     protected Runnable setText(String text) {
         return () -> {
             control.setText(text);
         };
     }
 
+    /**
+     * Returns a Runnable that checks the control's text against the expected value.
+     * @param expected the expected text
+     * @return the Runnable
+     */
     protected Runnable checkText(String expected) {
         return () -> {
             String v = control.getText();
@@ -48,11 +58,54 @@ public class TextInputControlTestBase<T extends TextInputControl> extends Behavi
         };
     }
 
+    /**
+     * Returns a Runnable that checks the control's text and selection indexes against the expected values.
+     * @param expected the expected text
+     * @param start the expected selection start index
+     * @param end the expected selection end index
+     * @return the Runnable
+     */
+    protected Runnable checkText(String expected, int start, int end) {
+        return () -> {
+            String s = control.getText();
+            Assertions.assertEquals(expected, s, errorMessage());
+
+            IndexRange v = control.getSelection();
+            IndexRange expectedSelection = new IndexRange(start, end);
+            Assertions.assertEquals(expectedSelection, v, errorMessage());
+        };
+    }
+
+    /**
+     * Returns a Runnable that checks the control's text and selection indexes against the expected values.
+     * @param expected the expected text
+     * @param index the expected selection start and end index
+     * @return the Runnable
+     */
+    protected Runnable checkText(String expected, int index) {
+        return checkText(expected, index, index);
+    }
+
+    /**
+     * Returns a Runnable that checks the control's selection indexes against the expected values.
+     * @param start the expected selection start index
+     * @param end the expected selection end index
+     * @return the Runnable
+     */
     protected Runnable checkSelection(int start, int end) {
         return () -> {
             IndexRange v = control.getSelection();
             IndexRange expected = new IndexRange(start, end);
             Assertions.assertEquals(expected, v, errorMessage());
         };
+    }
+
+    /**
+     * Returns a Runnable that checks the control's selection indexe against the expected value.
+     * @param index the expected selection start and end index
+     * @return the Runnable
+     */
+    protected Runnable checkSelection(int index) {
+        return checkSelection(index, index);
     }
 }

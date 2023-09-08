@@ -26,11 +26,10 @@ package test.javafx.scene.control.behavior;
 
 import java.util.function.BooleanSupplier;
 import javafx.scene.control.Control;
-import javafx.scene.control.TextField;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -88,10 +87,20 @@ public abstract class BehaviorTestBase<C extends Control> {
         }
     }
 
+    /**
+     * Returns the Control being tested.
+     * @return the control
+     */
     public C control() {
         return control;
     }
 
+    /**
+     * Returns a Runnable that enulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the SHIFT modifier.
+     * @param k the key code
+     * @return the Runnable
+     */
     protected Runnable shift(KeyCode k) {
         return () -> {
             kb.keyPressed(k, KeyModifier.SHIFT);
@@ -99,6 +108,12 @@ public abstract class BehaviorTestBase<C extends Control> {
         };
     }
 
+    /**
+     * Returns a Runnable that enulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the SHORTCUT modifier.
+     * @param k the key code
+     * @return the Runnable
+     */
     protected Runnable shortcut(KeyCode k) {
         return () -> {
             kb.keyPressed(k, KeyModifier.getShortcutKey());
@@ -122,8 +137,14 @@ public abstract class BehaviorTestBase<C extends Control> {
     }
 
     /**
-     * Executes a test by emulating key press / key releases and various operations upon control.
-     * @param items the sequence of KeyCodes/Runnables
+     * Executes a test by emulating key press / key releases and various operations on the control being tested.
+     * For each item:
+     * <ul>
+     * <li> if a String, emulates KEY_PRESSED + KEY_TYPED + KEY_RELEASED events for each character
+     * <li> if a KeyCode, emulates KEY_PRESSED + KEY_RELEASED events for that KeyCode
+     * <li> if a Runnable, runs it
+     * </ul>
+     * @param items the sequence of KeyCodes/Runnables/String
      */
     protected void execute(Object ... items) {
         step = 0;
@@ -139,5 +160,31 @@ public abstract class BehaviorTestBase<C extends Control> {
             }
             step++;
         }
+    }
+
+    /**
+     * Returns a Runnable that checks the clipboard content against the given text.
+     * @param expected the expected clipboard content
+     * @return the Runnable
+     */
+    protected Runnable checkClipboard(String expected) {
+        return () -> {
+            Clipboard c = Clipboard.getSystemClipboard();
+            String v = c.getString();
+            Assertions.assertEquals(expected, v, errorMessage());
+        };
+    }
+
+    /**
+     * Returns a Runnable that copies the specified text to the system clipboard.
+     * @param text the text to copy
+     * @return the Runnable
+     */
+    protected Runnable copy(String text) {
+        return () -> {
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString(text);
+            Clipboard.getSystemClipboard().setContent(cc);
+        };
     }
 }

@@ -24,20 +24,7 @@
  */
 package test.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.BACK_SPACE;
-import static javafx.scene.input.KeyCode.C;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.F1;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.V;
-import static javafx.scene.input.KeyCode.X;
+import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.TextField;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -60,11 +47,8 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
         closeStage();
     }
 
-    /**
-     * Tests basic typing.
-     */
     @Test
-    public void testTyping() {
+    public void testTypingSanity() {
         execute(
             "hello",
             checkText("hello"),
@@ -99,37 +83,97 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
         Assertions.assertTrue(kb.keyTyped(SPACE, " "));
         Assertions.assertFalse(kb.keyReleased(SPACE));
     }
-
-    /**
-     * this is an example of a test script I have in mind.
-     * perhaps we need to extract helper methods into a separate class in
-     * package test.com.sun.javafx.scene.control.infrastructure;
-     */
+    
+//    @Test
+//    public void testCopyCutPaste2() {
+//        execute(
+//            setText("01"), shortcut(A), shortcut(C),
+//            shortcut(INSERT), checkClipboard("01")
+//        );
+//    }
+    
     @Test
-    public void testCopyCutPaste() {
+    public void testCopy() {
         execute(
-            setText("copy-cut=paste."),
-            HOME, checkSelection(0, 0),
-            shift(RIGHT), shift(RIGHT), shift(RIGHT), shift(RIGHT), shift(RIGHT),
-            checkSelection(0, 5),
-            shortcut(X),
-            checkText("cut=paste."),
-            END, shortcut(V),
-            checkText("cut=paste.copy-"),
-            shift(LEFT), shift(LEFT), shift(LEFT), shift(LEFT), shift(LEFT), shortcut(C),
-            HOME, shortcut(V),
-            checkText("copy-cut=paste.copy-")
+            setText("abcd"),
+            shift(RIGHT), checkSelection(0, 1),
+            shortcut(C), checkSelection(0, 1), checkClipboard("a"),
+            HOME, RIGHT, shift(RIGHT), checkSelection(1, 2),
+            shortcut(INSERT), checkSelection(1, 2), checkClipboard("b"),
+            HOME, RIGHT, RIGHT, shift(RIGHT), checkSelection(2, 3),
+            COPY, checkSelection(2, 3), checkClipboard("c")
+        );
+    }
+
+    @Test
+    public void testCut() {
+        execute(
+            setText("aa"),
+            shortcut(A), shortcut(X), checkText("", 0), checkClipboard("aa"),
+            setText("bb"),
+            shortcut(A), CUT, shortcut(X), checkText("", 0), checkClipboard("bb")
+        );
+        
+        control.setEditable(false);
+        execute(
+            copy("yo"),
+            setText("aa"),
+            shortcut(A), shortcut(X), checkText("aa", 0, 2), checkClipboard("yo"),
+            setText("bb"),
+            shortcut(A), CUT, shortcut(X), checkText("bb", 0, 2), checkClipboard("yo")
+        );
+    }
+
+    @Test
+    public void testPaste() {
+        execute(
+            setText(null),
+            copy("1"), shortcut(V), checkText("1", 1),
+            copy("2"), PASTE, checkText("12", 2),
+            copy("3"), shift(INSERT), checkText("123", 3)
+        );
+        
+        control.setEditable(false);
+        execute(
+            setText(""),
+            copy("1"), shortcut(V), checkText("", 0),
+            copy("2"), PASTE, checkText("", 0),
+            copy("3"), shift(INSERT), checkText("", 0)
         );
     }
 
     @Test
     public void testNavigation() {
         execute(
-            "abc", checkSelection(3, 3),
-            LEFT, LEFT, checkSelection(1, 1),
-            "0", checkText("a0bc")
+            "0123456789", checkSelection(10),
+            LEFT, LEFT, checkSelection(8),
+            RIGHT, checkSelection(9),
+            UP, checkSelection(0),
+            DOWN, checkSelection(10),
+            HOME, checkSelection(0),
+            END, checkSelection(10),
+            shortcut(HOME), checkSelection(0),
+            shortcut(END), checkSelection(10)
         );
     }
+    
+    @Test
+    public void testDeletion() {
+        execute(
+            setText("0123456789"),
+            END, BACK_SPACE, checkText("012345678"),
+            shift(BACK_SPACE), checkText("01234567"),
+            HOME, DELETE, checkText("1234567")
+        );
+
+        control.setEditable(false);
+        execute(
+            setText("0123456789"),
+            END, BACK_SPACE, checkText("0123456789"),
+            shift(BACK_SPACE), checkText("0123456789"),
+            HOME, DELETE, checkText("0123456789")
+        );
+    }            
 
     @Disabled("JDK-8296266") // FIX
     @Test
