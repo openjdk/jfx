@@ -151,7 +151,7 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
 //            shortcut(END), checkSelection(10)
 //        );
 //    }
-    
+
 //    @Test
 //    public void testDeletion() {
 //        execute(

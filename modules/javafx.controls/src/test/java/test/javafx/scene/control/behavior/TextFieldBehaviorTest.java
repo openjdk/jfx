@@ -148,7 +148,7 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
             shortcut(END), checkSelection(10)
         );
     }
-    
+
     @Test
     public void testDeletion() {
         execute(
