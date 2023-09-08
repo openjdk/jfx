@@ -28,7 +28,6 @@ package test.robot.javafx.scene;
 import java.util.concurrent.CountDownLatch;
 
 import com.sun.javafx.scene.control.ContextMenuContentShim;
-import com.sun.javafx.tk.Toolkit;
 
 import javafx.application.Application;
 import javafx.collections.FXCollections;
@@ -70,7 +69,6 @@ import test.util.Util;
 
 public class ChoiceBoxScrollUpOnCollectionChangeTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
-    static CountDownLatch scrollLatch = new CountDownLatch(1);
     static CountDownLatch choiceBoxDisplayLatch = new CountDownLatch(1);
     static CountDownLatch choiceBoxHiddenLatch = new CountDownLatch(1);
     static Robot robot;
@@ -92,16 +90,10 @@ public class ChoiceBoxScrollUpOnCollectionChangeTest {
     }
 
     private void scrollChoiceBox(int scrollAmt) throws Exception {
-        Util.runAndWait(() -> {
-            for (int i = 0; i < scrollAmt; i++) {
-                robot.keyType(KeyCode.DOWN);
-                Toolkit.getToolkit().firePulse();
-            }
-            scrollLatch.countDown();
-        });
-
-        Util.waitForLatch(scrollLatch, 5, "Timeout waiting for choicebox to be hidden.");
-        Thread.sleep(400); // Wait for up arrow to get loaded in UI
+        for (int i = 0; i < scrollAmt; i++) {
+            Util.runAndWait(() -> robot.keyType(KeyCode.DOWN));
+            Util.waitForIdle(scene);
+        }
 
         Util.runAndWait(() -> {
             robot.keyType(KeyCode.ENTER);

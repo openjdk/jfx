@@ -70,6 +70,7 @@ public class InputMap2<C extends Control> {
     // EventType<?> -> Entry with value=List<EventHandler> (behavior only)
     // KeyBinding -> Entry with value=FunctionTag
     // FunctionTag -> Entry with value=Runnable
+    // ON_KEY_ENTER/EXIT -> Entry with value=Runnable
     private final HashMap<Object,Entry> map = new HashMap<>();
 
     /**
