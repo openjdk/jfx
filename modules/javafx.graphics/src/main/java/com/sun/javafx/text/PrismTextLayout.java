@@ -944,9 +944,54 @@ public class PrismTextLayout implements TextLayout {
             leading = Math.max(leading, run.getLeading());
             length += run.getLength();
         }
+
+        /*
+         * Subtract the width of trailing spaces for the new TextLine so they're not taken into account
+         * for alignment calculations:
+         */
+
+        width -= computeTrailingSpaceWidth(startOffset, length, lineRuns);
+
         if (width > layoutWidth) layoutWidth = width;
         return new TextLine(startOffset, length, lineRuns,
                             width, ascent, descent, leading);
+    }
+
+    private float computeTrailingSpaceWidth(int startOffset, int length, TextRun[] lineRuns) {
+        char[] chars = getText();
+        int trailingSpaces = 0;
+
+        for (int i = length + startOffset - 1; i >= startOffset; i--) {
+            if (chars[i] != ' ') {
+                break;
+            }
+
+            trailingSpaces++;
+        }
+
+        float trailingSpaceWidth = 0;
+
+        if (trailingSpaces > 0) {
+            int lineRunCount = lineRuns.length;
+
+            for (int j = 0; j < lineRunCount; j++) {
+                TextRun textRun = lineRuns[j];
+                int runStart = textRun.getStart();
+                int runEnd = textRun.getEnd();
+
+                for (int k = runStart; k < runEnd; k++) {
+                    if (chars[k] == ' ') {
+                        trailingSpaceWidth += textRun.positions[k - runStart];
+
+                        if (--trailingSpaces == 0) {
+                            return trailingSpaceWidth;
+                        }
+                    }
+                }
+            }
+        }
+
+        return trailingSpaceWidth;
     }
 
     private void reorderLine(TextLine line) {
@@ -1127,12 +1172,10 @@ public class PrismTextLayout implements TextLayout {
                  */
                 int offset = hitOffset;
                 int runEnd = run.getEnd();
+
+                // Don't take spaces into account at the preferred wrap index:
                 while (offset + 1 < runEnd && chars[offset] == ' ') {
                     offset++;
-                    /* Preserve behaviour: only keep one white space in the line
-                     * before wrapping. Needed API to allow change.
-                     */
-                    break;
                 }
 
                 /* Find the break opportunity */
