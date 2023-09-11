@@ -1807,41 +1807,6 @@ public class Region extends Parent {
         return snapPortionY(value, isSnapToPixel());
     }
 
-    /**
-     * If this region's snapToPixel property is true, then the value is either floored (positive values) or
-     * ceiled (negative values) with a scale. When the absolute value of the given value
-     * multiplied by the current scale is less than 10^15, then this method guarantees that:
-     *
-     * <pre>snapInnerSpaceX(snapInnerSpaceX(value)) == snapInnerSpaceX(value)</pre>
-     *
-     * The limit is about 10^15 because double values will no longer be able to represent
-     * larger integers with exact precision beyond this limit.
-     *
-     * @since 22
-     * @param value The value that needs to be snapped
-     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel property
-     */
-    public double snapInnerSpaceX(double value) {
-        return snapPortionX(value, isSnapToPixel());
-    }
-
-    /**
-     * If this region's snapToPixel property is true, then the value is either floored (positive values) or
-     * ceiled (negative values) with a scale. When the absolute value of the given value
-     * multiplied by the current scale is less than 10^15, then this method guarantees that:
-     *
-     * <pre>snapInnerSpaceY(snapInnerSpaceY(value)) == snapInnerSpaceY(value)</pre>
-     *
-     * The limit is about 10^15 because double values will no longer be able to represent
-     * larger integers with exact precision beyond this limit.
-     *
-     * @since 22
-     * @param value The value that needs to be snapped
-     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel property
-     */
-    public double snapInnerSpaceY(double value) {
-        return snapPortionY(value, isSnapToPixel());
-    }
 
     /**
      * Utility method to get the top inset which includes padding and border

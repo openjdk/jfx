@@ -1282,17 +1282,6 @@ public class RegionTest {
         assertEquals(Long.MIN_VALUE, region.snapSpaceX(Double.NEGATIVE_INFINITY), 0.0);
         assertEquals(Long.MIN_VALUE, region.snapSpaceY(Double.NEGATIVE_INFINITY), 0.0);
 
-        // Inner space
-        assertEquals(Double.POSITIVE_INFINITY, region.snapInnerSpaceX(Double.MAX_VALUE), 0.0);
-        assertEquals(Double.POSITIVE_INFINITY, region.snapInnerSpaceY(Double.MAX_VALUE), 0.0);
-        assertEquals(Double.NEGATIVE_INFINITY, region.snapInnerSpaceX(-Double.MAX_VALUE), 0.0);
-        assertEquals(Double.NEGATIVE_INFINITY, region.snapInnerSpaceY(-Double.MAX_VALUE), 0.0);
-
-        assertEquals(Double.POSITIVE_INFINITY, region.snapInnerSpaceX(Double.POSITIVE_INFINITY), 0.0);
-        assertEquals(Double.POSITIVE_INFINITY, region.snapInnerSpaceY(Double.POSITIVE_INFINITY), 0.0);
-        assertEquals(Double.NEGATIVE_INFINITY, region.snapInnerSpaceX(Double.NEGATIVE_INFINITY), 0.0);
-        assertEquals(Double.NEGATIVE_INFINITY, region.snapInnerSpaceY(Double.NEGATIVE_INFINITY), 0.0);
-
         stage.setRenderScaleX(1.5);
         stage.setRenderScaleY(1.5);
 
@@ -1320,20 +1309,9 @@ public class RegionTest {
         assertEquals(Long.MAX_VALUE / 1.5, region.snapSpaceY(Double.POSITIVE_INFINITY), 0.0);
         assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceX(Double.NEGATIVE_INFINITY), 0.0);
         assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceY(Double.NEGATIVE_INFINITY), 0.0);
-
-        // Inner space
-        assertEquals(Double.MAX_VALUE, region.snapInnerSpaceX(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
-        assertEquals(Double.MAX_VALUE, region.snapInnerSpaceY(Double.MAX_VALUE), Math.ulp(Double.MAX_VALUE));
-        assertEquals(-Double.MAX_VALUE, region.snapInnerSpaceX(-Double.MAX_VALUE), 0.0);
-        assertEquals(-Double.MAX_VALUE, region.snapInnerSpaceY(-Double.MAX_VALUE), 0.0);
-
-        assertEquals(Double.POSITIVE_INFINITY, region.snapInnerSpaceX(Double.POSITIVE_INFINITY), 0.0);
-        assertEquals(Double.POSITIVE_INFINITY, region.snapInnerSpaceY(Double.POSITIVE_INFINITY), 0.0);
-        assertEquals(Double.NEGATIVE_INFINITY, region.snapInnerSpaceX(Double.NEGATIVE_INFINITY), 0.0);
-        assertEquals(Double.NEGATIVE_INFINITY, region.snapInnerSpaceY(Double.NEGATIVE_INFINITY), 0.0);
     }
 
-    // Test for JDK-8255415, JDK-8311527
+    // Test for JDK-8255415
     @Test
     public void snappingASnappedValueGivesTheSameValueTest() {
         Stage stage = new Stage();
@@ -1358,10 +1336,6 @@ public class RegionTest {
                 double snappedValue = region.snapSizeX(value);
                 double snapOfSnappedValue = region.snapSizeX(snappedValue);
                 assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
-
-                snappedValue = region.snapInnerSpaceX(value);
-                snapOfSnappedValue = region.snapInnerSpaceX(snappedValue);
-                assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
             }
         }
 
@@ -1371,10 +1345,6 @@ public class RegionTest {
                 double value = random.nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = region.snapSizeY(value);
                 double snapOfSnappedValue = region.snapSizeY(snappedValue);
-                assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
-
-                snappedValue = region.snapInnerSpaceY(value);
-                snapOfSnappedValue = region.snapInnerSpaceY(snappedValue);
                 assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
             }
         }
@@ -1397,28 +1367,6 @@ public class RegionTest {
                 double value = random.nextDouble() * Integer.MAX_VALUE;
                 double snappedValue = RegionShim.snapPortionY(region, value);
                 double snapOfSnappedValue = RegionShim.snapPortionY(region, snappedValue);
-                assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
-            }
-        }
-
-        // test snapInnerSpaceX/snapInnerSpaceY methods
-
-        for (double scale: scales) {
-            stage.setRenderScaleX(scale);
-            for (int j = 0; j < 1000; j++) {
-                double value = random.nextDouble() * Integer.MAX_VALUE;
-                double snappedValue = region.snapInnerSpaceX(value);
-                double snapOfSnappedValue = region.snapInnerSpaceX(snappedValue);
-                assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
-            }
-        }
-
-        for (double scale: scales) {
-            stage.setRenderScaleY(scale);
-            for (int j = 0; j < 1000; j++) {
-                double value = random.nextDouble() * Integer.MAX_VALUE;
-                double snappedValue = region.snapInnerSpaceY(value);
-                double snapOfSnappedValue = region.snapInnerSpaceY(snappedValue);
                 assertEquals(failMessage, snappedValue, snapOfSnappedValue, 0.0);
             }
         }
