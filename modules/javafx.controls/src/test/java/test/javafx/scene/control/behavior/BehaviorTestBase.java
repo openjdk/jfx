@@ -111,6 +111,19 @@ public abstract class BehaviorTestBase<C extends Control> {
 
     /**
      * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the CTRL modifier.
+     * @param k the key code
+     * @return the Runnable
+     */
+    protected Runnable ctrl(KeyCode k) {
+        return () -> {
+            kb.keyPressed(k, KeyModifier.CTRL);
+            kb.keyReleased(k, KeyModifier.CTRL);
+        };
+    }
+
+    /**
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
      * and the SHIFT modifier.
      * @param k the key code
      * @return the Runnable

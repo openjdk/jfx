@@ -146,6 +146,14 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             shift(BACK_SPACE), checkText("01234567"),
             HOME, DELETE, checkText("1234567")
         );
+        
+        if(!isMac()) {
+            execute(
+                setText("012"), END,
+                // delete previous char
+                ctrl(H), checkText("01", 2)
+            );
+        }
 
         control.setEditable(false);
         execute(
@@ -194,11 +202,19 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             setText("b"),
             "a", checkText("ab"),
             shortcut(Z), checkText("b", 0),
-            isMac() ?
-                key(Z, KeyModifier.getShortcutKey(), KeyModifier.SHIFT) :
-                key(Y, KeyModifier.CTRL),
+            redo(),
             checkText("ab")
         );
+    }
+
+    protected Runnable redo() {
+        if (isMac()) {
+            return key(Z, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        } else if (isWin()) {
+            return key(Y, KeyModifier.CTRL);
+        } else {
+            return key(Z, KeyModifier.CTRL, KeyModifier.SHIFT);
+        }
     }
 
     protected void testMacBindings() {
@@ -227,9 +243,23 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
         if (isMac()) {
             return;
         }
+
+        execute(
+            setText("abc"),
+            // select end
+            shift(END), checkSelection(0, 3),
+            // select home
+            END, shift(HOME), checkSelection(0, 3),
+            // deselect
+            ctrl(BACK_SLASH), checkSelection(-1)
+        );
     }
 
     protected void testWordMac() {
+        if (!isMac()) {
+            return;
+        }
+
         execute(
             setText("one two three"),
             // right word
@@ -239,7 +269,9 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             alt(LEFT), checkSelection(4),
             // delete next word
             alt(DELETE), checkText("one  three", 4),
+            // delete prev word
             alt(BACK_SPACE), checkText(" three", 0),
+
             setText(""), "one two three",
             // select left word
             key(LEFT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(8, 13),
@@ -250,7 +282,29 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
     }
 
     protected void testWordNonMac() {
-    // TODO
+        if (isMac()) {
+            return;
+        }
+
+        execute(
+            setText("one two three"),
+            // right word
+            ctrl(RIGHT), checkSelection(3),
+            ctrl(RIGHT), checkSelection(7),
+            // left word
+            ctrl(LEFT), checkSelection(4),
+            // delete next word
+            ctrl(DELETE), checkText("one  three", 4),
+            // delete prev word
+            ctrl(BACK_SPACE), checkText(" three", 0),
+
+            setText(""), "one two three",
+            // select left word
+            key(LEFT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(8, 13),
+            // select right word
+            LEFT, LEFT, LEFT, LEFT, LEFT,
+            key(RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(4, 7)
+        );
     }
 
     /**
