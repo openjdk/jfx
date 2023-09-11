@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import javafx.beans.NamedArg;
+import com.sun.javafx.scene.layout.RegionHelper;
 
 
 /**
@@ -97,10 +98,8 @@ public abstract class ResizeFeaturesBase<S> {
   public void setColumnWidth(TableColumnBase<S, ?> col, double width) {
       Control c = getTableControl();
       if (c.isSnapToPixel()) {
-          // min = snapCeil()
           double min = c.snapSizeX(col.getMinWidth());
-          // max = snapFloor()
-          double max = c.snapInnerSpaceX(col.getMaxWidth());
+          double max = RegionHelper.snapInnerSpaceX(c, col.getMaxWidth());
           if (width < min) {
               width = min;
           } else if (width > max) {
