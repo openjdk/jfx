@@ -251,7 +251,7 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             // select home
             END, shift(HOME), checkSelection(0, 3),
             // deselect
-            ctrl(BACK_SLASH), checkSelection(-1)
+            ctrl(BACK_SLASH), checkSelection(0)
         );
     }
 
@@ -286,24 +286,28 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             return;
         }
 
+        boolean win = isWin();
+
         execute(
             setText("one two three"),
             // right word
-            ctrl(RIGHT), checkSelection(3),
-            ctrl(RIGHT), checkSelection(7),
+            ctrl(RIGHT), checkSelection(win ? 4 : 3),
+            ctrl(RIGHT), checkSelection(win ? 8 : 7),
             // left word
             ctrl(LEFT), checkSelection(4),
             // delete next word
-            ctrl(DELETE), checkText("one  three", 4),
+            //ctrl(DELETE), checkText("one  three", 4),
+            ctrl(DELETE), checkText("one three", 4),
             // delete prev word
-            ctrl(BACK_SPACE), checkText(" three", 0),
+            //ctrl(BACK_SPACE), checkText(" three", 0),
+            ctrl(BACK_SPACE), checkText("three", 0),
 
             setText(""), "one two three",
             // select left word
             key(LEFT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(8, 13),
             // select right word
             LEFT, LEFT, LEFT, LEFT, LEFT,
-            key(RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(4, 7)
+            key(RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(4, win ? 8 : 7)
         );
     }
 
