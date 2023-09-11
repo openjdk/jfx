@@ -317,10 +317,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * The list of items to show within the ComboBox popup.
      */
-    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<>(this, "items");
+    private final ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<>(this, "items");
     public final void setItems(ObservableList<T> value) { itemsProperty().set(value); }
     public final ObservableList<T> getItems() {return items.get(); }
-    public ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
+    public final ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
 
 
     // --- string converter
@@ -330,8 +330,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * the input may be retrieved via the  {@link #valueProperty() value} property.
      * @return the converter property
      */
-    public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
-    private ObjectProperty<StringConverter<T>> converter =
+    public final ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
+    private final ObjectProperty<StringConverter<T>> converter =
             new SimpleObjectProperty<>(this, "converter", ComboBox.<T>defaultStringConverter());
     public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
     public final StringConverter<T> getConverter() {return converterProperty().get(); }
@@ -343,11 +343,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * rendering of items in the ComboBox. Refer to the {@link Cell} javadoc
      * for more information on cell factories.
      */
-    private ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactory =
+    private final ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactory =
             new SimpleObjectProperty<>(this, "cellFactory");
     public final void setCellFactory(Callback<ListView<T>, ListCell<T>> value) { cellFactoryProperty().set(value); }
     public final Callback<ListView<T>, ListCell<T>> getCellFactory() {return cellFactoryProperty().get(); }
-    public ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() { return cellFactory; }
+    public final ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() { return cellFactory; }
 
 
     // --- button cell
@@ -359,8 +359,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * @return the button cell property
      * @since JavaFX 2.2
      */
-    public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
-    private ObjectProperty<ListCell<T>> buttonCell =
+    public final ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
+    private final ObjectProperty<ListCell<T>> buttonCell =
             new SimpleObjectProperty<>(this, "buttonCell");
     public final void setButtonCell(ListCell<T> value) { buttonCellProperty().set(value); }
     public final ListCell<T> getButtonCell() {return buttonCellProperty().get(); }

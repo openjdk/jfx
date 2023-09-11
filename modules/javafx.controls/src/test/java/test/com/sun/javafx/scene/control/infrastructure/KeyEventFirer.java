@@ -322,6 +322,7 @@ public class KeyEventFirer {
     public static KeyCode getKeyCodeFor(char c) {
         if (keyCodes == null) {
             keyCodes = createKeyCodes(
+                " ", KeyCode.SPACE,
                 "a", KeyCode.A,
                 "b", KeyCode.B,
                 "c", KeyCode.C,
