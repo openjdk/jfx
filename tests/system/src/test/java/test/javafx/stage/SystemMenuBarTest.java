@@ -74,7 +74,6 @@ public class SystemMenuBarTest {
 
         menubarLatch.await();
 
-        System.err.println("FAILED IS: " + failed.get());
         assertFalse(failed.get());
     }
 
