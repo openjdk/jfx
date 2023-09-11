@@ -52,7 +52,7 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
     public void testConsume() {
         super.testConsume();
     }
-    
+
     @Test
     @Override
     public void testConsumeEnter() {
@@ -87,5 +87,29 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
     @Override
     public void testSelection() {
         super.testSelection();
+    }
+
+    @Test
+    @Override
+    public void testMacBindings() {
+        super.testMacBindings();
+    }
+
+    @Test
+    @Override
+    public void testNonMacBindings() {
+        super.testNonMacBindings();
+    }
+    
+    @Test
+    @Override
+    public final void testWordMac() {
+        super.testWordMac();
+    }
+    
+    @Test
+    @Override
+    public final void testWordNonMac() {
+        super.testWordNonMac();
     }
 }

@@ -52,7 +52,7 @@ public class PasswordFieldBehaviorTest extends TextInputControlTestBase<Password
     public void testConsume() {
         super.testConsume();
     }
-    
+
     @Test
     @Override
     public void testConsumeEnter() {
@@ -87,5 +87,31 @@ public class PasswordFieldBehaviorTest extends TextInputControlTestBase<Password
     @Override
     public void testSelection() {
         super.testSelection();
+    }
+
+    @Test
+    @Override
+    public void testMacBindings() {
+        super.testMacBindings();
+    }
+
+    @Test
+    @Override
+    public void testNonMacBindings() {
+        super.testNonMacBindings();
+    }
+    
+    @Test
+    @Override
+    public final void testWordMac() {
+        // word navigation is disabled
+        // TODO
+    }
+    
+    @Test
+    @Override
+    public final void testWordNonMac() {
+        // word navigation is disabled
+        // TODO
     }
 }

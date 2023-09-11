@@ -30,6 +30,7 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import org.junit.jupiter.api.Assertions;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -96,7 +97,20 @@ public abstract class BehaviorTestBase<C extends Control> {
     }
 
     /**
-     * Returns a Runnable that enulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the ALT modifier.
+     * @param k the key code
+     * @return the Runnable
+     */
+    protected Runnable alt(KeyCode k) {
+        return () -> {
+            kb.keyPressed(k, KeyModifier.ALT);
+            kb.keyReleased(k, KeyModifier.ALT);
+        };
+    }
+
+    /**
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
      * and the SHIFT modifier.
      * @param k the key code
      * @return the Runnable
@@ -109,7 +123,7 @@ public abstract class BehaviorTestBase<C extends Control> {
     }
 
     /**
-     * Returns a Runnable that enulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
      * and the SHORTCUT modifier.
      * @param k the key code
      * @return the Runnable
@@ -118,6 +132,20 @@ public abstract class BehaviorTestBase<C extends Control> {
         return () -> {
             kb.keyPressed(k, KeyModifier.getShortcutKey());
             kb.keyReleased(k, KeyModifier.getShortcutKey());
+        };
+    }
+
+    /**
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the specified modifiers.
+     * @param k the key code
+     * @param modifiers the key modifiers
+     * @return the Runnable
+     */
+    protected Runnable key(KeyCode k, KeyModifier ... modifiers) {
+        return () -> {
+            kb.keyPressed(k, modifiers);
+            kb.keyReleased(k, modifiers);
         };
     }
 
@@ -186,5 +214,29 @@ public abstract class BehaviorTestBase<C extends Control> {
             cc.putString(text);
             Clipboard.getSystemClipboard().setContent(cc);
         };
+    }
+
+    /**
+     * Returns true if the platform is macOS.
+     * @return true if platform is a Mac
+     */
+    protected boolean isMac() {
+        return PlatformUtil.isMac();
+    }
+
+    /**
+     * Returns true if the platform is Windows.
+     * @return true if platform is Windows
+     */
+    protected boolean isWin() {
+        return PlatformUtil.isWindows();
+    }
+
+    /**
+     * Returns true if the platform is Linux.
+     * @return true if platform is Linux
+     */
+    protected boolean isLinux() {
+        return PlatformUtil.isLinux();
     }
 }

@@ -25,11 +25,13 @@
 package test.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.*;
+import javafx.application.ConditionalFeature;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextInputControl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 
 /**
  * Base class for testing behaviors based on TextInputControlBehavior.
@@ -37,7 +39,7 @@ import org.junit.jupiter.api.Test;
 public class TextInputControlTestBase<T extends TextInputControl> extends BehaviorTestBase<T> {
     public TextInputControlTestBase() {
     }
-    
+
     @Test
     public final void testTypingSanity() {
         execute(
@@ -69,10 +71,10 @@ public class TextInputControlTestBase<T extends TextInputControl> extends Behavi
         Assertions.assertTrue(kb.keyTyped(SPACE, " "));
         Assertions.assertFalse(kb.keyReleased(SPACE));
     }
-    
+
     protected void testConsumeEnter() {
         Assertions.assertFalse(kb.keyPressed(ENTER));
-        Assertions.assertFalse(kb.keyReleased(ENTER));        
+        Assertions.assertFalse(kb.keyReleased(ENTER));
     }
 
     protected void testCopy() {
@@ -184,6 +186,62 @@ public class TextInputControlTestBase<T extends TextInputControl> extends Behavi
             checkSelection(0, 0),
             RIGHT, checkSelection(1, 1)
         );
+    }
+
+    @Test
+    public final void testUndoRedo() {
+        execute(
+            setText("b"),
+            "a", checkText("ab"),
+            shortcut(Z), checkText("b", 0),
+            isMac() ?
+                key(Z, KeyModifier.getShortcutKey(), KeyModifier.SHIFT) :
+                key(Y, KeyModifier.CTRL),
+            checkText("ab")
+        );
+    }
+
+    protected void testMacBindings() {
+        if (!isMac()) {
+            return;
+        }
+
+        execute(
+            setText("abc"),
+            shift(END), checkSelection(0, 3),
+            shortcut(LEFT), checkSelection(0),
+            shortcut(RIGHT), checkSelection(3),
+            shift(HOME), checkSelection(0, 3)
+        );
+    }
+
+    protected void testNonMacBindings() {
+        if (isMac()) {
+            return;
+        }
+    }
+
+    protected void testWordMac() {
+        execute(
+            setText("one two three"),
+            alt(RIGHT), checkSelection(3),
+            alt(RIGHT), checkSelection(7),
+            alt(LEFT), checkSelection(4),
+            alt(DELETE), checkText("one  three", 4),
+            alt(BACK_SPACE), checkText(" three", 0),
+            // TODO TA needs graphics
+            //END, shortcut(BACK_SPACE), checkText("")
+            setText(""), "one two three",
+            // select left word
+            key(LEFT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(8, 13),
+            // select right word
+            LEFT, LEFT, LEFT, LEFT, LEFT,
+            key(RIGHT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(4, 7)
+        );
+    }
+
+    protected void testWordNonMac() {
+    // TODO
     }
 
     /**

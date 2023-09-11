@@ -91,4 +91,28 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     public void testSelection() {
         // needs graphics
     }
+
+    @Test
+    @Override
+    public void testMacBindings() {
+        // TODO
+    }
+
+    @Test
+    @Override
+    public void testNonMacBindings() {
+        // TODO
+    }
+
+    @Test
+    @Override
+    public final void testWordMac() {
+        super.testWordMac();
+    }
+    
+    @Test
+    @Override
+    public final void testWordNonMac() {
+        super.testWordNonMac();
+    }
 }
