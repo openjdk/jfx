@@ -4326,7 +4326,8 @@ task sdk() {
     } else {
         gradle.taskGraph.whenReady { taskGraph ->
             taskGraph.allTasks.each { task ->
-                if (!isTestTask(task) && !task.name.equals("verifyJava")) {
+                if (!isTestTask(task) && !task.name.equals("verifyJava") &&
+                    !task.name.equals("validateSourceSets")) {
                     task.enabled = false
                 }
             }
