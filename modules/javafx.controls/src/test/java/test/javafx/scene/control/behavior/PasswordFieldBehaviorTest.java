@@ -100,14 +100,14 @@ public class PasswordFieldBehaviorTest extends TextInputControlTestBase<Password
     public void testNonMacBindings() {
         super.testNonMacBindings();
     }
-    
+
     @Test
     @Override
     public final void testWordMac() {
         // word navigation is disabled
         // TODO
     }
-    
+
     @Test
     @Override
     public final void testWordNonMac() {

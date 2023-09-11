@@ -100,13 +100,13 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
     public void testNonMacBindings() {
         super.testNonMacBindings();
     }
-    
+
     @Test
     @Override
     public final void testWordMac() {
         super.testWordMac();
     }
-    
+
     @Test
     @Override
     public final void testWordNonMac() {

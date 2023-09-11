@@ -95,13 +95,13 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     @Test
     @Override
     public void testMacBindings() {
-        // TODO
+        // needs graphics
     }
 
     @Test
     @Override
     public void testNonMacBindings() {
-        // TODO
+        // needs graphics
     }
 
     @Test
@@ -109,7 +109,7 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     public final void testWordMac() {
         super.testWordMac();
     }
-    
+
     @Test
     @Override
     public final void testWordNonMac() {

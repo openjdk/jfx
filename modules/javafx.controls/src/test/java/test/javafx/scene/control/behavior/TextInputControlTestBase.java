@@ -211,7 +211,11 @@ public class TextInputControlTestBase<T extends TextInputControl> extends Behavi
             shift(END), checkSelection(0, 3),
             shortcut(LEFT), checkSelection(0),
             shortcut(RIGHT), checkSelection(3),
-            shift(HOME), checkSelection(0, 3)
+            shift(HOME), checkSelection(0, 3),
+            // select home extend
+            END, key(LEFT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT), checkSelection(0, 3),
+            // select end extend
+            HOME, key(RIGHT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT), checkSelection(0, 3)
         );
     }
 
