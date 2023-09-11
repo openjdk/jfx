@@ -36,8 +36,8 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 /**
  * Base class for testing behaviors based on TextInputControlBehavior.
  */
-public class TextInputControlTestBase<T extends TextInputControl> extends BehaviorTestBase<T> {
-    public TextInputControlTestBase() {
+public abstract class TextInputControlTestBase<T extends TextInputControl> extends BehaviorTestBase<T> {
+    protected TextInputControlTestBase() {
     }
 
     @Test
@@ -208,9 +208,13 @@ public class TextInputControlTestBase<T extends TextInputControl> extends Behavi
 
         execute(
             setText("abc"),
+            // select end extend
             shift(END), checkSelection(0, 3),
+            // home
             shortcut(LEFT), checkSelection(0),
+            // end
             shortcut(RIGHT), checkSelection(3),
+            // select home extend
             shift(HOME), checkSelection(0, 3),
             // select home extend
             END, key(LEFT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT), checkSelection(0, 3),
@@ -228,13 +232,14 @@ public class TextInputControlTestBase<T extends TextInputControl> extends Behavi
     protected void testWordMac() {
         execute(
             setText("one two three"),
+            // right word
             alt(RIGHT), checkSelection(3),
             alt(RIGHT), checkSelection(7),
+            // left word
             alt(LEFT), checkSelection(4),
+            // delete next word
             alt(DELETE), checkText("one  three", 4),
             alt(BACK_SPACE), checkText(" three", 0),
-            // TODO TA needs graphics
-            //END, shortcut(BACK_SPACE), checkText("")
             setText(""), "one two three",
             // select left word
             key(LEFT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(8, 13),

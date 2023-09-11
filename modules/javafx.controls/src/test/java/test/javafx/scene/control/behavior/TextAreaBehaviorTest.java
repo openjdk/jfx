@@ -35,8 +35,8 @@ import org.junit.jupiter.api.Test;
 /**
  * Tests the TextArea behavior using public APIs.
  *
- * Note: some aspects of behavior (navigation, selection) require a fully functional skin,
- * so it is impossible to test with a headless environment.
+ * Note: some aspects of behavior (navigation, selection) require a fully rendered skin,
+ * so it is impossible to test in headless environment.
  */
 public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
 
@@ -96,6 +96,9 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     @Override
     public void testMacBindings() {
         // needs graphics
+        // delete from line start
+        // TODO TA needs graphics
+        //END, shortcut(BACK_SPACE), checkText("")
     }
 
     @Test
