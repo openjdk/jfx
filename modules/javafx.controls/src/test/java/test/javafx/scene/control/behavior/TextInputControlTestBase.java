@@ -146,7 +146,7 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             shift(BACK_SPACE), checkText("01234567"),
             HOME, DELETE, checkText("1234567")
         );
-        
+
         if(!isMac()) {
             execute(
                 setText("012"), END,
@@ -296,11 +296,9 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             // left word
             ctrl(LEFT), checkSelection(4),
             // delete next word
-            //ctrl(DELETE), checkText("one  three", 4),
-            ctrl(DELETE), checkText("one three", 4),
+            ctrl(DELETE), checkText(win ? "one three" : "one  three", 4),
             // delete prev word
-            //ctrl(BACK_SPACE), checkText(" three", 0),
-            ctrl(BACK_SPACE), checkText("three", 0),
+            ctrl(BACK_SPACE), checkText(win ? "three" : " three", 0),
 
             setText(""), "one two three",
             // select left word
