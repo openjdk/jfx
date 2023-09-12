@@ -60,6 +60,11 @@ public class Util {
     /** Test timeout value in milliseconds */
     public static final int TIMEOUT = 10000;
 
+    private static final String OS = System.getProperty("os.name");
+    private static final boolean WINDOWS = OS.startsWith("Windows");
+    private static final boolean MAC = OS.startsWith("Mac");
+    private static final boolean LINUX = OS.startsWith("Linux");
+
     private static interface Future {
         public abstract boolean await(long timeout, TimeUnit unit);
     }
@@ -465,5 +470,29 @@ public class Util {
 
     private static boolean isFractional(double x) {
         return x != Math.rint(x);
+    }
+
+    /**
+     * Returns true if the operating system is a form of Windows.
+     * @return true if the platform is Windows
+     */
+    public static boolean isWindows(){
+        return WINDOWS;
+    }
+
+    /**
+     * Returns true if the operating system is a form of Mac OS.
+     * @return true if the platform is Mac
+     */
+    public static boolean isMac(){
+        return MAC;
+    }
+
+    /**
+     * Returns true if the operating system is a form of Linux.
+     * @return true if the platform is Linux
+     */
+    public static boolean isLinux(){
+        return LINUX;
     }
 }

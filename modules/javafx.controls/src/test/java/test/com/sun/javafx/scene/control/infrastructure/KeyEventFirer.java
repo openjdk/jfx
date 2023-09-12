@@ -323,6 +323,8 @@ public class KeyEventFirer {
         if (keyCodes == null) {
             keyCodes = createKeyCodes(
                 " ", KeyCode.SPACE,
+                "\t", KeyCode.TAB,
+                "\n", KeyCode.ENTER,
                 "a", KeyCode.A,
                 "b", KeyCode.B,
                 "c", KeyCode.C,
@@ -360,8 +362,7 @@ public class KeyEventFirer {
                 "8", KeyCode.DIGIT8,
                 "9", KeyCode.DIGIT9,
                 ".", KeyCode.PERIOD,
-                ",", KeyCode.COMMA,
-                "\n", KeyCode.ENTER
+                ",", KeyCode.COMMA
             );
         }
 
