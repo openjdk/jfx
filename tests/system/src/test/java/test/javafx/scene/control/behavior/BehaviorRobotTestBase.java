@@ -70,7 +70,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
             scene = new Scene(content);
             stage.setScene(scene);
             stage.setWidth(500);
-            stage.setHeight(400);
+            stage.setHeight(300);
             stage.setOnShown(l -> {
                 Platform.runLater(() -> startupLatch.countDown());
             });
@@ -79,14 +79,15 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
     }
 
     @BeforeEach
-    public final void beforeEach() {
+    public void beforeEach() {
         Platform.runLater(() -> {
+            step = 0;
             content.setCenter(control);
         });
     }
 
     @AfterEach
-    public final void afterEach() {
+    public void afterEach() {
         Platform.runLater(() -> {
             content.setCenter(null);
         });
@@ -114,7 +115,6 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
      * @param items the sequence of KeyCodes/Runnables/String
      */
     protected void execute(Object ... items) {
-        step = 0;
         for (Object x : items) {
             if (x instanceof Runnable r) {
                 Util.runAndWait(() -> {
@@ -128,16 +128,17 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
             } else if (x instanceof String s) {
                 for (int i = 0; i < s.length(); i++) {
                     char c = s.charAt(i);
+                    KeyCode k = getKeyCodeForChar(c);
                     Util.runAndWait(() -> {
-                        KeyCode code = getKeyCodeForChar(c);
-                        robot.keyType(code);
+                        robot.keyPress(k);
+                        robot.keyRelease(k);
                     });
                 }
             }
             step++;
         }
     }
-    
+
     /**
      * Looks up a KeyCode for the given character.
      * @param c character
@@ -208,7 +209,12 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         return m;
     }
 
-    protected Runnable exe(BooleanSupplier test) {
+    /**
+     * Returns a Runnable that, when executed, checks the result of the specified boolean operation.
+     * @param test the operation
+     * @return the Runnable
+     */
+    protected Runnable check(BooleanSupplier test) {
         return () -> {
             boolean result = test.getAsBoolean();
             Assertions.assertTrue(result, errorMessage());
@@ -238,5 +244,43 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
             robot.keyRelease(k);
             robot.keyRelease(shortcut);
         };
+    }
+
+    /**
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the SHIFT modifier.
+     * @param k the key code
+     * @return the Runnable
+     */
+    protected Runnable shift(KeyCode k) {
+        return () -> {
+            robot.keyPress(KeyCode.SHIFT);
+            robot.keyPress(k);
+            robot.keyRelease(k);
+            robot.keyRelease(KeyCode.SHIFT);
+        };
+    }
+
+    /**
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the CTRL modifier.
+     * @param k the key code
+     * @return the Runnable
+     */
+    protected Runnable ctrl(KeyCode k) {
+        return () -> {
+            robot.keyPress(KeyCode.CONTROL);
+            robot.keyPress(k);
+            robot.keyRelease(k);
+            robot.keyRelease(KeyCode.CONTROL);
+        };
+    }
+
+    protected void sleep(int ms) {
+        try {
+            Thread.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

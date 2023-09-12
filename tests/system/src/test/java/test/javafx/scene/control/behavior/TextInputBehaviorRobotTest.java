@@ -27,6 +27,7 @@ package test.javafx.scene.control.behavior;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextInputControl;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Base class for Robot testing TextInputControl descendants' behavior.
@@ -36,7 +37,16 @@ public abstract class TextInputBehaviorRobotTest<C extends TextInputControl> ext
     protected TextInputBehaviorRobotTest(C control) {
         super(control);
     }
-    
+
+    @BeforeEach
+    @Override
+    public void beforeEach() {
+        super.beforeEach();
+        // a good initial state
+        control.setText("");
+        control.setEditable(true);
+    }
+
     /**
      * Returns a Runnable that sets the specified text on the control.
      * @param text the text to set
@@ -109,5 +119,22 @@ public abstract class TextInputBehaviorRobotTest<C extends TextInputControl> ext
      */
     protected Runnable checkSelection(int index) {
         return checkSelection(index, index);
+    }
+
+    /**
+     * Returns a Runnable that checks the control's selection indexes against the specified testers.
+     * @param tester the selection tester
+     * @return the Runnable
+     */
+    protected Runnable checkSelection(SelectionChecker tester) {
+        return () -> {
+            IndexRange r = control.getSelection();
+            Assertions.assertTrue(tester.test(r.getStart(), r.getEnd()), errorMessage() + " (selection=" + r + ")");
+        };
+    }
+
+    @FunctionalInterface
+    public static interface SelectionChecker {
+        public boolean test(int start, int end);
     }
 }
