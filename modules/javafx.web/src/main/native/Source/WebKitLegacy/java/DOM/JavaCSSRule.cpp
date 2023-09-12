@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_dispose(JNIEnv*, jcla
 JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getTypeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->type();
+    return IMPL->typeForCSSOM();
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSRuleImpl_getCssTextImpl(JNIEnv* env, jclass, jlong peer)

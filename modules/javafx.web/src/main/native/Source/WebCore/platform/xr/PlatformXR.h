@@ -38,7 +38,7 @@
 #endif
 
 namespace WebCore {
-struct SecurityOriginData;
+class SecurityOriginData;
 }
 
 namespace PlatformXR {
@@ -89,7 +89,7 @@ enum class XRTargetRayMode {
 };
 
 // https://immersive-web.github.io/webxr/#feature-descriptor
-enum class SessionFeature {
+enum class SessionFeature : uint8_t {
     ReferenceSpaceTypeViewer,
     ReferenceSpaceTypeLocal,
     ReferenceSpaceTypeLocalFloor,
@@ -295,6 +295,10 @@ public:
             bool isShared { false };
 #else
             PlatformGLObject opaqueTexture { 0 };
+#endif
+#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+            MachSendRight completionPort { };
+            uint64_t renderingFrameIndex { 0 };
 #endif
 
             template<class Encoder> void encode(Encoder&) const;
@@ -581,6 +585,10 @@ void Device::FrameData::LayerData::encode(Encoder& encoder) const
 #else
     encoder << opaqueTexture;
 #endif
+#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+    encoder << completionPort;
+    encoder << renderingFrameIndex;
+#endif
 }
 
 template<class Decoder>
@@ -591,11 +599,17 @@ std::optional<Device::FrameData::LayerData> Device::FrameData::LayerData::decode
     MachSendRight surfaceSendRight;
     if (!decoder.decode(surfaceSendRight))
         return std::nullopt;
-    layerData.surface = WebCore::IOSurface::createFromSendRight(WTFMove(surfaceSendRight), WebCore::DestinationColorSpace::SRGB());
+    layerData.surface = WebCore::IOSurface::createFromSendRight(WTFMove(surfaceSendRight));
     if (!decoder.decode(layerData.isShared))
         return std::nullopt;
 #else
     if (!decoder.decode(layerData.opaqueTexture))
+        return std::nullopt;
+#endif
+#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+    if (!decoder.decode(layerData.completionPort))
+        return std::nullopt;
+    if (!decoder.decode(layerData.renderingFrameIndex))
         return std::nullopt;
 #endif
     return layerData;

@@ -28,6 +28,9 @@ function initializeWritableStreamDefaultController()
 {
     "use strict";
 
+    if (arguments.length !== 1 && arguments[0] !== @isWritableStream)
+        @throwTypeError("WritableStreamDefaultController constructor should not be called directly");
+
     @putByIdDirectPrivate(this, "queue", @newQueue());
     @putByIdDirectPrivate(this, "abortSteps", (reason) => {
         const result = @getByIdDirectPrivate(this, "abortAlgorithm").@call(@undefined, reason);
@@ -40,6 +43,17 @@ function initializeWritableStreamDefaultController()
     });
 
     return this;
+}
+
+@getter
+function signal()
+{
+    "use strict";
+
+    if (@getByIdDirectPrivate(this, "abortSteps") === @undefined)
+        throw @makeThisTypeError("WritableStreamDefaultController", "signal");
+
+    return @getByIdDirectPrivate(this, "signal");
 }
 
 function error(e)

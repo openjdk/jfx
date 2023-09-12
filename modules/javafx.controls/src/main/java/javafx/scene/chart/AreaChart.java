@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -450,6 +450,13 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         final double dataYMax = sortY ? axisY.getHeight() + hlw : Double.POSITIVE_INFINITY;
         LineTo prevDataPoint = null;
         LineTo nextDataPoint = null;
+        ObservableList<PathElement> lineElements = linePath.getElements();
+        ObservableList<PathElement> fillElements = null;
+        if (fillPath != null) {
+            fillElements = fillPath.getElements();
+            fillElements.clear();
+        }
+        lineElements.clear();
         constructedPath.clear();
         for (Iterator<Data<X, Y>> it = chart.getDisplayedDataIterator(series); it.hasNext(); ) {
             Data<X, Y> item = it.next();
@@ -510,16 +517,10 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             LineTo first = constructedPath.get(0);
             LineTo last = constructedPath.get(constructedPath.size()-1);
 
-            final double displayYPos = first.getY();
-
-            ObservableList<PathElement> lineElements = linePath.getElements();
-            lineElements.clear();
-            lineElements.add(new MoveTo(first.getX(), displayYPos));
+            lineElements.add(new MoveTo(first.getX(), first.getY()));
             lineElements.addAll(constructedPath);
 
             if (fillPath != null) {
-                ObservableList<PathElement> fillElements = fillPath.getElements();
-                fillElements.clear();
                 double yOrigin = axisY.getDisplayPosition(axisY.toRealValue(0.0));
 
                 fillElements.add(new MoveTo(first.getX(), yOrigin));

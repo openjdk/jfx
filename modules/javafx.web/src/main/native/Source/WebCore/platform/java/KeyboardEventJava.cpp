@@ -36,18 +36,18 @@
 
 namespace WebCore {
 
-static PlatformKeyboardEvent::Type toPlatformKeyboardEventType(jint type)
+static PlatformEvent::Type toPlatformKeyboardEventType(jint type)
 {
     switch (type) {
         case com_sun_webkit_event_WCKeyEvent_KEY_PRESSED:
-            return PlatformKeyboardEvent::RawKeyDown;
+            return PlatformEvent::Type::RawKeyDown;
         case com_sun_webkit_event_WCKeyEvent_KEY_TYPED:
-            return PlatformKeyboardEvent::Char;
+            return PlatformEvent::Type::Char;
         case com_sun_webkit_event_WCKeyEvent_KEY_RELEASED:
-            return PlatformKeyboardEvent::KeyUp;
+            return PlatformEvent::Type::KeyUp;
         default:
             ASSERT_NOT_REACHED();
-            return PlatformKeyboardEvent::RawKeyDown;
+            return PlatformEvent::Type::RawKeyDown;
     }
 }
 
@@ -83,15 +83,16 @@ PlatformKeyboardEvent::PlatformKeyboardEvent(
         : String();
 }
 
-bool PlatformKeyboardEvent::currentCapsLockState()
-{
-    notImplemented();
-    return false;
-}
 
 void PlatformKeyboardEvent::disambiguateKeyDownEvent(Type, bool)
 {
     ASSERT_NOT_REACHED();
+}
+#if 0
+bool PlatformKeyboardEvent::currentCapsLockState()
+{
+    notImplemented();
+    return false;
 }
 
 void PlatformKeyboardEvent::getCurrentModifierState(bool&, bool&, bool&, bool&)
@@ -116,6 +117,10 @@ static const unsigned short HIGH_BIT_MASK_SHORT = 0x8000;
 */
     notImplemented();
 }
+#endif
 
-
+OptionSet<PlatformEvent::Modifier> PlatformKeyboardEvent::currentStateOfModifierKeys()
+{
+    return { }; // FIXME: Implement.
+}
 } // namespace WebCore

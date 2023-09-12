@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingState.h"
 #include "TableGrid.h"
 #include <wtf/IsoMalloc.h>
@@ -39,7 +37,7 @@ namespace Layout {
 class TableFormattingState : public FormattingState {
     WTF_MAKE_ISO_ALLOCATED(TableFormattingState);
 public:
-    TableFormattingState(Ref<FloatingState>&&, LayoutState&, const ContainerBox& tableBox);
+    TableFormattingState(LayoutState&, const ElementBox& tableBox);
     ~TableFormattingState();
 
     TableGrid& tableGrid() { return m_tableGrid; }
@@ -54,4 +52,3 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_STATE(TableFormattingState, isTableFormattingState())
 
-#endif

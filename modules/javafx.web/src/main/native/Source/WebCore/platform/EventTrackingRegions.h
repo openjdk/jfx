@@ -41,8 +41,7 @@ enum class TrackingType : uint8_t {
     Synchronous = 2
 };
 
-struct EventTrackingRegions {
-    enum class EventType : uint8_t {
+enum class EventTrackingRegionsEventType : uint8_t {
         Mousedown,
         Mousemove,
         Mouseup,
@@ -59,7 +58,10 @@ struct EventTrackingRegions {
         Touchmove,
         Touchstart,
         Wheel,
-    };
+};
+
+struct EventTrackingRegions {
+    using EventType = EventTrackingRegionsEventType;
 
     WEBCORE_EXPORT static ASCIILiteral eventName(EventType);
     WEBCORE_EXPORT static const AtomString& eventNameAtomString(const EventNames&, EventType);
@@ -85,29 +87,3 @@ bool operator==(const EventTrackingRegions&, const EventTrackingRegions&);
 inline bool operator!=(const EventTrackingRegions& a, const EventTrackingRegions& b) { return !(a == b); }
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::EventTrackingRegions::EventType> {
-    using values = EnumValues<
-        WebCore::EventTrackingRegions::EventType,
-        WebCore::EventTrackingRegions::EventType::Mousedown,
-        WebCore::EventTrackingRegions::EventType::Mousemove,
-        WebCore::EventTrackingRegions::EventType::Mouseup,
-        WebCore::EventTrackingRegions::EventType::Mousewheel,
-        WebCore::EventTrackingRegions::EventType::Pointerdown,
-        WebCore::EventTrackingRegions::EventType::Pointerenter,
-        WebCore::EventTrackingRegions::EventType::Pointerleave,
-        WebCore::EventTrackingRegions::EventType::Pointermove,
-        WebCore::EventTrackingRegions::EventType::Pointerout,
-        WebCore::EventTrackingRegions::EventType::Pointerover,
-        WebCore::EventTrackingRegions::EventType::Pointerup,
-        WebCore::EventTrackingRegions::EventType::Touchend,
-        WebCore::EventTrackingRegions::EventType::Touchforcechange,
-        WebCore::EventTrackingRegions::EventType::Touchmove,
-        WebCore::EventTrackingRegions::EventType::Touchstart,
-        WebCore::EventTrackingRegions::EventType::Wheel
-    >;
-};
-
-} // namespace WTF

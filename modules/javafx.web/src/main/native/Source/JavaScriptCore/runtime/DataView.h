@@ -32,15 +32,10 @@ namespace JSC {
 
 class DataView final : public ArrayBufferView {
 public:
-    JS_EXPORT_PRIVATE static Ref<DataView> create(RefPtr<ArrayBuffer>&&, size_t byteOffset, size_t length);
+    JS_EXPORT_PRIVATE static Ref<DataView> create(RefPtr<ArrayBuffer>&&, size_t byteOffset, std::optional<size_t> length);
     static Ref<DataView> create(RefPtr<ArrayBuffer>&&);
 
-    TypedArrayType getType() const final
-    {
-        return TypeDataView;
-    }
-
-    JSArrayBufferView* wrap(JSGlobalObject*, JSGlobalObject*) final;
+    JSArrayBufferView* wrapImpl(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject);
 
     template<typename T>
     T get(size_t offset, bool littleEndian, bool* status = nullptr)
@@ -54,7 +49,7 @@ public:
         } else
             RELEASE_ASSERT(offset + sizeof(T) <= byteLength());
         return flipBytesIfLittleEndian(
-            *reinterpret_cast<T*>(static_cast<uint8_t*>(m_baseAddress.get(byteLength())) + offset),
+            *reinterpret_cast<T*>(static_cast<uint8_t*>(baseAddress()) + offset),
             littleEndian);
     }
 
@@ -78,12 +73,14 @@ public:
             *status = true;
         } else
             RELEASE_ASSERT(offset + sizeof(T) <= byteLength());
-        *reinterpret_cast<T*>(static_cast<uint8_t*>(m_baseAddress.get(byteLength())) + offset) =
+        *reinterpret_cast<T*>(static_cast<uint8_t*>(baseAddress()) + offset) =
             flipBytesIfLittleEndian(value, littleEndian);
     }
 
+    JS_EXPORT_PRIVATE static RefPtr<DataView> wrappedAs(Ref<ArrayBuffer>&&, size_t byteOffset, std::optional<size_t> length);
+
 private:
-    DataView(RefPtr<ArrayBuffer>&&, size_t byteOffset, size_t byteLength);
+    DataView(RefPtr<ArrayBuffer>&&, size_t byteOffset, std::optional<size_t> byteLength);
 };
 
 } // namespace JSC

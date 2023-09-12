@@ -53,7 +53,7 @@ ScriptCallStack::ScriptCallStack(Vector<ScriptCallFrame>&& frames, bool truncate
     , m_truncated(truncated)
     , m_parentStackTrace(parentStackTrace)
 {
-    ASSERT(m_frames.size() < maxCallStackSizeToCapture);
+    ASSERT(m_frames.size() <= maxCallStackSizeToCapture);
 }
 
 ScriptCallStack::~ScriptCallStack()
@@ -87,6 +87,11 @@ const ScriptCallFrame* ScriptCallStack::firstNonNativeCallFrame() const
 void ScriptCallStack::append(const ScriptCallFrame& frame)
 {
     m_frames.append(frame);
+}
+
+void ScriptCallStack::removeParentStackTrace()
+{
+    m_parentStackTrace = nullptr;
 }
 
 bool ScriptCallStack::isEqual(ScriptCallStack* o) const

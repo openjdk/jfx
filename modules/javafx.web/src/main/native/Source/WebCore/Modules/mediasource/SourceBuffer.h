@@ -57,10 +57,10 @@ class TimeRanges;
 class VideoTrackList;
 class WebCoreOpaqueRoot;
 
-class SourceBuffer final
+class SourceBuffer
     : public RefCounted<SourceBuffer>
     , public ActiveDOMObject
-    , public EventTargetWithInlineData
+    , public EventTarget
     , private SourceBufferPrivateClient
     , private AudioTrackClient
     , private VideoTrackClient
@@ -71,10 +71,11 @@ class SourceBuffer final
 {
     WTF_MAKE_ISO_ALLOCATED(SourceBuffer);
 public:
-    using WeakValueType = EventTarget::WeakValueType;
     using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+    using EventTarget::WeakPtrImplType;
 
-    static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource*);
+    static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource&);
     virtual ~SourceBuffer();
 
     bool updating() const { return m_updating; }
@@ -106,7 +107,7 @@ public:
     void removedFromMediaSource();
     void seekToTime(const MediaTime&);
 
-    bool canPlayThroughRange(PlatformTimeRanges&);
+    bool canPlayThroughRange(const PlatformTimeRanges&);
 
     bool hasVideo() const;
 
@@ -144,9 +145,12 @@ public:
 
     WebCoreOpaqueRoot opaqueRoot();
 
-private:
-    SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource*);
+    virtual bool isManaged() const { return false; }
 
+protected:
+    SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource&);
+
+private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -161,7 +165,7 @@ private:
     void sourceBufferPrivateAppendError(bool decodeError) final;
     void sourceBufferPrivateAppendComplete(AppendResult) final;
     void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&) final;
-    void sourceBufferPrivateDurationChanged(const MediaTime& duration) final;
+    void sourceBufferPrivateDurationChanged(const MediaTime& duration, CompletionHandler<void()>&&) final;
     void sourceBufferPrivateDidParseSample(double sampleDuration) final;
     void sourceBufferPrivateDidDropSample() final;
     void sourceBufferPrivateBufferedDirtyChanged(bool) final;

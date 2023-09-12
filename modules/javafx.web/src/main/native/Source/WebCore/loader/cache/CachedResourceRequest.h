@@ -42,6 +42,7 @@ class Document;
 class FrameLoader;
 class Page;
 struct ServiceWorkerRegistrationData;
+enum class CachePolicy : uint8_t;
 enum class ReferrerPolicy : uint8_t;
 
 bool isRequestCrossOrigin(SecurityOrigin*, const URL& requestURL, const ResourceLoaderOptions&);
@@ -64,8 +65,8 @@ public:
     void setPriority(std::optional<ResourceLoadPriority>&& priority) { m_priority = WTFMove(priority); }
 
     void setInitiator(Element&);
-    void setInitiator(const AtomString& name);
-    const AtomString& initiatorName() const;
+    void setInitiatorType(const AtomString&);
+    const AtomString& initiatorType() const;
 
     bool allowsCaching() const { return m_options.cachingPolicy == CachingPolicy::AllowCaching; }
     void setCachingPolicy(CachingPolicy policy) { m_options.cachingPolicy = policy;  }
@@ -78,7 +79,6 @@ public:
 
     void updateForAccessControl(Document&);
 
-    void updateFetchMetadataHeaders();
     void updateReferrerPolicy(ReferrerPolicy);
     void updateReferrerAndOriginHeaders(FrameLoader&);
     void updateUserAgentHeader(FrameLoader&);
@@ -86,6 +86,9 @@ public:
     void setAcceptHeaderIfNone(CachedResource::Type);
     void updateAccordingCacheMode();
     void updateAcceptEncodingHeader();
+    void updateCacheModeIfNeeded(CachePolicy);
+
+    void disableCachingIfNeeded();
 
     void removeFragmentIdentifierIfNeeded();
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -119,7 +122,7 @@ private:
     ResourceLoaderOptions m_options;
     std::optional<ResourceLoadPriority> m_priority;
     RefPtr<Element> m_initiatorElement;
-    AtomString m_initiatorName;
+    AtomString m_initiatorType;
     RefPtr<SecurityOrigin> m_origin;
     String m_fragmentIdentifier;
     bool m_isLinkPreload { false };

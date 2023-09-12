@@ -48,6 +48,7 @@
 #include "JSHTMLModelElementCamera.h"
 #include "LayoutRect.h"
 #include "LayoutSize.h"
+#include "MIMETypeRegistry.h"
 #include "Model.h"
 #include "ModelPlayer.h"
 #include "ModelPlayerProvider.h"
@@ -64,6 +65,8 @@
 #include <wtf/URL.h>
 
 namespace WebCore {
+
+using namespace HTMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLModelElement);
 
@@ -98,23 +101,37 @@ RefPtr<Model> HTMLModelElement::model() const
     return m_model;
 }
 
-void HTMLModelElement::sourcesChanged()
+static bool isSupportedModelType(const AtomString& type)
 {
-    if (!document().hasBrowsingContext()) {
-        setSourceURL(URL { });
-        return;
-    }
+    return type.isEmpty() || MIMETypeRegistry::isSupportedModelMIMEType(type);
+}
+
+URL HTMLModelElement::selectModelSource() const
+{
+    // FIXME: This should probably work more like media element resource
+    // selection, where if a <source> element fails to load, an error event
+    // is dispatched to it, and we continue to try subsequent <source>s.
+
+    if (!document().hasBrowsingContext())
+        return { };
+
+    if (auto src = getNonEmptyURLAttribute(srcAttr); src.isValid())
+        return src;
 
     for (auto& element : childrenOfType<HTMLSourceElement>(*this)) {
-        // FIXME: for now we use the first valid URL without looking at the mime-type.
-        auto url = element.getNonEmptyURLAttribute(HTMLNames::srcAttr);
-        if (url.isValid()) {
-            setSourceURL(url);
-            return;
-        }
+        if (!isSupportedModelType(element.attributeWithoutSynchronization(typeAttr)))
+            continue;
+
+        if (auto src = element.getNonEmptyURLAttribute(srcAttr); src.isValid())
+            return src;
     }
 
-    setSourceURL(URL { });
+    return { };
+}
+
+void HTMLModelElement::sourcesChanged()
+{
+    setSourceURL(selectModelSource());
 }
 
 void HTMLModelElement::setSourceURL(const URL& url)
@@ -320,18 +337,18 @@ GraphicsLayer::PlatformLayerID HTMLModelElement::platformLayerID()
 {
     auto* page = document().page();
     if (!page)
-        return 0;
+        return { };
 
     if (!is<RenderLayerModelObject>(this->renderer()))
-        return 0;
+        return { };
 
     auto& renderLayerModelObject = downcast<RenderLayerModelObject>(*this->renderer());
     if (!renderLayerModelObject.isComposited() || !renderLayerModelObject.layer() || !renderLayerModelObject.layer()->backing())
-        return 0;
+        return { };
 
     auto* graphicsLayer = renderLayerModelObject.layer()->backing()->graphicsLayer();
     if (!graphicsLayer)
-        return 0;
+        return { };
 
     return graphicsLayer->contentsLayerIDForModel();
 }
@@ -364,11 +381,15 @@ bool HTMLModelElement::isInteractive() const
     return hasAttributeWithoutSynchronization(HTMLNames::interactiveAttr);
 }
 
-void HTMLModelElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
+void HTMLModelElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
-    HTMLElement::attributeChanged(name, oldValue, newValue, reason);
-    if (m_modelPlayer && name == HTMLNames::interactiveAttr)
+    if (name == srcAttr)
+        sourcesChanged();
+    else if (name == interactiveAttr) {
+        if (m_modelPlayer)
         m_modelPlayer->setInteractionEnabled(isInteractive());
+    } else
+        HTMLElement::parseAttribute(name, value);
 }
 
 void HTMLModelElement::defaultEventHandler(Event& event)
@@ -677,6 +698,30 @@ String HTMLModelElement::inlinePreviewUUIDForTesting() const
     return m_modelPlayer->inlinePreviewUUIDForTesting();
 }
 #endif
+
+void HTMLModelElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+{
+    if (name == widthAttr) {
+        addHTMLLengthToStyle(style, CSSPropertyWidth, value);
+        applyAspectRatioFromWidthAndHeightAttributesToStyle(value, attributeWithoutSynchronization(heightAttr), style);
+    } else if (name == heightAttr) {
+        addHTMLLengthToStyle(style, CSSPropertyHeight, value);
+        applyAspectRatioFromWidthAndHeightAttributesToStyle(attributeWithoutSynchronization(widthAttr), value, style);
+    } else
+        HTMLElement::collectPresentationalHintsForAttribute(name, value, style);
+}
+
+bool HTMLModelElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
+{
+    if (name == widthAttr || name == heightAttr)
+        return true;
+    return HTMLElement::hasPresentationalHintsForAttribute(name);
+}
+
+bool HTMLModelElement::isURLAttribute(const Attribute& attribute) const
+{
+    return attribute.name() == srcAttr || HTMLElement::isURLAttribute(attribute);
+}
 
 }
 

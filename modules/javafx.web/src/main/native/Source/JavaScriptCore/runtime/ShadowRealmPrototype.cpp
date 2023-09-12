@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Igalia S.L.
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -105,22 +105,28 @@ JSC_DEFINE_HOST_FUNCTION(evalInRealm, (JSGlobalObject* globalObject, CallFrame* 
     SourceCode source = makeSource(script, callFrame->callerSourceOrigin(vm));
     EvalExecutable* eval = IndirectEvalExecutable::create(realmGlobalObject, source, DerivedContextType::None, false, EvalContextType::None, executableError);
     if (executableError) {
-        ErrorInstance* error = jsDynamicCast<ErrorInstance*>(JSValue(executableError.get()));
-        if (error != nullptr && error->errorType() == ErrorType::SyntaxError) {
+        JSValue error = executableError.get();
+        ErrorInstance* errorInstance = jsDynamicCast<ErrorInstance*>(error);
+        if (errorInstance != nullptr && errorInstance->errorType() == ErrorType::SyntaxError) {
             scope.clearException();
-            const String syntaxErrorMessage = error->sanitizedMessageString(globalObject);
+            const String syntaxErrorMessage = errorInstance->sanitizedMessageString(globalObject);
             RETURN_IF_EXCEPTION(scope, { });
-            throwVMError(globalObject, scope, createSyntaxError(globalObject, syntaxErrorMessage));
-        } else
-            throwVMError(globalObject, scope, createTypeError(globalObject, "Error encountered during evaluation"_s));
-        return JSValue::encode(jsUndefined());
+            return throwVMError(globalObject, scope, createSyntaxError(globalObject, syntaxErrorMessage));
+        }
+        auto typeError = createTypeErrorCopy(globalObject, error);
+        RETURN_IF_EXCEPTION(scope, { });
+        return throwVMError(globalObject, scope, typeError);
     }
     RETURN_IF_EXCEPTION(scope, { });
 
-    JSValue result = vm.interpreter.execute(eval, realmGlobalObject, realmGlobalObject->globalThis(), realmGlobalObject->globalScope());
+    JSValue result = vm.interpreter.executeEval(eval, realmGlobalObject, realmGlobalObject->globalThis(), realmGlobalObject->globalScope());
     if (UNLIKELY(scope.exception())) {
+        NakedPtr<Exception> exception = scope.exception();
+        JSValue error = exception->value();
         scope.clearException();
-        return throwVMError(globalObject, scope, createTypeError(globalObject, "Error encountered during evaluation"_s));
+        auto typeError = createTypeErrorCopy(globalObject, error);
+        RETURN_IF_EXCEPTION(scope, { });
+        return throwVMError(globalObject, scope, typeError);
     }
 
     RELEASE_AND_RETURN(scope, JSValue::encode(result));

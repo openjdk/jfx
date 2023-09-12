@@ -39,7 +39,7 @@ PlatformWheelEvent::PlatformWheelEvent(
     bool altKey,
     bool metaKey)
         : PlatformEvent(
-        PlatformEvent::Wheel,
+        PlatformEvent::Type::Wheel,
         shiftKey,
         ctrlKey,
         altKey,

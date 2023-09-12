@@ -31,13 +31,22 @@
 #include <AvailabilityMacros.h>
 #include <CoreFoundation/CoreFoundation.h>
 
-#if defined(BUILDING_GTK__) || defined(BUILDING_JAVA__)
+
+#if defined(BUILDING_GTK__) || defined(BUILDING_JSCONLY__) || defined(BUILDING_JAVA__)
 #undef JSC_API_AVAILABLE
 #define JSC_API_AVAILABLE(...)
+
+#undef JSC_API_DEPRECATED
+#define JSC_API_DEPRECATED(...)
+
+#undef JSC_API_DEPRECATED_WITH_REPLACEMENT
+#define JSC_API_DEPRECATED_WITH_REPLACEMENT(...)
 #endif
 
 #else
 #define JSC_API_AVAILABLE(...)
+#define JSC_API_DEPRECATED(...)
+#define JSC_API_DEPRECATED_WITH_REPLACEMENT(...)
 #endif
 
 #endif /* __WebKitAvailability__ */

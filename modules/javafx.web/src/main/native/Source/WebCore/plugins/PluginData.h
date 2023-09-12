@@ -99,8 +99,6 @@ public:
 
     const Vector<PluginInfo>& plugins() const { return m_plugins; }
     WEBCORE_EXPORT const Vector<PluginInfo>& webVisiblePlugins() const;
-    std::pair<Vector<PluginInfo>, Vector<PluginInfo>> publiclyVisiblePluginsAndAdditionalWebVisiblePlugins() const;
-
     WEBCORE_EXPORT Vector<MimeClassInfo> webVisibleMimeTypes() const;
 
     enum AllowedPluginTypes {
@@ -112,6 +110,10 @@ public:
     WEBCORE_EXPORT bool supportsWebVisibleMimeTypeForURL(const String& mimeType, const AllowedPluginTypes, const URL&) const;
 
     String pluginFileForWebVisibleMimeType(const String& mimeType) const;
+
+    const std::optional<PluginInfo>& builtInPDFPlugin() const { return m_builtInPDFPluginInfo; }
+
+    static PluginInfo dummyPDFPluginInfo();
 
 private:
     explicit PluginData(Page&);
@@ -127,6 +129,7 @@ protected:
         std::optional<Vector<PluginInfo>> pluginList;
     };
     mutable CachedVisiblePlugins m_cachedVisiblePlugins;
+    std::optional<PluginInfo> m_builtInPDFPluginInfo;
 };
 
 inline bool isSupportedPlugin(const Vector<SupportedPluginIdentifier>& pluginIdentifiers, const URL& pageURL, const String& pluginIdentifier)

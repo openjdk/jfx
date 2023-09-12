@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,7 @@ import java.util.List;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.beans.InvalidationListener;
+import javafx.collections.transformation.FilteredList;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -145,7 +146,9 @@ class GlassSystemMenu implements TKSystemMenu {
 
         final ObservableList<MenuItemBase> items = mb.getItemsBase();
 
-        items.addListener((ListChangeListener.Change<? extends MenuItemBase> change) -> {
+        final FilteredList<MenuItemBase> filteredItems = items.filtered(x -> x.isVisible());
+
+        filteredItems.addListener((ListChangeListener.Change<? extends MenuItemBase> change) -> {
             while (change.next()) {
                 int from = change.getFrom();
                 int to = change.getTo();

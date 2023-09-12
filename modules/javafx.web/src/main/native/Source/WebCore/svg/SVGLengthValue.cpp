@@ -23,7 +23,7 @@
 #include "SVGLengthValue.h"
 
 #include "AnimationUtilities.h"
-#include "CSSPrimitiveValue.h"
+#include "SVGElement.h"
 #include "SVGLengthContext.h"
 #include "SVGParserUtilities.h"
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -236,16 +236,37 @@ SVGLengthValue SVGLengthValue::blend(const SVGLengthValue& from, const SVGLength
     return { WebCore::blend(fromValue.releaseReturnValue(), toValue, { progress }), to.lengthType() };
 }
 
-SVGLengthValue SVGLengthValue::fromCSSPrimitiveValue(const CSSPrimitiveValue& value)
+SVGLengthValue SVGLengthValue::fromCSSPrimitiveValue(const CSSPrimitiveValue& value, const CSSToLengthConversionData& conversionData, ShouldConvertNumberToPxLength shouldConvertNumberToPxLength)
 {
-    // FIXME: This needs to call value.computeLength() so it can correctly resolve non-absolute units (webkit.org/b/204826).
-    SVGLengthType lengthType = primitiveTypeToLengthType(value.primitiveType());
-    return lengthType == SVGLengthType::Unknown ? SVGLengthValue() : SVGLengthValue(value.floatValue(), lengthType);
+    auto primitiveType = value.primitiveType();
+    if (primitiveType == CSSUnitType::CSS_NUMBER && shouldConvertNumberToPxLength == ShouldConvertNumberToPxLength::Yes)
+        return { value.floatValue(), SVGLengthType::Pixels };
+
+    auto lengthType = primitiveTypeToLengthType(primitiveType);
+    switch (lengthType) {
+    case SVGLengthType::Unknown:
+        return { };
+    case SVGLengthType::Number:
+    case SVGLengthType::Percentage:
+        return { value.floatValue(), lengthType };
+    default:
+        return { value.computeLength<float>(conversionData), SVGLengthType::Pixels };
+    }
+
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
-Ref<CSSPrimitiveValue> SVGLengthValue::toCSSPrimitiveValue(const SVGLengthValue& length)
+Ref<CSSPrimitiveValue> SVGLengthValue::toCSSPrimitiveValue(const Element* element) const
 {
-    return CSSPrimitiveValue::create(length.valueInSpecifiedUnits(), lengthTypeToPrimitiveType(length.lengthType()));
+    if (is<SVGElement>(element)) {
+        SVGLengthContext context { downcast<SVGElement>(element) };
+        auto computedValue = context.convertValueToUserUnits(valueInSpecifiedUnits(), lengthType(), lengthMode());
+        if (!computedValue.hasException())
+            return CSSPrimitiveValue::create(computedValue.releaseReturnValue(), CSSUnitType::CSS_PX);
+    }
+
+    return CSSPrimitiveValue::create(valueInSpecifiedUnits(), lengthTypeToPrimitiveType(lengthType()));
 }
 
 ExceptionOr<void> SVGLengthValue::setValueAsString(StringView valueAsString, SVGLengthMode lengthMode)

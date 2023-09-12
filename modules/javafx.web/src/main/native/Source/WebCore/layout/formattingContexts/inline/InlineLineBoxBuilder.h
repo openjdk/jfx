@@ -25,8 +25,7 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
+#include "BlockLayoutState.h"
 #include "InlineFormattingContext.h"
 #include "InlineLineBuilder.h"
 #include "TextUtil.h"
@@ -35,36 +34,47 @@ namespace WebCore {
 namespace Layout {
 
 class Box;
-class ContainerBox;
+class ElementBox;
 class LayoutState;
-struct LayoutBoundsMetrics;
+struct AscentAndDescent;
 
 class LineBoxBuilder {
 public:
-    LineBoxBuilder(const InlineFormattingContext&);
+    LineBoxBuilder(const InlineFormattingContext&, const LineBuilder::LineContent&, const BlockLayoutState&);
 
-    LineBox build(const LineBuilder::LineContent&, size_t lineIndex);
+    LineBox build(size_t lineIndex);
 
 private:
-    enum class BehavesAsText : uint8_t { No, Yes };
-    void setBaselineAndLayoutBounds(InlineLevelBox&, const LayoutBoundsMetrics&, BehavesAsText = BehavesAsText::No) const;
-    void adjustLayoutBoundsWithFallbackFonts(InlineLevelBox&, const TextUtil::FallbackFontList& fallbackFontsForContent, FontBaseline) const;
+    void setVerticalPropertiesForInlineLevelBox(const LineBox&, InlineLevelBox&) const;
+    void setLayoutBoundsForInlineBox(InlineLevelBox&, FontBaseline) const;
+    void adjustInlineBoxHeightsForLineBoxContainIfApplicable(LineBox&);
+    void computeLineBoxGeometry(LineBox&) const;
+    AscentAndDescent enclosingAscentDescentWithFallbackFonts(const InlineLevelBox&, const TextUtil::FallbackFontList& fallbackFontsForContent, FontBaseline) const;
     TextUtil::FallbackFontList collectFallbackFonts(const InlineLevelBox& parentInlineBox, const Line::Run&, const RenderStyle&);
 
-    void constructInlineLevelBoxes(LineBox&, const LineBuilder::LineContent&, size_t lineIndex);
-    void adjustIdeographicBaselineIfApplicable(LineBox&, size_t lineIndex);
+    void constructInlineLevelBoxes(LineBox&);
+    void adjustIdeographicBaselineIfApplicable(LineBox&);
+    void adjustOutsideListMarkersPosition(LineBox&);
 
+    bool isFirstLine() const { return m_lineContent.isFirstFormattedLine != LineBuilder::LineContent::FirstFormattedLine::No; }
+    bool isLastLine() const { return m_lineContent.isLastLineWithInlineContent; }
     const InlineFormattingContext& formattingContext() const { return m_inlineFormattingContext; }
+    const LineBuilder::LineContent lineContent() const { return m_lineContent; }
     const Box& rootBox() const { return formattingContext().root(); }
+    const RenderStyle& rootStyle() const { return isFirstLine() ? rootBox().firstLineStyle() : rootBox().style(); }
+
+    const BlockLayoutState& blockLayoutState() const { return m_blockLayoutState; }
     LayoutState& layoutState() const { return formattingContext().layoutState(); }
 
 private:
     const InlineFormattingContext& m_inlineFormattingContext;
+    const LineBuilder::LineContent& m_lineContent;
+    const BlockLayoutState& m_blockLayoutState;
     bool m_fallbackFontRequiresIdeographicBaseline { false };
     HashMap<const InlineLevelBox*, TextUtil::FallbackFontList> m_fallbackFontsForInlineBoxes;
+    Vector<size_t> m_outsideListMarkers;
 };
 
 }
 }
 
-#endif

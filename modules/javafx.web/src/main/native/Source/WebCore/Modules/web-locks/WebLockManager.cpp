@@ -29,6 +29,7 @@
 #include "ExceptionCode.h"
 #include "ExceptionOr.h"
 #include "JSDOMPromise.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSWebLockManagerSnapshot.h"
 #include "NavigatorBase.h"
 #include "Page.h"
@@ -50,7 +51,7 @@ static std::optional<ClientOrigin> clientOriginFromContext(ScriptExecutionContex
     if (!context)
         return std::nullopt;
     auto* origin = context->securityOrigin();
-    if (!origin || origin->isUnique())
+    if (!origin || origin->isOpaque())
         return std::nullopt;
     return { { context->topOrigin().data(), origin->data() } };
 }

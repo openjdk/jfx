@@ -223,6 +223,9 @@ void ItemHandle::apply(GraphicsContext& context)
     case ItemType::ClearRect:
         get<ClearRect>().apply(context);
         return;
+    case ItemType::DrawControlPart:
+        get<DrawControlPart>().apply(context);
+        return;
     case ItemType::BeginTransparencyLayer:
         get<BeginTransparencyLayer>().apply(context);
         return;
@@ -251,6 +254,9 @@ void ItemHandle::destroy()
         return;
     case ItemType::ClipPath:
         get<ClipPath>().~ClipPath();
+        return;
+    case ItemType::DrawControlPart:
+        get<DrawControlPart>().~DrawControlPart();
         return;
     case ItemType::DrawFilteredImageBuffer:
         get<DrawFilteredImageBuffer>().~DrawFilteredImageBuffer();
@@ -447,15 +453,14 @@ template<typename, typename = void> inline constexpr bool HasIsValid = false;
 template<typename T> inline constexpr bool HasIsValid<T, std::void_t<decltype(std::declval<T>().isValid())>> = true;
 
 template<typename Item>
-static inline typename std::enable_if_t<!HasIsValid<Item>, bool> isValid(const Item&)
+static inline bool isValid(const Item& item)
 {
-    return true;
-}
-
-template<typename Item>
-static inline typename std::enable_if_t<HasIsValid<Item>, bool> isValid(const Item& item)
-{
+    if constexpr (HasIsValid<Item>)
     return item.isValid();
+    else {
+        UNUSED_PARAM(item);
+        return true;
+    }
 }
 
 template<typename Item>
@@ -481,6 +486,8 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
         return copyInto<ClipOutToPath>(itemOffset, *this);
     case ItemType::ClipPath:
         return copyInto<ClipPath>(itemOffset, *this);
+    case ItemType::DrawControlPart:
+        return copyInto<DrawControlPart>(itemOffset, *this);
     case ItemType::DrawFilteredImageBuffer:
         return copyInto<DrawFilteredImageBuffer>(itemOffset, *this);
     case ItemType::DrawFocusRingPath:
@@ -616,7 +623,7 @@ bool ItemHandle::safeCopy(ItemType itemType, ItemHandle destination) const
 bool safeCopy(ItemHandle destination, const DisplayListItem& source)
 {
     return std::visit([&](const auto& source) {
-        using DisplayListItemType = typename WTF::RemoveCVAndReference<decltype(source)>::type;
+        using DisplayListItemType = std::remove_cvref_t<decltype(source)>;
         constexpr auto itemType = DisplayListItemType::itemType;
         destination.data[0] = static_cast<uint8_t>(itemType);
         auto itemOffset = destination.data + sizeof(uint64_t);
@@ -693,7 +700,16 @@ void ItemBuffer::clear()
 
 void ItemBuffer::shrinkToFit()
 {
+    if (m_writableBuffer) {
+        if (m_allocatedBuffers.last() == m_writableBuffer.data) {
+            m_writableBuffer.data = static_cast<uint8_t*>(fastRealloc(m_writableBuffer.data, m_writtenNumberOfBytes));
+            m_writableBuffer.capacity = m_writtenNumberOfBytes;
+            m_allocatedBuffers.last() = m_writableBuffer.data;
+        } else
+            ASSERT(!m_allocatedBuffers.contains(m_writableBuffer.data));
+    }
     m_allocatedBuffers.shrinkToFit();
+    m_readOnlyBuffers.shrinkToFit();
 }
 
 DidChangeItemBuffer ItemBuffer::swapWritableBufferIfNeeded(size_t numberOfBytes)

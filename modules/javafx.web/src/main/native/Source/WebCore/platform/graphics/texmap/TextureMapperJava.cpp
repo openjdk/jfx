@@ -30,7 +30,6 @@
 #include "BitmapTexturePool.h"
 #include "GraphicsLayer.h"
 #include "NotImplemented.h"
-#include <wtf/RandomNumber.h>
 
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
 
@@ -117,6 +116,11 @@ void TextureMapperJava::drawNumber(int /* number */, const Color&, const FloatPo
 }
 
 void TextureMapperJava::clearColor(const Color&)
+{
+    notImplemented();
+}
+
+void TextureMapperJava::setDepthRange(double, double)
 {
     notImplemented();
 }

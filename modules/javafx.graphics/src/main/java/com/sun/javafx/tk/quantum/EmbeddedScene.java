@@ -154,6 +154,12 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         renderScaleX = scalex;
         renderScaleY = scaley;
         entireSceneNeedsRepaint();
+        Platform.runLater(() -> {
+            QuantumToolkit.runWithRenderLock(() -> {
+                updateSceneState();
+                return null;
+            });
+        });
     }
 
     public float getRenderScaleX() {

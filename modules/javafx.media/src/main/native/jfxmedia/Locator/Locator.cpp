@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,23 +53,23 @@ CLocator::LocatorType CLocator::GetType()
 
 jstring CLocator::LocatorGetStringLocation(JNIEnv *env, jobject locator)
 {
-    static jmethodID mid_toString = 0;
+    static jmethodID mid_GetStringLocation = NULL;
     jstring result = NULL;
     CJavaEnvironment javaEnv(env);
 
-    if (mid_toString == 0)
+    if (mid_GetStringLocation == NULL)
     {
         jclass klass = env->GetObjectClass(locator);
 
-        mid_toString = env->GetMethodID(klass, "getStringLocation", "()Ljava/lang/String;");
+        mid_GetStringLocation = env->GetMethodID(klass, "getStringLocation", "()Ljava/lang/String;");
         env->DeleteLocalRef(klass);
-        if (javaEnv.clearException())
+        if (javaEnv.clearException() || mid_GetStringLocation == NULL)
         {
             return NULL;
         }
     }
 
-    result = (jstring)env->CallObjectMethod(locator, mid_toString);
+    result = (jstring)env->CallObjectMethod(locator, mid_GetStringLocation);
     if (javaEnv.clearException())
     {
         return NULL;

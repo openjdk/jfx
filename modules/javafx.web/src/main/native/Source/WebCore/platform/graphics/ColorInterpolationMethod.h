@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,8 +42,7 @@ enum class HueInterpolationMethod : uint8_t {
     Shorter,
     Longer,
     Increasing,
-    Decreasing,
-    Specified
+    Decreasing
 };
 
 enum class ColorInterpolationColorSpace : uint8_t {
@@ -63,7 +62,7 @@ template <typename T, typename = void>
 struct HasHueInterpolationMethod : std::false_type { };
 
 template <typename T>
-struct HasHueInterpolationMethod<T, std::void_t<decltype(T::hueInterpolationMethod)>> : std::true_type { };
+struct HasHueInterpolationMethod<T, std::void_t<decltype(std::declval<T>().hueInterpolationMethod)>> : std::true_type { };
 
 template <typename T>
 inline constexpr bool hasHueInterpolationMethod = HasHueInterpolationMethod<T>::value;
@@ -114,89 +113,9 @@ struct ColorInterpolationMethod {
         using ColorType = WebCore::XYZA<float, WhitePoint::D65>;
     };
 
-    template<typename Encoder> void encode(Encoder&) const;
-    template<typename Decoder> static std::optional<ColorInterpolationMethod> decode(Decoder&);
-
     std::variant<HSL, HWB, LCH, Lab, OKLCH, OKLab, SRGB, SRGBLinear, XYZD50, XYZD65> colorSpace;
     AlphaPremultiplication alphaPremultiplication;
 };
-
-template<typename Encoder> void ColorInterpolationMethod::encode(Encoder& encoder) const
-{
-    encoder << alphaPremultiplication;
-
-    WTF::switchOn(colorSpace,
-        [&] (auto& type) {
-            encoder << type.interpolationColorSpace;
-            if constexpr (std::remove_reference_t<decltype(type)>::ColorType::Model::coordinateSystem == ColorSpaceCoordinateSystem::CylindricalPolar) {
-                encoder << type.hueInterpolationMethod;
-            }
-        }
-    );
-}
-
-template<typename Decoder> std::optional<ColorInterpolationMethod> ColorInterpolationMethod::decode(Decoder& decoder)
-{
-    std::optional<AlphaPremultiplication> alphaPremultiplication;
-    decoder >> alphaPremultiplication;
-    if (!alphaPremultiplication)
-        return std::nullopt;
-
-    std::optional<ColorInterpolationColorSpace> interpolationColorSpace;
-    decoder >> interpolationColorSpace;
-    if (!interpolationColorSpace)
-        return std::nullopt;
-
-    switch (*interpolationColorSpace) {
-    case ColorInterpolationColorSpace::HSL: {
-        std::optional<HueInterpolationMethod> hueInterpolationMethod;
-        decoder >> hueInterpolationMethod;
-        if (!hueInterpolationMethod)
-            return std::nullopt;
-
-        return ColorInterpolationMethod { ColorInterpolationMethod::HSL { *hueInterpolationMethod }, *alphaPremultiplication };
-    }
-    case ColorInterpolationColorSpace::HWB: {
-        std::optional<HueInterpolationMethod> hueInterpolationMethod;
-        decoder >> hueInterpolationMethod;
-        if (!hueInterpolationMethod)
-            return std::nullopt;
-
-        return ColorInterpolationMethod { ColorInterpolationMethod::HWB { *hueInterpolationMethod }, *alphaPremultiplication };
-    }
-    case ColorInterpolationColorSpace::LCH: {
-        std::optional<HueInterpolationMethod> hueInterpolationMethod;
-        decoder >> hueInterpolationMethod;
-        if (!hueInterpolationMethod)
-            return std::nullopt;
-
-        return ColorInterpolationMethod { ColorInterpolationMethod::LCH { *hueInterpolationMethod }, *alphaPremultiplication };
-    }
-    case ColorInterpolationColorSpace::OKLCH: {
-        std::optional<HueInterpolationMethod> hueInterpolationMethod;
-        decoder >> hueInterpolationMethod;
-        if (!hueInterpolationMethod)
-            return std::nullopt;
-
-        return ColorInterpolationMethod { ColorInterpolationMethod::OKLCH { *hueInterpolationMethod }, *alphaPremultiplication };
-    }
-    case ColorInterpolationColorSpace::Lab:
-        return ColorInterpolationMethod { ColorInterpolationMethod::Lab { }, *alphaPremultiplication };
-    case ColorInterpolationColorSpace::OKLab:
-        return ColorInterpolationMethod { ColorInterpolationMethod::OKLab { }, *alphaPremultiplication };
-    case ColorInterpolationColorSpace::SRGB:
-        return ColorInterpolationMethod { ColorInterpolationMethod::SRGB { }, *alphaPremultiplication };
-    case ColorInterpolationColorSpace::SRGBLinear:
-        return ColorInterpolationMethod { ColorInterpolationMethod::SRGBLinear { }, *alphaPremultiplication };
-    case ColorInterpolationColorSpace::XYZD50:
-        return ColorInterpolationMethod { ColorInterpolationMethod::XYZD50 { }, *alphaPremultiplication };
-    case ColorInterpolationColorSpace::XYZD65:
-        return ColorInterpolationMethod { ColorInterpolationMethod::XYZD65 { }, *alphaPremultiplication };
-    }
-
-    RELEASE_ASSERT_NOT_REACHED();
-    return std::nullopt;
-}
 
 inline void add(Hasher& hasher, const ColorInterpolationMethod& colorInterpolationMethod)
 {
@@ -266,6 +185,9 @@ inline constexpr bool operator==(const ColorInterpolationMethod& a, const ColorI
     return a.alphaPremultiplication == b.alphaPremultiplication && a.colorSpace == b.colorSpace;
 }
 
+void serializationForCSS(StringBuilder&, const ColorInterpolationMethod&);
+String serializationForCSS(const ColorInterpolationMethod&);
+
 WTF::TextStream& operator<<(WTF::TextStream&, ColorInterpolationColorSpace);
 WTF::TextStream& operator<<(WTF::TextStream&, HueInterpolationMethod);
 WTF::TextStream& operator<<(WTF::TextStream&, const ColorInterpolationMethod&);
@@ -280,8 +202,7 @@ template<> struct EnumTraits<WebCore::HueInterpolationMethod> {
         WebCore::HueInterpolationMethod::Shorter,
         WebCore::HueInterpolationMethod::Longer,
         WebCore::HueInterpolationMethod::Increasing,
-        WebCore::HueInterpolationMethod::Decreasing,
-        WebCore::HueInterpolationMethod::Specified
+        WebCore::HueInterpolationMethod::Decreasing
     >;
 };
 

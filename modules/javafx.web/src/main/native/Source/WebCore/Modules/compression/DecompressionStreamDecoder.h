@@ -25,8 +25,14 @@
 #pragma once
 
 #include "BufferSource.h"
+#if PLATFORM(COCOA)
+#include <compression.h>
+#endif
+#include <cstring>
 #include "ExceptionOr.h"
 #include "Formats.h"
+#include "SharedBuffer.h"
+#include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -50,8 +56,13 @@ public:
     {
 /* removing zlib dependency , as newly added module compression requires zlib */
 #if !PLATFORM(JAVA)
-        if (initailized)
-            deflateEnd(&zstream);
+        if (m_initialized) {
+            if (m_usingAppleCompressionFramework) {
+#if PLATFORM(COCOA)
+                compression_stream_destroy(&m_stream);
+#endif
+            } else
+                deflateEnd(&m_zstream);
 #endif
     }
 
@@ -62,23 +73,46 @@ private:
     // has been fully processed. To ensure the user's memory is not completely consumed, I am setting a cap
     // of 1GB per allocation. This strategy enables very fast memory allocation growth without needing to perform
     // unnecessarily large allocations upfront.
-    const size_t startingAllocationSize = 16384; // 16KB
-    const size_t maxAllocationSize = 1073741824; // 1GB
-
-    bool initailized { false };
-    bool finish { false };
     #if !PLATFORM(JAVA)
-    z_stream zstream;
-    #endif
-
+        const size_t startingAllocationSize = 16384; // 16KB
+    const size_t maxAllocationSize = 1073741824; // 1GB
     Formats::CompressionFormat m_format;
+    bool m_initialized { false };
+        bool m_usingAppleCompressionFramework { false };
+    z_stream m_zstream;
+    #endif
+        bool m_finish { false };
 
-    ExceptionOr<Vector<uint8_t>> decompress(const uint8_t* input, const size_t inputLength);
+
+
+    inline ExceptionOr<RefPtr<JSC::ArrayBuffer>> decompress(const uint8_t* input, const size_t inputLength);
+
+#if PLATFORM(COCOA)
+    compression_stream m_stream;
+    ExceptionOr<RefPtr<JSC::ArrayBuffer>> decompressAppleCompressionFramework(const uint8_t* input, const size_t inputLength);
+    ExceptionOr<bool> initializeAppleCompressionFramework();
+#endif
+
+
+
+    ExceptionOr<RefPtr<JSC::ArrayBuffer>> decompressZlib(const uint8_t* input, const size_t inputLength);
     ExceptionOr<bool> initialize();
 
     explicit DecompressionStreamDecoder(unsigned char format)
+#if !PLATFORM(JAVA)
         : m_format(static_cast<Formats::CompressionFormat>(format))
+#endif
     {
+        UNUSED_PARAM(format);
+#if !PLATFORM(JAVA)
+    std::memset(&m_zstream, 0, sizeof(m_zstream));
+#endif
+#if PLATFORM(COCOA)
+    std::memset(&m_stream, 0, sizeof(m_stream));
+
+    if (m_format == Formats::CompressionFormat::Deflate)
+        m_usingAppleCompressionFramework = true;
+#endif
     }
 };
 } // namespace WebCore

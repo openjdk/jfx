@@ -191,7 +191,7 @@ void InspectorTimelineAgent::internalStart(std::optional<int>&& maxCallStackDept
 
     m_instrumentingAgents.setTrackingTimelineAgent(this);
 
-    m_environment.debugger().addObserver(*this);
+    m_environment.debugger()->addObserver(*this);
 
     m_tracking = true;
 
@@ -199,7 +199,7 @@ void InspectorTimelineAgent::internalStart(std::optional<int>&& maxCallStackDept
 
 #if PLATFORM(COCOA)
     m_frameStartObserver = makeUnique<RunLoopObserver>(static_cast<CFIndex>(RunLoopObserver::WellKnownRunLoopOrders::InspectorFrameBegin), [this]() {
-        if (!m_tracking || m_environment.debugger().isPaused())
+        if (!m_tracking || m_environment.debugger()->isPaused())
             return;
 
         if (!m_runLoopNestingLevel)
@@ -207,8 +207,9 @@ void InspectorTimelineAgent::internalStart(std::optional<int>&& maxCallStackDept
         m_runLoopNestingLevel++;
     });
 
+    // FIXME: This won't work correctly with RemoteLayerTreeDrawingArea: webkit.org/b/249796. Detecting FrameEnd needs to be handled at the DrawingArea level.
     m_frameStopObserver = makeUnique<RunLoopObserver>(static_cast<CFIndex>(RunLoopObserver::WellKnownRunLoopOrders::InspectorFrameEnd), [this]() {
-        if (!m_tracking || m_environment.debugger().isPaused())
+        if (!m_tracking || m_environment.debugger()->isPaused())
             return;
 
         ASSERT(m_runLoopNestingLevel > 0);
@@ -232,7 +233,7 @@ void InspectorTimelineAgent::internalStart(std::optional<int>&& maxCallStackDept
     m_runLoopNestingLevel = 1;
 #elif USE(GLIB_EVENT_LOOP)
     m_runLoopObserver = makeUnique<RunLoop::Observer>([this](RunLoop::Event event, const String& name) {
-        if (!m_tracking || m_environment.debugger().isPaused())
+        if (!m_tracking || m_environment.debugger()->isPaused())
             return;
 
         switch (event) {
@@ -260,7 +261,7 @@ void InspectorTimelineAgent::internalStop()
 
     m_instrumentingAgents.setTrackingTimelineAgent(nullptr);
 
-    m_environment.debugger().removeObserver(*this, true);
+    m_environment.debugger()->removeObserver(*this, true);
 
 #if PLATFORM(COCOA)
     m_frameStartObserver = nullptr;

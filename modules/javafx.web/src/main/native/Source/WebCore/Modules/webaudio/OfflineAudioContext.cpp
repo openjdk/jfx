@@ -33,6 +33,7 @@
 #include "AudioUtilities.h"
 #include "Document.h"
 #include "JSAudioBuffer.h"
+#include "JSDOMPromiseDeferred.h"
 #include "OfflineAudioCompletionEvent.h"
 #include "OfflineAudioContextOptions.h"
 #include <wtf/IsoMallocInlines.h>
@@ -49,6 +50,8 @@ OfflineAudioContext::OfflineAudioContext(Document& document, const OfflineAudioC
 {
     if (!renderTarget())
         document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Failed to construct internal AudioBuffer with ", options.numberOfChannels, " channel(s), a sample rate of ", options.sampleRate, " and a length of ", options.length, "."));
+    else if (noiseInjectionPolicy() == NoiseInjectionPolicy::Minimal)
+        renderTarget()->setNeedsAdditionalNoise();
 }
 
 ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutionContext& context, const OfflineAudioContextOptions& options)

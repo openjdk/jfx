@@ -124,8 +124,7 @@ public:
     Vector<String, 2> mediaControlsScripts() override;
 #endif
 
-    IntSize meterSizeForBounds(const RenderMeter&, const IntRect&) const override;
-    bool supportsMeter(ControlPart, const HTMLMeterElement&) const override;
+    bool supportsMeter(StyleAppearance, const HTMLMeterElement&) const override;
     void adjustMeterStyle(RenderStyle&, const Element*) const override;
     bool paintMeter(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
@@ -148,7 +147,7 @@ private:
     unsigned determineButtonState(const RenderObject&);
     unsigned determineSpinButtonState(const RenderObject&, ControlSubPart = None);
 
-    bool supportsFocus(ControlPart) const;
+    bool supportsFocus(StyleAppearance) const;
 
     ThemeData getThemeData(const RenderObject&, ControlSubPart = None);
     ThemeData getClassicThemeData(const RenderObject&, ControlSubPart = None);

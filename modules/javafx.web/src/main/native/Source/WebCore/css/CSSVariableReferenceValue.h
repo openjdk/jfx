@@ -31,9 +31,11 @@
 
 #include "CSSParserContext.h"
 #include "CSSValue.h"
+#include "CSSValueKeywords.h"
 
 namespace WebCore {
 
+class CSSParserToken;
 class CSSParserTokenRange;
 class CSSVariableData;
 
@@ -60,6 +62,11 @@ public:
 
 private:
     explicit CSSVariableReferenceValue(Ref<CSSVariableData>&&, const CSSParserContext&);
+
+    std::optional<Vector<CSSParserToken>> resolveTokenRange(CSSParserTokenRange, Style::BuilderState&) const;
+    bool resolveVariableReference(CSSParserTokenRange, CSSValueID, Vector<CSSParserToken>&, Style::BuilderState&) const;
+    enum class FallbackResult : uint8_t { None, Valid, Invalid };
+    std::pair<FallbackResult, Vector<CSSParserToken>> resolveVariableFallback(const AtomString& variableName, CSSParserTokenRange, CSSValueID functionId, Style::BuilderState&) const;
 
     Ref<CSSVariableData> m_data;
     mutable String m_stringValue;

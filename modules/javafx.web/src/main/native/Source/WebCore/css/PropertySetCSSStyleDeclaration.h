@@ -66,6 +66,8 @@ private:
     void deref() override;
 
     CSSRule* parentRule() const override { return nullptr; }
+    // FIXME: To implement.
+    CSSRule* cssRules() const override { return nullptr; }
     unsigned length() const final;
     String item(unsigned index) const final;
     RefPtr<DeprecatedCSSOMValue> getPropertyCSSValue(const String& propertyName) final;
@@ -77,12 +79,11 @@ private:
     ExceptionOr<String> removeProperty(const String& propertyName) final;
     String cssText() const final;
     ExceptionOr<void> setCssText(const String&) final;
-    RefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) final;
     String getPropertyValueInternal(CSSPropertyID) final;
     ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
 
     Ref<MutableStyleProperties> copyProperties() const final;
-    bool isCSSPropertyExposed(CSSPropertyID) const;
+    bool isExposed(CSSPropertyID) const;
 
     RefPtr<DeprecatedCSSOMValue> wrapForDeprecatedCSSOM(CSSValue*);
 

@@ -186,6 +186,29 @@ GridSpan Grid::gridItemSpan(const RenderBox& gridItem, GridTrackSizingDirection 
     return direction == ForColumns ? area.columns : area.rows;
 }
 
+GridSpan Grid::gridItemSpanIgnoringCollapsedTracks(const RenderBox& gridItem, GridTrackSizingDirection direction) const
+{
+    auto span = gridItemSpan(gridItem, direction);
+    if (!span.startLine() || !hasAutoRepeatEmptyTracks(direction))
+        return span;
+    unsigned currentLine = span.startLine() - 1;
+
+    while (currentLine && isEmptyAutoRepeatTrack(direction, currentLine))
+        currentLine--;
+    if (currentLine)
+        return GridSpan::translatedDefiniteGridSpan(currentLine + 1, span.integerSpan());
+
+    // Still need to check if the first track is empty
+    return isEmptyAutoRepeatTrack(direction, currentLine) ? GridSpan::translatedDefiniteGridSpan(currentLine, span.integerSpan()) : GridSpan::translatedDefiniteGridSpan(currentLine + 1, span.integerSpan());
+}
+
+void Grid::setupGridForMasonryLayout()
+{
+    // FIXME(248472): See if we can resize grid instead of clearing it here: https://bugs.webkit.org/show_bug.cgi?id=248472
+    m_grid.clear();
+    m_gridItemArea.clear();
+}
+
 void Grid::setNeedsItemsPlacement(bool needsItemsPlacement)
 {
     m_needsItemsPlacement = needsItemsPlacement;
@@ -214,17 +237,22 @@ GridIterator::GridIterator(const Grid& grid, GridTrackSizingDirection direction,
     , m_columnIndex((direction == ForColumns) ? fixedTrackIndex : varyingTrackIndex)
     , m_childIndex(0)
 {
+    if (m_grid.maxRows()) {
     ASSERT(m_grid.numTracks(ForRows));
-    ASSERT(m_grid.numTracks(ForColumns));
     ASSERT(m_rowIndex < m_grid.numTracks(ForRows));
+    }
+    if (m_grid.maxColumns()) {
+        ASSERT(m_grid.numTracks(ForColumns));
     ASSERT(m_columnIndex < m_grid.numTracks(ForColumns));
+    }
 }
 
 RenderBox* GridIterator::nextGridItem()
 {
+    if (m_grid.maxRows())
     ASSERT(m_grid.numTracks(ForRows));
+    if (m_grid.maxColumns())
     ASSERT(m_grid.numTracks(ForColumns));
-
     unsigned& varyingTrackIndex = (m_direction == ForColumns) ? m_rowIndex : m_columnIndex;
     const unsigned endOfVaryingTrackIndex = (m_direction == ForColumns) ? m_grid.numTracks(ForRows) : m_grid.numTracks(ForColumns);
     for (; varyingTrackIndex < endOfVaryingTrackIndex; ++varyingTrackIndex) {
@@ -239,9 +267,10 @@ RenderBox* GridIterator::nextGridItem()
 
 bool GridIterator::isEmptyAreaEnough(unsigned rowSpan, unsigned columnSpan) const
 {
+    if (m_grid.maxRows())
     ASSERT(m_grid.numTracks(ForRows));
+    if (m_grid.maxColumns())
     ASSERT(m_grid.numTracks(ForColumns));
-
     // Ignore cells outside current grid as we will grow it later if needed.
     unsigned maxRows = std::min<unsigned>(m_rowIndex + rowSpan, m_grid.numTracks(ForRows));
     unsigned maxColumns = std::min<unsigned>(m_columnIndex + columnSpan, m_grid.numTracks(ForColumns));
@@ -260,7 +289,9 @@ bool GridIterator::isEmptyAreaEnough(unsigned rowSpan, unsigned columnSpan) cons
 
 std::unique_ptr<GridArea> GridIterator::nextEmptyGridArea(unsigned fixedTrackSpan, unsigned varyingTrackSpan)
 {
+    if (m_grid.maxRows())
     ASSERT(m_grid.numTracks(ForRows));
+    if (m_grid.maxColumns())
     ASSERT(m_grid.numTracks(ForColumns));
     ASSERT(fixedTrackSpan >= 1);
     ASSERT(varyingTrackSpan >= 1);

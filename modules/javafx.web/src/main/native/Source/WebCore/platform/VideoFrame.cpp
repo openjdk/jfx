@@ -34,10 +34,11 @@
 
 namespace WebCore {
 
-VideoFrame::VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation rotation)
+VideoFrame::VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation rotation, PlatformVideoColorSpace&& colorSpace)
     : m_presentationTime(presentationTime)
     , m_isMirrored(isMirrored)
     , m_rotation(rotation)
+    , m_colorSpace(WTFMove(colorSpace))
 {
 }
 
@@ -47,6 +48,49 @@ void VideoFrame::initializeCharacteristics(MediaTime presentationTime, bool isMi
     const_cast<bool&>(m_isMirrored) = isMirrored;
     const_cast<Rotation&>(m_rotation) = rotation;
 }
+
+#if !PLATFORM(COCOA) && !USE(GSTREAMER)
+RefPtr<VideoFrame> VideoFrame::fromNativeImage(NativeImage&)
+{
+    // FIXME: Add support.
+    return nullptr;
+}
+
+RefPtr<VideoFrame> VideoFrame::createNV12(Span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
+{
+    // FIXME: Add support.
+    return nullptr;
+}
+
+RefPtr<VideoFrame> VideoFrame::createRGBA(Span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
+{
+    // FIXME: Add support.
+    return nullptr;
+}
+
+RefPtr<VideoFrame> VideoFrame::createBGRA(Span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
+{
+    // FIXME: Add support.
+    return nullptr;
+}
+
+RefPtr<VideoFrame> VideoFrame::createI420(Span<const uint8_t>, size_t, size_t, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&)
+{
+    // FIXME: Add support.
+    return nullptr;
+}
+
+void VideoFrame::copyTo(Span<uint8_t>, VideoPixelFormat, Vector<ComputedPlaneLayout>&&, CopyCallback&& callback)
+{
+    // FIXME: Add support.
+    callback({ });
+}
+
+void VideoFrame::paintInContext(GraphicsContext&, const FloatRect&, const ImageOrientation&, bool)
+{
+    // FIXME: Add support.
+}
+#endif // !PLATFORM(COCOA)
 
 #if !PLATFORM(COCOA)
 RefPtr<JSC::Uint8ClampedArray> VideoFrame::getRGBAImageData() const
@@ -59,7 +103,6 @@ RefPtr<JSC::Uint8ClampedArray> VideoFrame::getRGBAImageData() const
     return nullptr;
 }
 #endif
-
 }
 
 #endif // ENABLE(VIDEO)

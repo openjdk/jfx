@@ -38,6 +38,12 @@
 
 namespace JSC {
 
+class GetterSetterAccessCase;
+class InstanceOfAccessCase;
+class IntrinsicGetterAccessCase;
+class ModuleNamespaceAccessCase;
+class ProxyableAccessCase;
+
 struct AccessGenerationState;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
@@ -82,67 +88,93 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
 // We will sometimes buffer committed AccessCases in the PolymorphicAccess object before generating
 // code. This allows us to only regenerate once we've accumulated (hopefully) more than one new
 // AccessCase.
+
+#define JSC_FOR_EACH_ACCESS_TYPE(macro) \
+    macro(Load) \
+    macro(Transition) \
+    macro(Delete) \
+    macro(DeleteNonConfigurable) \
+    macro(DeleteMiss) \
+    macro(Replace) \
+    macro(Miss) \
+    macro(GetGetter) \
+    macro(Getter) \
+    macro(Setter) \
+    macro(CustomValueGetter) \
+    macro(CustomAccessorGetter) \
+    macro(CustomValueSetter) \
+    macro(CustomAccessorSetter) \
+    macro(IntrinsicGetter) \
+    macro(InHit) \
+    macro(InMiss) \
+    macro(ArrayLength) \
+    macro(StringLength) \
+    macro(DirectArgumentsLength) \
+    macro(ScopedArgumentsLength) \
+    macro(ModuleNamespaceLoad) \
+    macro(ProxyObjectLoad) \
+    macro(InstanceOfHit) \
+    macro(InstanceOfMiss) \
+    macro(InstanceOfGeneric) \
+    macro(CheckPrivateBrand) \
+    macro(SetPrivateBrand) \
+    macro(IndexedInt32Load) \
+    macro(IndexedDoubleLoad) \
+    macro(IndexedContiguousLoad) \
+    macro(IndexedArrayStorageLoad) \
+    macro(IndexedScopedArgumentsLoad) \
+    macro(IndexedDirectArgumentsLoad) \
+    macro(IndexedTypedArrayInt8Load) \
+    macro(IndexedTypedArrayUint8Load) \
+    macro(IndexedTypedArrayUint8ClampedLoad) \
+    macro(IndexedTypedArrayInt16Load) \
+    macro(IndexedTypedArrayUint16Load) \
+    macro(IndexedTypedArrayInt32Load) \
+    macro(IndexedTypedArrayUint32Load) \
+    macro(IndexedTypedArrayFloat32Load) \
+    macro(IndexedTypedArrayFloat64Load) \
+    macro(IndexedResizableTypedArrayInt8Load) \
+    macro(IndexedResizableTypedArrayUint8Load) \
+    macro(IndexedResizableTypedArrayUint8ClampedLoad) \
+    macro(IndexedResizableTypedArrayInt16Load) \
+    macro(IndexedResizableTypedArrayUint16Load) \
+    macro(IndexedResizableTypedArrayInt32Load) \
+    macro(IndexedResizableTypedArrayUint32Load) \
+    macro(IndexedResizableTypedArrayFloat32Load) \
+    macro(IndexedResizableTypedArrayFloat64Load) \
+    macro(IndexedStringLoad) \
+    macro(IndexedNoIndexingMiss) \
+    macro(IndexedInt32Store) \
+    macro(IndexedDoubleStore) \
+    macro(IndexedContiguousStore) \
+    macro(IndexedArrayStorageStore) \
+    macro(IndexedTypedArrayInt8Store) \
+    macro(IndexedTypedArrayUint8Store) \
+    macro(IndexedTypedArrayUint8ClampedStore) \
+    macro(IndexedTypedArrayInt16Store) \
+    macro(IndexedTypedArrayUint16Store) \
+    macro(IndexedTypedArrayInt32Store) \
+    macro(IndexedTypedArrayUint32Store) \
+    macro(IndexedTypedArrayFloat32Store) \
+    macro(IndexedTypedArrayFloat64Store) \
+    macro(IndexedResizableTypedArrayInt8Store) \
+    macro(IndexedResizableTypedArrayUint8Store) \
+    macro(IndexedResizableTypedArrayUint8ClampedStore) \
+    macro(IndexedResizableTypedArrayInt16Store) \
+    macro(IndexedResizableTypedArrayUint16Store) \
+    macro(IndexedResizableTypedArrayInt32Store) \
+    macro(IndexedResizableTypedArrayUint32Store) \
+    macro(IndexedResizableTypedArrayFloat32Store) \
+    macro(IndexedResizableTypedArrayFloat64Store) \
+
+
 class AccessCase : public ThreadSafeRefCounted<AccessCase> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessCase);
 public:
     enum AccessType : uint8_t {
-        Load,
-        Transition,
-        Delete,
-        DeleteNonConfigurable,
-        DeleteMiss,
-        Replace,
-        Miss,
-        GetGetter,
-        Getter,
-        Setter,
-        CustomValueGetter,
-        CustomAccessorGetter,
-        CustomValueSetter,
-        CustomAccessorSetter,
-        IntrinsicGetter,
-        InHit,
-        InMiss,
-        ArrayLength,
-        StringLength,
-        DirectArgumentsLength,
-        ScopedArgumentsLength,
-        ModuleNamespaceLoad,
-        InstanceOfHit,
-        InstanceOfMiss,
-        InstanceOfGeneric,
-        CheckPrivateBrand,
-        SetPrivateBrand,
-        IndexedInt32Load,
-        IndexedDoubleLoad,
-        IndexedContiguousLoad,
-        IndexedArrayStorageLoad,
-        IndexedScopedArgumentsLoad,
-        IndexedDirectArgumentsLoad,
-        IndexedTypedArrayInt8Load,
-        IndexedTypedArrayUint8Load,
-        IndexedTypedArrayUint8ClampedLoad,
-        IndexedTypedArrayInt16Load,
-        IndexedTypedArrayUint16Load,
-        IndexedTypedArrayInt32Load,
-        IndexedTypedArrayUint32Load,
-        IndexedTypedArrayFloat32Load,
-        IndexedTypedArrayFloat64Load,
-        IndexedStringLoad,
-        IndexedNoIndexingMiss,
-        IndexedInt32Store,
-        IndexedDoubleStore,
-        IndexedContiguousStore,
-        IndexedArrayStorageStore,
-        IndexedTypedArrayInt8Store,
-        IndexedTypedArrayUint8Store,
-        IndexedTypedArrayUint8ClampedStore,
-        IndexedTypedArrayInt16Store,
-        IndexedTypedArrayUint16Store,
-        IndexedTypedArrayInt32Store,
-        IndexedTypedArrayUint32Store,
-        IndexedTypedArrayFloat32Store,
-        IndexedTypedArrayFloat64Store,
+#define JSC_DEFINE_ACCESS_TYPE(name) name,
+        JSC_FOR_EACH_ACCESS_TYPE(JSC_DEFINE_ACCESS_TYPE)
+#undef JSC_DEFINE_ACCESS_TYPE
     };
 
     enum State : uint8_t {
@@ -164,11 +196,13 @@ public:
     static RefPtr<AccessCase> createTransition(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure,
         Structure* newStructure, const ObjectPropertyConditionSet&, RefPtr<PolyProtoAccessChain>&&, const StructureStubInfo&);
 
-    static Ref<AccessCase> createDelete(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure,
-        Structure* newStructure);
+    static Ref<AccessCase> createDelete(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure, Structure* newStructure);
 
     static Ref<AccessCase> createCheckPrivateBrand(VM&, JSCell* owner, CacheableIdentifier, Structure*);
+
     static Ref<AccessCase> createSetPrivateBrand(VM&, JSCell* owner, CacheableIdentifier, Structure* oldStructure, Structure* newStructure);
+
+    static Ref<AccessCase> createReplace(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure, bool viaProxy);
 
     static RefPtr<AccessCase> fromStructureStubInfo(VM&, JSCell* owner, CacheableIdentifier, StructureStubInfo&);
 
@@ -192,10 +226,10 @@ public:
 
     ObjectPropertyConditionSet conditionSet() const { return m_conditionSet; }
 
-    virtual bool hasAlternateBase() const;
-    virtual JSObject* alternateBase() const;
+    bool hasAlternateBase() const;
+    JSObject* alternateBase() const;
 
-    virtual WatchpointSet* additionalSet() const { return nullptr; }
+    WatchpointSet* additionalSet() const;
     bool viaProxy() const { return m_viaProxy; }
 
     // If you supply the optional vector, this will append the set of cells that this will need to keep alive
@@ -241,9 +275,6 @@ public:
     bool canReplace(const AccessCase& other) const;
 
     void dump(PrintStream& out) const;
-    virtual void dumpImpl(PrintStream&, CommaPrinter&, Indenter&) const { }
-
-    virtual ~AccessCase();
 
     bool usesPolyProto() const
     {
@@ -255,6 +286,7 @@ public:
     bool needsScratchFPR() const;
 
     static TypedArrayType toTypedArrayType(AccessType);
+    static bool forResizableTypedArray(AccessType);
 
     UniquedStringImpl* uid() const { return m_identifier.uid(); }
     CacheableIdentifier identifier() const { return m_identifier; }
@@ -271,6 +303,11 @@ public:
     }
 
     static bool canBeShared(const AccessCase&, const AccessCase&);
+
+    template<typename Func>
+    void runWithDowncast(const Func&);
+
+    void operator delete(AccessCase*, std::destroying_delete_t);
 
 protected:
     AccessCase(VM&, JSCell* owner, AccessType, CacheableIdentifier, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, RefPtr<PolyProtoAccessChain>&&);
@@ -299,9 +336,21 @@ protected:
     AccessCase& operator=(const AccessCase&) = delete;
     void resetState() { m_state = Primordial; }
 
+    Ref<AccessCase> cloneImpl() const;
+    WatchpointSet* additionalSetImpl() const { return nullptr; }
+    bool hasAlternateBaseImpl() const;
+    void dumpImpl(PrintStream&, CommaPrinter&, Indenter&) const { }
+    JSObject* alternateBaseImpl() const;
+
 private:
     friend class CodeBlock;
     friend class PolymorphicAccess;
+
+    friend class ProxyableAccessCase;
+    friend class GetterSetterAccessCase;
+    friend class IntrinsicGetterAccessCase;
+    friend class ModuleNamespaceAccessCase;
+    friend class InstanceOfAccessCase;
 
     template<typename Functor>
     void forEachDependentCell(VM&, const Functor&) const;
@@ -312,7 +361,7 @@ private:
 
     // FIXME: This only exists because of how AccessCase puts post-generation things into itself.
     // https://bugs.webkit.org/show_bug.cgi?id=156456
-    virtual Ref<AccessCase> clone() const;
+    Ref<AccessCase> clone() const;
 
     // Perform any action that must be performed before the end of the epoch in which the case
     // was created. Returns a set of watchpoint sets that will need to be watched.
@@ -361,11 +410,12 @@ public:
         struct Key {
             Key() = default;
 
-            Key(GPRReg baseGPR, GPRReg valueGPR, GPRReg extraGPR, GPRReg stubInfoGPR, GPRReg arrayProfileGPR, RegisterSet usedRegisters, PolymorphicAccessJITStubRoutine* wrapped)
+            Key(GPRReg baseGPR, GPRReg valueGPR, GPRReg extraGPR, GPRReg extra2GPR, GPRReg stubInfoGPR, GPRReg arrayProfileGPR, ScalarRegisterSet usedRegisters, PolymorphicAccessJITStubRoutine* wrapped)
                 : m_wrapped(wrapped)
                 , m_baseGPR(baseGPR)
                 , m_valueGPR(valueGPR)
                 , m_extraGPR(extraGPR)
+                , m_extra2GPR(extra2GPR)
                 , m_stubInfoGPR(stubInfoGPR)
                 , m_arrayProfileGPR(arrayProfileGPR)
                 , m_usedRegisters(usedRegisters)
@@ -383,6 +433,7 @@ public:
                     && a.m_baseGPR == b.m_baseGPR
                     && a.m_valueGPR == b.m_valueGPR
                     && a.m_extraGPR == b.m_extraGPR
+                    && a.m_extra2GPR == b.m_extra2GPR
                     && a.m_stubInfoGPR == b.m_stubInfoGPR
                     && a.m_arrayProfileGPR == b.m_arrayProfileGPR
                     && a.m_usedRegisters == b.m_usedRegisters;
@@ -392,9 +443,10 @@ public:
             GPRReg m_baseGPR;
             GPRReg m_valueGPR;
             GPRReg m_extraGPR;
+            GPRReg m_extra2GPR;
             GPRReg m_stubInfoGPR;
             GPRReg m_arrayProfileGPR;
-            RegisterSet m_usedRegisters;
+            ScalarRegisterSet m_usedRegisters;
         };
 
         using KeyTraits = SimpleClassHashTraits<Key>;
@@ -426,6 +478,7 @@ public:
                 if (a.m_baseGPR == b.m_baseGPR
                     && a.m_valueGPR == b.m_valueGPR
                     && a.m_extraGPR == b.m_extraGPR
+                    && a.m_extra2GPR == b.m_extra2GPR
                     && a.m_stubInfoGPR == b.m_stubInfoGPR
                     && a.m_arrayProfileGPR == b.m_arrayProfileGPR
                     && a.m_usedRegisters == b.m_usedRegisters) {
@@ -456,9 +509,10 @@ public:
         GPRReg m_baseGPR;
         GPRReg m_valueGPR;
         GPRReg m_extraGPR;
+        GPRReg m_extra2GPR;
         GPRReg m_stubInfoGPR;
         GPRReg m_arrayProfileGPR;
-        RegisterSet m_usedRegisters;
+        ScalarRegisterSet m_usedRegisters;
         const FixedVector<RefPtr<AccessCase>>& m_cases;
         const FixedVector<StructureID>& m_weakStructures;
     };

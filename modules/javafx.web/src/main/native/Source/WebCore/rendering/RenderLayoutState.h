@@ -28,6 +28,7 @@
 #include "FrameViewLayoutContext.h"
 #include "LayoutRect.h"
 #include <wtf/Noncopyable.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -42,6 +43,11 @@ class RenderLayoutState {
     WTF_MAKE_NONCOPYABLE(RenderLayoutState); WTF_MAKE_FAST_ALLOCATED;
 
 public:
+    struct LeadingTrim {
+        bool trimFirstFormattedLine { false };
+        WeakPtr<const RenderBlockFlow> trimLastFormattedLineOnTarget;
+    };
+
     RenderLayoutState()
         : m_clipped(false)
         , m_isPaginated(false)
@@ -52,7 +58,7 @@ public:
 #endif
     {
     }
-    RenderLayoutState(const FrameViewLayoutContext::LayoutStateStack&, RenderBox&, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged);
+    RenderLayoutState(const FrameViewLayoutContext::LayoutStateStack&, RenderBox&, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged, std::optional<size_t> maximumLineCountForLineClamp, std::optional<size_t> visibleLineCountForLineClamp, std::optional<LeadingTrim>);
     enum class IsPaginated { No, Yes };
     explicit RenderLayoutState(RenderElement&, IsPaginated = IsPaginated::No);
 
@@ -87,6 +93,23 @@ public:
 #if ASSERT_ENABLED
     bool layoutDeltaMatches(LayoutSize) const;
 #endif
+
+    bool hasLineClamp() const { return m_maximumLineCountForLineClamp.has_value(); }
+    void resetLineClamp();
+    void setMaximumLineCountForLineClamp(size_t maximumLineCount) { m_maximumLineCountForLineClamp = maximumLineCount; }
+    std::optional<size_t> maximumLineCountForLineClamp() { return m_maximumLineCountForLineClamp; }
+    void setVisibleLineCountForLineClamp(size_t visibleLineCount) { m_visibleLineCountForLineClamp = visibleLineCount; }
+    std::optional<size_t> visibleLineCountForLineClamp() const { return m_visibleLineCountForLineClamp; }
+
+    std::optional<LeadingTrim> leadingTrim() { return m_leadingTrim; }
+    bool hasLeadingTrimStart() const { return m_leadingTrim && m_leadingTrim->trimFirstFormattedLine; }
+    bool hasLeadingTrimEnd(const RenderBlockFlow& candidate) const { return m_leadingTrim && m_leadingTrim->trimLastFormattedLineOnTarget.get() == &candidate; }
+
+    void addLeadingTrimStart();
+    void removeLeadingTrimStart();
+
+    void addLeadingTrimEnd(const RenderBlockFlow& targetInlineFormattingContext);
+    void resetLeadingTrim() { m_leadingTrim = { }; }
 
 private:
     void computeOffsets(const RenderLayoutState& ancestor, RenderBox&, LayoutSize offset);
@@ -128,6 +151,9 @@ private:
     LayoutSize m_pageOffset;
     LayoutSize m_lineGridOffset;
     LayoutSize m_lineGridPaginationOrigin;
+    std::optional<size_t> m_maximumLineCountForLineClamp;
+    std::optional<size_t> m_visibleLineCountForLineClamp;
+    std::optional<LeadingTrim> m_leadingTrim;
 #if ASSERT_ENABLED
     RenderElement* m_renderer { nullptr };
 #endif
@@ -175,5 +201,35 @@ private:
     FrameViewLayoutContext& m_context;
     bool m_pushed { false };
 };
+
+inline void RenderLayoutState::addLeadingTrimStart()
+{
+    if (m_leadingTrim) {
+        m_leadingTrim->trimFirstFormattedLine = true;
+        return;
+    }
+    m_leadingTrim = { true, { } };
+}
+
+inline void RenderLayoutState::removeLeadingTrimStart()
+{
+    ASSERT(m_leadingTrim && m_leadingTrim->trimFirstFormattedLine);
+    m_leadingTrim->trimFirstFormattedLine = false;
+}
+
+inline void RenderLayoutState::addLeadingTrimEnd(const RenderBlockFlow& targetInlineFormattingContext)
+{
+    if (m_leadingTrim) {
+        m_leadingTrim->trimLastFormattedLineOnTarget = &targetInlineFormattingContext;
+        return;
+    }
+    m_leadingTrim = { false, &targetInlineFormattingContext };
+}
+
+inline void RenderLayoutState::resetLineClamp()
+{
+    m_maximumLineCountForLineClamp = { };
+    m_visibleLineCountForLineClamp = { };
+}
 
 } // namespace WebCore

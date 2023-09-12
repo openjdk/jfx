@@ -120,7 +120,7 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpToThis) \
     macro(OpCall) \
     macro(OpTailCall) \
-    macro(OpCallEval) \
+    macro(OpCallDirectEval) \
     macro(OpConstruct) \
     macro(OpGetFromScope) \
     macro(OpBitand) \
@@ -130,11 +130,12 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpLshift) \
     macro(OpRshift) \
     macro(OpGetPrivateName) \
+    macro(OpNewArrayWithSpecies) \
 
 #define FOR_EACH_OPCODE_WITH_CALL_LINK_INFO(macro) \
     macro(OpCall) \
     macro(OpTailCall) \
-    macro(OpCallEval) \
+    macro(OpCallDirectEval) \
     macro(OpConstruct) \
     macro(OpIteratorOpen) \
     macro(OpIteratorNext) \
@@ -152,11 +153,13 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpEnumeratorGetByVal) \
     macro(OpEnumeratorInByVal) \
     macro(OpEnumeratorHasOwnProperty) \
+    macro(OpNewArrayWithSpecies) \
     FOR_EACH_OPCODE_WITH_CALL_LINK_INFO(macro) \
 
 #define FOR_EACH_OPCODE_WITH_ARRAY_ALLOCATION_PROFILE(macro) \
     macro(OpNewArray) \
     macro(OpNewArrayWithSize) \
+    macro(OpNewArrayWithSpecies) \
     macro(OpNewArrayBuffer) \
 
 #define FOR_EACH_OPCODE_WITH_OBJECT_ALLOCATION_PROFILE(macro) \

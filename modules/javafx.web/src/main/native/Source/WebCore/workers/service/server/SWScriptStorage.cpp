@@ -53,8 +53,8 @@ String SWScriptStorage::sha2Hash(const String& input) const
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     crypto->addBytes(m_salt.data(), m_salt.size());
-    auto inputUtf8 = input.utf8();
-    crypto->addBytes(inputUtf8.data(), inputUtf8.length());
+    auto inputUTF8 = input.utf8();
+    crypto->addBytes(inputUTF8.data(), inputUTF8.length());
     auto hash = crypto->computeHash();
     return base64URLEncodeToString(hash.data(), hash.size());
 }
@@ -87,15 +87,16 @@ ScriptBuffer SWScriptStorage::store(const ServiceWorkerRegistrationKey& registra
     FileSystem::makeAllDirectories(FileSystem::parentPath(scriptPath));
 
     auto iterateOverBufferAndWriteData = [&](const Function<bool(Span<const uint8_t>)>& writeData) {
-        for (auto& entry : *script.buffer())
-            writeData({ entry.segment->data(), entry.segment->size() });
+        script.buffer()->forEachSegment([&](Span<const uint8_t> span) {
+            writeData(span);
+        });
     };
 
     // Make sure we delete the file before writing as there may be code using a mmap'd version of this file.
     FileSystem::deleteFile(scriptPath);
 
     if (!shouldUseFileMapping(script.buffer()->size())) {
-        auto handle = FileSystem::openFile(scriptPath, FileSystem::FileOpenMode::Write);
+        auto handle = FileSystem::openFile(scriptPath, FileSystem::FileOpenMode::Truncate);
         if (!FileSystem::isHandleValid(handle)) {
             RELEASE_LOG_ERROR(ServiceWorker, "SWScriptStorage::store: Failure to store %s, FileSystem::openFile() failed", scriptPath.utf8().data());
             return { };

@@ -78,12 +78,14 @@ private:
     void removeAllTargets();
     bool removeObservation(const Element&);
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     RefPtr<ResizeObserverCallback> m_callback;
     Vector<Ref<ResizeObservation>> m_observations;
 
     Vector<Ref<ResizeObservation>> m_activeObservations;
     Vector<GCReachableRef<Element>> m_activeObservationTargets;
+    Vector<GCReachableRef<Element>> m_targetsWaitingForFirstObservation;
+
     bool m_hasSkippedObservations { false };
 };
 

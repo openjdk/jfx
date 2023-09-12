@@ -36,16 +36,18 @@ class Document;
 class StyleCachedImage final : public StyleImage {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<StyleCachedImage> create(CSSImageValue& cssValue, float scaleFactor = 1);
+    static Ref<StyleCachedImage> create(Ref<CSSImageValue>, float scaleFactor = 1);
+    static Ref<StyleCachedImage> copyOverridingScaleFactor(StyleCachedImage&, float scaleFactor);
     virtual ~StyleCachedImage();
 
-    bool operator==(const StyleImage& other) const final;
+    bool operator==(const StyleImage&) const final;
+    bool equals(const StyleCachedImage&) const;
 
     CachedImage* cachedImage() const final;
 
     WrappedImagePtr data() const final { return m_cachedImage.get(); }
 
-    Ref<CSSValue> cssValue() const final;
+    Ref<CSSValue> computedStyleValue(const RenderStyle&) const final;
 
     bool canRender(const RenderElement*, float multiplier) const final;
     bool isPending() const final;
@@ -62,17 +64,17 @@ public:
     void removeClient(RenderElement&) final;
     bool hasClient(RenderElement&) const final;
     bool hasImage() const final;
-    RefPtr<Image> image(RenderElement*, const FloatSize&) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&) const final;
     float imageScaleFactor() const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     bool usesDataProtocol() const final;
 
     URL reresolvedURL(const Document&) const;
 
-private:
-    StyleCachedImage(CSSImageValue&, float);
-
     URL imageURL() const;
+
+private:
+    StyleCachedImage(Ref<CSSImageValue>&&, float);
 
     Ref<CSSImageValue> m_cssValue;
     bool m_isPending { true };

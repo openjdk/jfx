@@ -27,6 +27,7 @@
 #include "IDBKeyData.h"
 
 #include "KeyedCoding.h"
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
@@ -195,7 +196,7 @@ bool IDBKeyData::decode(KeyedDecoder& decoder, IDBKeyData& result)
     if (result.m_isNull)
         return true;
 
-    auto enumFunction = [](int64_t value) {
+    auto enumFunction = [](IndexedDB::KeyType value) {
         return value == IndexedDB::KeyType::Max
             || value == IndexedDB::KeyType::Invalid
             || value == IndexedDB::KeyType::Array

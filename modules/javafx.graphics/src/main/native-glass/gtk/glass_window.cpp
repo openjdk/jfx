@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1322,6 +1322,25 @@ void WindowContextTop::set_owner(WindowContext * owner_ctx) {
     owner = owner_ctx;
 }
 
+void WindowContextTop::update_view_size() {
+    // Notify the view size only if size is oriented by WINDOW, otherwise it knows its own size
+    if (geometry.final_width.type == BOUNDSTYPE_WINDOW
+        || geometry.final_height.type == BOUNDSTYPE_WINDOW) {
+
+        notify_view_resize();
+    }
+}
+
+void WindowContextTop::notify_view_resize() {
+    if (jview) {
+        int cw = geometry_get_content_width(&geometry);
+        int ch = geometry_get_content_height(&geometry);
+
+        mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
+}
+
 void WindowContextTop::notify_window_resize() {
     int w = geometry_get_window_width(&geometry);
     int h = geometry_get_window_height(&geometry);
@@ -1330,13 +1349,7 @@ void WindowContextTop::notify_window_resize() {
                  com_sun_glass_events_WindowEvent_RESIZE, w, h);
     CHECK_JNI_EXCEPTION(mainEnv)
 
-    if (jview) {
-        int cw = geometry_get_content_width(&geometry);
-        int ch = geometry_get_content_height(&geometry);
-
-        mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    }
+    notify_view_resize();
 }
 
 void WindowContextTop::notify_window_move() {

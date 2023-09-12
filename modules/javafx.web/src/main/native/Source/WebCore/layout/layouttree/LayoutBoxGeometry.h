@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutGeometryRect.h"
 #include "LayoutUnits.h"
 #include <wtf/IsoMalloc.h>
@@ -101,11 +99,18 @@ public:
     LayoutUnit marginBoxHeight() const { return marginBefore() + borderBoxHeight() + marginAfter(); }
     LayoutUnit marginBoxWidth() const { return marginStart() + borderBoxWidth() + marginEnd(); }
 
-    LayoutUnit verticalMarginBorderAndPadding() const { return marginBefore() + verticalBorder() + verticalPadding().value_or(0_lu) + marginAfter(); }
-    LayoutUnit horizontalMarginBorderAndPadding() const { return marginStart() + horizontalBorder() + horizontalPadding().value_or(0_lu) + marginEnd(); }
+    LayoutUnit marginBorderAndPaddingBefore() const { return marginBefore() + borderBefore() + paddingBefore().value_or(0_lu); }
+    LayoutUnit marginBorderAndPaddingAfter() const { return marginAfter() + borderAfter() + paddingAfter().value_or(0_lu); }
+    LayoutUnit verticalMarginBorderAndPadding() const { return marginBorderAndPaddingBefore() + marginBorderAndPaddingAfter(); }
+
+    LayoutUnit marginBorderAndPaddingStart() const { return marginStart() + borderStart() + paddingStart().value_or(0_lu); }
+    LayoutUnit marginBorderAndPaddingEnd() const { return marginEnd() + borderEnd() + paddingEnd().value_or(0_lu); }
+    LayoutUnit horizontalMarginBorderAndPadding() const { return marginBorderAndPaddingStart() + marginBorderAndPaddingEnd(); }
 
     LayoutUnit verticalSpaceForScrollbar() const { return m_verticalSpaceForScrollbar; }
     LayoutUnit horizontalSpaceForScrollbar() const { return m_horizontalSpaceForScrollbar; }
+
+    bool hasMarginBorderOrPadding() const { return horizontalMarginBorderAndPadding() || verticalMarginBorderAndPadding(); }
 
     Rect marginBox() const;
     Rect borderBox() const;
@@ -137,6 +142,8 @@ public:
 
     void setVerticalSpaceForScrollbar(LayoutUnit scrollbarHeight) { m_verticalSpaceForScrollbar = scrollbarHeight; }
     void setHorizontalSpaceForScrollbar(LayoutUnit scrollbarWidth) { m_horizontalSpaceForScrollbar = scrollbarWidth; }
+
+    BoxGeometry geometryForWritingModeAndDirection(bool isHorizontalWritingMode, bool isLeftToRightDirection, LayoutUnit containerLogicalWidth) const;
 
 private:
     LayoutUnit logicalTop() const;
@@ -418,6 +425,45 @@ inline LayoutUnit BoxGeometry::borderEnd() const
     return m_border.horizontal.right;
 }
 
+inline BoxGeometry BoxGeometry::geometryForWritingModeAndDirection(bool isHorizontalWritingMode, bool isLeftToRightDirection, LayoutUnit containerLogicalWidth) const
+{
+    if (isHorizontalWritingMode && isLeftToRightDirection)
+        return *this;
+
+    auto visualGeometry = *this;
+    if (isHorizontalWritingMode) {
+        // Horizontal flip.
+        visualGeometry.m_horizontalMargin = { m_horizontalMargin.end, m_horizontalMargin.start };
+        visualGeometry.m_border.horizontal = { m_border.horizontal.right, m_border.horizontal.left };
+        if (m_padding)
+            visualGeometry.m_padding->horizontal = { m_padding->horizontal.right, m_padding->horizontal.left };
+
+        visualGeometry.m_topLeft.setX(containerLogicalWidth - (m_topLeft.x() + borderBoxWidth()));
+        return visualGeometry;
+    }
+
+    // Vertical flip.
+    visualGeometry.m_contentWidth = m_contentHeight;
+    visualGeometry.m_contentHeight = m_contentWidth;
+
+    visualGeometry.m_horizontalMargin = { m_verticalMargin.after, m_verticalMargin.before };
+    visualGeometry.m_verticalMargin = { m_horizontalMargin.start, m_horizontalMargin.end };
+
+    auto left = isLeftToRightDirection ? m_topLeft.x() : containerLogicalWidth - (m_topLeft.x() + borderBoxWidth());
+    auto marginBoxOffset = LayoutSize { left - m_horizontalMargin.start, m_topLeft.y() - m_verticalMargin.before }.transposedSize();
+    visualGeometry.m_topLeft = { visualGeometry.m_horizontalMargin.start, visualGeometry.m_verticalMargin.before };
+    visualGeometry.m_topLeft.move(marginBoxOffset);
+
+    visualGeometry.m_border = { { m_border.vertical.bottom, m_border.vertical.top }, { m_border.horizontal.left, m_border.horizontal.right } };
+
+    if (m_padding)
+        visualGeometry.m_padding = Layout::Edges { { m_padding->vertical.bottom, m_padding->vertical.top }, { m_padding->horizontal.left, m_padding->horizontal.right } };
+
+    visualGeometry.m_verticalSpaceForScrollbar = m_horizontalSpaceForScrollbar;
+    visualGeometry.m_horizontalSpaceForScrollbar = m_verticalSpaceForScrollbar;
+
+    return visualGeometry;
+}
+
 }
 }
-#endif

@@ -26,47 +26,59 @@
 #pragma once
 
 #include "AbstractFrame.h"
-#include "GlobalFrameIdentifier.h"
-#include <wtf/Ref.h>
+#include "LayerHostingContextIdentifier.h"
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class RemoteDOMWindow;
+class RemoteFrameClient;
+class RemoteFrameView;
+class WeakPtrImplWithEventTargetData;
 
 class RemoteFrame final : public AbstractFrame {
 public:
-    static Ref<RemoteFrame> create(GlobalFrameIdentifier&& frameIdentifier)
+    static Ref<RemoteFrame> create(Page& page, FrameIdentifier frameID, HTMLFrameOwnerElement* ownerElement, UniqueRef<RemoteFrameClient>&& client, LayerHostingContextIdentifier layerHostingContextIdentifier)
     {
-        return adoptRef(* new RemoteFrame(WTFMove(frameIdentifier)));
+        return adoptRef(*new RemoteFrame(page, frameID, ownerElement, WTFMove(client), layerHostingContextIdentifier));
     }
     ~RemoteFrame();
 
-    const GlobalFrameIdentifier& identifier() const { return m_identifier; }
-
-    void setWindow(RemoteDOMWindow* window) { m_window = window; }
-    RemoteDOMWindow* window() const { return m_window; }
+    RemoteDOMWindow& window() const;
 
     void setOpener(AbstractFrame* opener) { m_opener = opener; }
     AbstractFrame* opener() const { return m_opener.get(); }
 
+    WEBCORE_EXPORT void didFinishLoadInAnotherProcess();
+
+    const RemoteFrameClient& client() const { return m_client.get(); }
+    RemoteFrameClient& client() { return m_client.get(); }
+
+    RemoteFrameView* view() const { return m_view.get(); }
+    WEBCORE_EXPORT void setView(RefPtr<RemoteFrameView>&&);
+
+    LayerHostingContextIdentifier layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
+
 private:
-    WEBCORE_EXPORT explicit RemoteFrame(GlobalFrameIdentifier&&);
+    WEBCORE_EXPORT explicit RemoteFrame(Page&, FrameIdentifier, HTMLFrameOwnerElement*, UniqueRef<RemoteFrameClient>&&, LayerHostingContextIdentifier);
 
-    bool isRemoteFrame() const final { return true; }
-    bool isLocalFrame() const final { return false; }
+    FrameType frameType() const final { return FrameType::Remote; }
+    void frameDetached() final;
 
+    AbstractFrameView* virtualView() const final;
     AbstractDOMWindow* virtualWindow() const final;
 
-    GlobalFrameIdentifier m_identifier;
-    RemoteDOMWindow* m_window { nullptr };
-
+    Ref<RemoteDOMWindow> m_window;
     RefPtr<AbstractFrame> m_opener;
+    RefPtr<RemoteFrameView> m_view;
+    UniqueRef<RemoteFrameClient> m_client;
+    LayerHostingContextIdentifier m_layerHostingContextIdentifier;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RemoteFrame)
-    static bool isType(const WebCore::AbstractFrame& frame) { return frame.isRemoteFrame(); }
+static bool isType(const WebCore::AbstractFrame& frame) { return frame.frameType() == WebCore::AbstractFrame::FrameType::Remote; }
 SPECIALIZE_TYPE_TRAITS_END()

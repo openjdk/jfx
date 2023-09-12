@@ -2,8 +2,9 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,14 +27,15 @@
 #include "HTMLLabelElement.h"
 
 #include "Document.h"
-#include "ElementIterator.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "FormAssociatedElement.h"
+#include "FormListedElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLNames.h"
 #include "SelectionRestorationMode.h"
+#include "TypedElementDescendantIterator.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/SetForScope.h>
 
 namespace WebCore {
 
@@ -41,14 +43,15 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLLabelElement);
 
 using namespace HTMLNames;
 
-static LabelableElement* firstElementWithIdIfLabelable(TreeScope& treeScope, const AtomString& id)
+static HTMLElement* firstElementWithIdIfLabelable(TreeScope& treeScope, const AtomString& id)
 {
-    RefPtr element = treeScope.getElementById(id);
-    if (!is<LabelableElement>(element))
+    if (RefPtr element = treeScope.getElementById(id)) {
+        if (auto* labelableElement = dynamicDowncast<HTMLElement>(*element)) {
+            if (labelableElement->isLabelable())
+                return labelableElement;
+        }
+    }
         return nullptr;
-
-    auto& labelableElement = downcast<LabelableElement>(*element);
-    return labelableElement.supportLabels() ? &labelableElement : nullptr;
 }
 
 inline HTMLLabelElement::HTMLLabelElement(const QualifiedName& tagName, Document& document)
@@ -62,16 +65,21 @@ Ref<HTMLLabelElement> HTMLLabelElement::create(const QualifiedName& tagName, Doc
     return adoptRef(*new HTMLLabelElement(tagName, document));
 }
 
-RefPtr<LabelableElement> HTMLLabelElement::control() const
+Ref<HTMLLabelElement> HTMLLabelElement::create(Document& document)
+{
+    return adoptRef(*new HTMLLabelElement(labelTag, document));
+}
+
+RefPtr<HTMLElement> HTMLLabelElement::control() const
 {
     auto& controlId = attributeWithoutSynchronization(forAttr);
     if (controlId.isNull()) {
         // Search the children and descendants of the label element for a form element.
         // per http://dev.w3.org/html5/spec/Overview.html#the-label-element
         // the form element must be "labelable form-associated element".
-        for (auto& labelableElement : descendantsOfType<LabelableElement>(*this)) {
-            if (labelableElement.supportLabels())
-                return const_cast<LabelableElement*>(&labelableElement);
+        for (const auto& labelableElement : descendantsOfType<HTMLElement>(*this)) {
+            if (labelableElement.isLabelable())
+                return const_cast<HTMLElement*>(&labelableElement);
         }
         return nullptr;
     }
@@ -80,10 +88,11 @@ RefPtr<LabelableElement> HTMLLabelElement::control() const
 
 HTMLFormElement* HTMLLabelElement::form() const
 {
-    auto control = this->control();
-    if (!is<HTMLFormControlElement>(control))
+    if (auto element = control()) {
+        if (auto* listedElement = element->asValidatedFormListedElement())
+            return listedElement->form();
+    }
         return nullptr;
-    return downcast<HTMLFormControlElement>(control.get())->form();
 }
 
 void HTMLLabelElement::setActive(bool down, Style::InvalidationScope invalidationScope)
@@ -130,9 +139,7 @@ bool HTMLLabelElement::isEventTargetedAtInteractiveDescendants(Event& event) con
 }
 void HTMLLabelElement::defaultEventHandler(Event& event)
 {
-    static bool processingClick = false;
-
-    if (event.type() == eventNames().clickEvent && !processingClick) {
+    if (event.type() == eventNames().clickEvent && !m_processingClick) {
         auto control = this->control();
 
         // If we can't find a control or if the control received the click
@@ -151,15 +158,13 @@ void HTMLLabelElement::defaultEventHandler(Event& event)
             return;
         }
 
-        processingClick = true;
+        SetForScope processingClick(m_processingClick, true);
 
         control->dispatchSimulatedClick(&event);
 
         document().updateLayoutIgnorePendingStylesheets();
         if (control->isMouseFocusable())
             control->focus({ { }, { }, { }, FocusTrigger::Click, { } });
-
-        processingClick = false;
 
         event.setDefaultHandled();
     }

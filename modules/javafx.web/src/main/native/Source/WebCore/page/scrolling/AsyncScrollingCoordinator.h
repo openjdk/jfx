@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "pal/HysteresisActivity.h"
 #if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingCoordinator.h"
@@ -58,10 +59,9 @@ public:
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT void handleWheelEventPhase(ScrollingNodeID, PlatformWheelEventPhase) final;
-
-    WEBCORE_EXPORT void setActiveScrollSnapIndices(ScrollingNodeID, std::optional<unsigned> horizontalIndex, std::optional<unsigned> verticalIndex);
 #endif
 
+    WEBCORE_EXPORT void setActiveScrollSnapIndices(ScrollingNodeID, std::optional<unsigned> horizontalIndex, std::optional<unsigned> verticalIndex);
     WEBCORE_EXPORT void updateScrollSnapPropertiesWithFrameView(const FrameView&) override;
 
     WEBCORE_EXPORT void updateIsMonitoringWheelEventsForFrameView(const FrameView&) override;
@@ -84,6 +84,8 @@ protected:
 
     WEBCORE_EXPORT String scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> = { }) const override;
     WEBCORE_EXPORT String scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> = { }) const override;
+    WEBCORE_EXPORT bool haveScrollingTree() const override;
+
     WEBCORE_EXPORT void willCommitTree() override;
     void synchronizeStateFromScrollingTree();
     void scheduleRenderingUpdate();
@@ -102,6 +104,9 @@ private:
     WEBCORE_EXPORT void frameViewVisualViewportChanged(FrameView&) override;
     WEBCORE_EXPORT void frameViewEventTrackingRegionsChanged(FrameView&) override;
     WEBCORE_EXPORT void frameViewWillBeDetached(FrameView&) override;
+
+    WEBCORE_EXPORT bool requestStartKeyboardScrollAnimation(ScrollableArea&, const KeyboardScroll&) final;
+    WEBCORE_EXPORT bool requestStopKeyboardScrollAnimation(ScrollableArea&, bool) final;
 
     WEBCORE_EXPORT bool requestScrollPositionUpdate(ScrollableArea&, const ScrollPosition&, ScrollType, ScrollClamping) final;
     WEBCORE_EXPORT bool requestAnimatedScrollToPosition(ScrollableArea&, const ScrollPosition&, ScrollClamping) final;
@@ -158,14 +163,21 @@ private:
 
     void applyScrollPositionUpdate(ScrollUpdate&&, ScrollType);
     void updateScrollPositionAfterAsyncScroll(ScrollingNodeID, const FloatPoint&, std::optional<FloatPoint> layoutViewportOrigin, ScrollingLayerPositionAction, ScrollType);
+    void animatedScrollWillStartForNode(ScrollingNodeID);
     void animatedScrollDidEndForNode(ScrollingNodeID);
+    void wheelEventScrollWillStartForNode(ScrollingNodeID);
+    void wheelEventScrollDidEndForNode(ScrollingNodeID);
 
     FrameView* frameViewForScrollingNode(ScrollingNodeID) const;
+
+    void hysterisisTimerFired(PAL::HysteresisState);
 
     std::unique_ptr<ScrollingStateTree> m_scrollingStateTree;
     RefPtr<ScrollingTree> m_scrollingTree;
 
     bool m_eventTrackingRegionsDirty { false };
+
+    PAL::HysteresisActivity m_hysterisisActivity;
 };
 
 #if ENABLE(SCROLLING_THREAD)

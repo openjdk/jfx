@@ -37,6 +37,7 @@ namespace JSC { namespace Wasm {
 Module::Module(LLIntPlan& plan)
     : m_moduleInformation(plan.takeModuleInformation())
     , m_llintCallees(LLIntCallees::createFromVector(plan.takeCallees()))
+    , m_wasmToJSCallee(WasmToJSCallee::create())
     , m_llintEntryThunks(plan.takeEntryThunks())
 {
 }
@@ -116,7 +117,7 @@ void Module::copyInitialCalleeGroupToAllMemoryModes(MemoryMode initialMode)
     Locker locker { m_lock };
     ASSERT(m_calleeGroups[static_cast<uint8_t>(initialMode)]);
     const CalleeGroup& initialBlock = *m_calleeGroups[static_cast<uint8_t>(initialMode)];
-    for (unsigned i = 0; i < Wasm::NumberOfMemoryModes; i++) {
+    for (unsigned i = 0; i < numberOfMemoryModes; i++) {
         if (i == static_cast<uint8_t>(initialMode))
             continue;
         // We should only try to copy the group here if it hasn't already been created.

@@ -44,8 +44,12 @@ public:
 protected:
     CSSGroupingRule(StyleRuleGroup&, CSSStyleSheet* parent);
     const StyleRuleGroup& groupRule() const { return m_groupRule; }
+    StyleRuleGroup& groupRule() { return m_groupRule; }
     void reattach(StyleRuleBase&) override;
     void appendCSSTextForItems(StringBuilder&) const;
+
+    // https://drafts.csswg.org/cssom/#serialize-a-css-rule
+    void cssTextForDeclsAndRules(StringBuilder& decls, StringBuilder& rules) const;
 
 private:
     Ref<StyleRuleGroup> m_groupRule;

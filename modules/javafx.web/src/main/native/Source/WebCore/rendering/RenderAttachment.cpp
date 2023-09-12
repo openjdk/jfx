@@ -73,12 +73,6 @@ void RenderAttachment::layout()
         layoutShadowContent(newIntrinsicSize);
 }
 
-void RenderAttachment::invalidate()
-{
-    setNeedsLayout();
-    repaint();
-}
-
 LayoutUnit RenderAttachment::baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const
 {
     return theme().attachmentBaseline(*this);
@@ -86,7 +80,7 @@ LayoutUnit RenderAttachment::baselinePosition(FontBaseline, bool, LineDirectionM
 
 bool RenderAttachment::shouldDrawBorder() const
 {
-    if (style().effectiveAppearance() == BorderlessAttachmentPart)
+    if (style().effectiveAppearance() == StyleAppearance::BorderlessAttachment)
         return false;
     return m_shouldDrawBorder;
 }
