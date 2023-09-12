@@ -59,6 +59,7 @@ Issue key|Summary|Subcomponent
 [JDK-8283063](https://bugs.openjdk.org/browse/JDK-8283063)|Optimize Observable{List/Set/Map}Wrapper.retainAll/removeAll|base
 [JDK-8304439](https://bugs.openjdk.org/browse/JDK-8304439)|Subscription based listeners|base
 [JDK-8304960](https://bugs.openjdk.org/browse/JDK-8304960)|ObservableListBase should defer constructing ListChangeBuilder|base
+[JDK-8305885](https://bugs.openjdk.org/browse/JDK-8305885)|Use ReadOnly*PropertyBase class where possible|base
 [JDK-8306021](https://bugs.openjdk.org/browse/JDK-8306021)|Add event handler management to EventTarget|base
 [JDK-8090647](https://bugs.openjdk.org/browse/JDK-8090647)|Mnemonics: on windows we should cancel the underscore latch when an app loses focus|controls
 [JDK-8091153](https://bugs.openjdk.org/browse/JDK-8091153)|Customize the Table Button Menu|controls
@@ -125,6 +126,7 @@ Issue key|Summary|Subcomponent
 [JDK-8309508](https://bugs.openjdk.org/browse/JDK-8309508)|Possible memory leak in JPEG image loader|graphics
 [JDK-8309935](https://bugs.openjdk.org/browse/JDK-8309935)|Mac - SystemMenuBar, IndexOutOfBoundsException on change|graphics
 [JDK-8313227](https://bugs.openjdk.org/browse/JDK-8313227)|Correct attenuation indicator for removed lights|graphics
+[JDK-8304290](https://bugs.openjdk.org/browse/JDK-8304290)|Some JNI calls made without checking exceptions in media|media
 [JDK-8306328](https://bugs.openjdk.org/browse/JDK-8306328)|Update libFFI to 3.4.4|media
 [JDK-8194704](https://bugs.openjdk.org/browse/JDK-8194704)|Text/TextFlow hitTest() javadoc|scenegraph
 [JDK-8301763](https://bugs.openjdk.org/browse/JDK-8301763)|Adding children to wrong index leaves inconsistent state in Parent#childrenSet|scenegraph
