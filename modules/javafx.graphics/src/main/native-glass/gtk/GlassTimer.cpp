@@ -45,10 +45,16 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkTimer__1start
     (void)obj;
 
     RunnableContext* context = (RunnableContext*) malloc(sizeof(RunnableContext));
-    context->runnable = env->NewGlobalRef(runnable);
-    context->flag = 0;
-    gdk_threads_add_timeout_full(G_PRIORITY_HIGH_IDLE, period, call_runnable_in_timer, context, NULL);
-    return PTR_TO_JLONG(context);
+    if (context != NULL) {
+        context->runnable = env->NewGlobalRef(runnable);
+        context->flag = 0;
+        gdk_threads_add_timeout_full(G_PRIORITY_HIGH_IDLE, period, call_runnable_in_timer, context, NULL);
+        return PTR_TO_JLONG(context);
+    } else {
+        // we throw RuntimeException on Java side when we can't
+        // start the timer
+        return 0L;
+    }
 }
 
 /*

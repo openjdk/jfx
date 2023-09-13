@@ -59,6 +59,12 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
         buffer = (char*)malloc(buf_len * sizeof (char));
     }
 
+    if (buffer == NULL) {
+        // dont process the key event
+        fprintf(stderr, "malloc failed in im_filter_keypress\n");
+        return false;
+    }
+
     KeySym keysym;
     Status status;
     XKeyPressedEvent xevent = convert_event(event);
@@ -74,7 +80,14 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
     int len = Xutf8LookupString(xim.ic, &xevent, buffer, buf_len - 1, &keysym, &status);
     if (status == XBufferOverflow) {
         buf_len = len + 1;
-        buffer = (char*)realloc(buffer, buf_len * sizeof (char));
+        char *tmpBuffer = (char*)realloc(buffer, buf_len * sizeof (char));
+        if (tmpBuffer == NULL) {
+            SAFE_FREE(buffer);
+            // dont process the key event
+            fprintf(stderr, "realloc failed in im_filter_keypress\n");
+            return false;
+        }
+        buffer = tmpBuffer;
         len = Xutf8LookupString(xim.ic, &xevent, buffer, buf_len - 1,
                 &keysym, &status);
     }
