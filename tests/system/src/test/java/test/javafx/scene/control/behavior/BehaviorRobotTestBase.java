@@ -334,7 +334,12 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
             e.printStackTrace();
         }
     }
-    
+
+    /**
+     * Adds a logging event filter to the control under test which prints all KeyEvent's to stdout,
+     * for the duration of a single test case.
+     * @return the Runnable
+     */
     protected Runnable addKeyListener() {
         return () -> {
             control.addEventFilter(KeyEvent.ANY, keyListener);
