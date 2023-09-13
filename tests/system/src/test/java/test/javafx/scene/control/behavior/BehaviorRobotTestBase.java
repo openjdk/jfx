@@ -72,7 +72,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
             content = new BorderPane();
             scene = new Scene(content);
             stage.setScene(scene);
-            stage.setWidth(500);
+            stage.setWidth(400);
             stage.setHeight(300);
             stage.setOnShown(l -> {
                 Platform.runLater(() -> startupLatch.countDown());
@@ -282,34 +282,12 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
 
     /**
      * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
-     * and the SHORTCUT modifier.
+     * and the ALT modifier.
      * @param k the key code
      * @return the Runnable
      */
-    protected Runnable shortcut(KeyCode k) {
-        return () -> {
-            // we don't have access to the shortcut key
-            KeyCode shortcut = Util.isMac() ? KeyCode.COMMAND : KeyCode.CONTROL;
-            robot.keyPress(shortcut);
-            robot.keyPress(k);
-            robot.keyRelease(k);
-            robot.keyRelease(shortcut);
-        };
-    }
-
-    /**
-     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
-     * and the SHIFT modifier.
-     * @param k the key code
-     * @return the Runnable
-     */
-    protected Runnable shift(KeyCode k) {
-        return () -> {
-            robot.keyPress(KeyCode.SHIFT);
-            robot.keyPress(k);
-            robot.keyRelease(k);
-            robot.keyRelease(KeyCode.SHIFT);
-        };
+    protected Runnable alt(KeyCode k) {
+        return key(k, Mod.ALT);
     }
 
     /**
@@ -319,12 +297,27 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
      * @return the Runnable
      */
     protected Runnable ctrl(KeyCode k) {
-        return () -> {
-            robot.keyPress(KeyCode.CONTROL);
-            robot.keyPress(k);
-            robot.keyRelease(k);
-            robot.keyRelease(KeyCode.CONTROL);
-        };
+        return key(k, Mod.CTRL);
+    }
+
+    /**
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the SHORTCUT modifier.
+     * @param k the key code
+     * @return the Runnable
+     */
+    protected Runnable shortcut(KeyCode k) {
+        return key(k, Mod.SHORTCUT);
+    }
+
+    /**
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the SHIFT modifier.
+     * @param k the key code
+     * @return the Runnable
+     */
+    protected Runnable shift(KeyCode k) {
+        return key(k, Mod.SHIFT);
     }
 
     protected void sleep(int ms) {

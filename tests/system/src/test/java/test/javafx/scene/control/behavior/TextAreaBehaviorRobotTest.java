@@ -28,7 +28,6 @@ package test.javafx.scene.control.behavior;
 import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.Test;
-import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.util.Util;
 
 /**
@@ -40,7 +39,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
         super(new TextArea());
     }
 
-    // FIX @Test
+    @Test
     public void testNavigation() throws Exception {
         execute(
             setText("0123456789"),
@@ -76,7 +75,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
         );
     }
 
- // FIX @Test
+    @Test
     public void testDeletion() {
         execute(
             setText("0123456789"),
@@ -102,7 +101,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
         );
     }
 
- // FIX @Test
+    @Test
     public void testSelection() {
         execute(
             setText("123\n456"),
@@ -134,17 +133,12 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
 
     @Test
     public void testMacBindings() {
-        // delete from line start
-        // TODO TA needs graphics
-        //END, shortcut(BACK_SPACE), checkText("")
-
         if (!Util.isMac()) {
             return;
         }
 
         // text input control mappings
         execute(
-            addKeyListener(),
             setText("1ab\n2cd\n3de"),
             // select end extend
             shift(END), checkSelection(0, 3),
@@ -159,20 +153,94 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             // select end extend
             HOME, key(RIGHT, Mod.SHORTCUT, Mod.SHIFT), checkSelection(0, 3)
         );
+        
+        // delete from line start
+        execute(
+            setText("aaa bbb\nccc ddd"), shortcut(DOWN), checkSelection(15),
+            shortcut(BACK_SPACE), checkText("aaa bbb\n", 8)
+        );
 
+        // TODO
         // text area mappings
+        execute(
+            setText("1ab\n2cd\n3de"), shortcut(DOWN), checkSelection(11),
+            // line start
+            UP, shortcut(LEFT), checkSelection(4),
+            shortcut(RIGHT), checkSelection(7),
+            // home
+            shortcut(UP), checkSelection(0),
+            // end
+            shortcut(DOWN), checkSelection(11),
+            // select line start
+            key(LEFT, Mod.SHIFT, Mod.SHORTCUT), checkSelection(8, 11),
+            // select line end
+            HOME,
+            key(RIGHT, Mod.SHIFT, Mod.SHORTCUT), checkSelection(8, 11),
+            // select home extend
+            key(UP, Mod.SHIFT, Mod.SHORTCUT), checkSelection(0, 11),
+            // select end extend
+            shortcut(UP), key(DOWN, Mod.SHIFT, Mod.SHORTCUT), checkSelection(0, 11)
+        );
+
+        // paragraph
+        execute(
+            exe(() -> control.setWrapText(true)),
+            setText(
+                "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n" + 
+                "bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb\n" +
+                "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
+            ),
+            // move
+            alt(DOWN), checkSelection(87),
+            alt(DOWN), checkSelection(175),
+            alt(DOWN), checkSelection(263),
+            alt(UP), checkSelection(176),
+            alt(UP), checkSelection(88),
+            // select
+            shortcut(UP), checkSelection(0),
+            key(DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 87),
+            key(DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 175),
+            key(DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 263),
+            key(UP, Mod.ALT, Mod.SHIFT), checkSelection(0, 176),
+            key(UP, Mod.ALT, Mod.SHIFT), checkSelection(0, 88)
+        );
     }
 
- // FIX @Test
+    @Test
     public void testNonMacBindings() {
-        // needs graphics
+        if (Util.isMac()) {
+            return;
+        }
+
+        // paragraph
+        execute(
+            exe(() -> control.setWrapText(true)),
+            setText(
+                "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n" + 
+                "bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb\n" +
+                "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
+            ),
+            // move
+            ctrl(DOWN), checkSelection(87),
+            ctrl(DOWN), checkSelection(175),
+            ctrl(DOWN), checkSelection(263),
+            ctrl(UP), checkSelection(176),
+            ctrl(UP), checkSelection(88),
+            // select
+            shortcut(UP), checkSelection(0),
+            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 87),
+            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 175),
+            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 263),
+            key(UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
+            key(UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88)
+        );
     }
 
- // FIX @Test
+    @Test
     public void testEditing() {
         execute(
             setText("a"), END,
-            "\t", checkText("a\t", 2),
+            TAB, checkText("a\t", 2),
             ENTER, checkText("a\t\n", 3)
         );
 
@@ -184,4 +252,16 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             ENTER, checkText(null)
         );
     }
+
+    public void testWordMac() {
+        // tested by headless test, see TextAreaBehaviorTest
+    }
+
+    public void testWordNonMac() {
+        // tested by headless test, see TextAreaBehaviorTest
+    }
+
+    // TODO
+    // keypad mappings
 }
+    
