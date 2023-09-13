@@ -17,7 +17,13 @@
 |ctrl-DELETE|linux, win|delete next word|
 |ctrl-shift-DIGIT9| |toggle the virtual keyboard (if supported)|
 |DOWN| |**line down**|
+|alt-DOWN|mac|**paragraph down**|
+|alt-shift-DOWN|mac|**select paragraph down**|
+|ctrl-DOWN|linux, win|**paragraph down**|
+|ctrl-shift-DOWN|linux, win|**select paragraph down**|
 |shift-DOWN| |**select line down**|
+|shift-shortcut-DOWN|mac|**extend selection to document end**|
+|shortcut-DOWN| |**move to document end**|
 |END| |**line end**|
 |shift-END| |**select to line end**|
 |shortcut-END| |move to document end|
@@ -26,8 +32,8 @@
 |ESCAPE| |cancel edit (forwarded to the parent container)|
 |HOME| |**line start**|
 |shift-HOME| |**select to line start**|
+|shift-shortcut-HOME| |select to document start|
 |shortcut-HOME| |move to document start|
-|shortcut-shift-HOME| |select to document start|
 |shift-INSERT| |paste|
 |shortcut-INSERT| |copy|
 |LEFT| |previous character|
@@ -36,8 +42,8 @@
 |ctrl-LEFT|linux, win|left word|
 |ctrl-shift-LEFT|linux, win|select left word|
 |shift-LEFT| |select left|
-|shortcut-LEFT|mac|move to document start|
-|shortcut-shift-LEFT|mac|select to document start|
+|shift-shortcut-LEFT|mac|**select to line start**|
+|shortcut-LEFT|mac|**move to line start**|
 |PAGE_DOWN| |**page down**|
 |shift-PAGE_DOWN| |**select page down**|
 |PAGE_UP| |**page up**|
@@ -49,14 +55,20 @@
 |ctrl-RIGHT|linux, win|right word|
 |ctrl-shift-RIGHT|linux, win|select right word|
 |shift-RIGHT| |select right|
-|shortcut-RIGHT|mac|move to document end|
-|shortcut-shift-RIGHT|mac|select to document end|
+|shift-shortcut-RIGHT|mac|**select to line end**|
+|shortcut-RIGHT|mac|**move to line end**|
 |TAB| |**insert tab**|
 |ctrl-TAB| |focus next|
 |ctrl-shift-TAB| |focus previous|
 |shift-TAB| |focus previous|
 |UP| |**line up**|
+|alt-UP|mac|**paragraph up**|
+|alt-shift-UP|mac|**select paragraph up**|
+|ctrl-UP|linux, win|**paragraph up**|
+|ctrl-shift-UP|linux, win|**select paragraph up**|
 |shift-UP| |**select line up**|
+|shift-shortcut-UP|mac|**extend selection to document start**|
+|shortcut-UP|mac|**move to document start**|
 | | |  |
 |shortcut-A| |select all|
 |shortcut-C| |copy|
@@ -65,8 +77,12 @@
 |shortcut-X| |cut|
 |ctrl-Y|win|redo|
 |ctrl-shift-Z|linux|redo|
+|shift-shortcut-Z|mac|redo|
 |shortcut-Z| |undo|
-|shortcut-shift-Z|mac|redo|
 
 
-(alt=option, shortcut=command on Mac)
+Notes:
+
+1. Base class mappings modified by the TextArea class are highlighted in bold.
+2. On Mac, alt is represented by the Option key.
+3. On Mac, shortcut is represented by the Command key.
