@@ -135,7 +135,6 @@ Issue key|Summary|Subcomponent
 [JDK-8231865](https://bugs.openjdk.org/browse/JDK-8231865)|JFXPanel sends resize event with size 0x0 on HiDPI devices|swing
 [JDK-8242419](https://bugs.openjdk.org/browse/JDK-8242419)|JFXPanel: MouseEvent always reports that Primary button changed state if held|swing
 [JDK-8299977](https://bugs.openjdk.org/browse/JDK-8299977)|Update WebKit to 615.1|web
-[JDK-8301009](https://bugs.openjdk.org/browse/JDK-8301009)|Update libxml2 to 2.10.3|web
 [JDK-8306115](https://bugs.openjdk.org/browse/JDK-8306115)|Update libxml2 to 2.10.4|web
 [JDK-8306329](https://bugs.openjdk.org/browse/JDK-8306329)|Update ICU4C to 73.1|web
 [JDK-8150709](https://bugs.openjdk.org/browse/JDK-8150709)|Mac OSX and German Keyboard Layout (Y/Z)|window-toolkit
