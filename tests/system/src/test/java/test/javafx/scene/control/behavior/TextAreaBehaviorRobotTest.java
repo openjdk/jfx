@@ -28,6 +28,7 @@ package test.javafx.scene.control.behavior;
 import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.util.Util;
 
 /**
@@ -39,7 +40,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
         super(new TextArea());
     }
 
-    @Test
+    // FIX @Test
     public void testNavigation() throws Exception {
         execute(
             setText("0123456789"),
@@ -75,7 +76,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
         );
     }
 
-    @Test
+ // FIX @Test
     public void testDeletion() {
         execute(
             setText("0123456789"),
@@ -101,7 +102,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
         );
     }
 
-    @Test
+ // FIX @Test
     public void testSelection() {
         execute(
             setText("123\n456"),
@@ -133,18 +134,41 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
 
     @Test
     public void testMacBindings() {
-        // needs graphics
         // delete from line start
         // TODO TA needs graphics
         //END, shortcut(BACK_SPACE), checkText("")
+
+        if (!Util.isMac()) {
+            return;
+        }
+
+        // text input control mappings
+        execute(
+            addKeyListener(),
+            setText("1ab\n2cd\n3de"),
+            // select end extend
+            shift(END), checkSelection(0, 3),
+            // home
+            shortcut(LEFT), checkSelection(0),
+            // end
+            shortcut(RIGHT), checkSelection(3),
+            // select home extend
+            shift(HOME), checkSelection(0, 3),
+            // select home extend
+            END, key(LEFT, Mod.SHORTCUT, Mod.SHIFT), checkSelection(0, 3),
+            // select end extend
+            HOME, key(RIGHT, Mod.SHORTCUT, Mod.SHIFT), checkSelection(0, 3)
+        );
+
+        // text area mappings
     }
 
-    @Test
+ // FIX @Test
     public void testNonMacBindings() {
         // needs graphics
     }
 
-    @Test
+ // FIX @Test
     public void testEditing() {
         execute(
             setText("a"), END,

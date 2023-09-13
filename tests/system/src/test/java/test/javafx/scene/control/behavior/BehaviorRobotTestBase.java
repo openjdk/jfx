@@ -30,9 +30,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.function.BooleanSupplier;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
@@ -56,6 +58,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
     private int step;
     private static HashMap<Character,KeyCode> keyCodes;
     protected C control;
+    private final EventHandler<KeyEvent> keyListener = (ev) -> System.out.println(ev);
 
     protected BehaviorRobotTestBase(C c) {
         this.control = c;
@@ -91,6 +94,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         Platform.runLater(() -> {
             content.setCenter(null);
         });
+        content.removeEventFilter(KeyEvent.ANY, keyListener);
     }
 
     @BeforeAll
@@ -231,6 +235,53 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
 
     /**
      * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
+     * and the specified modifiers.
+     * @param k the key code
+     * @param modifiers the modifiers
+     * @return the Runnable
+     */
+    protected Runnable key(KeyCode k, Mod ... modifiers) {
+        KeyCode alt = Mod.findAlt(modifiers);
+        KeyCode ctrl = Mod.findCtrl(modifiers);
+        KeyCode meta = Mod.findMeta(modifiers);
+        KeyCode shift = Mod.findShift(modifiers);
+
+        return () -> {
+            // we don't have access to the shortcut key
+            KeyCode shortcut = Util.isMac() ? KeyCode.COMMAND : KeyCode.CONTROL;
+            if (alt != null) {
+                robot.keyPress(alt);
+            }
+            if (ctrl != null) {
+                robot.keyPress(ctrl);
+            }
+            if (meta != null) {
+                robot.keyPress(meta);
+            }
+            if (shift != null) {
+                robot.keyPress(shift);
+            }
+
+            robot.keyPress(k);
+            robot.keyRelease(k);
+
+            if (shift != null) {
+                robot.keyRelease(shift);
+            }
+            if (meta != null) {
+                robot.keyRelease(meta);
+            }
+            if (ctrl != null) {
+                robot.keyRelease(ctrl);
+            }
+            if (alt != null) {
+                robot.keyRelease(alt);
+            }
+        };
+    }
+
+    /**
+     * Returns a Runnable that emulates KEY_PRESS + KEY_RELEASE events with the given KeyCode
      * and the SHORTCUT modifier.
      * @param k the key code
      * @return the Runnable
@@ -282,5 +333,11 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+    
+    protected Runnable addKeyListener() {
+        return () -> {
+            control.addEventFilter(KeyEvent.ANY, keyListener);
+        };
     }
 }
