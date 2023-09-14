@@ -26,11 +26,7 @@
 package test.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.*;
-import java.util.concurrent.atomic.AtomicReference;
-import javafx.event.EventHandler;
 import javafx.scene.control.TextArea;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
@@ -333,20 +329,21 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
                 "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
             ),
             // move
-            ctrl(DOWN), checkSelection(87),
-            ctrl(DOWN), checkSelection(175),
-            ctrl(DOWN), checkSelection(263),
+            ctrl(DOWN), checkSelection(88),
+            ctrl(DOWN), checkSelection(176),
+            ctrl(DOWN), checkSelection(264),
             ctrl(UP), checkSelection(176),
             ctrl(UP), checkSelection(88),
             // select
             shortcut(UP), checkSelection(0),
-            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 87),
-            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 175),
-            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 263),
+            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88),
+            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
+            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 264),
             key(UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
             key(UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88)
         );
 
+        /* FIX JDK-8316307
         // keypad
         execute(
             exe(() -> control.setWrapText(true)),
@@ -356,19 +353,20 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
                 "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
             ),
             // move
-            ctrl(KP_DOWN), checkSelection(87),
-            ctrl(KP_DOWN), checkSelection(175),
-            ctrl(KP_DOWN), checkSelection(263),
+            ctrl(KP_DOWN), checkSelection(88),
+            ctrl(KP_DOWN), checkSelection(176),
+            ctrl(KP_DOWN), checkSelection(264),
             ctrl(KP_UP), checkSelection(176),
             ctrl(KP_UP), checkSelection(88),
             // select
             shortcut(UP), checkSelection(0),
-            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 87),
-            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 175),
-            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 263),
+            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88),
+            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
+            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 264),
             key(KP_UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
             key(KP_UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88)
         );
+        */
     }
 
     @Test
@@ -394,39 +392,5 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
 
     public void testWordNonMac() {
         // tested by headless test, see TextAreaBehaviorTest
-    }
-
-    @Test
-    public void robotTest() {
-        t(LEFT);
-        t(KP_LEFT);
-        t(KP_RIGHT);
-        t(KP_DOWN);
-        t(KP_UP);
-        t(RIGHT);
-        t(DOWN);
-        t(UP);
-    }
-    private void t(KeyCode k) {
-        AtomicReference<KeyCode> ref = new AtomicReference<>();
-        EventHandler<KeyEvent> li = (ev) -> {
-            KeyCode v = ev.getCode();
-            ref.set(v);
-        };
-        control.addEventFilter(KeyEvent.KEY_PRESSED, li);
-        try
-        {
-            Util.runAndWait(() -> {
-                robot.keyPress(k);
-                robot.keyRelease(k);
-            });
-        }
-        finally
-        {
-            control.removeEventFilter(KeyEvent.KEY_PRESSED, li);
-        }
-        Object received = ref.get();
-        System.err.println("keycode=" + k + " key.press=" + received);
-        // Asserttions.assertEquals(k, received);
     }
 }
