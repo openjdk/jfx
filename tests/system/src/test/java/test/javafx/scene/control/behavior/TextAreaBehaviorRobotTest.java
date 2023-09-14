@@ -33,6 +33,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 /**
@@ -114,7 +115,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             HOME, DELETE, checkText("1234567")
         );
 
-        if(!Util.isMac()) {
+        if(!PlatformUtil.isMac()) {
             execute(
                 setText("012"), END,
                 // delete previous char
@@ -177,7 +178,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
 
     @Test
     public void testMacBindings() {
-        if (!Util.isMac()) {
+        if (!PlatformUtil.isMac()) {
             return;
         }
 
@@ -319,7 +320,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
 
     @Test
     public void testNonMacBindings() {
-        if (Util.isMac()) {
+        if (PlatformUtil.isMac()) {
             return;
         }
 

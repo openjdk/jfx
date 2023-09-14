@@ -43,6 +43,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 /**
@@ -248,7 +249,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
 
         return () -> {
             // we don't have access to the shortcut key
-            KeyCode shortcut = Util.isMac() ? KeyCode.COMMAND : KeyCode.CONTROL;
+            KeyCode shortcut = PlatformUtil.isMac() ? KeyCode.COMMAND : KeyCode.CONTROL;
             if (alt != null) {
                 robot.keyPress(alt);
             }

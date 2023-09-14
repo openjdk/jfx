@@ -25,7 +25,7 @@
 package test.javafx.scene.control.behavior;
 
 import javafx.scene.input.KeyCode;
-import test.util.Util;
+import com.sun.javafx.PlatformUtil;
 
 /**
  * Key Modifiers for use in behavior tests.
@@ -45,7 +45,7 @@ public enum Mod {
             case ALT:
                 return KeyCode.ALT;
             case OPTION:
-                if(Util.isMac()) {
+                if(PlatformUtil.isMac()) {
                     return KeyCode.ALT;
                 }
                 break;
@@ -60,7 +60,7 @@ public enum Mod {
             case CTRL:
                 return KeyCode.CONTROL;
             case SHORTCUT:
-                if (!Util.isMac()) {
+                if (!PlatformUtil.isMac()) {
                     return KeyCode.CONTROL;
                 }
                 break;
@@ -76,7 +76,7 @@ public enum Mod {
                 return KeyCode.META;
             case COMMAND:
             case SHORTCUT:
-                if (Util.isMac()) {
+                if (PlatformUtil.isMac()) {
                     return KeyCode.COMMAND;
                 }
                 break;
