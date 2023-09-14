@@ -54,7 +54,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
     private static Scene scene;
     private static Stage stage;
     private static BorderPane content;
-    private static Robot robot;
+    protected static Robot robot;
     private int step;
     private static HashMap<Character,KeyCode> keyCodes;
     protected C control;
@@ -320,6 +320,10 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         return key(k, Mod.SHIFT);
     }
 
+    /**
+     * Convenience alias for Thread.sleep() that does not throw an exception.
+     * @param ms the timout in milliseconds
+     */
     protected void sleep(int ms) {
         try {
             Thread.sleep(1);

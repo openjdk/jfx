@@ -26,17 +26,30 @@
 package test.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.*;
+import java.util.concurrent.atomic.AtomicReference;
+import javafx.event.EventHandler;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
- * Tests TextArea behavior with Robot using public APIs.
+ * Tests TextArea behavior by exercising every key binding not covered by TextAreaBehaviorTest,
+ * since the mapped functions require rendered text.
  */
 public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextArea> {
 
     public TextAreaBehaviorRobotTest() {
         super(new TextArea());
+    }
+
+    @BeforeEach
+    @Override
+    public void beforeEach() {
+        super.beforeEach();
+        control.setWrapText(true);
     }
 
     @Test
@@ -53,6 +66,23 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             // end
             shortcut(END), checkSelection(10)
         );
+
+        /* FIX JDK-8316307
+        // keypad
+        execute(
+            //addKeyListener(),
+            setText("0123456789"), checkSelection(0),
+            END, checkSelection(10),
+            KP_LEFT, KP_LEFT, checkSelection(8), // FIX fails
+            KP_RIGHT, checkSelection(9),
+            HOME, checkSelection(0),
+            END, checkSelection(10),
+            // home
+            shortcut(HOME), checkSelection(0),
+            // end
+            shortcut(END), checkSelection(10)
+        );
+        */
 
         execute(
             setText("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n==\n"),
@@ -114,6 +144,20 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             HOME, checkSelection(0), shortcut(A), checkSelection(0, 7)
         );
 
+        /* FIX JDK-8316307
+        // keypad
+        execute(
+            setText("123\n456"), checkSelection(0),
+            HOME, shift(KP_RIGHT), checkSelection(0, 1), // FIX fails step 29
+            END, shift(KP_LEFT), checkSelection(2, 3),
+            HOME, shift(KP_DOWN), checkSelection(0, 4),
+            END, checkSelection(7), shift(KP_UP), checkSelection(3, 7),
+            HOME, checkSelection(0), shift(END), checkSelection(0, 3),
+            END, checkSelection(3), shift(HOME), checkSelection(0, 3),
+            HOME, checkSelection(0), shortcut(A), checkSelection(0, 7)
+        );
+        */
+
         execute(
             setText("1\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n====\n"),
             checkSelection(0),
@@ -153,14 +197,33 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             // select end extend
             HOME, key(RIGHT, Mod.SHORTCUT, Mod.SHIFT), checkSelection(0, 3)
         );
-        
+
+        /* FIX JDK-8316307
+        // keypad
+        execute(
+            //addKeyListener(),
+            setText("1ab\n2cd\n3de"),
+            // select end extend
+            shift(END), checkSelection(0, 3),
+            // home
+            shortcut(KP_LEFT), checkSelection(0), // FIX fails
+            // end
+            shortcut(KP_RIGHT), checkSelection(3),
+            // select home extend
+            shift(HOME), checkSelection(0, 3),
+            // select home extend
+            END, key(KP_LEFT, Mod.SHORTCUT, Mod.SHIFT), checkSelection(0, 3),
+            // select end extend
+            HOME, key(KP_RIGHT, Mod.SHORTCUT, Mod.SHIFT), checkSelection(0, 3)
+        );
+        */
+
         // delete from line start
         execute(
             setText("aaa bbb\nccc ddd"), shortcut(DOWN), checkSelection(15),
             shortcut(BACK_SPACE), checkText("aaa bbb\n", 8)
         );
 
-        // TODO
         // text area mappings
         execute(
             setText("1ab\n2cd\n3de"), shortcut(DOWN), checkSelection(11),
@@ -182,11 +245,34 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             shortcut(UP), key(DOWN, Mod.SHIFT, Mod.SHORTCUT), checkSelection(0, 11)
         );
 
+        /* FIX JDK-8316307
+        // keypad
+        execute(
+            setText("1ab\n2cd\n3de"), shortcut(KP_DOWN), checkSelection(11),
+            // line start
+            KP_UP, shortcut(LEFT), checkSelection(4),
+            shortcut(KP_RIGHT), checkSelection(7),
+            // home
+            shortcut(KP_UP), checkSelection(0),
+            // end
+            shortcut(KP_DOWN), checkSelection(11),
+            // select line start
+            key(KP_LEFT, Mod.SHIFT, Mod.SHORTCUT), checkSelection(8, 11),
+            // select line end
+            HOME,
+            key(KP_RIGHT, Mod.SHIFT, Mod.SHORTCUT), checkSelection(8, 11),
+            // select home extend
+            key(KP_UP, Mod.SHIFT, Mod.SHORTCUT), checkSelection(0, 11),
+            // select end extend
+            shortcut(KP_UP), key(KP_DOWN, Mod.SHIFT, Mod.SHORTCUT), checkSelection(0, 11)
+        );
+        */
+
         // paragraph
         execute(
             exe(() -> control.setWrapText(true)),
             setText(
-                "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n" + 
+                "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n" +
                 "bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb\n" +
                 "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
             ),
@@ -204,6 +290,31 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             key(UP, Mod.ALT, Mod.SHIFT), checkSelection(0, 176),
             key(UP, Mod.ALT, Mod.SHIFT), checkSelection(0, 88)
         );
+
+        /* FIX JDK-8316307
+        // keypad
+        execute(
+            exe(() -> control.setWrapText(true)),
+            setText(
+                "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n" +
+                "bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb\n" +
+                "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
+            ),
+            // move
+            alt(KP_DOWN), checkSelection(87),
+            alt(KP_DOWN), checkSelection(175),
+            alt(KP_DOWN), checkSelection(263),
+            alt(KP_UP), checkSelection(176),
+            alt(KP_UP), checkSelection(88),
+            // select
+            shortcut(KP_UP), checkSelection(0),
+            key(KP_DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 87),
+            key(KP_DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 175),
+            key(KP_DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 263),
+            key(KP_UP, Mod.ALT, Mod.SHIFT), checkSelection(0, 176),
+            key(KP_UP, Mod.ALT, Mod.SHIFT), checkSelection(0, 88)
+        );
+        */
     }
 
     @Test
@@ -216,7 +327,7 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
         execute(
             exe(() -> control.setWrapText(true)),
             setText(
-                "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n" + 
+                "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n" +
                 "bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb\n" +
                 "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
             ),
@@ -233,6 +344,29 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 263),
             key(UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
             key(UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88)
+        );
+
+        // keypad
+        execute(
+            exe(() -> control.setWrapText(true)),
+            setText(
+                "aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa aaaaaaaaaa\n" +
+                "bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb bbbbbbbbbb\n" +
+                "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
+            ),
+            // move
+            ctrl(KP_DOWN), checkSelection(87),
+            ctrl(KP_DOWN), checkSelection(175),
+            ctrl(KP_DOWN), checkSelection(263),
+            ctrl(KP_UP), checkSelection(176),
+            ctrl(KP_UP), checkSelection(88),
+            // select
+            shortcut(UP), checkSelection(0),
+            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 87),
+            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 175),
+            key(KP_DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 263),
+            key(KP_UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
+            key(KP_UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88)
         );
     }
 
@@ -261,7 +395,37 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
         // tested by headless test, see TextAreaBehaviorTest
     }
 
-    // TODO
-    // keypad mappings
+    @Test
+    public void robotTest() {
+        t(LEFT);
+        t(KP_LEFT);
+        t(KP_RIGHT);
+        t(KP_DOWN);
+        t(KP_UP);
+        t(RIGHT);
+        t(DOWN);
+        t(UP);
+    }
+    private void t(KeyCode k) {
+        AtomicReference<KeyCode> ref = new AtomicReference<>();
+        EventHandler<KeyEvent> li = (ev) -> {
+            KeyCode v = ev.getCode();
+            ref.set(v);
+        };
+        control.addEventFilter(KeyEvent.KEY_PRESSED, li);
+        try
+        {
+            Util.runAndWait(() -> {
+                robot.keyPress(k);
+                robot.keyRelease(k);
+            });
+        }
+        finally
+        {
+            control.removeEventFilter(KeyEvent.KEY_PRESSED, li);
+        }
+        Object received = ref.get();
+        System.err.println("keycode=" + k + " key.press=" + received);
+        // Asserttions.assertEquals(k, received);
+    }
 }
-    
