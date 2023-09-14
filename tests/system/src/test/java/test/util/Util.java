@@ -37,15 +37,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.robot.Robot;
+import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+
 import org.junit.Assert;
+
 import junit.framework.AssertionFailedError;
 
 /**
