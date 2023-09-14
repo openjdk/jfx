@@ -24,16 +24,14 @@
  */
 package test.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.PasswordField;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests the PasswordField behavior using public APIs.
+ * Tests PasswordField behavior by exercising every key binding registered by the skin
+ * at least once.
  */
 public class PasswordFieldBehaviorTest extends TextInputControlTestBase<PasswordField> {
 
@@ -62,13 +60,13 @@ public class PasswordFieldBehaviorTest extends TextInputControlTestBase<Password
     @Test
     @Override
     public void testCopy() {
-        // n/a
+        // copy is disabled
     }
 
     @Test
     @Override
     public void testCut() {
-        // n/a
+        // cut is disabled
     }
 
     @Test
@@ -105,13 +103,11 @@ public class PasswordFieldBehaviorTest extends TextInputControlTestBase<Password
     @Override
     public final void testWordMac() {
         // word navigation is disabled
-        // TODO
     }
 
     @Test
     @Override
     public final void testWordNonMac() {
         // word navigation is disabled
-        // TODO
     }
 }

@@ -87,6 +87,17 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             HOME, RIGHT, RIGHT, shift(RIGHT), checkSelection(2, 3),
             COPY, checkSelection(2, 3), checkClipboard("c")
         );
+
+        // keypad mappings
+        execute(
+            setText("abcd"),
+            shift(KP_RIGHT), checkSelection(0, 1),
+            shortcut(C), checkSelection(0, 1), checkClipboard("a"),
+            HOME, KP_RIGHT, shift(KP_RIGHT), checkSelection(1, 2),
+            shortcut(INSERT), checkSelection(1, 2), checkClipboard("b"),
+            HOME, KP_RIGHT, KP_RIGHT, shift(KP_RIGHT), checkSelection(2, 3),
+            COPY, checkSelection(2, 3), checkClipboard("c")
+        );
     }
 
     protected void testCut() {
@@ -128,8 +139,9 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
     protected void testNavigation() {
         execute(
             "0123456789", checkSelection(10),
-            LEFT, LEFT, checkSelection(8),
+            LEFT, KP_LEFT, checkSelection(8),
             RIGHT, checkSelection(9),
+            KP_RIGHT, checkSelection(10),
             UP, checkSelection(0),
             DOWN, checkSelection(10),
             HOME, checkSelection(0),
@@ -171,6 +183,18 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             END, shift(LEFT), checkSelection(2, 3),
             HOME, shift(DOWN), checkSelection(0, 3),
             END, checkSelection(3), shift(UP), checkSelection(0, 3),
+            HOME, checkSelection(0), shift(END), checkSelection(0, 3),
+            END, checkSelection(3), shift(HOME), checkSelection(0, 3),
+            HOME, checkSelection(0), shortcut(A), checkSelection(0, 3)
+        );
+
+        // keypad
+        execute(
+            setText("abc"),
+            HOME, shift(KP_RIGHT), checkSelection(0, 1),
+            END, shift(KP_LEFT), checkSelection(2, 3),
+            HOME, shift(KP_DOWN), checkSelection(0, 3),
+            END, checkSelection(3), shift(KP_UP), checkSelection(0, 3),
             HOME, checkSelection(0), shift(END), checkSelection(0, 3),
             END, checkSelection(3), shift(HOME), checkSelection(0, 3),
             HOME, checkSelection(0), shortcut(A), checkSelection(0, 3)
@@ -237,6 +261,23 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             // select end extend
             HOME, key(RIGHT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT), checkSelection(0, 3)
         );
+
+        // keypad
+        execute(
+            setText("abc"),
+            // select end extend
+            shift(END), checkSelection(0, 3),
+            // home
+            shortcut(KP_LEFT), checkSelection(0),
+            // end
+            shortcut(KP_RIGHT), checkSelection(3),
+            // select home extend
+            shift(HOME), checkSelection(0, 3),
+            // select home extend
+            END, key(KP_LEFT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT), checkSelection(0, 3),
+            // select end extend
+            HOME, key(KP_RIGHT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT), checkSelection(0, 3)
+        );
     }
 
     protected void testNonMacBindings() {
@@ -279,6 +320,27 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             LEFT, LEFT, LEFT, LEFT, LEFT,
             key(RIGHT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(4, 7)
         );
+
+        // keypad
+        execute(
+            setText("one two three"),
+            // right word
+            alt(KP_RIGHT), checkSelection(3),
+            alt(KP_RIGHT), checkSelection(7),
+            // left word
+            alt(KP_LEFT), checkSelection(4),
+            // delete next word
+            alt(DELETE), checkText("one  three", 4),
+            // delete prev word
+            alt(BACK_SPACE), checkText(" three", 0),
+
+            setText(""), "one two three",
+            // select left word
+            key(KP_LEFT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(8, 13),
+            // select right word
+            KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT,
+            key(KP_RIGHT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(4, 7)
+        );
     }
 
     protected void testWordNonMac() {
@@ -305,6 +367,27 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             key(LEFT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(8, 13),
             // select right word
             LEFT, LEFT, LEFT, LEFT, LEFT,
+            key(RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(4, win ? 8 : 7)
+        );
+
+        // keypad
+        execute(
+            setText("one two three"),
+            // right word
+            ctrl(KP_RIGHT), checkSelection(win ? 4 : 3),
+            ctrl(KP_RIGHT), checkSelection(win ? 8 : 7),
+            // left word
+            ctrl(KP_LEFT), checkSelection(4),
+            // delete next word
+            ctrl(DELETE), checkText(win ? "one three" : "one  three", 4),
+            // delete prev word
+            ctrl(BACK_SPACE), checkText(win ? "three" : " three", 0),
+
+            setText(""), "one two three",
+            // select left word
+            key(KP_LEFT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(8, 13),
+            // select right word
+            KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT,
             key(RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(4, win ? 8 : 7)
         );
     }

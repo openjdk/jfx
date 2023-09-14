@@ -33,10 +33,12 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests the TextArea behavior using public APIs.
+ * Tests TextArea behavior by exercising every key binding registered by the skin
+ * at least once.
  *
- * Note: some aspects of behavior (navigation, selection) require a fully rendered skin,
+ * Note: some aspects of behavior (navigation, selection) require fully rendered skin,
  * so it is impossible to test in headless environment.
+ * See TextAreaBehaviorRobotTest.
  */
 public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
 
@@ -59,7 +61,7 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     @Test
     @Override
     public void testConsumeEnter() {
-        // n/a
+        // does not consume ENTER
     }
 
     @Test
@@ -96,9 +98,6 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     @Override
     public void testMacBindings() {
         // needs graphics
-        // delete from line start
-        // TODO TA needs graphics
-        //END, shortcut(BACK_SPACE), checkText("")
     }
 
     @Test

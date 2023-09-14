@@ -162,7 +162,12 @@ public abstract class BehaviorTestBase<C extends Control> {
         };
     }
 
-    protected Runnable exe(BooleanSupplier test) {
+    /**
+     * Returns a Runnable that, when executed, checks the result of the specified boolean operation.
+     * @param test the operation
+     * @return the Runnable
+     */
+    protected Runnable check(BooleanSupplier test) {
         return () -> {
             boolean result = test.getAsBoolean();
             Assertions.assertTrue(result, errorMessage());

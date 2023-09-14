@@ -24,16 +24,14 @@
  */
 package test.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.TextField;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests the TextField behavior using public APIs.
+ * Tests TextField behavior by exercising every key binding registered by the skin
+ * at least once.
  */
 public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
 
