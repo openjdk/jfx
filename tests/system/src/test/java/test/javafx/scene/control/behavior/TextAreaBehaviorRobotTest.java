@@ -30,7 +30,6 @@ import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
-import test.util.Util;
 
 /**
  * Tests TextArea behavior by exercising every key binding not covered by TextAreaBehaviorTest,
@@ -190,9 +189,9 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             // select home extend
             shift(HOME), checkSelection(0, 3),
             // select home extend
-            END, key(LEFT, Mod.SHORTCUT, Mod.SHIFT), checkSelection(0, 3),
+            END, key(LEFT, KeyModifier.SHORTCUT, KeyModifier.SHIFT), checkSelection(0, 3),
             // select end extend
-            HOME, key(RIGHT, Mod.SHORTCUT, Mod.SHIFT), checkSelection(0, 3)
+            HOME, key(RIGHT, KeyModifier.SHORTCUT, KeyModifier.SHIFT), checkSelection(0, 3)
         );
 
         /* FIX JDK-8316307
@@ -232,14 +231,14 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             // end
             shortcut(DOWN), checkSelection(11),
             // select line start
-            key(LEFT, Mod.SHIFT, Mod.SHORTCUT), checkSelection(8, 11),
+            key(LEFT, KeyModifier.SHIFT, KeyModifier.SHORTCUT), checkSelection(8, 11),
             // select line end
             HOME,
-            key(RIGHT, Mod.SHIFT, Mod.SHORTCUT), checkSelection(8, 11),
+            key(RIGHT, KeyModifier.SHIFT, KeyModifier.SHORTCUT), checkSelection(8, 11),
             // select home extend
-            key(UP, Mod.SHIFT, Mod.SHORTCUT), checkSelection(0, 11),
+            key(UP, KeyModifier.SHIFT, KeyModifier.SHORTCUT), checkSelection(0, 11),
             // select end extend
-            shortcut(UP), key(DOWN, Mod.SHIFT, Mod.SHORTCUT), checkSelection(0, 11)
+            shortcut(UP), key(DOWN, KeyModifier.SHIFT, KeyModifier.SHORTCUT), checkSelection(0, 11)
         );
 
         /* FIX JDK-8316307
@@ -281,11 +280,11 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             alt(UP), checkSelection(88),
             // select
             shortcut(UP), checkSelection(0),
-            key(DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 87),
-            key(DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 175),
-            key(DOWN, Mod.ALT, Mod.SHIFT), checkSelection(0, 263),
-            key(UP, Mod.ALT, Mod.SHIFT), checkSelection(0, 176),
-            key(UP, Mod.ALT, Mod.SHIFT), checkSelection(0, 88)
+            key(DOWN, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(0, 87),
+            key(DOWN, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(0, 175),
+            key(DOWN, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(0, 263),
+            key(UP, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(0, 176),
+            key(UP, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(0, 88)
         );
 
         /* FIX JDK-8316307
@@ -336,11 +335,11 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             ctrl(UP), checkSelection(88),
             // select
             shortcut(UP), checkSelection(0),
-            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88),
-            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
-            key(DOWN, Mod.CTRL, Mod.SHIFT), checkSelection(0, 264),
-            key(UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 176),
-            key(UP, Mod.CTRL, Mod.SHIFT), checkSelection(0, 88)
+            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 88),
+            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 176),
+            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 264),
+            key(UP, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 176),
+            key(UP, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 88)
         );
 
         /* FIX JDK-8316307

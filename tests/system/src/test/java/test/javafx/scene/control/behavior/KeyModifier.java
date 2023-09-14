@@ -30,7 +30,7 @@ import com.sun.javafx.PlatformUtil;
 /**
  * Key Modifiers for use in behavior tests.
  */
-public enum Mod {
+public enum KeyModifier {
     ALT,
     CTRL,
     COMMAND,
@@ -39,8 +39,8 @@ public enum Mod {
     SHIFT,
     SHORTCUT;
 
-    public static KeyCode findAlt(Mod[] modifiers) {
-        for (Mod m : modifiers) {
+    public static KeyCode findAlt(KeyModifier[] modifiers) {
+        for (KeyModifier m : modifiers) {
             switch (m) {
             case ALT:
                 return KeyCode.ALT;
@@ -54,8 +54,8 @@ public enum Mod {
         return null;
     }
 
-    public static KeyCode findCtrl(Mod[] modifiers) {
-        for (Mod m : modifiers) {
+    public static KeyCode findCtrl(KeyModifier[] modifiers) {
+        for (KeyModifier m : modifiers) {
             switch (m) {
             case CTRL:
                 return KeyCode.CONTROL;
@@ -69,8 +69,8 @@ public enum Mod {
         return null;
     }
 
-    public static KeyCode findMeta(Mod[] modifiers) {
-        for (Mod m : modifiers) {
+    public static KeyCode findMeta(KeyModifier[] modifiers) {
+        for (KeyModifier m : modifiers) {
             switch (m) {
             case META:
                 return KeyCode.META;
@@ -85,8 +85,8 @@ public enum Mod {
         return null;
     }
 
-    public static KeyCode findShift(Mod[] modifiers) {
-        for (Mod m : modifiers) {
+    public static KeyCode findShift(KeyModifier[] modifiers) {
+        for (KeyModifier m : modifiers) {
             switch (m) {
             case SHIFT:
                 return KeyCode.SHIFT;

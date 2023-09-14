@@ -241,11 +241,11 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
      * @param modifiers the modifiers
      * @return the Runnable
      */
-    protected Runnable key(KeyCode k, Mod ... modifiers) {
-        KeyCode alt = Mod.findAlt(modifiers);
-        KeyCode ctrl = Mod.findCtrl(modifiers);
-        KeyCode meta = Mod.findMeta(modifiers);
-        KeyCode shift = Mod.findShift(modifiers);
+    protected Runnable key(KeyCode k, KeyModifier ... modifiers) {
+        KeyCode alt = KeyModifier.findAlt(modifiers);
+        KeyCode ctrl = KeyModifier.findCtrl(modifiers);
+        KeyCode meta = KeyModifier.findMeta(modifiers);
+        KeyCode shift = KeyModifier.findShift(modifiers);
 
         return () -> {
             // we don't have access to the shortcut key
@@ -288,7 +288,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
      * @return the Runnable
      */
     protected Runnable alt(KeyCode k) {
-        return key(k, Mod.ALT);
+        return key(k, KeyModifier.ALT);
     }
 
     /**
@@ -298,7 +298,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
      * @return the Runnable
      */
     protected Runnable ctrl(KeyCode k) {
-        return key(k, Mod.CTRL);
+        return key(k, KeyModifier.CTRL);
     }
 
     /**
@@ -308,7 +308,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
      * @return the Runnable
      */
     protected Runnable shortcut(KeyCode k) {
-        return key(k, Mod.SHORTCUT);
+        return key(k, KeyModifier.SHORTCUT);
     }
 
     /**
@@ -318,7 +318,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
      * @return the Runnable
      */
     protected Runnable shift(KeyCode k) {
-        return key(k, Mod.SHIFT);
+        return key(k, KeyModifier.SHIFT);
     }
 
     /**
