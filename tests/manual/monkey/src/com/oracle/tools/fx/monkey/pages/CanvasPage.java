@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -38,7 +39,7 @@ public class CanvasPage extends TestPaneBase {
     private Pane pane;
 
     public CanvasPage() {
-        setId("CanvasPage");
+        FX.name(this, "CanvasPage");
 
         pane = new Pane();
         setContent(pane);

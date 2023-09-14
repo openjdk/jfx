@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,33 +22,16 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.oracle.tools.fx.monkey.pages;
 
-import java.util.function.Supplier;
-import javafx.scene.layout.Pane;
+import javafx.scene.control.PasswordField;
 
 /**
- * Descriptor for an individual test (a "demo").
- * Encapsulates the title and a generator that creates the Pane.
+ * PasswordField page uses the fact that PasswordField is a TextField.
  */
-public class DemoPage {
-    private final String title;
-    private final Supplier<Pane> generator;
-
-    public DemoPage(String title, Supplier<Pane> generator) {
-        this.title = title;
-        this.generator = generator;
-    }
-
-    public Pane createPane() {
-        return generator.get();
-    }
-
-    public String toString() {
-        return title;
-    }
-
-    public String getTitle() {
-        return title;
+public class PasswordFieldPage extends TextFieldPage {
+    public PasswordFieldPage() {
+        super(new PasswordField(), "PasswordFieldPage");
     }
 }

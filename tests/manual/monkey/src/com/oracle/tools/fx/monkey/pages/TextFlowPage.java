@@ -24,13 +24,6 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.FontSelector;
-import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
-import com.oracle.tools.fx.monkey.util.Templates;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import com.oracle.tools.fx.monkey.util.TextSelector;
-import com.oracle.tools.fx.monkey.util.Utils;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
@@ -40,6 +33,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
+import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
@@ -49,30 +43,48 @@ import javafx.scene.text.Font;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import com.oracle.tools.fx.monkey.util.EnterTextDialog;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.FontSelector;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
+import com.oracle.tools.fx.monkey.util.Templates;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.TextSelector;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
  * TextFlow Page
  */
 public class TextFlowPage extends TestPaneBase {
-    protected final TextSelector textSelector;
-    protected final FontSelector fontSelector;
-    protected final CheckBox showChars;
-    protected final CheckBox showCaretPath;
-    protected final CheckBox underline;
-    protected final TextFlow control;
-    protected final Label pickResult;
-    protected final Label hitInfo;
-    protected final Label hitInfo2;
-    protected final Path caretPath;
-    protected final Path underlinePath;
-    private static final String INLINE = "$INLINE";
-    private static final String RICH_TEXT = "$RICH";
+    private final TextSelector textSelector;
+    private final TextField styleField;
+    private final FontSelector fontSelector;
+    private final CheckBox showChars;
+    private final CheckBox showCaretPath;
+    private final TextFlow control;
+    private final Label pickResult;
+    private final Label hitInfo;
+    private final Label hitInfo2;
+    private final Path caretPath;
+    private String currentText;
+    private static final String INLINE = "\u0000_INLINE";
+    private static final String RICH_TEXT = "\u0000_RICH";
 
     public TextFlowPage() {
-        setId("TextFlowPage");
+        FX.name(this, "TextFlowPage");
 
         control = new TextFlow();
         control.addEventHandler(MouseEvent.ANY, this::handleMouseEvent);
+
+        styleField = new TextField();
+        styleField.setOnAction((ev) -> {
+            String s = styleField.getText();
+            if (Utils.isBlank(s)) {
+                s = null;
+            }
+            control.setStyle(s);
+        });
 
         pickResult = new Label();
 
@@ -85,101 +97,96 @@ public class TextFlowPage extends TestPaneBase {
         caretPath.setStroke(Color.RED);
         caretPath.setManaged(false);
 
-        underlinePath = new Path();
-        underlinePath.setStrokeWidth(1);
-        underlinePath.setStroke(Color.GREEN);
-        underlinePath.setFill(Color.YELLOW);
-        underlinePath.setManaged(false);
-
         textSelector = TextSelector.fromPairs(
             "textSelector",
-            (t) -> updateControl(),
+            (t) -> updateText(),
             Utils.combine(
                 Templates.multiLineTextPairs(),
                 "Inline Nodes", INLINE,
-                "Rich Text", RICH_TEXT
+                "Rich Text", RICH_TEXT,
+                "Accadian", Templates.AKKADIAN
             )
         );
 
         fontSelector = new FontSelector("font", (f) -> updateControl());
 
+        Button editButton = new Button("Enter Text");
+        editButton.setOnAction((ev) -> {
+            new EnterTextDialog(this, (s) -> {
+                currentText = s;
+                updateControl();
+            }).show();
+        });
+
         showChars = new CheckBox("show characters");
-        showChars.setId("showChars");
+        FX.name(showChars, "showChars");
         showChars.selectedProperty().addListener((p) -> {
             updateControl();
         });
 
         showCaretPath = new CheckBox("show caret path");
-        showCaretPath.setId("showCaretPath");
+        FX.name(showCaretPath, "showCaretPath");
         showCaretPath.selectedProperty().addListener((p) -> {
-            updateCaret();
+            updateControl();
         });
 
-        underline = new CheckBox("underline shape");
-        underline.setId("underline");
-        underline.selectedProperty().addListener((p) -> {
-            updateUnderline();
-        });
-
-        OptionPane p = new OptionPane();
-        p.label("Text:");
-        p.option(textSelector.node());
-        p.label("Font:");
-        p.option(fontSelector.fontNode());
-        p.label("Font Size:");
-        p.option(fontSelector.sizeNode());
-        p.option(showChars);
-        p.option(showCaretPath);
-        p.option(underline);
-        p.option(new Separator(Orientation.HORIZONTAL));
-        p.label("Pick Result:");
-        p.option(pickResult);
-        p.label("Text.hitTest:");
-        p.option(hitInfo2);
-        p.label("TextFlow.hitTest:");
-        p.option(hitInfo);
+        OptionPane op = new OptionPane();
+        op.label("Text:");
+        op.option(textSelector.node());
+        op.option(editButton);
+        op.label("Font:");
+        op.option(fontSelector.fontNode());
+        op.label("Font Size:");
+        op.option(fontSelector.sizeNode());
+        op.option(showChars);
+        op.option(showCaretPath);
+        op.label("Direct Style:");
+        op.option(styleField);
+        //
+        op.option(new Separator(Orientation.HORIZONTAL));
+        op.label("Pick Result:");
+        op.option(pickResult);
+        op.label("Text.hitTest:");
+        op.option(hitInfo2);
+        op.label("TextFlow.hitTest:");
+        op.option(hitInfo);
+        op.label("Note: " + (FX.isMac() ? "⌘" : "ctrl") + "-click for caret shape");
 
         setContent(control);
-        setOptions(p);
+        setOptions(op);
 
         fontSelector.selectSystemFont();
         textSelector.selectFirst();
     }
 
-    protected void updateControl() {
+    private void updateText() {
+        currentText = textSelector.getSelectedText();
+        updateControl();
+    }
+
+    private void updateControl() {
         Font f = fontSelector.getFont();
-        String text = textSelector.getSelectedText();
-        Node[] ts = createTextArray(text, f);
+        Node[] ts = createTextArray(currentText, f);
         control.getChildren().setAll(ts);
+
+        caretPath.getElements().clear();
+        control.getChildren().add(caretPath);
 
         if (showChars.isSelected()) {
             Group g = ShowCharacterRuns.createFor(control);
             control.getChildren().add(g);
         }
 
-        caretPath.getElements().clear();
-        underlinePath.getElements().clear();
-        control.getChildren().addAll(underlinePath, caretPath);
-
-        updateCaret();
-        updateUnderline();
-    }
-
-    /** TextFlow.getTextLength() */
-    private static int computeTextLength(TextFlow f) {
-        int len = 0;
-        for (Node n: f.getChildrenUnmodifiable()) {
-            if (n instanceof Text t) {
-                len += t.getText().length();
-            } else {
-                // treat any other nodes as having length 1
-                len++;
+        if (showCaretPath.isSelected()) {
+            int len = FX.getTextLength(control);
+            for (int i = 0; i < len; i++) {
+                PathElement[] es = control.caretShape(i, true);
+                caretPath.getElements().addAll(es);
             }
         }
-        return len;
     }
 
-    protected Node[] createTextArray(String text, Font f) {
+    private Node[] createTextArray(String text, Font f) {
         if (INLINE.equals(text)) {
             return new Node[] {
                 t("Inline Nodes:", f),
@@ -192,29 +199,32 @@ public class TextFlowPage extends TestPaneBase {
             return new Node[] {
                 t("Rich Text: ", f),
                 t("BOLD ", f, "-fx-font-weight:bold;"),
+                t("BOLD ", f, "-fx-font-weight:bold;"),
+                t("BOLD ", f, "-fx-font-weight:900;"),
                 t("italic ", f, "-fx-font-style:italic;"),
                 t("underline ", f, "-fx-underline:true;"),
-                t(Templates.TWO_EMOJIS, f)
+                t(Templates.TWO_EMOJIS, f),
+                t(Templates.CLUSTERS, f)
             };
         } else {
             return new Node[] { t(text, f) };
         }
     }
 
-    protected static Text t(String text, Font f) {
+    private static Text t(String text, Font f) {
         Text t = new Text(text);
         t.setFont(f);
         return t;
     }
 
-    protected static Text t(String text, Font f, String style) {
+    private static Text t(String text, Font f, String style) {
         Text t = new Text(text);
         t.setFont(f);
         t.setStyle(style);
         return t;
     }
 
-    protected void handleMouseEvent(MouseEvent ev) {
+    private void handleMouseEvent(MouseEvent ev) {
         PickResult pick = ev.getPickResult();
         Node n = pick.getIntersectedNode();
         hitInfo2.setText(null);
@@ -233,27 +243,18 @@ public class TextFlowPage extends TestPaneBase {
         Point2D p = new Point2D(ev.getX(), ev.getY());
         HitInfo h = control.hitTest(p);
         hitInfo.setText(String.valueOf(h));
-    }
 
-    protected void updateUnderline() {
-        if (underline.isSelected()) {
-            int len = computeTextLength(control);
-            PathElement[] es = control.underlineShape(0, len);
-            underlinePath.getElements().addAll(es);
-        } else {
-            underlinePath.getElements().clear();
-        }
-    }
-
-    protected void updateCaret() {
-        if (showCaretPath.isSelected()) {
-            int len = computeTextLength(control);
-            for (int i = 0; i < len; i++) {
-                PathElement[] es = control.caretShape(i, true);
-                caretPath.getElements().addAll(es);
+        if (ev.getEventType() == MouseEvent.MOUSE_CLICKED) {
+            if (ev.isShortcutDown()) {
+                showCaretShape(new Point2D(ev.getX(), ev.getY()));
             }
-        } else {
-            caretPath.getElements().clear();
         }
+    }
+
+    private void showCaretShape(Point2D p) {
+        HitInfo h = control.hitTest(p);
+        System.out.println("hit=" + h);
+        PathElement[] pe = control.caretShape(h.getCharIndex(), h.isLeading());
+        caretPath.getElements().setAll(pe);
     }
 }

@@ -31,6 +31,7 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
 import javafx.stage.StageStyle;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
@@ -44,7 +45,7 @@ public class DatePickerPage extends TestPaneBase {
     private Alert dialog;
 
     public DatePickerPage() {
-        setId("DatePickerPage");
+        FX.name(this, "DatePickerPage");
 
         button = new Button("Show in Alert");
 

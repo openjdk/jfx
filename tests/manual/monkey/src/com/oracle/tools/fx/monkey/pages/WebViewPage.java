@@ -24,55 +24,58 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
-import javafx.scene.control.TitledPane;
-import com.oracle.tools.fx.monkey.util.FX;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
- * Accordion Page.
+ * WebView Test Page.
  */
-public class AccordionPage extends TestPaneBase {
-    private final Accordion accordion;
+public class WebViewPage extends TestPaneBase {
+    private final TextField addressField;
+    private final WebView view;
+    private final WebEngine engine;
 
-    public AccordionPage() {
-        FX.name(this, "AccordionPage");
-
-        accordion = new Accordion();
-        addPane();
-
-        Button addButton = new Button("Add Pane");
-        addButton.setOnAction((ev) -> addPane());
-
-        Button removeButton = new Button("Remove Pane");
-        removeButton.setOnAction((ev) -> removePane());
-
-        OptionPane op = new OptionPane();
-        op.add(addButton);
-        op.add(removeButton);
-
-        setContent(accordion);
-        setOptions(op);
-    }
-
-    private void addPane() {
-        String name = SequenceNumber.next();
-        System.nanoTime();
-        Button b = new Button(name);
-        b.setOnAction((ev) -> {
-            System.out.println(name);
+    public WebViewPage() {
+        addressField = new TextField();
+        addressField.setOnAction((ev) -> {
+            handleUrlEntered();
         });
-        TitledPane p = new TitledPane(name, b);
-        accordion.getPanes().add(p);
-    }
 
-    private void removePane() {
-        int sz = accordion.getPanes().size();
-        if (sz > 0) {
-            accordion.getPanes().remove(0);
+        view = new WebView();
+
+        engine = view.getEngine();
+        engine.setOnError((ev) -> {
+            System.err.println(ev);
+        });
+        engine.setOnStatusChanged((ev) -> {
+            System.err.println(ev);
+        });
+        engine.getLoadWorker().stateProperty().addListener((s,p,c) -> {
+            System.err.println(c);
+        });
+        
+        OptionPane p = new OptionPane();
+        p.label("Data:");
+        //p.option(modelSelector);
+        setOptions(p);
+
+        BorderPane bp = new BorderPane();
+        bp.setTop(addressField);
+        bp.setCenter(view);
+        setContent(bp);
+    }
+    
+    protected void handleUrlEntered() {
+        String url = addressField.getText();
+        if(Utils.isBlank(url)) {
+            return;
         }
+        
+        engine.load(url);
     }
 }
