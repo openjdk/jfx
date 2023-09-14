@@ -161,7 +161,7 @@ public class TextPage extends TestPaneBase {
             PickResult p = ev.getPickResult();
             //System.out.println(p);
         });
-        
+
         control.addEventHandler(MouseEvent.MOUSE_CLICKED, (ev) -> {
             if(ev.isShortcutDown()) {
                 showCaretShape(new Point2D(ev.getX(), ev.getY()));

@@ -113,7 +113,7 @@ public class MainWindow extends Stage {
         updateTitle();
         updateStatus();
     }
-    
+
     private MenuBar createMenu() {
         CheckMenuItem orientation = new CheckMenuItem("Orientation: RTL");
         orientation.setOnAction((ev) -> {
@@ -191,7 +191,7 @@ public class MainWindow extends Stage {
             sb.append("  scaleY=");
             sb.append(getRenderScaleY());
         }
-        
+
         sb.append("  LOC:");
         sb.append(new File("").getAbsolutePath());
         status.setText(sb.toString());

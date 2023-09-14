@@ -81,7 +81,7 @@ public class XYChartPage extends TestPaneBase {
 
         Button addRemoveButton = new Button("Add/Remove Series");
         addRemoveButton.setOnAction((ev) -> addRemoveSeries());
-        
+
         Button addPointButton = new Button("Add Point");
         addPointButton.setOnAction((ev) -> addPoint());
         

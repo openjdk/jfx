@@ -212,7 +212,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
 
         menuButtonVisible = new CheckBox("menu button visible");
         FX.name(menuButtonVisible, "menuButton");
-        
+
         editable = new CheckBox("editable");
         editable.setOnAction((ev) -> {
             updateEditable();
@@ -609,7 +609,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
 
         Callback<ResizeFeatures, Boolean> p = createPolicy(policy);
         control.setColumnResizePolicy(p);
-        
+
         TreeTableColumn<String, String> lastColumn = null;
         int id = 1;
 

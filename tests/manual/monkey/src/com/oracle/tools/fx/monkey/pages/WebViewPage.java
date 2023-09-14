@@ -55,27 +55,28 @@ public class WebViewPage extends TestPaneBase {
         engine.setOnStatusChanged((ev) -> {
             System.err.println(ev);
         });
-        engine.getLoadWorker().stateProperty().addListener((s,p,c) -> {
+        engine.getLoadWorker().stateProperty().addListener((s, p, c) -> {
             System.err.println(c);
         });
-        
-        OptionPane p = new OptionPane();
-        p.label("Data:");
-        //p.option(modelSelector);
-        setOptions(p);
+
+        OptionPane op = new OptionPane();
+        op.label("Data:");
+        // TODO
+        //op.option(modelSelector);
+        setOptions(op);
 
         BorderPane bp = new BorderPane();
         bp.setTop(addressField);
         bp.setCenter(view);
         setContent(bp);
     }
-    
+
     protected void handleUrlEntered() {
         String url = addressField.getText();
-        if(Utils.isBlank(url)) {
+        if (Utils.isBlank(url)) {
             return;
         }
-        
+
         engine.load(url);
     }
 }

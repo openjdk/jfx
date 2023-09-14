@@ -80,8 +80,14 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
         NULL("null selection model");
 
         private final String text;
-        Selection(String text) { this.text = text; }
-        public String toString() { return text; }
+
+        Selection(String text) {
+            this.text = text;
+        }
+
+        public String toString() {
+            return text;
+        }
     }
 
     public enum Cmd {
@@ -107,7 +113,7 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
 
     public ListViewPage() {
         FX.name(this, "ListViewPage");
-        
+
         control = new ListView<>();
         control.setTooltip(new Tooltip("edit to 'update' to commit the change"));
         control.setOnEditCommit((ev) -> {
@@ -199,7 +205,7 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
         dataSelector.getSelectionModel().selectFirst();
         selectionSelector.getSelectionModel().select(Selection.MULTIPLE);
     }
-    
+
     protected void updateData() {
         Data d = dataSelector.getSelectionModel().getSelectedItem();
         ObservableList<Object> items = createData(d);
@@ -341,7 +347,7 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
         g.fillRect(0, 0, c.getWidth(), c.getHeight());
         return c.snapshot(null, null);
     }
-    
+
     private Callback getCellFactory(Cells t) {
         if (t != null) {
             switch (t) {

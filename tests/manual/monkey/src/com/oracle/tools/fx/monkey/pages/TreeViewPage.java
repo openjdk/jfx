@@ -40,14 +40,14 @@ import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- * Test code from CheckBoxTreeEditor, see https://bugs.openjdk.org/browse/JDK-8209017
+ * TreeView Page
  */
 public class TreeViewPage extends TestPaneBase {
     private enum Cells {
         DEFAULT,
         EDITABLE_TEXT_FIELD,
     }
-    
+
     private final TreeView<String> control;
     private final CheckBox editable;
     private final ComboBox<Cells> cellFactorySelector;
@@ -56,7 +56,7 @@ public class TreeViewPage extends TestPaneBase {
 
     public TreeViewPage() {
         FX.name(this, "TreeViewPage");
-        
+
         control = new TreeView<>(new CheckBoxTreeItem<>("root"));
         control.getRoot().setExpanded(true);
         control.setCellFactory(CheckBoxTreeCell.<String>forTreeView());
@@ -89,7 +89,7 @@ public class TreeViewPage extends TestPaneBase {
         removeButton.setOnAction((ev) -> {
             removeChild();
         });
-        
+
         editable = new CheckBox("editable");
         editable.setOnAction((ev) -> {
             updateEditable();

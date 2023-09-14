@@ -127,7 +127,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         Selection(String text) { this.text = text; }
         public String toString() { return text; }
     }
-    
+
     private enum Filter {
         NONE("<NONE>"),
         SKIP1S("skip 11s"),
@@ -170,7 +170,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         demoSelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             updatePane();
         });
-        
+
         cellValueSelector = new ComboBox<>();
         FX.name(cellValueSelector, "cellValueSelector");
         cellValueSelector.getItems().addAll(CellValue.values());
@@ -202,7 +202,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         selectionSelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             updatePane();
         });
-        
+
         filterSelector = new ComboBox<>();
         FX.name(filterSelector, "filterSelector");
         filterSelector.getItems().addAll(Filter.values());
@@ -255,7 +255,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         refresh.setOnAction((ev) -> {
             control.refresh();
         });
-        
+
         menuButtonVisible = new CheckBox("menu button visible");
         FX.name(menuButtonVisible, "menuButton");
 

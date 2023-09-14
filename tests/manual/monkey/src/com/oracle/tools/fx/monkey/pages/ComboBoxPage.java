@@ -85,7 +85,7 @@ public class ComboBoxPage extends TestPaneBase {
                     changeItemCount(2);
                 })).play();
         });
-        
+
         CheckBox editable = new CheckBox("editable");
         FX.name(editable, "editable");
         editable.selectedProperty().bindBidirectional(control.editableProperty());

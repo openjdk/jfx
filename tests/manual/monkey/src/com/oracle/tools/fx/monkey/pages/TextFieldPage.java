@@ -88,7 +88,7 @@ public class TextFieldPage extends TestPaneBase {
         CheckBox editable = new CheckBox("editable");
         FX.name(editable, "editable");
         editable.selectedProperty().bindBidirectional(control.editableProperty());
-        
+
         inScroll = new CheckBox("in scroll pane");
         FX.name(inScroll, "scroll");
         inScroll.setOnAction((ev) -> updateScroll());
@@ -115,7 +115,7 @@ public class TextFieldPage extends TestPaneBase {
         posSelector.select(Pos.BASELINE_RIGHT);
         fontSelector.selectSystemFont();
     }
-    
+
     private void updateScroll() {
         if(inScroll.isSelected()) {
             ScrollPane sp = new ScrollPane(control);

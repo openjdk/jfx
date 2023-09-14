@@ -67,12 +67,12 @@ public class TitledPanePage extends TestPaneBase {
                 "Label", mk(() -> new Label("Label"))
             }
         );
-        
+
         snap = new CheckBox("snap");
         FX.name(snap, "snap");
 
         control = new TitledPane();
-        
+
         snap.selectedProperty().bindBidirectional(control.snapToPixelProperty());
 
         OptionPane op = new OptionPane();
