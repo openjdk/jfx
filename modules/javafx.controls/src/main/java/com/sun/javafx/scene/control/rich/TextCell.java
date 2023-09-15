@@ -25,7 +25,7 @@
 // This code borrows heavily from the following project, with permission from the author:
 // https://github.com/andy-goryachev/FxEditor
 
-package javafx.scene.control.rich;
+package com.sun.javafx.scene.control.rich;
 
 import java.util.Objects;
 import javafx.scene.Node;
@@ -36,10 +36,6 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
-import com.sun.javafx.scene.control.rich.FxPathBuilder;
-import com.sun.javafx.scene.control.rich.HighlightShape;
-import com.sun.javafx.scene.control.rich.RichUtils;
-import com.sun.javafx.scene.control.rich.TextCellHelper;
 
 /**
  * Provides a visual representation of a paragraph.
@@ -55,6 +51,8 @@ import com.sun.javafx.scene.control.rich.TextCellHelper;
  * Each visible TextCell will be resized horizontally to fill the available width and then resized vertically
  * according to its preferred size for that width. 
  */
+// TODO extends Region
+// TODO move to com.oracle
 public final class TextCell {
     private final int index;
     private final Region content;

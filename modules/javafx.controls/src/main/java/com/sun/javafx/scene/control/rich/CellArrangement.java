@@ -33,7 +33,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.control.rich.CaretInfo;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;

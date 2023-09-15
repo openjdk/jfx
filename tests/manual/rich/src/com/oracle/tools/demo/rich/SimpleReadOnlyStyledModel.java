@@ -99,16 +99,14 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     }
 
     public SimpleReadOnlyStyledModel highlight(int start, int length, Color c) {
-        int end = start + length;
         RichParagraph p = lastSegmentStyledTextParagraph();
-        p.addHighlight((cell) -> cell.addHighlight(start, end, c));
+        p.addHighlight(start, length, c);
         return this;
     }
 
     public SimpleReadOnlyStyledModel squiggly(int start, int length, Color c) {
-        int end = start + length;
         RichParagraph p = lastSegmentStyledTextParagraph();
-        p.addHighlight((cell) -> cell.addSquiggly(start, end, c));
+        p.addSquiggly(start, length, c);
         return this;
     }
 

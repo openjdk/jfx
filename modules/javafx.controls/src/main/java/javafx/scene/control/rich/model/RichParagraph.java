@@ -31,9 +31,10 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javafx.scene.Node;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 import com.sun.javafx.scene.control.rich.RichParagraphHelper;
+import com.sun.javafx.scene.control.rich.TextCell;
 
 /**
  * Represents a paragraph with rich text inside the StyledModel.
@@ -127,11 +128,38 @@ public class RichParagraph {
         segments().add(seg);
     }
 
-    public void addHighlight(Consumer<TextCell> highlight) {
+    /**
+     * Adds a color background highlight.
+     * Use translucent colors to enable multiple highlights in the same region of text.
+     * @param start the start offset
+     * @param length the end offset
+     * @param color the background color
+     */
+    public void addHighlight(int start, int length, Color color) {
+        int end = start + length;
+        highlights().add((cell) -> {
+            cell.addHighlight(start, end, color);
+        });
+    }
+
+    /**
+     * Adds a squiggly line (as seen in a spell checker) with the given color.
+     * @param start the start offset
+     * @param length the end offset
+     * @param color the background color
+     */
+    public void addSquiggly(int start, int length, Color color) {
+        int end = start + length;
+        highlights().add((cell) -> {
+            cell.addSquiggly(start, end, color);
+        });
+    }
+
+    private List<Consumer<TextCell>> highlights() {
         if (highlights == null) {
-            highlights = new ArrayList<>();
+            highlights = new ArrayList<>(8);
         }
-        highlights.add(highlight);
+        return highlights;
     }
 
     /**

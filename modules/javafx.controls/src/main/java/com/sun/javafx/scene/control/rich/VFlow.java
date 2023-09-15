@@ -50,7 +50,6 @@ import javafx.scene.control.rich.ConfigurationParameters;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.SideDecorator;
 import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.CssStyles;
 import javafx.scene.control.rich.model.RichParagraph;

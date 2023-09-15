@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.rich;
 
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.shape.PathElement;
 import com.sun.javafx.util.Utils;
 

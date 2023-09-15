@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.rich;
 
 import java.util.List;
 import java.util.function.Consumer;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.model.RichParagraph;
 import javafx.scene.control.rich.model.StyledSegment;
 import com.sun.javafx.util.Utils;

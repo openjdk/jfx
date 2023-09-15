@@ -452,7 +452,8 @@ public class RichTextArea extends Control {
                 return (StyleableProperty<Insets>)t.contentPaddingProperty();
             }
         };
-        
+
+        // TODO remove if switched to paragraph attributes
         private static final FontCssMetaData<RichTextArea> FONT =
             new FontCssMetaData<>("-fx-font", Font.getDefault()) {
 
@@ -467,6 +468,7 @@ public class RichTextArea extends Control {
             }
         };
 
+        // TODO remove if switched to paragraph attributes
         private static final CssMetaData<RichTextArea, Number> LINE_SPACING =
             new CssMetaData<>("-fx-line-spacing", SizeConverter.getInstance(), 0) {
 
@@ -1235,6 +1237,10 @@ public class RichTextArea extends Control {
                     }
                 } else if (!TextPos.ZERO.equals(pos)) {
                     int ix = pos.offset() - 1;
+                    if (ix < 0) {
+                        // FIX find previous symbol
+                        ix = 0;
+                    }
                     pos = new TextPos(pos.index(), ix);
                 }
                 return m.getStyleAttrs(pos);

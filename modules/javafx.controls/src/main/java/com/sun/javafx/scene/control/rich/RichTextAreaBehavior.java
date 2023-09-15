@@ -41,7 +41,6 @@ import javafx.scene.control.input.BehaviorBase2;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.rich.CaretInfo;
 import javafx.scene.control.rich.RichTextArea;
-import javafx.scene.control.rich.TextCell;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.DataFormatHandler;
 import javafx.scene.control.rich.model.StyledInput;
