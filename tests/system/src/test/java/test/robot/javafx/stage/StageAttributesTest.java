@@ -32,6 +32,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -39,8 +41,8 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertTrue;
+
+import test.util.Util;
 import test.robot.testharness.VisualTestBase;
 
 import static test.util.Util.TIMEOUT;
@@ -56,6 +58,7 @@ public class StageAttributesTest extends VisualTestBase {
     private static final double TOLERANCE = 0.07;
 
     private Stage bottomStage;
+    private Scene topScene;
     private Stage topStage;
 
     private void setupStages(boolean overlayed) throws InterruptedException {
@@ -82,7 +85,7 @@ public class StageAttributesTest extends VisualTestBase {
             // Top stage, will be inconified
             topStage = getStage(true);
             topStage.initStyle(StageStyle.DECORATED);
-            Scene topScene = new Scene(new Pane(), WIDTH, HEIGHT);
+            topScene = new Scene(new Pane(), WIDTH, HEIGHT);
             topScene.setFill(TOP_COLOR);
             topStage.setScene(topScene);
             if (overlayed) {
@@ -100,7 +103,8 @@ public class StageAttributesTest extends VisualTestBase {
             topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
-    public @Test void testIconifiedStage() throws InterruptedException {
+    @Test
+    public void testIconifiedStage() throws InterruptedException {
         setupStages(true);
 
         runAndWait(() -> {
@@ -111,7 +115,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        Util.waitForIdle(topScene);
 
         runAndWait(() -> {
             assertTrue(topStage.isIconified());
@@ -120,7 +124,8 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    public @Test void testMaximizedStage() throws InterruptedException {
+    @Test
+    public void testMaximizedStage() throws InterruptedException {
         setupStages(false);
 
         runAndWait(() -> {
@@ -131,7 +136,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        Util.waitForIdle(topScene);
 
         runAndWait(() -> {
             assertTrue(topStage.isMaximized());
@@ -153,7 +158,8 @@ public class StageAttributesTest extends VisualTestBase {
         });
     }
 
-    public @Test void testFullscreenStage() throws InterruptedException {
+    @Test
+    public void testFullscreenStage() throws InterruptedException {
         setupStages(false);
 
         runAndWait(() -> {
@@ -164,7 +170,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        sleep(1000);
+        Util.waitForIdle(topScene);
 
         runAndWait(() -> {
             assertTrue(topStage.isFullScreen());
