@@ -43,9 +43,9 @@ public class EnterTextDialog extends Stage {
     public EnterTextDialog(Object owner, Consumer<String> onEdit) {
         initOwner(FX.getParentWindow(owner));
         initModality(Modality.APPLICATION_MODAL);
-        
+
         textField = new TextArea();
-        
+
         Button ok = new Button("OK");
         ok.setOnAction((ev) -> {
             String text = textField.getText();
@@ -56,17 +56,17 @@ public class EnterTextDialog extends Stage {
         ButtonBar bp = new ButtonBar();
         bp.setPadding(new Insets(5, 10, 5, 10));
         bp.getButtons().add(ok);
-        
+
         BorderPane p = new BorderPane(textField);
         p.setBottom(bp);
         setScene(new Scene(p));
-        
+
         addEventHandler(KeyEvent.KEY_PRESSED, (ev) -> {
-            if(ev.getCode() == KeyCode.ESCAPE) {
+            if (ev.getCode() == KeyCode.ESCAPE) {
                 hide();
             }
         });
-        
+
         setWidth(400);
         setHeight(300);
         setTitle("Enter Text");

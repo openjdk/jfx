@@ -80,7 +80,7 @@ public class ClipboardViewer extends BorderPane {
             c.setText("Value");
             c.setPrefWidth(1000);
             c.setCellFactory((r) -> {
-                return new TreeTableCell<Entry,String>() {
+                return new TreeTableCell<Entry, String>() {
                     @Override
                     protected void updateItem(String text, boolean empty) {
                         super.updateItem(text, empty);
@@ -128,7 +128,7 @@ public class ClipboardViewer extends BorderPane {
         });
 
         ArrayList<TreeItem<Entry>> items = new ArrayList<>();
-        for (DataFormat f : formats) {
+        for (DataFormat f: formats) {
             TreeItem<Entry> item = new TreeItem<>(new Entry(f, f.toString(), null));
             items.add(item);
 
@@ -140,13 +140,13 @@ public class ClipboardViewer extends BorderPane {
                 item.setExpanded(true);
             }
         }
-        
+
         root.getChildren().setAll(items);
     }
 
     private Set<DataFormat> getExpandedItems() {
         HashSet<DataFormat> rv = new HashSet<>();
-        for (TreeItem<Entry> item : root.getChildren()) {
+        for (TreeItem<Entry> item: root.getChildren()) {
             if (item.isExpanded()) {
                 rv.add(item.getValue().format);
             }

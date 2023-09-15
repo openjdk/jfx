@@ -84,7 +84,7 @@ public class XYChartPage extends TestPaneBase {
 
         Button addPointButton = new Button("Add Point");
         addPointButton.setOnAction((ev) -> addPoint());
-        
+
         Button removePointButton = new Button("Remove Point");
         removePointButton.setOnAction((ev) -> removePoint());
         
@@ -237,7 +237,7 @@ public class XYChartPage extends TestPaneBase {
         XYChart.Series s = list.get(0);
         int sz = s.getData().size();
         boolean atIndexZero = rnd.nextBoolean();
-        
+
         if (chart instanceof BarChart b) {
             int v = rnd.nextInt(50);
             add(s.getData(), atIndexZero, new XYChart.Data("c" + sz, v));
@@ -250,9 +250,9 @@ public class XYChartPage extends TestPaneBase {
             add(s.getData(), atIndexZero, new XYChart.Data(i, v));
         }
     }
-    
+
     private void add(ObservableList list, boolean atIndexZero, XYChart.Data d) {
-        if(atIndexZero) {
+        if (atIndexZero) {
             list.add(0, d);
         } else {
             list.add(d);

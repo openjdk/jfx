@@ -33,14 +33,14 @@ import javafx.stage.Window;
 
 public class SingleInstance {
     public static Stage openSingleInstance(String name, String title, Supplier<Parent> content) {
-        for (Window w : Window.getWindows()) {
+        for (Window w: Window.getWindows()) {
             String s = FX.getName(w);
             if (name.equals(s) && (w instanceof Stage stage)) {
                 stage.requestFocus();
                 return stage;
             }
         }
-        
+
         Parent p = content.get();
 
         Stage s = new Stage();

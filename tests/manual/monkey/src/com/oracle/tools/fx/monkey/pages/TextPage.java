@@ -177,7 +177,7 @@ public class TextPage extends TestPaneBase {
             control.setWrappingWidth(0);
         }
     }
-    
+
     private void showCaretShape(Point2D p) {
         HitInfo h = control.hitTest(p);
         System.out.println("hit=" + h);

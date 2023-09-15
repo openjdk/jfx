@@ -175,7 +175,7 @@ public class FxSettingsSchema {
         sb.append(name);
         return false;
     }
-    
+
     private static String getNodeName(Node n) {
         if (n != null) {
             String name = getName(n);
@@ -445,7 +445,7 @@ public class FxSettingsSchema {
     public static void setName(Window w, String name) {
         w.getProperties().put(NAME_PROP, name);
     }
-    
+
     /**
      * Returns the name for the purposes of storing user preferences,
      * set previously by {@link #setName(Node, String)},

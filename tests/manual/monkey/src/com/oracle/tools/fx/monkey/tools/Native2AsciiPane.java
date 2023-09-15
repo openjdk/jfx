@@ -82,7 +82,7 @@ public class Native2AsciiPane extends BorderPane {
             c.setPrefWidth(1000);
             table.getColumns().add(c);
         }
-        
+
         GridPane p = new GridPane();
         p.add(new Label("Native"), 0, 0);
         p.add(nat, 0, 1);
@@ -207,7 +207,7 @@ public class Native2AsciiPane extends BorderPane {
             return -1;
         }
     }
-    
+
     protected void updateSymbols(String text) {
         int sz = text.length();
         ArrayList<Entry> es = new ArrayList<>(sz);
@@ -220,13 +220,13 @@ public class Native2AsciiPane extends BorderPane {
         }
         table.getItems().setAll(es);
     }
-    
+
     protected static class Entry {
         public final int index;
         public final String character;
         public final String code;
         public final String description;
-        
+
         public Entry(int index, String character, String code, String description) {
             this.index = index;
             this.character = character;
