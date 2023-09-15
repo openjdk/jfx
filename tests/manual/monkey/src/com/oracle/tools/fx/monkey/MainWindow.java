@@ -95,7 +95,7 @@ public class MainWindow extends Stage {
 
         SplitPane split = new SplitPane(pageSelector, contentPane);
         FX.name(split, "MainSplit");
-        split.setDividerPositions(0.2);
+        split.setDividerPositions(0.15);
         SplitPane.setResizableWithParent(pageSelector, Boolean.FALSE);
         SplitPane.setResizableWithParent(contentPane, Boolean.TRUE);
 
