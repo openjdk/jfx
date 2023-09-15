@@ -44,14 +44,10 @@ import javafx.scene.text.TextFlow;
  * even including a different instance of RichTextArea).  These Regions will be presented as is, and,
  * for editable models, would not be editable via the RichTextArea mechanisms.
  * <p>
- * A typical usage would be the StyledModel creating a new instance of TextCell and populating it with styled
- * segments, inline Nodes, highlights (TODO), underlines (TODO).
- * <p>
  * Each visible TextCell will be resized horizontally to fill the available width and then resized vertically
  * according to its preferred size for that width. 
  */
-// TODO extends Region
-public final class TextCell {
+public final class TextCell extends Region {
     private final int index;
     private final Region content;
     private double height;
@@ -66,7 +62,8 @@ public final class TextCell {
         Objects.nonNull(content);
         this.index = index;
         this.content = content;
-        content.setManaged(false);
+        setManaged(false);
+        getChildren().add(content);
     }
 
     /**
@@ -84,54 +81,6 @@ public final class TextCell {
     public final Region getContent() {
         return content;
     }
-
-    /**
-     * Adds a styled text segment to a {@link TextFlow}-based {@code TextCell}.
-     * This method will throw an IllegalArgumentException if this text cell has content other
-     * than the TextFlow.
-     *
-     * @param text non-null text string
-     * @param style direct style (such as {@code -fx-fill:red;}), or null
-     * @param css array of style names, or null
-     * @return {@link Text} node added
-     */
-//    public Text addSegment(String text, String style, String[] css) {
-//        Objects.nonNull(text);
-//        Text t = new Text(text);
-//        if (style != null) {
-//            t.setStyle(style);
-//        }
-//        if (css != null) {
-//            t.getStyleClass().addAll(css);
-//        }
-//        flow().getChildren().add(t);
-//        return t;
-//    }
-
-    /**
-     * Adds a text segment with no styling (i.e. using default style).
-     * This method is an alias for {@code addSegment(text, null, null)}.
-     *
-     * @param text segment text
-     * @return {@link Text} node added
-     */
-//    public Text addSegment(String text) {
-//        Text t = new Text(text);
-//        flow().getChildren().add(t);
-//        return t;
-//    }
-
-    /**
-     * Adds an inline node to a {@link TextFlow}-based text cell.
-     *
-     * @param <T> actual Node type
-     * @param node node to add
-     * @return added {@code Node}
-     */
-//    public <T extends Node> T addInlineNode(T node) {
-//        flow().getChildren().add(node);
-//        return node;
-//    }
 
     /**
      * Adds a node to the text flow.
@@ -174,7 +123,7 @@ public final class TextCell {
         this.height = height;
     }
 
-    public double getHeight() {
+    public double getCellHeight() {
         return height;
     }
     

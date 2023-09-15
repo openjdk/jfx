@@ -486,7 +486,7 @@ public class VFlow extends Pane implements StyleResolver {
             } else {
                 w = getContentWidth() + leftPadding + rightPadding;
             }
-            cell.addBoxOutline(b, 0.0, snapPositionX(w), cell.getHeight());
+            cell.addBoxOutline(b, 0.0, snapPositionX(w), cell.getCellHeight());
         }
     }
 
@@ -1115,7 +1115,7 @@ public class VFlow extends Pane implements StyleResolver {
         for (int i=0; i < sz; i++) {
             TextCell cell = arrangement.getCellAt(i);
             Region r = cell.getContent();
-            double h = cell.getHeight();
+            double h = cell.getCellHeight();
             double y = cell.getY();
             content.layoutInArea(r, x, y, w, h);
 

@@ -157,7 +157,7 @@ public class RichParagraph {
 
     private List<Consumer<TextCell>> highlights() {
         if (highlights == null) {
-            highlights = new ArrayList<>(8);
+            highlights = new ArrayList<>(4);
         }
         return highlights;
     }

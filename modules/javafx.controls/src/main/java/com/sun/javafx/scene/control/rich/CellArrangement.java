@@ -134,7 +134,7 @@ public class CellArrangement {
             double y = cellY - cell.getY() - pad.getTop();
             if (y < 0) {
                 return new TextPos(cell.getIndex(), 0, 0, true);
-            } else if (y < cell.getHeight()) {
+            } else if (y < cell.getCellHeight()) {
                 if (r instanceof TextFlow t) {
                     double x = cellX - pad.getLeft();
                     Point2D p = new Point2D(x, y);
@@ -275,7 +275,7 @@ public class CellArrangement {
         double y = cell.getY();
         if (localY < y) {
             return 1;
-        } else if (localY >= y + cell.getHeight()) {
+        } else if (localY >= y + cell.getCellHeight()) {
             if (cell.getIndex() == (lineCount - 1)) {
                 return 0;
             }
