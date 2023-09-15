@@ -51,7 +51,7 @@ public class Native2AsciiPane extends BorderPane {
 
         ascii = new TextArea();
         ascii.textProperty().addListener((x) -> convert(false));
-        
+
         table = new TableView<>();
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
         {

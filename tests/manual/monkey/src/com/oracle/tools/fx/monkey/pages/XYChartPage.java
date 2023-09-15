@@ -87,7 +87,7 @@ public class XYChartPage extends TestPaneBase {
 
         Button removePointButton = new Button("Remove Point");
         removePointButton.setOnAction((ev) -> removePoint());
-        
+
         Button clearPointsButton = new Button("Clear Points");
         clearPointsButton.setOnAction((ev) -> clearPoints());
 
