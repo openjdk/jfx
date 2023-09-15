@@ -49,6 +49,16 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
     }
 
     @Test
+    public void testTyping() throws Exception {
+        execute(
+            //addKeyListener(),
+            checkText("", 0),
+            "0123456789.,abracadabra",
+            checkText("0123456789.,abracadabra", 23)
+        );
+    }
+
+    @Test
     public void testNavigation() throws Exception {
         execute(
             setText("0123456789"),
