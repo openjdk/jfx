@@ -176,7 +176,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         regKey(KeyBinding2.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
         regKey(KeyBinding2.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
         regKey(KeyBinding2.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        regKey(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
         regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
         regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
         regKey(KeyBinding2.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
