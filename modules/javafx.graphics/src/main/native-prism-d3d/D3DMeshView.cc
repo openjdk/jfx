@@ -289,10 +289,15 @@ void D3DMeshView::render() {
         return;
     }
 
-    SUCCEEDED(device->SetTexture(SR_DIFFUSE_MAP, material->getMap(DIFFUSE)));
-    SUCCEEDED(device->SetTexture(SR_SPECULAR_MAP, material->getMap(SPECULAR)));
-    SUCCEEDED(device->SetTexture(SR_BUMPHEIGHT_MAP, material->getMap(BUMP)));
-    SUCCEEDED(device->SetTexture(SR_SELFILLUM_MAP, material->getMap(SELFILLUMINATION)));
+    // Set the textures and their filters in their corresponding samplers
+    for (int i = 0; i < map_type::num_map_types; i++) {
+        map_type type = static_cast<map_type>(i);
+//        cout << "D3DMeshView setting " << type << " to " << material->getMinFilterType(type) << ", " << material->getMagFilterType(type) << endl;
+        SUCCEEDED(device->SetTexture(type, material->getMap(type)));
+        SUCCEEDED(device->SetSamplerState(type, D3DSAMP_MINFILTER, material->getMinFilterType(type)));
+        SUCCEEDED(device->SetSamplerState(type, D3DSAMP_MAGFILTER, material->getMagFilterType(type)));
+        SUCCEEDED(device->SetSamplerState(type, D3DSAMP_MIPFILTER, material->getMipFilterType(type)));
+    }
 
     if (context->state.cullMode != cullMode) {
         context->state.cullMode = cullMode;
@@ -300,8 +305,7 @@ void D3DMeshView::render() {
     }
     if (context->state.wireframe != wireframe) {
         context->state.wireframe = wireframe;
-        SUCCEEDED(device->SetRenderState(D3DRS_FILLMODE,
-                wireframe ? D3DFILL_WIREFRAME : D3DFILL_SOLID));
+        SUCCEEDED(device->SetRenderState(D3DRS_FILLMODE, wireframe ? D3DFILL_WIREFRAME : D3DFILL_SOLID));
     }
 
     SUCCEEDED(device->SetStreamSource(0, mesh->getVertexBuffer(), 0, PRIMITIVE_VERTEX_SIZE));

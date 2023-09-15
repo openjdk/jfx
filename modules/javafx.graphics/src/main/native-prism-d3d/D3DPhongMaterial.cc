@@ -34,10 +34,9 @@ using std::endl;
 D3DPhongMaterial::~D3DPhongMaterial() {
     context = NULL;
     // The freeing of texture native resources is handled by its Java layer.
-    map[DIFFUSE] = NULL;
-    map[SPECULAR] = NULL;
-    map[BUMP] = NULL;
-    map[SELFILLUMINATION] = NULL;
+    for (int i = 0; i < map_type::num_map_types; i++) {
+        map[i] = NULL;
+    }
 }
 
 D3DPhongMaterial::D3DPhongMaterial(D3DContext *ctx) :
@@ -68,35 +67,41 @@ float * D3DPhongMaterial::getSpecularColor() {
 }
 
 bool D3DPhongMaterial::isBumpMap() {
-    return map[BUMP] ? true : false;
+    return map[map_type::bump] ? true : false;
 }
 
 bool D3DPhongMaterial::isSpecularMap() {
-    return map[SPECULAR] ? true : false;
+    return map[map_type::specular] ? true : false;
 }
 
 bool D3DPhongMaterial::isSelfIllumMap() {
-    return map[SELFILLUMINATION] ? true : false;
+    return map[map_type::self_illumination] ? true : false;
 }
 
 bool D3DPhongMaterial::isSpecularColor() {
     return specularColorSet;
 }
 
-IDirect3DBaseTexture9 * D3DPhongMaterial::getMap(int type) {
-    // Within the range of DIFFUSE, SPECULAR, BUMP, SELFILLUMINATION
-    if (type >= 0 && type <= 3) {
-        return map[type];
-    }
-    cerr << "D3DPhongMaterial::getMap -- type is out of range - type = " << type << endl;
-    return NULL;
+IDirect3DBaseTexture9 * D3DPhongMaterial::getMap(map_type type) {
+    return map[type];
 }
 
-void D3DPhongMaterial::setMap(int mapID, IDirect3DBaseTexture9 *texMap) {
-    // Within the range of DIFFUSE, SPECULAR, BUMP, SELFILLUMINATION
-    if (mapID >= 0 && mapID <= 3) {
-        map[mapID] = texMap;
-    } else {
-        cerr << "D3DPhongMaterial::getMap -- mapID is out of range - mapID = " << mapID << endl;
-    }
+D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMinFilterType(map_type type) {
+    return minFilter[type];
+}
+
+D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMagFilterType(map_type type) {
+    return magFilter[type];
+}
+
+D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMipFilterType(map_type type) {
+    return mipFilter[type];
+}
+
+void D3DPhongMaterial::setMap(map_type type, IDirect3DBaseTexture9 *texMap, D3DTEXTUREFILTERTYPE min,
+        D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip) {
+    map[type] = texMap;
+    minFilter[type] = min;
+    magFilter[type] = mag;
+    mipFilter[type] = mip;
 }

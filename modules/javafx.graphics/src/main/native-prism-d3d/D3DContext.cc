@@ -352,6 +352,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetSpecularColor
 
     phongMaterial->setSpecularColor(set ? true : false, r, g, b, a);
 }
+
+enum minmagFilterType { nearest_point, bilinear };
+enum mipmapFilterType { none, nearest, linear };
+
 /*
  * Class:     com_sun_prism_d3d_D3DContext
  * Method:    nSetMap
@@ -359,14 +363,18 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetSpecularColor
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetMap
   (JNIEnv *env, jclass, jlong ctx, jlong nativePhongMaterial,
-        jint mapType, jlong nativeTexture)
+        jint mapType, jint minFilter, jint magFilter, jint mipFilter, jlong nativeTexture)
 {
+    static const D3DTEXTUREFILTERTYPE minMagEnumMap[2] = { D3DTEXF_POINT, D3DTEXF_LINEAR };
+    static const D3DTEXTUREFILTERTYPE mipmapEnumMap[3] = { D3DTEXF_NONE, D3DTEXF_POINT, D3DTEXF_LINEAR };
+
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetMap");
     D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
-    IDirect3DBaseTexture9 *texMap = (IDirect3DBaseTexture9 *)  jlong_to_ptr(nativeTexture);
+    IDirect3DBaseTexture9 *texMap = (IDirect3DBaseTexture9 *) jlong_to_ptr(nativeTexture);
     RETURN_IF_NULL(phongMaterial);
 
-    phongMaterial->setMap(mapType, texMap);
+    phongMaterial->setMap(static_cast<map_type>(mapType), texMap,
+            minMagEnumMap[minFilter], minMagEnumMap[magFilter], mipmapEnumMap[mipFilter]);
 }
 
 /*
@@ -621,10 +629,7 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
         // TODO: 3D - RT-34415: [D3D 3D] Need a robust 3D states management for texture
         // Set texture unit 0 to its default texture addressing mode for Prism
         SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP)) &&
-        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP)) &&
-        // Set texture filter to bilinear for 3D rendering
-        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR)) &&
-        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR));
+        SUCCEEDED(res = pd3dDevice->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP));// &&
     }
     return res;
 }

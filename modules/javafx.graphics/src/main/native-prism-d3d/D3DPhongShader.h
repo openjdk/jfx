@@ -65,12 +65,6 @@
 //#define PSR_LIGHT_DIRS 24        // 1 direction = 5 * 1 = 5: c24-28
 //#define PSR_LIGHT_POS 29         // 1 position = 5 * 1 = 5: c29-34
 
-// SR implies Sampler Registers
-#define SR_DIFFUSE_MAP 0
-#define SR_SPECULAR_MAP 1
-#define SR_BUMPHEIGHT_MAP 2
-#define SR_SELFILLUM_MAP 3
-
 enum SpecType {
     SpecNone,
     SpecTexture, // map only w/o alpha

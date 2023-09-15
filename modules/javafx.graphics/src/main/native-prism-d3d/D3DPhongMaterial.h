@@ -30,10 +30,15 @@
 
 // See MaterialPhong.h, MaterialPhongShaders.h
 
-#define DIFFUSE 0
-#define SPECULAR 1
-#define BUMP 2
-#define SELFILLUMINATION 3
+// Map type numbered sequence used for sampling registers (we have 4 sampling registers for vs 3.0).
+// Order is defined by com.sun.prism.PhongMaterial's MapType enum
+enum map_type : unsigned int {
+    diffuse,
+    specular,
+    bump,
+    self_illumination,
+    num_map_types
+};
 
 class D3DPhongMaterial {
 public:
@@ -43,19 +48,26 @@ public:
     float *getDiffuseColor();
     void setSpecularColor(bool set, float r, float g, float b, float a);
     float *getSpecularColor();
-    void setMap(int mapID, IDirect3DBaseTexture9 *texMap);
+    void setMap(map_type mapID, IDirect3DBaseTexture9 *texMap, D3DTEXTUREFILTERTYPE min,
+            D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip);
     bool isBumpMap();
     bool isSpecularMap();
     bool isSpecularColor();
     bool isSelfIllumMap();
-    IDirect3DBaseTexture9 * getMap(int type);
+    IDirect3DBaseTexture9 * getMap(map_type type);
+    D3DTEXTUREFILTERTYPE getMinFilterType(map_type type);
+    D3DTEXTUREFILTERTYPE getMagFilterType(map_type type);
+    D3DTEXTUREFILTERTYPE getMipFilterType(map_type type);
 
 private:
     D3DContext *context = NULL;
     float diffuseColor[4] = {0};
     float specularColor[4] = {1, 1, 1, 32};
-    IDirect3DBaseTexture9 *map[4] = {NULL};
     bool specularColorSet = false;
+    IDirect3DBaseTexture9 *map[map_type::num_map_types] = {NULL};
+    D3DTEXTUREFILTERTYPE minFilter[map_type::num_map_types] = {NULL};
+    D3DTEXTUREFILTERTYPE magFilter[map_type::num_map_types] = {NULL};
+    D3DTEXTUREFILTERTYPE mipFilter[map_type::num_map_types] = {NULL};
 };
 
 #endif  /* D3DPHONGMATERIAL_H */
