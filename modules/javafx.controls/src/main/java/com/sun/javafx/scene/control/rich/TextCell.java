@@ -34,7 +34,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
 /**
@@ -52,45 +51,11 @@ import javafx.scene.text.TextFlow;
  * according to its preferred size for that width. 
  */
 // TODO extends Region
-// TODO move to com.oracle
 public final class TextCell {
     private final int index;
     private final Region content;
     private double height;
     private double y;
-    static {
-        TextCellHelper.setAccessor(new TextCellHelper.Accessor() {
-            @Override
-            public void addBoxOutline(TextCell cell, FxPathBuilder b, double x, double w, double h) {
-                cell.addBoxOutline(b, x, w, h);
-            }
-            
-            @Override
-            public PathElement[] getCaretShape(TextCell cell, int cix, boolean leading) {
-                return cell.getCaretShape(cix, leading);
-            }
-
-            @Override
-            public PathElement[] getRangeShape(TextCell cell, int start, int end) {
-                return cell.getRangeShape(start, end);
-            }
-            
-            @Override
-            public double getHeight(TextCell cell) {
-                return cell.getHeight();
-            }
-
-            @Override
-            public double getY(TextCell cell) {
-                return cell.getY();
-            }
-
-            @Override
-            public void setPosition(TextCell cell, double y, double h) {
-                cell.setPosition(y, h);
-            }
-        });
-    }
 
     /**
      * Creates a text cell with the specified {@code Region} as its content.
@@ -204,20 +169,20 @@ public final class TextCell {
     }
 
     /** sets cell position along the y axis of this cell in VFlow coordinates */
-    private void setPosition(double y, double height) {
+    public void setPosition(double y, double height) {
         this.y = y;
         this.height = height;
     }
 
-    private double getHeight() {
+    public double getHeight() {
         return height;
     }
     
-    private double getY() {
+    public double getY() {
         return y;
     }
     
-    private void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
+    public void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
         double y0 = content.getLayoutY();
         double y1 = y0 + h;
         
@@ -228,7 +193,7 @@ public final class TextCell {
         b.lineto(x, y0);
     }
 
-    private PathElement[] getCaretShape(int charIndex, boolean leading) {
+    public PathElement[] getCaretShape(int charIndex, boolean leading) {
         if (content instanceof TextFlow f) {
             PathElement[] p = f.caretShape(charIndex, leading);
             if (p.length == 2) {
@@ -253,7 +218,7 @@ public final class TextCell {
         }
     }
 
-    private PathElement[] getRangeShape(int start, int end) {
+    public PathElement[] getRangeShape(int start, int end) {
         if (content instanceof TextFlow f) {
             PathElement[] p = f.rangeShape(start, end);
             if (p != null) {

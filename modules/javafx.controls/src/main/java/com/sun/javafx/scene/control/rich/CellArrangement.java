@@ -131,10 +131,10 @@ public class CellArrangement {
         if (cell != null) {
             Region r = cell.getContent();
             Insets pad = r.getPadding();
-            double y = cellY - TextCellHelper.getY(cell) - pad.getTop();
+            double y = cellY - cell.getY() - pad.getTop();
             if (y < 0) {
                 return new TextPos(cell.getIndex(), 0, 0, true);
-            } else if (y < TextCellHelper.getHeight(cell)) {
+            } else if (y < cell.getHeight()) {
                 if (r instanceof TextFlow t) {
                     double x = cellX - pad.getLeft();
                     Point2D p = new Point2D(x, y);
@@ -197,8 +197,8 @@ public class CellArrangement {
             if (cell != null) {
                 int charIndex = p.charIndex();
                 boolean leading = p.isLeading();
-                PathElement[] path = TextCellHelper.getCaretShape(cell, charIndex, leading);
-                return CaretInfo.create(-xoffset, TextCellHelper.getY(cell), path);
+                PathElement[] path = cell.getCaretShape(charIndex, leading);
+                return CaretInfo.create(-xoffset, cell.getY(), path);
             }
         }
         return null;
@@ -272,10 +272,10 @@ public class CellArrangement {
     }
 
     private int compare(TextCell cell, double localY) {
-        double y = TextCellHelper.getY(cell);
+        double y = cell.getY();
         if (localY < y) {
             return 1;
-        } else if (localY >= y + TextCellHelper.getHeight(cell)) {
+        } else if (localY >= y + cell.getHeight()) {
             if (cell.getIndex() == (lineCount - 1)) {
                 return 0;
             }
@@ -308,7 +308,7 @@ public class CellArrangement {
 
             ix = binarySearch(localY, topIx, btmIx - 1);
             TextCell cell = getCell(ix);
-            return new Origin(cell.getIndex(), localY - TextCellHelper.getY(cell));
+            return new Origin(cell.getIndex(), localY - cell.getY());
         }
         return new Origin(ix, 0.0);
     }
@@ -342,7 +342,7 @@ public class CellArrangement {
 
         int ix = binarySearch(y, topIx, btmIx - 1);
         TextCell cell = getCell(ix);
-        double off = y - TextCellHelper.getY(cell);
+        double off = y - cell.getY();
         return new Origin(cell.getIndex(), off);
     }
 

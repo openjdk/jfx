@@ -486,7 +486,7 @@ public class VFlow extends Pane implements StyleResolver {
             } else {
                 w = getContentWidth() + leftPadding + rightPadding;
             }
-            TextCellHelper.addBoxOutline(cell, b, 0.0, snapPositionX(w), TextCellHelper.getHeight(cell));
+            cell.addBoxOutline(b, 0.0, snapPositionX(w), cell.getHeight());
         }
     }
 
@@ -551,9 +551,9 @@ public class VFlow extends Pane implements StyleResolver {
         // TODO don't need helper here: can get TextFlow instance!
         PathElement[] pe;
         if (startOffset == endOffset) {
-            pe = TextCellHelper.getCaretShape(cell, startOffset, true);
+            pe = cell.getCaretShape(startOffset, true);
         } else {
-            pe = TextCellHelper.getRangeShape(cell, startOffset, endOffset);
+            pe = cell.getRangeShape(startOffset, endOffset);
         }
         
         if (pe == null) {
@@ -922,7 +922,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             double h = r.prefHeight(forWidth) + lineSpacing;
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
-            TextCellHelper.setPosition(cell, y, h/*, forWidth*/);
+            cell.setPosition(y, h/*, forWidth*/);
 
             if (!wrap) {
                 if (visible) {
@@ -1045,7 +1045,7 @@ public class VFlow extends Pane implements StyleResolver {
             y = snapPositionY(y - h);
             count++;
 
-            TextCellHelper.setPosition(cell, y, h/*, forWidth*/);
+            cell.setPosition(y, h/*, forWidth*/);
             
             content.getChildren().remove(r);
 
@@ -1115,8 +1115,8 @@ public class VFlow extends Pane implements StyleResolver {
         for (int i=0; i < sz; i++) {
             TextCell cell = arrangement.getCellAt(i);
             Region r = cell.getContent();
-            double h = TextCellHelper.getHeight(cell);
-            double y = TextCellHelper.getY(cell);
+            double h = cell.getHeight();
+            double y = cell.getY();
             content.layoutInArea(r, x, y, w, h);
 
             // place side nodes
