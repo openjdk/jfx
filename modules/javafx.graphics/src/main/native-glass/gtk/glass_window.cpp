@@ -1010,14 +1010,10 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     }
 
     int x, y;
-
+    gdk_window_get_origin(gdk_window, &x, &y);
     if (frame_type == TITLED) {
-        GdkRectangle rect;
-        gdk_window_get_frame_extents(gdk_window, &rect);
-        x = rect.x;
-        y = rect.y;
-    } else {
-        gdk_window_get_origin(gdk_window, &x, &y);
+        x -= geometry.extents.left;
+        y -= geometry.extents.top;
     }
 
     geometry.x = x;

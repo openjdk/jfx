@@ -262,8 +262,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1submitForLater
     (void)obj;
 
     RunnableContext* context = (RunnableContext*)malloc(sizeof(RunnableContext));
-    context->runnable = env->NewGlobalRef(runnable);
-    gdk_threads_add_idle_full(G_PRIORITY_HIGH_IDLE + 30, call_runnable, context, NULL);
+    if (context != NULL) {
+        context->runnable = env->NewGlobalRef(runnable);
+        gdk_threads_add_idle_full(G_PRIORITY_HIGH_IDLE + 30, call_runnable, context, NULL);
+        // we release this context in call_runnable
+    } else {
+        fprintf(stderr, "malloc failed in GtkApplication__1submitForLaterInvocation\n");
+    }
 }
 
 /*

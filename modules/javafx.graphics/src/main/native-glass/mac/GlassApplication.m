@@ -362,6 +362,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     LOG("GlassApplication:application:openFiles");
 
     GET_MAIN_JENV;
+    NSApplicationDelegateReply reply = NSApplicationDelegateReplySuccess;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
         NSUInteger count = [filenames count];
@@ -371,21 +372,26 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
         jobjectArray files = (*env)->NewObjectArray(env, (jsize)count, stringClass, NULL);
         GLASS_CHECK_EXCEPTION(env);
-        for (NSUInteger i=0; i<count; i++)
-        {
-            NSString *file = [filenames objectAtIndex:i];
-            if (file != nil)
+        if (files != NULL) {
+            for (NSUInteger i=0; i<count; i++)
             {
-                (*env)->SetObjectArrayElement(env, files, (jsize)i, (*env)->NewStringUTF(env, [file UTF8String]));
-                GLASS_CHECK_EXCEPTION(env);
+                NSString *file = [filenames objectAtIndex:i];
+                if (file != nil)
+                {
+                    (*env)->SetObjectArrayElement(env, files, (jsize)i, (*env)->NewStringUTF(env, [file UTF8String]));
+                    GLASS_CHECK_EXCEPTION(env);
+                }
             }
+            (*env)->CallVoidMethod(env, self->jApplication, [GlassHelper ApplicationNotifyOpenFilesMethod], files);
+        } else {
+            fprintf(stderr, "NewObjectArray failed in GlassApplication_application\n");
+            reply = NSApplicationDelegateReplyFailure;
         }
-        (*env)->CallVoidMethod(env, self->jApplication, [GlassHelper ApplicationNotifyOpenFilesMethod], files);
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    [theApplication replyToOpenOrPrint:NSApplicationDelegateReplySuccess];
+    [theApplication replyToOpenOrPrint:reply];
 }
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename

@@ -27,7 +27,8 @@ package javafx.css;
 
 import static javafx.geometry.NodeOrientation.INHERIT;
 
-import java.util.Collections;
+import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
+
 import java.util.Objects;
 import java.util.Set;
 
@@ -58,7 +59,7 @@ public final class Match implements Comparable<Match> {
         this.selector = selector;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
-        this.pseudoClasses = Collections.unmodifiableSet(pseudoClasses);
+        this.pseudoClasses = ImmutablePseudoClassSetsCache.of(pseudoClasses);
         int nPseudoClasses = pseudoClasses.size();
         if (selector instanceof SimpleSelector simple) {
             if (simple.getNodeOrientation() != INHERIT) {

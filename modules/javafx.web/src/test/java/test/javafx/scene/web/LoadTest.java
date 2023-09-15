@@ -429,4 +429,41 @@ public class LoadTest extends TestBase {
         WebEngine web = getEngine();
         assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
     }
+
+    // JDK-8311097 Synchronous XMLHttpRequest not receiving data
+    @Test public void testSynchronousDataRequest() {
+        final String TEXT = "pass";
+        final String FILE = "src/test/resources/test/html/sync-request.html";
+        load(new File(FILE));
+        final WebEngine web = getEngine();
+
+        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
+
+        // DOM access should happen on FX thread
+        submit(() -> {
+            Document doc = web.getDocument();
+            assertNotNull("Document should not be null", doc);
+
+            var body = doc.getDocumentElement().getLastChild();
+            String text = getTargetText(body);
+            assertEquals("Found expected text",
+                    TEXT, text);
+        });
+    }
+
+    private String getId(Node n) {
+        if (Node.ELEMENT_NODE == n.getNodeType()) {
+            return ((Element)n).getAttribute("id");
+        }
+        return "";
+    }
+
+    private String getTargetText(Node body) {
+        Node c = body.getFirstChild();
+        while (!"target".equals(getId(c))) {
+            c = c.getNextSibling();
+        }
+        assertNotNull("Found target element", c);
+        return c.getTextContent();
+    }
 }
