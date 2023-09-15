@@ -29,42 +29,6 @@
 
 package test.com.sun.javafx.pgstub;
 
-import java.io.File;
-import java.io.InputStream;
-import java.security.AccessControlContext;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.Future;
-import javafx.application.ConditionalFeature;
-import javafx.geometry.Dimension2D;
-import javafx.scene.image.Image;
-import javafx.scene.input.DataFormat;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.InputMethodRequests;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.TransferMode;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.ImagePattern;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.RadialGradient;
-import javafx.scene.shape.FillRule;
-import javafx.scene.shape.PathElement;
-import javafx.scene.shape.SVGPath;
-import javafx.scene.shape.StrokeLineCap;
-import javafx.scene.shape.StrokeLineJoin;
-import javafx.scene.shape.StrokeType;
-import javafx.stage.FileChooser.ExtensionFilter;
-import javafx.stage.Modality;
-import javafx.stage.StageStyle;
-import javafx.stage.Window;
-import javafx.util.Pair;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.GlassRobot;
 import com.sun.javafx.application.PlatformImpl;
@@ -78,26 +42,32 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.TextLayoutFactory;
-import com.sun.javafx.tk.FileChooserType;
-import com.sun.javafx.tk.FontLoader;
-import com.sun.javafx.tk.ImageLoader;
-import com.sun.javafx.tk.PlatformImage;
-import com.sun.javafx.tk.RenderJob;
-import com.sun.javafx.tk.ScreenConfigurationAccessor;
-import com.sun.javafx.tk.TKClipboard;
-import com.sun.javafx.tk.TKDragGestureListener;
-import com.sun.javafx.tk.TKDragSourceListener;
-import com.sun.javafx.tk.TKDropTargetListener;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.tk.TKScreenConfigurationListener;
-import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.tk.TKSystemMenu;
-import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.tk.*;
 import com.sun.prism.BasicStroke;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import javafx.application.ConditionalFeature;
+import javafx.geometry.Dimension2D;
+import javafx.scene.image.Image;
+import javafx.scene.input.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.shape.*;
+import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Modality;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
+import javafx.util.Pair;
+
+import java.io.File;
+import java.io.InputStream;
+import java.security.AccessControlContext;
+import java.util.*;
+import java.util.concurrent.Future;
 
 /**
  * A Toolkit implementation for use with Testing.
@@ -958,15 +928,5 @@ public class StubToolkit extends Toolkit {
     @Override
     public GlassRobot createRobot() {
         throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    /**
-     * Ensures that the current (test) runs with the StubToolkit.
-     * Throws a class cast exception otherwise.
-     *
-     * @return the StubToolkit instance
-     */
-    public static StubToolkit ensure() {
-        return (StubToolkit)Toolkit.getToolkit();
     }
 }
