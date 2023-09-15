@@ -61,7 +61,7 @@ public class StageAttributesTest extends VisualTestBase {
     private Scene topScene;
     private Stage topStage;
 
-    private void setupStages(boolean overlayed) throws InterruptedException {
+    private void setupStages(boolean overlayed, boolean topShown) throws InterruptedException {
         final CountDownLatch bottomShownLatch = new CountDownLatch(1);
         final CountDownLatch topShownLatch = new CountDownLatch(1);
 
@@ -95,17 +95,21 @@ public class StageAttributesTest extends VisualTestBase {
                 topStage.setX(WIDTH);
                 topStage.setY(HEIGHT);
             }
-            topStage.setOnShown(e -> Platform.runLater(topShownLatch::countDown));
-            topStage.show();
+            if (topShown) {
+                topStage.setOnShown(e -> Platform.runLater(topShownLatch::countDown));
+                topStage.show();
+            }
         });
 
-        assertTrue("Timeout waiting for top stage to be shown",
-            topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        if (topShown) {
+            assertTrue("Timeout waiting for top stage to be shown",
+                topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        }
     }
 
     @Test
     public void testIconifiedStage() throws InterruptedException {
-        setupStages(true);
+        setupStages(true, true);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -126,7 +130,7 @@ public class StageAttributesTest extends VisualTestBase {
 
     @Test
     public void testMaximizedStage() throws InterruptedException {
-        setupStages(false);
+        setupStages(false, true);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
@@ -159,14 +163,108 @@ public class StageAttributesTest extends VisualTestBase {
     }
 
     @Test
-    public void testFullscreenStage() throws InterruptedException {
-        setupStages(false);
+    public void testFullScreenStage() throws InterruptedException {
+        setupStages(false, true);
 
         runAndWait(() -> {
             Color color = getColor(200, 200);
             assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
 
             topStage.setFullScreen(true);
+        });
+
+        // wait a bit to let window system animate the change
+        Util.waitForIdle(topScene);
+
+        runAndWait(() -> {
+            assertTrue(topStage.isFullScreen());
+
+            // fullscreen stage should take over the bottom stage
+            Color color = getColor(200, 200);
+            assertColorEquals(TOP_COLOR, color, TOLERANCE);
+        });
+
+        // wait a little bit between getColor() calls - on macOS the below one
+        // would fail without this wait
+        sleep(100);
+
+        runAndWait(() -> {
+            // top left corner (plus some tolerance) should NOT show decorations
+            Color color = getColor((int)topStage.getX() + 5, (int)topStage.getY() + 5);
+            assertColorEquals(TOP_COLOR, color, TOLERANCE);
+        });
+    }
+
+    @Test
+    public void testIconifiedStageBeforeShow() throws InterruptedException {
+        setupStages(true, false);
+
+        runAndWait(() -> {
+            Color color = getColor(200, 200);
+            // top stage was not shown yet in this case, but the bottom stage should be ready
+            assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+
+            topStage.setIconified(true);
+            topStage.show();
+        });
+
+        // wait a bit to let window system animate the change
+        Util.waitForIdle(topScene);
+
+        runAndWait(() -> {
+            assertTrue(topStage.isIconified());
+
+            // bottom stage should still be visible
+            Color color = getColor(200, 200);
+            assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+        });
+    }
+
+    @Test
+    public void testMaximizedStageBeforeShow() throws InterruptedException {
+        setupStages(false, false);
+
+        runAndWait(() -> {
+            Color color = getColor(200, 200);
+            assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+
+            topStage.setMaximized(true);
+            topStage.show();
+        });
+
+        // wait a bit to let window system animate the change
+        Util.waitForIdle(topScene);
+
+        runAndWait(() -> {
+            assertTrue(topStage.isMaximized());
+
+            // maximized stage should take over the bottom stage
+            Color color = getColor(200, 200);
+            assertColorEquals(TOP_COLOR, color, TOLERANCE);
+        });
+
+        // wait a little bit between getColor() calls - on macOS the below one
+        // would fail without this wait
+        sleep(100);
+
+        runAndWait(() -> {
+            // top left corner (plus some tolerance) should show decorations (so not TOP_COLOR)
+            Color color = getColor((int)topStage.getX() + 10, (int)topStage.getY() + 10);
+            assertColorDoesNotEqual(TOP_COLOR, color, TOLERANCE);
+            assertColorDoesNotEqual(BOTTOM_COLOR, color, TOLERANCE);
+        });
+    }
+
+    @Test
+    public void testFullScreenStageBeforeShow() throws InterruptedException {
+        setupStages(false, false);
+
+        runAndWait(() -> {
+            Color color = getColor(200, 200);
+            assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+
+            topStage.setFullScreen(true);
+            topStage.show();
         });
 
         // wait a bit to let window system animate the change
