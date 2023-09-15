@@ -45,7 +45,7 @@ import test.robot.testharness.VisualTestBase;
 
 import static test.util.Util.TIMEOUT;
 
-public class AttributesTest extends VisualTestBase {
+public class StageAttributesTest extends VisualTestBase {
 
     private static final int WIDTH = 400;
     private static final int HEIGHT = 400;
