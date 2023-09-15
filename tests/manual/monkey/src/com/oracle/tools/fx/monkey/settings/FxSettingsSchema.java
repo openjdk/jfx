@@ -297,7 +297,6 @@ public class FxSettingsSchema {
         }
 
         SStream ss = FxSettings.getStream(PREFIX + name);
-        System.err.println("name=" + name);
         if (ss != null) {
             int sz = ss.nextInt(-1);
             if (sz > 0) {
@@ -308,7 +307,6 @@ public class FxSettingsSchema {
                         return;
                     }
                     divs[i] = v;
-                    System.err.println("i=" + i + " div=" + v);
                 }
                 // FIX getting smaller and smaller
                 // sp.setDividerPositions(divs);
