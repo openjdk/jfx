@@ -43,7 +43,7 @@ Most applications will not run into any backward compatibility problems with thi
 
 A compilation error will occur in one of the following two unlikely cases:
 
-* An application class extends `Menu`, `MenuItem`, `TreeColumnBase`, or `TreeItem`, and overrides `addEventHandler` or `removeEventHandler`
+* An application class extends `Menu`, `MenuItem`, `TableColumnBase`, or `TreeItem`, and overrides `addEventHandler` or `removeEventHandler`
 * An application class that is not a subclass of `Node` implements their own `addEventHandler` or `removeEventHandler` using a signature other than that of the newly added methods (for example, copying the same incorrect pattern that `MenuItem` used prior to this release)
 
 In these cases, the declared methods must be changed to conform to the updated interface method signature.
