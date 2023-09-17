@@ -40,8 +40,9 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     WindowContext *ctx = (WindowContext *) user_data;
     gchar *preedit_text;
     PangoAttrList* attrList;
+    int cursor_pos;
 
-    gtk_im_context_get_preedit_string(im_context, &preedit_text, &attrList, NULL);
+    gtk_im_context_get_preedit_string(im_context, &preedit_text, &attrList, &cursor_pos);
     ctx->updateCaretPos();
 
     jstring jstr = mainEnv->NewStringUTF(preedit_text);
@@ -49,7 +50,7 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     jsize slen = mainEnv->GetStringLength(jstr);
 
-    int cursor = 0;
+    g_print("CursorPos: %d\n", cursor_pos);
 
     PangoAttrIterator* iter = pango_attr_list_get_iterator(attrList);
     PangoAttribute  *attr;
@@ -100,7 +101,7 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
             NULL,
             NULL,
             0,
-            cursor,
+            cursor_pos,
             0);
     LOG_EXCEPTION(mainEnv)
 }
