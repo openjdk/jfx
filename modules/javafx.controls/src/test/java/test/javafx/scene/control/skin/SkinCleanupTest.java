@@ -1398,6 +1398,11 @@ public class SkinCleanupTest {
             }
 
             @Override
+            public Point2D getTextLocationRelative(int offset) {
+                return new Point2D(0, 0);
+            }
+
+            @Override
             public int getLocationOffset(int x, int y) {
                 return 0;
             }
