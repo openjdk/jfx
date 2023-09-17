@@ -31,6 +31,7 @@
 #include <jni.h>
 #include <set>
 #include <vector>
+#include <queue>
 
 #include "glass_view.h"
 
@@ -174,6 +175,7 @@ class WindowContextBase: public WindowContext {
         GtkIMContext *ctx;
         bool enabled;
         bool on_preedit;
+        bool send_keypress;
     } im_ctx;
 
     size_t events_processing_cnt;

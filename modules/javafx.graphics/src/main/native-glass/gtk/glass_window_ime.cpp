@@ -30,17 +30,19 @@
 #include "glass_general.h"
 #include "glass_key.h"
 
-void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
+static void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
+    g_print("preedit_start\n");
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->setOnPreEdit(true);
 }
 
-void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
+static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     gchar *preedit_text;
     WindowContext *ctx = (WindowContext *) user_data;
     jbyteArray attr = NULL;
+    PangoAttrList* attrList;
 
-    gtk_im_context_get_preedit_string(im_context, &preedit_text, NULL, NULL);
+    gtk_im_context_get_preedit_string(im_context, &preedit_text, &attrList, NULL);
     ctx->updateCaretPos();
 
     jstring jstr = mainEnv->NewStringUTF(preedit_text);
@@ -50,17 +52,28 @@ void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     attr = mainEnv->NewByteArray(slen);
     CHECK_JNI_EXCEPTION(mainEnv)
+
+    int cursor = 0;
     jbyte v[slen];
-    for (int i = 0; i < slen; i++) {
-        gunichar chr = g_utf8_get_char(&preedit_text[i]);
 
-        if (g_unichar_type(chr) == G_UNICODE_MODIFIER_SYMBOL) {
-            v[i] = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
-        } else {
-            v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
+    PangoAttrIterator* iter = pango_attr_list_get_iterator(attrList);
+    do {
+        int start, end;
+        pango_attr_iterator_range(iter, &start, &end);
+
+        if (pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) {
+            g_print("PANGO_ATTR_BACKGROUND\n");
+//            v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
         }
-    }
 
+        if (pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE)) {
+            g_print("PANGO_ATTR_UNDERLINE\n");
+    //        v[0] = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
+        }
+
+    } while (pango_attr_iterator_next(iter));
+
+    pango_attr_iterator_destroy (iter);
     g_free(preedit_text);
 
     mainEnv->SetByteArrayRegion(attr, 0, slen, v);
@@ -71,46 +84,26 @@ void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
             jstr,
             false,
             slen,
-            0,
+            cursor,
             attr);
     LOG_EXCEPTION(mainEnv)
 }
 
-void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
+static void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
+    g_print("on_preedit_end\n");
+
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->setOnPreEdit(false);
 }
 
-void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
+static void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
+    g_print("on_commit\n");
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->commitIME(str);
 }
 
 void WindowContextBase::commitIME(gchar *str) {
-    if (!im_ctx.on_preedit) {
-        jchar key = g_utf8_get_char(str);
-        guint key_val = gdk_unicode_to_keyval(key);
-
-        jcharArray jChars = mainEnv->NewCharArray(1);
-        if (jChars) {
-            mainEnv->SetCharArrayRegion(jChars, 0, 1, &key);
-            CHECK_JNI_EXCEPTION(mainEnv)
-        }
-
-        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                com_sun_glass_events_KeyEvent_PRESS,
-                gdk_keyval_to_glass(key_val),
-                jChars,
-                0);
-        CHECK_JNI_EXCEPTION(mainEnv)
-
-        mainEnv->CallVoidMethod(jview, jViewNotifyKey,
-                com_sun_glass_events_KeyEvent_TYPED,
-                com_sun_glass_events_KeyEvent_VK_UNDEFINED,
-                jChars,
-                0);
-        CHECK_JNI_EXCEPTION(mainEnv)
-    } else {
+    if (im_ctx.on_preedit) {
         jstring jstr = mainEnv->NewStringUTF(str);
         EXCEPTION_OCCURED(mainEnv);
         jsize slen = mainEnv->GetStringLength(jstr);
@@ -123,6 +116,8 @@ void WindowContextBase::commitIME(gchar *str) {
                 slen,
                 NULL);
         LOG_EXCEPTION(mainEnv)
+    } else {
+        im_ctx.send_keypress = true;
     }
 }
 
@@ -135,7 +130,17 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
         return false;
     }
 
-    return gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
+    g_print("will filter?\n");
+    bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
+
+    if (im_ctx.send_keypress) {
+        process_key(&event->key);
+        im_ctx.send_keypress = false;
+    }
+
+    g_print("filterIME -> keyval: %d, press: %d, filtered: %d\n", event->key.keyval, (event->key.type == GDK_KEY_PRESS), filtered);
+
+    return filtered;
 }
 
 void WindowContextBase::setOnPreEdit(bool preedit) {
