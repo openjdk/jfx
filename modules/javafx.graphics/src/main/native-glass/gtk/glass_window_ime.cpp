@@ -37,9 +37,8 @@ static void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
 }
 
 static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
-    gchar *preedit_text;
     WindowContext *ctx = (WindowContext *) user_data;
-    jbyteArray attr = NULL;
+    gchar *preedit_text;
     PangoAttrList* attrList;
 
     gtk_im_context_get_preedit_string(im_context, &preedit_text, &attrList, NULL);
@@ -50,42 +49,59 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     jsize slen = mainEnv->GetStringLength(jstr);
 
-    attr = mainEnv->NewByteArray(slen);
-    CHECK_JNI_EXCEPTION(mainEnv)
-
     int cursor = 0;
-    jbyte v[slen];
 
     PangoAttrIterator* iter = pango_attr_list_get_iterator(attrList);
+    PangoAttribute  *attr;
+
+    int boundaryCount = 0;
     do {
         int start, end;
         pango_attr_iterator_range(iter, &start, &end);
+        g_print("attr_range: %d, %d\n", start, end);
 
-        if (pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) {
-            g_print("PANGO_ATTR_BACKGROUND\n");
-//            v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
+        if (attr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) {
+            const PangoColor *color = &((PangoAttrColor *)attr)->color;
+
+            g_print("attr_color: %d, %d, %d\n", color->red, color->green, color->blue);
+
+            if ((color->red | color->green | color->blue) == 0) {
+//                v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
+            } else {
+//                v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_CONVERTED;
+            }
+        } else if ((attr = pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE))
+                && (((PangoAttrInt *)attr)->value != PANGO_UNDERLINE_NONE)) {
+            g_print("underline\n");
+//            v[i] = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
+        } else {
+//            v[i] = com_sun_glass_ui_View_IME_ATTR_INPUT;
         }
 
-        if (pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE)) {
-            g_print("PANGO_ATTR_UNDERLINE\n");
-    //        v[0] = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
-        }
-
+        boundaryCount++;
     } while (pango_attr_iterator_next(iter));
 
     pango_attr_iterator_destroy (iter);
     g_free(preedit_text);
 
-    mainEnv->SetByteArrayRegion(attr, 0, slen, v);
-    CHECK_JNI_EXCEPTION(mainEnv)
+//    boundary = mainEnv->newIntArray(slen);
+//    CHECK_JNI_EXCEPTION(mainEnv)
+//
+//    attr = mainEnv->NewByteArray(slen);
+//    CHECK_JNI_EXCEPTION(mainEnv)
+//
+//    mainEnv->SetByteArrayRegion(attr, 0, slen, v);
+//    CHECK_JNI_EXCEPTION(mainEnv)
 
     mainEnv->CallVoidMethod(ctx->get_jview(),
-            jViewNotifyInputMethodLinux,
+            jViewNotifyInputMethod,
             jstr,
-            false,
-            slen,
+            NULL,
+            NULL,
+            NULL,
+            0,
             cursor,
-            attr);
+            0);
     LOG_EXCEPTION(mainEnv)
 }
 
@@ -109,12 +125,14 @@ void WindowContextBase::commitIME(gchar *str) {
         jsize slen = mainEnv->GetStringLength(jstr);
 
         mainEnv->CallVoidMethod(jview,
-                jViewNotifyInputMethodLinux,
+                jViewNotifyInputMethod,
                 jstr,
-                true,
+                NULL,
+                NULL,
+                NULL,
                 slen,
                 slen,
-                NULL);
+                0);
         LOG_EXCEPTION(mainEnv)
     } else {
         im_ctx.send_keypress = true;

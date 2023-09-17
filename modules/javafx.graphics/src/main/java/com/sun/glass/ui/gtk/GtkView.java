@@ -26,11 +26,11 @@ package com.sun.glass.ui.gtk;
 
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
+
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Map;
-import java.util.TreeSet;
 
 final class GtkView extends View {
     private native void enableInputMethodEventsImpl(long ptr, boolean enable);
@@ -103,18 +103,5 @@ final class GtkView extends View {
     @Override
     protected void _finishInputMethodComposition(long ptr) {
         //nothing
-    }
-
-    protected void notifyInputMethodLinux(String str, boolean commit, int length, int cursor, byte[] attr) {
-        if (commit) {
-            notifyInputMethod(str, null, null, null, length, cursor, 0);
-        } else {
-            int[] boundary = new int[length + 1];
-            for (int i = 0; i < boundary.length; i++) {
-                boundary[i] = i;
-            }
-
-            notifyInputMethod(str, boundary, boundary, attr, 0, cursor, 0);
-        }
     }
 }
