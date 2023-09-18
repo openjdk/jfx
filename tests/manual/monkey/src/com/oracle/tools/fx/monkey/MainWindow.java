@@ -51,6 +51,7 @@ import com.oracle.tools.fx.monkey.tools.ClipboardViewer;
 import com.oracle.tools.fx.monkey.tools.CssPlaygroundPane;
 import com.oracle.tools.fx.monkey.tools.KeyboardEventViewer;
 import com.oracle.tools.fx.monkey.tools.Native2AsciiPane;
+import com.oracle.tools.fx.monkey.tools.SystemInfoViewer;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.SingleInstance;
@@ -147,6 +148,7 @@ public class MainWindow extends Stage {
         FX.item(b, "CSS Playground", this::openCssPlayground);
         FX.item(b, "Keyboard Event Viewer", this::openKeyboardViewer);
         FX.item(b, "Native-to-ascii", this::openNative2Ascii);
+        FX.item(b, "System Info", this::openSystemInfo);
         // Window
         FX.menu(b, "_Window");
         FX.item(b, orientation);
@@ -243,6 +245,14 @@ public class MainWindow extends Stage {
             "KeyboardEventViewer",
             "Keyboard Event Viewer",
             KeyboardEventViewer::new
+        );
+    }
+
+    private void openSystemInfo() {
+        SingleInstance.openSingleInstance(
+            "SystemInfo",
+            "System Info",
+            SystemInfoViewer::new
         );
     }
 
