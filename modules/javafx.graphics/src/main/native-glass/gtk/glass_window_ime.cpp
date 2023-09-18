@@ -31,7 +31,6 @@
 #include "glass_key.h"
 
 static void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
-    g_print("preedit_start\n");
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->setOnPreEdit(true);
 }
@@ -50,71 +49,39 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     jsize slen = mainEnv->GetStringLength(jstr);
 
-    g_print("CursorPos: %d\n", cursor_pos);
+    PangoAttrIterator *iter = pango_attr_list_get_iterator(attrList);
+    PangoAttribute *pangoAttr;
 
-    PangoAttrIterator* iter = pango_attr_list_get_iterator(attrList);
-    PangoAttribute  *attr;
-
-    int boundaryCount = 0;
+    jbyte attr = com_sun_glass_ui_View_IME_ATTR_INPUT;
     do {
-        int start, end;
-        pango_attr_iterator_range(iter, &start, &end);
-        g_print("attr_range: %d, %d\n", start, end);
-
-        if (attr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) {
-            const PangoColor *color = &((PangoAttrColor *)attr)->color;
-
-            g_print("attr_color: %d, %d, %d\n", color->red, color->green, color->blue);
-
-            if ((color->red | color->green | color->blue) == 0) {
-//                v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
-            } else {
-//                v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_CONVERTED;
-            }
-        } else if ((attr = pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE))
-                && (((PangoAttrInt *)attr)->value != PANGO_UNDERLINE_NONE)) {
-            g_print("underline\n");
-//            v[i] = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
-        } else {
-//            v[i] = com_sun_glass_ui_View_IME_ATTR_INPUT;
+        if (pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) {
+             attr = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
+             break;
+        } else if ((pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_UNDERLINE))
+                && (((PangoAttrInt *)pangoAttr)->value == PANGO_UNDERLINE_SINGLE)) {
+            attr = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
+            break;
         }
-
-        boundaryCount++;
     } while (pango_attr_iterator_next(iter));
 
     pango_attr_iterator_destroy (iter);
     g_free(preedit_text);
 
-//    boundary = mainEnv->newIntArray(slen);
-//    CHECK_JNI_EXCEPTION(mainEnv)
-//
-//    attr = mainEnv->NewByteArray(slen);
-//    CHECK_JNI_EXCEPTION(mainEnv)
-//
-//    mainEnv->SetByteArrayRegion(attr, 0, slen, v);
-//    CHECK_JNI_EXCEPTION(mainEnv)
-
     mainEnv->CallVoidMethod(ctx->get_jview(),
-            jViewNotifyInputMethod,
+            jViewNotifyInputMethodLinux,
             jstr,
-            NULL,
-            NULL,
-            NULL,
             0,
             cursor_pos,
-            0);
+            attr);
     LOG_EXCEPTION(mainEnv)
 }
 
 static void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
-    g_print("on_preedit_end\n");
-
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->setOnPreEdit(false);
 }
 
 static void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) {
-    g_print("on_commit\n");
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->commitIME(str);
 }
@@ -126,14 +93,11 @@ void WindowContextBase::commitIME(gchar *str) {
         jsize slen = mainEnv->GetStringLength(jstr);
 
         mainEnv->CallVoidMethod(jview,
-                jViewNotifyInputMethod,
+                jViewNotifyInputMethodLinux,
                 jstr,
-                NULL,
-                NULL,
-                NULL,
                 slen,
                 slen,
-                0);
+                NULL);
         LOG_EXCEPTION(mainEnv)
     } else {
         im_ctx.send_keypress = true;
@@ -149,15 +113,12 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
         return false;
     }
 
-    g_print("will filter?\n");
     bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
     if (im_ctx.send_keypress) {
         process_key(&event->key);
         im_ctx.send_keypress = false;
     }
-
-    g_print("filterIME -> keyval: %d, press: %d, filtered: %d\n", event->key.keyval, (event->key.type == GDK_KEY_PRESS), filtered);
 
     return filtered;
 }

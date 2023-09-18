@@ -475,7 +475,6 @@ void WindowContextBase::process_key(GdkEventKey* event) {
         return;
     }
 
-    g_print("PROCESS_KEY -> press: %d\n", press);
     mainEnv->CallVoidMethod(jview, jViewNotifyKey,
             (press) ? com_sun_glass_events_KeyEvent_PRESS
                     : com_sun_glass_events_KeyEvent_RELEASE,
