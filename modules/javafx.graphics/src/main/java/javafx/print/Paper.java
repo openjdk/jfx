@@ -78,9 +78,9 @@ public final class Paper {
      */
     private double getSizeInPoints(double dim) {
         switch (units) {
-        case POINT : return (int)(dim+0.5);
-        case INCH  : return (int)((dim * 72) + 0.5);
-        case MM    : return (int)(((dim * 72) / 25.4) + 0.5);
+            case POINT : return dim;
+            case INCH  : return dim * 72;
+            case MM    : return (dim * 72) / 25.4;
         }
         return dim;
     }
