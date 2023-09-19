@@ -128,6 +128,8 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
             } else if (x instanceof KeyCode k) {
                 Util.runAndWait(() -> {
                     robot.keyPress(k);
+                });
+                Util.runAndWait(() -> {
                     robot.keyRelease(k);
                 });
             } else if (x instanceof String s) {
@@ -136,6 +138,8 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
                     KeyCode k = getKeyCodeForChar(c);
                     Util.runAndWait(() -> {
                         robot.keyPress(k);
+                    });
+                    Util.runAndWait(() -> {
                         robot.keyRelease(k);
                     });
                 }
@@ -146,10 +150,13 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
 
     /**
      * Looks up a KeyCode for the given character.
-     * @param c character
-     * @return KeyCode
+     * An allowed subset includes space, tab, newline, and [a-z] characters only,
+     * to avoid unexpected symbols emitted by Robot with non-US keyboard layouts.
+     *
+     * @param c the character
+     * @return the KeyCode
+     * @throws RuntimeException if the character is not allowed
      */
-    // TODO duplicated code from KeyEventFirer - we don't have a common place for general purpose test utilities
     private static KeyCode getKeyCodeForChar(char c) {
         if (keyCodes == null) {
             keyCodes = createKeyCodes(
@@ -181,25 +188,13 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
                 "w", KeyCode.W,
                 "x", KeyCode.X,
                 "y", KeyCode.Y,
-                "z", KeyCode.Z,
-                "0", KeyCode.DIGIT0,
-                "1", KeyCode.DIGIT1,
-                "2", KeyCode.DIGIT2,
-                "3", KeyCode.DIGIT3,
-                "4", KeyCode.DIGIT4,
-                "5", KeyCode.DIGIT5,
-                "6", KeyCode.DIGIT6,
-                "7", KeyCode.DIGIT7,
-                "8", KeyCode.DIGIT8,
-                "9", KeyCode.DIGIT9,
-                ".", KeyCode.PERIOD,
-                ",", KeyCode.COMMA
+                "z", KeyCode.Z
             );
         }
 
         KeyCode code = keyCodes.get(c);
         if (code == null) {
-            throw new RuntimeException(String.format("character 0x%04x has no corresponding KeyCode", (int)c));
+            throw new RuntimeException(String.format("character 0x%04x is not allowed in tests", (int)c));
         }
         return code;
     }
