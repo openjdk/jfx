@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Set;
+
+import javafx.css.PseudoClass;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
@@ -38,28 +40,33 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class Node_lookup_Test {
-    //                  Group & #root
-    //                /      \
-    //              #a      .b.c
-    //             /   \        \
-    //           .d    #e        .d
-    private Group root, a, bc, d, e, d2;
+    //                   Group & #root
+    //                    /        \
+    //                 #a.c       .b.c:testPseudo
+    //                /    \         \
+    //    .d:testPseudo1    #e     .d:testPseudo1:testPseudo2
+    private Group root, ac, bc, d, e, d2;
 
     @Before public void setup() {
         root = new Group();
         root.setId("root");
-        a = new Group();
-        a.setId("a");
+        ac = new Group();
+        ac.setId("a");
+        ac.getStyleClass().addAll("c");
         d = new Group();
         d.getStyleClass().add("d");
+        d.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"),true);
         e = new Group();
         e.setId("e");
         bc = new Group();
         bc.getStyleClass().addAll("b", "c");
+        bc.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo"),true);
         d2 = new Group();
         d2.getStyleClass().add("d");
-        ParentShim.getChildren(root).addAll(a, bc);
-        ParentShim.getChildren(a).addAll(d, e);
+        d2.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"),true);
+        d2.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo2"),true);
+        ParentShim.getChildren(root).addAll(ac, bc);
+        ParentShim.getChildren(ac).addAll(d, e);
         ParentShim.getChildren(bc).addAll(d2);
     }
 
@@ -68,7 +75,7 @@ public class Node_lookup_Test {
         assertSame(root, found);
 
         found = root.lookup("#a");
-        assertSame(a, found);
+        assertSame(ac, found);
 
         found = root.lookup("#a > .d");
         assertSame(d, found);
@@ -80,7 +87,7 @@ public class Node_lookup_Test {
         assertSame(d2, found);
 
         found = root.lookup(".c .d");
-        assertSame(d2, found);
+        assertSame(d, found);
 
         found = root.lookup(".b");
         assertSame(bc, found);
@@ -89,11 +96,40 @@ public class Node_lookup_Test {
     @Test public void lookupAllTest() {
         Set<Node> nodes = root.lookupAll("#a");
         assertEquals(1, nodes.size());
-        assertTrue(nodes.contains(a));
+        assertTrue(nodes.contains(ac));
 
         nodes = root.lookupAll(".d");
         assertEquals(2, nodes.size());
         assertTrue(nodes.contains(d));
         assertTrue(nodes.contains(d2));
+    }
+
+    @Test
+    public void lookupPsuedoTest(){
+        Set<Node> nodes = root.lookupAll(".d:testPseudo2");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(d2));
+
+        Node found = root.lookup(".d:testPseudo2");
+        assertSame(d2, found);
+
+        found = root.lookup(".d:testPseudo1:testPseudo2");
+        assertSame(d2, found);
+
+        nodes = root.lookupAll(".d:testPseudo1");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(d));
+        assertTrue(nodes.contains(d2));
+
+        nodes = root.lookupAll("#a > .d:testPseudo1");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(d));
+
+        nodes = root.lookupAll(".c:testPseudo > .d:testPseudo1");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(d2));
+
+        nodes = root.lookupAll(".d:randomPseudo");
+        assertEquals(0, nodes.size());
     }
 }

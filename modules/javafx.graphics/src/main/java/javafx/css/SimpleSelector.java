@@ -248,6 +248,10 @@ final public class SimpleSelector extends Selector {
             if (!styleClassMatch) return false;
         }
 
+        if(!pseudoClassState.isEmpty()){
+            return stateMatches(styleable, styleable.getPseudoClassStates());
+        }
+
         return true;
     }
 
