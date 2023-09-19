@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,16 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
     public void beforeEach() {
         super.beforeEach();
         control.setWrapText(true);
+    }
+
+    @Test
+    public void testTyping() throws Exception {
+        execute(
+            //addKeyListener(),
+            checkText("", 0),
+            " \t\n abracadabra",
+            checkText(" \t\n abracadabra", 15)
+        );
     }
 
     @Test
@@ -130,7 +140,8 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
     @Test
     public void testSelection() {
         execute(
-            setText("123\n456"),
+            //addKeyListener(),
+            setText("123\n456"), checkSelection(0),
             HOME, shift(RIGHT), checkSelection(0, 1),
             END, shift(LEFT), checkSelection(2, 3),
             HOME, shift(DOWN), checkSelection(0, 4),
