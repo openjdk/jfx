@@ -723,43 +723,54 @@ public class VFlow extends Pane implements StyleResolver {
         return cell;
     }
 
-    private TextCell createTextCell(int index, RichParagraph rp) {
+    private TextCell createTextCell(int index, RichParagraph par) {
+        TextCell cell;
+
         // is this a paragraph node?
-        Supplier<Region> gen = rp.getParagraphRegion();
+        Supplier<Region> gen = par.getParagraphRegion();
         if (gen != null) {
             Region content = gen.get();
-            return new TextCell(index, content);
-        }
-
-        // it's a regular text cell
-        TextCell cell = new TextCell(index);
-
-        // highlights
-        List<Consumer<TextCell>> highlights = RichParagraphHelper.getHighlights(rp);
-        if (highlights != null) {
-            for (Consumer<TextCell> h : highlights) {
-                h.accept(cell);
-            }
-        }
-
-        // segments
-        List<StyledSegment> segments = RichParagraphHelper.getSegments(rp);
-        if ((segments == null) || segments.isEmpty()) {
-            // a bit of a hack: avoid TextCells with an empty TextFlow,
-            // as it makes the caret collapse to a single point
-            cell.add(new Text(""));
+            cell = new TextCell(index, content);
         } else {
-            for (StyledSegment seg : segments) {
-                if (seg.isText()) {
-                    Text t = createTextNode(seg);
-                    cell.add(t);
-                } else if (seg.isInlineNode()) {
-                    Node n = seg.getInlineNodeGenerator().get();
-                    cell.add(n);
+            // it's a regular text cell
+            cell = new TextCell(index);
+    
+            // highlights
+            List<Consumer<TextCell>> highlights = RichParagraphHelper.getHighlights(par);
+            if (highlights != null) {
+                for (Consumer<TextCell> h : highlights) {
+                    h.accept(cell);
+                }
+            }
+    
+            // segments
+            List<StyledSegment> segments = RichParagraphHelper.getSegments(par);
+            if ((segments == null) || segments.isEmpty()) {
+                // a bit of a hack: avoid TextCells with an empty TextFlow,
+                // as it makes the caret collapse to a single point
+                cell.add(new Text(""));
+            } else {
+                for (StyledSegment seg : segments) {
+                    if (seg.isText()) {
+                        Text t = createTextNode(seg);
+                        cell.add(t);
+                    } else if (seg.isInlineNode()) {
+                        Node n = seg.getInlineNodeGenerator().get();
+                        cell.add(n);
+                    }
                 }
             }
         }
 
+        // TODO merge with default paragrap attributes
+        StyleAttrs a = RichParagraphHelper.getAttributes(par);
+        if (a != null) {
+            // TODO problems:
+            // - need to resolve paragraph attributes only
+            // - Resolver needs to separate character/paragraph attributes
+            // - StyleAttrs.createStyleString() needs a boolean
+            applyStyles(cell, a);
+        }
         return cell;
     }
 
@@ -768,19 +779,23 @@ public class VFlow extends Pane implements StyleResolver {
         Text t = new Text(text);
         StyleAttrs a = seg.getStyleAttrs(this);
         if (a != null) {
-            CssStyles css = a.getCssStyles();
-            if (css == null) {
-                String style = a.getStyle();
-                t.setStyle(style);
-            } else {
-                t.setStyle(css.style());
-                String[] names = css.names();
-                if (names != null) {
-                    t.getStyleClass().addAll(names);
-                }
-            }
+            applyStyles(t, a);
         }
         return t;
+    }
+
+    private void applyStyles(Node n, StyleAttrs a) {
+        CssStyles css = a.getCssStyles();
+        if (css == null) {
+            String style = a.getStyle();
+            n.setStyle(style);
+        } else {
+            n.setStyle(css.style());
+            String[] names = css.names();
+            if (names != null) {
+                n.getStyleClass().addAll(names);
+            }
+        }
     }
 
     private double computeSideWidth(SideDecorator d) {
@@ -903,30 +918,28 @@ public class VFlow extends Pane implements StyleResolver {
         for ( ; i < paragraphCount; i++) {
             TextCell cell = getCell(i);
             // TODO skip computation if layout width is the same
-            Region r = cell.getContent();
-            content.getChildren().add(r);
-            r.setManaged(false);
-            if (!r.maxWidthProperty().isBound()) {
-                r.setMaxWidth(maxWidth);
-            }
-            r.setMaxHeight(USE_COMPUTED_SIZE);
-            if(r instanceof TextFlow f) {
+            Region r2 = cell.getContent();
+            content.getChildren().add(cell);
+            cell.setManaged(false);
+            cell.setMaxWidth(maxWidth);
+            cell.setMaxHeight(USE_COMPUTED_SIZE);
+            if(r2 instanceof TextFlow f) {
                 // TODO or bind?
                 f.setTabSize(tabSize);
                 f.setLineSpacing(lineSpacing);
             }
 
-            r.applyCss();
+            cell.applyCss();
 
             arrangement.addCell(cell);
 
-            double h = r.prefHeight(forWidth) + lineSpacing;
+            double h = cell.prefHeight(forWidth) + lineSpacing;
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
             cell.setPosition(y, h/*, forWidth*/);
 
             if (!wrap) {
                 if (visible) {
-                    double w = r.prefWidth(-1);
+                    double w = cell.prefWidth(-1);
                     if (unwrappedWidth < w) {
                         unwrappedWidth = w;
                     }
@@ -950,7 +963,7 @@ public class VFlow extends Pane implements StyleResolver {
                     }
                 } else {
                     // remove invisible cell from layout after sizing
-                    content.getChildren().remove(r);
+                    content.getChildren().remove(cell);
     
                     if ((y > (height + margin)) && (count > bottomMarginCount)) {
                         break;
@@ -1024,30 +1037,28 @@ public class VFlow extends Pane implements StyleResolver {
         for (i = topCellIndex() - 1; i >= 0; i--) {
             TextCell cell = getCell(i);
             // TODO maybe skip computation if layout width is the same
-            Region r = cell.getContent();
-            content.getChildren().add(r);
-            r.setManaged(false);
-            if (!r.maxWidthProperty().isBound()) {
-                r.setMaxWidth(maxWidth);
-            }
-            r.setMaxHeight(USE_COMPUTED_SIZE);
-            if(r instanceof TextFlow f) {
+            Region r2 = cell.getContent();
+            content.getChildren().add(cell);
+            cell.setManaged(false); // FIX not needed, here and before.
+            cell.setMaxWidth(maxWidth);
+            cell.setMaxHeight(USE_COMPUTED_SIZE);
+            if(r2 instanceof TextFlow f) {
                 f.setTabSize(tabSize);
                 f.setLineSpacing(lineSpacing);
             }
 
-            r.applyCss();
+            cell.applyCss();
             
             arrangement.addCell(cell);
             
-            double h = r.prefHeight(forWidth) + lineSpacing;
+            double h = cell.prefHeight(forWidth) + lineSpacing;
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
             y = snapPositionY(y - h);
             count++;
 
             cell.setPosition(y, h/*, forWidth*/);
             
-            content.getChildren().remove(r);
+            content.getChildren().remove(cell);
 
             // stop populating the top part of the sliding window
             // when exceeded both pixel and line count margins
@@ -1114,10 +1125,9 @@ public class VFlow extends Pane implements StyleResolver {
         int sz = arrangement.getVisibleCellCount();
         for (int i=0; i < sz; i++) {
             TextCell cell = arrangement.getCellAt(i);
-            Region r = cell.getContent();
             double h = cell.getCellHeight();
             double y = cell.getY();
-            content.layoutInArea(r, x, y, w, h);
+            content.layoutInArea(cell, x, y, w, h);
 
             // place side nodes
             if (addLeft) {

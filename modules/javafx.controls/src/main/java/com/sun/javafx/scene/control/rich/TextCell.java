@@ -28,8 +28,10 @@
 package com.sun.javafx.scene.control.rich;
 
 import java.util.Objects;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
@@ -47,7 +49,7 @@ import javafx.scene.text.TextFlow;
  * Each visible TextCell will be resized horizontally to fill the available width and then resized vertically
  * according to its preferred size for that width. 
  */
-public final class TextCell extends Region {
+public final class TextCell extends StackPane {
     private final int index;
     private final Region content;
     private double height;
@@ -64,6 +66,7 @@ public final class TextCell extends Region {
         this.content = content;
         setManaged(false);
         getChildren().add(content);
+        setAlignment(Pos.TOP_LEFT);
     }
 
     /**
@@ -132,7 +135,7 @@ public final class TextCell extends Region {
     }
     
     public void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
-        double y0 = content.getLayoutY();
+        double y0 = getLayoutY();
         double y1 = y0 + h;
         
         b.moveto(x, y0);
@@ -181,8 +184,8 @@ public final class TextCell extends Region {
                 new LineTo(0.0, f.getHeight())
             };
         } else {
-            double w = content.getWidth();
-            double h = content.getHeight();
+            double w = getWidth();
+            double h = getHeight();
 
             return new PathElement[] {
                 new MoveTo(0.0, 0.0),

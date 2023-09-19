@@ -93,24 +93,24 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     }
 
     public SimpleReadOnlyStyledModel addSegment(String text, String style, String... css) {
-        RichParagraph p = lastSegmentStyledTextParagraph();
+        RichParagraph p = lastParagraph();
         p.addSegment(text, style, css);
         return this;
     }
 
     public SimpleReadOnlyStyledModel highlight(int start, int length, Color c) {
-        RichParagraph p = lastSegmentStyledTextParagraph();
+        RichParagraph p = lastParagraph();
         p.addHighlight(start, length, c);
         return this;
     }
 
     public SimpleReadOnlyStyledModel squiggly(int start, int length, Color c) {
-        RichParagraph p = lastSegmentStyledTextParagraph();
+        RichParagraph p = lastParagraph();
         p.addSquiggly(start, length, c);
         return this;
     }
 
-    protected RichParagraph lastSegmentStyledTextParagraph() {
+    protected RichParagraph lastParagraph() {
         int sz = paragraphs.size();
         if (sz == 0) {
             RichParagraph p = new RichParagraph();
@@ -140,7 +140,7 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
     /** adds inline node segment */
     public SimpleReadOnlyStyledModel addNodeSegment(Supplier<Node> generator) {
-        RichParagraph p = lastSegmentStyledTextParagraph();
+        RichParagraph p = lastParagraph();
         p.addInlineNode(generator);
         return this;
     }
@@ -161,5 +161,10 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     public StyleAttrs getStyleAttrs(TextPos pos) {
         // TODO use segments
         return StyleAttrs.EMPTY;
+    }
+
+    public void setParagraphAttributes(StyleAttrs a) {
+        RichParagraph p = lastParagraph();
+        p.setAttributes(a);
     }
 }

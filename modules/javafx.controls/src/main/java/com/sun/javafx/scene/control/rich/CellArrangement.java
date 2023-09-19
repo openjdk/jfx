@@ -208,7 +208,7 @@ public class CellArrangement {
         ObservableList<Node> cs = p.getChildren();
         for (int i = getVisibleCellCount() - 1; i >= 0; --i) {
             TextCell cell = cells.get(i);
-            cs.remove(cell.getContent());
+            cs.remove(cell);
         }
     }
 

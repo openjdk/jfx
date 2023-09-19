@@ -35,7 +35,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import com.sun.javafx.scene.control.rich.D;
 import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
@@ -44,6 +43,15 @@ import com.sun.javafx.scene.control.rich.RichUtils;
 public class StyleAttrs {
     /** an instance with no attributes set */
     public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
+
+    /** Paragraph background attribute */
+    public static final StyleAttribute BACKGROUND = new StyleAttribute("BACKGROUND", Color.class) {
+        @Override
+        public void buildStyle(StringBuilder sb, Object value) {
+            String color = RichUtils.toCssColor((Color)value);
+            sb.append("-fx-background-color:").append(color).append("; ");
+        }
+    };
 
     /** Bold typeface attribute */
     public static final StyleAttribute BOLD = new StyleAttribute("BOLD", Boolean.class) {
@@ -60,7 +68,7 @@ public class StyleAttrs {
     public static final StyleAttribute CSS = new StyleAttribute("CSS", CssStyles.class) {
         @Override
         public void buildStyle(StringBuilder sb, Object value) {
-            D.p(); // FIX
+            // no-op
         }
     };
 

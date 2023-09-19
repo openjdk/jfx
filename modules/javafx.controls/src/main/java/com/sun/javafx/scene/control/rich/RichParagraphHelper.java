@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.rich;
 import java.util.List;
 import java.util.function.Consumer;
 import javafx.scene.control.rich.model.RichParagraph;
+import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledSegment;
 import com.sun.javafx.util.Utils;
 
@@ -39,6 +40,8 @@ public class RichParagraphHelper {
         public List<Consumer<TextCell>> getHighlights(RichParagraph p);
 
         public List<StyledSegment> getSegments(RichParagraph p);
+
+        public StyleAttrs getAttributes(RichParagraph p);
     }
 
     static {
@@ -60,5 +63,9 @@ public class RichParagraphHelper {
 
     public static List<StyledSegment> getSegments(RichParagraph p) {
         return accessor.getSegments(p);
+    }
+
+    public static StyleAttrs getAttributes(RichParagraph p) {
+        return accessor.getAttributes(p);
     }
 }

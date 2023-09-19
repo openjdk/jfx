@@ -27,11 +27,11 @@ import java.util.Arrays;
 import java.util.Random;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.rich.model.HtmlExportFormatHandler;
+import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -58,7 +58,18 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         String UNDERLINE = "underline";
 
         addSegment("RichTextArea Control", "-fx-font-size:200%;", UNDERLINE);
+        nl(2);
+
+        addSegment("Paragraph Attributes", null, BOLD, UNDERLINE);
         nl();
+        setParagraphAttributes(StyleAttrs.
+            builder().
+            set(StyleAttrs.BACKGROUND, Color.LIGHTSALMON).
+            set(StyleAttrs.ITALIC, true).
+            create());
+        addSegment("- background").nl();
+        nl(2);
+
         addImage(DemoModel.class.getResourceAsStream("animated.gif"));
         addSegment("  Fig. 1 Embedded animated GIF image.", null, GRAY, ITALIC);
         nl(2);
@@ -104,9 +115,6 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         addSegment(" "); // FIX cannot navigate over this segment
         nl(2);
         addSegment("A regular Arabic verb, كَتَبَ‎ kataba (to write).", null, ARABIC).nl();
-        //addSegment("Tibetan ཨོཾ་མ་ཎི་པདྨེ་ཧཱུྃ", null, LARGE).nl();
-        //addSegment("Double diacritics: a\u0360b a\u0361b a\u0362b a\u035cb").nl();
-        //addSegment("Emojis: [🇺🇦❤️🏁🇺🇸🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", null, LARGE).nl();
         addSegment("Emojis: [🔥🦋😀😃😄😁😆😅🤣😂🙂🙃😉😊😇]", null, LARGE).nl();
         nl();
         addSegment("Halfwidth and FullWidth Forms", null, UNDERLINE).nl();
@@ -128,15 +136,8 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         nl(2);
         
         addParagraph(this::createRect);
+        nl(2);
 
-        // TODO unicode codepoints
-//        addSegment("Mongolian ᠨᠢᠷᠤᠭᠤ niruγu (нуруу nuruu)", null, null).nl();
-//        addSegment("Arabic العربية", null, null).nl();
-//        addSegment("Japanese 日本語", null, null).nl();
-//        addSegment("Mongolian \u1828\u1822\u1837\u1824\u182d\u1824 niru\u03b3u (\u043d\u0443\u0440\u0443\u0443 nuruu)", null, null).nl();
-//        addSegment("Arabic \u0627\u0644\u0639\u0631\u0628\u064a\u0629", null, null).nl();
-//        addSegment("Japanese \u65e5\u672c\u8a9e", null, null).nl();
-        
         Random r = new Random();
         for(int line=0; line<100; line++) {
             int ct = r.nextInt(10);
@@ -165,12 +166,7 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
     }
 
     private Region createRect() {
-        Label t = new Label() {
-            @Override
-            protected double computePrefWidth(double height) {
-                return super.computePrefWidth(height);
-            }
-        };
+        Label t = new Label();
         t.setPrefSize(400, 200);
         t.textProperty().bind(Bindings.createObjectBinding(
             () -> {
