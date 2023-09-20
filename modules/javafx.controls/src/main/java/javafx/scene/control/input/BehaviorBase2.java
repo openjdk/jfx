@@ -45,7 +45,7 @@ import javafx.scene.input.KeyCode;
  * The base class adds a dispose() method (called from Skin.dispose()),
  * which undoes the mappings done in install().
  * <p>
- * TODO rename BehaviorBase
+ * TODO rename BehaviorBase/Behavior
  */
 public abstract class BehaviorBase2<C extends Control> {
     private final C control;
@@ -74,9 +74,7 @@ public abstract class BehaviorBase2<C extends Control> {
     }
 
     /**
-     * Installs this behavior.
-     * This method must be called in Skin.install() to actually install all the default mappings.
-     * @param skin the skin
+     * Installs this behavior by registering default key mappings and event handlers.
      */
     public abstract void install();
 
