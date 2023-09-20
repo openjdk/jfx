@@ -47,6 +47,8 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
 
     @Override
     public void install() {
+        super.install();
+
         regFunc(ComboBox.SELECT_PREV, this::selectPrevious);
         regFunc(ComboBox.SELECT_NEXT, this::selectNext);
 
