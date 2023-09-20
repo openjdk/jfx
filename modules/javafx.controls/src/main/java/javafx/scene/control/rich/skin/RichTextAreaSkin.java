@@ -38,6 +38,8 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.control.rich.ConfigurationParameters;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.StyleResolver;
+import javafx.scene.control.rich.TextPos;
+import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
@@ -67,6 +69,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     private final VFlow vflow;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
+    private final StyledTextModel.ChangeListener modelChangeListener;
 
     static {
         RichTextAreaSkinHelper.setAccessor(new RichTextAreaSkinHelper.Accessor() {
@@ -90,6 +93,20 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         
         this.config = cnf;
         this.listenerHelper = new ListenerHelper();
+
+        modelChangeListener = new StyledTextModel.ChangeListener() {
+            @Override
+            public void eventTextUpdated(TextPos start, TextPos end, int top, int ins, int btm) {
+                handleTextUpdated(start, end, top, ins, btm);
+                // TODO do we need to reflow if useContentXX is on?
+            }
+
+            @Override
+            public void eventStyleUpdated(TextPos start, TextPos end) {
+                handleStyleUpdated(start, end);
+                // TODO do we need to reflow if useContentXX is on?
+            }
+        };
         
         vscroll = createVScrollBar();
         vscroll.setOrientation(Orientation.VERTICAL);
@@ -167,8 +184,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         getChildren().add(mainPane);
         mainPane.setStyle("-fx-font-family: 'Iosevka Fixed SS16'; -fx-font-size: 9;");
 
-        // TODO can use ConfigurationParameters generator to create custom behavior
-        behavior = createBehavior();
+        behavior = new RichTextAreaBehavior(control);
 
         listenerHelper.addInvalidationListener(vflow::handleSelectionChange, control.selectionSegmentProperty());
         listenerHelper.addInvalidationListener(vflow::updateRateRestartBlink, true, control.caretBlinkPeriodProperty());
@@ -187,19 +203,12 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         listenerHelper.addInvalidationListener(vflow::handleWrapText, control.wrapTextProperty());
         listenerHelper.addInvalidationListener(vflow::handleModelChange, control.modelProperty());
         listenerHelper.addInvalidationListener(this::handleFontChange, true, getSkinnable().fontProperty());
-    }
-
-    /**
-     * Called from the constructor.  Override to provide custom behavior (this requires public BehaviorBase).
-     * TODO variant: generator in Config, or add methods to manipulate behavior to control
-     */
-    private RichTextAreaBehavior createBehavior() {
-        return new RichTextAreaBehavior(getSkinnable());
+        listenerHelper.addChangeListener(control.modelProperty(), true, this::handleModelChange);
     }
 
     @Override
     public void install() {
-        behavior.install(this, listenerHelper);
+        behavior.install();
     }
 
     @Override
@@ -212,7 +221,25 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             super.dispose();
         }
     }
+
+    public void handleModelChange(Object src, StyledTextModel old, StyledTextModel m) {
+        if (old != null) {
+            old.removeChangeListener(modelChangeListener);
+        }
+
+        if (m != null) {
+            m.addChangeListener(modelChangeListener);
+        }
+    }
+
+    protected void handleTextUpdated(TextPos start, TextPos end, int addedTop, int linesAdded, int addedBottom) {
+        vflow.handleTextUpdated(start, end, addedTop, linesAdded, addedBottom);
+    }
     
+    protected void handleStyleUpdated(TextPos start, TextPos end) {
+        vflow.handleStyleUpdated(start, end);
+    }
+
     private final ScrollBar createVScrollBar() {
         Supplier<ScrollBar> gen = config.scrollBarGeneratorVertical;
         return gen == null ? new ScrollBar() : gen.get();

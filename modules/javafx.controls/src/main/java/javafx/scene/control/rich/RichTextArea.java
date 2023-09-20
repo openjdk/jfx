@@ -521,7 +521,7 @@ public class RichTextArea extends Control {
     }
     
     private VFlow vflow() {
-        return RichTextAreaSkinHelper.getVFlow(getSkin());
+        return RichTextAreaSkinHelper.getVFlow(this);
     }
 
     /**

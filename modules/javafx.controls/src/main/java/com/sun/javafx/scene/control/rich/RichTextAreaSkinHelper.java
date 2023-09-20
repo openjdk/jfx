@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.rich;
 
 import javafx.scene.control.Skin;
+import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import com.sun.javafx.util.Utils;
 
@@ -50,7 +51,8 @@ public class RichTextAreaSkinHelper {
         accessor = a;
     }
 
-    public static VFlow getVFlow(Skin<?> skin) {
+    public static VFlow getVFlow(RichTextArea t) {
+        var skin = t.getSkin();
         return accessor.getVFlow(skin);
     }
 }

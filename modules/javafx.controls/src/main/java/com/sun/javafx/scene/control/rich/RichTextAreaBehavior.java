@@ -45,7 +45,6 @@ import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.DataFormatHandler;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
-import javafx.scene.control.rich.skin.RichTextAreaSkin;
 import javafx.scene.control.util.Util;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -60,15 +59,12 @@ import javafx.scene.layout.Pane;
 import javafx.stage.Screen;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
  * RichTextArea Behavior.
  */
 public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
-    private final RichTextArea control;
     private VFlow vflow;
-    private final StyledTextModel.ChangeListener modelChangeListener;
     private final Timeline autoScrollTimer;
     private boolean autoScrollUp;
     private boolean fastAutoScroll;
@@ -77,23 +73,9 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
     private ContextMenu contextMenu = new ContextMenu();
 
     public RichTextAreaBehavior(RichTextArea control) {
-        this.control = control;
+        super(control);
 
         autoScrollPeriod = Duration.millis(Params.AUTO_SCROLL_PERIOD);
-
-        modelChangeListener = new StyledTextModel.ChangeListener() {
-            @Override
-            public void eventTextUpdated(TextPos start, TextPos end, int top, int ins, int btm) {
-                handleTextUpdated(start, end, top, ins, btm);
-                // TODO do we need to reflow if useContentXX is on?
-            }
-
-            @Override
-            public void eventStyleUpdated(TextPos start, TextPos end) {
-                handleStyleUpdated(start, end);
-                // TODO do we need to reflow if useContentXX is on?
-            }
-        };
 
         autoScrollTimer = new Timeline(new KeyFrame(autoScrollPeriod, (ev) -> {
             autoScroll();
@@ -101,10 +83,9 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
         autoScrollTimer.setCycleCount(Timeline.INDEFINITE);
     }
 
-    public void install(RichTextAreaSkin skin, ListenerHelper lh) {
-        super.install(skin);
-
-        vflow = RichTextAreaSkinHelper.getVFlow(skin);
+    @Override
+    public void install() {
+        vflow = RichTextAreaSkinHelper.getVFlow(control);
         
         setOnKeyEventEnter(() -> vflow.setSuppressBlink(true));
         setOnKeyEventExit(() -> vflow.setSuppressBlink(false));
@@ -204,14 +185,7 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
         c.addEventFilter(ScrollEvent.ANY, this::handleScrollEvent);
 
         addHandler(KeyEvent.KEY_TYPED, this::handleKeyTyped);
-        
-        // TODO there is no way to override the default behavior, such as clear selection or select word under cursor,
-        // except for adding event filter
-        // TODO use map() ?
-        lh.addEventHandler(control, ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested);
-
-        // TODO move to skin?
-        lh.addChangeListener(control.modelProperty(), true, this::handleModel);
+        addHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested);
     }
     
     protected boolean isRTL() {
@@ -221,16 +195,6 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
     protected String getPlainText(int modelIndex) {
         StyledTextModel m = control.getModel();
         return (m == null) ? null : m.getPlainText(modelIndex);
-    }
-
-    protected void handleModel(Object src, StyledTextModel old, StyledTextModel m) {
-        if (old != null) {
-            old.removeChangeListener(modelChangeListener);
-        }
-
-        if (m != null) {
-            m.addChangeListener(modelChangeListener);
-        }
     }
 
     protected void handleKeyTyped(KeyEvent ev) {
@@ -720,14 +684,6 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
             TextPos ca = control.getEndOfParagraph(ix);
             control.select(an, ca);
         }
-    }
-
-    protected void handleTextUpdated(TextPos start, TextPos end, int addedTop, int linesAdded, int addedBottom) {
-        vflow.handleTextUpdated(start, end, addedTop, linesAdded, addedBottom);
-    }
-    
-    protected void handleStyleUpdated(TextPos start, TextPos end) {
-        vflow.handleStyleUpdated(start, end);
     }
 
     public void backspace() {
