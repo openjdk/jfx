@@ -394,8 +394,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     return newTextField.getInputMethodRequests().getTextLocation(offset);
                 }
 
-                @java.lang.Override
-                public Point2D getTextLocationRelative(int offset) {
+                @Override public Point2D getTextLocationRelative(int offset) {
                     return newTextField.getInputMethodRequests().getTextLocationRelative(offset);
                 }
 
