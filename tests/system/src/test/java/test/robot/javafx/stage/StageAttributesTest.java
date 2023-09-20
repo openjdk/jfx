@@ -107,6 +107,8 @@ public class StageAttributesTest extends VisualTestBase {
             assertTrue("Timeout waiting for top stage to be shown",
                 topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
         }
+
+        sleep(1000);
     }
 
     @Test
@@ -125,7 +127,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        Util.waitForIdle(topScene);
+        sleep(1000);
 
         runAndWait(() -> {
             assertTrue(topStage.isIconified());
@@ -150,7 +152,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        Util.waitForIdle(topScene);
+        sleep(1000);
 
         runAndWait(() -> {
             assertTrue(topStage.isMaximized());
@@ -188,7 +190,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        Util.waitForIdle(topScene);
+        sleep(1000);
 
         runAndWait(() -> {
             assertTrue(topStage.isFullScreen());
@@ -230,7 +232,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        Util.waitForIdle(topScene);
+        sleep(1000);
 
         runAndWait(() -> {
             assertTrue(topStage.isIconified());
@@ -262,7 +264,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        Util.waitForIdle(topScene);
+        sleep(1000);
 
         runAndWait(() -> {
             assertTrue(topStage.isMaximized());
@@ -302,7 +304,7 @@ public class StageAttributesTest extends VisualTestBase {
         });
 
         // wait a bit to let window system animate the change
-        Util.waitForIdle(topScene);
+        sleep(1000);
 
         runAndWait(() -> {
             assertTrue(topStage.isFullScreen());
