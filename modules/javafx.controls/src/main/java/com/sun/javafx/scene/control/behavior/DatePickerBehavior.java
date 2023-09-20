@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,9 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import java.time.LocalDate;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.PopupControl;
-
-import java.time.LocalDate;
 
 
 public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
@@ -42,7 +41,8 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
     /**
      *
      */
-    public DatePickerBehavior() {
+    public DatePickerBehavior(DatePicker c) {
+        super(c);
     }
 
     /***************************************************************************

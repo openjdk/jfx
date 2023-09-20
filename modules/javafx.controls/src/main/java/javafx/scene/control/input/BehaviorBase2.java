@@ -39,19 +39,20 @@ import javafx.scene.input.KeyCode;
  * 1. provide default behavior methods (a.k.a. functions)
  * 2. in install() method, called from Skin.install(), map control's function tags to
  *    behavior methods, map key bindings to function tags, and add additional event handlers,
- *    using func(), key(), and hand() methods correspondingly.
+ *    using regFunc(), regKey(), and addHandler() methods correspondingly.
  *    Important: no mapping should be made in the behavior constructor, only in install().
  * <p>
  * The base class adds a dispose() method (called from Skin.dispose()),
- * which undoes the mapping done in install().
+ * which undoes the mappings done in install().
  * <p>
- * TODO rename BehaviorBase
+ * TODO rename BehaviorBase/Behavior
  */
 public abstract class BehaviorBase2<C extends Control> {
-    private C control;
+    private final C control;
 
     /** The constructor. */
-    public BehaviorBase2() {
+    public BehaviorBase2(C control) {
+        this.control = control;
     }
     
     /**
@@ -73,14 +74,9 @@ public abstract class BehaviorBase2<C extends Control> {
     }
 
     /**
-     * Installs this behavior.
-     * This method must be called in Skin.install() to actually install all the default mappings.
-     * @param skin the skin
+     * Installs this behavior by registering default key mappings and event handlers.
      */
-    public void install(Skin<C> skin) {
-        Objects.nonNull(skin);
-        this.control = skin.getSkinnable();
-    }
+    public abstract void install();
 
     /**
      * Disposes of this behavior.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.text.HitInfo;
 
 /**
@@ -33,7 +34,8 @@ import javafx.scene.text.HitInfo;
  */
 public class PasswordFieldBehavior extends TextFieldBehavior {
 
-    public PasswordFieldBehavior() {
+    public PasswordFieldBehavior(PasswordField c, TextFieldSkin skin) {
+        super(c, skin);
     }
 
     // RT-18711 & RT-18854: Stub out word based navigation and editing
@@ -58,5 +60,4 @@ public class PasswordFieldBehavior extends TextFieldBehavior {
     protected void mouseDoubleClick(HitInfo hit) {
         getNode().selectAll();
     }
-
 }

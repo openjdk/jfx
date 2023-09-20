@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
-import javafx.scene.control.Skin;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.skin.TextAreaSkin;
@@ -51,7 +50,7 @@ import com.sun.javafx.scene.control.skin.Utils;
  * Text area behavior.
  */
 public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
-    private TextAreaSkin skin;
+    private final TextAreaSkin skin;
     private TwoLevelFocusBehavior tlFocus;
 
     private ChangeListener<Boolean> focusListener;
@@ -60,15 +59,17 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      * Constructors                                                           *
      *************************************************************************/
 
-    public TextAreaBehavior() {
+    public TextAreaBehavior(TextArea c, TextAreaSkin skin) {
+        super(c);
+        this.skin = skin;
         if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
     }
 
     @Override
-    public void install(Skin<TextArea> sk) {
-        super.install(sk);
+    public void install() {
+        super.install();
 
         TextArea c = getNode();
         
@@ -174,11 +175,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             focusGainedByMouseClick = false;
             setCaretAnimating(false);
         }
-    }
-
-    // An unholy back-reference!
-    public void setTextAreaSkin(TextAreaSkin skin) {
-        this.skin = skin;
     }
 
     private void insertNewLine() {

@@ -33,18 +33,13 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.PopupControl;
-import javafx.scene.control.Skin;
 import javafx.scene.control.TextField;
 import javafx.scene.control.input.BehaviorBase2;
-import javafx.scene.control.input.InputMap2;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 import com.sun.javafx.scene.control.skin.Utils;
 
 public class ComboBoxBaseBehavior<T> extends BehaviorBase2<ComboBoxBase<T>> {
@@ -62,13 +57,12 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase2<ComboBoxBase<T>> {
     /**
      *
      */
-    public ComboBoxBaseBehavior() {
+    public ComboBoxBaseBehavior(ComboBoxBase<T> c) {
+        super(c);
     }
 
     @Override
-    public void install(Skin<ComboBoxBase<T>> skin) {
-        super.install(skin);
-
+    public void install() {
         addHandler(KeyBinding2.with(KeyCode.SPACE).build(), true, this::keyPressed);
         addHandler(KeyBinding2.withRelease(KeyCode.SPACE).build(), true, this::keyReleased);
         addHandler(KeyBinding2.with(KeyCode.ENTER).build(), false, this::keyPressed);
