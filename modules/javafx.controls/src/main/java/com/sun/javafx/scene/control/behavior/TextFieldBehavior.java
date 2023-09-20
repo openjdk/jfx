@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Skin;
 import javafx.scene.control.TextField;
 import javafx.scene.control.input.KeyBinding2;
 import javafx.scene.control.skin.TextFieldSkin;
@@ -66,15 +65,16 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private WeakChangeListener<Node> weakFocusOwnerListener;
 
 
-    public TextFieldBehavior() {
+    public TextFieldBehavior(TextField c) {
+        super(c);
         if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
     }
     
     @Override
-    public void install(Skin<TextField> skin) {
-        super.install(skin);
+    public void install() {
+        super.install();
         
         TextField textField = getNode();
         
@@ -157,6 +157,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     // An unholy back-reference!
+    @Deprecated // FIX
     public void setTextFieldSkin(TextFieldSkin skin) {
         this.skin = skin;
     }

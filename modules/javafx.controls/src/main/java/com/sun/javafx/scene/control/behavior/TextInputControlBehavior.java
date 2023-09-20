@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import static com.sun.javafx.PlatformUtil.isWindows;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 import java.text.Bidi;
 import java.util.Set;
-import java.util.function.Predicate;
 import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ObservableList;
@@ -43,7 +42,6 @@ import javafx.scene.control.IndexRange;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.control.Skin;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.input.BehaviorBase2;
 import javafx.scene.control.input.EventCriteria;
@@ -59,8 +57,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.scene.control.skin.FXVK;
 
 /**
@@ -95,15 +91,14 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      *                                                                         *
      **************************************************************************/
 
-    public TextInputControlBehavior() {
+    public TextInputControlBehavior(T c) {
+        super(c);
         // TODO create upon demand
         contextMenu = new ContextMenu();
     }
 
     @Override
-    public void install(Skin<T> skin) {
-        super.install(skin);
-
+    public void install() {
         TextInputControl c = getNode();
 
         setOnKeyEventEnter(() -> setCaretAnimating(false));

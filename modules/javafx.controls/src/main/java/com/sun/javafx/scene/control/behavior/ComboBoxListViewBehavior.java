@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.SelectionModel;
-import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 
 public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
@@ -42,13 +41,12 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
     /**
      *
      */
-    public ComboBoxListViewBehavior() {
+    public ComboBoxListViewBehavior(ComboBoxBase<T> c) {
+        super(c);
     }
 
     @Override
-    public void install(Skin<ComboBoxBase<T>> skin) {
-        super.install(skin);
-
+    public void install() {
         regFunc(ComboBox.SELECT_PREV, this::selectPrevious);
         regFunc(ComboBox.SELECT_NEXT, this::selectNext);
 

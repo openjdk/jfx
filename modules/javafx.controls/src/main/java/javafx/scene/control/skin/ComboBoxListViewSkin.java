@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package javafx.scene.control.skin;
 
 import java.util.List;
 import java.util.function.Supplier;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
@@ -54,7 +53,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
-
 import com.sun.javafx.scene.control.IDisconnectable;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
@@ -100,7 +98,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean listSelectionLock = false;
     private boolean listViewSelectionDirty = false;
 
-    private final ComboBoxListViewBehavior behavior;
+    private final ComboBoxListViewBehavior<T> behavior;
     private IDisconnectable selectedItemWatcher;
 
 
@@ -164,7 +162,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
 
-        behavior = new ComboBoxListViewBehavior<>();
+        behavior = new ComboBoxListViewBehavior<>(control);
 
         lh.addChangeListener(control.itemsProperty(), e -> {
             updateComboBoxItems();
@@ -237,7 +235,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     public void install() {
         super.install();
         
-        behavior.install(this);
+        behavior.install();
     }
 
     @Override

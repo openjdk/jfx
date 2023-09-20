@@ -221,7 +221,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         contentView.getChildren().add(caretPath);
 
         // instantiate, but not install, the behavior
-        behavior = new TextAreaBehavior();
+        behavior = new TextAreaBehavior(control);
         behavior.setTextAreaSkin(this);
 
         if (SHOW_HANDLES) {
@@ -829,8 +829,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     public void install() {
         super.install();
 
-        // install default input map for the text area control
-        behavior.install(this);
+        behavior.install();
     }
 
     @Override

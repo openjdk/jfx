@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.PopupControl;
-
 import javafx.scene.paint.Color;
 
 public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
@@ -41,7 +40,8 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
     /**
      *
      */
-    public ColorPickerBehavior() {
+    public ColorPickerBehavior(ColorPicker c) {
+        super(c);
     }
 
      /**************************************************************************
