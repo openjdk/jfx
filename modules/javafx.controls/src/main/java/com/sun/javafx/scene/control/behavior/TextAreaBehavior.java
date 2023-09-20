@@ -50,7 +50,7 @@ import com.sun.javafx.scene.control.skin.Utils;
  * Text area behavior.
  */
 public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
-    private TextAreaSkin skin;
+    private final TextAreaSkin skin;
     private TwoLevelFocusBehavior tlFocus;
 
     private ChangeListener<Boolean> focusListener;
@@ -59,8 +59,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
      * Constructors                                                           *
      *************************************************************************/
 
-    public TextAreaBehavior(TextArea c) {
+    public TextAreaBehavior(TextArea c, TextAreaSkin skin) {
         super(c);
+        this.skin = skin;
         if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
@@ -174,11 +175,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             focusGainedByMouseClick = false;
             setCaretAnimating(false);
         }
-    }
-
-    // An unholy back-reference!
-    public void setTextAreaSkin(TextAreaSkin skin) {
-        this.skin = skin;
     }
 
     private void insertNewLine() {

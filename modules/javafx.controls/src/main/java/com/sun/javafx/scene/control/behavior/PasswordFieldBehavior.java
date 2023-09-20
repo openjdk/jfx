@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.text.HitInfo;
 
 /**
@@ -33,8 +34,8 @@ import javafx.scene.text.HitInfo;
  */
 public class PasswordFieldBehavior extends TextFieldBehavior {
 
-    public PasswordFieldBehavior(PasswordField c) {
-        super(c);
+    public PasswordFieldBehavior(PasswordField c, TextFieldSkin skin) {
+        super(c, skin);
     }
 
     // RT-18711 & RT-18854: Stub out word based navigation and editing

@@ -221,8 +221,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         contentView.getChildren().add(caretPath);
 
         // instantiate, but not install, the behavior
-        behavior = new TextAreaBehavior(control);
-        behavior.setTextAreaSkin(this);
+        behavior = new TextAreaBehavior(control, this);
 
         if (SHOW_HANDLES) {
             contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);

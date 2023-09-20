@@ -380,9 +380,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         
         var c = getSkinnable();
         behavior = (c instanceof PasswordField f) ?
-            new PasswordFieldBehavior(f) :
-            new TextFieldBehavior(c);
-        behavior.setTextFieldSkin(this);
+            new PasswordFieldBehavior(f, this) :
+            new TextFieldBehavior(c, this);
         behavior.install();
     }
 

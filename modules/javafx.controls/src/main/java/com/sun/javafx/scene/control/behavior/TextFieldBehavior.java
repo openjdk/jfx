@@ -54,7 +54,7 @@ import com.sun.javafx.scene.control.skin.Utils;
  * Text field behavior.
  */
 public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
-    private TextFieldSkin skin;
+    private final TextFieldSkin skin;
     private TwoLevelFocusBehavior tlFocus;
 
     // listeners to focus-related state
@@ -65,8 +65,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private WeakChangeListener<Node> weakFocusOwnerListener;
 
 
-    public TextFieldBehavior(TextField c) {
+    public TextFieldBehavior(TextField c, TextFieldSkin skin) {
         super(c);
+        this.skin = skin;
         if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
@@ -154,12 +155,6 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         } while (node != null);
 
         return transform;
-    }
-
-    // An unholy back-reference!
-    @Deprecated // FIX
-    public void setTextFieldSkin(TextFieldSkin skin) {
-        this.skin = skin;
     }
 
     protected void fire(KeyEvent event) {
