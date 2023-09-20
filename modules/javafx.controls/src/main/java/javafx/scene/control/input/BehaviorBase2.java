@@ -48,7 +48,8 @@ import javafx.scene.input.KeyCode;
  * TODO rename BehaviorBase/Behavior
  */
 public abstract class BehaviorBase2<C extends Control> {
-    private final C control;
+    /** the instance of Control associated with this behavior */
+    protected final C control;
 
     /** The constructor. */
     public BehaviorBase2(C control) {
