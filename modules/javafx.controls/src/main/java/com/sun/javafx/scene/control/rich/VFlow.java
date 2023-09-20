@@ -104,6 +104,7 @@ public class VFlow extends Pane implements StyleResolver {
     private double lineSpacing;
     private boolean inReflow;
     private static final Text measurer = makeMeasurer();
+    // TODO introduce 'dirty' flag to force the reflow when it's needed
 
     public VFlow(RichTextAreaSkin skin, ConfigurationParameters c, ScrollBar vscroll, ScrollBar hscroll) {
         this.control = skin.getSkinnable();
@@ -1128,6 +1129,9 @@ public class VFlow extends Pane implements StyleResolver {
             double h = cell.getCellHeight();
             double y = cell.getY();
             content.layoutInArea(cell, x, y, w, h);
+
+            // this step is needed to get the correct caret path afterwards
+            cell.layout();
 
             // place side nodes
             if (addLeft) {
