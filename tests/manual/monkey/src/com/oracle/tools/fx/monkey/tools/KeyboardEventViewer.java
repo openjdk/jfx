@@ -89,7 +89,7 @@ public class KeyboardEventViewer extends BorderPane {
         addToLog(sb.toString());
         ev.consume();
     }
-    
+
     private void addToLog(String s) {
         textField.setText(textField.getText() + s);
 
