@@ -85,7 +85,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         // We need to spin up a nested event loop and wait for the reactivation
         // to finish prior to allowing the rest of the initialization to run.
         final Runnable wrappedRunnable = () -> {
-            if (isNormalTaskbarApp()) {
+            if (shouldWaitForReactivation()) {
                 waitForReactivation();
             }
             launchable.run();
@@ -113,16 +113,19 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
                 if (!reactivationLatch.await(5, TimeUnit.SECONDS)) {
                     Logging.getJavaFXLogger().warning("Timeout while waiting for app reactivation");
                 }
+                System.err.println("*** Reactivation done");
             } catch (InterruptedException ex) {
                 Logging.getJavaFXLogger().warning("Exception while waiting for app reactivation: " + ex);
             }
             Application.invokeLater(() -> {
+                System.err.println("Reactivation: Exit nested event loop");
                 eventLoop.leave(null);
             });
         });
         thr.setDaemon(true);
         thr.start();
 
+        System.err.println("Reactivation: Spin up nested event loop");
         eventLoop.enter();
     }
 
@@ -142,12 +145,14 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected void notifyDidResignActive() {
+        System.err.println("Mac: notifyDidResignActive  firstDidResignActive=" + firstDidResignActive);
         firstDidResignActive = true;
         super.notifyDidResignActive();
     }
 
     @Override
     protected void notifyDidBecomeActive() {
+        System.err.println("Mac: notifyDidBecomeActive  firstDidResignActive=" + firstDidResignActive);
         if (firstDidResignActive) {
             reactivationLatch.countDown();
         }
@@ -367,9 +372,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     // NOTE: this will not return a valid result until the native _runloop
     // method has been executed and called the Runnable passed to that method.
-    native private boolean _isNormalTaskbarApp();
-    boolean isNormalTaskbarApp() {
-        return _isNormalTaskbarApp();
+    native private boolean _shouldWaitForReactivation();
+    boolean shouldWaitForReactivation() {
+        return _shouldWaitForReactivation();
     }
 
     private native String _getDataDirectory();
