@@ -25,25 +25,27 @@
 package com.oracle.tools.fx.monkey.tools;
 
 import javafx.scene.control.Button;
-import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ToolBar;
+import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import com.oracle.tools.fx.monkey.util.FX;
 
 /**
- * Keyboard Event Viewer
+ * Keyboard / InputMethod Event Viewer
  */
 public class KeyboardEventViewer extends BorderPane {
     private final TextArea textField;
 
     public KeyboardEventViewer() {
-        FX.name(this, "ClipboardPage");
+        FX.name(this, "KeyboardEventViewer");
 
         textField = new TextArea();
         textField.setEditable(false);
         textField.addEventFilter(KeyEvent.ANY, this::handleKeyboardEvent);
+        textField.setOnInputMethodTextChanged(this::inputMethodTextChangedEvent);
 
         Button clearButton = new Button("Clear");
         clearButton.setOnAction((ev) -> clear());
@@ -62,9 +64,8 @@ public class KeyboardEventViewer extends BorderPane {
 
     private void handleKeyboardEvent(KeyEvent ev) {
         StringBuilder sb = new StringBuilder();
-        sb.append(textField.getText());
         sb.append("KeyEvent{");
-        sb.append(", type = ").append(ev.getEventType());
+        sb.append("type=").append(ev.getEventType());
         sb.append(", character=").append(ev.getCharacter());
         sb.append(", text=").append(ev.getText());
         sb.append(", code=").append(ev.getCode());
@@ -85,13 +86,37 @@ public class KeyboardEventViewer extends BorderPane {
             sb.append(", shortcut");
         }
         sb.append("}\n");
-
-        textField.setText(sb.toString());
+        addToLog(sb.toString());
+        ev.consume();
+    }
+    
+    private void addToLog(String s) {
+        textField.setText(textField.getText() + s);
 
         // scroll to the end
         int ix = textField.getLength();
         textField.selectRange(ix, ix);
+    }
 
-        ev.consume();
+    private void inputMethodTextChangedEvent(InputMethodEvent ev) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("InputMethodEvent{");
+        sb.append("type=").append(ev.getEventType());
+        sb.append(", caret=").append(ev.getCaretPosition());
+
+        if (!ev.getCommitted().isEmpty()) {
+            sb.append(", committed=");
+            sb.append(ev.getCommitted());
+        }
+
+        if (!ev.getComposed().isEmpty()) {
+            sb.append(", composed=");
+            for (InputMethodTextRun run: ev.getComposed()) {
+                sb.append(run.getText());
+            }
+        }
+
+        sb.append("}\n");
+        addToLog(sb.toString());
     }
 }

@@ -243,7 +243,7 @@ public class MainWindow extends Stage {
     private void openKeyboardViewer() {
         SingleInstance.openSingleInstance(
             "KeyboardEventViewer",
-            "Keyboard Event Viewer",
+            "Keyboard / Input Method Event Viewer",
             KeyboardEventViewer::new
         );
     }
