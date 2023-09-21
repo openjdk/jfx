@@ -45,90 +45,90 @@ public class StyleAttrs {
     public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
 
     /** Paragraph background attribute */
-    public static final StyleAttribute BACKGROUND = new StyleAttribute("BACKGROUND", Color.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            String color = RichUtils.toCssColor((Color)value);
-            sb.append("-fx-background-color:").append(color).append("; ");
-        }
-    };
+    public static final StyleAttribute BACKGROUND = new StyleAttribute("BACKGROUND", Color.class, (a, sb, v) -> {
+        String color = RichUtils.toCssColor((Color)v);
+        sb.append("-fx-background-color:").append(color).append("; ");
+    });
 
     /** Bold typeface attribute */
-    public static final StyleAttribute BOLD = new StyleAttribute("BOLD", Boolean.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            if (Boolean.TRUE.equals(value)) {
-                sb.append("-fx-font-weight:bold; ");
-            } else {
-                sb.append("-fx-font-weight:normal; ");
-            }
+    public static final StyleAttribute BOLD = new StyleAttribute("BOLD", Boolean.class, (a, sb, v) -> {
+        if (Boolean.TRUE.equals(v)) {
+            sb.append("-fx-font-weight:bold; ");
+        } else {
+            sb.append("-fx-font-weight:normal; ");
         }
-    };
+    });
 
-    public static final StyleAttribute CSS = new StyleAttribute("CSS", CssStyles.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            // no-op
-        }
-    };
+    public static final StyleAttribute CSS = new StyleAttribute("CSS", CssStyles.class, null);
 
     /** Font family attribute */
-    public static final StyleAttribute FONT_FAMILY = new StyleAttribute("FONT_FAMILY", String.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            sb.append("-fx-font-family:'").append(value).append("'; ");
-        }
-    };
-    
+    public static final StyleAttribute FONT_FAMILY = new StyleAttribute("FONT_FAMILY", String.class, (a, sb, v) -> {
+        sb.append("-fx-font-family:'").append(v).append("'; ");
+    });
+
     /** Font size attribute, in percent, relative to the base font size. */
-    public static final StyleAttribute FONT_SIZE = new StyleAttribute("FONT_SIZE", Integer.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            int n = (Integer)value;
-            sb.append("-fx-font-size:").append(n).append("%; ");
-        }
-    };
+    public static final StyleAttribute FONT_SIZE = new StyleAttribute("FONT_SIZE", Integer.class, (a, sb, v) -> {
+        int n = (Integer)v;
+        sb.append("-fx-font-size:").append(n).append("%; ");
+    });
 
     /** Italic type face attribute */
-    public static final StyleAttribute ITALIC = new StyleAttribute("ITALIC", Boolean.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            if (Boolean.TRUE.equals(value)) {
-                sb.append("-fx-font-style:italic; ");
-            }
+    public static final StyleAttribute ITALIC = new StyleAttribute("ITALIC", Boolean.class, (a, sb, v) -> {
+        if (Boolean.TRUE.equals(v)) {
+            sb.append("-fx-font-style:italic; ");
         }
-    };
+    });
+
+    /** Space above the paragraph (top padding) attribute */
+    public static final StyleAttribute SPACE_ABOVE = new StyleAttribute("SPACE_ABOVE", Double.class, null);
+
+    /** Space below the paragraph (bottom padding) attribute */
+    public static final StyleAttribute SPACE_BELOW = new StyleAttribute("SPACE_BELOW", Double.class, null);
+
+    /** Space to the left of the paragraph (bottom padding) attribute */
+    public static final StyleAttribute SPACE_LEFT = new StyleAttribute("SPACE_LEFT", Double.class, null);
+
+    /** Space to the right of the paragraph (bottom padding) attribute */
+    public static final StyleAttribute SPACE_RIGHT = new StyleAttribute("SPACE_RIGHT", Double.class, null);
+
+    /** Space above the paragraph (top padding) attribute */
+    public static final StyleAttribute SPACE = new StyleAttribute("SPACE", Boolean.class, (a, sb, v) -> {
+        double top = a.getDouble(SPACE_ABOVE, 0);
+        double right = a.getDouble(SPACE_RIGHT, 0);
+        double bottom = a.getDouble(SPACE_BELOW, 0);
+        double left = a.getDouble(SPACE_LEFT, 0);
+        sb.append("-fx-padding:");
+        sb.append(top);
+        sb.append(',');
+        sb.append(right);
+        sb.append(',');
+        sb.append(bottom);
+        sb.append(',');
+        sb.append(left);
+        sb.append("; ");
+    });
 
     /** Strike-through style attribute */
-    public static final StyleAttribute STRIKE_THROUGH = new StyleAttribute("STRIKE_THROUGH", Boolean.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            if (Boolean.TRUE.equals(value)) {
-                sb.append("-fx-strikethrough:true; ");
-            }
+    public static final StyleAttribute STRIKE_THROUGH = new StyleAttribute("STRIKE_THROUGH", Boolean.class, (a, sb, v) -> {
+        if (Boolean.TRUE.equals(v)) {
+            sb.append("-fx-strikethrough:true; ");
         }
-    };
+    });
 
     /** Text color attrbute */
-    public static final StyleAttribute TEXT_COLOR = new StyleAttribute("TEXT_COLOR", Color.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            if (value != null) {
-                String color = RichUtils.toCssColor((Color)value);
-                sb.append("-fx-fill:").append(color).append("; ");
-            }
+    public static final StyleAttribute TEXT_COLOR = new StyleAttribute("TEXT_COLOR", Color.class, (a, sb, v) -> {
+        if (v instanceof Color c) {
+            String color = RichUtils.toCssColor(c);
+            sb.append("-fx-fill:").append(color).append("; ");
         }
-    };
+    });
 
     /** Underline style attribute */
-    public static final StyleAttribute UNDERLINE = new StyleAttribute("UNDERLINE", Boolean.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) {
-            if (Boolean.TRUE.equals(value)) {
-                sb.append("-fx-underline:true; ");
-            }
+    public static final StyleAttribute UNDERLINE = new StyleAttribute("UNDERLINE", Boolean.class, (a, sb, v) -> {
+        if (Boolean.TRUE.equals(v)) {
+            sb.append("-fx-underline:true; ");
         }
-    };
+    });
     
     private final HashMap<StyleAttribute,Object> attributes;
     private transient String style;
@@ -219,11 +219,14 @@ public class StyleAttrs {
         if (attributes.size() == 0) {
             return null;
         }
-        
+
         StringBuilder sb = new StringBuilder(32);
-        for(StyleAttribute a: attributes.keySet()) {
+        for (StyleAttribute a : attributes.keySet()) {
             Object v = attributes.get(a);
-            a.buildStyle(sb, v);
+            StyleAttribute.Generator g = a.getGenerator();
+            if (g != null) {
+                g.appendStyleString(this, sb, v);
+            }
         }
         return sb.toString();
     }
@@ -252,6 +255,22 @@ public class StyleAttrs {
     public boolean getBoolean(StyleAttribute a) {
         Object v = attributes.get(a);
         return Boolean.TRUE.equals(v);
+    }
+
+    /**
+     * Returns the value of the specified attribute, or defaultValue if the specified attribute
+     * is not present.
+     *
+     * @param a the attribute
+     * @param defaultValue the default value
+     * @return the attribute value
+     */
+    public double getDouble(StyleAttribute a, double defaultValue) {
+        Object v = attributes.get(a);
+        if (v instanceof Number n) {
+            return n.doubleValue();
+        }
+        return defaultValue;
     }
 
     @Override
@@ -357,35 +376,35 @@ public class StyleAttrs {
         boolean italic = st.contains("italic"); // oblique? any other names?
 
         if (bold) {
-            b.set(BOLD, true);
+            b.setBold(true);
         }
 
         if (italic) {
-            b.set(ITALIC, true);
+            b.setItalic(true);
         }
 
         if (textNode.isStrikethrough()) {
-            b.set(STRIKE_THROUGH, true);
+            b.setStrikeThrough(true);
         }
 
         if (textNode.isUnderline()) {
-            b.set(UNDERLINE, true);
+            b.setUnderline(true);
         }
 
         String family = f.getFamily();
-        b.set(FONT_FAMILY, family);
+        b.setFontFamily(family);
 
         double sz = f.getSize();
-        // TODO we could use a default font in the rich text area
+        // TODO use the default font
         int size = (int)Math.round(sz / 0.12); // in percent relative to size 12
         if (size != 100) {
-            b.set(FONT_SIZE, size);
+            b.setFontSize(size);
         }
 
         Paint x = textNode.getFill();
         if (x instanceof Color c) {
             // we do not support gradients (although we could get the first color, for example)
-            b.set(TEXT_COLOR, c);
+            b.setTextColor(c);
         }
 
         return b.create();
@@ -407,7 +426,7 @@ public class StyleAttrs {
         }
 
         /**
-         * Creates an immutable instance of {@link StyleAttrs}.
+         * Creates an immutable instance of {@link StyleAttrs} with the attributes set in this Builder.
          * @return the new instance
          */
         public StyleAttrs create() {
@@ -415,23 +434,13 @@ public class StyleAttrs {
         }
         
         /**
-         * Sets a boolean attribute.
-         * @param a the attribute
-         * @param value the attribute value
-         * @return a new Builder instance
-         */
-        public Builder set(StyleAttribute a, boolean value) {
-            return set(a, Boolean.valueOf(value));
-        }
-
-        /**
          * Sets the value for the specified attribute.
          * This method will throw an {@code IllegalArgumentException} if the value cannot be cast to the
          * type specified by the attribute.
          *
          * @param a the attribute
          * @param value the attribute value
-         * @return a new Builder instance
+         * @return this Builder instance
          */
         public Builder set(StyleAttribute a, Object value) {
             if (value == null) {
@@ -448,13 +457,141 @@ public class StyleAttrs {
          * Merges the specified attributes with the attributes in this instance.
          * The new values override any existing ones.
          * @param attrs the attributes to merge
-         * @return a new Builder instance
+         * @return this Builder instance
          */
         public Builder merge(StyleAttrs attrs) {
             for (StyleAttribute a : attrs.attributes.keySet()) {
                 Object v = attrs.get(a);
                 set(a, v);
             }
+            return this;
+        }
+
+        /**
+         * Sets the paragraph background attribute to the specified color.
+         * @param color the color
+         * @return this Builder instance
+         */
+        public Builder setBackground(Color color) {
+            set(BACKGROUND, color);
+            return this;
+        }
+
+        /**
+         * Sets the bold typeface attribute.
+         * @param on true for bold typeface
+         * @return this Builder instance
+         */
+        public Builder setBold(boolean on) {
+            set(BOLD, Boolean.valueOf(on));
+            return this;
+        }
+
+        /**
+         * Sets the font family attribute.
+         * @param name the font family name
+         * @return this Builder instance
+         */
+        public Builder setFontFamily(String name) {
+            set(FONT_FAMILY, name);
+            return this;
+        }
+
+        /**
+         * Sets the font size attribute (as percentage relative to the default paragraph font).
+         * @param size the font size in percent
+         * @return this Builder instance
+         */
+        public Builder setFontSize(double size) {
+            set(FONT_SIZE, size);
+            return this;
+        }
+
+        /**
+         * Sets the italic typeface attribute.
+         * @param on true for italic typeface
+         * @return this Builder instance
+         */
+        public Builder setItalic(boolean on) {
+            set(ITALIC, Boolean.valueOf(on));
+            return this;
+        }
+
+        /**
+         * Sets the space above paragraph attribute.
+         * This method also sets SPACE attribute to Boolean.TRUE.
+         * @param value the space amount
+         * @return this Builder instance
+         */
+        public Builder setSpaceAbove(double value) {
+            set(SPACE_ABOVE, value);
+            set(SPACE, Boolean.TRUE);
+            return this;
+        }
+
+        /**
+         * Sets the space below paragraph attribute.
+         * This method also sets SPACE attribute to Boolean.TRUE.
+         * @param value the space amount
+         * @return this Builder instance
+         */
+        public Builder setSpaceBelow(double value) {
+            set(SPACE_BELOW, value);
+            set(SPACE, Boolean.TRUE);
+            return this;
+        }
+
+        /**
+         * Sets the space left paragraph attribute.
+         * This method also sets SPACE attribute to Boolean.TRUE.
+         * @param value the space amount
+         * @return this Builder instance
+         */
+        public Builder setSpaceLeft(double value) {
+            set(SPACE_LEFT, value);
+            set(SPACE, Boolean.TRUE);
+            return this;
+        }
+
+        /**
+         * Sets the space right paragraph attribute.
+         * This method also sets SPACE attribute to Boolean.TRUE.
+         * @param value the space amount
+         * @return this Builder instance
+         */
+        public Builder setSpaceRight(double value) {
+            set(SPACE_RIGHT, value);
+            set(SPACE, Boolean.TRUE);
+            return this;
+        }
+
+        /**
+         * Sets the strike-through typeface attribute.
+         * @param on true for strike-through typeface
+         * @return this Builder instance
+         */
+        public Builder setStrikeThrough(boolean on) {
+            set(STRIKE_THROUGH, Boolean.valueOf(on));
+            return this;
+        }
+
+        /**
+         * Sets the text color attribute to the specified color.
+         * @param color the color
+         * @return this Builder instance
+         */
+        public Builder setTextColor(Color color) {
+            set(TEXT_COLOR, color);
+            return this;
+        }
+
+        /**
+         * Sets the underline attribute.
+         * @param on true for underline
+         * @return this Builder instance
+         */
+        public Builder setUnderline(boolean on) {
+            set(UNDERLINE, Boolean.valueOf(on));
             return this;
         }
     }

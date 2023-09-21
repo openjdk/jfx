@@ -28,29 +28,35 @@ package javafx.scene.control.rich.model;
 /**
  * Style Attribute provides a way to specify style in the RichTextArea.
  */
-public abstract class StyleAttribute {
-    /**
-     * Builds a direct style give this attribute.
-     * This method must append a valid CSS style followed by a semicolon, for example:
-     * {@code "-fx-font-weight:bold;"}
-     * This method must silently ignore any errors or values of incorrect type.
-     * 
-     * @param sb StringBuilder to append the style to
-     * @param value attribute value
-     */
-    public abstract void buildStyle(StringBuilder sb, Object value);
+public class StyleAttribute {
+    @FunctionalInterface
+    public interface Generator {
+        /**
+         * Appends a direct style string derived from the attribute value.
+         * This method must append a valid CSS style followed by a semicolon, for example:
+         * {@code "-fx-font-weight:bold;"}
+         * This method must silently ignore any errors or values of incorrect type.
+         *
+         * @param a the parent StyleAttrs instance
+         * @param sb the StringBuilder to append the style to
+         * @param value the attribute value
+         */
+        public void appendStyleString(StyleAttrs a, StringBuilder sb, Object value);
+    }
 
     private final String name;
     private final Class<?> type;
+    private final Generator generator;
 
     /**
      * Constructs a style attribute.
      * @param name the attribute name
      * @param type the attribute type
      */
-    public StyleAttribute(String name, Class<?> type) {
+    public StyleAttribute(String name, Class<?> type, Generator generator) {
         this.name = name;
         this.type = type;
+        this.generator = generator;
     }
 
     /**
@@ -68,6 +74,14 @@ public abstract class StyleAttribute {
      */
     public String getName() {
         return name;
+    }
+
+    /**
+     * Returns the generator instance.
+     * @return the generator instance
+     */
+    public Generator getGenerator() {
+        return generator;
     }
 
     @Override

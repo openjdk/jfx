@@ -64,8 +64,8 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         nl();
         setParagraphAttributes(StyleAttrs.
             builder().
-            set(StyleAttrs.BACKGROUND, Color.LIGHTSALMON).
-            set(StyleAttrs.ITALIC, true).
+            setBackground(Color.LIGHTSALMON).
+            setItalic(true).
             create());
         addSegment("- background").nl();
         nl(2);

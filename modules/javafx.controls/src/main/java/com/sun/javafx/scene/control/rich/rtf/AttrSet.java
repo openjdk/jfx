@@ -84,14 +84,12 @@ public class AttrSet {
     }
 
     public StyleAttrs getStyleAttrs() {
-        return
-            StyleAttrs.
-            builder().
-            set(StyleAttrs.BOLD, getBoolean(StyleAttrs.BOLD)).
-            set(StyleAttrs.ITALIC, getBoolean(StyleAttrs.ITALIC)).
-            set(StyleAttrs.FONT_FAMILY, getString(StyleAttrs.FONT_FAMILY)).
-            set(StyleAttrs.TEXT_COLOR, getColor(StyleAttrs.TEXT_COLOR)).
-            set(StyleAttrs.UNDERLINE, getBoolean(StyleAttrs.UNDERLINE)).
+        return StyleAttrs.builder().
+            setBold(getBoolean(StyleAttrs.BOLD)).
+            setFontFamily(getString(StyleAttrs.FONT_FAMILY)).
+            setItalic(getBoolean(StyleAttrs.ITALIC)).
+            setTextColor(getColor(StyleAttrs.TEXT_COLOR)).
+            setUnderline(getBoolean(StyleAttrs.UNDERLINE)).
             create();
     }
 

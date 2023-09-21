@@ -47,11 +47,7 @@ import javafx.scene.paint.Color;
 // TODO should we size down font on windows?
 public class HtmlStyledOutput implements StyledOutput {
     // a synthetic attribute used only in Key
-    private static final StyleAttribute STRIKE_THROUGH_AND_UNDERLINE = 
-        new StyleAttribute("STRIKE_THROUGH_AND_UNDERLINE", Key.class) {
-        @Override
-        public void buildStyle(StringBuilder sb, Object value) { }
-    };
+    private static final StyleAttribute SS_AND_UNDERLINE = new StyleAttribute("SS_AND_UNDERLINE", Key.class, null);
     private final StyleResolver resolver;
     private final Writer wr;
     private final boolean inlineStyles;
@@ -124,7 +120,7 @@ public class HtmlStyledOutput implements StyledOutput {
     private static Key createKey(StyleAttrs attrs, StyleAttribute a, Object v) {
         if (a == StyleAttrs.STRIKE_THROUGH) {
             if (attrs.isStrikeThrough() && attrs.isUnderline()) {
-                a = STRIKE_THROUGH_AND_UNDERLINE;
+                a = SS_AND_UNDERLINE;
             }
         } else if (a == StyleAttrs.UNDERLINE) {
             if (attrs.isStrikeThrough() && attrs.isUnderline()) {
@@ -310,7 +306,7 @@ public class HtmlStyledOutput implements StyledOutput {
             return "color: " + RichUtils.toWebColor((Color)v) + ";";
         } else if (a == StyleAttrs.UNDERLINE) {
             return "text-decoration: underline;";
-        } else if(a == STRIKE_THROUGH_AND_UNDERLINE) {
+        } else if(a == SS_AND_UNDERLINE) {
             return "text-decoration: line-through underline;";
         } else {
             return null;

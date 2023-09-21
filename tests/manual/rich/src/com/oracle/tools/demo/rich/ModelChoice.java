@@ -164,31 +164,31 @@ public enum ModelChoice {
     private static StyledTextModel tabs() {
         return SimpleReadOnlyStyledModel.from("0123456789012345678901234567890\n0\n\t1\n\t\t2\n\t\t\t3\n\t\t\t\t4\n0\n");
     }
-    
+
     private static StyledTextModel writingSystems() {
         StyleAttrs name = StyleAttrs.builder().
-            set(StyleAttrs.FONT_SIZE, 200).
-            set(StyleAttrs.TEXT_COLOR, Color.gray(0.5)).
+            setFontSize(200).
+            setTextColor(Color.gray(0.5)).
             create();
         
         StyleAttrs value = StyleAttrs.builder().
-            set(StyleAttrs.FONT_SIZE, 200).
+            setFontSize(200).
             create();
-        
+
         EditableRichTextModel m = new EditableRichTextModel();
         String[] ss = WritingSystemsDemo.PAIRS;
         for (int i = 0; i < ss.length;) {
             String s = ss[i++] + ":  ";
             append(m, s, name);
-            
+
             s = ss[i++];
             append(m, s, value);
-            
+
             append(m, "\n", null);
         }
         return m;
     }
-    
+
     // TODO add to StyledModel
     private static void append(StyledTextModel m, String text, StyleAttrs style) {
         TextPos p = m.getEndTextPos();

@@ -233,28 +233,28 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 index++;
                 switch(c) {
                 case 'B':
-                    b.set(StyleAttrs.BOLD, true);
+                    b.setBold(true);
                     break;
                 case 'C':
                     Color col = decodeColor();
-                    b.set(StyleAttrs.TEXT_COLOR, col);
+                    b.setTextColor(col);
                     break;
                 case 'F':
                     String fam = decodeText();
-                    b.set(StyleAttrs.FONT_FAMILY, fam);
+                    b.setFontFamily(fam);
                     break;
                 case 'I':
-                    b.set(StyleAttrs.ITALIC, true);
+                    b.setItalic(true);
                     break;
                 case 'T':
-                    b.set(StyleAttrs.STRIKE_THROUGH, true);
+                    b.setStrikeThrough(true);
                     break;
                 case 'U':
-                    b.set(StyleAttrs.UNDERLINE, true);
+                    b.setUnderline(true);
                     break;
                 case 'Z':
                     int percent = decodeInt();
-                    b.set(StyleAttrs.FONT_SIZE, percent);
+                    b.setFontSize(percent);
                     break;
                 case '`':
                     StyleAttrs a = b.create();
