@@ -53,7 +53,7 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
-static BOOL shouldWaitForReactivation = NO;
+static BOOL triggerReactivation = NO;
 static BOOL disableSyncRendering = NO;
 static BOOL firstActivation = YES;
 static BOOL shouldReactivate = NO;
@@ -265,7 +265,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (shouldWaitForReactivation && firstActivation) {
+    if (triggerReactivation && firstActivation) {
         LOG("-> deactivate (hide)  app");
         firstActivation = NO;
         shouldReactivate = YES;
@@ -298,7 +298,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (shouldWaitForReactivation && shouldReactivate) {
+    if (triggerReactivation && shouldReactivate) {
         LOG("-> reactivate  app");
         shouldReactivate = NO;
         [NSApp activateIgnoringOtherApps:YES];
@@ -536,14 +536,14 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             }
             if (self->jTaskBarApp == JNI_TRUE)
             {
-                shouldWaitForReactivation = YES;
+                triggerReactivation = YES;
 
                 // The workaround of deactivating and reactivating
                 // the application so that the system menu bar works
                 // correctly is no longer needed (and no longer works
                 // anyway) as of macOS 14
                 if (@available(macOS 14.0, *)) {
-                    shouldWaitForReactivation = NO;
+                    triggerReactivation = NO;
                 }
 
                 // move process from background only to full on app with visible Dock icon
@@ -1075,14 +1075,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSy
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _shouldWaitForReactivation
+ * Method:    _isTriggerReactivation
  * Signature: ()Z;
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1shouldWaitForReactivation
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isTriggerReactivation
 (JNIEnv *env, jobject japplication)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacApplication__1shouldWaitForReactivation");
-    return shouldWaitForReactivation;
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1isTriggerReactivation");
+    return triggerReactivation;
 }
 
 /*
