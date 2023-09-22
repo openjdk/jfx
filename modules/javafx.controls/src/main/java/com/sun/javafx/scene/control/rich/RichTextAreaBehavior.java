@@ -469,13 +469,17 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
     }
 
     public void moveUp() {
-        moveLine(-1.0 - control.getLineSpacing(), false);
+        moveLine(-1.0, false);
     }
 
     public void moveDown() {
-        moveLine(1.0 + control.getLineSpacing(), false);
+        CaretInfo c = vflow.getCaretInfo();
+        if (c != null) {
+            double sp = c.getMaxY() - c.getMinY() + c.getLineSpacing();
+            moveLine(1.0 + sp, false);
+        }
     }
-    
+
     /**
      * Moves the caret to before the first character of the text, also clearing the selection.
      */
@@ -493,7 +497,10 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
 
     protected void moveLine(double deltaPixels, boolean extendSelection) {
         CaretInfo c = vflow.getCaretInfo();
-        double sp = control.getLineSpacing();
+        if (c == null) {
+            return;
+        }
+        double sp = 0.0; //c.getLineSpacing();
         double x = (c.getMinX() + c.getMaxX()) / 2.0; // phantom x is unclear in the case of split caret
         double y = (deltaPixels < 0) ? c.getMinY() + deltaPixels - sp - 0.5 : c.getMaxY() + deltaPixels + sp;
 
@@ -599,23 +606,27 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
     public void selectLeft() {
         moveCharacter(false, true);
     }
-    
+
     public void selectRight() {
         moveCharacter(true, true);
     }
-    
-    public void selectDown() {
-        moveLine(1.0, true);
-    }
-    
+
     public void selectUp() {
         moveLine(-1.0, true);
     }
-    
+
+    public void selectDown() {
+        CaretInfo c = vflow.getCaretInfo();
+        if (c != null) {
+            double sp = c.getMaxY() - c.getMinY() + c.getLineSpacing();
+            moveLine(1.0 + sp, true);
+        }
+    }
+
     public void selectPageDown() {
         moveLine(vflow.getViewHeight(), true);
     }
-    
+
     public void selectPageUp() {
         moveLine(-vflow.getViewHeight(), true);
     }

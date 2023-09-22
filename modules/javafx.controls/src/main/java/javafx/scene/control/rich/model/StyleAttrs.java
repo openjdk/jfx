@@ -80,6 +80,11 @@ public class StyleAttrs {
         }
     });
 
+    /** Line spacing paragraph attribute */
+    public static final StyleAttribute LINE_SPACING = new StyleAttribute("LINE_SPACING", Double.class, (a, sb, v) -> {
+        sb.append("-fx-line-spacing:").append(v).append("; ");
+    });
+
     /** Space above the paragraph (top padding) attribute */
     public static final StyleAttribute SPACE_ABOVE = new StyleAttribute("SPACE_ABOVE", Double.class, null);
 
@@ -355,8 +360,7 @@ public class StyleAttrs {
     }
 
     /**
-     * This convenience method returns true if the value of {@link #FONT_SIZE} attribute is {@code Boolean.TRUE},
-     * false otherwise.
+     * This convenience method returns the value of the {@link #FONT_SIZE} attribute.
      * @return the font size
      */
     public final Integer getFontSize() {
@@ -364,12 +368,20 @@ public class StyleAttrs {
     }
 
     /**
-     * This convenience method returns true if the value of {@link #FONT_FAMILY} attribute is {@code Boolean.TRUE},
+     * This convenience method returns true if the value of the {@link #FONT_FAMILY} attribute is {@code Boolean.TRUE},
      * false otherwise.
      * @return the font family name
      */
     public final String getFontFamily() {
         return (String)get(FONT_FAMILY);
+    }
+
+    /**
+     * This convenience method returns the value of the {@link #LINE_SPACING} attribute, or null.
+     * @return the line spacing value
+     */
+    public Double getLineSpacing() {
+        return (Double)get(LINE_SPACING);
     }
 
     /**
@@ -421,10 +433,18 @@ public class StyleAttrs {
 
     /**
      * Creates a new Builder instance.
-     * @return the new instance
+     * @return the new Builder instance
      */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Creates a new Builder, populated with attributes from this StyleAttrs instance.
+     * @return the new Builder instance
+     */
+    public Builder toBuilder() {
+        return new Builder().merge(this);
     }
     
     /** StyleAttrs are immutable, so a Builder is required to create a new instance */
@@ -438,6 +458,7 @@ public class StyleAttrs {
          * Creates an immutable instance of {@link StyleAttrs} with the attributes set in this Builder.
          * @return the new instance
          */
+        // TODO or build()?
         public StyleAttrs create() {
             return new StyleAttrs(attributes);
         }
@@ -515,6 +536,16 @@ public class StyleAttrs {
          */
         public Builder setFontSize(int size) {
             set(FONT_SIZE, size);
+            return this;
+        }
+
+        /**
+         * Sets the line spacing paragraph attribute.
+         * @param value the line spacing value
+         * @return this Builder instance
+         */
+        public Builder setLineSpacing(double value) {
+            set(LINE_SPACING, value);
             return this;
         }
 

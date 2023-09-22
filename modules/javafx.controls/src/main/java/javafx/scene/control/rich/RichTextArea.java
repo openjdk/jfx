@@ -163,6 +163,7 @@ public class RichTextArea extends Control {
     private final ConfigurationParameters config;
     private final ObjectProperty<StyledTextModel> model = new SimpleObjectProperty<>(this, "model");
     private final SimpleBooleanProperty displayCaretProperty = new SimpleBooleanProperty(this, "displayCaret", true);
+    private ObjectProperty<StyleAttrs> defaultParagraphAttributes;
     private SimpleBooleanProperty editableProperty;
     private StyleableObjectProperty<Font> font;
     private final ReadOnlyObjectWrapper<Duration> caretBlinkPeriod;
@@ -171,7 +172,6 @@ public class RichTextArea extends Control {
     private ObjectProperty<SideDecorator> leftDecorator;
     private ObjectProperty<SideDecorator> rightDecorator;
     private ObjectProperty<Insets> contentPadding;
-    private DoubleProperty lineSpacing;
     private BooleanProperty highlightCurrentParagraph;
     private BooleanProperty useContentWidth;
     private BooleanProperty useContentHeight;
@@ -468,21 +468,6 @@ public class RichTextArea extends Control {
             }
         };
 
-        // TODO remove if switched to paragraph attributes
-        private static final CssMetaData<RichTextArea, Number> LINE_SPACING =
-            new CssMetaData<>("-fx-line-spacing", SizeConverter.getInstance(), 0) {
-
-            @Override
-            public boolean isSettable(RichTextArea t) {
-                return t.lineSpacing == null || !t.lineSpacing.isBound();
-            }
-
-            @Override
-            public StyleableProperty<Number> getStyleableProperty(RichTextArea t) {
-                return (StyleableProperty<Number>)t.lineSpacingProperty();
-            }
-        };
-
         private static final CssMetaData<RichTextArea,Boolean> WRAP_TEXT =
             new CssMetaData<>("-fx-wrap-text", StyleConverter.getBooleanConverter(), false) {
 
@@ -501,7 +486,6 @@ public class RichTextArea extends Control {
             Control.getClassCssMetaData(),
             CONTENT_PADDING,
             FONT,
-            LINE_SPACING,
             WRAP_TEXT
         );
     }
@@ -1298,7 +1282,7 @@ public class RichTextArea extends Control {
      */
     public final ObjectProperty<SideDecorator> leftDecoratorProperty() {
         if (leftDecorator == null) {
-            leftDecorator = new SimpleObjectProperty<>();
+            leftDecorator = new SimpleObjectProperty<>(this, "leftDecorator");
         }
         return leftDecorator;
     }
@@ -1321,7 +1305,7 @@ public class RichTextArea extends Control {
      */
     public final ObjectProperty<SideDecorator> rightDecoratorProperty() {
         if (rightDecorator == null) {
-            rightDecorator = new SimpleObjectProperty<>();
+            rightDecorator = new SimpleObjectProperty<>(this, "rightDecorator");
         }
         return rightDecorator;
     }
@@ -1364,30 +1348,28 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Determines the spacing between text lines, in pixels.
-     * @return the line spacing property
+     * Determines the default paragraph attributes.
+     * @return the default paragraph attributes property
      */
-    // TODO this is a paragraph style property
-    public final DoubleProperty lineSpacingProperty() {
-        if (lineSpacing == null) {
-            lineSpacing = new SimpleStyleableDoubleProperty(
-                StyleableProperties.LINE_SPACING,
+    public final ObjectProperty<StyleAttrs> defaultParagraphAttributesProperty() {
+        if (defaultParagraphAttributes == null) {
+            defaultParagraphAttributes = new SimpleObjectProperty<>(
                 this,
-                "lineSpacing",
-                Params.DEFAULT_LINE_SPACING
+                "defaultParagraphAttributes",
+                Params.DEFAULT_PARAGRAPH_ATTRIBUTES
             );
         }
-        return lineSpacing;
+        return defaultParagraphAttributes;
     }
 
-    public final void setLineSpacing(double spacing) {
-        lineSpacingProperty().set(spacing);
+    public final void setDefaultParagraphAttributes(StyleAttrs a) {
+        defaultParagraphAttributesProperty().set(a);
     }
 
-    public final double getLineSpacing() {
-        if (lineSpacing == null) {
-            return Params.DEFAULT_LINE_SPACING;
+    public final StyleAttrs getDefaultParagraphAttributes() {
+        if (defaultParagraphAttributes == null) {
+            return Params.DEFAULT_PARAGRAPH_ATTRIBUTES;
         }
-        return lineSpacing.get();
+        return defaultParagraphAttributes.get();
     }
 }

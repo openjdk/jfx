@@ -191,7 +191,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         listenerHelper.addInvalidationListener(vflow::updateTabSize, control.tabSizeProperty());
         listenerHelper.addInvalidationListener(vflow::updateCaretAndSelection, control.highlightCurrentParagraphProperty());
         listenerHelper.addInvalidationListener(vflow::handleContentPadding, true, control.contentPaddingProperty());
-        listenerHelper.addInvalidationListener(vflow::handleLineSpacing, control.lineSpacingProperty());
+        listenerHelper.addInvalidationListener(vflow::handleDefaultParagraphAttributes, true, control.defaultParagraphAttributesProperty());
         listenerHelper.addInvalidationListener(vflow::handleDecoratorChange,
             control.leftDecoratorProperty(),
             control.rightDecoratorProperty()

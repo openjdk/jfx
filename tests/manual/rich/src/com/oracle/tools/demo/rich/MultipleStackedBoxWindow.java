@@ -32,6 +32,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.rich.RichTextArea;
+import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.skin.LineNumberDecorator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -41,6 +42,7 @@ import javafx.stage.Stage;
  * Test Window that stacks multiple RichTextAreas and other components either vertically or horizontally.
  */
 public class MultipleStackedBoxWindow extends Stage {
+
     public MultipleStackedBoxWindow(boolean vertical) {
         RichTextArea a1 = new RichTextArea(NotebookModelStacked.m1());
         a1.setWrapText(true);
@@ -165,24 +167,44 @@ public class MultipleStackedBoxWindow extends Stage {
             });
             // line spacing
             m = FX.menu(c, "Line Spacing");
-            FX.checkItem(m, "0", t.getLineSpacing() == 0, (on) -> {
+            FX.checkItem(m, "0", getLineSpacing(t) == 0, (on) -> {
                 if (on) {
-                    t.setLineSpacing(0);
+                    setLineSpacing(t, 0);
                 }
             });
-            FX.checkItem(m, "1", t.getLineSpacing() == 1, (on) -> {
+            FX.checkItem(m, "1", getLineSpacing(t) == 1, (on) -> {
                 if (on) {
-                    t.setLineSpacing(1);
+                    setLineSpacing(t, 1);
                 }
             });
-            FX.checkItem(m, "10", t.getLineSpacing() == 10, (on) -> {
+            FX.checkItem(m, "10", getLineSpacing(t) == 10, (on) -> {
                 if (on) {
-                    t.setLineSpacing(10);
+                    setLineSpacing(t, 10);
                 }
             });
 
             FX.checkItem(c, "Wrap Text", t.isWrapText(), (on) -> t.setWrapText(on));
             return c;
         });
+    }
+
+    private StyleAttrs getStyleAttrs(RichTextArea t) {
+        StyleAttrs a = t.getDefaultParagraphAttributes();
+        return (a == null) ? StyleAttrs.EMPTY : a;
+    }
+
+    private double getLineSpacing(RichTextArea t) {
+        StyleAttrs a = getStyleAttrs(t);
+        Double v = a.getLineSpacing();
+        return v == null ? 0.0 : v;
+    }
+
+    protected void setLineSpacing(RichTextArea t, double x) {
+        StyleAttrs a = getStyleAttrs(t).
+            toBuilder().
+            setLineSpacing(x).
+            create();
+        t.setDefaultParagraphAttributes(a);
+        System.out.println(a);
     }
 }

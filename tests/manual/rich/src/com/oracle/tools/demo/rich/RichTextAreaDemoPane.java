@@ -200,17 +200,6 @@ public class RichTextAreaDemoPane extends BorderPane {
             control.setContentPadding(v);
         });
         
-        ComboBox<Double> lineSpacing = new ComboBox<>();
-        FX.name(lineSpacing, "lineSpacing");
-        lineSpacing.getItems().setAll(
-            0.0,
-            5.0,
-            31.415
-        );
-        lineSpacing.getSelectionModel().selectedItemProperty().addListener((s,p,v) -> {
-            control.setLineSpacing(v);
-        });
-        
         ComboBox<Decorator> leftDecorator = new ComboBox<>();
         FX.name(leftDecorator, "leftDecorator");
         leftDecorator.getItems().setAll(Decorator.values());
@@ -255,37 +244,10 @@ public class RichTextAreaDemoPane extends BorderPane {
         op.label("Decorators:");
         op.option(leftDecorator);
         op.option(rightDecorator);
-        op.label("Line Spacing:");
-        op.option(lineSpacing);
         op.option(trackWidth);
         op.option(trackHeight);
 
-//        if (useContentSize) {
-//            GridPane gp = new GridPane();
-//            gp.setBackground(Background.fill(Color.DARKGRAY));
-//            gp.setOpacity(1.0);
-//            GridPane.setFillHeight(control, false);
-//            GridPane.setFillWidth(control, false);
-//            gp.add(control, 0, 0);
-//            //
-//            Label t = new Label("right");
-//            gp.add(t, 1, 0);
-//            GridPane.setFillHeight(t, true);
-//            GridPane.setFillWidth(t, true);
-//            //
-//            t = new Label("bottom");
-//            gp.add(t, 0, 1);
-//            GridPane.setFillHeight(t, true);
-//            GridPane.setFillWidth(t, true);
-//            //
-//            t = new Label("corner");
-//            gp.add(t, 1, 1);
-//            GridPane.setFillHeight(t, true);
-//            GridPane.setFillWidth(t, true);
-//            setCenter(gp);
-//        } else {
-            setCenter(vsplit);
-//        }
+        setCenter(vsplit);
 
         ScrollPane sp = new ScrollPane(op);
         sp.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
@@ -296,7 +258,6 @@ public class RichTextAreaDemoPane extends BorderPane {
         contentPadding.getSelectionModel().selectFirst();
         leftDecorator.getSelectionModel().selectFirst();
         rightDecorator.getSelectionModel().selectFirst();
-        lineSpacing.getSelectionModel().selectFirst();
 
         Platform.runLater(() -> {
             // all this to make sure restore settings works correctly with second window loading the same model

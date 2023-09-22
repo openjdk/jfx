@@ -29,13 +29,13 @@ import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 
-public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
+public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
     private final StyleAttrs TITLE = StyleAttrs.builder().
         setFontSize(200).
         setUnderline(true).
         create();
 
-    public ParagraphAttributesModel() {
+    public ParagraphAttributesDemoModel() {
         addSegment("Paragraph Attributes", TITLE);
         nl(2);
 
@@ -96,6 +96,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
             setTextAlignment(TextAlignment.LEFT).
             create());
         nl();
+
         addSegment("✓ Text Alignment Right " + words(20));
         setParagraphAttributes(StyleAttrs.
             builder().
@@ -103,6 +104,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
             setTextAlignment(TextAlignment.RIGHT).
             create());
         nl();
+
         addSegment("✓ Text Alignment Center " + words(20));
         setParagraphAttributes(StyleAttrs.
             builder().
@@ -110,11 +112,41 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
             setTextAlignment(TextAlignment.CENTER).
             create());
         nl();
+
         addSegment("✓ Text Alignment Justify " + words(20));
         setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.gray(0.8, 0.5)).
             setTextAlignment(TextAlignment.JUSTIFY).
+            create());
+        nl();
+
+        // line spacing
+
+        addSegment("✓ Line Spacing 0 " + words(200));
+        highlight(50, 100, FX.alpha(Color.RED, 0.4));
+        setParagraphAttributes(StyleAttrs.
+            builder().
+            setBackground(Color.gray(0.95, 0.5)).
+            setLineSpacing(0).
+            create());
+        nl();
+
+        addSegment("✓ Line Spacing 20 " + words(200));
+        highlight(50, 100, FX.alpha(Color.RED, 0.4));
+        setParagraphAttributes(StyleAttrs.
+            builder().
+            setBackground(Color.gray(0.9, 0.5)).
+            setLineSpacing(20).
+            create());
+        nl();
+
+        addSegment("✓ Line Spacing 40 " + words(200));
+        highlight(50, 100, FX.alpha(Color.RED, 0.4));
+        setParagraphAttributes(StyleAttrs.
+            builder().
+            setBackground(Color.gray(0.9, 0.5)).
+            setLineSpacing(40).
             create());
         nl();
     }

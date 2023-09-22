@@ -35,13 +35,13 @@ import javafx.scene.paint.Color;
 
 public enum ModelChoice {
     DEMO("Demo"),
-    BILLION_LINES("1,000,000,000 Lines"),
+    PARAGRAPH("Paragraph Attributes"),
     WRITING_SYSTEMS_EDITABLE("Writing Systems (Editable)"),
     EDITABLE_STYLED("❤ Editable Rich Text Model"),
+    BILLION_LINES("1,000,000,000 Lines"),
     NOTEBOOK_STACK("Notebook: Embedded Rich Text Areas"),
     NOTEBOOK("Notebook: Embedded Chart"),
     NOTEBOOK2("Notebook: SQL Queries"),
-    PARAGRAPH("Paragraph Attributes"),
     EDITABLE_PLAIN("Plaintext with Syntax Highlighting"),
     NULL("null"),
     INLINE("Inline Nodes"),
@@ -142,7 +142,7 @@ public enum ModelChoice {
         case ONE_LINE:
             return new DemoStyledTextModel(1, false);
         case PARAGRAPH:
-            return new ParagraphAttributesModel();
+            return new ParagraphAttributesDemoModel();
         case TABS:
             return tabs();
         case TEN_LINES:

@@ -39,13 +39,15 @@ public final class CaretInfo {
     private final double xmax;
     private final double ymin;
     private final double ymax;
+    private final double lineSpacing;
     private final PathElement[] path;
 
-    private CaretInfo(double xmin, double xmax, double ymin, double ymax, PathElement[] path) {
+    private CaretInfo(double xmin, double xmax, double ymin, double ymax, double lineSpacing, PathElement[] path) {
         this.xmin = xmin;
         this.xmax = xmax;
         this.ymin = ymin;
         this.ymax = ymax;
+        this.lineSpacing = lineSpacing;
         this.path = path;
     }
 
@@ -54,12 +56,13 @@ public final class CaretInfo {
      * convert path coordinates (which come in the frame of reference of its {@code TextFlow}) to the view port
      * coordinates.
      *
-     * @param dx translation x offset
-     * @param dy translation y offset
-     * @param path caret path
-     * @return CaretInfo instance
+     * @param dx the translation x offset
+     * @param dy the translation y offset
+     * @param lineSpacing the line spacing
+     * @param path the caret path
+     * @return the CaretInfo instance
      */
-    public static CaretInfo create(double dx, double dy, PathElement[] path) {
+    public static CaretInfo create(double dx, double dy, double lineSpacing, PathElement[] path) {
         Objects.requireNonNull(path);
         if (path.length == 0) {
             throw new IllegalArgumentException("non-empty path is required");
@@ -116,7 +119,7 @@ public final class CaretInfo {
             }
         }
 
-        return new CaretInfo(xmin, xmax, ymin, ymax, newPath);
+        return new CaretInfo(xmin, xmax, ymin, ymax, lineSpacing, newPath);
     }
 
     /**
@@ -149,6 +152,14 @@ public final class CaretInfo {
      */
     public final double getMaxY() {
         return ymax;
+    }
+
+    /**
+     * Returns the line spacing at the caret position.
+     * @return the line spacing
+     */
+    public final double getLineSpacing() {
+        return lineSpacing;
     }
 
     /**

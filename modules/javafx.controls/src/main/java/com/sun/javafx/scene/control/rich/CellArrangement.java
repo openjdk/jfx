@@ -46,10 +46,9 @@ import javafx.scene.text.TextFlow;
  * The purpose is to estimating the average paragraph height, and to support relative navigation.
  */
 public class CellArrangement {
-    private final ArrayList<TextCell> cells = new ArrayList<>(64);
+    private final ArrayList<TextCell> cells = new ArrayList<>(32);
     private final double flowWidth;
     private final double flowHeight;
-    private final double lineSpacing;
     private final int lineCount;
     private final Insets contentPadding;
     private final Origin origin;
@@ -65,7 +64,6 @@ public class CellArrangement {
         this.flowWidth = f.getWidth();
         this.flowHeight = f.getViewHeight();
         this.origin = f.getOrigin();
-        this.lineSpacing = f.lineSpacing();
         this.lineCount = f.getParagraphCount();
         this.contentPadding = f.contentPadding();
     }
@@ -76,7 +74,6 @@ public class CellArrangement {
             (f.getWidth() == flowWidth) &&
             (f.getHeight() == flowHeight) &&
             (f.topCellIndex() == origin.index()) &&
-            (f.lineSpacing() == lineSpacing) &&
             (RichUtils.equals(f.contentPadding(), contentPadding));
     }
 
@@ -202,7 +199,14 @@ public class CellArrangement {
                 // snapping?
                 double xoff = (m == null) ? 0.0 : m.getLeft();
                 double yoff = (m == null) ? 0.0 : m.getTop();
-                return CaretInfo.create(xoff - xoffset, cell.getY() + yoff, path);
+                double sp;
+                Region r = cell.getContent();
+                if (r instanceof TextFlow f) {
+                    sp = f.getLineSpacing();
+                } else {
+                    sp = 0.0;
+                }
+                return CaretInfo.create(xoff - xoffset, cell.getY() + yoff, sp, path);
             }
         }
         return null;

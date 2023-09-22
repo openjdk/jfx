@@ -104,7 +104,6 @@ public class VFlow extends Pane implements StyleResolver {
     private double rightPadding;
     private double leftSide;
     private double rightSide;
-    private double lineSpacing;
     private boolean inReflow;
     private static final Text measurer = makeMeasurer();
     // TODO introduce 'dirty' flag to force the reflow when it's needed
@@ -245,7 +244,7 @@ public class VFlow extends Pane implements StyleResolver {
         return cache;
     }
 
-    public void handleLineSpacing() {
+    public void handleDefaultParagraphAttributes() {
         requestLayout();
         updateHorizontalScrollBar();
         updateVerticalScrollBar();
@@ -480,6 +479,8 @@ public class VFlow extends Pane implements StyleResolver {
         boolean topLTR = true;
         boolean bottomLTR = true;
 
+        // FIX
+        double lineSpacing = 0.0; // this is a problem!
         new SelectionHelper(b, left, right).generate(top, bottom, topLTR, bottomLTR, leftPadding, lineSpacing);
     }
 
@@ -595,9 +596,9 @@ public class VFlow extends Pane implements StyleResolver {
         return control.getParagraphCount();
     }
     
-    public double lineSpacing() {
-        return lineSpacing;
-    }
+//    public double lineSpacing() {
+//        return lineSpacing;
+//    }
 
     public Insets contentPadding() {
         return control.getContentPadding();
@@ -769,10 +770,17 @@ public class VFlow extends Pane implements StyleResolver {
             }
         }
 
-        // TODO merge with default paragrap attributes
+        // merge with the default paragraph attributes
+        StyleAttrs defaultAttrs = control.getDefaultParagraphAttributes();
         StyleAttrs a = RichParagraphHelper.getAttributes(par);
+        if ((defaultAttrs != null) && (!defaultAttrs.isEmpty())) {
+            if (a == null) {
+                a = defaultAttrs;
+            } else {
+                a = defaultAttrs.builder().merge(a).create();
+            }
+        }
         if (a != null) {
-            // TODO problems:
             // - need to resolve paragraph attributes only
             // - Resolver needs to separate character/paragraph attributes
             // - StyleAttrs.createStyleString() needs a boolean
@@ -894,7 +902,6 @@ public class VFlow extends Pane implements StyleResolver {
 
         int paragraphCount = getParagraphCount();
         int tabSize = control.getTabSize();
-        lineSpacing = control.getLineSpacing();
 
         boolean useContentHeight = control.isUseContentHeight();
         boolean useContentWidth = control.isUseContentWidth();
@@ -929,18 +936,14 @@ public class VFlow extends Pane implements StyleResolver {
             TextCell cell = getCell(i);
             // TODO skip computation if layout width is the same
             Region r = cell.getContent();
-            flow.getChildren().add(r);
             r.setManaged(false);
+            flow.getChildren().add(r);
+
             if (!r.maxWidthProperty().isBound()) {
                 r.setMaxWidth(maxWidth);
             }
             if (!r.maxHeightProperty().isBound()) {
                 r.setMaxHeight(USE_COMPUTED_SIZE);
-            }
-            if (r instanceof TextFlow f) {
-                // TODO or bind?
-                f.setTabSize(tabSize);
-                f.setLineSpacing(lineSpacing);
             }
 
             r.applyCss();
@@ -948,7 +951,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             arrangement.addCell(cell);
 
-            double h = r.prefHeight(forWidth) + lineSpacing;
+            double h = r.prefHeight(forWidth) + getLineSpacing(r);
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
             cell.setPosition(y, h/*, forWidth*/);
 
@@ -1053,8 +1056,9 @@ public class VFlow extends Pane implements StyleResolver {
             TextCell cell = getCell(i);
             // TODO maybe skip computation if layout width is the same
             Region r = cell.getContent();
-            flow.getChildren().add(r);
             r.setManaged(false); // FIX not needed, here and before.
+            flow.getChildren().add(r);
+
             if (!r.maxWidthProperty().isBound()) {
                 r.setMaxWidth(maxWidth);
             }
@@ -1063,7 +1067,6 @@ public class VFlow extends Pane implements StyleResolver {
             }
             if (r instanceof TextFlow f) {
                 f.setTabSize(tabSize);
-                f.setLineSpacing(lineSpacing);
             }
 
             r.applyCss();
@@ -1071,7 +1074,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             arrangement.addCell(cell);
 
-            double h = r.prefHeight(forWidth) + lineSpacing;
+            double h = r.prefHeight(forWidth) + getLineSpacing(r);
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
             y = snapPositionY(y - h);
             count++;
@@ -1170,6 +1173,14 @@ public class VFlow extends Pane implements StyleResolver {
                 }
             }
         }
+    }
+
+    private double getLineSpacing(Region r) {
+        if(r instanceof TextFlow f) {
+            return f.getLineSpacing();
+        }
+        // TODO what if this paragraph attribute is set and we have a paragraph node?
+        return 0.0;
     }
 
     public double getViewHeight() {
@@ -1295,7 +1306,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public void updateTabSize() {
-        CaretInfo c = getCaretInfo();
+        //CaretInfo c = getCaretInfo();
         requestLayout();
         // TODO remember caret line position, do layout pass, block move to preserve the caret y position
         // as it might shift (only if wrapping is enabled)
