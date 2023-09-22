@@ -35,6 +35,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import com.sun.javafx.scene.control.rich.RichUtils;
 
 /**
@@ -93,19 +94,21 @@ public class StyleAttrs {
 
     /** Space above the paragraph (top padding) attribute */
     public static final StyleAttribute SPACE = new StyleAttribute("SPACE", Boolean.class, (a, sb, v) -> {
-        double top = a.getDouble(SPACE_ABOVE, 0);
-        double right = a.getDouble(SPACE_RIGHT, 0);
-        double bottom = a.getDouble(SPACE_BELOW, 0);
-        double left = a.getDouble(SPACE_LEFT, 0);
-        sb.append("-fx-padding:");
-        sb.append(top);
-        sb.append(',');
-        sb.append(right);
-        sb.append(',');
-        sb.append(bottom);
-        sb.append(',');
-        sb.append(left);
-        sb.append("; ");
+        if (Boolean.TRUE.equals(v)) {
+            double top = a.getDouble(SPACE_ABOVE, 0);
+            double right = a.getDouble(SPACE_RIGHT, 0);
+            double bottom = a.getDouble(SPACE_BELOW, 0);
+            double left = a.getDouble(SPACE_LEFT, 0);
+            sb.append("-fx-padding:");
+            sb.append(top);
+            sb.append(',');
+            sb.append(right);
+            sb.append(',');
+            sb.append(bottom);
+            sb.append(',');
+            sb.append(left);
+            sb.append("; ");
+        }
     });
 
     /** Strike-through style attribute */
@@ -113,6 +116,12 @@ public class StyleAttrs {
         if (Boolean.TRUE.equals(v)) {
             sb.append("-fx-strikethrough:true; ");
         }
+    });
+
+    /** Paragraph text alignment attribute */
+    public static final StyleAttribute TEXT_ALIGNMENT = new StyleAttribute("TEXT_ALIGNMENT", TextAlignment.class, (a, sb, v) -> {
+        String alignment = RichUtils.toCss((TextAlignment)v);
+        sb.append("-fx-text-alignment:").append(alignment).append("; ");
     });
 
     /** Text color attrbute */
@@ -478,7 +487,7 @@ public class StyleAttrs {
         }
 
         /**
-         * Sets the bold typeface attribute.
+         * Sets the bold attribute.
          * @param on true for bold typeface
          * @return this Builder instance
          */
@@ -502,13 +511,13 @@ public class StyleAttrs {
          * @param size the font size in percent
          * @return this Builder instance
          */
-        public Builder setFontSize(double size) {
+        public Builder setFontSize(int size) {
             set(FONT_SIZE, size);
             return this;
         }
 
         /**
-         * Sets the italic typeface attribute.
+         * Sets the italic attribute.
          * @param on true for italic typeface
          * @return this Builder instance
          */
@@ -566,12 +575,22 @@ public class StyleAttrs {
         }
 
         /**
-         * Sets the strike-through typeface attribute.
+         * Sets the strike-through attribute.
          * @param on true for strike-through typeface
          * @return this Builder instance
          */
         public Builder setStrikeThrough(boolean on) {
             set(STRIKE_THROUGH, Boolean.valueOf(on));
+            return this;
+        }
+
+        /**
+         * Sets the text alignment attribute to the specified color.
+         * @param a the alignment
+         * @return this Builder instance
+         */
+        public Builder setTextAlignment(TextAlignment a) {
+            set(TEXT_ALIGNMENT, a);
             return this;
         }
 

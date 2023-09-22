@@ -32,11 +32,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.RichParagraph;
-import javafx.scene.control.rich.model.RtfFormatHandler;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledTextModelReadOnlyBase;
 import javafx.scene.image.Image;
@@ -50,7 +50,6 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     private final ArrayList<RichParagraph> paragraphs = new ArrayList<>();
 
     public SimpleReadOnlyStyledModel() {
-        registerDataFormatHandler(new RtfFormatHandler(), 1000);
     }
 
     public static SimpleReadOnlyStyledModel from(String text) {
@@ -89,12 +88,19 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
     }
 
     public SimpleReadOnlyStyledModel addSegment(String text) {
-        return addSegment(text, null);
+        return addSegment(text, StyleAttrs.EMPTY);
     }
 
     public SimpleReadOnlyStyledModel addSegment(String text, String style, String... css) {
         RichParagraph p = lastParagraph();
         p.addSegment(text, style, css);
+        return this;
+    }
+
+    public SimpleReadOnlyStyledModel addSegment(String text, StyleAttrs a) {
+        Objects.requireNonNull(a);
+        RichParagraph p = lastParagraph();
+        p.addSegment(text, a);
         return this;
     }
 

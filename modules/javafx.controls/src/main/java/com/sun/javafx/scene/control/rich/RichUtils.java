@@ -35,6 +35,7 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
 
 /**
@@ -85,7 +86,7 @@ public class RichUtils {
             );
         }
     }
-    
+
     /* Converts Color to its web CSS value #rrggbb */
     public static String toWebColor(Color c) {
         return String.format(
@@ -240,5 +241,19 @@ public class RichUtils {
 
     private static int r(double x) {
         return (int)Math.round(x);
+    }
+
+    public static String toCss(TextAlignment a) {
+        switch(a) {
+        case CENTER:
+            return "center";
+        case JUSTIFY:
+            return "justify";
+        case RIGHT:
+            return "right";
+        case LEFT:
+        default:
+            return "left";
+        }
     }
 }

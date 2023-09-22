@@ -41,6 +41,7 @@ public enum ModelChoice {
     NOTEBOOK_STACK("Notebook: Embedded Rich Text Areas"),
     NOTEBOOK("Notebook: Embedded Chart"),
     NOTEBOOK2("Notebook: SQL Queries"),
+    PARAGRAPH("Paragraph Attributes"),
     EDITABLE_PLAIN("Plaintext with Syntax Highlighting"),
     NULL("null"),
     INLINE("Inline Nodes"),
@@ -140,6 +141,8 @@ public enum ModelChoice {
             return null;
         case ONE_LINE:
             return new DemoStyledTextModel(1, false);
+        case PARAGRAPH:
+            return new ParagraphAttributesModel();
         case TABS:
             return tabs();
         case TEN_LINES:

@@ -44,6 +44,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.rich.CaretInfo;
 import javafx.scene.control.rich.ConfigurationParameters;
@@ -137,6 +138,7 @@ public class VFlow extends Pane implements StyleResolver {
         selectionHighlight.setManaged(false);
 
         getChildren().addAll(content, leftGutter, rightGutter);
+        // FIX caret must be on top (text cell background!)
         content.getChildren().addAll(caretLineHighlight, selectionHighlight, caretPath);
 
         caretAnimation = new Timeline();
@@ -810,6 +812,9 @@ public class VFlow extends Pane implements StyleResolver {
                 content.getChildren().add(n);
                 try {
                     n.applyCss();
+                    if (n instanceof Parent p) {
+                        p.layout();
+                    }
                     w = n.prefWidth(-1);
                 } finally {
                     content.getChildren().remove(n);
@@ -931,6 +936,7 @@ public class VFlow extends Pane implements StyleResolver {
             }
 
             cell.applyCss();
+            cell.layout();
 
             arrangement.addCell(cell);
 
@@ -1032,7 +1038,7 @@ public class VFlow extends Pane implements StyleResolver {
         arrangement.setUnwrappedWidth(snapSizeX(unwrappedWidth));
         count = 0;
         y = ytop;
-        
+
         // populate top margin, going backwards from topCellIndex
         // TODO populate more, if bottom ended prematurely
         for (i = topCellIndex() - 1; i >= 0; i--) {
@@ -1043,22 +1049,23 @@ public class VFlow extends Pane implements StyleResolver {
             cell.setManaged(false); // FIX not needed, here and before.
             cell.setMaxWidth(maxWidth);
             cell.setMaxHeight(USE_COMPUTED_SIZE);
-            if(r2 instanceof TextFlow f) {
+            if (r2 instanceof TextFlow f) {
                 f.setTabSize(tabSize);
                 f.setLineSpacing(lineSpacing);
             }
 
             cell.applyCss();
-            
+            cell.layout();
+
             arrangement.addCell(cell);
-            
+
             double h = cell.prefHeight(forWidth) + lineSpacing;
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
             y = snapPositionY(y - h);
             count++;
 
             cell.setPosition(y, h/*, forWidth*/);
-            
+
             content.getChildren().remove(cell);
 
             // stop populating the top part of the sliding window
@@ -1067,7 +1074,7 @@ public class VFlow extends Pane implements StyleResolver {
                 break;
             }
         }
-        
+
         arrangement.setTopHeight(-y);
 
         if (useContentWidth) {
@@ -1081,14 +1088,14 @@ public class VFlow extends Pane implements StyleResolver {
             leftGutter.setVisible(true);
             layoutInArea(leftGutter, 0.0, 0.0, leftSide, height, 0.0, HPos.CENTER, VPos.CENTER);
         }
-        
+
         if (rightDecorator == null) {
             rightGutter.setVisible(false);
         } else {
             rightGutter.setVisible(true);
             layoutInArea(rightGutter, width - rightSide, 0.0, rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
         }
-        
+
         layoutInArea(content, leftSide, 0.0, width - leftSide - rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
 
         if (wrap) {
@@ -1124,7 +1131,7 @@ public class VFlow extends Pane implements StyleResolver {
         boolean addRight = control.getRightDecorator() != null;
 
         int sz = arrangement.getVisibleCellCount();
-        for (int i=0; i < sz; i++) {
+        for (int i = 0; i < sz; i++) {
             TextCell cell = arrangement.getCellAt(i);
             double h = cell.getCellHeight();
             double y = cell.getY();
