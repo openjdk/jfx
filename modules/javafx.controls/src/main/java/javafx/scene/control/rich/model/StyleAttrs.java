@@ -101,11 +101,11 @@ public class StyleAttrs {
             double left = a.getDouble(SPACE_LEFT, 0);
             sb.append("-fx-padding:");
             sb.append(top);
-            sb.append(',');
+            sb.append(' ');
             sb.append(right);
-            sb.append(',');
+            sb.append(' ');
             sb.append(bottom);
-            sb.append(',');
+            sb.append(' ');
             sb.append(left);
             sb.append("; ");
         }

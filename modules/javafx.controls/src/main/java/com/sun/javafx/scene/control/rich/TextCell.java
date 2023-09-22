@@ -49,7 +49,7 @@ import javafx.scene.text.TextFlow;
  * Each visible TextCell will be resized horizontally to fill the available width and then resized vertically
  * according to its preferred size for that width. 
  */
-public final class TextCell extends StackPane {
+public final class TextCell {
     private final int index;
     private final Region content;
     private double height;
@@ -64,9 +64,7 @@ public final class TextCell extends StackPane {
         Objects.nonNull(content);
         this.index = index;
         this.content = content;
-        setManaged(false);
-        getChildren().add(content);
-        setAlignment(Pos.TOP_LEFT);
+        content.setManaged(false);
     }
 
     /**
@@ -135,7 +133,7 @@ public final class TextCell extends StackPane {
     }
     
     public void addBoxOutline(FxPathBuilder b, double x, double w, double h) {
-        double y0 = getLayoutY();
+        double y0 = content.getLayoutY();
         double y1 = y0 + h;
         
         b.moveto(x, y0);
@@ -184,8 +182,8 @@ public final class TextCell extends StackPane {
                 new LineTo(0.0, f.getHeight())
             };
         } else {
-            double w = getWidth();
-            double h = getHeight();
+            double w = content.getWidth();
+            double h = content.getHeight();
 
             return new PathElement[] {
                 new MoveTo(0.0, 0.0),
