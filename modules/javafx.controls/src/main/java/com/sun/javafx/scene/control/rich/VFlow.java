@@ -61,6 +61,7 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
@@ -80,7 +81,8 @@ public class VFlow extends Pane implements StyleResolver {
     private final ScrollBar hscroll;
     private final ClippedPane leftGutter;
     private final ClippedPane rightGutter;
-    private final ClippedPane content;
+    private final StackPane content;
+    private final ClippedPane flow;
     private final Path caretPath;
     private final Path caretLineHighlight;
     private final Path selectionHighlight;
@@ -113,8 +115,6 @@ public class VFlow extends Pane implements StyleResolver {
         this.vscroll = vscroll;
         this.hscroll = hscroll;
 
-        getStyleClass().add("flow");
-
         cellCache = new FastCache(Params.CELL_CACHE_SIZE);
 
         // TODO consider creating upond demand
@@ -122,7 +122,10 @@ public class VFlow extends Pane implements StyleResolver {
         // TODO consider creating upond demand
         rightGutter = new ClippedPane("right-side");
 
-        content = new ClippedPane("content");
+        content = new StackPane();
+        content.getStyleClass().add("content");
+
+        flow = new ClippedPane("flow");
 
         caretPath = new Path();
         caretPath.getStyleClass().add("caret");
@@ -137,9 +140,10 @@ public class VFlow extends Pane implements StyleResolver {
         selectionHighlight.getStyleClass().add("selection-highlight");
         selectionHighlight.setManaged(false);
 
+        content.getChildren().addAll(caretLineHighlight, selectionHighlight, flow, caretPath);
+
         getChildren().addAll(content, leftGutter, rightGutter);
-        // FIX caret must be on top (text cell background!)
-        content.getChildren().addAll(caretLineHighlight, selectionHighlight, caretPath);
+        getStyleClass().add("flow");
 
         caretAnimation = new Timeline();
         caretAnimation.setCycleCount(Animation.INDEFINITE);
@@ -181,7 +185,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public Pane getContentPane() {
-        return content;
+        return flow;
     }
 
     private static Text makeMeasurer() {
@@ -355,7 +359,7 @@ public class VFlow extends Pane implements StyleResolver {
             double w = wrappedWidth();
             setContentWidth(w);
         } else {
-            double w = getOffsetX() + content.getWidth();
+            double w = getOffsetX() + flow.getWidth();
             if (arrangement != null) {
                 if (arrangement.getUnwrappedWidth() > w) {
                     w = arrangement.getUnwrappedWidth();
@@ -562,7 +566,7 @@ public class VFlow extends Pane implements StyleResolver {
         if (pe == null) {
             return null;
         } else {
-            return RichUtils.translatePath(-leftPadding, content, cell.getContent(), pe);
+            return RichUtils.translatePath(-leftPadding, flow, cell.getContent(), pe);
         }
     }
 
@@ -661,7 +665,7 @@ public class VFlow extends Pane implements StyleResolver {
         }
 
         double max = getContentWidth() + leftPadding + rightPadding;
-        double w = content.getWidth();
+        double w = flow.getWidth();
         double off = getOffsetX();
         double vis = w / max;
         double val = toScrollBarValue(off, w, max);
@@ -687,7 +691,7 @@ public class VFlow extends Pane implements StyleResolver {
             }
             
             double max = getContentWidth() + leftPadding + rightPadding;
-            double visible = content.getWidth();
+            double visible = flow.getWidth();
             double val = hscroll.getValue();
             double off = fromScrollBarValue(val, visible, max) - leftPadding;
 
@@ -809,7 +813,7 @@ public class VFlow extends Pane implements StyleResolver {
                 Node n = d.getNode(top, true);
                 n.setManaged(false);
 
-                content.getChildren().add(n);
+                flow.getChildren().add(n);
                 try {
                     n.applyCss();
                     if (n instanceof Parent p) {
@@ -817,7 +821,7 @@ public class VFlow extends Pane implements StyleResolver {
                     }
                     w = n.prefWidth(-1);
                 } finally {
-                    content.getChildren().remove(n);
+                    flow.getChildren().remove(n);
                 }
             }
             // introducing some granularity in order to avoid left boundary moving back and forth when scrolling
@@ -861,7 +865,7 @@ public class VFlow extends Pane implements StyleResolver {
 
     protected void removeCells() {
         if (arrangement != null) {
-            arrangement.removeNodesFrom(content);
+            arrangement.removeNodesFrom(flow);
             arrangement = null;
         }
     }
@@ -925,11 +929,15 @@ public class VFlow extends Pane implements StyleResolver {
             TextCell cell = getCell(i);
             // TODO skip computation if layout width is the same
             Region r = cell.getContent();
-            content.getChildren().add(r);
+            flow.getChildren().add(r);
             r.setManaged(false);
-            r.setMaxWidth(maxWidth);
-            r.setMaxHeight(USE_COMPUTED_SIZE);
-            if(r instanceof TextFlow f) {
+            if (!r.maxWidthProperty().isBound()) {
+                r.setMaxWidth(maxWidth);
+            }
+            if (!r.maxHeightProperty().isBound()) {
+                r.setMaxHeight(USE_COMPUTED_SIZE);
+            }
+            if (r instanceof TextFlow f) {
                 // TODO or bind?
                 f.setTabSize(tabSize);
                 f.setLineSpacing(lineSpacing);
@@ -970,7 +978,7 @@ public class VFlow extends Pane implements StyleResolver {
                     }
                 } else {
                     // remove invisible cell from layout after sizing
-                    content.getChildren().remove(r);
+                    flow.getChildren().remove(r);
     
                     if ((y > (height + margin)) && (count > bottomMarginCount)) {
                         break;
@@ -1045,10 +1053,14 @@ public class VFlow extends Pane implements StyleResolver {
             TextCell cell = getCell(i);
             // TODO maybe skip computation if layout width is the same
             Region r = cell.getContent();
-            content.getChildren().add(r);
+            flow.getChildren().add(r);
             r.setManaged(false); // FIX not needed, here and before.
-            r.setMaxWidth(maxWidth);
-            r.setMaxHeight(USE_COMPUTED_SIZE);
+            if (!r.maxWidthProperty().isBound()) {
+                r.setMaxWidth(maxWidth);
+            }
+            if (!r.maxHeightProperty().isBound()) {
+                r.setMaxHeight(USE_COMPUTED_SIZE);
+            }
             if (r instanceof TextFlow f) {
                 f.setTabSize(tabSize);
                 f.setLineSpacing(lineSpacing);
@@ -1066,7 +1078,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             cell.setPosition(y, h/*, forWidth*/);
 
-            content.getChildren().remove(r);
+            flow.getChildren().remove(r);
 
             // stop populating the top part of the sliding window
             // when exceeded both pixel and line count margins
@@ -1096,7 +1108,7 @@ public class VFlow extends Pane implements StyleResolver {
             layoutInArea(rightGutter, width - rightSide, 0.0, rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
         }
 
-        layoutInArea(content, leftSide, 0.0, width - leftSide - rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(flow, leftSide, 0.0, width - leftSide - rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
 
         if (wrap) {
             double w = wrappedWidth();
@@ -1136,7 +1148,7 @@ public class VFlow extends Pane implements StyleResolver {
             Region r = cell.getContent();
             double h = cell.getCellHeight();
             double y = cell.getY();
-            content.layoutInArea(r, x, y, w, h);
+            flow.layoutInArea(r, x, y, w, h);
 
             // this step is needed to get the correct caret path afterwards
             r.layout();
@@ -1161,7 +1173,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public double getViewHeight() {
-        return content.getHeight();
+        return flow.getHeight();
     }
     
     public void pageUp() {
@@ -1193,7 +1205,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public void hscroll(double delta) {
-        double cw = content.getWidth();
+        double cw = flow.getWidth();
         double off = getOffsetX() + delta * cw;
         if (off < 0.0) {
             off = 0.0;
@@ -1254,7 +1266,7 @@ public class VFlow extends Pane implements StyleResolver {
     private void scrollHorizontalToVisible(double x) {
         if (!control.isWrapText()) {
             x += leftPadding;
-            double cw = content.getWidth();
+            double cw = flow.getWidth();
             double off;
             if (x < 0.0) {
                 off = Math.max(getOffsetX() + x - Params.HORIZONTAL_GUARD, 0.0);

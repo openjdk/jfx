@@ -39,10 +39,17 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
         addSegment("Paragraph Attributes", TITLE);
         nl(2);
 
-        addSegment("✓ Background Color");
+        addSegment("✓ Opaque Background Color");
         setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.LIGHTGREEN).
+            create());
+        nl();
+
+        addSegment("✓ Translucent Background Color");
+        setParagraphAttributes(StyleAttrs.
+            builder().
+            setBackground(FX.alpha(Color.LIGHTGREEN, 0.5)).
             create());
         nl();
 
@@ -60,7 +67,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
         setParagraphAttributes(StyleAttrs.
             builder().
             setSpaceBelow(20).
-            setBackground(Color.gray(0.8, 0.5)).
+            setBackground(Color.gray(0.9, 0.5)).
             create());
         nl();
 
@@ -68,7 +75,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
         setParagraphAttributes(StyleAttrs.
             builder().
             setSpaceLeft(20).
-            setBackground(Color.gray(0.75, 0.5)).
+            setBackground(Color.gray(0.85, 0.5)).
             create());
         nl();
 
@@ -76,7 +83,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
         setParagraphAttributes(StyleAttrs.
             builder().
             setSpaceRight(20).
-            setBackground(Color.gray(0.7, 0.5)).
+            setBackground(Color.gray(0.8, 0.5)).
             create());
         nl();
 

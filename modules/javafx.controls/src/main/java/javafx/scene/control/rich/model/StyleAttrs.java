@@ -478,6 +478,8 @@ public class StyleAttrs {
 
         /**
          * Sets the paragraph background attribute to the specified color.
+         * It is recommended to specify a translucent background color in order to avoid obstructing
+         * the selection and the current line highlights.
          * @param color the color
          * @return this Builder instance
          */

@@ -43,6 +43,7 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import com.oracle.tools.demo.rich.settings.FxSettingsSchema;
@@ -231,5 +232,18 @@ public class FX {
             }
             ev.consume();
         });
+    }
+
+    /**
+     * Sets opacity (alpha) value.
+     * @param c the initial color
+     * @param opacity the opacity value
+     * @return the new Color with specified opacity
+     */
+    public static Color alpha(Color c, double opacity) {
+        double r = c.getRed();
+        double g = c.getGreen();
+        double b = c.getBlue();
+        return new Color(r, g, b, opacity);
     }
 }
