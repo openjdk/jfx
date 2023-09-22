@@ -51,7 +51,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
         addSegment("✓ Space Above");
         setParagraphAttributes(StyleAttrs.
             builder().
-            setSpaceAbove(10).
+            setSpaceAbove(20).
             setBackground(Color.gray(0.95, 0.5)).
             create());
         nl();
@@ -59,7 +59,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
         addSegment("✓ Space Below");
         setParagraphAttributes(StyleAttrs.
             builder().
-            setSpaceBelow(10).
+            setSpaceBelow(20).
             setBackground(Color.gray(0.8, 0.5)).
             create());
         nl();
@@ -67,7 +67,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
         addSegment("✓ Space Left");
         setParagraphAttributes(StyleAttrs.
             builder().
-            setSpaceLeft(10).
+            setSpaceLeft(20).
             setBackground(Color.gray(0.75, 0.5)).
             create());
         nl();
@@ -75,7 +75,7 @@ public class ParagraphAttributesModel extends SimpleReadOnlyStyledModel {
         addSegment("✓ Space Right " + words(10));
         setParagraphAttributes(StyleAttrs.
             builder().
-            setSpaceRight(10).
+            setSpaceRight(20).
             setBackground(Color.gray(0.7, 0.5)).
             create());
         nl();

@@ -198,7 +198,11 @@ public class CellArrangement {
                 int charIndex = p.charIndex();
                 boolean leading = p.isLeading();
                 PathElement[] path = cell.getCaretShape(charIndex, leading);
-                return CaretInfo.create(-xoffset, cell.getY(), path);
+                Insets m = cell.getContent().getInsets();
+                // snapping?
+                double xoff = (m == null) ? 0.0 : m.getLeft();
+                double yoff = (m == null) ? 0.0 : m.getTop();
+                return CaretInfo.create(xoff - xoffset, cell.getY() + yoff, path);
             }
         }
         return null;
