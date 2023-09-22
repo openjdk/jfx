@@ -113,19 +113,16 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
                 if (!reactivationLatch.await(5, TimeUnit.SECONDS)) {
                     Logging.getJavaFXLogger().warning("Timeout while waiting for app reactivation");
                 }
-                System.err.println("*** Reactivation done");
             } catch (InterruptedException ex) {
                 Logging.getJavaFXLogger().warning("Exception while waiting for app reactivation: " + ex);
             }
             Application.invokeLater(() -> {
-                System.err.println("Reactivation: Exit nested event loop");
                 eventLoop.leave(null);
             });
         });
         thr.setDaemon(true);
         thr.start();
 
-        System.err.println("Reactivation: Spin up nested event loop");
         eventLoop.enter();
     }
 
@@ -145,14 +142,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected void notifyDidResignActive() {
-        System.err.println("Mac: notifyDidResignActive  firstDidResignActive=" + firstDidResignActive);
         firstDidResignActive = true;
         super.notifyDidResignActive();
     }
 
     @Override
     protected void notifyDidBecomeActive() {
-        System.err.println("Mac: notifyDidBecomeActive  firstDidResignActive=" + firstDidResignActive);
         if (firstDidResignActive) {
             reactivationLatch.countDown();
         }

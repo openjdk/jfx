@@ -224,7 +224,6 @@ public abstract class Application {
     // Overridden methods need to call super.
 
     protected void notifyWillFinishLaunching() {
-        System.err.println("notifyWillFinishLaunching");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleWillFinishLaunchingAction(this, System.nanoTime());
@@ -232,7 +231,6 @@ public abstract class Application {
     }
 
     protected void notifyDidFinishLaunching() {
-        System.err.println("notifyDidFinishLaunching");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleDidFinishLaunchingAction(this, System.nanoTime());
@@ -240,7 +238,6 @@ public abstract class Application {
     }
 
     protected void notifyWillBecomeActive() {
-        System.err.println("notifyWillBecomeActive");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleWillBecomeActiveAction(this, System.nanoTime());
@@ -248,7 +245,6 @@ public abstract class Application {
     }
 
     protected void notifyDidBecomeActive() {
-        System.err.println("notifyDidBecomeActive");
         this.initialActiveEventReceived = true;
         EventHandler handler = getEventHandler();
         if (handler != null) {
@@ -257,7 +253,6 @@ public abstract class Application {
     }
 
     protected void notifyWillResignActive() {
-        System.err.println("notifyWillResignActive");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleWillResignActiveAction(this, System.nanoTime());
@@ -273,7 +268,6 @@ public abstract class Application {
     }
 
     protected void notifyDidResignActive() {
-        System.err.println("notifyDidResignActive");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleDidResignActiveAction(this, System.nanoTime());
