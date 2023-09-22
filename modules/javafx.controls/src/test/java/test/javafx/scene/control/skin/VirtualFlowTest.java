@@ -1861,6 +1861,45 @@ assertEquals(0, firstCell.getIndex());
         assertSame(cell1, cell2);
     }
 
+    @Test
+    public void testFirstCellShouldHaveTheSameIndexOnScroll() {
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(50);
+        flow.resize(250, 300);
+
+        pulse();
+
+        IndexedCell<?> cell1 = flow.cells_get(flow.cells, 0);
+        assertEquals(0, cell1.getIndex());
+
+        flow.scrollPixels(0.01);
+
+        assertEquals(0, cell1.getIndex());
+    }
+
+    /**
+     * The first cell should always be at the same position (when visible), no matter if we scroll down or not.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8316590">JDK-8316590</a>
+     */
+    @Test
+    public void testFirstCellShouldBeAtPosition0OnScroll() {
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(50);
+        flow.resize(250, 300);
+
+        pulse();
+
+        IndexedCell<?> cell1 = flow.cells_get(flow.cells, 0);
+        assertEquals(0.0, cell1.getLayoutY(), 0);
+
+        flow.scrollPixels(0.01);
+
+        assertEquals(0.0, cell1.getLayoutY(), 0);
+    }
+
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {
