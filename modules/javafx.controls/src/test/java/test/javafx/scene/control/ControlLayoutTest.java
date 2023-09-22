@@ -41,7 +41,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class ControlContractTest {
+class ControlLayoutTest {
+
+    private static final double EPSILON = 0.00000000001;
 
     private ControlStub control;
 
@@ -64,7 +66,7 @@ class ControlContractTest {
      * @param scale the render scale
      */
     @ParameterizedTest
-    @ValueSource(doubles = { 1.0, 1.25, 1.5, 1.75, 2.0 })
+    @ValueSource(doubles = { 1.0, 1.25, 1.5, 1.75, 2.0, 2.25 })
     void testLayoutChildrenContract(double scale) {
         DoubleProperty renderScaleProperty = new SimpleDoubleProperty(scale);
 
@@ -86,30 +88,30 @@ class ControlContractTest {
                 Insets padding = control.getPadding();
 
                 double expectedX = control.snappedLeftInset();
-                assertEquals(expectedX, x);
+                assertEquals(expectedX, x, EPSILON);
 
                 expectedX = control.snapPositionX(padding.getLeft());
-                assertEquals(expectedX, x);
+                assertEquals(expectedX, x, EPSILON);
 
                 double expectedY = control.snappedTopInset();
-                assertEquals(expectedY, y);
+                assertEquals(expectedY, y, EPSILON);
 
                 expectedY = control.snapPositionY(padding.getTop());
-                assertEquals(expectedY, y);
+                assertEquals(expectedY, y, EPSILON);
 
                 double expectedWidth = control.snapSizeX(control.getWidth()) - control.snappedLeftInset() - control.snappedRightInset();
-                assertEquals(expectedWidth, w);
+                assertEquals(expectedWidth, w, EPSILON);
 
                 expectedWidth = control.snapSizeX(control.getWidth()) - control.snapPositionX(padding.getLeft())
                         - control.snapPositionX(padding.getRight());
-                assertEquals(expectedWidth, w);
+                assertEquals(expectedWidth, w, EPSILON);
 
                 double expectedHeight = control.snapSizeY(control.getHeight()) - control.snappedTopInset() - control.snappedBottomInset();
-                assertEquals(expectedHeight, h);
+                assertEquals(expectedHeight, h, EPSILON);
 
                 expectedHeight = control.snapSizeY(control.getHeight()) - control.snapPositionY(padding.getTop())
                         - control.snapPositionY(padding.getBottom());
-                assertEquals(expectedHeight, h);
+                assertEquals(expectedHeight, h, EPSILON);
             }
         });
 
