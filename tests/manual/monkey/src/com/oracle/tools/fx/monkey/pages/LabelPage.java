@@ -63,12 +63,12 @@ public class LabelPage extends TestPaneBase {
     private final Image im;
 
     public LabelPage() {
-        setId("LabelPage");
+        FX.name(this, "LabelPage");
 
         im = createImage();
 
         label1Selector = new ComboBox<>();
-        label1Selector.setId("label1Selector");
+        FX.name(label1Selector, "label1Selector");
         label1Selector.getItems().addAll(Demo.values());
         label1Selector.setEditable(false);
         label1Selector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
@@ -76,7 +76,7 @@ public class LabelPage extends TestPaneBase {
         });
 
         label2Selector = new ComboBox<>();
-        label2Selector.setId("label2Selector");
+        FX.name(label2Selector, "label2Selector");
         label2Selector.getItems().addAll(Demo.values());
         label2Selector.setEditable(false);
         label2Selector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
@@ -84,7 +84,7 @@ public class LabelPage extends TestPaneBase {
         });
 
         alignmentSelector = new ComboBox<>();
-        alignmentSelector.setId("alignmentSelector");
+        FX.name(alignmentSelector, "alignmentSelector");
         alignmentSelector.getItems().addAll(Pos.values());
         alignmentSelector.setEditable(false);
         alignmentSelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {

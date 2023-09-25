@@ -31,6 +31,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.paint.Color;
 import javafx.stage.StageStyle;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
@@ -44,7 +45,7 @@ public class ColorPickerPage extends TestPaneBase {
     private Alert dialog;
 
     public ColorPickerPage() {
-        setId("ColorPickerPage");
+        FX.name(this, "ColorPickerPage");
 
         button = new Button("Show in Alert");
 

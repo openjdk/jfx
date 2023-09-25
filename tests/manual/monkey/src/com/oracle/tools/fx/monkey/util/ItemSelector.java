@@ -41,7 +41,7 @@ public class ItemSelector<T> {
     private final ComboBox<Pair> field = new ComboBox<>();
 
     public ItemSelector(String id, Consumer<T> client, Object... displayValuePairs) {
-        field.setId("PosSelector");
+        FX.name(field, "PosSelector");
         field.getItems().setAll(toPairs(displayValuePairs));
         field.setConverter(new StringConverter<Pair>() {
             @Override
