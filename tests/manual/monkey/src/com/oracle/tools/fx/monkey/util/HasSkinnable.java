@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,33 +22,15 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.fx.monkey.pages;
-
-import java.util.function.Supplier;
-import javafx.scene.layout.Pane;
+package com.oracle.tools.fx.monkey.util;
 
 /**
- * Descriptor for an individual test (a "demo").
- * Encapsulates the title and a generator that creates the Pane.
+ * This interface enables manipulations with the {@link Control}'s {@link Skin}.
  */
-public class DemoPage {
-    private final String title;
-    private final Supplier<Pane> generator;
+public interface HasSkinnable {
+    /** Sets null {@link Skin} in the underlying {@link Control} */
+    public void nullSkin();
 
-    public DemoPage(String title, Supplier<Pane> generator) {
-        this.title = title;
-        this.generator = generator;
-    }
-
-    public Pane createPane() {
-        return generator.get();
-    }
-
-    public String toString() {
-        return title;
-    }
-
-    public String getTitle() {
-        return title;
-    }
+    /** Sets a new default {@link Skin} in the underlying {@link Control} */
+    public void newSkin();
 }

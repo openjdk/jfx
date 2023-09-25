@@ -24,33 +24,62 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.geometry.Point2D;
 import javafx.scene.Group;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.layout.Border;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
 import javafx.scene.text.Font;
+import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
+import com.oracle.tools.fx.monkey.util.EnterTextDialog;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.FontSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.ShowCharacterRuns;
 import com.oracle.tools.fx.monkey.util.Templates;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.TextSelector;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
  * Text Page
  */
 public class TextPage extends TestPaneBase {
     private final TextSelector textSelector;
+    private final TextField styleField;
     private final FontSelector fontSelector;
     private final CheckBox showChars;
     private final ScrollPane scroll;
     private final CheckBox wrap;
+    private final Path caretPath;
     private Text control;
+    private String currentText;
 
     public TextPage() {
-        setId("TextPage");
+        FX.name(this, "TextPage");
+
+        styleField = new TextField();
+        styleField.setOnAction((ev) -> {
+            String s = styleField.getText();
+            if (Utils.isBlank(s)) {
+                s = null;
+            }
+            control.setStyle(s);
+        });
+
+        caretPath = new Path();
+        caretPath.setStrokeWidth(1);
+        caretPath.setStroke(Color.RED);
+        caretPath.setManaged(false);
 
         textSelector = TextSelector.fromPairs(
             "textSelector",
@@ -58,29 +87,41 @@ public class TextPage extends TestPaneBase {
             Templates.multiLineTextPairs()
         );
 
-        fontSelector = new FontSelector("font", (f) -> updateText());
+        fontSelector = new FontSelector("font", (f) -> updateControl());
+
+        Button editButton = new Button("Enter Text");
+        editButton.setOnAction((ev) -> {
+            new EnterTextDialog(this, (s) -> {
+                currentText = s;
+                updateControl();
+            }).show();
+        });
 
         showChars = new CheckBox("show characters");
-        showChars.setId("showChars");
+        FX.name(showChars, "showChars");
         showChars.selectedProperty().addListener((p) -> {
-            updateText();
+            updateControl();
         });
 
         wrap = new CheckBox("wrap width");
-        wrap.setId("wrap");
+        FX.name(wrap, "wrap");
         wrap.selectedProperty().addListener((p) -> {
             updateWrap(wrap.selectedProperty().get());
         });
 
-        OptionPane p = new OptionPane();
-        p.label("Text:");
-        p.option(textSelector.node());
-        p.label("Font:");
-        p.option(fontSelector.fontNode());
-        p.label("Font Size:");
-        p.option(fontSelector.sizeNode());
-        p.option(wrap);
-        p.option(showChars);
+        OptionPane op = new OptionPane();
+        op.label("Text:");
+        op.option(textSelector.node());
+        op.option(editButton);
+        op.label("Font:");
+        op.option(fontSelector.fontNode());
+        op.label("Font Size:");
+        op.option(fontSelector.sizeNode());
+        op.option(wrap);
+        op.option(showChars);
+        op.label("Note: " + (FX.isMac() ? "⌘" : "ctrl") + "-click for caret shape");
+        op.label("Direct Style:");
+        op.option(styleField);
 
         scroll = new ScrollPane();
         scroll.setBorder(Border.EMPTY);
@@ -89,19 +130,24 @@ public class TextPage extends TestPaneBase {
         scroll.setFitToWidth(false);
 
         setContent(scroll);
-        setOptions(p);
+        setOptions(op);
 
         textSelector.selectFirst();
         fontSelector.selectSystemFont();
     }
 
-    protected void updateText() {
-        String text = textSelector.getSelectedText();
+    private void updateText() {
+        currentText = textSelector.getSelectedText();
+        updateControl();
+    }
+
+    private void updateControl() {
         Font f = fontSelector.getFont();
 
-        control = new Text(text);
+        control = new Text(currentText);
         control.setFont(f);
-        Group group = new Group(control);
+
+        Group group = new Group(control, caretPath);
         scroll.setContent(group);
 
         updateWrap(wrap.isSelected());
@@ -110,14 +156,32 @@ public class TextPage extends TestPaneBase {
             Group g = ShowCharacterRuns.createFor(control);
             group.getChildren().add(g);
         }
+
+        control.addEventHandler(MouseEvent.MOUSE_PRESSED, (ev) -> {
+            PickResult p = ev.getPickResult();
+            //System.out.println(p);
+        });
+
+        control.addEventHandler(MouseEvent.MOUSE_CLICKED, (ev) -> {
+            if(ev.isShortcutDown()) {
+                showCaretShape(new Point2D(ev.getX(), ev.getY()));
+            }
+        });
     }
 
-    protected void updateWrap(boolean on) {
+    private void updateWrap(boolean on) {
         if (on) {
             control.wrappingWidthProperty().bind(scroll.viewportBoundsProperty().map((b) -> b.getWidth()));
         } else {
             control.wrappingWidthProperty().unbind();
             control.setWrappingWidth(0);
         }
+    }
+
+    private void showCaretShape(Point2D p) {
+        HitInfo h = control.hitTest(p);
+        System.out.println("hit=" + h);
+        PathElement[] pe = control.caretShape(h.getCharIndex(), h.isLeading());
+        caretPath.getElements().setAll(pe);
     }
 }
