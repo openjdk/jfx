@@ -182,6 +182,11 @@ public class MultipleStackedBoxWindow extends Stage {
                     setLineSpacing(t, 10);
                 }
             });
+            FX.checkItem(m, "20", getLineSpacing(t) == 20, (on) -> {
+                if (on) {
+                    setLineSpacing(t, 20);
+                }
+            });
 
             FX.checkItem(c, "Wrap Text", t.isWrapText(), (on) -> t.setWrapText(on));
             return c;

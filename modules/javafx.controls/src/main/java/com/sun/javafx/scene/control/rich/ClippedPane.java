@@ -33,13 +33,13 @@ import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 
 /**
- * Pane that allows for container/controller to lay out its children.
+ * Pane that allows for container/controller to lay out its children,
+ * clipping its content to its bounds.
  */
 public class ClippedPane extends Pane {
     private final Rectangle clip;
     
     public ClippedPane(String cssName) {
-        setManaged(false);
         getStyleClass().add(cssName);
         
         clip = new Rectangle();

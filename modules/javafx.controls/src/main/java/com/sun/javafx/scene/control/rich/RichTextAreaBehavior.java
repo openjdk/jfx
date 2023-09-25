@@ -177,12 +177,12 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
         regKey(KeyBinding2.with(KeyCode.DOWN).shift().shortcut().forMac().build(), RichTextArea.SELECT_DOCUMENT_END);
         regKey(KeyBinding2.shortcut(KeyCode.Z), RichTextArea.UNDO);
 
-        Pane c = vflow.getContentPane();
-        c.addEventFilter(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
-        c.addEventFilter(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
-        c.addEventFilter(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
-        c.addEventFilter(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
-        c.addEventFilter(ScrollEvent.ANY, this::handleScrollEvent);
+        Pane cp = vflow.getContentPane();
+        cp.addEventFilter(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
+        cp.addEventFilter(MouseEvent.MOUSE_PRESSED, this::handleMousePressed);
+        cp.addEventFilter(MouseEvent.MOUSE_RELEASED, this::handleMouseReleased);
+        cp.addEventFilter(MouseEvent.MOUSE_DRAGGED, this::handleMouseDragged);
+        cp.addEventFilter(ScrollEvent.ANY, this::handleScrollEvent);
 
         addHandler(KeyEvent.KEY_TYPED, this::handleKeyTyped);
         addHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested);
@@ -198,41 +198,42 @@ public class RichTextAreaBehavior extends BehaviorBase2<RichTextArea> {
     }
 
     protected void handleKeyTyped(KeyEvent ev) {
-        //System.out.println("handleKeyEvent: " + ev); // FIX
         if (ev == null || ev.isConsumed()) {
             return;
         }
 
         // TODO something about consuming all key presses (yes) and key releases (not really)
         // in TextInputControlBehavior:194
-        
+
         String character = getValidKeyTyped(ev);
         if (character != null) {
             vflow.setSuppressBlink(true);
-            handleTypedChar(character);
+            boolean consume = handleTypedChar(character);
+            if (consume) {
+                ev.consume();
+            }
             vflow.setSuppressBlink(false);
-            ev.consume();
         }
     }
 
-    protected void handleTypedChar(String typed) {
-        if (!canEdit()) {
-            return;
-        }
-
-        StyledTextModel m = control.getModel();
-        TextPos start = control.getCaretPosition();
-        if (start != null) {
-            TextPos end = control.getAnchorPosition();
-            if (end == null) {
-                end = start;
+    private boolean handleTypedChar(String typed) {
+        if (canEdit()) {
+            StyledTextModel m = control.getModel();
+            TextPos start = control.getCaretPosition();
+            if (start != null) {
+                TextPos end = control.getAnchorPosition();
+                if (end == null) {
+                    end = start;
+                }
+    
+                TextPos p = m.replace(vflow, start, end, typed, true);
+                control.moveCaret(p, false);
+    
+                clearPhantomX();
+                return true;
             }
-
-            TextPos p = m.replace(vflow, start, end, typed, true);
-            control.moveCaret(p, false);
-
-            clearPhantomX();
         }
+        return false;
     }
 
     protected String getValidKeyTyped(KeyEvent ev) {

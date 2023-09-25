@@ -116,15 +116,21 @@ public class VFlow extends Pane implements StyleResolver {
 
         cellCache = new FastCache(Params.CELL_CACHE_SIZE);
 
+        getStyleClass().add("flow");
+
         // TODO consider creating upond demand
         leftGutter = new ClippedPane("left-side");
+        leftGutter.setManaged(false);
         // TODO consider creating upond demand
         rightGutter = new ClippedPane("right-side");
+        rightGutter.setManaged(false);
 
         content = new StackPane();
         content.getStyleClass().add("content");
+        content.setManaged(false);
 
         flow = new ClippedPane("flow");
+        flow.setManaged(true);
 
         caretPath = new Path();
         caretPath.getStyleClass().add("caret");
@@ -139,10 +145,9 @@ public class VFlow extends Pane implements StyleResolver {
         selectionHighlight.getStyleClass().add("selection-highlight");
         selectionHighlight.setManaged(false);
 
+        // layout
         content.getChildren().addAll(caretLineHighlight, selectionHighlight, flow, caretPath);
-
         getChildren().addAll(content, leftGutter, rightGutter);
-        getStyleClass().add("flow");
 
         caretAnimation = new Timeline();
         caretAnimation.setCycleCount(Animation.INDEFINITE);
@@ -245,6 +250,7 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     public void handleDefaultParagraphAttributes() {
+        cellCache.clear();
         requestLayout();
         updateHorizontalScrollBar();
         updateVerticalScrollBar();
@@ -492,7 +498,7 @@ public class VFlow extends Pane implements StyleResolver {
             if(control.isWrapText()) {
                 w = getWidth();
             } else {
-                w = getContentWidth() + leftPadding + rightPadding;
+                w = getContentWidth();
             }
             cell.addBoxOutline(b, 0.0, snapPositionX(w), cell.getCellHeight());
         }
@@ -1111,7 +1117,7 @@ public class VFlow extends Pane implements StyleResolver {
             layoutInArea(rightGutter, width - rightSide, 0.0, rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
         }
 
-        layoutInArea(flow, leftSide, 0.0, width - leftSide - rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(content, leftSide, 0.0, width - leftSide - rightSide, height, 0.0, HPos.CENTER, VPos.CENTER);
 
         if (wrap) {
             double w = wrappedWidth();
