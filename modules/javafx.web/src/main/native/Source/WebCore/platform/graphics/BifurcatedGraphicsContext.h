@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,8 @@ public:
     bool hasPlatformContext() const;
     PlatformGraphicsContext* platformContext() const final;
 
+    const DestinationColorSpace& colorSpace() const final;
+
     void save() final;
     void restore() final;
 
@@ -50,7 +52,7 @@ public:
     void drawLine(const FloatPoint&, const FloatPoint&) final;
     void drawEllipse(const FloatRect&) final;
 
-#if USE(CG) || USE(DIRECT2D)
+#if USE(CG)
     void applyStrokePattern() final;
     void applyFillPattern() final;
 #endif
@@ -75,7 +77,7 @@ public:
     void fillEllipse(const FloatRect& ellipse) final;
     void strokeEllipse(const FloatRect& ellipse) final;
 
-#if USE(CG) || USE(DIRECT2D)
+#if USE(CG)
     void setIsCALayerContext(bool) final;
     bool isCALayerContext() const final;
 
@@ -98,8 +100,13 @@ public:
     void setLineJoin(LineJoin) final;
     void setMiterLimit(float) final;
 
-    void drawNativeImage(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
-    void drawPattern(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
+    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
+    bool needsCachedNativeImageInvalidationWorkaround(RenderingMode) final;
+    void drawSystemImage(SystemImage&, const FloatRect&) final;
+    void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
+    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage }) final;
+    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
+    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule, Image::TileRule, const ImagePaintingOptions& = { }) final;
 
 #if ENABLE(VIDEO)
     void paintFrameForMedia(MediaPlayer&, const FloatRect& destination) final;
@@ -115,17 +122,12 @@ public:
 
     AffineTransform getCTM(IncludeDeviceScale = PossiblyIncludeDeviceScale) const final;
 
-    FloatRect roundToDevicePixels(const FloatRect&, RoundingMode = RoundAllSides) final;
-
-    void drawFocusRing(const Vector<FloatRect>&, float, float, const Color&) final;
-    void drawFocusRing(const Path&, float, float, const Color&) final;
-#if PLATFORM(MAC)
-    void drawFocusRing(const Path&, double, bool&, const Color&) final;
-    void drawFocusRing(const Vector<FloatRect>&, double, bool&, const Color&) final;
-#endif
+    void drawFocusRing(const Path&, float outlineWidth, const Color&) final;
+    void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
 
     FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
     void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode) final;
+    void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
     void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady) final;
 
@@ -140,13 +142,17 @@ public:
 
     bool supportsInternalLinks() const final;
 
-    void updateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) final;
+    void didUpdateState(GraphicsContextState&) final;
 
 #if OS(WINDOWS) && !USE(CAIRO)
     GraphicsContextPlatformPrivate* deprecatedPrivateContext() const final;
 #endif
 
 private:
+    void verifyStateSynchronization();
+
+    bool m_hasLoggedAboutDesynchronizedState { false };
+
     GraphicsContext& m_primaryContext;
     GraphicsContext& m_secondaryContext;
 };

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
+ * Copyright (C) 2023 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,16 +28,16 @@
 
 #if ENABLE(WEBXR)
 
-#include "CanvasBase.h"
+#include "CanvasObserver.h"
 #include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "GraphicsTypesGL.h"
 #include "PlatformXR.h"
 #include "WebXRLayer.h"
+#include <variant>
 #include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
-#include <wtf/Variant.h>
 
 namespace WebCore {
 
@@ -45,9 +46,7 @@ class IntSize;
 class WebGLFramebuffer;
 class WebGLRenderingContext;
 class WebGLRenderingContextBase;
-#if ENABLE(WEBGL2)
 class WebGL2RenderingContext;
-#endif
 class WebXROpaqueFramebuffer;
 class WebXRSession;
 class WebXRView;
@@ -58,11 +57,9 @@ class WebXRWebGLLayer : public WebXRLayer, private CanvasObserver {
     WTF_MAKE_ISO_ALLOCATED(WebXRWebGLLayer);
 public:
 
-    using WebXRRenderingContext = WTF::Variant<
-        RefPtr<WebGLRenderingContext>
-#if ENABLE(WEBGL2)
-        , RefPtr<WebGL2RenderingContext>
-#endif
+    using WebXRRenderingContext = std::variant<
+        RefPtr<WebGLRenderingContext>,
+        RefPtr<WebGL2RenderingContext>
     >;
 
     static ExceptionOr<Ref<WebXRWebGLLayer>> create(Ref<WebXRSession>&&, WebXRRenderingContext&&, const XRWebGLLayerInit&);

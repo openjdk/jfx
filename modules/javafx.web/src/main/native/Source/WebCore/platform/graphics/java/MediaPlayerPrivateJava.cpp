@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -430,6 +430,12 @@ float MediaPlayerPrivate::currentTime() const
         LOG_TRACE1("MediaPlayerPrivate currentTime returns (seekTime): %f\n", m_seekTime);
         return m_seekTime;
     }
+
+    // in case of hls media m3u8 format check network state
+    // since jfx media do not support hls live streaming protocol
+    if (MediaPlayerNetworkState::NetworkError == MediaPlayer::NetworkState::NetworkError)
+        return MediaTime::zeroTime().toFloat();
+
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkGetCurrentTime", "()F");
@@ -768,6 +774,12 @@ void MediaPlayerPrivate::notifyNewFrame()
     PLOG_TRACE0(">>MediaPlayerPrivate notifyNewFrame\n");
     m_player->repaint();
     //PLOG_TRACE0("<<MediaPlayerPrivate notifyNewFrame\n");
+}
+
+DestinationColorSpace MediaPlayerPrivate::colorSpace()
+{                                                // Needs to be implemented
+    notImplemented();
+    return DestinationColorSpace::SRGB();
 }
 
 void MediaPlayerPrivate::notifyBufferChanged(std::unique_ptr<PlatformTimeRanges> timeRanges, int bytesLoaded)

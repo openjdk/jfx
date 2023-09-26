@@ -37,11 +37,11 @@
 #include "JSDOMWindowCustom.h"
 #include "Page.h"
 #include "PageGroup.h"
-#include "PluginViewBase.h"
 #include "ScriptController.h"
 #include "Timer.h"
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/MainThread.h>
+#include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -125,7 +125,7 @@ void PageDebugger::runEventLoopWhilePausedInternal()
 
     m_page.incrementNestedRunLoopCount();
 
-    while (!doneProcessingDebuggerEvents()) {
+    while (!m_doneProcessingDebuggerEvents) {
         if (!platformShouldContinueRunningEventLoopWhilePaused())
             break;
     }
@@ -148,8 +148,12 @@ void PageDebugger::reportException(JSGlobalObject* state, JSC::Exception* except
 void PageDebugger::setJavaScriptPaused(const PageGroup& pageGroup, bool paused)
 {
     for (auto& page : pageGroup.pages()) {
-        for (auto* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext())
-            setJavaScriptPaused(*frame, paused);
+        for (AbstractFrame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            if (!localFrame)
+                continue;
+            setJavaScriptPaused(*localFrame, paused);
+        }
 
         if (auto* frontendClient = page.inspectorController().inspectorFrontendClient()) {
             if (paused)
@@ -175,14 +179,6 @@ void PageDebugger::setJavaScriptPaused(Frame& frame, bool paused)
     } else {
         document.resumeActiveDOMObjects(ReasonForSuspension::JavaScriptDebuggerPaused);
         document.resumeScriptedAnimationControllerCallbacks();
-    }
-
-    if (auto* view = frame.view()) {
-        for (auto& child : view->children()) {
-            if (!is<PluginViewBase>(child))
-                continue;
-            downcast<PluginViewBase>(child.get()).setJavaScriptPaused(paused);
-        }
     }
 }
 

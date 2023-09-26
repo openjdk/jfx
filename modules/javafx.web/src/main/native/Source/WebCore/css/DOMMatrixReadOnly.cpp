@@ -30,6 +30,7 @@
 #include "CSSToLengthConversionData.h"
 #include "DOMMatrix.h"
 #include "DOMPoint.h"
+#include "MutableStyleProperties.h"
 #include "ScriptExecutionContext.h"
 #include "StyleProperties.h"
 #include "TransformFunctions.h"
@@ -44,7 +45,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(DOMMatrixReadOnly);
 
 // https://drafts.fxtf.org/geometry/#dom-dommatrixreadonly-dommatrixreadonly
-ExceptionOr<Ref<DOMMatrixReadOnly>> DOMMatrixReadOnly::create(ScriptExecutionContext& scriptExecutionContext, std::optional<Variant<String, Vector<double>>>&& init)
+ExceptionOr<Ref<DOMMatrixReadOnly>> DOMMatrixReadOnly::create(ScriptExecutionContext& scriptExecutionContext, std::optional<std::variant<String, Vector<double>>>&& init)
 {
     if (!init)
         return adoptRef(*new DOMMatrixReadOnly);
@@ -93,7 +94,7 @@ DOMMatrixReadOnly::DOMMatrixReadOnly(TransformationMatrix&& matrix, Is2D is2D)
     ASSERT(!m_is2D || m_matrix.isAffine());
 }
 
-inline Ref<DOMMatrix> DOMMatrixReadOnly::cloneAsDOMMatrix() const
+Ref<DOMMatrix> DOMMatrixReadOnly::cloneAsDOMMatrix() const
 {
     return DOMMatrix::create(m_matrix, m_is2D ? Is2D::Yes : Is2D::No);
 }
@@ -236,12 +237,12 @@ ExceptionOr<DOMMatrixReadOnly::AbstractMatrix> DOMMatrixReadOnly::parseStringInt
     if (!value || (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).valueID() == CSSValueNone))
         return AbstractMatrix { };
 
-    TransformOperations operations;
-    if (!transformsForValue(*value, CSSToLengthConversionData(), operations))
+    auto operations = transformsForValue(*value, { });
+    if (!operations)
         return Exception { SyntaxError };
 
     AbstractMatrix matrix;
-    for (auto& operation : operations.operations()) {
+    for (auto& operation : operations->operations()) {
         if (operation->apply(matrix.matrix, { 0, 0 }))
             return Exception { SyntaxError };
         if (operation->is3DOperation())

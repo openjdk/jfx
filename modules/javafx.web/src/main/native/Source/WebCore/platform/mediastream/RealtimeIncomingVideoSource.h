@@ -36,16 +36,19 @@
 #include "RealtimeMediaSource.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/media_stream_interface.h>
 
 ALLOW_UNUSED_PARAMETERS_END
+ALLOW_COMMA_END
 
 #include <wtf/RetainPtr.h>
 
 namespace WebCore {
 
 class CaptureDevice;
+class FrameRateMonitor;
 
 class RealtimeIncomingVideoSource
     : public RealtimeMediaSource
@@ -56,12 +59,18 @@ public:
     static Ref<RealtimeIncomingVideoSource> create(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
     ~RealtimeIncomingVideoSource();
 
+    void enableFrameRatedMonitoring();
+
 protected:
     RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "RealtimeIncomingVideoSource"; }
 #endif
+
+    static VideoFrameTimeMetadata metadataFromVideoFrame(const webrtc::VideoFrame&);
+
+    void notifyNewFrame();
 
 private:
     // RealtimeMediaSource API
@@ -81,6 +90,7 @@ private:
     rtc::scoped_refptr<webrtc::VideoTrackInterface> m_videoTrack;
 
 #if !RELEASE_LOG_DISABLED
+    std::unique_ptr<FrameRateMonitor> m_frameRateMonitor;
     mutable RefPtr<const Logger> m_logger;
     const void* m_logIdentifier;
 #endif

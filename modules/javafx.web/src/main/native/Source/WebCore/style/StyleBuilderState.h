@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,9 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSToStyleMap.h"
 #include "CascadeLevel.h"
+#include "PropertyCascade.h"
 #include "RenderStyle.h"
+#include "RuleSet.h"
 #include "SelectorChecker.h"
 #include <wtf/Bitmap.h>
 
@@ -88,14 +90,13 @@ public:
 
     bool useSVGZoomRules() const;
     bool useSVGZoomRulesForLength() const;
-    ScopeOrdinal styleScopeOrdinal() const { return m_styleScopeOrdinal; }
+    ScopeOrdinal styleScopeOrdinal() const { return m_currentProperty->styleScopeOrdinal; }
 
-    Ref<CSSValue> resolveImageStyles(CSSValue&);
-    RefPtr<StyleImage> createStyleImage(CSSValue&);
-    bool createFilterOperations(const CSSValue&, FilterOperations& outOperations);
+    RefPtr<StyleImage> createStyleImage(const CSSValue&);
+    std::optional<FilterOperations> createFilterOperations(const CSSValue&);
 
     static bool isColorFromPrimitiveValueDerivedFromElement(const CSSPrimitiveValue&);
-    Color colorFromPrimitiveValue(const CSSPrimitiveValue&, ForVisitedLink = ForVisitedLink::No) const;
+    StyleColor colorFromPrimitiveValue(const CSSPrimitiveValue&, ForVisitedLink = ForVisitedLink::No) const;
     // FIXME: Remove. 'currentcolor' should be resolved at use time. All call sites are broken with inheritance.
     Color colorFromPrimitiveValueWithResolvedCurrentColor(const CSSPrimitiveValue&) const;
 
@@ -104,6 +105,8 @@ public:
 
     const CSSToLengthConversionData& cssToLengthConversionData() const { return m_cssToLengthConversionData; }
     CSSToStyleMap& styleMap() { return m_styleMap; }
+
+    void setIsBuildingKeyframeStyle() { m_isBuildingKeyframeStyle = true; }
 
 private:
     // See the comment in maybeUpdateFontForLetterSpacing() about why this needs to be a friend.
@@ -129,17 +132,19 @@ private:
 
     const CSSToLengthConversionData m_cssToLengthConversionData;
 
-    Bitmap<numCSSProperties> m_appliedProperties;
     HashSet<String> m_appliedCustomProperties;
+    HashSet<String> m_inProgressCustomProperties;
+    HashSet<String> m_inCycleCustomProperties;
     Bitmap<numCSSProperties> m_inProgressProperties;
-    HashSet<String> m_inProgressPropertiesCustom;
+    Bitmap<numCSSProperties> m_inUnitCycleProperties;
 
-    CascadeLevel m_cascadeLevel { };
-    ScopeOrdinal m_styleScopeOrdinal { };
+    const PropertyCascade::Property* m_currentProperty { nullptr };
     SelectorChecker::LinkMatchMask m_linkMatch { };
 
     bool m_fontDirty { false };
     Vector<AtomString> m_registeredContentAttributes;
+
+    bool m_isBuildingKeyframeStyle { false };
 };
 
 }

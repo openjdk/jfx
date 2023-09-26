@@ -45,6 +45,14 @@ ALWAYS_INLINE constexpr bool isIOS()
 #endif
 }
 
+template<size_t bits, typename Type>
+ALWAYS_INLINE constexpr bool isInt(Type t)
+{
+    constexpr size_t shift = sizeof(Type) * CHAR_BIT - bits;
+    static_assert(sizeof(Type) * CHAR_BIT > shift, "shift is larger than the size of the value");
+    return ((t << shift) >> shift) == t;
+}
+
 ALWAYS_INLINE bool isInt9(int32_t value)
 {
     return value == ((value << 23) >> 23);
@@ -304,5 +312,21 @@ private:
 
     int m_value;
 };
+
+ALWAYS_INLINE bool isValidARMThumb2Immediate(int64_t value)
+{
+    if (value < 0)
+        return false;
+    if (value > UINT32_MAX)
+        return false;
+    if (value < 256)
+        return true;
+    // If it can be expressed as an 8-bit number, left sifted by a constant
+    const int64_t mask = (value ^ (value & (value - 1))) * 0xff;
+    if ((value & mask) == value)
+        return true;
+    // FIXME: there are a few more valid forms, see section 4.2 in the Thumb-2 Supplement
+    return false;
+}
 
 } // namespace JSC.

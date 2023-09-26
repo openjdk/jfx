@@ -44,7 +44,7 @@ namespace WebCore {
 class AudioStreamDescription;
 class PlatformAudioData;
 class SpeechRecognitionUpdate;
-enum class SpeechRecognitionUpdateType;
+enum class SpeechRecognitionUpdateType : uint8_t;
 
 class SpeechRecognitionCaptureSourceImpl
     : public RealtimeMediaSource::Observer
@@ -59,11 +59,10 @@ public:
 
 private:
     // RealtimeMediaSource::AudioSampleObserver
-    void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
+    void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
 
 #if PLATFORM(COCOA)
-    bool updateDataSource(const CAAudioStreamDescription&);
-    void pullSamplesAndCallDataCallback(const MediaTime&, const CAAudioStreamDescription&, size_t sampleCount);
+    void pullSamplesAndCallDataCallback(AudioSampleDataSource*, const WTF::MediaTime&, const CAAudioStreamDescription&, size_t sampleCount);
 #endif
 
     // RealtimeMediaSource::Observer

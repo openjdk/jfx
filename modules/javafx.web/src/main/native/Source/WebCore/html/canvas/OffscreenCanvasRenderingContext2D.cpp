@@ -39,7 +39,6 @@
 #include "CSSPropertyParserHelpers.h"
 #include "CSSPropertyParserWorkerSafe.h"
 #include "RenderStyle.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptExecutionContext.h"
 #include "StyleResolveForFontRaw.h"
 #include "TextMetrics.h"
@@ -51,9 +50,10 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(OffscreenCanvasRenderingContext2D);
 
 bool OffscreenCanvasRenderingContext2D::enabledForContext(ScriptExecutionContext& context)
 {
+    UNUSED_PARAM(context);
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
     if (context.isWorkerGlobalScope())
-        return RuntimeEnabledFeatures::sharedFeatures().offscreenCanvasInWorkersEnabled();
+        return context.settingsValues().offscreenCanvasInWorkersEnabled;
 #endif
 
     ASSERT(context.isDocument());

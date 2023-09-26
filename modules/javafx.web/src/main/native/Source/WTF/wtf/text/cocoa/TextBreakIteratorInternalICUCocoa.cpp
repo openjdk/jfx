@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -31,15 +31,17 @@ namespace WTF {
 // Buffer sized to hold ASCII locale ID strings up to 32 characters long.
 using LocaleIDBuffer = std::array<char, 33>;
 
-static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomString& locale)
+static std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomString& locale)
 {
     switch (mode) {
     case TextBreakIterator::Mode::Line:
         return TextBreakIteratorICU(string, TextBreakIteratorICU::Mode::Line, locale.string().utf8().data());
     case TextBreakIterator::Mode::Caret:
-        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::Caret);
+        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::ComposedCharacter, locale);
     case TextBreakIterator::Mode::Delete:
-        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::Delete);
+        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::BackwardDeletion, locale);
+    case TextBreakIterator::Mode::Character:
+        return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::ComposedCharacter, locale);
     }
 }
 

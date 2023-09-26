@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ClassInfo.h"
+#include "Concurrency.h"
 #include "ConcurrentJSLock.h"
 #include "DeletePropertySlot.h"
 #include "IndexingType.h"
@@ -37,13 +38,15 @@
 #include "PropertyNameArray.h"
 #include "PropertyOffset.h"
 #include "PutPropertySlot.h"
-#include "StructureIDBlob.h"
 #include "StructureRareData.h"
 #include "StructureTransitionTable.h"
-#include "TinyBloomFilter.h"
+#include "TypeInfoBlob.h"
 #include "Watchpoint.h"
 #include "WriteBarrierInlines.h"
 #include <wtf/Atomics.h>
+#include <wtf/CompactPointerTuple.h>
+#include <wtf/CompactPtr.h>
+#include <wtf/CompactRefPtr.h>
 #include <wtf/PrintStream.h>
 
 namespace WTF {
@@ -67,6 +70,10 @@ struct DumpContext;
 struct HashTable;
 struct HashTableValue;
 
+namespace Integrity {
+class Analyzer;
+}
+
 // The out-of-line property storage capacity to use when first allocating out-of-line
 // storage. Note that all objects start out without having any out-of-line storage;
 // this comes into play only on the first property store that exhausts inline storage.
@@ -76,26 +83,79 @@ static constexpr unsigned initialOutOfLineCapacity = 4;
 // initial allocation.
 static constexpr unsigned outOfLineGrowthFactor = 2;
 
-struct PropertyMapEntry {
-    UniquedStringImpl* key;
-    PropertyOffset offset;
-    uint8_t attributes;
-
-    PropertyMapEntry()
-        : key(nullptr)
-        , offset(invalidOffset)
-        , attributes(0)
+class PropertyTableEntry;
+class CompactPropertyTableEntry {
+public:
+    CompactPropertyTableEntry()
+        : m_data(nullptr, 0)
     {
     }
 
-    PropertyMapEntry(UniquedStringImpl* key, PropertyOffset offset, unsigned attributes)
-        : key(key)
-        , offset(offset)
-        , attributes(attributes)
+    CompactPropertyTableEntry(UniquedStringImpl* key, PropertyOffset offset, unsigned attributes)
+        : m_data(key, ((offset << 8) | attributes))
     {
-        ASSERT(this->attributes == attributes);
+        ASSERT(this->attributes() == attributes);
+        ASSERT(this->offset() == offset);
     }
+
+    CompactPropertyTableEntry(const PropertyTableEntry&);
+
+    UniquedStringImpl* key() const { return m_data.pointer(); }
+    void setKey(UniquedStringImpl* key) { m_data.setPointer(key); }
+    PropertyOffset offset() const { return m_data.type() >> 8; }
+    void setOffset(PropertyOffset offset)
+    {
+        m_data.setType((m_data.type() & 0x00ffU) | (offset << 8));
+        ASSERT(this->offset() == offset);
+    }
+    uint8_t attributes() const { return m_data.type(); }
+    void setAttributes(uint8_t attributes)
+    {
+        m_data.setType((m_data.type() & 0xff00U) | attributes);
+        ASSERT(this->attributes() == attributes);
+    }
+
+private:
+    CompactPointerTuple<UniquedStringImpl*, uint16_t> m_data;
 };
+
+class PropertyTableEntry {
+public:
+    PropertyTableEntry() = default;
+
+    PropertyTableEntry(UniquedStringImpl* key, PropertyOffset offset, unsigned attributes)
+        : m_key(key)
+        , m_offset(offset)
+        , m_attributes(attributes)
+    {
+        ASSERT(this->attributes() == attributes);
+    }
+
+    PropertyTableEntry(const CompactPropertyTableEntry& entry)
+        : m_key(entry.key())
+        , m_offset(entry.offset())
+        , m_attributes(entry.attributes())
+    {
+    }
+
+    UniquedStringImpl* key() const { return m_key; }
+    void setKey(UniquedStringImpl* key) { m_key = key; }
+    PropertyOffset offset() const { return m_offset; }
+    void setOffset(PropertyOffset offset) { m_offset = offset; }
+    uint8_t attributes() const { return m_attributes; }
+    void setAttributes(uint8_t attributes) { m_attributes = attributes; }
+
+private:
+    UniquedStringImpl* m_key { nullptr };
+    PropertyOffset m_offset { 0 };
+    uint8_t m_attributes { 0 };
+};
+
+
+inline CompactPropertyTableEntry::CompactPropertyTableEntry(const PropertyTableEntry& entry)
+    : m_data(entry.key(), ((entry.offset() << 8) | entry.attributes()))
+{
+}
 
 class StructureFireDetail final : public FireDetail {
 public:
@@ -118,6 +178,12 @@ public:
 
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr uint8_t numberOfLowerTierCells = 0;
+
+#if ENABLE(STRUCTURE_ID_WITH_SHIFT)
+    static constexpr size_t atomSize = 32;
+#endif
+    static_assert(JSCell::atomSize >= MarkedBlock::atomSize);
 
     enum PolyProtoTag { PolyProto };
     static Structure* create(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
@@ -126,15 +192,15 @@ public:
     ~Structure();
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.structureSpace;
+        return &vm.structureSpace();
     }
 
     JS_EXPORT_PRIVATE static bool isValidPrototype(JSValue);
 
 protected:
-    void finishCreation(VM& vm, const Structure* previous)
+    void finishCreation(VM& vm, const Structure* previous, DeferredStructureTransitionWatchpointFire* deferred)
     {
         this->finishCreation(vm);
         if (previous->hasRareData()) {
@@ -144,6 +210,7 @@ protected:
                 rareData()->setSharedPolyProtoWatchpoint(previousRareData->copySharedPolyProtoWatchpoint());
             }
         }
+        previous->fireStructureTransitionWatchpoint(deferred);
     }
 
 private:
@@ -164,9 +231,9 @@ private:
     void validateFlags();
 
 public:
-    StructureID id() const { return m_blob.structureID(); }
-    int32_t objectInitializationBlob() const { return m_blob.blobExcludingStructureID(); }
-    int64_t idBlob() const { return m_blob.blob(); }
+    StructureID id() const { return StructureID::encode(this); }
+
+    int32_t typeInfoBlob() const { return m_blob.blob(); }
 
     bool isProxy() const
     {
@@ -189,11 +256,10 @@ public:
     JS_EXPORT_PRIVATE static Structure* attributeChangeTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* toCacheableDictionaryTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* toUncacheableDictionaryTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
-    JS_EXPORT_PRIVATE static Structure* sealTransition(VM&, Structure*);
-    JS_EXPORT_PRIVATE static Structure* freezeTransition(VM&, Structure*);
-    static Structure* preventExtensionsTransition(VM&, Structure*);
-    static Structure* nonPropertyTransition(VM&, Structure*, TransitionKind);
-    JS_EXPORT_PRIVATE static Structure* nonPropertyTransitionSlow(VM&, Structure*, TransitionKind);
+    JS_EXPORT_PRIVATE static Structure* sealTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
+    JS_EXPORT_PRIVATE static Structure* freezeTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
+    static Structure* preventExtensionsTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
+    static Structure* nonPropertyTransition(VM&, Structure*, TransitionKind, DeferredStructureTransitionWatchpointFire*);
     static Structure* setBrandTransitionFromExistingStructureConcurrently(Structure*, UniquedStringImpl*);
     static Structure* setBrandTransition(VM&, Structure*, Symbol* brand, DeferredStructureTransitionWatchpointFire* = nullptr);
 
@@ -264,6 +330,13 @@ public:
     // Type accessors.
     TypeInfo typeInfo() const { return m_blob.typeInfo(m_outOfLineTypeFlags); }
     bool isObject() const { return typeInfo().isObject(); }
+    const ClassInfo* classInfoForCells() const { return m_classInfo.get(); }
+protected:
+    // You probably want typeInfo().type()
+    JSType type() { return JSCell::type(); }
+    // You probably want classInfoForCell()
+    const ClassInfo* classInfo() const = delete;
+public:
 
     IndexingType indexingType() const { return m_blob.indexingModeIncludingHistory() & AllWritableArrayTypes; }
     IndexingType indexingMode() const  { return m_blob.indexingModeIncludingHistory() & AllArrayTypes; }
@@ -277,7 +350,7 @@ public:
 
     inline bool mayInterceptIndexedAccesses() const;
 
-    bool holesMustForwardToPrototype(VM&, JSObject*) const;
+    bool holesMustForwardToPrototype(JSObject*) const;
 
     JSGlobalObject* globalObject() const { return m_globalObject.get(); }
 
@@ -307,7 +380,6 @@ public:
     JSValue prototypeForLookup(JSGlobalObject*) const;
     JSValue prototypeForLookup(JSGlobalObject*, JSCell* base) const;
     StructureChain* prototypeChain(VM&, JSGlobalObject*, JSObject* base) const;
-    StructureChain* prototypeChain(JSGlobalObject*, JSObject* base) const;
     DECLARE_VISIT_CHILDREN;
 
     // A Structure is cheap to mark during GC if doing so would only add a small and bounded amount
@@ -364,7 +436,7 @@ public:
 
     Structure* previousID() const
     {
-        ASSERT(structure()->classInfo() == info());
+        ASSERT(structure()->classInfoForCells() == info());
         // This is so written because it's used concurrently. We only load from m_previousOrRareData
         // once, and this load is guaranteed atomic.
         JSCell* cell = m_previousOrRareData.get();
@@ -440,7 +512,7 @@ public:
             return initialOutOfLineCapacity;
 
         ASSERT(outOfLineSize > initialOutOfLineCapacity);
-        COMPILE_ASSERT(outOfLineGrowthFactor == 2, outOfLineGrowthFactor_is_two);
+        static_assert(outOfLineGrowthFactor == 2);
         return WTF::roundUpToPowerOfTwo(outOfLineSize);
     }
 
@@ -471,7 +543,7 @@ public:
     }
     unsigned totalStorageCapacity() const
     {
-        ASSERT(structure()->classInfo() == info());
+        ASSERT(structure()->classInfoForCells() == info());
         return outOfLineCapacity() + inlineCapacity();
     }
 
@@ -484,7 +556,7 @@ public:
 
     bool hijacksIndexingHeader() const
     {
-        return isTypedView(m_classInfo->typedArrayStorageType);
+        return isTypedView(m_blob.type());
     }
 
     bool couldHaveIndexingHeader() const
@@ -499,6 +571,8 @@ public:
     PropertyOffset get(VM&, PropertyName);
     PropertyOffset get(VM&, PropertyName, unsigned& attributes);
 
+    bool canPerformFastPropertyEnumeration() const;
+
     // This is a somewhat internalish method. It will call your functor while possibly holding the
     // Structure's lock. There is no guarantee whether the lock is held or not in any particular
     // call. So, you have to assume the worst. Also, the functor returns true if it wishes for you
@@ -509,10 +583,36 @@ public:
     template<typename Functor>
     void forEachProperty(VM&, const Functor&);
 
+    IGNORE_RETURN_TYPE_WARNINGS_BEGIN
+    ALWAYS_INLINE PropertyOffset get(VM& vm, Concurrency concurrency, UniquedStringImpl* uid, unsigned& attributes)
+    {
+        switch (concurrency) {
+        case Concurrency::MainThread:
+            ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+            return get(vm, uid, attributes);
+        case Concurrency::ConcurrentThread:
+            return getConcurrently(uid, attributes);
+        }
+    }
+    IGNORE_RETURN_TYPE_WARNINGS_END
+
+    IGNORE_RETURN_TYPE_WARNINGS_BEGIN
+    ALWAYS_INLINE PropertyOffset get(VM& vm, Concurrency concurrency, UniquedStringImpl* uid)
+    {
+        switch (concurrency) {
+        case Concurrency::MainThread:
+            ASSERT(!isCompilationThread() && !Thread::mayBeGCThread());
+            return get(vm, uid);
+        case Concurrency::ConcurrentThread:
+            return getConcurrently(uid);
+        }
+    }
+    IGNORE_RETURN_TYPE_WARNINGS_END
+
     PropertyOffset getConcurrently(UniquedStringImpl* uid);
     PropertyOffset getConcurrently(UniquedStringImpl* uid, unsigned& attributes);
 
-    Vector<PropertyMapEntry> getPropertiesConcurrently();
+    Vector<PropertyTableEntry> getPropertiesConcurrently();
 
     void setHasGetterSetterPropertiesWithProtoCheck(bool is__proto__)
     {
@@ -530,8 +630,9 @@ public:
             setHasReadOnlyOrGetterSetterPropertiesExcludingProto(true);
     }
 
-    void setCachedPropertyNameEnumerator(VM&, JSPropertyNameEnumerator*);
+    void setCachedPropertyNameEnumerator(VM&, JSPropertyNameEnumerator*, StructureChain*);
     JSPropertyNameEnumerator* cachedPropertyNameEnumerator() const;
+    uintptr_t cachedPropertyNameEnumeratorAndFlag() const;
     bool canCachePropertyNameEnumerator(VM&) const;
     bool canAccessPropertiesQuicklyForEnumeration() const;
 
@@ -549,13 +650,6 @@ public:
         return rareData()->cachedSpecialProperty(key);
     }
     void cacheSpecialProperty(JSGlobalObject*, VM&, JSValue, CachedSpecialPropertyKey, const PropertySlot&);
-
-    const ClassInfo* classInfo() const { return m_classInfo; }
-
-    static ptrdiff_t structureIDOffset()
-    {
-        return OBJECT_OFFSETOF(Structure, m_blob) + StructureIDBlob::structureIDOffset();
-    }
 
     static ptrdiff_t prototypeOffset()
     {
@@ -579,7 +673,7 @@ public:
 
     static ptrdiff_t indexingModeIncludingHistoryOffset()
     {
-        return OBJECT_OFFSETOF(Structure, m_blob) + StructureIDBlob::indexingModeIncludingHistoryOffset();
+        return OBJECT_OFFSETOF(Structure, m_blob) + TypeInfoBlob::indexingModeIncludingHistoryOffset();
     }
 
     static ptrdiff_t propertyTableUnsafeOffset()
@@ -635,13 +729,19 @@ public:
         return dfgShouldWatchIfPossible() && transitionWatchpointSetIsStillValid();
     }
 
+    bool propertyNameEnumeratorShouldWatch() const
+    {
+        return dfgShouldWatch() && !hasPolyProto();
+    }
+
     void addTransitionWatchpoint(Watchpoint* watchpoint) const
     {
         ASSERT(transitionWatchpointSetIsStillValid());
         m_transitionWatchpointSet.add(watchpoint);
     }
 
-    void didTransitionFromThisStructure(DeferredStructureTransitionWatchpointFire* = nullptr) const;
+    void didTransitionFromThisStructureWithoutFiringWatchpoint() const;
+    void fireStructureTransitionWatchpoint(DeferredStructureTransitionWatchpointFire*) const;
 
     InlineWatchpointSet& transitionWatchpointSet() const
     {
@@ -731,19 +831,24 @@ public:
     static_assert(s_bitWidthOfTransitionKind <= sizeof(TransitionKind) * 8);
 
 protected:
-    Structure(VM&, Structure*, DeferredStructureTransitionWatchpointFire*);
+    Structure(VM&, Structure*);
 
 private:
     friend class LLIntOffsetsExtractor;
 
     JS_EXPORT_PRIVATE Structure(VM&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType, unsigned inlineCapacity);
-    Structure(VM&);
+    Structure(VM&, CreatingEarlyCellTag);
 
-    static Structure* create(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
+    static Structure* create(VM&, Structure*, DeferredStructureTransitionWatchpointFire*);
 
     static Structure* addPropertyTransitionToExistingStructureImpl(Structure*, UniquedStringImpl* uid, unsigned attributes, PropertyOffset&);
     static Structure* removePropertyTransitionFromExistingStructureImpl(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     static Structure* setBrandTransitionFromExistingStructureImpl(Structure*, UniquedStringImpl*);
+
+    JS_EXPORT_PRIVATE static Structure* nonPropertyTransitionSlow(VM&, Structure*, TransitionKind, DeferredStructureTransitionWatchpointFire*);
+
+    // This function does the both didTransitionFromThisStructureWithoutFiringWatchpoint and fireStructureTransitionWatchpoint.
+    void didTransitionFromThisStructure(DeferredStructureTransitionWatchpointFire*) const;
 
     // This will return the structure that has a usable property table, that property table,
     // and the list of structures that we visited before we got to it. If it returns a
@@ -764,7 +869,11 @@ private:
     PropertyOffset attributeChange(VM&, PropertyName, unsigned attributes, const Func&);
     PropertyOffset attributeChange(VM&, PropertyName, unsigned attributes);
 
+#if ASSERT_ENABLED
     void checkConsistency();
+#else
+    ALWAYS_INLINE void checkConsistency() { }
+#endif
 
     // This may grab the lock, or not. Do not call when holding the Structure's lock.
     PropertyTable* ensurePropertyTableIfNotEmpty(VM& vm)
@@ -831,25 +940,27 @@ private:
     JS_EXPORT_PRIVATE void pin(const AbstractLocker&, VM&, PropertyTable*);
     void pinForCaching(const AbstractLocker&, VM&, PropertyTable*);
 
-    bool isRareData(JSCell* cell) const
+    static bool isRareData(JSCell* cell)
     {
-        return cell && cell->structureID() != structureID();
+        return cell && cell->type() != StructureType;
     }
 
     template<typename DetailsFunc>
-    bool checkOffsetConsistency(PropertyTable*, const DetailsFunc&) const;
-    bool checkOffsetConsistency() const;
+    void checkOffsetConsistency(PropertyTable*, const DetailsFunc&) const;
+    void checkOffsetConsistency() const;
 
     JS_EXPORT_PRIVATE void allocateRareData(VM&);
 
     void startWatchingInternalProperties(VM&);
+
+    void clearCachedPrototypeChain();
 
     static constexpr int s_maxTransitionLength = 64;
     static constexpr int s_maxTransitionLengthForNonEvalPutById = 512;
 
     // These need to be properly aligned at the beginning of the 'Structure'
     // part of the object.
-    StructureIDBlob m_blob;
+    TypeInfoBlob m_blob;
     TypeInfo::OutOfLineTypeFlags m_outOfLineTypeFlags;
 
     uint8_t m_inlineCapacity;
@@ -858,15 +969,22 @@ private:
 
     uint32_t m_bitField;
 
+    uint16_t m_transitionOffset;
+    uint16_t m_maxOffset;
+
+    uint32_t m_propertyHash;
+    TinyBloomFilter<CompactPtr<UniquedStringImpl>::StorageType> m_seenProperties;
+
+
     WriteBarrier<JSGlobalObject> m_globalObject;
     WriteBarrier<Unknown> m_prototype;
     mutable WriteBarrier<StructureChain> m_cachedPrototypeChain;
 
     WriteBarrier<JSCell> m_previousOrRareData;
 
-    RefPtr<UniquedStringImpl> m_transitionPropertyName;
+    CompactRefPtr<UniquedStringImpl> m_transitionPropertyName;
 
-    const ClassInfo* m_classInfo;
+    CompactPtr<const ClassInfo> m_classInfo;
 
     StructureTransitionTable m_transitionTable;
 
@@ -876,16 +994,11 @@ private:
 
     mutable InlineWatchpointSet m_transitionWatchpointSet;
 
-    COMPILE_ASSERT(firstOutOfLineOffset < 256, firstOutOfLineOffset_fits);
-
-    uint16_t m_transitionOffset;
-    uint16_t m_maxOffset;
-
-    uint32_t m_propertyHash;
-    TinyBloomFilter m_seenProperties;
+    static_assert(firstOutOfLineOffset < 256);
 
     friend class VMInspector;
     friend class JSDollarVMHelper;
+    friend class Integrity::Analyzer;
 };
 
 } // namespace JSC

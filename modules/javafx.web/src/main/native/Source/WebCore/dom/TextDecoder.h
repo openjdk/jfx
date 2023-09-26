@@ -26,14 +26,16 @@
 
 #include "BufferSource.h"
 #include "ExceptionOr.h"
-#include "TextEncoding.h"
+#include <pal/text/TextEncoding.h>
 #include <wtf/RefCounted.h>
+
+namespace PAL {
+class TextCodec;
+}
 
 namespace WebCore {
 
-class TextCodec;
-
-class TextDecoder : public RefCounted<TextDecoder> {
+class TextDecoder final : public RefCounted<TextDecoder> {
 public:
     ~TextDecoder();
 
@@ -53,11 +55,11 @@ public:
     ExceptionOr<String> decode(std::optional<BufferSource::VariantType>, DecodeOptions);
 
 private:
-    TextDecoder(const char*, Options);
+    TextDecoder(StringView, Options);
 
-    const TextEncoding m_textEncoding;
+    const PAL::TextEncoding m_textEncoding;
     const Options m_options;
-    std::unique_ptr<TextCodec> m_codec;
+    std::unique_ptr<PAL::TextCodec> m_codec;
 };
 
 }

@@ -31,20 +31,25 @@
 
 #if USE(TEXTURE_MAPPER)
 
-#include "TextureMapperPlatformLayerProxy.h"
+#include "TextureMapperPlatformLayerProxyGL.h"
 
 namespace Nicosia {
 
 auto ContentLayerTextureMapperImpl::createFactory(Client& client) -> Factory
 {
+    return createFactory(client, adoptRef(*new WebCore::TextureMapperPlatformLayerProxyGL));
+}
+
+auto ContentLayerTextureMapperImpl::createFactory(Client& client, Ref<WebCore::TextureMapperPlatformLayerProxy>&& proxy) -> Factory
+{
     return Factory(
-        [&client](ContentLayer&) {
-            return makeUnique<ContentLayerTextureMapperImpl>(client);
+        [&client, proxy = WTFMove(proxy)](ContentLayer&) mutable {
+            return makeUnique<ContentLayerTextureMapperImpl>(client, WTFMove(proxy));
         });
 }
 
-ContentLayerTextureMapperImpl::ContentLayerTextureMapperImpl(Client& client)
-    : m_proxy(adoptRef(*new WebCore::TextureMapperPlatformLayerProxy))
+ContentLayerTextureMapperImpl::ContentLayerTextureMapperImpl(Client& client, Ref<WebCore::TextureMapperPlatformLayerProxy>&& proxy)
+    : m_proxy(WTFMove(proxy))
     , m_client { { }, &client }
 {
 }

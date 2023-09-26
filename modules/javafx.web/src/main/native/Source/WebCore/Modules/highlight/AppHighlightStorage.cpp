@@ -34,6 +34,7 @@
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "HTMLBodyElement.h"
 #include "HighlightRegister.h"
 #include "Node.h"
@@ -71,7 +72,7 @@ static std::pair<RefPtr<Node>, size_t> findNodeStartingAtPathComponentIndex(cons
     if (initialIndexToFollow >= path.size())
         return { nullptr, initialIndexToFollow };
 
-    auto currentNode = makeRefPtr(initialNode);
+    RefPtr currentNode = &initialNode;
     size_t currentPathIndex = initialIndexToFollow;
     for (; currentPathIndex < path.size(); ++currentPathIndex) {
         auto& component = path[currentPathIndex];
@@ -101,7 +102,7 @@ static RefPtr<Node> findNode(const AppHighlightRangeData::NodePath& path, Docume
         if (component.identifier.isEmpty())
             continue;
 
-        auto elementWithIdentifier = makeRefPtr(document.getElementById(component.identifier));
+        RefPtr elementWithIdentifier = document.getElementById(component.identifier);
         if (!elementWithIdentifier || elementWithIdentifier->nodeName() != component.nodeName)
             continue;
 
@@ -202,9 +203,8 @@ static AppHighlightRangeData::NodePath makeNodePath(RefPtr<Node>&& node)
 
 static AppHighlightRangeData createAppHighlightRangeData(const StaticRange& range)
 {
-    auto text = plainText(range);
-    text.truncate(textPreviewLength);
-    auto identifier = createCanonicalUUIDString();
+    auto text = plainText(range).left(textPreviewLength);
+    auto identifier = createVersion4UUIDString();
 
     return {
         identifier,
@@ -217,7 +217,7 @@ static AppHighlightRangeData createAppHighlightRangeData(const StaticRange& rang
 }
 
 AppHighlightStorage::AppHighlightStorage(Document& document)
-    : m_document(makeWeakPtr(document))
+    : m_document(document)
 {
 }
 
@@ -236,7 +236,7 @@ void AppHighlightStorage::storeAppHighlight(Ref<StaticRange>&& range)
     m_document->page()->chrome().storeAppHighlight(WTFMove(highlight));
 }
 
-void AppHighlightStorage::restoreAndScrollToAppHighlight(Ref<SharedBuffer>&& buffer, ScrollToHighlight scroll)
+void AppHighlightStorage::restoreAndScrollToAppHighlight(Ref<FragmentedSharedBuffer>&& buffer, ScrollToHighlight scroll)
 {
     auto appHighlightRangeData = AppHighlightRangeData::create(buffer);
     if (!appHighlightRangeData)
@@ -257,21 +257,21 @@ bool AppHighlightStorage::attemptToRestoreHighlightAndScroll(AppHighlightRangeDa
     if (!m_document)
         return false;
 
-    auto strongDocument = makeRefPtr(m_document.get());
+    RefPtr strongDocument = m_document.get();
 
     auto range = findRange(highlight, *strongDocument);
 
     if (!range)
         return false;
 
-    strongDocument->appHighlightRegister().addAppHighlight(StaticRange::create(*range));
+    strongDocument->appHighlightRegister().addAnnotationHighlightWithRange(StaticRange::create(*range));
 
     if (scroll == ScrollToHighlight::Yes) {
         auto textIndicator = TextIndicator::createWithRange(range.value(), { TextIndicatorOption::DoNotClipToVisibleRect }, WebCore::TextIndicatorPresentationTransition::Bounce);
         if (textIndicator)
             m_document->page()->chrome().client().setTextIndicator(textIndicator->data());
 
-        TemporarySelectionChange selectionChange(*strongDocument, { range.value() }, { TemporarySelectionOption::DelegateMainFrameScroll, TemporarySelectionOption::SmoothScroll, TemporarySelectionOption::RevealSelectionBounds });
+        TemporarySelectionChange selectionChange(*strongDocument, { *range }, { TemporarySelectionOption::DelegateMainFrameScroll, TemporarySelectionOption::SmoothScroll, TemporarySelectionOption::RevealSelectionBounds, TemporarySelectionOption::UserTriggered });
     }
 
     return true;

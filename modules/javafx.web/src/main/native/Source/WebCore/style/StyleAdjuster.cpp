@@ -2,14 +2,14 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  * Copyright (C) 2012, 2013 Google Inc. All rights reserved.
- * Copyright (C) 2014 Igalia S.L.
+ * Copyright (C) 2014, 2020, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -33,9 +33,12 @@
 #include "CSSFontSelector.h"
 #include "DOMTokenList.h"
 #include "DOMWindow.h"
-#include "Element.h"
+#include "ElementInlines.h"
+#include "ElementName.h"
 #include "EventNames.h"
 #include "FrameView.h"
+#include "HTMLBodyElement.h"
+#include "HTMLDialogElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMarqueeElement.h"
@@ -45,20 +48,32 @@
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
 #include "MathMLElement.h"
+#include "ModalContainerObserver.h"
 #include "Page.h"
 #include "Quirks.h"
 #include "RenderBox.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
-#include "RuntimeEnabledFeatures.h"
+#include "RenderView.h"
 #include "SVGElement.h"
+#include "SVGGraphicsElement.h"
 #include "SVGNames.h"
+#include "SVGSVGElement.h"
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "StyleUpdate.h"
 #include "Text.h"
 #include "WebAnimationTypes.h"
 #include <wtf/RobinHoodHashSet.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
+#if ENABLE(FULLSCREEN_API)
+#include "FullscreenManager.h"
+#endif
 
 namespace WebCore {
 namespace Style {
@@ -73,6 +88,7 @@ Adjuster::Adjuster(const Document& document, const RenderStyle& parentStyle, con
 {
 }
 
+#if PLATFORM(COCOA)
 static void addIntrinsicMargins(RenderStyle& style)
 {
     // Intrinsic margin value.
@@ -94,8 +110,9 @@ static void addIntrinsicMargins(RenderStyle& style)
             style.setMarginBottom(Length(intrinsicMargin, LengthType::Fixed));
     }
 }
+#endif
 
-static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Document& document)
+static DisplayType equivalentBlockDisplay(const RenderStyle& style)
 {
     switch (auto display = style.display()) {
     case DisplayType::Block:
@@ -104,12 +121,7 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Docume
     case DisplayType::Flex:
     case DisplayType::Grid:
     case DisplayType::FlowRoot:
-        return display;
-
     case DisplayType::ListItem:
-        // It is a WinIE bug that floated list items lose their bullets, so we'll emulate the quirk, but only in quirks mode.
-        if (document.inQuirksMode() && style.isFloating())
-            return DisplayType::Block;
         return display;
     case DisplayType::InlineTable:
         return DisplayType::Table;
@@ -209,21 +221,18 @@ static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& st
 
 void Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
 {
-    auto regionTypes = computeEventListenerRegionTypes(document, { });
+    auto regionTypes = computeEventListenerRegionTypes(document, rootStyle, document, { });
     if (auto* window = document.domWindow())
-        regionTypes.add(computeEventListenerRegionTypes(*window, { }));
+        regionTypes.add(computeEventListenerRegionTypes(document, rootStyle, *window, { }));
 
     rootStyle.setEventListenerRegionTypes(regionTypes);
 }
 
-OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(const EventTarget& eventTarget, OptionSet<EventListenerRegionType> parentTypes)
+OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(const Document& document, const RenderStyle& style, const EventTarget& eventTarget, OptionSet<EventListenerRegionType> parentTypes)
 {
-#if ENABLE(WHEEL_EVENT_REGIONS)
-    if (!eventTarget.hasEventListeners())
-        return parentTypes;
-
     auto types = parentTypes;
 
+#if ENABLE(WHEEL_EVENT_REGIONS)
     auto findListeners = [&](auto& eventName, auto type, auto nonPassiveType) {
         auto* eventListenerVector = eventTarget.eventTargetData()->eventListenerMap.find(eventName);
         if (!eventListenerVector)
@@ -243,15 +252,28 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
             types.add(nonPassiveType);
     };
 
-    findListeners(eventNames().wheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
-    findListeners(eventNames().mousewheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+    if (eventTarget.hasEventListeners()) {
+        findListeners(eventNames().wheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+        findListeners(eventNames().mousewheelEvent, EventListenerRegionType::Wheel, EventListenerRegionType::NonPassiveWheel);
+    }
+#endif
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    if (document.page() && document.page()->shouldBuildInteractionRegions() && eventTarget.isNode()) {
+        const auto& node = downcast<Node>(eventTarget);
+        if (node.willRespondToMouseClickEventsWithEditability(node.computeEditabilityForMouseClickEvents(&style)))
+            types.add(EventListenerRegionType::MouseClick);
+    }
+#else
+    UNUSED_PARAM(document);
+    UNUSED_PARAM(style);
+#endif
+
+#if !ENABLE(WHEEL_EVENT_REGIONS) && !ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    UNUSED_PARAM(eventTarget);
+#endif
 
     return types;
-#else
-    UNUSED_PARAM(eventTarget);
-    UNUSED_PARAM(parentTypes);
-    return { };
-#endif
 }
 
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
@@ -261,30 +283,6 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
     if (style.display() != DisplayType::None && style.display() != DisplayType::Contents) {
         if (m_element) {
-            // If we have a <td> that specifies a float property, in quirks mode we just drop the float
-            // property.
-            // Sites also commonly use display:inline/block on <td>s and <table>s. In quirks mode we force
-            // these tags to retain their display types.
-            if (m_document.inQuirksMode()) {
-                if (m_element->hasTagName(tdTag)) {
-                    style.setEffectiveDisplay(DisplayType::TableCell);
-                    style.setFloating(Float::None);
-                } else if (is<HTMLTableElement>(*m_element))
-                    style.setEffectiveDisplay(style.isDisplayInlineType() ? DisplayType::InlineTable : DisplayType::Table);
-            }
-
-            if (m_element->hasTagName(tdTag) || m_element->hasTagName(thTag)) {
-                if (style.whiteSpace() == WhiteSpace::KHTMLNoWrap) {
-                    // Figure out if we are really nowrapping or if we should just
-                    // use normal instead. If the width of the cell is fixed, then
-                    // we don't actually use WhiteSpace::NoWrap.
-                    if (style.width().isFixed())
-                        style.setWhiteSpace(WhiteSpace::Normal);
-                    else
-                        style.setWhiteSpace(WhiteSpace::NoWrap);
-                }
-            }
-
             // Tables never support the -webkit-* values for text-align and will reset back to the default.
             if (is<HTMLTableElement>(*m_element) && (style.textAlign() == TextAlignMode::WebKitLeft || style.textAlign() == TextAlignMode::WebKitCenter || style.textAlign() == TextAlignMode::WebKitRight))
                 style.setTextAlign(TextAlignMode::Start);
@@ -302,26 +300,18 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
                 style.setFloating(Float::None);
             }
 
-            // User agents are expected to have a rule in their user agent stylesheet that matches th elements that have a parent
-            // node whose computed value for the 'text-align' property is its initial value, whose declaration block consists of
-            // just a single declaration that sets the 'text-align' property to the value 'center'.
-            // https://html.spec.whatwg.org/multipage/rendering.html#rendering
-            if (m_element->hasTagName(thTag) && !style.hasExplicitlySetTextAlign() && m_parentStyle.textAlign() == RenderStyle::initialTextAlign())
-                style.setTextAlign(TextAlignMode::Center);
-
             if (m_element->hasTagName(legendTag))
-                style.setEffectiveDisplay(DisplayType::Block);
+                style.setEffectiveDisplay(equivalentBlockDisplay(style));
         }
 
         // Top layer elements are always position: absolute; unless the position is set to fixed.
         // https://fullscreen.spec.whatwg.org/#new-stacking-layer
-        bool isInTopLayer = style.styleType() == PseudoId::Backdrop || (m_element && m_element->isInTopLayer());
-        if (style.position() != PositionType::Absolute && style.position() != PositionType::Fixed && isInTopLayer)
+        if (m_element != m_document.documentElement() && style.position() != PositionType::Absolute && style.position() != PositionType::Fixed && isInTopLayerOrBackdrop(style, m_element))
             style.setPosition(PositionType::Absolute);
 
         // Absolute/fixed positioned elements, floating elements and the document element need block-like outside display.
         if (style.hasOutOfFlowPosition() || style.isFloating() || (m_element && m_document.documentElement() == m_element))
-            style.setEffectiveDisplay(equivalentBlockDisplay(style, m_document));
+            style.setEffectiveDisplay(equivalentBlockDisplay(style));
 
         // FIXME: Don't support this mutation for pseudo styles like first-letter or first-line, since it's not completely
         // clear how that should work.
@@ -353,15 +343,57 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         // "A parent with a grid or flex display value blockifies the box’s display type."
         if (m_parentBoxStyle.isDisplayFlexibleOrGridBox()) {
             style.setFloating(Float::None);
-            style.setEffectiveDisplay(equivalentBlockDisplay(style, m_document));
+            style.setEffectiveDisplay(equivalentBlockDisplay(style));
         }
     }
 
-    // Make sure our z-index value is only applied if the object is positioned.
-    if (style.hasAutoSpecifiedZIndex() || (style.position() == PositionType::Static && !m_parentBoxStyle.isDisplayFlexibleOrGridBox()))
+    auto hasAutoZIndex = [](const RenderStyle& style, const RenderStyle& parentBoxStyle, const Element* element) {
+        if (style.hasAutoSpecifiedZIndex())
+            return true;
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        // SVG2: Contrary to the rules in CSS 2.1, the z-index property applies to all SVG elements regardless
+        // of the value of the position property, with one exception: as for boxes in CSS 2.1, outer ‘svg’ elements
+        // must be positioned for z-index to apply to them.
+        if (element && element->document().settings().layerBasedSVGEngineEnabled()) {
+            if (auto* svgElement = dynamicDowncast<SVGElement>(element); svgElement && svgElement->isOutermostSVGSVGElement())
+                return element->renderer() && element->renderer()->style().position() == PositionType::Static;
+
+            return false;
+        }
+#else
+        UNUSED_PARAM(element);
+#endif
+
+        // Make sure our z-index value is only applied if the object is positioned.
+        return style.position() == PositionType::Static && !parentBoxStyle.isDisplayFlexibleOrGridBox();
+    };
+
+    if (hasAutoZIndex(style, m_parentBoxStyle, m_element))
         style.setHasAutoUsedZIndex();
     else
         style.setUsedZIndex(style.specifiedZIndex());
+
+    // For SVG compatibility purposes we have to consider the 'animatedLocalTransform' besides the RenderStyle to query
+    // if an element has a transform. SVG transforms are not stored on the RenderStyle, and thus we need a special case here.
+    // Same for the additional translation component present in RenderSVGTransformableContainer (that stems from <use> x/y
+    // properties, that are transferred to the internal RenderSVGTransformableContainer), or for the viewBox-induced transformation
+    // in RenderSVGViewportContainer. They all need to return true for 'hasTransformRelatedProperty'.
+    auto hasTransformRelatedProperty = [](const RenderStyle& style, const Element* element) {
+        if (style.hasTransformRelatedProperty())
+            return true;
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (element && element->document().settings().layerBasedSVGEngineEnabled()) {
+            if (auto* graphicsElement = dynamicDowncast<SVGGraphicsElement>(element); graphicsElement && graphicsElement->hasTransformRelatedAttributes())
+                return true;
+        }
+#else
+        UNUSED_PARAM(element);
+#endif
+
+        return false;
+    };
 
     // Auto z-index becomes 0 for the root element and transparent objects. This prevents
     // cases where objects that should be blended as a single unit end up with a non-transparent
@@ -369,7 +401,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (style.hasAutoUsedZIndex()) {
         if ((m_element && m_document.documentElement() == m_element)
             || style.hasOpacity()
-            || style.hasTransformRelatedProperty()
+            || hasTransformRelatedProperty(style, m_element)
             || style.hasMask()
             || style.clipPath()
             || style.boxReflect()
@@ -381,7 +413,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasIsolation()
             || style.position() == PositionType::Sticky
             || style.position() == PositionType::Fixed
-            || style.willChangeCreatesStackingContext())
+            || style.willChangeCreatesStackingContext()
+            || isInTopLayerOrBackdrop(style, m_element))
             style.setUsedZIndex(0);
     }
 
@@ -391,6 +424,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setOverflowX(style.overflowX() == Overflow::Visible ? Overflow::Auto : style.overflowX());
             style.setOverflowY(style.overflowY() == Overflow::Visible ? Overflow::Auto : style.overflowY());
         }
+
+        if (is<HTMLInputElement>(*m_element) && downcast<HTMLInputElement>(*m_element).isPasswordField())
+            style.setTextSecurity(style.inputSecurity() == InputSecurity::Auto ? TextSecurity::Disc : TextSecurity::None);
 
         // Disallow -webkit-user-modify on :pseudo and ::pseudo elements.
         if (!m_element->shadowPseudoId().isNull())
@@ -414,9 +450,9 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     }
 
     if (shouldInheritTextDecorationsInEffect(style, m_element))
-        style.addToTextDecorationsInEffect(style.textDecoration());
+        style.addToTextDecorationsInEffect(style.textDecorationLine());
     else
-        style.setTextDecorationsInEffect(style.textDecoration());
+        style.setTextDecorationsInEffect(style.textDecorationLine());
 
     auto overflowReplacement = [] (Overflow overflow, Overflow overflowInOtherDimension) -> std::optional<Overflow> {
         if (overflow != Overflow::Visible && overflow != Overflow::Clip) {
@@ -454,21 +490,11 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             style.setOverflowY(Overflow::Visible);
     }
 
-    // Menulists should have visible overflow
-    if (style.appearance() == MenulistPart) {
-        style.setOverflowX(Overflow::Visible);
-        style.setOverflowY(Overflow::Visible);
-    }
-
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     // Touch overflow scrolling creates a stacking context.
     if (style.hasAutoUsedZIndex() && style.useTouchOverflowScrolling() && (isScrollableOverflow(style.overflowX()) || isScrollableOverflow(style.overflowY())))
         style.setUsedZIndex(0);
 #endif
-
-    // contain: layout creates a stacking context.
-    if (style.hasAutoUsedZIndex() && style.containsLayout())
-        style.setUsedZIndex(0);
 
     // Cull out any useless layers and also repeat patterns into additional layers.
     style.adjustBackgroundLayers();
@@ -478,6 +504,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     style.adjustAnimations();
     style.adjustTransitions();
 
+#if PLATFORM(COCOA)
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DoesNotAddIntrinsicMarginsToFormControls)) {
     // Important: Intrinsic margins get added to controls before the theme has adjusted the style, since the theme will
     // alter fonts and heights/widths.
     if (is<HTMLFormControlElement>(m_element) && style.computedFontPixelSize() >= 11) {
@@ -486,26 +514,32 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         if (!is<HTMLInputElement>(*m_element) || !downcast<HTMLInputElement>(*m_element).isImageButton())
             addIntrinsicMargins(style);
     }
+    }
+#endif
 
     // Let the theme also have a crack at adjusting the style.
     if (style.hasAppearance())
-        RenderTheme::singleton().adjustStyle(style, m_element, userAgentAppearanceStyle);
+        adjustThemeStyle(style, userAgentAppearanceStyle);
 
     // If we have first-letter pseudo style, do not share this style.
     if (style.hasPseudoStyle(PseudoId::FirstLetter))
         style.setUnique();
 
-    // FIXME: when dropping the -webkit prefix on transform-style, we should also have opacity < 1 cause flattening.
-    if (style.preserves3D() && (style.overflowX() != Overflow::Visible
-        || style.overflowY() != Overflow::Visible
-        || style.hasClip()
-        || style.clipPath()
-        || style.hasFilter()
+    if (style.preserves3D()) {
+        bool forceToFlat = style.overflowX() != Overflow::Visible
+            || style.hasOpacity()
+            || style.overflowY() != Overflow::Visible
+            || style.hasClip()
+            || style.clipPath()
+            || style.hasFilter()
+            || style.hasIsolation()
+            || style.hasMask()
 #if ENABLE(FILTERS_LEVEL_2)
-        || style.hasBackdropFilter()
+            || style.hasBackdropFilter()
 #endif
-        || style.hasBlendMode()))
-        style.setTransformStyle3D(TransformStyle3D::Flat);
+            || style.hasBlendMode();
+        style.setTransformStyleForcedToFlat(forceToFlat);
+    }
 
     if (is<SVGElement>(m_element))
         adjustSVGElementStyle(style, downcast<SVGElement>(*m_element));
@@ -517,46 +551,58 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
     style.setEffectiveTouchActions(computeEffectiveTouchActions(style, m_parentStyle.effectiveTouchActions()));
 
-    if (m_element)
-        style.setEventListenerRegionTypes(computeEventListenerRegionTypes(*m_element, m_parentStyle.eventListenerRegionTypes()));
+    // Counterparts in Element::addToTopLayer/removeFromTopLayer & SharingResolver::canShareStyleWithElement need to match!
+    auto hasInertAttribute = [this] (const Element* element) -> bool {
+        return m_document.settings().inertAttributeEnabled() && is<HTMLElement>(element) && element->hasAttributeWithoutSynchronization(HTMLNames::inertAttr);
+    };
+    auto isInertSubtreeRoot = [this, hasInertAttribute] (const Element* element) -> bool {
+        if (m_document.activeModalDialog() && element == m_document.documentElement())
+            return true;
+        if (hasInertAttribute(element))
+            return true;
+#if ENABLE(FULLSCREEN_API)
+        if (m_document.fullscreenManager().fullscreenElement() && element == m_document.documentElement())
+            return true;
+#endif
+        return false;
+    };
+    if (isInertSubtreeRoot(m_element))
+        style.setEffectiveInert(true);
+
+    if (m_element) {
+        // Make sure the active dialog is interactable when the whole document is blocked by the modal dialog
+        if (m_element == m_document.activeModalDialog() && !hasInertAttribute(m_element))
+            style.setEffectiveInert(false);
+
+#if ENABLE(FULLSCREEN_API)
+        if (m_element == m_document.fullscreenManager().fullscreenElement() && !hasInertAttribute(m_element))
+            style.setEffectiveInert(false);
+#endif
+
+        style.setEventListenerRegionTypes(computeEventListenerRegionTypes(m_document, style, *m_element, m_parentStyle.eventListenerRegionTypes()));
 
 #if ENABLE(TEXT_AUTOSIZING)
-    if (m_element && m_document.settings().textAutosizingUsesIdempotentMode())
-        adjustForTextAutosizing(style, *m_element);
+        if (m_document.settings().textAutosizingUsesIdempotentMode())
+            adjustForTextAutosizing(style, *m_element);
 #endif
+
+        if (auto observer = m_element->document().modalContainerObserverIfExists()) {
+            if (observer->shouldHide(*m_element))
+                style.setDisplay(DisplayType::None);
+            if (observer->shouldMakeVerticallyScrollable(*m_element))
+                style.setOverflowY(Overflow::Auto);
+        }
+    }
+
+    if (style.contentVisibility() == ContentVisibility::Hidden)
+        style.setEffectiveSkipsContent(true);
 
     adjustForSiteSpecificQuirks(style);
 }
 
 static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 {
-    // https://drafts.csswg.org/css-display-3/#unbox-html
-    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>> tagNames = [] {
-        static const HTMLQualifiedName* const tagList[] = {
-            &brTag.get(),
-            &wbrTag.get(),
-            &meterTag.get(),
-            &appletTag.get(),
-            &progressTag.get(),
-            &canvasTag.get(),
-            &embedTag.get(),
-            &objectTag.get(),
-            &audioTag.get(),
-            &iframeTag.get(),
-            &imgTag.get(),
-            &videoTag.get(),
-            &frameTag.get(),
-            &framesetTag.get(),
-            &inputTag.get(),
-            &textareaTag.get(),
-            &selectTag.get(),
-        };
-        MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
-        set.reserveInitialCapacity(sizeof(tagList));
-        for (auto& name : tagList)
-            set.add(name->localName());
-        return set;
-    }();
+    using namespace ElementNames;
 
     // https://drafts.csswg.org/css-display-3/#unbox-svg
     // FIXME: <g>, <use> and <tspan> have special (?) behavior for display:contents in the current draft spec.
@@ -569,12 +615,37 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 #endif // ENABLE(MATHML)
     if (!is<HTMLElement>(element))
         return false;
-    return tagNames.get().contains(element.localName());
+
+    // https://drafts.csswg.org/css-display-3/#unbox-html
+    switch (element.tagQName().elementName()) {
+    case HTML::br:
+    case HTML::wbr:
+    case HTML::meter:
+    case HTML::applet:
+    case HTML::progress:
+    case HTML::canvas:
+    case HTML::embed:
+    case HTML::object:
+    case HTML::audio:
+    case HTML::iframe:
+    case HTML::img:
+    case HTML::video:
+    case HTML::frame:
+    case HTML::frameset:
+    case HTML::input:
+    case HTML::textarea:
+    case HTML::select:
+        return true;
+    default:
+        break;
+    }
+
+    return false;
 }
 
 void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
 {
-    bool isInTopLayer = style.styleType() == PseudoId::Backdrop || (m_element && m_element->isInTopLayer());
+    bool isInTopLayer = isInTopLayerOrBackdrop(style, m_element);
     if (isInTopLayer || m_document.documentElement() == m_element) {
         style.setEffectiveDisplay(DisplayType::Block);
         return;
@@ -592,11 +663,44 @@ void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
 void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgElement)
 {
     // Only the root <svg> element in an SVG document fragment tree honors css position
-    auto isPositioningAllowed = svgElement.hasTagName(SVGNames::svgTag) && svgElement.parentNode() && !svgElement.parentNode()->isSVGElement() && !svgElement.correspondingElement();
-    if (!isPositioningAllowed)
+    if (!svgElement.isOutermostSVGSVGElement())
         style.setPosition(RenderStyle::initialPosition());
 
-    // RenderSVGRoot handles zooming for the whole SVG subtree, so foreignObject content should
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // SVG2: A new stacking context must be established at an SVG element for its descendants if:
+    // - it is the root element
+    // - the "z-index" property applies to the element and its computed value is an integer
+    // - the element is an outermost svg element, or a "foreignObject", "image", "marker", "mask", "pattern", "symbol" or "use" element
+    // - the element is an inner "svg" element and the computed value of its "overflow" property is a value other than visible
+    // - the element is subject to explicit clipping:
+    //   - the "clip" property applies to the element and it has a computed value other than auto
+    //   - the "clip-path" property applies to the element and it has a computed value other than none
+    // - the "mask" property applies to the element and it has a computed value other than none
+    // - the "filter" property applies to the element and it has a computed value other than none
+    // - a property defined in another specification is applied and that property is defined to establish a stacking context in SVG
+    //
+    // Some of the rules above were already enforced in StyleResolver::adjustRenderStyle() - for those cases assertions were added.
+    if (svgElement.document().settings().layerBasedSVGEngineEnabled() && style.hasAutoUsedZIndex()) {
+        // adjustRenderStyle() has already assigned a z-index of 0 if clip / filter is present or the element is the root element.
+        ASSERT(!style.hasClip());
+        ASSERT(!style.clipPath());
+        ASSERT(!style.hasFilter());
+
+        if (svgElement.isOutermostSVGSVGElement()
+            || svgElement.hasTagName(SVGNames::foreignObjectTag)
+            || svgElement.hasTagName(SVGNames::imageTag)
+            || svgElement.hasTagName(SVGNames::markerTag)
+            || svgElement.hasTagName(SVGNames::maskTag)
+            || svgElement.hasTagName(SVGNames::patternTag)
+            || svgElement.hasTagName(SVGNames::symbolTag)
+            || svgElement.hasTagName(SVGNames::useTag)
+            || (svgElement.isInnerSVGSVGElement() && (style.overflowX() != Overflow::Visible || style.overflowY() != Overflow::Visible))
+            || style.hasPositionedMask())
+        style.setUsedZIndex(0);
+    }
+#endif
+
+    // (Legacy)RenderSVGRoot handles zooming for the whole SVG subtree, so foreignObject content should
     // not be scaled again.
     if (svgElement.hasTagName(SVGNames::foreignObjectTag))
         style.setEffectiveZoom(RenderStyle::initialZoom());
@@ -621,6 +725,32 @@ void Adjuster::adjustAnimatedStyle(RenderStyle& style, OptionSet<AnimationImpact
         style.setUsedZIndex(0);
 }
 
+void Adjuster::adjustThemeStyle(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
+{
+    ASSERT(style.hasAppearance());
+    auto isOldWidthAuto = style.width().isAuto();
+    auto isOldMinWidthAuto = style.minWidth().isAuto();
+    auto isOldHeightAuto = style.height().isAuto();
+    auto isOldMinHeightAuto = style.minHeight().isAuto();
+
+    RenderTheme::singleton().adjustStyle(style, m_element, userAgentAppearanceStyle);
+
+    if (style.containsSize()) {
+        if (style.containIntrinsicWidthType() != ContainIntrinsicSizeType::None) {
+            if (isOldWidthAuto)
+                style.setWidth(Length(LengthType::Auto));
+            if (isOldMinWidthAuto)
+                style.setMinWidth(Length(LengthType::Auto));
+        }
+        if (style.containIntrinsicHeightType() != ContainIntrinsicSizeType::None) {
+            if (isOldHeightAuto)
+                style.setHeight(Length(LengthType::Auto));
+            if (isOldMinHeightAuto)
+                style.setMinHeight(Length(LengthType::Auto));
+        }
+    }
+}
+
 void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
 {
     if (!m_element)
@@ -628,19 +758,19 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
 
     if (m_document.quirks().needsGMailOverflowScrollQuirk()) {
         // This turns sidebar scrollable without mouse move event.
-        static MainThreadNeverDestroyed<const AtomString> roleValue("navigation", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> roleValue("navigation"_s);
         if (style.overflowY() == Overflow::Hidden && m_element->attributeWithoutSynchronization(roleAttr) == roleValue)
             style.setOverflowY(Overflow::Auto);
     }
     if (m_document.quirks().needsYouTubeOverflowScrollQuirk()) {
         // This turns sidebar scrollable without hover.
-        static MainThreadNeverDestroyed<const AtomString> idValue("guide-inner-content", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> idValue("guide-inner-content"_s);
         if (style.overflowY() == Overflow::Hidden && m_element->idForStyleResolution() == idValue)
             style.setOverflowY(Overflow::Auto);
     }
     if (m_document.quirks().needsWeChatScrollingQuirk()) {
-        static MainThreadNeverDestroyed<const AtomString> class1("tree-select", AtomString::ConstructFromLiteral);
-        static MainThreadNeverDestroyed<const AtomString> class2("v-tree-select", AtomString::ConstructFromLiteral);
+        static MainThreadNeverDestroyed<const AtomString> class1("tree-select"_s);
+        static MainThreadNeverDestroyed<const AtomString> class2("v-tree-select"_s);
         const auto& flexBasis = style.flexBasis();
         if (style.minHeight().isAuto()
             && style.display() == DisplayType::Flex
@@ -655,8 +785,8 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
 #if ENABLE(VIDEO)
     if (m_document.quirks().needsFullscreenDisplayNoneQuirk()) {
         if (is<HTMLDivElement>(m_element) && style.display() == DisplayType::None) {
-            static MainThreadNeverDestroyed<const AtomString> instreamNativeVideoDivClass("instream-native-video--mobile", AtomString::ConstructFromLiteral);
-            static MainThreadNeverDestroyed<const AtomString> videoElementID("vjs_video_3_html5_api", AtomString::ConstructFromLiteral);
+            static MainThreadNeverDestroyed<const AtomString> instreamNativeVideoDivClass("instream-native-video--mobile"_s);
+            static MainThreadNeverDestroyed<const AtomString> videoElementID("vjs_video_3_html5_api"_s);
 
             auto& div = downcast<HTMLDivElement>(*m_element);
             if (div.hasClass() && div.classNames().contains(instreamNativeVideoDivClass)) {
@@ -667,6 +797,78 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
         }
     }
 #endif
+}
+
+void Adjuster::propagateToDocumentElementAndInitialContainingBlock(Update& update, const Document& document)
+{
+    auto* body = document.body();
+    auto* bodyStyle = body ? update.elementStyle(*body) : nullptr;
+    auto* documentElementStyle = update.elementStyle(*document.documentElement());
+
+    if (!documentElementStyle)
+        return;
+
+    // https://drafts.csswg.org/css-contain-2/#contain-property
+    // "Additionally, when any containments are active on either the HTML html or body elements, propagation of
+    // properties from the body element to the initial containing block, the viewport, or the canvas background, is disabled."
+    auto shouldPropagateFromBody = [&] {
+        if (bodyStyle && !bodyStyle->effectiveContainment().isEmpty())
+            return false;
+        return documentElementStyle->effectiveContainment().isEmpty();
+    }();
+
+    auto writingMode = [&] {
+        // FIXME: The spec says body should win.
+        if (documentElementStyle->hasExplicitlySetWritingMode())
+            return documentElementStyle->writingMode();
+        if (shouldPropagateFromBody && bodyStyle && bodyStyle->hasExplicitlySetWritingMode())
+            return bodyStyle->writingMode();
+        return RenderStyle::initialWritingMode();
+    }();
+
+    auto direction = [&] {
+        if (documentElementStyle->hasExplicitlySetDirection())
+            return documentElementStyle->direction();
+        if (shouldPropagateFromBody && bodyStyle && bodyStyle->hasExplicitlySetDirection())
+            return bodyStyle->direction();
+        return RenderStyle::initialDirection();
+    }();
+
+    // https://drafts.csswg.org/css-writing-modes-3/#icb
+    auto& viewStyle = document.renderView()->style();
+    if (writingMode != viewStyle.writingMode() || direction != viewStyle.direction()) {
+        auto newRootStyle = RenderStyle::clonePtr(viewStyle);
+        newRootStyle->setWritingMode(writingMode);
+        newRootStyle->setDirection(direction);
+        newRootStyle->setColumnStylesFromPaginationMode(document.view()->pagination().mode);
+        update.addInitialContainingBlockUpdate(WTFMove(newRootStyle));
+    }
+
+    // https://drafts.csswg.org/css-writing-modes-3/#principal-flow
+    if (writingMode != documentElementStyle->writingMode() || direction != documentElementStyle->direction()) {
+        auto* documentElementUpdate = update.elementUpdate(*document.documentElement());
+        if (!documentElementUpdate) {
+            update.addElement(*document.documentElement(), nullptr, { RenderStyle::clonePtr(*documentElementStyle) });
+            documentElementUpdate = update.elementUpdate(*document.documentElement());
+        }
+        documentElementUpdate->style->setWritingMode(writingMode);
+        documentElementUpdate->style->setDirection(direction);
+        documentElementUpdate->change = determineChange(*documentElementStyle, *documentElementUpdate->style);
+    }
+}
+
+std::unique_ptr<RenderStyle> Adjuster::restoreUsedDocumentElementStyleToComputed(const RenderStyle& style)
+{
+    if (style.writingMode() == RenderStyle::initialWritingMode() && style.direction() == RenderStyle::initialDirection())
+        return { };
+
+    auto adjusted = RenderStyle::clonePtr(style);
+    if (!style.hasExplicitlySetWritingMode())
+        adjusted->setWritingMode(RenderStyle::initialWritingMode());
+    if (!style.hasExplicitlySetDirection())
+        adjusted->setDirection(RenderStyle::initialDirection());
+
+    return adjusted;
 }
 
 #if ENABLE(TEXT_AUTOSIZING)

@@ -107,9 +107,9 @@ Protocol::ErrorStringOr<void> InspectorWorkerAgent::sendMessageToWorker(const St
     return { };
 }
 
-void InspectorWorkerAgent::sendMessageFromWorkerToFrontend(WorkerInspectorProxy& proxy, const String& message)
+void InspectorWorkerAgent::sendMessageFromWorkerToFrontend(WorkerInspectorProxy& proxy, String&& message)
 {
-    m_frontendDispatcher->dispatchMessageFromWorker(proxy.identifier(), message);
+    m_frontendDispatcher->dispatchMessageFromWorker(proxy.identifier(), WTFMove(message));
 }
 
 bool InspectorWorkerAgent::shouldWaitForDebuggerOnStart() const
@@ -137,7 +137,7 @@ void InspectorWorkerAgent::connectToAllWorkerInspectorProxiesForPage()
 {
     ASSERT(m_connectedProxies.isEmpty());
 
-    for (Ref proxy : WorkerInspectorProxy::allWorkerInspectorProxies()) {
+    for (Ref proxy : WorkerInspectorProxy::allWorkerInspectorProxiesCopy()) {
         if (!is<Document>(proxy->scriptExecutionContext()))
             continue;
 
@@ -166,7 +166,7 @@ void InspectorWorkerAgent::connectToWorkerInspectorProxy(WorkerInspectorProxy& p
 {
     proxy.connectToWorkerInspectorController(*this);
 
-    m_connectedProxies.set(proxy.identifier(), makeWeakPtr(proxy));
+    m_connectedProxies.set(proxy.identifier(), proxy);
 
     m_frontendDispatcher->workerCreated(proxy.identifier(), proxy.url().string(), proxy.name());
 }

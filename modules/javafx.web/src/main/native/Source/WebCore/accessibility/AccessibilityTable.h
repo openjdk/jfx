@@ -49,6 +49,7 @@ public:
 
     void addChildren() override;
     void clearChildren() final;
+    void updateChildrenRoles();
 
     AccessibilityChildrenVector columns() override;
     AccessibilityChildrenVector rows() override;
@@ -73,6 +74,7 @@ public:
     bool isTable() const override { return true; }
     // Returns whether it is exposed as an AccessibilityTable to the platform.
     bool isExposable() const override;
+    void recomputeIsExposable();
 
     int axColumnCount() const override;
     int axRowCount() const override;
@@ -86,14 +88,9 @@ protected:
     RefPtr<AccessibilityObject> m_headerContainer;
     bool m_isExposable;
 
-    bool hasARIARole() const;
-
     // Used in type checking function is<AccessibilityTable>.
     bool isAccessibilityTableInstance() const final { return true; }
 
-    // isDataTable is whether it is exposed as an AccessibilityTable because the heuristic
-    // think this "looks" like a data-based table (instead of a table used for layout).
-    bool isDataTable() const final;
     bool computeAccessibilityIsIgnored() const final;
 
 private:
@@ -102,6 +99,11 @@ private:
     HTMLTableElement* tableElement() const;
     void addChildrenFromSection(RenderTableSection*, unsigned& maxColumnCount);
     void addTableCellChild(AccessibilityObject*, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount);
+
+    bool hasNonTableARIARole() const;
+    // isDataTable is whether it is exposed as an AccessibilityTable because the heuristic
+    // think this "looks" like a data-based table (instead of a table used for layout).
+    bool isDataTable() const;
 };
 
 } // namespace WebCore

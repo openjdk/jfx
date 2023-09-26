@@ -77,8 +77,8 @@ void ResourceHandle::registerBuiltinSynchronousLoader(const AtomString& protocol
     builtinResourceHandleSynchronousLoaderMap().add(protocol, loader);
 }
 
-ResourceHandle::ResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff, bool shouldContentEncodingSniff, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation)
-    : d(makeUnique<ResourceHandleInternal>(this, context, request, client, defersLoading, shouldContentSniff && shouldContentSniffURL(request.url()), shouldContentEncodingSniff, WTFMove(sourceOrigin), isMainFrameNavigation))
+ResourceHandle::ResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff, ContentEncodingSniffingPolicy contentEncodingSniffingPolicy, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation)
+    : d(makeUnique<ResourceHandleInternal>(this, context, request, client, defersLoading, shouldContentSniff && shouldContentSniffURL(request.url()), contentEncodingSniffingPolicy, WTFMove(sourceOrigin), isMainFrameNavigation))
 {
     if (!request.url().isValid()) {
         scheduleFailure(InvalidURLFailure);
@@ -91,12 +91,14 @@ ResourceHandle::ResourceHandle(NetworkingContext* context, const ResourceRequest
     }
 }
 
-RefPtr<ResourceHandle> ResourceHandle::create(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff, bool shouldContentEncodingSniff, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation)
+RefPtr<ResourceHandle> ResourceHandle::create(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff, ContentEncodingSniffingPolicy contentEncodingSniffingPolicy, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation)
 {
-    if (auto constructor = builtinResourceHandleConstructorMap().get(request.url().protocol().toStringWithoutCopying()))
-        return constructor(request, client);
+    if (auto protocol = request.url().protocol().toExistingAtomString(); !protocol.isNull()) {
+        if (auto constructor = builtinResourceHandleConstructorMap().get(protocol))
+            return constructor(request, client);
+    }
 
-    auto newHandle = adoptRef(*new ResourceHandle(context, request, client, defersLoading, shouldContentSniff, shouldContentEncodingSniff, WTFMove(sourceOrigin), isMainFrameNavigation));
+    auto newHandle = adoptRef(*new ResourceHandle(context, request, client, defersLoading, shouldContentSniff, contentEncodingSniffingPolicy, WTFMove(sourceOrigin), isMainFrameNavigation));
 
     if (newHandle->d->m_scheduledFailureType != NoFailure)
         return newHandle;
@@ -137,9 +139,11 @@ void ResourceHandle::failureTimerFired()
 
 void ResourceHandle::loadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentialsPolicy storedCredentialsPolicy, SecurityOrigin* sourceOrigin, ResourceError& error, ResourceResponse& response, Vector<uint8_t>& data)
 {
-    if (auto constructor = builtinResourceHandleSynchronousLoaderMap().get(request.url().protocol().toStringWithoutCopying())) {
-        constructor(context, request, storedCredentialsPolicy, error, response, data);
-        return;
+    if (auto protocol = request.url().protocol().toExistingAtomString(); !protocol.isNull()) {
+        if (auto constructor = builtinResourceHandleSynchronousLoaderMap().get(protocol)) {
+            constructor(context, request, storedCredentialsPolicy, error, response, data);
+            return;
+        }
     }
 
     platformLoadResourceSynchronously(context, request, storedCredentialsPolicy, sourceOrigin, error, response, data);
@@ -266,9 +270,9 @@ bool ResourceHandle::shouldContentSniff() const
     return d->m_shouldContentSniff;
 }
 
-bool ResourceHandle::shouldContentEncodingSniff() const
+ContentEncodingSniffingPolicy ResourceHandle::contentEncodingSniffingPolicy() const
 {
-    return d->m_shouldContentEncodingSniff;
+    return d->m_contentEncodingSniffingPolicy;
 }
 
 bool ResourceHandle::shouldContentSniffURL(const URL& url)
@@ -278,7 +282,7 @@ bool ResourceHandle::shouldContentSniffURL(const URL& url)
         return true;
 #endif
     // We shouldn't content sniff file URLs as their MIME type should be established via their extension.
-    return !url.protocolIs("file");
+    return !url.protocolIs("file"_s);
 }
 
 void ResourceHandle::forceContentSniffing()

@@ -27,16 +27,19 @@
 
 #if ENABLE(WEB_RTC)
 
-#include <wtf/Variant.h>
+#include <variant>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct RTCIceServer {
-    Variant<String, Vector<String>> urls;
-    String credential;
+    enum class CredentialType { Password };
+
+    std::variant<String, Vector<String>> urls;
     String username;
+    String credential;
+    CredentialType credentialType { CredentialType::Password };
 };
 
 } // namespace WebCore

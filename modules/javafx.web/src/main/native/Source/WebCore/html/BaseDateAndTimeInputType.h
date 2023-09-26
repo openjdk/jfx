@@ -48,6 +48,10 @@ struct DateTimeChooserParameters;
 
 // A super class of date, datetime, datetime-local, month, time, and week types.
 class BaseDateAndTimeInputType : public InputType, private DateTimeChooserClient, private DateTimeEditElement::EditControlOwner {
+public:
+    bool typeMismatchFor(const String&) const final;
+    bool valueMissing(const String&) const final;
+
 protected:
     enum class DateTimeFormatValidationResults : uint8_t {
         HasYear = 1 << 0,
@@ -69,14 +73,13 @@ protected:
     ~BaseDateAndTimeInputType();
 
     Decimal parseToNumber(const String&, const Decimal&) const override;
-    String serialize(const Decimal&) const override;
+    String serialize(const Decimal&) const final;
     String serializeWithComponents(const DateComponents&) const;
 
     bool shouldHaveSecondField(const DateComponents&) const;
     bool shouldHaveMillisecondField(const DateComponents&) const;
-    bool typeMismatchFor(const String&) const final;
+
     bool typeMismatch() const final;
-    bool valueMissing(const String&) const final;
 
 private:
     class DateTimeFormatValidator final : public DateTimeFormat::TokenHandler {
@@ -84,7 +87,7 @@ private:
         DateTimeFormatValidator() { }
 
         void visitField(DateTimeFormat::FieldType, int);
-        void visitLiteral(const String&) { }
+        void visitLiteral(String&&) { }
 
         bool validateFormat(const String& format, const BaseDateAndTimeInputType&);
 
@@ -92,7 +95,7 @@ private:
         OptionSet<DateTimeFormatValidationResults> m_results;
     };
 
-    virtual std::optional<DateComponents> parseToDateComponents(const StringView&) const = 0;
+    virtual std::optional<DateComponents> parseToDateComponents(StringView) const = 0;
     virtual std::optional<DateComponents> setMillisecondToDateComponents(double) const = 0;
     virtual void setupLayoutParameters(DateTimeEditElement::LayoutParameters&, const DateComponents&) const = 0;
     virtual bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const = 0;
@@ -100,10 +103,10 @@ private:
 
     // InputType functions:
     String visibleValue() const final;
-    String sanitizeValue(const String&) const final;
-    void setValue(const String&, bool valueChanged, TextFieldEventBehavior) final;
-    double valueAsDate() const override;
-    ExceptionOr<void> setValueAsDate(double) const override;
+    String sanitizeValue(const String&) const override;
+    void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
+    WallTime valueAsDate() const override;
+    ExceptionOr<void> setValueAsDate(WallTime) const override;
     double valueAsDouble() const final;
     ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const final;
     Decimal defaultValueForStepUp() const override;
@@ -114,7 +117,7 @@ private:
     bool isMouseFocusable() const final;
 
     void handleDOMActivateEvent(Event&) override;
-    void createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source, bool) final;
+    void createShadowSubtree() final;
     void destroyShadowSubtree() final;
     void updateInnerTextValue() final;
     bool hasCustomFocusLogic() const final;
@@ -123,11 +126,11 @@ private:
     void elementDidBlur() final;
     void detach() final;
 
-    ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) override;
-    void handleKeypressEvent(KeyboardEvent&) override;
-    void handleKeyupEvent(KeyboardEvent&) override;
+    ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) final;
+    void handleKeypressEvent(KeyboardEvent&) final;
+    void handleKeyupEvent(KeyboardEvent&) final;
     void handleFocusEvent(Node* oldFocusedNode, FocusDirection) final;
-    bool accessKeyAction(bool sendMouseEvents) override;
+    bool accessKeyAction(bool sendMouseEvents) final;
 
     // DateTimeEditElement::EditControlOwner functions:
     void didBlurFromControl() final;

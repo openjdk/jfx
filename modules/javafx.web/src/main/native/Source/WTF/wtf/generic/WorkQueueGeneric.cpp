@@ -36,28 +36,27 @@
 #include <wtf/java/JavaEnv.h>
 #endif
 
-Ref<WorkQueue> WorkQueue::constructMainWorkQueue()
-{
-    return adoptRef(*new WorkQueue(RunLoop::main()));
-}
+namespace WTF {
 
-WorkQueue::WorkQueue(RunLoop& runLoop)
+WorkQueueBase::WorkQueueBase(RunLoop& runLoop)
     : m_runLoop(&runLoop)
 {
 }
 
-void WorkQueue::platformInitialize(const char* name, Type, QOS)
+void WorkQueueBase::platformInitialize(const char* name, Type, QOS qos)
 {
+    m_runLoop = RunLoop::create(name, ThreadType::Unknown, qos).ptr();
+#if ASSERT_ENABLED
     BinarySemaphore semaphore;
-    Thread::create(name, [&] {
-        m_runLoop = &RunLoop::current();
+    m_runLoop->dispatch([&] {
+        m_threadID = Thread::current().uid();
         semaphore.signal();
-        m_runLoop->run();
-    })->detach();
+    });
     semaphore.wait();
+#endif
 }
 
-void WorkQueue::platformInvalidate()
+void WorkQueueBase::platformInvalidate()
 {
     if (m_runLoop) {
         Ref<RunLoop> protector(*m_runLoop);
@@ -68,10 +67,9 @@ void WorkQueue::platformInvalidate()
     }
 }
 
-void WorkQueue::dispatch(Function<void()>&& function)
+void WorkQueueBase::dispatch(Function<void()>&& function)
 {
-    RefPtr<WorkQueue> protect(this);
-    m_runLoop->dispatch([protect, function = WTFMove(function)] {
+    m_runLoop->dispatch([protectedThis = Ref { *this }, function = WTFMove(function)] {
 #if PLATFORM(JAVA)
         AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
@@ -79,9 +77,8 @@ void WorkQueue::dispatch(Function<void()>&& function)
     });
 }
 
-void WorkQueue::dispatchAfter(Seconds delay, Function<void()>&& function)
+void WorkQueueBase::dispatchAfter(Seconds delay, Function<void()>&& function)
 {
-    RefPtr<WorkQueue> protect(this);
 #if OS(WINDOWS) && PLATFORM(JAVA)
     // From empirical testing, we've seen CreateTimerQueueTimer() sometimes fire up to 5+ ms early.
     // This causes havoc for clients of this code that expect to not be called back until the
@@ -95,10 +92,29 @@ void WorkQueue::dispatchAfter(Seconds delay, Function<void()>&& function)
     if (delay)
         delay += slopAdjustment;
 #endif
-    m_runLoop->dispatchAfter(delay, [protect, function = WTFMove(function)] {
+    m_runLoop->dispatchAfter(delay, [protectedThis = Ref { *this }, function = WTFMove(function)] {
 #if PLATFORM(JAVA)
         AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
         function();
     });
+}
+
+WorkQueue::WorkQueue(RunLoop& loop)
+    : WorkQueueBase(loop)
+{
+}
+
+Ref<WorkQueue> WorkQueue::constructMainWorkQueue()
+{
+    return adoptRef(*new WorkQueue(RunLoop::main()));
+}
+
+#if ASSERT_ENABLED
+ThreadLikeAssertion WorkQueue::threadLikeAssertion() const
+{
+    return createThreadLikeAssertion(m_threadID);
+}
+#endif
+
 }

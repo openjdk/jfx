@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,29 +25,28 @@
 
 package com.sun.javafx.collections;
 
-import javafx.collections.ModifiableObservableListBase;
-import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
-
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.RandomAccess;
+
+import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.collections.ObservableList;
+import javafx.collections.ModifiableObservableListBase;
 import javafx.util.Callback;
 
 /**
  * A List wrapper class that implements observability.
  *
  */
-public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements
-        ObservableList<E>, SortableList<E>, RandomAccess {
+public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E>, RandomAccess {
 
     private final List<E> backingList;
-
-    private final ElementObserver elementObserver;
+    private final ElementObserver<E> elementObserver;
 
     public ObservableListWrapper(List<E> list) {
         backingList = list;
@@ -56,7 +55,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     public ObservableListWrapper(List<E> list, Callback<E, Observable[]> extractor) {
         backingList = list;
-        this.elementObserver = new ElementObserver(extractor, new Callback<E, InvalidationListener>() {
+        this.elementObserver = new ElementObserver<>(extractor, new Callback<E, InvalidationListener>() {
 
             @Override
             public InvalidationListener call(final E e) {
@@ -96,6 +95,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     protected void doAdd(int index, E element) {
+        Objects.checkIndex(index, size() + 1);
         if (elementObserver != null)
             elementObserver.attachListener(element);
         backingList.add(index, element);
@@ -160,6 +160,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public void remove(int fromIndex, int toIndex) {
+        Objects.checkFromToIndex(fromIndex, toIndex, size());
         beginChange();
         for (int i = fromIndex; i < toIndex; ++i) {
             remove(fromIndex);
@@ -169,6 +170,11 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean removeAll(Collection<?> c) {
+        // implicit check to ensure c != null
+        if (c.isEmpty() || backingList.isEmpty()) {
+            return false;
+        }
+
         beginChange();
         BitSet bs = new BitSet(c.size());
         for (int i = 0; i < size(); ++i) {
@@ -188,6 +194,16 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean retainAll(Collection<?> c) {
+        // implicit check to ensure c != null
+        if (c.isEmpty() && !backingList.isEmpty()) {
+            clear();
+            return true;
+        }
+
+        if (backingList.isEmpty()) {
+            return false;
+        }
+
         beginChange();
         BitSet bs = new BitSet(c.size());
         for (int i = 0; i < size(); ++i) {
@@ -208,22 +224,9 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
     private SortHelper helper;
 
     @Override
-    @SuppressWarnings("unchecked")
-    public void sort() {
-        if (backingList.isEmpty()) {
-            return;
-        }
-        int[] perm = getSortHelper().sort((List<? extends Comparable>)backingList);
-        fireChange(new SimplePermutationChange<E>(0, size(), perm, this));
-    }
-
-    @Override
-    public void sort(Comparator<? super E> comparator) {
-        if (backingList.isEmpty()) {
-            return;
-        }
+    public void doSort(Comparator<? super E> comparator) {
         int[] perm = getSortHelper().sort(backingList, comparator);
-        fireChange(new SimplePermutationChange<E>(0, size(), perm, this));
+        fireChange(new SimplePermutationChange<>(0, size(), perm, this));
     }
 
     private SortHelper getSortHelper() {
@@ -232,5 +235,4 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
         }
         return helper;
     }
-
 }

@@ -28,6 +28,7 @@
 #include "CairoUniquePtr.h"
 #include "CairoUtilities.h"
 #include "FontCache.h"
+#include "FontCacheFreeType.h"
 #include "SharedBuffer.h"
 #include <cairo-ft.h>
 #include <fontconfig/fcfreetype.h>
@@ -150,12 +151,17 @@ FontPlatformData FontPlatformData::cloneWithSyntheticOblique(const FontPlatformD
 FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source, float size)
 {
     FontPlatformData copy(source);
-    copy.m_size = size;
+    copy.updateSize(size);
+    return copy;
+}
+
+void FontPlatformData::updateSize(float size)
+{
+    m_size = size;
     // We need to reinitialize the instance, because the difference in size
     // necessitates a new scaled font instance.
-    ASSERT(copy.m_scaledFont.get());
-    copy.buildScaledFont(cairo_scaled_font_get_font_face(copy.m_scaledFont.get()));
-    return copy;
+    ASSERT(m_scaledFont.get());
+    buildScaledFont(cairo_scaled_font_get_font_face(m_scaledFont.get()));
 }
 
 FcPattern* FontPlatformData::fcPattern() const
@@ -190,6 +196,31 @@ String FontPlatformData::description() const
     return String();
 }
 #endif
+
+String FontPlatformData::familyName() const
+{
+    FcChar8* family = nullptr;
+    FcPatternGetString(m_pattern.get(), FC_FAMILY, 0, &family);
+    return String::fromUTF8(family);
+}
+
+Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes(ShouldLocalizeAxisNames shouldLocalizeAxisNames) const
+{
+#if ENABLE(VARIATION_FONTS)
+    CairoFtFaceLocker cairoFtFaceLocker(m_scaledFont.get());
+    FT_Face ftFace = cairoFtFaceLocker.ftFace();
+    if (!ftFace)
+        return { };
+
+    return WTF::map(defaultVariationValues(ftFace, shouldLocalizeAxisNames), [](auto&& entry) {
+        auto& [tag, values] = entry;
+        return FontPlatformData::FontVariationAxis { values.axisName, String(tag.data(), tag.size()), values.defaultValue, values.minimumValue, values.maximumValue };
+    });
+#else
+    UNUSED_PARAM(shouldLocalizeAxisNames);
+    return { };
+#endif
+}
 
 void FontPlatformData::buildScaledFont(cairo_font_face_t* fontFace)
 {

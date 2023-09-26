@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -354,7 +354,7 @@ Page* ChromeClientJava::createWindow(
     return p;
 }
 
-void ChromeClientJava::closeWindowSoon()
+void ChromeClientJava::closeWindow()
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -608,7 +608,7 @@ void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigne
         }
     } else {
         if (mouseOverNode) {
-            setStatusbarText("");
+            setStatusbarText(""_s);
             mouseOverNode = 0;
         }
     }
@@ -819,6 +819,18 @@ RefPtr<SearchPopupMenu> ChromeClientJava::createSearchPopupMenu(PopupMenuClient&
 RefPtr<Icon> ChromeClientJava::createIconForFiles(const Vector<String>& filenames)
 {
     return Icon::createIconForFiles(filenames);
+}
+
+void ChromeClientJava::requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&)
+{
+}
+
+void ChromeClientJava::classifyModalContainerControls(Vector<String>&& texts, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&)
+{
+}
+
+void ChromeClientJava::decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&)
+{
 }
 
 void ChromeClientJava::didFinishLoadingImageForElement(WebCore::HTMLImageElement&)

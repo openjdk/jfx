@@ -185,7 +185,8 @@ void PageOverlayController::installPageOverlay(PageOverlay& overlay, PageOverlay
 
     m_pageOverlays.append(&overlay);
 
-    auto layer = GraphicsLayer::create(m_page.chrome().client().graphicsLayerFactory(), *this);
+    auto layerType = (overlay.alwaysTileOverlayLayer() == PageOverlay::AlwaysTileOverlayLayer::Yes) ? GraphicsLayer::Type::TiledBacking : GraphicsLayer::Type::Normal;
+    auto layer = GraphicsLayer::create(m_page.chrome().client().graphicsLayerFactory(), *this, layerType);
     layer->setAnchorPoint({ });
     layer->setBackgroundColor(overlay.backgroundColor());
     layer->setName(MAKE_STATIC_STRING_IMPL("Overlay content"));
@@ -432,6 +433,14 @@ void PageOverlayController::didChangeOverlayBackgroundColor(PageOverlay& overlay
 bool PageOverlayController::shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions> options) const
 {
     return !options.contains(LayerTreeAsTextOptions::IncludePageOverlayLayers);
+}
+
+bool PageOverlayController::shouldDumpPropertyForLayer(const GraphicsLayer* layer, const char* propertyName, OptionSet<LayerTreeAsTextOptions>) const
+{
+    if (!strcmp(propertyName, "anchorPoint"))
+        return layer->anchorPoint() != FloatPoint3D(0.5f, 0.5f, 0);
+
+    return true;
 }
 
 void PageOverlayController::tiledBackingUsageChanged(const GraphicsLayer* graphicsLayer, bool usingTiledBacking)

@@ -30,6 +30,7 @@
 #include "FloatRect.h"
 #include "InlinePathData.h"
 #include "WindRule.h"
+#include <wtf/ArgumentCoder.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Function.h>
@@ -40,20 +41,6 @@
 #include <wtf/RetainPtr.h>
 #include <CoreGraphics/CGPath.h>
 typedef struct CGPath PlatformPath;
-
-#elif USE(DIRECT2D)
-#include "COMPtr.h"
-
-interface ID2D1Geometry;
-interface ID2D1GeometryGroup;
-interface ID2D1PathGeometry;
-interface ID2D1GeometrySink;
-
-typedef ID2D1GeometryGroup PlatformPath;
-
-namespace WebCore {
-class PlatformContextDirect2D;
-}
 
 #elif USE(CAIRO)
 #include "RefPtrCairo.h"
@@ -78,15 +65,24 @@ typedef PlatformPath* PlatformPathPtr;
 
 #if USE(CG)
 using PlatformPathStorageType = RetainPtr<CGMutablePathRef>;
-#elif USE(DIRECT2D)
-using PlatformPathStorageType = COMPtr<ID2D1GeometryGroup>;
 #else
 using PlatformPathStorageType = PlatformPathPtr;
 #endif
 #endif
 
+namespace WebCore {
+enum class PathElementType : uint8_t {
+    MoveToPoint, // The points member will contain 1 value.
+    AddLineToPoint, // The points member will contain 1 value.
+    AddQuadCurveToPoint, // The points member will contain 2 values.
+    AddCurveToPoint, // The points member will contain 3 values.
+    CloseSubpath // The points member will contain no values.
+};
+}
+
 namespace WTF {
 class TextStream;
+template<> bool isValidEnum<WebCore::PathElementType, void>(uint8_t);
 }
 
 namespace WebCore {
@@ -103,19 +99,45 @@ class RoundedRect;
 // add... method. For example, a line returns the endpoint, while a cubic returns
 // two tangent points and the endpoint.
 struct PathElement {
-    enum class Type : uint8_t {
-        MoveToPoint, // The points member will contain 1 value.
-        AddLineToPoint, // The points member will contain 1 value.
-        AddQuadCurveToPoint, // The points member will contain 2 values.
-        AddCurveToPoint, // The points member will contain 3 values.
-        CloseSubpath // The points member will contain no values.
-    };
+    using Type = PathElementType;
 
     FloatPoint points[3];
     Type type;
 };
 
-using PathApplierFunction = WTF::Function<void(const PathElement&)>;
+using PathApplierFunction = Function<void(const PathElement&)>;
+
+class EncodedPathElementType {
+public:
+    EncodedPathElementType()
+        : m_type(std::nullopt)
+    {
+    }
+
+    EncodedPathElementType(PathElement::Type type)
+        : m_type(type)
+    {
+        ASSERT(isValidPathElementType());
+    }
+
+    EncodedPathElementType(std::optional<PathElement::Type>&& type)
+        : m_type(WTFMove(type))
+    {
+    }
+
+    bool isEndOfPath() const { return !m_type.has_value(); }
+    bool isValidPathElementType() const { return m_type.has_value(); }
+
+    PathElement::Type type() const
+    {
+        ASSERT(isValidPathElementType());
+        return *m_type;
+    }
+
+private:
+    friend struct IPC::ArgumentCoder<EncodedPathElementType, void>;
+    std::optional<PathElement::Type> m_type;
+};
 
 class Path {
     WTF_MAKE_FAST_ALLOCATED;
@@ -169,6 +191,8 @@ public:
     bool hasCurrentPoint() const;
     FloatPoint currentPoint() const;
 
+    bool isClosed() const;
+
     WEBCORE_EXPORT void moveTo(const FloatPoint&);
     WEBCORE_EXPORT void addLineTo(const FloatPoint&);
     WEBCORE_EXPORT void addQuadCurveTo(const FloatPoint& controlPoint, const FloatPoint& endPoint);
@@ -196,10 +220,7 @@ public:
 
     // To keep Path() cheap, it does not allocate a PlatformPath immediately
     // meaning Path::platformPath() can return null.
-#if USE(DIRECT2D)
-    FloatRect fastBoundingRectForStroke(const PlatformContextDirect2D&) const;
-    PlatformPathPtr platformPath() const { return m_path.get(); }
-#elif USE(CG)
+#if USE(CG)
     WEBCORE_EXPORT PlatformPathPtr platformPath() const;
 #elif USE(CAIRO)
     cairo_t* cairoPath() const { return m_path.get(); }
@@ -224,17 +245,8 @@ public:
 
     void addBeziersForRoundedRect(const FloatRect&, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius);
 
-#if USE(CG) || USE(DIRECT2D)
+#if USE(CG)
     void platformAddPathForRoundedRect(const FloatRect&, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius);
-#endif
-
-#if USE(DIRECT2D)
-    void appendGeometry(ID2D1Geometry*);
-    void createGeometryWithFillMode(WindRule, COMPtr<ID2D1GeometryGroup>&) const;
-
-    void openFigureAtCurrentPointIfNecessary();
-    void closeAnyOpenGeometries(unsigned figureEndStyle) const;
-    void clearGeometries();
 #endif
 
 #ifndef NDEBUG
@@ -287,12 +299,6 @@ private:
     mutable PlatformPathStorageType m_path;
 #endif
 
-#if USE(DIRECT2D)
-    Vector<ID2D1Geometry*> m_geometries;
-    mutable COMPtr<ID2D1GeometrySink> m_activePath;
-    mutable bool m_figureIsOpened { false };
-#endif
-
 #if ENABLE(INLINE_PATH_DATA)
     InlinePathData m_inlineData;
 #endif
@@ -304,7 +310,7 @@ private:
 #endif
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const Path&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Path&);
 
 template<class Encoder> void Path::encode(Encoder& encoder) const
 {
@@ -317,10 +323,8 @@ template<class Encoder> void Path::encode(Encoder& encoder) const
     }
 #endif
 
-    encoder << static_cast<uint64_t>(elementCount());
-
     apply([&](auto& element) {
-        encoder << element.type;
+        encoder << EncodedPathElementType(element.type);
 
         switch (element.type) {
         case PathElement::Type::MoveToPoint:
@@ -342,6 +346,8 @@ template<class Encoder> void Path::encode(Encoder& encoder) const
             break;
         }
     });
+
+    encoder << EncodedPathElementType();
 }
 
 template<class Decoder> std::optional<Path> Path::decode(Decoder& decoder)
@@ -361,18 +367,17 @@ template<class Decoder> std::optional<Path> Path::decode(Decoder& decoder)
     }
 #endif
 
-    uint64_t numPoints;
-    if (!decoder.decode(numPoints))
-        return std::nullopt;
-
     path.clear();
 
-    for (uint64_t i = 0; i < numPoints; ++i) {
-        PathElement::Type elementType;
+    while (true) {
+        EncodedPathElementType elementType;
         if (!decoder.decode(elementType))
             return std::nullopt;
 
-        switch (elementType) {
+        if (elementType.isEndOfPath())
+            break;
+
+        switch (elementType.type()) {
         case PathElement::Type::MoveToPoint: {
             FloatPoint point;
             if (!decoder.decode(point))
@@ -428,39 +433,24 @@ template<class Decoder> std::optional<Path> Path::decode(Decoder& decoder)
 
 template <typename DataType> inline bool Path::hasInlineData() const
 {
-    return WTF::holds_alternative<DataType>(m_inlineData);
+    return std::holds_alternative<DataType>(m_inlineData);
 }
 
 template<typename DataType> inline const DataType& Path::inlineData() const
 {
-    return WTF::get<DataType>(m_inlineData);
+    return std::get<DataType>(m_inlineData);
 }
 
 template<typename DataType> inline DataType& Path::inlineData()
 {
-    return WTF::get<DataType>(m_inlineData);
+    return std::get<DataType>(m_inlineData);
 }
 
 inline bool Path::hasInlineData() const
 {
-    return !hasInlineData<Monostate>();
+    return !hasInlineData<std::monostate>();
 }
 
 #endif
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PathElement::Type> {
-    using values = EnumValues<
-        WebCore::PathElement::Type,
-        WebCore::PathElement::Type::MoveToPoint,
-        WebCore::PathElement::Type::AddLineToPoint,
-        WebCore::PathElement::Type::AddQuadCurveToPoint,
-        WebCore::PathElement::Type::AddCurveToPoint,
-        WebCore::PathElement::Type::CloseSubpath
-    >;
-};
-
-} // namespace WTF

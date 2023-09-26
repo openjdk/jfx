@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-const ClassInfo JSCustomSetterFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCustomSetterFunction) };
+const ClassInfo JSCustomSetterFunction::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCustomSetterFunction) };
 static JSC_DECLARE_HOST_FUNCTION(customSetterFunctionCall);
 
 JSC_DEFINE_HOST_FUNCTION(customSetterFunctionCall, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -52,9 +52,9 @@ JSCustomSetterFunction::JSCustomSetterFunction(VM& vm, NativeExecutable* executa
 JSCustomSetterFunction* JSCustomSetterFunction::create(VM& vm, JSGlobalObject* globalObject, const PropertyName& propertyName, CustomFunctionPointer setter)
 {
     ASSERT(setter);
-    NativeExecutable* executable = vm.getHostFunction(customSetterFunctionCall, callHostFunctionAsConstructor, String(propertyName.publicName()));
+    NativeExecutable* executable = vm.getHostFunction(customSetterFunctionCall, ImplementationVisibility::Public, callHostFunctionAsConstructor, String(propertyName.publicName()));
     Structure* structure = globalObject->customSetterFunctionStructure();
-    JSCustomSetterFunction* function = new (NotNull, allocateCell<JSCustomSetterFunction>(vm.heap)) JSCustomSetterFunction(vm, executable, globalObject, structure, propertyName, setter);
+    JSCustomSetterFunction* function = new (NotNull, allocateCell<JSCustomSetterFunction>(vm)) JSCustomSetterFunction(vm, executable, globalObject, structure, propertyName, setter);
 
     // Can't do this during initialization because getHostFunction might do a GC allocation.
     auto name = makeString("set ", propertyName.publicName());

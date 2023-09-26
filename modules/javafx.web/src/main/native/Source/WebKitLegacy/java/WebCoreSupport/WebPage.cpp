@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,6 +64,7 @@
 #include <WebCore/CookieJar.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/Document.h>
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/DragController.h>
 #include <WebCore/DragData.h>
 #include <WebCore/Editor.h>
@@ -96,7 +97,6 @@
 #include <WebCore/RenderTreeAsText.h>
 #include <WebCore/RenderView.h>
 #include <WebCore/ResourceRequest.h>
-#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/ScriptController.h>
 #include <WebCore/SecurityPolicy.h>
 #include <WebCore/Settings.h>
@@ -470,7 +470,7 @@ void WebPage::paintContents(const GraphicsLayer*, GraphicsContext& context, cons
 
 bool WebPage::processKeyEvent(const PlatformKeyboardEvent& event)
 {
-    return event.type() == PlatformKeyboardEvent::Char
+    return event.type() == PlatformEvent::Type::Char
         ? charEvent(event)
         : keyEvent(event);
 }
@@ -491,9 +491,9 @@ static const int VKEY_DOWN = com_sun_webkit_event_WCKeyEvent_VK_DOWN;
 
 bool WebPage::keyEvent(const PlatformKeyboardEvent& event)
 {
-    ASSERT((event.type() == PlatformKeyboardEvent::RawKeyDown)
-        || (event.type() == PlatformKeyboardEvent::KeyDown)
-        || (event.type() == PlatformKeyboardEvent::KeyUp));
+    ASSERT((event.type() == PlatformEvent::Type::RawKeyDown)
+        || (event.type() == PlatformEvent::Type::KeyDown)
+        || (event.type() == PlatformEvent::Type::KeyUp));
 
     // Please refer to the comments explaining the m_suppressNextKeypressEvent
     // member.
@@ -510,7 +510,7 @@ bool WebPage::keyEvent(const PlatformKeyboardEvent& event)
     EventHandler& handler = frame->eventHandler();
 
     if (handler.keyEvent(event)) {
-        if (event.type() == PlatformKeyboardEvent::RawKeyDown) {
+        if (event.type() == PlatformEvent::Type::RawKeyDown) {
             // Suppress the next keypress event unless the focused node
             // is a plug-in node. (Flash needs these keypress events to
             // handle non-US keyboards.)
@@ -527,7 +527,7 @@ bool WebPage::keyEvent(const PlatformKeyboardEvent& event)
 
 bool WebPage::charEvent(const PlatformKeyboardEvent& event)
 {
-    ASSERT(event.type() == PlatformKeyboardEvent::Char);
+    ASSERT(event.type() == PlatformEvent::Type::Char);
 
     // Please refer to the comments explaining the m_suppressNextKeypressEvent
     // member.  The m_suppressNextKeypressEvent is set if the KeyDown is
@@ -556,7 +556,7 @@ bool WebPage::keyEventDefault(const PlatformKeyboardEvent& event)
         return false;
 
     switch (event.type()) {
-    case PlatformKeyboardEvent::RawKeyDown:
+    case PlatformEvent::Type::RawKeyDown:
         if (event.modifiers() == PlatformKeyboardEvent::Modifier::ControlKey) {
             switch (event.windowsVirtualKeyCode()) {
             // Match FF behavior in the sense that Ctrl+home/end are the only
@@ -609,35 +609,35 @@ bool WebPage::mapKeyCodeForScroll(int keyCode,
     switch (keyCode) {
     case VKEY_LEFT:
         *scrollDirection = ScrollLeft;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_RIGHT:
         *scrollDirection = ScrollRight;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_UP:
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_DOWN:
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_HOME:
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByDocument;
+        *scrollGranularity = ScrollGranularity::Document;
         break;
     case VKEY_END:
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByDocument;
+        *scrollGranularity = ScrollGranularity::Document;
         break;
     case VKEY_PRIOR:  // page up
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByPage;
+        *scrollGranularity = ScrollGranularity::Page;
         break;
     case VKEY_NEXT:  // page down
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByPage;
+        *scrollGranularity = ScrollGranularity::Page;
         break;
     default:
         return false;
@@ -660,7 +660,7 @@ bool WebPage::propagateScroll(ScrollDirection scrollDirection,
     while (!scrollHandled && currentFrame) {
         scrollHandled = currentFrame->view()->scroll(scrollDirection,
                                                      scrollGranularity);
-        currentFrame = currentFrame->tree().parent();
+        currentFrame = dynamicDowncast<LocalFrame>(currentFrame->tree().parent());
     }
     return scrollHandled;
 }
@@ -690,9 +690,9 @@ static String agentOS()
 {
 #if OS(DARWIN)
 #if CPU(X86) || CPU(X86_64)
-    return "Macintosh; Intel Mac OS X";
+    return "Macintosh; Intel Mac OS X"_s;
 #else
-    return "Macintosh; PPC Mac OS X";
+    return "Macintosh; PPC Mac OS X"_s;
 #endif
 #elif OS(UNIX)
     struct utsname name;
@@ -703,18 +703,18 @@ static String agentOS()
 #else
     notImplemented();
 #endif
-    return "Unknown";
+    return "Unknown"_s;
 }
 
 static String defaultUserAgent()
 {
-    static const auto userAgentString = makeNeverDestroyed([] {
+    static const NeverDestroyed userAgentString = [] {
         String wkVersion = makeString(
                               WEBKIT_MAJOR_VERSION, ".", WEBKIT_MINOR_VERSION,
                               " (KHTML, like Gecko) JavaFX/", JAVAFX_RELEASE_VERSION,
                               " Safari/", WEBKIT_MAJOR_VERSION, ".",  WEBKIT_MINOR_VERSION);
         return makeString("Mozilla/5.0 (", agentOS(), ") AppleWebKit/", wkVersion);
-    }());
+    }();
     return userAgentString;
 }
 
@@ -801,11 +801,39 @@ public:
     }
 private:
     String m_localStorageDatabasePath;
+        WeakHashMap<WebCore::Page, HashMap<WebCore::SecurityOriginData, RefPtr<WebCore::StorageNamespace>>> m_sessionStorageNamespaces;
 
-    Ref<StorageNamespace> createSessionStorageNamespace(Page& page, unsigned quota) override
-    {
-        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota, page.sessionID());
+        RefPtr<StorageNamespace> sessionStorageNamespace(const SecurityOrigin& topLevelOrigin, Page& page, ShouldCreateNamespace shouldCreate) override{
+            if (m_sessionStorageNamespaces.find(page) == m_sessionStorageNamespaces.end()) {
+        if (shouldCreate == ShouldCreateNamespace::No)
+            return nullptr;
+        HashMap<SecurityOriginData, RefPtr<StorageNamespace>> map;
+        m_sessionStorageNamespaces.set(page, map);
     }
+    auto& sessionStorageNamespaces = m_sessionStorageNamespaces.find(page)->value;
+
+    auto sessionStorageNamespaceIt = sessionStorageNamespaces.find(topLevelOrigin.data());
+    if (sessionStorageNamespaceIt == sessionStorageNamespaces.end()) {
+        if (shouldCreate == ShouldCreateNamespace::No)
+            return nullptr;
+        return sessionStorageNamespaces.add(topLevelOrigin.data(), WebKit::StorageNamespaceImpl::createSessionStorageNamespace(sessionStorageQuota(), page.sessionID())).iterator->value;
+    }
+    return sessionStorageNamespaceIt->value;
+        }
+
+    void copySessionStorageNamespace(WebCore::Page& srcPage, WebCore::Page& dstPage) override{
+        auto& srcSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(srcPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
+    auto srcPageIt = srcSessionStorageNamespaces.find(srcPage);
+    if (srcPageIt == srcSessionStorageNamespaces.end())
+        return;
+
+    auto& srcPageSessionStorageNamespaces = srcPageIt->value;
+    HashMap<SecurityOriginData, RefPtr<StorageNamespace>> dstPageSessionStorageNamespaces;
+    for (auto& [origin, srcNamespace] : srcPageSessionStorageNamespaces)
+        dstPageSessionStorageNamespaces.set(origin, srcNamespace->copy(dstPage));
+
+    auto& dstSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(dstPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
+        }
 
     Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota, PAL::SessionID sessionID) override
     {
@@ -916,13 +944,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setInputTypeColorEnabled(true);
     settings.setUserAgent(defaultUserAgent());
     settings.setMaximumHTMLParserDOMTreeDepth(180);
-    settings.setXSSAuditorEnabled(true);
+    //settings.setXSSAuditorEnabled(true);
     settings.setInteractiveFormValidationEnabled(true);
 
     /* Using java logical fonts as defaults */
-    settings.setSerifFontFamily("Serif");
-    settings.setSansSerifFontFamily("SansSerif");
-    settings.setFixedFontFamily("Monospaced");
+    settings.setSerifFontFamily("Serif"_s);
+    settings.setSansSerifFontFamily("SansSerif"_s);
+    settings.setFixedFontFamily("Monospaced"_s);
     page->setDeviceScaleFactor(devicePixelScale);
 
     settings.setLinkPrefetchEnabled(true);
@@ -978,7 +1006,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkGetParentFrame
     if (!frame) {
         return 0;
     }
-    Frame* parentFrame = frame->tree().parent();
+    Frame* parentFrame = dynamicDowncast<LocalFrame>(frame->tree().parent());
     if (!parentFrame) {
         return 0;
     }
@@ -998,8 +1026,11 @@ JNIEXPORT jlongArray JNICALL Java_com_sun_webkit_WebPage_twkGetChildFrames
     jlongArray jArray = env->NewLongArray(tree.childCount());
     jlong *arr = env->GetLongArrayElements(jArray, 0);
     int i = 0;
-    for (Frame* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
-        arr[i++] = ptr_to_jlong(child);
+    for (auto* child = tree.firstChild(); child; child = child->tree().nextSibling()) {
+        auto* localChild = dynamicDowncast<LocalFrame>(child);
+        if (!localChild)
+               continue;
+                arr[i++] = ptr_to_jlong(child);
     }
     env->ReleaseLongArrayElements(jArray, arr, 0);
 
@@ -1134,8 +1165,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     size_t stringLen = (size_t)env->GetStringUTFLength(text);
     RefPtr<SharedBuffer> buffer = SharedBuffer::create(stringChars, (int)stringLen);
 
-    static const URL emptyUrl({ }, "");
-    ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8");
+    static const URL emptyUrl({ }, ""_s);
+    ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8"_s);
     FrameLoadRequest frameLoadRequest(
         *frame,
         ResourceRequest(emptyUrl),
@@ -1276,85 +1307,86 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     String nativePropertyValue(env, propertyValue);
     StringView nativePropertyString(nativePropertyValue);
 
-    if (nativePropertyName == "CSSCounterStyleAtRulesEnabled") {
-        settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled") {
-        settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "CSSIndividualTransformPropertiesEnabled") {
-        settings.setCSSIndividualTransformPropertiesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "CSSColorContrastEnabled") {
-        settings.setCSSColorContrastEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "WebKitTextAreasAreResizable") {
+    if (nativePropertyName == "CSSCounterStyleAtRulesEnabled"_s) {
+        settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled"_s) {
+        settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "CSSIndividualTransformPropertiesEnabled"_s) {
+        settings.setCSSIndividualTransformPropertiesEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "CSSColorContrastEnabled"_s) {
+        settings.setCSSColorContrastEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "WebKitTextAreasAreResizable"_s) {
         settings.setTextAreasAreResizable(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitLoadsImagesAutomatically") {
+    } else if (nativePropertyName == "WebKitLoadsImagesAutomatically"_s) {
         settings.setLoadsImagesAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitMinimumFontSize") {
+    } else if (nativePropertyName == "WebKitMinimumFontSize"_s) {
         settings.setMinimumFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitMinimumLogicalFontSize") {
+    } else if (nativePropertyName == "WebKitMinimumLogicalFontSize"_s) {
         settings.setMinimumLogicalFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitAcceleratedCompositingEnabled") {
+    } else if (nativePropertyName == "WebKitAcceleratedCompositingEnabled"_s) {
         settings.setAcceleratedCompositingEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitScriptEnabled") {
+    } else if (nativePropertyName == "WebKitScriptEnabled"_s) {
         settings.setScriptEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically") {
+    } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically"_s) {
         settings.setJavaScriptCanOpenWindowsAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitPluginsEnabled") {
+    } else if (nativePropertyName == "WebKitPluginsEnabled"_s) {
         settings.setPluginsEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitDefaultFixedFontSize") {
+    } else if (nativePropertyName == "WebKitDefaultFixedFontSize"_s) {
         settings.setDefaultFixedFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitContextMenuEnabled") {
+    } else if (nativePropertyName == "WebKitContextMenuEnabled"_s) {
         settings.setContextMenuEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitUserAgent") {
+    } else if (nativePropertyName == "WebKitUserAgent"_s) {
         settings.setUserAgent(nativePropertyValue);
-    } else if (nativePropertyName == "WebKitMaximumHTMLParserDOMTreeDepth") {
+    } else if (nativePropertyName == "WebKitMaximumHTMLParserDOMTreeDepth"_s) {
         settings.setMaximumHTMLParserDOMTreeDepth(parseIntegerAllowingTrailingJunk<uint32_t>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitXSSAuditorEnabled")  {
-        settings.setXSSAuditorEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitSerifFontFamily") {
+    } /*else if (nativePropertyName == "WebKitXSSAuditorEnabled"_s)  {
+       settings.setXSSAuditorEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
+    }*/
+     else if (nativePropertyName == "WebKitSerifFontFamily"_s) {
         settings.setSerifFontFamily(nativePropertyValue);
-    } else if (nativePropertyName == "WebKitSansSerifFontFamily") {
+    } else if (nativePropertyName == "WebKitSansSerifFontFamily"_s) {
         settings.setSansSerifFontFamily(nativePropertyValue);
-    } else if (nativePropertyName == "WebKitFixedFontFamily") {
+    } else if (nativePropertyName == "WebKitFixedFontFamily"_s) {
         settings.setFixedFontFamily(nativePropertyValue);
-    } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
+    } else if (nativePropertyName == "WebKitShowsURLsInToolTips"_s) {
         settings.setShowsURLsInToolTips(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "JavaScriptCanAccessClipboard") {
-        settings.setJavaScriptCanAccessClipboard(nativePropertyValue == "true");
-    } else if (nativePropertyName == "allowTopNavigationToDataURLs") {
-        settings.setAllowTopNavigationToDataURLs(nativePropertyValue == "true");
-    } else if (nativePropertyName == "UsesBackForwardCache") {
-        settings.setUsesBackForwardCache(nativePropertyValue == "true");
-    } else if (nativePropertyName == "enableColorFilter") {
-        settings.setColorFilterEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "KeygenElementEnabled") {
+    } else if (nativePropertyName == "JavaScriptCanAccessClipboard"_s) {
+        settings.setJavaScriptCanAccessClipboard(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "allowTopNavigationToDataURLs"_s) {
+        settings.setAllowTopNavigationToDataURLs(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "UsesBackForwardCache"_s) {
+        settings.setUsesBackForwardCache(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "enableColorFilter"_s) {
+        settings.setColorFilterEnabled(nativePropertyValue == "true"_s);
+    } /*else if (nativePropertyName == "KeygenElementEnabled"_s) {
         // removed from Chrome, Firefox, and the HTML specification in 2017.
         // https://trac.webkit.org/changeset/248960/webkit
-        RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled") {
-        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
-        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "IntersectionObserverEnabled") {
+        DeprecatedGlobalSettings::setKeygenElementEnabled(nativePropertyValue == "true"_s);
+    } */else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled"_s) {
+        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled"_s) {
+        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "IntersectionObserverEnabled"_s) {
 #if ENABLE(INTERSECTION_OBSERVER)
-        settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
+        settings.setIntersectionObserverEnabled(nativePropertyValue == "true"_s);
 #endif
-    } else if (nativePropertyName == "enableIntersectionObserver") {
+    } else if (nativePropertyName == "enableIntersectionObserver"_s) {
 #if ENABLE(INTERSECTION_OBSERVER)
-        settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
+        settings.setIntersectionObserverEnabled(nativePropertyValue == "true"_s);
 #endif
-    } else if (nativePropertyName == "ResizeObserverEnabled") {
+    } else if (nativePropertyName == "ResizeObserverEnabled"_s) {
 #if ENABLE(RESIZE_OBSERVER)
-        settings.setResizeObserverEnabled(nativePropertyValue == "true");
+        settings.setResizeObserverEnabled(nativePropertyValue == "true"_s);
 #endif
-    } else if (nativePropertyName == "RequestIdleCallbackEnabled") {
-        settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "ContactPickerAPIEnabled") {
-        settings.setContactPickerAPIEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "AttachmentElementEnabled") {
+    } else if (nativePropertyName == "RequestIdleCallbackEnabled"_s) {
+        settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "ContactPickerAPIEnabled"_s) {
+        settings.setContactPickerAPIEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "AttachmentElementEnabled"_s) {
 #if ENABLE(ATTACHMENT_ELEMENT)
-        RuntimeEnabledFeatures::sharedFeatures().setAttachmentElementEnabled(nativePropertyValue == "true");
+        DeprecatedGlobalSettings::setAttachmentElementEnabled(nativePropertyValue == "true"_s);
 #endif
-    } else if (nativePropertyName == "jscOptions" && !nativePropertyValue.isEmpty()) {
+    } else if (nativePropertyName == "jscOptions"_s && !nativePropertyValue.isEmpty()) {
         JSC::Options::setOptions(nativePropertyValue.utf8().data());
     }
 }
@@ -1381,8 +1413,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setDefaultFontSize(16);
     settings.setDefaultFixedFontSize(13);
     settings.setMinimumFontSize(0);
-    settings.setDefaultTextEncodingName("ISO-8859-1");
-    settings.setJavaEnabled(false);
+    settings.setDefaultTextEncodingName("ISO-8859-1"_s);
+    //settings.setJavaEnabled(false);
     settings.setFullScreenEnabled(true);
     settings.setScriptEnabled(true);
     settings.setEditableLinkBehavior(EditableLinkBehavior::OnlyLiveWithShiftKey);
@@ -1390,7 +1422,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setDOMPasteAllowed(true);
     settings.setShouldPrintBackgrounds(true);
     // settings.setCacheModel(WebCacheModelDocumentBrowser);
-    settings.setXSSAuditorEnabled(false);
+    //settings.setXSSAuditorEnabled(false); //
     settings.setPluginsEnabled(true);
     settings.setTextAreasAreResizable(true);
     settings.setUsesBackForwardCache(false);
@@ -1422,9 +1454,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     // Async spellcheck: NO
     DeprecatedGlobalSettings::setMockScrollbarsEnabled(true);
 
-    RuntimeEnabledFeatures::sharedFeatures().setHighlightAPIEnabled(true);
+    DeprecatedGlobalSettings::setHighlightAPIEnabled(true);
     // RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
-    RuntimeEnabledFeatures::sharedFeatures().setInspectorAdditionsEnabled(true);
+    //DeprecatedGlobalSettings::setInspectorAdditionsEnabled(true); // deprecated and not enable
     // RuntimeEnabledFeatures::sharedFeatures().clearNetworkLoaderSession();
 
     Frame& coreFrame = page->mainFrame();
@@ -2160,16 +2192,16 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
         setCopyKeyState(ACTION_COPY == javaAction);
         switch(actionId){
         case com_sun_webkit_WebPage_DND_DST_EXIT:
-            dc.dragExited(dragData);
+            dc.dragExited(WTFMove(dragData));
             return 0;
         case com_sun_webkit_WebPage_DND_DST_ENTER:
-            return dragOperationToDragCursor(dc.dragEntered(dragData));
+            return dragOperationToDragCursor(dc.dragEntered(WTFMove(dragData)));
         case com_sun_webkit_WebPage_DND_DST_OVER:
         case com_sun_webkit_WebPage_DND_DST_CHANGE:
-            return dragOperationToDragCursor(dc.dragUpdated(dragData));
+            return dragOperationToDragCursor(dc.dragUpdated(WTFMove(dragData)));
         case com_sun_webkit_WebPage_DND_DST_DROP:
             {
-                int ret = dc.performDragOperation(dragData) ? 1 : 0;
+                int ret = dc.performDragOperation(WTFMove(dragData)) ? 1 : 0;
                 WebPage::pageFromJLong(pPage)->dragController().dragEnded();
                 return ret;
             }
@@ -2184,9 +2216,9 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
             com_sun_webkit_WebPage_DND_SRC_DROP!=actionId
                 ? LeftButton
                 : NoButton,
-            PlatformEvent::MouseMoved,
+            PlatformEvent::Type::MouseMoved,
             0,
-            false, false, false, false, WallTime {}, ForceAtClick, NoTap); // TODO-java: handle force?
+            { }, WallTime {}, ForceAtClick, NoTap); // TODO-java: handle force?
         switch(actionId){
         case com_sun_webkit_WebPage_DND_SRC_EXIT:
         case com_sun_webkit_WebPage_DND_SRC_ENTER:

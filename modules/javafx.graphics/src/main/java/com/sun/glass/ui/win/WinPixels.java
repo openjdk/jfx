@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 
 import java.nio.ByteBuffer;
@@ -44,6 +43,10 @@ final class WinPixels extends Pixels {
 
     protected WinPixels(int width, int height, ByteBuffer data) {
         super(width, height, data);
+    }
+
+    protected WinPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        super(width, height, data, scalex, scaley);
     }
 
     protected WinPixels(int width, int height, IntBuffer data) {

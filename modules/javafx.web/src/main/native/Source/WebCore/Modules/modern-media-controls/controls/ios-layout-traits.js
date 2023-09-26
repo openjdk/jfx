@@ -55,19 +55,19 @@ class IOSLayoutTraits extends LayoutTraits
         return false;
     }
 
-    knobStyleForScrubber()
-    {
-        return Slider.KnobStyle.Circle;
-    }
-
     supportsDurationTimeLabel()
     {
         return false;
     }
 
-    playPauseButtonScaleFactor()
+    supportsAirPlay()
     {
-        return 1;
+        return true;
+    }
+
+    supportsPiP()
+    {
+        return true;
     }
 
     controlsDependOnPageScaleFactor()
@@ -75,9 +75,19 @@ class IOSLayoutTraits extends LayoutTraits
         return true;
     }
 
+    skipDuration()
+    {
+        return 10;
+    }
+
     promoteSubMenusWhenShowingMediaControlsContextMenu()
     {
         return false;
+    }
+
+    inheritsBorderRadius()
+    {
+        return true;
     }
 
     toString()

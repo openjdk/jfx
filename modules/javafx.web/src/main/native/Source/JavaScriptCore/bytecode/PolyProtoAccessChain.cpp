@@ -26,26 +26,26 @@
 #include "config.h"
 #include "PolyProtoAccessChain.h"
 
+#include "CacheableIdentifierInlines.h"
 #include "JSCInlines.h"
 
 namespace JSC {
 
-RefPtr<PolyProtoAccessChain> PolyProtoAccessChain::tryCreate(JSGlobalObject* globalObject, JSCell* base, const PropertySlot& slot)
+RefPtr<PolyProtoAccessChain> PolyProtoAccessChain::tryCreate(JSGlobalObject* globalObject, JSCell* base, CacheableIdentifier propertyName, const PropertySlot& slot)
 {
     JSObject* target = slot.isUnset() ? nullptr : slot.slotBase();
-    return tryCreate(globalObject, base, target);
+    return tryCreate(globalObject, base, propertyName, target);
 }
 
-RefPtr<PolyProtoAccessChain> PolyProtoAccessChain::tryCreate(JSGlobalObject* globalObject, JSCell* base, JSObject* target)
+RefPtr<PolyProtoAccessChain> PolyProtoAccessChain::tryCreate(JSGlobalObject* globalObject, JSCell* base, CacheableIdentifier propertyName, JSObject* target)
 {
     JSCell* current = base;
-    VM& vm = base->vm();
 
     bool found = false;
 
     Vector<StructureID> chain;
     for (unsigned iterationNumber = 0; true; ++iterationNumber) {
-        Structure* structure = current->structure(vm);
+        Structure* structure = current->structure();
 
         if (structure->isDictionary())
             return nullptr;
@@ -68,6 +68,14 @@ RefPtr<PolyProtoAccessChain> PolyProtoAccessChain::tryCreate(JSGlobalObject* glo
             break;
         }
 
+        // TypedArray has an ability to stop [[Prototype]] traversing for numeric index string (e.g. "0.1").
+        // If we found it, then traverse should stop for Unset case.
+        // https://262.ecma-international.org/9.0/#_ref_2826
+        if (!target && isTypedArrayType(structure->typeInfo().type()) && isCanonicalNumericIndexString(propertyName.uid())) {
+            found = true;
+            break;
+        }
+
         JSValue prototype = structure->prototypeForLookup(globalObject, current);
         if (prototype.isNull())
             break;
@@ -80,10 +88,10 @@ RefPtr<PolyProtoAccessChain> PolyProtoAccessChain::tryCreate(JSGlobalObject* glo
     return adoptRef(*new PolyProtoAccessChain(WTFMove(chain)));
 }
 
-bool PolyProtoAccessChain::needImpurePropertyWatchpoint(VM& vm) const
+bool PolyProtoAccessChain::needImpurePropertyWatchpoint(VM&) const
 {
     for (StructureID structureID : m_chain) {
-        if (vm.getStructure(structureID)->needImpurePropertyWatchpoint())
+        if (structureID.decode()->needImpurePropertyWatchpoint())
             return true;
     }
     return false;

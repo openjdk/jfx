@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,9 @@
 #include <tuple>
 #include <wtf/Forward.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/FixedWidthDouble.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/RawHex.h>
 #include <wtf/RawPointer.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
@@ -41,6 +43,11 @@ namespace WTF {
 inline const char* boolForPrinting(bool value)
 {
     return value ? "true" : "false";
+}
+
+inline const char* boolForPrinting(const std::optional<bool>& value)
+{
+    return value ? boolForPrinting(value.value()) : "<nullopt>";
 }
 
 class PrintStream {
@@ -94,9 +101,10 @@ protected:
 };
 
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const char*);
-WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const StringView&);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, StringView);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const CString&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const String&);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const AtomString&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const StringImpl*);
 inline void printInternal(PrintStream& out, const AtomStringImpl* value) { printInternal(out, bitwise_cast<const StringImpl*>(value)); }
 inline void printInternal(PrintStream& out, const UniquedStringImpl* value) { printInternal(out, bitwise_cast<const StringImpl*>(value)); }
@@ -111,6 +119,7 @@ inline void printInternal(PrintStream& out, UniquedStringImpl& value) { printInt
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, bool);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, signed char); // NOTE: this prints as a number, not as a character; use CharacterDump if you want the character
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, unsigned char); // NOTE: see above.
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, char16_t);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, short);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, unsigned short);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, int);
@@ -121,7 +130,9 @@ WTF_EXPORT_PRIVATE void printInternal(PrintStream&, long long);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, unsigned long long);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, float);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, double);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, RawHex);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, RawPointer);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, FixedWidthDouble);
 
 template<typename T>
 void printInternal(PrintStream& out, const T& value)

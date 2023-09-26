@@ -29,10 +29,13 @@
 #include "config.h"
 #include "UserAgentStyle.h"
 
+#include "CSSValuePool.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ElementInlines.h"
 #include "FullscreenManager.h"
 #include "HTMLAnchorElement.h"
+#include "HTMLAttachmentElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDataListElement.h"
@@ -43,15 +46,15 @@
 #include "HTMLHtmlElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
+#include "HTMLMeterElement.h"
 #include "HTMLObjectElement.h"
+#include "HTMLProgressElement.h"
 #include "HTMLSpanElement.h"
 #include "MathMLElement.h"
 #include "MediaQueryEvaluator.h"
 #include "Page.h"
-#include "Quirks.h"
 #include "RenderTheme.h"
-#include "RuleSet.h"
-#include "RuntimeEnabledFeatures.h"
+#include "RuleSetBuilder.h"
 #include "SVGElement.h"
 #include "StyleSheetContents.h"
 #include "UserAgentStyleSheets.h"
@@ -73,9 +76,19 @@ StyleSheetContents* UserAgentStyle::dialogStyleSheet;
 StyleSheetContents* UserAgentStyle::svgStyleSheet;
 StyleSheetContents* UserAgentStyle::mathMLStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaControlsStyleSheet;
-StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
-StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
+StyleSheetContents* UserAgentStyle::popoverStyleSheet;
+StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
+StyleSheetContents* UserAgentStyle::horizontalFormControlsStyleSheet;
+#if ENABLE(FULLSCREEN_API)
+StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
+#endif
+#if ENABLE(SERVICE_CONTROLS)
+StyleSheetContents* UserAgentStyle::imageControlsStyleSheet;
+#endif
+#if ENABLE(ATTACHMENT_ELEMENT)
+StyleSheetContents* UserAgentStyle::attachmentStyleSheet;
+#endif
 #if ENABLE(DATALIST_ELEMENT)
 StyleSheetContents* UserAgentStyle::dataListStyleSheet;
 #endif
@@ -85,16 +98,19 @@ StyleSheetContents* UserAgentStyle::colorInputStyleSheet;
 #if ENABLE(IOS_FORM_CONTROL_REFRESH)
 StyleSheetContents* UserAgentStyle::legacyFormControlsIOSStyleSheet;
 #endif
+#if ENABLE(ALTERNATE_FORM_CONTROL_DESIGN)
+StyleSheetContents* UserAgentStyle::alternateFormControlDesignStyleSheet;
+#endif
 
-static const MediaQueryEvaluator& screenEval()
+static const MQ::MediaQueryEvaluator& screenEval()
 {
-    static NeverDestroyed<const MediaQueryEvaluator> staticScreenEval(String(MAKE_STATIC_STRING_IMPL("screen")));
+    static NeverDestroyed<const MQ::MediaQueryEvaluator> staticScreenEval(screenAtom());
     return staticScreenEval;
 }
 
-static const MediaQueryEvaluator& printEval()
+static const MQ::MediaQueryEvaluator& printEval()
 {
-    static NeverDestroyed<const MediaQueryEvaluator> staticPrintEval(String(MAKE_STATIC_STRING_IMPL("print")));
+    static NeverDestroyed<const MQ::MediaQueryEvaluator> staticPrintEval(printAtom());
     return staticPrintEval;
 }
 
@@ -107,8 +123,11 @@ static StyleSheetContents* parseUASheet(const String& str)
 
 void UserAgentStyle::addToDefaultStyle(StyleSheetContents& sheet)
 {
-    defaultStyle->addRulesFromSheet(sheet, screenEval());
-    defaultPrintStyle->addRulesFromSheet(sheet, printEval());
+    RuleSetBuilder screenBuilder(*defaultStyle, screenEval());
+    screenBuilder.addRulesFromSheet(sheet);
+
+    RuleSetBuilder printBuilder(*defaultPrintStyle, printEval());
+    printBuilder.addRulesFromSheet(sheet);
 
     // Build a stylesheet consisting of non-trivial media queries seen in default style.
     // Rulesets for these can't be global and need to be built in document context.
@@ -117,9 +136,9 @@ void UserAgentStyle::addToDefaultStyle(StyleSheetContents& sheet)
             continue;
         auto& mediaRule = downcast<StyleRuleMedia>(*rule);
         auto& mediaQuery = mediaRule.mediaQueries();
-        if (screenEval().evaluate(mediaQuery, nullptr))
+        if (screenEval().evaluate(mediaQuery))
             continue;
-        if (printEval().evaluate(mediaQuery, nullptr))
+        if (printEval().evaluate(mediaQuery))
             continue;
         mediaQueryStyleSheet->parserAppendRule(mediaRule.copy());
     }
@@ -145,7 +164,9 @@ void UserAgentStyle::initDefaultStyleSheet()
     // Quirks-mode rules.
     String quirksRules = String(StringImpl::createWithoutCopying(quirksUserAgentStyleSheet, sizeof(quirksUserAgentStyleSheet))) + RenderTheme::singleton().extraQuirksStyleSheet();
     quirksStyleSheet = parseUASheet(quirksRules);
-    defaultQuirksStyle->addRulesFromSheet(*quirksStyleSheet, screenEval());
+
+    RuleSetBuilder quirkBuilder(*defaultQuirksStyle, screenEval());
+    quirkBuilder.addRulesFromSheet(*quirksStyleSheet);
 
     ++defaultStyleVersion;
 }
@@ -161,8 +182,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
                 plugInsStyleSheet = parseUASheet(plugInsRules);
                 addToDefaultStyle(*plugInsStyleSheet);
             }
-        }
-        else if (is<HTMLDialogElement>(element) && RuntimeEnabledFeatures::sharedFeatures().dialogElementEnabled()) {
+        } else if (is<HTMLDialogElement>(element) && element.document().settings().dialogElementEnabled()) {
             if (!dialogStyleSheet) {
                 dialogStyleSheet = parseUASheet(StringImpl::createWithoutCopying(dialogUserAgentStyleSheet, sizeof(dialogUserAgentStyleSheet)));
                 addToDefaultStyle(*dialogStyleSheet);
@@ -180,6 +200,12 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
             }
         }
 #endif // ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
+#if ENABLE(ATTACHMENT_ELEMENT)
+        else if (!attachmentStyleSheet && is<HTMLAttachmentElement>(element)) {
+            attachmentStyleSheet = parseUASheet(RenderTheme::singleton().attachmentStyleSheet());
+            addToDefaultStyle(*attachmentStyleSheet);
+        }
+#endif // ENABLE(ATTACHMENT_ELEMENT)
 #if ENABLE(DATALIST_ELEMENT)
         else if (!dataListStyleSheet && is<HTMLDataListElement>(element)) {
             dataListStyleSheet = parseUASheet(RenderTheme::singleton().dataListStyleSheet());
@@ -209,14 +235,14 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
     }
 #endif // ENABLE(MATHML)
 
+    if (!popoverStyleSheet && element.document().settings().popoverAttributeEnabled() && element.hasAttributeWithoutSynchronization(popoverAttr)) {
+        popoverStyleSheet = parseUASheet(StringImpl::createWithoutCopying(popoverUserAgentStyleSheet, sizeof(popoverUserAgentStyleSheet)));
+        addToDefaultStyle(*popoverStyleSheet);
+    }
+
 #if ENABLE(FULLSCREEN_API)
     if (!fullscreenStyleSheet && element.document().fullscreenManager().isFullscreen()) {
-        StringBuilder fullscreenRules;
-        fullscreenRules.appendCharacters(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet));
-        fullscreenRules.append(RenderTheme::singleton().extraFullScreenStyleSheet());
-        if (element.document().quirks().needsBlackFullscreenBackgroundQuirk())
-            fullscreenRules.append(":-webkit-full-screen { background-color: black; }"_s);
-        fullscreenStyleSheet = parseUASheet(fullscreenRules.toString());
+        fullscreenStyleSheet = parseUASheet(StringImpl::createWithoutCopying(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet)));
         addToDefaultStyle(*fullscreenStyleSheet);
     }
 #endif // ENABLE(FULLSCREEN_API)
@@ -227,6 +253,20 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
         addToDefaultStyle(*legacyFormControlsIOSStyleSheet);
     }
 #endif
+
+#if ENABLE(ALTERNATE_FORM_CONTROL_DESIGN)
+    if (!alternateFormControlDesignStyleSheet && element.document().settings().alternateFormControlDesignEnabled()) {
+        alternateFormControlDesignStyleSheet = parseUASheet(StringImpl::createWithoutCopying(alternateFormControlDesignUserAgentStyleSheet, sizeof(alternateFormControlDesignUserAgentStyleSheet)));
+        addToDefaultStyle(*alternateFormControlDesignStyleSheet);
+    }
+#endif
+
+    if ((is<HTMLFormControlElement>(element) || is<HTMLMeterElement>(element) || is<HTMLProgressElement>(element)) && !element.document().settings().verticalFormControlsEnabled()) {
+        if (!horizontalFormControlsStyleSheet) {
+            horizontalFormControlsStyleSheet = parseUASheet(StringImpl::createWithoutCopying(horizontalFormControlsUserAgentStyleSheet, sizeof(horizontalFormControlsUserAgentStyleSheet)));
+            addToDefaultStyle(*horizontalFormControlsStyleSheet);
+        }
+    }
 
     ASSERT(defaultStyle->features().idsInRules.isEmpty());
     ASSERT(mathMLStyleSheet || defaultStyle->features().siblingRules.isEmpty());

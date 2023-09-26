@@ -32,10 +32,7 @@
 
 namespace WebCore {
 
-MessagePortChannelRegistry::MessagePortChannelRegistry(CheckProcessLocalPortForActivityCallback&& checkProcessLocalPortForActivityCallback)
-    : m_checkProcessLocalPortForActivityCallback(WTFMove(checkProcessLocalPortForActivityCallback))
-{
-}
+MessagePortChannelRegistry::MessagePortChannelRegistry() = default;
 
 MessagePortChannelRegistry::~MessagePortChannelRegistry()
 {
@@ -141,7 +138,7 @@ bool MessagePortChannelRegistry::didPostMessageToRemote(MessageWithMessagePorts&
     return channel->postMessageToRemote(WTFMove(message), remoteTarget);
 }
 
-void MessagePortChannelRegistry::takeAllMessagesForPort(const MessagePortIdentifier& port, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&& callback)
+void MessagePortChannelRegistry::takeAllMessagesForPort(const MessagePortIdentifier& port, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&& callback)
 {
     ASSERT(isMainThread());
 
@@ -157,30 +154,11 @@ void MessagePortChannelRegistry::takeAllMessagesForPort(const MessagePortIdentif
     channel->takeAllMessagesForPort(port, WTFMove(callback));
 }
 
-void MessagePortChannelRegistry::checkRemotePortForActivity(const MessagePortIdentifier& remoteTarget, CompletionHandler<void(MessagePortChannelProvider::HasActivity)>&& callback)
-{
-    ASSERT(isMainThread());
-
-    // The channel might be gone if the remote side was closed.
-    auto* channel = m_openChannels.get(remoteTarget);
-    if (!channel) {
-        callback(MessagePortChannelProvider::HasActivity::No);
-        return;
-    }
-
-    channel->checkRemotePortForActivity(remoteTarget, WTFMove(callback));
-}
-
 MessagePortChannel* MessagePortChannelRegistry::existingChannelContainingPort(const MessagePortIdentifier& port)
 {
     ASSERT(isMainThread());
 
     return m_openChannels.get(port);
-}
-
-void MessagePortChannelRegistry::checkProcessLocalPortForActivity(const MessagePortIdentifier& messagePortIdentifier, ProcessIdentifier processIdentifier, CompletionHandler<void(MessagePortChannelProvider::HasActivity)>&& callback)
-{
-    m_checkProcessLocalPortForActivityCallback(messagePortIdentifier, processIdentifier, WTFMove(callback));
 }
 
 } // namespace WebCore

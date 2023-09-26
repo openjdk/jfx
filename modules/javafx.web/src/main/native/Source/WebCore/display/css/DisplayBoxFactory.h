@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutSize.h"
 #include <wtf/IsoMalloc.h>
 
@@ -39,9 +37,13 @@ class TransformationMatrix;
 namespace Layout {
 class Box;
 class BoxGeometry;
-class ContainerBox;
-class LineGeometry;
+class ElementBox;
 struct Run;
+}
+
+namespace InlineDisplay {
+struct Box;
+class Line;
 }
 
 namespace Display {
@@ -68,13 +70,13 @@ class BoxFactory {
 public:
     BoxFactory(TreeBuilder&, float pixelSnappingFactor);
 
-    static RootBackgroundPropagation determineRootBackgroundPropagation(const Layout::ContainerBox& rootLayoutBox);
+    static RootBackgroundPropagation determineRootBackgroundPropagation(const Layout::ElementBox& rootLayoutBox);
 
-    std::unique_ptr<ContainerBox> displayBoxForRootBox(const Layout::ContainerBox&, const Layout::BoxGeometry&, RootBackgroundPropagation) const;
+    std::unique_ptr<ContainerBox> displayBoxForRootBox(const Layout::ElementBox&, const Layout::BoxGeometry&, RootBackgroundPropagation) const;
     std::unique_ptr<Box> displayBoxForBodyBox(const Layout::Box&, const Layout::BoxGeometry&, const ContainingBlockContext&, RootBackgroundPropagation) const;
     std::unique_ptr<Box> displayBoxForLayoutBox(const Layout::Box&, const Layout::BoxGeometry&, const ContainingBlockContext&) const;
 
-    std::unique_ptr<Box> displayBoxForTextRun(const Layout::Run&, const Layout::LineGeometry&, const ContainingBlockContext&) const;
+    std::unique_ptr<Box> displayBoxForTextRun(const InlineDisplay::Box&, const InlineDisplay::Line&, const ContainingBlockContext&) const;
 
 private:
     std::unique_ptr<Box> displayBoxForLayoutBox(const Layout::Box&, const Layout::BoxGeometry&, const ContainingBlockContext&, const RenderStyle* styleForBackground, Style&&) const;
@@ -89,8 +91,8 @@ private:
     FloatPoint3D computeTransformOrigin(const BoxModelBox&, const Layout::BoxGeometry&, const RenderStyle&, LayoutSize offsetFromRoot) const;
     TransformationMatrix computeTransformationMatrix(const BoxModelBox&, const Layout::BoxGeometry&, const RenderStyle&, LayoutSize offsetFromRoot) const;
 
-    static const Layout::ContainerBox* documentElementBoxFromRootBox(const Layout::ContainerBox& rootLayoutBox);
-    static const Layout::Box* bodyBoxFromRootBox(const Layout::ContainerBox& rootLayoutBox);
+    static const Layout::ElementBox* documentElementBoxFromRootBox(const Layout::ElementBox& rootLayoutBox);
+    static const Layout::Box* bodyBoxFromRootBox(const Layout::ElementBox& rootLayoutBox);
 
     TreeBuilder& m_treeBuilder;
     float m_pixelSnappingFactor { 1 };
@@ -100,4 +102,3 @@ private:
 } // namespace WebCore
 
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

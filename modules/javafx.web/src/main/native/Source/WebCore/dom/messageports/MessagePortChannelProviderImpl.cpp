@@ -32,16 +32,7 @@
 
 namespace WebCore {
 
-static inline MessagePortChannelRegistry::CheckProcessLocalPortForActivityCallback checkActivityCallback()
-{
-    return [](auto& messagePortIdentifier, auto, auto&& callback) {
-        ASSERT(isMainThread());
-        callback(MessagePort::isExistingMessagePortLocallyReachable(messagePortIdentifier) ? MessagePortChannelProvider::HasActivity::Yes : MessagePortChannelProvider::HasActivity::No);
-    };
-}
-
 MessagePortChannelProviderImpl::MessagePortChannelProviderImpl()
-    : m_registry(checkActivityCallback())
 {
 }
 
@@ -86,28 +77,16 @@ void MessagePortChannelProviderImpl::postMessageToRemote(MessageWithMessagePorts
     });
 }
 
-void MessagePortChannelProviderImpl::takeAllMessagesForPort(const MessagePortIdentifier& port, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&& outerCallback)
+void MessagePortChannelProviderImpl::takeAllMessagesForPort(const MessagePortIdentifier& port, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&& outerCallback)
 {
     // It is the responsibility of outerCallback to get itself to the appropriate thread (e.g. WebWorker thread)
-    auto callback = [outerCallback = WTFMove(outerCallback)](Vector<MessageWithMessagePorts>&& messages, Function<void()>&& messageDeliveryCallback) mutable {
+    auto callback = [outerCallback = WTFMove(outerCallback)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& messageDeliveryCallback) mutable {
         ASSERT(isMainThread());
         outerCallback(WTFMove(messages), WTFMove(messageDeliveryCallback));
     };
 
     ensureOnMainThread([registry = &m_registry, port, callback = WTFMove(callback)]() mutable {
         registry->takeAllMessagesForPort(port, WTFMove(callback));
-    });
-}
-
-void MessagePortChannelProviderImpl::checkRemotePortForActivity(const MessagePortIdentifier& remoteTarget, CompletionHandler<void(HasActivity)>&& outerCallback)
-{
-    auto callback = Function<void(HasActivity)> { [outerCallback = WTFMove(outerCallback)](HasActivity hasActivity) mutable {
-        ASSERT(isMainThread());
-        outerCallback(hasActivity);
-    } };
-
-    ensureOnMainThread([registry = &m_registry, remoteTarget, callback = WTFMove(callback)]() mutable {
-        registry->checkRemotePortForActivity(remoteTarget, WTFMove(callback));
     });
 }
 

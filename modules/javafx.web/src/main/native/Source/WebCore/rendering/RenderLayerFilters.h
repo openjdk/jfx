@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 
 #include "CachedResourceHandle.h"
 #include "CachedSVGDocumentClient.h"
+#include "FilterRenderingMode.h"
 #include "RenderLayer.h"
 
 namespace WebCore {
@@ -39,6 +40,7 @@ namespace WebCore {
 class CachedSVGDocument;
 class Element;
 class FilterOperations;
+class FilterTargetSwitcher;
 
 class RenderLayerFilters final : private CachedSVGDocumentClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -50,7 +52,7 @@ public:
     void expandDirtySourceRect(const LayoutRect& rect) { m_dirtySourceRect.unite(rect); }
 
     CSSFilter* filter() const { return m_filter.get(); }
-    void setFilter(RefPtr<CSSFilter>&&);
+    void clearFilter() { m_filter = nullptr; }
 
     bool hasFilterThatMovesPixels() const;
     bool hasFilterThatShouldBeRestrictedBySecurityOrigin() const;
@@ -58,12 +60,16 @@ public:
     void updateReferenceFilterClients(const FilterOperations&);
     void removeReferenceFilterClients();
 
-    void buildFilter(RenderElement&, float scaleFactor, RenderingMode);
+    void setPreferredFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) { m_preferredFilterRenderingModes = preferredFilterRenderingModes; }
+    void setFilterScale(const FloatSize& filterScale) { m_filterScale = filterScale; }
+
+    static bool isIdentity(RenderElement&);
+    static IntOutsets calculateOutsets(RenderElement&, const FloatRect& targetBoundingBox);
 
     // Per render
     LayoutRect repaintRect() const { return m_repaintRect; }
 
-    GraphicsContext* beginFilterEffect(GraphicsContext& destinationContext, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect);
+    GraphicsContext* beginFilterEffect(RenderElement&, GraphicsContext&, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect);
     void applyFilterEffect(GraphicsContext& destinationContext);
 
 private:
@@ -71,16 +77,19 @@ private:
     void resetDirtySourceRect() { m_dirtySourceRect = LayoutRect(); }
 
     RenderLayer& m_layer;
-
     Vector<RefPtr<Element>> m_internalSVGReferences;
     Vector<CachedResourceHandle<CachedSVGDocument>> m_externalSVGReferences;
 
-    RefPtr<CSSFilter> m_filter;
+    LayoutRect m_targetBoundingBox;
     LayoutRect m_dirtySourceRect;
-
-    // Data used per paint
-    LayoutPoint m_paintOffset;
     LayoutRect m_repaintRect;
+
+    OptionSet<FilterRenderingMode> m_preferredFilterRenderingModes { FilterRenderingMode::Software };
+    FloatSize m_filterScale { 1, 1 };
+    FloatRect m_filterRegion;
+
+    RefPtr<CSSFilter> m_filter;
+    std::unique_ptr<FilterTargetSwitcher> m_targetSwitcher;
 };
 
 } // namespace WebCore

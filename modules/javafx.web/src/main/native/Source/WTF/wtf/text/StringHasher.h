@@ -22,6 +22,7 @@
 #pragma once
 
 #include <unicode/utypes.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/text/LChar.h>
 
 namespace WTF {
@@ -223,23 +224,6 @@ public:
     static constexpr unsigned computeLiteralHashAndMaskTop8Bits(const T (&characters)[charactersCount])
     {
         return computeHashAndMaskTop8Bits<T, DefaultConverter>(characters, charactersCount - 1);
-    }
-
-    static unsigned hashMemory(const void* data, unsigned length)
-    {
-        size_t lengthInUChar = length / sizeof(UChar);
-        StringHasher hasher;
-        hasher.addCharactersAssumingAligned(static_cast<const UChar*>(data), lengthInUChar);
-
-        for (size_t i = 0; i < length % sizeof(UChar); ++i)
-            hasher.addCharacter(static_cast<const char*>(data)[lengthInUChar * sizeof(UChar) + i]);
-
-        return hasher.hash();
-    }
-
-    template<size_t length> static unsigned hashMemory(const void* data)
-    {
-        return hashMemory(data, length);
     }
 
 private:

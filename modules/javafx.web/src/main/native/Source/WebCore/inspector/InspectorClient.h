@@ -60,6 +60,7 @@ public:
     virtual bool overridesShowPaintRects() const { return false; }
     virtual void setShowPaintRects(bool) { }
     virtual void showPaintRect(const FloatRect&) { }
+    virtual unsigned paintRectCount() const { return 0; }
     virtual void didSetSearchingForNode(bool) { }
     virtual void elementSelectionChanged(bool) { }
     virtual void timelineRecordingChanged(bool) { }
@@ -70,6 +71,10 @@ public:
         MockCaptureDevicesEnabled,
     };
     virtual void setDeveloperPreferenceOverride(DeveloperPreference, std::optional<bool>) { }
+
+#if ENABLE(INSPECTOR_NETWORK_THROTTLING)
+    virtual bool setEmulatedConditions(std::optional<int64_t>&& /* bytesPerSecondLimit */) { return false; }
+#endif
 
 #if ENABLE(REMOTE_INSPECTOR)
     virtual bool allowRemoteInspectionToPageDirectly() const { return false; }

@@ -34,8 +34,9 @@
 
 namespace WebCore {
 
-RenderGeometryMap::RenderGeometryMap(OptionSet<MapCoordinatesMode> flags)
+RenderGeometryMap::RenderGeometryMap(OptionSet<MapCoordinatesMode> flags, bool useCSS3DTransformInterop)
     : m_mapCoordinatesFlags(flags)
+    , m_useCSS3DTransformInterop(useCSS3DTransformInterop)
 {
 }
 
@@ -107,7 +108,7 @@ FloatPoint RenderGeometryMap::mapToContainer(const FloatPoint& p, const RenderLa
         result.move(m_accumulatedOffset);
         ASSERT(m_accumulatedOffsetMightBeSaturated || areEssentiallyEqual(rendererMappedResult, result));
     } else {
-        TransformState transformState(TransformState::ApplyTransformDirection, p);
+        TransformState transformState(m_useCSS3DTransformInterop, TransformState::ApplyTransformDirection, p);
         mapToContainer(transformState, container);
         result = transformState.lastPlanarPoint();
         ASSERT(areEssentiallyEqual(rendererMappedResult, result));
@@ -124,7 +125,7 @@ FloatQuad RenderGeometryMap::mapToContainer(const FloatRect& rect, const RenderL
         result = rect;
         result.move(m_accumulatedOffset);
     } else {
-        TransformState transformState(TransformState::ApplyTransformDirection, rect.center(), rect);
+        TransformState transformState(m_useCSS3DTransformInterop, TransformState::ApplyTransformDirection, rect.center(), rect);
         mapToContainer(transformState, container);
         result = transformState.lastPlanarQuad();
     }
@@ -135,7 +136,7 @@ FloatQuad RenderGeometryMap::mapToContainer(const FloatRect& rect, const RenderL
 void RenderGeometryMap::pushMappingsToAncestor(const RenderObject* renderer, const RenderLayerModelObject* ancestorRenderer)
 {
     // We need to push mappings in reverse order here, so do insertions rather than appends.
-    SetForScope<size_t> positionChange(m_insertionPosition, m_mapping.size());
+    SetForScope positionChange(m_insertionPosition, m_mapping.size());
     do {
         renderer = renderer->pushMappingToContainer(ancestorRenderer, *this);
     } while (renderer && renderer != ancestorRenderer);
@@ -150,13 +151,13 @@ static bool canMapBetweenRenderersViaLayers(const RenderLayerModelObject& render
         if (current->isFixedPositioned() || style.isFlippedBlocksWritingMode())
             return false;
 
-        if (current->hasTransformRelatedProperty() && !current->style().preserves3D())
+        if (current->hasTransformOrPerspective())
             return false;
 
         if (current->isRenderFragmentedFlow())
             return false;
 
-        if (current->isSVGRoot())
+        if (current->isLegacySVGRoot())
             return false;
 
         if (current == &ancestor)
@@ -172,7 +173,7 @@ void RenderGeometryMap::pushMappingsToAncestor(const RenderLayer* layer, const R
     if (!respectTransforms)
         newFlags.remove(UseTransforms);
 
-    SetForScope<OptionSet<MapCoordinatesMode>> flagsChange(m_mapCoordinatesFlags, newFlags);
+    SetForScope flagsChange(m_mapCoordinatesFlags, newFlags);
 
     const RenderLayerModelObject& renderer = layer->renderer();
 
@@ -189,7 +190,7 @@ void RenderGeometryMap::pushMappingsToAncestor(const RenderLayer* layer, const R
             pushMappingsToAncestor(&ancestorLayer->renderer(), nullptr);
         }
 
-        SetForScope<size_t> positionChange(m_insertionPosition, m_mapping.size());
+        SetForScope positionChange(m_insertionPosition, m_mapping.size());
         push(&renderer, layerOffset, /*accumulatingTransform*/ true, /*isNonUniform*/ false, /*isFixedPosition*/ false, /*hasTransform*/ false);
         return;
     }

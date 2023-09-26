@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,14 +31,17 @@
 namespace JSC {
 
 template<typename Adaptor>
-GenericTypedArrayView<Adaptor>::GenericTypedArrayView(
-RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned length)
-    : ArrayBufferView(WTFMove(buffer), byteOffset, length * sizeof(typename Adaptor::Type))
+GenericTypedArrayView<Adaptor>::GenericTypedArrayView(RefPtr<ArrayBuffer>&& buffer, size_t byteOffset, std::optional<size_t> length)
+    : ArrayBufferView(Adaptor::typeValue, WTFMove(buffer), byteOffset, length ? std::optional { length.value() * sizeof(typename Adaptor::Type) } : std::nullopt)
 {
+#if ASSERT_ENABLED
+    if (length)
+        ASSERT((length.value() / sizeof(typename Adaptor::Type)) < std::numeric_limits<size_t>::max());
+#endif
 }
 
 template<typename Adaptor>
-Ref<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(unsigned length)
+Ref<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(size_t length)
 {
     auto result = tryCreate(length);
     RELEASE_ASSERT(result);
@@ -47,7 +50,7 @@ Ref<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(unsig
 
 template<typename Adaptor>
 Ref<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(
-    const typename Adaptor::Type* array, unsigned length)
+    const typename Adaptor::Type* array, size_t length)
 {
     auto result = tryCreate(array, length);
     RELEASE_ASSERT(result);
@@ -56,7 +59,7 @@ Ref<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(
 
 template<typename Adaptor>
 Ref<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(
-    RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned length)
+    RefPtr<ArrayBuffer>&& buffer, size_t byteOffset, std::optional<size_t> length)
 {
     auto result = tryCreate(WTFMove(buffer), byteOffset, length);
     RELEASE_ASSERT(result);
@@ -64,7 +67,7 @@ Ref<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::create(
 }
 
 template<typename Adaptor>
-RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::tryCreate(unsigned length)
+RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::tryCreate(size_t length)
 {
     auto buffer = ArrayBuffer::tryCreate(length, sizeof(typename Adaptor::Type));
     if (!buffer)
@@ -74,7 +77,7 @@ RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::tryCreate
 
 template<typename Adaptor>
 RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::tryCreate(
-    const typename Adaptor::Type* array, unsigned length)
+    const typename Adaptor::Type* array, size_t length)
 {
     RefPtr<GenericTypedArrayView> result = tryCreate(length);
     if (!result)
@@ -84,23 +87,43 @@ RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::tryCreate
 }
 
 template<typename Adaptor>
-RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::tryCreate(
-    RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned length)
+RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::tryCreate(RefPtr<ArrayBuffer>&& buffer, size_t byteOffset, std::optional<size_t> length)
 {
     if (!buffer)
         return nullptr;
 
-    if (!ArrayBufferView::verifySubRangeLength(*buffer, byteOffset, length, sizeof(typename Adaptor::Type))
-        || !verifyByteOffsetAlignment(byteOffset, sizeof(typename Adaptor::Type))) {
+    ASSERT(length || buffer->isResizableOrGrowableShared());
+
+    if (!ArrayBufferView::verifySubRangeLength(*buffer, byteOffset, length.value_or(0), sizeof(typename Adaptor::Type)))
         return nullptr;
-    }
+
+    if (!verifyByteOffsetAlignment(byteOffset, sizeof(typename Adaptor::Type)))
+        return nullptr;
 
     return adoptRef(new GenericTypedArrayView(WTFMove(buffer), byteOffset, length));
 }
 
 template<typename Adaptor>
+RefPtr<GenericTypedArrayView<Adaptor>> GenericTypedArrayView<Adaptor>::wrappedAs(Ref<ArrayBuffer>&& buffer, size_t byteOffset, std::optional<size_t> length)
+{
+    ASSERT(length || buffer->isResizableOrGrowableShared());
+
+    // We do not check verifySubRangeLength for resizable buffer case since this function is only called from already created JS TypedArrays.
+    // It is possible that verifySubRangeLength fails when underlying ArrayBuffer is resized, but it is OK since it will be just recognized as OOB TypedArray.
+    if (!buffer->isResizableOrGrowableShared()) {
+        if (!ArrayBufferView::verifySubRangeLength(buffer.get(), byteOffset, length.value_or(0), sizeof(typename Adaptor::Type)))
+            return nullptr;
+    }
+
+    if (!verifyByteOffsetAlignment(byteOffset, sizeof(typename Adaptor::Type)))
+        return nullptr;
+
+    return adoptRef(*new GenericTypedArrayView(WTFMove(buffer), byteOffset, length));
+}
+
+template<typename Adaptor>
 Ref<GenericTypedArrayView<Adaptor>>
-GenericTypedArrayView<Adaptor>::createUninitialized(unsigned length)
+GenericTypedArrayView<Adaptor>::createUninitialized(size_t length)
 {
     auto result = tryCreateUninitialized(length);
     RELEASE_ASSERT(result);
@@ -109,7 +132,7 @@ GenericTypedArrayView<Adaptor>::createUninitialized(unsigned length)
 
 template<typename Adaptor>
 RefPtr<GenericTypedArrayView<Adaptor>>
-GenericTypedArrayView<Adaptor>::tryCreateUninitialized(unsigned length)
+GenericTypedArrayView<Adaptor>::tryCreateUninitialized(size_t length)
 {
     RefPtr<ArrayBuffer> buffer =
         ArrayBuffer::tryCreateUninitialized(length, sizeof(typename Adaptor::Type));
@@ -119,29 +142,10 @@ GenericTypedArrayView<Adaptor>::tryCreateUninitialized(unsigned length)
 }
 
 template<typename Adaptor>
-RefPtr<GenericTypedArrayView<Adaptor>>
-GenericTypedArrayView<Adaptor>::subarray(int start) const
-{
-    return subarray(start, length());
-}
-
-template<typename Adaptor>
-RefPtr<GenericTypedArrayView<Adaptor>>
-GenericTypedArrayView<Adaptor>::subarray(int start, int end) const
-{
-    unsigned offset, length;
-    calculateOffsetAndLength(start, end, this->length(), &offset, &length);
-    ArrayBuffer* buffer = possiblySharedBuffer();
-    ASSERT(buffer);
-    clampOffsetAndNumElements<Adaptor::Type>(*buffer, byteOffset(), &offset, &length);
-    return tryCreate(buffer, offset, length);
-}
-
-template<typename Adaptor>
-JSArrayBufferView* GenericTypedArrayView<Adaptor>::wrap(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject)
+JSArrayBufferView* GenericTypedArrayView<Adaptor>::wrapImpl(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject)
 {
     UNUSED_PARAM(lexicalGlobalObject);
-    return Adaptor::JSViewType::create(globalObject->vm(), globalObject->typedArrayStructure(Adaptor::typeValue), this);
+    return Adaptor::JSViewType::create(globalObject->vm(), globalObject->typedArrayStructure(Adaptor::typeValue, isResizableOrGrowableShared()), this);
 }
 
 } // namespace JSC

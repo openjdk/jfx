@@ -1,7 +1,6 @@
 package com.sun.javafx.css;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javafx.css.PseudoClass;
 import javafx.css.Styleable;
@@ -14,7 +13,7 @@ import javafx.scene.SubScene;
 
 
 /*
- * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -194,12 +193,12 @@ public class StyleManagerShim {
             return sc.parentUsers.contains(k);
         }
 
-        public StyleManagerShim.RefList<Parent> get_parentUsers() {
-            return new RefList<Parent>(sc.parentUsers);
+        public RefList get_parentUsers() {
+            return new RefList(sc.parentUsers);
         }
     }
 
-    static class RefList<T> {
+    static class RefList {
          private StyleManager.RefList ref;
 
          RefList(StyleManager.RefList ref) {

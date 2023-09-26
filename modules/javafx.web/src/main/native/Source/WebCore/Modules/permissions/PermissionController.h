@@ -25,23 +25,31 @@
 
 #pragma once
 
-#include "PermissionState.h"
+#include "PermissionDescriptor.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
+enum class PermissionName : uint8_t;
+enum class PermissionQuerySource : uint8_t;
+enum class PermissionState : uint8_t;
+class Page;
 class PermissionObserver;
 struct ClientOrigin;
-struct PermissionDescriptor;
+class SecurityOriginData;
 
 class PermissionController : public ThreadSafeRefCounted<PermissionController> {
 public:
+    static PermissionController& shared();
+    WEBCORE_EXPORT static void setSharedController(Ref<PermissionController>&&);
+
     virtual ~PermissionController() = default;
-    virtual PermissionState query(ClientOrigin&&, PermissionDescriptor&&) = 0;
-    virtual void request(ClientOrigin&&, PermissionDescriptor&&, CompletionHandler<void(PermissionState)>&&) = 0;
+    virtual void query(ClientOrigin&&, PermissionDescriptor, const WeakPtr<Page>&, PermissionQuerySource, CompletionHandler<void(std::optional<PermissionState>)>&&) = 0;
     virtual void addObserver(PermissionObserver&) = 0;
     virtual void removeObserver(PermissionObserver&) = 0;
+    virtual void permissionChanged(PermissionName, const SecurityOriginData&) = 0;
 protected:
     PermissionController() = default;
 };
@@ -51,10 +59,10 @@ public:
     static Ref<DummyPermissionController> create() { return adoptRef(*new DummyPermissionController); }
 private:
     DummyPermissionController() = default;
-    PermissionState query(ClientOrigin&&, PermissionDescriptor&&) final { return PermissionState::Denied; }
-    void request(ClientOrigin&&, PermissionDescriptor&&, CompletionHandler<void(PermissionState)>&& completionHandler) final { completionHandler(PermissionState::Denied); }
+    void query(ClientOrigin&&, PermissionDescriptor, const WeakPtr<Page>&, PermissionQuerySource, CompletionHandler<void(std::optional<PermissionState>)>&& callback) final { callback({ }); }
     void addObserver(PermissionObserver&) final { }
     void removeObserver(PermissionObserver&) final { }
+    void permissionChanged(PermissionName, const SecurityOriginData&) final { }
 };
 
 } // namespace WebCore

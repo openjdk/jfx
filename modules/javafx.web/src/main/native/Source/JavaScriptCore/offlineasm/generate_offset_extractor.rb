@@ -29,9 +29,11 @@ require "config"
 require "backends"
 require "digest/sha1"
 require "offsets"
+require 'optparse'
 require "parser"
 require "self_hash"
 require "settings"
+require "shellwords"
 require "transform"
 
 IncludeFile.processIncludeOptions()
@@ -44,6 +46,17 @@ validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
 includeOnlyBackends(validBackends)
 
 variants = ARGV.shift.split(/[,\s]+/)
+
+$options = {}
+OptionParser.new do |opts|
+    opts.banner = "Usage: generate_offset_extractor.rb asmFile settingFile outputFileName backends variants [--webkit-additions-path=<path>] [--depfile=<depfile>]"
+    opts.on("--webkit-additions-path=PATH", "WebKitAdditions path.") do |path|
+        $options[:webkit_additions_path] = path
+    end
+    opts.on("--depfile=DEPFILE", "path to write Makefile-style discovered dependencies to.") do |path|
+        $options[:depfile] = path
+    end
+end.parse!
 
 begin
     configurationList = configurationIndicesForVariants(settingsFlnm, variants)
@@ -60,9 +73,9 @@ def emitMagicNumber
 end
 
 configurationHash = Digest::SHA1.hexdigest(configurationList.join(' '))
-inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm)} #{configurationHash} #{selfHash}"
+inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm, $options)} #{configurationHash} #{selfHash}"
 
-if FileTest.exist? outputFlnm
+if FileTest.exist?(outputFlnm) and (not $options[:depfile] or FileTest.exist?($options[:depfile]))
     File.open(outputFlnm, "r") {
         | inp |
         firstLine = inp.gets
@@ -73,8 +86,15 @@ if FileTest.exist? outputFlnm
     }
 end
 
-ast = parse(inputFlnm)
+sources = Set.new
+ast = parse(inputFlnm, $options, sources)
 settingsCombinations = computeSettingsCombinations(ast)
+
+if $options[:depfile]
+    depfile = File.open($options[:depfile], "w")
+    depfile.print(Shellwords.escape(outputFlnm), ": ")
+    depfile.puts(Shellwords.join(sources.sort))
+end
 
 File.open(outputFlnm, "w") {
     | outp |

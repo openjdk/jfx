@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,28 +83,28 @@ public abstract class ComboBoxBase<T> extends Control {
      * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_SHOWING =
-            new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWING");
+            new EventType<>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWING");
 
     /**
      * <p>Called after the ComboBox has shown its popup/display.
      * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_SHOWN =
-            new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWN");
+            new EventType<>(Event.ANY, "COMBO_BOX_BASE_ON_SHOWN");
 
     /**
      * <p>Called when the ComboBox popup/display <b>will</b> be hidden.
      * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_HIDING =
-            new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_HIDING");
+            new EventType<>(Event.ANY, "COMBO_BOX_BASE_ON_HIDING");
 
     /**
      * <p>Called when the ComboBox popup/display has been hidden.
      * @since JavaFX 2.2
      */
     public static final EventType<Event> ON_HIDDEN =
-            new EventType<Event>(Event.ANY, "COMBO_BOX_BASE_ON_HIDDEN");
+            new EventType<>(Event.ANY, "COMBO_BOX_BASE_ON_HIDDEN");
 
 
 
@@ -145,8 +145,8 @@ public abstract class ComboBoxBase<T> extends Control {
      * either the value input by the user, or the last selected item.
      * @return the value property
      */
-    public ObjectProperty<T> valueProperty() { return value; }
-    private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value");
+    public final ObjectProperty<T> valueProperty() { return value; }
+    private final ObjectProperty<T> value = new SimpleObjectProperty<>(this, "value");
 
     public final void setValue(T value) { valueProperty().set(value); }
     public final T getValue() { return valueProperty().get(); }
@@ -162,10 +162,10 @@ public abstract class ComboBoxBase<T> extends Control {
      * reset, along with any other relevant state.
      * @return the editable property
      */
-    public BooleanProperty editableProperty() { return editable; }
+    public final BooleanProperty editableProperty() { return editable; }
     public final void setEditable(boolean value) { editableProperty().set(value); }
     public final boolean isEditable() { return editableProperty().get(); }
-    private BooleanProperty editable = new SimpleBooleanProperty(this, "editable", false) {
+    private final BooleanProperty editable = new SimpleBooleanProperty(this, "editable", false) {
         @Override protected void invalidated() {
             pseudoClassStateChanged(PSEUDO_CLASS_EDITABLE, get());
         }
@@ -178,7 +178,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * currently visible on screen (although it may be hidden behind other windows).
      */
     private ReadOnlyBooleanWrapper showing;
-    public ReadOnlyBooleanProperty showingProperty() { return showingPropertyImpl().getReadOnlyProperty(); }
+    public final ReadOnlyBooleanProperty showingProperty() { return showingPropertyImpl().getReadOnlyProperty(); }
     public final boolean isShowing() { return showingPropertyImpl().get(); }
     private void setShowing(boolean value) {
         // these events will not fire if the showing property is bound
@@ -245,10 +245,10 @@ public abstract class ComboBoxBase<T> extends Control {
      * ComboBox and pressed.
      * @return the armed property
      */
-    public BooleanProperty armedProperty() { return armed; }
+    public final BooleanProperty armedProperty() { return armed; }
     private final void setArmed(boolean value) { armedProperty().set(value); }
     public final boolean isArmed() { return armedProperty().get(); }
-    private BooleanProperty armed = new SimpleBooleanProperty(this, "armed", false) {
+    private final BooleanProperty armed = new SimpleBooleanProperty(this, "armed", false) {
         @Override protected void invalidated() {
             pseudoClassStateChanged(PSEUDO_CLASS_ARMED, get());
         }
@@ -269,7 +269,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
     public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
     public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ActionEvent.ACTION, get());
         }
@@ -294,7 +294,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * Called just prior to the {@code ComboBoxBase} popup/display being shown.
      * @since JavaFX 2.2
      */
-    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_SHOWING, get());
         }
@@ -317,7 +317,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * Called just after the {@link ComboBoxBase} popup/display is shown.
      * @since JavaFX 2.2
      */
-    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_SHOWN, get());
         }
@@ -340,7 +340,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * Called just prior to the {@link ComboBox} popup/display being hidden.
      * @since JavaFX 2.2
      */
-    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_HIDING, get());
         }
@@ -363,7 +363,7 @@ public abstract class ComboBoxBase<T> extends Control {
      * Called just after the {@link ComboBoxBase} popup/display has been hidden.
      * @since JavaFX 2.2
      */
-    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_HIDDEN, get());
         }

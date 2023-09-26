@@ -29,6 +29,7 @@
 #include "FloatPoint.h"
 #include "LinearGradientAttributes.h"
 #include "RenderSVGResourceLinearGradient.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGLengthValue.h"
 #include "SVGNames.h"
 #include "SVGUnitTypes.h"
@@ -40,7 +41,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGLinearGradientElement);
 
 inline SVGLinearGradientElement::SVGLinearGradientElement(const QualifiedName& tagName, Document& document)
-    : SVGGradientElement(tagName, document)
+    : SVGGradientElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     // Spec: If the x2 attribute is not specified, the effect is as if a value of "100%" were specified.
     ASSERT(hasTagName(SVGNames::linearGradientTag));
@@ -82,8 +83,7 @@ void SVGLinearGradientElement::svgAttributeChanged(const QualifiedName& attrName
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         updateRelativeLengthsInformation();
-        if (RenderObject* object = renderer())
-            object->setNeedsLayout();
+        updateSVGRendererForElementChange();
         return;
     }
 

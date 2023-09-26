@@ -28,6 +28,7 @@
 
 #include "AnimationUtilities.h"
 #include "Color.h"
+#include "ColorInterpolation.h"
 
 namespace WebCore {
 
@@ -39,8 +40,14 @@ Color blendSourceOver(const Color& backdrop, const Color& source)
     if (!source.isVisible())
         return backdrop;
 
-    auto [backdropR, backdropG, backdropB, backdropA] = backdrop.toSRGBALossy<uint8_t>();
-    auto [sourceR, sourceG, sourceB, sourceA] = source.toSRGBALossy<uint8_t>();
+    auto [backdropR, backdropG, backdropB, backdropA] = backdrop.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    auto [sourceR, sourceG, sourceB, sourceA] = source.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+
+    if (!backdropA || sourceA == 255)
+        return source;
+
+    if (!sourceA)
+        return backdrop;
 
     int d = 0xFF * (backdropA + sourceA) - backdropA * sourceA;
     int a = d / 0xFF;
@@ -68,7 +75,7 @@ Color blendWithWhite(const Color& color)
     if (!color.isOpaque())
         return color;
 
-    auto [existingR, existingG, existingB, existingAlpha] = color.toSRGBALossy<uint8_t>();
+    auto [existingR, existingG, existingB, existingAlpha] = color.toColorTypeLossy<SRGBA<uint8_t>>().resolved();
 
     SRGBA<uint8_t> result;
     for (int alpha = startAlpha; alpha <= endAlpha; alpha += alphaIncrement) {
@@ -90,24 +97,66 @@ Color blendWithWhite(const Color& color)
     return result;
 }
 
+static bool requiresLegacyInterpolationRules(const Color& color)
+{
+    return color.callOnUnderlyingType([&] (const auto& underlyingColor) {
+        using ColorType = std::decay_t<decltype(underlyingColor)>;
+
+        if constexpr (std::is_same_v<ColorType, SRGBA<uint8_t>>)
+            return true;
+        else if constexpr (std::is_same_v<ColorType, SRGBA<float>>)
+            return true;
+        else if constexpr (std::is_same_v<ColorType, HSLA<float>>)
+            return true;
+        else if constexpr (std::is_same_v<ColorType, HWBA<float>>)
+            return true;
+        else if constexpr (std::is_same_v<ColorType, ExtendedSRGBA<float>>)
+            return !color.usesColorFunctionSerialization();
+        else
+            return false;
+    });
+}
+
 Color blend(const Color& from, const Color& to, const BlendingContext& context)
 {
-    // FIXME: ExtendedColor - needs to handle color spaces.
     // We need to preserve the state of the valid flag at the end of the animation
     if (context.progress == 1 && !to.isValid())
         return { };
 
-    auto premultipliedFrom = premultiplied(from.toColorTypeLossy<SRGBA<float>>());
-    auto premultipliedTo = premultiplied(to.toColorTypeLossy<SRGBA<float>>());
+    if (requiresLegacyInterpolationRules(from) && requiresLegacyInterpolationRules(to)) {
+        using InterpolationColorSpace = ColorInterpolationMethod::SRGB;
 
-    auto premultipliedBlended = makeFromComponentsClamping<SRGBA<float>>(
-        WebCore::blend(premultipliedFrom.red, premultipliedTo.red, context),
-        WebCore::blend(premultipliedFrom.green, premultipliedTo.green, context),
-        WebCore::blend(premultipliedFrom.blue, premultipliedTo.blue, context),
-        WebCore::blend(premultipliedFrom.alpha, premultipliedTo.alpha, context)
-    );
+        auto fromComponents = from.toColorTypeLossy<typename InterpolationColorSpace::ColorType>();
+        auto toComponents = to.toColorTypeLossy<typename InterpolationColorSpace::ColorType>();
 
-    return convertColor<SRGBA<uint8_t>>(unpremultiplied(premultipliedBlended));
+        switch (context.compositeOperation) {
+        case CompositeOperation::Replace: {
+            auto interpolatedColor = interpolateColorComponents<AlphaPremultiplication::Premultiplied>(InterpolationColorSpace { }, fromComponents, 1.0 - context.progress, toComponents, context.progress);
+            return convertColor<SRGBA<uint8_t>>(clipToGamut<SRGBA<float>>(interpolatedColor));
+        }
+        case CompositeOperation::Add:
+        case CompositeOperation::Accumulate:
+            ASSERT(context.progress == 1.0);
+            return addColorComponents<AlphaPremultiplication::Premultiplied>(InterpolationColorSpace { }, fromComponents, toComponents);
+        }
+    } else {
+        using InterpolationColorSpace = ColorInterpolationMethod::OKLab;
+
+        auto fromComponents = from.toColorTypeLossy<typename InterpolationColorSpace::ColorType>();
+        auto toComponents = to.toColorTypeLossy<typename InterpolationColorSpace::ColorType>();
+
+        switch (context.compositeOperation) {
+        case CompositeOperation::Replace:
+            return interpolateColorComponents<AlphaPremultiplication::Premultiplied>(InterpolationColorSpace { }, fromComponents, 1.0 - context.progress, toComponents, context.progress);
+
+        case CompositeOperation::Add:
+        case CompositeOperation::Accumulate:
+            ASSERT(context.progress == 1.0);
+            return addColorComponents<AlphaPremultiplication::Premultiplied>(InterpolationColorSpace { }, fromComponents, toComponents);
+        }
+    }
+
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 Color blendWithoutPremultiply(const Color& from, const Color& to, const BlendingContext& context)
@@ -117,8 +166,8 @@ Color blendWithoutPremultiply(const Color& from, const Color& to, const Blending
     if (context.progress == 1 && !to.isValid())
         return { };
 
-    auto fromSRGB = from.toColorTypeLossy<SRGBA<float>>();
-    auto toSRGB = to.toColorTypeLossy<SRGBA<float>>();
+    auto fromSRGB = from.toColorTypeLossy<SRGBA<float>>().resolved();
+    auto toSRGB = to.toColorTypeLossy<SRGBA<float>>().resolved();
 
     auto blended = makeFromComponentsClamping<SRGBA<float>>(
         WebCore::blend(fromSRGB.red, toSRGB.red, context),

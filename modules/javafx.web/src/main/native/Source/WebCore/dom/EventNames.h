@@ -28,10 +28,6 @@
 #include <functional>
 #include <wtf/text/AtomString.h>
 
-#if ENABLE(TOUCH_EVENTS)
-#include "RuntimeEnabledFeatures.h"
-#endif
-
 namespace WebCore {
 
 #if ENABLE(APPLE_PAY_COUPON_CODE)
@@ -44,8 +40,6 @@ namespace WebCore {
     macro(DOMActivate) \
     macro(DOMCharacterDataModified) \
     macro(DOMContentLoaded) \
-    macro(DOMFocusIn) \
-    macro(DOMFocusOut) \
     macro(DOMNodeInserted) \
     macro(DOMNodeInsertedIntoDocument) \
     macro(DOMNodeRemoved) \
@@ -73,12 +67,14 @@ namespace WebCore {
     macro(beforeload) \
     macro(beforepaste) \
     macro(beforeprint) \
+    macro(beforetoggle) \
     macro(beforeunload) \
     macro(beginEvent) \
     macro(blocked) \
     macro(blur) \
     macro(boundary) \
     macro(bufferedamountlow) \
+    macro(bufferedchange) \
     macro(cached) \
     macro(cancel) \
     macro(canplay) \
@@ -89,10 +85,12 @@ namespace WebCore {
     macro(checking) \
     macro(click) \
     macro(close) \
+    macro(closing) \
     macro(complete) \
     macro(compositionend) \
     macro(compositionstart) \
     macro(compositionupdate) \
+    macro(configurationchange) \
     macro(connect) \
     macro(connectionstatechange) \
     macro(connecting) \
@@ -106,6 +104,7 @@ namespace WebCore {
     macro(dataavailable) \
     macro(datachannel) \
     macro(dblclick) \
+    macro(dequeue) \
     macro(devicechange) \
     macro(devicemotion) \
     macro(deviceorientation) \
@@ -125,6 +124,7 @@ namespace WebCore {
     macro(end) \
     macro(endEvent) \
     macro(ended) \
+    macro(endstreaming) \
     macro(enter) \
     macro(enterpictureinpicture) \
     macro(error) \
@@ -135,6 +135,8 @@ namespace WebCore {
     macro(focusin) \
     macro(focusout) \
     macro(formdata) \
+    macro(fullscreenchange) \
+    macro(fullscreenerror) \
     macro(gamepadconnected) \
     macro(gamepaddisconnected) \
     macro(gatheringstatechange) \
@@ -189,6 +191,8 @@ namespace WebCore {
     macro(negotiationneeded) \
     macro(nexttrack) \
     macro(nomatch) \
+    macro(notificationclick) \
+    macro(notificationclose) \
     macro(noupdate) \
     macro(obsolete) \
     macro(offline) \
@@ -220,9 +224,12 @@ namespace WebCore {
     macro(previoustrack) \
     macro(processorerror) \
     macro(progress) \
+    macro(push) \
+    macro(pushsubscriptionchange) \
     macro(ratechange) \
     macro(readystatechange) \
     macro(rejectionhandled) \
+    macro(release) \
     macro(remove) \
     macro(removesourcebuffer) \
     macro(removestream) \
@@ -239,6 +246,7 @@ namespace WebCore {
     macro(seeked) \
     macro(seeking) \
     macro(select) \
+    macro(selectedcandidatepairchange) \
     macro(selectend) \
     macro(selectionchange) \
     macro(selectstart) \
@@ -262,6 +270,7 @@ namespace WebCore {
     macro(stalled) \
     macro(start) \
     macro(started) \
+    macro(startstreaming) \
     macro(statechange) \
     macro(stop) \
     macro(storage) \
@@ -296,6 +305,7 @@ namespace WebCore {
     macro(validatemerchant) \
     macro(versionchange) \
     macro(visibilitychange) \
+    macro(voiceschanged) \
     macro(volumechange) \
     macro(waiting) \
     macro(waitingforkey) \
@@ -324,16 +334,10 @@ namespace WebCore {
     macro(webkitnetworkinfochange) \
     macro(webkitplaybacktargetavailabilitychanged) \
     macro(webkitpresentationmodechanged) \
-    macro(webkitregionoversetchange) \
     macro(webkitremovesourcebuffer) \
     macro(webkitsourceclose) \
     macro(webkitsourceended) \
     macro(webkitsourceopen) \
-    macro(webkitspeechchange) \
-    macro(webkitwillrevealbottom) \
-    macro(webkitwillrevealleft) \
-    macro(webkitwillrevealright) \
-    macro(webkitwillrevealtop) \
     macro(wheel) \
     macro(write) \
     macro(writeend) \
@@ -367,8 +371,10 @@ public:
     // We should choose one term and stick to it.
     bool isWheelEventType(const AtomString& eventType) const;
     bool isGestureEventType(const AtomString& eventType) const;
-    bool isTouchRelatedEventType(const AtomString& eventType, EventTarget&) const;
+    bool isTouchRelatedEventType(const AtomString& eventType, const EventTarget&) const;
     bool isTouchScrollBlockingEventType(const AtomString& eventType) const;
+    bool isMouseClickRelatedEventType(const AtomString& eventType) const;
+    bool isMouseMoveRelatedEventType(const AtomString& eventType) const;
 #if ENABLE(GAMEPAD)
     bool isGamepadEventType(const AtomString& eventType) const;
 #endif
@@ -402,7 +408,7 @@ inline bool EventNames::isTouchScrollBlockingEventType(const AtomString& eventTy
         || eventType == touchmoveEvent;
 }
 
-inline bool EventNames::isTouchRelatedEventType(const AtomString& eventType, EventTarget& target) const
+inline bool EventNames::isTouchRelatedEventType(const AtomString& eventType, const EventTarget& target) const
 {
 #if ENABLE(TOUCH_EVENTS)
     if (is<Node>(target) && downcast<Node>(target).document().quirks().shouldDispatchSimulatedMouseEvents(&target)) {
@@ -430,6 +436,21 @@ inline bool EventNames::isWheelEventType(const AtomString& eventType) const
 {
     return eventType == wheelEvent
         || eventType == mousewheelEvent;
+}
+
+inline bool EventNames::isMouseClickRelatedEventType(const AtomString& eventType) const
+{
+    return eventType == mouseupEvent
+        || eventType == mousedownEvent
+        || eventType == clickEvent
+        || eventType == DOMActivateEvent;
+}
+
+inline bool EventNames::isMouseMoveRelatedEventType(const AtomString& eventType) const
+{
+    return eventType == mousemoveEvent
+        || eventType == mouseoverEvent
+        || eventType == mouseoutEvent;
 }
 
 inline std::array<std::reference_wrapper<const AtomString>, 13> EventNames::touchRelatedEventNames() const

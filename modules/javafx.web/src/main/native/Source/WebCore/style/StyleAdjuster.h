@@ -26,6 +26,7 @@
 #pragma once
 
 #include "RenderStyleConstants.h"
+#include "TextSizeAdjustment.h"
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
@@ -37,9 +38,11 @@ class RenderStyle;
 class SVGElement;
 class Settings;
 
-enum class AnimationImpact;
+enum class AnimationImpact : uint8_t;
 
 namespace Style {
+
+class Update;
 
 class Adjuster {
 public:
@@ -50,6 +53,8 @@ public:
 
     static void adjustSVGElementStyle(RenderStyle&, const SVGElement&);
     static void adjustEventListenerRegionTypesForRootStyle(RenderStyle&, const Document&);
+    static void propagateToDocumentElementAndInitialContainingBlock(Update&, const Document&);
+    static std::unique_ptr<RenderStyle> restoreUsedDocumentElementStyleToComputed(const RenderStyle&);
 
 #if ENABLE(TEXT_AUTOSIZING)
     struct AdjustmentForTextAutosizing {
@@ -66,7 +71,10 @@ public:
 private:
     void adjustDisplayContentsStyle(RenderStyle&) const;
     void adjustForSiteSpecificQuirks(RenderStyle&) const;
-    static OptionSet<EventListenerRegionType> computeEventListenerRegionTypes(const EventTarget&, OptionSet<EventListenerRegionType>);
+
+    void adjustThemeStyle(RenderStyle&, const RenderStyle* userAgentAppearanceStyle) const;
+
+    static OptionSet<EventListenerRegionType> computeEventListenerRegionTypes(const Document&, const RenderStyle&, const EventTarget&, OptionSet<EventListenerRegionType>);
 
     const Document& m_document;
     const RenderStyle& m_parentStyle;

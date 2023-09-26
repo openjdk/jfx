@@ -26,9 +26,10 @@
 #include "config.h"
 #include "CSSAnimation.h"
 
-#include "Animation.h"
-#include "AnimationEvent.h"
+#include "AnimationEffect.h"
+#include "CSSAnimationEvent.h"
 #include "InspectorInstrumentation.h"
+#include "KeyframeEffect.h"
 #include "RenderStyle.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -36,10 +37,10 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CSSAnimation);
 
-Ref<CSSAnimation> CSSAnimation::create(const Styleable& owningElement, const Animation& backingAnimation, const RenderStyle* oldStyle, const RenderStyle& newStyle, const RenderStyle* parentElementStyle)
+Ref<CSSAnimation> CSSAnimation::create(const Styleable& owningElement, const Animation& backingAnimation, const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext& resolutionContext)
 {
     auto result = adoptRef(*new CSSAnimation(owningElement, backingAnimation));
-    result->initialize(oldStyle, newStyle, parentElementStyle);
+    result->initialize(oldStyle, newStyle, resolutionContext);
 
     InspectorInstrumentation::didCreateWebAnimation(result.get());
 
@@ -109,6 +110,11 @@ void CSSAnimation::syncPropertiesWithBackingAnimation()
     if (!m_overriddenProperties.contains(Property::Duration))
         animationEffect->setIterationDuration(Seconds(animation.duration()));
 
+    if (!m_overriddenProperties.contains(Property::CompositeOperation)) {
+        if (auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(animationEffect))
+            keyframeEffect->setComposite(animation.compositeOperation());
+    }
+
     animationEffect->updateStaticTimingProperties();
     effectTimingDidChange();
 
@@ -167,10 +173,12 @@ void CSSAnimation::setBindingsEffect(RefPtr<AnimationEffect>&& newEffect)
         m_overriddenProperties.add(Property::Direction);
         m_overriddenProperties.add(Property::Delay);
         m_overriddenProperties.add(Property::FillMode);
+        m_overriddenProperties.add(Property::Keyframes);
+        m_overriddenProperties.add(Property::CompositeOperation);
     }
 }
 
-void CSSAnimation::setBindingsStartTime(std::optional<double> startTime)
+ExceptionOr<void> CSSAnimation::setBindingsStartTime(const std::optional<CSSNumberish>& startTime)
 {
     // https://drafts.csswg.org/css-animations-2/#animations
 
@@ -179,10 +187,14 @@ void CSSAnimation::setBindingsStartTime(std::optional<double> startTime)
     // change to the animation-play-state will no longer cause the CSSAnimation to be played or paused.
 
     auto previousPlayState = playState();
-    DeclarativeAnimation::setBindingsStartTime(startTime);
+    auto result = DeclarativeAnimation::setBindingsStartTime(startTime);
+    if (result.hasException())
+        return result.releaseException();
     auto currentPlayState = playState();
     if (currentPlayState != previousPlayState && (currentPlayState == PlayState::Paused || previousPlayState == PlayState::Paused))
         m_overriddenProperties.add(Property::PlayState);
+
+    return { };
 }
 
 ExceptionOr<void> CSSAnimation::bindingsReverse()
@@ -237,12 +249,41 @@ void CSSAnimation::effectKeyframesWereSetUsingBindings()
     // After a successful call to setKeyframes() on the KeyframeEffect associated with a CSSAnimation, any subsequent change to
     // matching @keyframes rules or the resolved value of the animation-timing-function property for the target element will not
     // be reflected in that animation.
+    m_overriddenProperties.add(Property::Keyframes);
     m_overriddenProperties.add(Property::TimingFunction);
 }
 
-Ref<AnimationEventBase> CSSAnimation::createEvent(const AtomString& eventType, double elapsedTime, const String& pseudoId, std::optional<Seconds> timelineTime)
+void CSSAnimation::effectCompositeOperationWasSetUsingBindings()
 {
-    return AnimationEvent::create(eventType, m_animationName, elapsedTime, pseudoId, timelineTime, this);
+    m_overriddenProperties.add(Property::CompositeOperation);
+}
+
+void CSSAnimation::keyframesRuleDidChange()
+{
+    if (m_overriddenProperties.contains(Property::Keyframes) || !is<KeyframeEffect>(effect()))
+        return;
+
+    auto owningElement = this->owningElement();
+    if (!owningElement)
+        return;
+
+    downcast<KeyframeEffect>(*effect()).keyframesRuleDidChange();
+    owningElement->keyframesRuleDidChange();
+}
+
+void CSSAnimation::updateKeyframesIfNeeded(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext& resolutionContext)
+{
+    if (m_overriddenProperties.contains(Property::Keyframes) || !is<KeyframeEffect>(effect()))
+        return;
+
+    auto& keyframeEffect = downcast<KeyframeEffect>(*effect());
+    if (keyframeEffect.blendingKeyframes().isEmpty())
+        keyframeEffect.computeDeclarativeAnimationBlendingKeyframes(oldStyle, newStyle, resolutionContext);
+}
+
+Ref<DeclarativeAnimationEvent> CSSAnimation::createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId pseudoId)
+{
+    return CSSAnimationEvent::create(eventType, this, scheduledTime, elapsedTime, pseudoId, m_animationName);
 }
 
 } // namespace WebCore

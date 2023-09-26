@@ -33,19 +33,17 @@
 #include "CSSKeyframesRule.h"
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
+#include "CommonAtomStrings.h"
 #include "HTMLNames.h"
-#include "MediaQueryEvaluator.h"
+#include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "SelectorChecker.h"
 #include "SelectorFilter.h"
+#include "ShadowPseudoIds.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
-
-#if ENABLE(VIDEO)
-#include "TextTrackCue.h"
-#endif
 
 namespace WebCore {
 namespace Style {
@@ -59,7 +57,7 @@ struct SameSizeAsRuleData {
     unsigned d[4];
 };
 
-COMPILE_ASSERT(sizeof(RuleData) == sizeof(SameSizeAsRuleData), RuleData_should_stay_small);
+static_assert(sizeof(RuleData) == sizeof(SameSizeAsRuleData), "RuleData should stay small");
 
 static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector& selector)
 {
@@ -82,6 +80,8 @@ static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector
         return MatchBasedOnRuleHash::ClassA;
     if (selector.match() == CSSSelector::Class)
         return MatchBasedOnRuleHash::ClassB;
+    // FIXME: Valueless [attribute] case can be handled here too.
+
     return MatchBasedOnRuleHash::None;
 }
 
@@ -137,25 +137,25 @@ static bool computeContainsUncommonAttributeSelector(const CSSSelector& rootSele
     return false;
 }
 
-static inline PropertyAllowlistType determinePropertyAllowlistType(const CSSSelector* selector)
+static inline PropertyAllowlist determinePropertyAllowlist(const CSSSelector* selector)
 {
     for (const CSSSelector* component = selector; component; component = component->tagHistory()) {
 #if ENABLE(VIDEO)
-        if (component->match() == CSSSelector::PseudoElement && (component->pseudoElementType() == CSSSelector::PseudoElementCue || component->value() == TextTrackCue::cueShadowPseudoId()))
-            return PropertyAllowlistCue;
+        if (component->match() == CSSSelector::PseudoElement && (component->pseudoElementType() == CSSSelector::PseudoElementCue || component->value() == ShadowPseudoIds::cue()))
+            return PropertyAllowlist::Cue;
 #endif
         if (component->match() == CSSSelector::PseudoElement && component->pseudoElementType() == CSSSelector::PseudoElementMarker)
-            return PropertyAllowlistMarker;
+            return propertyAllowlistForPseudoId(PseudoId::Marker);
 
         if (const auto* selectorList = selector->selectorList()) {
             for (const auto* subSelector = selectorList->first(); subSelector; subSelector = CSSSelectorList::next(subSelector)) {
-                auto allowlistType = determinePropertyAllowlistType(subSelector);
-                if (allowlistType != PropertyAllowlistNone)
+                auto allowlistType = determinePropertyAllowlist(subSelector);
+                if (allowlistType != PropertyAllowlist::None)
                     return allowlistType;
             }
         }
     }
-    return PropertyAllowlistNone;
+    return PropertyAllowlist::None;
 }
 
 RuleData::RuleData(const StyleRule& styleRule, unsigned selectorIndex, unsigned selectorListIndex, unsigned position)
@@ -167,7 +167,7 @@ RuleData::RuleData(const StyleRule& styleRule, unsigned selectorIndex, unsigned 
     , m_canMatchPseudoElement(selectorCanMatchPseudoElement(*selector()))
     , m_containsUncommonAttributeSelector(computeContainsUncommonAttributeSelector(*selector()))
     , m_linkMatchType(SelectorChecker::determineLinkMatchType(selector()))
-    , m_propertyAllowlistType(determinePropertyAllowlistType(selector()))
+    , m_propertyAllowlist(static_cast<unsigned>(determinePropertyAllowlist(selector())))
     , m_isEnabled(true)
     , m_descendantSelectorIdentifierHashes(SelectorFilter::collectHashes(*selector()))
 {

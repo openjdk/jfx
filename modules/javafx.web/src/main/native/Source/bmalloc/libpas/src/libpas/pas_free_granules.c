@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Apple Inc. All rights reserved.
+ * Copyright (c) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "pas_free_granules.h"
 
 #include "pas_commit_span.h"
+#include "pas_heap_config.h"
 #include "pas_log.h"
 #include "pas_page_base_config.h"
 
@@ -93,7 +94,7 @@ void pas_free_granules_decommit_after_locking_range(pas_free_granules* free_gran
                                                     pas_page_base* page,
                                                     pas_deferred_decommit_log* log,
                                                     pas_lock* commit_lock,
-                                                    pas_page_base_config* page_config,
+                                                    const pas_page_base_config* page_config,
                                                     pas_lock_hold_mode heap_lock_hold_mode)
 {
     size_t granule_index;
@@ -105,7 +106,7 @@ void pas_free_granules_decommit_after_locking_range(pas_free_granules* free_gran
     PAS_ASSERT(num_granules >= 2); /* If there is only one granule then we don't have use counts. */
     PAS_ASSERT(num_granules <= PAS_MAX_GRANULES);
 
-    pas_commit_span_construct(&commit_span);
+    pas_commit_span_construct(&commit_span, page_config->heap_config_ptr->mmap_capability);
 
     for (granule_index = 0; granule_index < num_granules; ++granule_index) {
         if (pas_free_granules_is_free(free_granules, granule_index)) {

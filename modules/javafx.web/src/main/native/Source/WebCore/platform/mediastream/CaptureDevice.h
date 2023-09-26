@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,16 @@
 
 #pragma once
 
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class CaptureDevice {
 public:
-    enum class DeviceType { Unknown, Microphone, Speaker, Camera, Screen, Window };
+    enum class DeviceType { Unknown, Microphone, Speaker, Camera, Screen, Window, SystemAudio };
 
-    CaptureDevice(const String& persistentId, DeviceType type, const String& label, const String& groupId = emptyString(), bool isEnabled = false, bool isDefault = false, bool isMock = false)
+    CaptureDevice(const String& persistentId, DeviceType type, const String& label, const String& groupId = emptyString(), bool isEnabled = false, bool isDefault = false, bool isMock = false, bool isEphemeral = false)
         : m_persistentId(persistentId)
         , m_type(type)
         , m_label(label)
@@ -41,18 +42,21 @@ public:
         , m_enabled(isEnabled)
         , m_default(isDefault)
         , m_isMockDevice(isMock)
+        , m_isEphemeral(isEphemeral)
     {
     }
 
     CaptureDevice() = default;
 
+    void setPersistentId(const String& persistentId) { m_persistentId = persistentId; }
     const String& persistentId() const { return m_persistentId; }
 
+    void setLabel(const String& label) { m_label = label; }
     const String& label() const
     {
         static NeverDestroyed<String> airPods(MAKE_STATIC_STRING_IMPL("AirPods"));
 
-        if ((m_type == DeviceType::Microphone || m_type == DeviceType::Speaker) && m_label.contains(airPods))
+        if ((m_type == DeviceType::Microphone || m_type == DeviceType::Speaker) && m_label.contains(airPods.get()))
             return airPods;
 
         return m_label;
@@ -72,6 +76,9 @@ public:
     bool isMockDevice() const { return m_isMockDevice; }
     void setIsMockDevice(bool isMockDevice) { m_isMockDevice = isMockDevice; }
 
+    bool isEphemeral() const { return m_isEphemeral; }
+    void setIsEphemeral(bool isEphemeral) { m_isEphemeral = isEphemeral; }
+
     explicit operator bool() const { return m_type != DeviceType::Unknown; }
 
     CaptureDevice isolatedCopy() &&;
@@ -87,6 +94,7 @@ public:
         encoder << m_default;
         encoder << m_type;
         encoder << m_isMockDevice;
+        encoder << m_isEphemeral;
     }
 
     template <class Decoder>
@@ -127,10 +135,16 @@ public:
         if (!isMockDevice)
             return std::nullopt;
 
+        std::optional<bool> isEphemeral;
+        decoder >> isEphemeral;
+        if (!isEphemeral)
+            return std::nullopt;
+
         std::optional<CaptureDevice> device = {{ WTFMove(*persistentId), WTFMove(*type), WTFMove(*label), WTFMove(*groupId) }};
         device->setEnabled(*enabled);
         device->setIsDefault(*isDefault);
         device->setIsMockDevice(*isMockDevice);
+        device->setIsEphemeral(*isEphemeral);
         return device;
     }
 #endif
@@ -143,6 +157,7 @@ protected:
     bool m_enabled { false };
     bool m_default { false };
     bool m_isMockDevice { false };
+    bool m_isEphemeral { false };
 };
 
 inline bool haveDevicesChanged(const Vector<CaptureDevice>& oldDevices, const Vector<CaptureDevice>& newDevices)
@@ -154,7 +169,7 @@ inline bool haveDevicesChanged(const Vector<CaptureDevice>& oldDevices, const Ve
         if (newDevice.type() != CaptureDevice::DeviceType::Camera && newDevice.type() != CaptureDevice::DeviceType::Microphone)
             continue;
 
-        auto index = oldDevices.findMatching([&newDevice](auto& oldDevice) {
+        auto index = oldDevices.findIf([&newDevice](auto& oldDevice) {
             return newDevice.persistentId() == oldDevice.persistentId() && newDevice.enabled() != oldDevice.enabled();
         });
 
@@ -174,7 +189,8 @@ inline CaptureDevice CaptureDevice::isolatedCopy() &&
         WTFMove(m_groupId).isolatedCopy(),
         m_enabled,
         m_default,
-        m_isMockDevice
+        m_isMockDevice,
+        m_isEphemeral
     };
 }
 
@@ -211,7 +227,8 @@ template<> struct EnumTraits<WebCore::CaptureDevice::DeviceType> {
         WebCore::CaptureDevice::DeviceType::Speaker,
         WebCore::CaptureDevice::DeviceType::Camera,
         WebCore::CaptureDevice::DeviceType::Screen,
-        WebCore::CaptureDevice::DeviceType::Window
+        WebCore::CaptureDevice::DeviceType::Window,
+        WebCore::CaptureDevice::DeviceType::SystemAudio
     >;
 };
 

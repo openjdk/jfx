@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,8 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
+
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
@@ -836,6 +838,93 @@ public class ParentTest {
         res = new PickResultChooser();
         NodeHelper.pickNode(g, new PickRay(0, 0, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
         assertNull(res.getIntersectedNode());
+    }
+
+    @Test
+    public void testNegativeIndex_Add() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Adding an object at a negative or too big index should throw IndexOutOfBoundsException and not modify internal state
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().add(-1, new Rectangle()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().add(g.getChildren().size() + 1, new Rectangle()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
+    }
+
+    @Test
+    public void testNegativeIndex_Set() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Setting an object at a negative or too big index should throw IndexOutOfBoundsException and not modify internal state
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().set(-1, new Rectangle()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().set(g.getChildren().size(), new Rectangle()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
+    }
+
+    @Test
+    public void testNegativeIndex_Remove() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Removing an object at negative or too big index should throw IndexOutOfBoundsException and not modify internal state
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().remove(-1));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        assertThrows(IndexOutOfBoundsException.class, () -> g.getChildren().remove(g.getChildren().size()));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
+    }
+
+    @Test
+    public void testNullObject_AddAll() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Adding a null object should throw NPE and not modify internal state
+        assertThrows(NullPointerException.class, () -> g.getChildren().addAll((Collection<Node>)null));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        assertThrows(NullPointerException.class, () -> g.getChildren().addAll(0, (Collection<Node>)null));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
+    }
+
+    @Test
+    public void testNullObject_SetAll() {
+        Group g = new Group();
+        g.getChildren().addAll(new Rectangle(), new Rectangle());
+
+        int preTestSize = g.getChildren().size();
+
+        // Setting a null object should throw NPE and not modify internal state
+        assertThrows(NullPointerException.class, () -> g.getChildren().setAll((Collection<Node>)null));
+        assertEquals(preTestSize, g.getChildren().size());
+
+        // below call should throw no exception - if it does, internal state is corrupted
+        g.getChildren().remove(0);
     }
 
     public static class MockParent extends Parent {

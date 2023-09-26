@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package test.javafx.scene.control;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -33,16 +36,13 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-import test.util.Util;
-
-import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import junit.framework.Assert;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public class AccordionTitlePaneLeakTest {
 
@@ -50,6 +50,8 @@ public class AccordionTitlePaneLeakTest {
     static private Accordion accordion;
     static private StackPane root;
     static private Stage stage;
+
+    private WeakReference<TitledPane> weakRefToPane;
 
     public static class TestApp extends Application {
         @Override
@@ -68,33 +70,24 @@ public class AccordionTitlePaneLeakTest {
     @BeforeClass
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        Assert.assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
-        });
+        Util.shutdown(stage);
     }
 
     @Test
     public void testForTitledPaneLeak() throws Exception {
-        TitledPane pane = new TitledPane();
-        accordion.getPanes().add(pane);
-        WeakReference<TitledPane> weakRefToPane = new WeakReference<>(pane);
-        pane = null;
-        accordion.getPanes().clear();
-        for (int i = 0; i < 10; i++) {
-            System.gc();
-            if (weakRefToPane.get() == null) {
-                break;
-            }
-            Util.sleep(500);
-        }
-        // Ensure accordion's skin no longer hold a ref to titled pane.
-        Assert.assertNull("Couldn't collect TitledPane", weakRefToPane.get());
+        Util.runAndWait(() -> {
+            TitledPane pane = new TitledPane();
+            accordion.getPanes().add(pane);
+            weakRefToPane = new WeakReference<>(pane);
+            pane = null;
+            accordion.getPanes().clear();
+        });
+
+        JMemoryBuddy.assertCollectable(weakRefToPane);
     }
 }

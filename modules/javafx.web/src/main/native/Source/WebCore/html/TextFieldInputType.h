@@ -50,6 +50,9 @@ class TextFieldInputType : public InputType, protected SpinButtonElement::SpinBu
     , private DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
 #endif
 {
+public:
+    bool valueMissing(const String&) const final;
+
 protected:
     explicit TextFieldInputType(Type, HTMLInputElement&);
     virtual ~TextFieldInputType();
@@ -63,14 +66,13 @@ protected:
     HTMLElement* innerBlockElement() const final;
     RefPtr<TextControlInnerTextElement> innerTextElement() const final;
     HTMLElement* innerSpinButtonElement() const final;
-    HTMLElement* capsLockIndicatorElement() const final;
     HTMLElement* autoFillButtonElement() const final;
 #if ENABLE(DATALIST_ELEMENT)
     HTMLElement* dataListButtonElement() const final;
 #endif
 
     virtual bool needsContainer() const;
-    void createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source, bool) override;
+    void createShadowSubtree() override;
     void destroyShadowSubtree() override;
     void attributeChanged(const QualifiedName&) override;
     void disabledStateChanged() final;
@@ -78,10 +80,9 @@ protected:
     bool supportsReadOnly() const final;
     void handleFocusEvent(Node* oldFocusedNode, FocusDirection) final;
     void handleBlurEvent() final;
-    void setValue(const String&, bool valueChanged, TextFieldEventBehavior) override;
+    void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) override;
     void updateInnerTextValue() final;
     String sanitizeValue(const String&) const override;
-    bool valueMissing(const String&) const final;
 
     virtual String convertFromVisibleValue(const String&) const;
     virtual void didSetValueByUserEdit();
@@ -98,7 +99,7 @@ private:
     bool shouldRespectListAttribute() override;
     HTMLElement* placeholderElement() const final;
     void updatePlaceholderText() final;
-    bool appendFormData(DOMFormData&, bool multipart) const final;
+    bool appendFormData(DOMFormData&) const final;
     void subtreeHasChanged() final;
     void capsLockStateMayHaveChanged() final;
     void updateAutoFillButton() final;
@@ -106,8 +107,8 @@ private:
 
     // SpinButtonElement::SpinButtonOwner functions.
     void focusAndSelectSpinButtonOwner() final;
-    bool shouldSpinButtonRespondToMouseEvents() final;
-    bool shouldSpinButtonRespondToWheelEvents() final;
+    bool shouldSpinButtonRespondToMouseEvents() const final;
+    bool shouldSpinButtonRespondToWheelEvents() const final;
     void spinButtonStepDown() final;
     void spinButtonStepUp() final;
 
@@ -119,7 +120,8 @@ private:
     bool shouldDrawCapsLockIndicator() const;
     bool shouldDrawAutoFillButton() const;
 
-    void createContainer();
+    enum class PreserveSelectionRange : bool { No, Yes };
+    void createContainer(PreserveSelectionRange = PreserveSelectionRange::Yes);
     void createAutoFillButton(AutoFillButtonType);
 
 #if ENABLE(DATALIST_ELEMENT)

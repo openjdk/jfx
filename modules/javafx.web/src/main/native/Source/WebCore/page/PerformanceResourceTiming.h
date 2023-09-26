@@ -46,7 +46,7 @@ class PerformanceResourceTiming : public PerformanceEntry {
 public:
     static Ref<PerformanceResourceTiming> create(MonotonicTime timeOrigin, ResourceTiming&&);
 
-    const String& initiatorType() const { return m_resourceTiming.initiator(); }
+    const String& initiatorType() const { return m_resourceTiming.initiatorType(); }
     const String& nextHopProtocol() const;
 
     double workerStart() const;
@@ -74,8 +74,10 @@ protected:
     PerformanceResourceTiming(MonotonicTime timeOrigin, ResourceTiming&&);
     ~PerformanceResourceTiming();
 
+    bool isLoadedFromServiceWorker() const { return m_resourceTiming.isLoadedFromServiceWorker(); }
+
     MonotonicTime m_timeOrigin;
-    const ResourceTiming m_resourceTiming;
+    ResourceTiming m_resourceTiming;
     Vector<Ref<PerformanceServerTiming>> m_serverTiming;
 };
 

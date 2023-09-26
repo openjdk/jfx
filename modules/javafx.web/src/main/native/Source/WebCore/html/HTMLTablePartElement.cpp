@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
+#include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -58,24 +59,24 @@ void HTMLTablePartElement::collectPresentationalHintsForAttribute(const Qualifie
         if (!url.isEmpty())
             style.setProperty(CSSProperty(CSSPropertyBackgroundImage, CSSImageValue::create(document().completeURL(url), LoadedFromOpaqueSource::No)));
     } else if (name == valignAttr) {
-        if (equalLettersIgnoringASCIICase(value, "top"))
+        if (equalLettersIgnoringASCIICase(value, "top"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyVerticalAlign, CSSValueTop);
-        else if (equalLettersIgnoringASCIICase(value, "middle"))
+        else if (equalLettersIgnoringASCIICase(value, "middle"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyVerticalAlign, CSSValueMiddle);
-        else if (equalLettersIgnoringASCIICase(value, "bottom"))
+        else if (equalLettersIgnoringASCIICase(value, "bottom"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyVerticalAlign, CSSValueBottom);
-        else if (equalLettersIgnoringASCIICase(value, "baseline"))
+        else if (equalLettersIgnoringASCIICase(value, "baseline"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyVerticalAlign, CSSValueBaseline);
         else
             addPropertyToPresentationalHintStyle(style, CSSPropertyVerticalAlign, value);
     } else if (name == alignAttr) {
-        if (equalLettersIgnoringASCIICase(value, "middle") || equalLettersIgnoringASCIICase(value, "center"))
+        if (equalLettersIgnoringASCIICase(value, "middle"_s) || equalLettersIgnoringASCIICase(value, "center"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, CSSValueWebkitCenter);
-        else if (equalLettersIgnoringASCIICase(value, "absmiddle"))
+        else if (equalLettersIgnoringASCIICase(value, "absmiddle"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, CSSValueCenter);
-        else if (equalLettersIgnoringASCIICase(value, "left"))
+        else if (equalLettersIgnoringASCIICase(value, "left"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, CSSValueWebkitLeft);
-        else if (equalLettersIgnoringASCIICase(value, "right"))
+        else if (equalLettersIgnoringASCIICase(value, "right"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, CSSValueWebkitRight);
         else
             addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, value);

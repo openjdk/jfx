@@ -33,7 +33,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ClonedArguments);
 
-const ClassInfo ClonedArguments::s_info = { "Arguments", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ClonedArguments) };
+const ClassInfo ClonedArguments::s_info = { "Arguments"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ClonedArguments) };
 
 ClonedArguments::ClonedArguments(VM& vm, Structure* structure, Butterfly* butterfly)
     : Base(vm, structure, butterfly)
@@ -48,7 +48,7 @@ ClonedArguments* ClonedArguments::createEmpty(
         return nullptr;
 
     Butterfly* butterfly;
-    if (UNLIKELY(structure->mayInterceptIndexedAccesses() || structure->storedPrototypeObject()->needsSlowPutIndexing(vm))) {
+    if (UNLIKELY(structure->mayInterceptIndexedAccesses() || structure->storedPrototypeObject()->needsSlowPutIndexing())) {
         butterfly = createArrayStorageButterfly(vm, nullptr, structure, length, vectorLength);
         butterfly->arrayStorage()->m_numValuesInVector = vectorLength;
     } else {
@@ -64,12 +64,12 @@ ClonedArguments* ClonedArguments::createEmpty(
     }
 
     ClonedArguments* result =
-        new (NotNull, allocateCell<ClonedArguments>(vm.heap))
+        new (NotNull, allocateCell<ClonedArguments>(vm))
         ClonedArguments(vm, structure, butterfly);
     result->finishCreation(vm);
 
     result->m_callee.set(vm, result, callee);
-    result->putDirect(vm, clonedArgumentsLengthPropertyOffset, jsNumber(length));
+    result->putDirectOffset(vm, clonedArgumentsLengthPropertyOffset, jsNumber(length));
     return result;
 }
 
@@ -79,7 +79,7 @@ ClonedArguments* ClonedArguments::createEmpty(JSGlobalObject* globalObject, JSFu
     // NB. Some clients might expect that the global object of of this object is the global object
     // of the callee. We don't do this for now, but maybe we should.
     ClonedArguments* result = createEmpty(vm, globalObject->clonedArgumentsStructure(), callee, length);
-    ASSERT(!result->needsSlowPutIndexing(vm) || shouldUseSlowPut(result->structure(vm)->indexingType()));
+    ASSERT(!result->needsSlowPutIndexing() || shouldUseSlowPut(result->structure()->indexingType()));
     return result;
 }
 
@@ -122,15 +122,15 @@ ClonedArguments* ClonedArguments::createWithInlineFrame(JSGlobalObject* globalOb
         break;
     } }
 
-    ASSERT(globalObject->clonedArgumentsStructure() == result->structure(globalObject->vm()));
-    ASSERT(!result->needsSlowPutIndexing(globalObject->vm()) || shouldUseSlowPut(result->structure(globalObject->vm())->indexingType()));
+    ASSERT(globalObject->clonedArgumentsStructure() == result->structure());
+    ASSERT(!result->needsSlowPutIndexing() || shouldUseSlowPut(result->structure()->indexingType()));
     return result;
 }
 
 ClonedArguments* ClonedArguments::createWithMachineFrame(JSGlobalObject* globalObject, CallFrame* targetFrame, ArgumentsMode mode)
 {
     ClonedArguments* result = createWithInlineFrame(globalObject, targetFrame, nullptr, mode);
-    ASSERT(!result->needsSlowPutIndexing(globalObject->vm()) || shouldUseSlowPut(result->structure(globalObject->vm())->indexingType()));
+    ASSERT(!result->needsSlowPutIndexing() || shouldUseSlowPut(result->structure()->indexingType()));
     return result;
 }
 
@@ -143,7 +143,7 @@ ClonedArguments* ClonedArguments::createByCopyingFrom(
 
     for (unsigned i = length; i--;)
         result->putDirectIndex(globalObject, i, argumentStart[i].jsValue());
-    ASSERT(!result->needsSlowPutIndexing(vm) || shouldUseSlowPut(result->structure(vm)->indexingType()));
+    ASSERT(!result->needsSlowPutIndexing() || shouldUseSlowPut(result->structure()->indexingType()));
     return result;
 }
 
@@ -181,7 +181,7 @@ bool ClonedArguments::getOwnPropertySlot(JSObject* object, JSGlobalObject* globa
 
         if (ident == vm.propertyNames->callee) {
             if (isStrictMode || executable->usesNonSimpleParameterList()) {
-                slot.setGetterSlot(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::Accessor, thisObject->globalObject(vm)->throwTypeErrorArgumentsCalleeGetterSetter());
+                slot.setGetterSlot(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::Accessor, thisObject->globalObject()->throwTypeErrorArgumentsCalleeGetterSetter());
                 return true;
             }
             slot.setValue(thisObject, 0, thisObject->m_callee.get());
@@ -189,7 +189,7 @@ bool ClonedArguments::getOwnPropertySlot(JSObject* object, JSGlobalObject* globa
         }
 
         if (ident == vm.propertyNames->iteratorSymbol) {
-            slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), thisObject->globalObject(vm)->arrayProtoValuesFunction());
+            slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), thisObject->globalObject()->arrayProtoValuesFunction());
             return true;
         }
     }
@@ -252,11 +252,11 @@ void ClonedArguments::materializeSpecials(JSGlobalObject* globalObject)
     bool isStrictMode = executable->isInStrictContext();
 
     if (isStrictMode || executable->usesNonSimpleParameterList())
-        putDirectAccessor(globalObject, vm.propertyNames->callee, this->globalObject(vm)->throwTypeErrorArgumentsCalleeGetterSetter(), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+        putDirectAccessor(globalObject, vm.propertyNames->callee, this->globalObject()->throwTypeErrorArgumentsCalleeGetterSetter(), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
     else
         putDirect(vm, vm.propertyNames->callee, JSValue(m_callee.get()));
 
-    putDirect(vm, vm.propertyNames->iteratorSymbol, this->globalObject(vm)->arrayProtoValuesFunction(), static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirect(vm, vm.propertyNames->iteratorSymbol, this->globalObject()->arrayProtoValuesFunction(), static_cast<unsigned>(PropertyAttribute::DontEnum));
 
     m_callee.clear();
 }
@@ -277,6 +277,69 @@ void ClonedArguments::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 }
 
 DEFINE_VISIT_CHILDREN(ClonedArguments);
+
+void ClonedArguments::copyToArguments(JSGlobalObject* globalObject, JSValue* firstElementDest, unsigned offset, unsigned length)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    switch (this->indexingType()) {
+    case ALL_CONTIGUOUS_INDEXING_TYPES: {
+        auto& butterfly = *this->butterfly();
+        auto data = butterfly.contiguous().data();
+        unsigned limit = std::min(length + offset, butterfly.vectorLength());
+        unsigned i;
+        for (i = offset; i < limit; ++i) {
+            JSValue value = data[i].get();
+            if (UNLIKELY(!value)) {
+                value = get(globalObject, i);
+                RETURN_IF_EXCEPTION(scope, void());
+            }
+            firstElementDest[i - offset] = value;
+        }
+        for (; i < length; ++i) {
+            firstElementDest[i - offset] = get(globalObject, i);
+            RETURN_IF_EXCEPTION(scope, void());
+        }
+        return;
+    }
+    default:
+        break;
+    }
+
+    unsigned i;
+    for (i = 0; i < length && canGetIndexQuickly(i + offset); ++i)
+        firstElementDest[i] = getIndexQuickly(i + offset);
+    for (; i < length; ++i) {
+        JSValue value = get(globalObject, i + offset);
+        RETURN_IF_EXCEPTION(scope, void());
+        firstElementDest[i] = value;
+    }
+}
+
+bool ClonedArguments::isIteratorProtocolFastAndNonObservable()
+{
+    Structure* structure = this->structure();
+    JSGlobalObject* globalObject = structure->globalObject();
+    if (!globalObject->isArgumentsPrototypeIteratorProtocolFastAndNonObservable())
+        return false;
+
+    // FIXME: We should relax this restriction, or reorganize ClonedArguments's @@iterator property materialization to go to this condition.
+    // Probably, we should make ClonedArguments more similar to DirectArguments, and tracking changes on them instead of using relatively plain objects.
+    if (structure->didTransition())
+        return false;
+
+    if (UNLIKELY(structure->mayInterceptIndexedAccesses() || structure->storedPrototypeObject()->needsSlowPutIndexing()))
+        return false;
+
+    // Even though Structure is not transitioned, it is possible that length property is replaced with random value.
+    // To avoid side-effect, we need to ensure that this value is Int32.
+    JSValue lengthValue = getDirect(clonedArgumentsLengthPropertyOffset);
+    if (LIKELY(lengthValue.isInt32() && lengthValue.asInt32() >= 0))
+        return true;
+
+    return false;
+}
 
 } // namespace JSC
 

@@ -27,6 +27,7 @@
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
 #include "Chrome.h"
+#include "ElementInlines.h"
 #include "Font.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -54,7 +55,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSearchField);
 RenderSearchField::RenderSearchField(HTMLInputElement& element, RenderStyle&& style)
     : RenderTextControlSingleLine(element, WTFMove(style))
     , m_searchPopupIsVisible(false)
-    , m_searchPopup(0)
+    , m_searchPopup(nullptr)
 {
     ASSERT(element.isSearchField());
 }
@@ -167,6 +168,17 @@ LayoutUnit RenderSearchField::computeControlLogicalHeight(LayoutUnit lineHeight,
     return lineHeight + nonContentHeight;
 }
 
+Span<const RecentSearch> RenderSearchField::recentSearches()
+{
+    if (!m_searchPopup)
+        m_searchPopup = page().chrome().createSearchPopupMenu(*this);
+
+    const AtomString& name = autosaveName();
+    m_searchPopup->loadRecentSearches(name, m_recentSearches);
+
+    return m_recentSearches.span();
+}
+
 void RenderSearchField::updateFromElement()
 {
     RenderTextControlSingleLine::updateFromElement();
@@ -201,7 +213,7 @@ Visibility RenderSearchField::visibilityForCancelButton() const
 
 const AtomString& RenderSearchField::autosaveName() const
 {
-    return inputElement().attributeWithoutSynchronization(autosaveAttr);
+    return inputElement().attributeWithoutSynchronization(nameAttr);
 }
 
 // PopupMenuClient methods
@@ -354,7 +366,7 @@ FontSelector* RenderSearchField::fontSelector() const
 
 HostWindow* RenderSearchField::hostWindow() const
 {
-    return view().frameView().hostWindow();
+    return RenderTextControlSingleLine::hostWindow();
 }
 
 Ref<Scrollbar> RenderSearchField::createScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarControlSize controlSize)

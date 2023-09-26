@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 
 package com.sun.media.jfxmediaimpl.platform.gstreamer;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaError;
 import com.sun.media.jfxmedia.MediaPlayer;
 import com.sun.media.jfxmedia.events.PlayerStateEvent.PlayerState;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
-import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmediaimpl.MediaUtils;
 import com.sun.media.jfxmediaimpl.platform.Platform;
 import java.util.Arrays;
@@ -41,7 +41,7 @@ import java.util.Arrays;
  */
 public final class GSTPlatform extends Platform {
     /**
-     * The MIME types of all supported media.
+     * The MIME types of all supported media on Windows and Linux.
      */
     private static final String[] CONTENT_TYPES = {
         "audio/x-aiff",
@@ -53,6 +53,14 @@ public final class GSTPlatform extends Platform {
         "video/x-m4v",
         "application/vnd.apple.mpegurl",
         "audio/mpegurl"
+    };
+
+    /**
+     * The MIME types of all supported media on macOS.
+     */
+    private static final String[] CONTENT_TYPES_MACOS = {
+        "audio/x-aiff",
+        "audio/x-wav"
     };
 
     /**
@@ -99,7 +107,11 @@ public final class GSTPlatform extends Platform {
 
     @Override
     public String[] getSupportedContentTypes() {
-        return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
+        if (PlatformUtil.isMac()) {
+            return Arrays.copyOf(CONTENT_TYPES_MACOS, CONTENT_TYPES_MACOS.length);
+        } else {
+            return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
+        }
     }
 
     @Override
@@ -125,7 +137,7 @@ public final class GSTPlatform extends Platform {
         }
 
         // Special case for H.264 decoding on Mac OS X.
-        if (HostUtils.isMacOSX()) {
+        if (PlatformUtil.isMac()) {
             String contentType = source.getContentType();
             if ("video/mp4".equals(contentType) || "video/x-m4v".equals(contentType)
                   || source.getStringLocation().endsWith(".m3u8"))

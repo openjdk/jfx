@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,20 +27,24 @@
 #include "config.h"
 #include "Gradient.h"
 
-#include "Color.h"
 #include "FloatRect.h"
 #include <wtf/HashFunctions.h>
 #include <wtf/Hasher.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-Ref<Gradient> Gradient::create(Data&& data)
+Ref<Gradient> Gradient::create(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops)
 {
-    return adoptRef(*new Gradient(WTFMove(data)));
+    return adoptRef(*new Gradient(WTFMove(data), colorInterpolationMethod, spreadMethod, WTFMove(stops)));
 }
 
-Gradient::Gradient(Data&& data)
-    : m_data(WTFMove(data))
+Gradient::Gradient(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops)
+    : m_data { WTFMove(data) }
+    , m_colorInterpolationMethod { colorInterpolationMethod }
+    , m_spreadMethod { spreadMethod }
+    , m_stops { WTFMove(stops) }
 {
 }
 
@@ -89,56 +93,11 @@ bool Gradient::isZeroSize() const
     );
 }
 
-void Gradient::addColorStop(Gradient::ColorStop&& stop)
+void Gradient::addColorStop(GradientColorStop&& stop)
 {
-    m_stops.append(WTFMove(stop));
-    m_stopsSorted = false;
+    m_stops.addColorStop(WTFMove(stop));
     m_cachedHash = 0;
     stopsChanged();
-}
-
-void Gradient::setSortedColorStops(ColorStopVector&& stops)
-{
-    m_stops = WTFMove(stops);
-    m_stopsSorted = true;
-    m_cachedHash = 0;
-    stopsChanged();
-}
-
-void Gradient::sortStops() const
-{
-    if (m_stopsSorted)
-        return;
-    m_stopsSorted = true;
-    std::stable_sort(m_stops.begin(), m_stops.end(), [] (auto& a, auto& b) {
-        return a.offset < b.offset;
-    });
-}
-
-void Gradient::setSpreadMethod(GradientSpreadMethod spreadMethod)
-{
-    if (m_spreadMethod == spreadMethod)
-        return;
-    m_spreadMethod = spreadMethod;
-    m_cachedHash = 0;
-}
-
-// FIXME: Instead of these add(Hasher) functions, consider using encode functions to compute the hash.
-
-static void add(Hasher& hasher, const Color& color)
-{
-    // FIXME: We don't want to hash a hash; do better.
-    add(hasher, color.hash());
-}
-
-static void add(Hasher& hasher, const FloatPoint& point)
-{
-    add(hasher, point.x(), point.y());
-}
-
-static void add(Hasher& hasher, const Gradient::ColorStop& stop)
-{
-    add(hasher, stop.offset, stop.color);
 }
 
 static void add(Hasher& hasher, const Gradient::LinearData& data)
@@ -158,11 +117,34 @@ static void add(Hasher& hasher, const Gradient::ConicData& data)
 
 unsigned Gradient::hash() const
 {
-    if (!m_cachedHash) {
-        sortStops();
-        m_cachedHash = computeHash(m_data, m_spreadMethod, m_stops);
-    }
+    if (!m_cachedHash)
+        m_cachedHash = computeHash(m_data, m_colorInterpolationMethod, m_spreadMethod, m_stops.sorted());
     return m_cachedHash;
+}
+
+TextStream& operator<<(TextStream& ts, const Gradient& gradient)
+{
+    WTF::switchOn(gradient.m_data,
+        [&] (const Gradient::LinearData& data) {
+            ts.dumpProperty("p0", data.point0);
+            ts.dumpProperty("p1", data.point1);
+        },
+        [&] (const Gradient::RadialData& data) {
+            ts.dumpProperty("p0", data.point0);
+            ts.dumpProperty("p1", data.point1);
+            ts.dumpProperty("start-radius", data.startRadius);
+            ts.dumpProperty("end-radius", data.endRadius);
+            ts.dumpProperty("aspect-ratio", data.aspectRatio);
+        },
+        [&] (const Gradient::ConicData& data) {
+            ts.dumpProperty("p0", data.point0);
+            ts.dumpProperty("angle-radians", data.angleRadians);
+        }
+    );
+    ts.dumpProperty("color-interpolation-method", gradient.m_colorInterpolationMethod);
+    ts.dumpProperty("spread-method", gradient.m_spreadMethod);
+    ts.dumpProperty("stops", gradient.m_stops);
+    return ts;
 }
 
 }

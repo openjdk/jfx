@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,9 +48,9 @@ public class ContentBinding {
 
     public static <E> Object bind(List<E> list1, ObservableList<? extends E> list2) {
         checkParameters(list1, list2);
-        final ListContentBinding<E> contentBinding = new ListContentBinding<E>(list1);
-        if (list1 instanceof ObservableList) {
-            ((ObservableList) list1).setAll(list2);
+        final ListContentBinding<E> contentBinding = new ListContentBinding<>(list1);
+        if (list1 instanceof ObservableList<E> observableList) {
+            observableList.setAll(list2);
         } else {
             list1.clear();
             list1.addAll(list2);
@@ -62,7 +62,7 @@ public class ContentBinding {
 
     public static <E> Object bind(Set<E> set1, ObservableSet<? extends E> set2) {
         checkParameters(set1, set2);
-        final SetContentBinding<E> contentBinding = new SetContentBinding<E>(set1);
+        final SetContentBinding<E> contentBinding = new SetContentBinding<>(set1);
         set1.clear();
         set1.addAll(set2);
         set2.removeListener(contentBinding);
@@ -72,7 +72,7 @@ public class ContentBinding {
 
     public static <K, V> Object bind(Map<K, V> map1, ObservableMap<? extends K, ? extends V> map2) {
         checkParameters(map1, map2);
-        final MapContentBinding<K, V> contentBinding = new MapContentBinding<K, V>(map1);
+        final MapContentBinding<K, V> contentBinding = new MapContentBinding<>(map1);
         map1.clear();
         map1.putAll(map2);
         map2.removeListener(contentBinding);
@@ -82,12 +82,21 @@ public class ContentBinding {
 
     public static void unbind(Object obj1, Object obj2) {
         checkParameters(obj1, obj2);
-        if ((obj1 instanceof List) && (obj2 instanceof ObservableList)) {
-            ((ObservableList)obj2).removeListener(new ListContentBinding((List)obj1));
-        } else if ((obj1 instanceof Set) && (obj2 instanceof ObservableSet)) {
-            ((ObservableSet)obj2).removeListener(new SetContentBinding((Set)obj1));
-        } else if ((obj1 instanceof Map) && (obj2 instanceof ObservableMap)) {
-            ((ObservableMap)obj2).removeListener(new MapContentBinding((Map)obj1));
+        if ((obj1 instanceof List<?> list1) && (obj2 instanceof ObservableList<?> list2)) {
+            @SuppressWarnings("unchecked")
+            ListContentBinding<Object> binding = new ListContentBinding<>((List<Object>) list1);
+
+            list2.removeListener(binding);
+        } else if ((obj1 instanceof Set<?> set1) && (obj2 instanceof ObservableSet<?> set2)) {
+            @SuppressWarnings("unchecked")
+            SetContentBinding<Object> binding = new SetContentBinding<>((Set<Object>) set1);
+
+            set2.removeListener(binding);
+        } else if ((obj1 instanceof Map<?, ?> map1) && (obj2 instanceof ObservableMap<?, ?> map2)) {
+            @SuppressWarnings("unchecked")
+            MapContentBinding<Object, Object> binding = new MapContentBinding<>((Map<Object, Object>) map1);
+
+            map2.removeListener(binding);
         }
     }
 
@@ -96,7 +105,7 @@ public class ContentBinding {
         private final WeakReference<List<E>> listRef;
 
         public ListContentBinding(List<E> list) {
-            this.listRef = new WeakReference<List<E>>(list);
+            this.listRef = new WeakReference<>(list);
         }
 
         @Override
@@ -157,7 +166,7 @@ public class ContentBinding {
         private final WeakReference<Set<E>> setRef;
 
         public SetContentBinding(Set<E> set) {
-            this.setRef = new WeakReference<Set<E>>(set);
+            this.setRef = new WeakReference<>(set);
         }
 
         @Override
@@ -210,7 +219,7 @@ public class ContentBinding {
         private final WeakReference<Map<K, V>> mapRef;
 
         public MapContentBinding(Map<K, V> map) {
-            this.mapRef = new WeakReference<Map<K, V>>(map);
+            this.mapRef = new WeakReference<>(map);
         }
 
         @Override

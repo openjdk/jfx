@@ -25,10 +25,12 @@
 #include "SVGRootInlineBox.h"
 
 #include "GraphicsContext.h"
+#include "InlineIteratorLogicalOrderTraversal.h"
 #include "RenderSVGText.h"
 #include "RenderSVGTextPath.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGInlineFlowBox.h"
-#include "SVGInlineTextBox.h"
+#include "SVGInlineTextBoxInlines.h"
 #include "SVGNames.h"
 #include "SVGRenderingContext.h"
 #include "SVGTextPositioningElement.h"
@@ -44,21 +46,37 @@ SVGRootInlineBox::SVGRootInlineBox(RenderSVGText& renderSVGText)
 {
 }
 
-RenderSVGText& SVGRootInlineBox::renderSVGText()
+RenderSVGText& SVGRootInlineBox::renderSVGText() const
 {
     return downcast<RenderSVGText>(blockFlow());
 }
 
-void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit, LayoutUnit)
+void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom)
 {
     ASSERT(paintInfo.phase == PaintPhase::Foreground || paintInfo.phase == PaintPhase::Selection);
     ASSERT(!paintInfo.context().paintingDisabled());
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (renderer().document().settings().layerBasedSVGEngineEnabled()) {
+        auto overflowRect(visualOverflowRect(lineTop, lineBottom));
+        flipForWritingMode(overflowRect);
+        overflowRect.moveBy(paintOffset);
+
+        if (!paintInfo.rect.intersects(overflowRect))
+            return;
+    }
+#else
+    UNUSED_PARAM(lineTop);
+    UNUSED_PARAM(lineBottom);
+#endif
 
     bool isPrinting = renderSVGText().document().printing();
     bool hasSelection = !isPrinting && selectionState() != RenderObject::HighlightState::None;
     bool shouldPaintSelectionHighlight = !(paintInfo.paintBehavior.contains(PaintBehavior::SkipSelectionHighlight));
 
     PaintInfo childPaintInfo(paintInfo);
+    childPaintInfo.updateSubtreePaintRootForChildren(&renderer());
+
     if (hasSelection && shouldPaintSelectionHighlight) {
         for (auto* child = firstChild(); child; child = child->nextOnLine()) {
             if (is<SVGInlineTextBox>(*child))
@@ -67,6 +85,17 @@ void SVGRootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
                 downcast<SVGInlineFlowBox>(*child).paintSelectionBackground(childPaintInfo);
         }
     }
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (renderer().document().settings().layerBasedSVGEngineEnabled()) {
+        for (auto* child = firstChild(); child; child = child->nextOnLine()) {
+            if (child->renderer().isText() || !child->boxModelObject()->hasSelfPaintingLayer())
+                child->paint(childPaintInfo, paintOffset, lineTop, lineBottom);
+        }
+
+        return;
+    }
+#endif
 
     SVGRenderingContext renderingContext(renderSVGText(), paintInfo, SVGRenderingContext::SaveGraphicsContext);
     if (renderingContext.isRenderingPrepared()) {
@@ -84,7 +113,7 @@ void SVGRootInlineBox::computePerCharacterLayoutInformation()
         return;
 
     if (textRoot.needsReordering())
-        reorderValueLists(layoutAttributes);
+        reorderValueListsToLogicalOrder(layoutAttributes);
 
     // Perform SVG text layout phase two (see SVGTextLayoutEngine for details).
     SVGTextLayoutEngine characterLayout(layoutAttributes);
@@ -168,9 +197,7 @@ void SVGRootInlineBox::layoutRootBox(const FloatRect& childRect)
     RenderSVGText& parentBlock = renderSVGText();
 
     // Finally, assign the root block position, now that all content is laid out.
-    LayoutRect boundingRect = enclosingLayoutRect(childRect);
-    parentBlock.setLocation(boundingRect.location());
-    parentBlock.setSize(boundingRect.size());
+    parentBlock.updatePositionAndOverflow(childRect);
 
     // Position all children relative to the parent block.
     for (auto* child = firstChild(); child; child = child->nextOnLine()) {
@@ -185,6 +212,8 @@ void SVGRootInlineBox::layoutRootBox(const FloatRect& childRect)
     setY(0);
     setLogicalWidth(childRect.width());
     setLogicalHeight(childRect.height());
+
+    auto boundingRect = enclosingLayoutRect(childRect);
     setLineTopBottomPositions(0, boundingRect.height(), 0, boundingRect.height());
 }
 
@@ -269,26 +298,24 @@ static inline void findFirstAndLastAttributesInVector(Vector<SVGTextLayoutAttrib
     ASSERT(last);
 }
 
-static inline void reverseInlineBoxRangeAndValueListsIfNeeded(void* userData, Vector<LegacyInlineBox*>::iterator first, Vector<LegacyInlineBox*>::iterator last)
+static inline void reverseInlineBoxRangeAndValueListsIfNeeded(Vector<SVGTextLayoutAttributes*>& attributes, Vector<InlineIterator::LeafBoxIterator>::iterator first, Vector<InlineIterator::LeafBoxIterator>::iterator last)
 {
-    ASSERT(userData);
-    Vector<SVGTextLayoutAttributes*>& attributes = *reinterpret_cast<Vector<SVGTextLayoutAttributes*>*>(userData);
-
     // This is a copy of std::reverse(first, last). It additionally assures that the metrics map within the renderers belonging to the InlineBoxes are reordered as well.
     while (true)  {
         if (first == last || first == --last)
             return;
-
-        if (!is<SVGInlineTextBox>(**last) || !is<SVGInlineTextBox>(**first)) {
-            LegacyInlineBox* temp = *first;
+        auto* legacyFirst = (*first)->legacyInlineBox();
+        auto* legacyLast = (*last)->legacyInlineBox();
+        if (!is<SVGInlineTextBox>(legacyFirst) || !is<SVGInlineTextBox>(legacyLast)) {
+            auto temp = *first;
             *first = *last;
             *last = temp;
             ++first;
             continue;
         }
 
-        auto& firstTextBox = downcast<SVGInlineTextBox>(**first);
-        auto& lastTextBox = downcast<SVGInlineTextBox>(**last);
+        auto& firstTextBox = downcast<SVGInlineTextBox>(*legacyFirst);
+        auto& lastTextBox = downcast<SVGInlineTextBox>(*legacyLast);
 
         // Reordering is only necessary for BiDi text that is _absolutely_ positioned.
         if (firstTextBox.len() == 1 && firstTextBox.len() == lastTextBox.len()) {
@@ -301,7 +328,7 @@ static inline void reverseInlineBoxRangeAndValueListsIfNeeded(void* userData, Ve
             swapItemsInLayoutAttributes(firstAttributes, lastAttributes, firstTextBox.start(), lastTextBox.start());
         }
 
-        LegacyInlineBox* temp = *first;
+        auto temp = *first;
         *first = *last;
         *last = temp;
 
@@ -309,10 +336,14 @@ static inline void reverseInlineBoxRangeAndValueListsIfNeeded(void* userData, Ve
     }
 }
 
-void SVGRootInlineBox::reorderValueLists(Vector<SVGTextLayoutAttributes*>& attributes)
+void SVGRootInlineBox::reorderValueListsToLogicalOrder(Vector<SVGTextLayoutAttributes*>& attributes)
 {
-    Vector<LegacyInlineBox*> leafBoxesInLogicalOrder;
-    collectLeafBoxesInLogicalOrder(leafBoxesInLogicalOrder, reverseInlineBoxRangeAndValueListsIfNeeded, &attributes);
+    auto lineBox = InlineIterator::LineBoxIterator(this);
+
+    InlineIterator::leafBoxesInLogicalOrder(lineBox, [&](auto first, auto last) {
+        reverseInlineBoxRangeAndValueListsIfNeeded(attributes, first, last);
+    });
+
 }
 
 } // namespace WebCore

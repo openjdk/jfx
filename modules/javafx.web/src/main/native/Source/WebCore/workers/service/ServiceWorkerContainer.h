@@ -31,13 +31,17 @@
 #include "AddEventListenerOptions.h"
 #include "EventTarget.h"
 #include "IDLTypes.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
+#include "MessageEvent.h"
+#include "PushPermissionState.h"
+#include "PushSubscription.h"
 #include "SWClientConnection.h"
 #include "SWServer.h"
 #include "ServiceWorkerJobClient.h"
 #include "ServiceWorkerRegistration.h"
 #include "ServiceWorkerRegistrationOptions.h"
 #include "WorkerType.h"
+#include <wtf/Forward.h>
 #include <wtf/Threading.h>
 
 namespace WebCore {
@@ -47,15 +51,14 @@ class NavigatorBase;
 class ServiceWorker;
 
 enum class ServiceWorkerUpdateViaCache : uint8_t;
-enum class WorkerType : uint8_t;
+enum class WorkerType : bool;
 
-template<typename IDLType> class DOMPromiseProxy;
-
-class ServiceWorkerContainer final : public EventTargetWithInlineData, public ActiveDOMObject, public ServiceWorkerJobClient {
+class ServiceWorkerContainer final : public EventTarget, public ActiveDOMObject, public ServiceWorkerJobClient {
     WTF_MAKE_NONCOPYABLE(ServiceWorkerContainer);
     WTF_MAKE_ISO_ALLOCATED(ServiceWorkerContainer);
 public:
-    ServiceWorkerContainer(ScriptExecutionContext*, NavigatorBase&);
+    static UniqueRef<ServiceWorkerContainer> create(ScriptExecutionContext*, NavigatorBase&);
+
     ~ServiceWorkerContainer();
 
     ServiceWorker* controller() const;
@@ -83,6 +86,14 @@ public:
     void addRegistration(ServiceWorkerRegistration&);
     void removeRegistration(ServiceWorkerRegistration&);
 
+    void subscribeToPushService(ServiceWorkerRegistration&, const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&&);
+    void unsubscribeFromPushService(ServiceWorkerRegistrationIdentifier, PushSubscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&&);
+    void getPushSubscription(ServiceWorkerRegistration&, DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&&);
+    void getPushPermissionState(ServiceWorkerRegistrationIdentifier, DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&&);
+#if ENABLE(NOTIFICATIONS)
+    void getNotifications(const URL&, const String&, DOMPromiseDeferred<IDLSequence<IDLInterface<Notification>>>&&);
+#endif
+
     ServiceWorkerJob* job(ServiceWorkerJobIdentifier);
 
     void startMessages();
@@ -91,7 +102,16 @@ public:
 
     NavigatorBase* navigator() { return &m_navigator; }
 
+    using VoidPromise = DOMPromiseDeferred<void>;
+    using NavigationPreloadStatePromise = DOMPromiseDeferred<IDLDictionary<NavigationPreloadState>>;
+    void enableNavigationPreload(ServiceWorkerRegistrationIdentifier, VoidPromise&&);
+    void disableNavigationPreload(ServiceWorkerRegistrationIdentifier, VoidPromise&&);
+    void setNavigationPreloadHeaderValue(ServiceWorkerRegistrationIdentifier, String&&, VoidPromise&&);
+    void getNavigationPreloadState(ServiceWorkerRegistrationIdentifier, NavigationPreloadStatePromise&&);
+
 private:
+    ServiceWorkerContainer(ScriptExecutionContext*, NavigatorBase&);
+
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions& = { }) final;
 
     void scheduleJob(std::unique_ptr<ServiceWorkerJob>&&);
@@ -100,13 +120,15 @@ private:
     void jobResolvedWithRegistration(ServiceWorkerJob&, ServiceWorkerRegistrationData&&, ShouldNotifyWhenResolved) final;
     void jobResolvedWithUnregistrationResult(ServiceWorkerJob&, bool unregistrationResult) final;
     void startScriptFetchForJob(ServiceWorkerJob&, FetchOptions::Cache) final;
-    void jobFinishedLoadingScript(ServiceWorkerJob&, const ScriptBuffer&, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, const CrossOriginEmbedderPolicy&, const String& referrerPolicy) final;
+    void jobFinishedLoadingScript(ServiceWorkerJob&, WorkerFetchResult&&) final;
     void jobFailedLoadingScript(ServiceWorkerJob&, const ResourceError&, Exception&&) final;
 
     void notifyFailedFetchingScript(ServiceWorkerJob&, const ResourceError&);
     void destroyJob(ServiceWorkerJob&);
+    void willSettleRegistrationPromise(bool success);
 
-    DocumentOrWorkerIdentifier contextIdentifier() final;
+    ServiceWorkerOrClientIdentifier contextIdentifier() final;
+    ScriptExecutionContext* context() final { return scriptExecutionContext(); }
 
     SWClientConnection& ensureSWClientConnection();
 
@@ -143,7 +165,7 @@ private:
     uint64_t m_lastOngoingSettledRegistrationIdentifier { 0 };
     HashMap<uint64_t, ServiceWorkerRegistrationKey> m_ongoingSettledRegistrations;
     bool m_shouldDeferMessageEvents { false };
-    Vector<Ref<Event>> m_deferredMessageEvents;
+    Vector<MessageEvent::MessageEventWithStrongData> m_deferredMessageEvents;
 };
 
 } // namespace WebCore

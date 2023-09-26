@@ -28,6 +28,7 @@
 
 #if ENABLE(OFFSCREEN_CANVAS)
 
+#include "GraphicsLayerContentsDisplayDelegate.h"
 #include "HTMLCanvasElement.h"
 #include "ImageBufferPipe.h"
 #include "OffscreenCanvas.h"
@@ -51,12 +52,14 @@ HTMLCanvasElement* PlaceholderRenderingContext::canvas() const
     return &downcast<HTMLCanvasElement>(base);
 }
 
-PlatformLayer* PlaceholderRenderingContext::platformLayer() const
+void PlaceholderRenderingContext::setContentsToLayer(GraphicsLayer& layer)
 {
-    if (m_imageBufferPipe)
-        return m_imageBufferPipe->platformLayer();
+    if (m_imageBufferPipe) {
+        m_imageBufferPipe->setContentsToLayer(layer);
+        return;
+    }
 
-    return nullptr;
+    return CanvasRenderingContext::setContentsToLayer(layer);
 }
 
 }

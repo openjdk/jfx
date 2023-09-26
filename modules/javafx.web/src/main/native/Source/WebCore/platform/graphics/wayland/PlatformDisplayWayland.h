@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef  PlatformDisplayWayland_h
-#define  PlatformDisplayWayland_h
+#pragma once
 
 #if PLATFORM(WAYLAND)
 
@@ -37,7 +36,9 @@ namespace WebCore {
 class PlatformDisplayWayland : public PlatformDisplay {
 public:
     static std::unique_ptr<PlatformDisplay> create();
-    static std::unique_ptr<PlatformDisplay> create(struct wl_display*);
+#if PLATFORM(GTK)
+    static std::unique_ptr<PlatformDisplay> create(GdkDisplay*);
+#endif
 
     virtual ~PlatformDisplayWayland();
 
@@ -50,13 +51,19 @@ private:
 
     Type type() const final { return PlatformDisplay::Type::Wayland; }
 
+    void registryGlobal(const char* interface, uint32_t name);
+
 protected:
-    PlatformDisplayWayland(struct wl_display*, NativeDisplayOwned);
+    explicit PlatformDisplayWayland(struct wl_display*);
+#if PLATFORM(GTK)
+    explicit PlatformDisplayWayland(GdkDisplay*);
+
+    void sharedDisplayDidClose() override;
+#endif
 
     void initialize();
 
-    virtual void registryGlobal(const char* interface, uint32_t name);
-
+private:
     struct wl_display* m_display;
     WlUniquePtr<struct wl_registry> m_registry;
     WlUniquePtr<struct wl_compositor> m_compositor;
@@ -67,5 +74,3 @@ protected:
 SPECIALIZE_TYPE_TRAITS_PLATFORM_DISPLAY(PlatformDisplayWayland, Wayland)
 
 #endif // PLATFORM(WAYLAND)
-
-#endif // PlatformDisplayWayland_h

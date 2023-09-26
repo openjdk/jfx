@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "StructureIDTable.h"
+#include "CacheableIdentifier.h"
+#include "StructureID.h"
 #include "VM.h"
 #include <wtf/FixedVector.h>
 #include <wtf/Vector.h>
@@ -41,8 +42,8 @@ class Structure;
 class PolyProtoAccessChain final : public ThreadSafeRefCounted<PolyProtoAccessChain> {
 public:
     // Returns nullptr when invalid.
-    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, const PropertySlot&);
-    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, JSObject* target);
+    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, CacheableIdentifier, const PropertySlot&);
+    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, CacheableIdentifier, JSObject* target);
 
     const FixedVector<StructureID>& chain() const { return m_chain; }
 
@@ -57,20 +58,20 @@ public:
     bool needImpurePropertyWatchpoint(VM&) const;
 
     template <typename Func>
-    void forEach(VM& vm, Structure* baseStructure, const Func& func) const
+    void forEach(VM&, Structure* baseStructure, const Func& func) const
     {
         bool atEnd = !m_chain.size();
         func(baseStructure, atEnd);
         for (unsigned i = 0; i < m_chain.size(); ++i) {
             atEnd = i + 1 == m_chain.size();
-            func(vm.getStructure(m_chain[i]), atEnd);
+            func(m_chain[i].decode(), atEnd);
         }
     }
 
-    Structure* slotBaseStructure(VM& vm, Structure* baseStructure) const
+    Structure* slotBaseStructure(VM&, Structure* baseStructure) const
     {
         if (m_chain.size())
-            return vm.getStructure(m_chain.last());
+            return m_chain.last().decode();
         return baseStructure;
     }
 

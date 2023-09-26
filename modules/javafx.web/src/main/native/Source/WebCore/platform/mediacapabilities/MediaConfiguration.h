@@ -27,6 +27,7 @@
 
 #include "AudioConfiguration.h"
 #include "VideoConfiguration.h"
+#include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
 
@@ -34,34 +35,21 @@ struct MediaConfiguration {
     std::optional<VideoConfiguration> video;
     std::optional<AudioConfiguration> audio;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<MediaConfiguration> decode(Decoder&);
+    std::optional<Vector<String>> allowedMediaContainerTypes;
+    std::optional<Vector<String>> allowedMediaCodecTypes;
+
+    MediaConfiguration isolatedCopy() const &;
+    MediaConfiguration isolatedCopy() &&;
 };
 
-template<class Encoder>
-void MediaConfiguration::encode(Encoder& encoder) const
+inline MediaConfiguration MediaConfiguration::isolatedCopy() const &
 {
-    encoder << video;
-    encoder << audio;
+    return { crossThreadCopy(video),  crossThreadCopy(audio), crossThreadCopy(allowedMediaContainerTypes), crossThreadCopy(allowedMediaCodecTypes) };
 }
 
-template<class Decoder>
-std::optional<MediaConfiguration> MediaConfiguration::decode(Decoder& decoder)
+inline MediaConfiguration MediaConfiguration::isolatedCopy() &&
 {
-    std::optional<std::optional<VideoConfiguration>> video;
-    decoder >> video;
-    if (!video)
-        return std::nullopt;
-
-    std::optional<std::optional<AudioConfiguration>> audio;
-    decoder >> audio;
-    if (!audio)
-        return std::nullopt;
-
-    return {{
-        *video,
-        *audio,
-    }};
+    return { crossThreadCopy(WTFMove(video)),  crossThreadCopy(WTFMove(audio)), crossThreadCopy(WTFMove(allowedMediaContainerTypes)), crossThreadCopy(WTFMove(allowedMediaCodecTypes)) };
 }
 
 } // namespace WebCore

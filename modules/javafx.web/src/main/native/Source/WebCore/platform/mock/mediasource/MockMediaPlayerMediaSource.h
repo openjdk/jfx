@@ -67,7 +67,7 @@ public:
 private:
     // MediaPlayerPrivate Overrides
     void load(const String& url) override;
-    void load(const URL&, const ContentType&, MediaSourcePrivateClient*) override;
+    void load(const URL&, const ContentType&, MediaSourcePrivateClient&) override;
 #if ENABLE(MEDIA_STREAM)
     void load(MediaStreamPrivate&) override { }
 #endif
@@ -84,11 +84,12 @@ private:
     MediaTime maxMediaTimeSeekable() const override;
     std::unique_ptr<PlatformTimeRanges> buffered() const override;
     bool didLoadingProgress() const override;
-    void setSize(const IntSize&) override;
+    void setPresentationSize(const IntSize&) override;
     void paint(GraphicsContext&, const FloatRect&) override;
     MediaTime durationMediaTime() const override;
     void seekWithTolerance(const MediaTime&, const MediaTime&, const MediaTime&) override;
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() override;
+    DestinationColorSpace colorSpace() override;
 
     MediaPlayer* m_player;
     RefPtr<MockMediaSourcePrivate> m_mediaSourcePrivate;

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2015 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,9 @@
 #include "IntlDisplayNames.h"
 #include "IntlDisplayNamesConstructor.h"
 #include "IntlDisplayNamesPrototype.h"
+#include "IntlDurationFormat.h"
+#include "IntlDurationFormatConstructor.h"
+#include "IntlDurationFormatPrototype.h"
 #include "IntlListFormat.h"
 #include "IntlListFormatConstructor.h"
 #include "IntlListFormatPrototype.h"
@@ -82,63 +85,70 @@ static JSC_DECLARE_HOST_FUNCTION(intlObjectFuncSupportedValuesOf);
 static JSValue createCollatorConstructor(VM& vm, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return IntlCollatorConstructor::create(vm, IntlCollatorConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlCollatorPrototype*>(globalObject->collatorStructure()->storedPrototypeObject()));
 }
 
-static JSValue createDateTimeFormatConstructor(VM& vm, JSObject* object)
+static JSValue createDateTimeFormatConstructor(VM&, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return globalObject->dateTimeFormatConstructor();
 }
 
 static JSValue createDisplayNamesConstructor(VM& vm, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return IntlDisplayNamesConstructor::create(vm, IntlDisplayNamesConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlDisplayNamesPrototype*>(globalObject->displayNamesStructure()->storedPrototypeObject()));
+}
+
+static JSValue createDurationFormatConstructor(VM& vm, JSObject* object)
+{
+    IntlObject* intlObject = jsCast<IntlObject*>(object);
+    JSGlobalObject* globalObject = intlObject->globalObject();
+    return IntlDurationFormatConstructor::create(vm, IntlDurationFormatConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlDurationFormatPrototype*>(globalObject->durationFormatStructure()->storedPrototypeObject()));
 }
 
 static JSValue createListFormatConstructor(VM& vm, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return IntlListFormatConstructor::create(vm, IntlListFormatConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlListFormatPrototype*>(globalObject->listFormatStructure()->storedPrototypeObject()));
 }
 
 static JSValue createLocaleConstructor(VM& vm, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return IntlLocaleConstructor::create(vm, IntlLocaleConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlLocalePrototype*>(globalObject->localeStructure()->storedPrototypeObject()));
 }
 
-static JSValue createNumberFormatConstructor(VM& vm, JSObject* object)
+static JSValue createNumberFormatConstructor(VM&, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return globalObject->numberFormatConstructor();
 }
 
 static JSValue createPluralRulesConstructor(VM& vm, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return IntlPluralRulesConstructor::create(vm, IntlPluralRulesConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlPluralRulesPrototype*>(globalObject->pluralRulesStructure()->storedPrototypeObject()));
 }
 
 static JSValue createRelativeTimeFormatConstructor(VM& vm, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return IntlRelativeTimeFormatConstructor::create(vm, IntlRelativeTimeFormatConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlRelativeTimeFormatPrototype*>(globalObject->relativeTimeFormatStructure()->storedPrototypeObject()));
 }
 
 static JSValue createSegmenterConstructor(VM& vm, JSObject* object)
 {
     IntlObject* intlObject = jsCast<IntlObject*>(object);
-    JSGlobalObject* globalObject = intlObject->globalObject(vm);
+    JSGlobalObject* globalObject = intlObject->globalObject();
     return IntlSegmenterConstructor::create(vm, IntlSegmenterConstructor::createStructure(vm, globalObject, globalObject->functionPrototype()), jsCast<IntlSegmenterPrototype*>(globalObject->segmenterStructure()->storedPrototypeObject()));
 }
 
@@ -151,8 +161,10 @@ namespace JSC {
 /* Source for IntlObject.lut.h
 @begin intlObjectTable
   getCanonicalLocales   intlObjectFuncGetCanonicalLocales            DontEnum|Function 1
+  supportedValuesOf     intlObjectFuncSupportedValuesOf              DontEnum|Function 1
   Collator              createCollatorConstructor                    DontEnum|PropertyCallback
   DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
+  DisplayNames          createDisplayNamesConstructor                DontEnum|PropertyCallback
   Locale                createLocaleConstructor                      DontEnum|PropertyCallback
   NumberFormat          createNumberFormatConstructor                DontEnum|PropertyCallback
   PluralRules           createPluralRulesConstructor                 DontEnum|PropertyCallback
@@ -167,7 +179,7 @@ struct MatcherResult {
     size_t extensionIndex { 0 };
 };
 
-const ClassInfo IntlObject::s_info = { "Intl", &Base::s_info, &intlObjectTable, nullptr, CREATE_METHOD_TABLE(IntlObject) };
+const ClassInfo IntlObject::s_info = { "Intl"_s, &Base::s_info, &intlObjectTable, nullptr, CREATE_METHOD_TABLE(IntlObject) };
 
 void UFieldPositionIteratorDeleter::operator()(UFieldPositionIterator* iterator) const
 {
@@ -175,7 +187,7 @@ void UFieldPositionIteratorDeleter::operator()(UFieldPositionIterator* iterator)
         ufieldpositer_close(iterator);
 }
 
-const MeasureUnit simpleUnits[43] = {
+const MeasureUnit simpleUnits[45] = {
     { "area"_s, "acre"_s },
     { "digital"_s, "bit"_s },
     { "digital"_s, "byte"_s },
@@ -201,6 +213,7 @@ const MeasureUnit simpleUnits[43] = {
     { "digital"_s, "megabit"_s },
     { "digital"_s, "megabyte"_s },
     { "length"_s, "meter"_s },
+    { "duration"_s, "microsecond"_s },
     { "length"_s, "mile"_s },
     { "length"_s, "mile-scandinavian"_s },
     { "volume"_s, "milliliter"_s },
@@ -208,6 +221,7 @@ const MeasureUnit simpleUnits[43] = {
     { "duration"_s, "millisecond"_s },
     { "duration"_s, "minute"_s },
     { "duration"_s, "month"_s },
+    { "duration"_s, "nanosecond"_s },
     { "mass"_s, "ounce"_s },
     { "concentr"_s, "percent"_s },
     { "digital"_s, "petabyte"_s },
@@ -228,28 +242,24 @@ IntlObject::IntlObject(VM& vm, Structure* structure)
 
 IntlObject* IntlObject::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    IntlObject* object = new (NotNull, allocateCell<IntlObject>(vm.heap)) IntlObject(vm, structure);
+    IntlObject* object = new (NotNull, allocateCell<IntlObject>(vm)) IntlObject(vm, structure);
     object->finishCreation(vm, globalObject);
     return object;
 }
 
-void IntlObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
+void IntlObject::finishCreation(VM& vm, JSGlobalObject*)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
-#if HAVE(ICU_U_LOCALE_DISPLAY_NAMES)
-    putDirectWithoutTransition(vm, vm.propertyNames->DisplayNames, createDisplayNamesConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
-#else
-    UNUSED_PARAM(&createDisplayNamesConstructor);
-#endif
 #if HAVE(ICU_U_LIST_FORMATTER)
+    if (Options::useIntlDurationFormat())
+        putDirectWithoutTransition(vm, vm.propertyNames->DurationFormat, createDurationFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->ListFormat, createListFormatConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
 #else
+    UNUSED_PARAM(&createDurationFormatConstructor);
     UNUSED_PARAM(&createListFormatConstructor);
 #endif
-    if (Options::useIntlEnumeration())
-        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("supportedValuesOf", intlObjectFuncSupportedValuesOf, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
 }
 
 Structure* IntlObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -324,7 +334,7 @@ Vector<char, 32> canonicalizeUnicodeExtensionsAfterICULocaleCanonicalization(Vec
 {
     StringView locale(buffer.data(), buffer.size());
     ASSERT(locale.is8Bit());
-    size_t extensionIndex = locale.find("-u-");
+    size_t extensionIndex = locale.find("-u-"_s);
     if (extensionIndex == notFound)
         return WTFMove(buffer);
 
@@ -493,7 +503,7 @@ const LocaleSet& intlAvailableLocales()
 //
 //  Based on the above observation, our fast path handles ASCII strings excluding control characters. We first compare strings with level-1 weights. And then,
 //  if we found they are the same and if we found they are not binary-equal strings, then we perform comparison with level-3 and level-4 weights.
-const uint8_t ducetLevel1Weights[128] = {
+const uint8_t ducetLevel1Weights[256] = {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 1, 2, 3, 4, 5, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -510,11 +520,28 @@ const uint8_t ducetLevel1Weights[128] = {
     56, 57, 58, 59, 60, 61, 62, 63,
     64, 65, 66, 67, 68, 69, 70, 71,
     72, 73, 74, 21, 36, 22, 37, 0,
+
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 // Level 2 are all zeros.
 
-const uint8_t ducetLevel3Weights[128] = {
+const uint8_t ducetLevel3Weights[256] = {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -527,6 +554,23 @@ const uint8_t ducetLevel3Weights[128] = {
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -592,7 +636,7 @@ TriState intlBooleanOption(JSGlobalObject* globalObject, JSObject* options, Prop
     return triState(value.toBoolean(globalObject));
 }
 
-String intlStringOption(JSGlobalObject* globalObject, JSObject* options, PropertyName property, std::initializer_list<const char*> values, const char* notFound, const char* fallback)
+String intlStringOption(JSGlobalObject* globalObject, JSObject* options, PropertyName property, std::initializer_list<ASCIILiteral> values, ASCIILiteral notFound, ASCIILiteral fallback)
 {
     // GetOption (options, property, type="string", values, fallback)
     // https://tc39.github.io/ecma402/#sec-getoption
@@ -661,10 +705,6 @@ unsigned intlDefaultNumberOption(JSGlobalObject* globalObject, JSValue value, Pr
 // http://www.unicode.org/reports/tr35/#Unicode_locale_identifier
 bool isUnicodeLocaleIdentifierType(StringView string)
 {
-    // Matching the Unicode Locale Identifier type nonterminal.
-    // Because the spec abstract operation is not mentioning to BCP-47 conformance for this matching,
-    // '-' and '_' separators are allowed while BCP-47 only accepts '-'.
-    // On the other hand, IsStructurallyValidLanguageTag explicitly mentions to BCP-47.
     return readCharactersForParsing(string, [](auto buffer) -> bool {
         while (true) {
             auto begin = buffer.position();
@@ -675,7 +715,7 @@ bool isUnicodeLocaleIdentifierType(StringView string)
                 return false;
             if (!buffer.hasCharactersRemaining())
                 return true;
-            if (*buffer != '-' && *buffer != '_')
+            if (*buffer != '-')
                 return false;
             ++buffer;
         }
@@ -710,7 +750,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
         return seen;
 
     JSObject* localesObject;
-    if (locales.isString() || locales.inherits<IntlLocale>(vm)) {
+    if (locales.isString() || locales.inherits<IntlLocale>()) {
         JSArray* localesArray = JSArray::tryCreate(vm, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous));
         if (!localesArray) {
             throwOutOfMemoryError(globalObject, scope);
@@ -729,7 +769,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
     JSValue lengthProperty = localesObject->get(globalObject, vm.propertyNames->length);
     RETURN_IF_EXCEPTION(scope, Vector<String>());
 
-    uint64_t length = static_cast<uint64_t>(lengthProperty.toLength(globalObject));
+    uint64_t length = lengthProperty.toLength(globalObject);
     RETURN_IF_EXCEPTION(scope, Vector<String>());
 
     HashSet<String> seenSet;
@@ -747,7 +787,7 @@ Vector<String> canonicalizeLocaleList(JSGlobalObject* globalObject, JSValue loca
             }
 
             String tag;
-            if (kValue.inherits<IntlLocale>(vm))
+            if (kValue.inherits<IntlLocale>())
                 tag = jsCast<IntlLocale*>(kValue)->toString();
             else {
                 JSString* string = kValue.toString(globalObject);
@@ -831,9 +871,9 @@ String removeUnicodeLocaleExtension(const String& locale)
     if (partsSize > 0)
         builder.append(parts[0]);
     for (size_t p = 1; p < partsSize; ++p) {
-        if (parts[p] == "x")
+        if (parts[p] == "x"_s)
             atPrivate = true;
-        if (!atPrivate && parts[p] == "u" && p + 1 < partsSize) {
+        if (!atPrivate && parts[p] == "u"_s && p + 1 < partsSize) {
             // Skip the u- and anything that follows until another singleton.
             // While the next part is part of the unicode extension, skip it.
             while (p + 1 < partsSize && parts[p + 1].length() > 1)
@@ -863,7 +903,7 @@ static MatcherResult lookupMatcher(JSGlobalObject* globalObject, const LocaleSet
     if (!availableLocale.isEmpty()) {
         result.locale = availableLocale;
         if (locale != noExtensionsLocale) {
-            size_t extensionIndex = locale.find("-u-");
+            size_t extensionIndex = locale.find("-u-"_s);
             RELEASE_ASSERT(extensionIndex != notFound);
 
             size_t extensionLength = locale.length() - extensionIndex;
@@ -904,7 +944,7 @@ constexpr ASCIILiteral relevantExtensionKeyString(RelevantExtensionKey key)
     JSC_INTL_RELEVANT_EXTENSION_KEYS(JSC_RETURN_INTL_RELEVANT_EXTENSION_KEYS)
 #undef JSC_RETURN_INTL_RELEVANT_EXTENSION_KEYS
     }
-    return ASCIILiteral::null();
+    return { };
 }
 
 ResolvedLocale resolveLocale(JSGlobalObject* globalObject, const LocaleSet& availableLocales, const Vector<String>& requestedLocales, LocaleMatcher localeMatcher, const ResolveLocaleOptions& options, std::initializer_list<RelevantExtensionKey> relevantExtensionKeys, Vector<String> (*localeData)(const String&, RelevantExtensionKey))
@@ -925,7 +965,8 @@ ResolvedLocale resolveLocale(JSGlobalObject* globalObject, const LocaleSet& avai
     ResolvedLocale resolved;
     resolved.dataLocale = foundLocale;
 
-    String supportedExtension = "-u"_s;
+    StringBuilder supportedExtension;
+    supportedExtension.append("-u"_s);
     for (RelevantExtensionKey key : relevantExtensionKeys) {
         ASCIILiteral keyString = relevantExtensionKeyString(key);
         Vector<String> keyLocaleData = localeData(foundLocale, key);
@@ -965,7 +1006,7 @@ ResolvedLocale resolveLocale(JSGlobalObject* globalObject, const LocaleSet& avai
 
     if (supportedExtension.length() > 2) {
         StringView foundLocaleView(foundLocale);
-        foundLocale = makeString(foundLocaleView.substring(0, matcherResult.extensionIndex), supportedExtension, foundLocaleView.substring(matcherResult.extensionIndex));
+        foundLocale = makeString(foundLocaleView.left(matcherResult.extensionIndex), supportedExtension.toString(), foundLocaleView.substring(matcherResult.extensionIndex));
     }
 
     resolved.locale = WTFMove(foundLocale);
@@ -1058,7 +1099,7 @@ Vector<String> numberingSystemsForLocale(const String& locale)
     UErrorCode status = U_ZERO_ERROR;
     UNumberingSystem* defaultSystem = unumsys_open(locale.utf8().data(), &status);
     ASSERT(U_SUCCESS(status));
-    String defaultSystemName(unumsys_getName(defaultSystem));
+    auto defaultSystemName = String::fromLatin1(unumsys_getName(defaultSystem));
     unumsys_close(defaultSystem);
 
     Vector<String> numberingSystems({ defaultSystemName });
@@ -1609,7 +1650,7 @@ const Vector<String>& intlAvailableCalendars()
         }
 
         // The AvailableCalendars abstract operation returns a List, ordered as if an Array of the same
-        // values had been sorted using %Array.prototype.sort% using undefined as comparefn
+        // values had been sorted using %Array.prototype.sort% using undefined as comparator
         std::sort(availableCalendars->begin(), availableCalendars->end(),
             [](const String& a, const String& b) {
                 return WTF::codePointCompare(a, b) < 0;
@@ -1661,7 +1702,11 @@ static JSArray* availableCollations(JSGlobalObject* globalObject)
     }
 
     Vector<String, 1> elements;
-    elements.reserveInitialCapacity(count);
+    elements.reserveInitialCapacity(count + 2);
+    // ICU ~69 has a bug that does not report "emoji" and "eor" for collation when using ucol_getKeywordValues.
+    // https://github.com/unicode-org/icu/commit/24778dfc9bf67f431509361a173a33a1ab860b5d
+    elements.append("emoji"_s);
+    elements.append("eor"_s);
     for (int32_t index = 0; index < count; ++index) {
         int32_t length = 0;
         const char* pointer = uenum_next(enumeration.get(), &length, &status);
@@ -1679,11 +1724,13 @@ static JSArray* availableCollations(JSGlobalObject* globalObject)
     }
 
     // The AvailableCollations abstract operation returns a List, ordered as if an Array of the same
-    // values had been sorted using %Array.prototype.sort% using undefined as comparefn
+    // values had been sorted using %Array.prototype.sort% using undefined as comparator
     std::sort(elements.begin(), elements.end(),
         [](const String& a, const String& b) {
             return WTF::codePointCompare(a, b) < 0;
         });
+    auto end = std::unique(elements.begin(), elements.end());
+    elements.resize(elements.size() - (elements.end() - end));
 
     RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
 }
@@ -1695,7 +1742,7 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     UErrorCode status = U_ZERO_ERROR;
-    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucurr_openISOCurrencies(UCURR_COMMON | UCURR_NON_DEPRECATED, &status));
+    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucurr_openISOCurrencies(UCURR_ALL, &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to enumerate available currencies"_s);
         return { };
@@ -1708,23 +1755,38 @@ static JSArray* availableCurrencies(JSGlobalObject* globalObject)
     }
 
     Vector<String, 1> elements;
-    elements.reserveInitialCapacity(count);
+    // ICU ~69 doesn't list VES and UYW, but it is actually supported via Intl.DisplayNames.
+    // And ICU ~69 lists up EQE / LSM while it cannot return information via Intl.DisplayNames.
+    // So, we need to add the following work-around.
+    //     1. Add VES and UYW
+    //     2. Do not add EQE and LSM
+    // https://unicode-org.atlassian.net/browse/ICU-21685
+    elements.reserveInitialCapacity(count + 2);
+    elements.append("VES"_s);
+    elements.append("UYW"_s);
     for (int32_t index = 0; index < count; ++index) {
         int32_t length = 0;
-        const char* currency = uenum_next(enumeration.get(), &length, &status);
+        const char* pointer = uenum_next(enumeration.get(), &length, &status);
         if (U_FAILURE(status)) {
             throwTypeError(globalObject, scope, "failed to enumerate available currencies"_s);
             return { };
         }
-        elements.constructAndAppend(currency, length);
+        String currency(pointer, length);
+        if (currency == "EQE"_s)
+            continue;
+        if (currency == "LSM"_s)
+            continue;
+        elements.append(WTFMove(currency));
     }
 
     // The AvailableCurrencies abstract operation returns a List, ordered as if an Array of the same
-    // values had been sorted using %Array.prototype.sort% using undefined as comparefn
+    // values had been sorted using %Array.prototype.sort% using undefined as comparator
     std::sort(elements.begin(), elements.end(),
         [](const String& a, const String& b) {
             return WTF::codePointCompare(a, b) < 0;
         });
+    auto end = std::unique(elements.begin(), elements.end());
+    elements.resize(elements.size() - (elements.end() - end));
 
     RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
 }
@@ -1752,16 +1814,23 @@ static JSArray* availableNumberingSystems(JSGlobalObject* globalObject)
     elements.reserveInitialCapacity(count);
     for (int32_t index = 0; index < count; ++index) {
         int32_t length = 0;
-        const char* numberingSystem = uenum_next(enumeration.get(), &length, &status);
+        const char* name = uenum_next(enumeration.get(), &length, &status);
         if (U_FAILURE(status)) {
             throwTypeError(globalObject, scope, "failed to enumerate available numbering systems"_s);
             return { };
         }
-        elements.constructAndAppend(numberingSystem, length);
+        auto numberingSystem = std::unique_ptr<UNumberingSystem, ICUDeleter<unumsys_close>>(unumsys_openByName(name, &status));
+        if (U_FAILURE(status)) {
+            throwTypeError(globalObject, scope, "failed to enumerate available numbering systems"_s);
+            return { };
+        }
+        if (unumsys_isAlgorithmic(numberingSystem.get()))
+            continue;
+        elements.constructAndAppend(name, length);
     }
 
     // The AvailableNumberingSystems abstract operation returns a List, ordered as if an Array of the same
-    // values had been sorted using %Array.prototype.sort% using undefined as comparefn
+    // values had been sorted using %Array.prototype.sort% using undefined as comprator
     std::sort(elements.begin(), elements.end(),
         [](const String& a, const String& b) {
             return WTF::codePointCompare(a, b) < 0;
@@ -1770,63 +1839,92 @@ static JSArray* availableNumberingSystems(JSGlobalObject* globalObject)
     RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
 }
 
-// https://tc39.es/proposal-intl-enumeration/#sec-canonicalizetimezonename
-static std::optional<String> canonicalizeTimeZoneNameFromICUTimeZone(const String& timeZoneName)
+static bool isValidTimeZoneNameFromICUTimeZone(StringView timeZoneName)
 {
     // Some time zone names are included in ICU, but they are not included in the IANA Time Zone Database.
     // We need to filter them out.
-    if (timeZoneName.startsWith("SystemV/"))
-        return std::nullopt;
-    if (timeZoneName.startsWith("Etc/"))
-        return std::nullopt;
+    if (timeZoneName.startsWith("SystemV/"_s))
+        return false;
+    if (timeZoneName.startsWith("Etc/"_s))
+        return isUTCEquivalent(timeZoneName);
     // IANA time zone names include '/'. Some of them are not including, but it is in backward links.
     // And ICU already resolved these backward links.
     if (!timeZoneName.contains('/'))
-        return std::nullopt;
+        return timeZoneName == "UTC"_s || timeZoneName == "GMT"_s;
+    return true;
+}
 
-    return timeZoneName;
+// https://tc39.es/proposal-intl-enumeration/#sec-canonicalizetimezonename
+static std::optional<String> canonicalizeTimeZoneNameFromICUTimeZone(String&& timeZoneName)
+{
+    if (isUTCEquivalent(timeZoneName))
+        return "UTC"_s;
+    return std::make_optional(WTFMove(timeZoneName));
+}
+
+// https://tc39.es/proposal-intl-enumeration/#sec-availabletimezones
+const Vector<String>& intlAvailableTimeZones()
+{
+    static LazyNeverDestroyed<Vector<String>> availableTimeZones;
+    static std::once_flag initializeOnce;
+    std::call_once(initializeOnce, [&] {
+        Vector<String> temporary;
+        UErrorCode status = U_ZERO_ERROR;
+        auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, nullptr, nullptr, &status));
+        ASSERT(U_SUCCESS(status));
+
+        int32_t count = uenum_count(enumeration.get(), &status);
+        ASSERT(U_SUCCESS(status));
+        temporary.reserveInitialCapacity(count);
+        for (int32_t index = 0; index < count; ++index) {
+            int32_t length = 0;
+            const char* pointer = uenum_next(enumeration.get(), &length, &status);
+            ASSERT(U_SUCCESS(status));
+            String timeZone(pointer, length);
+            if (isValidTimeZoneNameFromICUTimeZone(timeZone)) {
+                if (auto mapped = canonicalizeTimeZoneNameFromICUTimeZone(WTFMove(timeZone)))
+                    temporary.append(WTFMove(mapped.value()));
+            }
+        }
+
+        // The AvailableTimeZones abstract operation returns a List, ordered as if an Array of the same
+        // values had been sorted using %Array.prototype.sort% using undefined as comparator
+        std::sort(temporary.begin(), temporary.end(),
+            [](const String& a, const String& b) {
+                return WTF::codePointCompare(a, b) < 0;
+            });
+        auto end = std::unique(temporary.begin(), temporary.end());
+        availableTimeZones.construct();
+        availableTimeZones->reserveInitialCapacity(end - temporary.begin());
+
+        auto createImmortalThreadSafeString = [&](String&& string) {
+            if (string.is8Bit())
+                return StringImpl::createStaticStringImpl(string.characters8(), string.length());
+            return StringImpl::createStaticStringImpl(string.characters16(), string.length());
+        };
+        for (auto iterator = temporary.begin(); iterator != end; ++iterator)
+            availableTimeZones->uncheckedAppend(createImmortalThreadSafeString(WTFMove(*iterator)));
+    });
+    return availableTimeZones;
+}
+
+TimeZoneID utcTimeZoneIDStorage { std::numeric_limits<TimeZoneID>::max() };
+TimeZoneID utcTimeZoneIDSlow()
+{
+    static std::once_flag initializeOnce;
+    std::call_once(initializeOnce, [&] {
+        auto& timeZones = intlAvailableTimeZones();
+        auto index = timeZones.find("UTC"_s);
+        RELEASE_ASSERT(index != WTF::notFound);
+        utcTimeZoneIDStorage = index;
+    });
+    return utcTimeZoneIDStorage;
 }
 
 // https://tc39.es/proposal-intl-enumeration/#sec-availabletimezones
 static JSArray* availableTimeZones(JSGlobalObject* globalObject)
 {
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    UErrorCode status = U_ZERO_ERROR;
-    auto enumeration = std::unique_ptr<UEnumeration, ICUDeleter<uenum_close>>(ucal_openTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, nullptr, nullptr, &status));
-    if (U_FAILURE(status)) {
-        throwTypeError(globalObject, scope, "failed to enumerate available timezones"_s);
-        return { };
-    }
-
-    int32_t count = uenum_count(enumeration.get(), &status);
-    if (U_FAILURE(status)) {
-        throwTypeError(globalObject, scope, "failed to enumerate available timezones"_s);
-        return { };
-    }
-
-    Vector<String, 1> elements;
-    elements.reserveInitialCapacity(count);
-    for (int32_t index = 0; index < count; ++index) {
-        int32_t length = 0;
-        const char* pointer = uenum_next(enumeration.get(), &length, &status);
-        if (U_FAILURE(status)) {
-            throwTypeError(globalObject, scope, "failed to enumerate available timezones"_s);
-            return { };
-        }
-        String timeZone(pointer, length);
-        if (auto mapped = canonicalizeTimeZoneNameFromICUTimeZone(timeZone))
-            elements.append(WTFMove(mapped.value()));
-    }
-
-    // 4. Sort result in order as if an Array of the same values had been sorted using %Array.prototype.sort% using undefined as comparefn.
-    std::sort(elements.begin(), elements.end(),
-        [](const String& a, const String& b) {
-            return WTF::codePointCompare(a, b) < 0;
-        });
-
-    RELEASE_AND_RETURN(scope, createArrayFromStringVector(globalObject, WTFMove(elements)));
+    return createArrayFromStringVector(globalObject, intlAvailableTimeZones());
 }
 
 // https://tc39.es/proposal-intl-enumeration/#sec-availableunits
@@ -1849,7 +1947,7 @@ static JSArray* availableUnits(JSGlobalObject* globalObject)
 
     int32_t index = 0;
     for (const MeasureUnit& unit : simpleUnits) {
-        result->putDirectIndex(globalObject, index++, jsString(vm, StringImpl::createFromLiteral(unit.subType)));
+        result->putDirectIndex(globalObject, index++, jsString(vm, StringImpl::create(unit.subType)));
         RETURN_IF_EXCEPTION(scope, { });
     }
     return result;

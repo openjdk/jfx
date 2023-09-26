@@ -32,22 +32,32 @@
 
 #include "Document.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CSSStyleImageValue);
 
-CSSStyleImageValue::CSSStyleImageValue(Ref<CSSImageValue>&& cssValue, Document& document)
+CSSStyleImageValue::CSSStyleImageValue(Ref<CSSImageValue>&& cssValue, Document* document)
     : m_cssValue(WTFMove(cssValue))
-    , m_document(makeWeakPtr(document))
+    , m_document(document)
 {
 }
 
-Document* CSSStyleImageValue::document() const { return m_document.get(); }
+void CSSStyleImageValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments>) const
+{
+    builder.append(m_cssValue->cssText());
+}
+
+Document* CSSStyleImageValue::document() const
+{
+    return m_document.get();
+}
+
+
+RefPtr<CSSValue> CSSStyleImageValue::toCSSValue() const
+{
+    return m_cssValue.copyRef();
+}
 
 } // namespace WebCore
-
-#endif

@@ -71,6 +71,11 @@ void RenderTextControl::styleDidChange(StyleDifference diff, const RenderStyle* 
         auto oldInnerTextStyle = textFormControlElement().createInnerTextStyle(*oldStyle);
         if (newInnerTextStyle != oldInnerTextStyle)
             innerTextRenderer->setStyle(WTFMove(newInnerTextStyle));
+        else if (diff == StyleDifference::RepaintIfText || diff == StyleDifference::Repaint) {
+            // Repaint is expected to be propagated down to the shadow tree when non-inherited style property changes
+            // (e.g. text-decoration-color) since that's where the value actually takes effect.
+            innerTextRenderer->repaint();
+        }
     }
     textFormControlElement().updatePlaceholderVisibility();
 }
@@ -83,7 +88,8 @@ int RenderTextControl::textBlockLogicalHeight() const
 int RenderTextControl::textBlockLogicalWidth() const
 {
     auto innerText = innerTextElement();
-    ASSERT(innerText);
+    if (!innerText)
+        return 0;
 
     LayoutUnit unitWidth = logicalWidth() - borderAndPaddingLogicalWidth();
     if (innerText->renderer())
@@ -101,7 +107,9 @@ int RenderTextControl::scrollbarThickness() const
 RenderBox::LogicalExtentComputedValues RenderTextControl::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const
 {
     auto innerText = innerTextElement();
-    ASSERT(innerText);
+    if (!innerText)
+        return RenderBox::computeLogicalHeight(LayoutUnit(), LayoutUnit());
+
     if (RenderBox* innerTextBox = innerText->renderBox()) {
         LayoutUnit nonContentHeight = innerTextBox->verticalBorderAndPaddingExtent() + innerTextBox->verticalMarginExtent();
         logicalHeight = computeControlLogicalHeight(innerTextBox->lineHeight(true, HorizontalLine, PositionOfInteriorLineBoxes), nonContentHeight);
@@ -143,7 +151,7 @@ float RenderTextControl::getAverageCharWidth()
     const UChar ch = '0';
     const String str = String(&ch, 1);
     const FontCascade& font = style().fontCascade();
-    TextRun textRun = constructTextRun(str, style(), AllowRightExpansion);
+    TextRun textRun = constructTextRun(str, style(), ExpansionBehavior::allowRightOnly());
     return font.width(textRun);
 }
 
@@ -156,11 +164,16 @@ float RenderTextControl::scaleEmToUnits(int x) const
 
 void RenderTextControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    if (shouldApplySizeContainment(*this))
+    if (shouldApplySizeContainment()) {
+        if (auto width = explicitIntrinsicInnerLogicalWidth()) {
+            minLogicalWidth = width.value();
+            maxLogicalWidth = width.value();
+        }
         return;
+    }
     // Use average character width. Matches IE.
     maxLogicalWidth = preferredContentLogicalWidth(const_cast<RenderTextControl*>(this)->getAverageCharWidth());
-    if (RenderBox* innerTextRenderBox = innerTextElement()->renderBox())
+    if (RenderBox* innerTextRenderBox = innerTextElement() ? innerTextElement()->renderBox() : nullptr)
         maxLogicalWidth += innerTextRenderBox->paddingStart() + innerTextRenderBox->paddingEnd();
     if (!style().logicalWidth().isPercentOrCalculated())
         minLogicalWidth = maxLogicalWidth;
@@ -183,7 +196,7 @@ void RenderTextControl::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-void RenderTextControl::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*)
+void RenderTextControl::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*) const
 {
     if (!size().isEmpty())
         rects.append(LayoutRect(additionalOffset, size()));

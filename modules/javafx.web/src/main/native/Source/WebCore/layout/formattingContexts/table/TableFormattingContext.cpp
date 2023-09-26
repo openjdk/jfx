@@ -26,12 +26,9 @@
 #include "config.h"
 #include "TableFormattingContext.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BlockFormattingState.h"
 #include "FloatingState.h"
 #include "InlineFormattingState.h"
-#include "InvalidationState.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
@@ -47,14 +44,14 @@ namespace Layout {
 WTF_MAKE_ISO_ALLOCATED_IMPL(TableFormattingContext);
 
 // https://www.w3.org/TR/css-tables-3/#table-layout-algorithm
-TableFormattingContext::TableFormattingContext(const ContainerBox& formattingContextRoot, TableFormattingState& formattingState)
+TableFormattingContext::TableFormattingContext(const ElementBox& formattingContextRoot, TableFormattingState& formattingState)
     : FormattingContext(formattingContextRoot, formattingState)
     , m_tableFormattingGeometry(*this)
     , m_tableFormattingQuirks(*this)
 {
 }
 
-void TableFormattingContext::layoutInFlowContent(InvalidationState&, const ConstraintsForInFlowContent& constraints)
+void TableFormattingContext::layoutInFlowContent(const ConstraintsForInFlowContent& constraints)
 {
     auto availableHorizontalSpace = constraints.horizontal().logicalWidth;
     auto availableVerticalSpace = downcast<ConstraintsForTableContent>(constraints).availableVerticalSpaceForContent();
@@ -105,11 +102,10 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
         cellBoxGeometry.setContentBoxWidth(formattingGeometry.horizontalSpaceForCellContent(*cell));
 
         if (cellBox.hasInFlowOrFloatingChild()) {
-            auto invalidationState = InvalidationState { };
             // FIXME: This should probably be part of the invalidation state to indicate when we re-layout the cell multiple times as part of the multi-pass table algorithm.
             auto& floatingStateForCellContent = layoutState().ensureBlockFormattingState(cellBox).floatingState();
             floatingStateForCellContent.clear();
-            LayoutContext::createFormattingContext(cellBox, layoutState())->layoutInFlowContent(invalidationState, formattingGeometry.constraintsForInFlowContent(cellBox));
+            LayoutContext::createFormattingContext(cellBox, layoutState())->layoutInFlowContent(formattingGeometry.constraintsForInFlowContent(cellBox));
         }
         cellBoxGeometry.setContentBoxHeight(formattingGeometry.verticalSpaceForCellContent(*cell, availableVerticalSpace));
 
@@ -125,8 +121,8 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
 
             // FIXME: Find out if it is ok to use the regular padding here to align the content box inside a tall cell or we need to
             // use some kind of intrinsic padding similar to RenderTableCell.
-            auto paddingTop = cellBoxGeometry.paddingTop().value_or(LayoutUnit { });
-            auto paddingBottom = cellBoxGeometry.paddingBottom().value_or(LayoutUnit { });
+            auto paddingTop = valueOrDefault(cellBoxGeometry.paddingBefore());
+            auto paddingBottom = valueOrDefault(cellBoxGeometry.paddingAfter());
             auto intrinsicPaddingTop = LayoutUnit { };
             auto intrinsicPaddingBottom = LayoutUnit { };
 
@@ -140,7 +136,7 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
             case VerticalAlign::Baseline: {
                 auto rowBaseline = LayoutUnit { rowList[cell->startRow()].baseline() };
                 auto cellBaseline = LayoutUnit { cell->baseline() };
-                intrinsicPaddingTop = std::max(0_lu, rowBaseline - cellBaseline - cellBoxGeometry.borderTop());
+                intrinsicPaddingTop = std::max(0_lu, rowBaseline - cellBaseline - cellBoxGeometry.borderBefore());
                 intrinsicPaddingBottom = std::max(0_lu, cellLogicalHeight - cellBoxGeometry.verticalMarginBorderAndPadding() - intrinsicPaddingTop - cellBoxGeometry.contentBoxHeight());
                 break;
             }
@@ -156,16 +152,16 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
                     // Normally by the time we start positioning the child content, we already have computed borders and padding for the containing block.
                     // This is different with table cells where the final padding offset depends on the content height as we use
                     // the padding box to vertically align the table cell content.
-                    auto& formattingState = layoutState().establishedFormattingState(cellBox);
+                    auto& formattingState = layoutState().formattingStateForFormattingContext(cellBox);
                     for (auto* child = cellBox.firstInFlowOrFloatingChild(); child; child = child->nextInFlowOrFloatingSibling()) {
                         if (child->isInlineTextBox())
                             continue;
                         formattingState.boxGeometry(*child).moveVertically(intrinsicPaddingTop);
                     }
                     if (cellBox.establishesInlineFormattingContext()) {
-                        auto& inlineFormattingStatee = layoutState().establishedInlineFormattingState(cellBox);
-                        for (auto& run : inlineFormattingStatee.runs())
-                            run.moveVertically(intrinsicPaddingTop);
+                        auto& inlineFormattingStatee = layoutState().formattingStateForInlineFormattingContext(cellBox);
+                        for (auto& box : inlineFormattingStatee.boxes())
+                            box.moveVertically(intrinsicPaddingTop);
                         for (auto& line : inlineFormattingStatee.lines())
                             line.moveVertically(intrinsicPaddingTop);
                     }
@@ -184,7 +180,7 @@ void TableFormattingContext::setUsedGeometryForRows(LayoutUnit availableHorizont
     auto& rows = grid.rows().list();
 
     auto rowLogicalTop = grid.verticalSpacing();
-    const ContainerBox* previousRow = nullptr;
+    const ElementBox* previousRow = nullptr;
     for (size_t rowIndex = 0; rowIndex < rows.size(); ++rowIndex) {
         auto& row = rows[rowIndex];
         auto& rowBox = row.box();
@@ -266,7 +262,7 @@ void TableFormattingContext::setUsedGeometryForSections(const ConstraintsForInFl
     auto verticalSpacing = grid.verticalSpacing();
     auto paddingBefore = std::optional<LayoutUnit> { verticalSpacing };
     auto paddingAfter = verticalSpacing;
-    for (auto& sectionBox : childrenOfType<ContainerBox>(tableBox)) {
+    for (auto& sectionBox : childrenOfType<ElementBox>(tableBox)) {
         auto& sectionBoxGeometry = formattingState().boxGeometry(sectionBox);
         // Section borders are either collapsed or ignored.
         sectionBoxGeometry.setBorder({ });
@@ -280,7 +276,7 @@ void TableFormattingContext::setUsedGeometryForSections(const ConstraintsForInFl
         sectionBoxGeometry.setContentBoxWidth(sectionWidth);
         auto sectionContentHeight = LayoutUnit { };
         size_t rowCount = 0;
-        for (auto& rowBox : childrenOfType<ContainerBox>(sectionBox)) {
+        for (auto& rowBox : childrenOfType<ElementBox>(sectionBox)) {
             sectionContentHeight += geometryForBox(rowBox).borderBoxHeight();
             ++rowCount;
         }
@@ -541,10 +537,8 @@ void TableFormattingContext::computeAndDistributeExtraSpace(LayoutUnit available
                 cellBoxGeometry.setPadding(formattingGeometry.computedPadding(cellBox, availableHorizontalSpace));
                 cellBoxGeometry.setContentBoxWidth(formattingGeometry.horizontalSpaceForCellContent(cell));
 
-                if (cellBox.hasInFlowOrFloatingChild()) {
-                    auto invalidationState = InvalidationState { };
-                    LayoutContext::createFormattingContext(cellBox, layoutState())->layoutInFlowContent(invalidationState, formattingGeometry.constraintsForInFlowContent(cellBox));
-                }
+                if (cellBox.hasInFlowOrFloatingChild())
+                    LayoutContext::createFormattingContext(cellBox, layoutState())->layoutInFlowContent(formattingGeometry.constraintsForInFlowContent(cellBox));
                 cellBoxGeometry.setContentBoxHeight(formattingGeometry.verticalSpaceForCellContent(cell, availableVerticalSpace));
             };
             layoutCellContent(slot.cell());
@@ -571,4 +565,3 @@ void TableFormattingContext::computeAndDistributeExtraSpace(LayoutUnit available
 }
 }
 
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,11 +29,11 @@
 
 #pragma once
 
-#include "ArgList.h"
 #include "JSCJSValue.h"
-#include "JSObject.h"
+#include "MacroAssemblerCodeRef.h"
+#include "NativeFunction.h"
 #include "Opcode.h"
-#include "StackAlignment.h"
+#include <variant>
 #include <wtf/HashMap.h>
 
 #if ENABLE(C_LOOP)
@@ -43,10 +43,28 @@
 
 namespace JSC {
 
+#if ENABLE(WEBASSEMBLY)
+namespace Wasm {
+class Callee;
+struct HandlerInfo;
+}
+#endif
+
+template<typename> struct BaseInstruction;
+struct JSOpcodeTraits;
+struct WasmOpcodeTraits;
+using JSInstruction = BaseInstruction<JSOpcodeTraits>;
+using WasmInstruction = BaseInstruction<WasmOpcodeTraits>;
+
+using JSOrWasmInstruction = std::variant<const JSInstruction*, const WasmInstruction*>;
+
+    class ArgList;
     class CodeBlock;
     class EvalExecutable;
+    class Exception;
     class FunctionExecutable;
     class VM;
+    class JSBoundFunction;
     class JSFunction;
     class JSGlobalObject;
     class JSModuleEnvironment;
@@ -55,12 +73,13 @@ namespace JSC {
     class ProgramExecutable;
     class ModuleProgramExecutable;
     class Register;
+    class JSObject;
     class JSScope;
     class SourceCode;
     class StackFrame;
+    enum class HandlerType : uint8_t;
     struct CallFrameClosure;
     struct HandlerInfo;
-    struct Instruction;
     struct ProtoCallFrame;
 
     enum DebugHookType {
@@ -81,6 +100,23 @@ namespace JSC {
         StackFrameNativeCode
     };
 
+    struct CatchInfo {
+        CatchInfo() = default;
+
+        CatchInfo(const HandlerInfo*, CodeBlock*);
+#if ENABLE(WEBASSEMBLY)
+        CatchInfo(const Wasm::HandlerInfo*, const Wasm::Callee*);
+#endif
+
+        bool m_valid { false };
+        HandlerType m_type;
+#if ENABLE(JIT)
+        CodePtr<ExceptionHandlerPtrTag> m_nativeCode;
+#endif
+
+        JSOrWasmInstruction m_catchPCForInterpreter;
+    };
+
     class Interpreter {
         WTF_MAKE_FAST_ALLOCATED;
         friend class CachedCall;
@@ -89,11 +125,12 @@ namespace JSC {
         friend class VM;
 
     public:
-        Interpreter(VM &);
+        Interpreter();
         ~Interpreter();
 
 #if ENABLE(C_LOOP)
         CLoopStack& cloopStack() { return m_cloopStack; }
+        const CLoopStack& cloopStack() const { return m_cloopStack; }
 #endif
 
         static inline Opcode getOpcode(OpcodeID);
@@ -108,11 +145,11 @@ namespace JSC {
         JSValue executeModuleProgram(JSModuleRecord*, ModuleProgramExecutable*, JSGlobalObject*, JSModuleEnvironment*, JSValue sentValue, JSValue resumeMode);
         JSValue executeCall(JSGlobalObject*, JSObject* function, const CallData&, JSValue thisValue, const ArgList&);
         JSObject* executeConstruct(JSGlobalObject*, JSObject* function, const CallData&, const ArgList&, JSValue newTarget);
-        JSValue execute(EvalExecutable*, JSGlobalObject*, JSValue thisValue, JSScope*);
+        JSValue executeEval(EvalExecutable*, JSGlobalObject*, JSValue thisValue, JSScope*);
 
         void getArgumentsData(CallFrame*, JSFunction*&, ptrdiff_t& firstParameterIndex, Register*& argv, int& argc);
 
-        NEVER_INLINE HandlerInfo* unwind(VM&, CallFrame*&, Exception*);
+        NEVER_INLINE CatchInfo unwind(VM&, CallFrame*&, Exception*);
         void notifyDebuggerOfExceptionToBeThrown(VM&, JSGlobalObject*, CallFrame*, Exception*);
         NEVER_INLINE void debug(CallFrame*, DebugHookType);
         static String stackTraceAsString(VM&, const Vector<StackFrame>&);
@@ -122,23 +159,13 @@ namespace JSC {
     private:
         enum ExecutionFlag { Normal, InitializeAndReturn };
 
-        static JSValue checkedReturn(JSValue returnValue)
-        {
-            ASSERT(returnValue);
-            return returnValue;
-        }
+        CallFrameClosure prepareForRepeatCall(FunctionExecutable*, ProtoCallFrame*, JSFunction*, int argumentCountIncludingThis, JSScope*, const ArgList&);
 
-        static JSObject* checkedReturn(JSObject* returnValue)
-        {
-            ASSERT(returnValue);
-            return returnValue;
-        }
+        JSValue executeCachedCall(CallFrameClosure&);
+        JSValue executeBoundCall(VM&, JSBoundFunction*, const ArgList&);
+        JSValue executeCallImpl(VM&, JSObject*, const CallData&, JSValue, const ArgList&);
 
-        CallFrameClosure prepareForRepeatCall(FunctionExecutable*, CallFrame*, ProtoCallFrame*, JSFunction*, int argumentCountIncludingThis, JSScope*, const ArgList&);
-
-        JSValue execute(CallFrameClosure&);
-
-        VM& m_vm;
+        inline VM& vm();
 #if ENABLE(C_LOOP)
         CLoopStack m_cloopStack;
 #endif
@@ -150,22 +177,9 @@ namespace JSC {
 #endif // ENABLE(COMPUTED_GOTO_OPCODES)
     };
 
-    JSValue eval(JSGlobalObject*, CallFrame*, ECMAMode);
+    JSValue eval(CallFrame*, JSValue thisValue, JSScope*, ECMAMode);
 
-    inline CallFrame* calleeFrameForVarargs(CallFrame* callFrame, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis)
-    {
-        // We want the new frame to be allocated on a stack aligned offset with a stack
-        // aligned size. Align the size here.
-        argumentCountIncludingThis = WTF::roundUpToMultipleOf(
-            stackAlignmentRegisters(),
-            argumentCountIncludingThis + CallFrame::headerSizeInRegisters) - CallFrame::headerSizeInRegisters;
-
-        // Align the frame offset here.
-        unsigned paddedCalleeFrameOffset = WTF::roundUpToMultipleOf(
-            stackAlignmentRegisters(),
-            numUsedStackSlots + argumentCountIncludingThis + CallFrame::headerSizeInRegisters);
-        return CallFrame::create(callFrame->registers() - paddedCalleeFrameOffset);
-    }
+    inline CallFrame* calleeFrameForVarargs(CallFrame*, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis);
 
     unsigned sizeOfVarargs(JSGlobalObject*, JSValue arguments, uint32_t firstVarArgOffset);
     static constexpr unsigned maxArguments = 0x10000;

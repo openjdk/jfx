@@ -28,7 +28,6 @@
 
 #include "RenderButton.h"
 #include "RenderChildIterator.h"
-#include "RenderFullScreen.h"
 #include "RenderMultiColumnFlow.h"
 #include "RenderRuby.h"
 #include "RenderRubyRun.h"
@@ -178,13 +177,7 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
             // If the requested beforeChild is not one of our children, then this is because
             // there is an anonymous container within this object that contains the beforeChild.
             RenderElement* beforeChildAnonymousContainer = beforeChildContainer;
-            if (beforeChildAnonymousContainer->isAnonymousBlock()
-#if ENABLE(FULLSCREEN_API)
-                // Full screen renderers and full screen placeholders act as anonymous blocks, not tables:
-                || beforeChildAnonymousContainer->isRenderFullScreen()
-                || beforeChildAnonymousContainer->isRenderFullScreenPlaceholder()
-#endif
-                ) {
+            if (beforeChildAnonymousContainer->isAnonymousBlock()) {
                 // Insert the child into the anonymous block box instead of here.
                 if (child->isInline() || beforeChildAnonymousContainer->firstChild() != beforeChild)
                     m_builder.attach(*beforeChildAnonymousContainer, WTFMove(child), beforeChild);
@@ -287,8 +280,8 @@ RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlock& parent, Re
 
     // If this child is a block, and if our previous and next siblings are both anonymous blocks
     // with inline content, then we can fold the inline content back together.
-    auto prev = makeWeakPtr(oldChild.previousSibling());
-    auto next = makeWeakPtr(oldChild.nextSibling());
+    WeakPtr prev = oldChild.previousSibling();
+    WeakPtr next = oldChild.nextSibling();
     bool canMergeAnonymousBlocks = canCollapseAnonymousBlock == CanCollapseAnonymousBlock::Yes && canMergeContiguousAnonymousBlocks(oldChild, prev.get(), next.get());
 
     auto takenChild = m_builder.detachFromRenderElement(parent, oldChild);
@@ -369,10 +362,11 @@ void RenderTreeBuilder::Block::dropAnonymousBoxChild(RenderBlock& parent, Render
 {
     parent.setNeedsLayoutAndPrefWidthsRecalc();
     parent.setChildrenInline(child.childrenInline());
-    auto* nextSibling = child.nextSibling();
 
+    // FIXME: This should really just be a moveAllChilrenTo (see webkit.org/b/182495)
+    moveAllChildrenToInternal(child, parent);
     auto toBeDeleted = m_builder.detachFromRenderElement(parent, child);
-    m_builder.moveAllChildren(child, parent, nextSibling, RenderTreeBuilder::NormalizeAfterInsertion::No);
+
     // Delete the now-empty block's lines and nuke it.
     child.deleteLines();
 }

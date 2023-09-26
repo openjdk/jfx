@@ -34,15 +34,15 @@ class MediaController
 
         this.fullscreenChangeEventType = media.webkitSupportsPresentationMode ? "webkitpresentationmodechanged" : "webkitfullscreenchange";
 
-        this.hasPlayed = false;
+        this.hasPlayed = !media.paused || !!media.played.length;
 
         this.container = shadowRoot.appendChild(document.createElement("div"));
-        this.container.className = "media-controls-container";
 
         this._updateControlsIfNeeded();
         this._usesLTRUserInterfaceLayoutDirection = false;
 
         if (host) {
+            this.container.className = host.mediaControlsContainerClassName;
             host.controlsDependOnPageScaleFactor = this.layoutTraits.controlsDependOnPageScaleFactor();
             this.container.insertBefore(host.textTrackContainer, this.controls.element);
             if (host.isInMediaDocument)
@@ -110,7 +110,7 @@ class MediaController
 
     togglePlayback()
     {
-        if (this.media.paused)
+        if (this.media.paused || !this.hasPlayed)
             this.media.play().catch(e => {});
         else
             this.media.pause();
@@ -205,6 +205,64 @@ class MediaController
         }
     }
 
+    // HTMLMediaElement
+
+    setShowingStats(shouldShowStats)
+    {
+        if (!(this.media instanceof HTMLVideoElement))
+            return false;
+
+        if (!shouldShowStats) {
+            this._statsContainer?.remove();
+            this._statsContainer = null;
+            return false;
+        }
+
+        if (this._statsContainer)
+            return true;
+
+        this._statsContainer = this.container.appendChild(document.createElement("div"))
+        this._statsContainer.className = "stats-container";
+
+        let table = this._statsContainer.appendChild(document.createElement("table"));
+
+        function createRow(label) {
+            let rowElement = table.appendChild(document.createElement("tr"));
+
+            let labelElement = rowElement.appendChild(document.createElement("th"));
+            labelElement.textContent = label;
+
+            let valueElement = rowElement.appendChild(document.createElement("td"));
+            return valueElement;
+        }
+        let viewportValueElement = createRow(UIString("Viewport"));
+        let framesValueElement = createRow(UIString("Frames"));
+        let resolutionValueElement = createRow(UIString("Resolution"));
+        let codecsValueElement = createRow(UIString("Codecs"));
+        let colorValueElement = createRow(UIString("Color"));
+
+        let update = () => {
+            if (!this._statsContainer)
+                return;
+
+            let quality = this.media.getVideoPlaybackQuality();
+            let videoTrack = this.media.videoTracks.item(this.media.videoTracks.selectedIndex);
+            let videoTrackConfiguration = videoTrack.configuration;
+            let videoColorSpace = videoTrackConfiguration?.colorSpace;
+
+            viewportValueElement.textContent = UIString("%s\u00d7%s", this.controls.width, this.controls.height) + (window.devicePixelRatio !== 1 ? " " + UIString("(%s)", UIString("%s\u00d7", window.devicePixelRatio)) : "");
+            framesValueElement.textContent = UIString("%s dropped of %s", quality.droppedVideoFrames, quality.totalVideoFrames);
+            resolutionValueElement.textContent = UIString("%s\u00d7%s", videoTrackConfiguration?.width, videoTrackConfiguration?.height) + " " + UIString("(%s)", UIString("%sfps", videoTrackConfiguration?.framerate));
+            codecsValueElement.textContent = videoTrackConfiguration?.codec;
+            colorValueElement.textContent = UIString("%s / %s / %s", videoColorSpace?.primaries, videoColorSpace?.transfer, videoColorSpace?.matrix);
+
+            window.requestAnimationFrame(update);
+        };
+        update();
+
+        return true;
+    }
+
     // Private
 
     _supportingObjectClasses()
@@ -213,7 +271,7 @@ class MediaController
         if (overridenSupportingObjectClasses)
             return overridenSupportingObjectClasses;
 
-        return [AirplaySupport, AudioSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport];
+        return [AirplaySupport, AudioSupport, CloseSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport];
     }
 
     _updateControlsIfNeeded()
@@ -302,8 +360,6 @@ class MediaController
         // Finally, we factor in the scale factor of the controls themselves, which reflects the page's scale factor.
         this.controls.width = Math.round((maxX - minX) * this.controls.scaleFactor);
         this.controls.height = Math.round((maxY - minY) * this.controls.scaleFactor);
-
-        this.controls.shouldCenterControlsVertically = this.isAudio;
     }
 
     _updateTextTracksClassList()

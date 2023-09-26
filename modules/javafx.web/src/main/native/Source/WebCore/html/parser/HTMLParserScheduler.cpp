@@ -28,9 +28,12 @@
 #include "HTMLParserScheduler.h"
 
 #include "Document.h"
+#include "ElementInlines.h"
+#include "Frame.h"
 #include "FrameView.h"
 #include "HTMLDocumentParser.h"
 #include "Page.h"
+#include "ScriptController.h"
 #include "ScriptElement.h"
 
 namespace WebCore {
@@ -107,6 +110,9 @@ bool HTMLParserScheduler::shouldYieldBeforeExecutingScript(const ScriptElement* 
     session.didSeeScript = true;
 
     if (!document->body())
+        return false;
+
+    if (!document->frame() || !document->frame()->script().canExecuteScripts(NotAboutToExecuteScript))
         return false;
 
     if (!document->haveStylesheetsLoaded())

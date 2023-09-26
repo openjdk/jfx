@@ -35,15 +35,15 @@ class ConditionEventListener;
 class SMILTimeContainer;
 class SVGSMILElement;
 
-template<typename T> class EventSender;
+template<typename T, typename Counter> class EventSender;
 
-using SMILEventSender = EventSender<SVGSMILElement>;
+using SMILEventSender = EventSender<SVGSMILElement, WeakPtrImplWithEventTargetData>;
 
 // This class implements SMIL interval timing model as needed for SVG animation.
 class SVGSMILElement : public SVGElement {
     WTF_MAKE_ISO_ALLOCATED(SVGSMILElement);
 public:
-    SVGSMILElement(const QualifiedName&, Document&);
+    SVGSMILElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
     virtual ~SVGSMILElement();
 
     void parseAttribute(const QualifiedName&, const AtomString&) override;
@@ -57,7 +57,7 @@ public:
 
     SMILTimeContainer* timeContainer() { return m_timeContainer.get(); }
 
-    SVGElement* targetElement() const { return m_targetElement; }
+    SVGElement* targetElement() const { return m_targetElement.get(); }
     const QualifiedName& attributeName() const { return m_attributeName; }
 
     void beginByLinkActivation();
@@ -87,8 +87,8 @@ public:
 
     void reset();
 
-    static SMILTime parseClockValue(const String&);
-    static SMILTime parseOffsetValue(const String&);
+    static SMILTime parseClockValue(StringView);
+    static SMILTime parseOffsetValue(StringView);
 
     bool isContributing(SMILTime elapsed) const;
     bool isInactive() const;
@@ -105,7 +105,7 @@ public:
     void connectConditions();
     bool hasConditionsConnected() const { return m_conditionsConnected; }
 
-    void dispatchPendingEvent(SMILEventSender*);
+    void dispatchPendingEvent(SMILEventSender*, const AtomString& eventType);
 
 protected:
     void addBeginTime(SMILTime eventTime, SMILTime endTime, SMILTimeWithOrigin::Origin = SMILTimeWithOrigin::ParserOrigin);
@@ -150,18 +150,18 @@ private:
     // for example <animate begin="otherElement.begin + 8s; button.click" ... />
     struct Condition {
         enum Type { EventBase, Syncbase, AccessKey };
-        Condition(Type, BeginOrEnd, const String& baseID, const String& name, SMILTime offset, int repeats = -1);
+        Condition(Type, BeginOrEnd, const String& baseID, const AtomString& name, SMILTime offset, int repeats = -1);
         Type m_type;
         BeginOrEnd m_beginOrEnd;
         String m_baseID;
-        String m_name;
+        AtomString m_name;
         SMILTime m_offset;
         int m_repeats { -1 };
         RefPtr<Element> m_syncbase;
         RefPtr<ConditionEventListener> m_eventListener;
     };
-    bool parseCondition(const String&, BeginOrEnd beginOrEnd);
-    void parseBeginOrEnd(const String&, BeginOrEnd beginOrEnd);
+    bool parseCondition(StringView, BeginOrEnd);
+    void parseBeginOrEnd(StringView, BeginOrEnd);
     Element* eventBaseFor(const Condition&);
 
     void disconnectConditions();
@@ -185,7 +185,7 @@ private:
 
     QualifiedName m_attributeName;
 
-    SVGElement* m_targetElement;
+    WeakPtr<SVGElement, WeakPtrImplWithEventTargetData> m_targetElement;
 
     Vector<Condition> m_conditions;
     bool m_conditionsConnected;
@@ -193,7 +193,7 @@ private:
 
     bool m_isWaitingForFirstInterval;
 
-    HashSet<SVGSMILElement*> m_timeDependents;
+    WeakHashSet<SVGSMILElement, WeakPtrImplWithEventTargetData> m_timeDependents;
 
     // Instance time lists
     Vector<SMILTimeWithOrigin> m_beginTimes;

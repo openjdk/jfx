@@ -33,6 +33,8 @@ class FrameView;
 struct MouseRelatedEventInit : public EventModifierInit {
     int screenX { 0 };
     int screenY { 0 };
+    double movementX { 0 };
+    double movementY { 0 };
 };
 
 // Internal only: Helper class for what's common between mouse and wheel events.
@@ -48,10 +50,9 @@ public:
     const IntPoint& screenLocation() const { return m_screenLocation; }
     int clientX() const { return m_clientLocation.x(); }
     int clientY() const { return m_clientLocation.y(); }
-#if ENABLE(POINTER_LOCK)
-    int movementX() const { return m_movementDelta.x(); }
-    int movementY() const { return m_movementDelta.y(); }
-#endif
+    double movementX() const { return m_movementX; }
+    double movementY() const { return m_movementY; }
+
     const LayoutPoint& clientLocation() const { return m_clientLocation; }
     int layerX() override;
     int layerY() override;
@@ -78,7 +79,7 @@ public:
 protected:
     MouseRelatedEvent() = default;
     MouseRelatedEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& windowLocation, const IntPoint& movementDelta, OptionSet<Modifier> modifiers,
+        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier> modifiers,
         IsSimulated = IsSimulated::No, IsTrusted = IsTrusted::Yes);
     MouseRelatedEvent(const AtomString& type, IsCancelable, MonotonicTime, RefPtr<WindowProxy>&&, const IntPoint& globalLocation, OptionSet<Modifier>);
     MouseRelatedEvent(const AtomString& type, const MouseRelatedEventInit&, IsTrusted = IsTrusted::No);
@@ -95,9 +96,8 @@ protected:
     // Expose these so MouseEvent::initMouseEvent can set them.
     IntPoint m_screenLocation;
     LayoutPoint m_clientLocation;
-#if ENABLE(POINTER_LOCK)
-    LayoutPoint m_movementDelta;
-#endif
+    double m_movementX { 0 };
+    double m_movementY { 0 };
 
 private:
     void init(bool isSimulated, const IntPoint&);

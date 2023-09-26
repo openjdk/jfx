@@ -23,10 +23,10 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+// https://drafts.css-houdini.org/css-typed-om/#cssunitvalue
 [
     InterfaceName=CSSUnitValue,
-    EnabledAtRuntime=CSSTypedOM,
-    Conditional=CSS_TYPED_OM,
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet),
 ] interface CSSUnitValue : CSSNumericValue {
     constructor(double value, USVString unit);

@@ -37,22 +37,6 @@
 
 namespace WebCore {
 
-static GlobalFrameIdentifier createGlobalFrameIdentifier(const Document& document)
-{
-    if (document.frame())
-        return { document.frame()->loader().pageID().value_or(PageIdentifier { }), document.frame()->loader().frameID().value_or(FrameIdentifier { }) };
-    return GlobalFrameIdentifier();
-}
-
-NavigationAction::Requester::Requester(const Document& document)
-    : m_url { URL { document.url() } }
-    , m_origin { &document.securityOrigin() }
-    , m_topOrigin { &document.topOrigin() }
-    , m_crossOriginOpenerPolicy { document.crossOriginOpenerPolicy() }
-    , m_globalFrameIdentifier(createGlobalFrameIdentifier(document))
-{
-}
-
 NavigationAction::UIEventWithKeyStateData::UIEventWithKeyStateData(const UIEventWithKeyState& uiEvent)
     : isTrusted { uiEvent.isTrusted() }
     , shiftKey { uiEvent.shiftKey() }
@@ -102,19 +86,6 @@ static std::optional<NavigationAction::MouseEventData> mouseEventDataForFirstMou
     return std::nullopt;
 }
 
-NavigationAction::NavigationAction(Document& requester, const ResourceRequest& resourceRequest, InitiatedByMainFrame initiatedByMainFrame, NavigationType type, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy, Event* event, const AtomString& downloadAttribute)
-    : m_requester { requester }
-    , m_resourceRequest { resourceRequest }
-    , m_type { type }
-    , m_shouldOpenExternalURLsPolicy { shouldOpenExternalURLsPolicy }
-    , m_initiatedByMainFrame { initiatedByMainFrame }
-    , m_keyStateEventData { keyStateDataForFirstEventWithKeyState(event) }
-    , m_mouseEventData { mouseEventDataForFirstMouseEvent(event) }
-    , m_downloadAttribute { downloadAttribute }
-    , m_treatAsSameOriginNavigation { shouldTreatAsSameOriginNavigation(requester, resourceRequest.url()) }
-{
-}
-
 static NavigationType navigationType(FrameLoadType frameLoadType, bool isFormSubmission, bool haveEvent)
 {
     if (isFormSubmission)
@@ -128,15 +99,29 @@ static NavigationType navigationType(FrameLoadType frameLoadType, bool isFormSub
     return NavigationType::Other;
 }
 
-NavigationAction::NavigationAction(Document& requester, const ResourceRequest& resourceRequest, InitiatedByMainFrame initiatedByMainFrame, FrameLoadType frameLoadType, bool isFormSubmission, Event* event, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy, const AtomString& downloadAttribute)
-    : m_requester { requester }
+NavigationAction::NavigationAction(Document& requester, const ResourceRequest& resourceRequest, InitiatedByMainFrame initiatedByMainFrame, NavigationType type, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy, Event* event, const AtomString& downloadAttribute)
+    : m_requester { NavigationRequester::from(requester) }
     , m_resourceRequest { resourceRequest }
-    , m_type { navigationType(frameLoadType, isFormSubmission, !!event) }
-    , m_shouldOpenExternalURLsPolicy { shouldOpenExternalURLsPolicy }
-    , m_initiatedByMainFrame { initiatedByMainFrame }
     , m_keyStateEventData { keyStateDataForFirstEventWithKeyState(event) }
     , m_mouseEventData { mouseEventDataForFirstMouseEvent(event) }
     , m_downloadAttribute { downloadAttribute }
+    , m_type { type }
+    , m_shouldOpenExternalURLsPolicy { shouldOpenExternalURLsPolicy }
+    , m_initiatedByMainFrame { initiatedByMainFrame }
+    , m_treatAsSameOriginNavigation { shouldTreatAsSameOriginNavigation(requester, resourceRequest.url()) }
+
+{
+}
+
+NavigationAction::NavigationAction(Document& requester, const ResourceRequest& resourceRequest, InitiatedByMainFrame initiatedByMainFrame, FrameLoadType frameLoadType, bool isFormSubmission, Event* event, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy, const AtomString& downloadAttribute)
+    : m_requester { NavigationRequester::from(requester) }
+    , m_resourceRequest { resourceRequest }
+    , m_keyStateEventData { keyStateDataForFirstEventWithKeyState(event) }
+    , m_mouseEventData { mouseEventDataForFirstMouseEvent(event) }
+    , m_downloadAttribute { downloadAttribute }
+    , m_type { navigationType(frameLoadType, isFormSubmission, !!event) }
+    , m_shouldOpenExternalURLsPolicy { shouldOpenExternalURLsPolicy }
+    , m_initiatedByMainFrame { initiatedByMainFrame }
     , m_treatAsSameOriginNavigation { shouldTreatAsSameOriginNavigation(requester, resourceRequest.url()) }
 {
 }

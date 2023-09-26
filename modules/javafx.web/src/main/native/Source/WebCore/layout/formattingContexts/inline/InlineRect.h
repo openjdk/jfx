@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutUnits.h"
 
 namespace WebCore {
@@ -38,6 +36,7 @@ public:
     InlineRect(InlineLayoutUnit top, InlineLayoutUnit left, InlineLayoutUnit width, InlineLayoutUnit height);
     InlineRect(const InlineLayoutPoint& topLeft, InlineLayoutUnit width, InlineLayoutUnit height);
     InlineRect(const InlineLayoutPoint& topLeft, const InlineLayoutSize&);
+    InlineRect(const FloatRect&);
 
     InlineLayoutUnit top() const;
     InlineLayoutUnit left() const;
@@ -53,6 +52,7 @@ public:
     void setTop(InlineLayoutUnit);
     void setBottom(InlineLayoutUnit);
     void setLeft(InlineLayoutUnit);
+    void setRight(InlineLayoutUnit);
     void setTopLeft(const InlineLayoutPoint&);
     void setWidth(InlineLayoutUnit);
     void setHeight(InlineLayoutUnit);
@@ -61,12 +61,19 @@ public:
     void moveVertically(InlineLayoutUnit);
     void moveBy(InlineLayoutPoint);
 
+    void shiftLeftTo(InlineLayoutUnit);
+    void shiftLeftBy(InlineLayoutUnit);
+    void shiftRightBy(InlineLayoutUnit);
+
     void expand(std::optional<InlineLayoutUnit>, std::optional<InlineLayoutUnit>);
     void expandToContain(const InlineRect&);
     void expandHorizontally(InlineLayoutUnit delta) { expand(delta, { }); }
     void expandVertically(InlineLayoutUnit delta) { expand({ }, delta); }
     void expandVerticallyToContain(const InlineRect&);
     void inflate(InlineLayoutUnit);
+    void inflate(InlineLayoutUnit top, InlineLayoutUnit right, InlineLayoutUnit bottom, InlineLayoutUnit left);
+
+    bool isEmpty() const;
 
     operator InlineLayoutRect() const;
 
@@ -111,6 +118,11 @@ inline InlineRect::InlineRect(const InlineLayoutPoint& topLeft, InlineLayoutUnit
 
 inline InlineRect::InlineRect(const InlineLayoutPoint& topLeft, const InlineLayoutSize& size)
     : InlineRect(topLeft.y(), topLeft.x(), size.width(), size.height())
+{
+}
+
+inline InlineRect::InlineRect(const FloatRect& rect)
+    : InlineRect(rect.y(), rect.x(), rect.width(), rect.height())
 {
 }
 
@@ -215,6 +227,15 @@ inline void InlineRect::setLeft(InlineLayoutUnit left)
     m_rect.setX(left);
 }
 
+inline void InlineRect::setRight(InlineLayoutUnit right)
+{
+#if ASSERT_ENABLED
+    m_hasValidLeft = true;
+    m_hasValidWidth = true;
+#endif
+    m_rect.shiftMaxXEdgeTo(right);
+}
+
 inline void InlineRect::setWidth(InlineLayoutUnit width)
 {
 #if ASSERT_ENABLED
@@ -250,6 +271,24 @@ inline void InlineRect::moveBy(InlineLayoutPoint offset)
     m_rect.moveBy(offset);
 }
 
+inline void InlineRect::shiftLeftTo(InlineLayoutUnit left)
+{
+    ASSERT(m_hasValidLeft);
+    m_rect.shiftXEdgeTo(left);
+}
+
+inline void InlineRect::shiftLeftBy(InlineLayoutUnit offset)
+{
+    ASSERT(m_hasValidLeft);
+    m_rect.shiftXEdgeBy(offset);
+}
+
+inline void InlineRect::shiftRightBy(InlineLayoutUnit offset)
+{
+    ASSERT(m_hasValidLeft && m_hasValidWidth);
+    m_rect.shiftMaxXEdgeBy(offset);
+}
+
 inline void InlineRect::expand(std::optional<InlineLayoutUnit> width, std::optional<InlineLayoutUnit> height)
 {
     ASSERT(!width || m_hasValidWidth);
@@ -282,6 +321,21 @@ inline void InlineRect::inflate(InlineLayoutUnit inflate)
     m_rect.inflate(inflate);
 }
 
+inline void InlineRect::inflate(InlineLayoutUnit top, InlineLayoutUnit right, InlineLayoutUnit bottom, InlineLayoutUnit left)
+{
+    ASSERT(hasValidGeometry());
+    m_rect.setX(m_rect.x() - left);
+    m_rect.setY(m_rect.y() - top);
+    m_rect.setWidth(m_rect.width() + left + right);
+    m_rect.setHeight(m_rect.height() + top + bottom);
+}
+
+inline bool InlineRect::isEmpty() const
+{
+    ASSERT(hasValidGeometry());
+    return m_rect.isEmpty();
+}
+
 inline InlineRect::operator InlineLayoutRect() const
 {
     ASSERT(hasValidGeometry());
@@ -290,4 +344,3 @@ inline InlineRect::operator InlineLayoutRect() const
 
 }
 }
-#endif

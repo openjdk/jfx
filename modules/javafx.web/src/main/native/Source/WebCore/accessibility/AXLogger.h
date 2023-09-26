@@ -25,41 +25,65 @@
 
 #pragma once
 
-#if !LOG_DISABLED
-
 #include "AXObjectCache.h"
 #include "AccessibilityObjectInterface.h"
 
 namespace WebCore {
+
+enum class AXLoggingOptions : uint8_t {
+    MainThread = 1 << 0, // Logs messages on the main thread.
+    OffMainThread = 1 << 1, // Logs messages off the main thread.
+};
+
+enum class AXStreamOptions : uint8_t {
+    ObjectID = 1 << 0,
+    Role = 1 << 1,
+    ParentID = 1 << 2,
+    IdentifierAttribute = 1 << 3,
+    OuterHTML = 1 << 4,
+    DisplayContents = 1 << 5,
+    Address = 1 << 6,
+};
+
+#if !LOG_DISABLED
 
 class AXLogger {
 public:
     AXLogger() = default;
     AXLogger(const String& methodName);
     ~AXLogger();
-    static void log(const String&);
-    static void log(RefPtr<AXCoreObject>);
-    static void log(const Vector<RefPtr<AXCoreObject>>&);
-    static void log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>&);
-    static void log(const AccessibilitySearchCriteria&);
-    static void log(AccessibilityObjectInclusion);
+    void log(const String&);
+    void log(const char*);
+    void log(const AXCoreObject&);
+    void log(RefPtr<AXCoreObject>);
+    void log(const Vector<RefPtr<AXCoreObject>>&);
+    void log(const std::pair<RefPtr<AXCoreObject>, AXObjectCache::AXNotification>&);
+    void log(const AccessibilitySearchCriteria&);
+    void log(AccessibilityObjectInclusion);
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    static void log(AXIsolatedTree&);
+    void log(AXIsolatedTree&);
 #endif
-    static void log(AXObjectCache&);
+    void log(AXObjectCache&);
     static void add(TextStream&, const RefPtr<AXCoreObject>&, bool recursive = false);
+    void log(const String&, const AXObjectCache::DeferredCollection&);
 private:
+    bool shouldLog();
     String m_methodName;
 };
 
 #define AXTRACE(methodName) AXLogger axLogger(methodName)
-#define AXLOG(x) AXLogger::log(x)
-
-} // namespace WebCore
+#define AXLOG(x) axLogger.log(x)
+#define AXLOGDeferredCollection(name, collection) axLogger.log(name, collection)
 
 #else
 
 #define AXTRACE(methodName) (void)0
 #define AXLOG(x) (void)0
+#define AXLOGDeferredCollection(name, collection) (void)0
 
 #endif // !LOG_DISABLED
+
+void streamAXCoreObject(TextStream&, const AXCoreObject&, const OptionSet<AXStreamOptions>&);
+void streamSubtree(TextStream&, const RefPtr<AXCoreObject>&, const OptionSet<AXStreamOptions>&);
+
+} // namespace WebCore

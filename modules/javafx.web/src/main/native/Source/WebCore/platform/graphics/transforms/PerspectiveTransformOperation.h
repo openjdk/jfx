@@ -28,6 +28,7 @@
 #include "Length.h"
 #include "LengthFunctions.h"
 #include "TransformOperation.h"
+#include <optional>
 #include <wtf/Ref.h>
 
 namespace WebCore {
@@ -36,28 +37,39 @@ struct BlendingContext;
 
 class PerspectiveTransformOperation final : public TransformOperation {
 public:
-    static Ref<PerspectiveTransformOperation> create(const Length& p)
-    {
-        return adoptRef(*new PerspectiveTransformOperation(p));
-    }
+    WEBCORE_EXPORT static Ref<PerspectiveTransformOperation> create(const std::optional<Length>&);
 
     Ref<TransformOperation> clone() const override
     {
         return adoptRef(*new PerspectiveTransformOperation(m_p));
     }
 
-    Length perspective() const { return m_p; }
+    std::optional<Length> perspective() const { return m_p; }
 
 private:
-    bool isIdentity() const override { return !floatValueForLength(m_p, 1); }
+    bool isIdentity() const override { return !m_p; }
     bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
     bool isRepresentableIn2D() const final { return false; }
 
+    bool operator==(const PerspectiveTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
     bool operator==(const TransformOperation&) const override;
+
+    std::optional<float> floatValue() const
+    {
+        if (!m_p)
+            return { };
+
+        // From https://www.w3.org/TR/css-transforms-2/#perspective-property:
+        // "As very small <length> values can produce bizarre rendering results and stress the numerical accuracy of
+        // transform calculations, values less than 1px must be treated as 1px for rendering purposes. (This clamping
+        // does not affect the underlying value, so perspective: 0; in a stylesheet will still serialize back as 0.)"
+        return std::max(1.0f, floatValueForLength(*m_p, 1.0));
+    }
 
     bool apply(TransformationMatrix& transform, const FloatSize&) const override
     {
-        transform.applyPerspective(floatValueForLength(m_p, 1));
+        if (auto value = floatValue())
+            transform.applyPerspective(*value);
         return false;
     }
 
@@ -65,16 +77,11 @@ private:
 
     void dump(WTF::TextStream&) const final;
 
-    PerspectiveTransformOperation(const Length& p)
-        : TransformOperation(PERSPECTIVE)
-        , m_p(p)
-    {
-        ASSERT(p.isFixed());
-    }
+    PerspectiveTransformOperation(const std::optional<Length>&);
 
-    Length m_p;
+    std::optional<Length> m_p;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::PerspectiveTransformOperation, type() == WebCore::TransformOperation::PERSPECTIVE)
+SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::PerspectiveTransformOperation, WebCore::TransformOperation::Type::Perspective ==)

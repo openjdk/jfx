@@ -36,7 +36,9 @@
 namespace WebCore {
 
 class DocumentLoader;
+class Page;
 class ResourceRequest;
+struct ContentRuleListResults;
 
 namespace ContentExtensions {
 
@@ -55,16 +57,24 @@ public:
 
     // Set a list of rules for a given name. If there were existing rules for the name, they are overridden.
     // The identifier cannot be empty.
-    WEBCORE_EXPORT void addContentExtension(const String& identifier, Ref<CompiledContentExtension>, ContentExtension::ShouldCompileCSS = ContentExtension::ShouldCompileCSS::Yes);
+    WEBCORE_EXPORT void addContentExtension(const String& identifier, Ref<CompiledContentExtension>, URL&& extensionBaseURL, ContentExtension::ShouldCompileCSS = ContentExtension::ShouldCompileCSS::Yes);
     WEBCORE_EXPORT void removeContentExtension(const String& identifier);
     WEBCORE_EXPORT void removeAllContentExtensions();
 
     // - Internal WebCore Interface.
-    WEBCORE_EXPORT Vector<ActionsFromContentRuleList> actionsForResourceLoad(const ResourceLoadInfo&) const;
+    struct ActionsFromContentRuleList {
+        String contentRuleListIdentifier;
+        bool sawIgnorePreviousRules { false };
+        Vector<DeserializedAction> actions;
+    };
+
+    enum class ShouldSkipRuleList : bool { No, Yes };
+    using RuleListFilter = Function<ShouldSkipRuleList(const String&)>;
+    WEBCORE_EXPORT Vector<ActionsFromContentRuleList> actionsForResourceLoad(const ResourceLoadInfo&, const RuleListFilter& = { [](const String&) { return ShouldSkipRuleList::No; } }) const;
     WEBCORE_EXPORT StyleSheetContents* globalDisplayNoneStyleSheet(const String& identifier) const;
 
-    ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ResourceType>, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom);
-    WEBCORE_EXPORT ContentRuleListResults processContentRuleListsForPingLoad(const URL&, const URL& mainDocumentURL);
+    ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ResourceType>, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter&);
+    WEBCORE_EXPORT ContentRuleListResults processContentRuleListsForPingLoad(const URL&, const URL& mainDocumentURL, const URL& frameURL);
 
     static const String& displayNoneCSSRule();
 
@@ -73,10 +83,15 @@ public:
     WEBCORE_EXPORT static bool shouldBeMadeSecure(const URL&);
 
 private:
+    ActionsFromContentRuleList actionsFromContentRuleList(const ContentExtension&, const String& urlString, const ResourceLoadInfo&, ResourceFlags) const;
+
     HashMap<String, Ref<ContentExtension>> m_contentExtensions;
 };
 
-} // namespace ContentExtensions
+WEBCORE_EXPORT void applyResultsToRequest(ContentRuleListResults&&, Page*, ResourceRequest&);
+std::optional<String> customLoadBlockingMessageForConsole(const ContentRuleListResults&, const URL& urlString = { }, const URL& mainDocumentURL = { });
+
+} // namespace WebCore::ContentExtensions
 } // namespace WebCore
 
 #endif // ENABLE(CONTENT_EXTENSIONS)

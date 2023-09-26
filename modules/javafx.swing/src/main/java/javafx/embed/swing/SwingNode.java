@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,6 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import com.sun.javafx.embed.swing.Disposer;
-import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
@@ -71,6 +70,7 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.NodeHelper;
 import static javafx.stage.WindowEvent.WINDOW_HIDDEN;
 
+import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.embed.swing.SwingEvents;
 import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
@@ -122,6 +122,7 @@ public class SwingNode extends Node {
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
             public Object run() {
                 isThreadMerged = Boolean.valueOf(
                         System.getProperty("javafx.embed.singleThread"));
@@ -251,6 +252,8 @@ public class SwingNode extends Node {
     private boolean grabbed; // lwframe initiated grab
     private Timer deactivate; // lwFrame deactivate delay for Linux
     private SwingNodeInteropN swNodeIOP;
+    private DisposerRecord rec;
+    private WeakReference disposerRecRef;
 
     {
         // To initialize the class helper at the begining each constructor of this class
@@ -361,7 +364,10 @@ public class SwingNode extends Node {
      */
     private void setContentImpl(JComponent content) {
         if (lwFrame != null) {
-            swNodeIOP.disposeFrame(lwFrame);
+            rec.dispose();
+            Disposer.removeRecord(disposerRecRef);
+            rec = null;
+            disposerRecRef = null;
             lwFrame = null;
         }
         if (content != null) {
@@ -381,7 +387,8 @@ public class SwingNode extends Node {
             swNodeIOP.setContent(lwFrame, swNodeIOP.createSwingNodeContent(content, this));
             swNodeIOP.setVisible(lwFrame, true);
 
-            Disposer.addRecord(this, swNodeIOP.createSwingNodeDisposer(lwFrame));
+            rec = swNodeIOP.createSwingNodeDisposer(lwFrame);
+            disposerRecRef = Disposer.addRecord(this, rec);
 
             if (getScene() != null) {
                 notifyNativeHandle(getScene().getWindow());
@@ -782,7 +789,7 @@ public class SwingNode extends Node {
         private WeakReference<SwingNode> swingNodeRef;
 
         SwingNodeWindowFocusListener(SwingNode swingNode) {
-            this.swingNodeRef = new WeakReference<SwingNode>(swingNode);
+            this.swingNodeRef = new WeakReference<>(swingNode);
         }
 
         @Override

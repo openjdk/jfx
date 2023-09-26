@@ -81,6 +81,11 @@ MacroAssemblerCodeRef<ExceptionHandlerPtrTag> callToThrowThunk();
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleUncaughtExceptionThunk();
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleCatchThunk(OpcodeSize);
 
+#if ENABLE(WEBASSEMBLY)
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchThunk(OpcodeSize);
+MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchAllThunk(OpcodeSize);
+#endif
+
 #if ENABLE(JIT_CAGE)
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> jitCagePtrThunk();
 #endif
@@ -88,7 +93,8 @@ MacroAssemblerCodeRef<NativeToJITGatePtrTag> jitCagePtrThunk();
 #if CPU(ARM64E)
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> createJSGateThunk(void*, PtrTag, const char*);
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> createWasmGateThunk(void*, PtrTag, const char*);
-MacroAssemblerCodeRef<NativeToJITGatePtrTag> createTailCallGate(PtrTag);
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> createTailCallGate(PtrTag, bool);
+MacroAssemblerCodeRef<NativeToJITGatePtrTag> createWasmTailCallGate(PtrTag);
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> loopOSREntryGateThunk();
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> entryOSREntryGateThunk();
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> wasmOSREntryGateThunk();
@@ -107,6 +113,7 @@ MacroAssemblerCodeRef<JSEntryPtrTag> returnLocationThunk(OpcodeID, OpcodeSize);
 
 #if ENABLE(WEBASSEMBLY)
 MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD();
 #endif // ENABLE(WEBASSEMBLY)
 
 } } // namespace JSC::LLInt

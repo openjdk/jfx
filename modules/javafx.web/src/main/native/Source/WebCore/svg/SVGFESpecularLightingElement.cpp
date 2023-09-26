@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Oliver Hunt <oliver@nerget.com>
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,10 +23,9 @@
 #include "config.h"
 #include "SVGFESpecularLightingElement.h"
 
-#include "FilterEffect.h"
+#include "FESpecularLighting.h"
 #include "RenderStyle.h"
 #include "SVGFELightElement.h"
-#include "SVGFilterBuilder.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>
@@ -36,7 +35,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFESpecularLightingElement);
 
 inline SVGFESpecularLightingElement::SVGFESpecularLightingElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feSpecularLightingTag));
 
@@ -88,24 +87,25 @@ void SVGFESpecularLightingElement::parseAttribute(const QualifiedName& name, con
     SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
 }
 
-bool SVGFESpecularLightingElement::setFilterEffectAttribute(FilterEffect* effect, const QualifiedName& attrName)
+bool SVGFESpecularLightingElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
 {
-    FESpecularLighting* specularLighting = static_cast<FESpecularLighting*>(effect);
+    auto& feSpecularLighting = downcast<FESpecularLighting>(effect);
 
     if (attrName == SVGNames::lighting_colorAttr) {
         RenderObject* renderer = this->renderer();
         ASSERT(renderer);
-        Color color = renderer->style().colorByApplyingColorFilter(renderer->style().svgStyle().lightingColor());
-        return specularLighting->setLightingColor(color);
+        auto& style = renderer->style();
+        auto color = style.colorWithColorFilter(style.svgStyle().lightingColor());
+        return feSpecularLighting.setLightingColor(color);
     }
     if (attrName == SVGNames::surfaceScaleAttr)
-        return specularLighting->setSurfaceScale(surfaceScale());
+        return feSpecularLighting.setSurfaceScale(surfaceScale());
     if (attrName == SVGNames::specularConstantAttr)
-        return specularLighting->setSpecularConstant(specularConstant());
+        return feSpecularLighting.setSpecularConstant(specularConstant());
     if (attrName == SVGNames::specularExponentAttr)
-        return specularLighting->setSpecularExponent(specularExponent());
+        return feSpecularLighting.setSpecularExponent(specularExponent());
 
-    auto& lightSource = const_cast<LightSource&>(specularLighting->lightSource());
+    auto& lightSource = feSpecularLighting.lightSource().get();
     const SVGFELightElement* lightElement = SVGFELightElement::findLightElement(this);
     ASSERT(lightElement);
 
@@ -136,15 +136,14 @@ bool SVGFESpecularLightingElement::setFilterEffectAttribute(FilterEffect* effect
 
 void SVGFESpecularLightingElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::surfaceScaleAttr || attrName == SVGNames::specularConstantAttr || attrName == SVGNames::specularExponentAttr || attrName == SVGNames::kernelUnitLengthAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        primitiveAttributeChanged(attrName);
-        return;
-    }
-
-    if (attrName == SVGNames::inAttr) {
-        InstanceInvalidationGuard guard(*this);
-        invalidate();
+        if (attrName == SVGNames::inAttr)
+            updateSVGRendererForElementChange();
+        else {
+            ASSERT(attrName == SVGNames::specularConstantAttr || attrName == SVGNames::specularExponentAttr || attrName == SVGNames::surfaceScaleAttr || attrName == SVGNames::kernelUnitLengthAttr);
+            primitiveAttributeChanged(attrName);
+        }
         return;
     }
 
@@ -160,28 +159,22 @@ void SVGFESpecularLightingElement::lightElementAttributeChanged(const SVGFELight
     primitiveAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFESpecularLightingElement::build(SVGFilterBuilder* filterBuilder, Filter& filter) const
+RefPtr<FilterEffect> SVGFESpecularLightingElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
-    auto input1 = filterBuilder->getEffectById(in1());
-
-    if (!input1)
-        return nullptr;
-
-    auto lightElement = makeRefPtr(SVGFELightElement::findLightElement(this));
+    RefPtr lightElement = SVGFELightElement::findLightElement(this);
     if (!lightElement)
         return nullptr;
 
-    auto lightSource = lightElement->lightSource(*filterBuilder);
-
-    RenderObject* renderer = this->renderer();
+    auto* renderer = this->renderer();
     if (!renderer)
         return nullptr;
 
-    Color color = renderer->style().colorByApplyingColorFilter(renderer->style().svgStyle().lightingColor());
+    auto lightSource = lightElement->lightSource();
+    auto& style = renderer->style();
 
-    auto effect = FESpecularLighting::create(filter, color, surfaceScale(), specularConstant(), specularExponent(), kernelUnitLengthX(), kernelUnitLengthY(), WTFMove(lightSource));
-    effect->inputEffects() = { input1 };
-    return effect;
+    auto color = style.colorWithColorFilter(style.svgStyle().lightingColor());
+
+    return FESpecularLighting::create(color, surfaceScale(), specularConstant(), specularExponent(), kernelUnitLengthX(), kernelUnitLengthY(), WTFMove(lightSource));
 }
 
-}
+} // namespace WebCore

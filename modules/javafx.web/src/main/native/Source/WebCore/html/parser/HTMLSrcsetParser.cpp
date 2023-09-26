@@ -130,7 +130,7 @@ static bool parseDescriptors(Vector<StringView>& descriptors, DescriptorParsingR
             continue;
         unsigned descriptorCharPosition = descriptor.length() - 1;
         UChar descriptorChar = descriptor[descriptorCharPosition];
-        descriptor = descriptor.substring(0, descriptorCharPosition);
+        descriptor = descriptor.left(descriptorCharPosition);
         if (descriptorChar == 'x') {
             if (result.hasDensity() || result.hasHeight() || result.hasWidth())
                 return false;
@@ -257,7 +257,7 @@ static ImageCandidate pickBestImageCandidate(float deviceScaleFactor, Vector<Ima
     return imageCandidates[winner];
 }
 
-ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, const AtomString& srcAttribute, const AtomString& srcsetAttribute, float sourceSize)
+ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, StringView srcAttribute, StringView srcsetAttribute, float sourceSize)
 {
     if (srcsetAttribute.isNull()) {
         if (srcAttribute.isNull())

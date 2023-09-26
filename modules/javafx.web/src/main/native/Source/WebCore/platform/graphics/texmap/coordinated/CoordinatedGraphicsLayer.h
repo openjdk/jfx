@@ -22,7 +22,6 @@
 
 #if USE(COORDINATED_GRAPHICS)
 
-#include "CoordinatedGraphicsState.h"
 #include "FloatPoint3D.h"
 #include "GraphicsLayer.h"
 #include "GraphicsLayerTransform.h"
@@ -33,11 +32,13 @@
 #include "NicosiaBuffer.h"
 #include "NicosiaPlatformLayer.h"
 #include "TransformationMatrix.h"
+#include <wtf/Function.h>
 #include <wtf/RunLoop.h>
 #include <wtf/text/StringHash.h>
 
 namespace Nicosia {
 class Animations;
+class ImageBackingStore;
 class PaintingEngine;
 }
 
@@ -51,6 +52,7 @@ public:
     virtual void detachLayer(CoordinatedGraphicsLayer*) = 0;
     virtual void attachLayer(CoordinatedGraphicsLayer*) = 0;
     virtual Nicosia::PaintingEngine& paintingEngine() = 0;
+    virtual RefPtr<Nicosia::ImageBackingStore> imageBackingStore(uint64_t, Function<RefPtr<Nicosia::Buffer>()>) = 0;
     virtual void syncLayerState() = 0;
 };
 
@@ -71,7 +73,10 @@ public:
     void addChildBelow(Ref<GraphicsLayer>&&, GraphicsLayer*) override;
     bool replaceChild(GraphicsLayer*, Ref<GraphicsLayer>&&) override;
     void removeFromParent() override;
+    void setEventRegion(EventRegion&&) override;
+#if ENABLE(SCROLLING_THREAD)
     void setScrollingNodeID(ScrollingNodeID) override;
+#endif
     void setPosition(const FloatPoint&) override;
     void syncPosition(const FloatPoint&) override;
     void setAnchorPoint(const FloatPoint3D&) override;
@@ -91,12 +96,14 @@ public:
     void setContentsTilePhase(const FloatSize&) override;
     void setContentsTileSize(const FloatSize&) override;
     void setContentsClippingRect(const FloatRoundedRect&) override;
+    void setContentsRectClipsDescendants(bool) override;
     void setContentsToImage(Image*) override;
     void setContentsToSolidColor(const Color&) override;
     void setShowDebugBorder(bool) override;
     void setShowRepaintCounter(bool) override;
     bool shouldDirectlyCompositeImage(Image*) const override;
     void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) override;
+    void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose) override;
     void setMaskLayer(RefPtr<GraphicsLayer>&&) override;
     void setReplicatedByLayer(RefPtr<GraphicsLayer>&&) override;
     void setNeedsDisplay() override;
@@ -227,7 +234,7 @@ private:
     RefPtr<NativeImage> m_compositedNativeImage;
 
     Timer m_animationStartedTimer;
-    RunLoop::Timer<CoordinatedGraphicsLayer> m_requestPendingTileCreationTimer;
+    RunLoop::Timer m_requestPendingTileCreationTimer;
     Nicosia::Animations m_animations;
     MonotonicTime m_lastAnimationStartTime;
 

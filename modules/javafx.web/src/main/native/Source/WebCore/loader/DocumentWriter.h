@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include "NavigationAction.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -36,6 +38,7 @@ namespace WebCore {
 class Document;
 class DocumentParser;
 class Frame;
+class SharedBuffer;
 class TextResourceDecoder;
 
 class DocumentWriter {
@@ -46,14 +49,15 @@ public:
     void replaceDocumentWithResultOfExecutingJavascriptURL(const String&, Document* ownerDocument);
 
     bool begin();
-    bool begin(const URL&, bool dispatchWindowObjectAvailable = true, Document* ownerDocument = nullptr);
-    void addData(const uint8_t* bytes, size_t length);
+    bool begin(const URL&, bool dispatchWindowObjectAvailable = true, Document* ownerDocument = nullptr, ScriptExecutionContextIdentifier = { }, const NavigationAction* triggeringAction = nullptr);
+    void addData(const SharedBuffer&);
     void insertDataSynchronously(const String&); // For an internal use only to prevent the parser from yielding.
     WEBCORE_EXPORT void end();
 
     void setFrame(Frame&);
 
-    WEBCORE_EXPORT void setEncoding(const String& encoding, bool userChosen);
+    enum class IsEncodingUserChosen : bool { No, Yes };
+    WEBCORE_EXPORT void setEncoding(const String& encoding, IsEncodingUserChosen);
 
     const String& mimeType() const { return m_mimeType; }
     void setMIMEType(const String& type) { m_mimeType = type; }
@@ -65,21 +69,22 @@ public:
     void setDocumentWasLoadedAsPartOfNavigation();
 
 private:
-    Ref<Document> createDocument(const URL&);
+    Ref<Document> createDocument(const URL&, ScriptExecutionContextIdentifier);
     void clear();
 
     WeakPtr<Frame> m_frame;
 
-    bool m_hasReceivedSomeData { false };
     String m_mimeType;
 
-    bool m_encodingWasChosenByUser { false };
     String m_encoding;
     RefPtr<TextResourceDecoder> m_decoder;
     RefPtr<DocumentParser> m_parser;
 
-    enum class State { NotStarted, Started, Finished };
+    enum class State : uint8_t { NotStarted, Started, Finished };
     State m_state { State::NotStarted };
+
+    bool m_hasReceivedSomeData { false };
+    bool m_encodingWasChosenByUser { false };
 };
 
 } // namespace WebCore

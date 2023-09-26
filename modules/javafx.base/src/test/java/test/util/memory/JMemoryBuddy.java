@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,11 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 
 /**
@@ -93,6 +93,38 @@ public class JMemoryBuddy {
     }
 
     /**
+     * Checks whether the content of all references from a WeakReference array can be collected.
+     * @param weakReferences WeakReference objects to check.
+     */
+    public static void assertCollectable(WeakReference[] weakReferences) {
+        for (WeakReference wr : weakReferences) {
+            assertCollectable(wr);
+        }
+    }
+
+    /**
+     * Checks whether the content of all references from a WeakReference Collection can be collected.
+     * @param weakReferences WeakReference objects to check.
+     */
+    public static <T> void assertCollectable(Collection<WeakReference<T>> weakReferences) {
+        for (WeakReference<T> wr : weakReferences) {
+            assertCollectable(wr);
+        }
+    }
+
+    /**
+     * Checks whether the content of provided WeakReference objects can be collected.
+     * @param weakReference The WeakReference to check.
+     * @param otherWeakReferences Other WeakReference objects to check.
+     */
+    public static void assertCollectable(WeakReference weakReference, WeakReference... otherWeakReferences) {
+        assertCollectable(weakReference);
+        for (WeakReference wr : otherWeakReferences) {
+            assertCollectable(wr);
+        }
+    }
+
+    /**
      * Checks whether the content of the WeakReference can be collected.
      * @param weakReference The WeakReference to check.
      * @return Returns true, when the provided WeakReference can be collected.
@@ -121,7 +153,7 @@ public class JMemoryBuddy {
         }
 
         if (weakReference.get() == null && counter < steps / 3) {
-            int percentageUsed = (int) ((steps - counter) / steps * 100);
+            int percentageUsed = (steps - counter) / steps * 100;
             System.out.println("Warning test seems to be unstable. time used: " + percentageUsed + "%");
         }
 
@@ -157,19 +189,22 @@ public class JMemoryBuddy {
      * @param f A function which get's executed with the API to define the required memory semantic.
      */
     public static void memoryTest(Consumer<MemoryTestAPI> f) {
-        LinkedList<WeakReference> toBeCollected = new LinkedList<WeakReference>();
-        LinkedList<AssertNotCollectable> toBeNotCollected = new LinkedList<AssertNotCollectable>();
-        LinkedList<SetAsReferenced> toBeReferenced = new LinkedList<SetAsReferenced>();
+        LinkedList<WeakReference> toBeCollected = new LinkedList<>();
+        LinkedList<AssertNotCollectable> toBeNotCollected = new LinkedList<>();
+        LinkedList<SetAsReferenced> toBeReferenced = new LinkedList<>();
 
         f.accept(new MemoryTestAPI() {
+            @Override
             public void assertCollectable(Object ref) {
                 Objects.requireNonNull(ref);
-                toBeCollected.add(new WeakReference<Object>(ref));
+                toBeCollected.add(new WeakReference<>(ref));
             }
+            @Override
             public void assertNotCollectable(Object ref) {
                 Objects.requireNonNull(ref);
                 toBeNotCollected.add(new AssertNotCollectable(ref));
             }
+            @Override
             public void setAsReferenced(Object ref) {
                 Objects.requireNonNull(ref);
                 toBeReferenced.add(new SetAsReferenced(ref));
@@ -188,12 +223,12 @@ public class JMemoryBuddy {
         for (AssertNotCollectable wRef: toBeNotCollected) {
             if (!checkNotCollectable(wRef.getWeakReference())) {
                 failed = true;
-            };
+            }
         }
 
         if (failed) {
-            LinkedList<AssertCollectable> toBeCollectedMarked = new LinkedList<AssertCollectable>();
-            LinkedList<AssertNotCollectable> toBeNotCollectedMarked = new LinkedList<AssertNotCollectable>();
+            LinkedList<AssertCollectable> toBeCollectedMarked = new LinkedList<>();
+            LinkedList<AssertNotCollectable> toBeNotCollectedMarked = new LinkedList<>();
 
             for (WeakReference wRef: toBeCollected) {
                 if (wRef.get() != null) {

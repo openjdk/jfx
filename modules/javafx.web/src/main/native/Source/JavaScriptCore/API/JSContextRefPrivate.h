@@ -101,7 +101,7 @@ JS_EXPORT void JSContextGroupClearExecutionTimeLimit(JSContextGroupRef group) JS
 @result The value of the setting, true if remote inspection is enabled, otherwise false.
 @discussion Remote inspection is true by default.
 */
-JS_EXPORT bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx) JSC_API_AVAILABLE(macos(10.10), ios(8.0));
+JS_EXPORT bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx) JSC_API_DEPRECATED_WITH_REPLACEMENT("JSGlobalContextIsInspectable", macos(10.10, JSC_MAC_TBA), ios(8.0, JSC_IOS_TBA));
 
 /*!
 @function
@@ -109,7 +109,7 @@ JS_EXPORT bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx)
 @param ctx The JSGlobalContext that you want to change.
 @param enabled The new remote inspection enabled setting for the context.
 */
-JS_EXPORT void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enabled) JSC_API_AVAILABLE(macos(10.10), ios(8.0));
+JS_EXPORT void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enabled) JSC_API_DEPRECATED_WITH_REPLACEMENT("JSGlobalContextSetInspectable", macos(10.10, JSC_MAC_TBA), ios(8.0, JSC_IOS_TBA));
 
 /*!
 @function
@@ -137,6 +137,15 @@ JS_EXPORT void JSGlobalContextSetIncludesNativeCallStackWhenReportingExceptions(
 @param exception A pointer to a JSValueRef in which to store an exception, if any. Pass NULL if you do not care to store an exception.
 */
 JS_EXPORT void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef ctx, JSObjectRef function, JSValueRef* exception) JSC_API_AVAILABLE(macos(10.15.4), ios(13.4));
+
+/*!
+@function
+@abstract Sets whether a context allows use of eval (or the Function constructor).
+@param ctx The JSGlobalContext that you want to change.
+@param enabled The new eval enabled setting for the context.
+@param message The error message to display when user attempts to call eval (or the Function constructor). Pass NULL when setting enabled to true.
+*/
+JS_EXPORT void JSGlobalContextSetEvalEnabled(JSGlobalContextRef ctx, bool enabled, JSStringRef message) JSC_API_AVAILABLE(macos(JSC_MAC_TBA), ios(JSC_IOS_TBA));
 
 #ifdef __cplusplus
 }

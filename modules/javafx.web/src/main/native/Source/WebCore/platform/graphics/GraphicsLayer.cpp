@@ -30,6 +30,7 @@
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "GraphicsLayerContentsDisplayDelegate.h"
 #include "LayoutRect.h"
 #include "RotateTransformOperation.h"
 #include <wtf/HashMap.h>
@@ -76,33 +77,16 @@ bool GraphicsLayer::supportsLayerType(Type type)
 {
     switch (type) {
     case Type::Normal:
+    case Type::Structural:
     case Type::PageTiledBacking:
     case Type::ScrollContainer:
     case Type::ScrolledContents:
+    case Type::TiledBacking:
         return true;
     case Type::Shape:
         return false;
     }
     ASSERT_NOT_REACHED();
-    return false;
-}
-
-bool GraphicsLayer::supportsRoundedClip()
-{
-    return false;
-}
-
-bool GraphicsLayer::supportsBackgroundColorContent()
-{
-#if USE(TEXTURE_MAPPER)
-    return true;
-#else
-    return false;
-#endif
-}
-
-bool GraphicsLayer::supportsSubpixelAntialiasedLayerText()
-{
     return false;
 }
 #endif
@@ -133,8 +117,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_type(type)
     , m_beingDestroyed(false)
     , m_contentsOpaque(false)
-    , m_supportsSubpixelAntialiasedText(false)
-    , m_preserves3D(false)
+    , m_preserves3D(type == Type::Structural)
     , m_backfaceVisibility(true)
     , m_masksToBounds(false)
     , m_drawsContent(false)
@@ -142,13 +125,16 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_contentsRectClipsDescendants(false)
     , m_acceleratesDrawing(false)
     , m_usesDisplayListDrawing(false)
+    , m_allowsTiling(true)
     , m_appliesPageScale(false)
+    , m_appliesDeviceScale(true)
     , m_showDebugBorder(false)
     , m_showRepaintCounter(false)
     , m_isMaskLayer(false)
     , m_isTrackingDisplayListReplay(false)
     , m_userInteractionEnabled(true)
     , m_canDetachBackingStore(true)
+    , m_shouldPaintUsingCompositeCopy(false)
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     , m_isSeparated(false)
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
@@ -350,6 +336,24 @@ void GraphicsLayer::removeFromParentInternal()
     }
 }
 
+void GraphicsLayer::setPreserves3D(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, b);
+    m_preserves3D = b;
+}
+
+void GraphicsLayer::setMasksToBounds(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, false);
+    m_masksToBounds = b;
+}
+
+void GraphicsLayer::setDrawsContent(bool b)
+{
+    ASSERT_IMPLIES(m_type == Type::Structural, false);
+    m_drawsContent = b;
+}
+
 const TransformationMatrix& GraphicsLayer::transform() const
 {
     return m_transform ? *m_transform : TransformationMatrix::identity;
@@ -376,6 +380,19 @@ void GraphicsLayer::setChildrenTransform(const TransformationMatrix& matrix)
         m_childrenTransform = makeUnique<TransformationMatrix>(matrix);
 }
 
+bool GraphicsLayer::setFilters(const FilterOperations& filters)
+{
+    ASSERT(m_type != Type::Structural);
+    m_filters = filters;
+    return true;
+}
+
+void GraphicsLayer::setOpacity(float opacity)
+{
+    ASSERT(m_type != Type::Structural);
+    m_opacity = opacity;
+}
+
 void GraphicsLayer::removeFromParent()
 {
     // removeFromParentInternal is nonvirtual, for use in willBeDestroyed,
@@ -398,11 +415,6 @@ void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
     }
 
     m_maskLayer = WTFMove(layer);
-}
-
-void GraphicsLayer::setMasksToBoundsRect(const FloatRoundedRect& roundedRect)
-{
-    m_masksToBoundsRect = roundedRect;
 }
 
 Path GraphicsLayer::shapeLayerPath() const
@@ -517,6 +529,7 @@ void GraphicsLayer::setSize(const FloatSize& size)
 
 void GraphicsLayer::setBackgroundColor(const Color& color)
 {
+    ASSERT(m_type != Type::Structural);
     m_backgroundColor = color;
 }
 
@@ -531,11 +544,13 @@ void GraphicsLayer::setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase> phase
 
 void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
 {
-    FloatSize offset = offsetFromRenderer() - toFloatSize(scrollOffset());
-    context.translate(-offset);
+    auto offset = offsetFromRenderer() - toFloatSize(scrollOffset());
+    auto clipRect = clip;
 
-    FloatRect clipRect(clip);
-    clipRect.move(offset);
+    if (!offset.isZero()) {
+        context.translate(-offset);
+        clipRect.move(offset);
+    }
 
     client().paintContents(this, context, clipRect, layerPaintBehavior);
 }
@@ -598,7 +613,7 @@ FloatRect GraphicsLayer::adjustCoverageRectForMovement(const FloatRect& coverage
     return unionRect(coverageRect, expandedRect);
 }
 
-String GraphicsLayer::animationNameForTransition(AnimatedPropertyID property)
+String GraphicsLayer::animationNameForTransition(AnimatedProperty property)
 {
     // | is not a valid identifier character in CSS, so this can never conflict with a keyframe identifier.
     return makeString("-|transition", static_cast<int>(property), '-');
@@ -610,6 +625,15 @@ void GraphicsLayer::suspendAnimations(MonotonicTime)
 
 void GraphicsLayer::resumeAnimations()
 {
+}
+
+void GraphicsLayer::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose)
+{
+}
+
+RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayer::createAsyncContentsDisplayDelegate()
+{
+    return nullptr;
 }
 
 void GraphicsLayer::getDebugBorderInfo(Color& color, float& width) const
@@ -671,9 +695,9 @@ static inline const FilterOperations& filterOperationsAt(const KeyframeValueList
 int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
 {
 #if ENABLE(FILTERS_LEVEL_2)
-    ASSERT(valueList.property() == AnimatedPropertyFilter || valueList.property() == AnimatedPropertyWebkitBackdropFilter);
+    ASSERT(valueList.property() == AnimatedProperty::Filter || valueList.property() == AnimatedProperty::WebkitBackdropFilter);
 #else
-    ASSERT(valueList.property() == AnimatedPropertyFilter);
+    ASSERT(valueList.property() == AnimatedProperty::Filter);
 #endif
 
     if (valueList.size() < 2)
@@ -705,81 +729,6 @@ int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
     return firstIndex;
 }
 
-// An "invalid" list is one whose functions don't match, and therefore has to be animated as a Matrix
-// The hasBigRotation flag will always return false if isValid is false. Otherwise hasBigRotation is
-// true if the rotation between any two keyframes is >= 180 degrees.
-
-static inline const TransformOperations& operationsAt(const KeyframeValueList& valueList, size_t index)
-{
-    return static_cast<const TransformAnimationValue&>(valueList.at(index)).value();
-}
-
-int GraphicsLayer::validateTransformOperations(const KeyframeValueList& valueList, bool& hasBigRotation)
-{
-    ASSERT(animatedPropertyIsTransformOrRelated(valueList.property()));
-
-    hasBigRotation = false;
-
-    if (valueList.size() < 2)
-        return -1;
-
-    // Empty transforms match anything, so find the first non-empty entry as the reference.
-    size_t firstIndex = 0;
-    for ( ; firstIndex < valueList.size(); ++firstIndex) {
-        if (!operationsAt(valueList, firstIndex).operations().isEmpty())
-            break;
-    }
-
-    if (firstIndex >= valueList.size())
-        return -1;
-
-    const TransformOperations& firstVal = operationsAt(valueList, firstIndex);
-
-    // See if the keyframes are valid.
-    for (size_t i = firstIndex + 1; i < valueList.size(); ++i) {
-        const TransformOperations& val = operationsAt(valueList, i);
-
-        // An empty transform list matches anything.
-        if (val.operations().isEmpty())
-            continue;
-
-        if (!firstVal.operationsMatch(val))
-            return -1;
-    }
-
-    // Keyframes are valid, check for big rotations.
-    double lastRotationAngle = 0.0;
-    double maxRotationAngle = -1.0;
-
-    for (size_t j = 0; j < firstVal.operations().size(); ++j) {
-        TransformOperation::OperationType type = firstVal.operations().at(j)->type();
-
-        // if this is a rotation entry, we need to see if any angle differences are >= 180 deg
-        if (type == TransformOperation::ROTATE_X ||
-            type == TransformOperation::ROTATE_Y ||
-            type == TransformOperation::ROTATE_Z ||
-            type == TransformOperation::ROTATE_3D) {
-            lastRotationAngle = downcast<RotateTransformOperation>(*firstVal.operations().at(j)).angle();
-
-            if (maxRotationAngle < 0)
-                maxRotationAngle = fabs(lastRotationAngle);
-
-            for (size_t i = firstIndex + 1; i < valueList.size(); ++i) {
-                const TransformOperations& val = operationsAt(valueList, i);
-                double rotationAngle = val.operations().isEmpty() ? 0 : downcast<RotateTransformOperation>(*val.operations().at(j)).angle();
-                double diffAngle = fabs(rotationAngle - lastRotationAngle);
-                if (diffAngle > maxRotationAngle)
-                    maxRotationAngle = diffAngle;
-                lastRotationAngle = rotationAngle;
-            }
-        }
-    }
-
-    hasBigRotation = maxRotationAngle >= 180.0;
-
-    return firstIndex;
-}
-
 double GraphicsLayer::backingStoreMemoryEstimate() const
 {
     if (!drawsContent())
@@ -802,17 +751,15 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     FloatRect largestRepaintRect(FloatPoint(), m_size);
     largestRepaintRect.intersect(repaintRect);
     RepaintMap::iterator repaintIt = repaintRectMap().find(this);
-    if (repaintIt == repaintRectMap().end()) {
-        Vector<FloatRect> repaintRects;
-        repaintRects.append(largestRepaintRect);
-        repaintRectMap().set(this, repaintRects);
-    } else {
+    if (repaintIt == repaintRectMap().end())
+        repaintRectMap().set(this, Vector { WTFMove(largestRepaintRect) });
+    else {
         Vector<FloatRect>& repaintRects = repaintIt->value;
         repaintRects.append(largestRepaintRect);
     }
 }
 
-void GraphicsLayer::traverse(GraphicsLayer& layer, const WTF::Function<void (GraphicsLayer&)>& traversalFunc)
+void GraphicsLayer::traverse(GraphicsLayer& layer, const Function<void(GraphicsLayer&)>& traversalFunc)
 {
     traversalFunc(layer);
 
@@ -873,7 +820,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (m_boundsOrigin != FloatPoint())
         ts << indent << "(bounds origin " << m_boundsOrigin.x() << " " << m_boundsOrigin.y() << ")\n";
 
-    if (m_anchorPoint != FloatPoint3D(0.5f, 0.5f, 0)) {
+    if (client().shouldDumpPropertyForLayer(this, "anchorPoint", options)) {
         ts << indent << "(anchor " << m_anchorPoint.x() << " " << m_anchorPoint.y();
         if (m_anchorPoint.z())
             ts << " " << m_anchorPoint.z();
@@ -897,9 +844,6 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     bool needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack = client().needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack(*this);
     if (m_contentsOpaque || needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack)
         ts << indent << "(contentsOpaque " << (m_contentsOpaque || needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack) << ")\n";
-
-    if (m_supportsSubpixelAntialiasedText)
-        ts << indent << "(supports subpixel antialiased text " << m_supportsSubpixelAntialiasedText << ")\n";
 
     if (m_masksToBounds && options & LayerTreeAsTextOptions::IncludeClipping)
         ts << indent << "(clips " << m_masksToBounds << ")\n";
@@ -1052,8 +996,6 @@ TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& cu
     case GraphicsLayer::CustomAppearance::None: ts << "none"; break;
     case GraphicsLayer::CustomAppearance::ScrollingOverhang: ts << "scrolling-overhang"; break;
     case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
-    case GraphicsLayer::CustomAppearance::LightBackdrop: ts << "light-backdrop"; break;
-    case GraphicsLayer::CustomAppearance::DarkBackdrop: ts << "dark-backdrop"; break;
     }
     return ts;
 }

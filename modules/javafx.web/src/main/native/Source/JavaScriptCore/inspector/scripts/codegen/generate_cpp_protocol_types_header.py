@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014-2018 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -36,7 +36,7 @@ try:
     from .cpp_generator_templates import CppGeneratorTemplates as CppTemplates
     from .generator import Generator, ucfirst
     from .models import EnumType, ObjectType, PrimitiveType, AliasedType, ArrayType, Frameworks
-except ValueError:
+except ImportError:
     from cpp_generator import CppGenerator
     from cpp_generator_templates import CppGeneratorTemplates as CppTemplates
     from generator import Generator, ucfirst
@@ -347,7 +347,7 @@ class CppProtocolTypesHeaderGenerator(CppGenerator):
         lines.append('')
         lines.append('        Builder<STATE | %(camelName)sSet>& set%(camelName)s(%(memberType)s %(memberName)s)' % setter_args)
         lines.append('        {')
-        lines.append('            COMPILE_ASSERT(!(STATE & %(camelName)sSet), property_%(memberKey)s_already_set);' % setter_args)
+        lines.append('            static_assert(!(STATE & %(camelName)sSet), "property %(memberKey)s already set");' % setter_args)
         lines.append('            m_result->%(setter)s("%(memberKey)s"_s, %(memberValue)s);' % setter_args)
         lines.append('            return castState<%(camelName)sSet>();' % setter_args)
         lines.append('        }')

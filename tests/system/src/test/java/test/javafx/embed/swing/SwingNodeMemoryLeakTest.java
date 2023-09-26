@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,34 +25,36 @@
 
 package test.javafx.embed.swing;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
+
+import java.lang.ref.WeakReference;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+
+import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
+
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
-import javax.swing.JLabel;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import com.sun.javafx.PlatformUtil;
 
 import test.util.Util;
-import static test.util.Util.TIMEOUT;
-import junit.framework.AssertionFailedError;
-import org.junit.Test;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
+import test.util.memory.JMemoryBuddy;
 
 public class SwingNodeMemoryLeakTest {
 
     final static int TOTAL_SWINGNODE = 10;
-    static CountDownLatch launchLatch;
+    static CountDownLatch launchLatch = new CountDownLatch(1);
     final static int GC_ATTEMPTS = 10;
     ArrayList<WeakReference<SwingNode>> weakRefArrSN =
                                       new ArrayList(TOTAL_SWINGNODE);
@@ -61,40 +63,26 @@ public class SwingNodeMemoryLeakTest {
 
     @BeforeClass
     public static void setupOnce() {
-        launchLatch = new CountDownLatch(1);
-        // Start the Application
-        new Thread(() -> Application.launch(SwingNodeMemoryLeakTest.MyApp.class, (String[])null)).start();
-
-        try {
-            if (!launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch ("+
-                    (5 * TIMEOUT) + " seconds)");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+        Util.launch(launchLatch, 50, MyApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test
-    public void testSwingNodeMemoryLeak() {
-        if (PlatformUtil.isMac()) {
-            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8196614
-        }
+    public void testSwingNodeMemoryLeak() throws InterruptedException, InvocationTargetException {
         Util.runAndWait(() -> {
             testSwingNodeObjectsInStage();
         });
-        attemptGCSwingNode();
-        assertEquals(TOTAL_SWINGNODE, getCleanedUpSwingNodeCount());
 
-        attemptGCJLabel();
-        assertEquals(TOTAL_SWINGNODE, getCleanedUpJLabelCount());
+        // Invoke a noop on EDT thread and wait for a bit to make sure EDT processed node objects
+        SwingUtilities.invokeAndWait(() -> {});
+        Util.sleep(500);
+
+        JMemoryBuddy.assertCollectable(weakRefArrSN);
+        JMemoryBuddy.assertCollectable(weakRefArrJL);
     }
 
     private void testSwingNodeObjectsInStage() {
@@ -134,35 +122,6 @@ public class SwingNodeMemoryLeakTest {
         }
     }
 
-    private void attemptGCSwingNode() {
-        // Attempt gc GC_ATTEMPTS times
-        for (int i = 0; i < GC_ATTEMPTS; i++) {
-            System.gc();
-            if (getCleanedUpSwingNodeCount() == TOTAL_SWINGNODE) {
-                break;
-            }
-            try {
-                Thread.sleep(250);
-            } catch (InterruptedException e) {
-                System.err.println("InterruptedException occurred during Thread.sleep()");
-            }
-        }
-    }
-
-    private void attemptGCJLabel() {
-        // Attempt gc GC_ATTEMPTS times
-        for (int i = 0; i < GC_ATTEMPTS; i++) {
-            System.gc();
-            if (getCleanedUpJLabelCount() == TOTAL_SWINGNODE) {
-                break;
-            }
-            try {
-                Thread.sleep(250);
-            } catch (InterruptedException e) {
-                System.err.println("InterruptedException occurred during Thread.sleep()");
-            }
-        }
-    }
     private int getCleanedUpSwingNodeCount() {
         int count = 0;
         for (WeakReference<SwingNode> ref : weakRefArrSN) {

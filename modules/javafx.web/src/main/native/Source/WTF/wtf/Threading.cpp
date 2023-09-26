@@ -29,11 +29,12 @@
 #include <cstring>
 #include <wtf/DateMath.h>
 #include <wtf/Gigacage.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
-#include <wtf/RandomNumberSeed.h>
 #include <wtf/ThreadGroup.h>
 #include <wtf/ThreadingPrimitives.h>
 #include <wtf/WTFConfig.h>
+#include <wtf/text/AtomString.h>
 #include <wtf/threads/Signals.h>
 
 #if HAVE(QOS_CLASSES)
@@ -43,10 +44,61 @@
 #if PLATFORM(JAVA)
 #include <wtf/java/JavaEnv.h>
 #endif
+#if OS(LINUX)
+#include <wtf/linux/RealTimeThreads.h>
+#endif
+
+#if PLATFORM(COCOA)
+#include <wtf/darwin/LibraryPathDiagnostics.h>
+#endif
+
+#if !USE(SYSTEM_MALLOC)
+#include <bmalloc/BPlatform.h>
+#if BENABLE(LIBPAS)
+#define USE_LIBPAS_THREAD_SUSPEND_LOCK 1
+#include <bmalloc/pas_thread_suspend_lock.h>
+#endif
+#endif
 
 namespace WTF {
 
 Lock Thread::s_allThreadsLock;
+
+
+// During suspend, suspend or resume should not be executed from the other threads.
+// We use global lock instead of per thread lock.
+// Consider the following case, there are threads A and B.
+// And A attempt to suspend B and B attempt to suspend A.
+// A and B send signals. And later, signals are delivered to A and B.
+// In that case, both will be suspended.
+//
+// And it is important to use a global lock to suspend and resume. Let's consider using per-thread lock.
+// Your issuing thread (A) attempts to suspend the target thread (B). Then, you will suspend the thread (C) additionally.
+// This case frequently happens if you stop threads to perform stack scanning. But thread (B) may hold the lock of thread (C).
+// In that case, dead lock happens. Using global lock here avoids this dead lock.
+#if USE(LIBPAS_THREAD_SUSPEND_LOCK)
+ThreadSuspendLocker::ThreadSuspendLocker()
+{
+    pas_thread_suspend_lock_lock();
+}
+
+ThreadSuspendLocker::~ThreadSuspendLocker()
+{
+    pas_thread_suspend_lock_unlock();
+}
+#else
+static Lock globalSuspendLock;
+
+ThreadSuspendLocker::ThreadSuspendLocker()
+{
+    globalSuspendLock.lock();
+}
+
+ThreadSuspendLocker::~ThreadSuspendLocker()
+{
+    globalSuspendLock.unlock();
+}
+#endif
 
 static std::optional<size_t> stackSize(ThreadType threadType)
 {
@@ -77,7 +129,16 @@ static std::optional<size_t> stackSize(ThreadType threadType)
 #endif
 }
 
-std::atomic<uint32_t> Thread::s_uid { 0 };
+std::atomic<uint32_t> ThreadLike::s_uid;
+
+uint32_t ThreadLike::currentSequence()
+{
+#if PLATFORM(COCOA)
+    if (uint32_t uid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(dispatch_get_specific(&s_uid))))
+        return uid;
+#endif
+    return Thread::current().uid();
+}
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
@@ -123,7 +184,7 @@ const char* Thread::normalizeThreadName(const char* threadName)
     // This name can be com.apple.WebKit.ProcessLauncher or com.apple.CoreIPC.ReceiveQueue.
     // We are using those names for the thread name, but both are longer than the limit of
     // the platform thread name length, 32 for Windows and 16 for Linux.
-    StringView result(threadName);
+    auto result = StringView::fromLatin1(threadName);
     size_t size = result.reverseFind('.');
     if (size != notFound)
         result = result.substring(size + 1);
@@ -259,15 +320,10 @@ void Thread::didExit()
 
     if (shouldRemoveThreadFromThreadGroup()) {
         {
-            Vector<std::shared_ptr<ThreadGroup>> threadGroups;
+            Vector<Ref<ThreadGroup>> threadGroups;
             {
                 Locker locker { m_mutex };
-                for (auto& threadGroupPointerPair : m_threadGroupMap) {
-                    // If ThreadGroup is just being destroyed,
-                    // we do not need to perform unregistering.
-                    if (auto retained = threadGroupPointerPair.value.lock())
-                        threadGroups.append(WTFMove(retained));
-                }
+                threadGroups = m_threadGroups.values();
                 m_isShuttingDown = true;
             }
             for (auto& threadGroup : threadGroups) {
@@ -291,25 +347,16 @@ ThreadGroupAddResult Thread::addToThreadGroup(const AbstractLocker& threadGroupL
     if (m_isShuttingDown)
         return ThreadGroupAddResult::NotAdded;
     if (threadGroup.m_threads.add(*this).isNewEntry) {
-        m_threadGroupMap.add(&threadGroup, threadGroup.weakFromThis());
+        m_threadGroups.add(threadGroup);
         return ThreadGroupAddResult::NewlyAdded;
     }
     return ThreadGroupAddResult::AlreadyAdded;
 }
 
-void Thread::removeFromThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup& threadGroup)
-{
-    UNUSED_PARAM(threadGroupLocker);
-    Locker locker { m_mutex };
-    if (m_isShuttingDown)
-        return;
-    m_threadGroupMap.remove(&threadGroup);
-}
-
 unsigned Thread::numberOfThreadGroups()
 {
     Locker locker { m_mutex };
-    return m_threadGroupMap.size();
+    return m_threadGroups.values().size();
 }
 
 bool Thread::exchangeIsCompilationThread(bool newValue)
@@ -330,12 +377,24 @@ bool Thread::mayBeGCThread()
     return Thread::current().gcThreadType() != GCThreadType::None;
 }
 
+void Thread::registerJSThread(Thread& thread)
+{
+    ASSERT(&thread == &Thread::current());
+    thread.m_isJSThread = true;
+}
+
 void Thread::setCurrentThreadIsUserInteractive(int relativePriority)
 {
 #if HAVE(QOS_CLASSES)
     ASSERT(relativePriority <= 0);
     ASSERT(relativePriority >= QOS_MIN_RELATIVE_PRIORITY);
     pthread_set_qos_class_self_np(adjustedQOSClass(QOS_CLASS_USER_INTERACTIVE), relativePriority);
+#elif OS(LINUX)
+    // We don't allow to make the main thread real time. This is used by secondary processes to match the
+    // UI process, but in linux the UI process is not real time.
+    if (!isMainThread())
+        RealTimeThreads::singleton().registerThread(current());
+    UNUSED_PARAM(relativePriority);
 #else
     UNUSED_PARAM(relativePriority);
 #endif
@@ -349,6 +408,38 @@ void Thread::setCurrentThreadIsUserInitiated(int relativePriority)
     pthread_set_qos_class_self_np(adjustedQOSClass(QOS_CLASS_USER_INITIATED), relativePriority);
 #else
     UNUSED_PARAM(relativePriority);
+#endif
+}
+
+#if HAVE(QOS_CLASSES)
+static Thread::QOS toQOS(qos_class_t qosClass)
+{
+    switch (qosClass) {
+    case QOS_CLASS_USER_INTERACTIVE:
+        return Thread::QOS::UserInteractive;
+    case QOS_CLASS_USER_INITIATED:
+        return Thread::QOS::UserInitiated;
+    case QOS_CLASS_UTILITY:
+        return Thread::QOS::Utility;
+    case QOS_CLASS_BACKGROUND:
+        return Thread::QOS::Background;
+    case QOS_CLASS_UNSPECIFIED:
+    case QOS_CLASS_DEFAULT:
+    default:
+        return Thread::QOS::Default;
+    }
+}
+#endif
+
+auto Thread::currentThreadQOS() -> QOS
+{
+#if HAVE(QOS_CLASSES)
+    qos_class_t qos = QOS_CLASS_DEFAULT;
+    int relativePriority;
+    pthread_get_qos_class_np(pthread_self(), &qos, &relativePriority);
+    return toQOS(qos);
+#else
+    return QOS::Default;
 #endif
 }
 
@@ -383,9 +474,9 @@ void initialize()
     static std::once_flag onceKey;
     std::call_once(onceKey, [] {
         setPermissionsOfConfigPage();
+        Config::initialize();
         Gigacage::ensureGigacage();
         Config::AssertNotFrozenScope assertScope;
-        initializeRandomNumberGenerator();
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
         Thread::initializeTLSKey();
 #endif
@@ -393,6 +484,9 @@ void initialize()
         Thread::initializePlatformThreading();
 #if USE(PTHREADS) && HAVE(MACHINE_CONTEXT)
         SignalHandlers::initialize();
+#endif
+#if PLATFORM(COCOA)
+        initializeLibraryPathDiagnostics();
 #endif
     });
 }

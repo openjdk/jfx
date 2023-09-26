@@ -35,9 +35,9 @@ var withHttp = true;
 var withHtml = true;
 var withC14n = true;
 var withCatalog = true;
-var withDocb = true;
 var withXpath = true;
 var withXptr = true;
+var withXptrLocs = false;
 var withXinclude = true;
 var withIconv = true;
 var withIcu = false;
@@ -121,9 +121,9 @@ function usage()
 	txt += "  html:       Enable HTML processor (" + (withHtml? "yes" : "no")  + ")\n";
 	txt += "  c14n:       Enable C14N support (" + (withC14n? "yes" : "no")  + ")\n";
 	txt += "  catalog:    Enable catalog support (" + (withCatalog? "yes" : "no")  + ")\n";
-	txt += "  docb:       Enable DocBook support (" + (withDocb? "yes" : "no")  + ")\n";
 	txt += "  xpath:      Enable XPath support (" + (withXpath? "yes" : "no")  + ")\n";
 	txt += "  xptr:       Enable XPointer support (" + (withXptr? "yes" : "no")  + ")\n";
+	txt += "  xptr_locs:  Enable XPointer locs support (" + (withXptrLocs? "yes" : "no")  + ")\n";
 	txt += "  xinclude:   Enable XInclude support (" + (withXinclude? "yes" : "no")  + ")\n";
 	txt += "  iconv:      Enable iconv support (" + (withIconv? "yes" : "no")  + ")\n";
 	txt += "  icu:        Enable icu support (" + (withIcu? "yes" : "no")  + ")\n";
@@ -218,9 +218,9 @@ function discoverVersion()
 	vf.WriteLine("WITH_HTML=" + (withHtml? "1" : "0"));
 	vf.WriteLine("WITH_C14N=" + (withC14n? "1" : "0"));
 	vf.WriteLine("WITH_CATALOG=" + (withCatalog? "1" : "0"));
-	vf.WriteLine("WITH_DOCB=" + (withDocb? "1" : "0"));
 	vf.WriteLine("WITH_XPATH=" + (withXpath? "1" : "0"));
 	vf.WriteLine("WITH_XPTR=" + (withXptr? "1" : "0"));
+	vf.WriteLine("WITH_XPTR_LOCS=" + (withXptrLocs? "1" : "0"));
 	vf.WriteLine("WITH_XINCLUDE=" + (withXinclude? "1" : "0"));
 	vf.WriteLine("WITH_ICONV=" + (withIconv? "1" : "0"));
 	vf.WriteLine("WITH_ICU=" + (withIcu? "1" : "0"));
@@ -315,12 +315,12 @@ function configureLibxml()
 			of.WriteLine(s.replace(/\@WITH_C14N\@/, withC14n? "1" : "0"));
 		} else if (s.search(/\@WITH_CATALOG\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_CATALOG\@/, withCatalog? "1" : "0"));
-		} else if (s.search(/\@WITH_DOCB\@/) != -1) {
-			of.WriteLine(s.replace(/\@WITH_DOCB\@/, withDocb? "1" : "0"));
 		} else if (s.search(/\@WITH_XPATH\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_XPATH\@/, withXpath? "1" : "0"));
 		} else if (s.search(/\@WITH_XPTR\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_XPTR\@/, withXptr? "1" : "0"));
+		} else if (s.search(/\@WITH_XPTR_LOCS\@/) != -1) {
+			of.WriteLine(s.replace(/\@WITH_XPTR_LOCS\@/, withXptrLocs? "1" : "0"));
 		} else if (s.search(/\@WITH_XINCLUDE\@/) != -1) {
 			of.WriteLine(s.replace(/\@WITH_XINCLUDE\@/, withXinclude? "1" : "0"));
 		} else if (s.search(/\@WITH_ICONV\@/) != -1) {
@@ -470,12 +470,12 @@ for (i = 0; (i < WScript.Arguments.length) && (error == 0); i++) {
 			withC14n = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "catalog")
 			withCatalog = strToBool(arg.substring(opt.length + 1, arg.length));
-		else if (opt == "docb")
-			withDocb = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "xpath")
 			withXpath = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "xptr")
 			withXptr = strToBool(arg.substring(opt.length + 1, arg.length));
+		else if (opt == "xptr_locs")
+			withXptrLocs = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "xinclude")
 			withXinclude = strToBool(arg.substring(opt.length + 1, arg.length));
 		else if (opt == "iconv")
@@ -661,9 +661,9 @@ txtOut += "       HTTP client: " + boolToStr(withHttp) + "\n";
 txtOut += "    HTML processor: " + boolToStr(withHtml) + "\n";
 txtOut += "      C14N support: " + boolToStr(withC14n) + "\n";
 txtOut += "   Catalog support: " + boolToStr(withCatalog) + "\n";
-txtOut += "   DocBook support: " + boolToStr(withDocb) + "\n";
 txtOut += "     XPath support: " + boolToStr(withXpath) + "\n";
 txtOut += "  XPointer support: " + boolToStr(withXptr) + "\n";
+txtOut += "     XPointer locs: " + boolToStr(withXptrLocs) + "\n";
 txtOut += "  XInclude support: " + boolToStr(withXinclude) + "\n";
 txtOut += "     iconv support: " + boolToStr(withIconv) + "\n";
 txtOut += "     icu   support: " + boolToStr(withIcu) + "\n";

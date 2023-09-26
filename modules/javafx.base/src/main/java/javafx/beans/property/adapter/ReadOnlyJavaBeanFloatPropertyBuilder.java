@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ import java.lang.reflect.Method;
  */
 public final class ReadOnlyJavaBeanFloatPropertyBuilder {
 
-    private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
+    private final ReadOnlyJavaBeanPropertyBuilderHelper<Number> helper = new ReadOnlyJavaBeanPropertyBuilderHelper<>();
 
     private ReadOnlyJavaBeanFloatPropertyBuilder() {}
 
@@ -81,7 +81,7 @@ public final class ReadOnlyJavaBeanFloatPropertyBuilder {
      * {@code float} or {@code Float}
      */
     public ReadOnlyJavaBeanFloatProperty build() throws NoSuchMethodException {
-        final ReadOnlyPropertyDescriptor descriptor = helper.getDescriptor();
+        final ReadOnlyPropertyDescriptor<Number> descriptor = helper.getDescriptor();
         if (!float.class.equals(descriptor.getType()) && !Number.class.isAssignableFrom(descriptor.getType())) {
             throw new IllegalArgumentException("Not a float property");
         }

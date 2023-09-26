@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if ENABLE(WEB_AUTHN)
 #include "AuthenticationExtensionsClientInputs.h"
+#include "AuthenticatorAttachment.h"
 #include "BufferSource.h"
 #include "PublicKeyCredentialDescriptor.h"
 #include "UserVerificationRequirement.h"
@@ -42,52 +43,9 @@ struct PublicKeyCredentialRequestOptions {
     mutable String rpId;
     Vector<PublicKeyCredentialDescriptor> allowCredentials;
     UserVerificationRequirement userVerification { UserVerificationRequirement::Preferred };
-    std::optional<AuthenticatorAttachment> authenticatorAttachment;
     mutable std::optional<AuthenticationExtensionsClientInputs> extensions;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<PublicKeyCredentialRequestOptions> decode(Decoder&);
+    std::optional<AuthenticatorAttachment> authenticatorAttachment { }; // Not serialized over IPC.
 #endif // ENABLE(WEB_AUTHN)
 };
-
-#if ENABLE(WEB_AUTHN)
-// Not every member is encoded.
-template<class Encoder>
-void PublicKeyCredentialRequestOptions::encode(Encoder& encoder) const
-{
-    encoder << timeout << rpId << allowCredentials << userVerification << extensions;
-}
-
-template<class Decoder>
-std::optional<PublicKeyCredentialRequestOptions> PublicKeyCredentialRequestOptions::decode(Decoder& decoder)
-{
-    PublicKeyCredentialRequestOptions result;
-
-    std::optional<std::optional<unsigned>> timeout;
-    decoder >> timeout;
-    if (!timeout)
-        return std::nullopt;
-    result.timeout = WTFMove(*timeout);
-
-    if (!decoder.decode(result.rpId))
-        return std::nullopt;
-    if (!decoder.decode(result.allowCredentials))
-        return std::nullopt;
-
-    std::optional<UserVerificationRequirement> userVerification;
-    decoder >> userVerification;
-    if (!userVerification)
-        return std::nullopt;
-    result.userVerification = WTFMove(*userVerification);
-
-    std::optional<std::optional<AuthenticationExtensionsClientInputs>> extensions;
-    decoder >> extensions;
-    if (!extensions)
-        return std::nullopt;
-    result.extensions = WTFMove(*extensions);
-
-    return result;
-}
-#endif // ENABLE(WEB_AUTHN)
 
 } // namespace WebCore

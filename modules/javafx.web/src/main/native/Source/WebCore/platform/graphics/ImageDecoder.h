@@ -37,13 +37,20 @@
 
 namespace WebCore {
 
-class SharedBuffer;
+class FragmentedSharedBuffer;
+
+struct ImageDecoderFrameInfo {
+    bool hasAlpha;
+    Seconds duration;
+};
 
 class ImageDecoder : public ThreadSafeRefCounted<ImageDecoder> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static RefPtr<ImageDecoder> create(SharedBuffer&, const String& mimeType, AlphaOption, GammaAndColorProfileOption);
+    static RefPtr<ImageDecoder> create(FragmentedSharedBuffer&, const String& mimeType, AlphaOption, GammaAndColorProfileOption);
     virtual ~ImageDecoder() = default;
+
+    using FrameInfo = ImageDecoderFrameInfo;
 
     enum class MediaType {
         Image,
@@ -55,43 +62,12 @@ public:
         std::optional<IntSize> densityCorrectedSize;
     };
 
-    struct FrameInfo {
-        bool hasAlpha;
-        Seconds duration;
-
-        template<class Encoder>
-        void encode(Encoder& encoder) const
-        {
-            encoder << hasAlpha;
-            encoder << duration;
-        }
-
-        template<class Decoder>
-        static std::optional<FrameInfo> decode(Decoder& decoder)
-        {
-            std::optional<bool> hasAlpha;
-            decoder >> hasAlpha;
-            if (!hasAlpha)
-                return std::nullopt;
-
-            std::optional<Seconds> duration;
-            decoder >> duration;
-            if (!duration)
-                return std::nullopt;
-
-            return {{
-                *hasAlpha,
-                *duration
-            }};
-        }
-    };
-
     static bool supportsMediaType(MediaType);
 
 #if ENABLE(GPU_PROCESS)
-    using SupportsMediaTypeFunc = WTF::Function<bool(MediaType)>;
-    using CanDecodeTypeFunc = WTF::Function<bool(const String&)>;
-    using CreateImageDecoderFunc = WTF::Function<RefPtr<ImageDecoder>(SharedBuffer&, const String&, AlphaOption, GammaAndColorProfileOption)>;
+    using SupportsMediaTypeFunc = Function<bool(MediaType)>;
+    using CanDecodeTypeFunc = Function<bool(const String&)>;
+    using CreateImageDecoderFunc = Function<RefPtr<ImageDecoder>(FragmentedSharedBuffer&, const String&, AlphaOption, GammaAndColorProfileOption)>;
 
     struct ImageDecoderFactory {
         SupportsMediaTypeFunc supportsMediaType;
@@ -107,7 +83,7 @@ public:
     virtual size_t bytesDecodedToDetermineProperties() const = 0;
 
     virtual EncodedDataStatus encodedDataStatus() const = 0;
-    virtual void setEncodedDataStatusChangeCallback(WTF::Function<void(EncodedDataStatus)>&&) { }
+    virtual void setEncodedDataStatusChangeCallback(Function<void(EncodedDataStatus)>&&) { }
     virtual bool isSizeAvailable() const { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
     virtual IntSize size() const = 0;
     virtual size_t frameCount() const = 0;
@@ -129,13 +105,9 @@ public:
     virtual PlatformImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) = 0;
 
     virtual void setExpectedContentSize(long long) { }
-    virtual void setData(SharedBuffer&, bool allDataReceived) = 0;
+    virtual void setData(const FragmentedSharedBuffer&, bool allDataReceived) = 0;
     virtual bool isAllDataReceived() const = 0;
     virtual void clearFrameBufferCache(size_t) = 0;
-
-#if USE(DIRECT2D)
-    virtual void setTargetContext(ID2D1RenderTarget*) = 0;
-#endif
 
 protected:
     ImageDecoder() = default;

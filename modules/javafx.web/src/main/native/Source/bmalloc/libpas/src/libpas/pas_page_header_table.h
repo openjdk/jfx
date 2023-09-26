@@ -45,10 +45,10 @@ struct pas_page_header_table {
 };
 
 #define PAS_PAGE_HEADER_TABLE_INITIALIZER(passed_page_size) \
-    ((pas_page_header_table){ \
+    { \
          .page_size = (passed_page_size), \
          .hashtable = PAS_LOCK_FREE_READ_PTR_PTR_HASHTABLE_INITIALIZER \
-     })
+    }
 
 static inline unsigned pas_page_header_table_hash(const void* key, void* arg)
 {
@@ -56,7 +56,7 @@ static inline unsigned pas_page_header_table_hash(const void* key, void* arg)
 
     page_size = (size_t)arg;
 
-    return (unsigned)((uintptr_t)key / page_size);
+    return pas_hash32((unsigned)((uintptr_t)key / page_size));
 }
 
 PAS_API pas_page_base* pas_page_header_table_add(pas_page_header_table* table,
@@ -74,7 +74,7 @@ static PAS_ALWAYS_INLINE void** pas_page_header_table_get_boundary_ptr(pas_page_
 {
     PAS_TESTING_ASSERT(page_size == table->page_size);
 
-    return ((void**)page_base) - 1;
+    return ((void**)page_base) - 2;
 }
 
 static PAS_ALWAYS_INLINE void* pas_page_header_table_get_boundary(pas_page_header_table* table,

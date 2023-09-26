@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,8 @@
  * questions.
  */
 package com.sun.glass.ui;
+
+import com.sun.javafx.PlatformUtil;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -62,15 +64,13 @@ final class Platform {
                 return type;
             }
 
-            String osName = System.getProperty("os.name");
-            String osNameLowerCase = osName.toLowerCase(Locale.ROOT);
-            if (osNameLowerCase.startsWith("mac") || osNameLowerCase.startsWith("darwin")) {
+            if (PlatformUtil.isMac()) {
                 type = MAC;
-            } else if (osNameLowerCase.startsWith("wind")) {
+            } else if (PlatformUtil.isWindows()) {
                 type = WINDOWS;
-            } else if (osNameLowerCase.startsWith("linux")) {
+            } else if (PlatformUtil.isLinux()) {
                 type = GTK;
-            } else if (osNameLowerCase.startsWith("ios")) {
+            } else if (PlatformUtil.isIOS()) {
                 type = IOS;
             }
         }

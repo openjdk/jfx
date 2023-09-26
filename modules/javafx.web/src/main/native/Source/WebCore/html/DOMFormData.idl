@@ -35,9 +35,8 @@ typedef (File or USVString) FormDataEntryValue;
     JSGenerateToNativeObject,
     JSGenerateToJSObject,
     InterfaceName=FormData,
-    ImplementationLacksVTable,
 ] interface DOMFormData {
-    constructor(optional HTMLFormElement form);
+    [CallWith=CurrentScriptExecutionContext] constructor(optional HTMLFormElement form, optional HTMLElement? submitter = null);
 
     undefined append(USVString name, USVString value);
     undefined append(USVString name, Blob blobValue, optional USVString filename);

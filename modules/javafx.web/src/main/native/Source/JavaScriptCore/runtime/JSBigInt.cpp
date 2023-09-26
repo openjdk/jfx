@@ -55,11 +55,12 @@
 #include "StructureInlines.h"
 #include <algorithm>
 #include <wtf/Hasher.h>
+#include <wtf/Int128.h>
 #include <wtf/MathExtras.h>
 
 namespace JSC {
 
-const ClassInfo JSBigInt::s_info = { "BigInt", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSBigInt) };
+const ClassInfo JSBigInt::s_info = { "BigInt"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSBigInt) };
 
 JSBigInt::JSBigInt(VM& vm, Structure* structure, Digit* data, unsigned length)
     : Base(vm, structure)
@@ -116,7 +117,7 @@ inline JSBigInt* JSBigInt::createWithLength(JSGlobalObject* nullOrGlobalObjectFo
     }
 
     ASSERT(length <= maxLength);
-    void* data = vm.primitiveGigacageAuxiliarySpace.allocateNonVirtual(vm, length * sizeof(Digit), nullptr, AllocationFailureMode::ReturnNull);
+    void* data = vm.primitiveGigacageAuxiliarySpace().allocate(vm, length * sizeof(Digit), nullptr, AllocationFailureMode::ReturnNull);
     if (UNLIKELY(!data)) {
         if (nullOrGlobalObjectForOOM) {
             auto scope = DECLARE_THROW_SCOPE(vm);
@@ -124,7 +125,7 @@ inline JSBigInt* JSBigInt::createWithLength(JSGlobalObject* nullOrGlobalObjectFo
         }
         return nullptr;
     }
-    JSBigInt* bigInt = new (NotNull, allocateCell<JSBigInt>(vm.heap)) JSBigInt(vm, vm.bigIntStructure.get(), reinterpret_cast<Digit*>(data), length);
+    JSBigInt* bigInt = new (NotNull, allocateCell<JSBigInt>(vm)) JSBigInt(vm, vm.bigIntStructure.get(), reinterpret_cast<Digit*>(data), length);
     bigInt->finishCreation(vm);
     return bigInt;
 }
@@ -229,6 +230,62 @@ JSBigInt* JSBigInt::createFrom(JSGlobalObject* globalObject, int64_t value)
     } else
         unsignedValue = value;
     return createFromImpl(globalObject, unsignedValue, sign);
+}
+
+JSBigInt* JSBigInt::createFrom(JSGlobalObject* globalObject, Int128 value)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!value)
+        RELEASE_AND_RETURN(scope, createZero(globalObject));
+
+    UInt128 unsignedValue;
+    bool sign = false;
+    if (value < 0) {
+        unsignedValue = static_cast<UInt128>(-(value + 1)) + 1;
+        sign = true;
+    } else
+        unsignedValue = value;
+
+    if (unsignedValue <= UINT64_MAX)
+        RELEASE_AND_RETURN(scope, createFromImpl(globalObject, static_cast<uint64_t>(unsignedValue), sign));
+
+    if constexpr (sizeof(Digit) == 8) {
+        JSBigInt* bigInt = createWithLength(globalObject, 2);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+
+        Digit lowBits = static_cast<Digit>(static_cast<uint64_t>(unsignedValue));
+        Digit highBits = static_cast<Digit>(static_cast<uint64_t>(unsignedValue >> 64));
+
+        ASSERT(highBits);
+
+        bigInt->setDigit(0, lowBits);
+        bigInt->setDigit(1, highBits);
+        bigInt->setSign(sign);
+        return bigInt;
+    }
+
+    ASSERT(sizeof(Digit) == 4);
+
+    Digit digit0 = static_cast<Digit>(static_cast<uint64_t>(unsignedValue));
+    Digit digit1 = static_cast<Digit>(static_cast<uint64_t>(unsignedValue >> 32));
+    Digit digit2 = static_cast<Digit>(static_cast<uint64_t>(unsignedValue >> 64));
+    Digit digit3 = static_cast<Digit>(static_cast<uint64_t>(unsignedValue >> 96));
+
+    ASSERT(digit2 || digit3);
+
+    int length = digit3 ? 4 : 3;
+    JSBigInt* bigInt = createWithLength(globalObject, length);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+
+    bigInt->setDigit(0, digit0);
+    bigInt->setDigit(1, digit1);
+    bigInt->setDigit(2, digit2);
+    if (digit3)
+        bigInt->setDigit(3, digit3);
+    bigInt->setSign(sign);
+    return bigInt;
 }
 
 JSBigInt* JSBigInt::createFrom(JSGlobalObject* globalObject, bool value)
@@ -1117,13 +1174,9 @@ JSValue JSBigInt::bitwiseNot(JSGlobalObject* globalObject, JSBigInt* x)
 }
 
 #if USE(JSVALUE32_64)
-#define HAVE_TWO_DIGIT 1
-typedef uint64_t TwoDigit;
-#elif HAVE(INT128_T)
-#define HAVE_TWO_DIGIT 1
-typedef __uint128_t TwoDigit;
+using TwoDigit = uint64_t;
 #else
-#define HAVE_TWO_DIGIT 0
+using TwoDigit = UInt128;
 #endif
 
 // {carry} must point to an initialized Digit and will either be incremented
@@ -1147,40 +1200,9 @@ inline JSBigInt::Digit JSBigInt::digitSub(Digit a, Digit b, Digit& borrow)
 // Returns the low half of the result. High half is in {high}.
 inline JSBigInt::Digit JSBigInt::digitMul(Digit a, Digit b, Digit& high)
 {
-#if HAVE(TWO_DIGIT)
     TwoDigit result = static_cast<TwoDigit>(a) * static_cast<TwoDigit>(b);
-    high = result >> digitBits;
-
+    high = static_cast<Digit>(result >> digitBits);
     return static_cast<Digit>(result);
-#else
-    // Multiply in half-pointer-sized chunks.
-    // For inputs [AH AL]*[BH BL], the result is:
-    //
-    //            [AL*BL]  // rLow
-    //    +    [AL*BH]     // rMid1
-    //    +    [AH*BL]     // rMid2
-    //    + [AH*BH]        // rHigh
-    //    = [R4 R3 R2 R1]  // high = [R4 R3], low = [R2 R1]
-    //
-    // Where of course we must be careful with carries between the columns.
-    Digit aLow = a & halfDigitMask;
-    Digit aHigh = a >> halfDigitBits;
-    Digit bLow = b & halfDigitMask;
-    Digit bHigh = b >> halfDigitBits;
-
-    Digit rLow = aLow * bLow;
-    Digit rMid1 = aLow * bHigh;
-    Digit rMid2 = aHigh * bLow;
-    Digit rHigh = aHigh * bHigh;
-
-    Digit carry = 0;
-    Digit low = digitAdd(rLow, rMid1 << halfDigitBits, carry);
-    low = digitAdd(low, rMid2 << halfDigitBits, carry);
-
-    high = (rMid1 >> halfDigitBits) + (rMid2 >> halfDigitBits) + rHigh + carry;
-
-    return low;
-#endif
 }
 
 // Raises {base} to the power of {exponent}. Does not check for overflow.
@@ -2402,7 +2424,7 @@ JSValue JSBigInt::parseInt(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm, Cha
         ASSERT(nullOrGlobalObjectForOOM);
         if (errorParseMode == ErrorParseMode::ThrowExceptions) {
             auto scope = DECLARE_THROW_SCOPE(vm);
-            throwVMError(nullOrGlobalObjectForOOM, scope, createSyntaxError(nullOrGlobalObjectForOOM, "Failed to parse String to BigInt"));
+            throwVMError(nullOrGlobalObjectForOOM, scope, createSyntaxError(nullOrGlobalObjectForOOM, "Failed to parse String to BigInt"_s));
         }
         return JSValue();
     }
@@ -2519,7 +2541,7 @@ JSValue JSBigInt::parseInt(JSGlobalObject* nullOrGlobalObjectForOOM, VM& vm, Cha
                 if (errorParseMode == ErrorParseMode::ThrowExceptions) {
                     auto scope = DECLARE_THROW_SCOPE(vm);
                     ASSERT(nullOrGlobalObjectForOOM);
-                    throwVMError(nullOrGlobalObjectForOOM, scope, createSyntaxError(nullOrGlobalObjectForOOM, "Failed to parse String to BigInt"));
+                    throwVMError(nullOrGlobalObjectForOOM, scope, createSyntaxError(nullOrGlobalObjectForOOM, "Failed to parse String to BigInt"_s));
                 }
                 return JSValue();
             }

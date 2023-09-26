@@ -26,12 +26,9 @@
 #include "config.h"
 #include "TableWrapperBlockFormattingContext.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BlockFormattingGeometry.h"
 #include "BlockFormattingState.h"
 #include "BlockMarginCollapse.h"
-#include "InvalidationState.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
 #include "LayoutContext.h"
@@ -46,20 +43,20 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(TableWrapperBlockFormattingContext);
 
-TableWrapperBlockFormattingContext::TableWrapperBlockFormattingContext(const ContainerBox& formattingContextRoot, BlockFormattingState& formattingState)
+TableWrapperBlockFormattingContext::TableWrapperBlockFormattingContext(const ElementBox& formattingContextRoot, BlockFormattingState& formattingState)
     : BlockFormattingContext(formattingContextRoot, formattingState)
     , m_tableWrapperFormattingQuirks(*this)
 {
 }
 
-void TableWrapperBlockFormattingContext::layoutInFlowContent(InvalidationState&, const ConstraintsForInFlowContent& constraints)
+void TableWrapperBlockFormattingContext::layoutInFlowContent(const ConstraintsForInFlowContent& constraints)
 {
     // The table generates a principal block container box called the table wrapper box that contains the table box itself and any caption boxes
     // (in document order). The table box is a block-level box that contains the table's internal table boxes.
     // The caption boxes are principal block-level boxes that retain their own content, padding, margin, and border areas, and are rendered
     // as normal block boxes inside the table wrapper box. Whether the caption boxes are placed before or after the table box is decided by
     // the 'caption-side' property, as described below.
-    for (auto& child : childrenOfType<ContainerBox>(root())) {
+    for (auto& child : childrenOfType<ElementBox>(root())) {
         if (child.isTableBox())
             layoutTableBox(child, constraints);
         else if (child.isTableCaption())
@@ -69,7 +66,7 @@ void TableWrapperBlockFormattingContext::layoutInFlowContent(InvalidationState&,
     }
 }
 
-void TableWrapperBlockFormattingContext::layoutTableBox(const ContainerBox& tableBox, const ConstraintsForInFlowContent& constraints)
+void TableWrapperBlockFormattingContext::layoutTableBox(const ElementBox& tableBox, const ConstraintsForInFlowContent& constraints)
 {
     layoutState().ensureTableFormattingState(tableBox);
 
@@ -80,15 +77,14 @@ void TableWrapperBlockFormattingContext::layoutTableBox(const ContainerBox& tabl
 
     if (tableBox.hasChild()) {
         auto& formattingGeometry = this->formattingGeometry();
-        auto invalidationState = InvalidationState { };
         auto constraints = ConstraintsForTableContent { formattingGeometry.constraintsForInFlowContent(tableBox), formattingGeometry.computedHeight(tableBox) };
-        LayoutContext::createFormattingContext(tableBox, layoutState())->layoutInFlowContent(invalidationState, constraints);
+        LayoutContext::createFormattingContext(tableBox, layoutState())->layoutInFlowContent(constraints);
     }
 
     computeHeightAndMarginForTableBox(tableBox, constraints);
 }
 
-void TableWrapperBlockFormattingContext::computeBorderAndPaddingForTableBox(const ContainerBox& tableBox, const HorizontalConstraints& horizontalConstraints)
+void TableWrapperBlockFormattingContext::computeBorderAndPaddingForTableBox(const ElementBox& tableBox, const HorizontalConstraints& horizontalConstraints)
 {
     ASSERT(tableBox.isTableBox());
     if (!tableBox.hasChild() || tableBox.style().borderCollapse() == BorderCollapse::Separate) {
@@ -103,7 +99,7 @@ void TableWrapperBlockFormattingContext::computeBorderAndPaddingForTableBox(cons
     // borders with the top border of the table. The top border width of the table is equal to half of the
     // maximum collapsed top border. The bottom border width is computed by examining all cells whose bottom borders collapse
     // with the bottom of the table. The bottom border width is equal to half of the maximum collapsed bottom border.
-    auto& grid = layoutState().establishedTableFormattingState(tableBox).tableGrid();
+    auto& grid = layoutState().formattingStateForTableFormattingContext(tableBox).tableGrid();
     auto tableBorder = formattingGeometry().computedBorder(tableBox);
 
     auto& firstColumnFirstRowBox = grid.slot({ 0 , 0 })->cell().box();
@@ -124,7 +120,7 @@ void TableWrapperBlockFormattingContext::computeBorderAndPaddingForTableBox(cons
     }
 
     topBorder = std::max(topBorder, formattingGeometry().computedBorder(*tableBox.firstChild()).vertical.top);
-    for (auto& section : childrenOfType<ContainerBox>(tableBox)) {
+    for (auto& section : childrenOfType<ElementBox>(tableBox)) {
         auto horiztonalBorder = formattingGeometry().computedBorder(section).horizontal;
         leftBorder = std::max(leftBorder, horiztonalBorder.left);
         rightBorder = std::max(rightBorder, horiztonalBorder.right);
@@ -148,12 +144,12 @@ void TableWrapperBlockFormattingContext::computeBorderAndPaddingForTableBox(cons
     boxGeometry.setPadding(formattingGeometry().computedPadding(tableBox, horizontalConstraints.logicalWidth));
 }
 
-void TableWrapperBlockFormattingContext::computeWidthAndMarginForTableBox(const ContainerBox& tableBox, const HorizontalConstraints& horizontalConstraints)
+void TableWrapperBlockFormattingContext::computeWidthAndMarginForTableBox(const ElementBox& tableBox, const HorizontalConstraints& horizontalConstraints)
 {
     ASSERT(tableBox.isTableBox());
     // This is a special table "fit-content size" behavior handling. Not in the spec though.
     // Table returns its final width as min/max. Use this final width value to computed horizontal margins etc.
-    auto& formattingStateForTableBox = layoutState().establishedTableFormattingState(tableBox);
+    auto& formattingStateForTableBox = layoutState().formattingStateForTableFormattingContext(tableBox);
     auto intrinsicWidthConstraints = IntrinsicWidthConstraints { };
     if (auto precomputedIntrinsicWidthConstraints = formattingStateForTableBox.intrinsicWidthConstraints())
         intrinsicWidthConstraints = *precomputedIntrinsicWidthConstraints;
@@ -219,7 +215,7 @@ void TableWrapperBlockFormattingContext::computeWidthAndMarginForTableBox(const 
     boxGeometry.setHorizontalMargin({ contentWidthAndMargin.usedMargin.start, contentWidthAndMargin.usedMargin.end });
 }
 
-void TableWrapperBlockFormattingContext::computeHeightAndMarginForTableBox(const ContainerBox& tableBox, const ConstraintsForInFlowContent& constraints)
+void TableWrapperBlockFormattingContext::computeHeightAndMarginForTableBox(const ElementBox& tableBox, const ConstraintsForInFlowContent& constraints)
 {
     ASSERT(tableBox.isTableBox());
     // Table is a special BFC content. Its height is mainly driven by the content. Computed height, min-height and max-height are all
@@ -248,4 +244,3 @@ void TableWrapperBlockFormattingContext::computeHeightAndMarginForTableBox(const
 }
 }
 
-#endif

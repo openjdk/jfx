@@ -24,6 +24,8 @@
 
 #include "CommonVM.h"
 #include "EventLoop.h"
+#include "RejectedPromiseTracker.h"
+#include "ScriptExecutionContext.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
@@ -31,8 +33,9 @@
 
 namespace WebCore {
 
-MicrotaskQueue::MicrotaskQueue(JSC::VM& vm)
-    : m_vm(makeRef(vm))
+MicrotaskQueue::MicrotaskQueue(JSC::VM& vm, EventLoop& eventLoop)
+    : m_vm(vm)
+    , m_eventLoop(eventLoop)
 {
 }
 
@@ -48,7 +51,7 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
     if (m_performingMicrotaskCheckpoint)
         return;
 
-    SetForScope<bool> change(m_performingMicrotaskCheckpoint, true);
+    SetForScope change(m_performingMicrotaskCheckpoint, true);
     JSC::JSLockHolder locker(vm());
 
     Vector<std::unique_ptr<EventLoopTask>> toKeep;
@@ -81,6 +84,15 @@ void MicrotaskQueue::performMicrotaskCheckpoint()
 
         checkpointTask->execute();
     }
+
+    // https://html.spec.whatwg.org/multipage/webappapis.html#perform-a-microtask-checkpoint (step 4).
+    m_eventLoop->forEachAssociatedContext([](auto& context) {
+        if (auto* tracker = context.rejectedPromiseTracker())
+            tracker->processQueueSoon();
+    });
+
+    // FIXME: We should cleanup Indexed Database transactions as per:
+    // https://html.spec.whatwg.org/multipage/webappapis.html#perform-a-microtask-checkpoint (step 5).
 }
 
 void MicrotaskQueue::addCheckpointTask(std::unique_ptr<EventLoopTask>&& task)

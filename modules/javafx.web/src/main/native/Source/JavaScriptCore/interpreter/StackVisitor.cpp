@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "ClonedArguments.h"
 #include "DebuggerPrimitives.h"
+#include "ExecutableBaseInlines.h"
 #include "InlineCallFrame.h"
 #include "JSCInlines.h"
 #include "RegisterAtOffsetList.h"
@@ -110,7 +111,7 @@ void StackVisitor::readFrame(CallFrame* callFrame)
         return;
     }
 
-    if (callFrame->isAnyWasmCallee()) {
+    if (callFrame->isWasmFrame()) {
         readNonInlinedFrame(callFrame);
         return;
     }
@@ -166,23 +167,20 @@ void StackVisitor::readNonInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOri
     m_frame.m_inlineCallFrame = nullptr;
 #endif
 
-#if ENABLE(WEBASSEMBLY)
-    if (callFrame->isAnyWasmCallee()) {
-        m_frame.m_isWasmFrame = true;
-        m_frame.m_codeBlock = nullptr;
-        m_frame.m_bytecodeIndex = BytecodeIndex();
-
-        if (m_frame.m_callee.isWasm())
-            m_frame.m_wasmFunctionIndexOrName = m_frame.m_callee.asWasmCallee()->indexOrName();
-
-        return;
-    }
-#endif
-    m_frame.m_codeBlock = callFrame->codeBlock();
+    m_frame.m_codeBlock = callFrame->isWasmFrame() ? nullptr : callFrame->codeBlock();
     m_frame.m_bytecodeIndex = !m_frame.codeBlock() ? BytecodeIndex(0)
         : codeOrigin ? codeOrigin->bytecodeIndex()
         : callFrame->bytecodeIndex();
 
+#if ENABLE(WEBASSEMBLY)
+    if (callFrame->isWasmFrame()) {
+        m_frame.m_isWasmFrame = true;
+        m_frame.m_codeBlock = nullptr;
+
+        if (m_frame.m_callee.isWasm())
+            m_frame.m_wasmFunctionIndexOrName = m_frame.m_callee.asWasmCallee()->indexOrName();
+    }
+#endif
 }
 
 #if ENABLE(DFG_JIT)
@@ -262,21 +260,18 @@ std::optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForU
 #if ENABLE(WEBASSEMBLY)
     if (isWasmFrame()) {
         if (callee().isCell()) {
-            RELEASE_ASSERT(isWebAssemblyModule(callee().asCell()));
+            RELEASE_ASSERT(isWebAssemblyInstance(callee().asCell()));
             return std::nullopt;
         }
         Wasm::Callee* wasmCallee = callee().asWasmCallee();
-        return *wasmCallee->calleeSaveRegisters();
-    }
-
-    if (callee().isCell()) {
-        if (auto* jsToWasmICCallee = jsDynamicCast<JSToWasmICCallee*>(callee().asCell()->vm(), callee().asCell()))
-            return jsToWasmICCallee->function()->usedCalleeSaveRegisters();
+        if (auto* calleeSaveRegisters = wasmCallee->calleeSaveRegisters())
+            return *calleeSaveRegisters;
+        return std::nullopt;
     }
 #endif // ENABLE(WEBASSEMBLY)
 
     if (CodeBlock* codeBlock = this->codeBlock())
-        return *codeBlock->calleeSaveRegisters();
+        return *codeBlock->jitCode()->calleeSaveRegisters();
 
     return std::nullopt;
 }
@@ -336,6 +331,28 @@ String StackVisitor::Frame::sourceURL() const
     return traceLine.isNull() ? emptyString() : traceLine;
 }
 
+String StackVisitor::Frame::preRedirectURL() const
+{
+    String traceLine;
+
+    switch (codeType()) {
+    case CodeType::Eval:
+    case CodeType::Module:
+    case CodeType::Function:
+    case CodeType::Global: {
+        String preRedirectURL = codeBlock()->ownerExecutable()->preRedirectURL();
+        if (!preRedirectURL.isEmpty())
+            traceLine = preRedirectURL.impl();
+        break;
+    }
+    case CodeType::Native:
+    case CodeType::Wasm:
+        break;
+    }
+
+    return traceLine.isNull() ? emptyString() : traceLine;
+}
+
 String StackVisitor::Frame::toString() const
 {
     String functionName = this->functionName();
@@ -351,7 +368,7 @@ String StackVisitor::Frame::toString() const
     return makeString(functionName, separator, sourceURL, ':', line, ':', column);
 }
 
-intptr_t StackVisitor::Frame::sourceID()
+SourceID StackVisitor::Frame::sourceID()
 {
     if (CodeBlock* codeBlock = this->codeBlock())
         return codeBlock->ownerExecutable()->sourceID();
@@ -425,6 +442,37 @@ void StackVisitor::Frame::setToEnd()
     m_isWasmFrame = false;
 }
 
+bool StackVisitor::Frame::isImplementationVisibilityPrivate() const
+{
+    auto* executable = [&] () -> ExecutableBase* {
+        if (auto* codeBlock = this->codeBlock())
+            return codeBlock->ownerExecutable();
+
+        if (callee().isCell()) {
+            if (auto* callee = this->callee().asCell()) {
+                if (auto* jsFunction = jsDynamicCast<JSFunction*>(callee))
+                    return jsFunction->executable();
+            }
+        }
+
+        return nullptr;
+    }();
+    if (!executable)
+        return false;
+
+    switch (executable->implementationVisibility()) {
+    case ImplementationVisibility::Public:
+        return false;
+
+    case ImplementationVisibility::Private:
+    case ImplementationVisibility::PrivateRecursive:
+        return true;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 void StackVisitor::Frame::dump(PrintStream& out, Indenter indent) const
 {
     dump(out, indent, [] (PrintStream&) { });
@@ -447,7 +495,7 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, WTF::Function<
 
         CallFrame* callFrame = m_callFrame;
         CallFrame* callerFrame = this->callerFrame();
-        const void* returnPC = callFrame->hasReturnPC() ? callFrame->returnPC().value() : nullptr;
+        const void* returnPC = callFrame->hasReturnPC() ? callFrame->returnPCForInspection() : nullptr;
 
         out.print(indent, "name: ", functionName(), "\n");
         out.print(indent, "sourceURL: ", sourceURL(), "\n");
@@ -465,7 +513,7 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, WTF::Function<
         out.print(indent, "callerFrame: ", RawPointer(callerFrame), "\n");
         uintptr_t locationRawBits = callFrame->callSiteAsRawBits();
         out.print(indent, "rawLocationBits: ", locationRawBits,
-            " ", RawPointer(reinterpret_cast<void*>(locationRawBits)), "\n");
+            " ", RawHex(locationRawBits), "\n");
         out.print(indent, "codeBlock: ", RawPointer(codeBlock));
         if (codeBlock)
             out.print(" ", *codeBlock);

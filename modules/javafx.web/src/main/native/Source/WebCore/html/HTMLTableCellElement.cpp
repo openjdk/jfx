@@ -27,6 +27,7 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
+#include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
@@ -100,13 +101,13 @@ bool HTMLTableCellElement::hasPresentationalHintsForAttribute(const QualifiedNam
 void HTMLTableCellElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == nowrapAttr)
-        addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValueWebkitNowrap);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValueNowrap);
     else if (name == widthAttr) {
-        if (parseHTMLInteger(value).value_or(0) > 0) // width="0" is ignored for compatibility with WinIE.
-            addHTMLLengthToStyle(style, CSSPropertyWidth, value);
+        // width="0" is not allowed for compatibility with WinIE.
+        addHTMLLengthToStyle(style, CSSPropertyWidth, value, AllowZeroValue::No);
     } else if (name == heightAttr) {
-        if (parseHTMLInteger(value).value_or(0) > 0) // height="0" is ignored for compatibility with WinIE.
-            addHTMLLengthToStyle(style, CSSPropertyHeight, value);
+        // width="0" is not allowed for compatibility with WinIE.
+        addHTMLLengthToStyle(style, CSSPropertyHeight, value, AllowZeroValue::No);
     } else
         HTMLTablePartElement::collectPresentationalHintsForAttribute(name, value, style);
 }
@@ -123,7 +124,7 @@ void HTMLTableCellElement::parseAttribute(const QualifiedName& name, const AtomS
         HTMLTablePartElement::parseAttribute(name, value);
 }
 
-const StyleProperties* HTMLTableCellElement::additionalPresentationalHintStyle() const
+const MutableStyleProperties* HTMLTableCellElement::additionalPresentationalHintStyle() const
 {
     if (auto table = findParentTable())
         return table->additionalCellStyle();
@@ -163,10 +164,10 @@ void HTMLTableCellElement::setRowSpanForBindings(unsigned n)
 const AtomString& HTMLTableCellElement::scope() const
 {
     // https://html.spec.whatwg.org/multipage/tables.html#attr-th-scope
-    static MainThreadNeverDestroyed<const AtomString> row("row", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> col("col", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> rowgroup("rowgroup", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> colgroup("colgroup", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> row("row"_s);
+    static MainThreadNeverDestroyed<const AtomString> col("col"_s);
+    static MainThreadNeverDestroyed<const AtomString> rowgroup("rowgroup"_s);
+    static MainThreadNeverDestroyed<const AtomString> colgroup("colgroup"_s);
 
     const AtomString& value = attributeWithoutSynchronization(HTMLNames::scopeAttr);
 

@@ -26,7 +26,7 @@
 #pragma once
 
 #include "BaseAudioContext.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "OfflineAudioDestinationNode.h"
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
@@ -68,7 +68,7 @@ private:
 
     UniqueRef<OfflineAudioDestinationNode> m_destinationNode;
     RefPtr<DeferredPromise> m_pendingRenderingPromise;
-    HashMap<unsigned /* frame */, RefPtr<DeferredPromise>, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_suspendRequests;
+    HashMap<unsigned /* frame */, RefPtr<DeferredPromise>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_suspendRequests;
     unsigned m_length;
     bool m_didStartRendering { false };
 };

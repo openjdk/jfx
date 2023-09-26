@@ -26,24 +26,19 @@
 #include "config.h"
 #include "LayoutContext.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BlockFormattingContext.h"
 #include "BlockFormattingState.h"
 #include "FlexFormattingContext.h"
 #include "FlexFormattingState.h"
 #include "InlineFormattingContext.h"
 #include "InlineFormattingState.h"
-#include "InvalidationContext.h"
-#include "InvalidationState.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include "LayoutPhase.h"
 #include "LayoutTreeBuilder.h"
 #include "RenderStyleConstants.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "TableFormattingContext.h"
 #include "TableFormattingState.h"
 #include "TableWrapperBlockFormattingContext.h"
@@ -59,7 +54,7 @@ LayoutContext::LayoutContext(LayoutState& layoutState)
 {
 }
 
-void LayoutContext::layout(const LayoutSize& rootContentBoxSize, InvalidationState& invalidationState)
+void LayoutContext::layout(const LayoutSize& rootContentBoxSize)
 {
     // Set the geometry on the root.
     // Note that we never layout the root box. It has to have an already computed geometry (in case of ICB, it's the view geometry).
@@ -74,23 +69,12 @@ void LayoutContext::layout(const LayoutSize& rootContentBoxSize, InvalidationSta
     boxGeometry.setContentBoxHeight(rootContentBoxSize.height());
     boxGeometry.setContentBoxWidth(rootContentBoxSize.width());
 
-    layoutWithPreparedRootGeometry(invalidationState);
+    auto scope = PhaseScope { Phase::Type::Layout };
+    layoutFormattingContextSubtree(m_layoutState.root());
 }
 
-void LayoutContext::layoutWithPreparedRootGeometry(InvalidationState& invalidationState)
-{
-    PhaseScope scope(Phase::Type::Layout);
 
-    auto& formattingContextRootsForLayout = invalidationState.formattingContextRoots();
-    // When invalidation is empty, we assume constraint mutation and start running layout on the context root. Layout logic should be able to figure out the damage.
-    if (formattingContextRootsForLayout.computesEmpty())
-        return layoutFormattingContextSubtree(m_layoutState.root(), invalidationState);
-
-    for (auto& formattingContextRoot : formattingContextRootsForLayout)
-        layoutFormattingContextSubtree(formattingContextRoot, invalidationState);
-}
-
-void LayoutContext::layoutFormattingContextSubtree(const ContainerBox& formattingContextRoot, InvalidationState& invalidationState)
+void LayoutContext::layoutFormattingContextSubtree(const ElementBox& formattingContextRoot)
 {
     RELEASE_ASSERT(formattingContextRoot.establishesFormattingContext());
     if (!formattingContextRoot.hasChild())
@@ -101,7 +85,7 @@ void LayoutContext::layoutFormattingContextSubtree(const ContainerBox& formattin
 
     if (formattingContextRoot.hasInFlowOrFloatingChild()) {
         auto constraintsForInFlowContent = ConstraintsForInFlowContent { { boxGeometry.contentBoxLeft(), boxGeometry.contentBoxWidth() }, boxGeometry.contentBoxTop() };
-        formattingContext->layoutInFlowContent(invalidationState, constraintsForInFlowContent);
+        formattingContext->layoutInFlowContent(constraintsForInFlowContent);
     }
 
     // FIXME: layoutFormattingContextSubtree() does not perform layout on the root, rather it lays out the root's content.
@@ -110,11 +94,11 @@ void LayoutContext::layoutFormattingContextSubtree(const ContainerBox& formattin
     {
         auto constraints = ConstraintsForOutOfFlowContent { { boxGeometry.paddingBoxLeft(), boxGeometry.paddingBoxWidth() },
             { boxGeometry.paddingBoxTop(), boxGeometry.paddingBoxHeight() }, boxGeometry.contentBoxWidth() };
-        formattingContext->layoutOutOfFlowContent(invalidationState, constraints);
+        formattingContext->layoutOutOfFlowContent(constraints);
     }
 }
 
-std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const ContainerBox& formattingContextRoot, LayoutState& layoutState)
+std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const ElementBox& formattingContextRoot, LayoutState& layoutState)
 {
     ASSERT(formattingContextRoot.establishesFormattingContext());
     if (formattingContextRoot.establishesInlineFormattingContext()) {
@@ -146,4 +130,3 @@ std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const 
 }
 }
 
-#endif

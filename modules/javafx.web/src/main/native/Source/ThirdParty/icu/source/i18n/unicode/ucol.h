@@ -83,7 +83,7 @@ typedef enum {
 } UCollationResult ;
 
 
-/** Enum containing attribute values for controling collation behavior.
+/** Enum containing attribute values for controlling collation behavior.
  * Here are all the allowable values. Not every attribute can take every value. The only
  * universal value is UCOL_DEFAULT, which resets the attribute value to the predefined
  * value for that locale
@@ -397,7 +397,7 @@ typedef enum {
  * @param status A pointer to a UErrorCode to receive any errors
  * @return A pointer to a UCollator, or 0 if an error occurred.
  * @see ucol_openRules
- * @see ucol_safeClone
+ * @see ucol_clone
  * @see ucol_close
  * @stable ICU 2.0
  */
@@ -418,14 +418,14 @@ ucol_open(const char *loc, UErrorCode *status);
  *             UCOL_DEFAULT (set the mode according to the rules)
  * @param strength The default collation strength; one of UCOL_PRIMARY, UCOL_SECONDARY,
  * UCOL_TERTIARY, UCOL_IDENTICAL,UCOL_DEFAULT_STRENGTH - can be also set in the rules.
- * @param parseError  A pointer to UParseError to recieve information about errors
+ * @param parseError  A pointer to UParseError to receive information about errors
  *                    occurred during parsing. This argument can currently be set
  *                    to NULL, but at users own risk. Please provide a real structure.
  * @param status A pointer to a UErrorCode to receive any errors
  * @return A pointer to a UCollator. It is not guaranteed that NULL be returned in case
  *         of error - please use status argument to check for errors.
  * @see ucol_open
- * @see ucol_safeClone
+ * @see ucol_clone
  * @see ucol_close
  * @stable ICU 2.0
  */
@@ -443,7 +443,7 @@ ucol_openRules( const UChar        *rules,
  * The structure and the syntax of the string is defined in the "Naming collators"
  * section of the users guide:
  * https://unicode-org.github.io/icu/userguide/collation/concepts#collator-naming-scheme
- * Attributes are overriden by the subsequent attributes. So, for "S2_S3", final
+ * Attributes are overridden by the subsequent attributes. So, for "S2_S3", final
  * strength will be 3. 3066bis locale overrides individual locale parts.
  * The call to this function is equivalent to a call to ucol_open, followed by a
  * series of calls to ucol_setAttribute and ucol_setVariableTop.
@@ -462,7 +462,7 @@ ucol_openRules( const UChar        *rules,
  *                   instantiating collators (like out of memory or similar), this
  *                   API will return an error if an invalid attribute or attribute/value
  *                   combination is specified.
- * @return           A pointer to a UCollator or 0 if an error occured (including an
+ * @return           A pointer to a UCollator or 0 if an error occurred (including an
  *                   invalid attribute).
  * @see ucol_open
  * @see ucol_setAttribute
@@ -521,7 +521,7 @@ ucol_getContractionsAndExpansions( const UCollator *coll,
  * @param coll The UCollator to close.
  * @see ucol_open
  * @see ucol_openRules
- * @see ucol_safeClone
+ * @see ucol_clone
  * @stable ICU 2.0
  */
 U_CAPI void U_EXPORT2
@@ -653,7 +653,7 @@ ucol_equal(const UCollator *coll,
            const UChar     *target, int32_t targetLength);
 
 /**
- * Compare two UTF-8 encoded trings.
+ * Compare two UTF-8 encoded strings.
  * The strings will be compared using the options already specified.
  * @param coll The UCollator containing the comparison rules.
  * @param sIter The source string iterator.
@@ -985,7 +985,6 @@ ucol_getShortDefinitionString(const UCollator *coll,
  *
  *  @deprecated ICU 54
  */
-
 U_DEPRECATED int32_t U_EXPORT2
 ucol_normalizeShortDefinitionString(const char *source,
                                     char *destination,
@@ -1313,6 +1312,20 @@ ucol_restoreVariableTop(UCollator *coll, const uint32_t varTop, UErrorCode *stat
 /**
  * Thread safe cloning operation. The result is a clone of a given collator.
  * @param coll collator to be cloned
+ * @param status to indicate whether the operation went on smoothly or there were errors
+ * @return pointer to the new clone
+ * @see ucol_open
+ * @see ucol_openRules
+ * @see ucol_close
+ * @stable ICU 71
+ */
+U_CAPI UCollator* U_EXPORT2 ucol_clone(const UCollator *coll, UErrorCode *status);
+
+#ifndef U_HIDE_DEPRECATED_API
+
+/**
+ * Thread safe cloning operation. The result is a clone of a given collator.
+ * @param coll collator to be cloned
  * @param stackBuffer <em>Deprecated functionality as of ICU 52, use NULL.</em><br>
  * user allocated space for the new clone.
  * If NULL new memory will be allocated.
@@ -1325,21 +1338,20 @@ ucol_restoreVariableTop(UCollator *coll, const uint32_t varTop, UErrorCode *stat
  *  If *pBufferSize is not enough for a stack-based safe clone,
  *  new memory will be allocated.
  * @param status to indicate whether the operation went on smoothly or there were errors
- *    An informational status value, U_SAFECLONE_ALLOCATED_ERROR, is used if any
- * allocations were necessary.
+ *    An informational status value, U_SAFECLONE_ALLOCATED_ERROR, is used
+ * if pBufferSize != NULL and any allocations were necessary
  * @return pointer to the new clone
  * @see ucol_open
  * @see ucol_openRules
  * @see ucol_close
- * @stable ICU 2.0
+ * @deprecated ICU 71 Use ucol_clone() instead.
  */
-U_CAPI UCollator* U_EXPORT2
+U_DEPRECATED UCollator* U_EXPORT2
 ucol_safeClone(const UCollator *coll,
                void            *stackBuffer,
                int32_t         *pBufferSize,
                UErrorCode      *status);
 
-#ifndef U_HIDE_DEPRECATED_API
 
 /** default memory size for the new clone.
  * @deprecated ICU 52. Do not rely on ucol_safeClone() cloning into any provided buffer.

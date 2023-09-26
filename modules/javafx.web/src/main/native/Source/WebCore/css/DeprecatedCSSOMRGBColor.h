@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "Color.h"
 #include "DeprecatedCSSOMPrimitiveValue.h"
 #include <wtf/Ref.h>
 
@@ -37,16 +38,16 @@ public:
     DeprecatedCSSOMPrimitiveValue& blue() { return m_blue; }
     DeprecatedCSSOMPrimitiveValue& alpha() { return m_alpha; }
 
-    SRGBA<uint8_t> color() const { return m_color; }
+    ResolvedColorType<SRGBA<uint8_t>> color() const { return m_color; }
 
 private:
     template<typename NumberType> static Ref<DeprecatedCSSOMPrimitiveValue> createWrapper(CSSStyleDeclaration& owner, NumberType number)
     {
-        return CSSPrimitiveValue::create(number, CSSUnitType::CSS_NUMBER)->createDeprecatedCSSOMPrimitiveWrapper(owner);
+        return DeprecatedCSSOMPrimitiveValue::create(CSSPrimitiveValue::create(number), owner);
     }
 
     DeprecatedCSSOMRGBColor(CSSStyleDeclaration& owner, const Color& color)
-        : m_color(color.toSRGBALossy<uint8_t>())
+        : m_color(color.toColorTypeLossy<SRGBA<uint8_t>>().resolved())
         , m_red(createWrapper(owner, m_color.red))
         , m_green(createWrapper(owner, m_color.green))
         , m_blue(createWrapper(owner, m_color.blue))
@@ -54,7 +55,7 @@ private:
     {
     }
 
-    SRGBA<uint8_t> m_color;
+    ResolvedColorType<SRGBA<uint8_t>> m_color;
     Ref<DeprecatedCSSOMPrimitiveValue> m_red;
     Ref<DeprecatedCSSOMPrimitiveValue> m_green;
     Ref<DeprecatedCSSOMPrimitiveValue> m_blue;

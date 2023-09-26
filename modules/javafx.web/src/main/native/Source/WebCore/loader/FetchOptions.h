@@ -28,28 +28,33 @@
 
 #pragma once
 
-#include "DocumentIdentifier.h"
+#include "FetchOptionsCache.h"
+#include "FetchOptionsCredentials.h"
+#include "FetchOptionsDestination.h"
+#include "FetchOptionsMode.h"
+#include "FetchOptionsRedirect.h"
+#include "ProcessQualified.h"
 #include "ReferrerPolicy.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include <wtf/Markable.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct FetchOptions {
-    enum class Destination : uint8_t { EmptyString, Audio, Audioworklet, Document, Embed, Font, Image, Manifest, Model, Object, Paintworklet, Report, Script, Serviceworker, Sharedworker, Style, Track, Video, Worker, Xslt };
-    enum class Mode : uint8_t { Navigate, SameOrigin, NoCors, Cors };
-    enum class Credentials : uint8_t { Omit, SameOrigin, Include };
-    enum class Cache : uint8_t { Default, NoStore, Reload, NoCache, ForceCache, OnlyIfCached };
-    enum class Redirect : uint8_t { Follow, Error, Manual };
+    using Destination = FetchOptionsDestination;
+    using Mode = FetchOptionsMode;
+    using Credentials = FetchOptionsCredentials;
+    using Cache = FetchOptionsCache;
+    using Redirect = FetchOptionsRedirect;
 
     FetchOptions() = default;
-    FetchOptions(Destination, Mode, Credentials, Cache, Redirect, ReferrerPolicy, String&&, bool);
-    FetchOptions isolatedCopy() const { return { destination, mode, credentials, cache, redirect, referrerPolicy, integrity.isolatedCopy(), keepAlive }; }
+    FetchOptions(Destination, Mode, Credentials, Cache, Redirect, ReferrerPolicy, bool, String&&, Markable<UUID>, Markable<UUID>);
+    FetchOptions isolatedCopy() const & { return { destination, mode, credentials, cache, redirect, referrerPolicy, keepAlive, integrity.isolatedCopy(), clientIdentifier, resultingClientIdentifier }; }
+    FetchOptions isolatedCopy() && { return { destination, mode, credentials, cache, redirect, referrerPolicy, keepAlive, WTFMove(integrity).isolatedCopy(), clientIdentifier, resultingClientIdentifier }; }
 
     template<class Encoder> void encodePersistent(Encoder&) const;
     template<class Decoder> static WARN_UNUSED_RETURN bool decodePersistent(Decoder&, FetchOptions&);
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<FetchOptions> decode(Decoder&);
 
     Destination destination { Destination::EmptyString };
     Mode mode { Mode::NoCors };
@@ -59,10 +64,11 @@ struct FetchOptions {
     ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
     bool keepAlive { false };
     String integrity;
-    Markable<DocumentIdentifier, DocumentIdentifier::MarkableTraits> clientIdentifier;
+    Markable<UUID> clientIdentifier; // Identifier of https://fetch.spec.whatwg.org/#concept-request-client
+    Markable<UUID> resultingClientIdentifier; // Identifier of https://fetch.spec.whatwg.org/#concept-request-reserved-client
 };
 
-inline FetchOptions::FetchOptions(Destination destination, Mode mode, Credentials credentials, Cache cache, Redirect redirect, ReferrerPolicy referrerPolicy, String&& integrity, bool keepAlive)
+inline FetchOptions::FetchOptions(Destination destination, Mode mode, Credentials credentials, Cache cache, Redirect redirect, ReferrerPolicy referrerPolicy, bool keepAlive, String&& integrity, Markable<UUID> clientIdentifier, Markable<UUID> resultingClientIdentifier)
     : destination(destination)
     , mode(mode)
     , credentials(credentials)
@@ -71,6 +77,8 @@ inline FetchOptions::FetchOptions(Destination destination, Mode mode, Credential
     , referrerPolicy(referrerPolicy)
     , keepAlive(keepAlive)
     , integrity(WTFMove(integrity))
+    , clientIdentifier(clientIdentifier)
+    , resultingClientIdentifier(resultingClientIdentifier)
 {
 }
 
@@ -80,9 +88,20 @@ inline bool isPotentialNavigationOrSubresourceRequest(FetchOptions::Destination 
         || destination == FetchOptions::Destination::Embed;
 }
 
+// https://fetch.spec.whatwg.org/#navigation-request
+inline bool isNavigationRequest(FetchOptions::Destination destination)
+{
+    return destination == FetchOptions::Destination::Document
+        || destination == FetchOptions::Destination::Iframe
+        || destination == FetchOptions::Destination::Object
+        || destination == FetchOptions::Destination::Embed;
+}
+
+// https://fetch.spec.whatwg.org/#non-subresource-request
 inline bool isNonSubresourceRequest(FetchOptions::Destination destination)
 {
     return destination == FetchOptions::Destination::Document
+        || destination == FetchOptions::Destination::Iframe
         || destination == FetchOptions::Destination::Report
         || destination == FetchOptions::Destination::Serviceworker
         || destination == FetchOptions::Destination::Sharedworker
@@ -95,6 +114,7 @@ inline bool isScriptLikeDestination(FetchOptions::Destination destination)
         || destination == FetchOptions::Destination::Paintworklet
         || destination == FetchOptions::Destination::Script
         || destination == FetchOptions::Destination::Serviceworker
+        || destination == FetchOptions::Destination::Sharedworker
         || destination == FetchOptions::Destination::Worker;
 }
 
@@ -102,7 +122,7 @@ inline bool isScriptLikeDestination(FetchOptions::Destination destination)
 
 namespace WTF {
 
-template<> struct EnumTraits<WebCore::FetchOptions::Destination> {
+template<> struct EnumTraitsForPersistence<WebCore::FetchOptions::Destination> {
     using values = EnumValues<
         WebCore::FetchOptions::Destination,
         WebCore::FetchOptions::Destination::EmptyString,
@@ -112,6 +132,7 @@ template<> struct EnumTraits<WebCore::FetchOptions::Destination> {
         WebCore::FetchOptions::Destination::Embed,
         WebCore::FetchOptions::Destination::Font,
         WebCore::FetchOptions::Destination::Image,
+        WebCore::FetchOptions::Destination::Iframe,
         WebCore::FetchOptions::Destination::Manifest,
         WebCore::FetchOptions::Destination::Model,
         WebCore::FetchOptions::Destination::Object,
@@ -128,7 +149,7 @@ template<> struct EnumTraits<WebCore::FetchOptions::Destination> {
     >;
 };
 
-template<> struct EnumTraits<WebCore::FetchOptions::Mode> {
+template<> struct EnumTraitsForPersistence<WebCore::FetchOptions::Mode> {
     using values = EnumValues<
         WebCore::FetchOptions::Mode,
         WebCore::FetchOptions::Mode::Navigate,
@@ -138,7 +159,8 @@ template<> struct EnumTraits<WebCore::FetchOptions::Mode> {
     >;
 };
 
-template<> struct EnumTraits<WebCore::FetchOptions::Credentials> {
+
+template<> struct EnumTraitsForPersistence<WebCore::FetchOptions::Credentials> {
     using values = EnumValues<
         WebCore::FetchOptions::Credentials,
         WebCore::FetchOptions::Credentials::Omit,
@@ -147,7 +169,7 @@ template<> struct EnumTraits<WebCore::FetchOptions::Credentials> {
     >;
 };
 
-template<> struct EnumTraits<WebCore::FetchOptions::Cache> {
+template<> struct EnumTraitsForPersistence<WebCore::FetchOptions::Cache> {
     using values = EnumValues<
         WebCore::FetchOptions::Cache,
         WebCore::FetchOptions::Cache::Default,
@@ -159,7 +181,7 @@ template<> struct EnumTraits<WebCore::FetchOptions::Cache> {
     >;
 };
 
-template<> struct EnumTraits<WebCore::FetchOptions::Redirect> {
+template<> struct EnumTraitsForPersistence<WebCore::FetchOptions::Redirect> {
     using values = EnumValues<
         WebCore::FetchOptions::Redirect,
         WebCore::FetchOptions::Redirect::Follow,
@@ -239,29 +261,6 @@ inline bool FetchOptions::decodePersistent(Decoder& decoder, FetchOptions& optio
     options.keepAlive = *keepAlive;
 
     return true;
-}
-
-template<class Encoder>
-inline void FetchOptions::encode(Encoder& encoder) const
-{
-    encodePersistent(encoder);
-    encoder << clientIdentifier.asOptional();
-}
-
-template<class Decoder>
-inline std::optional<FetchOptions> FetchOptions::decode(Decoder& decoder)
-{
-    FetchOptions options;
-    if (!decodePersistent(decoder, options))
-        return std::nullopt;
-
-    std::optional<std::optional<DocumentIdentifier>> clientIdentifier;
-    decoder >> clientIdentifier;
-    if (!clientIdentifier)
-        return std::nullopt;
-    options.clientIdentifier = WTFMove(clientIdentifier.value());
-
-    return options;
 }
 
 } // namespace WebCore

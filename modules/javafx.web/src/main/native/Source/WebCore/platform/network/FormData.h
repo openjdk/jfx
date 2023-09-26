@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,12 +20,18 @@
 #pragma once
 
 #include "BlobData.h"
+#include <variant>
+#include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
 #include <wtf/URL.h>
-#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
+
+namespace PAL {
+class TextEncoding;
+}
 
 namespace WebCore {
 
@@ -33,12 +39,11 @@ class BlobRegistryImpl;
 class DOMFormData;
 class File;
 class SharedBuffer;
-class TextEncoding;
 
 struct FormDataElement {
     struct EncodedFileData;
     struct EncodedBlobData;
-    using Data = Variant<Vector<uint8_t>, EncodedFileData, EncodedBlobData>;
+    using Data = std::variant<Vector<uint8_t>, EncodedFileData, EncodedBlobData>;
 
     FormDataElement() = default;
     explicit FormDataElement(Data&& data)
@@ -54,19 +59,6 @@ struct FormDataElement {
     uint64_t lengthInBytes() const;
 
     FormDataElement isolatedCopy() const;
-
-    template<typename Encoder> void encode(Encoder& encoder) const
-    {
-        encoder << data;
-    }
-    template<typename Decoder> static std::optional<FormDataElement> decode(Decoder& decoder)
-    {
-        std::optional<Data> data;
-        decoder >> data;
-        if (!data)
-            return std::nullopt;
-        return FormDataElement(WTFMove(*data));
-    }
 
     struct EncodedFileData {
         String filename;
@@ -88,40 +80,6 @@ struct FormDataElement {
                 && fileLength == other.fileLength
                 && expectedFileModificationTime == other.expectedFileModificationTime;
         }
-        template<typename Encoder> void encode(Encoder& encoder) const
-        {
-            encoder << filename << fileStart << fileLength << expectedFileModificationTime;
-        }
-        template<typename Decoder> static std::optional<EncodedFileData> decode(Decoder& decoder)
-        {
-            std::optional<String> filename;
-            decoder >> filename;
-            if (!filename)
-                return std::nullopt;
-
-            std::optional<int64_t> fileStart;
-            decoder >> fileStart;
-            if (!fileStart)
-                return std::nullopt;
-
-            std::optional<int64_t> fileLength;
-            decoder >> fileLength;
-            if (!fileLength)
-                return std::nullopt;
-
-            std::optional<std::optional<WallTime>> expectedFileModificationTime;
-            decoder >> expectedFileModificationTime;
-            if (!expectedFileModificationTime)
-                return std::nullopt;
-
-            return {{
-                WTFMove(*filename),
-                WTFMove(*fileStart),
-                WTFMove(*fileLength),
-                WTFMove(*expectedFileModificationTime)
-            }};
-        }
-
     };
 
     struct EncodedBlobData {
@@ -130,19 +88,6 @@ struct FormDataElement {
         bool operator==(const EncodedBlobData& other) const
         {
             return url == other.url;
-        }
-        template<typename Encoder> void encode(Encoder& encoder) const
-        {
-            encoder << url;
-        }
-        template<typename Decoder> static std::optional<EncodedBlobData> decode(Decoder& decoder)
-        {
-            std::optional<URL> url;
-            decoder >> url;
-            if (!url)
-                return std::nullopt;
-
-            return {{ WTFMove(*url) }};
         }
     };
 
@@ -153,10 +98,10 @@ struct FormDataElement {
         if (data.index() != other.data.index())
             return false;
         if (!data.index())
-            return WTF::get<0>(data) == WTF::get<0>(other.data);
+            return std::get<0>(data) == std::get<0>(other.data);
         if (data.index() == 1)
-            return WTF::get<1>(data) == WTF::get<1>(other.data);
-        return WTF::get<2>(data) == WTF::get<2>(other.data);
+            return std::get<1>(data) == std::get<1>(other.data);
+        return std::get<2>(data) == std::get<2>(other.data);
     }
     bool operator!=(const FormDataElement& other) const
     {
@@ -182,9 +127,10 @@ private:
     Vector<String> m_temporaryZipFiles;
 };
 
-class FormData : public RefCounted<FormData> {
+class FormData final : public RefCounted<FormData> {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(FormData, WEBCORE_EXPORT);
 public:
-    enum EncodingType {
+    enum class EncodingType : uint8_t {
         FormURLEncoded, // for application/x-www-form-urlencoded
         TextPlain, // for text/plain
         MultipartFormData // for multipart/form-data
@@ -193,10 +139,11 @@ public:
     WEBCORE_EXPORT static Ref<FormData> create();
     WEBCORE_EXPORT static Ref<FormData> create(const void*, size_t);
     WEBCORE_EXPORT static Ref<FormData> create(const CString&);
-    static Ref<FormData> create(Vector<uint8_t>&&);
+    WEBCORE_EXPORT static Ref<FormData> create(Vector<uint8_t>&&);
+    WEBCORE_EXPORT static Ref<FormData> create(bool alwaysStream, Vector<char>&& boundary, Vector<WebCore::FormDataElement>&& elements, int64_t identifier);
     static Ref<FormData> create(const Vector<char>&);
     static Ref<FormData> create(const Vector<uint8_t>&);
-    static Ref<FormData> create(const DOMFormData&, EncodingType = FormURLEncoded);
+    static Ref<FormData> create(const DOMFormData&, EncodingType = EncodingType::FormURLEncoded);
     static Ref<FormData> createMultiPart(const DOMFormData&);
     WEBCORE_EXPORT ~FormData();
 
@@ -204,11 +151,6 @@ public:
     // How much of that is intentional? We need better names that explain the difference.
     Ref<FormData> copy() const;
     WEBCORE_EXPORT Ref<FormData> isolatedCopy() const;
-
-    template<typename Encoder>
-    void encode(Encoder&) const;
-    template<typename Decoder>
-    static RefPtr<FormData> decode(Decoder&);
 
     WEBCORE_EXPORT void appendData(const void* data, size_t);
     void appendFile(const String& filePath);
@@ -243,11 +185,11 @@ public:
 
     static EncodingType parseEncodingType(const String& type)
     {
-        if (equalLettersIgnoringASCIICase(type, "text/plain"))
-            return TextPlain;
-        if (equalLettersIgnoringASCIICase(type, "multipart/form-data"))
-            return MultipartFormData;
-        return FormURLEncoded;
+        if (equalLettersIgnoringASCIICase(type, "text/plain"_s))
+            return EncodingType::TextPlain;
+        if (equalLettersIgnoringASCIICase(type, "multipart/form-data"_s))
+            return EncodingType::MultipartFormData;
+        return EncodingType::FormURLEncoded;
     }
 
     WEBCORE_EXPORT uint64_t lengthInBytes() const;
@@ -255,11 +197,12 @@ public:
     WEBCORE_EXPORT URL asBlobURL() const;
 
 private:
-    FormData();
+    friend struct IPC::ArgumentCoder<FormData, void>;
+    FormData() = default;
     FormData(const FormData&);
 
-    void appendMultiPartFileValue(const File&, Vector<char>& header, TextEncoding&);
-    void appendMultiPartStringValue(const String&, Vector<char>& header, TextEncoding&);
+    void appendMultiPartFileValue(const File&, Vector<char>& header, PAL::TextEncoding&);
+    void appendMultiPartStringValue(const String&, Vector<char>& header, PAL::TextEncoding&);
     void appendMultiPartKeyValuePairItems(const DOMFormData&);
     void appendNonMultiPartKeyValuePairItems(const DOMFormData&, EncodingType);
 
@@ -279,35 +222,6 @@ inline bool operator==(const FormData& a, const FormData& b)
 inline bool operator!=(const FormData& a, const FormData& b)
 {
     return !(a == b);
-}
-
-template<typename Encoder>
-void FormData::encode(Encoder& encoder) const
-{
-    encoder << m_alwaysStream;
-    encoder << m_boundary;
-    encoder << m_elements;
-    encoder << m_identifier;
-}
-
-template<typename Decoder>
-RefPtr<FormData> FormData::decode(Decoder& decoder)
-{
-    auto data = FormData::create();
-
-    if (!decoder.decode(data->m_alwaysStream))
-        return nullptr;
-
-    if (!decoder.decode(data->m_boundary))
-        return nullptr;
-
-    if (!decoder.decode(data->m_elements))
-        return nullptr;
-
-    if (!decoder.decode(data->m_identifier))
-        return nullptr;
-
-    return data;
 }
 
 } // namespace WebCore

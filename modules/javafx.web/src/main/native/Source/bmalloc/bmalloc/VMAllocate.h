@@ -23,15 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VMAllocate_h
-#define VMAllocate_h
+#pragma once
 
 #include "BAssert.h"
+#include "BSyscall.h"
 #include "BVMTags.h"
 #include "Logging.h"
 #include "Range.h"
 #include "Sizes.h"
-#include "Syscall.h"
 #include <algorithm>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -265,5 +264,3 @@ inline void vmAllocatePhysicalPagesSloppy(void* p, size_t size)
 }
 
 } // namespace bmalloc
-
-#endif // VMAllocate_h

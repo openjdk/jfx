@@ -33,6 +33,7 @@
 #include "WorkerThreadableLoader.h"
 
 #include "ContentSecurityPolicy.h"
+#include "DedicatedWorkerGlobalScope.h"
 #include "Document.h"
 #include "DocumentThreadableLoader.h"
 #include "InspectorInstrumentation.h"
@@ -45,6 +46,7 @@
 #include "ServiceWorker.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ThreadableLoader.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerThread.h"
@@ -54,9 +56,8 @@
 namespace WebCore {
 
 WorkerThreadableLoader::WorkerThreadableLoader(WorkerOrWorkletGlobalScope& workerOrWorkletGlobalScope, ThreadableLoaderClient& client, const String& taskMode, ResourceRequest&& request, const ThreadableLoaderOptions& options, const String& referrer)
-    : m_WorkerOrWorkletGlobalScope(workerOrWorkletGlobalScope)
-    , m_workerClientWrapper(ThreadableLoaderClientWrapper::create(client, options.initiator))
-    , m_bridge(*new MainThreadBridge(m_workerClientWrapper.get(), workerOrWorkletGlobalScope.workerOrWorkletThread()->workerLoaderProxy(), taskMode, WTFMove(request), options, referrer.isEmpty() ? workerOrWorkletGlobalScope.url().strippedForUseAsReferrer() : referrer, workerOrWorkletGlobalScope))
+    : m_workerClientWrapper(ThreadableLoaderClientWrapper::create(client, options.initiatorType))
+    , m_bridge(*new MainThreadBridge(m_workerClientWrapper.get(), workerOrWorkletGlobalScope.workerOrWorkletThread()->workerLoaderProxy(), workerOrWorkletGlobalScope.identifier(), taskMode, WTFMove(request), options, referrer.isEmpty() ? workerOrWorkletGlobalScope.url().strippedForUseAsReferrer() : referrer, workerOrWorkletGlobalScope))
 {
 }
 
@@ -73,11 +74,11 @@ void WorkerThreadableLoader::loadResourceSynchronously(WorkerOrWorkletGlobalScop
     auto mode = makeString("loadResourceSynchronouslyMode", runLoop.createUniqueId());
 
     auto loader = WorkerThreadableLoader::create(workerOrWorkletGlobalScope, client, mode, WTFMove(request), options, String());
-    MessageQueueWaitResult result = MessageQueueMessageReceived;
-    while (!loader->done() && result != MessageQueueTerminated)
-        result = runLoop.runInMode(&workerOrWorkletGlobalScope, mode);
+    bool success = true;
+    while (!loader->done() && success)
+        success = runLoop.runInMode(&workerOrWorkletGlobalScope, mode);
 
-    if (!loader->done() && result == MessageQueueTerminated)
+    if (!loader->done() && !success)
         loader->cancel();
 }
 
@@ -107,12 +108,13 @@ LoaderTaskOptions::LoaderTaskOptions(const ThreadableLoaderOptions& options, con
 {
 }
 
-WorkerThreadableLoader::MainThreadBridge::MainThreadBridge(ThreadableLoaderClientWrapper& workerClientWrapper, WorkerLoaderProxy& loaderProxy, const String& taskMode,
+WorkerThreadableLoader::MainThreadBridge::MainThreadBridge(ThreadableLoaderClientWrapper& workerClientWrapper, WorkerLoaderProxy& loaderProxy, ScriptExecutionContextIdentifier contextIdentifier, const String& taskMode,
     ResourceRequest&& request, const ThreadableLoaderOptions& options, const String& outgoingReferrer, WorkerOrWorkletGlobalScope& globalScope)
     : m_workerClientWrapper(&workerClientWrapper)
     , m_loaderProxy(loaderProxy)
     , m_taskMode(taskMode.isolatedCopy())
-    , m_workerRequestIdentifier(globalScope.createUniqueIdentifier())
+    , m_workerRequestIdentifier { ResourceLoaderIdentifier::generate() }
+    , m_contextIdentifier(contextIdentifier)
 {
     auto* securityOrigin = globalScope.securityOrigin();
     auto* contentSecurityPolicy = globalScope.contentSecurityPolicy();
@@ -121,9 +123,14 @@ WorkerThreadableLoader::MainThreadBridge::MainThreadBridge(ThreadableLoaderClien
     ASSERT(contentSecurityPolicy);
 
     auto securityOriginCopy = securityOrigin->isolatedCopy();
-    auto contentSecurityPolicyCopy = makeUnique<ContentSecurityPolicy>(globalScope.url().isolatedCopy());
-    contentSecurityPolicyCopy->copyStateFrom(contentSecurityPolicy);
-    contentSecurityPolicyCopy->copyUpgradeInsecureRequestStateFrom(*contentSecurityPolicy);
+    ReportingClient* reportingClient = nullptr;
+    if (auto* client = m_loaderProxy.reportingClient())
+        reportingClient = client;
+    else if (auto* workerScope = dynamicDowncast<WorkerGlobalScope>(globalScope))
+        reportingClient = workerScope;
+    auto contentSecurityPolicyIsolatedCopy = makeUnique<ContentSecurityPolicy>(globalScope.url().isolatedCopy(), nullptr, reportingClient);
+    contentSecurityPolicyIsolatedCopy->copyStateFrom(contentSecurityPolicy, ContentSecurityPolicy::ShouldMakeIsolatedCopy::Yes);
+    contentSecurityPolicyIsolatedCopy->copyUpgradeInsecureRequestStateFrom(*contentSecurityPolicy, ContentSecurityPolicy::ShouldMakeIsolatedCopy::Yes);
     auto crossOriginEmbedderPolicyCopy = globalScope.crossOriginEmbedderPolicy().isolatedCopy();
 
     auto optionsCopy = makeUnique<LoaderTaskOptions>(options, request.httpReferrer().isNull() ? outgoingReferrer : request.httpReferrer(), WTFMove(securityOriginCopy));
@@ -133,22 +140,32 @@ WorkerThreadableLoader::MainThreadBridge::MainThreadBridge(ThreadableLoaderClien
     optionsCopy->options.initiatorContext = InitiatorContext::Worker;
 
 #if ENABLE(SERVICE_WORKER)
-    optionsCopy->options.serviceWorkersMode = is<ServiceWorkerGlobalScope>(globalScope) ? ServiceWorkersMode::None : ServiceWorkersMode::All;
-    if (auto* activeServiceWorker = globalScope.activeServiceWorker())
+    if (optionsCopy->options.serviceWorkersMode == ServiceWorkersMode::All) {
+        if (is<ServiceWorkerGlobalScope>(globalScope))
+            optionsCopy->options.serviceWorkersMode = ServiceWorkersMode::None;
+        else if (auto* activeServiceWorker = globalScope.activeServiceWorker()) {
         optionsCopy->options.serviceWorkerRegistrationIdentifier = activeServiceWorker->registrationIdentifier();
+            optionsCopy->options.serviceWorkersMode = ServiceWorkersMode::All;
+        } else if (is<DedicatedWorkerGlobalScope>(globalScope))
+            optionsCopy->options.serviceWorkersMode = ServiceWorkersMode::None;
+        else
+            optionsCopy->options.serviceWorkersMode = ServiceWorkersMode::All;
+    }
 #endif
+    if (!optionsCopy->options.clientIdentifier)
+        optionsCopy->options.clientIdentifier = globalScope.identifier().object();
 
     if (is<WorkerGlobalScope>(globalScope))
         InspectorInstrumentation::willSendRequest(downcast<WorkerGlobalScope>(globalScope), m_workerRequestIdentifier, request);
 
     // Can we benefit from request being an r-value to create more efficiently its isolated copy?
-    m_loaderProxy.postTaskToLoader([this, request = request.isolatedCopy(), options = WTFMove(optionsCopy), contentSecurityPolicyCopy = WTFMove(contentSecurityPolicyCopy), crossOriginEmbedderPolicyCopy = WTFMove(crossOriginEmbedderPolicyCopy)](ScriptExecutionContext& context) mutable {
+    m_loaderProxy.postTaskToLoader([this, request = WTFMove(request).isolatedCopy(), options = WTFMove(optionsCopy), contentSecurityPolicyIsolatedCopy = WTFMove(contentSecurityPolicyIsolatedCopy), crossOriginEmbedderPolicyCopy = WTFMove(crossOriginEmbedderPolicyCopy)](ScriptExecutionContext& context) mutable {
         ASSERT(isMainThread());
         Document& document = downcast<Document>(context);
 
         // FIXME: If the site requests a local resource, then this will return a non-zero value but the sync path will return a 0 value.
         // Either this should return 0 or the other code path should call a failure callback.
-        m_mainThreadLoader = DocumentThreadableLoader::create(document, *this, WTFMove(request), options->options, WTFMove(options->origin), WTFMove(contentSecurityPolicyCopy), WTFMove(crossOriginEmbedderPolicyCopy), WTFMove(options->referrer), DocumentThreadableLoader::ShouldLogError::No);
+        m_mainThreadLoader = DocumentThreadableLoader::create(document, *this, WTFMove(request), options->options, WTFMove(options->origin), WTFMove(contentSecurityPolicyIsolatedCopy), WTFMove(crossOriginEmbedderPolicyCopy), WTFMove(options->referrer), DocumentThreadableLoader::ShouldLogError::No);
         ASSERT(m_mainThreadLoader || m_loadingFinished);
     });
 }
@@ -201,7 +218,7 @@ void WorkerThreadableLoader::MainThreadBridge::computeIsDone()
 
 void WorkerThreadableLoader::MainThreadBridge::notifyIsDone(bool isDone)
 {
-    m_loaderProxy.postTaskForModeToWorkerOrWorkletGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), isDone](auto&) {
+    ScriptExecutionContext::postTaskForModeToWorkerOrWorklet(m_contextIdentifier, [protectedWorkerClientWrapper = Ref { *m_workerClientWrapper }, isDone](auto&) {
         protectedWorkerClientWrapper->notifyIsDone(isDone);
     }, m_taskMode);
 }
@@ -213,15 +230,15 @@ void WorkerThreadableLoader::MainThreadBridge::clearClientWrapper()
 
 void WorkerThreadableLoader::MainThreadBridge::didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
 {
-    m_loaderProxy.postTaskForModeToWorkerOrWorkletGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), bytesSent, totalBytesToBeSent] (ScriptExecutionContext& context) mutable {
+    ScriptExecutionContext::postTaskForModeToWorkerOrWorklet(m_contextIdentifier, [protectedWorkerClientWrapper = Ref { *m_workerClientWrapper }, bytesSent, totalBytesToBeSent] (ScriptExecutionContext& context) mutable {
         ASSERT_UNUSED(context, context.isWorkerGlobalScope() || context.isWorkletGlobalScope());
         protectedWorkerClientWrapper->didSendData(bytesSent, totalBytesToBeSent);
     }, m_taskMode);
 }
 
-void WorkerThreadableLoader::MainThreadBridge::didReceiveResponse(unsigned long identifier, const ResourceResponse& response)
+void WorkerThreadableLoader::MainThreadBridge::didReceiveResponse(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
 {
-    m_loaderProxy.postTaskForModeToWorkerOrWorkletGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), workerRequestIdentifier = m_workerRequestIdentifier, identifier, responseData = response.crossThreadData()] (ScriptExecutionContext& context) mutable {
+    ScriptExecutionContext::postTaskForModeToWorkerOrWorklet(m_contextIdentifier, [protectedWorkerClientWrapper = Ref { *m_workerClientWrapper }, workerRequestIdentifier = m_workerRequestIdentifier, identifier, responseData = response.crossThreadData()] (ScriptExecutionContext& context) mutable {
         ASSERT(context.isWorkerGlobalScope() || context.isWorkletGlobalScope());
         auto response = ResourceResponse::fromCrossThreadData(WTFMove(responseData));
         protectedWorkerClientWrapper->didReceiveResponse(identifier, response);
@@ -230,32 +247,31 @@ void WorkerThreadableLoader::MainThreadBridge::didReceiveResponse(unsigned long 
     }, m_taskMode);
 }
 
-void WorkerThreadableLoader::MainThreadBridge::didReceiveData(const uint8_t* data, int dataLength)
+void WorkerThreadableLoader::MainThreadBridge::didReceiveData(const SharedBuffer& data)
 {
-    Vector<uint8_t> buffer(data, dataLength);
-    m_loaderProxy.postTaskForModeToWorkerOrWorkletGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), workerRequestIdentifier = m_workerRequestIdentifier, buffer = WTFMove(buffer)] (ScriptExecutionContext& context) mutable {
+    ScriptExecutionContext::postTaskForModeToWorkerOrWorklet(m_contextIdentifier, [protectedWorkerClientWrapper = Ref { *m_workerClientWrapper }, workerRequestIdentifier = m_workerRequestIdentifier, buffer = Ref { data }] (ScriptExecutionContext& context) {
         ASSERT(context.isWorkerGlobalScope() || context.isWorkletGlobalScope());
-        protectedWorkerClientWrapper->didReceiveData(buffer.data(), buffer.size());
+        protectedWorkerClientWrapper->didReceiveData(buffer);
         if (is<WorkerGlobalScope>(context))
-            InspectorInstrumentation::didReceiveData(downcast<WorkerGlobalScope>(context), workerRequestIdentifier, buffer.data(), buffer.size());
+            InspectorInstrumentation::didReceiveData(downcast<WorkerGlobalScope>(context), workerRequestIdentifier, buffer);
     }, m_taskMode);
 }
 
-void WorkerThreadableLoader::MainThreadBridge::didFinishLoading(unsigned long identifier)
+void WorkerThreadableLoader::MainThreadBridge::didFinishLoading(ResourceLoaderIdentifier identifier, const NetworkLoadMetrics& metrics)
 {
     m_loadingFinished = true;
-    m_loaderProxy.postTaskForModeToWorkerOrWorkletGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), workerRequestIdentifier = m_workerRequestIdentifier, networkLoadMetrics = m_networkLoadMetrics.isolatedCopy(), identifier] (ScriptExecutionContext& context) mutable {
+    ScriptExecutionContext::postTaskForModeToWorkerOrWorklet(m_contextIdentifier, [protectedWorkerClientWrapper = Ref { *m_workerClientWrapper }, workerRequestIdentifier = m_workerRequestIdentifier, metrics = metrics.isolatedCopy(), identifier] (ScriptExecutionContext& context) mutable {
         ASSERT(context.isWorkerGlobalScope() || context.isWorkletGlobalScope());
-        protectedWorkerClientWrapper->didFinishLoading(identifier);
+        protectedWorkerClientWrapper->didFinishLoading(identifier, metrics);
         if (is<WorkerGlobalScope>(context))
-            InspectorInstrumentation::didFinishLoading(downcast<WorkerGlobalScope>(context), workerRequestIdentifier, networkLoadMetrics);
+            InspectorInstrumentation::didFinishLoading(downcast<WorkerGlobalScope>(context), workerRequestIdentifier, metrics);
     }, m_taskMode);
 }
 
 void WorkerThreadableLoader::MainThreadBridge::didFail(const ResourceError& error)
 {
     m_loadingFinished = true;
-    m_loaderProxy.postTaskForModeToWorkerOrWorkletGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), workerRequestIdentifier = m_workerRequestIdentifier, error = error.isolatedCopy()] (ScriptExecutionContext& context) mutable {
+    ScriptExecutionContext::postTaskForModeToWorkerOrWorklet(m_contextIdentifier, [protectedWorkerClientWrapper = Ref { *m_workerClientWrapper }, workerRequestIdentifier = m_workerRequestIdentifier, error = error.isolatedCopy()] (ScriptExecutionContext& context) mutable {
         ASSERT(context.isWorkerGlobalScope() || context.isWorkletGlobalScope());
         ThreadableLoader::logError(context, error, protectedWorkerClientWrapper->initiator());
         protectedWorkerClientWrapper->didFail(error);
@@ -267,9 +283,9 @@ void WorkerThreadableLoader::MainThreadBridge::didFail(const ResourceError& erro
 void WorkerThreadableLoader::MainThreadBridge::didFinishTiming(const ResourceTiming& resourceTiming)
 {
     m_networkLoadMetrics = resourceTiming.networkLoadMetrics();
-    m_loaderProxy.postTaskForModeToWorkerOrWorkletGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), resourceTiming = resourceTiming.isolatedCopy()] (ScriptExecutionContext& context) mutable {
+    ScriptExecutionContext::postTaskForModeToWorkerOrWorklet(m_contextIdentifier, [protectedWorkerClientWrapper = Ref { *m_workerClientWrapper }, resourceTiming = resourceTiming.isolatedCopy()] (ScriptExecutionContext& context) mutable {
         ASSERT(context.isWorkerGlobalScope() || context.isWorkletGlobalScope());
-        ASSERT(!resourceTiming.initiator().isEmpty());
+        ASSERT(!resourceTiming.initiatorType().isEmpty());
 
         // No need to notify clients, just add the performance timing entry.
         if (is<WorkerGlobalScope>(context))

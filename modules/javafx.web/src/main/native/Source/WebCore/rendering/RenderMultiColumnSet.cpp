@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2012 Apple Inc.  All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2015 Google Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +27,7 @@
 #include "config.h"
 #include "RenderMultiColumnSet.h"
 
+#include "BorderPainter.h"
 #include "FrameView.h"
 #include "HitTestResult.h"
 #include "PaintInfo.h"
@@ -239,6 +241,13 @@ LayoutUnit RenderMultiColumnSet::calculateBalancedHeight(bool initial) const
         // Too many forced breaks to allow any implicit breaks. Initial balancing should already
         // have set a good height. There's nothing more we should do.
         return m_computedColumnHeight + sizeContainmentShortage;
+    }
+
+    if (m_computedColumnHeight >= m_maxColumnHeight) {
+        // We cannot stretch any further. We'll just have to live with the overflowing columns. This
+        // typically happens if the max column height is less than the height of the tallest piece
+        // of unbreakable content (e.g. lines).
+        return m_computedColumnHeight;
     }
 
     // If the initial guessed column height wasn't enough, stretch it now. Stretch by the lowest
@@ -543,7 +552,7 @@ std::pair<unsigned, unsigned> RenderMultiColumnSet::firstAndLastColumnsFromOffse
             return 0;
 
         auto columnIndex = static_cast<float>(offset - fragmentedFlowLogicalTop) / columnHeight;
-        if (isBottom && WTF::isIntegral(columnIndex) && columnIndex > 0)
+        if (isBottom && WTF::isIntegral(columnIndex) && bottomOffset > topOffset && columnIndex > 0)
             columnIndex -= 1;
 
         return static_cast<unsigned>(columnIndex);
@@ -584,7 +593,7 @@ LayoutRect RenderMultiColumnSet::fragmentedFlowPortionOverflowRect(const LayoutR
 
     // Calculate the overflow rectangle, based on the flow thread's, clipped at column logical
     // top/bottom unless it's the first/last column.
-    LayoutRect overflowRect = overflowRectForFragmentedFlowPortion(portionRect, isFirstColumn && isFirstFragment(), isLastColumn && isLastFragment(), VisualOverflow);
+    LayoutRect overflowRect = overflowRectForFragmentedFlowPortion(portionRect, isFirstColumn && isFirstFragment(), isLastColumn && isLastFragment());
 
     // For RenderViews only (i.e., iBooks), avoid overflowing into neighboring columns, by clipping in the middle of adjacent column gaps. Also make sure that we avoid rounding errors.
     if (&view() == parent()) {
@@ -623,7 +632,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     if (colCount <= 1)
         return;
 
-    bool antialias = shouldAntialiasLines(paintInfo.context());
+    bool antialias = BorderPainter::shouldAntialiasLines(paintInfo.context());
 
     if (fragmentedFlow->progressionIsInline()) {
         bool leftToRight = style().isLeftToRightDirection() ^ fragmentedFlow->progressionIsReversed();
@@ -652,7 +661,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
                 LayoutUnit ruleTop = isHorizontalWritingMode() ? paintOffset.y() + borderTop() + paddingTop() : paintOffset.y() + ruleLogicalLeft - ruleThickness / 2 + ruleAdd;
                 LayoutUnit ruleBottom = isHorizontalWritingMode() ? ruleTop + contentHeight() : ruleTop + ruleThickness;
                 IntRect pixelSnappedRuleRect = snappedIntRect(ruleLeft, ruleTop, ruleRight - ruleLeft, ruleBottom - ruleTop);
-                drawLineForBoxSide(paintInfo.context(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
+                BorderPainter::drawLineForBoxSide(paintInfo.context(), document(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
             }
 
             ruleLogicalLeft = currLogicalLeftOffset;
@@ -683,7 +692,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
         for (unsigned i = 1; i < colCount; i++) {
             ruleRect.move(step);
             IntRect pixelSnappedRuleRect = snappedIntRect(ruleRect);
-            drawLineForBoxSide(paintInfo.context(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
+            BorderPainter::drawLineForBoxSide(paintInfo.context(), document(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
         }
     }
 }
@@ -924,12 +933,6 @@ LayoutPoint RenderMultiColumnSet::columnTranslationForOffset(const LayoutUnit& o
     return translationOffset;
 }
 
-void RenderMultiColumnSet::adjustFragmentBoundsFromFragmentedFlowPortionRect(LayoutRect&) const
-{
-    // This only fires for named flow thread compositing code, so let's make sure to ASSERT if this ever gets invoked.
-    ASSERT_NOT_REACHED();
-}
-
 void RenderMultiColumnSet::addOverflowFromChildren()
 {
     // FIXME: Need to do much better here.
@@ -1046,9 +1049,9 @@ void RenderMultiColumnSet::updateHitTestResult(HitTestResult& result, const Layo
     }
 }
 
-const char* RenderMultiColumnSet::renderName() const
+ASCIILiteral RenderMultiColumnSet::renderName() const
 {
-    return "RenderMultiColumnSet";
+    return "RenderMultiColumnSet"_s;
 }
 
 }

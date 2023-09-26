@@ -36,9 +36,6 @@
 #include "Scavenger.h"
 
 #if BUSE(LIBPAS)
-#ifndef PAS_BMALLOC
-#define PAS_BMALLOC 1
-#endif
 #include "bmalloc_heap_inlines.h"
 #endif
 
@@ -191,6 +188,24 @@ BEXPORT void enableMiniMode();
 
 // Used for debugging only.
 BEXPORT void disableScavenger();
+
+#if BENABLE(MALLOC_SIZE)
+inline size_t mallocSize(const void* object)
+{
+    if (auto* debugHeap = DebugHeap::tryGet())
+        return debugHeap->mallocSize(object);
+    return bmalloc_get_allocation_size(const_cast<void*>(object));
+}
+#endif
+
+#if BENABLE(MALLOC_GOOD_SIZE)
+inline size_t mallocGoodSize(size_t size)
+{
+    if (auto* debugHeap = DebugHeap::tryGet())
+        return debugHeap->mallocGoodSize(size);
+    return size;
+}
+#endif
 
 } // namespace api
 } // namespace bmalloc

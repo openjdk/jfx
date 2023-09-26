@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -116,21 +116,27 @@ private:
 
 inline Ref<ImageDocumentElement> ImageDocumentElement::create(ImageDocument& document)
 {
-    return adoptRef(*new ImageDocumentElement(document));
+    auto image = adoptRef(*new ImageDocumentElement(document));
+    image->suspendIfNeeded();
+    return image;
 }
 
 // --------
 
 HTMLImageElement* ImageDocument::imageElement() const
 {
-    return m_imageElement;
+    return m_imageElement.get();
 }
 
 LayoutSize ImageDocument::imageSize()
 {
-    ASSERT(m_imageElement);
+    RefPtr imageElement = m_imageElement.get();
+    ASSERT(imageElement);
     updateStyleIfNeeded();
-    return m_imageElement->cachedImage()->imageSizeForRenderer(m_imageElement->renderer(), frame() ? frame()->pageZoomFactor() : 1);
+    auto* cachedImage = imageElement->cachedImage();
+    if (!cachedImage)
+        return { };
+    return cachedImage->imageSizeForRenderer(imageElement->renderer(), frame() ? frame()->pageZoomFactor() : 1);
 }
 
 void ImageDocument::updateDuringParsing()
@@ -141,17 +147,19 @@ void ImageDocument::updateDuringParsing()
     if (!m_imageElement)
         createDocumentStructure();
 
-    if (RefPtr<SharedBuffer> buffer = loader()->mainResourceData())
-        m_imageElement->cachedImage()->updateBuffer(*buffer);
+    if (RefPtr<FragmentedSharedBuffer> buffer = loader()->mainResourceData()) {
+        if (auto* cachedImage = m_imageElement->cachedImage())
+            cachedImage->updateBuffer(*buffer);
+    }
 
     imageUpdated();
 }
 
 void ImageDocument::finishedParsing()
 {
-    if (!parser()->isStopped() && m_imageElement) {
+    if (!parser()->isStopped() && m_imageElement && m_imageElement->cachedImage()) {
         CachedImage& cachedImage = *m_imageElement->cachedImage();
-        RefPtr<SharedBuffer> data = loader()->mainResourceData();
+        RefPtr<FragmentedSharedBuffer> data = loader()->mainResourceData();
 
         // If this is a multipart image, make a copy of the current part, since the resource data
         // will be overwritten by the next part.
@@ -168,7 +176,7 @@ void ImageDocument::finishedParsing()
         if (size.width()) {
             // Compute the title. We use the decoded filename of the resource, falling
             // back on the hostname if there is no path.
-            String name = decodeURLEscapeSequences(url().lastPathComponent());
+            String name = PAL::decodeURLEscapeSequences(url().lastPathComponent());
             if (name.isEmpty())
                 name = url().host().toString();
             setTitle(imageTitle(name, size));
@@ -198,7 +206,7 @@ void ImageDocumentParser::finish()
 }
 
 ImageDocument::ImageDocument(Frame& frame, const URL& url)
-    : HTMLDocument(&frame, frame.settings(), url, ImageDocumentClass)
+    : HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::Image })
     , m_imageElement(nullptr)
     , m_imageSizeIsKnown(false)
 #if !PLATFORM(IOS_FAMILY)
@@ -206,7 +214,7 @@ ImageDocument::ImageDocument(Frame& frame, const URL& url)
 #endif
     , m_shouldShrinkImage(frame.settings().shrinksStandaloneImagesToFit() && frame.isMainFrame())
 {
-    setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
+    setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
     lockCompatibilityMode();
 }
 
@@ -220,6 +228,7 @@ void ImageDocument::createDocumentStructure()
     auto rootElement = HTMLHtmlElement::create(*this);
     appendChild(rootElement);
     rootElement->insertedByParser();
+    rootElement->setInlineStyleProperty(CSSPropertyHeight, 100, CSSUnitType::CSS_PERCENTAGE);
 
     frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
@@ -228,20 +237,22 @@ void ImageDocument::createDocumentStructure()
     rootElement->appendChild(head);
 
     auto body = HTMLBodyElement::create(*this);
-    body->setAttribute(styleAttr, "margin: 0px");
+    body->setAttribute(styleAttr, "margin: 0px; height: 100%"_s);
     if (MIMETypeRegistry::isPDFMIMEType(document().loader()->responseMIMEType()))
-        body->setInlineStyleProperty(CSSPropertyBackgroundColor, "white");
+        body->setInlineStyleProperty(CSSPropertyBackgroundColor, "white"_s);
     rootElement->appendChild(body);
 
     auto imageElement = ImageDocumentElement::create(*this);
     if (m_shouldShrinkImage)
-        imageElement->setAttribute(styleAttr, "-webkit-user-select:none; display:block; margin:auto; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
+        imageElement->setAttribute(styleAttr, "-webkit-user-select:none; display:block; margin:auto; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);"_s);
     else
-        imageElement->setAttribute(styleAttr, "-webkit-user-select:none; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);");
+        imageElement->setAttribute(styleAttr, "-webkit-user-select:none; display:block; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);"_s);
     imageElement->setLoadManually(true);
-    imageElement->setSrc(url().string());
-    imageElement->cachedImage()->setResponse(loader()->response());
+    imageElement->setSrc(AtomString { url().string() });
+    if (auto* cachedImage = imageElement->cachedImage())
+        cachedImage->setResponse(loader()->response());
     body->appendChild(imageElement);
+    imageElement->setLoadManually(false);
 
     if (m_shouldShrinkImage) {
 #if PLATFORM(IOS_FAMILY)
@@ -249,13 +260,11 @@ void ImageDocument::createDocumentStructure()
         processViewport("width=device-width,viewport-fit=cover"_s, ViewportArguments::ImageDocument);
 #else
         auto listener = ImageEventListener::create(*this);
-        if (RefPtr<DOMWindow> window = this->domWindow())
-            window->addEventListener("resize", listener.copyRef(), false);
-        imageElement->addEventListener("click", WTFMove(listener), false);
+        imageElement->addEventListener(eventNames().clickEvent, WTFMove(listener), false);
 #endif
     }
 
-    m_imageElement = imageElement.ptr();
+    m_imageElement = imageElement.get();
 }
 
 void ImageDocument::imageUpdated()
@@ -280,8 +289,8 @@ void ImageDocument::imageUpdated()
         if (page())
             page()->chrome().client().imageOrMediaDocumentSizeChanged(IntSize(imageSize.width(), imageSize.height()));
 #else
-        // Call windowSizeChanged for its side effect of sizing the image.
-        windowSizeChanged();
+        // Call didChangeViewSize for its side effect of sizing the image.
+        didChangeViewSize();
 #endif
     }
 }
@@ -350,8 +359,7 @@ bool ImageDocument::imageFitsInWindow()
     return imageSize.width() <= viewportSize.width() && imageSize.height() <= viewportSize.height();
 }
 
-
-void ImageDocument::windowSizeChanged()
+void ImageDocument::didChangeViewSize()
 {
     if (!m_imageElement || !m_imageSizeIsKnown)
         return;
@@ -392,8 +400,8 @@ void ImageDocument::imageClicked(int x, int y)
     m_shouldShrinkImage = !m_shouldShrinkImage;
 
     if (m_shouldShrinkImage) {
-        // Call windowSizeChanged for its side effect of sizing the image.
-        windowSizeChanged();
+        // Call didChangeViewSize for its side effect of sizing the image.
+        didChangeViewSize();
     } else {
         restoreImageSize();
 
@@ -414,9 +422,7 @@ void ImageDocument::imageClicked(int x, int y)
 
 void ImageEventListener::handleEvent(ScriptExecutionContext&, Event& event)
 {
-    if (event.type() == eventNames().resizeEvent)
-        m_document.windowSizeChanged();
-    else if (event.type() == eventNames().clickEvent && is<MouseEvent>(event)) {
+    if (event.type() == eventNames().clickEvent && is<MouseEvent>(event)) {
         MouseEvent& mouseEvent = downcast<MouseEvent>(event);
         m_document.imageClicked(mouseEvent.offsetX(), mouseEvent.offsetY());
     }

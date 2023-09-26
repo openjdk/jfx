@@ -25,7 +25,9 @@
 
 #include "config.h"
 #include "WOFFFileFormat.h"
+#if !PLATFORM(JAVA)
 #include <zlib.h>
+#endif
 
 #include "SharedBuffer.h"
 #include <wtf/ByteOrder.h>
@@ -48,7 +50,7 @@ static bool readUInt32(SharedBuffer& buffer, size_t& offset, uint32_t& value)
 
     return true;
 }
-
+#if !PLATFORM(JAVA)
 static bool readUInt16(SharedBuffer& buffer, size_t& offset, uint16_t& value)
 {
     ASSERT_ARG(offset, offset <= buffer.size());
@@ -72,7 +74,7 @@ static bool writeUInt16(Vector<uint8_t>& vector, uint16_t value)
     uint16_t bigEndianValue = htons(value);
     return vector.tryAppend(reinterpret_cast_ptr<uint8_t*>(&bigEndianValue), sizeof(bigEndianValue));
 }
-
+#endif
 static const uint32_t woffSignature = 0x774f4646; /* 'wOFF' */
 
 bool isWOFF(SharedBuffer& buffer)
@@ -129,6 +131,11 @@ private:
 bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
 {
     ASSERT_ARG(sfnt, sfnt.isEmpty());
+#if PLATFORM(JAVA)
+    UNUSED_PARAM(woff);
+        UNUSED_PARAM(sfnt);
+    return false;
+#else
 
     size_t offset = 0;
 
@@ -269,8 +276,10 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
                 return false;
             Bytef* dest = reinterpret_cast<Bytef*>(sfnt.end());
             sfnt.grow(sfnt.size() + tableOrigLength);
+//#if PLATFORM(COCOA) && !PLATFORM(JAVA)
             if (uncompress(dest, &destLen, reinterpret_cast<const Bytef*>(woff.data() + tableOffset), tableCompLength) != Z_OK)
                 return false;
+//#endif
             if (destLen != tableOrigLength)
                 return false;
         }
@@ -281,11 +290,12 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<uint8_t>& sfnt)
     }
 
     return sfnt.size() == totalSfntSize;
+#endif
 }
 
 bool convertWOFFToSfntIfNecessary(RefPtr<SharedBuffer>& buffer)
 {
-#if PLATFORM(COCOA)
+#if (PLATFORM(COCOA) || PLATFORM(WIN)) && PLATFORM(JAVA)
     UNUSED_PARAM(buffer);
     return false;
 #else

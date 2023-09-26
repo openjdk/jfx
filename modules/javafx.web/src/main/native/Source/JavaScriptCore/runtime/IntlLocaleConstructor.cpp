@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,11 +35,11 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlLocaleConstructor);
 
-const ClassInfo IntlLocaleConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlLocaleConstructor) };
+const ClassInfo IntlLocaleConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlLocaleConstructor) };
 
 IntlLocaleConstructor* IntlLocaleConstructor::create(VM& vm, Structure* structure, IntlLocalePrototype* localePrototype)
 {
-    auto* constructor = new (NotNull, allocateCell<IntlLocaleConstructor>(vm.heap)) IntlLocaleConstructor(vm, structure);
+    auto* constructor = new (NotNull, allocateCell<IntlLocaleConstructor>(vm)) IntlLocaleConstructor(vm, structure);
     constructor->finishCreation(vm, localePrototype);
     return constructor;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #include "CodeBlock.h"
 #include "DFGGraph.h"
 #include "DFGNodeType.h"
-#include "Heap.h"
 #include "JSCJSValueInlines.h"
 #include "Options.h"
 #include "VMInspector.h"
@@ -70,8 +69,8 @@ void DoesGCCheck::verifyCanGC(VM& vm)
 
         CallFrame* callFrame = vm.topCallFrame;
         if (callFrame) {
-            CodeBlock* codeBlock = callFrame->codeBlock();
-            dataLogLn(" in ", codeBlock);
+            if (!callFrame->isWasmFrame())
+                dataLogLn(" in ", callFrame->codeBlock());
             VMInspector::dumpStack(&vm, callFrame);
         }
         dataLogLn();

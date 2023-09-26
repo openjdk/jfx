@@ -62,7 +62,7 @@ void ArtworkImageLoader::requestImageResource()
     options.contentSecurityPolicyImposition = m_document.isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
 
     CachedResourceRequest request(ResourceRequest(m_document.completeURL(m_src)), options);
-    request.setInitiator(m_document.documentURI());
+    request.setInitiatorType(AtomString { m_document.documentURI() });
     m_cachedImage = m_document.cachedResourceLoader().requestImage(WTFMove(request)).value_or(nullptr);
 
     if (m_cachedImage)
@@ -72,21 +72,11 @@ void ArtworkImageLoader::requestImageResource()
 void ArtworkImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     ASSERT_UNUSED(resource, &resource == m_cachedImage);
-    if (m_cachedImage->loadFailedOrCanceled() || m_cachedImage->errorOccurred() || !m_cachedImage->image() || !m_cachedImage->image()->data() || m_cachedImage->image()->data()->isEmpty()) {
+    if (m_cachedImage->loadFailedOrCanceled() || m_cachedImage->errorOccurred() || !m_cachedImage->image()) {
         m_callback(nullptr);
         return;
     }
-    // Sanitize the image by decoding it into a BitmapImage.
-    RefPtr<SharedBuffer> bufferToSanitize = m_cachedImage->image()->data();
-    auto bitmapImage = BitmapImage::create();
-    bitmapImage->setData(WTFMove(bufferToSanitize), true);
-    auto imageBuffer = ImageBuffer::create(bitmapImage->size(), RenderingMode::Unaccelerated, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
-    if (!imageBuffer) {
-        m_callback(nullptr);
-        return;
-    }
-    imageBuffer->context().drawImage(bitmapImage.get(), FloatPoint::zero());
-    m_callback(bitmapImage.ptr());
+    m_callback(m_cachedImage->image());
 }
 
 ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& context, std::optional<MediaMetadataInit>&& init)
@@ -111,7 +101,7 @@ MediaMetadata::~MediaMetadata() = default;
 
 void MediaMetadata::setMediaSession(MediaSession& session)
 {
-    m_session = makeWeakPtr(session);
+    m_session = session;
     refreshArtworkImage();
 }
 

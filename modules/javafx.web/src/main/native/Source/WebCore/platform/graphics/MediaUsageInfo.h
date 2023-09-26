@@ -33,6 +33,7 @@ namespace WebCore {
 
 struct MediaUsageInfo {
     URL mediaURL;
+    bool hasSource { false };
     bool isPlaying { false };
     bool canShowControlsManager { false };
     bool canShowNowPlayingControls { false };
@@ -54,7 +55,6 @@ struct MediaUsageInfo {
     bool isMediaDocumentAndNotOwnerElement { false };
     bool pageExplicitlyAllowsElementToAutoplayInline { false };
     bool requiresFullscreenForVideoPlaybackAndFullscreenNotPermitted { false };
-    bool hasHadUserInteractionAndQuirksContainsShouldAutoplayForArbitraryUserGesture { false };
     bool isVideoAndRequiresUserGestureForVideoRateChange { false };
     bool isAudioAndRequiresUserGestureForAudioRateChange { false };
     bool isVideoAndRequiresUserGestureForVideoDueToLowPowerMode { false };
@@ -63,10 +63,14 @@ struct MediaUsageInfo {
     bool hasEverNotifiedAboutPlaying { false };
     bool outsideOfFullscreen { false };
     bool isLargeEnoughForMainContent { false };
+#if PLATFORM(COCOA) && !HAVE(CGS_FIX_FOR_RADAR_97530095)
+    bool isInViewport { false };
+#endif
 
     bool operator==(const MediaUsageInfo& other) const
     {
         return mediaURL == other.mediaURL
+            && hasSource == other.hasSource
             && isPlaying == other.isPlaying
             && canShowControlsManager == other.canShowControlsManager
             && canShowNowPlayingControls == other.canShowNowPlayingControls
@@ -88,7 +92,6 @@ struct MediaUsageInfo {
             && isMediaDocumentAndNotOwnerElement == other.isMediaDocumentAndNotOwnerElement
             && pageExplicitlyAllowsElementToAutoplayInline == other.pageExplicitlyAllowsElementToAutoplayInline
             && requiresFullscreenForVideoPlaybackAndFullscreenNotPermitted == other.requiresFullscreenForVideoPlaybackAndFullscreenNotPermitted
-            && hasHadUserInteractionAndQuirksContainsShouldAutoplayForArbitraryUserGesture == other.hasHadUserInteractionAndQuirksContainsShouldAutoplayForArbitraryUserGesture
             && isVideoAndRequiresUserGestureForVideoRateChange == other.isVideoAndRequiresUserGestureForVideoRateChange
             && isAudioAndRequiresUserGestureForAudioRateChange == other.isAudioAndRequiresUserGestureForAudioRateChange
             && isVideoAndRequiresUserGestureForVideoDueToLowPowerMode == other.isVideoAndRequiresUserGestureForVideoDueToLowPowerMode
@@ -96,7 +99,11 @@ struct MediaUsageInfo {
             && requiresPlaybackAndIsNotPlaying == other.requiresPlaybackAndIsNotPlaying
             && hasEverNotifiedAboutPlaying == other.hasEverNotifiedAboutPlaying
             && outsideOfFullscreen == other.outsideOfFullscreen
-            && isLargeEnoughForMainContent == other.isLargeEnoughForMainContent;
+            && isLargeEnoughForMainContent == other.isLargeEnoughForMainContent
+#if PLATFORM(COCOA) && !HAVE(CGS_FIX_FOR_RADAR_97530095)
+            && isInViewport == other.isInViewport
+#endif
+            ;
     }
 
     bool operator!=(const MediaUsageInfo other) const
@@ -111,6 +118,7 @@ struct MediaUsageInfo {
 template<class Encoder> inline void MediaUsageInfo::encode(Encoder& encoder) const
 {
     encoder << mediaURL;
+    encoder << hasSource;
     encoder << isPlaying;
     encoder << canShowControlsManager;
     encoder << canShowNowPlayingControls;
@@ -132,7 +140,6 @@ template<class Encoder> inline void MediaUsageInfo::encode(Encoder& encoder) con
     encoder << isMediaDocumentAndNotOwnerElement;
     encoder << pageExplicitlyAllowsElementToAutoplayInline;
     encoder << requiresFullscreenForVideoPlaybackAndFullscreenNotPermitted;
-    encoder << hasHadUserInteractionAndQuirksContainsShouldAutoplayForArbitraryUserGesture;
     encoder << isVideoAndRequiresUserGestureForVideoRateChange;
     encoder << isAudioAndRequiresUserGestureForAudioRateChange;
     encoder << isVideoAndRequiresUserGestureForVideoDueToLowPowerMode;
@@ -141,6 +148,9 @@ template<class Encoder> inline void MediaUsageInfo::encode(Encoder& encoder) con
     encoder << hasEverNotifiedAboutPlaying;
     encoder << outsideOfFullscreen;
     encoder << isLargeEnoughForMainContent;
+#if PLATFORM(COCOA) && !HAVE(CGS_FIX_FOR_RADAR_97530095)
+    encoder << isInViewport;
+#endif
 }
 
 template<class Decoder> inline std::optional<MediaUsageInfo> MediaUsageInfo::decode(Decoder& decoder)
@@ -148,6 +158,9 @@ template<class Decoder> inline std::optional<MediaUsageInfo> MediaUsageInfo::dec
     MediaUsageInfo info;
 
     if (!decoder.decode(info.mediaURL))
+        return { };
+
+    if (!decoder.decode(info.hasSource))
         return { };
 
     if (!decoder.decode(info.isPlaying))
@@ -213,9 +226,6 @@ template<class Decoder> inline std::optional<MediaUsageInfo> MediaUsageInfo::dec
     if (!decoder.decode(info.requiresFullscreenForVideoPlaybackAndFullscreenNotPermitted))
         return { };
 
-    if (!decoder.decode(info.hasHadUserInteractionAndQuirksContainsShouldAutoplayForArbitraryUserGesture))
-        return { };
-
     if (!decoder.decode(info.isVideoAndRequiresUserGestureForVideoRateChange))
         return { };
 
@@ -239,6 +249,11 @@ template<class Decoder> inline std::optional<MediaUsageInfo> MediaUsageInfo::dec
 
     if (!decoder.decode(info.isLargeEnoughForMainContent))
         return { };
+
+#if PLATFORM(COCOA) && !HAVE(CGS_FIX_FOR_RADAR_97530095)
+    if (!decoder.decode(info.isInViewport))
+        return { };
+#endif
 
     return info;
 }

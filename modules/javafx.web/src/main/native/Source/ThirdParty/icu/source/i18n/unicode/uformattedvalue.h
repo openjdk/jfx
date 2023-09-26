@@ -93,6 +93,13 @@ typedef enum UFieldCategory {
      */
     UFIELD_CATEGORY_DATE_INTERVAL_SPAN = 0x1000 + UFIELD_CATEGORY_DATE_INTERVAL,
 
+    /**
+     * Category for spans in a number range.
+     *
+     * @stable ICU 69
+     */
+    UFIELD_CATEGORY_NUMBER_RANGE_SPAN = 0x1000 + UFIELD_CATEGORY_NUMBER,
+
 } UFieldCategory;
 
 

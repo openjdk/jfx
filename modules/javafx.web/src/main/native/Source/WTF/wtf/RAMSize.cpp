@@ -30,12 +30,12 @@
 
 #if OS(WINDOWS)
 #include <windows.h>
-#elif defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
-#if OS(LINUX)
+#elif USE(SYSTEM_MALLOC)
+#if OS(LINUX) || OS(FREEBSD)
 #include <sys/sysinfo.h>
 #elif OS(UNIX)
 #include <unistd.h>
-#endif // OS(LINUX) || OS(UNIX)
+#endif // OS(LINUX) || OS(FREEBSD) || OS(UNIX)
 #else
 #include <bmalloc/bmalloc.h>
 #endif

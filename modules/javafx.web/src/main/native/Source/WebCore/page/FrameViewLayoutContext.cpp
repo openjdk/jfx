@@ -35,19 +35,14 @@
 #include "RenderElement.h"
 #include "RenderLayoutState.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "StyleScope.h"
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-#include "InvalidationContext.h"
-#include "InvalidationState.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutContext.h"
 #include "LayoutState.h"
 #include "LayoutTreeBuilder.h"
 #include "RenderDescendantIterator.h"
-#endif
 
 #include <wtf/SetForScope.h>
 #include <wtf/SystemTracing.h>
@@ -55,22 +50,22 @@
 
 namespace WebCore {
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 void FrameViewLayoutContext::layoutUsingFormattingContext()
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled())
+    if (!frame().settings().layoutFormattingContextEnabled())
         return;
     // FrameView::setContentsSize temporary disables layout.
     if (m_disableSetNeedsLayoutCount)
         return;
 
+    m_layoutState = nullptr;
+    m_layoutTree = nullptr;
+
     auto& renderView = *this->renderView();
     m_layoutTree = Layout::TreeBuilder::buildLayoutTree(renderView);
     m_layoutState = makeUnique<Layout::LayoutState>(*document(), m_layoutTree->root());
-    // FIXME: This is not the real invalidation yet.
-    auto invalidationState = Layout::InvalidationState { };
     auto layoutContext = Layout::LayoutContext { *m_layoutState };
-    layoutContext.layout(view().layoutSize(), invalidationState);
+    layoutContext.layout(view().layoutSize());
 
     // Clean up the render tree state when we don't run RenderView::layout.
     if (renderView.needsLayout()) {
@@ -86,7 +81,6 @@ void FrameViewLayoutContext::layoutUsingFormattingContext()
     Layout::LayoutContext::verifyAndOutputMismatchingLayoutTree(*m_layoutState, renderView);
 #endif
 }
-#endif
 
 static bool isObjectAncestorContainerOf(RenderElement& ancestor, RenderElement& descendant)
 {
@@ -170,6 +164,29 @@ void FrameViewLayoutContext::layout()
 {
     LOG_WITH_STREAM(Layout, stream << "FrameView " << &view() << " FrameViewLayoutContext::layout() with size " << view().layoutSize());
 
+    Ref<FrameView> protectView(view());
+
+    performLayout();
+
+    if (view().hasOneRef())
+        return;
+
+    Style::Scope::QueryContainerUpdateContext queryContainerUpdateContext;
+    while (document() && document()->styleScope().updateQueryContainerState(queryContainerUpdateContext)) {
+        document()->updateStyleIfNeeded();
+
+        if (!needsLayout())
+            break;
+
+        performLayout();
+
+        if (view().hasOneRef())
+            return;
+    }
+}
+
+void FrameViewLayoutContext::performLayout()
+{
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!frame().document()->inRenderTreeUpdate());
     ASSERT(LayoutDisallowedScope::isLayoutAllowed());
     ASSERT(!view().isPainting());
@@ -182,10 +199,9 @@ void FrameViewLayoutContext::layout()
         return;
     }
 
-    Ref<FrameView> protectView(view());
     LayoutScope layoutScope(*this);
     TraceScope tracingScope(LayoutStart, LayoutEnd);
-    InspectorInstrumentation::willLayout(view().frame());
+    InspectorInstrumentation::willLayout(downcast<LocalFrame>(view().frame()));
     WeakPtr<RenderElement> layoutRoot;
 
     m_layoutTimer.stop();
@@ -199,17 +215,18 @@ void FrameViewLayoutContext::layout()
     if (view().updateFixedPositionLayoutRect() && subtreeLayoutRoot())
         convertSubtreeLayoutToFullLayout();
 #endif
-    if (handleLayoutWithFrameFlatteningIfNeeded())
-        return;
 
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InPreLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InPreLayout);
 
-        // If this is a new top-level layout and there are any remaining tasks from the previous layout, finish them now.
-        if (!isLayoutNested() && m_asynchronousTasksTimer.isActive() && !view().isInChildFrameWithFrameFlattening())
-            runAsynchronousTasks();
+        if (!frame().document()->isResolvingContainerQueriesForSelfOrAncestor()) {
+            // If this is a new top-level layout and there are any remaining tasks from the previous layout, finish them now.
+            if (!isLayoutNested() && m_asynchronousTasksTimer.isActive())
+                runAsynchronousTasks();
 
-        updateStyleForLayout();
+            updateStyleForLayout();
+        }
+
         if (view().hasOneRef())
             return;
 
@@ -217,13 +234,13 @@ void FrameViewLayoutContext::layout()
         if (!renderView())
             return;
 
-        layoutRoot = makeWeakPtr(subtreeLayoutRoot() ? subtreeLayoutRoot() : renderView());
-        m_needsFullRepaint = is<RenderView>(layoutRoot.get()) && (m_firstLayout || renderView()->printing());
+        layoutRoot = subtreeLayoutRoot() ? subtreeLayoutRoot() : renderView();
+        m_needsFullRepaint = is<RenderView>(layoutRoot) && (m_firstLayout || renderView()->printing());
         view().willDoLayout(layoutRoot);
         m_firstLayout = false;
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InRenderTreeLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InRenderTreeLayout);
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
         SubtreeLayoutStateMaintainer subtreeLayoutStateMaintainer(subtreeLayoutRoot());
         RenderView::RepaintRegionAccumulator repaintRegionAccumulator(renderView());
@@ -231,9 +248,7 @@ void FrameViewLayoutContext::layout()
         RenderTreeNeedsLayoutChecker checker(*layoutRoot);
 #endif
         layoutRoot->layout();
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
         layoutUsingFormattingContext();
-#endif
         ++m_layoutCount;
 #if ENABLE(TEXT_AUTOSIZING)
         applyTextSizingIfNeeded(*layoutRoot.get());
@@ -241,10 +256,10 @@ void FrameViewLayoutContext::layout()
         clearSubtreeLayoutRoot();
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InViewSizeAdjust);
-        if (is<RenderView>(layoutRoot.get()) && !renderView()->printing()) {
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InViewSizeAdjust);
+        if (is<RenderView>(layoutRoot) && !renderView()->printing()) {
             // This is to protect m_needsFullRepaint's value when layout() is getting re-entered through adjustViewSize().
-            SetForScope<bool> needsFullRepaint(m_needsFullRepaint);
+            SetForScope needsFullRepaint(m_needsFullRepaint);
             view().adjustViewSize();
             // FIXME: Firing media query callbacks synchronously on nested frames could produced a detached FrameView here by
             // navigating away from the current document (see webkit.org/b/173329).
@@ -253,15 +268,15 @@ void FrameViewLayoutContext::layout()
         }
     }
     {
-        SetForScope<LayoutPhase> layoutPhase(m_layoutPhase, LayoutPhase::InPostLayout);
+        SetForScope layoutPhase(m_layoutPhase, LayoutPhase::InPostLayout);
         if (m_needsFullRepaint)
             renderView()->repaintRootContents();
         ASSERT(!layoutRoot->needsLayout());
         view().didLayout(layoutRoot);
         runOrScheduleAsynchronousTasks();
     }
-    InspectorInstrumentation::didLayout(view().frame(), *layoutRoot);
-    DebugPageOverlays::didLayout(view().frame());
+    InspectorInstrumentation::didLayout(downcast<LocalFrame>(view().frame()), *layoutRoot);
+    DebugPageOverlays::didLayout(downcast<LocalFrame>(view().frame()));
 }
 
 void FrameViewLayoutContext::runOrScheduleAsynchronousTasks()
@@ -269,11 +284,8 @@ void FrameViewLayoutContext::runOrScheduleAsynchronousTasks()
     if (m_asynchronousTasksTimer.isActive())
         return;
 
-    if (view().isInChildFrameWithFrameFlattening()) {
-        // While flattening frames, we defer post layout tasks to avoid getting stuck in a cycle,
-        // except updateWidgetPositions() which is required to kick off subframe layout in certain cases.
-        if (!m_inAsynchronousTasks)
-            view().updateWidgetPositions();
+    if (frame().document()->isResolvingContainerQueries()) {
+        // We are doing layout from style resolution to resolve container queries.
         m_asynchronousTasksTimer.startOneShot(0_s);
         return;
     }
@@ -298,7 +310,7 @@ void FrameViewLayoutContext::runAsynchronousTasks()
     m_asynchronousTasksTimer.stop();
     if (m_inAsynchronousTasks)
         return;
-    SetForScope<bool> inAsynchronousTasks(m_inAsynchronousTasks, true);
+    SetForScope inAsynchronousTasks(m_inAsynchronousTasks, true);
     view().performPostLayoutTasks();
 }
 
@@ -373,12 +385,8 @@ void FrameViewLayoutContext::scheduleLayout()
         return;
     if (!frame().document()->shouldScheduleLayout())
         return;
-    InspectorInstrumentation::didInvalidateLayout(frame());
-    // When frame flattening is enabled, the contents of the frame could affect the layout of the parent frames.
-    // Also invalidate parent frame starting from the owner element of this frame.
-    if (frame().ownerRenderer() && view().isInChildFrameWithFrameFlattening())
-        frame().ownerRenderer()->setNeedsLayout(MarkContainingBlockChain);
 
+    InspectorInstrumentation::didInvalidateLayout(frame());
     if (m_layoutTimer.isActive())
         return;
 
@@ -400,7 +408,7 @@ void FrameViewLayoutContext::unscheduleLayout()
 
 #if !LOG_DISABLED
     if (!frame().document()->ownerElement())
-        LOG(Layout, "FrameView %p layout timer unscheduled at %.3fs", this, frame().document()->timeSinceDocumentCreation().value());
+        LOG_WITH_STREAM(Layout, stream << "FrameViewLayoutContext for FrameView " << frame().view() << " layout timer unscheduled at " << frame().document()->timeSinceDocumentCreation().value());
 #endif
 
     m_layoutTimer.stop();
@@ -464,7 +472,7 @@ void FrameViewLayoutContext::layoutTimerFired()
 {
 #if !LOG_DISABLED
     if (!frame().document()->ownerElement())
-        LOG(Layout, "FrameView %p layout timer fired at %.3fs", this, frame().document()->timeSinceDocumentCreation().value());
+        LOG_WITH_STREAM(Layout, stream << "FrameViewLayoutContext for FrameView " << frame().view() << " layout timer fired at " << frame().document()->timeSinceDocumentCreation().value());
 #endif
     layout();
 }
@@ -483,7 +491,7 @@ void FrameViewLayoutContext::convertSubtreeLayoutToFullLayout()
 
 void FrameViewLayoutContext::setSubtreeLayoutRoot(RenderElement& layoutRoot)
 {
-    m_subtreeLayoutRoot = makeWeakPtr(layoutRoot);
+    m_subtreeLayoutRoot = layoutRoot;
 }
 
 bool FrameViewLayoutContext::canPerformLayout() const
@@ -546,40 +554,6 @@ void FrameViewLayoutContext::updateStyleForLayout()
     document.updateStyleIfNeeded();
 }
 
-bool FrameViewLayoutContext::handleLayoutWithFrameFlatteningIfNeeded()
-{
-    if (!view().isInChildFrameWithFrameFlattening())
-        return false;
-
-    startLayoutAtMainFrameViewIfNeeded();
-    auto* layoutRoot = subtreeLayoutRoot() ? subtreeLayoutRoot() : frame().document()->renderView();
-    return !layoutRoot || !layoutRoot->needsLayout();
-}
-
-void FrameViewLayoutContext::startLayoutAtMainFrameViewIfNeeded()
-{
-    // When we start a layout at the child level as opposed to the topmost frame view and this child
-    // frame requires flattening, we need to re-initiate the layout at the topmost view. Layout
-    // will hit this view eventually.
-    auto* parentView = view().parentFrameView();
-    if (!parentView)
-        return;
-
-    // In the middle of parent layout, no need to restart from topmost.
-    if (parentView->layoutContext().isInLayout())
-        return;
-
-    // Parent tree is clean. Starting layout from it would have no effect.
-    if (!parentView->needsLayout())
-        return;
-
-    while (parentView->parentFrameView())
-        parentView = parentView->parentFrameView();
-
-    LOG(Layout, "  frame flattening, starting from root");
-    parentView->layoutContext().layout();
-}
-
 LayoutSize FrameViewLayoutContext::layoutDelta() const
 {
     if (auto* layoutState = this->layoutState())
@@ -631,7 +605,14 @@ bool FrameViewLayoutContext::pushLayoutState(RenderBox& renderer, const LayoutSi
     auto* layoutState = this->layoutState();
     if (!layoutState || !needsFullRepaint() || layoutState->isPaginated() || renderer.enclosingFragmentedFlow()
         || layoutState->lineGrid() || (renderer.style().lineGrid() != RenderStyle::initialLineGrid() && renderer.isRenderBlockFlow())) {
-        m_layoutStateStack.append(makeUnique<RenderLayoutState>(m_layoutStateStack, renderer, offset, pageHeight, pageHeightChanged));
+        m_layoutStateStack.append(makeUnique<RenderLayoutState>(m_layoutStateStack
+            , renderer
+            , offset
+            , pageHeight
+            , pageHeightChanged
+            , layoutState ? layoutState->maximumLineCountForLineClamp() : std::nullopt
+            , layoutState ? layoutState->visibleLineCountForLineClamp() : std::nullopt
+            , layoutState ? layoutState->leadingTrim() : RenderLayoutState::LeadingTrim()));
         return true;
     }
     return false;
@@ -652,7 +633,7 @@ void FrameViewLayoutContext::checkLayoutState()
 
 Frame& FrameViewLayoutContext::frame() const
 {
-    return view().frame();
+    return downcast<LocalFrame>(view().frame());
 }
 
 FrameView& FrameViewLayoutContext::view() const

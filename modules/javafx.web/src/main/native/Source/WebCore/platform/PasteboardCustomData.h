@@ -25,9 +25,9 @@
 
 #pragma once
 
+#include <variant>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
-#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/text/WTFString.h>
@@ -41,6 +41,7 @@ public:
     struct Entry {
         WEBCORE_EXPORT Entry();
         WEBCORE_EXPORT Entry(const Entry&);
+        WEBCORE_EXPORT Entry(const String&, const String&, const std::variant<String, Ref<WebCore::SharedBuffer>>&);
         WEBCORE_EXPORT Entry(Entry&&);
         WEBCORE_EXPORT Entry& operator=(const Entry& otherData);
         WEBCORE_EXPORT Entry& operator=(Entry&& otherData);
@@ -48,7 +49,7 @@ public:
 
         String type;
         String customData;
-        Variant<String, Ref<SharedBuffer>> platformData;
+        std::variant<String, Ref<SharedBuffer>> platformData;
     };
 
     WEBCORE_EXPORT PasteboardCustomData();
@@ -76,14 +77,14 @@ public:
     void clear(const String& type);
 
 #if PLATFORM(COCOA)
-    WEBCORE_EXPORT static const char* cocoaType();
+    WEBCORE_EXPORT static ASCIILiteral cocoaType();
 #elif PLATFORM(GTK)
-    static const char* gtkType() { return "org.webkitgtk.WebKit.custom-pasteboard-data"; }
+    static ASCIILiteral gtkType() { return "org.webkitgtk.WebKit.custom-pasteboard-data"_s; }
 #endif
 
     void forEachType(Function<void(const String&)>&&) const;
     void forEachPlatformString(Function<void(const String& type, const String& data)>&&) const;
-    void forEachPlatformStringOrBuffer(Function<void(const String& type, const Variant<String, Ref<SharedBuffer>>& data)>&&) const;
+    void forEachPlatformStringOrBuffer(Function<void(const String& type, const std::variant<String, Ref<SharedBuffer>>& data)>&&) const;
     void forEachCustomString(Function<void(const String& type, const String& data)>&&) const;
 
     bool hasData() const;

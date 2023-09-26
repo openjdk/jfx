@@ -26,8 +26,6 @@
 #include "config.h"
 #include "TableFormattingContext.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "TableFormattingGeometry.h"
@@ -115,7 +113,7 @@ inline static GridSpace& operator/(GridSpace& a, unsigned value)
 }
 
 template <typename SpanType>
-static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, LayoutUnit availableSpace, const WTF::Function<GridSpace(const TableGrid::Slot&, size_t)>& slotSpace)
+static Vector<LayoutUnit> distributeAvailableSpace(const TableGrid& grid, LayoutUnit availableSpace, const Function<GridSpace(const TableGrid::Slot&, size_t)>& slotSpace)
 {
     auto& columns = grid.columns();
     auto& rows = grid.rows();
@@ -459,4 +457,3 @@ TableFormattingContext::TableLayout::DistributedSpaces TableFormattingContext::T
 }
 }
 
-#endif

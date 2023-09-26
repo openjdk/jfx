@@ -39,19 +39,23 @@ class HTMLLinkElement;
 class Page;
 struct MediaQueryParserContext;
 
-template<typename T> class EventSender;
-using LinkEventSender = EventSender<HTMLLinkElement>;
+template<typename T, typename Counter> class EventSender;
+using LinkEventSender = EventSender<HTMLLinkElement, WeakPtrImplWithEventTargetData>;
 
 class HTMLLinkElement final : public HTMLElement, public CachedStyleSheetClient, public LinkLoaderClient {
     WTF_MAKE_ISO_ALLOCATED(HTMLLinkElement);
 public:
+    using HTMLElement::weakPtrFactory;
+    using HTMLElement::WeakValueType;
+    using HTMLElement::WeakPtrImplType;
+
     static Ref<HTMLLinkElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLLinkElement();
 
     URL href() const;
     WEBCORE_EXPORT const AtomString& rel() const;
 
-    String target() const final;
+    AtomString target() const final;
 
     const AtomString& type() const;
 
@@ -65,12 +69,14 @@ public:
     bool isEnabledViaScript() const { return m_disabledState == EnabledViaScript; }
     DOMTokenList& sizes();
 
+    WEBCORE_EXPORT bool mediaAttributeMatches() const;
+
     WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
     WEBCORE_EXPORT void setAs(const AtomString&);
     WEBCORE_EXPORT String as() const;
 
-    void dispatchPendingEvent(LinkEventSender*);
+    void dispatchPendingEvent(LinkEventSender*, const AtomString& eventType);
     static void dispatchPendingLoadEvents(Page*);
 
     WEBCORE_EXPORT DOMTokenList& relList();
@@ -140,13 +146,13 @@ private:
     String m_type;
     String m_media;
     String m_integrityMetadataForPendingSheetRequest;
+    URL m_url;
     std::unique_ptr<DOMTokenList> m_sizes;
     std::unique_ptr<DOMTokenList> m_relList;
     DisabledState m_disabledState;
     LinkRelAttribute m_relAttribute;
     bool m_loading : 1;
     bool m_createdByParser : 1;
-    bool m_firedLoad : 1;
     bool m_loadedResource : 1;
     bool m_isHandlingBeforeLoad : 1;
     bool m_allowPrefetchLoadAndErrorForTesting : 1;

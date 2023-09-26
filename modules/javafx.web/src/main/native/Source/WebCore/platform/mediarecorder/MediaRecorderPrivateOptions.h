@@ -26,7 +26,7 @@
 
 #include <wtf/Forward.h>
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_RECORDER)
 
 namespace WebCore {
 
@@ -35,45 +35,8 @@ struct MediaRecorderPrivateOptions {
     std::optional<unsigned> audioBitsPerSecond;
     std::optional<unsigned> videoBitsPerSecond;
     std::optional<unsigned> bitsPerSecond;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<MediaRecorderPrivateOptions> decode(Decoder&);
 };
-
-template<class Encoder>
-inline void MediaRecorderPrivateOptions::encode(Encoder& encoder) const
-{
-    encoder << mimeType;
-    encoder << audioBitsPerSecond;
-    encoder << videoBitsPerSecond;
-    encoder << bitsPerSecond;
-}
-
-template<class Decoder>
-inline std::optional<MediaRecorderPrivateOptions> MediaRecorderPrivateOptions::decode(Decoder& decoder)
-{
-    String mimeType;
-    if (!decoder.decode(mimeType))
-        return std::nullopt;
-
-    std::optional<std::optional<unsigned>> audioBitsPerSecond;
-    decoder >> audioBitsPerSecond;
-    if (!audioBitsPerSecond)
-        return std::nullopt;
-
-    std::optional<std::optional<unsigned>> videoBitsPerSecond;
-    decoder >> videoBitsPerSecond;
-    if (!videoBitsPerSecond)
-        return std::nullopt;
-
-    std::optional<std::optional<unsigned>> bitsPerSecond;
-    decoder >> bitsPerSecond;
-    if (!bitsPerSecond)
-        return std::nullopt;
-
-    return MediaRecorderPrivateOptions { WTFMove(mimeType), *audioBitsPerSecond, *videoBitsPerSecond, *bitsPerSecond };
-}
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_RECORDER)

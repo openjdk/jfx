@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,9 @@
 #endif
 #define GLASS_GTK3
 #endif
+
+#define GTK_3_MIN_MINOR_VERSION 8
+#define GTK_3_MIN_MICRO_VERSION 0
 
 #ifndef GDK_TOUCH_MASK
 #define GDK_TOUCH_MASK (1 << 22)
@@ -92,6 +95,12 @@ private:
     const char *message;
     jstring jmessage;
 };
+
+#define SAFE_FREE(PTR)  \
+    if ((PTR) != NULL) {  \
+        free(PTR);     \
+        (PTR) = NULL;     \
+    }
 
 #define EXCEPTION_OCCURED(env) (check_and_clear_exception(env))
 

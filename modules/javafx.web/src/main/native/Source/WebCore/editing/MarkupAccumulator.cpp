@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
- * Copyright (C) 2009, 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,18 +27,23 @@
 #include "config.h"
 #include "MarkupAccumulator.h"
 
+#include "Attr.h"
 #include "CDATASection.h"
 #include "Comment.h"
+#include "CommonAtomStrings.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLTemplateElement.h"
 #include "ProcessingInstruction.h"
+#include "TemplateContentDocumentFragment.h"
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <memory>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -159,7 +164,7 @@ static inline void appendCharactersReplacingEntitiesInternal(StringBuilder& resu
     size_t positionAfterLastEntity = 0;
     for (size_t i = 0; i < length; ++i) {
         CharacterType character = text[i];
-        uint8_t substitution = character < WTF_ARRAY_LENGTH(entityMap) ? entityMap[character] : static_cast<uint8_t>(EntitySubstitutionNullIndex);
+        uint8_t substitution = character < std::size(entityMap) ? entityMap[character] : static_cast<uint8_t>(EntitySubstitutionNullIndex);
         if (UNLIKELY(substitution != EntitySubstitutionNullIndex) && entitySubstitutionList[substitution].mask & entityMask) {
             result.appendSubstring(source, offset + positionAfterLastEntity, i - positionAfterLastEntity);
             result.appendCharacters(entitySubstitutionList[substitution].characters, entitySubstitutionList[substitution].length);
@@ -199,51 +204,72 @@ String MarkupAccumulator::serializeNodes(Node& targetNode, SerializedNodes root,
 
 void MarkupAccumulator::serializeNodesWithNamespaces(Node& targetNode, SerializedNodes root, const Namespaces* namespaces, Vector<QualifiedName>* tagNamesToSkip)
 {
-    if (tagNamesToSkip && is<Element>(targetNode)) {
-        for (auto& name : *tagNamesToSkip) {
-            if (downcast<Element>(targetNode).hasTagName(name))
-                return;
-        }
-    }
-
-    Namespaces namespaceHash;
+    WTF::Vector<Namespaces> namespaceStack;
     if (namespaces)
-        namespaceHash = *namespaces;
+        namespaceStack.append(*namespaces);
     else if (inXMLFragmentSerialization()) {
         // Make sure xml prefix and namespace are always known to uphold the constraints listed at http://www.w3.org/TR/xml-names11/#xmlReserved.
+        Namespaces namespaceHash;
         namespaceHash.set(xmlAtom().impl(), XMLNames::xmlNamespaceURI->impl());
         namespaceHash.set(XMLNames::xmlNamespaceURI->impl(), xmlAtom().impl());
+        namespaceStack.append(WTFMove(namespaceHash));
+    } else
+        namespaceStack.constructAndAppend();
+
+    const Node* current = &targetNode;
+    do {
+        bool shouldSkipNode = false;
+        if (tagNamesToSkip && is<Element>(current)) {
+            for (auto& name : *tagNamesToSkip) {
+                if (downcast<Element>(current)->hasTagName(name))
+                    shouldSkipNode = true;
+            }
     }
 
-    if (root == SerializedNodes::SubtreeIncludingNode)
-        startAppendingNode(targetNode, &namespaceHash);
+        bool shouldAppendNode = !shouldSkipNode && !(current == &targetNode && root != SerializedNodes::SubtreeIncludingNode);
+        if (shouldAppendNode)
+            startAppendingNode(*current, &namespaceStack.last());
 
-    if (targetNode.document().isHTMLDocument() && elementCannotHaveEndTag(targetNode))
-        return;
+        bool shouldEmitCloseTag = !(targetNode.document().isHTMLDocument() && elementCannotHaveEndTag(*current));
+        shouldSkipNode = shouldSkipNode || !shouldEmitCloseTag;
+        if (!shouldSkipNode) {
+            auto firstChild = current->hasTagName(templateTag) ? downcast<HTMLTemplateElement>(current)->content().firstChild() : current->firstChild();
+            if (firstChild) {
+                current = firstChild;
+                namespaceStack.append(namespaceStack.last());
+                continue;
+            }
+        }
 
-    Node* current = targetNode.hasTagName(templateTag) ? downcast<HTMLTemplateElement>(targetNode).content().firstChild() : targetNode.firstChild();
-    for ( ; current; current = current->nextSibling())
-        serializeNodesWithNamespaces(*current, SerializedNodes::SubtreeIncludingNode, &namespaceHash, tagNamesToSkip);
+        if (shouldAppendNode && shouldEmitCloseTag)
+            endAppendingNode(*current);
 
-    if (root == SerializedNodes::SubtreeIncludingNode)
-        endAppendingNode(targetNode);
+        while (current != &targetNode) {
+            auto nextSibling = current->nextSibling();
+            if (nextSibling) {
+                current = nextSibling;
+                namespaceStack.removeLast();
+                namespaceStack.append(namespaceStack.last());
+                break;
+            }
+            current = current->parentNode();
+            namespaceStack.removeLast();
+            if (auto* fragment = dynamicDowncast<TemplateContentDocumentFragment>(current)) {
+                if (current != &targetNode)
+                    current = fragment->host();
+            }
+
+            shouldAppendNode = !(current == &targetNode && root != SerializedNodes::SubtreeIncludingNode);
+            shouldEmitCloseTag = !(targetNode.document().isHTMLDocument() && elementCannotHaveEndTag(*current));
+            if (shouldAppendNode && shouldEmitCloseTag)
+                endAppendingNode(*current);
+        }
+    } while (current != &targetNode);
 }
 
 String MarkupAccumulator::resolveURLIfNeeded(const Element& element, const String& urlString) const
 {
-    switch (m_resolveURLs) {
-    case ResolveURLs::Yes:
-        return element.document().completeURL(urlString).string();
-
-    case ResolveURLs::YesExcludingLocalFileURLsForPrivacy:
-        if (!element.document().url().isLocalFile())
-            return element.document().completeURL(urlString).string();
-        break;
-
-    case ResolveURLs::No:
-        break;
-    }
-    return urlString;
+    return element.resolveURLStringIfNeeded(urlString, m_resolveURLs);
 }
 
 void MarkupAccumulator::startAppendingNode(const Node& node, Namespaces* namespaces)
@@ -286,9 +312,12 @@ void MarkupAccumulator::appendQuotedURLAttributeValue(StringBuilder& result, con
     char quoteChar = '"';
     if (WTF::protocolIsJavaScript(resolvedURLString)) {
         // minimal escaping for javascript urls
+        if (resolvedURLString.contains('&'))
+            resolvedURLString = makeStringByReplacingAll(resolvedURLString, '&', "&amp;"_s);
+
         if (resolvedURLString.contains('"')) {
             if (resolvedURLString.contains('\''))
-                resolvedURLString.replaceWithLiteral('"', "&quot;");
+                resolvedURLString = makeStringByReplacingAll(resolvedURLString, '"', "&quot;"_s);
             else
                 quoteChar = '\'';
         }
@@ -308,7 +337,7 @@ static bool shouldAddNamespaceElement(const Element& element)
     auto& prefix = element.prefix();
     if (prefix.isEmpty())
         return !element.hasAttribute(xmlnsAtom());
-    return !element.hasAttribute("xmlns:" + prefix);
+    return !element.hasAttribute(makeAtomString("xmlns:"_s, prefix));
 }
 
 static bool shouldAddNamespaceAttribute(const Attribute& attribute, Namespaces& namespaces)
@@ -465,7 +494,7 @@ void MarkupAccumulator::generateUniquePrefix(QualifiedName& prefixedName, const 
     AtomString name;
     do {
         // FIXME: We should create makeAtomString, which would be more efficient.
-        name = makeString("NS", ++m_prefixLevel);
+        name = makeAtomString("NS"_s, ++m_prefixLevel);
     } while (namespaces.get(name.impl()));
     prefixedName.setPrefix(name);
 }
@@ -484,7 +513,7 @@ static String htmlAttributeSerialization(const Attribute& attribute)
             return xmlnsAtom();
         prefixedName.setPrefix(xmlnsAtom());
     } else if (attribute.namespaceURI() == XLinkNames::xlinkNamespaceURI)
-        prefixedName.setPrefix(AtomString("xlink", AtomString::ConstructFromLiteral));
+        prefixedName.setPrefix(AtomString("xlink"_s));
     return prefixedName.toString();
 }
 
@@ -574,7 +603,8 @@ void MarkupAccumulator::appendNonElementNode(StringBuilder& result, const Node& 
         result.append("<![CDATA[", downcast<CDATASection>(node).data(), "]]>");
         break;
     case Node::ATTRIBUTE_NODE:
-        ASSERT_NOT_REACHED();
+        // Only XMLSerializer can pass an Attr. So, |documentIsHTML| flag is false.
+        appendAttributeValue(result, downcast<Attr>(node).value(), false);
         break;
     }
 }

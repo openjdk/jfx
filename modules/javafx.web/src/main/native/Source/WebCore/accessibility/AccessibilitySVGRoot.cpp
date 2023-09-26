@@ -29,28 +29,31 @@
 #include "config.h"
 #include "AccessibilitySVGRoot.h"
 
+#include "AXObjectCache.h"
+#include "ElementInlines.h"
 #include "RenderObject.h"
 #include "SVGDescElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGTitleElement.h"
 #include "TypedElementDescendantIterator.h"
 
 namespace WebCore {
 
-AccessibilitySVGRoot::AccessibilitySVGRoot(RenderObject* renderer)
-    : AccessibilitySVGElement(renderer)
+AccessibilitySVGRoot::AccessibilitySVGRoot(RenderObject* renderer, AXObjectCache* cache)
+    : AccessibilitySVGElement(renderer, cache)
 {
 }
 
 AccessibilitySVGRoot::~AccessibilitySVGRoot() = default;
 
-Ref<AccessibilitySVGRoot> AccessibilitySVGRoot::create(RenderObject* renderer)
+Ref<AccessibilitySVGRoot> AccessibilitySVGRoot::create(RenderObject* renderer, AXObjectCache* cache)
 {
-    return adoptRef(*new AccessibilitySVGRoot(renderer));
+    return adoptRef(*new AccessibilitySVGRoot(renderer, cache));
 }
 
 void AccessibilitySVGRoot::setParent(AccessibilityRenderObject* parent)
 {
-    m_parent = makeWeakPtr(parent);
+    m_parent = parent;
 }
 
 AccessibilityObject* AccessibilitySVGRoot::parentObject() const

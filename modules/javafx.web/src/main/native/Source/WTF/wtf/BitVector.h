@@ -39,6 +39,8 @@ class CachedBitVector;
 
 namespace WTF {
 
+class FixedBitVector;
+
 // This is a space-efficient, resizeable bitvector class. In the common case it
 // occupies one word, but if necessary, it will inflate this one word to point
 // to a single chunk of out-of-line allocated storage to store an arbitrary number
@@ -357,8 +359,11 @@ public:
         return byteCount(size());
     }
 
+    WTF_EXPORT_PRIVATE void shiftRightByMultipleOf64(size_t);
+
 private:
     friend class JSC::CachedBitVector;
+    friend class FixedBitVector;
 
     static unsigned bitsInPointer()
     {
@@ -461,7 +466,7 @@ private:
     const OutOfLineBits* outOfLineBits() const { return bitwise_cast<const OutOfLineBits*>(m_bitsOrPointer << 1); }
     OutOfLineBits* outOfLineBits() { return bitwise_cast<OutOfLineBits*>(m_bitsOrPointer << 1); }
 
-    WTF_EXPORT_PRIVATE void resizeOutOfLine(size_t numBits);
+    WTF_EXPORT_PRIVATE void resizeOutOfLine(size_t numBits, size_t shiftInWords = 0);
     WTF_EXPORT_PRIVATE void setSlow(const BitVector& other);
 
     WTF_EXPORT_PRIVATE void mergeSlow(const BitVector& other);

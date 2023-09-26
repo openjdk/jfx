@@ -55,11 +55,11 @@ private:
         linkFrom(jit);
         for (unsigned i = 0; i < m_plans.size(); ++i)
             jit->silentSpill(m_plans[i]);
-        jit->callOperation(m_function, m_resultGPR, &jit->vm(), m_structure, m_size, m_storageGPR);
+        jit->callOperation(m_function, m_resultGPR, SpeculativeJIT::TrustedImmPtr(&jit->vm()), m_structure, m_size, m_storageGPR);
         for (unsigned i = m_plans.size(); i--;)
             jit->silentFill(m_plans[i]);
-        jit->m_jit.exceptionCheck();
-        jit->m_jit.loadPtr(MacroAssembler::Address(m_resultGPR, JSObject::butterflyOffset()), m_storageGPR);
+        jit->exceptionCheck();
+        jit->loadPtr(MacroAssembler::Address(m_resultGPR, JSObject::butterflyOffset()), m_storageGPR);
         jumpTo(jit);
     }
 
@@ -75,7 +75,7 @@ class CallArrayAllocatorWithVariableSizeSlowPathGenerator final : public Jumping
 public:
     CallArrayAllocatorWithVariableSizeSlowPathGenerator(
         MacroAssembler::JumpList from, SpeculativeJIT* jit, P_JITOperation_GStZB function,
-        GPRReg resultGPR, CCallHelpers::TrustedImmPtr globalObject, RegisteredStructure contiguousStructure, RegisteredStructure arrayStorageStructure, GPRReg sizeGPR, GPRReg storageGPR)
+        GPRReg resultGPR, JITCompiler::LinkableConstant globalObject, RegisteredStructure contiguousStructure, RegisteredStructure arrayStorageStructure, GPRReg sizeGPR, GPRReg storageGPR)
         : JumpingSlowPathGenerator<MacroAssembler::JumpList>(from, jit)
         , m_function(function)
         , m_contiguousStructure(contiguousStructure)
@@ -96,18 +96,18 @@ private:
             jit->silentSpill(m_plans[i]);
         GPRReg scratchGPR = AssemblyHelpers::selectScratchGPR(m_sizeGPR, m_storageGPR);
         if (m_contiguousStructure.get() != m_arrayStorageOrContiguousStructure.get()) {
-            MacroAssembler::Jump bigLength = jit->m_jit.branch32(MacroAssembler::AboveOrEqual, m_sizeGPR, MacroAssembler::TrustedImm32(MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH));
-            jit->m_jit.move(SpeculativeJIT::TrustedImmPtr(m_contiguousStructure), scratchGPR);
-            MacroAssembler::Jump done = jit->m_jit.jump();
-            bigLength.link(&jit->m_jit);
-            jit->m_jit.move(SpeculativeJIT::TrustedImmPtr(m_arrayStorageOrContiguousStructure), scratchGPR);
-            done.link(&jit->m_jit);
+            MacroAssembler::Jump bigLength = jit->branch32(MacroAssembler::AboveOrEqual, m_sizeGPR, MacroAssembler::TrustedImm32(MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH));
+            jit->move(SpeculativeJIT::TrustedImmPtr(m_contiguousStructure), scratchGPR);
+            MacroAssembler::Jump done = jit->jump();
+            bigLength.link(jit);
+            jit->move(SpeculativeJIT::TrustedImmPtr(m_arrayStorageOrContiguousStructure), scratchGPR);
+            done.link(jit);
         } else
-            jit->m_jit.move(SpeculativeJIT::TrustedImmPtr(m_contiguousStructure), scratchGPR);
+            jit->move(SpeculativeJIT::TrustedImmPtr(m_contiguousStructure), scratchGPR);
         jit->callOperation(m_function, m_resultGPR, m_globalObject, scratchGPR, m_sizeGPR, m_storageGPR);
         for (unsigned i = m_plans.size(); i--;)
             jit->silentFill(m_plans[i]);
-        jit->m_jit.exceptionCheck();
+        jit->exceptionCheck();
         jumpTo(jit);
     }
 
@@ -115,7 +115,7 @@ private:
     RegisteredStructure m_contiguousStructure;
     RegisteredStructure m_arrayStorageOrContiguousStructure;
     GPRReg m_resultGPR;
-    CCallHelpers::TrustedImmPtr m_globalObject;
+    JITCompiler::LinkableConstant m_globalObject;
     GPRReg m_sizeGPR;
     GPRReg m_storageGPR;
     Vector<SilentRegisterSavePlan, 2> m_plans;
@@ -125,7 +125,7 @@ class CallArrayAllocatorWithVariableStructureVariableSizeSlowPathGenerator final
 public:
     CallArrayAllocatorWithVariableStructureVariableSizeSlowPathGenerator(
         MacroAssembler::JumpList from, SpeculativeJIT* jit, P_JITOperation_GStZB function,
-        GPRReg resultGPR, CCallHelpers::TrustedImmPtr globalObject, GPRReg structureGPR, GPRReg sizeGPR, GPRReg storageGPR)
+        GPRReg resultGPR, JITCompiler::LinkableConstant globalObject, GPRReg structureGPR, GPRReg sizeGPR, GPRReg storageGPR)
         : JumpingSlowPathGenerator<MacroAssembler::JumpList>(from, jit)
         , m_function(function)
         , m_resultGPR(resultGPR)
@@ -146,13 +146,13 @@ private:
         jit->callOperation(m_function, m_resultGPR, m_globalObject, m_structureGPR, m_sizeGPR, m_storageGPR);
         for (unsigned i = m_plans.size(); i--;)
             jit->silentFill(m_plans[i]);
-        jit->m_jit.exceptionCheck();
+        jit->exceptionCheck();
         jumpTo(jit);
     }
 
     P_JITOperation_GStZB m_function;
     GPRReg m_resultGPR;
-    CCallHelpers::TrustedImmPtr m_globalObject;
+    JITCompiler::LinkableConstant m_globalObject;
     GPRReg m_structureGPR;
     GPRReg m_sizeGPR;
     GPRReg m_storageGPR;

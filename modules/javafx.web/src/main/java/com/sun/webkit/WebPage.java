@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import javafx.scene.paint.Color;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.event.WCFocusEvent;
 import com.sun.webkit.event.WCInputMethodEvent;
 import com.sun.webkit.event.WCKeyEvent;
@@ -100,7 +101,7 @@ public final class WebPage {
     private final WCFrameView hostWindow;
 
     // List of created frames
-    private final Set<Long> frames = new HashSet<Long>();
+    private final Set<Long> frames = new HashSet<>();
 
     // The access control context associated with this object
     @SuppressWarnings("removal")
@@ -108,11 +109,11 @@ public final class WebPage {
 
     // Maps load request identifiers to URLs
     private final Map<Integer, String> requestURLs =
-            new HashMap<Integer, String>();
+            new HashMap<>();
 
     // There may be several RESOURCE_STARTED events for a resource,
     // so this map is used to convert them to RESOURCE_REDIRECTED
-    private final Set<Integer> requestStarted = new HashSet<Integer>();
+    private final Set<Integer> requestStarted = new HashSet<>();
 
     // PAGE_LOCK is used to synchronize the following operations b/w Event & Main threads:
     // - rendering of the page (Main thread)
@@ -123,7 +124,7 @@ public final class WebPage {
     // The queue of render frames awaiting rendering.
     // Access to this object is synchronized on its monitor.
     // Accessed on: Event thread and Main thread.
-    private final Queue<RenderFrame> frameQueue = new LinkedList<RenderFrame>();
+    private final Queue<RenderFrame> frameQueue = new LinkedList<>();
 
     // The current frame being generated.
     // Accessed on: Event thread only.
@@ -150,7 +151,7 @@ public final class WebPage {
             final boolean useJIT = Boolean.valueOf(System.getProperty(
                     "com.sun.webkit.useJIT", "true"));
             final boolean useDFGJIT = Boolean.valueOf(System.getProperty(
-                    "com.sun.webkit.useDFGJIT", "true"));
+                    "com.sun.webkit.useDFGJIT", "false"));
 
             // TODO: Enable CSS3D by default once it is stabilized.
             boolean useCSS3D = Boolean.valueOf(System.getProperty(
@@ -159,6 +160,19 @@ public final class WebPage {
 
             // Initialize WTF, WebCore and JavaScriptCore.
             twkInitWebCore(useJIT, useDFGJIT, useCSS3D);
+
+            // Inform the native webkit code when either the JVM or the
+            // JavaFX runtime is being shutdown
+            final Runnable shutdownHook = () -> {
+                synchronized(WebPage.class) {
+                    MainThread.twkSetShutdown(true);
+                }
+            };
+
+            // Register shutdown hook with the Java runtime and the Toolkit
+            Toolkit.getToolkit().addShutdownHook(shutdownHook);
+            Runtime.getRuntime().addShutdownHook(new Thread(shutdownHook));
+
             return null;
         });
 
@@ -250,7 +264,7 @@ public final class WebPage {
     // *************************************************************************
 
     private WCPageBackBuffer backbuffer;
-    private List<WCRectangle> dirtyRects = new LinkedList<WCRectangle>();
+    private List<WCRectangle> dirtyRects = new LinkedList<>();
 
     private void addDirtyRect(WCRectangle toPaint) {
         if (toPaint.getWidth() <= 0 || toPaint.getHeight() <= 0) {
@@ -307,7 +321,7 @@ public final class WebPage {
             clip = new WCRectangle(0, 0, width, height);
         }
         List<WCRectangle> oldDirtyRects = dirtyRects;
-        dirtyRects = new LinkedList<WCRectangle>();
+        dirtyRects = new LinkedList<>();
         twkPrePaint(getPage());
         while (!oldDirtyRects.isEmpty()) {
             WCRectangle r = oldDirtyRects.remove(0).intersection(clip);
@@ -380,7 +394,7 @@ public final class WebPage {
             if (paintLog.isLoggable(Level.FINEST)) {
                 paintLog.finest("rect=[" + x + ", " + y + " " + w + "x" + h +"]");
             }
-            addDirtyRect(new WCRectangle(x, y, (float) w, (float) h));
+            addDirtyRect(new WCRectangle(x, y, w, h));
             return;
         }
 
@@ -439,7 +453,7 @@ public final class WebPage {
     // by multiple threads
     private static final class RenderFrame {
         private final List<WCRenderQueue> rqList =
-                new LinkedList<WCRenderQueue>();
+                new LinkedList<>();
         private int scrollDx, scrollDy;
         private final WCRectangle enclosingRect = new WCRectangle();
 
@@ -499,7 +513,7 @@ public final class WebPage {
     private final PolicyClient policyClient;
     private InputMethodClient imClient;
     private final List<LoadListenerClient> loadListenerClients =
-        new LinkedList<LoadListenerClient>();
+        new LinkedList<>();
     private final InspectorClient inspectorClient;
     private final RenderTheme renderTheme;
     private final ScrollBarTheme scrollbarTheme;
@@ -692,7 +706,7 @@ public final class WebPage {
         try {
             final WCRenderQueue rq = WCGraphicsManager.getGraphicsManager().
                     createRenderQueue(new WCRectangle(x, y, w, h), true);
-            FutureTask<Void> f = new FutureTask<Void>(() -> {
+            FutureTask<Void> f = new FutureTask<>(() -> {
                 twkUpdateContent(getPage(), rq, x, y, w, h);
             }, null);
             Invoker.getInvoker().invokeOnEventThread(f);
@@ -1612,7 +1626,7 @@ public final class WebPage {
                 return null;
             }
             long[] children = twkGetChildFrames(parentID);
-            List<Long> childrenList = new LinkedList<Long>();
+            List<Long> childrenList = new LinkedList<>();
             for (long child : children) {
                 childrenList.add(Long.valueOf(child));
             }

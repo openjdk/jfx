@@ -43,7 +43,7 @@ ObjectInitializationScope::ObjectInitializationScope(VM& vm)
 
 ObjectInitializationScope::~ObjectInitializationScope()
 {
-    m_vm.heap.mutatorFence();
+    m_vm.mutatorFence();
     if (!m_object)
         return;
     verifyPropertiesAreInitialized(m_object);
@@ -71,7 +71,7 @@ void ObjectInitializationScope::notifyInitialized(JSObject* object)
 void ObjectInitializationScope::verifyPropertiesAreInitialized(JSObject* object)
 {
     Butterfly* butterfly = object->butterfly();
-    Structure* structure = object->structure(m_vm);
+    Structure* structure = object->structure();
     IndexingType indexingType = structure->indexingType();
     unsigned vectorLength = butterfly->vectorLength();
     if (UNLIKELY(hasUndecided(indexingType)) || !hasIndexedProperties(indexingType)) {

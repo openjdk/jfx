@@ -36,16 +36,23 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "SourceBuffer.h"
+#include "WebCoreOpaqueRoot.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SourceBufferList);
 
+Ref<SourceBufferList> SourceBufferList::create(ScriptExecutionContext* context)
+{
+    auto result = adoptRef(*new SourceBufferList(context));
+    result->suspendIfNeeded();
+    return result;
+}
+
 SourceBufferList::SourceBufferList(ScriptExecutionContext* context)
     : ActiveDOMObject(context)
 {
-    suspendIfNeeded();
 }
 
 SourceBufferList::~SourceBufferList()
@@ -100,6 +107,11 @@ void SourceBufferList::scheduleEvent(const AtomString& eventName)
 const char* SourceBufferList::activeDOMObjectName() const
 {
     return "SourceBufferList";
+}
+
+WebCoreOpaqueRoot root(SourceBufferList* list)
+{
+    return WebCoreOpaqueRoot { list };
 }
 
 } // namespace WebCore

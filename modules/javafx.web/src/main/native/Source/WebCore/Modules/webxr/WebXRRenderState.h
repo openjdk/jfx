@@ -56,7 +56,7 @@ public:
     void setBaseLayer(WebXRWebGLLayer* baseLayer) { m_baseLayer = baseLayer; }
 
     HTMLCanvasElement* outputCanvas() const { return m_outputCanvas.get(); }
-    void setOutputCanvas(HTMLCanvasElement* canvas) { m_outputCanvas = makeWeakPtr(canvas); }
+    void setOutputCanvas(HTMLCanvasElement* canvas) { m_outputCanvas = canvas; }
 
     bool isCompositionEnabled() const { return m_compositionEnabled; }
     void setCompositionEnabled(bool compositionEnabled) { m_compositionEnabled = compositionEnabled; }
@@ -72,7 +72,7 @@ private:
     } m_depth;
     std::optional<double> m_inlineVerticalFieldOfView; // in radians
     RefPtr<WebXRWebGLLayer> m_baseLayer;
-    WeakPtr<HTMLCanvasElement> m_outputCanvas;
+    WeakPtr<HTMLCanvasElement, WeakPtrImplWithEventTargetData> m_outputCanvas;
     bool m_compositionEnabled { true };
 };
 

@@ -32,13 +32,14 @@
 
 #include "AsyncScrollingCoordinator.h"
 #include "NicosiaPlatformLayer.h"
-#include "ScrollingTreeFixedNode.h"
+#include "ScrollingThread.h"
+#include "ScrollingTreeFixedNodeNicosia.h"
 #include "ScrollingTreeFrameHostingNode.h"
 #include "ScrollingTreeFrameScrollingNodeNicosia.h"
-#include "ScrollingTreeOverflowScrollProxyNode.h"
+#include "ScrollingTreeOverflowScrollProxyNodeNicosia.h"
 #include "ScrollingTreeOverflowScrollingNodeNicosia.h"
-#include "ScrollingTreePositionedNode.h"
-#include "ScrollingTreeStickyNode.h"
+#include "ScrollingTreePositionedNodeNicosia.h"
+#include "ScrollingTreeStickyNodeNicosia.h"
 
 namespace WebCore {
 
@@ -63,16 +64,29 @@ Ref<ScrollingTreeNode> ScrollingTreeNicosia::createScrollingTreeNode(ScrollingNo
     case ScrollingNodeType::Overflow:
         return ScrollingTreeOverflowScrollingNodeNicosia::create(*this, nodeID);
     case ScrollingNodeType::OverflowProxy:
-        return ScrollingTreeOverflowScrollProxyNode::create(*this, nodeID);
+        return ScrollingTreeOverflowScrollProxyNodeNicosia::create(*this, nodeID);
     case ScrollingNodeType::Fixed:
-        return ScrollingTreeFixedNode::create(*this, nodeID);
+        return ScrollingTreeFixedNodeNicosia::create(*this, nodeID);
     case ScrollingNodeType::Sticky:
-        return ScrollingTreeStickyNode::create(*this, nodeID);
+        return ScrollingTreeStickyNodeNicosia::create(*this, nodeID);
     case ScrollingNodeType::Positioned:
-        return ScrollingTreePositionedNode::create(*this, nodeID);
+        return ScrollingTreePositionedNodeNicosia::create(*this, nodeID);
     }
 
     RELEASE_ASSERT_NOT_REACHED();
+}
+
+void ScrollingTreeNicosia::applyLayerPositionsInternal()
+{
+    std::unique_ptr<Nicosia::SceneIntegration::UpdateScope> updateScope;
+    if (ScrollingThread::isCurrentThread()) {
+        if (auto* rootScrollingNode = rootNode()) {
+            auto rootContentsLayer = static_cast<ScrollingTreeFrameScrollingNodeNicosia*>(rootScrollingNode)->rootContentsLayer();
+            updateScope = rootContentsLayer->createUpdateScope();
+        }
+    }
+
+    ThreadedScrollingTree::applyLayerPositionsInternal();
 }
 
 using Nicosia::CompositionLayer;
@@ -82,13 +96,12 @@ static bool collectDescendantLayersAtPoint(Vector<RefPtr<CompositionLayer>>& lay
     bool existsOnLayer = false;
     bool existsOnDescendent = false;
 
-    parent->accessPending([&](const CompositionLayer::LayerState& state) {
-        if (FloatRect(FloatPoint(), state.size).contains(point))
-            existsOnLayer = !!state.scrollingNodeID;
+    parent->accessCommitted([&](const CompositionLayer::LayerState& state) {
+        existsOnLayer = !!state.scrollingNodeID && FloatRect({ }, state.size).contains(point) && state.eventRegion.contains(roundedIntPoint(point));
 
         for (auto child : state.children) {
             FloatPoint transformedPoint(point);
-            child->accessPending([&](const CompositionLayer::LayerState& childState) {
+            child->accessCommitted([&](const CompositionLayer::LayerState& childState) {
                 if (!childState.transform.isInvertible())
                     return;
                 float originX = childState.anchorPoint.x() * childState.size.width();
@@ -116,14 +129,14 @@ RefPtr<ScrollingTreeNode> ScrollingTreeNicosia::scrollingNodeForPoint(FloatPoint
     if (!rootScrollingNode)
         return nullptr;
 
-    LayerTreeHitTestLocker layerLocker(m_scrollingCoordinator.get());
+    Locker layerLocker { m_layerHitTestMutex };
 
     auto rootContentsLayer = static_cast<ScrollingTreeFrameScrollingNodeNicosia*>(rootScrollingNode)->rootContentsLayer();
     Vector<RefPtr<CompositionLayer>> layersAtPoint;
     collectDescendantLayersAtPoint(layersAtPoint, rootContentsLayer, point);
 
     ScrollingTreeNode* returnNode = nullptr;
-    for (auto layer : WTF::makeReversedRange(layersAtPoint)) {
+    for (auto layer : makeReversedRange(layersAtPoint)) {
         layer->accessCommitted([&](const CompositionLayer::LayerState& state) {
             auto* scrollingNode = nodeForID(state.scrollingNodeID);
             if (is<ScrollingTreeScrollingNode>(scrollingNode))

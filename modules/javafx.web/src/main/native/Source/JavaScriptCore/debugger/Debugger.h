@@ -27,7 +27,9 @@
 #include "DebuggerParseData.h"
 #include "DebuggerPrimitives.h"
 #include "JSCJSValue.h"
+#include <wtf/DoublyLinkedList.h>
 #include <wtf/Forward.h>
+#include <wtf/ListHashSet.h>
 
 namespace JSC {
 
@@ -35,10 +37,11 @@ class CallFrame;
 class CodeBlock;
 class Exception;
 class JSGlobalObject;
+class Microtask;
 class SourceProvider;
 class VM;
 
-class Debugger {
+class Debugger : public DoublyLinkedListNode<Debugger> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     JS_EXPORT_PRIVATE Debugger(VM&);
@@ -56,6 +59,8 @@ public:
     JS_EXPORT_PRIVATE void attach(JSGlobalObject*);
     JS_EXPORT_PRIVATE void detach(JSGlobalObject*, ReasonForDetach);
     JS_EXPORT_PRIVATE bool isAttached(JSGlobalObject*);
+
+    void forEachBreakpointLocation(SourceID, SourceProvider*, int startLine, int startColumn, int endLine, int endColumn, Function<void(int, int)>&&);
 
     bool resolveBreakpoint(Breakpoint&, SourceProvider*);
     bool setBreakpoint(Breakpoint&);
@@ -115,6 +120,7 @@ public:
 
     enum class BlackboxType { Deferred, Ignored };
     void setBlackboxType(SourceID, std::optional<BlackboxType>);
+    void setBlackboxBreakpointEvaluations(bool);
     void clearBlackbox();
 
     bool isPaused() const { return m_isPaused; }
@@ -135,20 +141,28 @@ public:
     void didExecuteProgram(CallFrame*);
     void didReachDebuggerStatement(CallFrame*);
 
-    void willRunMicrotask();
-    void didRunMicrotask();
+    JS_EXPORT_PRIVATE void didQueueMicrotask(JSGlobalObject*, MicrotaskIdentifier);
+    JS_EXPORT_PRIVATE void willRunMicrotask(JSGlobalObject*, MicrotaskIdentifier);
+    JS_EXPORT_PRIVATE void didRunMicrotask(JSGlobalObject*, MicrotaskIdentifier);
 
     void registerCodeBlock(CodeBlock*);
+    void forEachRegisteredCodeBlock(const Function<void(CodeBlock*)>&);
+
+    void didCreateNativeExecutable(NativeExecutable&);
+    void willCallNativeExecutable(CallFrame*);
 
     class Client {
     public:
         virtual ~Client() = default;
 
+        virtual bool isInspectorDebuggerAgent() const { return false; }
+
         virtual JSObject* debuggerScopeExtensionObject(Debugger&, JSGlobalObject*, DebuggerCallFrame&) { return nullptr; }
-        virtual void debuggerWillEvaluate(Debugger&, const Breakpoint::Action&) { }
-        virtual void debuggerDidEvaluate(Debugger&, const Breakpoint::Action&) { }
+        virtual void debuggerWillEvaluate(Debugger&, JSGlobalObject*, const Breakpoint::Action&) { }
+        virtual void debuggerDidEvaluate(Debugger&, JSGlobalObject*, const Breakpoint::Action&) { }
     };
 
+    Client* client() const { return m_client; }
     void setClient(Client*);
 
     // FIXME: <https://webkit.org/b/162773> Web Inspector: Simplify Debugger::Script to use SourceProvider
@@ -172,15 +186,23 @@ public:
         virtual void didParseSource(SourceID, const Debugger::Script&) { }
         virtual void failedToParseSource(const String& /* url */, const String& /* data */, int /* firstLine */, int /* errorLine */, const String& /* errorMessage */) { }
 
-        virtual void willRunMicrotask() { }
-        virtual void didRunMicrotask() { }
+        virtual void didCreateNativeExecutable(NativeExecutable&) { }
+        virtual void willCallNativeExecutable(CallFrame*) { }
+
+        virtual void willEnter(CallFrame*) { }
+
+        virtual void didQueueMicrotask(JSGlobalObject*, MicrotaskIdentifier) { }
+        virtual void willRunMicrotask(JSGlobalObject*, MicrotaskIdentifier) { }
+        virtual void didRunMicrotask(JSGlobalObject*, MicrotaskIdentifier) { }
 
         virtual void didPause(JSGlobalObject*, DebuggerCallFrame&, JSValue /* exceptionOrCaughtValue */) { }
         virtual void didContinue() { }
 
+        virtual void applyBreakpoints(CodeBlock*) { }
         virtual void breakpointActionLog(JSGlobalObject*, const String& /* data */) { }
         virtual void breakpointActionSound(BreakpointActionID) { }
         virtual void breakpointActionProbe(JSGlobalObject*, BreakpointActionID, unsigned /* batchId */, unsigned /* sampleId */, JSValue /* result */) { }
+        virtual void didDeferBreakpointPause(BreakpointID) { }
     };
 
     JS_EXPORT_PRIVATE void addObserver(Observer&);
@@ -231,7 +253,7 @@ protected:
     // or some other async operation in a pure JSContext) we can ignore exceptions reported here.
     virtual void reportException(JSGlobalObject*, Exception*) const { }
 
-    bool doneProcessingDebuggerEvents() const { return m_doneProcessingDebuggerEvents; }
+    bool m_doneProcessingDebuggerEvents { true };
 
 private:
     JSValue exceptionOrCaughtValue(JSGlobalObject*);
@@ -257,7 +279,7 @@ private:
         Debugger& m_debugger;
     };
 
-    RefPtr<Breakpoint> didHitBreakpoint(JSGlobalObject*, SourceID, const TextPosition&);
+    RefPtr<Breakpoint> didHitBreakpoint(SourceID, const TextPosition&);
 
     DebuggerParseData& debuggerParseData(SourceID, SourceProvider*);
 
@@ -299,6 +321,7 @@ private:
     HashSet<JSGlobalObject*> m_globalObjects;
     HashMap<SourceID, DebuggerParseData, WTF::IntHash<SourceID>, WTF::UnsignedWithZeroKeyHashTraits<SourceID>> m_parseDataMap;
     HashMap<SourceID, BlackboxType, WTF::IntHash<SourceID>, WTF::UnsignedWithZeroKeyHashTraits<SourceID>> m_blackboxedScripts;
+    bool m_blackboxBreakpointEvaluations : 1;
 
     bool m_pauseAtNextOpportunity : 1;
     bool m_pauseOnStepNext : 1;
@@ -322,6 +345,7 @@ private:
     HashMap<SourceID, LineToBreakpointsMap, WTF::IntHash<SourceID>, WTF::UnsignedWithZeroKeyHashTraits<SourceID>> m_breakpointsForSourceID;
     HashSet<Ref<Breakpoint>> m_breakpoints;
     RefPtr<Breakpoint> m_specialBreakpoint;
+    ListHashSet<Ref<Breakpoint>> m_deferredBreakpoints;
     BreakpointID m_pausingBreakpointID;
 
     RefPtr<Breakpoint> m_pauseOnAllExceptionsBreakpoint;
@@ -334,16 +358,17 @@ private:
     RefPtr<JSC::DebuggerCallFrame> m_currentDebuggerCallFrame;
 
     HashSet<Observer*> m_observers;
-    bool m_dispatchingFunctionToObservers { false };
 
     Client* m_client { nullptr };
     ProfilingClient* m_profilingClient { nullptr };
 
-    bool m_doneProcessingDebuggerEvents { true };
+    Debugger* m_prev; // Required by DoublyLinkedListNode.
+    Debugger* m_next; // Required by DoublyLinkedListNode.
 
     friend class DebuggerPausedScope;
     friend class TemporaryPausedState;
     friend class LLIntOffsetsExtractor;
+    friend class WTF::DoublyLinkedListNode<Debugger>;
 };
 
 } // namespace JSC

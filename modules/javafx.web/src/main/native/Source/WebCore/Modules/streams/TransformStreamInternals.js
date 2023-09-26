@@ -59,7 +59,7 @@ function createTransformStream(startAlgorithm, transformAlgorithm, flushAlgorith
     const startPromiseCapability = @newPromiseCapability(@Promise);
     @initializeTransformStream(stream, startPromiseCapability.@promise, writableHighWaterMark, writableSizeAlgorithm, readableHighWaterMark, readableSizeAlgorithm);
 
-    const controller = new @TransformStreamDefaultController();
+    const controller = new @TransformStreamDefaultController(@isTransformStream);
     @setUpTransformStreamDefaultController(stream, controller, transformAlgorithm, flushAlgorithm);
 
     startAlgorithm().@then(() => {
@@ -95,7 +95,11 @@ function initializeTransformStream(stream, startPromise, writableHighWaterMark, 
     @putByIdDirectPrivate(options, "highWaterMark", readableHighWaterMark);
     const readable = new @ReadableStream(underlyingSource, options);
 
+    // The writable to expose to JS through writable getter.
     @putByIdDirectPrivate(stream, "writable", writable);
+    // The writable to use for the actual transform algorithms.
+    @putByIdDirectPrivate(stream, "internalWritable", @getInternalWritableStream(writable));
+
     @putByIdDirectPrivate(stream, "readable", readable);
     @putByIdDirectPrivate(stream, "backpressure", @undefined);
     @putByIdDirectPrivate(stream, "backpressureChangePromise", @undefined);
@@ -121,7 +125,7 @@ function transformStreamErrorWritableAndUnblockWrite(stream, e)
 
     @transformStreamDefaultControllerClearAlgorithms(@getByIdDirectPrivate(stream, "controller"));
 
-    const writable = @getByIdDirectPrivate(stream, "writable");
+    const writable = @getByIdDirectPrivate(stream, "internalWritable");
     @writableStreamDefaultControllerErrorIfNeeded(@getByIdDirectPrivate(writable, "controller"), e);
 
     if (@getByIdDirectPrivate(stream, "backpressure"))
@@ -160,7 +164,7 @@ function setUpTransformStreamDefaultControllerFromTransformer(stream, transforme
 {
     "use strict";
 
-    const controller = new @TransformStreamDefaultController();
+    const controller = new @TransformStreamDefaultController(@isTransformStream);
     let transformAlgorithm = (chunk) => {
         try {
             @transformStreamDefaultControllerEnqueue(controller, chunk);
@@ -262,7 +266,7 @@ function transformStreamDefaultSinkWriteAlgorithm(stream, chunk)
 {
     "use strict";
 
-    const writable = @getByIdDirectPrivate(stream, "writable");
+    const writable = @getByIdDirectPrivate(stream, "internalWritable");
 
     @assert(@getByIdDirectPrivate(writable, "state") === "writable");
 

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
- * Copyright (C) 2003, 2006, 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -30,6 +30,7 @@
 #include "CSSValuePool.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
@@ -167,7 +168,7 @@ bool HTMLFontElement::cssValueFromFontSizeNumber(const String& s, CSSValueID& si
         size = CSSValueXxLarge;
         break;
     case 7:
-        size = CSSValueWebkitXxxLarge;
+        size = CSSValueXxxLarge;
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -190,7 +191,7 @@ void HTMLFontElement::collectPresentationalHintsForAttribute(const QualifiedName
             addPropertyToPresentationalHintStyle(style, CSSPropertyFontSize, size);
     } else if (name == colorAttr)
         addHTMLColorToStyle(style, CSSPropertyColor, value);
-    else if (name == faceAttr) {
+    else if (name == faceAttr && !value.isEmpty()) {
         if (auto fontFaceValue = CSSValuePool::singleton().createFontFaceValue(value))
             style.setProperty(CSSProperty(CSSPropertyFontFamily, WTFMove(fontFaceValue)));
     } else

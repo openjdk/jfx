@@ -43,12 +43,12 @@ public:
 
     static JSWeakMap* create(VM& vm, Structure* structure)
     {
-        JSWeakMap* instance = new (NotNull, allocateCell<JSWeakMap>(vm.heap)) JSWeakMap(vm, structure);
+        JSWeakMap* instance = new (NotNull, allocateCell<JSWeakMap>(vm)) JSWeakMap(vm, structure);
         instance->finishCreation(vm);
         return instance;
     }
 
-    ALWAYS_INLINE void set(VM&, JSObject* key, JSValue);
+    ALWAYS_INLINE void set(VM&, JSCell* key, JSValue);
 
 private:
     JSWeakMap(VM& vm, Structure* structure)

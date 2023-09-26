@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Holger Hans Peter Freyther
  *
  * This library is free software; you can redistribute it and/or
@@ -24,11 +24,13 @@
 
 #pragma once
 
+#include "CharacterProperties.h"
 #include "DashArray.h"
 #include "Font.h"
 #include "FontCascadeDescription.h"
 #include "FontCascadeFonts.h"
 #include "Path.h"
+#include <optional>
 #include <wtf/HashSet.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -91,9 +93,9 @@ struct GlyphOverflow {
 };
 
 #if USE(CORE_TEXT)
-void showLetterpressedGlyphsWithAdvances(const FloatPoint&, const Font&, GraphicsContext&, const CGGlyph*, const CGSize* advances, unsigned count);
-void fillVectorWithHorizontalGlyphPositions(Vector<CGPoint, 256>& positions, CGContextRef, const CGSize* advances, unsigned count, const FloatPoint&);
+AffineTransform computeBaseOverallTextMatrix(const std::optional<AffineTransform>& syntheticOblique);
 AffineTransform computeOverallTextMatrix(const Font&);
+AffineTransform computeBaseVerticalTextMatrix(const AffineTransform& previousTextMatrix);
 AffineTransform computeVerticalTextMatrix(const Font&, const AffineTransform& previousTextMatrix);
 #endif
 
@@ -109,7 +111,7 @@ public:
     // This constructor is only used if the platform wants to start with a native font.
     WEBCORE_EXPORT FontCascade(const FontPlatformData&, FontSmoothingMode = FontSmoothingMode::AutoSmoothing);
 
-    FontCascade(const FontCascade&);
+    WEBCORE_EXPORT FontCascade(const FontCascade&);
     WEBCORE_EXPORT FontCascade& operator=(const FontCascade&);
 
     WEBCORE_EXPORT bool operator==(const FontCascade& other) const;
@@ -137,6 +139,10 @@ public:
 
     std::unique_ptr<TextLayout, TextLayoutDeleter> createLayout(RenderText&, float xPos, bool collapseWhiteSpace) const;
     static float width(TextLayout&, unsigned from, unsigned len, HashSet<const Font*>* fallbackFonts = 0);
+    float widthOfSpaceString() const
+    {
+        return width(TextRun { String { &space, 1 } });
+    }
 
     int offsetForPosition(const TextRun&, float position, bool includePartialGlyphs) const;
     void adjustSelectionRectForText(const TextRun&, LayoutRect& selectionRect, unsigned from = 0, std::optional<unsigned> to = std::nullopt) const;
@@ -165,16 +171,15 @@ public:
 
     bool isPlatformFont() const { return m_fonts->isForPlatformFont(); }
 
-    const FontMetrics& fontMetrics() const { return primaryFont().fontMetrics(); }
-    float spaceWidth() const { return primaryFont().spaceWidth() + m_letterSpacing; }
-    float tabWidth(const Font&, const TabSize&, float) const;
-    float tabWidth(const TabSize& tabSize, float position) const { return tabWidth(primaryFont(), tabSize, position); }
+    const FontMetrics& metricsOfPrimaryFont() const { return primaryFont().fontMetrics(); }
+    float tabWidth(const Font&, const TabSize&, float, Font::SyntheticBoldInclusion) const;
     bool hasValidAverageCharWidth() const;
     bool fastAverageCharWidthIfAvailable(float &width) const; // returns true on success
 
     int emphasisMarkAscent(const AtomString&) const;
     int emphasisMarkDescent(const AtomString&) const;
     int emphasisMarkHeight(const AtomString&) const;
+    float floatEmphasisMarkHeight(const AtomString&) const;
 
     const Font& primaryFont() const;
     const FontRanges& fallbackRangesAt(unsigned) const;
@@ -187,17 +192,15 @@ public:
 
     // Returns (the number of opportunities, whether the last expansion is a trailing expansion)
     // If there are no opportunities, the bool will be true iff we are forbidding leading expansions.
-    static std::pair<unsigned, bool> expansionOpportunityCount(const StringView&, TextDirection, ExpansionBehavior);
+    static std::pair<unsigned, bool> expansionOpportunityCount(StringView, TextDirection, ExpansionBehavior);
 
     // Whether or not there is an expansion opportunity just before the first character
     // Note that this does not take a isAfterExpansion flag; this assumes that isAfterExpansion is false
-    static bool leftExpansionOpportunity(const StringView&, TextDirection);
-    static bool rightExpansionOpportunity(const StringView&, TextDirection);
+    static bool leftExpansionOpportunity(StringView, TextDirection);
+    static bool rightExpansionOpportunity(StringView, TextDirection);
 
-    WEBCORE_EXPORT static void setShouldUseSmoothing(bool);
-    WEBCORE_EXPORT static bool shouldUseSmoothing();
-
-    static bool isSubpixelAntialiasingAvailable();
+    WEBCORE_EXPORT static void setDisableFontSubpixelAntialiasingForTesting(bool);
+    WEBCORE_EXPORT static bool shouldDisableFontSubpixelAntialiasingForTesting();
 
     enum class CodePath : uint8_t { Auto, Simple, Complex, SimpleWithGlyphOverflow };
     CodePath codePath(const TextRun&, std::optional<unsigned> from = std::nullopt, std::optional<unsigned> to = std::nullopt) const;
@@ -210,14 +213,8 @@ public:
 
     std::unique_ptr<DisplayList::InMemoryDisplayList> displayListForTextRun(GraphicsContext&, const TextRun&, unsigned from = 0, std::optional<unsigned> to = { }, CustomFontNotReadyAction = CustomFontNotReadyAction::DoNotPaintIfFontNotReady) const;
 
-#if PLATFORM(WIN) && USE(CG)
-    static void setFontSmoothingLevel(int);
-    static uint32_t setFontSmoothingStyle(CGContextRef, bool fontAllowsSmoothing);
-    static void setFontSmoothingContrast(CGFloat);
-    static void systemFontSmoothingChanged();
-    static void setCGContextFontRenderingStyle(CGContextRef, bool isSystemFont, bool isPrinterFont, bool usePlatformNativeGlyphs);
-    static void getPlatformGlyphAdvances(CGFontRef, const CGAffineTransform&, bool isSystemFont, bool isPrinterFont, CGGlyph, CGSize& advance);
-#endif
+    unsigned generation() const { return m_generation; }
+
 private:
     enum ForTextEmphasisOrNot { NotForTextEmphasis, ForTextEmphasis };
 
@@ -230,6 +227,7 @@ private:
     void adjustSelectionRectForSimpleText(const TextRun&, LayoutRect& selectionRect, unsigned from, unsigned to) const;
 
     std::optional<GlyphData> getEmphasisMarkGlyphData(const AtomString&) const;
+    const Font* fontForEmphasisMark(const AtomString&) const;
 
     static bool canReturnFallbackFontsForComplexText();
     static bool canExpandAroundIdeographsInComplexText();
@@ -261,9 +259,18 @@ public:
     static CodePath s_codePath;
 
     FontSelector* fontSelector() const;
-    static bool treatAsSpace(UChar32 c) { return c == ' ' || c == '\t' || c == '\n' || c == noBreakSpace; }
-    static bool treatAsZeroWidthSpace(UChar32 c) { return treatAsZeroWidthSpaceInComplexScript(c) || c == 0x200c || c == 0x200d; }
-    static bool treatAsZeroWidthSpaceInComplexScript(UChar32 c) { return c < 0x20 || (c >= 0x7F && c < 0xA0) || c == softHyphen || c == zeroWidthSpace || (c >= 0x200e && c <= 0x200f) || (c >= 0x202a && c <= 0x202e) || c == zeroWidthNoBreakSpace || c == objectReplacementCharacter; }
+    static bool treatAsSpace(UChar32 c) { return c == space || c == tabCharacter || c == newlineCharacter || c == noBreakSpace; }
+    static bool isCharacterWhoseGlyphsShouldBeDeletedForTextRendering(UChar32 character)
+    {
+        // https://drafts.csswg.org/css-text-3/#white-space-processing
+        // "Unsupported Default_ignorable characters must be ignored for text rendering."
+        return (character == objectReplacementCharacter
+            || isControlCharacter(character)
+            || isDefaultIgnorableCodePoint(character));
+    }
+    // FIXME: Callers of treatAsZeroWidthSpace() and treatAsZeroWidthSpaceInComplexScript() should probably be calling isCharacterWhoseGlyphsShouldBeDeletedForTextRendering() instead.
+    static bool treatAsZeroWidthSpace(UChar32 c) { return treatAsZeroWidthSpaceInComplexScript(c) || c == zeroWidthNonJoiner || c == zeroWidthJoiner; }
+    static bool treatAsZeroWidthSpaceInComplexScript(UChar32 c) { return c < space || (c >= deleteCharacter && c < noBreakSpace) || c == softHyphen || c == zeroWidthSpace || (c >= leftToRightMark && c <= rightToLeftMark) || (c >= leftToRightEmbed && c <= rightToLeftOverride) || c == zeroWidthNoBreakSpace || c == objectReplacementCharacter; }
     static bool canReceiveTextEmphasis(UChar32);
 
     static inline UChar normalizeSpaces(UChar character)
@@ -321,22 +328,14 @@ private:
         return advancedTextRenderingMode();
     }
 
-#if PLATFORM(WIN) && USE(CG)
-    static double s_fontSmoothingContrast;
-    static uint32_t s_fontSmoothingType;
-    static int s_fontSmoothingLevel;
-    static uint32_t s_systemFontSmoothingType;
-    static bool s_systemFontSmoothingSet;
-    static bool s_systemFontSmoothingEnabled;
-#endif
-
     FontCascadeDescription m_fontDescription;
     mutable RefPtr<FontCascadeFonts> m_fonts;
     float m_letterSpacing { 0 };
     float m_wordSpacing { 0 };
-    mutable bool m_useBackslashAsYenSymbol { false };
-    mutable bool m_enableKerning { false }; // Computed from m_fontDescription.
-    mutable bool m_requiresShaping { false }; // Computed from m_fontDescription.
+    mutable unsigned m_generation { 0 };
+    bool m_useBackslashAsYenSymbol { false };
+    bool m_enableKerning { false }; // Computed from m_fontDescription.
+    bool m_requiresShaping { false }; // Computed from m_fontDescription.
 };
 
 inline const Font& FontCascade::primaryFont() const
@@ -362,13 +361,20 @@ inline FontSelector* FontCascade::fontSelector() const
     return m_fonts ? m_fonts->fontSelector() : nullptr;
 }
 
-inline float FontCascade::tabWidth(const Font& font, const TabSize& tabSize, float position) const
+inline float FontCascade::tabWidth(const Font& font, const TabSize& tabSize, float position, Font::SyntheticBoldInclusion syntheticBoldInclusion) const
 {
     float baseTabWidth = tabSize.widthInPixels(font.spaceWidth());
+    float result = 0;
     if (!baseTabWidth)
-        return letterSpacing();
-    float tabDeltaWidth = baseTabWidth - fmodf(position, baseTabWidth);
-    return (tabDeltaWidth < font.spaceWidth() / 2) ? baseTabWidth : tabDeltaWidth;
+        result = letterSpacing();
+    else {
+        float tabDeltaWidth = baseTabWidth - fmodf(position, baseTabWidth);
+        result = (tabDeltaWidth < font.spaceWidth() / 2) ? baseTabWidth : tabDeltaWidth;
+    }
+    // If our caller passes in SyntheticBoldInclusion::Exclude, that means they're going to apply synthetic bold themselves later.
+    // However, regardless of that, the space characters that are fed into the width calculation need to have their correct width, including the synthetic bold.
+    // So, we've already got synthetic bold applied, so if we're supposed to exclude it, we need to subtract it out here.
+    return result - (syntheticBoldInclusion == Font::SyntheticBoldInclusion::Exclude ? font.syntheticBoldOffset() : 0);
 }
 
 }

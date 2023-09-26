@@ -26,8 +26,6 @@
 #include "config.h"
 #include "FlexFormattingGeometry.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FlexFormattingContext.h"
 #include "LayoutContext.h"
 
@@ -39,7 +37,21 @@ FlexFormattingGeometry::FlexFormattingGeometry(const FlexFormattingContext& flex
 {
 }
 
-IntrinsicWidthConstraints FlexFormattingGeometry::intrinsicWidthConstraints(const ContainerBox& flexItem) const
+bool FlexFormattingGeometry::isMainAxisParallelWithInlineAxis(const ElementBox& flexBox)
+{
+    ASSERT(flexBox.isFlexBox());
+    auto flexDirection = flexBox.style().flexDirection();
+    return flexDirection == FlexDirection::Row || flexBox.style().flexDirection() == FlexDirection::RowReverse;
+}
+
+bool FlexFormattingGeometry::isReversedToContentDirection(const ElementBox& flexBox)
+{
+    ASSERT(flexBox.isFlexBox());
+    auto flexDirection = flexBox.style().flexDirection();
+    return flexDirection == FlexDirection::RowReverse || flexDirection == FlexDirection::ColumnReverse;
+}
+
+IntrinsicWidthConstraints FlexFormattingGeometry::intrinsicWidthConstraints(const ElementBox& flexItem) const
 {
     auto fixedMarginBorderAndPadding = [&](auto& layoutBox) {
         auto& style = layoutBox.style();
@@ -78,4 +90,3 @@ IntrinsicWidthConstraints FlexFormattingGeometry::intrinsicWidthConstraints(cons
 }
 }
 
-#endif

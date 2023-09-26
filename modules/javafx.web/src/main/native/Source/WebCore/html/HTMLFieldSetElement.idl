@@ -20,7 +20,7 @@
 [
     Exposed=Window
 ] interface HTMLFieldSetElement : HTMLElement {
-    [CEReactions=NotNeeded, Reflect] attribute boolean disabled;
+    [CEReactions, Reflect] attribute boolean disabled;
     readonly attribute HTMLFormElement form;
     [CEReactions=NotNeeded, Reflect] attribute DOMString name;
 
@@ -32,6 +32,6 @@
     readonly attribute ValidityState   validity;
     readonly attribute DOMString       validationMessage;
     boolean  checkValidity();
-    [EnabledBySetting=InteractiveFormValidation] boolean reportValidity();
+    [EnabledBySetting=InteractiveFormValidationEnabled] boolean reportValidity();
     undefined setCustomValidity(DOMString error);
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,10 @@
 
 namespace JSC {
 
+class ClonedArguments;
+class DirectArguments;
+class ScopedArguments;
+
 class JSImmutableButterfly : public JSCell {
     using Base = JSCell;
 
@@ -53,7 +57,7 @@ public:
             return nullptr;
 
         // Because of the above maximumLength requirement, allocationSize can never overflow.
-        void* buffer = tryAllocateCell<JSImmutableButterfly>(vm.heap, allocationSize(length));
+        void* buffer = tryAllocateCell<JSImmutableButterfly>(vm, allocationSize(length));
         if (UNLIKELY(!buffer))
             return nullptr;
         JSImmutableButterfly* result = new (NotNull, buffer) JSImmutableButterfly(vm, structure, length);
@@ -100,6 +104,7 @@ public:
         }
 
         if (indexingType == DoubleShape) {
+            ASSERT(Options::allowDoubleShape());
             for (unsigned i = 0; i < length; i++) {
                 double d = array->butterfly()->contiguousDouble().at(array, i);
                 JSValue value = std::isnan(d) ? jsUndefined() : JSValue(JSValue::EncodeAsDouble, d);
@@ -128,6 +133,11 @@ public:
         return result;
     }
 
+    static JSImmutableButterfly* createFromClonedArguments(JSGlobalObject*, ClonedArguments*);
+    static JSImmutableButterfly* createFromDirectArguments(JSGlobalObject*, DirectArguments*);
+    static JSImmutableButterfly* createFromScopedArguments(JSGlobalObject*, ScopedArguments*);
+    static JSImmutableButterfly* createFromString(JSGlobalObject*, JSString*);
+
     unsigned publicLength() const { return m_header.publicLength(); }
     unsigned vectorLength() const { return m_header.vectorLength(); }
     unsigned length() const { return m_header.publicLength(); }
@@ -153,7 +163,7 @@ public:
     static CompleteSubspace* subspaceFor(VM& vm)
     {
         // We allocate out of the JSValue gigacage as other code expects all butterflies to live there.
-        return &vm.immutableButterflyJSValueGigacageAuxiliarySpace;
+        return &vm.immutableButterflyJSValueGigacageAuxiliarySpace();
     }
 
     // Only call this if you just allocated this butterfly.

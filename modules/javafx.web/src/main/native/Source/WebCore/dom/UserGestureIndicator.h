@@ -37,6 +37,7 @@
 namespace WebCore {
 
 class Document;
+class WeakPtrImplWithEventTargetData;
 
 enum ProcessingUserGestureState {
     ProcessingUserGesture,
@@ -64,7 +65,7 @@ public:
     bool processingUserGestureForMedia() const { return m_state == ProcessingUserGesture || m_state == ProcessingPotentialUserGesture; }
     UserGestureType gestureType() const { return m_gestureType; }
 
-    void addDestructionObserver(WTF::Function<void (UserGestureToken&)>&& observer)
+    void addDestructionObserver(Function<void(UserGestureToken&)>&& observer)
     {
         m_destructionObservers.append(WTFMove(observer));
     }
@@ -104,13 +105,15 @@ public:
 
     bool isValidForDocument(const Document&) const;
 
+    void forEachImpactedDocument(Function<void(Document&)>&&);
+
 private:
     UserGestureToken(ProcessingUserGestureState, UserGestureType, Document*);
 
     ProcessingUserGestureState m_state = NotProcessingUserGesture;
-    Vector<WTF::Function<void (UserGestureToken&)>> m_destructionObservers;
+    Vector<Function<void(UserGestureToken&)>> m_destructionObservers;
     UserGestureType m_gestureType;
-    WeakHashSet<Document> m_documentsImpactedByUserGesture;
+    WeakHashSet<Document, WeakPtrImplWithEventTargetData> m_documentsImpactedByUserGesture;
     DOMPasteAccessPolicy m_domPasteAccessPolicy { DOMPasteAccessPolicy::NotRequestedYet };
     GestureScope m_scope { GestureScope::All };
     MonotonicTime m_startTime { MonotonicTime::now() };

@@ -44,12 +44,16 @@
 
 namespace JSC { namespace B3 {
 
-Procedure::Procedure()
+Procedure::Procedure(bool usesSIMD)
     : m_cfg(new CFG(*this))
     , m_lastPhaseName("initial")
     , m_byproducts(makeUnique<OpaqueByproducts>())
-    , m_code(new Air::Code(*this))
 {
+    if (usesSIMD)
+        setUsessSIMD();
+    // Initialize all our fields before constructing Air::Code since
+    // it looks into our fields.
+    m_code = std::unique_ptr<Air::Code>(new Air::Code(*this));
     m_code->setNumEntrypoints(m_numEntrypoints);
 }
 
@@ -142,6 +146,20 @@ Value* Procedure::addConstant(Origin origin, Type type, uint64_t bits)
         return add<ConstFloatValue>(origin, bitwise_cast<float>(static_cast<int32_t>(bits)));
     case Double:
         return add<ConstDoubleValue>(origin, bitwise_cast<double>(bits));
+    case V128:
+        RELEASE_ASSERT(!bits);
+        return addConstant(origin, type, v128_t { });
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+}
+
+Value* Procedure::addConstant(Origin origin, Type type, v128_t bits)
+{
+    switch (type.kind()) {
+    case V128:
+        return add<Const128Value>(origin, bits);
     default:
         RELEASE_ASSERT_NOT_REACHED();
         return nullptr;
@@ -152,7 +170,7 @@ Value* Procedure::addBottom(Origin origin, Type type)
 {
     if (type.isTuple())
         return add<BottomTupleValue>(origin, type);
-    return addIntConstant(origin, type, 0);
+    return addConstant(origin, type, 0);
 }
 
 Value* Procedure::addBottom(Value* value)
@@ -228,6 +246,7 @@ void Procedure::invalidateCFG()
 
 void Procedure::dump(PrintStream& out) const
 {
+    out.print("Opt Level: ", optLevel(), "\n");
     IndexSet<Value*> valuesInBlocks;
     for (BasicBlock* block : *this) {
         out.print(deepDump(*this, block));
@@ -418,14 +437,9 @@ void Procedure::setWasmBoundsCheckGenerator(RefPtr<WasmBoundsCheckGenerator> gen
     code().setWasmBoundsCheckGenerator(generator);
 }
 
-RegisterSet Procedure::mutableGPRs()
+RegisterSetBuilder Procedure::mutableGPRs()
 {
     return code().mutableGPRs();
-}
-
-RegisterSet Procedure::mutableFPRs()
-{
-    return code().mutableFPRs();
 }
 
 void Procedure::setNumEntrypoints(unsigned numEntrypoints)
@@ -477,6 +491,18 @@ void Procedure::freeUnneededB3ValuesAfterLowering()
             m_values.remove(value);
     }
     m_values.packIndices();
+}
+
+void Procedure::setShouldDumpIR()
+{
+    m_shouldDumpIR = true;
+    m_code->forcePreservationOfB3Origins();
+}
+
+void Procedure::setNeedsPCToOriginMap()
+{
+    m_needsPCToOriginMap = true;
+    m_code->forcePreservationOfB3Origins();
 }
 
 } } // namespace JSC::B3

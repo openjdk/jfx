@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,18 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.event.EventDispatchChainImpl;
-
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
@@ -63,11 +59,11 @@ public class TabTest {
     private TabShim tab;//Empty string
     private TabShim tabWithStr;//
     private TabPane dummyTabPane;
-    private Toolkit tk;
-        EventHandler eh;
+    EventHandler eh;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         tab = new TabShim();
         tabWithStr = new TabShim("text");
         dummyTabPane = new TabPane();
@@ -167,14 +163,6 @@ public class TabTest {
         assertEquals("styleProperty cannot be bound", tab.styleProperty().getValue(), "one");
         objPr.setValue("another");
         assertEquals("styleProperty cannot be bound", tab.styleProperty().getValue(), "another");
-    }
-
-    @Test public void checkSelectedPropertyReadOnly() {
-        assertTrue(tab.selectedProperty() instanceof ReadOnlyBooleanProperty);
-    }
-
-    @Test public void checkTabPanePropertyReadOnly() {
-        assertTrue(tab.tabPaneProperty() instanceof ReadOnlyObjectProperty);
     }
 
     @Test public void checkTextPropertyBind() {
@@ -475,5 +463,36 @@ public class TabTest {
         assertTrue(vBox.isDisable());
         assertTrue(vBox.isDisabled());
         tab.setContent(null);
+    }
+
+    @Test public void testAddAndRemoveEventHandler() {
+        var handler = new TestHandler();
+        tab.addEventHandler(ActionEvent.ACTION, handler);
+        Event.fireEvent(tab, new ActionEvent());
+        assertEquals(1, handler.handled);
+
+        tab.removeEventHandler(ActionEvent.ACTION, handler);
+        Event.fireEvent(tab, new ActionEvent());
+        assertEquals(1, handler.handled);
+    }
+
+    @Test public void testAddAndRemoveEventFilter() {
+        var handler = new TestHandler();
+        tab.addEventFilter(ActionEvent.ACTION, handler);
+        Event.fireEvent(tab, new ActionEvent());
+        assertEquals(1, handler.handled);
+
+        tab.removeEventFilter(ActionEvent.ACTION, handler);
+        Event.fireEvent(tab, new ActionEvent());
+        assertEquals(1, handler.handled);
+    }
+
+    private static class TestHandler implements EventHandler<ActionEvent> {
+        int handled;
+
+        @Override
+        public void handle(ActionEvent event) {
+            handled++;
+        }
     }
 }

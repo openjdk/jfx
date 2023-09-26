@@ -22,6 +22,7 @@
 #include "config.h"
 #include "SVGHKernElement.h"
 
+#include "SVGElementInlines.h"
 #include "SVGFontElement.h"
 #include "SVGFontFaceElement.h"
 #include "SVGNames.h"
@@ -32,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGHKernElement);
 
 inline SVGHKernElement::SVGHKernElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::hkernTag));
 }

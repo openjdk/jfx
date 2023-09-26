@@ -67,7 +67,7 @@
                 { "name": "templateContent", "$ref": "Node", "optional": true, "description": "Content document fragment for template elements" },
                 { "name": "pseudoElements", "type": "array", "items": { "$ref": "Node" }, "optional": true, "description": "Pseudo elements associated with this node." },
                 { "name": "contentSecurityPolicyHash", "type": "string", "optional": true, "description": "Computed SHA-256 Content Security Policy hash source for given element." },
-                { "name": "layoutContextType", "$ref": "CSS.LayoutContextType", "optional": true, "description": "The layout context type of the node. When not provided, the <code>LayoutContextType</code> of the node is not a context for which Web Inspector has specific functionality." }
+                { "name": "layoutFlags", "type": "array", "items": { "type": "string", "description": "CSS.LayoutFlag" }, "optional": true, "description": "Relevant information about the layout of the node. When not provided, the layout of the node is not important to Web Inspector." }
             ]
         },
         {
@@ -168,6 +168,37 @@
                 { "name": "borderColor", "$ref": "RGBAColor", "optional": true, "description": "The border highlight fill color (default: transparent)." },
                 { "name": "marginColor", "$ref": "RGBAColor", "optional": true, "description": "The margin highlight fill color (default: transparent)." }
             ]
+        },
+        {
+            "id": "GridOverlayConfig",
+            "type": "object",
+            "description": "Configuration data for grid overlays.",
+            "properties": [
+                { "name": "gridColor", "$ref": "RGBAColor", "description": "The primary color to use for the grid overlay." },
+                { "name": "showLineNames", "type": "boolean", "optional": true, "description": "Show labels for grid line names. If not specified, the default value is false." },
+                { "name": "showLineNumbers", "type": "boolean", "optional": true, "description": "Show labels for grid line numbers. If not specified, the default value is false." },
+                { "name": "showExtendedGridLines", "type": "boolean", "optional": true, "description": "Show grid lines that extend beyond the bounds of the grid. If not specified, the default value is false." },
+                { "name": "showTrackSizes", "type": "boolean", "optional": true, "description": "Show grid track size information. If not specified, the default value is false." },
+                { "name": "showAreaNames", "type": "boolean", "optional": true, "description": "Show labels for grid area names. If not specified, the default value is false." }
+            ]
+        },
+        {
+            "id": "FlexOverlayConfig",
+            "type": "object",
+            "description": "Configuration data for flex overlays.",
+            "properties": [
+                { "name": "flexColor", "$ref": "RGBAColor", "description": "The primary color to use for the flex overlay." },
+                { "name": "showOrderNumbers", "type": "boolean", "optional": true, "description": "Show labels for flex order. If not specified, the default value is false." }
+            ]
+        },
+        {
+            "id": "Styleable",
+            "type": "object",
+            "properties": [
+                { "name": "nodeId", "$ref": "NodeId" },
+                { "name": "pseudoId", "$ref": "CSS.PseudoId", "optional": true }
+            ],
+            "description": "An object referencing a node and a pseudo-element, primarily used to identify an animation effect target."
         }
     ],
     "commands": [
@@ -195,7 +226,7 @@
                 { "name": "selector", "type": "string", "description": "Selector string." }
             ],
             "returns": [
-                { "name": "nodeId", "$ref": "NodeId", "description": "Query selector result." }
+                { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "Query selector result." }
             ]
         },
         {
@@ -298,7 +329,8 @@
             "name": "getEventListenersForNode",
             "description": "Returns event listeners relevant to the node.",
             "parameters": [
-                { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get listeners for." }
+                { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get listeners for." },
+                { "name": "includeAncestors", "type": "boolean", "optional": true, "description": "Controls whether ancestor event listeners are included. Defaults to true." }
             ],
             "returns": [
                 { "name": "listeners", "type": "array", "items": { "$ref": "EventListener"}, "description": "Array of relevant listeners." }
@@ -415,7 +447,9 @@
             "condition": "defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY",
             "parameters": [
                 { "name": "enabled", "type": "boolean", "description": "True to enable inspection mode, false to disable it." },
-                { "name": "highlightConfig", "$ref": "HighlightConfig", "optional": true, "description": "A descriptor for the highlight appearance of hovered-over nodes. May be omitted if <code>enabled == false</code>." }
+                { "name": "highlightConfig", "$ref": "HighlightConfig", "optional": true, "description": "A descriptor for the highlight appearance of hovered-over nodes. May be omitted if <code>enabled == false</code>." },
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "optional": true, "description": "If provided, used to configure a grid overlay shown during element selection. This overrides DOM.showGridOverlay." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "optional": true, "description": "If provided, used to configure a flex overlay shown during element selection. This overrides DOM.showFlexOverlay." }
             ]
         },
         {
@@ -425,6 +459,8 @@
             "parameters": [
                 { "name": "enabled", "type": "boolean", "description": "True to enable inspection mode, false to disable it." },
                 { "name": "highlightConfig", "$ref": "HighlightConfig", "optional": true, "description": "A descriptor for the highlight appearance of hovered-over nodes. May be omitted if <code>enabled == false</code>." },
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "optional": true, "description": "If provided, used to configure a grid overlay shown during element selection. This overrides DOM.showGridOverlay." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "optional": true, "description": "If provided, used to configure a flex overlay shown during element selection. This overrides DOM.showFlexOverlay." },
                 { "name": "showRulers", "type": "boolean", "optional": true, "description": "Whether the rulers should be shown during element selection. This overrides Page.setShowRulers." }
             ]
         },
@@ -457,27 +493,75 @@
             "name": "highlightSelector",
             "description": "Highlights all DOM nodes that match a given selector. A string containing a CSS selector must be specified.",
             "targetTypes": ["page"],
+            "condition": "defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY",
             "parameters": [
-                { "name": "highlightConfig", "$ref": "HighlightConfig", "description": "A descriptor for the highlight appearance." },
                 { "name": "selectorString", "type": "string", "description": "A CSS selector for finding matching nodes to highlight." },
-                { "name": "frameId", "type": "string", "optional": true, "description": "Identifier of the frame which will be searched using the selector.  If not provided, the main frame will be used." }
+                { "name": "frameId", "type": "string", "optional": true, "description": "Identifier of the frame which will be searched using the selector.  If not provided, the main frame will be used." },
+                { "name": "highlightConfig", "$ref": "HighlightConfig", "description": "A descriptor for the highlight appearance." },
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "optional": true, "description": "If provided, used to configure a grid overlay shown during element selection. This overrides DOM.showGridOverlay." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "optional": true, "description": "If provided, used to configure a flex overlay shown during element selection. This overrides DOM.showFlexOverlay." }
+            ]
+        },
+        {
+            "name": "highlightSelector",
+            "description": "Highlights all DOM nodes that match a given selector. A string containing a CSS selector must be specified.",
+            "targetTypes": ["page"],
+            "condition": "!(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)",
+            "parameters": [
+                { "name": "selectorString", "type": "string", "description": "A CSS selector for finding matching nodes to highlight." },
+                { "name": "frameId", "type": "string", "optional": true, "description": "Identifier of the frame which will be searched using the selector.  If not provided, the main frame will be used." },
+                { "name": "highlightConfig", "$ref": "HighlightConfig", "description": "A descriptor for the highlight appearance." },
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "optional": true, "description": "If provided, used to configure a grid overlay shown during element selection. This overrides DOM.showGridOverlay." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "optional": true, "description": "If provided, used to configure a flex overlay shown during element selection. This overrides DOM.showFlexOverlay." },
+                { "name": "showRulers", "type": "boolean", "optional": true, "description": "Whether the rulers should be shown during element selection. This overrides Page.setShowRulers." }
             ]
         },
         {
             "name": "highlightNode",
             "description": "Highlights DOM node with given id or with the given JavaScript object wrapper. Either nodeId or objectId must be specified.",
+            "condition": "defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY",
             "parameters": [
-                { "name": "highlightConfig", "$ref": "HighlightConfig", "description": "A descriptor for the highlight appearance." },
                 { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "Identifier of the node to highlight." },
-                { "name": "objectId", "$ref": "Runtime.RemoteObjectId", "optional": true, "description": "JavaScript object id of the node to be highlighted." }
+                { "name": "objectId", "$ref": "Runtime.RemoteObjectId", "optional": true, "description": "JavaScript object id of the node to be highlighted." },
+                { "name": "highlightConfig", "$ref": "HighlightConfig", "description": "A descriptor for the highlight appearance." },
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "optional": true, "description": "If provided, used to configure a grid overlay shown during element selection. This overrides DOM.showGridOverlay." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "optional": true, "description": "If provided, used to configure a flex overlay shown during element selection. This overrides DOM.showFlexOverlay." }
+            ]
+        },
+        {
+            "name": "highlightNode",
+            "description": "Highlights DOM node with given id or with the given JavaScript object wrapper. Either nodeId or objectId must be specified.",
+            "condition": "!(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)",
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "Identifier of the node to highlight." },
+                { "name": "objectId", "$ref": "Runtime.RemoteObjectId", "optional": true, "description": "JavaScript object id of the node to be highlighted." },
+                { "name": "highlightConfig", "$ref": "HighlightConfig", "description": "A descriptor for the highlight appearance." },
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "optional": true, "description": "If provided, used to configure a grid overlay shown during element selection. This overrides DOM.showGridOverlay." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "optional": true, "description": "If provided, used to configure a flex overlay shown during element selection. This overrides DOM.showFlexOverlay." },
+                { "name": "showRulers", "type": "boolean", "optional": true, "description": "Whether the rulers should be shown during element selection. This overrides Page.setShowRulers." }
             ]
         },
         {
             "name": "highlightNodeList",
             "description": "Highlights each DOM node in the given list.",
+            "condition": "defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY",
             "parameters": [
                 { "name": "nodeIds", "type": "array", "items": { "$ref": "NodeId" } },
-                { "name": "highlightConfig", "$ref": "HighlightConfig" }
+                { "name": "highlightConfig", "$ref": "HighlightConfig" },
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "optional": true, "description": "If provided, used to configure a grid overlay shown during element selection. This overrides DOM.showGridOverlay." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "optional": true, "description": "If provided, used to configure a flex overlay shown during element selection. This overrides DOM.showFlexOverlay." }
+            ]
+        },
+        {
+            "name": "highlightNodeList",
+            "description": "Highlights each DOM node in the given list.",
+            "condition": "!(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)",
+            "parameters": [
+                { "name": "nodeIds", "type": "array", "items": { "$ref": "NodeId" } },
+                { "name": "highlightConfig", "$ref": "HighlightConfig" },
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "optional": true, "description": "If provided, used to configure a grid overlay shown during element selection. This overrides DOM.showGridOverlay." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "optional": true, "description": "If provided, used to configure a flex overlay shown during element selection. This overrides DOM.showFlexOverlay." },
+                { "name": "showRulers", "type": "boolean", "optional": true, "description": "Whether the rulers should be shown during element selection. This overrides Page.setShowRulers." }
             ]
         },
         {
@@ -500,12 +584,7 @@
             "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "The node for which a grid overlay should be shown." },
-                { "name": "gridColor", "$ref": "RGBAColor", "description": "The primary color to use for the grid overlay." },
-                { "name": "showLineNames", "type": "boolean", "optional": true, "description": "Show labels for grid line names. If not specified, the default value is false." },
-                { "name": "showLineNumbers", "type": "boolean", "optional": true, "description": "Show labels for grid line numbers. If not specified, the default value is false." },
-                { "name": "showExtendedGridLines", "type": "boolean", "optional": true, "description": "Show grid lines that extend beyond the bounds of the grid. If not specified, the default value is false." },
-                { "name": "showTrackSizes", "type": "boolean", "optional": true, "description": "Show grid track size information. If not specified, the default value is false." },
-                { "name": "showAreaNames", "type": "boolean", "optional": true, "description": "Show labels for grid area names. If not specified, the default value is false." }
+                { "name": "gridOverlayConfig", "$ref": "GridOverlayConfig", "description": "Configuration options for the grid overlay." }
             ]
         },
         {
@@ -514,6 +593,23 @@
             "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "The node for which a grid overlay should be hidden. If a <code>nodeId</code> is not specified, all grid overlays will be hidden." }
+            ]
+        },
+        {
+            "name": "showFlexOverlay",
+            "description": "Shows a flex overlay for a node that begins a 'flex' layout context. The command has no effect if <code>nodeId</code> is invalid or the associated node does not begin a 'flex' layout context. A node can only have one flex overlay at a time; subsequent calls with the same <code>nodeId</code> will override earlier calls.",
+            "targetTypes": ["page"],
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "description": "The node for which a flex overlay should be shown." },
+                { "name": "flexOverlayConfig", "$ref": "FlexOverlayConfig", "description": "Configuration options for the flex overlay." }
+            ]
+        },
+        {
+            "name": "hideFlexOverlay",
+            "description": "Hides a flex overlay for a node that begins a 'flex' layout context. The command has no effect if <code>nodeId</code> is specified and invalid, or if there is not currently an overlay set for the <code>nodeId</code>.",
+            "targetTypes": ["page"],
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "The node for which a flex overlay should be hidden. If a <code>nodeId</code> is not specified, all flex overlays will be hidden." }
             ]
         },
         {

@@ -49,32 +49,37 @@ static StyledMarkedText resolveStyleForMarkedText(const MarkedText& markedText, 
         break;
     case MarkedText::Highlight:
         if (auto renderStyle = renderer.parent()->getUncachedPseudoStyle({ PseudoId::Highlight, markedText.highlightName }, &renderer.style())) {
-            style.backgroundColor = renderStyle->backgroundColor();
+            style.backgroundColor = renderStyle->colorResolvingCurrentColor(renderStyle->backgroundColor());
             style.textStyles.fillColor = renderStyle->computedStrokeColor();
             style.textStyles.strokeColor = renderStyle->computedStrokeColor();
 
-            auto color = TextDecorationPainter::decorationColor(*renderStyle.get());
+            auto color = TextDecorationPainter::decorationColor(*renderStyle.get(), paintInfo.paintBehavior);
             auto decorationStyle = renderStyle->textDecorationStyle();
             auto decorations = renderStyle->textDecorationsInEffect();
 
-            if (decorations.contains(TextDecoration::Underline)) {
-                style.textDecorationStyles.underlineColor = color;
-                style.textDecorationStyles.underlineStyle = decorationStyle;
+            if (decorations.contains(TextDecorationLine::Underline)) {
+                style.textDecorationStyles.underline.color = color;
+                style.textDecorationStyles.underline.decorationStyle = decorationStyle;
             }
-            if (decorations.contains(TextDecoration::Overline)) {
-                style.textDecorationStyles.overlineColor = color;
-                style.textDecorationStyles.overlineStyle = decorationStyle;
+            if (decorations.contains(TextDecorationLine::Overline)) {
+                style.textDecorationStyles.overline.color = color;
+                style.textDecorationStyles.overline.decorationStyle = decorationStyle;
             }
-            if (decorations.contains(TextDecoration::LineThrough)) {
-                style.textDecorationStyles.linethroughColor = color;
-                style.textDecorationStyles.linethroughStyle = decorationStyle;
+            if (decorations.contains(TextDecorationLine::LineThrough)) {
+                style.textDecorationStyles.linethrough.color = color;
+                style.textDecorationStyles.linethrough.decorationStyle = decorationStyle;
             }
         }
         break;
+    case MarkedText::FragmentHighlight: {
+        OptionSet<StyleColorOptions> styleColorOptions = { StyleColorOptions::UseSystemAppearance };
+        style.backgroundColor = renderer.theme().annotationHighlightColor(styleColorOptions);
+        break;
+    }
 #if ENABLE(APP_HIGHLIGHTS)
     case MarkedText::AppHighlight: {
-        OptionSet<StyleColor::Options> styleColorOptions = { StyleColor::Options::UseSystemAppearance };
-        style.backgroundColor = renderer.theme().appHighlightColor(styleColorOptions);
+        OptionSet<StyleColorOptions> styleColorOptions = { StyleColorOptions::UseSystemAppearance };
+        style.backgroundColor = renderer.theme().annotationHighlightColor(styleColorOptions);
         break;
     }
 #endif
@@ -92,7 +97,7 @@ static StyledMarkedText resolveStyleForMarkedText(const MarkedText& markedText, 
     }
     case MarkedText::TextMatch: {
         // Text matches always use the light system appearance.
-        OptionSet<StyleColor::Options> styleColorOptions = { StyleColor::Options::UseSystemAppearance };
+        OptionSet<StyleColorOptions> styleColorOptions = { StyleColorOptions::UseSystemAppearance };
 #if PLATFORM(MAC)
         style.textStyles.fillColor = renderer.theme().systemColor(CSSValueAppleSystemLabel, styleColorOptions);
 #endif
@@ -105,13 +110,12 @@ static StyledMarkedText resolveStyleForMarkedText(const MarkedText& markedText, 
     return styledMarkedText;
 }
 
-static StyledMarkedText::Style computeStyleForUnmarkedMarkedText(const RenderText& renderer, const RenderStyle& lineStyle, bool isFirstLine, const PaintInfo& paintInfo)
+StyledMarkedText::Style StyledMarkedText::computeStyleForUnmarkedMarkedText(const RenderText& renderer, const RenderStyle& lineStyle, bool isFirstLine, const PaintInfo& paintInfo)
 {
     StyledMarkedText::Style style;
-    style.textDecorationStyles = TextDecorationPainter::stylesForRenderer(renderer, lineStyle.textDecorationsInEffect(), isFirstLine);
+    style.textDecorationStyles = TextDecorationPainter::stylesForRenderer(renderer, lineStyle.textDecorationsInEffect(), isFirstLine, paintInfo.paintBehavior);
     style.textStyles = computeTextPaintStyle(renderer.frame(), lineStyle, paintInfo);
     style.textShadow = ShadowData::clone(paintInfo.forceTextColor() ? nullptr : lineStyle.textShadow());
-    style.alpha = 1;
     return style;
 }
 
@@ -194,7 +198,7 @@ Vector<StyledMarkedText> StyledMarkedText::coalesceAdjacentWithEqualForeground(c
 Vector<StyledMarkedText> StyledMarkedText::coalesceAdjacentWithEqualDecorations(const Vector<StyledMarkedText>& markedTexts)
 {
     return coalesceAdjacent(markedTexts, [&](auto& a, auto& b) {
-        return a.textDecorationStyles == b.textDecorationStyles && a.textShadow == b.textShadow && a.alpha == b.alpha;
+        return a.textDecorationStyles == b.textDecorationStyles && a.textStyles == b.textStyles && a.textShadow == b.textShadow && a.alpha == b.alpha;
     });
 }
 

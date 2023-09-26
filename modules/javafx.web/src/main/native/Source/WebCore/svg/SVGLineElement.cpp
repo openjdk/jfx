@@ -22,7 +22,9 @@
 #include "config.h"
 #include "SVGLineElement.h"
 
+#include "LegacyRenderSVGShape.h"
 #include "RenderSVGResource.h"
+#include "RenderSVGShape.h"
 #include "SVGLengthValue.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -31,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGLineElement);
 
 inline SVGLineElement::SVGLineElement(const QualifiedName& tagName, Document& document)
-    : SVGGeometryElement(tagName, document)
+    : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::lineTag));
 
@@ -73,10 +75,14 @@ void SVGLineElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         updateRelativeLengthsInformation();
 
-        if (auto* renderer = downcast<RenderSVGShape>(this->renderer())) {
-            renderer->setNeedsShapeUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        }
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (auto* shape = dynamicDowncast<RenderSVGShape>(renderer()))
+            shape->setNeedsShapeUpdate();
+#endif
+        if (auto* shape = dynamicDowncast<LegacyRenderSVGShape>(renderer()))
+            shape->setNeedsShapeUpdate();
+
+        updateSVGRendererForElementChange();
         return;
     }
 

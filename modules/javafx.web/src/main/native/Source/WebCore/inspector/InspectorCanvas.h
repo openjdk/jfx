@@ -26,18 +26,17 @@
 #pragma once
 
 #include "InspectorCanvasCallTracer.h"
+#include <JavaScriptCore/AsyncStackTrace.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
 #include <JavaScriptCore/ScriptCallStack.h>
-#include <initializer_list>
+#include <variant>
 #include <wtf/HashSet.h>
-#include <wtf/Variant.h>
-#include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class CSSStyleImageValue;
 class CanvasGradient;
 class CanvasPattern;
 class Element;
@@ -46,12 +45,7 @@ class HTMLImageElement;
 class HTMLVideoElement;
 class ImageBitmap;
 class ImageData;
-#if ENABLE(OFFSCREEN_CANVAS)
 class OffscreenCanvas;
-#endif
-#if ENABLE(CSS_TYPED_OM)
-class CSSStyleImageValue;
-#endif
 
 class InspectorCanvas final : public RefCounted<InspectorCanvas> {
 public:
@@ -59,7 +53,7 @@ public:
 
     const String& identifier() const { return m_identifier; }
 
-    CanvasRenderingContext* canvasContext() const;
+    CanvasRenderingContext& canvasContext() const { return m_context; }
     HTMLCanvasElement* canvasElement() const;
 
     ScriptExecutionContext* scriptExecutionContext() const;
@@ -102,11 +96,11 @@ public:
     String getCanvasContentAsDataURL(Inspector::Protocol::ErrorString&);
 
 private:
-    InspectorCanvas(CanvasRenderingContext&);
+    explicit InspectorCanvas(CanvasRenderingContext&);
 
     void appendActionSnapshotIfNeeded();
 
-    using DuplicateDataVariant = Variant<
+    using DuplicateDataVariant = std::variant<
         RefPtr<CanvasGradient>,
         RefPtr<CanvasPattern>,
         RefPtr<HTMLCanvasElement>,
@@ -117,9 +111,8 @@ private:
         RefPtr<ImageData>,
         RefPtr<ImageBitmap>,
         RefPtr<Inspector::ScriptCallStack>,
-#if ENABLE(CSS_TYPED_OM)
+        RefPtr<Inspector::AsyncStackTrace>,
         RefPtr<CSSStyleImageValue>,
-#endif
         Inspector::ScriptCallFrame,
 #if ENABLE(OFFSCREEN_CANVAS)
         RefPtr<OffscreenCanvas>,
@@ -138,10 +131,7 @@ private:
 
     String m_identifier;
 
-    Variant<
-        std::reference_wrapper<CanvasRenderingContext>,
-        Monostate
-    > m_context;
+    CanvasRenderingContext& m_context;
 
     RefPtr<Inspector::Protocol::Recording::InitialState> m_initialState;
     RefPtr<JSON::ArrayOf<Inspector::Protocol::Recording::Frame>> m_frames;

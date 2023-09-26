@@ -163,6 +163,7 @@ public:
 
     // This function returns 0 if the table has no non-empty sections.
     RenderTableSection* topNonEmptySection() const;
+    RenderTableSection* bottomNonEmptySection() const;
 
     unsigned lastColumnIndex() const { return numEffCols() - 1; }
 
@@ -271,6 +272,8 @@ public:
     void willInsertTableColumn(RenderTableCol& child, RenderObject* beforeChild);
     void willInsertTableSection(RenderTableSection& child, RenderObject* beforeChild);
 
+    LayoutUnit sumCaptionsLogicalHeight() const;
+
 protected:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void simplifiedNormalFlowLayout() final;
@@ -278,7 +281,7 @@ protected:
 private:
     static RenderPtr<RenderTable> createTableWithStyle(Document&, const RenderStyle&);
 
-    const char* renderName() const override { return "RenderTable"; }
+    ASCIILiteral renderName() const override { return "RenderTable"_s; }
 
     bool isTable() const final { return true; }
 
@@ -297,6 +300,7 @@ private:
 
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
     std::optional<LayoutUnit> firstLineBaseline() const override;
+    std::optional<LayoutUnit> lastLineBaseline() const override;
     std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode) const final;
 
     RenderTableCol* slowColElement(unsigned col, bool* startEdge, bool* endEdge) const;
@@ -305,8 +309,6 @@ private:
     void invalidateCachedColumns();
 
     void invalidateCachedColumnOffsets();
-
-    RenderBlock* firstLineBlock() const final;
 
     void updateLogicalWidth() final;
 

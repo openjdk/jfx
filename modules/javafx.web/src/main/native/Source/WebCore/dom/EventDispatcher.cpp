@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010, 2011, 2012, 2013 Google Inc. All rights reserved.
@@ -31,6 +31,7 @@
 #include "EventNames.h"
 #include "EventPath.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
 #include "HTMLInputElement.h"
@@ -50,7 +51,7 @@ namespace WebCore {
 void EventDispatcher::dispatchScopedEvent(Node& node, Event& event)
 {
     // Need to set the target here so the scoped event queue knows which node to dispatch to.
-    event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+    event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
     ScopedEventQueue::singleton().enqueueEvent(event);
 }
 
@@ -60,7 +61,8 @@ static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPat
         return;
 
     // Non-bubbling events call only one default event handler, the one for the target.
-    path.contextAt(0).node()->defaultEventHandler(event);
+    Ref rootNode { *path.contextAt(0).node() };
+    rootNode->defaultEventHandler(event);
     ASSERT(!event.defaultPrevented());
 
     if (event.defaultHandled() || !event.bubbles())
@@ -68,7 +70,8 @@ static void callDefaultEventHandlersInBubblingOrder(Event& event, const EventPat
 
     size_t size = path.size();
     for (size_t i = 1; i < size; ++i) {
-        path.contextAt(i).node()->defaultEventHandler(event);
+        Ref currentNode { *path.contextAt(i).node() };
+        currentNode->defaultEventHandler(event);
         ASSERT(!event.defaultPrevented());
         if (event.defaultHandled())
             return;
@@ -119,7 +122,11 @@ static bool shouldSuppressEventDispatchInDOM(Node& node, Event& event)
     if (!frame)
         return false;
 
-    if (!frame->mainFrame().loader().shouldSuppressTextInputFromEditing())
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame());
+    if (!localFrame)
+        return false;
+
+    if (!localFrame->loader().shouldSuppressTextInputFromEditing())
         return false;
 
     if (is<TextEvent>(event)) {
@@ -147,8 +154,8 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     LOG_WITH_STREAM(Events, stream << "EventDispatcher::dispatchEvent " << event << " on node " << node);
 
-    auto protectedNode = makeRef(node);
-    auto protectedView = makeRefPtr(node.document().view());
+    Ref protectedNode { node };
+    RefPtr protectedView { node.document().view() };
 
     EventPath eventPath { node, event };
 
@@ -167,14 +174,14 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
 
     event.resetBeforeDispatch();
 
-    event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+    event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
     if (!event.target())
         return;
 
     InputElementClickState clickHandlingState;
 
     bool isActivationEvent = event.type() == eventNames().clickEvent;
-    RefPtr<HTMLInputElement> inputForLegacyPreActivationBehavior = is<HTMLInputElement>(node) ? &downcast<HTMLInputElement>(node) : nullptr;
+    RefPtr inputForLegacyPreActivationBehavior = dynamicDowncast<HTMLInputElement>(node);
     if (!inputForLegacyPreActivationBehavior && isActivationEvent && event.bubbles())
         inputForLegacyPreActivationBehavior = findInputElementInEventPath(eventPath);
     if (inputForLegacyPreActivationBehavior)
@@ -199,10 +206,10 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     if (!event.defaultPrevented() && !event.defaultHandled() && !event.isDefaultEventHandlerIgnored()) {
         // FIXME: Not clear why we need to reset the target for the default event handlers.
         // We should research this, and remove this code if possible.
-        auto* finalTarget = event.target();
-        event.setTarget(EventPath::eventTargetRespectingTargetRules(node));
+        RefPtr finalTarget = event.target();
+        event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
         callDefaultEventHandlersInBubblingOrder(event, eventPath);
-        event.setTarget(finalTarget);
+        event.setTarget(WTFMove(finalTarget));
     }
 
     if (shouldClearTargetsAfterDispatch.value_or(false)) {
@@ -219,7 +226,7 @@ static void dispatchEventWithType(const Vector<T*>& targets, Event& event)
     ASSERT(*targets.begin());
 
     EventPath eventPath { targets };
-    event.setTarget(*targets.begin());
+    event.setTarget(RefPtr { *targets.begin() });
     event.setEventPath(eventPath);
     event.resetBeforeDispatch();
     dispatchEventInDOM(event, eventPath);

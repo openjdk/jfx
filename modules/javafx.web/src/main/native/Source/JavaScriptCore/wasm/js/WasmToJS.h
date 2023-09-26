@@ -29,20 +29,21 @@
 
 #include "JITCompilation.h"
 #include "WasmBinding.h"
-#include "WasmEmbedder.h"
+#include "WasmJS.h"
 #include <wtf/Bag.h>
 #include <wtf/Expected.h>
 
 namespace JSC {
 
-class CallLinkInfo;
+class OptimizingCallLinkInfo;
 class VM;
 
 namespace Wasm {
 
 class Instance;
+class WasmToJSCallee;
 
-Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM&, Bag<CallLinkInfo>& callLinkInfos, SignatureIndex, unsigned importIndex);
+Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM&, WasmToJSCallee&, OptimizingCallLinkInfo&, TypeIndex, unsigned importIndex);
 
 void emitThrowWasmToJSException(CCallHelpers&, GPRReg wasmInstance, Wasm::ExceptionType);
 

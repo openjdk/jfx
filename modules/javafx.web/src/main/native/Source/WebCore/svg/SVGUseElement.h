@@ -29,7 +29,6 @@
 namespace WebCore {
 
 class CachedSVGDocument;
-class SVGGElement;
 
 class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference, private CachedSVGDocumentClient {
     WTF_MAKE_ISO_ALLOCATED(SVGUseElement);
@@ -38,8 +37,7 @@ public:
     virtual ~SVGUseElement();
 
     void invalidateShadowTree();
-    bool shadowTreeNeedsUpdate() const { return m_shadowTreeNeedsUpdate; }
-    void updateShadowTree();
+    void updateUserAgentShadowTree() final;
 
     RenderElement* rendererClipChild() const;
 
@@ -62,7 +60,6 @@ private:
     void buildPendingResource() override;
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGUseElement, SVGGraphicsElement, SVGURIReference>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
@@ -75,7 +72,7 @@ private:
     Document* externalDocument() const;
     void updateExternalDocument();
 
-    SVGElement* findTarget(String* targetID = nullptr) const;
+    SVGElement* findTarget(AtomString* targetID = nullptr) const;
 
     void cloneTarget(ContainerNode&, SVGElement& target) const;
     RefPtr<SVGElement> targetClone() const;
@@ -97,7 +94,6 @@ private:
 
     bool isValid() const override { return SVGTests::isValid(); }
 
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
     Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
     Ref<SVGAnimatedLength> m_width { SVGAnimatedLength::create(this, SVGLengthMode::Width) };

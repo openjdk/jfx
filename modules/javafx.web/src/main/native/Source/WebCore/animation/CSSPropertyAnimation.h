@@ -29,25 +29,29 @@
 #pragma once
 
 #include "CSSPropertyNames.h"
+#include "CompositeOperation.h"
+#include "IterationCompositeOperation.h"
+#include "WebAnimationTypes.h"
 #include <wtf/HashSet.h>
 
 namespace WebCore {
 
 class CSSPropertyBlendingClient;
+class Document;
 class RenderStyle;
 
 class CSSPropertyAnimation {
 public:
-    static bool isPropertyAnimatable(CSSPropertyID);
-    static bool animationOfPropertyIsAccelerated(CSSPropertyID);
-    static bool propertiesEqual(CSSPropertyID, const RenderStyle& a, const RenderStyle& b);
-    static bool canPropertyBeInterpolated(CSSPropertyID, const RenderStyle& a, const RenderStyle& b);
+    static bool isPropertyAnimatable(AnimatableProperty);
+    static bool isPropertyAdditiveOrCumulative(AnimatableProperty);
+    static bool propertyRequiresBlendingForAccumulativeIteration(const CSSPropertyBlendingClient&, AnimatableProperty, const RenderStyle& a, const RenderStyle& b);
+    static bool animationOfPropertyIsAccelerated(AnimatableProperty);
+    static bool propertiesEqual(AnimatableProperty, const RenderStyle& a, const RenderStyle& b, const Document&);
+    static bool canPropertyBeInterpolated(AnimatableProperty, const RenderStyle& a, const RenderStyle& b, const Document&);
     static CSSPropertyID getPropertyAtIndex(int, std::optional<bool>& isShorthand);
     static int getNumProperties();
 
-    static HashSet<CSSPropertyID> animatableShorthandsAffectingProperty(CSSPropertyID);
-
-    static void blendProperties(const CSSPropertyBlendingClient*, CSSPropertyID, RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, double progress);
+    static void blendProperty(const CSSPropertyBlendingClient&, AnimatableProperty, RenderStyle& destination, const RenderStyle& from, const RenderStyle& to, double progress, CompositeOperation, IterationCompositeOperation = IterationCompositeOperation::Replace, double currentIteration = 0);
 };
 
 } // namespace WebCore

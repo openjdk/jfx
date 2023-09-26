@@ -47,7 +47,7 @@ struct( IDLDocument => {
     fileName => '$',
 });
 
-# https://heycam.github.io/webidl/#idl-types
+# https://webidl.spec.whatwg.org/#idl-types
 struct( IDLType => {
     name =>         '$', # Type identifier
     isNullable =>   '$', # Is the type Nullable (T?)
@@ -86,7 +86,7 @@ struct( IDLArgument => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-operations
+# https://webidl.spec.whatwg.org/#idl-operations
 struct( IDLOperation => {
     name => '$',
     type => 'IDLType', # Return type
@@ -98,7 +98,7 @@ struct( IDLOperation => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-attributes
+# https://webidl.spec.whatwg.org/#idl-attributes
 struct( IDLAttribute => {
     name => '$',
     type => 'IDLType',
@@ -110,7 +110,7 @@ struct( IDLAttribute => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-iterable
+# https://webidl.spec.whatwg.org/#idl-iterable
 struct( IDLIterable => {
     isKeyValue => '$',
     keyType => 'IDLType',
@@ -119,16 +119,17 @@ struct( IDLIterable => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-async-iterable
+# https://webidl.spec.whatwg.org/#idl-async-iterable
 struct( IDLAsyncIterable => {
     isKeyValue => '$',
     keyType => 'IDLType',
     valueType => 'IDLType',
+    operations => '@',
     arguments => '@', # List of 'IDLArgument'
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#es-maplike
+# https://webidl.spec.whatwg.org/#es-maplike
 struct( IDLMapLike => {
     isReadOnly => '$',
     keyType => 'IDLType',
@@ -136,14 +137,14 @@ struct( IDLMapLike => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#es-setlike
+# https://webidl.spec.whatwg.org/#es-setlike
 struct( IDLSetLike => {
     isReadOnly => '$',
     itemType => 'IDLType',
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-constants
+# https://webidl.spec.whatwg.org/#idl-constants
 struct( IDLConstant => {
     name => '$',
     type => 'IDLType',
@@ -151,7 +152,7 @@ struct( IDLConstant => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-enums
+# https://webidl.spec.whatwg.org/#idl-enums
 struct( IDLEnum => {
     name => '$',
     type => 'IDLType',
@@ -159,7 +160,7 @@ struct( IDLEnum => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#dfn-dictionary-member
+# https://webidl.spec.whatwg.org/#dfn-dictionary-member
 struct( IDLDictionaryMember => {
     name => '$',
     type => 'IDLType',
@@ -168,7 +169,7 @@ struct( IDLDictionaryMember => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-dictionaries
+# https://webidl.spec.whatwg.org/#idl-dictionaries
 struct( IDLDictionary => {
     type => 'IDLType',
     parentType => 'IDLType',
@@ -177,30 +178,31 @@ struct( IDLDictionary => {
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-callback-functions
+# https://webidl.spec.whatwg.org/#idl-callback-functions
 struct( IDLCallbackFunction => {
     type => '$',
     operation => 'IDLOperation',
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-namespaces
+# https://webidl.spec.whatwg.org/#idl-namespaces
 struct( IDLNamespace => {
     name => '$',
+    constants => '@', # List of 'IDLConstant'
     operations => '@', # List of 'IDLOperation'
     attributes => '@', # List of 'IDLAttribute'
     isPartial => '$', # Used for partial namespaces
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#includes-statement
+# https://webidl.spec.whatwg.org/#includes-statement
 struct( IDLIncludesStatement => {
     interfaceIdentifier => '$',
     mixinIdentifier => '$',
     extendedAttributes => '%',
 });
 
-# https://heycam.github.io/webidl/#idl-typedefs
+# https://webidl.spec.whatwg.org/#idl-typedefs
 struct( IDLTypedef => {
     type => 'IDLType',
 });
@@ -333,6 +335,8 @@ sub convertNamespaceToInterface
         $attribute->isStatic(1);
         push(@{$interface->attributes}, $attribute);
     }
+
+    push(@{$interface->constants}, @{$namespace->constants});
 
     $interface->isNamespaceObject(1);
     $interface->isPartial($namespace->isPartial);
@@ -597,10 +601,10 @@ sub addBuiltinTypedefs()
     push(@{$bufferSourceType->subtypes}, makeSimpleType("ArrayBuffer"));
     $typedefs{"BufferSource"} = IDLTypedef->new(type => $bufferSourceType);
 
-    # typedef unsigned long long DOMTimeStamp;
+    # typedef unsigned long long EpochTimeStamp;
 
-    my $DOMTimeStampType = IDLType->new(name => "unsigned long long");
-    $typedefs{"DOMTimeStamp"} = IDLTypedef->new(type => $DOMTimeStampType);
+    my $EpochTimeStampType = IDLType->new(name => "unsigned long long");
+    $typedefs{"EpochTimeStamp"} = IDLTypedef->new(type => $EpochTimeStampType);
 }
 
 my $nextOptionallyReadonlyAttribute_1 = '^(readonly|attribute)$';
@@ -620,7 +624,7 @@ my $nextDictionaryMember_1 = '^(\(|ByteString|DOMString|USVString|any|boolean|by
 my $nextCallbackInterfaceMembers_1 = '^(\(|const|ByteString|DOMString|USVString|any|boolean|byte|double|float|long|object|octet|sequence|short|symbol|undefined|unrestricted|unsigned)$';
 my $nextInterfaceMembers_1 = '^(\(|ByteString|DOMString|USVString|any|attribute|boolean|byte|const|constructor|deleter|double|float|getter|inherit|long|object|octet|readonly|sequence|setter|short|static|stringifier|symbol|undefined|unrestricted|unsigned)$';
 my $nextMixinMembers_1 = '^(\(|attribute|ByteString|DOMString|USVString|any|boolean|byte|const|double|float|long|object|octet|readonly|sequence|short|stringifier|symbol|undefined|unrestricted|unsigned)$';
-my $nextNamespaceMembers_1 = '^(\(|ByteString|DOMString|USVString|any|boolean|byte|double|float|long|object|octet|readonly|sequence|short|symbol|undefined|unrestricted|unsigned)$';
+my $nextNamespaceMembers_1 = '^(\(|ByteString|DOMString|USVString|any|boolean|byte|const|double|float|long|object|octet|readonly|sequence|short|symbol|undefined|unrestricted|unsigned)$';
 my $nextPartialInterfaceMember_1 = '^(\(|ByteString|DOMString|USVString|any|attribute|boolean|byte|const|deleter|double|float|getter|inherit|long|object|octet|readonly|sequence|setter|short|static|stringifier|symbol|undefined|unrestricted|unsigned)$';
 my $nextSingleType_1 = '^(ByteString|DOMString|USVString|boolean|byte|double|float|long|object|octet|sequence|short|symbol|undefined|unrestricted|unsigned)$';
 my $nextArgumentName_1 = '^(async|attribute|callback|const|constructor|deleter|dictionary|enum|getter|includes|inherit|interface|iterable|maplike|mixin|namespace|partial|readonly|required|setlike|setter|static|stringifier|typedef|unrestricted)$';
@@ -713,6 +717,9 @@ sub applyTypedefs
         } elsif (ref($definition) eq "IDLCallbackFunction") {
             $self->applyTypedefsToOperation($definition->operation);
         } elsif (ref($definition) eq "IDLNamespace") {
+            foreach my $constant (@{$definition->constants}) {
+                $constant->type($self->typeByApplyingTypedefs($constant->type));
+            }
             foreach my $operation (@{$definition->operations}) {
                 $self->applyTypedefsToOperation($operation);
             }
@@ -893,7 +900,7 @@ sub parseCallbackInterface
 
         my $interfaceNameToken = $self->getToken();
         $self->assertTokenType($interfaceNameToken, IdentifierToken);
-
+        
         my $name = identifierRemoveNullablePrefix($interfaceNameToken->value());
         $interface->type(makeSimpleType($name));
 
@@ -1042,7 +1049,7 @@ sub parseNamespace
 
         my $namespaceNameToken = $self->getToken();
         $self->assertTokenType($namespaceNameToken, IdentifierToken);
-
+        
         my $name = identifierRemoveNullablePrefix($namespaceNameToken->value());
         $namespace->name($name);
 
@@ -1050,10 +1057,14 @@ sub parseNamespace
         my $namespaceMembers = $self->parseNamespaceMembers();
         $self->assertTokenValue($self->getToken(), "}", __LINE__);
         $self->assertTokenValue($self->getToken(), ";", __LINE__);
-
+        
         for my $namespaceMember (@{$namespaceMembers}) {
             if (ref($namespaceMember) eq "IDLAttribute") {
                 push(@{$namespace->attributes}, $namespaceMember);
+                next;
+            }
+            if (ref($namespaceMember) eq "IDLConstant") {
+                push(@{$namespace->constants}, $namespaceMember);
                 next;
             }
             if (ref($namespaceMember) eq "IDLOperation") {
@@ -1098,6 +1109,9 @@ sub parseNamespaceMember
     my $extendedAttributeList = shift;
 
     my $next = $self->nextToken();
+    if ($next->value() eq "const") {
+        return $self->parseConst($extendedAttributeList);
+    }
     if ($next->value() eq "readonly") {
         $self->assertTokenValue($self->getToken(), "readonly", __LINE__);
         my $attribute = $self->parseAttributeRest($extendedAttributeList);
@@ -1399,7 +1413,7 @@ sub parseDictionaryMember
 
             my $type = $self->parseType();
             $self->moveExtendedAttributesApplicableToTypes($type, $extendedAttributeList);
-
+            
             $member->type($type);
         }
 
@@ -1441,6 +1455,12 @@ sub parseDefaultValue
         $self->assertTokenValue($self->getToken(), "[", __LINE__);
         $self->assertTokenValue($self->getToken(), "]", __LINE__);
         return "[]";
+    }
+    if ($next->value() eq "{") {
+        # Accept {} but just ignore it.
+        $self->assertTokenValue($self->getToken(), "{", __LINE__);
+        $self->assertTokenValue($self->getToken(), "}", __LINE__);
+        return undef;
     }
     $self->assertUnexpectedToken($next->value(), __LINE__);
 }
@@ -1507,6 +1527,9 @@ sub parseEnumValues
     my $next = $self->nextToken();
     if ($next->value() eq ",") {
         $self->assertTokenValue($self->getToken(), ",", __LINE__);
+    }
+    $next = $self->nextToken();
+    if ($next->type() == StringToken) {
         my $enumValueToken = $self->getToken();
         $self->assertTokenType($enumValueToken, StringToken);
         my $enumValue = $self->unquoteString($enumValueToken->value());
@@ -1587,7 +1610,7 @@ sub parseIncludesStatement
     my $next = $self->nextToken();
     if ($next->type() == IdentifierToken) {
         my $includesStatement = IDLIncludesStatement->new();
-
+    
         my $interfaceIdentifier = $self->parseName();
         $includesStatement->interfaceIdentifier($interfaceIdentifier);
 
@@ -2029,8 +2052,7 @@ sub parseAsyncIterable
         }
 
         $self->assertTokenValue($self->getToken(), ";", __LINE__);
-
-        die "'async iterable` interfaces are not currently supported by the code generators.";
+        $asyncIterable->extendedAttributes($extendedAttributeList);
 
         return $asyncIterable;
     }
@@ -2108,7 +2130,7 @@ sub parseSetLikeRest
     my $next = $self->nextToken();
     if ($next->value() eq "setlike") {
         $self->assertTokenValue($self->getToken(), "setlike", __LINE__);
-
+        
         my $setlike = IDLSetLike->new();
 
         $self->assertTokenValue($self->getToken(), "<", __LINE__);
@@ -2118,7 +2140,7 @@ sub parseSetLikeRest
 
         $self->assertExtendedAttributesValidForContext($extendedAttributeList, "set-like");
         $setlike->extendedAttributes($extendedAttributeList);
-
+        
         return $setlike;
     }
     $self->assertUnexpectedToken($next->value(), __LINE__);
@@ -2227,7 +2249,7 @@ sub parseArgumentsRest
         return $argument;
     } else {
         my $argument = IDLArgument->new();
-
+    
         my $type = $self->parseType();
         $self->moveExtendedAttributesApplicableToTypes($type, $extendedAttributeList);
 
@@ -2371,6 +2393,10 @@ sub parseExtendedAttributeRest2
         my @arguments = $self->parseIdentifierList();
         $self->assertTokenValue($self->getToken(), ")", __LINE__);
         return \@arguments;
+    }
+    if ($next->value() eq "*") {
+        $self->assertTokenValue($self->getToken(), "*", __LINE__);
+        return "*";
     }
     if ($next->type() == IdentifierToken) {
         my $name = $self->parseName();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,56 +51,70 @@ public class PrImage implements Filterable {
         return image;
     }
 
+    @Override
     public Object getData() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public int getContentWidth() {
         return image.getWidth();
     }
 
+    @Override
     public int getContentHeight() {
         return image.getHeight();
     }
 
+    @Override
     public int getPhysicalWidth() {
         return image.getWidth();
     }
 
+    @Override
     public int getPhysicalHeight() {
         return image.getHeight();
     }
 
+    @Override
     public float getPixelScale() {
         return image.getPixelScale();
     }
 
+    @Override
     public int getMaxContentWidth() {
         return image.getWidth();
     }
 
+    @Override
     public int getMaxContentHeight() {
         return image.getHeight();
     }
 
+    @Override
     public void setContentWidth(int contentW) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
+    @Override
     public void setContentHeight(int contentH) {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public void lock() {
     }
 
+    @Override
     public void unlock() {
     }
 
+    @Override
     public boolean isLost() {
         return false;
     }
 
+    @Override
     public void flush() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

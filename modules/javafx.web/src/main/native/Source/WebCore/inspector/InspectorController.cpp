@@ -100,7 +100,6 @@ InspectorController::InspectorController(Page& page, InspectorClient* inspectorC
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
     , m_overlay(makeUnique<InspectorOverlay>(page, inspectorClient))
     , m_executionStopwatch(Stopwatch::create())
-    , m_debugger(page)
     , m_page(page)
     , m_inspectorClient(inspectorClient)
 {
@@ -148,6 +147,8 @@ void InspectorController::createLazyAgents()
 
     m_didCreateLazyAgents = true;
 
+    m_debugger = makeUnique<PageDebugger>(m_page);
+
     m_injectedScriptManager->connect();
 
     auto pageContext = pageAgentContext();
@@ -161,7 +162,7 @@ void InspectorController::createLazyAgents()
     auto debuggerAgentPtr = debuggerAgent.get();
     m_agents.append(WTFMove(debuggerAgent));
 
-    m_agents.append(makeUnique<PageNetworkAgent>(pageContext));
+    m_agents.append(makeUnique<PageNetworkAgent>(pageContext, m_inspectorClient));
     m_agents.append(makeUnique<InspectorCSSAgent>(pageContext));
     ensureDOMAgent();
     m_agents.append(makeUnique<PageDOMDebuggerAgent>(pageContext, debuggerAgentPtr));
@@ -200,6 +201,8 @@ void InspectorController::inspectedPageDestroyed()
     m_inspectorClient = nullptr;
 
     m_agents.discardValues();
+
+    m_debugger = nullptr;
 }
 
 void InspectorController::setInspectorFrontendClient(InspectorFrontendClient* inspectorFrontendClient)
@@ -359,9 +362,27 @@ void InspectorController::getHighlight(InspectorOverlay::Highlight& highlight, I
     m_overlay->getHighlight(highlight, coordinateSystem);
 }
 
+bool InspectorController::isUnderTest() const
+{
+    return m_isUnderTest;
+}
+
 unsigned InspectorController::gridOverlayCount() const
 {
     return m_overlay->gridOverlayCount();
+}
+
+unsigned InspectorController::flexOverlayCount() const
+{
+    return m_overlay->flexOverlayCount();
+}
+
+unsigned InspectorController::paintRectCount() const
+{
+    if (m_inspectorClient->overridesShowPaintRects())
+        return m_inspectorClient->paintRectCount();
+
+    return m_overlay->paintRectCount();
 }
 
 bool InspectorController::shouldShowOverlay() const
@@ -382,6 +403,7 @@ void InspectorController::inspect(Node* node)
 
 bool InspectorController::enabled() const
 {
+    // FIXME: <http://webkit.org/b/246237> Local inspection should be controlled by `inspectable` API.
     return developerExtrasEnabled();
 }
 
@@ -460,7 +482,7 @@ bool InspectorController::canAccessInspectedScriptState(JSC::JSGlobalObject* lex
 {
     JSLockHolder lock(lexicalGlobalObject);
 
-    auto* inspectedWindow = jsDynamicCast<JSDOMWindow*>(lexicalGlobalObject->vm(), lexicalGlobalObject);
+    auto* inspectedWindow = jsDynamicCast<JSDOMWindow*>(lexicalGlobalObject);
     if (!inspectedWindow)
         return false;
 
@@ -496,9 +518,10 @@ Stopwatch& InspectorController::executionStopwatch() const
     return m_executionStopwatch;
 }
 
-PageDebugger& InspectorController::debugger()
+JSC::Debugger* InspectorController::debugger()
 {
-    return m_debugger;
+    ASSERT_IMPLIES(m_didCreateLazyAgents, m_debugger);
+    return m_debugger.get();
 }
 
 JSC::VM& InspectorController::vm()

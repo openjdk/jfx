@@ -53,9 +53,9 @@ void TypeProfiler::logTypesForTypeLocation(TypeLocation* location, VM& vm)
 
     dataLog("\t\t", location->m_globalVariableID == TypeProfilerReturnStatement ? "[Return Statement]" : "[Normal Statement]", "\n");
 
-    dataLog("\t\t#Local#\n\t\t", location->m_instructionTypeSet->dumpTypes().replace("\n", "\n\t\t"), "\n");
+    dataLog("\t\t#Local#\n\t\t", makeStringByReplacingAll(location->m_instructionTypeSet->dumpTypes(), '\n', "\n\t\t"_s), "\n");
     if (location->m_globalTypeSet)
-        dataLog("\t\t#Global#\n\t\t", location->m_globalTypeSet->dumpTypes().replace("\n", "\n\t\t"), "\n");
+        dataLog("\t\t#Global#\n\t\t", makeStringByReplacingAll(location->m_globalTypeSet->dumpTypes(), '\n', "\n\t\t"_s), "\n");
 }
 
 void TypeProfiler::insertNewLocation(TypeLocation* location)
@@ -72,7 +72,7 @@ void TypeProfiler::insertNewLocation(TypeLocation* location)
     bucket.append(location);
 }
 
-String TypeProfiler::typeInformationForExpressionAtOffset(TypeProfilerSearchDescriptor descriptor, unsigned offset, intptr_t sourceID, VM& vm)
+String TypeProfiler::typeInformationForExpressionAtOffset(TypeProfilerSearchDescriptor descriptor, unsigned offset, SourceID sourceID, VM& vm)
 {
     // This returns a JSON string representing an Object with the following properties:
     //     globalTypeSet: 'JSON<TypeSet> | null'
@@ -102,7 +102,7 @@ String TypeProfiler::typeInformationForExpressionAtOffset(TypeProfilerSearchDesc
     return json.toString();
 }
 
-TypeLocation* TypeProfiler::findLocation(unsigned divot, intptr_t sourceID, TypeProfilerSearchDescriptor descriptor, VM& vm)
+TypeLocation* TypeProfiler::findLocation(unsigned divot, SourceID sourceID, TypeProfilerSearchDescriptor descriptor, VM& vm)
 {
     QueryKey queryKey(sourceID, divot, descriptor);
     auto iter = m_queryCache.find(queryKey);

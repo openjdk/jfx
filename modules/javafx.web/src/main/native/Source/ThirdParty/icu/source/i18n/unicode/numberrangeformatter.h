@@ -73,7 +73,7 @@ struct UFormattedNumberRangeImpl;
  * Export an explicit template instantiation. See datefmt.h
  * (When building DLLs for Windows this is required.)
  */
-#if U_PLATFORM == U_PF_WINDOWS && !defined(U_IN_DOXYGEN)
+#if U_PLATFORM == U_PF_WINDOWS && !defined(U_IN_DOXYGEN) && !defined(U_STATIC_IMPLEMENTATION)
 } // namespace icu::number
 U_NAMESPACE_END
 
@@ -381,6 +381,13 @@ class U_I18N_API NumberRangeFormatterSettings {
     friend class UnlocalizedNumberRangeFormatter;
 };
 
+// Explicit instantiations in source/i18n/numrange_fluent.cpp.
+// (MSVC treats imports/exports of explicit instantiations differently.)
+#ifndef _MSC_VER
+extern template class NumberRangeFormatterSettings<UnlocalizedNumberRangeFormatter>;
+extern template class NumberRangeFormatterSettings<LocalizedNumberRangeFormatter>;
+#endif
+
 /**
  * A NumberRangeFormatter that does not yet have a locale. In order to format, a locale must be specified.
  *
@@ -433,7 +440,7 @@ class U_I18N_API UnlocalizedNumberRangeFormatter
      * The source UnlocalizedNumberRangeFormatter will be left in a valid but undefined state.
      * @stable ICU 63
      */
-    UnlocalizedNumberRangeFormatter(UnlocalizedNumberRangeFormatter&& src) U_NOEXCEPT;
+    UnlocalizedNumberRangeFormatter(UnlocalizedNumberRangeFormatter&& src) noexcept;
 
     /**
      * Copy assignment operator.
@@ -446,14 +453,14 @@ class U_I18N_API UnlocalizedNumberRangeFormatter
      * The source UnlocalizedNumberRangeFormatter will be left in a valid but undefined state.
      * @stable ICU 63
      */
-    UnlocalizedNumberRangeFormatter& operator=(UnlocalizedNumberRangeFormatter&& src) U_NOEXCEPT;
+    UnlocalizedNumberRangeFormatter& operator=(UnlocalizedNumberRangeFormatter&& src) noexcept;
 
   private:
     explicit UnlocalizedNumberRangeFormatter(
             const NumberRangeFormatterSettings<UnlocalizedNumberRangeFormatter>& other);
 
     explicit UnlocalizedNumberRangeFormatter(
-            NumberRangeFormatterSettings<UnlocalizedNumberRangeFormatter>&& src) U_NOEXCEPT;
+            NumberRangeFormatterSettings<UnlocalizedNumberRangeFormatter>&& src) noexcept;
 
     // To give the fluent setters access to this class's constructor:
     friend class NumberRangeFormatterSettings<UnlocalizedNumberRangeFormatter>;
@@ -507,7 +514,7 @@ class U_I18N_API LocalizedNumberRangeFormatter
      * The source LocalizedNumberRangeFormatter will be left in a valid but undefined state.
      * @stable ICU 63
      */
-    LocalizedNumberRangeFormatter(LocalizedNumberRangeFormatter&& src) U_NOEXCEPT;
+    LocalizedNumberRangeFormatter(LocalizedNumberRangeFormatter&& src) noexcept;
 
     /**
      * Copy assignment operator.
@@ -520,7 +527,7 @@ class U_I18N_API LocalizedNumberRangeFormatter
      * The source LocalizedNumberRangeFormatter will be left in a valid but undefined state.
      * @stable ICU 63
      */
-    LocalizedNumberRangeFormatter& operator=(LocalizedNumberRangeFormatter&& src) U_NOEXCEPT;
+    LocalizedNumberRangeFormatter& operator=(LocalizedNumberRangeFormatter&& src) noexcept;
 
 #ifndef U_HIDE_INTERNAL_API
 
@@ -554,13 +561,11 @@ class U_I18N_API LocalizedNumberRangeFormatter
         const NumberRangeFormatterSettings<LocalizedNumberRangeFormatter>& other);
 
     explicit LocalizedNumberRangeFormatter(
-        NumberRangeFormatterSettings<LocalizedNumberRangeFormatter>&& src) U_NOEXCEPT;
+        NumberRangeFormatterSettings<LocalizedNumberRangeFormatter>&& src) noexcept;
 
     LocalizedNumberRangeFormatter(const impl::RangeMacroProps &macros, const Locale &locale);
 
     LocalizedNumberRangeFormatter(impl::RangeMacroProps &&macros, const Locale &locale);
-
-    void clear();
 
     // To give the fluent setters access to this class's constructor:
     friend class NumberRangeFormatterSettings<UnlocalizedNumberRangeFormatter>;
@@ -588,11 +593,11 @@ class U_I18N_API FormattedNumberRange : public UMemory, public FormattedValue {
      *
      * @stable ICU 63
      */
-    UnicodeString toString(UErrorCode& status) const U_OVERRIDE;
+    UnicodeString toString(UErrorCode& status) const override;
 
     // Copydoc: this method is new in ICU 64
     /** @copydoc FormattedValue::toTempString() */
-    UnicodeString toTempString(UErrorCode& status) const U_OVERRIDE;
+    UnicodeString toTempString(UErrorCode& status) const override;
 
     // Copybrief: this method is older than the parent method
     /**
@@ -602,56 +607,12 @@ class U_I18N_API FormattedNumberRange : public UMemory, public FormattedValue {
      *
      * @stable ICU 63
      */
-    Appendable &appendTo(Appendable &appendable, UErrorCode& status) const U_OVERRIDE;
+    Appendable &appendTo(Appendable &appendable, UErrorCode& status) const override;
 
     // Copydoc: this method is new in ICU 64
     /** @copydoc FormattedValue::nextPosition() */
-    UBool nextPosition(ConstrainedFieldPosition& cfpos, UErrorCode& status) const U_OVERRIDE;
+    UBool nextPosition(ConstrainedFieldPosition& cfpos, UErrorCode& status) const override;
 
-#ifndef U_HIDE_DEPRECATED_API
-    /**
-     * Export the first formatted number as a decimal number. This endpoint
-     * is useful for obtaining the exact number being printed after scaling
-     * and rounding have been applied by the number range formatting pipeline.
-     *
-     * The syntax of the unformatted number is a "numeric string"
-     * as defined in the Decimal Arithmetic Specification, available at
-     * http://speleotrove.com/decimal
-     *
-     * TODO(ICU-21275): This function will be removed in ICU 69.
-     * Use getDecimalNumbers() instead.
-     *
-     * @param status Set if an error occurs.
-     * @return A decimal representation of the first formatted number.
-     * @deprecated ICU 68 Use getDecimalNumbers instead.
-     * @see NumberRangeFormatter
-     * @see #getSecondDecimal
-     */
-    UnicodeString getFirstDecimal(UErrorCode& status) const;
-
-    /**
-     * Export the second formatted number as a decimal number. This endpoint
-     * is useful for obtaining the exact number being printed after scaling
-     * and rounding have been applied by the number range formatting pipeline.
-     *
-     * The syntax of the unformatted number is a "numeric string"
-     * as defined in the Decimal Arithmetic Specification, available at
-     * http://speleotrove.com/decimal
-     *
-     * TODO(ICU-21275): This function will be removed in ICU 69.
-     * Use getDecimalNumbers() instead.
-     *
-     * @param status Set if an error occurs.
-     * @return A decimal representation of the second formatted number.
-     * @deprecated ICU 68 Use getDecimalNumbers instead.
-     * @see NumberRangeFormatter
-     * @see #getFirstDecimal
-     */
-    UnicodeString getSecondDecimal(UErrorCode& status) const;
-#endif // U_HIDE_DEPRECATED_API
-
-
-#ifndef U_HIDE_DRAFT_API
     /**
      * Extracts the formatted range as a pair of decimal numbers. This endpoint
      * is useful for obtaining the exact number being printed after scaling
@@ -669,11 +630,10 @@ class U_I18N_API FormattedNumberRange : public UMemory, public FormattedValue {
      *         for example, std::string.
      * @param status Set if an error occurs.
      * @return A pair of StringClasses containing the numeric strings.
-     * @draft ICU 68
+     * @stable ICU 68
      */
     template<typename StringClass>
     inline std::pair<StringClass, StringClass> getDecimalNumbers(UErrorCode& status) const;
-#endif // U_HIDE_DRAFT_API
 
     /**
      * Returns whether the pair of numbers was successfully formatted as a range or whether an identity fallback was
@@ -685,6 +645,13 @@ class U_I18N_API FormattedNumberRange : public UMemory, public FormattedValue {
      * @see UNumberRangeIdentityFallback
      */
     UNumberRangeIdentityResult getIdentityResult(UErrorCode& status) const;
+
+    /**
+     * Default constructor; makes an empty FormattedNumberRange.
+     * @stable ICU 70
+     */
+    FormattedNumberRange()
+        : fData(nullptr), fErrorCode(U_INVALID_STATE_ERROR) {}
 
     /**
      * Copying not supported; use move constructor instead.
@@ -701,14 +668,14 @@ class U_I18N_API FormattedNumberRange : public UMemory, public FormattedValue {
      * Leaves the source FormattedNumberRange in an undefined state.
      * @stable ICU 63
      */
-    FormattedNumberRange(FormattedNumberRange&& src) U_NOEXCEPT;
+    FormattedNumberRange(FormattedNumberRange&& src) noexcept;
 
     /**
      * Move assignment:
      * Leaves the source FormattedNumberRange in an undefined state.
      * @stable ICU 63
      */
-    FormattedNumberRange& operator=(FormattedNumberRange&& src) U_NOEXCEPT;
+    FormattedNumberRange& operator=(FormattedNumberRange&& src) noexcept;
 
     /**
      * Destruct an instance of FormattedNumberRange, cleaning up any memory it might own.
@@ -732,8 +699,6 @@ class U_I18N_API FormattedNumberRange : public UMemory, public FormattedValue {
     explicit FormattedNumberRange(UErrorCode errorCode)
         : fData(nullptr), fErrorCode(errorCode) {}
 
-    void getAllFieldPositionsImpl(FieldPositionIteratorHandler& fpih, UErrorCode& status) const;
-
     void getDecimalNumbers(ByteSink& sink1, ByteSink& sink2, UErrorCode& status) const;
 
     const impl::UFormattedNumberRangeData* getData(UErrorCode& status) const;
@@ -748,8 +713,7 @@ class U_I18N_API FormattedNumberRange : public UMemory, public FormattedValue {
     friend struct impl::UFormattedNumberRangeImpl;
 };
 
-#ifndef U_HIDE_DRAFT_API
-// Note: This is draft ICU 68
+// inline impl of @stable ICU 68 method
 template<typename StringClass>
 std::pair<StringClass, StringClass> FormattedNumberRange::getDecimalNumbers(UErrorCode& status) const {
     StringClass str1;
@@ -759,7 +723,6 @@ std::pair<StringClass, StringClass> FormattedNumberRange::getDecimalNumbers(UErr
     getDecimalNumbers(sink1, sink2, status);
     return std::make_pair(str1, str2);
 }
-#endif // U_HIDE_DRAFT_API
 
 /**
  * See the main description in numberrangeformatter.h for documentation and examples.

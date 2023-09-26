@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc.  All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -48,8 +49,8 @@ public:
     enum Mode {
         Incomplete, Normal, Failed, Connected
     };
-    WebSocketHandshake(const URL&, const String& protocol, const String& userAgent, const String& clientOrigin, bool allowCookies);
-    ~WebSocketHandshake();
+    WEBCORE_EXPORT WebSocketHandshake(const URL&, const String& protocol, const String& userAgent, const String& clientOrigin, bool allowCookies, bool isAppInitiated);
+    WEBCORE_EXPORT ~WebSocketHandshake();
 
     const URL& url() const;
     void setURL(const URL&);
@@ -63,31 +64,31 @@ public:
 
     String clientLocation() const;
 
-    CString clientHandshakeMessage() const;
+    WEBCORE_EXPORT CString clientHandshakeMessage() const;
     ResourceRequest clientHandshakeRequest(const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const;
 
-    void reset();
+    WEBCORE_EXPORT void reset();
 
-    int readServerHandshake(const uint8_t* header, size_t len);
-    Mode mode() const;
-    String failureReason() const; // Returns a string indicating the reason of failure if mode() == Failed.
+    WEBCORE_EXPORT int readServerHandshake(const uint8_t* header, size_t len);
+    WEBCORE_EXPORT Mode mode() const;
+    WEBCORE_EXPORT String failureReason() const; // Returns a string indicating the reason of failure if mode() == Failed.
 
-    String serverWebSocketProtocol() const;
-    String serverSetCookie() const;
+    WEBCORE_EXPORT String serverWebSocketProtocol() const;
+    WEBCORE_EXPORT String serverSetCookie() const;
     String serverUpgrade() const;
     String serverConnection() const;
     String serverWebSocketAccept() const;
-    String acceptedExtensions() const;
+    WEBCORE_EXPORT String acceptedExtensions() const;
 
-    const ResourceResponse& serverHandshakeResponse() const;
+    WEBCORE_EXPORT const ResourceResponse& serverHandshakeResponse() const;
 
-    void addExtensionProcessor(std::unique_ptr<WebSocketExtensionProcessor>);
+    WEBCORE_EXPORT void addExtensionProcessor(std::unique_ptr<WebSocketExtensionProcessor>);
 
     static String getExpectedWebSocketAccept(const String& secWebSocketKey);
 
 private:
 
-    int readStatusLine(const uint8_t* header, size_t headerLength, int& statusCode, String& statusText);
+    int readStatusLine(const uint8_t* header, size_t headerLength, int& statusCode, AtomString& statusText);
 
     // Reads all headers except for the two predefined ones.
     const uint8_t* readHTTPHeaders(const uint8_t* start, const uint8_t* end);
@@ -102,6 +103,7 @@ private:
     String m_userAgent;
     String m_clientOrigin;
     bool m_allowCookies;
+    bool m_isAppInitiated;
 
     ResourceResponse m_serverHandshakeResponse;
 

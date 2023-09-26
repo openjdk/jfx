@@ -31,6 +31,7 @@
 #include "pas_lock.h"
 #include "pas_min_heap.h"
 #include "pas_page_sharing_participant.h"
+#include "pas_page_sharing_pool_scavenge_result.h"
 #include "pas_page_sharing_pool_take_result.h"
 #include "pas_segmented_vector.h"
 #include "pas_utils.h"
@@ -82,6 +83,7 @@ static inline void pas_page_sharing_participant_set_index(pas_page_sharing_parti
     pas_page_sharing_participant_get_payload(*ptr)->index_in_sharing_pool_min_heap = (unsigned)index;
 }
 
+PAS_IGNORE_WARNINGS_BEGIN("missing-field-initializers")
 PAS_CREATE_MIN_HEAP(
     pas_page_sharing_pool_min_heap,
     pas_page_sharing_participant,
@@ -89,6 +91,7 @@ PAS_CREATE_MIN_HEAP(
     .compare = pas_page_sharing_participant_compare,
     .get_index = pas_page_sharing_participant_get_index,
     .set_index = pas_page_sharing_participant_set_index);
+PAS_IGNORE_WARNINGS_END
 
 struct PAS_ALIGNED(sizeof(pas_versioned_field)) pas_page_sharing_pool {
     pas_versioned_field first_delta;
@@ -121,7 +124,7 @@ PAS_API void pas_page_sharing_pool_add(pas_page_sharing_pool* pool,
 
 /* This is the low-level interface for taking things from the sharing pool. Usually you want to call
    pas_physical_page_sharing_pool_take, pas_physical_page_sharing_pool_scavenge,
-   pas_physical_page_sharing_pool_take_for_page_config, or pas_bias_page_sharing_pool_take.
+   or pas_physical_page_sharing_pool_take_for_page_config.
 
    This just takes the least recently used piece of memory (could be a page, a span of multiple pages,
    or even a set of disjoint pages). The amount of memory returned is going to be whatever is
@@ -150,7 +153,7 @@ PAS_API void pas_physical_page_sharing_pool_take(
     size_t num_locks_already_held);
 
 /* This returns the excuse for why it stopped scavenging. */
-PAS_API pas_page_sharing_pool_take_result
+PAS_API pas_page_sharing_pool_scavenge_result
 pas_physical_page_sharing_pool_scavenge(uint64_t max_epoch);
 
 PAS_API void pas_physical_page_sharing_pool_take_later(size_t bytes);
@@ -158,12 +161,10 @@ PAS_API void pas_physical_page_sharing_pool_give_back(size_t bytes);
 
 PAS_API void pas_physical_page_sharing_pool_take_for_page_config(
     size_t bytes,
-    pas_page_base_config* page_config,
+    const pas_page_base_config* page_config,
     pas_lock_hold_mode heap_lock_hold_mode,
     pas_lock** locks_already_held,
     size_t num_locks_already_held);
-
-PAS_API bool pas_bias_page_sharing_pool_take(pas_page_sharing_pool* pool);
 
 PAS_API void pas_page_sharing_pool_did_create_delta(pas_page_sharing_pool* pool,
                                                     pas_page_sharing_participant participant);

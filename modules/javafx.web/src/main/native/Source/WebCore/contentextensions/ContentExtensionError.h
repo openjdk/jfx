@@ -29,6 +29,8 @@
 
 #include <system_error>
 
+#include <wtf/Forward.h>
+
 namespace WebCore {
 namespace ContentExtensions {
 
@@ -37,7 +39,6 @@ enum class ContentExtensionError {
     JSONInvalid = 1,
 
     // JSON semantics error
-    JSONTopLevelStructureNotAnObject,
     JSONTopLevelStructureNotAnArray,
     JSONInvalidObjectInTopLevelArray,
     JSONInvalidRule,
@@ -46,12 +47,10 @@ enum class ContentExtensionError {
     JSONInvalidTrigger,
     JSONInvalidURLFilterInTrigger,
     JSONInvalidTriggerFlagsArray,
-    JSONInvalidObjectInTriggerFlagsArray,
     JSONInvalidStringInTriggerFlagsArray,
     JSONInvalidConditionList,
     JSONDomainNotLowerCaseASCII,
     JSONMultipleConditions,
-    JSONTopURLAndDomainConditions,
     JSONTooManyRules,
 
     JSONInvalidAction,
@@ -60,10 +59,35 @@ enum class ContentExtensionError {
     JSONInvalidNotification,
     JSONInvalidRegex,
 
+    JSONRedirectMissing,
+    JSONRedirectExtensionPathDoesNotStartWithSlash,
+    JSONRedirectURLSchemeInvalid,
+    JSONRedirectToJavaScriptURL,
+    JSONRedirectURLInvalid,
+    JSONRedirectInvalidType,
+    JSONRedirectInvalidPort,
+    JSONRedirectInvalidQuery,
+    JSONRedirectInvalidFragment,
+
+    JSONRemoveParametersNotStringArray,
+
+    JSONAddOrReplaceParametersNotArray,
+    JSONAddOrReplaceParametersKeyValueNotADictionary,
+    JSONAddOrReplaceParametersKeyValueMissingKeyString,
+    JSONAddOrReplaceParametersKeyValueMissingValueString,
+
+    JSONModifyHeadersNotArray,
+    JSONModifyHeadersInfoNotADictionary,
+    JSONModifyHeadersMissingOperation,
+    JSONModifyHeadersInvalidOperation,
+    JSONModifyHeadersMissingHeader,
+    JSONModifyHeadersMissingValue,
+    JSONModifyHeadersInvalidPriority,
+
     ErrorWritingSerializedNFA,
 };
 
-extern const char* WebKitContentBlockerDomain;
+extern ASCIILiteral WebKitContentBlockerDomain;
 
 WEBCORE_EXPORT const std::error_category& contentExtensionErrorCategory();
 

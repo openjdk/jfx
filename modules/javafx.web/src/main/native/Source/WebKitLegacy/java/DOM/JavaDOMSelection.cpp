@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -207,9 +207,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_modifyImpl(JNIEn
     , jstring granularity)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->modify(String(env, alter)
-            , String(env, direction)
-            , String(env, granularity));
+    IMPL->modify(AtomString {String(env, alter)}
+            , AtomString {String(env, direction)}
+            , AtomString {String(env, granularity)});
 }
 
 

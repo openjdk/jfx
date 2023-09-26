@@ -24,11 +24,11 @@
  */
 
 [
-    EnabledAtRuntime=WritableStreamAPI,
-    Exposed=(Window,Worker),
+    Exposed=*,
     JSBuiltin,
     PrivateIdentifier,
     PublicIdentifier
 ] interface WritableStreamDefaultController {
+    readonly attribute AbortSignal signal;
     undefined error(optional any e);
 };

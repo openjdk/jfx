@@ -31,7 +31,7 @@ namespace WebCore {
 class RadioButtonGroup {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    bool isEmpty() const { return m_members.computesEmpty(); }
+    bool isEmpty() const { return m_members.isEmptyIgnoringNullReferences(); }
     bool isRequired() const { return m_requiredCount; }
     RefPtr<HTMLInputElement> checkedButton() const { return m_checkedButton.get(); }
     void add(HTMLInputElement&);
@@ -47,8 +47,8 @@ private:
     bool isValid() const;
     void setCheckedButton(HTMLInputElement*);
 
-    WeakHashSet<HTMLInputElement> m_members;
-    WeakPtr<HTMLInputElement> m_checkedButton;
+    WeakHashSet<HTMLInputElement, WeakPtrImplWithEventTargetData> m_members;
+    WeakPtr<HTMLInputElement, WeakPtrImplWithEventTargetData> m_checkedButton;
     size_t m_requiredCount { 0 };
 };
 
@@ -59,9 +59,7 @@ inline bool RadioButtonGroup::isValid() const
 
 Vector<Ref<HTMLInputElement>> RadioButtonGroup::members() const
 {
-    Vector<Ref<HTMLInputElement>> sortedMembers;
-    for (auto& member : m_members)
-        sortedMembers.append(member);
+    auto sortedMembers = copyToVectorOf<Ref<HTMLInputElement>>(m_members);
     std::sort(sortedMembers.begin(), sortedMembers.end(), [](auto& a, auto& b) {
         return is_lt(treeOrder<ComposedTree>(a, b));
     });
@@ -79,7 +77,7 @@ void RadioButtonGroup::setCheckedButton(HTMLInputElement* button)
     if (hadCheckedButton != willHaveCheckedButton)
         setNeedsStyleRecalcForAllButtons();
 
-    m_checkedButton = makeWeakPtr(button);
+    m_checkedButton = button;
     if (oldCheckedButton)
         oldCheckedButton->setChecked(false);
 }
@@ -87,7 +85,7 @@ void RadioButtonGroup::setCheckedButton(HTMLInputElement* button)
 void RadioButtonGroup::add(HTMLInputElement& button)
 {
     ASSERT(button.isRadioButton());
-    if (!m_members.add(&button).isNewEntry)
+    if (!m_members.add(button).isNewEntry)
         return;
     bool groupWasValid = isValid();
     if (button.isRequired())
@@ -155,7 +153,7 @@ void RadioButtonGroup::remove(HTMLInputElement& button)
         }
     }
 
-    if (m_members.computesEmpty()) {
+    if (m_members.isEmptyIgnoringNullReferences()) {
         ASSERT(!m_requiredCount);
         ASSERT(!m_checkedButton);
     } else if (wasValid != isValid())

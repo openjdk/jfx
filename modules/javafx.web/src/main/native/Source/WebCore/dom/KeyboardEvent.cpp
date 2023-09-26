@@ -40,13 +40,13 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(KeyboardEvent);
 static inline const AtomString& eventTypeForKeyboardEventType(PlatformEvent::Type type)
 {
     switch (type) {
-        case PlatformEvent::KeyUp:
+    case PlatformEvent::Type::KeyUp:
             return eventNames().keyupEvent;
-        case PlatformEvent::RawKeyDown:
+    case PlatformEvent::Type::RawKeyDown:
             return eventNames().keydownEvent;
-        case PlatformEvent::Char:
+    case PlatformEvent::Type::Char:
             return eventNames().keypressEvent;
-        case PlatformEvent::KeyDown:
+    case PlatformEvent::Type::KeyDown:
             // The caller should disambiguate the combined event into RawKeyDown or Char events.
             break;
         default:
@@ -108,7 +108,7 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
     , m_underlyingPlatformEvent(makeUnique<PlatformKeyboardEvent>(key))
     , m_key(key.key())
     , m_code(key.code())
-    , m_keyIdentifier(key.keyIdentifier())
+    , m_keyIdentifier(AtomString { key.keyIdentifier() })
     , m_location(keyLocationCode(key))
     , m_repeat(key.isAutoRepeat())
     , m_isComposing(view && is<DOMWindow>(view->window()) && downcast<DOMWindow>(*view->window()).frame() && downcast<DOMWindow>(*view->window()).frame()->editor().hasComposition())
@@ -153,7 +153,7 @@ Ref<KeyboardEvent> KeyboardEvent::create(const AtomString& type, const Init& ini
 }
 
 void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view,
-    const String& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
+    const AtomString& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
 {
     if (isBeingDispatched())
         return;

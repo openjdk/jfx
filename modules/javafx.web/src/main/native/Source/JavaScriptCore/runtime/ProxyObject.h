@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,27 @@
 
 namespace JSC {
 
-class ProxyObject final : public JSNonFinalObject {
+class ProxyObject final : public JSInternalFieldObjectImpl<2> {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSInternalFieldObjectImpl<2>;
 
     static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesGetPrototype | OverridesGetCallData | OverridesPut | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | ProhibitsPropertyCaching;
 
+    enum class Field : uint32_t {
+        Target = 0,
+        Handler,
+    };
+    static_assert(numberOfInternalFields == 2);
+    static std::array<JSValue, numberOfInternalFields> initialValues()
+    {
+        return { {
+            jsNull(),
+            jsUndefined(),
+        } };
+    }
+
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.proxyObjectSpace<mode>();
     }
@@ -46,7 +59,7 @@ public:
     {
         VM& vm = getVM(globalObject);
         Structure* structure = ProxyObject::structureForTarget(globalObject, target);
-        ProxyObject* proxy = new (NotNull, allocateCell<ProxyObject>(vm.heap)) ProxyObject(vm, structure);
+        ProxyObject* proxy = new (NotNull, allocateCell<ProxyObject>(vm)) ProxyObject(vm, structure);
         proxy->finishCreation(vm, globalObject, target, handler);
         return proxy;
     }
@@ -64,8 +77,8 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    JSObject* target() const { return m_target.get(); }
-    JSValue handler() const { return m_handler.get(); }
+    JSObject* target() const { return jsCast<JSObject*>(internalField(Field::Target).get()); }
+    JSValue handler() const { return internalField(Field::Handler).get(); }
 
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
@@ -73,6 +86,9 @@ public:
     JSValue performGetPrototype(JSGlobalObject*);
     void revoke(VM&);
     bool isRevoked() const;
+
+    const WriteBarrier<Unknown>& internalField(Field field) const { return Base::internalField(static_cast<uint32_t>(field)); }
+    WriteBarrier<Unknown>& internalField(Field field) { return Base::internalField(static_cast<uint32_t>(field)); }
 
 private:
     JS_EXPORT_PRIVATE ProxyObject(VM&, Structure*);
@@ -108,10 +124,8 @@ private:
     void performGetOwnEnumerablePropertyNames(JSGlobalObject*, PropertyNameArray&);
     bool performSetPrototype(JSGlobalObject*, JSValue prototype, bool shouldThrowIfCantSet);
 
-    WriteBarrier<JSObject> m_target;
-    WriteBarrier<Unknown> m_handler;
-    bool m_isCallable : 1;
-    bool m_isConstructible : 1;
+    bool m_isCallable : 1 { false };
+    bool m_isConstructible : 1 { false };
 };
 
 } // namespace JSC

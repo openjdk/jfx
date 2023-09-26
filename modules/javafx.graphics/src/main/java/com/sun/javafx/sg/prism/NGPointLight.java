@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,22 +87,6 @@ public class NGPointLight extends NGLightBase {
     }
 
     public static float getSimulatedFalloff() {
-        return SIMULATED_FALLOFF;
-    }
-
-    public Point3D getDirection() {
-        return SIMULATED_DIRECTION;
-    }
-
-    public float getInnerAngle() {
-        return SIMULATED_INNER_ANGLE;
-    }
-
-    public float getOuterAngle() {
-        return SIMULATED_OUTER_ANGLE;
-    }
-
-    public float getFalloff() {
         return SIMULATED_FALLOFF;
     }
 

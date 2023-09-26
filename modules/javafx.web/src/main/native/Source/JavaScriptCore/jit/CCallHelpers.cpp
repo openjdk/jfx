@@ -29,6 +29,7 @@
 #if ENABLE(JIT)
 
 #include "LinkBuffer.h"
+#include "MaxFrameExtentForSlowPathCall.h"
 #include "ShadowChicken.h"
 
 namespace JSC {
@@ -43,21 +44,11 @@ void CCallHelpers::logShadowChickenProloguePacket(GPRReg shadowPacket, GPRReg sc
     storePtr(scope, Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, scope)));
 }
 
-void CCallHelpers::logShadowChickenTailPacket(GPRReg shadowPacket, JSValueRegs thisRegs, GPRReg scope, CodeBlock* codeBlock, CallSiteIndex callSiteIndex)
-{
-    storePtr(GPRInfo::callFrameRegister, Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, frame)));
-    storePtr(TrustedImmPtr(ShadowChicken::Packet::tailMarker()), Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, callee)));
-    storeValue(thisRegs, Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, thisValue)));
-    storePtr(scope, Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, scope)));
-    storePtr(TrustedImmPtr(codeBlock), Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, codeBlock)));
-    store32(TrustedImm32(callSiteIndex.bits()), Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, callSiteIndex)));
-}
-
 void CCallHelpers::ensureShadowChickenPacket(VM& vm, GPRReg shadowPacket, GPRReg scratch1NonArgGPR, GPRReg scratch2)
 {
     ShadowChicken* shadowChicken = vm.shadowChicken();
     RELEASE_ASSERT(shadowChicken);
-    ASSERT(!RegisterSet::argumentGPRS().get(scratch1NonArgGPR));
+    ASSERT(!RegisterSetBuilder::argumentGPRS().contains(scratch1NonArgGPR, IgnoreVectors));
     move(TrustedImmPtr(shadowChicken->addressOfLogCursor()), scratch1NonArgGPR);
     loadPtr(Address(scratch1NonArgGPR), shadowPacket);
     Jump ok = branchPtr(Below, shadowPacket, TrustedImmPtr(shadowChicken->logEnd()));
@@ -72,7 +63,24 @@ void CCallHelpers::ensureShadowChickenPacket(VM& vm, GPRReg shadowPacket, GPRReg
     storePtr(scratch2, Address(scratch1NonArgGPR));
 }
 
-void CCallHelpers::emitJITCodeOver(MacroAssemblerCodePtr<JSInternalPtrTag> where, ScopedLambda<void(CCallHelpers&)> emitCode, const char* description)
+
+template <typename CodeBlockType>
+void CCallHelpers::logShadowChickenTailPacketImpl(GPRReg shadowPacket, JSValueRegs thisRegs, GPRReg scope, CodeBlockType codeBlock, CallSiteIndex callSiteIndex)
+{
+    storePtr(GPRInfo::callFrameRegister, Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, frame)));
+    storePtr(TrustedImmPtr(ShadowChicken::Packet::tailMarker()), Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, callee)));
+    storeValue(thisRegs, Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, thisValue)));
+    storePtr(scope, Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, scope)));
+    storePtr(codeBlock, Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, codeBlock)));
+    store32(TrustedImm32(callSiteIndex.bits()), Address(shadowPacket, OBJECT_OFFSETOF(ShadowChicken::Packet, callSiteIndex)));
+}
+
+void CCallHelpers::logShadowChickenTailPacket(GPRReg shadowPacket, JSValueRegs thisRegs, GPRReg scope, GPRReg codeBlock, CallSiteIndex callSiteIndex)
+{
+    logShadowChickenTailPacketImpl(shadowPacket, thisRegs, scope, codeBlock, callSiteIndex);
+}
+
+void CCallHelpers::emitJITCodeOver(CodePtr<JSInternalPtrTag> where, ScopedLambda<void(CCallHelpers&)> emitCode, const char* description)
 {
     CCallHelpers jit;
     emitCode(jit);
@@ -80,6 +88,44 @@ void CCallHelpers::emitJITCodeOver(MacroAssemblerCodePtr<JSInternalPtrTag> where
     constexpr bool needsBranchCompaction = false;
     LinkBuffer linkBuffer(jit, where, jit.m_assembler.buffer().codeSize(), LinkBuffer::Profile::InlineCache, JITCompilationMustSucceed, needsBranchCompaction);
     FINALIZE_CODE(linkBuffer, NoPtrTag, description);
+}
+
+static_assert(!((maxFrameExtentForSlowPathCall + 2 * sizeof(CPURegister)) % 16), "Stack must be aligned after CTI thunk entry");
+
+void CCallHelpers::emitCTIThunkPrologue(bool returnAddressAlreadyTagged)
+{
+    // Stash frame pointer and return address
+    if (!returnAddressAlreadyTagged)
+        tagReturnAddress();
+#if CPU(X86_64)
+    push(X86Registers::ebp); // return address pushed by the call instruction
+#elif CPU(ARM64) || CPU(ARM_THUMB2) || CPU(RISCV64)
+    pushPair(framePointerRegister, linkRegister);
+#elif CPU(MIPS)
+    pushPair(framePointerRegister, returnAddressRegister);
+#else
+#   error "Not implemented on platform"
+#endif
+    // Make enough space on the stack to pass arguments in a call
+    if constexpr (!!maxFrameExtentForSlowPathCall)
+        subPtr(TrustedImm32(maxFrameExtentForSlowPathCall), stackPointerRegister);
+}
+
+void CCallHelpers::emitCTIThunkEpilogue()
+{
+    // Reset stack
+    if constexpr (!!maxFrameExtentForSlowPathCall)
+        addPtr(TrustedImm32(maxFrameExtentForSlowPathCall), stackPointerRegister);
+    // Restore frame pointer and return address
+#if CPU(X86_64)
+    pop(X86Registers::ebp); // Return address left on stack
+#elif CPU(ARM64) || CPU(ARM_THUMB2) || CPU(RISCV64)
+    popPair(framePointerRegister, linkRegister);
+#elif CPU(MIPS)
+    popPair(framePointerRegister, returnAddressRegister);
+#else
+#   error "Not implemented on platform"
+#endif
 }
 
 } // namespace JSC

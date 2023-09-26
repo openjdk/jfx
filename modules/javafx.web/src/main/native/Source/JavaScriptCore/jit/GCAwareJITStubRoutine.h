@@ -27,6 +27,7 @@
 
 #if ENABLE(JIT)
 
+#include "DFGCodeOriginPool.h"
 #include "JITStubRoutine.h"
 #include "JSObject.h"
 #include "WriteBarrier.h"
@@ -35,13 +36,11 @@
 #include <wtf/Vector.h>
 
 namespace JSC {
-namespace DFG {
-class CodeOriginPool;
-}
 
 class AccessCase;
 class CallLinkInfo;
 class JITStubRoutineSet;
+class OptimizingCallLinkInfo;
 
 // Use this stub routine if you know that your code might be on stack when
 // either GC or other kinds of stub deletion happen. Basicaly, if your stub
@@ -56,20 +55,14 @@ class JITStubRoutineSet;
 // list which does not get reclaimed all at once).
 class GCAwareJITStubRoutine : public JITStubRoutine {
 public:
-    GCAwareJITStubRoutine(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&);
-    ~GCAwareJITStubRoutine() override;
+    friend class JITStubRoutine;
+    GCAwareJITStubRoutine(Type, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&);
 
     static Ref<JITStubRoutine> create(VM& vm, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code)
     {
-        auto stub = adoptRef(*new GCAwareJITStubRoutine(code));
+        auto stub = adoptRef(*new GCAwareJITStubRoutine(Type::GCAwareJITStubRoutineType, code));
         stub->makeGCAware(vm);
         return stub;
-    }
-
-    template<typename Visitor>
-    void markRequiredObjects(Visitor& visitor)
-    {
-        markRequiredObjectsInternal(visitor);
     }
 
     void deleteFromGC();
@@ -77,10 +70,7 @@ public:
     void makeGCAware(VM&);
 
 protected:
-    void observeZeroRefCount() override;
-
-    virtual void markRequiredObjectsInternal(AbstractSlotVisitor&) { }
-    virtual void markRequiredObjectsInternal(SlotVisitor&) { }
+    void observeZeroRefCountImpl();
 
 private:
     friend class JITStubRoutineSet;
@@ -93,8 +83,9 @@ private:
 class PolymorphicAccessJITStubRoutine : public GCAwareJITStubRoutine {
 public:
     using Base = GCAwareJITStubRoutine;
+    friend class JITStubRoutine;
 
-    PolymorphicAccessJITStubRoutine(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&);
+    PolymorphicAccessJITStubRoutine(Type, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&);
 
     const FixedVector<RefPtr<AccessCase>>& cases() const { return m_cases; }
     const FixedVector<StructureID>& weakStructures() const { return m_weakStructures; }
@@ -109,7 +100,7 @@ public:
     static unsigned computeHash(const FixedVector<RefPtr<AccessCase>>&, const FixedVector<StructureID>&);
 
 protected:
-    void observeZeroRefCount() override;
+    void observeZeroRefCountImpl();
 
 private:
     VM& m_vm;
@@ -122,19 +113,18 @@ private:
 class MarkingGCAwareJITStubRoutine : public PolymorphicAccessJITStubRoutine {
 public:
     using Base = PolymorphicAccessJITStubRoutine;
+    friend class JITStubRoutine;
 
-    MarkingGCAwareJITStubRoutine(
-        const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&, const JSCell* owner, const Vector<JSCell*>&, Bag<CallLinkInfo>&&);
-    ~MarkingGCAwareJITStubRoutine() override;
+    MarkingGCAwareJITStubRoutine(Type, const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&, const JSCell* owner, const Vector<JSCell*>&, Bag<OptimizingCallLinkInfo>&&);
 
 protected:
     template<typename Visitor> void markRequiredObjectsInternalImpl(Visitor&);
-    void markRequiredObjectsInternal(AbstractSlotVisitor&) final;
-    void markRequiredObjectsInternal(SlotVisitor&) final;
+    void markRequiredObjectsImpl(AbstractSlotVisitor&);
+    void markRequiredObjectsImpl(SlotVisitor&);
 
 private:
     FixedVector<WriteBarrier<JSCell>> m_cells;
-    Bag<CallLinkInfo> m_callLinkInfos;
+    Bag<OptimizingCallLinkInfo> m_callLinkInfos;
 };
 
 
@@ -144,14 +134,23 @@ private:
 class GCAwareJITStubRoutineWithExceptionHandler final : public MarkingGCAwareJITStubRoutine {
 public:
     using Base = MarkingGCAwareJITStubRoutine;
+    friend class JITStubRoutine;
 
-    GCAwareJITStubRoutineWithExceptionHandler(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&, const JSCell* owner, const Vector<JSCell*>&, Bag<CallLinkInfo>&&, CodeBlock*, DisposableCallSiteIndex);
-    ~GCAwareJITStubRoutineWithExceptionHandler() final;
+    GCAwareJITStubRoutineWithExceptionHandler(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, FixedVector<RefPtr<AccessCase>>&&, FixedVector<StructureID>&&, const JSCell* owner, const Vector<JSCell*>&, Bag<OptimizingCallLinkInfo>&&, CodeBlock*, DisposableCallSiteIndex);
+    ~GCAwareJITStubRoutineWithExceptionHandler();
 
-    void aboutToDie() final;
-    void observeZeroRefCount() final;
 
 private:
+    void aboutToDieImpl()
+    {
+        m_codeBlockWithExceptionHandler = nullptr;
+#if ENABLE(DFG_JIT)
+        m_codeOriginPool = nullptr;
+#endif
+    }
+
+    void observeZeroRefCountImpl();
+
     CodeBlock* m_codeBlockWithExceptionHandler;
 #if ENABLE(DFG_JIT)
     RefPtr<DFG::CodeOriginPool> m_codeOriginPool;
@@ -181,7 +180,7 @@ private:
 
 Ref<PolymorphicAccessJITStubRoutine> createICJITStubRoutine(
     const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, FixedVector<RefPtr<AccessCase>>&& cases, FixedVector<StructureID>&& weakStructures, VM&, const JSCell* owner, bool makesCalls,
-    const Vector<JSCell*>&, Bag<CallLinkInfo>&& callLinkInfos,
+    const Vector<JSCell*>&, Bag<OptimizingCallLinkInfo>&& callLinkInfos,
     CodeBlock* codeBlockForExceptionHandlers, DisposableCallSiteIndex exceptionHandlingCallSiteIndex);
 
 } // namespace JSC

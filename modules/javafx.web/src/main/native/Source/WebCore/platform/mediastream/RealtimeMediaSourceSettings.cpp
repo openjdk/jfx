@@ -52,19 +52,19 @@ String RealtimeMediaSourceSettings::facingMode(RealtimeMediaSourceSettings::Vide
     static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Environment) == 2, "RealtimeMediaSourceSettings::VideoFacingMode::Environment is not 2 as expected");
     static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Left) == 3, "RealtimeMediaSourceSettings::VideoFacingMode::Left is not 3 as expected");
     static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Right) == 4, "RealtimeMediaSourceSettings::VideoFacingMode::Right is not 4 as expected");
-    ASSERT(static_cast<size_t>(mode) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(mode) < std::size(values));
     return values[static_cast<size_t>(mode)];
 }
 
 RealtimeMediaSourceSettings::VideoFacingMode RealtimeMediaSourceSettings::videoFacingModeEnum(const String& mode)
 {
-    if (mode == "user")
+    if (mode == "user"_s)
         return RealtimeMediaSourceSettings::VideoFacingMode::User;
-    if (mode == "environment")
+    if (mode == "environment"_s)
         return RealtimeMediaSourceSettings::VideoFacingMode::Environment;
-    if (mode == "left")
+    if (mode == "left"_s)
         return RealtimeMediaSourceSettings::VideoFacingMode::Left;
-    if (mode == "right")
+    if (mode == "right"_s)
         return RealtimeMediaSourceSettings::VideoFacingMode::Right;
 
     return RealtimeMediaSourceSettings::Unknown;
@@ -179,8 +179,27 @@ String convertEnumerationToString(RealtimeMediaSourceSettings::VideoFacingMode e
     static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Environment) == 2, "RealtimeMediaSourceSettings::VideoFacingMode::Environment is not 2 as expected");
     static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Left) == 3, "RealtimeMediaSourceSettings::VideoFacingMode::Left is not 3 as expected");
     static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::VideoFacingMode::Right) == 4, "RealtimeMediaSourceSettings::VideoFacingMode::Right is not 4 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
+}
+
+String RealtimeMediaSourceSettings::displaySurface(RealtimeMediaSourceSettings::DisplaySurfaceType surface)
+{
+    static const NeverDestroyed<String> values[] = {
+        MAKE_STATIC_STRING_IMPL("monitor"),
+        MAKE_STATIC_STRING_IMPL("window"),
+        MAKE_STATIC_STRING_IMPL("application"),
+        MAKE_STATIC_STRING_IMPL("browser"),
+        MAKE_STATIC_STRING_IMPL("invalid"),
+    };
+
+    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Monitor) == 0, "RealtimeMediaSourceSettings::DisplaySurface::Monitor is not 0 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Window) == 1, "RealtimeMediaSourceSettings::DisplaySurface::Window is not 1 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Application) == 2, "RealtimeMediaSourceSettings::DisplaySurface::Application is not 0 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Browser) == 3, "RealtimeMediaSourceSettings::DisplaySurface::Browser is not 1 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Invalid) == 4, "RealtimeMediaSourceSettings::DisplaySurface::Invalid is not 0 as expected");
+    ASSERT(static_cast<size_t>(surface) < std::size(values));
+    return values[static_cast<size_t>(surface)];
 }
 
 } // namespace WebCore

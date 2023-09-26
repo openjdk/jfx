@@ -2,7 +2,8 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,14 +27,15 @@
 #include "Attribute.h"
 #include "Color.h"
 #include "Document.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLHeadElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "MediaList.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryParser.h"
+#include "MediaQueryParserContext.h"
 #include "RenderStyle.h"
 #include "Settings.h"
 #include "StyleResolveForDocument.h"
@@ -65,26 +67,29 @@ bool HTMLMetaElement::mediaAttributeMatches()
 {
     auto& document = this->document();
 
-    if (!m_media)
-        m_media = MediaQuerySet::create(attributeWithoutSynchronization(mediaAttr).convertToASCIILowercase(), MediaQueryParserContext(document));
+    if (!m_mediaQueryList) {
+        auto mediaText = attributeWithoutSynchronization(mediaAttr).convertToASCIILowercase();
+        m_mediaQueryList = MQ::MediaQueryParser::parse(mediaText, { document });
+    }
 
     std::optional<RenderStyle> documentStyle;
     if (document.hasLivingRenderTree())
         documentStyle = Style::resolveForDocument(document);
 
-    String mediaType;
+    AtomString mediaType;
     if (auto* frame = document.frame()) {
         if (auto* frameView = frame->view())
             mediaType = frameView->mediaType();
     }
 
-    return MediaQueryEvaluator(mediaType, document, documentStyle ? &*documentStyle : nullptr).evaluate(*m_media);
+    auto evaluator = MQ::MediaQueryEvaluator { mediaType, document, documentStyle ? &*documentStyle : nullptr };
+    return evaluator.evaluate(*m_mediaQueryList);
 }
 
 const Color& HTMLMetaElement::contentColor()
 {
     if (!m_contentColor)
-        m_contentColor = CSSParser::parseColor(content());
+        m_contentColor = CSSParser::parseColorWithoutContext(content());
     return *m_contentColor;
 }
 
@@ -96,7 +101,7 @@ void HTMLMetaElement::attributeChanged(const QualifiedName& name, const AtomStri
         return;
 
     if (name == nameAttr) {
-        if (equalLettersIgnoringASCIICase(oldValue, "theme-color") && !equalLettersIgnoringASCIICase(newValue, "theme-color"))
+        if (equalLettersIgnoringASCIICase(oldValue, "theme-color"_s) && !equalLettersIgnoringASCIICase(newValue, "theme-color"_s))
             document().metaElementThemeColorChanged(*this);
         return;
     }
@@ -121,7 +126,7 @@ void HTMLMetaElement::parseAttribute(const QualifiedName& name, const AtomString
     }
 
     if (name == mediaAttr) {
-        m_media = nullptr;
+        m_mediaQueryList = { };
         process();
         return;
     }
@@ -146,7 +151,7 @@ void HTMLMetaElement::removedFromAncestor(RemovalType removalType, ContainerNode
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 
-    if (removalType.disconnectedFromDocument && equalLettersIgnoringASCIICase(name(), "theme-color"))
+    if (removalType.disconnectedFromDocument && equalLettersIgnoringASCIICase(name(), "theme-color"_s))
         oldParentOfRemovedTree.document().metaElementThemeColorChanged(*this);
 }
 
@@ -156,32 +161,41 @@ void HTMLMetaElement::process()
     if (!isInDocumentTree())
         return;
 
+    // https://html.spec.whatwg.org/multipage/semantics.html#the-meta-element
+    // All below situations require a content attribute (which can be the empty string).
     const AtomString& contentValue = attributeWithoutSynchronization(contentAttr);
     if (contentValue.isNull())
         return;
 
-    if (equalLettersIgnoringASCIICase(name(), "viewport"))
-        document().processViewport(contentValue, ViewportArguments::ViewportMeta);
-    else if (document().settings().disabledAdaptationsMetaTagEnabled() && equalLettersIgnoringASCIICase(name(), "disabled-adaptations"))
-        document().processDisabledAdaptations(contentValue);
-#if ENABLE(DARK_MODE_CSS)
-    else if (equalLettersIgnoringASCIICase(name(), "color-scheme") || equalLettersIgnoringASCIICase(name(), "supported-color-schemes"))
-        document().processColorScheme(contentValue);
-#endif
-    else if (equalLettersIgnoringASCIICase(name(), "theme-color"))
-        document().metaElementThemeColorChanged(*this);
-#if PLATFORM(IOS_FAMILY)
-    else if (equalLettersIgnoringASCIICase(name(), "format-detection"))
-        document().processFormatDetection(contentValue);
-    else if (equalLettersIgnoringASCIICase(name(), "apple-mobile-web-app-orientations"))
-        document().processWebAppOrientations();
-#endif
-    else if (equalLettersIgnoringASCIICase(name(), "referrer"))
-        document().processReferrerPolicy(contentValue, ReferrerPolicySource::MetaTag);
-
     const AtomString& httpEquivValue = attributeWithoutSynchronization(http_equivAttr);
+    // Get the document to process the tag, but only if we're actually part of DOM
+    // tree (changing a meta tag while it's not in the tree shouldn't have any effect
+    // on the document)
     if (!httpEquivValue.isNull())
         document().processMetaHttpEquiv(httpEquivValue, contentValue, isDescendantOf(document().head()));
+
+    const AtomString& nameValue = attributeWithoutSynchronization(nameAttr);
+    if (nameValue.isNull())
+        return;
+
+    if (equalLettersIgnoringASCIICase(nameValue, "viewport"_s))
+        document().processViewport(contentValue, ViewportArguments::ViewportMeta);
+    else if (document().settings().disabledAdaptationsMetaTagEnabled() && equalLettersIgnoringASCIICase(nameValue, "disabled-adaptations"_s))
+        document().processDisabledAdaptations(contentValue);
+#if ENABLE(DARK_MODE_CSS)
+    else if (equalLettersIgnoringASCIICase(nameValue, "color-scheme"_s) || equalLettersIgnoringASCIICase(nameValue, "supported-color-schemes"_s))
+        document().processColorScheme(contentValue);
+#endif
+    else if (equalLettersIgnoringASCIICase(nameValue, "theme-color"_s))
+        document().metaElementThemeColorChanged(*this);
+#if PLATFORM(IOS_FAMILY)
+    else if (equalLettersIgnoringASCIICase(nameValue, "format-detection"_s))
+        document().processFormatDetection(contentValue);
+    else if (equalLettersIgnoringASCIICase(nameValue, "apple-mobile-web-app-orientations"_s))
+        document().processWebAppOrientations();
+#endif
+    else if (equalLettersIgnoringASCIICase(nameValue, "referrer"_s))
+        document().processReferrerPolicy(contentValue, ReferrerPolicySource::MetaTag);
 }
 
 const AtomString& HTMLMetaElement::content() const

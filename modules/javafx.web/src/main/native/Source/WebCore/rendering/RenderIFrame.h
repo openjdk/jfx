@@ -38,8 +38,6 @@ public:
 
     HTMLIFrameElement& iframeElement() const;
 
-    bool flattenFrame() const;
-
 private:
     void frameOwnerElement() const = delete;
 
@@ -50,7 +48,7 @@ private:
 
     bool isRenderIFrame() const override { return true; }
 
-    const char* renderName() const override { return "RenderIFrame"; }
+    ASCIILiteral renderName() const override { return "RenderIFrame"_s; }
 
     bool requiresLayer() const override;
 

@@ -26,11 +26,14 @@
 #include "config.h"
 #include "KeyframeEffectStack.h"
 
+#include "AnimationTimeline.h"
 #include "CSSAnimation.h"
+#include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
 #include "KeyframeEffect.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
+#include <wtf/PointerComparison.h>
 
 namespace WebCore {
 
@@ -49,41 +52,58 @@ bool KeyframeEffectStack::addEffect(KeyframeEffect& effect)
     if (!effect.targetStyleable() || !effect.animation() || !effect.animation()->timeline() || !effect.animation()->isRelevant())
         return false;
 
-    m_effects.append(makeWeakPtr(&effect));
+    effect.invalidate();
+    m_effects.append(effect);
     m_isSorted = false;
+
+    if (m_effects.size() > 1 && effect.preventsAcceleration())
+        stopAcceleratedAnimations();
+
     return true;
 }
 
 void KeyframeEffectStack::removeEffect(KeyframeEffect& effect)
 {
-    m_effects.removeFirst(&effect);
+    auto removedEffect = m_effects.removeFirst(&effect);
+    if (removedEffect && !m_effects.isEmpty() && !effect.canBeAccelerated())
+        startAcceleratedAnimationsIfPossible();
+}
+
+bool KeyframeEffectStack::hasMatchingEffect(const Function<bool(const KeyframeEffect&)>& function) const
+{
+    for (auto& effect : m_effects) {
+        if (function(*effect))
+            return true;
+    }
+    return false;
+}
+
+bool KeyframeEffectStack::containsProperty(CSSPropertyID property) const
+{
+    return hasMatchingEffect([property] (const KeyframeEffect& effect) {
+        return effect.animatesProperty(property);
+    });
 }
 
 bool KeyframeEffectStack::requiresPseudoElement() const
 {
-    for (auto& effect : m_effects) {
-        if (effect->requiresPseudoElement())
-            return true;
-    }
-    return false;
+    return hasMatchingEffect([] (const KeyframeEffect& effect) {
+        return effect.requiresPseudoElement();
+    });
 }
 
 bool KeyframeEffectStack::hasEffectWithImplicitKeyframes() const
 {
-    for (auto& effect : m_effects) {
-        if (effect->hasImplicitKeyframes())
-            return true;
-    }
-    return false;
+    return hasMatchingEffect([] (const KeyframeEffect& effect) {
+        return effect.hasImplicitKeyframes();
+    });
 }
 
 bool KeyframeEffectStack::isCurrentlyAffectingProperty(CSSPropertyID property) const
 {
-    for (auto& effect : m_effects) {
-        if (effect->isCurrentlyAffectingProperty(property) || effect->isRunningAcceleratedAnimationForProperty(property))
-            return true;
-    }
-    return false;
+    return hasMatchingEffect([property] (const KeyframeEffect& effect) {
+        return effect.isCurrentlyAffectingProperty(property) || effect.isRunningAcceleratedAnimationForProperty(property);
+    });
 }
 
 Vector<WeakPtr<KeyframeEffect>> KeyframeEffectStack::sortedEffects()
@@ -120,20 +140,27 @@ void KeyframeEffectStack::setCSSAnimationList(RefPtr<const AnimationList>&& cssA
     m_isSorted = false;
 }
 
-OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle& targetStyle, const RenderStyle& previousLastStyleChangeEventStyle, const RenderStyle* parentElementStyle)
+OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle& targetStyle, HashSet<AnimatableProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext)
 {
     OptionSet<AnimationImpact> impact;
 
+    auto& previousStyle = previousLastStyleChangeEventStyle ? *previousLastStyleChangeEventStyle : RenderStyle::defaultStyle();
+
     auto transformRelatedPropertyChanged = [&]() -> bool {
-        return !arePointingToEqualData(targetStyle.translate(), previousLastStyleChangeEventStyle.translate())
-            || !arePointingToEqualData(targetStyle.scale(), previousLastStyleChangeEventStyle.scale())
-            || !arePointingToEqualData(targetStyle.rotate(), previousLastStyleChangeEventStyle.rotate())
-            || targetStyle.transform() != previousLastStyleChangeEventStyle.transform();
+        return !arePointingToEqualData(targetStyle.translate(), previousStyle.translate())
+            || !arePointingToEqualData(targetStyle.scale(), previousStyle.scale())
+            || !arePointingToEqualData(targetStyle.rotate(), previousStyle.rotate())
+            || targetStyle.transform() != previousStyle.transform();
     }();
 
+    auto unanimatedStyle = RenderStyle::clone(targetStyle);
+
     for (const auto& effect : sortedEffects()) {
+        auto keyframeRecomputationReason = effect->recomputeKeyframesIfNecessary(previousLastStyleChangeEventStyle, unanimatedStyle, resolutionContext);
+
         ASSERT(effect->animation());
-        effect->animation()->resolve(targetStyle, parentElementStyle);
+        auto* animation = effect->animation();
+        animation->resolve(targetStyle, resolutionContext);
 
         if (effect->isRunningAccelerated() || effect->isAboutToRunAccelerated())
             impact.add(AnimationImpact::RequiresRecomposite);
@@ -143,15 +170,108 @@ OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle
 
         if (transformRelatedPropertyChanged && effect->isRunningAcceleratedTransformRelatedAnimation())
             effect->transformRelatedPropertyDidChange();
+
+        // If one of the effect's resolved property changed it could affect whether that effect's animation is removed.
+        if (keyframeRecomputationReason && *keyframeRecomputationReason == KeyframeEffect::RecomputationReason::LogicalPropertyChange) {
+            ASSERT(animation->timeline());
+            animation->timeline()->animationTimingDidChange(*animation);
+        }
+
+        affectedProperties.formUnion(effect->animatedProperties());
     }
 
     return impact;
 }
 
-void KeyframeEffectStack::stopAcceleratingTransformRelatedProperties(UseAcceleratedAction useAcceleratedAction)
+void KeyframeEffectStack::clearInvalidCSSAnimationNames()
+{
+    m_invalidCSSAnimationNames.clear();
+}
+
+bool KeyframeEffectStack::hasInvalidCSSAnimationNames() const
+{
+    return !m_invalidCSSAnimationNames.isEmpty();
+}
+
+bool KeyframeEffectStack::containsInvalidCSSAnimationName(const String& name) const
+{
+    return m_invalidCSSAnimationNames.contains(name);
+}
+
+void KeyframeEffectStack::addInvalidCSSAnimationName(const String& name)
+{
+    m_invalidCSSAnimationNames.add(name);
+}
+
+void KeyframeEffectStack::effectAbilityToBeAcceleratedDidChange(const KeyframeEffect& effect)
+{
+    ASSERT(m_effects.contains(&effect));
+    if (effect.preventsAcceleration())
+        stopAcceleratedAnimations();
+    else
+        startAcceleratedAnimationsIfPossible();
+}
+
+bool KeyframeEffectStack::allowsAcceleration() const
+{
+    // We could try and be a lot smarter here and do this on a per-property basis and
+    // account for fully replacing effects which could co-exist with effects that
+    // don't support acceleration lower in the stack, etc. But, if we are not able to run
+    // all effects that could support acceleration using acceleration, then we might
+    // as well not run any at all since we'll be updating effects for this stack
+    // for each animation frame. So for now, we simply return false if any effect in the
+    // stack is unable to be accelerated.
+    return !hasMatchingEffect([] (const KeyframeEffect& effect) {
+        return effect.preventsAcceleration();
+    });
+}
+
+void KeyframeEffectStack::startAcceleratedAnimationsIfPossible()
+{
+    if (!allowsAcceleration())
+        return;
+
+    for (auto& effect : m_effects)
+        effect->effectStackNoLongerPreventsAcceleration();
+}
+
+void KeyframeEffectStack::stopAcceleratedAnimations()
 {
     for (auto& effect : m_effects)
-        effect->stopAcceleratingTransformRelatedProperties(useAcceleratedAction);
+        effect->effectStackNoLongerAllowsAcceleration();
+}
+
+void KeyframeEffectStack::lastStyleChangeEventStyleDidChange(const RenderStyle* previousStyle, const RenderStyle* currentStyle)
+{
+    for (auto& effect : m_effects)
+        effect->lastStyleChangeEventStyleDidChange(previousStyle, currentStyle);
+}
+
+void KeyframeEffectStack::didApplyCascade(const RenderStyle& styleBeforeCascade, const RenderStyle& styleAfterCascade, const HashSet<AnimatableProperty> animatedProperties, const Document& document)
+{
+    HashSet<AnimatableProperty> acceleratedPropertiesOverriddenByCascade;
+    if (styleBeforeCascade != styleAfterCascade) {
+        for (auto animatedProperty : animatedProperties) {
+            if (!CSSPropertyAnimation::animationOfPropertyIsAccelerated(animatedProperty))
+                continue;
+            if (!CSSPropertyAnimation::propertiesEqual(animatedProperty, styleBeforeCascade, styleAfterCascade, document))
+                acceleratedPropertiesOverriddenByCascade.add(animatedProperty);
+        }
+    }
+
+    if (acceleratedPropertiesOverriddenByCascade == m_acceleratedPropertiesOverriddenByCascade)
+        return;
+
+    m_acceleratedPropertiesOverriddenByCascade = WTFMove(acceleratedPropertiesOverriddenByCascade);
+
+    for (auto& effect : m_effects)
+        effect->acceleratedPropertiesOverriddenByCascadeDidChange();
+}
+
+void KeyframeEffectStack::applyPendingAcceleratedActions() const
+{
+    for (auto& effect : m_effects)
+        effect->applyPendingAcceleratedActionsOrUpdateTimingProperties();
 }
 
 } // namespace WebCore

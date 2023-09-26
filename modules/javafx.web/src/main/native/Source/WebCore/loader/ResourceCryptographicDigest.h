@@ -34,7 +34,7 @@
 namespace WebCore {
 
 class CachedResource;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 
 struct ResourceCryptographicDigest {
     enum class Algorithm {
@@ -60,6 +60,11 @@ struct ResourceCryptographicDigest {
     }
 };
 
+inline void add(Hasher& hasher, const ResourceCryptographicDigest& digest)
+{
+    add(hasher, digest.algorithm, digest.value);
+}
+
 struct EncodedResourceCryptographicDigest {
     using Algorithm = ResourceCryptographicDigest::Algorithm;
 
@@ -75,7 +80,7 @@ std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDiges
 
 std::optional<ResourceCryptographicDigest> decodeEncodedResourceCryptographicDigest(const EncodedResourceCryptographicDigest&);
 
-ResourceCryptographicDigest cryptographicDigestForSharedBuffer(ResourceCryptographicDigest::Algorithm, const SharedBuffer*);
+ResourceCryptographicDigest cryptographicDigestForSharedBuffer(ResourceCryptographicDigest::Algorithm, const FragmentedSharedBuffer*);
 ResourceCryptographicDigest cryptographicDigestForBytes(ResourceCryptographicDigest::Algorithm, const void* bytes, size_t length);
 
 }
@@ -85,7 +90,7 @@ namespace WTF {
 template<> struct DefaultHash<WebCore::ResourceCryptographicDigest> {
     static unsigned hash(const WebCore::ResourceCryptographicDigest& digest)
     {
-        return pairIntHash(intHash(static_cast<unsigned>(digest.algorithm)), StringHasher::computeHash(digest.value.data(), digest.value.size()));
+        return computeHash(digest);
     }
     static bool equal(const WebCore::ResourceCryptographicDigest& a, const WebCore::ResourceCryptographicDigest& b)
     {

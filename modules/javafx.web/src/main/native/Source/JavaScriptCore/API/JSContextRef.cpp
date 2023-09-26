@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "APICast.h"
 #include "CallFrame.h"
 #include "InitializeThreading.h"
+#include "IntegrityInlines.h"
 #include "JSAPIGlobalObject.h"
 #include "JSAPIWrapperObject.h"
 #include "JSCallbackObject.h"
@@ -140,8 +141,7 @@ JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClass
     if (!globalObjectClass) {
         JSGlobalObject* globalObject = JSAPIGlobalObject::create(vm.get(), JSAPIGlobalObject::createStructure(vm.get(), jsNull()));
 #if ENABLE(REMOTE_INSPECTOR)
-        if (JSRemoteInspectorGetInspectionEnabledByDefault())
-            globalObject->setRemoteDebuggingEnabled(true);
+        globalObject->setInspectable(JSRemoteInspectorGetInspectionEnabledByDefault());
 #endif
         return JSGlobalContextRetain(toGlobalRef(globalObject));
     }
@@ -152,8 +152,7 @@ JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClass
         prototype = jsNull();
     globalObject->resetPrototype(vm.get(), prototype);
 #if ENABLE(REMOTE_INSPECTOR)
-    if (JSRemoteInspectorGetInspectionEnabledByDefault())
-        globalObject->setRemoteDebuggingEnabled(true);
+    globalObject->setInspectable(JSRemoteInspectorGetInspectionEnabledByDefault());
 #endif
     return JSGlobalContextRetain(toGlobalRef(globalObject));
 }
@@ -191,7 +190,7 @@ JSObjectRef JSContextGetGlobalObject(JSContextRef ctx)
     VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
-    return toRef(jsCast<JSObject*>(globalObject->methodTable(vm)->toThis(globalObject, globalObject, ECMAMode::sloppy())));
+    return toRef(jsCast<JSObject*>(JSValue(globalObject).toThis(globalObject, ECMAMode::sloppy())));
 }
 
 JSContextGroupRef JSContextGetGroup(JSContextRef ctx)
@@ -248,6 +247,34 @@ void JSGlobalContextSetName(JSGlobalContextRef ctx, JSStringRef name)
     globalObject->setName(name ? name->string() : String());
 }
 
+bool JSGlobalContextIsInspectable(JSGlobalContextRef ctx)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+
+    return globalObject->inspectable();
+}
+
+void JSGlobalContextSetInspectable(JSGlobalContextRef ctx, bool inspectable)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+
+    globalObject->setInspectable(inspectable);
+}
+
 void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef ctx, JSObjectRef function, JSValueRef* exception)
 {
     if (!ctx) {
@@ -260,12 +287,26 @@ void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef ctx, JSObje
     JSLockHolder locker(vm);
 
     JSObject* object = toJS(function);
-    if (!object->isCallable(vm)) {
+    if (!object->isCallable()) {
         *exception = toRef(createTypeError(globalObject));
         return;
     }
 
     globalObject->setUnhandledRejectionCallback(vm, object);
+}
+
+void JSGlobalContextSetEvalEnabled(JSGlobalContextRef ctx, bool enabled, JSStringRef message)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
+    JSLockHolder locker(vm);
+
+    globalObject->setEvalEnabled(enabled, message ? message->string() : String());
 }
 
 class BacktraceFunctor {
@@ -276,7 +317,7 @@ public:
     {
     }
 
-    StackVisitor::Status operator()(StackVisitor& visitor) const
+    IterationStatus operator()(StackVisitor& visitor) const
     {
         if (m_remainingCapacityForFrameCapture) {
             // If callee is unknown, but we've not added any frame yet, we should
@@ -284,7 +325,7 @@ public:
             if (visitor->callee().isCell()) {
                 JSCell* callee = visitor->callee().asCell();
                 if (!callee && visitor->index())
-                    return StackVisitor::Done;
+                    return IterationStatus::Done;
             }
 
             StringBuilder& builder = m_builder;
@@ -299,12 +340,12 @@ public:
             }
 
             if (!visitor->callee().rawPtr())
-                return StackVisitor::Done;
+                return IterationStatus::Done;
 
             m_remainingCapacityForFrameCapture--;
-            return StackVisitor::Continue;
+            return IterationStatus::Continue;
         }
-        return StackVisitor::Done;
+        return IterationStatus::Done;
     }
 
 private:
@@ -326,37 +367,19 @@ JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
 
     ASSERT(maxStackSize);
     BacktraceFunctor functor(builder, maxStackSize);
-    frame->iterate(vm, functor);
+    StackVisitor::visit(frame, vm, functor);
 
     return OpaqueJSString::tryCreate(builder.toString()).leakRef();
 }
 
 bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx)
 {
-    if (!ctx) {
-        ASSERT_NOT_REACHED();
-        return false;
-    }
-
-    JSGlobalObject* globalObject = toJS(ctx);
-    VM& vm = globalObject->vm();
-    JSLockHolder lock(vm);
-
-    return globalObject->remoteDebuggingEnabled();
+    return JSGlobalContextIsInspectable(ctx);
 }
 
 void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enabled)
 {
-    if (!ctx) {
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    JSGlobalObject* globalObject = toJS(ctx);
-    VM& vm = globalObject->vm();
-    JSLockHolder lock(vm);
-
-    globalObject->setRemoteDebuggingEnabled(enabled);
+    JSGlobalContextSetInspectable(ctx, enabled);
 }
 
 bool JSGlobalContextGetIncludesNativeCallStackWhenReportingExceptions(JSGlobalContextRef ctx)

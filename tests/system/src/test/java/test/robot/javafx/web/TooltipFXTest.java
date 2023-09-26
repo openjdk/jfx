@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,28 +25,31 @@
 
 package test.robot.javafx.web;
 
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+import static test.util.Util.TIMEOUT;
+
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
+import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
-import javafx.scene.Scene;
 import javafx.scene.robot.Robot;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
-import org.junit.After;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
+import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public class TooltipFXTest {
 
@@ -63,7 +66,7 @@ public class TooltipFXTest {
     // Sleep time to allow tooltip to show in milliseconds
     private static final int TOOLTIP_SLEEP_TIME = 3000;
 
-    private static CountDownLatch startupLatch;
+    private static CountDownLatch startupLatch = new CountDownLatch(1);
 
     private Scene scene;
 
@@ -98,20 +101,12 @@ public class TooltipFXTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void teardown() {
-        Platform.exit();
+        Util.shutdown();
     }
 
 // ========================== TEST CASE ==========================
@@ -170,13 +165,6 @@ public class TooltipFXTest {
             scene = null;
         });
 
-        for (int j = 0; j < 5; ++j) {
-            System.gc();
-            if (webViewRef.get() == null) {
-                break;
-            }
-            Util.sleep(SLEEP_TIME);
-        }
-        assertNull("webViewRef is not null", webViewRef.get());
+        JMemoryBuddy.assertCollectable(webViewRef);
     }
 }

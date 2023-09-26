@@ -21,14 +21,20 @@
     This class provides all functionality needed for loading images, style sheets and html
     pages from the web. It has a memory cache for these objects.
 */
+
 #pragma once
+
+#include <wtf/Noncopyable.h>
+#include <wtf/WeakHashSet.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class CachedResource;
 class NetworkLoadMetrics;
 
-class CachedResourceClient {
+class WEBCORE_EXPORT CachedResourceClient : public CanMakeWeakPtr<CachedResourceClient> {
+    WTF_MAKE_NONCOPYABLE(CachedResourceClient);
 public:
     enum CachedResourceClientType {
         BaseResourceType,
@@ -39,16 +45,32 @@ public:
         RawResourceType
     };
 
-    virtual ~CachedResourceClient() = default;
-    virtual void notifyFinished(CachedResource&, const NetworkLoadMetrics&) { }
-    virtual void deprecatedDidReceiveCachedResource(CachedResource&) { }
+    virtual ~CachedResourceClient();
 
-    static CachedResourceClientType expectedType() { return BaseResourceType; }
-    virtual CachedResourceClientType resourceClientType() const { return expectedType(); }
-    virtual bool shouldMarkAsReferenced() const { return true; }
+    virtual void notifyFinished(CachedResource&, const NetworkLoadMetrics&);
+    virtual void deprecatedDidReceiveCachedResource(CachedResource&);
+
+    static CachedResourceClientType expectedType();
+    virtual CachedResourceClientType resourceClientType() const;
+    virtual bool shouldMarkAsReferenced() const;
+
+#if ASSERT_ENABLED
+    void addAssociatedResource(CachedResource&);
+    void removeAssociatedResource(CachedResource&);
+#endif
 
 protected:
-    CachedResourceClient() = default;
+    CachedResourceClient();
+
+private:
+#if ASSERT_ENABLED
+    WeakHashSet<CachedResource> m_associatedResources;
+#endif
 };
 
-}
+} // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE_CLIENT(ToClassName, CachedResourceTypeValue) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToClassName) \
+    static bool isType(const WebCore::CachedResourceClient& client) { return client.resourceClientType() == WebCore::CachedResourceClient::CachedResourceTypeValue; } \
+SPECIALIZE_TYPE_TRAITS_END()

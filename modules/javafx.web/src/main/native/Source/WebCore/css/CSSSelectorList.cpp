@@ -28,6 +28,7 @@
 #include "CSSSelectorList.h"
 
 #include "CSSParserSelector.h"
+#include "CommonAtomStrings.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -35,7 +36,8 @@ namespace WebCore {
 CSSSelectorList::CSSSelectorList(const CSSSelectorList& other)
 {
     unsigned otherComponentCount = other.componentCount();
-    ASSERT_WITH_SECURITY_IMPLICATION(otherComponentCount);
+    if (!otherComponentCount)
+        return;
 
     m_selectorArray = makeUniqueArray<CSSSelector>(otherComponentCount);
     for (unsigned i = 0; i < otherComponentCount; ++i)
@@ -55,7 +57,8 @@ CSSSelectorList::CSSSelectorList(Vector<std::unique_ptr<CSSParserSelector>>&& se
     m_selectorArray = makeUniqueArray<CSSSelector>(flattenedSize);
     size_t arrayIndex = 0;
     for (size_t i = 0; i < selectorVector.size(); ++i) {
-        CSSParserSelector* current = selectorVector[i].get();
+        CSSParserSelector* first = selectorVector[i].get();
+        CSSParserSelector* current = first;
         while (current) {
             {
                 // Move item from the parser selector vector into m_selectorArray without invoking destructor (Ugh.)
@@ -65,8 +68,10 @@ CSSSelectorList::CSSSelectorList(Vector<std::unique_ptr<CSSParserSelector>>&& se
                 // Free the underlying memory without invoking the destructor.
                 operator delete (currentSelector);
             }
+            if (current != first)
+                m_selectorArray[arrayIndex].setNotFirstInTagHistory();
             current = current->tagHistory();
-            ASSERT(!m_selectorArray[arrayIndex].isLastInSelectorList());
+            ASSERT(!m_selectorArray[arrayIndex].isLastInSelectorList() || (flattenedSize == arrayIndex + 1));
             if (current)
                 m_selectorArray[arrayIndex].setNotLastInTagHistory();
             ++arrayIndex;
@@ -180,4 +185,12 @@ bool CSSSelectorList::hasInvalidSelector() const
     return forEachSelector(functor, this);
 }
 
+bool CSSSelectorList::hasExplicitNestingParent() const
+{
+    auto functor = [](auto* selector) {
+        return selector->hasExplicitNestingParent();
+    };
+
+    return forEachSelector(functor, this);
+}
 } // namespace WebCore

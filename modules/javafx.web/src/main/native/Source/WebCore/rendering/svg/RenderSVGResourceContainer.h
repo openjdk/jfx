@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "RenderSVGHiddenContainer.h"
+#include "LegacyRenderSVGHiddenContainer.h"
 #include "RenderSVGResource.h"
 #include "SVGDocumentExtensions.h"
 
@@ -27,7 +27,7 @@ namespace WebCore {
 
 class RenderLayer;
 
-class RenderSVGResourceContainer : public RenderSVGHiddenContainer,
+class RenderSVGResourceContainer : public LegacyRenderSVGHiddenContainer,
                                    public RenderSVGResource {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceContainer);
 public:
@@ -38,13 +38,14 @@ public:
 
     bool isSVGResourceContainer() const final { return true; }
 
-    static bool shouldTransformOnTextPainting(const RenderElement&, AffineTransform&);
+    static float computeTextPaintingScale(const RenderElement&);
     static AffineTransform transformOnNonScalingStroke(RenderObject*, const AffineTransform& resourceTransform);
 
     void idChanged();
     void markAllClientsForRepaint();
     void addClientRenderLayer(RenderLayer*);
     void removeClientRenderLayer(RenderLayer*);
+    void markAllClientLayersForInvalidation();
 
 protected:
     RenderSVGResourceContainer(SVGElement&, RenderStyle&&);
@@ -60,7 +61,6 @@ protected:
     virtual bool selfNeedsClientInvalidation() const { return everHadLayout() && selfNeedsLayout(); }
 
     void markAllClientsForInvalidation(InvalidationMode);
-    void markAllClientLayersForInvalidation();
     void markClientForInvalidation(RenderObject&, InvalidationMode);
 
 private:

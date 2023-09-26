@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ public class ObservableMapTest {
     @Before
     public void setUp() throws Exception {
         observableMap = mapFactory.call();
-        observer = new MockMapObserver<String, String>();
+        observer = new MockMapObserver<>();
         observableMap.addListener(observer);
 
         useMapData();
@@ -172,7 +172,7 @@ public class ObservableMapTest {
     @Test
     @SuppressWarnings("unchecked")
     public void testPutAll() {
-        Map<String, String> map = new HashMap<String, String>();
+        Map<String, String> map = new HashMap<>();
         map.put("oFoo", "OFoo");
         map.put("pFoo", "PFoo");
         map.put("foo", "foofoo");
@@ -351,7 +351,6 @@ public class ObservableMapTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testEntrySet_RetainAll() {
         observableMap.entrySet().retainAll(Arrays.asList(entry("one","1"), entry("two","2"), entry("three","3")));
 
@@ -383,7 +382,6 @@ public class ObservableMapTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testEntrySet_Other() {
         assertEquals(3, observableMap.entrySet().size());
         assertTrue(observableMap.entrySet().contains(entry("foo", "bar")));
@@ -436,7 +434,7 @@ public class ObservableMapTest {
     }
 
     private<K, V> Map.Entry<K, V> entry(final K key, final V value) {
-        return new Map.Entry<K, V>() {
+        return new Map.Entry<>() {
 
             @Override
             public K getKey() {

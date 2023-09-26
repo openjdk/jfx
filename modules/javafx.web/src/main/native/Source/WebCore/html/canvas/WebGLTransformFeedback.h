@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,11 @@
 
 #pragma once
 
-#if ENABLE(WEBGL2)
+#if ENABLE(WEBGL)
 
 #include "WebGLSharedObject.h"
+#include <wtf/RefPtr.h>
+#include <wtf/Vector.h>
 
 namespace JSC {
 class AbstractSlotVisitor;
@@ -58,8 +60,9 @@ public:
     // These are the indexed bind points for transform feedback buffers.
     // Returns false if index is out of range and the caller should
     // synthesize a GL error.
-    void setBoundIndexedTransformFeedbackBuffer(const WTF::AbstractLocker&, GCGLuint index, WebGLBuffer*);
+    void setBoundIndexedTransformFeedbackBuffer(const AbstractLocker&, GCGLuint index, WebGLBuffer*);
     bool getBoundIndexedTransformFeedbackBuffer(GCGLuint index, WebGLBuffer** outBuffer);
+    bool hasBoundIndexedTransformFeedbackBuffer(const WebGLBuffer* buffer) { return m_boundIndexedTransformFeedbackBuffers.contains(buffer); }
 
     bool validateProgramForResume(WebGLProgram*) const;
 
@@ -67,7 +70,7 @@ public:
     void setHasEverBeenBound() { m_hasEverBeenBound = true; }
 
     WebGLProgram* program() const { return m_program.get(); }
-    void setProgram(const WTF::AbstractLocker&, WebGLProgram&);
+    void setProgram(const AbstractLocker&, WebGLProgram&);
 
     void unbindBuffer(const AbstractLocker&, WebGLBuffer&);
 
@@ -78,7 +81,7 @@ public:
 private:
     WebGLTransformFeedback(WebGL2RenderingContext&);
 
-    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
+    void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
     bool m_active { false };
     bool m_paused { false };
@@ -90,4 +93,4 @@ private:
 
 } // namespace WebCore
 
-#endif
+#endif // ENABLE(WEBGL)

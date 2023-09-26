@@ -59,10 +59,10 @@ enum class GCDeferralContextArgPresense {
     DoesNotHaveArg
 };
 
-template<typename T> void* allocateCell(Heap&, size_t = sizeof(T));
-template<typename T> void* tryAllocateCell(Heap&, size_t = sizeof(T));
-template<typename T> void* allocateCell(Heap&, GCDeferralContext*, size_t = sizeof(T));
-template<typename T> void* tryAllocateCell(Heap&, GCDeferralContext*, size_t = sizeof(T));
+template<typename T> void* allocateCell(VM&, size_t = sizeof(T));
+template<typename T> void* tryAllocateCell(VM&, size_t = sizeof(T));
+template<typename T> void* allocateCell(VM&, GCDeferralContext*, size_t = sizeof(T));
+template<typename T> void* tryAllocateCell(VM&, GCDeferralContext*, size_t = sizeof(T));
 
 #define DECLARE_EXPORT_INFO                                                  \
     protected:                                                               \
@@ -89,6 +89,10 @@ public:
 
     static constexpr uint8_t numberOfLowerTierCells = 8;
 
+    static constexpr size_t atomSize = 16; // This needs to be larger or equal to 16.
+
+    static constexpr bool isResizableOrGrowableSharedTypedArray = false;
+
     static JSCell* seenMultipleCalleeObjects() { return bitwise_cast<JSCell*>(static_cast<uintptr_t>(1)); }
 
     enum CreatingEarlyCellTag { CreatingEarlyCell };
@@ -108,23 +112,23 @@ public:
     bool isGetterSetter() const;
     bool isCustomGetterSetter() const;
     bool isProxy() const;
-    bool isCallable(VM&);
-    bool isConstructor(VM&);
-    template<Concurrency> TriState isCallableWithConcurrency(VM&);
-    template<Concurrency> TriState isConstructorWithConcurrency(VM&);
-    bool inherits(VM&, const ClassInfo*) const;
-    template<typename Target> bool inherits(VM&) const;
+    bool isCallable();
+    bool isConstructor();
+    template<Concurrency> TriState isCallableWithConcurrency();
+    template<Concurrency> TriState isConstructorWithConcurrency();
+    bool inherits(const ClassInfo*) const;
+    template<typename Target> bool inherits() const;
     JS_EXPORT_PRIVATE bool isValidCallee() const;
     bool isAPIValueWrapper() const;
 
     // Each cell has a built-in lock. Currently it's simply available for use if you need it. It's
     // a full-blown WTF::Lock. Note that this lock is currently used in JSArray and that lock's
-    // ordering with the Structure lock is that the Structure lock must be acquired first.
+    // ordering with the Structure lock is that the cell lock must be acquired first.
 
     // We use this abstraction to make it easier to grep for places where we lock cells.
     // to lock a cell you can just do:
-    // Locker locker { cell->cellLocker() };
-    JSCellLock& cellLock() { return *reinterpret_cast<JSCellLock*>(this); }
+    // Locker locker { cell->cellLock() };
+    JSCellLock& cellLock() const { return *reinterpret_cast<JSCellLock*>(const_cast<JSCell*>(this)); }
 
     JSType type() const;
     IndexingType indexingTypeAndMisc() const;
@@ -132,14 +136,13 @@ public:
     IndexingType indexingType() const;
     StructureID structureID() const { return m_structureID; }
     Structure* structure() const;
-    Structure* structure(VM&) const;
     void setStructure(VM&, Structure*);
     void setStructureIDDirectly(StructureID id) { m_structureID = id; }
-    void clearStructure() { m_structureID = 0; }
+    void clearStructure() { m_structureID = StructureID(); }
 
     TypeInfo::InlineTypeFlags inlineTypeFlags() const { return m_flags; }
 
-    const char* className(VM&) const;
+    ASCIILiteral className() const;
 
     // Extracting the value.
     JS_EXPORT_PRIVATE bool getString(JSGlobalObject*, String&) const;
@@ -175,8 +178,8 @@ public:
     JS_EXPORT_PRIVATE static void analyzeHeap(JSCell*, HeapAnalyzer&);
 
     // Object operations, with the toObject operation included.
-    const ClassInfo* classInfo(VM&) const;
-    const MethodTable* methodTable(VM&) const;
+    const ClassInfo* classInfo() const;
+    const MethodTable* methodTable() const;
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
     bool putInline(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
@@ -184,8 +187,6 @@ public:
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
     static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
-
-    static JSValue toThis(JSCell*, JSGlobalObject*, ECMAMode);
 
     static bool canUseFastGetOwnProperty(const Structure&);
     JSValue fastGetOwnProperty(VM&, Structure&, PropertyName);

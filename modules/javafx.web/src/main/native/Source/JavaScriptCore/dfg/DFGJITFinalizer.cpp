@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 
 namespace JSC { namespace DFG {
 
-JITFinalizer::JITFinalizer(Plan& plan, Ref<JITCode>&& jitCode, std::unique_ptr<LinkBuffer> linkBuffer, MacroAssemblerCodePtr<JSEntryPtrTag> withArityCheck)
+JITFinalizer::JITFinalizer(Plan& plan, Ref<JITCode>&& jitCode, std::unique_ptr<LinkBuffer> linkBuffer, CodePtr<JSEntryPtrTag> withArityCheck)
     : Finalizer(plan)
     , m_jitCode(WTFMove(jitCode))
     , m_linkBuffer(WTFMove(linkBuffer))
@@ -65,6 +65,11 @@ bool JITFinalizer::finalize()
 
     codeBlock->setJITCode(m_jitCode.copyRef());
 
+    auto data = m_plan.tryFinalizeJITData(m_jitCode.get());
+    if (UNLIKELY(!data))
+        return false;
+    codeBlock->setDFGJITData(WTFMove(data));
+
 #if ENABLE(FTL_JIT)
     m_jitCode->optimizeAfterWarmUp(codeBlock);
 #endif // ENABLE(FTL_JIT)
@@ -77,7 +82,7 @@ bool JITFinalizer::finalize()
 
     // The codeBlock is now responsible for keeping many things alive (e.g. frozen values)
     // that were previously kept alive by the plan.
-    vm.heap.writeBarrier(codeBlock);
+    vm.writeBarrier(codeBlock);
 
     return true;
 }
@@ -85,4 +90,3 @@ bool JITFinalizer::finalize()
 } } // namespace JSC::DFG
 
 #endif // ENABLE(DFG_JIT)
-

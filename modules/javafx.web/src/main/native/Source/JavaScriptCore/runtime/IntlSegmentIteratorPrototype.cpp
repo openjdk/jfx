@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ static JSC_DECLARE_HOST_FUNCTION(intlSegmentIteratorPrototypeFuncNext);
 
 namespace JSC {
 
-const ClassInfo IntlSegmentIteratorPrototype::s_info = { "Segment String Iterator", &Base::s_info, &segmentIteratorPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlSegmentIteratorPrototype) };
+const ClassInfo IntlSegmentIteratorPrototype::s_info = { "Segment String Iterator"_s, &Base::s_info, &segmentIteratorPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlSegmentIteratorPrototype) };
 
 /* Source for IntlSegmentIteratorPrototype.lut.h
 @begin segmentIteratorPrototypeTable
@@ -49,7 +49,7 @@ const ClassInfo IntlSegmentIteratorPrototype::s_info = { "Segment String Iterato
 
 IntlSegmentIteratorPrototype* IntlSegmentIteratorPrototype::create(VM& vm, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<IntlSegmentIteratorPrototype>(vm.heap)) IntlSegmentIteratorPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<IntlSegmentIteratorPrototype>(vm)) IntlSegmentIteratorPrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -67,7 +67,7 @@ IntlSegmentIteratorPrototype::IntlSegmentIteratorPrototype(VM& vm, Structure* st
 void IntlSegmentIteratorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -77,7 +77,7 @@ JSC_DEFINE_HOST_FUNCTION(intlSegmentIteratorPrototypeFuncNext, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* segmentIterator = jsDynamicCast<IntlSegmentIterator*>(vm, callFrame->thisValue());
+    auto* segmentIterator = jsDynamicCast<IntlSegmentIterator*>(callFrame->thisValue());
     if (!segmentIterator)
         return throwVMTypeError(globalObject, scope, "Intl.SegmentIterator.prototype.next called on value that's not a SegmentIterator"_s);
 

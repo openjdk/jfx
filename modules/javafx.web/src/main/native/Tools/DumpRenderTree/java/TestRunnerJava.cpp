@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,6 +100,16 @@ void TestRunner::dispatchPendingLoadRequests()
 {
     // FIXME: implement
 }
+void TestRunner::removeAllCookies(JSValueRef callback)
+{
+    //FIXME: Implement
+}
+
+void TestRunner::generateTestReport(JSStringRef message, JSStringRef group)
+{
+    //FIXME: Implement
+}
+
 
 void TestRunner::display()
 {
@@ -383,9 +393,7 @@ void TestRunner::setDomainRelaxationForbiddenForURLScheme(bool,JSStringRef) {
 void TestRunner::setScrollbarPolicy(JSStringRef,JSStringRef) {
     //FIXME: implement
 }
-
-void TestRunner::setWebViewEditable(bool) {
-    //FIXME: implement
+void TestRunner::stopLoading() {
 }
 
 bool TestRunner::findString(JSContextRef context, JSStringRef target, JSObjectRef optionsArray)

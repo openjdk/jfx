@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,10 +33,15 @@
 #include "DFGClobberize.h"
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
+#include "DFGJITCode.h"
 #include "DFGPhase.h"
+#include "JSObjectInlines.h"
+#include "JSWebAssemblyInstance.h"
 #include "MathCommon.h"
 #include "RegExpObject.h"
-#include "StringPrototype.h"
+#include "StringPrototypeInlines.h"
+#include "WasmCallingConvention.h"
+#include "WebAssemblyFunction.h"
 #include <cstdlib>
 #include <wtf/text/StringBuilder.h>
 
@@ -197,8 +202,15 @@ private:
                 && m_node->child2()->isInt32Constant()
                 && m_node->child1()->op() == ArithMod
                 && m_node->child1()->binaryUseKind() == Int32Use
-                && m_node->child1()->child2()->isInt32Constant()
-                && std::abs(m_node->child1()->child2()->asInt32()) <= std::abs(m_node->child2()->asInt32())) {
+                && m_node->child1()->child2()->isInt32Constant()) {
+
+                int32_t const1 = m_node->child1()->child2()->asInt32();
+                int32_t const2 = m_node->child2()->asInt32();
+
+                if (const1 == INT_MIN || const2 == INT_MIN)
+                    break; // std::abs(INT_MIN) is undefined.
+
+                if (std::abs(const1) <= std::abs(const2))
                     convertToIdentityOverChild1();
             }
             break;
@@ -464,8 +476,8 @@ private:
         }
 
         case GetGlobalObject: {
-            if (JSObject* object = m_node->child1()->dynamicCastConstant<JSObject*>(vm())) {
-                m_graph.convertToConstant(m_node, object->globalObject(vm()));
+            if (JSObject* object = m_node->child1()->dynamicCastConstant<JSObject*>()) {
+                m_graph.convertToConstant(m_node, object->globalObject());
                 m_changed = true;
                 break;
             }
@@ -476,28 +488,47 @@ private:
         case RegExpTest:
         case RegExpMatchFast:
         case RegExpExecNonGlobalOrSticky: {
-            JSGlobalObject* globalObject = m_node->child1()->dynamicCastConstant<JSGlobalObject*>(vm());
+            JSGlobalObject* globalObject = m_node->child1()->dynamicCastConstant<JSGlobalObject*>();
             if (!globalObject) {
-                if (verbose)
-                    dataLog("Giving up because no global object.\n");
+                dataLogLnIf(verbose, "Giving up because no global object.");
                 break;
             }
 
             if (globalObject->isHavingABadTime()) {
-                if (verbose)
-                    dataLog("Giving up because bad time.\n");
+                dataLogLnIf(verbose, "Giving up because bad time.");
+                break;
+            }
+
+            if (m_graph.m_plan.isUnlinked() && globalObject != m_graph.globalObjectFor(m_node->origin.semantic)) {
+                dataLogLnIf(verbose, "Giving up because unlinked DFG requires globalObject is the same to the node's origin.");
                 break;
             }
 
             Node* regExpObjectNode = nullptr;
             RegExp* regExp = nullptr;
+            bool regExpObjectNodeIsConstant = false;
             if (m_node->op() == RegExpExec || m_node->op() == RegExpTest || m_node->op() == RegExpMatchFast) {
                 regExpObjectNode = m_node->child2().node();
-                if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>(vm()))
+                if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>()) {
+                    JSGlobalObject* globalObject = regExpObject->globalObject();
+                    if (globalObject->isRegExpRecompiled()) {
+                        if (verbose)
+                            dataLog("Giving up because RegExp recompile happens.\n");
+                        break;
+                    }
+                    m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                     regExp = regExpObject->regExp();
-                else if (regExpObjectNode->op() == NewRegexp)
+                    regExpObjectNodeIsConstant = true;
+                } else if (regExpObjectNode->op() == NewRegexp) {
+                    JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
+                    if (globalObject->isRegExpRecompiled()) {
+                        if (verbose)
+                            dataLog("Giving up because RegExp recompile happens.\n");
+                        break;
+                    }
+                    m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                     regExp = regExpObjectNode->castOperand<RegExp*>();
-                else {
+                } else {
                     if (verbose)
                         dataLog("Giving up because the regexp is unknown.\n");
                     break;
@@ -545,6 +576,8 @@ private:
                 for (unsigned otherNodeIndex = m_nodeIndex; otherNodeIndex--;) {
                     Node* otherNode = m_block->at(otherNodeIndex);
                     if (otherNode == regExpObjectNode) {
+                        if (regExpObjectNodeIsConstant)
+                            break;
                         lastIndex = 0;
                         break;
                     }
@@ -613,7 +646,7 @@ private:
                     }
                 }
 
-                m_graph.watchpoints().addLazily(globalObject->havingABadTimeWatchpoint());
+                m_graph.watchpoints().addLazily(globalObject->havingABadTimeWatchpointSet());
 
                 Structure* structure = globalObject->regExpMatchesArrayStructure();
                 if (structure->indexingType() != ArrayWithContiguous) {
@@ -718,8 +751,10 @@ private:
                             PromotedLocationDescriptor(NamedPropertyPLoc, groupsIndex));
 
                         auto materializeString = [&] (const String& string) -> Node* {
-                            if (string.isNull())
-                                return nullptr;
+                            if (string.isNull()) {
+                                return m_insertionSet.insertConstant(
+                                    m_nodeIndex, origin, jsUndefined());
+                            }
                             if (string.isEmpty()) {
                                 return m_insertionSet.insertConstant(
                                     m_nodeIndex, origin, vm().smallStrings.emptyString());
@@ -731,12 +766,11 @@ private:
                         };
 
                         for (unsigned i = 0; i < resultArray.size(); ++i) {
-                            if (Node* node = materializeString(resultArray[i])) {
+                            Node* node = materializeString(resultArray[i]);
                                 m_graph.m_varArgChildren.append(Edge(node, UntypedUse));
                                 data->m_properties.append(
                                     PromotedLocationDescriptor(IndexedPropertyPLoc, i));
                             }
-                        }
 
                         Node* resultNode = m_insertionSet.insertNode(
                             m_nodeIndex, SpecArray, Node::VarArg, MaterializeNewObject, origin,
@@ -791,6 +825,45 @@ private:
                 return true;
             };
 
+#if ENABLE(YARR_JIT_REGEXP_TEST_INLINE)
+            auto convertTestToTestInline = [&] {
+                if (m_node->op() != RegExpTest)
+                    return false;
+
+                if (regExp->globalOrSticky())
+                    return false;
+
+                if (regExp->unicode())
+                    return false;
+
+                auto jitCodeBlock = regExp->getRegExpJITCodeBlock();
+                if (!jitCodeBlock)
+                    return false;
+
+                auto inlineCodeStats8Bit = jitCodeBlock->get8BitInlineStats();
+
+                if (!inlineCodeStats8Bit.canInline())
+                    return false;
+
+                unsigned codeSize = inlineCodeStats8Bit.codeSize();
+
+                if (codeSize > Options::maximumRegExpTestInlineCodesize())
+                    return false;
+
+                unsigned alignedFrameSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), inlineCodeStats8Bit.stackSize());
+
+                if (alignedFrameSize)
+                    m_graph.m_parameterSlots = std::max(m_graph.m_parameterSlots, argumentCountForStackSize(alignedFrameSize));
+
+                NodeOrigin origin = m_node->origin;
+                m_insertionSet.insertNode(
+                    m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
+                m_node->convertToRegExpTestInline(m_graph.freeze(globalObject), m_graph.freeze(regExp));
+                m_changed = true;
+                return true;
+            };
+#endif
+
             auto convertToStatic = [&] {
                 if (m_node->op() != RegExpExec)
                     return false;
@@ -809,6 +882,11 @@ private:
             if (foldToConstant())
                 break;
 
+#if ENABLE(YARR_JIT_REGEXP_TEST_INLINE)
+            if (convertTestToTestInline())
+                break;
+#endif
+
             if (convertToStatic())
                 break;
 
@@ -822,21 +900,41 @@ private:
             if (!string)
                 break;
 
+            String replace = m_node->child3()->tryGetString(m_graph);
+            if (!replace)
+                break;
+
             Node* regExpObjectNode = m_node->child2().node();
             RegExp* regExp;
-            if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>(vm()))
+            if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>()) {
+                JSGlobalObject* globalObject = regExpObject->globalObject();
+                if (m_graph.m_plan.isUnlinked() && globalObject != m_graph.globalObjectFor(m_node->origin.semantic)) {
+                    dataLogLnIf(verbose, "Giving up because unlinked DFG requires globalObject is the same to the node's origin.");
+                    break;
+                }
+                if (globalObject->isRegExpRecompiled()) {
+                    dataLogLnIf(verbose, "Giving up because RegExp recompile happens.");
+                    break;
+                }
+                m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                 regExp = regExpObject->regExp();
-            else if (regExpObjectNode->op() == NewRegexp)
+            } else if (regExpObjectNode->op() == NewRegexp) {
+                JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
+                if (m_graph.m_plan.isUnlinked() && globalObject != m_graph.globalObjectFor(m_node->origin.semantic)) {
+                    dataLogLnIf(verbose, "Giving up because unlinked DFG requires globalObject is the same to the node's origin.");
+                    break;
+                }
+                if (globalObject->isRegExpRecompiled()) {
+                    dataLogLnIf(verbose, "Giving up because RegExp recompile happens.");
+                    break;
+                }
+                m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpointSet());
                 regExp = regExpObjectNode->castOperand<RegExp*>();
-            else {
+            } else {
                 if (verbose)
                     dataLog("Giving up because the regexp is unknown.\n");
                 break;
             }
-
-            String replace = m_node->child3()->tryGetString(m_graph);
-            if (!replace)
-                break;
 
             StringBuilder builder;
 
@@ -894,7 +992,6 @@ private:
 
             NodeOrigin origin = m_node->origin;
 
-            // Preserve any checks we have.
             m_insertionSet.insertNode(
                 m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
 
@@ -920,6 +1017,98 @@ private:
             break;
         }
 
+        case StringReplaceString: {
+            Node* stringNode = m_node->child1().node();
+            String string = stringNode->tryGetString(m_graph);
+            if (!string)
+                break;
+
+            String searchString = m_node->child2()->tryGetString(m_graph);
+            if (!searchString)
+                break;
+
+            String replace = m_node->child3()->tryGetString(m_graph);
+            if (!replace)
+                break;
+
+            // String/String/String case.
+            // FIXME: Extract these operations and share it with runtime code.
+
+            size_t matchStart = string.find(searchString);
+            if (matchStart == notFound) {
+                m_changed = true;
+                m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+                m_node->convertToIdentityOn(stringNode);
+                break;
+            }
+
+            size_t searchStringLength = searchString.length();
+            size_t matchEnd = matchStart + searchStringLength;
+
+            size_t dollarSignPosition = replace.find('$');
+            if (dollarSignPosition != WTF::notFound) {
+                StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+                int ovector[2] = { static_cast<int>(matchStart),  static_cast<int>(matchEnd) };
+                substituteBackreferencesSlow(builder, replace, string, ovector, nullptr, dollarSignPosition);
+                if (UNLIKELY(builder.hasOverflowed()))
+                    break;
+                replace = builder.toString();
+            }
+
+            auto result = tryMakeString(StringView(string).substring(0, matchStart), replace, StringView(string).substring(matchEnd, string.length() - matchEnd));
+            if (UNLIKELY(!result))
+                break;
+
+            m_changed = true;
+            m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+            m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, WTFMove(result)));
+            break;
+        }
+
+        case StringSubstring:
+        case StringSlice: {
+            Node* stringNode = m_node->child1().node();
+
+            if (!m_node->child2()->isInt32Constant())
+                break;
+
+            int32_t startValue = m_node->child2()->asInt32();
+            std::optional<int32_t> endValue = std::nullopt;
+            if (m_node->child3()) {
+                if (!m_node->child3()->isInt32Constant())
+                    break;
+                endValue = m_node->child3()->asInt32();
+                if (endValue.value() == startValue) {
+                    // Regardless of whatever the string is, it generates empty string (Even if both are negative index).
+                    m_changed = true;
+                    m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+                    m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, emptyString()));
+                    break;
+                }
+            }
+
+            String string = stringNode->tryGetString(m_graph);
+            if (!string)
+                break;
+
+            int32_t length = string.length();
+            int32_t start = 0;
+            int32_t end = 0;
+            if (m_node->op() == StringSubstring)
+                std::tie(start, end) = extractSubstringOffsets(length, startValue, endValue);
+            else
+                std::tie(start, end) = extractSliceOffsets(length, startValue, endValue);
+
+            m_changed = true;
+            m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+            if (!start && end == length) {
+                m_node->convertToIdentityOn(stringNode);
+                break;
+            }
+            m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, string.substring(start, end - start)));
+            break;
+        }
+
         case Call:
         case Construct:
         case TailCallInlinedCaller:
@@ -927,7 +1116,8 @@ private:
             ExecutableBase* executable = nullptr;
             Edge callee = m_graph.varArgChild(m_node, 0);
             CallVariant callVariant;
-            if (JSFunction* function = callee->dynamicCastConstant<JSFunction*>(vm())) {
+            JSFunction* function = callee->dynamicCastConstant<JSFunction*>();
+            if (function) {
                 executable = function->executable();
                 callVariant = CallVariant(function);
             } else if (callee->isFunctionAllocation()) {
@@ -938,13 +1128,234 @@ private:
             if (!executable)
                 break;
 
+            if (m_graph.m_plan.isUnlinked())
+                break;
+
+            if (m_graph.m_plan.isFTL()) {
+                if (Options::useDataICInFTL())
+                    break;
+            }
+
+#if ENABLE(WEBASSEMBLY)
             // FIXME: Support wasm IC.
             // DirectCall to wasm function has suboptimal implementation. We avoid using DirectCall if we know that function is a wasm function.
             // https://bugs.webkit.org/show_bug.cgi?id=220339
-            if (executable->intrinsic() == WasmFunctionIntrinsic)
+            if (executable->intrinsic() == WasmFunctionIntrinsic) {
+                if (m_node->op() != Call) // FIXME: We should support tail-call.
+                    break;
+                if (!function)
+                    break;
+                auto* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(function);
+                if (!wasmFunction)
+                    break;
+                const auto& typeDefinition = Wasm::TypeInformation::get(wasmFunction->typeIndex()).expand();
+                const auto& signature = *typeDefinition.as<Wasm::FunctionSignature>();
+                const Wasm::WasmCallingConvention& wasmCC = Wasm::wasmCallingConvention();
+                Wasm::CallInformation wasmCallInfo = wasmCC.callInformationFor(typeDefinition);
+                if (wasmCallInfo.argumentsOrResultsIncludeV128)
                 break;
 
-            if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(vm(), executable)) {
+                unsigned numPassedArgs = m_node->numChildren() - /* |callee| and |this| */ 2;
+                if (signature.argumentCount() > numPassedArgs)
+                    break;
+
+                if (!signature.returnsVoid() && signature.returnCount() != 1)
+                    break;
+
+                bool success = true;
+                for (unsigned index = 0; index < signature.argumentCount(); ++index) {
+                    auto type = signature.argumentType(index);
+                    Edge argument = m_graph.varArgChild(m_node, 2 + index);
+                    switch (type.kind) {
+                    case Wasm::TypeKind::I32: {
+                        if (!argument->shouldSpeculateInt32())
+                            success = false;
+                        break;
+                    }
+                    case Wasm::TypeKind::I64: {
+                        if (!argument->shouldSpeculateHeapBigInt())
+                            success = false;
+                        break;
+                    }
+                    case Wasm::TypeKind::Ref:
+                    case Wasm::TypeKind::RefNull:
+                    case Wasm::TypeKind::Funcref:
+                    case Wasm::TypeKind::Externref: {
+                        if (!Wasm::isExternref(type) || !type.isNullable())
+                            success = false;
+                        break;
+                    }
+                    case Wasm::TypeKind::F32:
+                    case Wasm::TypeKind::F64: {
+                        if (!argument->shouldSpeculateNumber())
+                            success = false;
+                        break;
+                    }
+                    case Wasm::TypeKind::V128:
+                    default: {
+                        success = false;
+                        break;
+                    }
+                    }
+                }
+
+                if (!signature.returnsVoid()) {
+                    ASSERT(signature.returnCount() == 1);
+                    auto type = signature.returnType(0);
+                    switch (type.kind) {
+                    case Wasm::TypeKind::I32:
+                    case Wasm::TypeKind::I64:
+                    case Wasm::TypeKind::Ref:
+                    case Wasm::TypeKind::RefNull:
+                    case Wasm::TypeKind::Funcref:
+                    case Wasm::TypeKind::Externref:
+                    case Wasm::TypeKind::F32:
+                    case Wasm::TypeKind::F64: {
+                        break;
+                    }
+                    case Wasm::TypeKind::V128:
+                    default: {
+                        success = false;
+                        break;
+                    }
+                    }
+                }
+
+                auto indexForChecks = [&]() -> std::optional<unsigned> {
+                    unsigned index = m_nodeIndex;
+                    while (!m_block->at(index)->origin.exitOK) {
+                        if (index)
+                            return std::nullopt;
+                        index--;
+                    }
+                    return index;
+                };
+
+                auto checkIndexValue = indexForChecks();
+                if (!checkIndexValue)
+                    break;
+
+                if (!success || !is64Bit() || !m_graph.m_plan.isFTL())
+                    break;
+
+                unsigned numAllocatedArgs = static_cast<unsigned>(signature.argumentCount()) + /* |this| for wasm */ 1;
+                m_graph.m_parameterSlots = std::max(m_graph.m_parameterSlots, Graph::parameterSlotsForArgCount(numAllocatedArgs));
+
+                unsigned checkIndex = checkIndexValue.value();
+                for (unsigned index = 0; index < signature.argumentCount(); ++index) {
+                    auto type = signature.argumentType(index);
+                    Edge argument = m_graph.varArgChild(m_node, 2 + index);
+                    Node* argumentNode = argument.node();
+                    switch (type.kind) {
+                    case Wasm::TypeKind::I32: {
+                        m_insertionSet.insertCheck(checkIndex, m_node->origin, Edge(argumentNode, Int32Use));
+                        m_graph.varArgChild(m_node, 2 + index) = Edge(argumentNode, KnownInt32Use);
+                        break;
+                    }
+                    case Wasm::TypeKind::I64: {
+                        m_insertionSet.insertCheck(checkIndex, m_node->origin, Edge(argumentNode, HeapBigIntUse));
+                        m_graph.varArgChild(m_node, 2 + index) = Edge(argumentNode, KnownCellUse);
+                        break;
+                    }
+                    case Wasm::TypeKind::Ref:
+                    case Wasm::TypeKind::RefNull:
+                    case Wasm::TypeKind::Funcref:
+                    case Wasm::TypeKind::Externref: {
+                        break;
+                    }
+                    case Wasm::TypeKind::F32:
+                    case Wasm::TypeKind::F64: {
+                        UseKind useKind;
+                        if (argument->shouldSpeculateDoubleReal())
+                            useKind = RealNumberUse;
+                        else if (argument->shouldSpeculateNumber())
+                            useKind = NumberUse;
+                        else
+                            useKind = NotCellNorBigIntUse;
+                        Node* result = m_insertionSet.insertNode(checkIndex, SpecBytecodeDouble, DoubleRep, m_node->origin, Edge(argumentNode, useKind));
+                        m_graph.varArgChild(m_node, 2 + index) = Edge(result, DoubleRepUse);
+                        break;
+                    }
+                    case Wasm::TypeKind::V128:
+                    default:
+                        RELEASE_ASSERT_NOT_REACHED();
+                    }
+                }
+
+                if (!signature.returnsVoid()) {
+                    auto type = signature.returnType(0);
+                    switch (type.kind) {
+                    case Wasm::TypeKind::I32: {
+                        m_node->setResult(NodeResultInt32);
+                        break;
+                    }
+                    case Wasm::TypeKind::I64: {
+                        break;
+                    }
+                    case Wasm::TypeKind::Ref:
+                    case Wasm::TypeKind::RefNull:
+                    case Wasm::TypeKind::Funcref:
+                    case Wasm::TypeKind::Externref: {
+                        break;
+                    }
+                    case Wasm::TypeKind::F32:
+                    case Wasm::TypeKind::F64: {
+                        break;
+                    }
+                    case Wasm::TypeKind::V128:
+                    default: {
+                        break;
+                    }
+                    }
+                }
+
+                m_node->convertToCallWasm(m_graph.freeze(wasmFunction));
+                break;
+            }
+#endif
+
+            // We gave up inlining a wrapped function, but still, we can inline bound function's wrapper by extracting it.
+            // This also wipes bound-function thunk call which is suboptimal compared to directly calling a wrapped function here.
+            if (executable->intrinsic() == BoundFunctionCallIntrinsic && function && (m_node->op() == Call || m_node->op() == TailCall || m_node->op() == TailCallInlinedCaller)) {
+                JSBoundFunction* boundFunction = jsCast<JSBoundFunction*>(function);
+                if (JSFunction* targetFunction = jsDynamicCast<JSFunction*>(boundFunction->targetFunction())) {
+                    auto* targetExecutable = targetFunction->executable();
+                    JSImmutableButterfly* boundArgs = boundFunction->boundArgs();
+                    if (((boundArgs ? boundArgs->length() : 0) + m_node->numChildren()) <= Options::maximumDirectCallStackSize()) {
+                        if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(targetExecutable)) {
+                            // We need to update m_parameterSlots before we get to the backend, but we don't
+                            // want to do too much of this.
+                            unsigned numAllocatedArgs = static_cast<unsigned>(functionExecutable->parameterCount()) + 1;
+                            if (numAllocatedArgs <= Options::maximumDirectCallStackSize())
+                                m_graph.m_parameterSlots = std::max(m_graph.m_parameterSlots, Graph::parameterSlotsForArgCount(numAllocatedArgs));
+                        }
+
+                        unsigned firstChild = m_graph.m_varArgChildren.size();
+                        m_graph.m_varArgChildren.append(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, targetFunction)); // |callee|.
+                        m_graph.m_varArgChildren.append(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, boundFunction->boundThis())); // |this|
+
+                        JSImmutableButterfly* boundArgs = boundFunction->boundArgs();
+                        if (boundArgs) {
+                            for (unsigned index = 0; index < boundArgs->length(); ++index)
+                                m_graph.m_varArgChildren.append(m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, boundArgs->get(index)));
+                        }
+
+                        // First one is |callee|, second one is |this|.
+                        for (unsigned index = 2; index < m_node->numChildren(); ++index)
+                            m_graph.m_varArgChildren.append(m_graph.child(m_node, index));
+
+                        m_node->children = AdjacencyList(AdjacencyList::Variable, firstChild, m_graph.m_varArgChildren.size() - firstChild);
+                        m_graph.m_parameterSlots = std::max(m_graph.m_parameterSlots, Graph::parameterSlotsForArgCount(m_node->numChildren() - 1));
+
+                        m_graph.m_plan.recordedStatuses().addCallLinkStatus(m_node->origin.semantic, CallLinkStatus(CallVariant(targetExecutable)));
+                        m_node->convertToDirectCall(m_graph.freeze(targetExecutable));
+                        m_changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(executable)) {
                 if (m_node->op() == Construct && functionExecutable->constructAbility() == ConstructAbility::CannotConstruct)
                     break;
 

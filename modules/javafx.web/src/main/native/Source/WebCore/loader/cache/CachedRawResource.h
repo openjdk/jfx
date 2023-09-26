@@ -28,6 +28,7 @@ namespace WebCore {
 
 class CachedResourceClient;
 class ResourceTiming;
+class SharedBuffer;
 class SharedBufferDataView;
 
 class CachedRawResource final : public CachedResource {
@@ -39,7 +40,7 @@ public:
     void setDataBufferingPolicy(DataBufferingPolicy);
 
     // FIXME: This is exposed for the InspectorInstrumentation for preflights in DocumentThreadableLoader. It's also really lame.
-    unsigned long identifier() const { return m_identifier; }
+    ResourceLoaderIdentifier identifier() const { return m_identifier; }
 
     void clear();
 
@@ -51,9 +52,9 @@ public:
 
 private:
     void didAddClient(CachedResourceClient&) final;
-    void updateBuffer(SharedBuffer&) final;
-    void updateData(const uint8_t* data, unsigned length) final;
-    void finishLoading(SharedBuffer*, const NetworkLoadMetrics&) final;
+    void updateBuffer(const FragmentedSharedBuffer&) final;
+    void updateData(const SharedBuffer&) final;
+    void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) final;
 
     bool shouldIgnoreHTTPStatusCodeErrors() const override { return true; }
     void allClientsRemoved() override;
@@ -66,16 +67,14 @@ private:
     void switchClientsToRevalidatedResource() override;
     bool mayTryReplaceEncodedData() const override { return m_allowEncodedDataReplacement; }
 
-    std::optional<SharedBufferDataView> calculateIncrementalDataChunk(const SharedBuffer*) const;
-    void notifyClientsDataWasReceived(const uint8_t* data, unsigned length);
+    std::optional<SharedBufferDataView> calculateIncrementalDataChunk(const FragmentedSharedBuffer&) const;
+    void notifyClientsDataWasReceived(const SharedBuffer&);
 
 #if USE(QUICK_LOOK)
     void previewResponseReceived(const ResourceResponse&) final;
 #endif
 
-    unsigned long m_identifier;
-    bool m_allowEncodedDataReplacement;
-    bool m_inIncrementalDataNotify { false };
+    ResourceLoaderIdentifier m_identifier;
 
     struct RedirectPair {
     public:
@@ -92,9 +91,12 @@ private:
     Vector<RedirectPair, 0, CrashOnOverflow, 0> m_redirectChain;
 
     struct DelayedFinishLoading {
-        RefPtr<SharedBuffer> buffer;
+        RefPtr<const FragmentedSharedBuffer> buffer;
     };
     std::optional<DelayedFinishLoading> m_delayedFinishLoading;
+
+    bool m_allowEncodedDataReplacement { true };
+    bool m_inIncrementalDataNotify { false };
 };
 
 } // namespace WebCore

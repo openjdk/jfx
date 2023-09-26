@@ -163,10 +163,10 @@ private:
     uint8_t m_transitionsLength { 0 };
 
     uint8_t m_flags { 0 };
-    const uint8_t IsKilled = 0x01;
+    static constexpr uint8_t IsKilled = 0x01;
 };
 
-COMPILE_ASSERT(sizeof(DFANode) <= 16, Keep the DFANodes small);
+static_assert(sizeof(DFANode) <= 16, "Keep the DFANodes small");
 
 } // namespace ContentExtensions
 } // namespace WebCore

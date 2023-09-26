@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,9 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
 #define TRACK_LOG(...) {}
 #endif
 
+// Max number of bytes we will provide per request
+#define MAX_READ_SIZE (1024 * 1024)
+
 @implementation AVFMediaPlayer
 
 static void SpectrumCallbackProc(void *context, double duration, double timestamp);
@@ -103,7 +106,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     return (klass != nil);
 }
 
-- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr {
+- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr locatorStream:(CLocatorStream*)ls {
     if ((self = [super init]) != nil) {
         previousWidth = -1;
         previousHeight = -1;
@@ -123,6 +126,25 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         if (!_player) {
             return nil;
         }
+
+        // Setup AVAssetResourceLoaderDelegate if locatorStream provided and use
+        // it to load data.
+        if (ls != NULL) {
+            AVAsset *avAsset = _player.currentItem.asset;
+            if ([avAsset isKindOfClass:AVURLAsset.class]) {
+                AVURLAsset *avUrlAsset = (AVURLAsset *)avAsset;
+
+                playerLoaderQueue = dispatch_queue_create(NULL, NULL);
+
+                AVAssetResourceLoader *resourceLoader = avUrlAsset.resourceLoader;
+                [resourceLoader setDelegate:self queue:playerLoaderQueue];
+            } else {
+                return nil;
+            }
+
+            self->locatorStream = ls;
+        }
+
         _player.volume = 1.0f;
         _player.muted = NO;
 
@@ -297,6 +319,22 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     });
 }
 
+- (void) logNSError:(NSString*)tag error:(NSError*)error
+{
+    if (error != nil) {
+        LOGGER_DEBUGMSG(([
+            [NSString stringWithFormat:@"[%@] error code: %d",
+            tag, (int)error.code] UTF8String]));
+        LOGGER_DEBUGMSG(([
+            [NSString stringWithFormat:@"[%@] error description: %@",
+            tag, error.localizedDescription] UTF8String]));
+    } else {
+        LOGGER_DEBUGMSG(([
+             [NSString stringWithFormat:@"Error nil for [%@]",
+             tag] UTF8String]));
+    }
+}
+
 - (void) observeValueForKeyPath:(NSString *)keyPath
                        ofObject:(id)object
                          change:(NSDictionary *)change
@@ -312,6 +350,15 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                     [self setPlayerState:kPlayerState_READY];
                     _movieReady = true;
                 }
+            } else if (status == AVPlayerStatusFailed) {
+                LOGGER_DEBUGMSG(([[NSString stringWithFormat:@"Setting player to HALTED state"] UTF8String]));
+                if (_player != nil) {
+                    [self logNSError:@"AVPlayer" error:_player.error];
+                    if (_player.currentItem != nil) {
+                         [self logNSError:@"AVPlayerItem" error:_player.currentItem.error];
+                    }
+                }
+                [self setPlayerState:kPlayerState_HALTED];
             }
         }
     } else if (context == AVFMediaPlayerItemDurationContext) {
@@ -447,6 +494,12 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                 CVDisplayLinkRelease(_displayLink);
                 _displayLink = NULL;
             }
+
+            if (locatorStream != NULL) {
+                locatorStream->GetCallbacks()->CloseConnection();
+                locatorStream = NULL;
+            }
+
             isDisposed = YES;
         }
     }
@@ -667,6 +720,103 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         // Always true for queryTimestamp to avoid hang. See JDK-8240694.
         eventHandler->SendAudioSpectrumEvent(timestamp, duration, true);
     }
+}
+
+- (NSString*) getContentTypeFromURL:(NSString*) URL {
+    if (URL == nil) {
+        return nil;
+    }
+
+    NSString *lowercaseURL = [URL lowercaseString];
+    if ([lowercaseURL hasSuffix:@"mp4"]) {
+        return AVFileTypeMPEG4;
+    } else if ([lowercaseURL hasSuffix:@"m4a"]) {
+        return AVFileTypeMPEG4;
+    } else if ([lowercaseURL hasSuffix:@"m4v"]) {
+        return AVFileTypeMPEG4;
+    } else if ([lowercaseURL hasSuffix:@"mp3"]) {
+        return AVFileTypeMPEGLayer3;
+    }
+
+    return nil;
+}
+
+// AVAssetResourceLoaderDelegate
+- (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader
+        shouldWaitForLoadingOfRequestedResource:
+        (AVAssetResourceLoadingRequest *)loadingRequest {
+    AVAssetResourceLoadingContentInformationRequest* contentRequest = loadingRequest.contentInformationRequest;
+    AVAssetResourceLoadingDataRequest* dataRequest = loadingRequest.dataRequest;
+    NSURLResponse *response = loadingRequest.response;
+
+    if (locatorStream == NULL) {
+        return NO;
+    }
+
+    if (contentRequest != nil) {
+        contentRequest.contentType = [self getContentTypeFromURL:loadingRequest.request.URL.absoluteString];
+        contentRequest.contentLength = locatorStream->GetSizeHint();
+        contentRequest.byteRangeAccessSupported = YES;
+    }
+
+    if (dataRequest != nil) {
+        long position = locatorStream->GetCallbacks()->Seek(dataRequest.requestedOffset);
+        if (position != dataRequest.requestedOffset) {
+            return NO;
+        }
+
+        // If requestsAllDataToEndOfResource is YES, than requestedLength is
+        // invalid and we need to provide all data to the end of file.
+        long requestedLength = 0;
+        if (dataRequest.requestsAllDataToEndOfResource) {
+           int64_t sizeHint = locatorStream->GetSizeHint();
+           requestedLength = sizeHint - dataRequest.requestedOffset;
+        } else {
+           requestedLength = dataRequest.requestedLength;
+        }
+
+        // Do not provide more then MAX_READ_SIZE at one call, otherwise
+        // AVFoundation might fail if we provide too much data.
+        // We will be requested again if not all data provided.
+        if (requestedLength > MAX_READ_SIZE) {
+           requestedLength = MAX_READ_SIZE;
+        }
+
+        NSMutableData* readData = nil;
+        while (requestedLength > 0) {
+            unsigned int blockSize = locatorStream->GetCallbacks()->ReadNextBlock();
+            if (blockSize <= 0) {
+                break;
+            }
+
+            unsigned int readSize =
+                    (blockSize > (unsigned int)dataRequest.requestedLength) ?
+                    (unsigned int)dataRequest.requestedLength : blockSize;
+            readData = [NSMutableData dataWithLength:readSize];
+
+            locatorStream->GetCallbacks()->CopyBlock((void*)[readData bytes], readSize);
+            [loadingRequest.dataRequest respondWithData:readData];
+
+            requestedLength -= readSize;
+        }
+
+        [loadingRequest finishLoading];
+
+        return YES;
+    }
+
+    return NO;
+}
+
+- (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader
+        shouldWaitForRenewalOfRequestedResource:
+        (AVAssetResourceRenewalRequest *)renewalRequest {
+     return NO;
+}
+
+- (void)resourceLoader:(AVAssetResourceLoader *)resourceLoader
+        didCancelLoadingRequest:
+        (AVAssetResourceLoadingRequest *)loadingRequest {
 }
 
 @end

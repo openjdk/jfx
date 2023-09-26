@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,14 @@
 
 package test.robot.javafx.scene;
 
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import com.sun.javafx.PlatformUtil;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -36,14 +44,12 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.fail;
+
+import test.util.Util;
 
 /*
  * Test to verify the events when scene of stage is changed.
@@ -56,7 +62,7 @@ import static org.junit.Assert.fail;
  */
 
 public class SceneChangeEventsTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
     static volatile Stage stage;
     boolean mouseExited = false;
@@ -86,7 +92,7 @@ public class SceneChangeEventsTest {
         Platform.runLater(() -> {
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
 
         scene.setOnMouseExited(event -> {
             mouseExited = true;
@@ -101,7 +107,7 @@ public class SceneChangeEventsTest {
             robot.mousePress(MouseButton.PRIMARY);
             robot.mouseRelease(MouseButton.PRIMARY);
         });
-        waitForLatch(onActionLatch, 5, "Timeout while waiting for button.onAction().");
+        Util.waitForLatch(onActionLatch, 5, "Timeout while waiting for button.onAction().");
 
         Assert.assertTrue("MOUSE_EXITED should be received when scene is " +
             " changed.", mouseExited);
@@ -126,26 +132,14 @@ public class SceneChangeEventsTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(startupLatch, 10, "Timeout waiting for FX runtime to start");
+        assumeTrue(!PlatformUtil.isMac()); // See JDK-8300094
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
+        if (stage != null) {
+            Util.shutdown(stage);
         }
     }
 }

@@ -21,8 +21,10 @@
 
 #pragma once
 
+#include "ElementName.h"
 #include "FEComponentTransfer.h"
 #include "SVGElement.h"
+#include <wtf/SortedArrayMap.h>
 
 namespace WebCore {
 
@@ -53,23 +55,22 @@ struct SVGPropertyTraits<ComponentTransferType> {
 
     static ComponentTransferType fromString(const String& value)
     {
-        if (value == "identity")
-            return FECOMPONENTTRANSFER_TYPE_IDENTITY;
-        if (value == "table")
-            return FECOMPONENTTRANSFER_TYPE_TABLE;
-        if (value == "discrete")
-            return FECOMPONENTTRANSFER_TYPE_DISCRETE;
-        if (value == "linear")
-            return FECOMPONENTTRANSFER_TYPE_LINEAR;
-        if (value == "gamma")
-            return FECOMPONENTTRANSFER_TYPE_GAMMA;
-        return FECOMPONENTTRANSFER_TYPE_UNKNOWN;
+        static constexpr std::pair<PackedASCIILiteral<uint64_t>, ComponentTransferType> mappings[] = {
+            { "discrete", FECOMPONENTTRANSFER_TYPE_DISCRETE },
+            { "gamma", FECOMPONENTTRANSFER_TYPE_GAMMA },
+            { "identity", FECOMPONENTTRANSFER_TYPE_IDENTITY },
+            { "linear", FECOMPONENTTRANSFER_TYPE_LINEAR },
+            { "table", FECOMPONENTTRANSFER_TYPE_TABLE }
+        };
+        static constexpr SortedArrayMap map { mappings };
+        return  map.get(value, FECOMPONENTTRANSFER_TYPE_UNKNOWN);
     }
 };
 
 class SVGComponentTransferFunctionElement : public SVGElement {
     WTF_MAKE_ISO_ALLOCATED(SVGComponentTransferFunctionElement);
 public:
+    virtual ComponentTransferChannel channel() const = 0;
     ComponentTransferFunction transferFunction() const;
 
     ComponentTransferType type() const { return m_type->currentValue<ComponentTransferType>(); }
@@ -92,7 +93,6 @@ protected:
     SVGComponentTransferFunctionElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGComponentTransferFunctionElement, SVGElement>;
-    const SVGPropertyRegistry& propertyRegistry() const override { return m_propertyRegistry; }
 
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
@@ -100,7 +100,6 @@ protected:
     bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
 private:
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedEnumeration> m_type { SVGAnimatedEnumeration::create(this, FECOMPONENTTRANSFER_TYPE_IDENTITY) };
     Ref<SVGAnimatedNumberList> m_tableValues { SVGAnimatedNumberList::create(this) };
     Ref<SVGAnimatedNumber> m_slope { SVGAnimatedNumber::create(this, 1) };

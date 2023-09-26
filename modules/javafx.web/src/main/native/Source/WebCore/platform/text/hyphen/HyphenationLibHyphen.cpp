@@ -41,7 +41,6 @@
 #include <wtf/text/StringView.h>
 
 #if PLATFORM(GTK)
-#include <wtf/glib/GLibUtilities.h>
 #include <wtf/glib/GUniquePtr.h>
 #endif
 
@@ -52,26 +51,27 @@ static const char* const gDictionaryDirectories[] = {
     "/usr/local/share/hyphen",
 };
 
-static String extractLocaleFromDictionaryFileName(const String& fileName)
+static AtomString extractLocaleFromDictionaryFileName(const String& fileName)
 {
-    if (!fileName.startsWith("hyph_") || !fileName.endsWith(".dic"))
-        return { };
+    if (!fileName.startsWith("hyph_"_s) || !fileName.endsWith(".dic"_s))
+        return nullAtom();
 
     // Dictionary files always have the form "hyph_<locale name>.dic"
     // so we strip everything except the locale.
     constexpr int prefixLength = 5;
     constexpr int suffixLength = 4;
-    return fileName.substring(prefixLength, fileName.length() - prefixLength - suffixLength).convertToASCIILowercase();
+    return StringView(fileName).substring(prefixLength, fileName.length() - prefixLength - suffixLength).convertToASCIILowercaseAtom();
 }
 
 static void scanDirectoryForDictionaries(const char* directoryPath, HashMap<AtomString, Vector<String>>& availableLocales)
 {
-    for (auto& fileName : FileSystem::listDirectory(directoryPath)) {
-        String locale = extractLocaleFromDictionaryFileName(fileName);
+    auto directoryPathString = String::fromUTF8(directoryPath);
+    for (auto& fileName : FileSystem::listDirectory(directoryPathString)) {
+        auto locale = extractLocaleFromDictionaryFileName(fileName);
         if (locale.isEmpty())
             continue;
 
-        auto filePath = FileSystem::pathByAppendingComponent(directoryPath, fileName);
+        auto filePath = FileSystem::pathByAppendingComponent(directoryPathString, fileName);
         char normalizedPath[PATH_MAX];
         if (!realpath(FileSystem::fileSystemRepresentation(filePath).data(), normalizedPath))
             continue;
@@ -79,16 +79,13 @@ static void scanDirectoryForDictionaries(const char* directoryPath, HashMap<Atom
         filePath = FileSystem::stringFromFileSystemRepresentation(normalizedPath);
         availableLocales.add(locale, Vector<String>()).iterator->value.append(filePath);
 
-        String localeReplacingUnderscores = String(locale);
-        localeReplacingUnderscores.replace('_', '-');
+        String localeReplacingUnderscores = makeStringByReplacingAll(locale, '_', '-');
         if (locale != localeReplacingUnderscores)
-            availableLocales.add(localeReplacingUnderscores, Vector<String>()).iterator->value.append(filePath);
+            availableLocales.add(AtomString { localeReplacingUnderscores }, Vector<String>()).iterator->value.append(filePath);
 
         size_t dividerPosition = localeReplacingUnderscores.find('-');
-        if (dividerPosition != notFound) {
-            localeReplacingUnderscores.truncate(dividerPosition);
-            availableLocales.add(localeReplacingUnderscores, Vector<String>()).iterator->value.append(filePath);
-        }
+        if (dividerPosition != notFound)
+            availableLocales.add(StringView(localeReplacingUnderscores).left(dividerPosition).toAtomString(), Vector<String>()).iterator->value.append(filePath);
     }
 }
 
@@ -103,7 +100,7 @@ static CString topLevelPath()
     // If the environment variable wasn't provided then assume we were built into
     // WebKitBuild/Debug or WebKitBuild/Release. Obviously this will fail if the build
     // directory is non-standard, but we can't do much more about this.
-    GUniquePtr<char> parentPath(g_path_get_dirname(getCurrentExecutablePath().data()));
+    GUniquePtr<char> parentPath(g_path_get_dirname(FileSystem::currentExecutablePath().data()));
     GUniquePtr<char> layoutTestsPath(g_build_filename(parentPath.get(), "..", "..", "..", nullptr));
     GUniquePtr<char> absoluteTopLevelPath(realpath(layoutTestsPath.get(), 0));
     return absoluteTopLevelPath.get();
@@ -159,7 +156,7 @@ static HashMap<AtomString, Vector<String>>& availableLocales()
     static HashMap<AtomString, Vector<String>> availableLocales;
 
     if (!scannedLocales) {
-        for (size_t i = 0; i < WTF_ARRAY_LENGTH(gDictionaryDirectories); i++)
+        for (size_t i = 0; i < std::size(gDictionaryDirectories); i++)
             scanDirectoryForDictionaries(gDictionaryDirectories[i], availableLocales);
 
 #if ENABLE(DEVELOPER_MODE)
@@ -178,7 +175,7 @@ bool canHyphenate(const AtomString& localeIdentifier)
         return false;
     if (availableLocales().contains(localeIdentifier))
         return true;
-    return availableLocales().contains(AtomString(localeIdentifier.string().convertToASCIILowercase()));
+    return availableLocales().contains(localeIdentifier.convertToASCIILowercase());
 }
 
 class HyphenationDictionary : public RefCounted<HyphenationDictionary> {
@@ -292,14 +289,14 @@ size_t lastHyphenLocation(StringView string, size_t beforeIndex, const AtomStrin
     Vector<char> hyphenArray(utf8StringCopy.length() - leadingSpaceBytes + 5);
     char* hyphenArrayData = hyphenArray.data();
 
-    String lowercaseLocaleIdentifier = AtomString(localeIdentifier.string().convertToASCIILowercase());
+    AtomString lowercaseLocaleIdentifier = localeIdentifier.convertToASCIILowercase();
 
     // Web content may specify strings for locales which do not exist or that we do not have.
     if (!availableLocales().contains(lowercaseLocaleIdentifier))
         return 0;
 
     for (const auto& dictionaryPath : availableLocales().get(lowercaseLocaleIdentifier)) {
-        RefPtr<HyphenationDictionary> dictionary = WTF::TinyLRUCachePolicy<AtomString, RefPtr<HyphenationDictionary>>::cache().get(AtomString(dictionaryPath));
+        RefPtr<HyphenationDictionary> dictionary = TinyLRUCachePolicy<AtomString, RefPtr<HyphenationDictionary>>::cache().get(AtomString(dictionaryPath));
 
         char** replacements = nullptr;
         int* positions = nullptr;

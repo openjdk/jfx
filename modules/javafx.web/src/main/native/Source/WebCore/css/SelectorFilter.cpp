@@ -30,6 +30,9 @@
 #include "SelectorFilter.h"
 
 #include "CSSSelector.h"
+#include "CommonAtomStrings.h"
+#include "ElementInlines.h"
+#include "HTMLNames.h"
 #include "ShadowRoot.h"
 #include "StyledElement.h"
 
@@ -43,9 +46,17 @@ static bool isExcludedAttribute(const AtomString& name)
     return name == HTMLNames::classAttr->localName() || name == HTMLNames::idAttr->localName() || name == HTMLNames::styleAttr->localName();
 }
 
-static inline void collectElementIdentifierHashes(const Element& element, Vector<unsigned, 4>& identifierHashes)
+static inline bool localNameIsKnownToBeLowercase(const Element& element)
 {
-    AtomString tagLowercaseLocalName = element.localName().convertToASCIILowercase();
+    // Known HTML element always return a localName() that is defined inside HTMLNames.h. All known HTML
+    // tags are lowercase.
+    return element.isHTMLElement() && !element.isUnknownElement();
+}
+
+void SelectorFilter::collectElementIdentifierHashes(const Element& element, Vector<unsigned, 4>& identifierHashes)
+{
+    AtomString tagLowercaseLocalName = LIKELY(localNameIsKnownToBeLowercase(element)) ? element.localName() : element.localName().convertToASCIILowercase();
+    ASSERT(tagLowercaseLocalName == tagLowercaseLocalName.convertToASCIILowercase());
     identifierHashes.append(tagLowercaseLocalName.impl()->existingHash() * TagNameSalt);
 
     auto& id = element.idForStyleResolution();
@@ -132,15 +143,7 @@ void SelectorFilter::popParentsUntil(Element* parent)
     }
 }
 
-struct CollectedSelectorHashes {
-    using HashVector = Vector<unsigned, 8>;
-    HashVector ids;
-    HashVector classes;
-    HashVector tags;
-    HashVector attributes;
-};
-
-static inline void collectSimpleSelectorHash(CollectedSelectorHashes& collectedHashes, const CSSSelector& selector)
+void SelectorFilter::collectSimpleSelectorHash(CollectedSelectorHashes& collectedHashes, const CSSSelector& selector)
 {
     switch (selector.match()) {
     case CSSSelector::Id:
@@ -169,21 +172,34 @@ static inline void collectSimpleSelectorHash(CollectedSelectorHashes& collectedH
             collectedHashes.attributes.append(attributeName.impl()->existingHash() * AttributeSalt);
         break;
     }
+    case CSSSelector::PseudoClass:
+        switch (selector.pseudoClassType()) {
+        case CSSSelector::PseudoClassIs:
+        case CSSSelector::PseudoClassWhere:
+            // We can use the filter in the trivial case of single argument :is()/:where().
+            // Supporting the multiargument case would require more than one hash.
+            if (selector.selectorList()->listSize() == 1)
+                collectSelectorHashes(collectedHashes, *selector.selectorList()->first(), IncludeRightmost::Yes);
+            break;
+        default:
+            break;
+        }
+        break;
     default:
         break;
     }
 }
 
-static CollectedSelectorHashes collectSelectorHashes(const CSSSelector& rightmostSelector)
+void SelectorFilter::collectSelectorHashes(CollectedSelectorHashes& collectedHashes, const CSSSelector& rightmostSelector, IncludeRightmost includeRightmost)
 {
-    CollectedSelectorHashes collectedHashes;
+    auto [selector, relation, skipOverSubselectors] = [&] {
+        if (includeRightmost == IncludeRightmost::No)
+            return std::tuple { rightmostSelector.tagHistory(), rightmostSelector.relation(), true };
 
-    auto* selector = &rightmostSelector;
-    auto relation = selector->relation();
+        return std::tuple { &rightmostSelector, CSSSelector::Subselector, false };
+    }();
 
-    // Skip the topmost selector. It is handled quickly by the rule hashes.
-    bool skipOverSubselectors = true;
-    for (selector = selector->tagHistory(); selector; selector = selector->tagHistory()) {
+    for (; selector; selector = selector->tagHistory()) {
         // Only collect identifiers that match ancestors.
         switch (relation) {
         case CSSSelector::Subselector:
@@ -193,6 +209,8 @@ static CollectedSelectorHashes collectSelectorHashes(const CSSSelector& rightmos
         case CSSSelector::DirectAdjacent:
         case CSSSelector::IndirectAdjacent:
         case CSSSelector::ShadowDescendant:
+        case CSSSelector::ShadowPartDescendant:
+        case CSSSelector::ShadowSlotted:
             skipOverSubselectors = true;
             break;
         case CSSSelector::DescendantSpace:
@@ -203,12 +221,11 @@ static CollectedSelectorHashes collectSelectorHashes(const CSSSelector& rightmos
         }
         relation = selector->relation();
     }
-    return collectedHashes;
 }
 
-static SelectorFilter::Hashes chooseSelectorHashesForFilter(const CollectedSelectorHashes& collectedSelectorHashes)
+auto SelectorFilter::chooseSelectorHashesForFilter(const CollectedSelectorHashes& collectedSelectorHashes) -> Hashes
 {
-    SelectorFilter::Hashes resultHashes;
+    Hashes resultHashes;
     unsigned index = 0;
 
     auto addIfNew = [&] (unsigned hash) {
@@ -245,8 +262,16 @@ static SelectorFilter::Hashes chooseSelectorHashesForFilter(const CollectedSelec
 
 SelectorFilter::Hashes SelectorFilter::collectHashes(const CSSSelector& selector)
 {
-    auto hashes = collectSelectorHashes(selector);
-    return chooseSelectorHashesForFilter(hashes);
+    CollectedSelectorHashes collectedHashes;
+    collectSelectorHashes(collectedHashes, selector, IncludeRightmost::No);
+    return chooseSelectorHashesForFilter(collectedHashes);
+}
+
+SelectorFilter::CollectedSelectorHashes SelectorFilter::collectHashesForTesting(const CSSSelector& selector)
+{
+    CollectedSelectorHashes collectedHashes;
+    collectSelectorHashes(collectedHashes, selector, IncludeRightmost::No);
+    return collectedHashes;
 }
 
 }

@@ -49,15 +49,16 @@ ScrollingTreeFrameHostingNode::ScrollingTreeFrameHostingNode(ScrollingTree& scro
 
 ScrollingTreeFrameHostingNode::~ScrollingTreeFrameHostingNode() = default;
 
-void ScrollingTreeFrameHostingNode::commitStateBeforeChildren(const ScrollingStateNode&)
+bool ScrollingTreeFrameHostingNode::commitStateBeforeChildren(const ScrollingStateNode&)
 {
+    return true;
 }
 
 void ScrollingTreeFrameHostingNode::applyLayerPositions()
 {
 }
 
-void ScrollingTreeFrameHostingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreeFrameHostingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "frame hosting node";
     ScrollingTreeNode::dumpProperties(ts, behavior);

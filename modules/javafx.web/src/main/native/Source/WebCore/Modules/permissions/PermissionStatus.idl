@@ -24,11 +24,11 @@
  */
  
 // https://w3c.github.io/permissions/#permissionstatus
-
+// FIXME: Add worker support: https://bugs.webkit.org/show_bug.cgi?id=236443.
 [
     ActiveDOMObject,
-    EnabledBySetting=PermissionsAPI,
-    Exposed=(Window,Worker)
+    EnabledBySetting=PermissionsAPIEnabled,
+    Exposed=(Window,DedicatedWorker)
 ] interface PermissionStatus : EventTarget {
     readonly attribute PermissionState state;
     readonly attribute PermissionName name;

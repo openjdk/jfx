@@ -63,6 +63,8 @@ public:
     RenderTableRow* lastRow() const;
 
     std::optional<LayoutUnit> firstLineBaseline() const override;
+    std::optional<LayoutUnit> lastLineBaseline() const override;
+    std::optional<LayoutUnit> baselineFromCellContentEdges(ItemPosition alignment) const;
 
     void addCell(RenderTableCell*, RenderTableRow* row);
 
@@ -159,7 +161,7 @@ private:
         DoNotIncludeAllIntersectingCells
     };
 
-    const char* renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)" : "RenderTableSection"; }
+    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s; }
 
     bool canHaveChildren() const override { return true; }
 

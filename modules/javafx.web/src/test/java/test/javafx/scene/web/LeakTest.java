@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,13 @@ package test.javafx.scene.web;
 import static javafx.concurrent.Worker.State.SUCCEEDED;
 import com.sun.webkit.dom.JSObjectShim;
 import com.sun.webkit.dom.NodeImplShim;
-import com.sun.webkit.WebPage;
 import java.io.File;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.concurrent.Worker.State;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -48,6 +48,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
+import test.util.memory.JMemoryBuddy;
 
 public class LeakTest extends TestBase {
 
@@ -74,36 +75,22 @@ public class LeakTest extends TestBase {
                 }
             }
         }));
-        time.play();
+        Platform.runLater(time::play);
         latch.await();
     }
 
     @Test public void testGarbageCollectability() throws InterruptedException {
         final int count = 3;
-        Reference<?>[] willGC = new Reference[count];
+        WeakReference<?>[] willGC = new WeakReference[count];
 
         submit(() -> {
             WebView webView = new WebView();
-            willGC[0] = new WeakReference<WebView>(webView);
-            willGC[1] = new WeakReference<WebEngine>(webView.getEngine());
-            willGC[2] = new WeakReference<WebPage>(WebEngineShim.getPage(webView.getEngine()));
+            willGC[0] = new WeakReference<>(webView);
+            willGC[1] = new WeakReference<>(webView.getEngine());
+            willGC[2] = new WeakReference<>(WebEngineShim.getPage(webView.getEngine()));
         });
 
-        Thread.sleep(SLEEP_TIME);
-
-        for (int i = 0; i < 5; i++) {
-            System.gc();
-
-            if (isAllElementsNull(willGC)) {
-                break;
-            }
-
-            Thread.sleep(SLEEP_TIME);
-        }
-
-        assertNull("WebView has not been GCed", willGC[0].get());
-        assertNull("WebEngine has not been GCed", willGC[1].get());
-        assertNull("WebPage has not been GCed", willGC[2].get());
+        JMemoryBuddy.assertCollectable(willGC);
     }
 
     private static boolean isAllElementsNull(Reference<?>[] array) {
@@ -117,7 +104,7 @@ public class LeakTest extends TestBase {
 
     @Test public void testJSObjectGarbageCollectability() throws InterruptedException {
         final int count = 10000;
-        Reference<?>[] willGC = new Reference[count];
+        WeakReference<?>[] willGC = new WeakReference[count];
 
         submit(() -> {
             for (int i = 0; i < count; i++) {
@@ -126,19 +113,7 @@ public class LeakTest extends TestBase {
             }
         });
 
-        Thread.sleep(SLEEP_TIME);
-
-        for (int i = 0; i < 5; i++) {
-            System.gc();
-
-            if (isAllElementsNull(willGC)) {
-                break;
-            }
-
-            Thread.sleep(SLEEP_TIME);
-        }
-
-        assertTrue("All JSObjects are GC'ed", isAllElementsNull(willGC));
+        JMemoryBuddy.assertCollectable(willGC);
     }
 
     // JDK-8170938
@@ -178,7 +153,7 @@ public class LeakTest extends TestBase {
     // JDK-8176729
     @Test public void testDOMNodeDisposeCount() throws InterruptedException {
         int count = 7;
-        Reference<?>[] willGC = new Reference[count];
+        WeakReference<?>[] willGC = new WeakReference[count];
         final String html =
                 "<html>\n" +
                 "<head></head>\n" +
@@ -202,17 +177,17 @@ public class LeakTest extends TestBase {
             assertNotNull("Document should not be null", doc);
 
             NodeList tagList = doc.getElementsByTagName("html");
-            Element element = (Element) tagList.item(0);;
+            Element element = (Element) tagList.item(0);
             willGC[0] = new WeakReference<>(element);
             assertEquals("Expected NodeImpl(tag:html) HashCount", initialHashCount+1, NodeImplShim.test_getHashCount());
 
             tagList = doc.getElementsByTagName("head");
-            element = (Element) tagList.item(0);;
+            element = (Element) tagList.item(0);
             willGC[1] = new WeakReference<>(element);
             assertEquals("Expected NodeImpl(tag:head) HashCount", initialHashCount+2, NodeImplShim.test_getHashCount());
 
             tagList = doc.getElementsByTagName("body");
-            element = (Element) tagList.item(0);;
+            element = (Element) tagList.item(0);
             willGC[2] = new WeakReference<>(element);
             assertEquals("Expected NodeImpl(tag:body) HashCount", initialHashCount+3, NodeImplShim.test_getHashCount());
 
@@ -237,20 +212,6 @@ public class LeakTest extends TestBase {
             assertEquals("Expected NodeImpl(tag:br) HashCount", initialHashCount+7, NodeImplShim.test_getHashCount());
         });
 
-        Thread.sleep(SLEEP_TIME);
-
-        for (int i = 0; i < 5; i++) {
-            System.gc();
-
-            if (isAllElementsNull(willGC)) {
-                break;
-            }
-
-            Thread.sleep(SLEEP_TIME);
-        }
-
-        // Give disposer a chance to run
-        Thread.sleep(SLEEP_TIME);
-        assertEquals("NodeImpl HashCount after dispose", initialHashCount, NodeImplShim.test_getHashCount());
+        JMemoryBuddy.assertCollectable(willGC);
     }
 }

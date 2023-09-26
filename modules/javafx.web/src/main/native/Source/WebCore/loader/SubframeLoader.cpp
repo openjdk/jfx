@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
@@ -61,6 +61,16 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
+static bool canLoadJavaScriptURL(HTMLFrameOwnerElement& ownerElement, const URL& url)
+{
+    ASSERT(url.protocolIsJavaScript());
+    if (!ownerElement.document().contentSecurityPolicy()->allowJavaScriptURLs(aboutBlankURL().string(), { }, url.string(), &ownerElement))
+        return false;
+    if (!ownerElement.canLoadScriptURL(url))
+        return false;
+    return true;
+}
+
 FrameLoader::SubframeLoader::SubframeLoader(Frame& frame)
     : m_frame(frame)
 {
@@ -71,43 +81,31 @@ void FrameLoader::SubframeLoader::clear()
     m_containsPlugins = false;
 }
 
+void FrameLoader::SubframeLoader::createFrameIfNecessary(HTMLFrameOwnerElement& ownerElement, const AtomString& frameName)
+{
+    if (ownerElement.contentFrame())
+        return;
+    m_frame.loader().client().createFrame(frameName, ownerElement);
+    if (!ownerElement.contentFrame())
+        return;
+
+    if (auto* contentDocument = downcast<LocalFrame>(ownerElement.contentFrame())->document())
+        contentDocument->setReferrerPolicy(ownerElement.referrerPolicy());
+}
+
 bool FrameLoader::SubframeLoader::requestFrame(HTMLFrameOwnerElement& ownerElement, const String& urlString, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
 {
     // Support for <frame src="javascript:string">
-    URL scriptURL;
-    URL url;
-    if (WTF::protocolIsJavaScript(urlString)) {
-        scriptURL = completeURL(urlString); // completeURL() encodes the URL.
-        url = aboutBlankURL();
-    } else
-        url = completeURL(urlString);
+    URL url = completeURL(urlString);
 
     if (shouldConvertInvalidURLsToBlank() && !url.isValid())
         url = aboutBlankURL();
 
-    // If we will schedule a JavaScript URL load, we need to delay the firing of the load event at least until we've run the JavaScript in the URL.
-    CompletionHandlerCallingScope stopDelayingLoadEvent;
-    if (!scriptURL.isEmpty()) {
-        ownerElement.document().incrementLoadEventDelayCount();
-        stopDelayingLoadEvent = CompletionHandlerCallingScope([ownerDocument = makeRef(ownerElement.document())] {
-            ownerDocument->decrementLoadEventDelayCount();
-        });
-    }
+    // Check the CSP of the embedder to determine if we allow execution of javascript: URLs via child frame navigation.
+    if (url.protocolIsJavaScript() && !canLoadJavaScriptURL(ownerElement, url))
+        url = aboutBlankURL();
 
-    Frame* frame = loadOrRedirectSubframe(ownerElement, url, frameName, lockHistory, lockBackForwardList);
-    if (!frame)
-        return false;
-
-    if (!scriptURL.isEmpty() && ownerElement.canLoadScriptURL(scriptURL)) {
-        // FIXME: Some sites rely on the javascript:'' loading synchronously, which is why we have this special case.
-        // Blink has the same workaround (https://bugs.chromium.org/p/chromium/issues/detail?id=923585).
-        if (urlString == "javascript:''" || urlString == "javascript:\"\"")
-            frame->script().executeJavaScriptURL(scriptURL);
-        else
-            frame->navigationScheduler().scheduleLocationChange(ownerElement.document(), ownerElement.document().securityOrigin(), scriptURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList, stopDelayingLoadEvent.release());
-    }
-
-    return true;
+    return loadOrRedirectSubframe(ownerElement, url, frameName, lockHistory, lockBackForwardList);
 }
 
 bool FrameLoader::SubframeLoader::resourceWillUsePlugin(const String& url, const String& mimeType)
@@ -120,17 +118,9 @@ bool FrameLoader::SubframeLoader::resourceWillUsePlugin(const String& url, const
     return shouldUsePlugin(completedURL, mimeType, false, useFallback);
 }
 
-bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url, const String& mimeType)
+bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url)
 {
     auto* document = m_frame.document();
-
-    if (MIMETypeRegistry::isJavaAppletMIMEType(mimeType)) {
-        if (!m_frame.settings().isJavaEnabled())
-            return false;
-        if (document && document->securityOrigin().isLocal() && !m_frame.settings().isJavaEnabledForLocalFiles())
-            return false;
-    }
-
     if (document) {
         if (document->isSandboxed(SandboxPlugins))
             return false;
@@ -145,7 +135,7 @@ bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url, const String&
             return false;
         }
 
-        if (!MixedContentChecker::canRunInsecureContent(m_frame, document->securityOrigin(), url))
+        if (!MixedContentChecker::frameAndAncestorsCanRunInsecureContent(m_frame, document->securityOrigin(), url))
             return false;
     }
 
@@ -171,7 +161,7 @@ static String findPluginMIMETypeFromURL(Page& page, const URL& url)
     return { };
 }
 
-bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInImageElement& ownerElement, const URL& url, const String& explicitMIMEType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback)
+bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInImageElement& ownerElement, const URL& url, const String& explicitMIMEType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, bool useFallback)
 {
     String mimeType = explicitMIMEType;
     if (mimeType.isEmpty()) {
@@ -185,7 +175,7 @@ bool FrameLoader::SubframeLoader::requestPlugin(HTMLPlugInImageElement& ownerEle
     if (!(m_frame.arePluginsEnabled() || MIMETypeRegistry::isApplicationPluginMIMEType(mimeType)))
         return false;
 
-    if (!pluginIsLoadable(url, explicitMIMEType))
+    if (!pluginIsLoadable(url))
         return false;
 
     ASSERT(ownerElement.hasTagName(objectTag) || ownerElement.hasTagName(embedTag));
@@ -210,7 +200,7 @@ static void logPluginRequest(Page* page, const String& mimeType, const URL& url)
     page->sawPlugin(description);
 }
 
-bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInImageElement& ownerElement, const String& url, const AtomString& frameName, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
+bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInImageElement& ownerElement, const String& url, const AtomString& frameName, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
 {
     if (url.isEmpty() && mimeType.isEmpty())
         return false;
@@ -222,6 +212,10 @@ bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInImageElement& ownerEle
         completedURL = completeURL(url);
 
     document.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(completedURL, ContentSecurityPolicy::InsecureRequestType::Load);
+
+    // Historically, we haven't run javascript URLs in <embed> / <object> elements.
+    if (completedURL.protocolIsJavaScript())
+        return false;
 
     bool hasFallbackContent = is<HTMLObjectElement>(ownerElement) && downcast<HTMLObjectElement>(ownerElement).hasFallbackContent();
 
@@ -245,23 +239,30 @@ Frame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement
     URL upgradedRequestURL = requestURL;
     initiatingDocument.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(upgradedRequestURL, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    RefPtr<Frame> frame = makeRefPtr(ownerElement.contentFrame());
-    if (frame)
-        frame->navigationScheduler().scheduleLocationChange(initiatingDocument, initiatingDocument.securityOrigin(), upgradedRequestURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList);
-    else
+    RefPtr frame = dynamicDowncast<LocalFrame>(ownerElement.contentFrame());
+    if (frame) {
+        CompletionHandler<void()> stopDelayingLoadEvent = [] { };
+        if (upgradedRequestURL.protocolIsJavaScript()) {
+            ownerElement.document().incrementLoadEventDelayCount();
+            stopDelayingLoadEvent = [ownerDocument = Ref { ownerElement.document() }] {
+                ownerDocument->decrementLoadEventDelayCount();
+            };
+        }
+        frame->navigationScheduler().scheduleLocationChange(initiatingDocument, initiatingDocument.securityOrigin(), upgradedRequestURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList, WTFMove(stopDelayingLoadEvent));
+    } else
         frame = loadSubframe(ownerElement, upgradedRequestURL, frameName, m_frame.loader().outgoingReferrer());
 
     if (!frame)
         return nullptr;
 
     ASSERT(ownerElement.contentFrame() == frame || !ownerElement.contentFrame());
-    return ownerElement.contentFrame();
+    return dynamicDowncast<LocalFrame>(ownerElement.contentFrame());
 }
 
-RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const String& name, const String& referrer)
+RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const AtomString& name, const String& referrer)
 {
-    Ref<Frame> protect(m_frame);
-    auto document = makeRef(ownerElement.document());
+    Ref protectedFrame { m_frame };
+    Ref document = ownerElement.document();
 
     if (!document->securityOrigin().canDisplay(url)) {
         FrameLoader::reportLocalLoadFailed(&m_frame, url.string());
@@ -277,6 +278,9 @@ RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& o
         return nullptr;
 
     if (!m_frame.page() || m_frame.page()->subframeCount() >= Page::maxNumberOfFrames)
+        return nullptr;
+
+    if (m_frame.tree().depth() >= Page::maxFrameDepth)
         return nullptr;
 
     // Prevent initial empty document load from triggering load events.
@@ -351,7 +355,7 @@ bool FrameLoader::SubframeLoader::shouldUsePlugin(const URL& url, const String& 
     return objectType == ObjectContentType::None || objectType == ObjectContentType::PlugIn;
 }
 
-bool FrameLoader::SubframeLoader::loadPlugin(HTMLPlugInImageElement& pluginElement, const URL& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues, bool useFallback)
+bool FrameLoader::SubframeLoader::loadPlugin(HTMLPlugInImageElement& pluginElement, const URL& url, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, bool useFallback)
 {
     if (useFallback)
         return false;
@@ -372,7 +376,7 @@ bool FrameLoader::SubframeLoader::loadPlugin(HTMLPlugInImageElement& pluginEleme
         loadManually = false;
 #endif
 
-    auto weakRenderer = makeWeakPtr(*renderer);
+    WeakPtr weakRenderer { *renderer };
 
     auto widget = m_frame.loader().client().createPlugin(contentSize, pluginElement, url, paramNames, paramValues, mimeType, loadManually);
 

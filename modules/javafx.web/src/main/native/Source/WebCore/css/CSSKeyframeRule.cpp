@@ -28,8 +28,10 @@
 
 #include "CSSKeyframesRule.h"
 #include "CSSParser.h"
+#include "MutableStyleProperties.h"
 #include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -61,7 +63,7 @@ StyleRuleKeyframe::~StyleRuleKeyframe() = default;
 
 MutableStyleProperties& StyleRuleKeyframe::mutableProperties()
 {
-    if (!is<MutableStyleProperties>(m_properties.get()))
+    if (!is<MutableStyleProperties>(m_properties))
         m_properties = m_properties->mutableCopy();
     return downcast<MutableStyleProperties>(m_properties.get());
 }

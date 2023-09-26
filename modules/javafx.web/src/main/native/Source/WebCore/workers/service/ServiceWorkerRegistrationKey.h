@@ -28,9 +28,12 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "SecurityOriginData.h"
+#include <wtf/Hasher.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
+
+class RegistrableDomain;
 
 class ServiceWorkerRegistrationKey {
 public:
@@ -38,7 +41,6 @@ public:
     WEBCORE_EXPORT ServiceWorkerRegistrationKey(SecurityOriginData&& topOrigin, URL&& scope);
 
     static ServiceWorkerRegistrationKey emptyKey();
-    unsigned hash() const;
 
     bool operator==(const ServiceWorkerRegistrationKey&) const;
     bool operator!=(const ServiceWorkerRegistrationKey& key) const { return !(*this == key); }
@@ -48,18 +50,20 @@ public:
     size_t scopeLength() const { return m_scope.string().length(); }
 
     const SecurityOriginData& topOrigin() const { return m_topOrigin; }
+    WEBCORE_EXPORT RegistrableDomain firstPartyForCookies() const;
     const URL& scope() const { return m_scope; }
     void setScope(URL&& scope) { m_scope = WTFMove(scope); }
 
     bool relatesToOrigin(const SecurityOriginData&) const;
 
-    ServiceWorkerRegistrationKey isolatedCopy() const;
+    ServiceWorkerRegistrationKey isolatedCopy() const &;
+    ServiceWorkerRegistrationKey isolatedCopy() &&;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<ServiceWorkerRegistrationKey> decode(Decoder&);
 
     String toDatabaseKey() const;
-    static std::optional<ServiceWorkerRegistrationKey> fromDatabaseKey(const String&);
+    WEBCORE_EXPORT static std::optional<ServiceWorkerRegistrationKey> fromDatabaseKey(const String&);
 
 #if !LOG_DISABLED
     String loggingString() const;
@@ -75,7 +79,7 @@ private:
 template<class Encoder>
 void ServiceWorkerRegistrationKey::encode(Encoder& encoder) const
 {
-    RELEASE_ASSERT(!m_topOrigin.isEmpty());
+    RELEASE_ASSERT(!m_topOrigin.isNull());
     RELEASE_ASSERT(!m_scope.isNull());
     encoder << m_topOrigin << m_scope;
 }
@@ -95,12 +99,17 @@ std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::decode
     return ServiceWorkerRegistrationKey { WTFMove(*topOrigin), WTFMove(scope) };
 }
 
+inline void add(Hasher& hasher, const ServiceWorkerRegistrationKey& key)
+{
+    add(hasher, key.topOrigin(), key.scope());
+}
+
 } // namespace WebCore
 
 namespace WTF {
 
 struct ServiceWorkerRegistrationKeyHash {
-    static unsigned hash(const WebCore::ServiceWorkerRegistrationKey& key) { return key.hash(); }
+    static unsigned hash(const WebCore::ServiceWorkerRegistrationKey& key) { return computeHash(key); }
     static bool equal(const WebCore::ServiceWorkerRegistrationKey& a, const WebCore::ServiceWorkerRegistrationKey& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = false;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.com.sun.javafx.test;
 
-import java.util.Iterator;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -128,10 +127,10 @@ public abstract class CssMethodsTestBase {
 
     public static class Configuration {
         private static final StyleConverter<String, Object> TEST_TYPE =
-                new StyleConverter<String, Object>();
+                new StyleConverter<>();
 
         private static final CssMetaData<Node, Object> UNDEFINED_KEY =
-                new CssMetaData<Node,Object>("U-N-D-E-F-I-N-E-D", TEST_TYPE, "") {
+                new CssMetaData<>("U-N-D-E-F-I-N-E-D", TEST_TYPE, "") {
 
             @Override
             public boolean isSettable(Node n) {

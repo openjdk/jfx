@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2009 Torch Mobile, Inc.
  *
  *  This library is free software; you can redistribute it and/or
@@ -47,9 +47,9 @@ public:
     static constexpr bool needsDestruction = true;
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.regExpSpace;
+        return &vm.regExpSpace();
     }
 
     JS_EXPORT_PRIVATE static RegExp* create(VM&, const String& pattern, OptionSet<Yarr::Flags>);
@@ -104,11 +104,11 @@ public:
         return m_rareData->m_captureGroupNames[i];
     }
 
-    unsigned subpatternForName(String groupName)
+    unsigned subpatternForName(StringView groupName)
     {
         if (!m_rareData)
             return 0;
-        auto it = m_rareData->m_namedGroupToParenIndex.find(groupName);
+        auto it = m_rareData->m_namedGroupToParenIndex.find<StringViewHashTranslator>(groupName);
         if (it == m_rareData->m_namedGroupToParenIndex.end())
             return 0;
         return it->value;
@@ -141,6 +141,16 @@ public:
 
     String toSourceString() const;
 
+#if ENABLE(YARR_JIT)
+    Yarr::YarrCodeBlock* getRegExpJITCodeBlock()
+    {
+        if (m_state != JITCode)
+            return nullptr;
+
+        return m_regExpJITCode.get();
+    }
+#endif
+
 private:
     friend class RegExpCache;
     RegExp(VM&, const String&, OptionSet<Yarr::Flags>);
@@ -157,11 +167,11 @@ private:
 
     void byteCodeCompileIfNecessary(VM*);
 
-    void compile(VM*, Yarr::CharSize);
-    void compileIfNecessary(VM&, Yarr::CharSize);
+    void compile(VM*, Yarr::CharSize, std::optional<StringView> sampleString);
+    void compileIfNecessary(VM&, Yarr::CharSize, std::optional<StringView> sampleString);
 
-    void compileMatchOnly(VM*, Yarr::CharSize);
-    void compileIfNecessaryMatchOnly(VM&, Yarr::CharSize);
+    void compileMatchOnly(VM*, Yarr::CharSize, std::optional<StringView> sampleString);
+    void compileIfNecessaryMatchOnly(VM&, Yarr::CharSize, std::optional<StringView> sampleString);
 
 #if ENABLE(YARR_JIT_DEBUG)
     void matchCompareWithInterpreter(const String&, int startOffset, int* offsetVector, int jitResult);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -685,9 +685,9 @@ public class Stage extends Window {
      *
      * @defaultValue empty
      */
-    private ObservableList<Image> icons = new VetoableListDecorator<Image>(new TrackableObservableList<Image>() {
+    private ObservableList<Image> icons = new VetoableListDecorator<>(new TrackableObservableList<Image>() {
         @Override protected void onChanged(Change<Image> c) {
-            List<Object> platformImages = new ArrayList<Object>();
+            List<Object> platformImages = new ArrayList<>();
             for (Image icon : icons) {
                 platformImages.add(Toolkit.getImageAccessor().getPlatformImage(icon));
             }
@@ -1187,7 +1187,11 @@ public class Stage extends Window {
             peer.setMaximized(isMaximized());
             peer.setTitle(getTitle());
 
-            List<Object> platformImages = new ArrayList<Object>();
+            if (!isIconified()) {
+                peer.requestFocus();
+            }
+
+            List<Object> platformImages = new ArrayList<>();
             for (Image icon : icons) {
                 platformImages.add(Toolkit.getImageAccessor().getPlatformImage(icon));
             }
@@ -1265,7 +1269,7 @@ public class Stage extends Window {
 
 
     private final ObjectProperty<KeyCombination> fullScreenExitCombination =
-            new SimpleObjectProperty<KeyCombination>(this, "fullScreenExitCombination", null);
+            new SimpleObjectProperty<>(this, "fullScreenExitCombination", null);
 
     /**
      * Specifies the KeyCombination that will allow the user to exit full screen
@@ -1323,7 +1327,7 @@ public class Stage extends Window {
      * @since JavaFX 8.0
      */
     private final ObjectProperty<String> fullScreenExitHint =
-            new SimpleObjectProperty<String>(this, "fullScreenExitHint", null);
+            new SimpleObjectProperty<>(this, "fullScreenExitHint", null);
 
     public final void setFullScreenExitHint(String value) {
         fullScreenExitHint.set(value);

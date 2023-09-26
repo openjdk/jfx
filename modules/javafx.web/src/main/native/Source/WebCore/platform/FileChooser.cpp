@@ -31,13 +31,13 @@
 
 namespace WebCore {
 
-FileChooser::FileChooser(FileChooserClient* client, const FileChooserSettings& settings)
-    : m_client(client)
+FileChooser::FileChooser(FileChooserClient& client, const FileChooserSettings& settings)
+    : m_client(&client)
     , m_settings(settings)
 {
 }
 
-Ref<FileChooser> FileChooser::create(FileChooserClient* client, const FileChooserSettings& settings)
+Ref<FileChooser> FileChooser::create(FileChooserClient& client, const FileChooserSettings& settings)
 {
     return adoptRef(*new FileChooser(client, settings));
 }
@@ -53,57 +53,46 @@ void FileChooser::invalidate()
 
 void FileChooser::chooseFile(const String& filename)
 {
-    Vector<String> filenames;
-    filenames.append(filename);
-    chooseFiles(filenames);
+    chooseFiles({ filename });
 }
 
 void FileChooser::chooseFiles(const Vector<String>& filenames, const Vector<String>& replacementNames)
 {
-    // FIXME: This is inelegant. We should not be looking at settings here.
-    if (m_settings.selectedFiles == filenames)
-        return;
-
     if (!m_client)
         return;
 
     Vector<FileChooserFileInfo> files;
+    files.reserveInitialCapacity(filenames.size());
     for (size_t i = 0, size = filenames.size(); i < size; ++i)
-        files.append({ filenames[i], i < replacementNames.size() ? replacementNames[i] : nullString(), { } });
-    m_client->filesChosen(files);
+        files.uncheckedAppend({ filenames[i], i < replacementNames.size() ? replacementNames[i] : nullString(), { } });
+    m_client->filesChosen(WTFMove(files));
+}
+
+void FileChooser::cancelFileChoosing()
+{
+    if (!m_client)
+        return;
+
+    m_client->fileChoosingCancelled();
 }
 
 #if PLATFORM(IOS_FAMILY)
 
-// FIXME: This function is almost identical to FileChooser::chooseFiles(). We should merge this function
-// with FileChooser::chooseFiles() and hence remove the PLATFORM(IOS_FAMILY)-guard.
 void FileChooser::chooseMediaFiles(const Vector<String>& filenames, const String& displayString, Icon* icon)
 {
-    // FIXME: This is inelegant. We should not be looking at settings here.
-    if (m_settings.selectedFiles == filenames)
-        return;
-
     if (!m_client)
         return;
 
-    Vector<FileChooserFileInfo> files;
-    for (auto& filename : filenames)
-        files.append({ filename, { }, { } });
-    m_client->filesChosen(files, displayString, icon);
+    auto files = filenames.map([](auto& filename) {
+        return FileChooserFileInfo { filename, { }, { } };
+    });
+    m_client->filesChosen(WTFMove(files), displayString, icon);
 }
 
 #endif
 
 void FileChooser::chooseFiles(const Vector<FileChooserFileInfo>& files)
 {
-    Vector<String> paths;
-    for (auto& file : files)
-        paths.append(file.path);
-
-    // FIXME: This is inelegant. We should not be looking at settings here.
-    if (m_settings.selectedFiles == paths)
-        return;
-
     if (m_client)
         m_client->filesChosen(files);
 }

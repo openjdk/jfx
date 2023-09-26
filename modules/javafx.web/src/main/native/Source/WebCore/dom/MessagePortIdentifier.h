@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "PortIdentifier.h"
 #include "ProcessIdentifier.h"
 #include <wtf/Hasher.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -33,49 +34,21 @@ namespace WebCore {
 
 struct MessagePortIdentifier {
     ProcessIdentifier processIdentifier;
-    enum PortIdentifierType { };
-    ObjectIdentifier<PortIdentifierType> portIdentifier;
-
-    unsigned hash() const;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<MessagePortIdentifier> decode(Decoder&);
+    PortIdentifier portIdentifier;
 
 #if !LOG_DISABLED
     String logString() const;
 #endif
 };
 
+inline void add(Hasher& hasher, const MessagePortIdentifier& identifier)
+{
+    add(hasher, identifier.processIdentifier, identifier.portIdentifier);
+}
+
 inline bool operator==(const MessagePortIdentifier& a, const MessagePortIdentifier& b)
 {
     return a.processIdentifier == b.processIdentifier &&  a.portIdentifier == b.portIdentifier;
-}
-
-template<class Encoder>
-void MessagePortIdentifier::encode(Encoder& encoder) const
-{
-    encoder << processIdentifier << portIdentifier;
-}
-
-template<class Decoder>
-std::optional<MessagePortIdentifier> MessagePortIdentifier::decode(Decoder& decoder)
-{
-    std::optional<ProcessIdentifier> processIdentifier;
-    decoder >> processIdentifier;
-    if (!processIdentifier)
-        return std::nullopt;
-
-    std::optional<ObjectIdentifier<PortIdentifierType>> portIdentifier;
-    decoder >> portIdentifier;
-    if (!portIdentifier)
-        return std::nullopt;
-
-    return { { WTFMove(*processIdentifier), WTFMove(*portIdentifier) } };
-}
-
-inline unsigned MessagePortIdentifier::hash() const
-{
-    return computeHash(processIdentifier.toUInt64(), portIdentifier.toUInt64());
 }
 
 #if !LOG_DISABLED
@@ -92,7 +65,7 @@ inline String MessagePortIdentifier::logString() const
 namespace WTF {
 
 struct MessagePortIdentifierHash {
-    static unsigned hash(const WebCore::MessagePortIdentifier& key) { return key.hash(); }
+    static unsigned hash(const WebCore::MessagePortIdentifier& key) { return computeHash(key); }
     static bool equal(const WebCore::MessagePortIdentifier& a, const WebCore::MessagePortIdentifier& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = true;
 };

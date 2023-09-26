@@ -16,6 +16,11 @@
             "description": "Unique shader program identifier."
         },
         {
+            "id": "ColorSpace",
+            "type": "string",
+            "enum": ["srgb", "display-p3"]
+        },
+        {
             "id": "ContextType",
             "type": "string",
             "enum": ["canvas-2d", "bitmaprenderer", "webgl", "webgl2"],
@@ -39,6 +44,8 @@
             "description": "Drawing surface attributes.",
             "properties": [
                 { "name": "alpha", "type": "boolean", "optional": true, "description": "WebGL, WebGL2, ImageBitmapRenderingContext" },
+                { "name": "colorSpace", "$ref": "ColorSpace", "optional": true, "description": "2D" },
+                { "name": "desynchronized", "type": "boolean", "optional": true, "description": "2D" },
                 { "name": "depth", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
                 { "name": "stencil", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
                 { "name": "antialias", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
@@ -59,7 +66,7 @@
                 { "name": "cssCanvasName", "type": "string", "optional": true, "description": "The CSS canvas identifier, for canvases created with <code>document.getCSSCanvasContext</code>." },
                 { "name": "contextAttributes", "$ref": "ContextAttributes", "optional": true, "description": "Context attributes for rendering contexts." },
                 { "name": "memoryCost", "type": "number", "optional": true, "description": "Memory usage of the canvas in bytes." },
-                { "name": "backtrace", "type": "array", "items": { "$ref": "Console.CallFrame" }, "optional": true, "description": "Backtrace that was captured when this canvas context was created." }
+                { "name": "stackTrace", "$ref": "Console.StackTrace", "optional": true, "description": "Backtrace that was captured when this canvas context was created." }
             ]
         },
         {

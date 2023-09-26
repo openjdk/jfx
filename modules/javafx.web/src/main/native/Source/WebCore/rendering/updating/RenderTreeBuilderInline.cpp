@@ -26,14 +26,13 @@
 #include "config.h"
 #include "RenderTreeBuilderInline.h"
 
-#include "FullscreenManager.h"
 #include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
-#include "RenderFullScreen.h"
 #include "RenderInline.h"
 #include "RenderTable.h"
 #include "RenderTreeBuilderMultiColumn.h"
 #include "RenderTreeBuilderTable.h"
+#include <wtf/SetForScope.h>
 
 namespace WebCore {
 
@@ -50,7 +49,7 @@ static bool canUseAsParentForContinuation(const RenderObject* renderer)
 
 static RenderBoxModelObject* nextContinuation(RenderObject* renderer)
 {
-    if (is<RenderInline>(*renderer) && !renderer->isReplaced())
+    if (is<RenderInline>(*renderer) && !renderer->isReplacedOrInlineBlock())
         return downcast<RenderInline>(*renderer).continuation();
     return downcast<RenderBlock>(*renderer).inlineContinuation();
 }
@@ -172,7 +171,7 @@ void RenderTreeBuilder::Inline::attachIgnoringContinuation(RenderInline& parent,
         // inline into continuations. This involves creating an anonymous block box to hold
         // |newChild|. We then make that block box a continuation of this inline. We take all of
         // the children after |beforeChild| and put them in a clone of this object.
-        auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent.style(), DisplayType::Block);
+        auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent.containingBlock() ? parent.containingBlock()->style() : parent.style(), DisplayType::Block);
 
         // If inside an inline affected by in-flow positioning the block needs to be affected by it too.
         // Giving the block a layer like this allows it to collect the x/y offsets from inline parents later.
@@ -266,18 +265,10 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
 
 void RenderTreeBuilder::Inline::splitInlines(RenderInline& parent, RenderBlock* fromBlock, RenderBlock* toBlock, RenderBlock* middleBlock, RenderObject* beforeChild, RenderBoxModelObject* oldCont)
 {
+    auto internalMoveScope = SetForScope { m_builder.m_internalMovesType, RenderObject::IsInternalMove::Yes };
     // Create a clone of this inline.
     RenderPtr<RenderInline> cloneInline = cloneAsContinuation(parent);
-#if ENABLE(FULLSCREEN_API)
-    // If we're splitting the inline containing the fullscreened element,
-    // |beforeChild| may be the renderer for the fullscreened element. However,
-    // that renderer is wrapped in a RenderFullScreen, so |this| is not its
-    // parent. Since the splitting logic expects |this| to be the parent, set
-    // |beforeChild| to be the RenderFullScreen.
-    const Element* fullScreenElement = parent.document().fullscreenManager().currentFullscreenElement();
-    if (fullScreenElement && beforeChild && beforeChild->node() == fullScreenElement)
-        beforeChild = parent.document().fullscreenManager().fullscreenRenderer();
-#endif
+
     // Now take all of the children from beforeChild to the end and remove
     // them from |this| and place them in the clone.
     for (RenderObject* rendererToMove = beforeChild; rendererToMove;) {

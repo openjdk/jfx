@@ -29,6 +29,7 @@
 #include "Editing.h"
 #include "ElementAncestorIterator.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameSelection.h"
 #include "HTMLElement.h"
 #include "HTMLOListElement.h"
@@ -62,7 +63,7 @@ static std::optional<std::pair<ChangeListTypeCommand::Type, Ref<HTMLElement>>> l
 
 std::optional<ChangeListTypeCommand::Type> ChangeListTypeCommand::listConversionType(Document& document)
 {
-    if (auto frame = makeRefPtr(document.frame())) {
+    if (RefPtr frame = document.frame()) {
         if (auto typeAndElement = listConversionTypeForSelection(frame->selection().selection()))
             return typeAndElement->first;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "AppHighlight.h"
 #include "AppHighlightRangeData.h"
+#include "EventTarget.h"
 #include <wtf/Forward.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/OptionSet.h>
@@ -39,7 +40,7 @@ namespace WebCore {
 #if ENABLE(APP_HIGHLIGHTS)
 
 class Document;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 class StaticRange;
 class Highlight;
 
@@ -54,7 +55,7 @@ public:
     ~AppHighlightStorage();
 
     WEBCORE_EXPORT void storeAppHighlight(Ref<StaticRange>&&);
-    WEBCORE_EXPORT void restoreAndScrollToAppHighlight(Ref<SharedBuffer>&&, ScrollToHighlight);
+    WEBCORE_EXPORT void restoreAndScrollToAppHighlight(Ref<FragmentedSharedBuffer>&&, ScrollToHighlight);
     void restoreUnrestoredAppHighlights();
     MonotonicTime lastRangeSearchTime() const { return m_timeAtLastRangeSearch; }
     void resetLastRangeSearchTime() { m_timeAtLastRangeSearch = MonotonicTime::now(); }
@@ -63,7 +64,7 @@ public:
 private:
     bool attemptToRestoreHighlightAndScroll(AppHighlightRangeData&, ScrollToHighlight);
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     MonotonicTime m_timeAtLastRangeSearch;
     Vector<AppHighlightRangeData> m_unrestoredHighlights;
     std::optional<AppHighlightRangeData> m_unrestoredScrollHighlight;

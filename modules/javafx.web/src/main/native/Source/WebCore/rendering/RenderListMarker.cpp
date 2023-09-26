@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  * Copyright (C) 2010 Daniel Bates (dbates@intudata.com)
  *
@@ -25,6 +25,7 @@
 #include "config.h"
 #include "RenderListMarker.h"
 
+#include "CSSCounterStyleRegistry.h"
 #include "Document.h"
 #include "FontCascade.h"
 #include "GraphicsContext.h"
@@ -34,6 +35,7 @@
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderView.h"
+#include "StyleScope.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -302,6 +304,8 @@ static ListStyleType effectiveListMarkerType(ListStyleType type, int value)
 {
     // Note, the following switch statement has been explicitly grouped by list-style-type ordinal range.
     switch (type) {
+    // FIXME: handle counter-style: rdar://102988393.
+    case ListStyleType::CustomCounterStyle:
     case ListStyleType::ArabicIndic:
     case ListStyleType::Bengali:
     case ListStyleType::Binary:
@@ -418,6 +422,9 @@ static ListStyleType effectiveListMarkerType(ListStyleType type, int value)
 static StringView listMarkerSuffix(ListStyleType type)
 {
     switch (type) {
+    // FIXME: handle counter-style: rdar://102988393.
+    case ListStyleType::CustomCounterStyle:
+        return { };
     case ListStyleType::Asterisks:
     case ListStyleType::Circle:
     case ListStyleType::Disc:
@@ -499,7 +506,7 @@ static StringView listMarkerSuffix(ListStyleType type)
     case ListStyleType::UpperNorwegian:
     case ListStyleType::UpperRoman:
     case ListStyleType::Urdu:
-        return ". ";
+        return ". "_s;
     case ListStyleType::CJKDecimal:
     case ListStyleType::CJKEarthlyBranch:
     case ListStyleType::CJKHeavenlyStem:
@@ -516,21 +523,21 @@ static StringView listMarkerSuffix(ListStyleType type)
     case ListStyleType::TraditionalChineseInformal:
         return { &ideographicComma, 1 };
     case ListStyleType::EthiopicNumeric:
-        return "/ ";
+        return "/ "_s;
     case ListStyleType::KoreanHangulFormal:
     case ListStyleType::KoreanHanjaInformal:
     case ListStyleType::KoreanHanjaFormal:
-        return ", ";
+        return ", "_s;
     case ListStyleType::String:
         ASSERT_NOT_REACHED();
         break;
     }
 
     ASSERT_NOT_REACHED();
-    return ". ";
+    return ". "_s;
 }
 
-String listMarkerText(ListStyleType type, int value)
+String listMarkerText(ListStyleType type, int value, CSSCounterStyle* counterStyle)
 {
     switch (effectiveListMarkerType(type, value)) {
     case ListStyleType::None:
@@ -560,6 +567,11 @@ String listMarkerText(ListStyleType type, int value)
     case ListStyleType::DisclosureOpen:
         return { &blackDownPointingSmallTriangle, 1 };
 
+    // FIXME: handle counter-style: rdar://102988393.
+    case ListStyleType::CustomCounterStyle:
+        if (!counterStyle)
+            return String::number(value);
+        return counterStyle->text(value);
     case ListStyleType::Decimal:
         return String::number(value);
 
@@ -1465,11 +1477,10 @@ String listMarkerText(ListStyleType type, int value)
 
 RenderListMarker::RenderListMarker(RenderListItem& listItem, RenderStyle&& style)
     : RenderBox(listItem.document(), WTFMove(style), 0)
-    , m_listItem(makeWeakPtr(listItem))
+    , m_listItem(listItem)
 {
-    // init RenderObject attributes
-    setInline(true);   // our object is Inline
-    setReplaced(true); // pretend to be replaced
+    setInline(true);
+    setReplacedOrInlineBlock(true); // pretend to be replaced
 }
 
 RenderListMarker::~RenderListMarker()
@@ -1563,13 +1574,13 @@ auto RenderListMarker::textRun() const -> TextRunWithUnderlyingString
             if (style().listStyleType() == ListStyleType::DisclosureClosed)
                 textForRun = { &blackLeftPointingSmallTriangle, 1 };
             else
-                textForRun = makeString(reversed(m_textWithSuffix.substring(m_textWithoutSuffixLength)), m_textWithSuffix.left(m_textWithoutSuffixLength));
+                textForRun = makeString(reversed(StringView(m_textWithSuffix).substring(m_textWithoutSuffixLength)), m_textWithSuffix.left(m_textWithoutSuffixLength));
         }
     } else {
         if (!style().isLeftToRightDirection())
             textForRun = reversed(m_textWithSuffix);
         else
-            textForRun = makeString(reversed(m_textWithSuffix.left(m_textWithoutSuffixLength)), m_textWithSuffix.substring(m_textWithoutSuffixLength));
+            textForRun = makeString(reversed(StringView(m_textWithSuffix).left(m_textWithoutSuffixLength)), m_textWithSuffix.substring(m_textWithoutSuffixLength));
     }
     auto textRun = RenderBlock::constructTextRun(textForRun, style());
     return { WTFMove(textRun), WTFMove(textForRun) };
@@ -1617,20 +1628,19 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
 
     auto color = style().visitedDependentColorWithColorFilter(CSSPropertyColor);
     context.setStrokeColor(color);
-    context.setStrokeStyle(SolidStroke);
+    context.setStrokeStyle(StrokeStyle::SolidStroke);
     context.setStrokeThickness(1.0f);
     context.setFillColor(color);
 
     switch (style().listStyleType()) {
     case ListStyleType::Disc:
-        context.drawEllipse(markerRect);
+        context.fillEllipse(markerRect);
         return;
     case ListStyleType::Circle:
-        context.setFillColor(Color::transparentBlack);
-        context.drawEllipse(markerRect);
+        context.strokeEllipse(markerRect);
         return;
     case ListStyleType::Square:
-        context.drawRect(markerRect);
+        context.fillRect(markerRect);
         return;
     default:
         break;
@@ -1649,7 +1659,7 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
         context.translate(-markerRect.x(), -markerRect.maxY());
     }
 
-    FloatPoint textOrigin = FloatPoint(markerRect.x(), markerRect.y() + style().fontMetrics().ascent());
+    FloatPoint textOrigin = FloatPoint(markerRect.x(), markerRect.y() + style().metricsOfPrimaryFont().ascent());
     textOrigin = roundPointToDevicePixels(LayoutPoint(textOrigin), document().deviceScaleFactor(), style().isLeftToRightDirection());
     context.drawText(style().fontCascade(), textRun(), textOrigin);
 }
@@ -1770,10 +1780,9 @@ void RenderListMarker::layout()
     LayoutUnit blockOffset;
     for (auto* ancestor = parentBox(*this); ancestor && ancestor != m_listItem.get(); ancestor = parentBox(*ancestor))
         blockOffset += ancestor->logicalTop();
-    if (style().isLeftToRightDirection())
-        m_lineOffsetForListItem = m_listItem->logicalLeftOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
-    else
-        m_lineOffsetForListItem = m_listItem->logicalRightOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
+
+    m_lineLogicalOffsetForListItem = m_listItem->logicalLeftOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
+    m_lineOffsetForListItem = style().isLeftToRightDirection() ? m_lineLogicalOffsetForListItem : m_listItem->logicalRightOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
 
     if (isImage()) {
         updateMarginsAndContent();
@@ -1781,7 +1790,7 @@ void RenderListMarker::layout()
         setHeight(m_image->imageSize(this, style().effectiveZoom()).height());
     } else {
         setLogicalWidth(minPreferredLogicalWidth());
-        setLogicalHeight(style().fontMetrics().height());
+        setLogicalHeight(style().metricsOfPrimaryFont().height());
     }
 
     setMarginStart(0);
@@ -1797,16 +1806,15 @@ void RenderListMarker::layout()
     clearNeedsLayout();
 }
 
-void RenderListMarker::imageChanged(WrappedImagePtr o, const IntRect*)
+void RenderListMarker::imageChanged(WrappedImagePtr o, const IntRect* rect)
 {
-    // A list marker can't have a background or border image, so no need to call the base class method.
-    if (o != m_image->data())
-        return;
-
-    if (width() != m_image->imageSize(this, style().effectiveZoom()).width() || height() != m_image->imageSize(this, style().effectiveZoom()).height() || m_image->errorOccurred())
-        setNeedsLayoutAndPrefWidthsRecalc();
-    else
-        repaint();
+    if (m_image && o == m_image->data()) {
+        if (width() != m_image->imageSize(this, style().effectiveZoom()).width() || height() != m_image->imageSize(this, style().effectiveZoom()).height() || m_image->errorOccurred())
+            setNeedsLayoutAndPrefWidthsRecalc();
+        else
+            repaint();
+    }
+    RenderBox::imageChanged(o, rect);
 }
 
 void RenderListMarker::updateMarginsAndContent()
@@ -1822,7 +1830,7 @@ void RenderListMarker::updateContent()
     if (isImage()) {
         // FIXME: This is a somewhat arbitrary width.  Generated images for markers really won't become particularly useful
         // until we support the CSS3 marker pseudoclass to allow control over the width and height of the marker box.
-        LayoutUnit bulletWidth = style().fontMetrics().ascent() / 2_lu;
+        LayoutUnit bulletWidth = style().metricsOfPrimaryFont().ascent() / 2_lu;
         LayoutSize defaultBulletSize(bulletWidth, bulletWidth);
         LayoutSize imageSize = calculateImageIntrinsicDimensions(m_image.get(), defaultBulletSize, DoNotScaleByEffectiveZoom);
         m_image->setContainerContextForRenderer(*this, imageSize, style().effectiveZoom());
@@ -1834,6 +1842,8 @@ void RenderListMarker::updateContent()
 
     auto type = style().listStyleType();
     switch (type) {
+    // FIXME: handle CSSCounterStyle case rdar://102988393.
+    case ListStyleType::CustomCounterStyle:
     case ListStyleType::String:
         m_textWithSuffix = style().listStyleStringValue();
         m_textWithoutSuffixLength = m_textWithSuffix.length();
@@ -1869,7 +1879,7 @@ void RenderListMarker::computePreferredLogicalWidths()
     case ListStyleType::Circle:
     case ListStyleType::Disc:
     case ListStyleType::Square:
-        logicalWidth = (font.fontMetrics().ascent() * 2 / 3 + 1) / 2 + 2;
+        logicalWidth = (font.metricsOfPrimaryFont().ascent() * 2 / 3 + 1) / 2 + 2;
         break;
     default:
         if (!m_textWithSuffix.isEmpty())
@@ -1887,7 +1897,7 @@ void RenderListMarker::computePreferredLogicalWidths()
 
 void RenderListMarker::updateMargins()
 {
-    const FontMetrics& fontMetrics = style().fontMetrics();
+    const FontMetrics& fontMetrics = style().metricsOfPrimaryFont();
 
     LayoutUnit marginStart;
     LayoutUnit marginEnd;
@@ -1952,6 +1962,11 @@ bool RenderListMarker::isInside() const
     return m_listItem->notInList() || style().listStylePosition() == ListStylePosition::Inside;
 }
 
+const RenderListItem* RenderListMarker::listItem() const
+{
+    return m_listItem.get();
+}
+
 FloatRect RenderListMarker::relativeMarkerRect()
 {
     if (isImage())
@@ -1963,7 +1978,7 @@ FloatRect RenderListMarker::relativeMarkerRect()
     case ListStyleType::Circle:
     case ListStyleType::Square: {
         // FIXME: Are these particular rounding rules necessary?
-        const FontMetrics& fontMetrics = style().fontMetrics();
+        const FontMetrics& fontMetrics = style().metricsOfPrimaryFont();
         int ascent = fontMetrics.ascent();
         int bulletWidth = (ascent * 2 / 3 + 1) / 2;
         relativeRect = FloatRect(1, 3 * (ascent - ascent * 2 / 3) / 2, bulletWidth, bulletWidth);
@@ -1973,7 +1988,7 @@ FloatRect RenderListMarker::relativeMarkerRect()
         if (m_textWithSuffix.isEmpty())
             return FloatRect();
         auto& font = style().fontCascade();
-        relativeRect = FloatRect(0, 0, font.width(textRun()), font.fontMetrics().height());
+        relativeRect = FloatRect(0, 0, font.width(textRun()), font.metricsOfPrimaryFont().height());
         break;
     }
 
@@ -2003,6 +2018,11 @@ LayoutRect RenderListMarker::selectionRectForRepaint(const RenderLayerModelObjec
 StringView RenderListMarker::textWithoutSuffix() const
 {
     return StringView { m_textWithSuffix }.left(m_textWithoutSuffixLength);
+}
+
+CSSCounterStyle* RenderListMarker::counterStyle() const
+{
+    return document().counterStyleRegistry().resolvedCounterStyle(style().listStyleStringValue()).get();
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,10 +44,10 @@ private:
 
 public:
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        static_assert(!CellType::needsDestruction, "");
-        return &vm.scopedArgumentsSpace;
+        static_assert(!CellType::needsDestruction);
+        return &vm.scopedArgumentsSpace();
     }
 
     // Creates an arguments object but leaves it uninitialized. This is dangerous if we GC right
@@ -144,6 +144,8 @@ public:
 
     void copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length);
 
+    JS_EXPORT_PRIVATE bool isIteratorProtocolFastAndNonObservable();
+
     DECLARE_INFO;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
@@ -161,6 +163,7 @@ private:
     }
 
     bool m_overrodeThings { false }; // True if length, callee, and caller are fully materialized in the object.
+    bool m_hasUnmappedArgument { false };
     unsigned m_totalLength; // The length of declared plus overflow arguments.
     WriteBarrier<JSFunction> m_callee;
     WriteBarrier<ScopedArgumentsTable> m_table;

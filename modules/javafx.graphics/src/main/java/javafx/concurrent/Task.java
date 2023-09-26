@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -690,14 +690,14 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      */
     protected abstract V call() throws Exception;
 
-    private ObjectProperty<State> state = new SimpleObjectProperty<>(this, "state", State.READY);
-    final void setState(State value) { // package access for the Service
+    private ObjectProperty<Worker.State> state = new SimpleObjectProperty<>(this, "state", Worker.State.READY);
+    final void setState(Worker.State value) { // package access for the Service
         checkThread();
-        final State s = getState();
-        if (s != State.CANCELLED) {
+        final Worker.State s = getState();
+        if (s != Worker.State.CANCELLED) {
             this.state.set(value);
             // Make sure the running flag is set
-            setRunning(value == State.SCHEDULED || value == State.RUNNING);
+            setRunning(value == Worker.State.SCHEDULED || value == Worker.State.RUNNING);
 
             // Invoke the event handlers, and then call the protected methods.
             switch (state.get()) {
@@ -729,8 +729,8 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             }
         }
     }
-    @Override public final State getState() { checkThread(); return state.get(); }
-    @Override public final ReadOnlyObjectProperty<State> stateProperty() { checkThread(); return state; }
+    @Override public final Worker.State getState() { checkThread(); return state.get(); }
+    @Override public final ReadOnlyObjectProperty<Worker.State> stateProperty() { checkThread(); return state; }
 
     /**
      * The onSchedule event handler is called whenever the Task state
@@ -1025,9 +1025,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // state flag will not be readable immediately after this call. However,
             // that would be the case anyway since these properties are not thread-safe.
             if (isFxApplicationThread()) {
-                setState(State.CANCELLED);
+                setState(Worker.State.CANCELLED);
             } else {
-                runLater(() -> setState(State.CANCELLED));
+                runLater(() -> setState(Worker.State.CANCELLED));
             }
         }
         // return the flag
@@ -1249,18 +1249,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     /**
-     * Registers an event handler to this task. Any event filters are first
-     * processed, then the specified onFoo event handlers, and finally any
-     * event handlers registered by this method. As with other events
-     * in the scene graph, if an event is consumed, it will not continue
-     * dispatching.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
+     * {@inheritDoc}
      * @since JavaFX 2.1
      */
+    @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -1269,17 +1261,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     /**
-     * Unregisters a previously registered event handler from this task. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
+     * {@inheritDoc}
      * @since JavaFX 2.1
      */
+    @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -1288,15 +1273,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     /**
-     * Registers an event filter to this task. Registered event filters get
-     * an event before any associated event handlers.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the type of the events to receive by the filter
-     * @param eventFilter the filter to register
-     * @throws NullPointerException if the event type or filter is null
+     * {@inheritDoc}
      * @since JavaFX 2.1
      */
+    @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -1305,17 +1285,10 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     }
 
     /**
-     * Unregisters a previously registered event filter from this task. One
-     * filter might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the filter.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the event type from which to unregister
-     * @param eventFilter the filter to unregister
-     * @throws NullPointerException if the event type or filter is null
+     * {@inheritDoc}
      * @since JavaFX 2.1
      */
+    @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -1418,8 +1391,8 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // in all cases so that developer code can be consistent.
             task.started = true;
             task.runLater(() -> {
-                task.setState(State.SCHEDULED);
-                task.setState(State.RUNNING);
+                task.setState(Worker.State.SCHEDULED);
+                task.setState(Worker.State.RUNNING);
             });
             // Go ahead and delegate to the wrapped callable
             try {
@@ -1434,7 +1407,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                         // can assume if the result is set, it has
                         // succeeded.
                         task.updateValue(result);
-                        task.setState(State.SUCCEEDED);
+                        task.setState(Worker.State.SUCCEEDED);
                     });
                     return result;
                 } else {
@@ -1453,7 +1426,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                 // in that circumstance.
                 task.runLater(() -> {
                     task._setException(th);
-                    task.setState(State.FAILED);
+                    task.setState(Worker.State.FAILED);
                 });
                 // Some error occurred during the call (it might be
                 // an exception (either runtime or checked), or it might

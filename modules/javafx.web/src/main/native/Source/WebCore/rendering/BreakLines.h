@@ -132,9 +132,15 @@ inline unsigned nextBreakablePosition(LazyLineBreakIterator& lazyBreakIterator, 
 template<typename CharacterType, NonBreakingSpaceBehavior nonBreakingSpaceBehavior>
 inline unsigned nextBreakablePositionKeepingAllWords(const CharacterType* string, unsigned length, unsigned startPosition)
 {
+    // FIXME: Use ICU instead.
     for (unsigned i = startPosition; i < length; i++) {
         if (isBreakableSpace<nonBreakingSpaceBehavior>(string[i]))
             return i;
+        // FIXME: This should either be in isBreakableSpace (though previous attempts broke the world) or should use ICU instead.
+        if (string[i] == zeroWidthSpace)
+            return i;
+        if (string[i] == ideographicSpace)
+            return i + 1;
     }
     return length;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,31 +52,31 @@ public class DialogEvent extends Event {
      * Common supertype for all dialog event types.
      */
     public static final EventType<DialogEvent> ANY =
-            new EventType<DialogEvent>(Event.ANY, "DIALOG");
+            new EventType<>(Event.ANY, "DIALOG");
 
     /**
      * This event occurs on dialog just before it is shown.
      */
     public static final EventType<DialogEvent> DIALOG_SHOWING =
-            new EventType<DialogEvent>(DialogEvent.ANY, "DIALOG_SHOWING");
+            new EventType<>(DialogEvent.ANY, "DIALOG_SHOWING");
 
     /**
      * This event occurs on dialog just after it is shown.
      */
     public static final EventType<DialogEvent> DIALOG_SHOWN =
-            new EventType<DialogEvent>(DialogEvent.ANY, "DIALOG_SHOWN");
+            new EventType<>(DialogEvent.ANY, "DIALOG_SHOWN");
 
     /**
      * This event occurs on dialog just before it is hidden.
      */
     public static final EventType<DialogEvent> DIALOG_HIDING =
-            new EventType<DialogEvent>(DialogEvent.ANY, "DIALOG_HIDING");
+            new EventType<>(DialogEvent.ANY, "DIALOG_HIDING");
 
     /**
      * This event occurs on dialog just after it is hidden.
      */
     public static final EventType<DialogEvent> DIALOG_HIDDEN =
-            new EventType<DialogEvent>(DialogEvent.ANY, "DIALOG_HIDDEN");
+            new EventType<>(DialogEvent.ANY, "DIALOG_HIDDEN");
 
     /**
      * This event is delivered to a
@@ -85,7 +85,7 @@ public class DialogEvent extends Event {
      * handler for this event closes the corresponding dialog.
      */
     public static final EventType<DialogEvent> DIALOG_CLOSE_REQUEST =
-            new EventType<DialogEvent>(DialogEvent.ANY, "DIALOG_CLOSE_REQUEST");
+            new EventType<>(DialogEvent.ANY, "DIALOG_CLOSE_REQUEST");
 
     /**
      * Construct a new {@code Event} with the specified event source, target

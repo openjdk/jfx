@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@
 
 namespace JSC {
 
-const ClassInfo WebAssemblyGlobalConstructor::s_info = { "Function", &Base::s_info, &constructorGlobalWebAssemblyGlobal, nullptr, CREATE_METHOD_TABLE(WebAssemblyGlobalConstructor) };
+const ClassInfo WebAssemblyGlobalConstructor::s_info = { "Function"_s, &Base::s_info, &constructorGlobalWebAssemblyGlobal, nullptr, CREATE_METHOD_TABLE(WebAssemblyGlobalConstructor) };
 
 static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyGlobal);
 static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyGlobal);
@@ -62,26 +62,26 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
     {
         JSValue argument = callFrame->argument(0);
         if (!argument.isObject())
-            return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global expects its first argument to be an object"_s)));
+            return throwVMTypeError(globalObject, throwScope, "WebAssembly.Global expects its first argument to be an object"_s);
         globalDescriptor = jsCast<JSObject*>(argument);
     }
 
-    Wasm::GlobalInformation::Mutability mutability;
+    Wasm::Mutability mutability;
     {
-        Identifier mutableIdent = Identifier::fromString(vm, "mutable");
+        Identifier mutableIdent = Identifier::fromString(vm, "mutable"_s);
         JSValue mutableValue = globalDescriptor->get(globalObject, mutableIdent);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         bool mutableBoolean = mutableValue.toBoolean(globalObject);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         if (mutableBoolean)
-            mutability = Wasm::GlobalInformation::Mutable;
+            mutability = Wasm::Mutable;
         else
-            mutability = Wasm::GlobalInformation::Immutable;
+            mutability = Wasm::Immutable;
     }
 
     Wasm::Type type;
     {
-        Identifier valueIdent = Identifier::fromString(vm, "value");
+        Identifier valueIdent = Identifier::fromString(vm, "value"_s);
         JSValue valueValue = globalDescriptor->get(globalObject, valueIdent);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         String valueString = valueValue.toWTFString(globalObject);
@@ -95,11 +95,11 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         else if (valueString == "f64"_s)
             type = Wasm::Types::F64;
         else if (valueString == "anyfunc"_s || valueString == "funcref"_s)
-            type = Wasm::Types::Funcref;
+            type = Wasm::funcrefType();
         else if (valueString == "externref"_s)
-            type = Wasm::Types::Externref;
+            type = Wasm::externrefType();
         else
-            return JSValue::encode(throwException(globalObject, throwScope, createTypeError(globalObject, "WebAssembly.Global expects its 'value' field to be the string 'i32', 'i64', 'f32', 'f64', 'anyfunc', 'funcref', or 'externref'"_s)));
+            return throwVMTypeError(globalObject, throwScope, "WebAssembly.Global expects its 'value' field to be the string 'i32', 'i64', 'f32', 'f64', 'anyfunc', 'funcref', or 'externref'"_s);
     }
 
     uint64_t initialValue = 0;
@@ -137,30 +137,31 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyGlobal, (JSGlobalObject* globalOb
         }
         break;
     }
-    case Wasm::TypeKind::Funcref: {
-        if (argument.isUndefined())
-            argument = defaultValueForReferenceType(type);
-        if (!isWebAssemblyHostFunction(vm, argument) && !argument.isNull()) {
-            throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function"));
-            return { };
-        }
-        initialValue = JSValue::encode(argument);
-        break;
-    }
-    case Wasm::TypeKind::Externref: {
-        if (argument.isUndefined())
-            argument = defaultValueForReferenceType(type);
-        initialValue = JSValue::encode(argument);
-        break;
-    }
-    default:
+    case Wasm::TypeKind::V128:
         RELEASE_ASSERT_NOT_REACHED();
+        break;
+    default: {
+        if (Wasm::isFuncref(type)) {
+        if (argument.isUndefined())
+            argument = defaultValueForReferenceType(type);
+            if (!isWebAssemblyHostFunction(argument) && !argument.isNull())
+                return throwVMTypeError(globalObject, throwScope, "Funcref must be an exported wasm function"_s);
+        initialValue = JSValue::encode(argument);
+        } else if (Wasm::isExternref(type)) {
+        if (argument.isUndefined())
+            argument = defaultValueForReferenceType(type);
+        initialValue = JSValue::encode(argument);
+        } else if (Wasm::isExternref(type))
+            return throwVMTypeError(globalObject, throwScope, "I31ref import from JS currently unsupported"_s);
+        else
+        RELEASE_ASSERT_NOT_REACHED();
+    }
     }
 
     Ref<Wasm::Global> wasmGlobal = Wasm::Global::create(type, mutability, initialValue);
     JSWebAssemblyGlobal* jsWebAssemblyGlobal = JSWebAssemblyGlobal::tryCreate(globalObject, vm, webAssemblyGlobalStructure, WTFMove(wasmGlobal));
     RETURN_IF_EXCEPTION(throwScope, { });
-    ensureStillAliveHere(bitwise_cast<void*>(initialValue)); // Ensure this is kept alive while creating JSWebAssemblyGlobal.
+    ensureStillAliveHere(initialValue); // Ensure this is kept alive while creating JSWebAssemblyGlobal.
     return JSValue::encode(jsWebAssemblyGlobal);
 }
 
@@ -173,7 +174,7 @@ JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyGlobal, (JSGlobalObject* globalObject,
 
 WebAssemblyGlobalConstructor* WebAssemblyGlobalConstructor::create(VM& vm, Structure* structure, WebAssemblyGlobalPrototype* thisPrototype)
 {
-    auto* constructor = new (NotNull, allocateCell<WebAssemblyGlobalConstructor>(vm.heap)) WebAssemblyGlobalConstructor(vm, structure);
+    auto* constructor = new (NotNull, allocateCell<WebAssemblyGlobalConstructor>(vm)) WebAssemblyGlobalConstructor(vm, structure);
     constructor->finishCreation(vm, thisPrototype);
     return constructor;
 }

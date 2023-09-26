@@ -48,9 +48,9 @@ static ExceptionOr<bool> canWriteHeader(const String& name, const String& value,
         return Exception { TypeError, makeString("Header '", name, "' has invalid value: '", value, "'") };
     if (guard == FetchHeaders::Guard::Immutable)
         return Exception { TypeError, "Headers object's guard is 'immutable'"_s };
-    if (guard == FetchHeaders::Guard::Request && isForbiddenHeaderName(name))
+    if (guard == FetchHeaders::Guard::Request && isForbiddenHeader(name, value))
         return false;
-    if (guard == FetchHeaders::Guard::RequestNoCors && !combinedValue.isEmpty() && !isSimpleHeader(name, combinedValue))
+    if (guard == FetchHeaders::Guard::RequestNoCors && !isSimpleHeader(name, combinedValue))
         return false;
     if (guard == FetchHeaders::Guard::Response && isForbiddenResponseHeaderName(name))
         return false;
@@ -87,7 +87,7 @@ static ExceptionOr<void> appendToHeaderMap(const HTTPHeaderMap::HTTPHeaderMapCon
     if (header.keyAsHTTPHeaderName)
         headers.add(header.keyAsHTTPHeaderName.value(), header.value);
     else
-        headers.add(header.key, header.value);
+        headers.addUncommonHeader(header.key, header.value);
 
     if (guard == FetchHeaders::Guard::RequestNoCors)
         removePrivilegedNoCORSRequestHeaders(headers);
@@ -98,17 +98,17 @@ static ExceptionOr<void> appendToHeaderMap(const HTTPHeaderMap::HTTPHeaderMapCon
 // https://fetch.spec.whatwg.org/#concept-headers-fill
 static ExceptionOr<void> fillHeaderMap(HTTPHeaderMap& headers, const FetchHeaders::Init& headersInit, FetchHeaders::Guard guard)
 {
-    if (WTF::holds_alternative<Vector<Vector<String>>>(headersInit)) {
-        auto& sequence = WTF::get<Vector<Vector<String>>>(headersInit);
+    if (std::holds_alternative<Vector<Vector<String>>>(headersInit)) {
+        auto& sequence = std::get<Vector<Vector<String>>>(headersInit);
         for (auto& header : sequence) {
             if (header.size() != 2)
-                return Exception { TypeError, "Header sub-sequence must contain exactly two items" };
+                return Exception { TypeError, "Header sub-sequence must contain exactly two items"_s };
             auto result = appendToHeaderMap(header[0], header[1], headers, guard);
             if (result.hasException())
                 return result.releaseException();
         }
     } else {
-        auto& record = WTF::get<Vector<WTF::KeyValuePair<String, String>>>(headersInit);
+        auto& record = std::get<Vector<KeyValuePair<String, String>>>(headersInit);
         for (auto& header : record) {
             auto result = appendToHeaderMap(header.key, header.value, headers, guard);
             if (result.hasException())
@@ -150,6 +150,7 @@ ExceptionOr<void> FetchHeaders::fill(const FetchHeaders& otherHeaders)
 
 ExceptionOr<void> FetchHeaders::append(const String& name, const String& value)
 {
+    ++m_updateCounter;
     return appendToHeaderMap(name, value, m_headers, m_guard);
 }
 
@@ -167,6 +168,7 @@ ExceptionOr<void> FetchHeaders::remove(const String& name)
     if (m_guard == FetchHeaders::Guard::Response && isForbiddenResponseHeaderName(name))
         return { };
 
+    ++m_updateCounter;
     m_headers.remove(name);
 
     if (m_guard == FetchHeaders::Guard::RequestNoCors)
@@ -198,6 +200,7 @@ ExceptionOr<void> FetchHeaders::set(const String& name, const String& value)
     if (!canWriteResult.releaseReturnValue())
         return { };
 
+    ++m_updateCounter;
     m_headers.set(name, normalizedValue);
 
     if (m_guard == FetchHeaders::Guard::RequestNoCors)
@@ -218,17 +221,25 @@ void FetchHeaders::filterAndFill(const HTTPHeaderMap& headers, Guard guard)
         if (header.keyAsHTTPHeaderName)
             m_headers.add(header.keyAsHTTPHeaderName.value(), header.value);
         else
-            m_headers.add(header.key, header.value);
+            m_headers.addUncommonHeader(header.key, header.value);
     }
 }
 
-std::optional<WTF::KeyValuePair<String, String>> FetchHeaders::Iterator::next()
+std::optional<KeyValuePair<String, String>> FetchHeaders::Iterator::next()
 {
+    if (m_keys.isEmpty() || m_updateCounter != m_headers->m_updateCounter) {
+        m_keys.resize(0);
+        m_keys.reserveCapacity(m_headers->m_headers.size());
+        for (auto& header : m_headers->m_headers)
+            m_keys.uncheckedAppend(header.key.convertToASCIILowercase());
+        std::sort(m_keys.begin(), m_keys.end(), WTF::codePointCompareLessThan);
+        m_updateCounter = m_headers->m_updateCounter;
+    }
     while (m_currentIndex < m_keys.size()) {
         auto key = m_keys[m_currentIndex++];
         auto value = m_headers->m_headers.get(key);
         if (!value.isNull())
-            return WTF::KeyValuePair<String, String> { WTFMove(key), WTFMove(value) };
+            return KeyValuePair<String, String> { WTFMove(key), WTFMove(value) };
     }
     return std::nullopt;
 }
@@ -236,10 +247,6 @@ std::optional<WTF::KeyValuePair<String, String>> FetchHeaders::Iterator::next()
 FetchHeaders::Iterator::Iterator(FetchHeaders& headers)
     : m_headers(headers)
 {
-    m_keys.reserveInitialCapacity(headers.m_headers.size());
-    for (auto& header : headers.m_headers)
-        m_keys.uncheckedAppend(header.key.convertToASCIILowercase());
-    std::sort(m_keys.begin(), m_keys.end(), WTF::codePointCompareLessThan);
 }
 
 } // namespace WebCore

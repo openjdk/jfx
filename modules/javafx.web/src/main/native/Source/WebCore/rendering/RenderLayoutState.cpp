@@ -62,13 +62,18 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPagi
     }
 }
 
-RenderLayoutState::RenderLayoutState(const FrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged)
+RenderLayoutState::RenderLayoutState(const FrameViewLayoutContext::LayoutStateStack& layoutStateStack, RenderBox& renderer, const LayoutSize& offset, LayoutUnit pageLogicalHeight, bool pageLogicalHeightChanged, std::optional<size_t> maximumLineCountForLineClamp, std::optional<size_t> visibleLineCountForLineClamp, std::optional<LeadingTrim> leadingTrim)
     : m_clipped(false)
     , m_isPaginated(false)
     , m_pageLogicalHeightChanged(false)
 #if ASSERT_ENABLED
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
+#endif
+    , m_maximumLineCountForLineClamp(maximumLineCountForLineClamp)
+    , m_visibleLineCountForLineClamp(visibleLineCountForLineClamp)
+    , m_leadingTrim(leadingTrim)
+#if ASSERT_ENABLED
     , m_renderer(&renderer)
 #endif
 {
@@ -220,7 +225,7 @@ void RenderLayoutState::propagateLineGridInfo(const RenderLayoutState& ancestor,
     if (renderer.isUnsplittableForPagination())
         return;
 
-    m_lineGrid = makeWeakPtr(ancestor.lineGrid());
+    m_lineGrid = ancestor.lineGrid();
     m_lineGridOffset = ancestor.lineGridOffset();
     m_lineGridPaginationOrigin = ancestor.lineGridPaginationOrigin();
 }
@@ -240,7 +245,7 @@ void RenderLayoutState::establishLineGrid(const FrameViewLayoutContext::LayoutSt
             if (!currentGrid)
                 break;
             if (currentGrid->style().lineGrid() == renderer.style().lineGrid()) {
-                m_lineGrid = makeWeakPtr(currentGrid);
+                m_lineGrid = currentGrid;
                 m_lineGridOffset = currentState.m_lineGridOffset;
                 return;
             }
@@ -248,7 +253,7 @@ void RenderLayoutState::establishLineGrid(const FrameViewLayoutContext::LayoutSt
     }
 
     // We didn't find an already-established grid with this identifier. Our render object establishes the grid.
-    m_lineGrid = makeWeakPtr(renderer);
+    m_lineGrid = renderer;
     m_lineGridOffset = m_layoutOffset;
 }
 
@@ -300,7 +305,7 @@ LayoutStateDisabler::~LayoutStateDisabler()
 static bool shouldDisablePaintOffsetCacheForSubtree(RenderElement& subtreeLayoutRoot)
 {
     for (auto* renderer = &subtreeLayoutRoot; renderer; renderer = renderer->container()) {
-        if (renderer->hasTransform() || renderer->hasReflection())
+        if (renderer->isTransformed() || renderer->hasReflection())
             return true;
     }
     return false;

@@ -35,11 +35,12 @@
 #include "pas_designated_intrinsic_heap.h"
 #include "pas_heap_config_utils_inlines.h"
 
-pas_heap_config hotbit_heap_config = HOTBIT_HEAP_CONFIG;
+const pas_heap_config hotbit_heap_config = HOTBIT_HEAP_CONFIG;
 
 PAS_BASIC_HEAP_CONFIG_DEFINITIONS(
     hotbit, HOTBIT,
-    .allocate_page_should_zero = false);
+    .allocate_page_should_zero = false,
+    .intrinsic_view_cache_capacity = pas_heap_runtime_config_aggressive_view_cache_capacity);
 
 void hotbit_heap_config_activate(void)
 {

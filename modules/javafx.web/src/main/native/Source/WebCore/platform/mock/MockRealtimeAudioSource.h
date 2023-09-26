@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,13 +42,15 @@ namespace WebCore {
 
 class MockRealtimeAudioSource : public RealtimeMediaSource {
 public:
-    static CaptureSourceOrError create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints*);
+    static CaptureSourceOrError create(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier);
     virtual ~MockRealtimeAudioSource();
+
+    static void setIsInterrupted(bool);
 
     WEBCORE_EXPORT void setChannelCount(unsigned);
 
 protected:
-    MockRealtimeAudioSource(String&& deviceID, String&& name, String&& hashSalt);
+    MockRealtimeAudioSource(String&& deviceID, AtomString&& name, MediaDeviceHashSalts&&, PageIdentifier);
 
     virtual void render(Seconds) = 0;
     void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) override;
@@ -79,7 +81,7 @@ private:
     std::optional<RealtimeMediaSourceSettings> m_currentSettings;
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
 
-    RunLoop::Timer<MockRealtimeAudioSource> m_timer;
+    RunLoop::Timer m_timer;
     MonotonicTime m_startTime { MonotonicTime::nan() };
     MonotonicTime m_lastRenderTime { MonotonicTime::nan() };
     Seconds m_elapsedTime { 0_s };

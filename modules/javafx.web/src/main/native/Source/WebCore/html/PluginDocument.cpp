@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "HTMLEmbedElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
+#include "PluginViewBase.h"
 #include "RawDataDocumentParser.h"
 #include "RenderEmbeddedObject.h"
 #include <wtf/IsoMallocInlines.h>
@@ -61,7 +62,7 @@ private:
     void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void createDocumentStructure();
 
-    HTMLEmbedElement* m_embedElement { nullptr };
+    WeakPtr<HTMLEmbedElement, WeakPtrImplWithEventTargetData> m_embedElement;
 };
 
 void PluginDocumentParser::createDocumentStructure()
@@ -71,6 +72,8 @@ void PluginDocumentParser::createDocumentStructure()
     auto rootElement = HTMLHtmlElement::create(document);
     document.appendChild(rootElement);
     rootElement->insertedByParser();
+    rootElement->setInlineStyleProperty(CSSPropertyHeight, 100, CSSUnitType::CSS_PERCENTAGE);
+    rootElement->setInlineStyleProperty(CSSPropertyWidth, 100, CSSUnitType::CSS_PERCENTAGE);
 
     if (document.frame())
         document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
@@ -81,28 +84,28 @@ void PluginDocumentParser::createDocumentStructure()
 #endif
 
     auto body = HTMLBodyElement::create(document);
-    body->setAttributeWithoutSynchronization(marginwidthAttr, AtomString("0", AtomString::ConstructFromLiteral));
-    body->setAttributeWithoutSynchronization(marginheightAttr, AtomString("0", AtomString::ConstructFromLiteral));
+    body->setAttributeWithoutSynchronization(marginwidthAttr, "0"_s);
+    body->setAttributeWithoutSynchronization(marginheightAttr, "0"_s);
 #if PLATFORM(IOS_FAMILY)
-    body->setAttribute(styleAttr, AtomString("background-color: rgb(217,224,233)", AtomString::ConstructFromLiteral));
+    body->setAttribute(styleAttr, "background-color: rgb(217,224,233); height: 100%; width: 100%; overflow:hidden; margin: 0"_s);
 #else
-    body->setAttribute(styleAttr, AtomString("background-color: rgb(38,38,38)", AtomString::ConstructFromLiteral));
+    body->setAttribute(styleAttr, "background-color: rgb(38,38,38); height: 100%; width: 100%; overflow:hidden; margin: 0"_s);
 #endif
 
     rootElement->appendChild(body);
 
     auto embedElement = HTMLEmbedElement::create(document);
 
-    m_embedElement = embedElement.ptr();
-    embedElement->setAttributeWithoutSynchronization(widthAttr, AtomString("100%", AtomString::ConstructFromLiteral));
-    embedElement->setAttributeWithoutSynchronization(heightAttr, AtomString("100%", AtomString::ConstructFromLiteral));
+    m_embedElement = embedElement.get();
+    embedElement->setAttributeWithoutSynchronization(widthAttr, "100%"_s);
+    embedElement->setAttributeWithoutSynchronization(heightAttr, "100%"_s);
 
-    embedElement->setAttributeWithoutSynchronization(nameAttr, AtomString("plugin", AtomString::ConstructFromLiteral));
-    embedElement->setAttributeWithoutSynchronization(srcAttr, document.url().string());
+    embedElement->setAttributeWithoutSynchronization(nameAttr, "plugin"_s);
+    embedElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document.url().string() });
 
     ASSERT(document.loader());
-    if (auto loader = makeRefPtr(document.loader()))
-        m_embedElement->setAttributeWithoutSynchronization(typeAttr, loader->writer().mimeType());
+    if (RefPtr loader = document.loader())
+        m_embedElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->writer().mimeType() });
 
     document.setPluginElement(*m_embedElement);
 
@@ -117,7 +120,7 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
 
     createDocumentStructure();
 
-    auto frame = makeRefPtr(document()->frame());
+    RefPtr frame = document()->frame();
     if (!frame)
         return;
 
@@ -131,7 +134,7 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
     frame->view()->flushAnyPendingPostLayoutTasks();
 
     if (auto renderer = m_embedElement->renderWidget()) {
-        if (auto widget = makeRefPtr(renderer->widget())) {
+        if (RefPtr widget = renderer->widget()) {
             frame->loader().client().redirectDataToPlugin(*widget);
 
             // In a plugin document, the main resource is the plugin. If we have a null widget, that means
@@ -144,9 +147,9 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
 }
 
 PluginDocument::PluginDocument(Frame& frame, const URL& url)
-    : HTMLDocument(&frame, frame.settings(), url, PluginDocumentClass)
+    : HTMLDocument(&frame, frame.settings(), url, { }, { DocumentClass::Plugin })
 {
-    setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
+    setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
     lockCompatibilityMode();
 }
 
@@ -155,14 +158,14 @@ Ref<DocumentParser> PluginDocument::createParser()
     return PluginDocumentParser::create(*this);
 }
 
-Widget* PluginDocument::pluginWidget()
+PluginViewBase* PluginDocument::pluginWidget()
 {
     if (!m_pluginElement)
         return nullptr;
-    auto* renderer = m_pluginElement->renderer();
+    auto* renderer = dynamicDowncast<RenderEmbeddedObject>(m_pluginElement->renderer());
     if (!renderer)
         return nullptr;
-    return downcast<RenderEmbeddedObject>(*m_pluginElement->renderer()).widget();
+    return dynamicDowncast<PluginViewBase>(renderer->widget());
 }
 
 void PluginDocument::setPluginElement(HTMLPlugInElement& element)

@@ -26,13 +26,22 @@
 #include "config.h"
 #include "CanvasBase.h"
 
-#include "CSSCanvasValue.h"
 #include "CanvasRenderingContext.h"
+#include "Chrome.h"
+#include "Document.h"
 #include "Element.h"
 #include "FloatRect.h"
+#include "GraphicsClient.h"
 #include "GraphicsContext.h"
+#include "HTMLCanvasElement.h"
+#include "HostWindow.h"
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
+#include "StyleCanvasImage.h"
+#include "RenderElement.h"
+#include "WebCoreOpaqueRoot.h"
+#include "WorkerClient.h"
+#include "WorkerGlobalScope.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <atomic>
@@ -50,6 +59,9 @@ const InterpolationQuality defaultInterpolationQuality = InterpolationQuality::L
 const InterpolationQuality defaultInterpolationQuality = InterpolationQuality::Default;
 #endif
 
+static std::optional<size_t> maxCanvasAreaForTesting;
+static std::optional<size_t> maxActivePixelMemoryForTesting;
+
 CanvasBase::CanvasBase(IntSize size)
     : m_size(size)
 {
@@ -58,7 +70,7 @@ CanvasBase::CanvasBase(IntSize size)
 CanvasBase::~CanvasBase()
 {
     ASSERT(m_didNotifyObserversCanvasDestroyed);
-    ASSERT(m_observers.isEmpty());
+    ASSERT(m_observers.isEmptyIgnoringNullReferences());
     ASSERT(!m_imageBuffer);
 }
 
@@ -120,59 +132,115 @@ size_t CanvasBase::externalMemoryCost() const
     return m_imageBuffer->externalMemoryCost();
 }
 
+size_t CanvasBase::maxActivePixelMemory()
+{
+    if (maxActivePixelMemoryForTesting)
+        return *maxActivePixelMemoryForTesting;
+
+    static size_t maxPixelMemory;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+#if PLATFORM(IOS_FAMILY)
+        maxPixelMemory = ramSize() / 4;
+#else
+        maxPixelMemory = std::max(ramSize() / 4, 2151 * MB);
+#endif
+    });
+
+    return maxPixelMemory;
+}
+
+void CanvasBase::setMaxPixelMemoryForTesting(std::optional<size_t> size)
+{
+    maxActivePixelMemoryForTesting = size;
+}
+
+static inline size_t maxCanvasArea()
+{
+    if (maxCanvasAreaForTesting)
+        return *maxCanvasAreaForTesting;
+
+    // Firefox limits width/height to 32767 pixels, but slows down dramatically before it
+    // reaches that limit. We limit by area instead, giving us larger maximum dimensions,
+    // in exchange for a smaller maximum canvas size. The maximum canvas size is in device pixels.
+#if PLATFORM(IOS_FAMILY)
+    return 4096 * 4096;
+#else
+    return 16384 * 16384;
+#endif
+}
+
+void CanvasBase::setMaxCanvasAreaForTesting(std::optional<size_t> size)
+{
+    maxCanvasAreaForTesting = size;
+}
+
 void CanvasBase::addObserver(CanvasObserver& observer)
 {
-    m_observers.add(&observer);
+    m_observers.add(observer);
 
-    if (is<CSSCanvasValue::CanvasObserverProxy>(observer))
+    if (is<StyleCanvasImage>(observer))
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*this);
 }
 
 void CanvasBase::removeObserver(CanvasObserver& observer)
 {
-    m_observers.remove(&observer);
+    m_observers.remove(observer);
 
-    if (is<CSSCanvasValue::CanvasObserverProxy>(observer))
+    if (is<StyleCanvasImage>(observer))
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*this);
 }
 
 void CanvasBase::notifyObserversCanvasChanged(const std::optional<FloatRect>& rect)
 {
     for (auto& observer : m_observers)
-        observer->canvasChanged(*this, rect);
+        observer.canvasChanged(*this, rect);
 }
 
 void CanvasBase::notifyObserversCanvasResized()
 {
     for (auto& observer : m_observers)
-        observer->canvasResized(*this);
+        observer.canvasResized(*this);
 }
 
 void CanvasBase::notifyObserversCanvasDestroyed()
 {
     ASSERT(!m_didNotifyObserversCanvasDestroyed);
 
-    for (auto& observer : copyToVector(m_observers))
-        observer->canvasDestroyed(*this);
-
-    m_observers.clear();
+    for (auto& observer : std::exchange(m_observers, WeakHashSet<CanvasObserver>()))
+        observer.canvasDestroyed(*this);
 
 #if ASSERT_ENABLED
     m_didNotifyObserversCanvasDestroyed = true;
 #endif
 }
 
+void CanvasBase::addDisplayBufferObserver(CanvasDisplayBufferObserver& observer)
+{
+    m_displayBufferObservers.add(observer);
+}
+
+void CanvasBase::removeDisplayBufferObserver(CanvasDisplayBufferObserver& observer)
+{
+    m_displayBufferObservers.remove(observer);
+}
+
+void CanvasBase::notifyObserversCanvasDisplayBufferPrepared()
+{
+    for (auto& observer : m_displayBufferObservers)
+        observer.canvasDisplayBufferPrepared(*this);
+}
+
 HashSet<Element*> CanvasBase::cssCanvasClients() const
 {
     HashSet<Element*> cssCanvasClients;
     for (auto& observer : m_observers) {
-        if (!is<CSSCanvasValue::CanvasObserverProxy>(observer))
+        if (!is<StyleCanvasImage>(observer))
             continue;
 
-        auto clients = downcast<CSSCanvasValue::CanvasObserverProxy>(observer)->ownerValue().clients();
-        for (auto& entry : clients) {
-            if (RefPtr<Element> element = entry.key->element())
-                cssCanvasClients.add(element.get());
+        for (auto& client : downcast<StyleCanvasImage>(observer).clients().values()) {
+            if (auto element = client->element())
+                cssCanvasClients.add(element);
         }
     }
     return cssCanvasClients;
@@ -193,8 +261,8 @@ RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) con
         returnBuffer = std::exchange(m_imageBuffer, WTFMove(buffer));
     }
 
-    if (m_imageBuffer && m_size != m_imageBuffer->logicalSize())
-        m_size = m_imageBuffer->logicalSize();
+    if (m_imageBuffer && m_size != m_imageBuffer->truncatedLogicalSize())
+        m_size = m_imageBuffer->truncatedLogicalSize();
 
     size_t previousMemoryCost = m_imageBufferCost;
     m_imageBufferCost = memoryCost();
@@ -217,6 +285,77 @@ RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) con
     return returnBuffer;
 }
 
+GraphicsClient* CanvasBase::graphicsClient() const
+{
+    if (scriptExecutionContext()->isDocument() && downcast<Document>(scriptExecutionContext())->page())
+        return &downcast<Document>(scriptExecutionContext())->page()->chrome();
+    if (is<WorkerGlobalScope>(scriptExecutionContext()))
+        return downcast<WorkerGlobalScope>(scriptExecutionContext())->workerClient();
+
+    return nullptr;
+}
+
+bool CanvasBase::shouldAccelerate(const IntSize& size) const
+{
+    auto checkedArea = size.area<RecordOverflow>();
+    if (checkedArea.hasOverflowed())
+        return false;
+
+    return shouldAccelerate(checkedArea.value());
+}
+
+bool CanvasBase::shouldAccelerate(unsigned area) const
+{
+    if (area > scriptExecutionContext()->settingsValues().maximumAccelerated2dCanvasSize)
+        return false;
+
+#if USE(IOSURFACE_CANVAS_BACKING_STORE)
+    return scriptExecutionContext()->settingsValues().canvasUsesAcceleratedDrawing;
+#else
+    return false;
+#endif
+}
+
+RefPtr<ImageBuffer> CanvasBase::allocateImageBuffer(bool usesDisplayListDrawing, bool avoidBackendSizeCheckForTesting) const
+{
+    auto checkedArea = size().area<RecordOverflow>();
+
+    if (checkedArea.hasOverflowed() || checkedArea > maxCanvasArea()) {
+        auto message = makeString("Canvas area exceeds the maximum limit (width * height > ", maxCanvasArea(), ").");
+        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
+        return nullptr;
+    }
+
+    // Make sure we don't use more pixel memory than the system can support.
+    auto checkedRequestedPixelMemory = (4 * checkedArea) + activePixelMemory();
+    if (checkedRequestedPixelMemory.hasOverflowed() || checkedRequestedPixelMemory > maxActivePixelMemory()) {
+        auto message = makeString("Total canvas memory use exceeds the maximum limit (", maxActivePixelMemory() / 1024 / 1024, " MB).");
+        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
+        return nullptr;
+    }
+
+    unsigned area = checkedArea.value();
+    if (!area)
+        return nullptr;
+
+    OptionSet<ImageBufferOptions> bufferOptions;
+    if (shouldAccelerate(area))
+        bufferOptions.add(ImageBufferOptions::Accelerated);
+    // FIXME: Add a new setting for DisplayList drawing on canvas.
+    if (usesDisplayListDrawing || scriptExecutionContext()->settingsValues().displayListDrawingEnabled)
+        bufferOptions.add(ImageBufferOptions::UseDisplayList);
+
+    auto [colorSpace, pixelFormat] = [&] {
+        if (renderingContext())
+            return std::pair { renderingContext()->colorSpace(), renderingContext()->pixelFormat() };
+        return std::pair { DestinationColorSpace::SRGB(), PixelFormat::BGRA8 };
+    }();
+    ImageBufferCreationContext context = { };
+    context.graphicsClient = graphicsClient();
+    context.avoidIOSurfaceSizeCheckInWebProcessForTesting = avoidBackendSizeCheckForTesting;
+    return ImageBuffer::create(size(), RenderingPurpose::Canvas, 1, colorSpace, pixelFormat, bufferOptions, context);
+}
+
 size_t CanvasBase::activePixelMemory()
 {
     return s_activePixelMemory.load();
@@ -231,4 +370,9 @@ void CanvasBase::resetGraphicsContextState() const
     }
 }
 
+WebCoreOpaqueRoot root(CanvasBase* canvas)
+{
+    return WebCoreOpaqueRoot { canvas };
 }
+
+} // namespace WebCore

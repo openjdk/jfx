@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
@@ -44,7 +42,6 @@ import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleRole;
 
-import com.sun.javafx.binding.ExpressionHelper;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.SizeConverter;
 import javafx.scene.control.skin.TextFieldSkin;
@@ -74,9 +71,9 @@ import javafx.css.Styleable;
  * @since JavaFX 2.0
  */
 public class TextField extends TextInputControl {
+
     // Text field content
-    private static final class TextFieldContent implements Content {
-        private ExpressionHelper<String> helper = null;
+    private static final class TextFieldContent extends ContentBase {
         private StringBuilder characters = new StringBuilder();
 
         @Override public String get(int start, int end) {
@@ -88,7 +85,7 @@ public class TextField extends TextInputControl {
             if (!text.isEmpty()) {
                 characters.insert(index, text);
                 if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper);
+                    fireValueChangedEvent();
                 }
             }
         }
@@ -97,7 +94,7 @@ public class TextField extends TextInputControl {
             if (end > start) {
                 characters.delete(start, end);
                 if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper);
+                    fireValueChangedEvent();
                 }
             }
         }
@@ -110,24 +107,8 @@ public class TextField extends TextInputControl {
             return characters.toString();
         }
 
-        @Override public void addListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.addListener(helper, this, changeListener);
-        }
-
-        @Override public void removeListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.removeListener(helper, changeListener);
-        }
-
         @Override public String getValue() {
             return get();
-        }
-
-        @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
         }
     }
 
@@ -216,7 +197,7 @@ public class TextField extends TextInputControl {
      *
      * The action handler is normally called when the user types the ENTER key.
      */
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
         @Override
         protected void invalidated() {
             setEventHandler(ActionEvent.ACTION, get());
@@ -289,8 +270,8 @@ public class TextField extends TextInputControl {
 
     private static class StyleableProperties {
         private static final CssMetaData<TextField, Pos> ALIGNMENT =
-            new CssMetaData<TextField, Pos>("-fx-alignment",
-                new EnumConverter<Pos>(Pos.class), Pos.CENTER_LEFT ) {
+            new CssMetaData<>("-fx-alignment",
+                new EnumConverter<>(Pos.class), Pos.CENTER_LEFT ) {
 
             @Override public boolean isSettable(TextField n) {
                 return (n.alignment == null || !n.alignment.isBound());
@@ -302,7 +283,7 @@ public class TextField extends TextInputControl {
         };
 
         private static final CssMetaData<TextField,Number> PREF_COLUMN_COUNT =
-            new CssMetaData<TextField,Number>("-fx-pref-column-count",
+            new CssMetaData<>("-fx-pref-column-count",
                 SizeConverter.getInstance(), DEFAULT_PREF_COLUMN_COUNT) {
 
             @Override
@@ -312,14 +293,14 @@ public class TextField extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextField n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)n.prefColumnCountProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(TextInputControl.getClassCssMetaData());
+                new ArrayList<>(TextInputControl.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(PREF_COLUMN_COUNT);
             STYLEABLES = Collections.unmodifiableList(styleables);

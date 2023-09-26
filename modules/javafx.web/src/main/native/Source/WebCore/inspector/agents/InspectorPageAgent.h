@@ -36,7 +36,8 @@
 #include "LayoutRect.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
-#include <wtf/HashMap.h>
+#include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/Seconds.h>
 #include <wtf/text/WTFString.h>
 
@@ -49,7 +50,7 @@ class InspectorClient;
 class InspectorOverlay;
 class Page;
 class RenderObject;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 
 class InspectorPageAgent final : public InspectorAgentBase, public Inspector::PageBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorPageAgent);
@@ -72,14 +73,15 @@ public:
 #if ENABLE(APPLICATION_MANIFEST)
         ApplicationManifestResource,
 #endif
+        EventSourceResource,
         OtherResource,
     };
 
-    static bool sharedBufferContent(RefPtr<SharedBuffer>&&, const String& textEncodingName, bool withBase64Encode, String* result);
+    static bool sharedBufferContent(RefPtr<FragmentedSharedBuffer>&&, const String& textEncodingName, bool withBase64Encode, String* result);
     static Vector<CachedResource*> cachedResourcesForFrame(Frame*);
     static void resourceContent(Inspector::Protocol::ErrorString&, Frame*, const URL&, String* result, bool* base64Encoded);
     static String sourceMapURLForResource(CachedResource*);
-    static CachedResource* cachedResource(Frame*, const URL&);
+    static CachedResource* cachedResource(const Frame*, const URL&);
     static Inspector::Protocol::Page::ResourceType resourceTypeJSON(ResourceType);
     static ResourceType inspectorResourceType(CachedResource::Type);
     static ResourceType inspectorResourceType(const CachedResource&);
@@ -98,6 +100,7 @@ public:
     Inspector::Protocol::ErrorStringOr<void> navigate(const String& url);
     Inspector::Protocol::ErrorStringOr<void> overrideUserAgent(const String&);
     Inspector::Protocol::ErrorStringOr<void> overrideSetting(Inspector::Protocol::Page::Setting, std::optional<bool>&& value);
+    Inspector::Protocol::ErrorStringOr<void> overrideUserPreference(Inspector::Protocol::Page::UserPreferenceName, std::optional<Inspector::Protocol::Page::UserPreferenceValue>&&);
     Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::Page::Cookie>>> getCookies();
     Inspector::Protocol::ErrorStringOr<void> setCookie(Ref<JSON::Object>&&);
     Inspector::Protocol::ErrorStringOr<void> deleteCookie(const String& cookieName, const String& url);
@@ -111,9 +114,6 @@ public:
 #endif
     Inspector::Protocol::ErrorStringOr<void> setShowPaintRects(bool);
     Inspector::Protocol::ErrorStringOr<void> setEmulatedMedia(const String&);
-#if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-    Inspector::Protocol::ErrorStringOr<void> setForcedAppearance(std::optional<Inspector::Protocol::Page::Appearance>&&);
-#endif
     Inspector::Protocol::ErrorStringOr<String> snapshotNode(Inspector::Protocol::DOM::NodeId);
     Inspector::Protocol::ErrorStringOr<String> snapshotRect(int x, int y, int width, int height, Inspector::Protocol::Page::CoordinateSystem);
 #if ENABLE(WEB_ARCHIVE) && USE(CF)
@@ -133,11 +133,13 @@ public:
     void frameStoppedLoading(Frame&);
     void frameScheduledNavigation(Frame&, Seconds delay);
     void frameClearedScheduledNavigation(Frame&);
+    void accessibilitySettingsDidChange();
+    void defaultUserPreferencesDidChange();
 #if ENABLE(DARK_MODE_CSS) || HAVE(OS_DARK_MODE_SUPPORT)
-    void defaultAppearanceDidChange(bool useDarkAppearance);
+    void defaultAppearanceDidChange();
 #endif
     void applyUserAgentOverride(String&);
-    void applyEmulatedMedia(String&);
+    void applyEmulatedMedia(AtomString&);
     void didClearWindowObjectInWorld(Frame&, DOMWrapperWorld&);
     void didPaint(RenderObject&, const LayoutRect&);
     void didLayout();
@@ -155,6 +157,10 @@ private:
     static bool mainResourceContent(Frame*, bool withBase64Encode, String* result);
     static bool dataContent(const uint8_t* data, unsigned size, const String& textEncodingName, bool withBase64Encode, String* result);
 
+    void overridePrefersReducedMotion(std::optional<Inspector::Protocol::Page::UserPreferenceValue>&&);
+    void overridePrefersContrast(std::optional<Inspector::Protocol::Page::UserPreferenceValue>&&);
+    void overridePrefersColorScheme(std::optional<Inspector::Protocol::Page::UserPreferenceValue>&&);
+
     Ref<Inspector::Protocol::Page::Frame> buildObjectForFrame(Frame*);
     Ref<Inspector::Protocol::Page::FrameResourceTree> buildObjectForFrameTree(Frame*);
 
@@ -167,10 +173,10 @@ private:
 
     // FIXME: Make a WeakHashMap and use it for m_frameToIdentifier and m_loaderToIdentifier.
     HashMap<Frame*, String> m_frameToIdentifier;
-    HashMap<String, WeakPtr<Frame>> m_identifierToFrame;
+    MemoryCompactRobinHoodHashMap<String, WeakPtr<Frame>> m_identifierToFrame;
     HashMap<DocumentLoader*, String> m_loaderToIdentifier;
     String m_userAgentOverride;
-    String m_emulatedMedia;
+    AtomString m_emulatedMedia;
     String m_bootstrapScript;
     bool m_isFirstLayoutAfterOnLoad { false };
     bool m_showPaintRects { false };

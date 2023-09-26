@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,14 +28,17 @@
 
 #include "ArrayPrototype.h"
 #include "BuiltinNames.h"
+#include "CachedCall.h"
 #include "CodeBlock.h"
 #include "ControlFlowProfiler.h"
 #include "DOMAttributeGetterSetter.h"
 #include "DOMJITGetterSetter.h"
 #include "Debugger.h"
+#include "ExecutableBaseInlines.h"
 #include "FrameTracers.h"
 #include "FunctionCodeBlock.h"
 #include "GetterSetter.h"
+#include "InterpreterInlines.h"
 #include "JITSizeStatistics.h"
 #include "JSArray.h"
 #include "JSCInlines.h"
@@ -54,6 +57,7 @@
 #include "VMTrapsInlines.h"
 #include "WasmCapabilities.h"
 #include <unicode/uversion.h>
+#include <wtf/ApproximateTime.h>
 #include <wtf/Atomics.h>
 #include <wtf/CPUTime.h>
 #include <wtf/DataLog.h>
@@ -65,9 +69,6 @@
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
 #if BUSE(LIBPAS)
-#ifndef PAS_BMALLOC
-#define PAS_BMALLOC 1
-#endif
 #include <bmalloc/pas_debug_spectrum.h>
 #include <bmalloc/pas_fd_stream.h>
 #include <bmalloc/pas_heap_lock.h>
@@ -79,6 +80,10 @@
 #include "WasmModuleInformation.h"
 #include "WasmStreamingCompiler.h"
 #include "WasmStreamingParser.h"
+#endif
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/CrashReporter.h>
 #endif
 
 using namespace JSC;
@@ -132,7 +137,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     JSDollarVMCallFrame(VM& vm, Structure* structure)
@@ -152,7 +157,7 @@ public:
         DollarVMAssertScope assertScope;
         VM& vm = globalObject->vm();
         Structure* structure = createStructure(vm, globalObject, jsNull());
-        JSDollarVMCallFrame* frame = new (NotNull, allocateCell<JSDollarVMCallFrame>(vm.heap)) JSDollarVMCallFrame(vm, structure);
+        JSDollarVMCallFrame* frame = new (NotNull, allocateCell<JSDollarVMCallFrame>(vm)) JSDollarVMCallFrame(vm, structure);
         frame->finishCreation(vm, callFrame, requestedFrameIndex);
         return frame;
     }
@@ -162,42 +167,42 @@ public:
         DollarVMAssertScope assertScope;
         Base::finishCreation(vm);
 
-        auto addProperty = [&] (VM& vm, const char* name, JSValue value) {
+        auto addProperty = [&] (VM& vm, ASCIILiteral name, JSValue value) {
             DollarVMAssertScope assertScope;
             JSDollarVMCallFrame::addProperty(vm, name, value);
         };
 
         unsigned frameIndex = 0;
         bool isValid = false;
-        callFrame->iterate(vm, [&] (StackVisitor& visitor) {
+        StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) {
             DollarVMAssertScope assertScope;
 
             if (frameIndex++ != requestedFrameIndex)
-                return StackVisitor::Continue;
+                return IterationStatus::Continue;
 
-            addProperty(vm, "name", jsString(vm, visitor->functionName()));
+            addProperty(vm, "name"_s, jsString(vm, visitor->functionName()));
 
             if (visitor->callee().isCell())
-                addProperty(vm, "callee", visitor->callee().asCell());
+                addProperty(vm, "callee"_s, visitor->callee().asCell());
 
             CodeBlock* codeBlock = visitor->codeBlock();
             if (codeBlock) {
-                addProperty(vm, "codeBlock", codeBlock);
-                addProperty(vm, "unlinkedCodeBlock", codeBlock->unlinkedCodeBlock());
-                addProperty(vm, "executable", codeBlock->ownerExecutable());
+                addProperty(vm, "codeBlock"_s, codeBlock);
+                addProperty(vm, "unlinkedCodeBlock"_s, codeBlock->unlinkedCodeBlock());
+                addProperty(vm, "executable"_s, codeBlock->ownerExecutable());
             }
             isValid = true;
 
-            return StackVisitor::Done;
+            return IterationStatus::Done;
         });
 
-        addProperty(vm, "valid", jsBoolean(isValid));
+        addProperty(vm, "valid"_s, jsBoolean(isValid));
     }
 
     DECLARE_INFO;
 
 private:
-    void addProperty(VM& vm, const char* name, JSValue value)
+    void addProperty(VM& vm, ASCIILiteral name, JSValue value)
     {
         DollarVMAssertScope assertScope;
         Identifier identifier = Identifier::fromString(vm, name);
@@ -205,7 +210,7 @@ private:
     }
 };
 
-const ClassInfo JSDollarVMCallFrame::s_info = { "CallFrame", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDollarVMCallFrame) };
+const ClassInfo JSDollarVMCallFrame::s_info = { "CallFrame"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDollarVMCallFrame) };
 
 class ElementHandleOwner;
 class Root;
@@ -222,7 +227,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     Root* root() const { return m_root.get(); }
@@ -232,7 +237,7 @@ public:
     {
         DollarVMAssertScope assertScope;
         Structure* structure = createStructure(vm, globalObject, jsNull());
-        Element* element = new (NotNull, allocateCell<Element>(vm.heap)) Element(vm, structure);
+        Element* element = new (NotNull, allocateCell<Element>(vm)) Element(vm, structure);
         element->finishCreation(vm, root);
         return element;
     }
@@ -286,7 +291,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.destructibleObjectSpace;
+        return &vm.destructibleObjectSpace();
     }
 
     Root(VM& vm, Structure* structure)
@@ -311,7 +316,7 @@ public:
     {
         DollarVMAssertScope assertScope;
         Structure* structure = createStructure(vm, globalObject, jsNull());
-        Root* root = new (NotNull, allocateCell<Root>(vm.heap)) Root(vm, structure);
+        Root* root = new (NotNull, allocateCell<Root>(vm)) Root(vm, structure);
         root->finishCreation(vm);
         return root;
     }
@@ -353,14 +358,14 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     static SimpleObject* create(VM& vm, JSGlobalObject* globalObject)
     {
         DollarVMAssertScope assertScope;
         Structure* structure = createStructure(vm, globalObject, jsNull());
-        SimpleObject* simpleObject = new (NotNull, allocateCell<SimpleObject>(vm.heap)) SimpleObject(vm, structure);
+        SimpleObject* simpleObject = new (NotNull, allocateCell<SimpleObject>(vm)) SimpleObject(vm, structure);
         simpleObject->finishCreation(vm);
         return simpleObject;
     }
@@ -389,6 +394,7 @@ public:
         CallData constructData;
         constructData.type = CallData::Type::Native;
         constructData.native.function = callHostFunctionAsConstructor;
+        constructData.native.isBoundFunction = false;
         return constructData;
     }
 
@@ -425,7 +431,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -437,7 +443,7 @@ public:
     static ImpureGetter* create(VM& vm, Structure* structure, JSObject* delegate)
     {
         DollarVMAssertScope assertScope;
-        ImpureGetter* getter = new (NotNull, allocateCell<ImpureGetter>(vm.heap)) ImpureGetter(vm, structure);
+        ImpureGetter* getter = new (NotNull, allocateCell<ImpureGetter>(vm)) ImpureGetter(vm, structure);
         getter->finishCreation(vm, delegate);
         return getter;
     }
@@ -507,7 +513,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -519,7 +525,7 @@ public:
     static CustomGetter* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        CustomGetter* getter = new (NotNull, allocateCell<CustomGetter>(vm.heap)) CustomGetter(vm, structure);
+        CustomGetter* getter = new (NotNull, allocateCell<CustomGetter>(vm)) CustomGetter(vm, structure);
         getter->finishCreation(vm);
         return getter;
     }
@@ -529,12 +535,12 @@ public:
         DollarVMAssertScope assertScope;
         VM& vm = globalObject->vm();
         CustomGetter* thisObject = jsCast<CustomGetter*>(object);
-        if (propertyName == PropertyName(Identifier::fromString(vm, "customGetter"))) {
+        if (propertyName == PropertyName(Identifier::fromString(vm, "customGetter"_s))) {
             slot.setCacheableCustom(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum, customGetterValueGetter);
             return true;
         }
 
-        if (propertyName == PropertyName(Identifier::fromString(vm, "customGetterAccessor"))) {
+        if (propertyName == PropertyName(Identifier::fromString(vm, "customGetterAccessor"_s))) {
             slot.setCacheableCustom(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor, customGetterAcessorGetter);
             return true;
         }
@@ -549,10 +555,10 @@ JSC_DEFINE_CUSTOM_GETTER(customGetterValueGetter, (JSGlobalObject* globalObject,
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    CustomGetter* thisObject = jsDynamicCast<CustomGetter*>(vm, JSValue::decode(thisValue));
+    CustomGetter* thisObject = jsDynamicCast<CustomGetter*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
-    bool shouldThrow = thisObject->get(globalObject, PropertyName(Identifier::fromString(vm, "shouldThrow"))).toBoolean(globalObject);
+    bool shouldThrow = thisObject->get(globalObject, PropertyName(Identifier::fromString(vm, "shouldThrow"_s))).toBoolean(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (shouldThrow)
         return throwVMTypeError(globalObject, scope);
@@ -565,10 +571,10 @@ JSC_DEFINE_CUSTOM_GETTER(customGetterAcessorGetter, (JSGlobalObject* globalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, JSValue::decode(thisValue));
+    JSObject* thisObject = jsDynamicCast<JSObject*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
-    bool shouldThrow = thisObject->get(globalObject, PropertyName(Identifier::fromString(vm, "shouldThrow"))).toBoolean(globalObject);
+    bool shouldThrow = thisObject->get(globalObject, PropertyName(Identifier::fromString(vm, "shouldThrow"_s))).toBoolean(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (shouldThrow)
         return throwVMTypeError(globalObject, scope);
@@ -589,7 +595,7 @@ IGNORE_WARNINGS_END
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     static RuntimeArray* create(JSGlobalObject* globalObject, CallFrame* callFrame)
@@ -597,7 +603,7 @@ IGNORE_WARNINGS_END
         DollarVMAssertScope assertScope;
         VM& vm = globalObject->vm();
         Structure* structure = createStructure(vm, globalObject, createPrototype(vm, globalObject));
-        RuntimeArray* runtimeArray = new (NotNull, allocateCell<RuntimeArray>(vm.heap)) RuntimeArray(globalObject, structure);
+        RuntimeArray* runtimeArray = new (NotNull, allocateCell<RuntimeArray>(vm)) RuntimeArray(globalObject, structure);
         runtimeArray->finishCreation(globalObject, callFrame);
         vm.heap.addFinalizer(runtimeArray, destroy);
         return runtimeArray;
@@ -674,7 +680,7 @@ protected:
         DollarVMAssertScope assertScope;
         VM& vm = globalObject->vm();
         Base::finishCreation(vm);
-        ASSERT(inherits(vm, info()));
+        ASSERT(inherits(info()));
 
         for (size_t i = 0; i < callFrame->argumentCount(); i++)
             m_vector.append(callFrame->argument(i).toInt32(globalObject));
@@ -696,7 +702,7 @@ JSC_DEFINE_CUSTOM_GETTER(runtimeArrayLengthGetter, (JSGlobalObject* globalObject
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    RuntimeArray* thisObject = jsDynamicCast<RuntimeArray*>(vm, JSValue::decode(thisValue));
+    RuntimeArray* thisObject = jsDynamicCast<RuntimeArray*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
     return JSValue::encode(jsNumber(thisObject->getLength()));
@@ -711,11 +717,11 @@ JSC_DEFINE_CUSTOM_GETTER(testStaticAccessorGetter, (JSGlobalObject* globalObject
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, JSValue::decode(thisValue));
+    JSObject* thisObject = jsDynamicCast<JSObject*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
 
-    if (JSValue result = thisObject->getDirect(vm, PropertyName(Identifier::fromString(vm, "testField"))))
+    if (JSValue result = thisObject->getDirect(vm, PropertyName(Identifier::fromString(vm, "testField"_s))))
         return JSValue::encode(result);
     return JSValue::encode(jsUndefined());
 }
@@ -731,7 +737,7 @@ JSC_DEFINE_CUSTOM_SETTER(testStaticAccessorPutter, (JSGlobalObject* globalObject
     RETURN_IF_EXCEPTION(scope, false);
     RELEASE_ASSERT(thisObject);
 
-    return thisObject->putDirect(vm, PropertyName(Identifier::fromString(vm, "testField")), JSValue::decode(value));
+    return thisObject->putDirect(vm, PropertyName(Identifier::fromString(vm, "testField"_s)), JSValue::decode(value));
 }
 
 static const struct CompactHashIndex staticCustomAccessorTableIndex[9] = {
@@ -747,9 +753,9 @@ static const struct CompactHashIndex staticCustomAccessorTableIndex[9] = {
 };
 
 static const struct HashTableValue staticCustomAccessorTableValues[3] = {
-    { "testStaticAccessor", static_cast<unsigned>(PropertyAttribute::CustomAccessor), NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(testStaticAccessorGetter), (intptr_t)static_cast<PutPropertySlot::PutValueFunc>(testStaticAccessorPutter) } },
-    { "testStaticAccessorDontEnum", PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum, NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticAccessorGetter), (intptr_t)static_cast<PutValueFunc>(testStaticAccessorPutter) } },
-    { "testStaticAccessorReadOnly", PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticAccessorGetter), 0 } },
+    { "testStaticAccessor"_s, static_cast<unsigned>(PropertyAttribute::CustomAccessor), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, testStaticAccessorPutter } },
+    { "testStaticAccessorDontEnum"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, testStaticAccessorPutter } },
+    { "testStaticAccessorReadOnly"_s, PropertyAttribute::CustomAccessor | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticAccessorGetter, nullptr } },
 };
 
 static const struct HashTable staticCustomAccessorTable =
@@ -771,7 +777,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -783,14 +789,14 @@ public:
     static StaticCustomAccessor* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        StaticCustomAccessor* accessor = new (NotNull, allocateCell<StaticCustomAccessor>(vm.heap)) StaticCustomAccessor(vm, structure);
+        StaticCustomAccessor* accessor = new (NotNull, allocateCell<StaticCustomAccessor>(vm)) StaticCustomAccessor(vm, structure);
         accessor->finishCreation(vm);
         return accessor;
     }
 
     static bool getOwnPropertySlot(JSObject* thisObject, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
     {
-        if (String(propertyName.uid()) == "thinAirCustomGetter") {
+        if (String(propertyName.uid()) == "thinAirCustomGetter"_s) {
             slot.setCacheableCustom(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor, testStaticAccessorGetter);
             return true;
         }
@@ -814,11 +820,11 @@ JSC_DEFINE_CUSTOM_SETTER(testStaticValuePutter, (JSGlobalObject* globalObject, E
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, JSValue::decode(thisValue));
+    JSObject* thisObject = jsDynamicCast<JSObject*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
 
-    return thisObject->putDirect(vm, PropertyName(Identifier::fromString(vm, "testStaticValue")), JSValue::decode(value));
+    return thisObject->putDirect(vm, PropertyName(Identifier::fromString(vm, "testStaticValue"_s)), JSValue::decode(value));
 }
 
 JSC_DEFINE_CUSTOM_SETTER(testStaticValuePutterSetFlag, (JSGlobalObject* globalObject, EncodedJSValue thisValue, EncodedJSValue, PropertyName))
@@ -827,11 +833,11 @@ JSC_DEFINE_CUSTOM_SETTER(testStaticValuePutterSetFlag, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, JSValue::decode(thisValue));
+    JSObject* thisObject = jsDynamicCast<JSObject*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
 
-    return thisObject->putDirect(vm, PropertyName(Identifier::fromString(vm, "testStaticValueSetterCalled")), jsBoolean(true));
+    return thisObject->putDirect(vm, PropertyName(Identifier::fromString(vm, "testStaticValueSetterCalled"_s)), jsBoolean(true));
 }
 
 static const struct CompactHashIndex staticCustomValueTableIndex[8] = {
@@ -846,10 +852,10 @@ static const struct CompactHashIndex staticCustomValueTableIndex[8] = {
 };
 
 static const struct HashTableValue staticCustomValueTableValues[4] = {
-    { "testStaticValue", static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticValueGetter), (intptr_t)static_cast<PutValueFunc>(testStaticValuePutter) } },
-    { "testStaticValueNoSetter", PropertyAttribute::CustomValue | PropertyAttribute::DontEnum, NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticValueGetter), 0 } },
-    { "testStaticValueReadOnly", PropertyAttribute::CustomValue | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticValueGetter), 0 } },
-    { "testStaticValueSetFlag", static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { (intptr_t)static_cast<GetValueFunc>(testStaticValueGetter), (intptr_t)static_cast<PutValueFunc>(testStaticValuePutterSetFlag) } },
+    { "testStaticValue"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, testStaticValuePutter } },
+    { "testStaticValueNoSetter"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, nullptr } },
+    { "testStaticValueReadOnly"_s, PropertyAttribute::CustomValue | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly, NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, nullptr } },
+    { "testStaticValueSetFlag"_s, static_cast<unsigned>(PropertyAttribute::CustomValue), NoIntrinsic, { HashTableValue::GetterSetterType, testStaticValueGetter, testStaticValuePutterSetFlag } },
 };
 
 static const struct HashTable staticCustomValueTable =
@@ -871,7 +877,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -883,11 +889,73 @@ public:
     static StaticCustomValue* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        StaticCustomValue* accessor = new (NotNull, allocateCell<StaticCustomValue>(vm.heap)) StaticCustomValue(vm, structure);
+        StaticCustomValue* accessor = new (NotNull, allocateCell<StaticCustomValue>(vm)) StaticCustomValue(vm, structure);
         accessor->finishCreation(vm);
         return accessor;
     }
 };
+
+static JSC_DECLARE_HOST_FUNCTION(staticDontDeleteDontEnumMethod);
+
+class StaticDontDeleteDontEnum : public JSNonFinalObject {
+public:
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    StaticDontDeleteDontEnum(VM& vm, Structure* structure)
+        : Base(vm, structure)
+    {
+        DollarVMAssertScope assertScope;
+    }
+
+    DECLARE_INFO;
+
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace();
+    }
+
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+    {
+        DollarVMAssertScope assertScope;
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+    }
+
+    static StaticDontDeleteDontEnum* create(VM& vm, Structure* structure)
+    {
+        DollarVMAssertScope assertScope;
+        StaticDontDeleteDontEnum* result = new (NotNull, allocateCell<StaticDontDeleteDontEnum>(vm)) StaticDontDeleteDontEnum(vm, structure);
+        result->finishCreation(vm);
+        return result;
+    }
+};
+
+JSC_DEFINE_HOST_FUNCTION(staticDontDeleteDontEnumMethod, (JSGlobalObject*, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    return encodedJSUndefined();
+}
+
+static const struct CompactHashIndex staticDontDeleteDontEnumTableIndex[8] = {
+    { 0, -1 },
+    { 1, -1 },
+    { -1, -1 },
+    { -1, -1 },
+    { -1, -1 },
+    { 2, -1 },
+    { -1, -1 },
+    { -1, -1 },
+};
+
+static const struct HashTableValue staticDontDeleteDontEnumTableValues[3] = {
+    { "dontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
+    { "dontDelete"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontDelete), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
+    { "dontDeleteDontEnum"_s, static_cast<unsigned>(PropertyAttribute::Function | PropertyAttribute::DontDelete | PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::NativeFunctionType, staticDontDeleteDontEnumMethod, 0 } },
+};
+
+static const struct HashTable staticDontDeleteDontEnumTable =
+    { 3, 7, false, nullptr, staticDontDeleteDontEnumTableValues, staticDontDeleteDontEnumTableIndex };
 
 class ObjectDoingSideEffectPutWithoutCorrectSlotStatus : public JSNonFinalObject {
     using Base = JSNonFinalObject;
@@ -896,7 +964,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     ObjectDoingSideEffectPutWithoutCorrectSlotStatus(VM& vm, Structure* structure)
@@ -916,7 +984,7 @@ public:
     static ObjectDoingSideEffectPutWithoutCorrectSlotStatus* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        ObjectDoingSideEffectPutWithoutCorrectSlotStatus* accessor = new (NotNull, allocateCell<ObjectDoingSideEffectPutWithoutCorrectSlotStatus>(vm.heap)) ObjectDoingSideEffectPutWithoutCorrectSlotStatus(vm, structure);
+        ObjectDoingSideEffectPutWithoutCorrectSlotStatus* accessor = new (NotNull, allocateCell<ObjectDoingSideEffectPutWithoutCorrectSlotStatus>(vm)) ObjectDoingSideEffectPutWithoutCorrectSlotStatus(vm, structure);
         accessor->finishCreation(vm);
         return accessor;
     }
@@ -947,7 +1015,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -974,7 +1042,7 @@ public:
     static DOMJITNode* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        DOMJITNode* getter = new (NotNull, allocateCell<DOMJITNode>(vm.heap)) DOMJITNode(vm, structure);
+        DOMJITNode* getter = new (NotNull, allocateCell<DOMJITNode>(vm)) DOMJITNode(vm, structure);
         getter->finishCreation(vm);
         return getter;
     }
@@ -992,7 +1060,7 @@ private:
 
 
 static JSC_DECLARE_CUSTOM_GETTER(domJITGetterCustomGetter);
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(domJITGetterSlowCall, EncodedJSValue, (JSGlobalObject*, void*));
+extern "C" { static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(domJITGetterSlowCall, EncodedJSValue, (JSGlobalObject*, void*)); }
 
 class DOMJITGetter : public DOMJITNode {
 public:
@@ -1015,7 +1083,7 @@ public:
     static DOMJITGetter* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        DOMJITGetter* getter = new (NotNull, allocateCell<DOMJITGetter>(vm.heap)) DOMJITGetter(vm, structure);
+        DOMJITGetter* getter = new (NotNull, allocateCell<DOMJITGetter>(vm)) DOMJITGetter(vm, structure);
         getter->finishCreation(vm);
         return getter;
     }
@@ -1067,11 +1135,11 @@ void DOMJITGetter::finishCreation(VM& vm)
     {
         const DOMJIT::GetterSetter* domJIT = &DOMJITGetterDOMJIT;
         auto* customGetterSetter = DOMAttributeGetterSetter::create(vm, domJIT->getter(), nullptr, DOMAttributeAnnotation { DOMJITNode::info(), domJIT });
-        putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
+        putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"_s), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
     }
     {
         auto* customGetterSetter = DOMAttributeGetterSetter::create(vm, domJITGetterCustomGetter, nullptr, DOMAttributeAnnotation { DOMJITNode::info(), nullptr });
-        putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter2"), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
+        putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter2"_s), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
     }
 }
 
@@ -1080,7 +1148,7 @@ JSC_DEFINE_CUSTOM_GETTER(domJITGetterCustomGetter, (JSGlobalObject* globalObject
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    DOMJITNode* thisObject = jsDynamicCast<DOMJITNode*>(vm, JSValue::decode(thisValue));
+    DOMJITNode* thisObject = jsDynamicCast<DOMJITNode*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
     return JSValue::encode(jsNumber(thisObject->value()));
@@ -1097,7 +1165,7 @@ JSC_DEFINE_JIT_OPERATION(domJITGetterSlowCall, EncodedJSValue, (JSGlobalObject* 
 
 
 static JSC_DECLARE_CUSTOM_GETTER(domJITGetterNoEffectCustomGetter);
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(domJITGetterNoEffectSlowCall, EncodedJSValue, (JSGlobalObject*, void*));
+extern "C" { static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(domJITGetterNoEffectSlowCall, EncodedJSValue, (JSGlobalObject*, void*)); }
 
 class DOMJITGetterNoEffects : public DOMJITNode {
 public:
@@ -1120,7 +1188,7 @@ public:
     static DOMJITGetterNoEffects* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        DOMJITGetterNoEffects* getter = new (NotNull, allocateCell<DOMJITGetterNoEffects>(vm.heap)) DOMJITGetterNoEffects(vm, structure);
+        DOMJITGetterNoEffects* getter = new (NotNull, allocateCell<DOMJITGetterNoEffects>(vm)) DOMJITGetterNoEffects(vm, structure);
         getter->finishCreation(vm);
         return getter;
     }
@@ -1172,7 +1240,7 @@ void DOMJITGetterNoEffects::finishCreation(VM& vm)
     Base::finishCreation(vm);
     const DOMJIT::GetterSetter* domJIT = &DOMJITGetterNoEffectsDOMJIT;
     auto* customGetterSetter = DOMAttributeGetterSetter::create(vm, domJIT->getter(), nullptr, DOMAttributeAnnotation { DOMJITNode::info(), domJIT });
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"_s), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
 }
 
 JSC_DEFINE_CUSTOM_GETTER(domJITGetterNoEffectCustomGetter, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
@@ -1180,7 +1248,7 @@ JSC_DEFINE_CUSTOM_GETTER(domJITGetterNoEffectCustomGetter, (JSGlobalObject* glob
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    DOMJITNode* thisObject = jsDynamicCast<DOMJITNode*>(vm, JSValue::decode(thisValue));
+    DOMJITNode* thisObject = jsDynamicCast<DOMJITNode*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
     return JSValue::encode(jsNumber(thisObject->value()));
@@ -1196,7 +1264,7 @@ JSC_DEFINE_JIT_OPERATION(domJITGetterNoEffectSlowCall, EncodedJSValue, (JSGlobal
 }
 
 static JSC_DECLARE_CUSTOM_GETTER(domJITGetterComplexCustomGetter);
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(domJITGetterComplexSlowCall, EncodedJSValue, (JSGlobalObject*, void*));
+extern "C" { static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(domJITGetterComplexSlowCall, EncodedJSValue, (JSGlobalObject*, void*)); }
 
 class DOMJITGetterComplex : public DOMJITNode {
 public:
@@ -1219,7 +1287,7 @@ public:
     static DOMJITGetterComplex* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        DOMJITGetterComplex* getter = new (NotNull, allocateCell<DOMJITGetterComplex>(vm.heap)) DOMJITGetterComplex(vm, structure);
+        DOMJITGetterComplex* getter = new (NotNull, allocateCell<DOMJITGetterComplex>(vm)) DOMJITGetterComplex(vm, structure);
         getter->finishCreation(vm, globalObject);
         return getter;
     }
@@ -1269,11 +1337,10 @@ public:
     bool m_enableException { false };
 };
 
-JSC_DEFINE_HOST_FUNCTION(functionDOMJITGetterComplexEnableException, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(functionDOMJITGetterComplexEnableException, (JSGlobalObject*, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
-    VM& vm = globalObject->vm();
-    auto* object = jsDynamicCast<DOMJITGetterComplex*>(vm, callFrame->thisValue());
+    auto* object = jsDynamicCast<DOMJITGetterComplex*>(callFrame->thisValue());
     if (object)
         object->m_enableException = true;
     return JSValue::encode(jsUndefined());
@@ -1285,7 +1352,7 @@ JSC_DEFINE_CUSTOM_GETTER(domJITGetterComplexCustomGetter, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* thisObject = jsDynamicCast<DOMJITGetterComplex*>(vm, JSValue::decode(thisValue));
+    auto* thisObject = jsDynamicCast<DOMJITGetterComplex*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
     if (thisObject->m_enableException)
@@ -1301,7 +1368,7 @@ JSC_DEFINE_JIT_OPERATION(domJITGetterComplexSlowCall, EncodedJSValue, (JSGlobalO
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto* object = static_cast<DOMJITNode*>(pointer);
-    auto* domjitGetterComplex = jsDynamicCast<DOMJITGetterComplex*>(vm, object);
+    auto* domjitGetterComplex = jsDynamicCast<DOMJITGetterComplex*>(object);
     if (domjitGetterComplex) {
         if (domjitGetterComplex->m_enableException)
             return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "DOMJITGetterComplex slow call exception"_s)));
@@ -1317,11 +1384,11 @@ void DOMJITGetterComplex::finishCreation(VM& vm, JSGlobalObject* globalObject)
     Base::finishCreation(vm);
     const DOMJIT::GetterSetter* domJIT = &DOMJITGetterComplexDOMJIT;
     auto* customGetterSetter = DOMAttributeGetterSetter::create(vm, domJIT->getter(), nullptr, DOMAttributeAnnotation { DOMJITGetterComplex::info(), domJIT });
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "enableException"), 0, functionDOMJITGetterComplexEnableException, NoIntrinsic, 0);
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"_s), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "enableException"_s), 0, functionDOMJITGetterComplexEnableException, ImplementationVisibility::Public, NoIntrinsic, 0);
 }
 
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(functionDOMJITFunctionObjectWithoutTypeCheck, EncodedJSValue, (JSGlobalObject* globalObject, DOMJITNode*));
+extern "C" { static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(functionDOMJITFunctionObjectWithoutTypeCheck, EncodedJSValue, (JSGlobalObject* globalObject, DOMJITNode*)); }
 
 class DOMJITFunctionObject : public DOMJITNode {
 public:
@@ -1344,7 +1411,7 @@ public:
     static DOMJITFunctionObject* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        DOMJITFunctionObject* object = new (NotNull, allocateCell<DOMJITFunctionObject>(vm.heap)) DOMJITFunctionObject(vm, structure);
+        DOMJITFunctionObject* object = new (NotNull, allocateCell<DOMJITFunctionObject>(vm)) DOMJITFunctionObject(vm, structure);
         object->finishCreation(vm, globalObject);
         return object;
     }
@@ -1378,7 +1445,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDOMJITFunctionObjectWithTypeCheck, (JSGlobalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    DOMJITNode* thisObject = jsDynamicCast<DOMJITNode*>(vm, callFrame->thisValue());
+    DOMJITNode* thisObject = jsDynamicCast<DOMJITNode*>(callFrame->thisValue());
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
     return JSValue::encode(jsNumber(thisObject->value()));
@@ -1399,10 +1466,10 @@ void DOMJITFunctionObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     DollarVMAssertScope assertScope;
     Base::finishCreation(vm);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "func"), 0, functionDOMJITFunctionObjectWithTypeCheck, NoIntrinsic, &DOMJITFunctionObjectSignature, static_cast<unsigned>(PropertyAttribute::ReadOnly));
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "func"_s), 0, functionDOMJITFunctionObjectWithTypeCheck, ImplementationVisibility::Public, NoIntrinsic, &DOMJITFunctionObjectSignature, static_cast<unsigned>(PropertyAttribute::ReadOnly));
 }
 
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(functionDOMJITCheckJSCastObjectWithoutTypeCheck, EncodedJSValue, (JSGlobalObject* globalObject, DOMJITNode* node));
+extern "C" { static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(functionDOMJITCheckJSCastObjectWithoutTypeCheck, EncodedJSValue, (JSGlobalObject* globalObject, DOMJITNode* node)); }
 
 class DOMJITCheckJSCastObject : public DOMJITNode {
 public:
@@ -1425,7 +1492,7 @@ public:
     static DOMJITCheckJSCastObject* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        DOMJITCheckJSCastObject* object = new (NotNull, allocateCell<DOMJITCheckJSCastObject>(vm.heap)) DOMJITCheckJSCastObject(vm, structure);
+        DOMJITCheckJSCastObject* object = new (NotNull, allocateCell<DOMJITCheckJSCastObject>(vm)) DOMJITCheckJSCastObject(vm, structure);
         object->finishCreation(vm, globalObject);
         return object;
     }
@@ -1440,7 +1507,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDOMJITCheckJSCastObjectWithTypeCheck, (JSGlobal
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* thisObject = jsDynamicCast<DOMJITCheckJSCastObject*>(vm, callFrame->thisValue());
+    auto* thisObject = jsDynamicCast<DOMJITCheckJSCastObject*>(callFrame->thisValue());
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
     return JSValue::encode(jsNumber(thisObject->value()));
@@ -1461,11 +1528,11 @@ void DOMJITCheckJSCastObject::finishCreation(VM& vm, JSGlobalObject* globalObjec
 {
     DollarVMAssertScope assertScope;
     Base::finishCreation(vm);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "func"), 0, functionDOMJITCheckJSCastObjectWithTypeCheck, NoIntrinsic, &DOMJITCheckJSCastObjectSignature, static_cast<unsigned>(PropertyAttribute::ReadOnly));
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "func"_s), 0, functionDOMJITCheckJSCastObjectWithTypeCheck, ImplementationVisibility::Public, NoIntrinsic, &DOMJITCheckJSCastObjectSignature, static_cast<unsigned>(PropertyAttribute::ReadOnly));
 }
 
 static JSC_DECLARE_CUSTOM_GETTER(domJITGetterBaseJSObjectCustomGetter);
-static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(domJITGetterBaseJSObjectSlowCall, EncodedJSValue, (JSGlobalObject*, void*));
+extern "C" { static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(domJITGetterBaseJSObjectSlowCall, EncodedJSValue, (JSGlobalObject*, void*)); }
 
 class DOMJITGetterBaseJSObject : public DOMJITNode {
 public:
@@ -1488,7 +1555,7 @@ public:
     static DOMJITGetterBaseJSObject* create(VM& vm, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        DOMJITGetterBaseJSObject* getter = new (NotNull, allocateCell<DOMJITGetterBaseJSObject>(vm.heap)) DOMJITGetterBaseJSObject(vm, structure);
+        DOMJITGetterBaseJSObject* getter = new (NotNull, allocateCell<DOMJITGetterBaseJSObject>(vm)) DOMJITGetterBaseJSObject(vm, structure);
         getter->finishCreation(vm);
         return getter;
     }
@@ -1539,7 +1606,7 @@ void DOMJITGetterBaseJSObject::finishCreation(VM& vm)
     Base::finishCreation(vm);
     const DOMJIT::GetterSetter* domJIT = &DOMJITGetterBaseJSObjectDOMJIT;
     auto* customGetterSetter = DOMAttributeGetterSetter::create(vm, domJIT->getter(), nullptr, DOMAttributeAnnotation { JSObject::info(), domJIT });
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customGetter"_s), customGetterSetter, PropertyAttribute::ReadOnly | PropertyAttribute::CustomAccessor);
 }
 
 JSC_DEFINE_CUSTOM_GETTER(domJITGetterBaseJSObjectCustomGetter, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
@@ -1547,10 +1614,10 @@ JSC_DEFINE_CUSTOM_GETTER(domJITGetterBaseJSObjectCustomGetter, (JSGlobalObject* 
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, JSValue::decode(thisValue));
+    JSObject* thisObject = jsDynamicCast<JSObject*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(globalObject, scope);
-    return JSValue::encode(thisObject->getPrototypeDirect(vm));
+    return JSValue::encode(thisObject->getPrototypeDirect());
 }
 
 JSC_DEFINE_JIT_OPERATION(domJITGetterBaseJSObjectSlowCall, EncodedJSValue, (JSGlobalObject* globalObject, void* pointer))
@@ -1560,7 +1627,7 @@ JSC_DEFINE_JIT_OPERATION(domJITGetterBaseJSObjectSlowCall, EncodedJSValue, (JSGl
     CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
     JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
     JSObject* object = static_cast<JSObject*>(pointer);
-    return JSValue::encode(object->getPrototypeDirect(vm));
+    return JSValue::encode(object->getPrototypeDirect());
 }
 
 class Message : public ThreadSafeRefCounted<Message> {
@@ -1584,7 +1651,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.cellSpace;
+        return &vm.cellSpace();
     }
 
     JSTestCustomGetterSetter(VM& vm, Structure* structure)
@@ -1596,7 +1663,7 @@ public:
     static JSTestCustomGetterSetter* create(VM& vm, JSGlobalObject*, Structure* structure)
     {
         DollarVMAssertScope assertScope;
-        JSTestCustomGetterSetter* result = new (NotNull, allocateCell<JSTestCustomGetterSetter>(vm.heap)) JSTestCustomGetterSetter(vm, structure);
+        JSTestCustomGetterSetter* result = new (NotNull, allocateCell<JSTestCustomGetterSetter>(vm)) JSTestCustomGetterSetter(vm, structure);
         result->finishCreation(vm);
         return result;
     }
@@ -1631,9 +1698,9 @@ JSC_DEFINE_CUSTOM_GETTER(customGetAccessor, (JSGlobalObject*, EncodedJSValue thi
     return thisValue;
 }
 
-JSC_DEFINE_CUSTOM_GETTER(customGetValue, (JSGlobalObject* globalObject, EncodedJSValue slotValue, PropertyName))
+JSC_DEFINE_CUSTOM_GETTER(customGetValue, (JSGlobalObject*, EncodedJSValue slotValue, PropertyName))
 {
-    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>(globalObject->vm()));
+    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>());
     // Passed property holder.
     return slotValue;
 }
@@ -1643,10 +1710,10 @@ JSC_DEFINE_CUSTOM_GETTER(customGetValue2, (JSGlobalObject* globalObject, Encoded
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
 
-    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>(globalObject->vm()));
+    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>());
 
     auto* target = jsCast<JSTestCustomGetterSetter*>(JSValue::decode(slotValue));
-    JSValue value = target->getDirect(vm, Identifier::fromString(vm, "value2"));
+    JSValue value = target->getDirect(vm, Identifier::fromString(vm, "value2"_s));
     return JSValue::encode(value ? value : jsUndefined());
 }
 
@@ -1671,7 +1738,7 @@ JSC_DEFINE_CUSTOM_SETTER(customSetAccessor, (JSGlobalObject* globalObject, Encod
 
     JSObject* object = asObject(value);
     PutPropertySlot slot(object);
-    object->put(object, globalObject, Identifier::fromString(vm, "result"), JSValue::decode(thisObject), slot);
+    object->put(object, globalObject, Identifier::fromString(vm, "result"_s), JSValue::decode(thisObject), slot);
 
     return true;
 }
@@ -1687,7 +1754,7 @@ JSC_DEFINE_CUSTOM_SETTER(customSetAccessorGlobalObject, (JSGlobalObject* globalO
 
     JSObject* object = asObject(value);
     PutPropertySlot slot(object);
-    object->put(object, globalObject, Identifier::fromString(vm, "result"), globalObject, slot);
+    object->put(object, globalObject, Identifier::fromString(vm, "result"_s), globalObject, slot);
 
     return true;
 }
@@ -1697,7 +1764,7 @@ JSC_DEFINE_CUSTOM_SETTER(customSetValue, (JSGlobalObject* globalObject, EncodedJ
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
 
-    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>(globalObject->vm()));
+    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>());
 
     JSValue value = JSValue::decode(encodedValue);
     if (!value.isObject())
@@ -1705,7 +1772,7 @@ JSC_DEFINE_CUSTOM_SETTER(customSetValue, (JSGlobalObject* globalObject, EncodedJ
 
     JSObject* object = asObject(value);
     PutPropertySlot slot(object);
-    object->put(object, globalObject, Identifier::fromString(vm, "result"), JSValue::decode(slotValue), slot);
+    object->put(object, globalObject, Identifier::fromString(vm, "result"_s), JSValue::decode(slotValue), slot);
 
     return true;
 }
@@ -1715,7 +1782,7 @@ JSC_DEFINE_CUSTOM_SETTER(customSetValueGlobalObject, (JSGlobalObject* globalObje
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
 
-    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>(globalObject->vm()));
+    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>());
 
     JSValue value = JSValue::decode(encodedValue);
     if (!value.isObject())
@@ -1723,7 +1790,7 @@ JSC_DEFINE_CUSTOM_SETTER(customSetValueGlobalObject, (JSGlobalObject* globalObje
 
     JSObject* object = asObject(value);
     PutPropertySlot slot(object);
-    object->put(object, globalObject, Identifier::fromString(vm, "result"), globalObject, slot);
+    object->put(object, globalObject, Identifier::fromString(vm, "result"_s), globalObject, slot);
 
     return true;
 }
@@ -1733,24 +1800,23 @@ JSC_DEFINE_CUSTOM_SETTER(customSetValue2, (JSGlobalObject* globalObject, Encoded
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
 
-    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>(vm));
+    RELEASE_ASSERT(JSValue::decode(slotValue).inherits<JSTestCustomGetterSetter>());
     auto* target = jsCast<JSTestCustomGetterSetter*>(JSValue::decode(slotValue));
     PutPropertySlot slot(target);
-    target->putDirect(vm, Identifier::fromString(vm, "value2"), JSValue::decode(encodedValue));
+    target->putDirect(vm, Identifier::fromString(vm, "value2"_s), JSValue::decode(encodedValue));
     return true;
 }
 
 JSC_DEFINE_CUSTOM_SETTER(customFunctionSetter, (JSGlobalObject* globalObject, EncodedJSValue, EncodedJSValue encodedValue, PropertyName))
 {
     DollarVMAssertScope assertScope;
-    VM& vm = globalObject->vm();
 
     JSValue value = JSValue::decode(encodedValue);
-    JSFunction* function = jsDynamicCast<JSFunction*>(vm, value);
+    JSFunction* function = jsDynamicCast<JSFunction*>(value);
     if (!function)
         return false;
 
-    auto callData = getCallData(vm, function);
+    auto callData = JSC::getCallData(function);
     MarkedArgumentBuffer args;
     call(globalObject, function, callData, jsUndefined(), args);
 
@@ -1762,52 +1828,53 @@ void JSTestCustomGetterSetter::finishCreation(VM& vm)
     DollarVMAssertScope assertScope;
     Base::finishCreation(vm);
 
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customValue"),
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customValue"_s),
         CustomGetterSetter::create(vm, customGetValue, customSetValue), 0);
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customValue2"),
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customValue2"_s),
         CustomGetterSetter::create(vm, customGetValue2, customSetValue2), static_cast<unsigned>(PropertyAttribute::CustomValue));
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customAccessor"),
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customAccessor"_s),
         CustomGetterSetter::create(vm, customGetAccessor, customSetAccessor), static_cast<unsigned>(PropertyAttribute::CustomAccessor));
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customValueGlobalObject"),
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customValueGlobalObject"_s),
         CustomGetterSetter::create(vm, customGetValueGlobalObject, customSetValueGlobalObject), static_cast<unsigned>(PropertyAttribute::CustomValue));
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customAccessorGlobalObject"),
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customAccessorGlobalObject"_s),
         CustomGetterSetter::create(vm, customGetAccessorGlobalObject, customSetAccessorGlobalObject), static_cast<unsigned>(PropertyAttribute::CustomAccessor));
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customValueNoSetter"),
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customValueNoSetter"_s),
         CustomGetterSetter::create(vm, customGetValue, nullptr), static_cast<unsigned>(PropertyAttribute::CustomValue));
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customAccessorReadOnly"),
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customAccessorReadOnly"_s),
         CustomGetterSetter::create(vm, customGetAccessor, nullptr), PropertyAttribute::CustomAccessor | PropertyAttribute::ReadOnly);
 
-    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customFunction"),
+    putDirectCustomAccessor(vm, Identifier::fromString(vm, "customFunction"_s),
         CustomGetterSetter::create(vm, customGetAccessor, customFunctionSetter), static_cast<unsigned>(PropertyAttribute::CustomAccessor));
 
 }
 
-const ClassInfo Element::s_info = { "Element", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(Element) };
-const ClassInfo Root::s_info = { "Root", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(Root) };
-const ClassInfo SimpleObject::s_info = { "SimpleObject", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(SimpleObject) };
-const ClassInfo ImpureGetter::s_info = { "ImpureGetter", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ImpureGetter) };
-const ClassInfo CustomGetter::s_info = { "CustomGetter", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(CustomGetter) };
-const ClassInfo RuntimeArray::s_info = { "RuntimeArray", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeArray) };
+const ClassInfo Element::s_info = { "Element"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(Element) };
+const ClassInfo Root::s_info = { "Root"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(Root) };
+const ClassInfo SimpleObject::s_info = { "SimpleObject"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(SimpleObject) };
+const ClassInfo ImpureGetter::s_info = { "ImpureGetter"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ImpureGetter) };
+const ClassInfo CustomGetter::s_info = { "CustomGetter"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(CustomGetter) };
+const ClassInfo RuntimeArray::s_info = { "RuntimeArray"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeArray) };
 #if ENABLE(JIT)
-const ClassInfo DOMJITNode::s_info = { "DOMJITNode", &Base::s_info, nullptr, &DOMJITNode::checkSubClassSnippet, CREATE_METHOD_TABLE(DOMJITNode) };
+const ClassInfo DOMJITNode::s_info = { "DOMJITNode"_s, &Base::s_info, nullptr, &DOMJITNode::checkSubClassSnippet, CREATE_METHOD_TABLE(DOMJITNode) };
 #else
-const ClassInfo DOMJITNode::s_info = { "DOMJITNode", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITNode) };
+const ClassInfo DOMJITNode::s_info = { "DOMJITNode"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITNode) };
 #endif
-const ClassInfo DOMJITGetter::s_info = { "DOMJITGetter", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITGetter) };
-const ClassInfo DOMJITGetterNoEffects::s_info = { "DOMJITGetterNoEffects", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITGetterNoEffects) };
-const ClassInfo DOMJITGetterComplex::s_info = { "DOMJITGetterComplex", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITGetterComplex) };
-const ClassInfo DOMJITGetterBaseJSObject::s_info = { "DOMJITGetterBaseJSObject", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITGetterBaseJSObject) };
+const ClassInfo DOMJITGetter::s_info = { "DOMJITGetter"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITGetter) };
+const ClassInfo DOMJITGetterNoEffects::s_info = { "DOMJITGetterNoEffects"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITGetterNoEffects) };
+const ClassInfo DOMJITGetterComplex::s_info = { "DOMJITGetterComplex"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITGetterComplex) };
+const ClassInfo DOMJITGetterBaseJSObject::s_info = { "DOMJITGetterBaseJSObject"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITGetterBaseJSObject) };
 #if ENABLE(JIT)
-const ClassInfo DOMJITFunctionObject::s_info = { "DOMJITFunctionObject", &Base::s_info, nullptr, &DOMJITFunctionObject::checkSubClassSnippet, CREATE_METHOD_TABLE(DOMJITFunctionObject) };
+const ClassInfo DOMJITFunctionObject::s_info = { "DOMJITFunctionObject"_s, &Base::s_info, nullptr, &DOMJITFunctionObject::checkSubClassSnippet, CREATE_METHOD_TABLE(DOMJITFunctionObject) };
 #else
-const ClassInfo DOMJITFunctionObject::s_info = { "DOMJITFunctionObject", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITFunctionObject) };
+const ClassInfo DOMJITFunctionObject::s_info = { "DOMJITFunctionObject"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITFunctionObject) };
 #endif
-const ClassInfo DOMJITCheckJSCastObject::s_info = { "DOMJITCheckJSCastObject", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITCheckJSCastObject) };
-const ClassInfo JSTestCustomGetterSetter::s_info = { "JSTestCustomGetterSetter", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestCustomGetterSetter) };
+const ClassInfo DOMJITCheckJSCastObject::s_info = { "DOMJITCheckJSCastObject"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DOMJITCheckJSCastObject) };
+const ClassInfo JSTestCustomGetterSetter::s_info = { "JSTestCustomGetterSetter"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSTestCustomGetterSetter) };
 
-const ClassInfo StaticCustomAccessor::s_info = { "StaticCustomAccessor", &Base::s_info, &staticCustomAccessorTable, nullptr, CREATE_METHOD_TABLE(StaticCustomAccessor) };
-const ClassInfo StaticCustomValue::s_info = { "StaticCustomValue", &Base::s_info, &staticCustomValueTable, nullptr, CREATE_METHOD_TABLE(StaticCustomValue) };
-const ClassInfo ObjectDoingSideEffectPutWithoutCorrectSlotStatus::s_info = { "ObjectDoingSideEffectPutWithoutCorrectSlotStatus", &Base::s_info, &staticCustomAccessorTable, nullptr, CREATE_METHOD_TABLE(ObjectDoingSideEffectPutWithoutCorrectSlotStatus) };
+const ClassInfo StaticCustomAccessor::s_info = { "StaticCustomAccessor"_s, &Base::s_info, &staticCustomAccessorTable, nullptr, CREATE_METHOD_TABLE(StaticCustomAccessor) };
+const ClassInfo StaticCustomValue::s_info = { "StaticCustomValue"_s, &Base::s_info, &staticCustomValueTable, nullptr, CREATE_METHOD_TABLE(StaticCustomValue) };
+const ClassInfo StaticDontDeleteDontEnum::s_info = { "StaticDontDeleteDontEnum"_s, &Base::s_info, &staticDontDeleteDontEnumTable, nullptr, CREATE_METHOD_TABLE(StaticDontDeleteDontEnum) };
+const ClassInfo ObjectDoingSideEffectPutWithoutCorrectSlotStatus::s_info = { "ObjectDoingSideEffectPutWithoutCorrectSlotStatus"_s, &Base::s_info, &staticCustomAccessorTable, nullptr, CREATE_METHOD_TABLE(ObjectDoingSideEffectPutWithoutCorrectSlotStatus) };
 
 ElementHandleOwner* Element::handleOwner()
 {
@@ -1837,7 +1904,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.destructibleObjectSpace;
+        return &vm.destructibleObjectSpace();
     }
 
     class Client final : public Wasm::StreamingParserClient {
@@ -1867,7 +1934,7 @@ public:
     {
         DollarVMAssertScope assertScope;
         Structure* structure = createStructure(vm, globalObject, jsNull());
-        WasmStreamingParser* result = new (NotNull, allocateCell<WasmStreamingParser>(vm.heap)) WasmStreamingParser(vm, structure);
+        WasmStreamingParser* result = new (NotNull, allocateCell<WasmStreamingParser>(vm)) WasmStreamingParser(vm, structure);
         result->finishCreation(vm);
         return result;
     }
@@ -1885,9 +1952,9 @@ public:
         DollarVMAssertScope assertScope;
         Base::finishCreation(vm);
 
-        JSGlobalObject* globalObject = this->globalObject(vm);
-        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "addBytes"), 0, functionWasmStreamingParserAddBytes, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
-        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "finalize"), 0, functionWasmStreamingParserFinalize, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+        JSGlobalObject* globalObject = this->globalObject();
+        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "addBytes"_s), 0, functionWasmStreamingParserAddBytes, ImplementationVisibility::Public, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "finalize"_s), 0, functionWasmStreamingParserFinalize, ImplementationVisibility::Public, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
     }
 
     DECLARE_INFO;
@@ -1897,28 +1964,33 @@ public:
     Wasm::StreamingParser m_streamingParser;
 };
 
-const ClassInfo WasmStreamingParser::s_info = { "WasmStreamingParser", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WasmStreamingParser) };
+const ClassInfo WasmStreamingParser::s_info = { "WasmStreamingParser"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WasmStreamingParser) };
 
 JSC_DEFINE_HOST_FUNCTION(functionWasmStreamingParserAddBytes, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(globalObject->vm());
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* thisObject = jsDynamicCast<WasmStreamingParser*>(vm, callFrame->thisValue());
+    auto* thisObject = jsDynamicCast<WasmStreamingParser*>(callFrame->thisValue());
     if (!thisObject)
         RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(false)));
 
-    auto data = getWasmBufferFromValue(globalObject, callFrame->argument(0));
+    JSValue value = callFrame->argument(0);
+    BaseWebAssemblySourceProvider* provider = nullptr;
+    if (auto* source = jsDynamicCast<JSSourceCode*>(value))
+        provider = static_cast<BaseWebAssemblySourceProvider*>(source->sourceCode().provider());
+    WebAssemblySourceProviderBufferGuard guard(provider);
+
+    auto data = getWasmBufferFromValue(globalObject, value, guard);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     RELEASE_AND_RETURN(scope, JSValue::encode(jsNumber(static_cast<int32_t>(thisObject->streamingParser().addBytes(bitwise_cast<const uint8_t*>(data.first), data.second)))));
 }
 
-JSC_DEFINE_HOST_FUNCTION(functionWasmStreamingParserFinalize, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(functionWasmStreamingParserFinalize, (JSGlobalObject*, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
-    VM& vm = globalObject->vm();
-    auto* thisObject = jsDynamicCast<WasmStreamingParser*>(vm, callFrame->thisValue());
+    auto* thisObject = jsDynamicCast<WasmStreamingParser*>(callFrame->thisValue());
     if (!thisObject)
         return JSValue::encode(jsBoolean(false));
     return JSValue::encode(jsNumber(static_cast<int32_t>(thisObject->streamingParser().finalize())));
@@ -1932,7 +2004,7 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.destructibleObjectSpace;
+        return &vm.destructibleObjectSpace();
     }
 
     WasmStreamingCompiler(VM& vm, Structure* structure, Wasm::CompilerMode compilerMode, JSGlobalObject* globalObject, JSPromise* promise, JSObject* importObject)
@@ -1948,7 +2020,7 @@ public:
         DollarVMAssertScope assertScope;
         JSPromise* promise = JSPromise::create(vm, globalObject->promiseStructure());
         Structure* structure = createStructure(vm, globalObject, jsNull());
-        WasmStreamingCompiler* result = new (NotNull, allocateCell<WasmStreamingCompiler>(vm.heap)) WasmStreamingCompiler(vm, structure, compilerMode, globalObject, promise, importObject);
+        WasmStreamingCompiler* result = new (NotNull, allocateCell<WasmStreamingCompiler>(vm)) WasmStreamingCompiler(vm, structure, compilerMode, globalObject, promise, importObject);
         result->finishCreation(vm);
         return result;
     }
@@ -1968,8 +2040,8 @@ public:
         DollarVMAssertScope assertScope;
         Base::finishCreation(vm);
 
-        JSGlobalObject* globalObject = this->globalObject(vm);
-        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "addBytes"), 0, functionWasmStreamingCompilerAddBytes, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+        JSGlobalObject* globalObject = this->globalObject();
+        putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "addBytes"_s), 0, functionWasmStreamingCompilerAddBytes, ImplementationVisibility::Public, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
     }
 
     DECLARE_VISIT_CHILDREN;
@@ -1992,19 +2064,25 @@ void WasmStreamingCompiler::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(WasmStreamingCompiler);
 
-const ClassInfo WasmStreamingCompiler::s_info = { "WasmStreamingCompiler", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WasmStreamingCompiler) };
+const ClassInfo WasmStreamingCompiler::s_info = { "WasmStreamingCompiler"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WasmStreamingCompiler) };
 
 JSC_DEFINE_HOST_FUNCTION(functionWasmStreamingCompilerAddBytes, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(globalObject->vm());
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* thisObject = jsDynamicCast<WasmStreamingCompiler*>(vm, callFrame->thisValue());
+    auto* thisObject = jsDynamicCast<WasmStreamingCompiler*>(callFrame->thisValue());
     if (!thisObject)
         RELEASE_AND_RETURN(scope, JSValue::encode(jsBoolean(false)));
 
-    auto data = getWasmBufferFromValue(globalObject, callFrame->argument(0));
+    JSValue value = callFrame->argument(0);
+    BaseWebAssemblySourceProvider* provider = nullptr;
+    if (auto* source = jsDynamicCast<JSSourceCode*>(value))
+        provider = static_cast<BaseWebAssemblySourceProvider*>(source->sourceCode().provider());
+    WebAssemblySourceProviderBufferGuard guard(provider);
+
+    auto data = getWasmBufferFromValue(globalObject, value, guard);
     RETURN_IF_EXCEPTION(scope, { });
     thisObject->streamingCompiler().addBytes(bitwise_cast<const uint8_t*>(data.first), data.second);
     return JSValue::encode(jsUndefined());
@@ -2018,6 +2096,7 @@ namespace JSC {
 
 static NO_RETURN_DUE_TO_CRASH JSC_DECLARE_HOST_FUNCTION(functionCrash);
 static JSC_DECLARE_HOST_FUNCTION(functionBreakpoint);
+static JSC_DECLARE_HOST_FUNCTION(functionExit);
 static JSC_DECLARE_HOST_FUNCTION(functionDFGTrue);
 static JSC_DECLARE_HOST_FUNCTION(functionFTLTrue);
 static JSC_DECLARE_HOST_FUNCTION(functionCpuMfence);
@@ -2072,6 +2151,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForInstantia
 #endif
 static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticCustomAccessor);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticCustomValue);
+static JSC_DECLARE_HOST_FUNCTION(functionCreateStaticDontDeleteDontEnum);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateEmptyFunctionWithName);
 static JSC_DECLARE_HOST_FUNCTION(functionSetImpureGetterDelegate);
@@ -2117,17 +2197,33 @@ static JSC_DECLARE_HOST_FUNCTION(functionSecurityAssertEnabled);
 static JSC_DECLARE_HOST_FUNCTION(functionAsanEnabled);
 static JSC_DECLARE_HOST_FUNCTION(functionIsMemoryLimited);
 static JSC_DECLARE_HOST_FUNCTION(functionUseJIT);
+static JSC_DECLARE_HOST_FUNCTION(functionUseDFGJIT);
+static JSC_DECLARE_HOST_FUNCTION(functionUseFTLJIT);
 static JSC_DECLARE_HOST_FUNCTION(functionIsGigacageEnabled);
+static JSC_DECLARE_HOST_FUNCTION(functionToCacheableDictionary);
 static JSC_DECLARE_HOST_FUNCTION(functionToUncacheableDictionary);
 static JSC_DECLARE_HOST_FUNCTION(functionIsPrivateSymbol);
 static JSC_DECLARE_HOST_FUNCTION(functionDumpAndResetPasDebugSpectrum);
+static JSC_DECLARE_HOST_FUNCTION(functionMonotonicTimeNow);
+static JSC_DECLARE_HOST_FUNCTION(functionWallTimeNow);
+static JSC_DECLARE_HOST_FUNCTION(functionApproximateTimeNow);
+static JSC_DECLARE_HOST_FUNCTION(functionHeapExtraMemorySize);
 #if ENABLE(JIT)
 static JSC_DECLARE_HOST_FUNCTION(functionJITSizeStatistics);
 static JSC_DECLARE_HOST_FUNCTION(functionDumpJITSizeStatistics);
 static JSC_DECLARE_HOST_FUNCTION(functionResetJITSizeStatistics);
 #endif
 
-const ClassInfo JSDollarVM::s_info = { "DollarVM", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDollarVM) };
+static JSC_DECLARE_HOST_FUNCTION(functionAllowDoubleShape);
+static JSC_DECLARE_HOST_FUNCTION(functionEnsureArrayStorage);
+#if PLATFORM(COCOA)
+static JSC_DECLARE_HOST_FUNCTION(functionSetCrashLogMessage);
+#endif
+static JSC_DECLARE_HOST_FUNCTION(functionAssertFrameAligned);
+static JSC_DECLARE_HOST_FUNCTION(functionCallFromCPP);
+static JSC_DECLARE_HOST_FUNCTION(functionCachedCallFromCPP);
+
+const ClassInfo JSDollarVM::s_info = { "DollarVM"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDollarVM) };
 
 static EncodedJSValue doPrint(JSGlobalObject* globalObject, CallFrame* callFrame, bool addLineFeed)
 {
@@ -2186,6 +2282,14 @@ JSC_DEFINE_HOST_FUNCTION(functionBreakpoint, (JSGlobalObject* globalObject, Call
         WTFBreakpointTrap();
 
     return encodedJSUndefined();
+}
+
+// Executes exit(EXIT_SUCCESS).
+// Usage: $vm.exit()
+JSC_DEFINE_HOST_FUNCTION(functionExit, (JSGlobalObject*, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    exit(EXIT_SUCCESS);
 }
 
 // Returns true if the current frame is a DFG frame.
@@ -2253,12 +2357,10 @@ JSC_DEFINE_HOST_FUNCTION(functionCpuPause, (JSGlobalObject*, CallFrame*))
 //
 // If the first argument is not a JSArrayBuffer, we load the butterfly
 // and clflush at the address of the butterfly.
-JSC_DEFINE_HOST_FUNCTION(functionCpuClflush, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(functionCpuClflush, (JSGlobalObject*, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
 #if CPU(X86_64) && !OS(WINDOWS)
-    VM& vm = globalObject->vm();
-
     if (!callFrame->argument(1).isUInt32())
         return JSValue::encode(jsBoolean(false));
 
@@ -2272,9 +2374,9 @@ JSC_DEFINE_HOST_FUNCTION(functionCpuClflush, (JSGlobalObject* globalObject, Call
 
     uint32_t offset = callFrame->argument(1).asUInt32();
 
-    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(vm, callFrame->argument(0)))
+    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(callFrame->argument(0)))
         toFlush.append(bitwise_cast<char*>(view->vector()) + offset);
-    else if (JSObject* object = jsDynamicCast<JSObject*>(vm, callFrame->argument(0))) {
+    else if (JSObject* object = jsDynamicCast<JSObject*>(callFrame->argument(0))) {
         switch (object->indexingType()) {
         case ALL_INT32_INDEXING_TYPES:
         case ALL_CONTIGUOUS_INDEXING_TYPES:
@@ -2291,7 +2393,6 @@ JSC_DEFINE_HOST_FUNCTION(functionCpuClflush, (JSGlobalObject* globalObject, Call
         clflush(ptr);
     return JSValue::encode(jsBoolean(true));
 #else
-    UNUSED_PARAM(globalObject);
     UNUSED_PARAM(callFrame);
     return JSValue::encode(jsBoolean(false));
 #endif
@@ -2304,16 +2405,16 @@ public:
         DollarVMAssertScope assertScope;
     }
 
-    StackVisitor::Status operator()(StackVisitor& visitor) const
+    IterationStatus operator()(StackVisitor& visitor) const
     {
         unsigned index = m_currentFrame++;
         // First frame (index 0) is `llintTrue` etc. function itself.
         if (index == 1) {
             if (visitor->codeBlock())
-            m_jitType = visitor->codeBlock()->jitType();
-            return StackVisitor::Done;
+                m_jitType = visitor->codeBlock()->jitType();
+            return IterationStatus::Done;
         }
-        return StackVisitor::Continue;
+        return IterationStatus::Continue;
     }
 
     JITType jitType() { return m_jitType; }
@@ -2329,13 +2430,11 @@ static FunctionExecutable* getExecutableForFunction(JSValue theFunctionValue)
     if (!theFunctionValue.isCell())
         return nullptr;
 
-    VM& vm = theFunctionValue.asCell()->vm();
-    JSFunction* theFunction = jsDynamicCast<JSFunction*>(vm, theFunctionValue);
+    JSFunction* theFunction = jsDynamicCast<JSFunction*>(theFunctionValue);
     if (!theFunction)
         return nullptr;
 
-    FunctionExecutable* executable = jsDynamicCast<FunctionExecutable*>(vm,
-        theFunction->executable());
+    FunctionExecutable* executable = jsDynamicCast<FunctionExecutable*>(theFunction->executable());
 
     return executable;
 }
@@ -2349,7 +2448,7 @@ JSC_DEFINE_HOST_FUNCTION(functionLLintTrue, (JSGlobalObject* globalObject, CallF
     if (!callFrame)
         return JSValue::encode(jsUndefined());
     CallerFrameJITTypeFunctor functor;
-    callFrame->iterate(vm, functor);
+    StackVisitor::visit(callFrame, vm, functor);
     return JSValue::encode(jsBoolean(functor.jitType() == JITType::InterpreterThunk));
 }
 
@@ -2362,7 +2461,7 @@ JSC_DEFINE_HOST_FUNCTION(functionBaselineJITTrue, (JSGlobalObject* globalObject,
     if (!callFrame)
         return JSValue::encode(jsUndefined());
     CallerFrameJITTypeFunctor functor;
-    callFrame->iterate(vm, functor);
+    StackVisitor::visit(callFrame, vm, functor);
     return JSValue::encode(jsBoolean(functor.jitType() == JITType::BaselineJIT));
 }
 
@@ -2487,7 +2586,7 @@ static CodeBlock* codeBlockFromArg(JSGlobalObject* globalObject, CallFrame* call
     JSValue value = callFrame->uncheckedArgument(0);
     CodeBlock* candidateCodeBlock = nullptr;
     if (value.isCell()) {
-        JSFunction* func = jsDynamicCast<JSFunction*>(vm, value.asCell());
+        JSFunction* func = jsDynamicCast<JSFunction*>(value.asCell());
         if (func) {
             if (func->isHostFunction())
                 candidateCodeBlock = nullptr;
@@ -2607,12 +2706,12 @@ JSC_DEFINE_HOST_FUNCTION(functionDumpRegisters, (JSGlobalObject* globalObject, C
     }
 
     unsigned frameIndex = 0;
-    callFrame->iterate(vm, [&] (StackVisitor& visitor) {
+    StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) {
         DollarVMAssertScope assertScope;
         if (frameIndex++ != requestedFrameIndex)
-            return StackVisitor::Continue;
+            return IterationStatus::Continue;
         VMInspector::dumpRegisters(visitor->callFrame());
-        return StackVisitor::Done;
+        return IterationStatus::Done;
     });
 
     return encodedJSUndefined();
@@ -2644,12 +2743,11 @@ JSC_DEFINE_HOST_FUNCTION(functionIndexingMode, (JSGlobalObject* globalObject, Ca
     return JSValue::encode(jsString(globalObject->vm(), stream.toString()));
 }
 
-JSC_DEFINE_HOST_FUNCTION(functionInlineCapacity, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(functionInlineCapacity, (JSGlobalObject*, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
-    VM& vm = globalObject->vm();
-    if (auto* object = jsDynamicCast<JSObject*>(vm, callFrame->argument(0)))
-        return JSValue::encode(jsNumber(object->structure(vm)->inlineCapacity()));
+    if (auto* object = jsDynamicCast<JSObject*>(callFrame->argument(0)))
+        return JSValue::encode(jsNumber(object->structure()->inlineCapacity()));
 
     return encodedJSUndefined();
 }
@@ -2714,7 +2812,7 @@ JSC_DEFINE_HOST_FUNCTION(functionHaveABadTime, (JSGlobalObject* globalObject, Ca
     if (!callFrame->argument(0).isUndefined()) {
         JSObject* obj = callFrame->argument(0).getObject();
         if (!obj)
-            return throwVMTypeError(globalObject, scope, "haveABadTime expects first argument to be an object if provided");
+            return throwVMTypeError(globalObject, scope, "haveABadTime expects first argument to be an object if provided"_s);
         target = obj->globalObject();
     }
 
@@ -2733,7 +2831,7 @@ JSC_DEFINE_HOST_FUNCTION(functionIsHavingABadTime, (JSGlobalObject* globalObject
     if (!callFrame->argument(0).isUndefined()) {
         JSObject* obj = callFrame->argument(0).getObject();
         if (!obj)
-            return throwVMTypeError(globalObject, scope, "isHavingABadTime expects first argument to be an object if provided");
+            return throwVMTypeError(globalObject, scope, "isHavingABadTime expects first argument to be an object if provided"_s);
         target = obj->globalObject();
     }
 
@@ -2760,9 +2858,8 @@ static void callWithStackSizeProbeFunction(Probe::State* state)
     state->initializeStackArg = nullptr;
 
     DollarVMAssertScope assertScope;
-    VM& vm = globalObject->vm();
 
-    auto callData = getCallData(vm, function);
+    auto callData = JSC::getCallData(function);
     MarkedArgumentBuffer args;
     call(globalObject, function, callData, jsUndefined(), args);
 }
@@ -2782,20 +2879,20 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(functionCallWithStackSize, SUPPRESS_ASA
 #endif
 
     if (!isSupportedByPlatform)
-        return throwVMError(globalObject, throwScope, "Not supported for this platform");
+        return throwVMError(globalObject, throwScope, "Not supported for this platform"_s);
 
 #if ENABLE(ASSEMBLER)
     if (g_jscConfig.isPermanentlyFrozen() || !g_jscConfig.disabledFreezingForTesting)
-        return throwVMError(globalObject, throwScope, "Options are frozen");
+        return throwVMError(globalObject, throwScope, "Options are frozen"_s);
 
     if (callFrame->argumentCount() < 2)
-        return throwVMError(globalObject, throwScope, "Invalid number of arguments");
+        return throwVMError(globalObject, throwScope, "Invalid number of arguments"_s);
     JSValue arg0 = callFrame->argument(0);
     JSValue arg1 = callFrame->argument(1);
-    if (!arg0.isCallable(vm))
-        return throwVMError(globalObject, throwScope, "arg0 should be a function");
+    if (!arg0.isCallable())
+        return throwVMError(globalObject, throwScope, "arg0 should be a function"_s);
     if (!arg1.isNumber())
-        return throwVMError(globalObject, throwScope, "arg1 should be a number");
+        return throwVMError(globalObject, throwScope, "arg1 should be a number"_s);
 
     JSFunction* function = jsCast<JSFunction*>(arg0);
     size_t desiredStackSize = arg1.asNumber();
@@ -2805,7 +2902,7 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(functionCallWithStackSize, SUPPRESS_ASA
     uint8_t* end = bitwise_cast<uint8_t*>(bounds.end());
     uint8_t* desiredStart = end + desiredStackSize;
     if (desiredStart >= currentStackPosition)
-        return throwVMError(globalObject, throwScope, "Unable to setup desired stack size");
+        return throwVMError(globalObject, throwScope, "Unable to setup desired stack size"_s);
 
     JSDollarVMHelper helper(vm);
 
@@ -2858,7 +2955,7 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(functionCallWithStackSize, SUPPRESS_ASA
 
 #else // not ENABLE(ASSEMBLER)
     UNUSED_PARAM(callFrame);
-    return throwVMError(globalObject, throwScope, "Not supported for this platform");
+    return throwVMError(globalObject, throwScope, "Not supported for this platform"_s);
 #endif // ENABLE(ASSEMBLER)
 }
 
@@ -2881,7 +2978,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateProxy, (JSGlobalObject* globalObject, Cal
     if (!target.isObject())
         return JSValue::encode(jsUndefined());
     JSObject* jsTarget = asObject(target.asCell());
-    Structure* structure = JSProxy::createStructure(vm, globalObject, jsTarget->getPrototypeDirect(vm));
+    Structure* structure = JSProxy::createStructure(vm, globalObject, jsTarget->getPrototypeDirect());
     JSProxy* proxy = JSProxy::create(vm, structure, jsTarget);
     return JSValue::encode(proxy);
 }
@@ -3012,14 +3109,15 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForCompile, (JSGloba
     JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto callback = jsDynamicCast<JSFunction*>(vm, callFrame->argument(0));
+    auto callback = jsDynamicCast<JSFunction*>(callFrame->argument(0));
     if (!callback)
         return throwVMTypeError(globalObject, scope, "First argument is not a JS function"_s);
 
     auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::Validation, nullptr);
     MarkedArgumentBuffer args;
     args.append(compiler);
-    call(globalObject, callback, jsUndefined(), args, "You shouldn't see this...");
+    ASSERT(!args.hasOverflowed());
+    call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
     if (UNLIKELY(scope.exception()))
         scope.clearException();
     compiler->streamingCompiler().finalize(globalObject);
@@ -3034,7 +3132,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForInstantiate, (JSG
     JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto callback = jsDynamicCast<JSFunction*>(vm, callFrame->argument(0));
+    auto callback = jsDynamicCast<JSFunction*>(callFrame->argument(0));
     if (!callback)
         return throwVMTypeError(globalObject, scope, "First argument is not a JS function"_s);
 
@@ -3046,7 +3144,8 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForInstantiate, (JSG
     auto compiler = WasmStreamingCompiler::create(vm, globalObject, Wasm::CompilerMode::FullCompile, importObject);
     MarkedArgumentBuffer args;
     args.append(compiler);
-    call(globalObject, callback, jsUndefined(), args, "You shouldn't see this...");
+    ASSERT(!args.hasOverflowed());
+    call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
     if (UNLIKELY(scope.exception()))
         scope.clearException();
     compiler->streamingCompiler().finalize(globalObject);
@@ -3075,13 +3174,23 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateStaticCustomValue, (JSGlobalObject* globa
     return JSValue::encode(result);
 }
 
+JSC_DEFINE_HOST_FUNCTION(functionCreateStaticDontDeleteDontEnum, (JSGlobalObject* globalObject, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    JSLockHolder lock(vm);
+    Structure* structure = StaticDontDeleteDontEnum::createStructure(vm, globalObject, jsNull());
+    auto* result = StaticDontDeleteDontEnum::create(vm, structure);
+    return JSValue::encode(result);
+}
+
 JSC_DEFINE_HOST_FUNCTION(functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    auto* dollarVM = jsDynamicCast<JSDollarVM*>(vm, callFrame->thisValue());
+    auto* dollarVM = jsDynamicCast<JSDollarVM*>(callFrame->thisValue());
     RELEASE_ASSERT(dollarVM);
     auto* result = ObjectDoingSideEffectPutWithoutCorrectSlotStatus::create(vm, dollarVM->objectDoingSideEffectPutWithoutCorrectSlotStatusStructure());
     return JSValue::encode(result);
@@ -3097,7 +3206,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateEmptyFunctionWithName, (JSGlobalObject* g
     const String name = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(JSFunction::create(vm, globalObject, 1, name, functionCreateEmptyFunctionWithName)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSFunction::create(vm, globalObject, 1, name, functionCreateEmptyFunctionWithName, ImplementationVisibility::Public)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionSetImpureGetterDelegate, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3113,7 +3222,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSetImpureGetterDelegate, (JSGlobalObject* globa
     JSValue delegate = callFrame->argument(1);
     if (!delegate.isObject())
         return JSValue::encode(jsUndefined());
-    ImpureGetter* impureGetter = jsDynamicCast<ImpureGetter*>(vm, asObject(base.asCell()));
+    ImpureGetter* impureGetter = jsDynamicCast<ImpureGetter*>(asObject(base.asCell()));
     if (UNLIKELY(!impureGetter)) {
         throwTypeError(globalObject, scope, "argument is not an ImpureGetter"_s);
         return encodedJSValue();
@@ -3134,8 +3243,8 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateBuiltin, (JSGlobalObject* globalObject, C
     String functionText = asString(callFrame->argument(0))->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    SourceCode source = makeSource(functionText, { });
-    JSFunction* func = JSFunction::create(vm, createBuiltinExecutable(vm, source, Identifier::fromString(vm, "foo"), ConstructorKind::None, ConstructAbility::CannotConstruct)->link(vm, nullptr, source), globalObject);
+    SourceCode source = makeSource(WTFMove(functionText), { });
+    JSFunction* func = JSFunction::create(vm, createBuiltinExecutable(vm, source, Identifier::fromString(vm, "foo"_s), ImplementationVisibility::Public, ConstructorKind::None, ConstructAbility::CannotConstruct)->link(vm, nullptr, source), globalObject);
 
     return JSValue::encode(func);
 }
@@ -3154,7 +3263,7 @@ JSC_DEFINE_HOST_FUNCTION(functionGetPrivateProperty, (JSGlobalObject* globalObje
 
     SymbolImpl* symbol = vm.propertyNames->builtinNames().lookUpPrivateName(str);
     if (!symbol)
-        return throwVMError(globalObject, scope, "Unknown private name.");
+        return throwVMError(globalObject, scope, "Unknown private name."_s);
 
     RELEASE_AND_RETURN(scope, JSValue::encode(callFrame->argument(0).get(globalObject, symbol)));
 }
@@ -3174,7 +3283,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateElement, (JSGlobalObject* globalObject, C
     JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    Root* root = jsDynamicCast<Root*>(vm, callFrame->argument(0));
+    Root* root = jsDynamicCast<Root*>(callFrame->argument(0));
     if (!root)
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Cannot create Element without a Root."_s)));
     return JSValue::encode(Element::create(vm, globalObject, root));
@@ -3185,7 +3294,7 @@ JSC_DEFINE_HOST_FUNCTION(functionGetElement, (JSGlobalObject* globalObject, Call
     DollarVMAssertScope assertScope;
     VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
-    Root* root = jsDynamicCast<Root*>(vm, callFrame->argument(0));
+    Root* root = jsDynamicCast<Root*>(callFrame->argument(0));
     if (!root)
         return JSValue::encode(jsUndefined());
     Element* result = root->element();
@@ -3207,7 +3316,7 @@ JSC_DEFINE_HOST_FUNCTION(functionGetHiddenValue, (JSGlobalObject* globalObject, 
     JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    SimpleObject* simpleObject = jsDynamicCast<SimpleObject*>(vm, callFrame->argument(0));
+    SimpleObject* simpleObject = jsDynamicCast<SimpleObject*>(callFrame->argument(0));
     if (UNLIKELY(!simpleObject)) {
         throwTypeError(globalObject, scope, "Invalid use of getHiddenValue test function"_s);
         return encodedJSValue();
@@ -3222,7 +3331,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSetHiddenValue, (JSGlobalObject* globalObject, 
     JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    SimpleObject* simpleObject = jsDynamicCast<SimpleObject*>(vm, callFrame->argument(0));
+    SimpleObject* simpleObject = jsDynamicCast<SimpleObject*>(callFrame->argument(0));
     if (UNLIKELY(!simpleObject)) {
         throwTypeError(globalObject, scope, "Invalid use of setHiddenValue test function"_s);
         return encodedJSValue();
@@ -3245,15 +3354,15 @@ JSC_DEFINE_HOST_FUNCTION(functionShadowChickenFunctionsOnStack, (JSGlobalObject*
 
     JSArray* result = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, { });
-    StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
+    StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) -> IterationStatus {
         DollarVMAssertScope assertScope;
         if (visitor->isInlinedFrame())
-            return StackVisitor::Continue;
+            return IterationStatus::Continue;
         if (visitor->isWasmFrame())
-            return StackVisitor::Continue;
+            return IterationStatus::Continue;
         result->push(globalObject, jsCast<JSObject*>(visitor->callee().asCell()));
         scope.releaseAssertNoException(); // This function is only called from tests.
-        return StackVisitor::Continue;
+        return IterationStatus::Continue;
     });
     RETURN_IF_EXCEPTION(scope, { });
     return JSValue::encode(result);
@@ -3275,8 +3384,8 @@ JSC_DEFINE_HOST_FUNCTION(functionFindTypeForExpression, (JSGlobalObject* globalO
     vm.typeProfilerLog()->processLogEntries(vm, "jsc Testing API: functionFindTypeForExpression"_s);
 
     JSValue functionValue = callFrame->argument(0);
-    RELEASE_ASSERT(functionValue.isCallable(vm));
-    FunctionExecutable* executable = (jsDynamicCast<JSFunction*>(vm, functionValue.asCell()->getObject()))->jsExecutable();
+    RELEASE_ASSERT(functionValue.isCallable());
+    FunctionExecutable* executable = (jsDynamicCast<JSFunction*>(functionValue.asCell()->getObject()))->jsExecutable();
 
     RELEASE_ASSERT(callFrame->argument(1).isString());
     String substring = asString(callFrame->argument(1))->value(globalObject);
@@ -3295,8 +3404,8 @@ JSC_DEFINE_HOST_FUNCTION(functionReturnTypeFor, (JSGlobalObject* globalObject, C
     vm.typeProfilerLog()->processLogEntries(vm, "jsc Testing API: functionReturnTypeFor"_s);
 
     JSValue functionValue = callFrame->argument(0);
-    RELEASE_ASSERT(functionValue.isCallable(vm));
-    FunctionExecutable* executable = (jsDynamicCast<JSFunction*>(vm, functionValue.asCell()->getObject()))->jsExecutable();
+    RELEASE_ASSERT(functionValue.isCallable());
+    FunctionExecutable* executable = (jsDynamicCast<JSFunction*>(functionValue.asCell()->getObject()))->jsExecutable();
 
     unsigned offset = executable->typeProfilingStartOffset(vm);
     String jsonString = vm.typeProfiler()->typeInformationForExpressionAtOffset(TypeProfilerSearchDescriptorFunctionReturn, offset, executable->sourceID(), vm);
@@ -3329,8 +3438,8 @@ JSC_DEFINE_HOST_FUNCTION(functionHasBasicBlockExecuted, (JSGlobalObject* globalO
     RELEASE_ASSERT(vm.controlFlowProfiler());
 
     JSValue functionValue = callFrame->argument(0);
-    RELEASE_ASSERT(functionValue.isCallable(vm));
-    FunctionExecutable* executable = (jsDynamicCast<JSFunction*>(vm, functionValue.asCell()->getObject()))->jsExecutable();
+    RELEASE_ASSERT(functionValue.isCallable());
+    FunctionExecutable* executable = (jsDynamicCast<JSFunction*>(functionValue.asCell()->getObject()))->jsExecutable();
 
     RELEASE_ASSERT(callFrame->argument(1).isString());
     String substring = asString(callFrame->argument(1))->value(globalObject);
@@ -3349,8 +3458,8 @@ JSC_DEFINE_HOST_FUNCTION(functionBasicBlockExecutionCount, (JSGlobalObject* glob
     RELEASE_ASSERT(vm.controlFlowProfiler());
 
     JSValue functionValue = callFrame->argument(0);
-    RELEASE_ASSERT(functionValue.isCallable(vm));
-    FunctionExecutable* executable = (jsDynamicCast<JSFunction*>(vm, functionValue.asCell()->getObject()))->jsExecutable();
+    RELEASE_ASSERT(functionValue.isCallable());
+    FunctionExecutable* executable = (jsDynamicCast<JSFunction*>(functionValue.asCell()->getObject()))->jsExecutable();
 
     RELEASE_ASSERT(callFrame->argument(1).isString());
     String substring = asString(callFrame->argument(1))->value(globalObject);
@@ -3434,14 +3543,14 @@ JSC_DEFINE_HOST_FUNCTION(functionGlobalObjectCount, (JSGlobalObject* globalObjec
     return JSValue::encode(jsNumber(globalObject->vm().heap.globalObjectCount()));
 }
 
-JSC_DEFINE_HOST_FUNCTION(functionGlobalObjectForObject, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(functionGlobalObjectForObject, (JSGlobalObject*, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
     JSValue value = callFrame->argument(0);
     RELEASE_ASSERT(value.isObject());
-    JSGlobalObject* result = jsCast<JSObject*>(value)->globalObject(globalObject->vm());
+    JSGlobalObject* result = jsCast<JSObject*>(value)->globalObject();
     RELEASE_ASSERT(result);
-    return JSValue::encode(result);
+    return JSValue::encode(result->globalThis());
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionGetGetterSetter, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3480,7 +3589,7 @@ JSC_DEFINE_HOST_FUNCTION(functionLoadGetterFromGetterSetter, (JSGlobalObject* gl
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    GetterSetter* getterSetter = jsDynamicCast<GetterSetter*>(vm, callFrame->argument(0));
+    GetterSetter* getterSetter = jsDynamicCast<GetterSetter*>(callFrame->argument(0));
     if (UNLIKELY(!getterSetter)) {
         throwTypeError(globalObject, scope, "Invalid use of loadGetterFromGetterSetter test function: argument is not a GetterSetter"_s);
         return encodedJSValue();
@@ -3498,12 +3607,11 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateCustomTestGetterSetter, (JSGlobalObject* 
     return JSValue::encode(JSTestCustomGetterSetter::create(vm, globalObject, JSTestCustomGetterSetter::createStructure(vm, globalObject)));
 }
 
-JSC_DEFINE_HOST_FUNCTION(functionDeltaBetweenButterflies, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(functionDeltaBetweenButterflies, (JSGlobalObject*, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
-    VM& vm = globalObject->vm();
-    JSObject* a = jsDynamicCast<JSObject*>(vm, callFrame->argument(0));
-    JSObject* b = jsDynamicCast<JSObject*>(vm, callFrame->argument(1));
+    JSObject* a = jsDynamicCast<JSObject*>(callFrame->argument(0));
+    JSObject* b = jsDynamicCast<JSObject*>(callFrame->argument(1));
     if (!a || !b)
         return JSValue::encode(jsNumber(PNaN));
 
@@ -3551,12 +3659,8 @@ JSC_DEFINE_HOST_FUNCTION(functionMake16BitStringIfPossible, (JSGlobalObject* glo
     auto scope = DECLARE_THROW_SCOPE(vm);
     String string = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (!string.is8Bit())
+    string.convertTo16Bit();
         return JSValue::encode(jsString(vm, WTFMove(string)));
-    Vector<UChar> buffer;
-    buffer.resize(string.length());
-    StringImpl::copyCharacters(buffer.data(), string.characters8(), string.length());
-    return JSValue::encode(jsString(vm, String::adopt(WTFMove(buffer))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionGetStructureTransitionList, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3578,7 +3682,7 @@ JSC_DEFINE_HOST_FUNCTION(functionGetStructureTransitionList, (JSGlobalObject* gl
 
     for (size_t i = 0; i < structures.size(); ++i) {
         auto* structure = structures[structures.size() - i - 1];
-        result->push(globalObject, JSValue(structure->id()));
+        result->push(globalObject, JSValue(structure->id().bits()));
         RETURN_IF_EXCEPTION(scope, { });
         result->push(globalObject, JSValue(structure->transitionOffset()));
         RETURN_IF_EXCEPTION(scope, { });
@@ -3622,7 +3726,7 @@ JSC_DEFINE_HOST_FUNCTION(functionHasOwnLengthProperty, (JSGlobalObject* globalOb
     VM& vm = globalObject->vm();
 
     JSObject* target = asObject(callFrame->uncheckedArgument(0));
-    JSFunction* function = jsDynamicCast<JSFunction*>(vm, target);
+    JSFunction* function = jsDynamicCast<JSFunction*>(target);
     return JSValue::encode(jsBoolean(function->canAssumeNameAndLengthAreOriginal(vm)));
 }
 
@@ -3641,7 +3745,7 @@ JSC_DEFINE_HOST_FUNCTION(functionSetUserPreferredLanguages, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSArray* array = jsDynamicCast<JSArray*>(vm, callFrame->argument(0));
+    JSArray* array = jsDynamicCast<JSArray*>(callFrame->argument(0));
     if (!array)
         return throwVMTypeError(globalObject, scope, "Expected first argument to be an array"_s);
 
@@ -3707,10 +3811,36 @@ JSC_DEFINE_HOST_FUNCTION(functionUseJIT, (JSGlobalObject*, CallFrame*))
     return JSValue::encode(jsBoolean(Options::useJIT()));
 }
 
+JSC_DEFINE_HOST_FUNCTION(functionUseDFGJIT, (JSGlobalObject*, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    return JSValue::encode(jsBoolean(Options::useDFGJIT()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionUseFTLJIT, (JSGlobalObject*, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    return JSValue::encode(jsBoolean(Options::useFTLJIT()));
+}
+
 JSC_DEFINE_HOST_FUNCTION(functionIsGigacageEnabled, (JSGlobalObject*, CallFrame*))
 {
     DollarVMAssertScope assertScope;
     return JSValue::encode(jsBoolean(Gigacage::isEnabled()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionToCacheableDictionary, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSObject* object = jsDynamicCast<JSObject*>(callFrame->argument(0));
+    if (!object)
+        return throwVMTypeError(globalObject, scope, "Expected first argument to be an object"_s);
+    if (!object->structure()->isUncacheableDictionary())
+        object->convertToDictionary(vm);
+    return JSValue::encode(object);
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionToUncacheableDictionary, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3719,7 +3849,7 @@ JSC_DEFINE_HOST_FUNCTION(functionToUncacheableDictionary, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* object = jsDynamicCast<JSObject*>(vm, callFrame->argument(0));
+    JSObject* object = jsDynamicCast<JSObject*>(callFrame->argument(0));
     if (!object)
         return throwVMTypeError(globalObject, scope, "Expected first argument to be an object"_s);
     object->convertToUncacheableDictionary(vm);
@@ -3748,6 +3878,27 @@ JSC_DEFINE_HOST_FUNCTION(functionDumpAndResetPasDebugSpectrum, (JSGlobalObject*,
 #endif
 #endif
     return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionMonotonicTimeNow, (JSGlobalObject*, CallFrame*))
+{
+    return JSValue::encode(jsNumber(MonotonicTime::now().secondsSinceEpoch().milliseconds()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionWallTimeNow, (JSGlobalObject*, CallFrame*))
+{
+    return JSValue::encode(jsNumber(WallTime::now().secondsSinceEpoch().milliseconds()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionApproximateTimeNow, (JSGlobalObject*, CallFrame*))
+{
+    return JSValue::encode(jsNumber(ApproximateTime::now().secondsSinceEpoch().milliseconds()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionHeapExtraMemorySize, (JSGlobalObject* globalObject, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    return JSValue::encode(jsNumber(globalObject->vm().heap.extraMemorySize()));
 }
 
 #if ENABLE(JIT)
@@ -3792,6 +3943,120 @@ JSC_DEFINE_HOST_FUNCTION(functionResetJITSizeStatistics, (JSGlobalObject* global
 }
 #endif
 
+// Checks if DoubleShape is allowed.
+// Usage: var allowed = $vm.allowDoubleShape()
+JSC_DEFINE_HOST_FUNCTION(functionAllowDoubleShape, (JSGlobalObject*, CallFrame*))
+{
+    DollarVMAssertScope assertScope;
+    return JSValue::encode(jsBoolean(Options::allowDoubleShape()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionEnsureArrayStorage, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+
+    VM& vm = globalObject->vm();
+
+    JSValue arg = callFrame->argument(0);
+    if (arg.isObject())
+        asObject(arg)->ensureArrayStorage(vm);
+    return JSValue::encode(jsUndefined());
+}
+
+
+#if PLATFORM(COCOA)
+JSC_DEFINE_HOST_FUNCTION(functionSetCrashLogMessage, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    String message = callFrame->argument(0).toWTFString(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    WTF::setCrashLogMessage(message.utf8().data());
+
+    return JSValue::encode(jsUndefined());
+}
+#endif
+
+JSC_DEFINE_HOST_FUNCTION(functionAssertFrameAligned, (JSGlobalObject*, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+#if CPU(X86_64) || CPU(ARM64)
+    RELEASE_ASSERT(bitwise_cast<uintptr_t>(callFrame) % stackAlignmentBytes() == 0);
+#else
+    UNUSED_PARAM(callFrame);
+#endif
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionCallFromCPP, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue callback = callFrame->argument(0);
+    auto callData = JSC::getCallData(callback);
+    if (callData.type == CallData::Type::None)
+        return JSValue::encode(jsUndefined());
+    auto* callbackObject = jsCast<JSObject*>(callback);
+
+    int32_t count = callFrame->argument(1).toInt32(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (count < 0)
+        return JSValue::encode(jsUndefined());
+
+    MarkedArgumentBuffer arguments;
+    for (unsigned i = 2; i < callFrame->argumentCount(); ++i)
+        arguments.append(callFrame->argument(i));
+    ASSERT(!arguments.hasOverflowed());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    for (int32_t i = 0; i < count; ++i) {
+        call(globalObject, callbackObject, callData, jsNull(), arguments);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionCachedCallFromCPP, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue callback = callFrame->argument(0);
+    auto callData = JSC::getCallData(callback);
+    if (callData.type != CallData::Type::JS)
+        return JSValue::encode(jsUndefined());
+    auto* callbackObject = jsCast<JSFunction*>(callback);
+
+    int32_t count = callFrame->argument(1).toInt32(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+    if (count < 0)
+        return JSValue::encode(jsUndefined());
+
+    CachedCall cachedCall(globalObject, callbackObject, callFrame->argumentCount() - 2);
+    RETURN_IF_EXCEPTION(scope, { });
+    cachedCall.clearArguments();
+    for (unsigned i = 2; i < callFrame->argumentCount(); ++i)
+        cachedCall.appendArgument(callFrame->argument(i));
+    cachedCall.setThis(jsNull());
+
+    if (UNLIKELY(cachedCall.hasOverflowedArguments()))
+        return JSValue::encode(jsUndefined());
+
+    for (int32_t i = 0; i < count; ++i) {
+        cachedCall.call();
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    return JSValue::encode(jsUndefined());
+}
+
 constexpr unsigned jsDollarVMPropertyAttributes = PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete;
 
 void JSDollarVM::finishCreation(VM& vm)
@@ -3799,179 +4064,202 @@ void JSDollarVM::finishCreation(VM& vm)
     DollarVMAssertScope assertScope;
     Base::finishCreation(vm);
 
-    JSGlobalObject* globalObject = this->globalObject(vm);
+    JSGlobalObject* globalObject = this->globalObject();
 
-    auto addFunction = [&] (VM& vm, const char* name, NativeFunction function, unsigned arguments) {
+    auto addFunction = [&] (VM& vm, ASCIILiteral name, NativeFunction function, unsigned arguments) {
         DollarVMAssertScope assertScope;
         JSDollarVM::addFunction(vm, globalObject, name, function, arguments);
     };
-    auto addConstructibleFunction = [&] (VM& vm, const char* name, NativeFunction function, unsigned arguments) {
+    auto addConstructibleFunction = [&] (VM& vm, ASCIILiteral name, NativeFunction function, unsigned arguments) {
         DollarVMAssertScope assertScope;
         JSDollarVM::addConstructibleFunction(vm, globalObject, name, function, arguments);
     };
 
-    addFunction(vm, "abort", functionCrash, 0);
-    addFunction(vm, "crash", functionCrash, 0);
-    addFunction(vm, "breakpoint", functionBreakpoint, 0);
+    addFunction(vm, "abort"_s, functionCrash, 0);
+    addFunction(vm, "crash"_s, functionCrash, 0);
+    addFunction(vm, "breakpoint"_s, functionBreakpoint, 0);
+    addFunction(vm, "exit"_s, functionExit, 0);
 
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "dfgTrue"), 0, functionDFGTrue, DFGTrueIntrinsic, jsDollarVMPropertyAttributes);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "ftlTrue"), 0, functionFTLTrue, FTLTrueIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "dfgTrue"_s), 0, functionDFGTrue, ImplementationVisibility::Public, DFGTrueIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "ftlTrue"_s), 0, functionFTLTrue, ImplementationVisibility::Public, FTLTrueIntrinsic, jsDollarVMPropertyAttributes);
 
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuMfence"), 0, functionCpuMfence, CPUMfenceIntrinsic, jsDollarVMPropertyAttributes);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuRdtsc"), 0, functionCpuRdtsc, CPURdtscIntrinsic, jsDollarVMPropertyAttributes);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuCpuid"), 0, functionCpuCpuid, CPUCpuidIntrinsic, jsDollarVMPropertyAttributes);
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuPause"), 0, functionCpuPause, CPUPauseIntrinsic, jsDollarVMPropertyAttributes);
-    addFunction(vm, "cpuClflush", functionCpuClflush, 2);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuMfence"_s), 0, functionCpuMfence, ImplementationVisibility::Public, CPUMfenceIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuRdtsc"_s), 0, functionCpuRdtsc, ImplementationVisibility::Public, CPURdtscIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuCpuid"_s), 0, functionCpuCpuid, ImplementationVisibility::Public, CPUCpuidIntrinsic, jsDollarVMPropertyAttributes);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(vm, "cpuPause"_s), 0, functionCpuPause, ImplementationVisibility::Public, CPUPauseIntrinsic, jsDollarVMPropertyAttributes);
+    addFunction(vm, "cpuClflush"_s, functionCpuClflush, 2);
 
-    addFunction(vm, "llintTrue", functionLLintTrue, 0);
-    addFunction(vm, "baselineJITTrue", functionBaselineJITTrue, 0);
+    addFunction(vm, "llintTrue"_s, functionLLintTrue, 0);
+    addFunction(vm, "baselineJITTrue"_s, functionBaselineJITTrue, 0);
 
-    addFunction(vm, "noInline", functionNoInline, 1);
+    addFunction(vm, "noInline"_s, functionNoInline, 1);
 
-    addFunction(vm, "gc", functionGC, 0);
-    addFunction(vm, "gcSweepAsynchronously", functionGCSweepAsynchronously, 0);
-    addFunction(vm, "edenGC", functionEdenGC, 0);
-    addFunction(vm, "dumpSubspaceHashes", functionDumpSubspaceHashes, 0);
+    addFunction(vm, "gc"_s, functionGC, 0);
+    addFunction(vm, "gcSweepAsynchronously"_s, functionGCSweepAsynchronously, 0);
+    addFunction(vm, "edenGC"_s, functionEdenGC, 0);
+    addFunction(vm, "dumpSubspaceHashes"_s, functionDumpSubspaceHashes, 0);
 
-    addFunction(vm, "callFrame", functionCallFrame, 1);
-    addFunction(vm, "codeBlockFor", functionCodeBlockFor, 1);
-    addFunction(vm, "codeBlockForFrame", functionCodeBlockForFrame, 1);
-    addFunction(vm, "dumpSourceFor", functionDumpSourceFor, 1);
-    addFunction(vm, "dumpBytecodeFor", functionDumpBytecodeFor, 1);
+    addFunction(vm, "callFrame"_s, functionCallFrame, 1);
+    addFunction(vm, "codeBlockFor"_s, functionCodeBlockFor, 1);
+    addFunction(vm, "codeBlockForFrame"_s, functionCodeBlockForFrame, 1);
+    addFunction(vm, "dumpSourceFor"_s, functionDumpSourceFor, 1);
+    addFunction(vm, "dumpBytecodeFor"_s, functionDumpBytecodeFor, 1);
 
-    addFunction(vm, "dataLog", functionDataLog, 1);
-    addFunction(vm, "print", functionPrint, 1);
-    addFunction(vm, "dumpCallFrame", functionDumpCallFrame, 0);
-    addFunction(vm, "dumpStack", functionDumpStack, 0);
-    addFunction(vm, "dumpRegisters", functionDumpRegisters, 1);
+    addFunction(vm, "dataLog"_s, functionDataLog, 1);
+    addFunction(vm, "print"_s, functionPrint, 1);
+    addFunction(vm, "dumpCallFrame"_s, functionDumpCallFrame, 0);
+    addFunction(vm, "dumpStack"_s, functionDumpStack, 0);
+    addFunction(vm, "dumpRegisters"_s, functionDumpRegisters, 1);
 
-    addFunction(vm, "dumpCell", functionDumpCell, 1);
+    addFunction(vm, "dumpCell"_s, functionDumpCell, 1);
 
-    addFunction(vm, "indexingMode", functionIndexingMode, 1);
-    addFunction(vm, "inlineCapacity", functionInlineCapacity, 1);
-    addFunction(vm, "clearLinkBufferStats", functionClearLinkBufferStats, 0);
-    addFunction(vm, "linkBufferStats", functionLinkBufferStats, 0);
-    addFunction(vm, "value", functionValue, 1);
-    addFunction(vm, "getpid", functionGetPID, 0);
+    addFunction(vm, "indexingMode"_s, functionIndexingMode, 1);
+    addFunction(vm, "inlineCapacity"_s, functionInlineCapacity, 1);
+    addFunction(vm, "clearLinkBufferStats"_s, functionClearLinkBufferStats, 0);
+    addFunction(vm, "linkBufferStats"_s, functionLinkBufferStats, 0);
+    addFunction(vm, "value"_s, functionValue, 1);
+    addFunction(vm, "getpid"_s, functionGetPID, 0);
 
-    addFunction(vm, "haveABadTime", functionHaveABadTime, 1);
-    addFunction(vm, "isHavingABadTime", functionIsHavingABadTime, 1);
+    addFunction(vm, "haveABadTime"_s, functionHaveABadTime, 1);
+    addFunction(vm, "isHavingABadTime"_s, functionIsHavingABadTime, 1);
 
-    addFunction(vm, "callWithStackSize", functionCallWithStackSize, 2);
+    addFunction(vm, "callWithStackSize"_s, functionCallWithStackSize, 2);
 
-    addFunction(vm, "createGlobalObject", functionCreateGlobalObject, 0);
-    addFunction(vm, "createProxy", functionCreateProxy, 1);
-    addFunction(vm, "createRuntimeArray", functionCreateRuntimeArray, 0);
-    addFunction(vm, "createNullRopeString", functionCreateNullRopeString, 0);
+    addFunction(vm, "createGlobalObject"_s, functionCreateGlobalObject, 0);
+    addFunction(vm, "createProxy"_s, functionCreateProxy, 1);
+    addFunction(vm, "createRuntimeArray"_s, functionCreateRuntimeArray, 0);
+    addFunction(vm, "createNullRopeString"_s, functionCreateNullRopeString, 0);
 
-    addFunction(vm, "createImpureGetter", functionCreateImpureGetter, 1);
-    addFunction(vm, "createCustomGetterObject", functionCreateCustomGetterObject, 0);
-    addFunction(vm, "createDOMJITNodeObject", functionCreateDOMJITNodeObject, 0);
-    addFunction(vm, "createDOMJITGetterObject", functionCreateDOMJITGetterObject, 0);
-    addFunction(vm, "createDOMJITGetterNoEffectsObject", functionCreateDOMJITGetterNoEffectsObject, 0);
-    addFunction(vm, "createDOMJITGetterComplexObject", functionCreateDOMJITGetterComplexObject, 0);
-    addFunction(vm, "createDOMJITFunctionObject", functionCreateDOMJITFunctionObject, 0);
-    addFunction(vm, "createDOMJITCheckJSCastObject", functionCreateDOMJITCheckJSCastObject, 0);
-    addFunction(vm, "createDOMJITGetterBaseJSObject", functionCreateDOMJITGetterBaseJSObject, 0);
-    addFunction(vm, "createBuiltin", functionCreateBuiltin, 2);
+    addFunction(vm, "createImpureGetter"_s, functionCreateImpureGetter, 1);
+    addFunction(vm, "createCustomGetterObject"_s, functionCreateCustomGetterObject, 0);
+    addFunction(vm, "createDOMJITNodeObject"_s, functionCreateDOMJITNodeObject, 0);
+    addFunction(vm, "createDOMJITGetterObject"_s, functionCreateDOMJITGetterObject, 0);
+    addFunction(vm, "createDOMJITGetterNoEffectsObject"_s, functionCreateDOMJITGetterNoEffectsObject, 0);
+    addFunction(vm, "createDOMJITGetterComplexObject"_s, functionCreateDOMJITGetterComplexObject, 0);
+    addFunction(vm, "createDOMJITFunctionObject"_s, functionCreateDOMJITFunctionObject, 0);
+    addFunction(vm, "createDOMJITCheckJSCastObject"_s, functionCreateDOMJITCheckJSCastObject, 0);
+    addFunction(vm, "createDOMJITGetterBaseJSObject"_s, functionCreateDOMJITGetterBaseJSObject, 0);
+    addFunction(vm, "createBuiltin"_s, functionCreateBuiltin, 2);
 #if ENABLE(WEBASSEMBLY)
-    addFunction(vm, "createWasmStreamingParser", functionCreateWasmStreamingParser, 0);
-    addFunction(vm, "createWasmStreamingCompilerForCompile", functionCreateWasmStreamingCompilerForCompile, 0);
-    addFunction(vm, "createWasmStreamingCompilerForInstantiate", functionCreateWasmStreamingCompilerForInstantiate, 0);
+    addFunction(vm, "createWasmStreamingParser"_s, functionCreateWasmStreamingParser, 0);
+    addFunction(vm, "createWasmStreamingCompilerForCompile"_s, functionCreateWasmStreamingCompilerForCompile, 0);
+    addFunction(vm, "createWasmStreamingCompilerForInstantiate"_s, functionCreateWasmStreamingCompilerForInstantiate, 0);
 #endif
-    addFunction(vm, "createStaticCustomAccessor", functionCreateStaticCustomAccessor, 0);
-    addFunction(vm, "createStaticCustomValue", functionCreateStaticCustomValue, 0);
-    addFunction(vm, "createObjectDoingSideEffectPutWithoutCorrectSlotStatus", functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus, 0);
-    addFunction(vm, "createEmptyFunctionWithName", functionCreateEmptyFunctionWithName, 1);
-    addFunction(vm, "getPrivateProperty", functionGetPrivateProperty, 2);
-    addFunction(vm, "setImpureGetterDelegate", functionSetImpureGetterDelegate, 2);
+    addFunction(vm, "createStaticCustomAccessor"_s, functionCreateStaticCustomAccessor, 0);
+    addFunction(vm, "createStaticCustomValue"_s, functionCreateStaticCustomValue, 0);
+    addFunction(vm, "createStaticDontDeleteDontEnum"_s, functionCreateStaticDontDeleteDontEnum, 0);
+    addFunction(vm, "createObjectDoingSideEffectPutWithoutCorrectSlotStatus"_s, functionCreateObjectDoingSideEffectPutWithoutCorrectSlotStatus, 0);
+    addFunction(vm, "createEmptyFunctionWithName"_s, functionCreateEmptyFunctionWithName, 1);
+    addFunction(vm, "getPrivateProperty"_s, functionGetPrivateProperty, 2);
+    addFunction(vm, "setImpureGetterDelegate"_s, functionSetImpureGetterDelegate, 2);
 
-    addConstructibleFunction(vm, "Root", functionCreateRoot, 0);
-    addConstructibleFunction(vm, "Element", functionCreateElement, 1);
-    addFunction(vm, "getElement", functionGetElement, 1);
+    addConstructibleFunction(vm, "Root"_s, functionCreateRoot, 0);
+    addConstructibleFunction(vm, "Element"_s, functionCreateElement, 1);
+    addFunction(vm, "getElement"_s, functionGetElement, 1);
 
-    addConstructibleFunction(vm, "SimpleObject", functionCreateSimpleObject, 0);
-    addFunction(vm, "getHiddenValue", functionGetHiddenValue, 1);
-    addFunction(vm, "setHiddenValue", functionSetHiddenValue, 2);
+    addConstructibleFunction(vm, "SimpleObject"_s, functionCreateSimpleObject, 0);
+    addFunction(vm, "getHiddenValue"_s, functionGetHiddenValue, 1);
+    addFunction(vm, "setHiddenValue"_s, functionSetHiddenValue, 2);
 
-    addFunction(vm, "shadowChickenFunctionsOnStack", functionShadowChickenFunctionsOnStack, 0);
-    addFunction(vm, "setGlobalConstRedeclarationShouldNotThrow", functionSetGlobalConstRedeclarationShouldNotThrow, 0);
+    addFunction(vm, "shadowChickenFunctionsOnStack"_s, functionShadowChickenFunctionsOnStack, 0);
+    addFunction(vm, "setGlobalConstRedeclarationShouldNotThrow"_s, functionSetGlobalConstRedeclarationShouldNotThrow, 0);
 
-    addFunction(vm, "findTypeForExpression", functionFindTypeForExpression, 2);
-    addFunction(vm, "returnTypeFor", functionReturnTypeFor, 1);
+    addFunction(vm, "findTypeForExpression"_s, functionFindTypeForExpression, 2);
+    addFunction(vm, "returnTypeFor"_s, functionReturnTypeFor, 1);
 
-    addFunction(vm, "flattenDictionaryObject", functionFlattenDictionaryObject, 1);
+    addFunction(vm, "flattenDictionaryObject"_s, functionFlattenDictionaryObject, 1);
 
-    addFunction(vm, "dumpBasicBlockExecutionRanges", functionDumpBasicBlockExecutionRanges , 0);
-    addFunction(vm, "hasBasicBlockExecuted", functionHasBasicBlockExecuted, 2);
-    addFunction(vm, "basicBlockExecutionCount", functionBasicBlockExecutionCount, 2);
+    addFunction(vm, "dumpBasicBlockExecutionRanges"_s, functionDumpBasicBlockExecutionRanges , 0);
+    addFunction(vm, "hasBasicBlockExecuted"_s, functionHasBasicBlockExecuted, 2);
+    addFunction(vm, "basicBlockExecutionCount"_s, functionBasicBlockExecutionCount, 2);
 
-    addFunction(vm, "enableDebuggerModeWhenIdle", functionEnableDebuggerModeWhenIdle, 0);
-    addFunction(vm, "disableDebuggerModeWhenIdle", functionDisableDebuggerModeWhenIdle, 0);
+    addFunction(vm, "enableDebuggerModeWhenIdle"_s, functionEnableDebuggerModeWhenIdle, 0);
+    addFunction(vm, "disableDebuggerModeWhenIdle"_s, functionDisableDebuggerModeWhenIdle, 0);
 
-    addFunction(vm, "deleteAllCodeWhenIdle", functionDeleteAllCodeWhenIdle, 0);
+    addFunction(vm, "deleteAllCodeWhenIdle"_s, functionDeleteAllCodeWhenIdle, 0);
 
-    addFunction(vm, "globalObjectCount", functionGlobalObjectCount, 0);
-    addFunction(vm, "globalObjectForObject", functionGlobalObjectForObject, 1);
+    addFunction(vm, "globalObjectCount"_s, functionGlobalObjectCount, 0);
+    addFunction(vm, "globalObjectForObject"_s, functionGlobalObjectForObject, 1);
 
-    addFunction(vm, "getGetterSetter", functionGetGetterSetter, 2);
-    addFunction(vm, "loadGetterFromGetterSetter", functionLoadGetterFromGetterSetter, 1);
-    addFunction(vm, "createCustomTestGetterSetter", functionCreateCustomTestGetterSetter, 1);
+    addFunction(vm, "getGetterSetter"_s, functionGetGetterSetter, 2);
+    addFunction(vm, "loadGetterFromGetterSetter"_s, functionLoadGetterFromGetterSetter, 1);
+    addFunction(vm, "createCustomTestGetterSetter"_s, functionCreateCustomTestGetterSetter, 1);
 
-    addFunction(vm, "deltaBetweenButterflies", functionDeltaBetweenButterflies, 2);
+    addFunction(vm, "deltaBetweenButterflies"_s, functionDeltaBetweenButterflies, 2);
 
-    addFunction(vm, "currentCPUTime", functionCurrentCPUTime, 0);
-    addFunction(vm, "totalGCTime", functionTotalGCTime, 0);
+    addFunction(vm, "currentCPUTime"_s, functionCurrentCPUTime, 0);
+    addFunction(vm, "totalGCTime"_s, functionTotalGCTime, 0);
 
-    addFunction(vm, "parseCount", functionParseCount, 0);
+    addFunction(vm, "parseCount"_s, functionParseCount, 0);
 
-    addFunction(vm, "isWasmSupported", functionIsWasmSupported, 0);
-    addFunction(vm, "make16BitStringIfPossible", functionMake16BitStringIfPossible, 1);
+    addFunction(vm, "isWasmSupported"_s, functionIsWasmSupported, 0);
+    addFunction(vm, "make16BitStringIfPossible"_s, functionMake16BitStringIfPossible, 1);
 
-    addFunction(vm, "getStructureTransitionList", functionGetStructureTransitionList, 1);
-    addFunction(vm, "getConcurrently", functionGetConcurrently, 2);
+    addFunction(vm, "getStructureTransitionList"_s, functionGetStructureTransitionList, 1);
+    addFunction(vm, "getConcurrently"_s, functionGetConcurrently, 2);
 
-    addFunction(vm, "hasOwnLengthProperty", functionHasOwnLengthProperty, 1);
-    addFunction(vm, "rejectPromiseAsHandled", functionRejectPromiseAsHandled, 1);
+    addFunction(vm, "hasOwnLengthProperty"_s, functionHasOwnLengthProperty, 1);
+    addFunction(vm, "rejectPromiseAsHandled"_s, functionRejectPromiseAsHandled, 1);
 
-    addFunction(vm, "setUserPreferredLanguages", functionSetUserPreferredLanguages, 1);
-    addFunction(vm, "icuVersion", functionICUVersion, 0);
-    addFunction(vm, "icuHeaderVersion", functionICUHeaderVersion, 0);
+    addFunction(vm, "setUserPreferredLanguages"_s, functionSetUserPreferredLanguages, 1);
+    addFunction(vm, "icuVersion"_s, functionICUVersion, 0);
+    addFunction(vm, "icuHeaderVersion"_s, functionICUHeaderVersion, 0);
 
-    addFunction(vm, "assertEnabled", functionAssertEnabled, 0);
-    addFunction(vm, "securityAssertEnabled", functionSecurityAssertEnabled, 0);
-    addFunction(vm, "asanEnabled", functionAsanEnabled, 0);
+    addFunction(vm, "assertEnabled"_s, functionAssertEnabled, 0);
+    addFunction(vm, "securityAssertEnabled"_s, functionSecurityAssertEnabled, 0);
+    addFunction(vm, "asanEnabled"_s, functionAsanEnabled, 0);
 
-    addFunction(vm, "isMemoryLimited", functionIsMemoryLimited, 0);
-    addFunction(vm, "useJIT", functionUseJIT, 0);
-    addFunction(vm, "isGigacageEnabled", functionIsGigacageEnabled, 0);
+    addFunction(vm, "isMemoryLimited"_s, functionIsMemoryLimited, 0);
+    addFunction(vm, "useJIT"_s, functionUseJIT, 0);
+    addFunction(vm, "useDFGJIT"_s, functionUseDFGJIT, 0);
+    addFunction(vm, "useFTLJIT"_s, functionUseFTLJIT, 0);
+    addFunction(vm, "isGigacageEnabled"_s, functionIsGigacageEnabled, 0);
 
-    addFunction(vm, "toUncacheableDictionary", functionToUncacheableDictionary, 1);
+    addFunction(vm, "toCacheableDictionary"_s, functionToCacheableDictionary, 1);
+    addFunction(vm, "toUncacheableDictionary"_s, functionToUncacheableDictionary, 1);
 
-    addFunction(vm, "isPrivateSymbol", functionIsPrivateSymbol, 1);
-    addFunction(vm, "dumpAndResetPasDebugSpectrum", functionDumpAndResetPasDebugSpectrum, 0);
+    addFunction(vm, "isPrivateSymbol"_s, functionIsPrivateSymbol, 1);
+    addFunction(vm, "dumpAndResetPasDebugSpectrum"_s, functionDumpAndResetPasDebugSpectrum, 0);
+
+    addFunction(vm, "monotonicTimeNow"_s, functionMonotonicTimeNow, 0);
+    addFunction(vm, "wallTimeNow"_s, functionWallTimeNow, 0);
+    addFunction(vm, "approximateTimeNow"_s, functionApproximateTimeNow, 0);
+
+    addFunction(vm, "heapExtraMemorySize"_s, functionHeapExtraMemorySize, 0);
 
 #if ENABLE(JIT)
-    addFunction(vm, "jitSizeStatistics", functionJITSizeStatistics, 0);
-    addFunction(vm, "dumpJITSizeStatistics", functionDumpJITSizeStatistics, 0);
-    addFunction(vm, "resetJITSizeStatistics", functionResetJITSizeStatistics, 0);
+    addFunction(vm, "jitSizeStatistics"_s, functionJITSizeStatistics, 0);
+    addFunction(vm, "dumpJITSizeStatistics"_s, functionDumpJITSizeStatistics, 0);
+    addFunction(vm, "resetJITSizeStatistics"_s, functionResetJITSizeStatistics, 0);
 #endif
 
-    m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructure.set(vm, this, ObjectDoingSideEffectPutWithoutCorrectSlotStatus::createStructure(vm, globalObject, jsNull()));
+    addFunction(vm, "allowDoubleShape"_s, functionAllowDoubleShape, 0);
+    addFunction(vm, "ensureArrayStorage"_s, functionEnsureArrayStorage, 1);
+
+#if PLATFORM(COCOA)
+    addFunction(vm, "setCrashLogMessage"_s, functionSetCrashLogMessage, 1);
+#endif
+
+    addFunction(vm, "assertFrameAligned"_s, functionAssertFrameAligned, 0);
+
+    addFunction(vm, "callFromCPP"_s, functionCallFromCPP, 2);
+    addFunction(vm, "cachedCallFromCPP"_s, functionCachedCallFromCPP, 2);
+
+    m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID.set(vm, this, ObjectDoingSideEffectPutWithoutCorrectSlotStatus::createStructure(vm, globalObject, jsNull()));
 }
 
-void JSDollarVM::addFunction(VM& vm, JSGlobalObject* globalObject, const char* name, NativeFunction function, unsigned arguments)
+void JSDollarVM::addFunction(VM& vm, JSGlobalObject* globalObject, ASCIILiteral name, NativeFunction function, unsigned arguments)
 {
     DollarVMAssertScope assertScope;
     Identifier identifier = Identifier::fromString(vm, name);
-    putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function), jsDollarVMPropertyAttributes);
+    putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, ImplementationVisibility::Public), jsDollarVMPropertyAttributes);
 }
 
-void JSDollarVM::addConstructibleFunction(VM& vm, JSGlobalObject* globalObject, const char* name, NativeFunction function, unsigned arguments)
+void JSDollarVM::addConstructibleFunction(VM& vm, JSGlobalObject* globalObject, ASCIILiteral name, NativeFunction function, unsigned arguments)
 {
     DollarVMAssertScope assertScope;
     Identifier identifier = Identifier::fromString(vm, name);
-    putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, NoIntrinsic, function), jsDollarVMPropertyAttributes);
+    putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, ImplementationVisibility::Public, NoIntrinsic, function), jsDollarVMPropertyAttributes);
 }
 
 template<typename Visitor>
@@ -3979,7 +4267,7 @@ void JSDollarVM::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSDollarVM* thisObject = jsCast<JSDollarVM*>(cell);
     Base::visitChildren(thisObject, visitor);
-    visitor.append(thisObject->m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructure);
+    visitor.append(thisObject->m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID);
 }
 
 DEFINE_VISIT_CHILDREN(JSDollarVM);

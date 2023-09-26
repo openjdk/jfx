@@ -31,6 +31,7 @@
 namespace WebCore {
 
 class HitTestResult;
+class LegacyInlineFlowBox;
 class LegacyRootInlineBox;
 
 // LegacyInlineBox represents a rectangle that occurs on a line. It corresponds to
@@ -89,6 +90,7 @@ public:
     virtual bool isInlineElementBox() const { return false; }
     virtual bool isInlineFlowBox() const { return false; }
     virtual bool isInlineTextBox() const { return false; }
+    virtual bool isEllipsisBox() const { return false; }
     virtual bool isRootInlineBox() const { return false; }
     virtual bool isSVGInlineTextBox() const { return false; }
     virtual bool isSVGInlineFlowBox() const { return false; }
@@ -219,7 +221,7 @@ public:
 
     WEBCORE_EXPORT virtual void dirtyLineBoxes();
 
-    WEBCORE_EXPORT virtual RenderObject::HighlightState selectionState();
+    WEBCORE_EXPORT virtual RenderObject::HighlightState selectionState() const;
 
     WEBCORE_EXPORT virtual bool canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const;
     // visibleLeftEdge, visibleRightEdge are in the parent's coordinate system.
@@ -229,17 +231,6 @@ public:
     void setHasBadParent();
     void invalidateParentChildList();
 #endif
-
-    bool visibleToHitTesting(std::optional<HitTestRequest> hitTestRequest = std::nullopt) const
-    {
-        if (renderer().style().visibility() != Visibility::Visible)
-            return false;
-
-        if ((!hitTestRequest || !hitTestRequest->ignoreCSSPointerEventsProperty()) && renderer().style().pointerEvents() == PointerEvents::None)
-            return false;
-
-        return true;
-    }
 
     const RenderStyle& lineStyle() const { return m_bitfields.firstLine() ? renderer().firstLineStyle() : renderer().style(); }
 
@@ -261,9 +252,6 @@ public:
 
     bool knownToHaveNoOverflow() const { return m_bitfields.knownToHaveNoOverflow(); }
     void clearKnownToHaveNoOverflow();
-
-    bool dirOverride() const { return m_bitfields.dirOverride(); }
-    void setDirOverride(bool dirOverride) { m_bitfields.setDirOverride(dirOverride); }
 
     void setExpansion(float newExpansion)
     {
@@ -319,7 +307,6 @@ private:
             , m_canHaveRightExpansion(false)
             , m_knownToHaveNoOverflow(true)
             , m_hasEllipsisBoxOrHyphen(false)
-            , m_dirOverride(false)
             , m_behavesLikeText(false)
             , m_forceRightExpansion(false)
             , m_forceLeftExpansion(false)
@@ -352,7 +339,6 @@ private:
         ADD_BOOLEAN_BITFIELD(knownToHaveNoOverflow, KnownToHaveNoOverflow);
         ADD_BOOLEAN_BITFIELD(hasEllipsisBoxOrHyphen, HasEllipsisBoxOrHyphen);
         // for LegacyInlineTextBox
-        ADD_BOOLEAN_BITFIELD(dirOverride, DirOverride);
         ADD_BOOLEAN_BITFIELD(behavesLikeText, BehavesLikeText); // Whether or not this object represents text with a non-zero height. Includes non-image list markers, text boxes, br.
         ADD_BOOLEAN_BITFIELD(forceRightExpansion, ForceRightExpansion);
         ADD_BOOLEAN_BITFIELD(forceLeftExpansion, ForceLeftExpansion);
@@ -377,7 +363,7 @@ private:
 
 protected:
     explicit LegacyInlineBox(RenderObject& renderer)
-        : m_renderer(makeWeakPtr(renderer))
+        : m_renderer(renderer)
     {
     }
 
@@ -385,7 +371,7 @@ protected:
         : m_nextOnLine(next)
         , m_previousOnLine(previous)
         , m_parent(parent)
-        , m_renderer(makeWeakPtr(renderer))
+        , m_renderer(renderer)
         , m_logicalWidth(logicalWidth)
         , m_topLeft(topLeft)
         , m_bitfields(firstLine, constructed, dirty, extracted, isHorizontal)

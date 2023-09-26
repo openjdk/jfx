@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBXR)
 #include "WebFakeXRDevice.h"
+#include "XRHandJoint.h"
 
 namespace WebCore {
 
@@ -35,6 +36,11 @@ using InputSource = PlatformXR::Device::FrameData::InputSource;
 using InputSourceButton = PlatformXR::Device::FrameData::InputSourceButton;
 using InputSourcePose = PlatformXR::Device::FrameData::InputSourcePose;
 using ButtonType = FakeXRButtonStateInit::Type;
+
+#if ENABLE(WEBXR_HANDS)
+using HandJointsVector = PlatformXR::Device::FrameData::HandJointsVector;
+using InputSourceHandJoint = PlatformXR::Device::FrameData::InputSourceHandJoint;
+#endif
 
 // https://immersive-web.github.io/webxr-gamepads-module/#xr-standard-gamepad-mapping
 constexpr std::array<ButtonType, 5> XR_STANDARD_BUTTONS = { ButtonType::Grip, ButtonType::Touchpad, ButtonType::Thumbstick, ButtonType::OptionalButton, ButtonType::OptionalThumbstick };
@@ -55,6 +61,9 @@ WebFakeXRInputController::WebFakeXRInputController(PlatformXR::InputSourceHandle
     setPointerOrigin(init.pointerOrigin, false);
     setGripOrigin(init.gripOrigin, false);
     setSupportedButtons(init.supportedButtons);
+#if ENABLE(WEBXR_HANDS)
+    updateHandJoints(init.handJoints);
+#endif
 }
 
 void WebFakeXRInputController::setGripOrigin(FakeXRRigidTransformInit gripOrigin, bool emulatedPosition)
@@ -106,6 +115,9 @@ InputSource WebFakeXRInputController::getFrameData()
     state.profiles = m_profiles;
     state.pointerOrigin = m_pointerOrigin;
     state.gripOrigin = m_gripOrigin;
+#if ENABLE(WEBXR_HANDS)
+    state.handJoints = m_handJoints;
+#endif
 
     if (m_simulateSelect)
         m_primarySelected = true;
@@ -175,6 +187,28 @@ WebFakeXRInputController::ButtonOrPlaceholder WebFakeXRInputController::getButto
 
     return result;
 }
+
+#if ENABLE(WEBXR_HANDS)
+void WebFakeXRInputController::updateHandJoints(const Vector<FakeXRJointStateInit>& handJoints)
+{
+    if (handJoints.isEmpty() || handJoints.size() != static_cast<size_t>(XRHandJoint::Count)) {
+        m_handJoints = std::nullopt;
+        return;
+    }
+
+    HandJointsVector updatedJoints;
+    for (auto handJoint : handJoints) {
+        auto transform = WebFakeXRDevice::parseRigidTransform(handJoint.pose);
+        if (transform.hasException()) {
+            updatedJoints.append(std::nullopt);
+            continue;
+        }
+
+        updatedJoints.append(InputSourceHandJoint { InputSourcePose { transform.releaseReturnValue(), false }, handJoint.radius });
+    }
+    m_handJoints = WTFMove(updatedJoints);
+}
+#endif // ENABLE(WEBXR_HANDS)
 
 } // namespace WebCore
 

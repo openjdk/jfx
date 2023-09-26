@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,6 @@ namespace JSC {
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(macro) \
     macro(add) \
     macro(applyFunction) \
-    macro(arraySpeciesCreate) \
     macro(assert) \
     macro(callFunction) \
     macro(charCodeAt) \
@@ -62,6 +61,7 @@ namespace JSC {
     macro(Number) \
     macro(Array) \
     macro(ArrayBuffer) \
+    macro(ShadowRealm) \
     macro(RegExp) \
     macro(min) \
     macro(trunc) \
@@ -69,12 +69,13 @@ namespace JSC {
     macro(defineProperty) \
     macro(defaultPromiseThen) \
     macro(Set) \
+    macro(Map) \
     macro(throwTypeErrorFunction) \
     macro(typedArrayLength) \
+    macro(typedArrayClone) \
     macro(typedArrayContentType) \
     macro(typedArraySort) \
     macro(typedArrayGetOriginalConstructor) \
-    macro(typedArraySubarrayCreate) \
     macro(BuiltinLog) \
     macro(BuiltinDescribe) \
     macro(homeObject) \
@@ -88,9 +89,13 @@ namespace JSC {
     macro(starNamespace) \
     macro(keys) \
     macro(values) \
-    macro(get) \
     macro(set) \
+    macro(clear) \
+    macro(context) \
+    macro(delete) \
+    macro(size) \
     macro(shift) \
+    macro(staticInitializerBlock) \
     macro(Int8Array) \
     macro(Int16Array) \
     macro(Int32Array) \
@@ -115,13 +120,19 @@ namespace JSC {
     macro(asyncGeneratorQueueItemNext) \
     macro(dateTimeFormat) \
     macro(this) \
+    macro(importMapStatus) \
+    macro(importInRealm) \
+    macro(evalInRealm) \
+    macro(moveFunctionToRealm) \
     macro(thisTimeValue) \
     macro(newTargetLocal) \
     macro(derivedConstructor) \
     macro(isTypedArrayView) \
     macro(isSharedTypedArrayView) \
+    macro(isResizableOrGrowableSharedTypedArrayView) \
     macro(isDetached) \
     macro(typedArrayDefaultComparator) \
+    macro(typedArrayFromFast) \
     macro(isBoundFunction) \
     macro(hasInstanceBoundFunction) \
     macro(instanceOf) \
@@ -143,6 +154,7 @@ namespace JSC {
     macro(setBucketHead) \
     macro(setBucketNext) \
     macro(setBucketKey) \
+    macro(setClone) \
     macro(setPrototypeDirect) \
     macro(setPrototypeDirectOrThrow) \
     macro(regExpBuiltinExec) \
@@ -167,9 +179,10 @@ namespace JSC {
     macro(stringIncludesInternal) \
     macro(stringIndexOfInternal) \
     macro(stringSplitFast) \
-    macro(stringSubstringInternal) \
+    macro(stringSubstring) \
     macro(makeBoundFunction) \
     macro(hasOwnLengthProperty) \
+    macro(handleProxyGetTrapResult) \
     macro(importModule) \
     macro(copyDataProperties) \
     macro(meta) \
@@ -182,7 +195,22 @@ namespace JSC {
     macro(createPrivateSymbol) \
     macro(entries) \
     macro(outOfLineReactionCounts) \
-    macro(emptyPropertyNameEnumerator)
+    macro(emptyPropertyNameEnumerator) \
+    macro(sentinelString) \
+    macro(createRemoteFunction) \
+    macro(isRemoteFunction) \
+    macro(arraySort) \
+    macro(jsonParse) \
+    macro(jsonStringify) \
+    macro(String) \
+    macro(substr) \
+    macro(endsWith) \
+    macro(getOwnPropertyDescriptor) \
+    macro(getOwnPropertyNames) \
+    macro(getOwnPropertySymbols) \
+    macro(hasOwn) \
+    macro(indexOf) \
+    macro(pop) \
 
 
 namespace Symbols {

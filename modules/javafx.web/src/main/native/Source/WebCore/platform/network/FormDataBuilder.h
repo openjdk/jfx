@@ -24,9 +24,11 @@
 #include "FormData.h"
 #include <wtf/Forward.h>
 
-namespace WebCore {
-
+namespace PAL {
 class TextEncoding;
+}
+
+namespace WebCore {
 
 namespace FormDataBuilder {
 
@@ -34,12 +36,12 @@ namespace FormDataBuilder {
 Vector<char> generateUniqueBoundaryString();
 void beginMultiPartHeader(Vector<char>&, const CString& boundary, const Vector<uint8_t>& name);
 void addBoundaryToMultiPartHeader(Vector<char>&, const CString& boundary, bool isLastBoundary = false);
-void addFilenameToMultiPartHeader(Vector<char>&, const TextEncoding&, const String& filename);
+void addFilenameToMultiPartHeader(Vector<char>&, const PAL::TextEncoding&, const String& filename);
 void addContentTypeToMultiPartHeader(Vector<char>&, const CString& mimeType);
 void finishMultiPartHeader(Vector<char>&);
 
 // Helper functions used by HTMLFormElement for non-multi-part form data.
-void addKeyValuePairAsFormData(Vector<char>&, const Vector<uint8_t>& key, const Vector<uint8_t>& value, FormData::EncodingType = FormData::FormURLEncoded);
+void addKeyValuePairAsFormData(Vector<char>&, const Vector<uint8_t>& key, const Vector<uint8_t>& value, FormData::EncodingType = FormData::EncodingType::FormURLEncoded);
 void encodeStringAsFormData(Vector<char>&, const CString&);
 
 }

@@ -38,18 +38,18 @@
 namespace WebCore {
 using namespace JSC;
 
-void reportException(JSGlobalObject* lexicalGlobalObject, JSValue exceptionValue, CachedScript* cachedScript)
+void reportException(JSGlobalObject* lexicalGlobalObject, JSValue exceptionValue, CachedScript* cachedScript, bool fromModule)
 {
     VM& vm = lexicalGlobalObject->vm();
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
-    auto* exception = jsDynamicCast<JSC::Exception*>(vm, exceptionValue);
+    auto* exception = jsDynamicCast<JSC::Exception*>(exceptionValue);
     if (!exception) {
         exception = vm.lastException();
         if (!exception)
             exception = JSC::Exception::create(lexicalGlobalObject->vm(), exceptionValue, JSC::Exception::DoNotCaptureStack);
     }
 
-    reportException(lexicalGlobalObject, exception, cachedScript);
+    reportException(lexicalGlobalObject, exception, cachedScript, fromModule);
 }
 
 String retrieveErrorMessageWithoutName(JSGlobalObject& lexicalGlobalObject, VM& vm, JSValue exception, CatchScope& catchScope)
@@ -57,9 +57,9 @@ String retrieveErrorMessageWithoutName(JSGlobalObject& lexicalGlobalObject, VM& 
     // FIXME: <http://webkit.org/b/115087> Web Inspector: WebCore::reportException should not evaluate JavaScript handling exceptions
     // If this is a custom exception object, call toString on it to try and get a nice string representation for the exception.
     String errorMessage;
-    if (auto* error = jsDynamicCast<ErrorInstance*>(vm, exception))
+    if (auto* error = jsDynamicCast<ErrorInstance*>(exception))
         errorMessage = error->sanitizedMessageString(&lexicalGlobalObject);
-    else if (auto* error = jsDynamicCast<JSDOMException*>(vm, exception))
+    else if (auto* error = jsDynamicCast<JSDOMException*>(exception))
         errorMessage = error->wrapped().message();
     else
         errorMessage = exception.toWTFString(&lexicalGlobalObject);
@@ -76,7 +76,7 @@ String retrieveErrorMessage(JSGlobalObject& lexicalGlobalObject, VM& vm, JSValue
     // FIXME: <http://webkit.org/b/115087> Web Inspector: WebCore::reportException should not evaluate JavaScript handling exceptions
     // If this is a custom exception object, call toString on it to try and get a nice string representation for the exception.
     String errorMessage;
-    if (auto* error = jsDynamicCast<ErrorInstance*>(vm, exception))
+    if (auto* error = jsDynamicCast<ErrorInstance*>(exception))
         errorMessage = error->sanitizedToString(&lexicalGlobalObject);
     else
         errorMessage = exception.toWTFString(&lexicalGlobalObject);
@@ -88,14 +88,17 @@ String retrieveErrorMessage(JSGlobalObject& lexicalGlobalObject, VM& vm, JSValue
     return errorMessage;
 }
 
-void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* exception, CachedScript* cachedScript, ExceptionDetails* exceptionDetails)
+void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* exception, CachedScript* cachedScript, bool fromModule, ExceptionDetails* exceptionDetails)
 {
     VM& vm = lexicalGlobalObject->vm();
-    auto scope = DECLARE_CATCH_SCOPE(vm);
-
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
     if (vm.isTerminationException(exception))
         return;
+
+    // We can declare a CatchScope here because we will clear the exception below if it's
+    // not a TerminationException. If it's a TerminationException, it'll remain sticky in
+    // the VM, but we have the check above to ensure that we do not re-enter this scope.
+    auto scope = DECLARE_CATCH_SCOPE(vm);
 
     ErrorHandlingScope errorScope(lexicalGlobalObject->vm());
 
@@ -104,7 +107,7 @@ void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* except
     vm.clearLastException();
 
     auto* globalObject = jsCast<JSDOMGlobalObject*>(lexicalGlobalObject);
-    if (auto* window = jsDynamicCast<JSDOMWindow*>(vm, globalObject)) {
+    if (auto* window = jsDynamicCast<JSDOMWindow*>(globalObject)) {
         if (!window->wrapped().isCurrentlyDisplayedInFrame())
             return;
     }
@@ -119,7 +122,7 @@ void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* except
     }
 
     auto errorMessage = retrieveErrorMessage(*lexicalGlobalObject, vm, exception->value(), scope);
-    globalObject->scriptExecutionContext()->reportException(errorMessage, lineNumber, columnNumber, exceptionSourceURL, exception, callStack->size() ? callStack.ptr() : nullptr, cachedScript);
+    globalObject->scriptExecutionContext()->reportException(errorMessage, lineNumber, columnNumber, exceptionSourceURL, exception, callStack->size() ? callStack.ptr() : nullptr, cachedScript, fromModule);
 
     if (exceptionDetails) {
         exceptionDetails->message = errorMessage;
@@ -140,6 +143,10 @@ void reportCurrentException(JSGlobalObject* lexicalGlobalObject)
 
 JSValue createDOMException(JSGlobalObject* lexicalGlobalObject, ExceptionCode ec, const String& message)
 {
+    VM& vm = lexicalGlobalObject->vm();
+    if (UNLIKELY(vm.hasPendingTerminationException()))
+        return jsUndefined();
+
     switch (ec) {
     case ExistingExceptionError:
         return jsUndefined();

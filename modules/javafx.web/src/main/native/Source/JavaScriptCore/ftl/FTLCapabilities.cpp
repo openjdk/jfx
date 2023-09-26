@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -151,12 +151,13 @@ inline CapabilityLevel canCompile(Node* node)
     case CreateDirectArguments:
     case CreateScopedArguments:
     case CreateClonedArguments:
-    case CreateArgumentsButterfly:
+    case CreateArgumentsButterflyExcludingThis:
     case GetFromArguments:
     case PutToArguments:
     case GetArgument:
     case InvalidationPoint:
     case StringCharAt:
+    case StringLocaleCompare:
     case CheckIsConstant:
     case CheckBadValue:
     case CheckNotEmpty:
@@ -170,7 +171,9 @@ inline CapabilityLevel canCompile(Node* node)
     case ReallocatePropertyStorage:
     case NukeStructureAndSetButterfly:
     case GetTypedArrayByteOffset:
+    case GetTypedArrayByteOffsetAsInt52:
     case GetPrototypeOf:
+    case GetWebAssemblyInstanceExports:
     case NotifyWrite:
     case StoreBarrier:
     case FencedStoreBarrier:
@@ -183,7 +186,7 @@ inline CapabilityLevel canCompile(Node* node)
     case Construct:
     case DirectConstruct:
     case CallVarargs:
-    case CallEval:
+    case CallDirectEval:
     case TailCallVarargs:
     case TailCallVarargsInlinedCaller:
     case ConstructVarargs:
@@ -191,6 +194,7 @@ inline CapabilityLevel canCompile(Node* node)
     case TailCallForwardVarargs:
     case TailCallForwardVarargsInlinedCaller:
     case ConstructForwardVarargs:
+    case CallWasm:
     case VarargsLength:
     case LoadVarargs:
     case ValueToInt32:
@@ -199,6 +203,7 @@ inline CapabilityLevel canCompile(Node* node)
     case LogicalNot:
     case AssertInBounds:
     case CheckInBounds:
+    case CheckInBoundsInt52:
     case ConstantStoragePointer:
     case Check:
     case CheckVarargs:
@@ -226,8 +231,10 @@ inline CapabilityLevel canCompile(Node* node)
     case ObjectCreate:
     case ObjectKeys:
     case ObjectGetOwnPropertyNames:
+    case ObjectToString:
     case MakeRope:
     case NewArrayWithSize:
+    case NewArrayWithSpecies:
     case TryGetById:
     case GetById:
     case GetByIdFlush:
@@ -259,6 +266,7 @@ inline CapabilityLevel canCompile(Node* node)
     case ExtractValueFromWeakMapGet:
     case SetAdd:
     case MapSet:
+    case MapOrSetDelete:
     case WeakMapGet:
     case WeakSetAdd:
     case WeakMapSet:
@@ -287,6 +295,7 @@ inline CapabilityLevel canCompile(Node* node)
     case BooleanToNumber:
     case HasIndexedProperty:
     case GetIndexedPropertyStorage:
+    case ResolveRope:
     case GetPropertyEnumerator:
     case EnumeratorNextUpdateIndexAndMode:
     case EnumeratorNextExtractMode:
@@ -337,11 +346,13 @@ inline CapabilityLevel canCompile(Node* node)
     case RegExpExec:
     case RegExpExecNonGlobalOrSticky:
     case RegExpTest:
+    case RegExpTestInline:
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
     case NewRegexp:
     case StringReplace:
     case StringReplaceRegExp:
+    case StringReplaceString:
     case GetRegExpObjectLastIndex:
     case SetRegExpObjectLastIndex:
     case RecordRegExpCachedResult:
@@ -366,6 +377,7 @@ inline CapabilityLevel canCompile(Node* node)
     case DefineAccessorProperty:
     case StringValueOf:
     case StringSlice:
+    case StringSubstring:
     case ToLowerCase:
     case NumberToStringWithRadix:
     case NumberToStringWithValidRadixConstant:
@@ -391,6 +403,7 @@ inline CapabilityLevel canCompile(Node* node)
     case InitializeEntrypointArguments:
     case CPUIntrinsic:
     case GetArrayLength:
+    case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case GetByVal:
     case GetByValWithThis:
@@ -527,6 +540,7 @@ CapabilityLevel canCompile(Graph& graph)
                 case AnyIntUse:
                 case DoubleRepAnyIntUse:
                 case NotDoubleUse:
+                case NeitherDoubleNorHeapBigIntUse:
                 case NeitherDoubleNorHeapBigIntNorStringUse:
                     // These are OK.
                     break;

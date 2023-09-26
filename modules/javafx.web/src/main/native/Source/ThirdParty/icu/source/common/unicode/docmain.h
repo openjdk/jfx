@@ -15,7 +15,7 @@
  * \file
  * \brief (Non API- contains Doxygen definitions)
  *
- * This file contains documentation for Doxygen and doesnot have
+ * This file contains documentation for Doxygen and does not have
  * any significance with respect to C or C++ API
  */
 
@@ -47,7 +47,7 @@
  * <h3>API References for Previous Releases</h3>
  * <p>The API References for each release of ICU are also available as
  * a zip file from the ICU
- * <a href="http://site.icu-project.org/download">download page</a>.</p>
+ * <a href="https://icu.unicode.org/download">download page</a>.</p>
  *
  * <hr>
  *
@@ -74,7 +74,7 @@
  *   </tr>
  *   <tr>
  *     <td>Strings and Character Iteration</td>
- *     <td>ustring.h, utf8.h, utf16.h, UText, UCharIterator</td>
+ *     <td>ustring.h, utf8.h, utf16.h, icu::StringPiece, UText, UCharIterator, icu::ByteSink</td>
  *     <td>icu::UnicodeString, icu::CharacterIterator, icu::Appendable, icu::StringPiece,icu::ByteSink</td>
  *   </tr>
  *   <tr>
@@ -128,9 +128,9 @@
  *     <td>icu::Normalizer2</td>
  *   </tr>
  *   <tr>
- *     <td>Calendars</td>
+ *     <td>Calendars and Time Zones</td>
  *     <td>ucal.h</td>
- *     <td>icu::Calendar</td>
+ *     <td>icu::Calendar, icu::TimeZone</td>
  *   </tr>
  *   <tr>
  *     <td>Date and Time Formatting</td>
@@ -149,8 +149,8 @@
  *   </tr>
  *   <tr>
  *     <td>Number Formatting<br/>(includes currency and unit formatting)</td>
- *     <td>unumberformatter.h, unum.h</td>
- *     <td>icu::number::NumberFormatter (ICU 60+) or icu::NumberFormat (older versions)</td>
+ *     <td>unumberformatter.h, unum.h, usimplenumberformatter.h</td>
+ *     <td>icu::number::NumberFormatter (ICU 60+) or icu::NumberFormat (older versions)<br>icu::number::SimpleNumberFormatter (ICU 73+)</td>
  *   </tr>
  *   <tr>
  *     <td>Number Range Formatting<br />(includes currency and unit ranges)</td>

@@ -450,25 +450,33 @@
     _Pragma(_COMPILER_STRINGIZE(compiler diagnostic push)) \
     _COMPILER_CONCAT(IGNORE_WARNINGS_BEGIN_IMPL_, cond)(compiler, warning)
 
+/* Condition is either 1 (true) or 0 (false, do nothing). */
 #define IGNORE_WARNINGS_BEGIN_IMPL_1(compiler, warning) \
     _Pragma(_COMPILER_STRINGIZE(compiler diagnostic ignored warning))
 #define IGNORE_WARNINGS_BEGIN_IMPL_0(compiler, warning)
-#define IGNORE_WARNINGS_BEGIN_IMPL_(compiler, warning)
 
-
+#if defined(__has_warning)
 #define IGNORE_WARNINGS_END_IMPL(compiler) _Pragma(_COMPILER_STRINGIZE(compiler diagnostic pop))
+#else
+#define IGNORE_WARNINGS_END_IMPL(compiler) \
+    _Pragma(_COMPILER_STRINGIZE(compiler diagnostic pop)) \
+    _Pragma(_COMPILER_STRINGIZE(compiler diagnostic pop))
+#endif
 
 #if defined(__has_warning)
 #define _IGNORE_WARNINGS_BEGIN_IMPL(compiler, warning) \
     IGNORE_WARNINGS_BEGIN_COND(__has_warning(warning), compiler, warning)
 #else
-#define _IGNORE_WARNINGS_BEGIN_IMPL(compiler, warning) IGNORE_WARNINGS_BEGIN_COND(1, compiler, warning)
+/* Suppress -Wpragmas to dodge warnings about attempts to suppress unrecognized warnings. */
+#define _IGNORE_WARNINGS_BEGIN_IMPL(compiler, warning) \
+    IGNORE_WARNINGS_BEGIN_COND(1, compiler, "-Wpragmas") \
+    IGNORE_WARNINGS_BEGIN_COND(1, compiler, warning)
 #endif
 
 #define IGNORE_WARNINGS_BEGIN_IMPL(compiler, warning) \
     _IGNORE_WARNINGS_BEGIN_IMPL(compiler, _COMPILER_WARNING_NAME(warning))
 
-#endif // COMPILER(GCC) || COMPILER(CLANG)
+#endif /* COMPILER(GCC) || COMPILER(CLANG) */
 
 
 #if COMPILER(GCC)
@@ -507,6 +515,9 @@
 #define ALLOW_UNUSED_PARAMETERS_BEGIN IGNORE_WARNINGS_BEGIN("unused-parameter")
 #define ALLOW_UNUSED_PARAMETERS_END IGNORE_WARNINGS_END
 
+#define ALLOW_COMMA_BEGIN IGNORE_WARNINGS_BEGIN("comma")
+#define ALLOW_COMMA_END IGNORE_WARNINGS_END
+
 #define ALLOW_NONLITERAL_FORMAT_BEGIN IGNORE_WARNINGS_BEGIN("format-nonliteral")
 #define ALLOW_NONLITERAL_FORMAT_END IGNORE_WARNINGS_END
 
@@ -526,4 +537,16 @@
 
 #if !defined(NO_UNIQUE_ADDRESS)
 #define NO_UNIQUE_ADDRESS
+#endif
+
+/* TLS_MODEL_INITIAL_EXEC */
+
+#if !defined(TLS_MODEL_INITIAL_EXEC) && defined(__has_attribute)
+#if __has_attribute(tls_model)
+#define TLS_MODEL_INITIAL_EXEC __attribute__((tls_model("initial-exec")))
+#endif
+#endif
+
+#if !defined(TLS_MODEL_INITIAL_EXEC)
+#define TLS_MODEL_INITIAL_EXEC
 #endif

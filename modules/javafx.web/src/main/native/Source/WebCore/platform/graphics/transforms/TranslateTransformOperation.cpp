@@ -28,6 +28,20 @@
 
 namespace WebCore {
 
+Ref<TranslateTransformOperation> TranslateTransformOperation::create(const Length& tx, const Length& ty, const Length& tz, TransformOperation::Type type)
+{
+    return adoptRef(*new TranslateTransformOperation(tx, ty, tz, type));
+}
+
+TranslateTransformOperation::TranslateTransformOperation(const Length& tx, const Length& ty, const Length& tz, TransformOperation::Type type)
+    : TransformOperation(type)
+    , m_x(tx)
+    , m_y(ty)
+    , m_z(tz)
+{
+    RELEASE_ASSERT(isTranslateTransformOperationType(type));
+}
+
 bool TranslateTransformOperation::operator==(const TransformOperation& other) const
 {
     if (!isSameType(other))
@@ -38,18 +52,19 @@ bool TranslateTransformOperation::operator==(const TransformOperation& other) co
 
 Ref<TransformOperation> TranslateTransformOperation::blend(const TransformOperation* from, const BlendingContext& context, bool blendToIdentity)
 {
-    if (from && !from->isSameType(*this))
-        return *this;
-
     Length zeroLength(0, LengthType::Fixed);
     if (blendToIdentity)
         return TranslateTransformOperation::create(WebCore::blend(m_x, zeroLength, context), WebCore::blend(m_y, zeroLength, context), WebCore::blend(m_z, zeroLength, context), type());
+
+    auto outputType = sharedPrimitiveType(from);
+    if (!outputType)
+        return *this;
 
     const TranslateTransformOperation* fromOp = downcast<TranslateTransformOperation>(from);
     Length fromX = fromOp ? fromOp->m_x : zeroLength;
     Length fromY = fromOp ? fromOp->m_y : zeroLength;
     Length fromZ = fromOp ? fromOp->m_z : zeroLength;
-    return TranslateTransformOperation::create(WebCore::blend(fromX, x(), context), WebCore::blend(fromY, y(), context), WebCore::blend(fromZ, z(), context), type());
+    return TranslateTransformOperation::create(WebCore::blend(fromX, x(), context), WebCore::blend(fromY, y(), context), WebCore::blend(fromZ, z(), context), *outputType);
 }
 
 void TranslateTransformOperation::dump(TextStream& ts) const

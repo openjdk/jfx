@@ -40,6 +40,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <wtf/EnumTraits.h>
+#include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -60,7 +61,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
     case FileOpenMode::Read:
         platformFlag |= O_RDONLY;
         break;
-    case FileOpenMode::Write:
+    case FileOpenMode::Truncate:
         platformFlag |= (O_WRONLY | O_CREAT | O_TRUNC);
         break;
     case FileOpenMode::ReadWrite:
@@ -93,6 +94,11 @@ void closeFile(PlatformFileHandle& handle)
     }
 }
 
+int posixFileDescriptor(PlatformFileHandle handle)
+{
+    return handle;
+}
+
 long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
 {
     int whence = SEEK_SET;
@@ -118,6 +124,11 @@ bool truncateFile(PlatformFileHandle handle, long long offset)
     return !ftruncate(handle, offset);
 }
 
+bool flushFile(PlatformFileHandle handle)
+{
+    return !fsync(handle);
+}
+
 int writeToFile(PlatformFileHandle handle, const void* data, int length)
 {
     do {
@@ -141,9 +152,9 @@ int readFromFile(PlatformFileHandle handle, void* data, int length)
 #if USE(FILE_LOCK)
 bool lockFile(PlatformFileHandle handle, OptionSet<FileLockMode> lockMode)
 {
-    COMPILE_ASSERT(LOCK_SH == WTF::enumToUnderlyingType(FileLockMode::Shared), LockSharedEncodingIsAsExpected);
-    COMPILE_ASSERT(LOCK_EX == WTF::enumToUnderlyingType(FileLockMode::Exclusive), LockExclusiveEncodingIsAsExpected);
-    COMPILE_ASSERT(LOCK_NB == WTF::enumToUnderlyingType(FileLockMode::Nonblocking), LockNonblockingEncodingIsAsExpected);
+    static_assert(LOCK_SH == WTF::enumToUnderlyingType(FileLockMode::Shared), "LockSharedEncoding is as expected");
+    static_assert(LOCK_EX == WTF::enumToUnderlyingType(FileLockMode::Exclusive), "LockExclusiveEncoding is as expected");
+    static_assert(LOCK_NB == WTF::enumToUnderlyingType(FileLockMode::Nonblocking), "LockNonblockingEncoding is as expected");
     int result = flock(handle, lockMode.toRaw());
     return (result != -1);
 }
@@ -184,6 +195,20 @@ std::optional<WallTime> fileCreationTime(const String& path)
 #endif
 }
 
+std::optional<PlatformFileID> fileID(PlatformFileHandle handle)
+{
+    struct stat fileInfo;
+    if (fstat(handle, &fileInfo))
+        return std::nullopt;
+
+    return fileInfo.st_ino;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+{
+    return a == b;
+}
+
 std::optional<uint32_t> volumeFileBlockSize(const String& path)
 {
     struct statvfs fileStat;
@@ -209,7 +234,7 @@ CString fileSystemRepresentation(const String& path)
 #endif
 
 #if !PLATFORM(COCOA)
-String openTemporaryFile(const String& prefix, PlatformFileHandle& handle, const String& suffix)
+String openTemporaryFile(StringView prefix, PlatformFileHandle& handle, StringView suffix)
 {
     // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
@@ -235,8 +260,12 @@ end:
 }
 #endif // !PLATFORM(COCOA)
 
-std::optional<int32_t> getFileDeviceId(const CString& fsFile)
+std::optional<int32_t> getFileDeviceId(const String& path)
 {
+    auto fsFile = fileSystemRepresentation(path);
+    if (fsFile.isNull())
+        return std::nullopt;
+
     struct stat fileStat;
     if (stat(fsFile.data(), &fileStat) == -1)
         return std::nullopt;
@@ -256,7 +285,7 @@ bool deleteFile(const String& path)
     // unlink(...) returns 0 on successful deletion of the path and non-zero in any other case (including invalid permissions or non-existent file)
     bool unlinked = !unlink(fileSystemRepresentation(path).data());
     if (!unlinked && errno != ENOENT)
-        LOG_ERROR("File failed to delete. Error message: %s", strerror(errno));
+        LOG_ERROR("File failed to delete. Error message: %s", safeStrerror(errno).data());
 
     return unlinked;
 }
@@ -264,11 +293,14 @@ bool deleteFile(const String& path)
 bool makeAllDirectories(const String& path)
 {
     auto fullPath = fileSystemRepresentation(path);
+    int length = fullPath.length();
+    if (!length)
+        return false;
+
     if (!access(fullPath.data(), F_OK))
         return true;
 
     char* p = fullPath.mutableData() + 1;
-    int length = fullPath.length();
     if (p[length - 1] == '/')
         p[length - 1] = '\0';
     for (; *p; ++p) {
@@ -289,11 +321,11 @@ bool makeAllDirectories(const String& path)
     return true;
 }
 
-String pathByAppendingComponent(const String& path, const String& component)
+String pathByAppendingComponent(StringView path, StringView component)
 {
     if (path.endsWith('/'))
-        return path + component;
-    return path + "/" + component;
+        return makeString(path, component);
+    return makeString(path, '/', component);
 }
 
 String pathByAppendingComponents(StringView path, const Vector<StringView>& components)

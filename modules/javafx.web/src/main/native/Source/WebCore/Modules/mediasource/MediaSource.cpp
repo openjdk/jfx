@@ -36,20 +36,24 @@
 
 #include "AudioTrackList.h"
 #include "ContentType.h"
+#include "ContentTypeUtilities.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
 #include "Logging.h"
+#include "ManagedMediaSource.h"
+#include "ManagedSourceBuffer.h"
 #include "MediaSourcePrivate.h"
 #include "MediaSourceRegistry.h"
 #include "Quirks.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "SourceBuffer.h"
 #include "SourceBufferList.h"
 #include "SourceBufferPrivate.h"
 #include "TextTrackList.h"
 #include "TimeRanges.h"
+#include "VideoTrack.h"
 #include "VideoTrackList.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -67,7 +71,7 @@ String convertEnumerationToString(MediaSourcePrivate::AddStatus enumerationValue
     static_assert(static_cast<size_t>(MediaSourcePrivate::AddStatus::Ok) == 0, "MediaSourcePrivate::AddStatus::Ok is not 0 as expected");
     static_assert(static_cast<size_t>(MediaSourcePrivate::AddStatus::NotSupported) == 1, "MediaSourcePrivate::AddStatus::NotSupported is not 1 as expected");
     static_assert(static_cast<size_t>(MediaSourcePrivate::AddStatus::ReachedIdLimit) == 2, "MediaSourcePrivate::AddStatus::ReachedIdLimit is not 2 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -81,7 +85,7 @@ String convertEnumerationToString(MediaSourcePrivate::EndOfStreamStatus enumerat
     static_assert(static_cast<size_t>(MediaSourcePrivate::EndOfStreamStatus::EosNoError) == 0, "MediaSourcePrivate::EndOfStreamStatus::EosNoError is not 0 as expected");
     static_assert(static_cast<size_t>(MediaSourcePrivate::EndOfStreamStatus::EosNetworkError) == 1, "MediaSourcePrivate::EndOfStreamStatus::EosNetworkError is not 1 as expected");
     static_assert(static_cast<size_t>(MediaSourcePrivate::EndOfStreamStatus::EosDecodeError) == 2, "MediaSourcePrivate::EndOfStreamStatus::EosDecodeError is not 2 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 
@@ -329,7 +333,7 @@ const MediaTime& MediaSource::currentTimeFudgeFactor()
 
 bool MediaSource::contentTypeShouldGenerateTimestamps(const ContentType& contentType)
 {
-    return contentType.containerType() == "audio/aac" || contentType.containerType() == "audio/mpeg";
+    return contentType.containerType() == "audio/aac"_s || contentType.containerType() == "audio/mpeg"_s;
 }
 
 bool MediaSource::hasBufferedTime(const MediaTime& time)
@@ -512,10 +516,10 @@ ExceptionOr<void> MediaSource::setDurationInternal(const MediaTime& duration)
 
     // 5. Update duration to new duration.
     m_duration = newDuration;
-    ALWAYS_LOG(LOGIDENTIFIER, duration);
+    ALWAYS_LOG(LOGIDENTIFIER, newDuration);
 
     // 6. Update the media duration to new duration and run the HTMLMediaElement duration change algorithm.
-    m_private->durationChanged(duration);
+    m_private->durationChanged(newDuration);
 
     return { };
 }
@@ -639,7 +643,7 @@ static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type
     };
 
     for (auto codec : type.codecs()) {
-        if (!codec.startsWith("vp09") || countPeriods(codec) != 7)
+        if (!codec.startsWith("vp09"_s) || countPeriods(codec) != 7)
             continue;
 
         auto rawType = type.raw();
@@ -648,8 +652,7 @@ static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type
         if (position == notFound)
             continue;
 
-        rawType.insert(".00", position + codec.length());
-        return ContentType(rawType);
+        return ContentType(makeStringByInserting(rawType, ".00"_s, position + codec.length()));
     }
     return type;
 }
@@ -696,7 +699,13 @@ ExceptionOr<Ref<SourceBuffer>> MediaSource::addSourceBuffer(const String& type)
         return sourceBufferPrivate.releaseException();
     }
 
-    auto buffer = SourceBuffer::create(sourceBufferPrivate.releaseReturnValue(), this);
+    Ref<SourceBuffer> buffer =
+#if ENABLE(MANAGED_MEDIA_SOURCE)
+        isManaged() ? ManagedSourceBuffer::create(sourceBufferPrivate.releaseReturnValue(), downcast<ManagedMediaSource>(*this)).get() : SourceBuffer::create(sourceBufferPrivate.releaseReturnValue(), *this).get();
+#else
+        SourceBuffer::create(sourceBufferPrivate.releaseReturnValue(), *this);
+#endif
+
     DEBUG_LOG(LOGIDENTIFIER, "created SourceBuffer");
 
     // 6. Set the generate timestamps flag on the new object to the value in the "Generate Timestamps Flag"
@@ -867,6 +876,8 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
     // 12. Destroy all resources for sourceBuffer.
     buffer.removedFromMediaSource();
 
+    notifyElementUpdateMediaState();
+
     return { };
 }
 
@@ -893,7 +904,7 @@ bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String&
     if (context.isDocument() && downcast<Document>(context).quirks().needsVP9FullRangeFlagQuirk())
         contentType = addVP9FullRangeVideoFlagToContentType(contentType);
 
-    String codecs = contentType.parameter("codecs");
+    String codecs = contentType.parameter("codecs"_s);
 
     // 2. If type does not contain a valid MIME type string, then return false.
     if (contentType.containerType().isEmpty())
@@ -907,6 +918,17 @@ bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String&
     parameters.type = contentType;
     parameters.isMediaSource = true;
     parameters.contentTypesRequiringHardwareSupport = WTFMove(contentTypesRequiringHardwareSupport);
+
+    if (context.isDocument()) {
+        auto& settings = downcast<Document>(context).settings();
+        if (!contentTypeMeetsContainerAndCodecTypeRequirements(contentType, settings.allowedMediaContainerTypes(), settings.allowedMediaCodecTypes()))
+            return false;
+
+        parameters.allowedMediaContainerTypes = settings.allowedMediaContainerTypes();
+        parameters.allowedMediaVideoCodecIDs = settings.allowedMediaVideoCodecIDs();
+        parameters.allowedMediaAudioCodecIDs = settings.allowedMediaAudioCodecIDs();
+        parameters.allowedMediaCaptionFormatTypes = settings.allowedMediaCaptionFormatTypes();
+    }
 
     MediaPlayer::SupportsType supported = MediaPlayer::supportsType(parameters);
 
@@ -978,7 +1000,7 @@ bool MediaSource::attachToElement(HTMLMediaElement& element)
 
     ASSERT(isClosed());
 
-    m_mediaElement = makeWeakPtr(&element);
+    m_mediaElement = element;
     return true;
 }
 
@@ -1038,10 +1060,9 @@ void MediaSource::onReadyStateChange(ReadyState oldState, ReadyState newState)
 
 Vector<PlatformTimeRanges> MediaSource::activeRanges() const
 {
-    Vector<PlatformTimeRanges> activeRanges;
-    for (auto& sourceBuffer : *m_activeSourceBuffers)
-        activeRanges.append(sourceBuffer->bufferedInternal().ranges());
-    return activeRanges;
+    return WTF::map(*m_activeSourceBuffers, [](auto& sourceBuffer) {
+        return sourceBuffer->bufferedInternal().ranges();
+    });
 }
 
 ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(const ContentType& incomingType)
@@ -1053,7 +1074,7 @@ ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(con
         type = addVP9FullRangeVideoFlagToContentType(incomingType);
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    switch (m_private->addSourceBuffer(type, RuntimeEnabledFeatures::sharedFeatures().webMParserEnabled(), sourceBufferPrivate)) {
+    switch (m_private->addSourceBuffer(type, DeprecatedGlobalSettings::webMParserEnabled(), sourceBufferPrivate)) {
     case MediaSourcePrivate::AddStatus::Ok:
         return sourceBufferPrivate.releaseNonNull();
     case MediaSourcePrivate::AddStatus::NotSupported:
@@ -1106,7 +1127,16 @@ void MediaSource::regenerateActiveSourceBuffers()
     for (auto& sourceBuffer : *m_activeSourceBuffers)
         sourceBuffer->setBufferedDirty(true);
 
+    notifyElementUpdateMediaState();
+
     updateBufferedIfNeeded();
+}
+
+void MediaSource::notifyElementUpdateMediaState() const
+{
+    if (!mediaElement())
+        return;
+    mediaElement()->updateMediaState();
 }
 
 void MediaSource::updateBufferedIfNeeded()

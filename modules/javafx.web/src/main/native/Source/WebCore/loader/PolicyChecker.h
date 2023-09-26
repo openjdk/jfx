@@ -30,6 +30,7 @@
 #pragma once
 
 #include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "ResourceRequest.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -51,7 +52,7 @@ class Frame;
 class NavigationAction;
 class ResourceError;
 class ResourceResponse;
-class BlobURLHandle;
+class URLKeepingBlobAlive;
 
 enum class NavigationPolicyDecision : uint8_t {
     ContinueLoad,
@@ -61,18 +62,18 @@ enum class NavigationPolicyDecision : uint8_t {
 
 enum class PolicyDecisionMode { Synchronous, Asynchronous };
 
-class FrameLoader::PolicyChecker {
+class FrameLoader::PolicyChecker : public CanMakeWeakPtr<FrameLoader::PolicyChecker> {
     WTF_MAKE_NONCOPYABLE(PolicyChecker);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit PolicyChecker(Frame&);
 
     using NavigationPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<FormState>&&, NavigationPolicyDecision)>;
-    using NewWindowPolicyDecisionFunction = CompletionHandler<void(const ResourceRequest&, WeakPtr<FormState>&&, const String& frameName, const NavigationAction&, ShouldContinuePolicyCheck)>;
+    using NewWindowPolicyDecisionFunction = CompletionHandler<void(const ResourceRequest&, WeakPtr<FormState>&&, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck)>;
 
     void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, DocumentLoader*, RefPtr<FormState>&&, NavigationPolicyDecisionFunction&&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous);
     void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, NavigationPolicyDecisionFunction&&);
-    void checkNewWindowPolicy(NavigationAction&&, ResourceRequest&&, RefPtr<FormState>&&, const String& frameName, NewWindowPolicyDecisionFunction&&);
+    void checkNewWindowPolicy(NavigationAction&&, ResourceRequest&&, RefPtr<FormState>&&, const AtomString& frameName, NewWindowPolicyDecisionFunction&&);
 
     void stopCheck();
 
@@ -90,9 +91,11 @@ public:
 
 private:
     void handleUnimplementablePolicy(const ResourceError&);
-    BlobURLHandle extendBlobURLLifetimeIfNecessary(const ResourceRequest&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous) const;
+    URLKeepingBlobAlive extendBlobURLLifetimeIfNecessary(const ResourceRequest&, const Document&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous) const;
 
     Frame& m_frame;
+
+    HashMap<PolicyCheckIdentifier, FramePolicyFunction> m_javaScriptURLPolicyChecks;
 
     bool m_delegateIsDecidingNavigationPolicy;
     bool m_delegateIsHandlingUnimplementablePolicy;

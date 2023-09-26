@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,11 @@
 
 namespace JSC {
 
-const ClassInfo JSMap::s_info = { "Map", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSMap) };
+const ClassInfo JSMap::s_info = { "Map"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSMap) };
 
 JSMap* JSMap::clone(JSGlobalObject* globalObject, VM& vm, Structure* structure)
 {
-    JSMap* instance = new (NotNull, allocateCell<JSMap>(vm.heap)) JSMap(vm, structure);
+    JSMap* instance = new (NotNull, allocateCell<JSMap>(vm)) JSMap(vm, structure);
     instance->finishCreation(globalObject, vm, this);
     return instance;
 }
@@ -61,12 +61,12 @@ bool JSMap::isIteratorProtocolFastAndNonObservable()
         return false;
 
     VM& vm = globalObject->vm();
-    Structure* structure = this->structure(vm);
+    Structure* structure = this->structure();
     // This is the fast case. Many maps will be an original map.
     if (structure == globalObject->mapStructure())
         return true;
 
-    if (getPrototypeDirect(vm) != globalObject->mapPrototype())
+    if (getPrototypeDirect() != globalObject->mapPrototype())
         return false;
 
     if (getDirectOffset(vm, vm.propertyNames->iteratorSymbol) != invalidOffset)

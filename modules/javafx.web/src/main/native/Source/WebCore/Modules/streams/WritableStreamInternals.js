@@ -45,19 +45,70 @@ function acquireWritableStreamDefaultWriter(stream)
     return new @WritableStreamDefaultWriter(stream);
 }
 
-function createWritableStream(startAlgorithm, writeAlgorithm, closeAlgorithm, abortAlgorithm, writableHighWaterMark, writableSizeAlgorithm)
+// https://streams.spec.whatwg.org/#create-writable-stream
+function createWritableStream(startAlgorithm, writeAlgorithm, closeAlgorithm, abortAlgorithm, highWaterMark, sizeAlgorithm)
 {
-    if (arguments.length < 5)
-        writableHighWaterMark = 1;
-    if (arguments.length < 6)
-        writableSizeAlgorithm = () => { return 1; };
+    @assert(typeof highWaterMark === "number" && !@isNaN(highWaterMark) && highWaterMark >= 0);
 
-    let underlyingSink = { startAlgorithm: startAlgorithm, writeAlgorithm: writeAlgorithm, closeAlgorithm: closeAlgorithm, abortAlgorithm: abortAlgorithm};
-    @putByIdDirectPrivate(underlyingSink, "WritableStream", true);
-    return new @WritableStream(underlyingSink, { sizeAlgorithm: writableSizeAlgorithm, highWaterMark: writableHighWaterMark });
+    const internalStream = { };
+    @initializeWritableStreamSlots(internalStream, { });
+    const controller = new @WritableStreamDefaultController(@isWritableStream);
+
+    @setUpWritableStreamDefaultController(internalStream, controller, startAlgorithm, writeAlgorithm, closeAlgorithm, abortAlgorithm, highWaterMark, sizeAlgorithm);
+
+    return @createWritableStreamFromInternal(internalStream);
 }
 
-function privateInitializeWritableStream(stream, underlyingSink)
+function createInternalWritableStreamFromUnderlyingSink(underlyingSink, strategy)
+{
+    "use strict";
+
+    const stream = { };
+
+    if (underlyingSink === @undefined)
+        underlyingSink = { };
+
+    if (strategy === @undefined)
+        strategy = { };
+
+    if (!@isObject(underlyingSink))
+        @throwTypeError("WritableStream constructor takes an object as first argument");
+
+    if ("type" in underlyingSink)
+        @throwRangeError("Invalid type is specified");
+
+    const sizeAlgorithm = @extractSizeAlgorithm(strategy);
+    const highWaterMark = @extractHighWaterMark(strategy, 1);
+
+    const underlyingSinkDict = { };
+    if ("start" in underlyingSink) {
+        underlyingSinkDict["start"] = underlyingSink["start"];
+        if (typeof underlyingSinkDict["start"] !== "function")
+            @throwTypeError("underlyingSink.start should be a function");
+    }
+    if ("write" in underlyingSink) {
+        underlyingSinkDict["write"] = underlyingSink["write"];
+        if (typeof underlyingSinkDict["write"] !== "function")
+            @throwTypeError("underlyingSink.write should be a function");
+    }
+    if ("close" in underlyingSink) {
+        underlyingSinkDict["close"] = underlyingSink["close"];
+        if (typeof underlyingSinkDict["close"] !== "function")
+            @throwTypeError("underlyingSink.close should be a function");
+    }
+    if ("abort" in underlyingSink) {
+        underlyingSinkDict["abort"] = underlyingSink["abort"];
+        if (typeof underlyingSinkDict["abort"] !== "function")
+            @throwTypeError("underlyingSink.abort should be a function");
+    }
+
+    @initializeWritableStreamSlots(stream, underlyingSink);
+    @setUpWritableStreamDefaultControllerFromUnderlyingSink(stream, underlyingSink, underlyingSinkDict, highWaterMark, sizeAlgorithm);
+
+    return stream;
+}
+
+function initializeWritableStreamSlots(stream, underlyingSink)
 {
     @putByIdDirectPrivate(stream, "state", "writable");
     @putByIdDirectPrivate(stream, "storedError", @undefined);
@@ -70,6 +121,25 @@ function privateInitializeWritableStream(stream, underlyingSink)
     @putByIdDirectPrivate(stream, "writeRequests", []);
     @putByIdDirectPrivate(stream, "backpressure", false);
     @putByIdDirectPrivate(stream, "underlyingSink", underlyingSink);
+}
+
+function writableStreamCloseForBindings(stream)
+{
+    if (@isWritableStreamLocked(stream))
+        return @Promise.@reject(@makeTypeError("WritableStream.close method can only be used on non locked WritableStream"));
+
+    if (@writableStreamCloseQueuedOrInFlight(stream))
+        return @Promise.@reject(@makeTypeError("WritableStream.close method can only be used on a being close WritableStream"));
+
+    return @writableStreamClose(stream);
+}
+
+function writableStreamAbortForBindings(stream, reason)
+{
+    if (@isWritableStreamLocked(stream))
+        return @Promise.@reject(@makeTypeError("WritableStream.abort method can only be used on non locked WritableStream"));
+
+    return @writableStreamAbort(stream, reason);
 }
 
 function isWritableStreamLocked(stream)
@@ -116,6 +186,9 @@ function writableStreamAbort(stream, reason)
     if (state === "closed" || state === "errored")
         return @Promise.@resolve();
 
+    const controller = @getByIdDirectPrivate(stream, "controller");
+    @signalAbort(@getByIdDirectPrivate(controller, "signal"), reason);
+
     const pendingAbortRequest = @getByIdDirectPrivate(stream, "pendingAbortRequest");
     if (pendingAbortRequest !== @undefined)
         return pendingAbortRequest.promise.@promise;
@@ -150,7 +223,7 @@ function writableStreamClose(stream)
     const writer = @getByIdDirectPrivate(stream, "writer");
     if (writer !== @undefined && @getByIdDirectPrivate(stream, "backpressure") && state === "writable")
         @getByIdDirectPrivate(writer, "readyPromise").@resolve.@call();
-
+        
     @writableStreamDefaultControllerClose(@getByIdDirectPrivate(stream, "controller"));
 
     return closePromiseCapability.@promise;
@@ -345,7 +418,7 @@ function writableStreamStartErroring(stream, reason)
 {
     @assert(@getByIdDirectPrivate(stream, "storedError") === @undefined);
     @assert(@getByIdDirectPrivate(stream, "state") === "writable");
-
+ 
     const controller = @getByIdDirectPrivate(stream, "controller");
     @assert(controller !== @undefined);
 
@@ -509,6 +582,7 @@ function setUpWritableStreamDefaultController(stream, controller, startAlgorithm
 
     @resetQueue(@getByIdDirectPrivate(controller, "queue"));
 
+    @putByIdDirectPrivate(controller, "signal", @createAbortSignal());
     @putByIdDirectPrivate(controller, "started", false);
     @putByIdDirectPrivate(controller, "strategySizeAlgorithm", sizeAlgorithm);
     @putByIdDirectPrivate(controller, "strategyHWM", highWaterMark);
@@ -534,7 +608,7 @@ function setUpWritableStreamDefaultController(stream, controller, startAlgorithm
 
 function setUpWritableStreamDefaultControllerFromUnderlyingSink(stream, underlyingSink, underlyingSinkDict, highWaterMark, sizeAlgorithm)
 {
-    const controller = new @WritableStreamDefaultController();
+    const controller = new @WritableStreamDefaultController(@isWritableStream);
 
     let startAlgorithm = () => { };
     let writeAlgorithm = () => { return @Promise.@resolve(); };

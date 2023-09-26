@@ -39,6 +39,8 @@ namespace WebCore {
 enum class ServiceWorkerUpdateViaCache : uint8_t;
 
 struct ServiceWorkerRegistrationData {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
     ServiceWorkerRegistrationKey key;
     ServiceWorkerRegistrationIdentifier identifier;
     URL scopeURL;
@@ -49,7 +51,8 @@ struct ServiceWorkerRegistrationData {
     std::optional<ServiceWorkerData> waitingWorker;
     std::optional<ServiceWorkerData> activeWorker;
 
-    ServiceWorkerRegistrationData isolatedCopy() const;
+    ServiceWorkerRegistrationData isolatedCopy() const &;
+    ServiceWorkerRegistrationData isolatedCopy() &&;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<ServiceWorkerRegistrationData> decode(Decoder&);

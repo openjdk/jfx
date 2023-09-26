@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,37 +20,32 @@
 
 #pragma once
 
-#include "InternalFunction.h"
+#include "JSFunction.h"
 
 namespace JSC {
 
 class StringPrototype;
 class GetterSetter;
 
-class StringConstructor final : public InternalFunction {
+class StringConstructor final : public JSFunction {
 public:
-    typedef InternalFunction Base;
+    using Base = JSFunction;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static StringConstructor* create(VM& vm, Structure* structure, StringPrototype* stringPrototype, GetterSetter*)
-    {
-        StringConstructor* constructor = new (NotNull, allocateCell<StringConstructor>(vm.heap)) StringConstructor(vm, structure);
-        constructor->finishCreation(vm, stringPrototype);
-        return constructor;
-    }
+    static StringConstructor* create(VM&, Structure*, StringPrototype*, GetterSetter*);
 
     DECLARE_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
     }
 
 private:
-    StringConstructor(VM&, Structure*);
+    StringConstructor(VM&, NativeExecutable*, JSGlobalObject*, Structure*);
     void finishCreation(VM&, StringPrototype*);
 };
-STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(StringConstructor, InternalFunction);
+static_assert(sizeof(StringConstructor) == sizeof(JSFunction), "Allocate StringConstructor in JSFunction IsoSubspace");
 
 JSString* stringFromCharCode(JSGlobalObject*, int32_t);
 JSString* stringConstructor(JSGlobalObject*, JSValue);

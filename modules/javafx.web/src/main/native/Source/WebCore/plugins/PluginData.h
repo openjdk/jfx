@@ -1,6 +1,6 @@
 /*
     Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
-    Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+    Copyright (C) 2015-2022 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -50,7 +50,7 @@ enum class PluginLoadClientPolicy : uint8_t {
 };
 
 struct MimeClassInfo {
-    String type;
+    AtomString type;
     String desc;
     Vector<String> extensions;
 };
@@ -99,8 +99,6 @@ public:
 
     const Vector<PluginInfo>& plugins() const { return m_plugins; }
     WEBCORE_EXPORT const Vector<PluginInfo>& webVisiblePlugins() const;
-    std::pair<Vector<PluginInfo>, Vector<PluginInfo>> publiclyVisiblePluginsAndAdditionalWebVisiblePlugins() const;
-
     WEBCORE_EXPORT Vector<MimeClassInfo> webVisibleMimeTypes() const;
 
     enum AllowedPluginTypes {
@@ -112,6 +110,10 @@ public:
     WEBCORE_EXPORT bool supportsWebVisibleMimeTypeForURL(const String& mimeType, const AllowedPluginTypes, const URL&) const;
 
     String pluginFileForWebVisibleMimeType(const String& mimeType) const;
+
+    const std::optional<PluginInfo>& builtInPDFPlugin() const { return m_builtInPDFPluginInfo; }
+
+    static PluginInfo dummyPDFPluginInfo();
 
 private:
     explicit PluginData(Page&);
@@ -127,11 +129,12 @@ protected:
         std::optional<Vector<PluginInfo>> pluginList;
     };
     mutable CachedVisiblePlugins m_cachedVisiblePlugins;
+    std::optional<PluginInfo> m_builtInPDFPluginInfo;
 };
 
 inline bool isSupportedPlugin(const Vector<SupportedPluginIdentifier>& pluginIdentifiers, const URL& pageURL, const String& pluginIdentifier)
 {
-    return pluginIdentifiers.findMatching([&] (auto&& plugin) {
+    return pluginIdentifiers.findIf([&] (auto&& plugin) {
         return pageURL.isMatchingDomain(plugin.matchingDomain) && plugin.pluginIdentifier == pluginIdentifier;
     }) != notFound;
 }

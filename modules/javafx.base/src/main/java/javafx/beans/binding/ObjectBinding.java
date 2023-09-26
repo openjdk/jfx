@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,14 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     private T value;
     private boolean valid = false;
+    private boolean observed;
+
+    /**
+     * Invalidation listener used for observing dependencies.  This
+     * is never cleared once created as there is no way to determine
+     * when all dependencies that were previously bound were removed
+     * in one or more calls to {@link #unbind(Observable...)}.
+     */
     private BindingHelperObserver observer;
     private ExpressionHelper<T> helper = null;
 
@@ -74,22 +82,26 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
 
     @Override
     public void addListener(InvalidationListener listener) {
+        observed = observed || listener != null;
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
+        observed = helper != null;
     }
 
     @Override
     public void addListener(ChangeListener<? super T> listener) {
+        observed = observed || listener != null;
         helper = ExpressionHelper.addListener(helper, this, listener);
     }
 
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
         helper = ExpressionHelper.removeListener(helper, listener);
+        observed = helper != null;
     }
 
     /**
@@ -121,7 +133,6 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
             for (final Observable dep : dependencies) {
                 dep.removeListener(observer);
             }
-            observer = null;
         }
     }
 
@@ -167,9 +178,8 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     }
 
     /**
-     * The method onInvalidating() can be overridden by extending classes to
-     * react, if this binding becomes invalid. The default implementation is
-     * empty.
+     * Called when this binding becomes invalid. Can be overridden by extending classes to react to the invalidation.
+     * The default implementation is empty.
      */
     protected void onInvalidating() {
     }
@@ -206,7 +216,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
      * @since 19
      */
     protected final boolean isObserved() {
-        return helper != null;
+        return observed;
     }
 
     /**

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2003-2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2014 Google Inc.  All rights reserved.
  * Copyright (C) 2005 Nokia.  All rights reserved.
  *               2008 Eric Seidel <eric@webkit.org>
  *
@@ -48,11 +49,6 @@ typedef struct _NSSize NSSize;
 #endif
 #endif // PLATFORM(MAC)
 
-#if PLATFORM(WIN)
-struct D2D_SIZE_F;
-typedef D2D_SIZE_F D2D1_SIZE_F;
-#endif
-
 namespace WTF {
 class TextStream;
 }
@@ -64,16 +60,20 @@ class IntSize;
 class FloatSize {
 public:
     FloatSize() { }
-    FloatSize(float width, float height) : m_width(width), m_height(height) { }
-    WEBCORE_EXPORT FloatSize(const IntSize&);
+    FloatSize(float width, float height)
+        : m_width(width)
+        , m_height(height) { }
+    FloatSize(const IntSize& size)
+        : m_width(size.width())
+        , m_height(size.height()) { }
 
     static FloatSize narrowPrecision(double width, double height);
 
     float width() const { return m_width; }
     float height() const { return m_height; }
 
-    bool hasIntrinsicWidth = false;
-    bool hasIntrinsicHeight = false;
+    float minDimension() const { return std::min(m_width, m_height); }
+    float maxDimension() const { return std::max(m_width, m_height); }
 
     void setWidth(float width) { m_width = width; }
     void setHeight(float height) { m_height = height; }
@@ -83,6 +83,7 @@ public:
     bool isExpressibleAsIntSize() const;
 
     float aspectRatio() const { return m_width / m_height; }
+    double aspectRatioDouble() const { return m_width / static_cast<double>(m_height); }
 
     void expand(float width, float height)
     {
@@ -154,11 +155,6 @@ public:
 #if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
     WEBCORE_EXPORT explicit FloatSize(const NSSize&); // don't do this implicitly since it's lossy
     operator NSSize() const;
-#endif
-
-#if PLATFORM(WIN)
-    WEBCORE_EXPORT FloatSize(const D2D1_SIZE_F&);
-    operator D2D1_SIZE_F() const;
 #endif
 
     String toJSONString() const;

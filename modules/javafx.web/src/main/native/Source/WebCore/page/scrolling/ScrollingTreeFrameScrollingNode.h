@@ -38,7 +38,7 @@ class WEBCORE_EXPORT ScrollingTreeFrameScrollingNode : public ScrollingTreeScrol
 public:
     virtual ~ScrollingTreeFrameScrollingNode();
 
-    void commitStateBeforeChildren(const ScrollingStateNode&) override;
+    bool commitStateBeforeChildren(const ScrollingStateNode&) override;
 
     bool fixedElementsLayoutRelativeToFrame() const { return m_fixedElementsLayoutRelativeToFrame; }
     bool visualViewportIsSmallerThanLayoutViewport() const { return m_visualViewportIsSmallerThanLayoutViewport; }
@@ -69,7 +69,7 @@ private:
     bool scrollPositionAndLayoutViewportMatch(const FloatPoint& position, std::optional<FloatRect> overrideLayoutViewport) override;
     FloatRect layoutViewportForScrollPosition(const FloatPoint&, float scale, ScrollBehaviorForFixedElements = StickToDocumentBounds) const;
 
-    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
     FloatRect m_layoutViewport;
     FloatPoint m_minLayoutViewportOrigin;

@@ -25,22 +25,35 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutBox.h"
 #include "LayoutUnits.h"
+#include <unicode/ubidi.h>
 
 namespace WebCore {
 namespace Layout {
 
+class InlineItemsBuilder;
+
 class InlineItem {
 public:
-    enum class Type : uint8_t { Text, HardLineBreak, SoftLineBreak, WordBreakOpportunity, Box, Float, InlineBoxStart, InlineBoxEnd };
-    InlineItem(const Box& layoutBox, Type);
+    enum class Type : uint8_t {
+        Text,
+        HardLineBreak,
+        SoftLineBreak,
+        WordBreakOpportunity,
+        Box,
+        InlineBoxStart,
+        InlineBoxEnd,
+        Float
+    };
+    InlineItem(const Box& layoutBox, Type, UBiDiLevel = UBIDI_DEFAULT_LTR);
 
     Type type() const { return m_type; }
+    static constexpr UBiDiLevel opaqueBidiLevel = 0xff;
+    UBiDiLevel bidiLevel() const { return m_bidiLevel; }
     const Box& layoutBox() const { return *m_layoutBox; }
     const RenderStyle& style() const { return layoutBox().style(); }
+    const RenderStyle& firstLineStyle() const { return layoutBox().firstLineStyle(); }
 
     bool isText() const { return type() == Type::Text; }
     bool isBox() const { return type() == Type::Box; }
@@ -53,27 +66,45 @@ public:
     bool isInlineBoxEnd() const { return type() == Type::InlineBoxEnd; }
 
 private:
+    friend class InlineItemsBuilder;
+
+    void setBidiLevel(UBiDiLevel bidiLevel) { m_bidiLevel = bidiLevel; }
+    void setWidth(InlineLayoutUnit);
+
     const Box* m_layoutBox { nullptr };
-    Type m_type { };
 
 protected:
-    // For InlineTextItem
-    enum class TextItemType  : uint8_t { Undefined, Whitespace, NonWhitespace };
-    TextItemType m_textItemType { TextItemType::Undefined };
-    bool m_hasWidth { false };
-    bool m_hasTrailingSoftHyphen { false };
-    bool m_isWordSeparator { false };
     InlineLayoutUnit m_width { };
     unsigned m_length { 0 };
 
     // For InlineTextItem and InlineSoftLineBreakItem
     unsigned m_startOrPosition { 0 };
+private:
+    UBiDiLevel m_bidiLevel { UBIDI_DEFAULT_LTR };
+
+    Type m_type : 3 { };
+
+protected:
+    // For InlineTextItem
+    enum class TextItemType  : uint8_t { Undefined, Whitespace, NonWhitespace };
+
+    TextItemType m_textItemType : 2 { TextItemType::Undefined };
+    bool m_hasWidth : 1 { false };
+    bool m_hasTrailingSoftHyphen : 1 { false };
+    bool m_isWordSeparator : 1 { false };
 };
 
-inline InlineItem::InlineItem(const Box& layoutBox, Type type)
+inline InlineItem::InlineItem(const Box& layoutBox, Type type, UBiDiLevel bidiLevel)
     : m_layoutBox(&layoutBox)
+    , m_bidiLevel(bidiLevel)
     , m_type(type)
 {
+}
+
+inline void InlineItem::setWidth(InlineLayoutUnit width)
+{
+    m_width = width;
+    m_hasWidth = true;
 }
 
 #define SPECIALIZE_TYPE_TRAITS_INLINE_ITEM(ToValueTypeName, predicate) \
@@ -83,4 +114,3 @@ SPECIALIZE_TYPE_TRAITS_END()
 
 }
 }
-#endif

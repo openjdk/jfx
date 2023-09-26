@@ -35,8 +35,8 @@
 #include "PaymentMethodChangeEvent.h"
 #include "PaymentOptions.h"
 #include "PaymentResponse.h"
+#include <variant>
 #include <wtf/URL.h>
-#include <wtf/Variant.h>
 
 namespace WebCore {
 
@@ -52,7 +52,7 @@ struct PaymentDetailsUpdate;
 struct PaymentMethodData;
 template<typename IDLType> class DOMPromiseDeferred;
 
-class PaymentRequest final : public ActiveDOMObject, public EventTargetWithInlineData, public RefCounted<PaymentRequest> {
+class PaymentRequest final : public ActiveDOMObject, public EventTarget, public RefCounted<PaymentRequest> {
     WTF_MAKE_ISO_ALLOCATED(PaymentRequest);
 public:
     using AbortPromise = DOMPromiseDeferred<void>;
@@ -60,7 +60,6 @@ public:
     using ShowPromise = DOMPromiseDeferred<IDLInterface<PaymentResponse>>;
 
     static ExceptionOr<Ref<PaymentRequest>> create(Document&, Vector<PaymentMethodData>&&, PaymentDetailsInit&&, PaymentOptions&&);
-    static bool enabledForContext(ScriptExecutionContext&);
     ~PaymentRequest();
 
     void show(Document&, RefPtr<DOMPromise>&& detailsPromise, ShowPromise&&);
@@ -96,12 +95,14 @@ public:
     void paymentMethodChanged(const String& methodName, PaymentMethodChangeEvent::MethodDetailsFunction&&);
     ExceptionOr<void> updateWith(UpdateReason, Ref<DOMPromise>&&);
     ExceptionOr<void> completeMerchantValidation(Event&, Ref<DOMPromise>&&);
+    void accept(const String& methodName, PaymentResponse::DetailsFunction&&);
     void accept(const String& methodName, PaymentResponse::DetailsFunction&&, Ref<PaymentAddress>&& shippingAddress, const String& payerName, const String& payerEmail, const String& payerPhone);
-    ExceptionOr<void> complete(std::optional<PaymentComplete>&&);
+    void reject(Exception&&);
+    ExceptionOr<void> complete(Document&, std::optional<PaymentComplete>&&, String&& serializedData);
     ExceptionOr<void> retry(PaymentValidationErrors&&);
     void cancel();
 
-    using MethodIdentifier = Variant<String, URL>;
+    using MethodIdentifier = std::variant<String, URL>;
     using RefCounted<PaymentRequest>::ref;
     using RefCounted<PaymentRequest>::deref;
 

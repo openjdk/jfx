@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(RESIZE_OBSERVER)
-
 #include "GCReachableRef.h"
 #include "ResizeObservation.h"
 #include "ResizeObserverCallback.h"
@@ -44,6 +42,7 @@ namespace WebCore {
 
 class Document;
 class Element;
+struct ResizeObserverOptions;
 
 struct ResizeObserverData {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -58,7 +57,7 @@ public:
     bool hasObservations() const { return m_observations.size(); }
     bool hasActiveObservations() const { return m_activeObservations.size(); }
 
-    void observe(Element&);
+    void observe(Element&, const ResizeObserverOptions&);
     void unobserve(Element&);
     void disconnect();
     void targetDestroyed(Element&);
@@ -79,15 +78,15 @@ private:
     void removeAllTargets();
     bool removeObservation(const Element&);
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     RefPtr<ResizeObserverCallback> m_callback;
     Vector<Ref<ResizeObservation>> m_observations;
 
     Vector<Ref<ResizeObservation>> m_activeObservations;
     Vector<GCReachableRef<Element>> m_activeObservationTargets;
+    Vector<GCReachableRef<Element>> m_targetsWaitingForFirstObservation;
+
     bool m_hasSkippedObservations { false };
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(RESIZE_OBSERVER)

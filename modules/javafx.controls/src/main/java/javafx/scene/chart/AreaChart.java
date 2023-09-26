@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,8 +69,9 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PRIVATE FIELDS ------------------------------------------
 
-    /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
+    /** A multiplier for the Y values that we store for each series, it is used to animate in a new series */
     private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
+    private Timeline timeline;
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
@@ -100,14 +101,17 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return this;
         }
 
+        @Override
         public String getName() {
             return "createSymbols";
         }
 
+        @Override
         public CssMetaData<AreaChart<?, ?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
@@ -161,8 +165,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         final Axis<Y> ya = getYAxis();
         List<X> xData = null;
         List<Y> yData = null;
-        if(xa.isAutoRanging()) xData = new ArrayList<X>();
-        if(ya.isAutoRanging()) yData = new ArrayList<Y>();
+        if(xa.isAutoRanging()) xData = new ArrayList<>();
+        if(ya.isAutoRanging()) yData = new ArrayList<>();
         if(xData != null || yData != null) {
             for(Series<X,Y> series : getData()) {
                 for(Data<X,Y> data: series.getData()) {
@@ -369,7 +373,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             seriesYAnimMultiplier.setValue(1d);
         }
         getPlotChildren().add(areaGroup);
-        List<KeyFrame> keyFrames = new ArrayList<KeyFrame>();
+        List<KeyFrame> keyFrames = new ArrayList<>();
         if (shouldAnimate()) {
             // animate in new series
             keyFrames.add(new KeyFrame(Duration.ZERO,
@@ -407,8 +411,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         seriesYMultiplierMap.remove(series);
         // remove all symbol nodes
         if (shouldAnimate()) {
-            Timeline tl = new Timeline(createSeriesRemoveTimeLine(series, 400));
-            tl.play();
+            timeline = new Timeline(createSeriesRemoveTimeLine(series, 400));
+            timeline.play();
         } else {
             getPlotChildren().remove(series.getNode());
             for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
@@ -446,6 +450,13 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         final double dataYMax = sortY ? axisY.getHeight() + hlw : Double.POSITIVE_INFINITY;
         LineTo prevDataPoint = null;
         LineTo nextDataPoint = null;
+        ObservableList<PathElement> lineElements = linePath.getElements();
+        ObservableList<PathElement> fillElements = null;
+        if (fillPath != null) {
+            fillElements = fillPath.getElements();
+            fillElements.clear();
+        }
+        lineElements.clear();
         constructedPath.clear();
         for (Iterator<Data<X, Y>> it = chart.getDisplayedDataIterator(series); it.hasNext(); ) {
             Data<X, Y> item = it.next();
@@ -506,16 +517,10 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             LineTo first = constructedPath.get(0);
             LineTo last = constructedPath.get(constructedPath.size()-1);
 
-            final double displayYPos = first.getY();
-
-            ObservableList<PathElement> lineElements = linePath.getElements();
-            lineElements.clear();
-            lineElements.add(new MoveTo(first.getX(), displayYPos));
+            lineElements.add(new MoveTo(first.getX(), first.getY()));
             lineElements.addAll(constructedPath);
 
             if (fillPath != null) {
-                ObservableList<PathElement> fillElements = fillPath.getElements();
-                fillElements.clear();
                 double yOrigin = axisY.getDisplayPosition(axisY.toRealValue(0.0));
 
                 fillElements.add(new MoveTo(first.getX(), yOrigin));
@@ -551,11 +556,23 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         return legendItem;
     }
 
+    /** {@inheritDoc} */
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        if (timeline != null) {
+            timeline.setOnFinished(null);
+            timeline.stop();
+            timeline = null;
+            getPlotChildren().remove(series.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
+            removeSeriesFromDisplay(series);
+        }
+    }
+
     // -------------- STYLESHEET HANDLING --------------------------------------
 
     private static class StyleableProperties {
         private static final CssMetaData<AreaChart<?,?>,Boolean> CREATE_SYMBOLS =
-            new CssMetaData<AreaChart<?,?>,Boolean>("-fx-create-symbols",
+            new CssMetaData<>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -572,7 +589,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(CREATE_SYMBOLS);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

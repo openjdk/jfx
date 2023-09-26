@@ -46,17 +46,17 @@ namespace WebCore {
 JSC::JSValue JSMessageEvent::ports(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
     auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
-    return cachedPropertyValue(lexicalGlobalObject, *this, wrapped().cachedPorts(), [&] {
-        JSC::JSValue ports = toJS<IDLFrozenArray<IDLInterface<MessagePort>>>(lexicalGlobalObject, *globalObject(), throwScope, wrapped().ports());
-        return ports;
+    return cachedPropertyValue(throwScope, lexicalGlobalObject, *this, wrapped().cachedPorts(), [&](JSC::ThrowScope& throwScope) {
+        return toJS<IDLFrozenArray<IDLInterface<MessagePort>>>(lexicalGlobalObject, *globalObject(), throwScope, wrapped().ports());
     });
 }
 
 JSC::JSValue JSMessageEvent::data(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
-    return cachedPropertyValue(lexicalGlobalObject, *this, wrapped().cachedData(), [this, &lexicalGlobalObject] {
-        return WTF::switchOn(wrapped().data(), [] (JSC::JSValue data) {
-            return data ? data : JSC::jsNull();
+    auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
+    return cachedPropertyValue(throwScope, lexicalGlobalObject, *this, wrapped().cachedData(), [this, &lexicalGlobalObject](JSC::ThrowScope&) {
+        return WTF::switchOn(wrapped().data(), [this] (MessageEvent::JSValueTag) -> JSC::JSValue {
+            return wrapped().jsData().getValue(JSC::jsNull());
         }, [this, &lexicalGlobalObject] (const Ref<SerializedScriptValue>& data) {
             // FIXME: Is it best to handle errors by returning null rather than throwing an exception?
             return data->deserialize(lexicalGlobalObject, globalObject(), wrapped().ports(), SerializationErrorMode::NonThrowing);
@@ -73,14 +73,7 @@ JSC::JSValue JSMessageEvent::data(JSC::JSGlobalObject& lexicalGlobalObject) cons
 template<typename Visitor>
 void JSMessageEvent::visitAdditionalChildren(Visitor& visitor)
 {
-    WTF::switchOn(wrapped().data(), [&visitor] (const JSValueInWrappedObject& data) {
-        data.visit(visitor);
-    }, [] (const Ref<SerializedScriptValue>&) {
-    }, [] (const String&) {
-    }, [] (const Ref<Blob>&) {
-    }, [] (const Ref<ArrayBuffer>&) {
-    });
-
+    wrapped().jsData().visit(visitor);
     wrapped().cachedData().visit(visitor);
     wrapped().cachedPorts().visit(visitor);
 }

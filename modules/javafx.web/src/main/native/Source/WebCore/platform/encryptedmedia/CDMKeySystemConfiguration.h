@@ -42,73 +42,12 @@ struct CDMKeySystemConfiguration {
     using KeysRequirement = CDMRequirement;
 
     String label;
-    Vector<String> initDataTypes;
+    Vector<AtomString> initDataTypes;
     Vector<CDMMediaCapability> audioCapabilities;
     Vector<CDMMediaCapability> videoCapabilities;
     CDMRequirement distinctiveIdentifier { CDMRequirement::Optional };
     CDMRequirement persistentState { CDMRequirement::Optional };
     Vector<CDMSessionType> sessionTypes;
-
-    template<class Encoder>
-    void encode(Encoder& encoder) const
-    {
-        encoder << label;
-        encoder << initDataTypes;
-        encoder << audioCapabilities;
-        encoder << videoCapabilities;
-        encoder << distinctiveIdentifier;
-        encoder << persistentState;
-        encoder << sessionTypes;
-    }
-
-    template <class Decoder>
-    static std::optional<CDMKeySystemConfiguration> decode(Decoder& decoder)
-    {
-        std::optional<String> label;
-        decoder >> label;
-        if (!label)
-            return std::nullopt;
-
-        std::optional<Vector<String>> initDataTypes;
-        decoder >> initDataTypes;
-        if (!initDataTypes)
-            return std::nullopt;
-
-        std::optional<Vector<CDMMediaCapability>> audioCapabilities;
-        decoder >> audioCapabilities;
-        if (!audioCapabilities)
-            return std::nullopt;
-
-        std::optional<Vector<CDMMediaCapability>> videoCapabilities;
-        decoder >> videoCapabilities;
-        if (!videoCapabilities)
-            return std::nullopt;
-
-        std::optional<CDMRequirement> distinctiveIdentifier;
-        decoder >> distinctiveIdentifier;
-        if (!distinctiveIdentifier)
-            return std::nullopt;
-
-        std::optional<CDMRequirement> persistentState;
-        decoder >> persistentState;
-        if (!persistentState)
-            return std::nullopt;
-
-        std::optional<Vector<CDMSessionType>> sessionTypes;
-        decoder >> sessionTypes;
-        if (!sessionTypes)
-            return std::nullopt;
-
-        return {{
-            WTFMove(*label),
-            WTFMove(*initDataTypes),
-            WTFMove(*audioCapabilities),
-            WTFMove(*videoCapabilities),
-            *distinctiveIdentifier,
-            *persistentState,
-            WTFMove(*sessionTypes),
-        }};
-    }
 };
 
 } // namespace WebCore

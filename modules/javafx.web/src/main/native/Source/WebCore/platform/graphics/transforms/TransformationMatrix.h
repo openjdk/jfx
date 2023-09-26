@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CompositeOperation.h"
 #include "FloatPoint.h"
 #include "FloatPoint3D.h"
 #include "IntPoint.h"
@@ -259,6 +260,8 @@ public:
 
     // this = mat * this.
     WEBCORE_EXPORT TransformationMatrix& multiply(const TransformationMatrix&);
+    // Identical to multiply(TransformationMatrix&), but saving a AffineTransform -> TransformationMatrix roundtrip for identity or translation matrices.
+    TransformationMatrix& multiplyAffineTransform(const AffineTransform&);
 
     WEBCORE_EXPORT TransformationMatrix& scale(double);
     WEBCORE_EXPORT TransformationMatrix& scaleNonUniform(double sx, double sy);
@@ -273,11 +276,11 @@ public:
     TransformationMatrix& rotate3d(double x, double y, double z, double angle);
 
     WEBCORE_EXPORT TransformationMatrix& translate(double tx, double ty);
-    TransformationMatrix& translate3d(double tx, double ty, double tz);
+    WEBCORE_EXPORT TransformationMatrix& translate3d(double tx, double ty, double tz);
 
     // translation added with a post-multiply
     TransformationMatrix& translateRight(double tx, double ty);
-    TransformationMatrix& translateRight3d(double tx, double ty, double tz);
+    WEBCORE_EXPORT TransformationMatrix& translateRight3d(double tx, double ty, double tz);
 
     WEBCORE_EXPORT TransformationMatrix& flipX();
     WEBCORE_EXPORT TransformationMatrix& flipY();
@@ -290,6 +293,16 @@ public:
 
     // Returns a transformation that maps a rect to a rect.
     WEBCORE_EXPORT static TransformationMatrix rectToRect(const FloatRect&, const FloatRect&);
+
+    // Changes the transform to:
+    //
+    //     scale3d(z, z, z) * mat * scale3d(1/z, 1/z, 1/z)
+    //
+    // Useful for mapping zoomed points to their zoomed transformed result:
+    //
+    //     new_mat * (scale3d(z, z, z) * x) == scale3d(z, z, z) * (mat * x)
+    //
+    TransformationMatrix& zoom(double zoomFactor);
 
     WEBCORE_EXPORT bool isInvertible() const;
     WEBCORE_EXPORT std::optional<TransformationMatrix> inverse() const;
@@ -327,15 +340,15 @@ public:
         }
     };
 
-    bool decompose2(Decomposed2Type&) const;
+    bool decompose2(Decomposed2Type&) const WARN_UNUSED_RETURN;
     void recompose2(const Decomposed2Type&);
 
-    bool decompose4(Decomposed4Type&) const;
+    bool decompose4(Decomposed4Type&) const WARN_UNUSED_RETURN;
     void recompose4(const Decomposed4Type&);
 
-    WEBCORE_EXPORT void blend(const TransformationMatrix& from, double progress);
-    WEBCORE_EXPORT void blend2(const TransformationMatrix& from, double progress);
-    WEBCORE_EXPORT void blend4(const TransformationMatrix& from, double progress);
+    WEBCORE_EXPORT void blend(const TransformationMatrix& from, double progress, CompositeOperation = CompositeOperation::Replace);
+    WEBCORE_EXPORT void blend2(const TransformationMatrix& from, double progress, CompositeOperation = CompositeOperation::Replace);
+    WEBCORE_EXPORT void blend4(const TransformationMatrix& from, double progress, CompositeOperation = CompositeOperation::Replace);
 
     bool isAffine() const
     {
@@ -394,12 +407,7 @@ public:
 #endif
 
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS))
-    operator XFORM() const;
-#endif
-
-#if PLATFORM(WIN)
-    TransformationMatrix(const D2D1_MATRIX_3X2_F&);
-    operator D2D1_MATRIX_3X2_F() const;
+    WEBCORE_EXPORT operator XFORM() const;
 #endif
 
     bool isIdentityOrTranslation() const

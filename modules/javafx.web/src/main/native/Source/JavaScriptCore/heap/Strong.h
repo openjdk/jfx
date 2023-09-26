@@ -25,17 +25,18 @@
 
 #pragma once
 
-#include <wtf/Assertions.h>
 #include "Handle.h"
 #include "HandleSet.h"
 #include "JSLock.h"
+#include "StrongForward.h"
+#include <wtf/Assertions.h>
 
 namespace JSC {
 
 class VM;
 
 // A strongly referenced handle that prevents the object it points to from being garbage collected.
-template <typename T, ShouldStrongDestructorGrabLock shouldStrongDestructorGrabLock = ShouldStrongDestructorGrabLock::No> class Strong : public Handle<T> {
+template <typename T, ShouldStrongDestructorGrabLock shouldStrongDestructorGrabLock> class Strong : public Handle<T> {
     using Handle<T>::slot;
     using Handle<T>::setSlot;
     template <typename U, ShouldStrongDestructorGrabLock> friend class Strong;
@@ -48,9 +49,9 @@ public:
     {
     }
 
-    Strong(VM&, ExternalType = ExternalType());
+    inline Strong(VM&, ExternalType = ExternalType());
 
-    Strong(VM&, Handle<T>);
+    inline Strong(VM&, Handle<T>);
 
     Strong(const Strong& other)
         : Handle<T>()
@@ -93,7 +94,7 @@ public:
 
     ExternalType get() const { return HandleTypes<T>::getFromSlot(this->slot()); }
 
-    void set(VM&, ExternalType);
+    inline void set(VM&, ExternalType);
 
     template <typename U> Strong& operator=(const Strong<U>& other)
     {
@@ -140,7 +141,7 @@ private:
     {
         ASSERT(slot());
         JSValue value = HandleTypes<T>::toJSValue(externalType);
-        HandleSet::heapFor(slot())->writeBarrier(slot(), value);
+        HandleSet::heapFor(slot())->template writeBarrier<std::is_base_of_v<JSCell, T>>(slot(), value);
         *slot() = value;
     }
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,8 +45,8 @@ class PluginWidgetJava final : public Widget {
     String m_url;
     String m_mimeType;
     IntSize m_size;
-    Vector<String> m_paramNames;
-    Vector<String> m_paramValues;
+    Vector<AtomString> m_paramNames;
+    Vector<AtomString> m_paramValues;
 
 public:
     PluginWidgetJava(
@@ -55,8 +55,8 @@ public:
         const IntSize& size,
         const String& url,
         const String& mimeType,
-        const Vector<String>& paramNames,
-        const Vector<String>& paramValues);
+        const Vector<AtomString>& paramNames,
+        const Vector<AtomString>& paramValues);
     ~PluginWidgetJava() override;
 
     void invalidateRect(const IntRect&) override;

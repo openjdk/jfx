@@ -35,9 +35,9 @@ class ScriptExecutionContext;
 class Event;
 class EventTarget;
 
-class EventListener : public RefCounted<EventListener>, public CanMakeWeakPtr<EventListener> {
+class EventListener : public CanMakeWeakPtr<EventListener>, public RefCounted<EventListener> {
 public:
-    enum Type {
+    enum Type : uint8_t {
         JSEventListenerType,
         ImageEventListenerType,
         ObjCEventListenerType,
@@ -46,12 +46,12 @@ public:
         GObjectEventListenerType,
         NativeEventListenerType,
         SVGTRefTargetEventListenerType,
+        PDFDocumentEventListenerType,
     };
 
     virtual ~EventListener() = default;
     virtual bool operator==(const EventListener&) const = 0;
     virtual void handleEvent(ScriptExecutionContext&, Event&) = 0;
-    virtual bool wasCreatedFromMarkup() const { return false; }
 
     virtual void visitJSFunction(JSC::AbstractSlotVisitor&) { }
     virtual void visitJSFunction(JSC::SlotVisitor&) { }

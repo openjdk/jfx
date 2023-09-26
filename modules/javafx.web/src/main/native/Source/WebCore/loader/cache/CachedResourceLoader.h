@@ -29,13 +29,14 @@
 #include "CachedResourceHandle.h"
 #include "CachedResourceRequest.h"
 #include "ContentSecurityPolicy.h"
+#include "Document.h"
 #include "KeepaliveRequestTracker.h"
 #include "ResourceTimingInformation.h"
 #include "Timer.h"
 #include <wtf/Expected.h>
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
-#include <wtf/ListHashSet.h>
+#include <wtf/RobinHoodHashSet.h>
+#include <wtf/WeakListHashSet.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -64,6 +65,7 @@ using ResourceErrorOr = Expected<T, ResourceError>;
 
 enum class CachePolicy : uint8_t;
 enum class ImageLoading : uint8_t { Immediate, DeferredUntilVisible };
+enum class FetchMetadataSite : uint8_t { None, SameOrigin, SameSite, CrossSite };
 
 // The CachedResourceLoader provides a per-context interface to the MemoryCache
 // and enforces a bunch of security checks and rules for resource revalidation.
@@ -73,7 +75,7 @@ enum class ImageLoading : uint8_t { Immediate, DeferredUntilVisible };
 // RefPtr<CachedResourceLoader> for their lifetime (and will create one if they
 // are initialized without a Frame), so a Document can keep a CachedResourceLoader
 // alive past detach if scripts still reference the Document.
-class CachedResourceLoader : public RefCounted<CachedResourceLoader> {
+class CachedResourceLoader : public RefCounted<CachedResourceLoader>, public CanMakeWeakPtr<CachedResourceLoader> {
     WTF_MAKE_NONCOPYABLE(CachedResourceLoader); WTF_MAKE_FAST_ALLOCATED;
 friend class ImageLoader;
 friend class ResourceCacheValidationSuppressor;
@@ -114,7 +116,7 @@ public:
     // Logs an access denied message to the console for the specified URL.
     void printAccessDeniedMessage(const URL& url) const;
 
-    CachedResource* cachedResource(const String& url) const;
+    WEBCORE_EXPORT CachedResource* cachedResource(const String& url) const;
     CachedResource* cachedResource(const URL& url) const;
 
     typedef HashMap<String, CachedResourceHandle<CachedResource>> DocumentResourceMap;
@@ -136,8 +138,7 @@ public:
 
     Frame* frame() const; // Can be null
     Document* document() const { return m_document.get(); } // Can be null
-    void setDocument(Document* document) { m_document = makeWeakPtr(document); }
-    DocumentLoader* documentLoader() const { return m_documentLoader; }
+    void setDocument(Document* document) { m_document = document; }
     void clearDocumentLoader() { m_documentLoader = nullptr; }
 
     void loadDone(LoadCompletionType, bool shouldPerformPostLoadActions = true);
@@ -156,7 +157,7 @@ public:
     void warnUnusedPreloads();
     void stopUnusedPreloadsTimer();
 
-    bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&, const URL& preRedirectURL);
+    bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&, FetchMetadataSite, const URL& preRedirectURL);
     bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL()) const;
 
     static const ResourceLoaderOptions& defaultCachedResourceOptions();
@@ -168,6 +169,8 @@ public:
     KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker; }
 
     Vector<CachedResource*> visibleResourcesToPrioritize();
+
+    static FetchMetadataSite computeFetchMetadataSite(const ResourceRequest&, CachedResource::Type, FetchOptions::Mode, const SecurityOrigin& originalOrigin, FetchMetadataSite originalSite = FetchMetadataSite::SameOrigin);
 
 private:
     explicit CachedResourceLoader(DocumentLoader*);
@@ -200,15 +203,15 @@ private:
     bool canRequestAfterRedirection(CachedResource::Type, const URL&, const ResourceLoaderOptions&, const URL& preRedirectURL) const;
     bool canRequestInContentDispositionAttachmentSandbox(CachedResource::Type, const URL&) const;
 
-    HashSet<String> m_validatedURLs;
-    HashSet<String> m_cachedSVGImagesURLs;
+    MemoryCompactRobinHoodHashSet<URL> m_validatedURLs;
+    MemoryCompactRobinHoodHashSet<URL> m_cachedSVGImagesURLs;
     mutable DocumentResourceMap m_documentResources;
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     DocumentLoader* m_documentLoader;
 
     int m_requestCount { 0 };
 
-    std::unique_ptr<ListHashSet<CachedResource*>> m_preloads;
+    std::unique_ptr<WeakListHashSet<CachedResource>> m_preloads;
     Timer m_unusedPreloadsTimer;
 
     Timer m_garbageCollectDocumentResourcesTimer;

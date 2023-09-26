@@ -26,11 +26,13 @@
 #pragma once
 
 #include "AXTextStateChangeIntent.h"
+#include "CaretAnimator.h"
 #include "Color.h"
 #include "EditingStyle.h"
 #include "Element.h"
 #include "IntRect.h"
 #include "LayoutRect.h"
+#include "Range.h"
 #include "ScrollAlignment.h"
 #include "ScrollBehavior.h"
 #include "Timer.h"
@@ -51,6 +53,7 @@ class VisiblePosition;
 
 enum EUserTriggered : bool { NotUserTriggered, UserTriggered };
 enum RevealExtentOption : bool { RevealExtent, DoNotRevealExtent };
+enum ForceCenterScrollOption : bool { DoNotForceCenterScroll, ForceCenterScroll };
 
 class CaretBase {
     WTF_MAKE_NONCOPYABLE(CaretBase);
@@ -65,7 +68,7 @@ protected:
     void clearCaretRect();
     bool updateCaretRect(Document&, const VisiblePosition& caretPosition);
     bool shouldRepaintCaret(const RenderView*, bool isContentEditable) const;
-    void paintCaret(const Node&, GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect) const;
+    void paintCaret(const Node&, GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect, const CaretAnimator::PresentationProperties&) const;
 
     const LayoutRect& localCaretRectWithoutUpdate() const { return m_caretLocalRect; }
 
@@ -104,10 +107,12 @@ public:
     void nodeWillBeRemoved(Node&);
 
 private:
+    void clearCaretPositionWithoutUpdatingStyle();
+
     VisiblePosition m_position;
 };
 
-class FrameSelection : private CaretBase {
+class FrameSelection final : private CaretBase, public CaretAnimationClient {
     WTF_MAKE_NONCOPYABLE(FrameSelection);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -125,11 +130,14 @@ public:
         RevealSelectionUpToMainFrame = 1 << 8,
         SmoothScroll = 1 << 9,
         DelegateMainFrameScroll = 1 << 10,
-        RevealSelectionBounds = 1 << 11
+        RevealSelectionBounds = 1 << 11,
+        ForceCenterScroll = 1 << 12,
     };
     static constexpr OptionSet<SetSelectionOption> defaultSetSelectionOptions(EUserTriggered = NotUserTriggered);
 
     WEBCORE_EXPORT explicit FrameSelection(Document* = nullptr);
+
+    WEBCORE_EXPORT virtual ~FrameSelection();
 
     WEBCORE_EXPORT Element* rootEditableElementOrDocumentElement() const;
 
@@ -185,19 +193,17 @@ public:
     bool isCaretOrRange() const { return m_selection.isCaretOrRange(); }
     bool isAll(EditingBoundaryCrossingRule rule = CannotCrossEditingBoundary) const { return m_selection.isAll(rule); }
 
-    void debugRenderer(RenderObject*, bool selected) const;
-
     void nodeWillBeRemoved(Node&);
-    void textWasReplaced(CharacterData*, unsigned offset, unsigned oldLength, unsigned newLength);
+    void textWasReplaced(CharacterData&, unsigned offset, unsigned oldLength, unsigned newLength);
 
     void setCaretVisible(bool caretIsVisible) { setCaretVisibility(caretIsVisible ? Visible : Hidden, ShouldUpdateAppearance::Yes); }
     void paintCaret(GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect);
 
     // Used to suspend caret blinking while the mouse is down.
-    void setCaretBlinkingSuspended(bool suspended) { m_isCaretBlinkingSuspended = suspended; }
-    bool isCaretBlinkingSuspended() const { return m_isCaretBlinkingSuspended; }
+    WEBCORE_EXPORT void setCaretBlinkingSuspended(bool);
+    WEBCORE_EXPORT bool isCaretBlinkingSuspended() const;
 
-    void setFocused(bool);
+    WEBCORE_EXPORT void setFocused(bool);
     bool isFocused() const { return m_focused; }
     WEBCORE_EXPORT bool isFocusedAndActive() const;
     void pageActivationChanged();
@@ -221,7 +227,6 @@ public:
     WEBCORE_EXPORT std::optional<SimpleRange> rangeByMovingCurrentSelection(int amount) const;
     WEBCORE_EXPORT std::optional<SimpleRange> rangeByExtendingCurrentSelection(int amount) const;
     WEBCORE_EXPORT void clearCurrentSelection();
-    void setCaretBlinks(bool caretBlinks = true);
     WEBCORE_EXPORT void setCaretColor(const Color&);
     WEBCORE_EXPORT static VisibleSelection wordSelectionContainingCaretSelection(const VisibleSelection&);
     bool isUpdateAppearanceEnabled() const { return m_updateAppearanceEnabled; }
@@ -242,7 +247,7 @@ public:
     void clearTypingStyle();
 
     enum class ClipToVisibleContent : uint8_t { No, Yes };
-    WEBCORE_EXPORT FloatRect selectionBounds(ClipToVisibleContent = ClipToVisibleContent::Yes) const;
+    WEBCORE_EXPORT FloatRect selectionBounds(ClipToVisibleContent = ClipToVisibleContent::Yes);
 
     enum class TextRectangleHeight { TextHeight, SelectionHeight };
     WEBCORE_EXPORT void getClippedVisibleTextRectangles(Vector<FloatRect>&, TextRectangleHeight = TextRectangleHeight::SelectionHeight) const;
@@ -263,13 +268,18 @@ public:
     void disassociateLiveRange();
     void updateFromAssociatedLiveRange();
 
+    CaretAnimator& caretAnimator() { return m_caretAnimator.get(); }
+
+    const CaretAnimator& caretAnimator() const { return m_caretAnimator.get(); }
+
 private:
-    void updateAndRevealSelection(const AXTextStateChangeIntent&, ScrollBehavior = ScrollBehavior::Instant, RevealExtentOption = RevealExtentOption::RevealExtent);
+    void updateSelectionAppearanceNow();
+    void updateAndRevealSelection(const AXTextStateChangeIntent&, ScrollBehavior = ScrollBehavior::Instant, RevealExtentOption = RevealExtentOption::RevealExtent, ForceCenterScrollOption = ForceCenterScrollOption::DoNotForceCenterScroll);
     void updateDataDetectorsForSelection();
 
     bool setSelectionWithoutUpdatingAppearance(const VisibleSelection&, OptionSet<SetSelectionOption>, CursorAlignOnScroll, TextGranularity);
 
-    void respondToNodeModification(Node&, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved);
+    void respondToNodeModification(Node&, bool anchorRemoved, bool focusRemoved, bool baseRemoved, bool extentRemoved, bool startRemoved, bool endRemoved);
     TextDirection directionOfEnclosingBlock();
     TextDirection directionOfSelection();
 
@@ -300,8 +310,6 @@ private:
     void setFocusedElementIfNeeded();
     void focusedOrActiveStateChanged();
 
-    void caretBlinkTimerFired();
-
     void updateAppearanceAfterLayoutOrStyleChange();
     void appearanceUpdateTimerFired();
 
@@ -311,6 +319,10 @@ private:
     bool recomputeCaretRect();
     void invalidateCaretRect();
 
+    void caretAnimationDidUpdate(CaretAnimator&) final;
+
+    Document* document() final;
+
     bool dispatchSelectStart();
 
 #if PLATFORM(IOS_FAMILY)
@@ -319,7 +331,7 @@ private:
 
     void updateAssociatedLiveRange();
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     RefPtr<Range> m_associatedLiveRange;
     std::optional<LayoutUnit> m_xPosForVerticalArrowNavigation;
     VisibleSelection m_selection;
@@ -329,10 +341,6 @@ private:
     RefPtr<Node> m_previousCaretNode; // The last node which painted the caret. Retained for clearing the old caret when it moves.
 
     RefPtr<EditingStyle> m_typingStyle;
-
-#if ENABLE(TEXT_CARET)
-    Timer m_caretBlinkTimer;
-#endif
     Timer m_appearanceUpdateTimer;
     // The painted bounds of the caret in absolute coordinates
     IntRect m_absCaretBounds;
@@ -340,18 +348,18 @@ private:
     SelectionRevealMode m_selectionRevealMode { SelectionRevealMode::DoNotReveal };
     AXTextStateChangeIntent m_selectionRevealIntent;
 
+    UniqueRef<CaretAnimator> m_caretAnimator;
+
     bool m_caretInsidePositionFixed : 1;
     bool m_absCaretBoundsDirty : 1;
-    bool m_caretPaint : 1;
-    bool m_isCaretBlinkingSuspended : 1;
     bool m_focused : 1;
+    bool m_isActive : 1;
     bool m_shouldShowBlockCursor : 1;
     bool m_pendingSelectionUpdate : 1;
     bool m_alwaysAlignCursorOnScrollWhenRevealingSelection : 1;
 
 #if PLATFORM(IOS_FAMILY)
     bool m_updateAppearanceEnabled : 1;
-    bool m_caretBlinks : 1;
     Color m_caretColor;
     int m_scrollingSuppressCount { 0 };
 #endif
@@ -375,7 +383,7 @@ inline void FrameSelection::clearTypingStyle()
     m_typingStyle = nullptr;
 }
 
-#if !(ENABLE(ACCESSIBILITY) && (PLATFORM(COCOA) || USE(ATK)))
+#if !(ENABLE(ACCESSIBILITY) && (PLATFORM(COCOA) || USE(ATSPI)))
 
 inline void FrameSelection::notifyAccessibilityForSelectionChange(const AXTextStateChangeIntent&)
 {

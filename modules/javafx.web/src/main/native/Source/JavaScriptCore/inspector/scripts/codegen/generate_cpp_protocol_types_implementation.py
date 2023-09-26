@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014-2018 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -35,7 +35,7 @@ try:
     from .cpp_generator_templates import CppGeneratorTemplates as CppTemplates
     from .generator import Generator, ucfirst
     from .models import AliasedType, ArrayType, EnumType, ObjectType
-except ValueError:
+except ImportError:
     from cpp_generator import CppGenerator
     from cpp_generator_templates import CppGeneratorTemplates as CppTemplates
     from generator import Generator, ucfirst
@@ -293,7 +293,7 @@ class CppProtocolTypesImplementationGenerator(CppGenerator):
         lines.append('    auto result = value->asString();')
         lines.append('    ASSERT(result);')
 
-        assert_condition = ' || '.join(['result == "%s"' % enum_value for enum_value in enum_member.type.enum_values()])
+        assert_condition = ' || '.join(['result == "%s"_s' % enum_value for enum_value in enum_member.type.enum_values()])
         lines.append('    ASSERT(%s);' % assert_condition)
         lines.append('#endif')
         lines.append('}')

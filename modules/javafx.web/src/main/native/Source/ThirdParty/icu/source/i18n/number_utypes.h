@@ -35,6 +35,9 @@ public:
     UFormattedNumberData() : FormattedValueStringBuilderImpl(kUndefinedField) {}
     virtual ~UFormattedNumberData();
 
+    UFormattedNumberData(UFormattedNumberData&&) = default;
+    UFormattedNumberData& operator=(UFormattedNumberData&&) = default;
+
     // The formatted quantity.
     DecimalQuantity quantity;
 
@@ -42,6 +45,9 @@ public:
     // TODO(units,hugovdm): populate this correctly for the general case - it's
     // currently only implemented for the .usage() use case.
     MeasureUnit outputUnit;
+
+    // The gender of the formatted output.
+    const char *gender = "";
 };
 
 

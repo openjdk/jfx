@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,23 @@
 
 package test.robot.javafx.scene.tableview;
 
+import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.Scene;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
-import javafx.beans.property.SimpleObjectProperty;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.fail;
+import test.util.Util;
 
 /*
  * Test to verify TableView resizeColumnToFitContent with
@@ -58,7 +55,8 @@ public class TableViewResizeColumnToFitContentTest {
     static volatile Scene scene;
     static final int SCENE_WIDTH = 450;
     static final int SCENE_HEIGHT = 100;
-    static CountDownLatch startupLatch;
+    private static final double EPSILON = 1e-10;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
 
     public static void main(String[] args) {
         TableViewResizeColumnToFitContentTest test =
@@ -68,15 +66,13 @@ public class TableViewResizeColumnToFitContentTest {
 
     @Test
     public void resizeColumnToFitContentTest() {
-        double colOneWidth = table.getColumns().get(0).getWidth();
-        double colTwoWidth = table.getColumns().get(1).getWidth();
-        double colThreeWidth = table.getColumns().get(2).getWidth();
-        double colsWidthBeforeResize = colOneWidth + colTwoWidth + colThreeWidth;
+        double wid0 = table.getColumns().get(0).getWidth();
+        double wid1 = table.getColumns().get(1).getWidth();
+        double wid2 = table.getColumns().get(2).getWidth();
+        double colsWidthBeforeResize = wid0 + wid1 + wid2;
         double colHeaderHeight = 25;
-        double posX = scene.getWindow().getX() + table.getLayoutX() +
-                colOneWidth + colTwoWidth;
-        double posY = scene.getWindow().getY() + table.getLayoutY() +
-                colHeaderHeight / 2;
+        double posX = scene.getWindow().getX() + table.getLayoutX() + wid0 + wid1;
+        double posY = scene.getWindow().getY() + table.getLayoutY() + colHeaderHeight / 2;
 
         CountDownLatch latch = new CountDownLatch(1);
         Platform.runLater(() -> {
@@ -87,47 +83,34 @@ public class TableViewResizeColumnToFitContentTest {
             robot.mouseRelease(MouseButton.PRIMARY);
             latch.countDown();
         });
-        waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
-        try {
-            Thread.sleep(1000); // Delay for table resizing of table columns.
-        } catch (Exception e) {
-            fail("Thread was interrupted." + e);
-        }
+
+        Util.waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
+        Util.waitForIdle(scene);
+
         Assert.assertTrue("resizeColumnToFitContent failed",
-                (colTwoWidth != table.getColumns().get(1).getWidth()));
-        colTwoWidth = table.getColumns().get(1).getWidth();
-        colThreeWidth = table.getColumns().get(2).getWidth();
-        double colsWidthAfterResize = colOneWidth + colTwoWidth + colThreeWidth;
-        Assert.assertEquals("TableView.CONSTRAINED_RESIZE_POLICY ignored.",
-                colsWidthBeforeResize, colsWidthAfterResize, 0);
+            (wid1 != table.getColumns().get(1).getWidth()));
+
+        wid1 = table.getColumns().get(1).getWidth();
+        wid2 = table.getColumns().get(2).getWidth();
+        double colsWidthAfterResize = wid0 + wid1 + wid2;
+        double tolerance = Util.getTolerance(table);
+        String message = "TableView.CONSTRAINED_RESIZE_POLICY ignored" +
+            ", before=" + colsWidthBeforeResize +
+            ", after=" + colsWidthAfterResize +
+            ", diff=" + Math.abs(colsWidthBeforeResize - colsWidthAfterResize) +
+            ", tolerance=" + tolerance +
+            ", tol+eps=" + (tolerance + EPSILON);
+        Assert.assertEquals(message, colsWidthBeforeResize, colsWidthAfterResize, tolerance + EPSILON);
     }
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(
-                TableViewResizeColumnToFitContentTest.TestApp.class,
-                (String[]) null)).start();
-        waitForLatch(startupLatch, 10, "Timeout waiting for FX runtime to start");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
-    }
-
-    public static void waitForLatch(CountDownLatch latch,
-            int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        Util.shutdown(stage);
     }
 
     public static class TestApp extends Application {
@@ -178,5 +161,4 @@ public class TableViewResizeColumnToFitContentTest {
             this.descriptionProperty = new SimpleObjectProperty<>(description);
         }
     }
-
 }

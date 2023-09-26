@@ -37,7 +37,7 @@ class StorageSyncManager;
 
 enum class StorageType : uint8_t;
 
-struct SecurityOriginData;
+class SecurityOriginData;
 
 class StorageArea : public RefCounted<StorageArea> {
 public:
@@ -46,9 +46,9 @@ public:
     virtual unsigned length() = 0;
     virtual String key(unsigned index) = 0;
     virtual String item(const String& key) = 0;
-    virtual void setItem(Frame* sourceFrame, const String& key, const String& value, bool& quotaException) = 0;
-    virtual void removeItem(Frame* sourceFrame, const String& key) = 0;
-    virtual void clear(Frame* sourceFrame) = 0;
+    virtual void setItem(Frame& sourceFrame, const String& key, const String& value, bool& quotaException) = 0;
+    virtual void removeItem(Frame& sourceFrame, const String& key) = 0;
+    virtual void clear(Frame& sourceFrame) = 0;
     virtual bool contains(const String& key) = 0;
 
     virtual StorageType storageType() const = 0;
@@ -58,6 +58,7 @@ public:
     virtual void incrementAccessCount() { }
     virtual void decrementAccessCount() { }
     virtual void closeDatabaseIfIdle() { }
+    virtual void prewarm() { }
 };
 
 } // namespace WebCore

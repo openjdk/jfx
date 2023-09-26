@@ -33,33 +33,12 @@ namespace WebCore {
 struct MediaEncodingConfiguration : MediaConfiguration {
     MediaEncodingType type;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<MediaEncodingConfiguration> decode(Decoder&);
+    MediaEncodingConfiguration isolatedCopy() const;
 };
 
-template<class Encoder>
-void MediaEncodingConfiguration::encode(Encoder& encoder) const
+inline MediaEncodingConfiguration MediaEncodingConfiguration::isolatedCopy() const
 {
-    MediaConfiguration::encode(encoder);
-    encoder << type;
-}
-
-template<class Decoder>
-std::optional<MediaEncodingConfiguration> MediaEncodingConfiguration::decode(Decoder& decoder)
-{
-    auto mediaConfiguration = MediaConfiguration::decode(decoder);
-    if (!mediaConfiguration)
-        return std::nullopt;
-
-    std::optional<MediaEncodingType> type;
-    decoder >> type;
-    if (!type)
-        return std::nullopt;
-
-    return {{
-        *mediaConfiguration,
-        *type,
-    }};
+    return { MediaConfiguration::isolatedCopy(), type };
 }
 
 } // namespace WebCore

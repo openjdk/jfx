@@ -73,7 +73,7 @@ public:
 
     virtual void doAsyncTask(JSValueRef) { notImplemented(); }
     virtual void doAfterPresentationUpdate(JSValueRef callback) { doAsyncTask(callback); }
-    virtual void doAfterNextStablePresentationUpdate(JSValueRef callback) { doAsyncTask(callback); }
+    virtual void doAfterNextStablePresentationUpdate(JSValueRef callback) { doAfterPresentationUpdate(callback); }
     virtual void ensurePositionInformationIsUpToDateAt(long, long, JSValueRef callback) { doAsyncTask(callback); }
     virtual void doAfterVisibleContentRectUpdate(JSValueRef callback) { doAsyncTask(callback); }
 
@@ -97,6 +97,8 @@ public:
     virtual void setMinimumEffectiveWidth(double) { notImplemented(); }
     virtual void setAllowsViewportShrinkToFit(bool) { notImplemented(); }
 
+    virtual void setScrollViewKeyboardAvoidanceEnabled(bool) { notImplemented(); }
+
     virtual std::optional<bool> stableStateOverride() const { notImplemented(); return std::nullopt; }
     virtual void setStableStateOverride(std::optional<bool>) { notImplemented(); }
 
@@ -118,6 +120,7 @@ public:
     virtual void firstResponderSuppressionForWebView(bool) { notImplemented(); }
     virtual void makeWindowContentViewFirstResponder() { notImplemented(); }
     virtual bool isWindowContentViewFirstResponder() const { notImplemented(); return false; }
+    virtual bool isWebContentFirstResponder() const { notImplemented(); return false; }
 
     virtual void removeViewFromWindow(JSValueRef) { notImplemented(); }
     virtual void addViewToWindow(JSValueRef) { notImplemented(); }
@@ -145,8 +148,11 @@ public:
     virtual double contentOffsetX() const { notImplemented(); return 0; }
     virtual double contentOffsetY() const { notImplemented(); return 0; }
 
+    virtual JSObjectRef adjustedContentInset() const { notImplemented(); return nullptr; }
+
     virtual JSRetainPtr<JSStringRef> scrollingTreeAsText() const { notImplemented(); return nullptr; }
     virtual JSRetainPtr<JSStringRef> uiViewTreeAsText() const { notImplemented(); return nullptr; }
+    virtual JSRetainPtr<JSStringRef> caLayerTreeAsText() const { notImplemented(); return nullptr; }
 
     // Touches
 
@@ -193,6 +199,8 @@ public:
         notImplemented();
         return nullptr;
     }
+
+    virtual void setWebViewEditable(bool) { }
 
     virtual void rawKeyDown(JSStringRef) { notImplemented(); }
     virtual void rawKeyUp(JSStringRef) { notImplemented(); }
@@ -257,6 +265,9 @@ public:
 
     virtual void findString(JSStringRef, unsigned long, unsigned long) { notImplemented(); }
 
+    virtual void presentFindNavigator() { notImplemented(); }
+    virtual void dismissFindNavigator() { notImplemented(); }
+
     // Accessibility
 
     virtual void simulateAccessibilitySettingsChangeNotification(JSValueRef) { notImplemented(); }
@@ -280,6 +291,7 @@ public:
     virtual bool isShowingMenu() const { notImplemented(); return false; }
     virtual JSObjectRef rectForMenuAction(JSStringRef) const { notImplemented(); return nullptr; }
     virtual JSObjectRef menuRect() const { notImplemented(); return nullptr; }
+    virtual JSObjectRef contextMenuRect() const { notImplemented(); return nullptr; }
     virtual bool isShowingContextMenu() const { notImplemented(); return false; }
 
     // Selection

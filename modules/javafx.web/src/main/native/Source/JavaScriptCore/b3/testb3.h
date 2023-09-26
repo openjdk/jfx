@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,7 +50,6 @@
 #include "B3MoveConstants.h"
 #include "B3NativeTraits.h"
 #include "B3Procedure.h"
-#include "B3ReduceLoopStrength.h"
 #include "B3ReduceStrength.h"
 #include "B3SlotBaseValue.h"
 #include "B3StackmapGenerationParams.h"
@@ -92,14 +91,14 @@ inline void usage()
         exit(1);
 }
 
-#if ENABLE(B3_JIT)
+#if ENABLE(B3_JIT) && !CPU(ARM)
 
 using namespace JSC;
 using namespace JSC::B3;
 
-inline bool shouldBeVerbose()
+inline bool shouldBeVerbose(Procedure& procedure)
 {
-    return shouldDumpIR(B3Mode);
+    return shouldDumpIR(procedure, B3Mode);
 }
 
 extern Lock crashLock;
@@ -197,9 +196,9 @@ inline std::unique_ptr<Compilation> compileProc(Procedure& procedure, unsigned o
 }
 
 template<typename T, typename... Arguments>
-T invoke(MacroAssemblerCodePtr<JITCompilationPtrTag> ptr, Arguments... arguments)
+T invoke(CodePtr<JITCompilationPtrTag> ptr, Arguments... arguments)
 {
-    void* executableAddress = untagCFunctionPtr<JITCompilationPtrTag>(ptr.executableAddress());
+    void* executableAddress = untagCFunctionPtr<JITCompilationPtrTag>(ptr.taggedPtr());
     T (*function)(Arguments...) = bitwise_cast<T(*)(Arguments...)>(executableAddress);
     return function(arguments...);
 }
@@ -220,13 +219,13 @@ inline void lowerToAirForTesting(Procedure& proc)
 {
     proc.resetReachability();
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("B3 before lowering:\n", proc);
 
     validate(proc);
     lowerToAir(proc);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("Air after lowering:\n", proc.code());
 
     Air::validate(proc.code());
@@ -273,6 +272,7 @@ struct B3Operand {
     Type value;
 };
 
+typedef B3Operand<v128_t> V128Operand;
 typedef B3Operand<int64_t> Int64Operand;
 typedef B3Operand<int32_t> Int32Operand;
 typedef B3Operand<int16_t> Int16Operand;
@@ -315,6 +315,30 @@ Vector<B3Operand<FloatType>> floatingPointOperands()
     populateWithInterestingValues(operands);
     return operands;
 };
+
+inline Vector<V128Operand> v128Operands()
+{
+    Vector<V128Operand> operands;
+    operands.append({ "0,0", v128_t { 0, 0 } });
+    operands.append({ "1,0", v128_t { 1, 0 } });
+    operands.append({ "0,1", v128_t { 0, 1 } });
+    operands.append({ "42,0", v128_t { 42, 0 } });
+    operands.append({ "0,42", v128_t { 0, 42 } });
+    operands.append({ "42,42", v128_t { 42, 42 } });
+    operands.append({ "-42,-42", v128_t { static_cast<uint64_t>(-42), static_cast<uint64_t>(-42) } });
+    operands.append({ "0,-42", v128_t { 0, static_cast<uint64_t>(-42) } });
+    operands.append({ "-42,0", v128_t { static_cast<uint64_t>(-42), 0 } });
+    operands.append({ "int64-max,int64-max", v128_t { static_cast<uint64_t>(std::numeric_limits<int64_t>::max()), static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) } });
+    operands.append({ "int64-min,int64-min", v128_t { static_cast<uint64_t>(std::numeric_limits<int64_t>::min()), static_cast<uint64_t>(std::numeric_limits<int64_t>::min()) } });
+    operands.append({ "int32-max,int32-max", v128_t { static_cast<uint64_t>(std::numeric_limits<int32_t>::max()), static_cast<uint64_t>(std::numeric_limits<int32_t>::max()) } });
+    operands.append({ "int32-min,int32-min", v128_t { static_cast<uint64_t>(std::numeric_limits<int32_t>::min()), static_cast<uint64_t>(std::numeric_limits<int32_t>::min()) } });
+    operands.append({ "uint64-max,uint64-max", v128_t { static_cast<uint64_t>(std::numeric_limits<uint64_t>::max()), static_cast<uint64_t>(std::numeric_limits<uint64_t>::max()) } });
+    operands.append({ "uint64-min,uint64-min", v128_t { static_cast<uint64_t>(std::numeric_limits<uint64_t>::min()), static_cast<uint64_t>(std::numeric_limits<uint64_t>::min()) } });
+    operands.append({ "uint32-max,uint32-max", v128_t { static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) } });
+    operands.append({ "uint32-min,uint32-min", v128_t { static_cast<uint64_t>(std::numeric_limits<uint32_t>::min()), static_cast<uint64_t>(std::numeric_limits<uint32_t>::min()) } });
+
+    return operands;
+}
 
 inline Vector<Int64Operand> int64Operands()
 {
@@ -532,7 +556,7 @@ void testPatchpointDoubleRegs();
 void testSpillDefSmallerThanUse();
 void testSpillUseLargerThanDef();
 void testLateRegister();
-void interpreterPrint(Vector<intptr_t>* stream, intptr_t value);
+extern "C" void interpreterPrint(Vector<intptr_t>* stream, intptr_t value);
 void testInterpreter();
 void testReduceStrengthCheckBottomUseInAnotherBlock();
 void testResetReachabilityDanglingReference();
@@ -555,6 +579,8 @@ void testTrappingLoadAddStore();
 void testTrappingLoadDCE();
 void testTrappingStoreElimination();
 void testMoveConstants();
+void testMoveConstantsWithLargeOffsets();
+void testMoveConstantsSIMD();
 void testPCOriginMapDoesntInsertNops();
 void testBitOrBitOrArgImmImm32(int, int, int c);
 void testBitOrImmBitOrArgImm32(int, int, int c);
@@ -1154,13 +1180,6 @@ void addAtomicTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>&);
 void addLoadTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>&);
 void addTupleTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>&);
 
-void testFastForwardCopy32();
-void testByteCopyLoop();
-void testByteCopyLoopStartIsLoopDependent();
-void testByteCopyLoopBoundIsLoopDependent();
-
-void addCopyTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>&);
-
 bool shouldRun(const char* filter, const char* testName);
 
 void testLoadPreIndex32();
@@ -1172,5 +1191,29 @@ void testStorePreIndex32();
 void testStorePreIndex64();
 void testStorePostIndex32();
 void testStorePostIndex64();
+
+void testFloatMaxMin();
+void testDoubleMaxMin();
+
+void testWasmAddressDoesNotCSE();
+void testWasmAddressWithOffset();
+void testStoreAfterClobberExitsSideways();
+void testStoreAfterClobberDifferentWidth();
+void testStoreAfterClobberDifferentWidthSuccessor();
+void testStoreAfterClobberExitsSidewaysSuccessor();
+
+void testVectorOrConstants(v128_t, v128_t);
+void testVectorAndConstants(v128_t, v128_t);
+void testVectorXorConstants(v128_t, v128_t);
+void testVectorOrSelf();
+void testVectorAndSelf();
+void testVectorXorSelf();
+void testVectorXorOrAllOnesToVectorAndXor();
+void testVectorXorAndAllOnesToVectorOrXor();
+void testVectorXorOrAllOnesConstantToVectorAndXor(v128_t);
+void testVectorXorAndAllOnesConstantToVectorOrXor(v128_t);
+void testVectorAndConstantConstant(v128_t, v128_t);
+void testVectorFmulByElementFloat();
+void testVectorFmulByElementDouble();
 
 #endif // ENABLE(B3_JIT)

@@ -33,13 +33,12 @@ dictionary TextDecodeOptions {
 };
 
 [
-    Exposed=(Window,Worker),
-    ImplementationLacksVTable,
+    Exposed=*,
 ] interface TextDecoder {
     constructor(optional DOMString label = "utf-8", optional TextDecoderOptions options);
 
     readonly attribute DOMString encoding;
     readonly attribute boolean fatal;
     readonly attribute boolean ignoreBOM;
-    USVString decode(optional [AllowShared] BufferSource? input, optional TextDecodeOptions options);
+    USVString decode(optional [AllowShared] (ArrayBufferView or ArrayBuffer)? input, optional TextDecodeOptions options);
 };

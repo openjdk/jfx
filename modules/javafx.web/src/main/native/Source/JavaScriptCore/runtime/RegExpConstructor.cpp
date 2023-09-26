@@ -45,7 +45,7 @@ static JSC_DECLARE_CUSTOM_SETTER(setRegExpConstructorMultiline);
 
 namespace JSC {
 
-const ClassInfo RegExpConstructor::s_info = { "Function", &InternalFunction::s_info, &regExpConstructorTable, nullptr, CREATE_METHOD_TABLE(RegExpConstructor) };
+const ClassInfo RegExpConstructor::s_info = { "Function"_s, &InternalFunction::s_info, &regExpConstructorTable, nullptr, CREATE_METHOD_TABLE(RegExpConstructor) };
 
 /* Source for RegExpConstructor.lut.h
 @begin regExpConstructorTable
@@ -85,7 +85,7 @@ RegExpConstructor::RegExpConstructor(VM& vm, Structure* structure)
 void RegExpConstructor::finishCreation(VM& vm, RegExpPrototype* regExpPrototype, GetterSetter* speciesSymbol)
 {
     Base::finishCreation(vm, 2, vm.propertyNames->RegExp.string(), PropertyAdditionMode::WithoutStructureTransition);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, regExpPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
@@ -187,6 +187,13 @@ JSC_DEFINE_CUSTOM_SETTER(setRegExpConstructorMultiline, (JSGlobalObject* globalO
     return true;
 }
 
+static inline bool areLegacyFeaturesEnabled(JSGlobalObject* globalObject, JSValue newTarget)
+{
+    if (!newTarget)
+        return true;
+    return newTarget == globalObject->regExpConstructor();
+}
+
 inline Structure* getRegExpStructure(JSGlobalObject* globalObject, JSValue newTarget)
 {
     if (!newTarget)
@@ -232,7 +239,7 @@ static JSObject* regExpCreate(JSGlobalObject* globalObject, JSValue newTarget, J
 
     Structure* structure = getRegExpStructure(globalObject, newTarget);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    return RegExpObject::create(vm, structure, regExp);
+    return RegExpObject::create(vm, structure, regExp, areLegacyFeaturesEnabled(globalObject, newTarget));
 }
 
 JSObject* constructRegExp(JSGlobalObject* globalObject, const ArgList& args,  JSObject* callee, JSValue newTarget)
@@ -242,7 +249,7 @@ JSObject* constructRegExp(JSGlobalObject* globalObject, const ArgList& args,  JS
     JSValue patternArg = args.at(0);
     JSValue flagsArg = args.at(1);
 
-    bool isPatternRegExp = patternArg.inherits<RegExpObject>(vm);
+    bool isPatternRegExp = patternArg.inherits<RegExpObject>();
     bool constructAsRegexp = isRegExp(vm, globalObject, patternArg);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
@@ -271,7 +278,7 @@ JSObject* constructRegExp(JSGlobalObject* globalObject, const ArgList& args,  JS
             }
         }
 
-        return RegExpObject::create(vm, structure, regExp);
+        return RegExpObject::create(vm, structure, regExp, areLegacyFeaturesEnabled(globalObject, newTarget));
     }
 
     if (constructAsRegexp) {

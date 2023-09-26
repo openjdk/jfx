@@ -26,17 +26,17 @@
 
 [
     Conditional=WEB_RTC,
-    EnabledBySetting=PeerConnection,
+    EnabledBySetting=PeerConnectionEnabled,
     Exposed=Window
 ] interface RTCDTMFToneChangeEvent : Event {
-    constructor(DOMString type, optional RTCDTMFToneChangeEventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional RTCDTMFToneChangeEventInit eventInitDict);
 
     readonly attribute DOMString tone;
 };
 
 [
     Conditional=WEB_RTC,
-    EnabledBySetting=PeerConnection
+    EnabledBySetting=PeerConnectionEnabled
 ] dictionary RTCDTMFToneChangeEventInit : EventInit {
     DOMString tone;
 };

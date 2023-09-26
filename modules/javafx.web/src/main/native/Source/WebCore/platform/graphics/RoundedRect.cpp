@@ -165,7 +165,11 @@ void RoundedRect::excludeLogicalEdges(bool isHorizontal, bool excludeLogicalLeft
 
 bool RoundedRect::isRenderable() const
 {
-    return m_radii.topLeft().width() + m_radii.topRight().width() <= m_rect.width()
+    return m_radii.topLeft().width() >= 0 && m_radii.topLeft().height() >= 0
+        && m_radii.bottomLeft().width() >= 0 && m_radii.bottomLeft().height() >= 0
+        && m_radii.topRight().width() >= 0 && m_radii.topRight().height() >= 0
+        && m_radii.bottomRight().width() >= 0 && m_radii.bottomRight().height() >= 0
+        && m_radii.topLeft().width() + m_radii.topRight().width() <= m_rect.width()
         && m_radii.bottomLeft().width() + m_radii.bottomRight().width() <= m_rect.width()
         && m_radii.topLeft().height() + m_radii.bottomLeft().height() <= m_rect.height()
         && m_radii.topRight().height() + m_radii.bottomRight().height() <= m_rect.height();
@@ -375,6 +379,16 @@ Region approximateAsRegion(const RoundedRect& roundedRect, unsigned stepLength)
     }
 
     return region;
+}
+
+TextStream& operator<<(TextStream& ts, const RoundedRect& roundedRect)
+{
+    ts << roundedRect.rect();
+    ts.dumpProperty("top-left", roundedRect.radii().topLeft());
+    ts.dumpProperty("top-right", roundedRect.radii().topRight());
+    ts.dumpProperty("bottom-left", roundedRect.radii().bottomLeft());
+    ts.dumpProperty("bottom-right", roundedRect.radii().bottomRight());
+    return ts;
 }
 
 } // namespace WebCore

@@ -33,15 +33,12 @@ struct BlendingContext;
 
 class RotateTransformOperation final : public TransformOperation {
 public:
-    static Ref<RotateTransformOperation> create(double angle, OperationType type)
+    static Ref<RotateTransformOperation> create(double angle, TransformOperation::Type type)
     {
         return adoptRef(*new RotateTransformOperation(0, 0, 1, angle, type));
     }
 
-    static Ref<RotateTransformOperation> create(double x, double y, double z, double angle, OperationType type)
-    {
-        return adoptRef(*new RotateTransformOperation(x, y, z, angle, type));
-    }
+    WEBCORE_EXPORT static Ref<RotateTransformOperation> create(double, double, double, double, TransformOperation::Type);
 
     Ref<TransformOperation> clone() const override
     {
@@ -53,6 +50,9 @@ public:
     double z() const { return m_z; }
     double angle() const { return m_angle; }
 
+    TransformOperation::Type primitiveType() const final { return type() == Type::Rotate ? Type::Rotate : Type::Rotate3D; }
+
+    bool operator==(const RotateTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
     bool operator==(const TransformOperation&) const override;
 
     Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) final;
@@ -66,7 +66,7 @@ private:
 
     bool apply(TransformationMatrix& transform, const FloatSize& /*borderBoxSize*/) const override
     {
-        if (type() == TransformOperation::ROTATE)
+        if (type() == TransformOperation::Type::Rotate)
             transform.rotate(m_angle);
         else
             transform.rotate3d(m_x, m_y, m_z, m_angle);
@@ -75,15 +75,7 @@ private:
 
     void dump(WTF::TextStream&) const final;
 
-    RotateTransformOperation(double x, double y, double z, double angle, OperationType type)
-        : TransformOperation(type)
-        , m_x(x)
-        , m_y(y)
-        , m_z(z)
-        , m_angle(angle)
-    {
-        ASSERT(isRotateTransformOperationType());
-    }
+    RotateTransformOperation(double, double, double, double, TransformOperation::Type);
 
     double m_x;
     double m_y;
@@ -93,4 +85,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::RotateTransformOperation, isRotateTransformOperationType())
+SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::RotateTransformOperation, WebCore::TransformOperation::isRotateTransformOperationType)

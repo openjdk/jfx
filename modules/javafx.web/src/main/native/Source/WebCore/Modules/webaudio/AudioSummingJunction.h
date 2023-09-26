@@ -31,8 +31,9 @@
 
 namespace WebCore {
 
-class BaseAudioContext;
 class AudioNodeOutput;
+class BaseAudioContext;
+class WeakPtrImplWithEventTargetData;
 
 // An AudioSummingJunction represents a point where zero, one, or more AudioNodeOutputs connect.
 
@@ -63,12 +64,12 @@ public:
 
     void markRenderingStateAsDirty();
 
-protected:
-    WeakPtr<BaseAudioContext> m_context;
-
     // numberOfConnections() should never be called from the audio rendering thread.
     // Instead numberOfRenderingConnections() and renderingOutput() should be used.
     unsigned numberOfConnections() const { return m_outputs.size(); }
+
+protected:
+    WeakPtr<BaseAudioContext, WeakPtrImplWithEventTargetData> m_context;
 
     unsigned maximumNumberOfChannels() const;
 

@@ -182,6 +182,12 @@ template<typename T> struct HashTraits<UniqueRef<T>> : SimpleClassHashTraits<Uni
     typedef std::nullptr_t EmptyValueType;
     static EmptyValueType emptyValue() { return nullptr; }
 
+    template <typename>
+    static void constructEmptyValue(UniqueRef<T>& slot)
+    {
+        new (NotNull, std::addressof(slot)) UniqueRef<T>(HashTableEmptyValue);
+    }
+
     static void constructDeletedValue(UniqueRef<T>& slot) { new (NotNull, std::addressof(slot)) UniqueRef<T> { reinterpret_cast<T*>(-1) }; }
     static bool isDeletedValue(const UniqueRef<T>& value) { return value.get() == reinterpret_cast<T*>(-1); }
 
@@ -242,8 +248,20 @@ template<typename P> struct HashTraits<Packed<P*>> : SimpleClassHashTraits<Packe
     static Packed<P*> emptyValue() { return nullptr; }
     static bool isEmptyValue(const TargetType& value) { return value.get() == nullptr; }
 
-    using PeekType = P*;
-    static PeekType peek(const TargetType& value) { return value.get(); }
+    using PeekType = Packed<P*>;
+    static PeekType peek(const TargetType& value) { return value; }
+    static PeekType peek(P* value) { return value; }
+};
+
+template<typename P> struct HashTraits<CompactPtr<P>> : SimpleClassHashTraits<CompactPtr<P>> {
+    static constexpr bool hasIsEmptyValueFunction = true;
+    using TargetType = CompactPtr<P>;
+
+    static CompactPtr<P> emptyValue() { return nullptr; }
+    static bool isEmptyValue(const TargetType& value) { return !value; }
+
+    using PeekType = CompactPtr<P>;
+    static PeekType peek(const TargetType& value) { return value; }
     static PeekType peek(P* value) { return value; }
 };
 
@@ -290,18 +308,14 @@ struct HashTraitHasCustomDelete {
 };
 
 template<typename Traits, typename T>
-typename std::enable_if<HashTraitHasCustomDelete<Traits, T>::value>::type
-hashTraitsDeleteBucket(T& value)
+void hashTraitsDeleteBucket(T& value)
 {
+    if constexpr (HashTraitHasCustomDelete<Traits, T>::value)
     Traits::customDeleteBucket(value);
-}
-
-template<typename Traits, typename T>
-typename std::enable_if<!HashTraitHasCustomDelete<Traits, T>::value>::type
-hashTraitsDeleteBucket(T& value)
-{
+    else {
     value.~T();
     Traits::constructDeletedValue(value);
+    }
 }
 
 template<typename FirstTraitsArg, typename SecondTraitsArg>

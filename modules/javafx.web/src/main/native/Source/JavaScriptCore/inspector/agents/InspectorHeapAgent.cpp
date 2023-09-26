@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -106,7 +106,7 @@ Protocol::ErrorStringOr<std::tuple<double, Protocol::Heap::HeapSnapshotData>> In
 
     auto timestamp = m_environment.executionStopwatch().elapsedTime().seconds();
     auto snapshotData = snapshotBuilder.json([&] (const HeapSnapshotNode& node) {
-        if (Structure* structure = node.cell->structure(vm)) {
+        if (Structure* structure = node.cell->structure()) {
             if (JSGlobalObject* globalObject = structure->globalObject()) {
                 if (!m_environment.canAccessInspectedScriptState(globalObject))
                     return false;
@@ -182,7 +182,7 @@ Protocol::ErrorStringOr<std::tuple<String, RefPtr<Protocol::Debugger::FunctionDe
     // Prevent the cell from getting collected as we look it up.
     VM& vm = m_environment.vm();
     JSLockHolder lock(vm);
-    DeferGC deferGC(vm.heap);
+    DeferGC deferGC(vm);
 
     unsigned heapObjectIdentifier = static_cast<unsigned>(heapObjectId);
     const std::optional<HeapSnapshotNode> optionalNode = nodeForHeapObjectIdentifier(errorString, heapObjectIdentifier);
@@ -200,7 +200,7 @@ Protocol::ErrorStringOr<std::tuple<String, RefPtr<Protocol::Debugger::FunctionDe
 
     // FIXME: Provide preview information for Internal Objects? CodeBlock, Executable, etc.
 
-    Structure* structure = cell->structure(vm);
+    Structure* structure = cell->structure();
     if (!structure)
         return makeUnexpected("Unable to get object details - Structure"_s);
 
@@ -213,7 +213,7 @@ Protocol::ErrorStringOr<std::tuple<String, RefPtr<Protocol::Debugger::FunctionDe
         return makeUnexpected("Unable to get object details - InjectedScript"_s);
 
     // Function preview.
-    if (cell->inherits<JSFunction>(vm)) {
+    if (cell->inherits<JSFunction>()) {
         RefPtr<Protocol::Debugger::FunctionDetails> functionDetails;
         injectedScript.functionDetails(errorString, cell, functionDetails);
         if (!functionDetails)
@@ -232,7 +232,7 @@ Protocol::ErrorStringOr<Ref<Protocol::Runtime::RemoteObject>> InspectorHeapAgent
     // Prevent the cell from getting collected as we look it up.
     VM& vm = m_environment.vm();
     JSLockHolder lock(vm);
-    DeferGC deferGC(vm.heap);
+    DeferGC deferGC(vm);
 
     unsigned heapObjectIdentifier = static_cast<unsigned>(heapObjectId);
     const std::optional<HeapSnapshotNode> optionalNode = nodeForHeapObjectIdentifier(errorString, heapObjectIdentifier);
@@ -240,7 +240,7 @@ Protocol::ErrorStringOr<Ref<Protocol::Runtime::RemoteObject>> InspectorHeapAgent
         return makeUnexpected(errorString);
 
     JSCell* cell = optionalNode->cell;
-    Structure* structure = cell->structure(vm);
+    Structure* structure = cell->structure();
     if (!structure)
         return makeUnexpected("Unable to get object details - Structure"_s);
 
@@ -254,7 +254,7 @@ Protocol::ErrorStringOr<Ref<Protocol::Runtime::RemoteObject>> InspectorHeapAgent
 
     auto object = injectedScript.wrapObject(cell, objectGroup, true);
     if (!object)
-        return makeUnexpected("Internal error: unable to cast Object");
+        return makeUnexpected("Internal error: unable to cast Object"_s);
 
     return object.releaseNonNull();
 }

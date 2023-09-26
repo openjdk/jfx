@@ -81,7 +81,7 @@ class Procedure {
     WTF_MAKE_FAST_ALLOCATED;
 public:
 
-    JS_EXPORT_PRIVATE Procedure();
+    JS_EXPORT_PRIVATE Procedure(bool usesSIMD = false);
     JS_EXPORT_PRIVATE ~Procedure();
 
     template<typename Callback>
@@ -136,6 +136,7 @@ public:
 
     // bits is a bitwise_cast of the constant you want.
     JS_EXPORT_PRIVATE Value* addConstant(Origin, Type, uint64_t bits);
+    JS_EXPORT_PRIVATE Value* addConstant(Origin, Type, v128_t bits);
 
     // You're guaranteed that bottom is zero.
     Value* addBottom(Origin, Type);
@@ -189,7 +190,7 @@ public:
     CFG& cfg() const { return *m_cfg; }
 
     Dominators& dominators();
-    NaturalLoops& naturalLoops();
+    JS_EXPORT_PRIVATE NaturalLoops& naturalLoops();
     BackwardsCFG& backwardsCFG();
     BackwardsDominators& backwardsDominators();
 
@@ -272,13 +273,32 @@ public:
         setWasmBoundsCheckGenerator(RefPtr<WasmBoundsCheckGenerator>(createSharedTask<WasmBoundsCheckGeneratorFunction>(functor)));
     }
 
-    JS_EXPORT_PRIVATE RegisterSet mutableGPRs();
-    JS_EXPORT_PRIVATE RegisterSet mutableFPRs();
+    JS_EXPORT_PRIVATE RegisterSetBuilder mutableGPRs();
 
-    void setNeedsPCToOriginMap() { m_needsPCToOriginMap = true; }
+    void setNeedsPCToOriginMap();
     bool needsPCToOriginMap() { return m_needsPCToOriginMap; }
 
     JS_EXPORT_PRIVATE void freeUnneededB3ValuesAfterLowering();
+
+    bool shouldDumpIR() const { return m_shouldDumpIR; }
+    void setShouldDumpIR();
+
+    void setUsessSIMD()
+    {
+        RELEASE_ASSERT(Options::useWebAssemblySIMD());
+        m_usesSIMD = true;
+    }
+    bool usesSIMD() const
+    {
+        // See also: WasmModuleInformation::isSIMDFunction().
+        if (!Options::useWebAssemblySIMD())
+            return false;
+        if (Options::forceAllFunctionsToUseSIMD())
+            return true;
+        // The LLInt discovers this value.
+        ASSERT(Options::useWasmLLInt());
+        return m_usesSIMD;
+    }
 
 private:
     friend class BlockInsertionSet;
@@ -307,6 +327,8 @@ private:
     bool m_needsUsedRegisters { true };
     bool m_hasQuirks { false };
     bool m_needsPCToOriginMap { false };
+    bool m_shouldDumpIR { false };
+    bool m_usesSIMD { false };
 };
 
 } } // namespace JSC::B3

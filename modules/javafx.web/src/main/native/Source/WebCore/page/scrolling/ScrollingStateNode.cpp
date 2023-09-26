@@ -131,10 +131,11 @@ void ScrollingStateNode::insertChild(Ref<ScrollingStateNode>&& childNode, size_t
 
 void ScrollingStateNode::removeFromParent()
 {
-    if (!m_parent)
+    RefPtr parent = m_parent.get();
+    if (!parent)
         return;
 
-    m_parent->removeChild(*this);
+    parent->removeChild(*this);
     m_parent = nullptr;
 }
 
@@ -172,16 +173,16 @@ void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation
     setPropertyChanged(Property::Layer);
 }
 
-void ScrollingStateNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingStateNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs)
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
         ts.dumpProperty("nodeID", scrollingNodeID());
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerIDs)
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs)
         ts.dumpProperty("layerID", layer().layerID());
 }
 
-void ScrollingStateNode::dump(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingStateNode::dump(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "\n";
     ts << indent << "(";
@@ -205,7 +206,7 @@ void ScrollingStateNode::dump(TextStream& ts, ScrollingStateTreeAsTextBehavior b
     ts << indent << ")";
 }
 
-String ScrollingStateNode::scrollingStateTreeAsText(ScrollingStateTreeAsTextBehavior behavior) const
+String ScrollingStateNode::scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
 

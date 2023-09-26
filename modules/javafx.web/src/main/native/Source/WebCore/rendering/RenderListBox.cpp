@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *               2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,8 +33,7 @@
 
 #include "AXObjectCache.h"
 #include "CSSFontSelector.h"
-#include "DeprecatedGlobalSettings.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "EventHandler.h"
 #include "FocusController.h"
 #include "Frame.h"
@@ -77,10 +77,6 @@ const int rowSpacing = 1;
 
 const int optionsSpacingHorizontal = 2;
 
-// The minSize constant was originally defined to render scrollbars correctly.
-// This might vary for different platforms.
-const int minSize = 4;
-
 // Default size when the multiple attribute is present but size attribute is absent.
 const int defaultSize = 4;
 
@@ -90,11 +86,6 @@ const int baselineAdjustment = 7;
 
 RenderListBox::RenderListBox(HTMLSelectElement& element, RenderStyle&& style)
     : RenderBlockFlow(element, WTFMove(style))
-    , m_optionsChanged(true)
-    , m_scrollToRevealSelectionAfterLayout(false)
-    , m_inAutoscroll(false)
-    , m_optionsWidth(0)
-    , m_indexOffset(0)
 {
     view().frameView().addScrollableArea(this);
 }
@@ -131,15 +122,15 @@ void RenderListBox::updateFromElement()
         float width = 0;
         auto& normalFont = style().fontCascade();
         std::optional<FontCascade> boldFont;
-        for (auto* element : selectElement().listItems()) {
+        for (auto& element : selectElement().listItems()) {
             String text;
-            WTF::Function<const FontCascade&()> selectFont = [&normalFont] () -> const FontCascade& {
+            Function<const FontCascade&()> selectFont = [&normalFont] () -> const FontCascade& {
                 return normalFont;
             };
-            if (is<HTMLOptionElement>(*element))
-                text = downcast<HTMLOptionElement>(*element).textIndentedToRespectGroupLabel();
-            else if (is<HTMLOptGroupElement>(*element)) {
-                text = downcast<HTMLOptGroupElement>(*element).groupLabelText();
+            if (RefPtr optionElement = dynamicDowncast<HTMLOptionElement>(element.get()))
+                text = optionElement->textIndentedToRespectGroupLabel();
+            else if (RefPtr optGroupElement = dynamicDowncast<HTMLOptGroupElement>(element.get())) {
+                text = optGroupElement->groupLabelText();
                 selectFont = [this, &normalFont, &boldFont] () -> const FontCascade& {
                     if (!boldFont)
                         boldFont = bolder(document(), normalFont);
@@ -149,7 +140,7 @@ void RenderListBox::updateFromElement()
             if (text.isEmpty())
                 continue;
             text = applyTextTransform(style(), text, ' ');
-            auto textRun = constructTextRun(text, style(), AllowRightExpansion);
+            auto textRun = constructTextRun(text, style(), ExpansionBehavior::allowRightOnly());
             width = std::max(width, selectFont().width(textRun));
         }
         // FIXME: Is ceiling right here, or should we be doing some kind of rounding instead?
@@ -189,7 +180,7 @@ void RenderListBox::layout()
         m_vBar->setSteps(1, std::max(1, numVisibleItems() - 1), itemHeight());
         m_vBar->setProportion(numVisibleItems(), numItems());
         if (!enabled) {
-            scrollToOffsetWithoutAnimation(VerticalScrollbar, 0);
+            scrollToOffsetWithoutAnimation(ScrollbarOrientation::Vertical, 0);
             m_indexOffset = 0;
         }
     }
@@ -211,9 +202,17 @@ void RenderListBox::scrollToRevealSelection()
 
 void RenderListBox::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    maxLogicalWidth = shouldApplySizeContainment(*this) ? 2 * optionsSpacingHorizontal : m_optionsWidth + 2 * optionsSpacingHorizontal;
+    if (shouldApplySizeContainment()) {
+        if (auto width = explicitIntrinsicInnerLogicalWidth())
+            maxLogicalWidth = width.value();
+        else
+            maxLogicalWidth = 2 * optionsSpacingHorizontal;
+    } else
+        maxLogicalWidth = 2 * optionsSpacingHorizontal + m_optionsWidth;
+
     if (m_vBar)
         maxLogicalWidth += m_vBar->width();
+
     if (!style().width().isPercentOrCalculated())
         minLogicalWidth = maxLogicalWidth;
 }
@@ -239,8 +238,8 @@ void RenderListBox::computePreferredLogicalWidths()
 int RenderListBox::size() const
 {
     int specifiedSize = selectElement().size();
-    if (specifiedSize > 1)
-        return std::max(minSize, specifiedSize);
+    if (specifiedSize >= 1)
+        return specifiedSize;
 
     return defaultSize;
 }
@@ -268,6 +267,12 @@ LayoutUnit RenderListBox::listHeight() const
 RenderBox::LogicalExtentComputedValues RenderListBox::computeLogicalHeight(LayoutUnit, LayoutUnit logicalTop) const
 {
     LayoutUnit height = itemHeight() * size() - rowSpacing;
+
+    if (shouldApplySizeContainment()) {
+        if (auto explicitIntrinsicHeight = explicitIntrinsicInnerLogicalHeight())
+            height = explicitIntrinsicHeight.value();
+    }
+
     cacheIntrinsicContentLogicalHeightForFlexItem(height);
     height += verticalBorderAndPaddingExtent();
     return RenderBox::computeLogicalHeight(height, logicalTop);
@@ -276,18 +281,65 @@ RenderBox::LogicalExtentComputedValues RenderListBox::computeLogicalHeight(Layou
 LayoutUnit RenderListBox::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode lineDirection, LinePositionMode linePositionMode) const
 {
     auto baseline = RenderBox::baselinePosition(baselineType, firstLine, lineDirection, linePositionMode);
-    if (!shouldApplyLayoutContainment(*this))
+    if (!shouldApplyLayoutContainment())
         baseline -= baselineAdjustment;
     return baseline;
 }
 
-LayoutRect RenderListBox::itemBoundingBoxRect(const LayoutPoint& additionalOffset, int index)
+LayoutRect RenderListBox::itemBoundingBoxRect(const LayoutPoint& additionalOffset, int index) const
 {
     LayoutUnit x = additionalOffset.x() + borderLeft() + paddingLeft();
     if (shouldPlaceVerticalScrollbarOnLeft() && m_vBar)
         x += m_vBar->occupiedWidth();
     LayoutUnit y = additionalOffset.y() + borderTop() + paddingTop() + itemHeight() * (index - m_indexOffset);
     return LayoutRect(x, y, contentWidth(), itemHeight());
+}
+
+std::optional<int> RenderListBox::optionRowIndex(const HTMLOptionElement& optionElement) const
+{
+    // We can't use optionElement.index(), because it doesn't account for optgroup items.
+    int rowIndex = 0;
+    for (auto& item : selectElement().listItems()) {
+        if (item == &optionElement)
+            return rowIndex;
+
+        ++rowIndex;
+    }
+
+    return { };
+}
+
+std::optional<LayoutRect> RenderListBox::localBoundsOfOption(const HTMLOptionElement& optionElement) const
+{
+    auto rowIndex = optionRowIndex(optionElement);
+    if (!rowIndex)
+        return { };
+
+    return itemBoundingBoxRect({ }, *rowIndex);
+}
+
+std::optional<LayoutRect> RenderListBox::localBoundsOfOptGroup(const HTMLOptGroupElement& optGroupElement) const
+{
+    if (optGroupElement.ownerSelectElement() != &selectElement())
+        return { };
+
+    std::optional<LayoutRect> boundingBox;
+    int rowIndex = 0;
+
+    for (auto& item : selectElement().listItems()) {
+        if (is<HTMLOptGroupElement>(*item)) {
+            if (item == &optGroupElement)
+                boundingBox = itemBoundingBoxRect({ }, rowIndex);
+        } else if (is<HTMLOptionElement>(*item)) {
+            if (item->parentNode() != &optGroupElement)
+                break;
+
+            boundingBox->setHeight(boundingBox->height() + itemBoundingBoxRect({ }, rowIndex).height());
+        }
+        ++rowIndex;
+    }
+
+    return boundingBox;
 }
 
 void RenderListBox::paintItem(PaintInfo& paintInfo, const LayoutPoint& paintOffset, const PaintFunction& paintFunction)
@@ -336,7 +388,7 @@ void RenderListBox::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOf
     }
 }
 
-void RenderListBox::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer)
+void RenderListBox::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer) const
 {
     if (!selectElement().allowsNonContiguousSelection())
         return RenderBlockFlow::addFocusRingRects(rects, additionalOffset, paintContainer);
@@ -349,15 +401,14 @@ void RenderListBox::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoi
     }
 
     // No selected items, find the first non-disabled item.
-    int size = numItems();
-    const Vector<HTMLElement*>& listItems = selectElement().listItems();
-    for (int i = 0; i < size; ++i) {
-        HTMLElement* element = listItems[i];
-        if (is<HTMLOptionElement>(*element) && !element->isDisabledFormControl()) {
-            selectElement().setActiveSelectionEndIndex(i);
-            rects.append(itemBoundingBoxRect(additionalOffset, i));
+    int indexOfFirstEnabledOption = 0;
+    for (auto& item : selectElement().listItems()) {
+        if (is<HTMLOptionElement>(item.get()) && !item->isDisabledFormControl()) {
+            selectElement().setActiveSelectionEndIndex(indexOfFirstEnabledOption);
+            rects.append(itemBoundingBoxRect(additionalOffset, indexOfFirstEnabledOption));
             return;
         }
+        indexOfFirstEnabledOption++;
     }
 }
 
@@ -383,7 +434,7 @@ static LayoutSize itemOffsetForAlignment(TextRun textRun, const RenderStyle* ite
     if (actualAlignment == TextAlignMode::Start || actualAlignment == TextAlignMode::Justify)
         actualAlignment = itemStyle->isLeftToRightDirection() ? TextAlignMode::Left : TextAlignMode::Right;
 
-    LayoutSize offset = LayoutSize(0, itemFont.fontMetrics().ascent());
+    LayoutSize offset = LayoutSize(0, itemFont.metricsOfPrimaryFont().ascent());
     if (actualAlignment == TextAlignMode::Right || actualAlignment == TextAlignMode::WebKitRight) {
         float textWidth = itemFont.width(textRun);
         offset.setWidth(itemBoudingBox.width() - textWidth - optionsSpacingHorizontal);
@@ -397,12 +448,14 @@ static LayoutSize itemOffsetForAlignment(TextRun textRun, const RenderStyle* ite
 
 void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint& paintOffset, int listIndex)
 {
-    const Vector<HTMLElement*>& listItems = selectElement().listItems();
-    HTMLElement* listItemElement = listItems[listIndex];
+    const auto& listItems = selectElement().listItems();
+    RefPtr listItemElement = listItems[listIndex].get();
 
-    auto& itemStyle = *listItemElement->computedStyle();
+    auto itemStyle = listItemElement->computedStyle();
+    if (!itemStyle)
+        return;
 
-    if (itemStyle.visibility() == Visibility::Hidden)
+    if (itemStyle->visibility() == Visibility::Hidden)
         return;
 
     String itemText;
@@ -416,7 +469,7 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     if (itemText.isNull())
         return;
 
-    Color textColor = itemStyle.visitedDependentColorWithColorFilter(CSSPropertyColor);
+    Color textColor = itemStyle->visitedDependentColorWithColorFilter(CSSPropertyColor);
     if (isOptionElement && downcast<HTMLOptionElement>(*listItemElement).selected()) {
         if (frame().selection().isFocusedAndActive() && document().focusedElement() == &selectElement())
             textColor = theme().activeListBoxSelectionForegroundColor(styleColorOptions());
@@ -427,10 +480,10 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
 
     paintInfo.context().setFillColor(textColor);
 
-    TextRun textRun(itemText, 0, 0, AllowRightExpansion, itemStyle.direction(), isOverride(itemStyle.unicodeBidi()), true);
+    TextRun textRun(itemText, 0, 0, ExpansionBehavior::allowRightOnly(), itemStyle->direction(), isOverride(itemStyle->unicodeBidi()), true);
     FontCascade itemFont = style().fontCascade();
     LayoutRect r = itemBoundingBoxRect(paintOffset, listIndex);
-    r.move(itemOffsetForAlignment(textRun, &itemStyle, itemFont, r));
+    r.move(itemOffsetForAlignment(textRun, itemStyle, itemFont, r));
 
     if (is<HTMLOptGroupElement>(*listItemElement)) {
         auto description = itemFont.fontDescription();
@@ -445,9 +498,11 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
 
 void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint& paintOffset, int listIndex)
 {
-    const Vector<HTMLElement*>& listItems = selectElement().listItems();
-    HTMLElement* listItemElement = listItems[listIndex];
-    auto& itemStyle = *listItemElement->computedStyle();
+    const auto& listItems = selectElement().listItems();
+    RefPtr listItemElement = listItems[listIndex].get();
+    auto itemStyle = listItemElement->computedStyle();
+    if (!itemStyle)
+        return;
 
     Color backColor;
     if (is<HTMLOptionElement>(*listItemElement) && downcast<HTMLOptionElement>(*listItemElement).selected()) {
@@ -456,10 +511,10 @@ void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint&
         else
             backColor = theme().inactiveListBoxSelectionBackgroundColor(styleColorOptions());
     } else
-        backColor = itemStyle.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
+        backColor = itemStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
 
     // Draw the background for this list box item
-    if (itemStyle.visibility() == Visibility::Hidden)
+    if (itemStyle->visibility() == Visibility::Hidden)
         return;
 
     LayoutRect itemRect = itemBoundingBoxRect(paintOffset, listIndex);
@@ -485,7 +540,7 @@ bool RenderListBox::isPointInOverflowControl(HitTestResult& result, const Layout
     return true;
 }
 
-int RenderListBox::listIndexAtOffset(const LayoutSize& offset)
+int RenderListBox::listIndexAtOffset(const LayoutSize& offset) const
 {
     if (!numItems())
         return -1;
@@ -605,7 +660,7 @@ bool RenderListBox::scrollToRevealElementAtListIndex(int index)
     else
         newOffset = index - numVisibleItems() + 1;
 
-    scrollToOffsetWithoutAnimation(VerticalScrollbar, newOffset);
+    scrollToOffsetWithoutAnimation(ScrollbarOrientation::Vertical, newOffset);
 
     return true;
 }
@@ -620,20 +675,14 @@ bool RenderListBox::listIndexIsVisible(int index)
     return index >= firstIndex && index < endIndex;
 }
 
-bool RenderListBox::scroll(ScrollDirection direction, ScrollGranularity granularity, float multiplier, Element**, RenderBox*, const IntPoint&)
+bool RenderListBox::scroll(ScrollDirection direction, ScrollGranularity granularity, unsigned stepCount, Element**, RenderBox*, const IntPoint&)
 {
-    return ScrollableArea::scroll(direction, granularity, multiplier);
+    return ScrollableArea::scroll(direction, granularity, stepCount);
 }
 
-bool RenderListBox::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Element**)
+bool RenderListBox::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, unsigned stepCount, Element**)
 {
-    return ScrollableArea::scroll(logicalToPhysical(direction, style().isHorizontalWritingMode(), style().isFlippedBlocksWritingMode()), granularity, multiplier);
-}
-
-void RenderListBox::valueChanged(unsigned listIndex)
-{
-    selectElement().setSelectedIndex(selectElement().listToOptionIndex(listIndex));
-    selectElement().dispatchFormControlChangeEvent();
+    return ScrollableArea::scroll(logicalToPhysical(direction, style().isHorizontalWritingMode(), style().isFlippedBlocksWritingMode()), granularity, stepCount);
 }
 
 ScrollPosition RenderListBox::scrollPosition() const
@@ -709,7 +758,7 @@ void RenderListBox::scrollTo(int newOffset)
 
 LayoutUnit RenderListBox::itemHeight() const
 {
-    return style().fontMetrics().height() + rowSpacing;
+    return style().metricsOfPrimaryFont().height() + rowSpacing;
 }
 
 int RenderListBox::verticalScrollbarWidth() const
@@ -756,28 +805,29 @@ void RenderListBox::setScrollTop(int newTop, const ScrollPositionChangeOptions&)
 {
     // Determine an index and scroll to it.
     int index = newTop / itemHeight();
-    if (index < 0 || index >= numItems() || index == m_indexOffset)
+    index = std::clamp(index, 0, std::max(0, numItems() - 1));
+    if (index == m_indexOffset)
         return;
 
     setupWheelEventTestMonitor(*this);
-    scrollToOffsetWithoutAnimation(VerticalScrollbar, index);
+    scrollToOffsetWithoutAnimation(ScrollbarOrientation::Vertical, index);
 }
 
 bool RenderListBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)
 {
     if (!RenderBlockFlow::nodeAtPoint(request, result, locationInContainer, accumulatedOffset, hitTestAction))
         return false;
-    const Vector<HTMLElement*>& listItems = selectElement().listItems();
+    const auto& listItems = selectElement().listItems();
     int size = numItems();
     LayoutPoint adjustedLocation = accumulatedOffset + location();
 
     for (int i = 0; i < size; ++i) {
         if (!itemBoundingBoxRect(adjustedLocation, i).contains(locationInContainer.point()))
             continue;
-        if (Element* node = listItems[i]) {
-            result.setInnerNode(node);
+        if (RefPtr node = listItems[i].get()) {
+            result.setInnerNode(node.get());
             if (!result.innerNonSharedNode())
-                result.setInnerNonSharedNode(node);
+                result.setInnerNonSharedNode(node.get());
             result.setLocalPoint(locationInContainer.point() - toLayoutSize(adjustedLocation));
             break;
         }
@@ -898,12 +948,12 @@ IntRect RenderListBox::scrollableAreaBoundingBox(bool*) const
     return absoluteBoundingBoxRect();
 }
 
-bool RenderListBox::usesMockScrollAnimator() const
+bool RenderListBox::mockScrollbarsControllerEnabled() const
 {
-    return DeprecatedGlobalSettings::usesMockScrollAnimator();
+    return settings().mockScrollbarsControllerEnabled();
 }
 
-void RenderListBox::logMockScrollAnimatorMessage(const String& message) const
+void RenderListBox::logMockScrollbarsControllerMessage(const String& message) const
 {
     document().addConsoleMessage(MessageSource::Other, MessageLevel::Debug, "RenderListBox: " + message);
 }
@@ -913,15 +963,20 @@ String RenderListBox::debugDescription() const
     return RenderObject::debugDescription();
 }
 
+void RenderListBox::didStartScrollAnimation()
+{
+    page().scheduleRenderingUpdate({ RenderingUpdateStep::Scroll });
+}
+
 Ref<Scrollbar> RenderListBox::createScrollbar()
 {
     RefPtr<Scrollbar> widget;
     bool hasCustomScrollbarStyle = style().hasPseudoStyle(PseudoId::Scrollbar);
     if (hasCustomScrollbarStyle)
-        widget = RenderScrollbar::createCustomScrollbar(*this, VerticalScrollbar, &selectElement());
+        widget = RenderScrollbar::createCustomScrollbar(*this, ScrollbarOrientation::Vertical, &selectElement());
     else {
-        widget = Scrollbar::createNativeScrollbar(*this, VerticalScrollbar, theme().scrollbarControlSizeForPart(ListboxPart));
-        didAddScrollbar(widget.get(), VerticalScrollbar);
+        widget = Scrollbar::createNativeScrollbar(*this, ScrollbarOrientation::Vertical, theme().scrollbarControlSizeForPart(StyleAppearance::Listbox));
+        didAddScrollbar(widget.get(), ScrollbarOrientation::Vertical);
         if (page().isMonitoringWheelEvents())
             scrollAnimator().setWheelEventTestMonitor(page().wheelEventTestMonitor());
     }
@@ -935,7 +990,7 @@ void RenderListBox::destroyScrollbar()
         return;
 
     if (!m_vBar->isCustomScrollbar())
-        ScrollableArea::willRemoveScrollbar(m_vBar.get(), VerticalScrollbar);
+        ScrollableArea::willRemoveScrollbar(m_vBar.get(), ScrollbarOrientation::Vertical);
     m_vBar->removeFromParent();
     m_vBar = nullptr;
 }

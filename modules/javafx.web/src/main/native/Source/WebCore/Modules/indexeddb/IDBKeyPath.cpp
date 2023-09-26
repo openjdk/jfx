@@ -115,7 +115,7 @@ IDBKeyPathLexer::TokenType IDBKeyPathLexer::lexIdentifier(String& element)
     while (!m_remainingText.isEmpty() && isIdentifierCharacter(m_remainingText[0]))
         m_remainingText = m_remainingText.substring(1);
 
-    element = start.substring(0, start.length() - m_remainingText.length()).toString();
+    element = start.left(start.length() - m_remainingText.length()).toString();
     return TokenIdentifier;
 }
 
@@ -203,22 +203,7 @@ bool isIDBKeyPathValid(const IDBKeyPath& keyPath)
         }
         return true;
     });
-    return WTF::visit(visitor, keyPath);
-}
-
-IDBKeyPath isolatedCopy(const IDBKeyPath& keyPath)
-{
-    auto visitor = WTF::makeVisitor([](const String& string) -> IDBKeyPath {
-        return string.isolatedCopy();
-    }, [](const Vector<String>& vector) -> IDBKeyPath {
-        Vector<String> vectorCopy;
-        vectorCopy.reserveInitialCapacity(vector.size());
-        for (auto& string : vector)
-            vectorCopy.uncheckedAppend(string.isolatedCopy());
-        return vectorCopy;
-    });
-
-    return WTF::visit(visitor, keyPath);
+    return std::visit(visitor, keyPath);
 }
 
 #if !LOG_DISABLED
@@ -242,7 +227,7 @@ String loggingString(const IDBKeyPath& path)
         return builder.toString();
     });
 
-    return WTF::visit(visitor, path);
+    return std::visit(visitor, path);
 }
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +31,16 @@
 
 namespace JSC {
 
+#define JSCALLBACK_FUNCTION_METHOD(method) \
+    WTF_VTBL_FUNCPTR_PTRAUTH_STR("JSCallbackFunction." #method) method
+
 class JSCallbackFunction final : public InternalFunction {
     friend struct APICallbackFunction;
 public:
     typedef InternalFunction Base;
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.callbackFunctionSpace<mode>();
     }
@@ -59,8 +62,10 @@ private:
 
     JSObjectCallAsFunctionCallback functionCallback() { return m_callback; }
 
-    JSObjectCallAsFunctionCallback m_callback { nullptr };
+    JSObjectCallAsFunctionCallback JSCALLBACK_FUNCTION_METHOD(m_callback) { nullptr };
 };
+
+#undef JSCALLBACK_FUNCTION_METHOD
 
 } // namespace JSC
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -163,7 +163,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MouseEventImpl_initMouseEventImpl
     , jlong relatedTarget)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->initMouseEvent(String(env, type)
+    IMPL->initMouseEvent(AtomString {String(env, type)}
             , canBubble
             , cancelable
             , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))

@@ -26,15 +26,13 @@
 #include "config.h"
 #include "DisplayView.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
+#include "DeprecatedGlobalSettings.h"
 #include "DisplayTree.h"
 #include "DisplayTreeBuilder.h"
 #include "Frame.h"
 #include "FrameView.h"
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include "Page.h"
-#include "RuntimeEnabledFeatures.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -54,7 +52,7 @@ View::~View()
 
 Frame& View::frame() const
 {
-    return m_frameView.frame();
+    return downcast<LocalFrame>(m_frameView.frame());
 }
 
 Page* View::page() const
@@ -74,7 +72,7 @@ void View::prepareForDisplay()
         return;
 
     // Workaround for webkit.org/b/219369
-    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled())
+    if (DeprecatedGlobalSettings::inlineFormattingContextIntegrationEnabled())
         return;
 
     auto treeBuilder = TreeBuilder { deviceScaleFactor() };
@@ -107,4 +105,3 @@ float View::deviceScaleFactor() const
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

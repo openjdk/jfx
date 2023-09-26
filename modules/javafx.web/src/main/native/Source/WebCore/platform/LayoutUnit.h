@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2012, Google Inc. All rights reserved.
+ * Copyright (c) 2012-2014, Google Inc. All rights reserved.
+ * Copyright (c) 2012-2023, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -58,13 +59,15 @@ while (0)
 
 #endif
 
-static const int kFixedPointDenominator = 64;
+static const int kLayoutUnitFractionalBits = 6;
+static constexpr int kFixedPointDenominator = 1 << kLayoutUnitFractionalBits;
 const int intMaxForLayoutUnit = INT_MAX / kFixedPointDenominator;
 const int intMinForLayoutUnit = INT_MIN / kFixedPointDenominator;
 
 class LayoutUnit {
 public:
     LayoutUnit() : m_value(0) { }
+    LayoutUnit(const LayoutUnit&) = default;
     LayoutUnit(int value) { setValue(value); }
     LayoutUnit(unsigned short value) { setValue(value); }
     LayoutUnit(unsigned value) { setValue(value); }
@@ -85,7 +88,7 @@ public:
         m_value = clampToInteger(value * kFixedPointDenominator);
     }
 
-    LayoutUnit& operator=(const LayoutUnit& other) = default;
+    LayoutUnit& operator=(const LayoutUnit&) = default;
     LayoutUnit& operator=(const float& other) { return *this = LayoutUnit(other); }
 
     static LayoutUnit fromFloatCeil(float value)
@@ -107,6 +110,13 @@ public:
         if (value >= 0)
             return clamp(value + epsilon() / 2.0f);
         return clamp(value - epsilon() / 2.0f);
+    }
+
+    static LayoutUnit fromRawValue(int value)
+    {
+        LayoutUnit v;
+        v.m_value = value;
+        return v;
     }
 
     int toInt() const { return m_value / kFixedPointDenominator; }
@@ -150,18 +160,14 @@ public:
 
     int round() const
     {
-        if (m_value > 0)
-            return saturatedSum<int>(rawValue(), kFixedPointDenominator / 2) / kFixedPointDenominator;
-        return saturatedDifference<int>(rawValue(), (kFixedPointDenominator / 2) - 1) / kFixedPointDenominator;
+        return saturatedSum<int>(rawValue(), kFixedPointDenominator / 2) >> kLayoutUnitFractionalBits;
     }
 
     int floor() const
     {
         if (UNLIKELY(m_value <= INT_MIN + kFixedPointDenominator - 1))
             return intMinForLayoutUnit;
-        if (m_value >= 0)
-            return toInt();
-        return (m_value - kFixedPointDenominator + 1) / kFixedPointDenominator;
+        return m_value >> kLayoutUnitFractionalBits;
     }
 
     float ceilToFloat() const
@@ -375,6 +381,11 @@ inline bool operator>(const double a, const LayoutUnit& b)
 inline bool operator!=(const LayoutUnit& a, const LayoutUnit& b)
 {
     return a.rawValue() != b.rawValue();
+}
+
+inline bool operator!=(const float a, const LayoutUnit& b)
+{
+    return LayoutUnit(a) != b;
 }
 
 inline bool operator!=(const LayoutUnit& a, float b)

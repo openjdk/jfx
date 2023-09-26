@@ -139,7 +139,7 @@ RenderMathMLRoot::VerticalParameters RenderMathMLRoot::verticalParameters()
         // RadicalDegreeBottomRaisePercent: Suggested value is 60%.
         parameters.ruleThickness = ruleThicknessFallback();
         if (style().mathStyle() == MathStyle::Normal)
-            parameters.verticalGap = parameters.ruleThickness + style().fontMetrics().xHeight() / 4;
+            parameters.verticalGap = parameters.ruleThickness + style().metricsOfPrimaryFont().xHeight() / 4;
         else
             parameters.verticalGap = 5 * parameters.ruleThickness / 4;
 
@@ -290,7 +290,7 @@ void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
     GraphicsContextStateSaver stateSaver(info.context());
 
     info.context().setStrokeThickness(ruleThickness);
-    info.context().setStrokeStyle(SolidStroke);
+    info.context().setStrokeStyle(StrokeStyle::SolidStroke);
     info.context().setStrokeColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
     LayoutPoint ruleOffsetFrom = paintOffset + location() + LayoutPoint(0_lu, m_radicalOperatorTop + ruleThickness / 2);
     LayoutPoint ruleOffsetTo = ruleOffsetFrom;

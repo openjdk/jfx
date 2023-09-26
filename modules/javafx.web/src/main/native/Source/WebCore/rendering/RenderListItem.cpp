@@ -25,6 +25,7 @@
 #include "RenderListItem.h"
 
 #include "CSSFontSelector.h"
+#include "ElementInlines.h"
 #include "ElementTraversal.h"
 #include "HTMLNames.h"
 #include "HTMLOListElement.h"
@@ -76,7 +77,7 @@ RenderStyle RenderListItem::computeMarkerStyle() const
     fontDescription.setVariantNumericSpacing(FontVariantNumericSpacing::TabularNumbers);
     markerStyle.setFontDescription(WTFMove(fontDescription));
     markerStyle.fontCascade().update(&document().fontSelector());
-    markerStyle.setUnicodeBidi(EUnicodeBidi::Isolate);
+    markerStyle.setUnicodeBidi(UnicodeBidi::Isolate);
     markerStyle.setWhiteSpace(WhiteSpace::Pre);
     markerStyle.setTextTransform(TextTransform::None);
     return markerStyle;
@@ -123,7 +124,10 @@ static RenderListItem* nextListItemHelper(const Element& list, const Element& el
 {
     auto* current = &element;
     auto advance = [&] {
-        current = ElementTraversal::nextIncludingPseudo(*current, &list);
+        if (!current->renderOrDisplayContentsStyle())
+            current = ElementTraversal::nextIncludingPseudoSkippingChildren(*current, &list);
+        else
+            current = ElementTraversal::nextIncludingPseudo(*current, &list);
     };
     advance();
     while (current) {
@@ -209,7 +213,7 @@ unsigned RenderListItem::itemCountForOrderedList(const HTMLOListElement& list)
 void RenderListItem::updateValueNow() const
 {
     auto* list = enclosingList(*this);
-    auto* orderedList = is<HTMLOListElement>(list) ? downcast<HTMLOListElement>(list) : nullptr;
+    auto* orderedList = dynamicDowncast<HTMLOListElement>(list);
 
     // The start item is either the closest item before this one in the list that already has a value,
     // or the first item in the list if none have before this have values yet.

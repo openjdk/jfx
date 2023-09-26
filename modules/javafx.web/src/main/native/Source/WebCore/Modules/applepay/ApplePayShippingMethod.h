@@ -43,51 +43,10 @@ struct ApplePayShippingMethod final {
     std::optional<ApplePayDateComponentsRange> dateComponentsRange;
 #endif
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<ApplePayShippingMethod> decode(Decoder&);
+#if ENABLE(APPLE_PAY_SELECTED_SHIPPING_METHOD)
+    bool selected { false };
+#endif
 };
-
-template<class Encoder>
-void ApplePayShippingMethod::encode(Encoder& encoder) const
-{
-    encoder << label;
-    encoder << detail;
-    encoder << amount;
-    encoder << identifier;
-#if ENABLE(APPLE_PAY_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
-    encoder << dateComponentsRange;
-#endif
-}
-
-template<class Decoder>
-std::optional<ApplePayShippingMethod> ApplePayShippingMethod::decode(Decoder& decoder)
-{
-#define DECODE(name, type) \
-    std::optional<type> name; \
-    decoder >> name; \
-    if (!name) \
-        return std::nullopt; \
-
-    DECODE(label, String)
-    DECODE(detail, String)
-    DECODE(amount, String)
-    DECODE(identifier, String)
-#if ENABLE(APPLE_PAY_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
-    DECODE(dateComponentsRange, std::optional<ApplePayDateComponentsRange>)
-#endif
-
-#undef DECODE
-
-    return { {
-        WTFMove(*label),
-        WTFMove(*detail),
-        WTFMove(*amount),
-        WTFMove(*identifier),
-#if ENABLE(APPLE_PAY_SHIPPING_METHOD_DATE_COMPONENTS_RANGE)
-        WTFMove(*dateComponentsRange),
-#endif
-    } };
-}
 
 } // namespace WebCore
 

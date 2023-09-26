@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include <wtf/text/WTFString.h>
+#include <wtf/text/AtomString.h>
 #include "Font.h"
 
 namespace WebCore {
-using WTF::String;
+using WTF::AtomString;
 jobjectArray strVect2JArray(
-    JNIEnv* env, const Vector<String>& strVect);
+    JNIEnv* env, const Vector<AtomString>& strVect);
 
 } // namespace WebCore

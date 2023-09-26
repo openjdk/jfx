@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutGeometryRect.h"
 #include "LayoutUnits.h"
 #include <wtf/IsoMalloc.h>
@@ -63,44 +61,56 @@ public:
     LayoutUnit marginAfter() const;
     LayoutUnit marginEnd() const;
 
-    LayoutUnit borderTop() const;
-    LayoutUnit borderLeft() const;
-    LayoutUnit borderBottom() const;
-    LayoutUnit borderRight() const;
-    LayoutUnit verticalBorder() const { return borderTop() + borderBottom(); }
-    LayoutUnit horizontalBorder() const { return borderLeft() + borderRight(); }
+    LayoutUnit borderBefore() const;
+    LayoutUnit borderAfter() const;
+    LayoutUnit borderStart() const;
+    LayoutUnit borderEnd() const;
+    LayoutUnit verticalBorder() const { return borderBefore() + borderAfter(); }
+    LayoutUnit horizontalBorder() const { return borderStart() + borderEnd(); }
 
-    std::optional<LayoutUnit> paddingTop() const;
-    std::optional<LayoutUnit> paddingLeft() const;
-    std::optional<LayoutUnit> paddingBottom() const;
-    std::optional<LayoutUnit> paddingRight() const;
+    std::optional<LayoutUnit> paddingBefore() const;
+    std::optional<LayoutUnit> paddingAfter() const;
+    std::optional<LayoutUnit> paddingStart() const;
+    std::optional<LayoutUnit> paddingEnd() const;
     std::optional<LayoutUnit> verticalPadding() const;
     std::optional<LayoutUnit> horizontalPadding() const;
 
-    LayoutUnit contentBoxTop() const { return paddingBoxTop() + paddingTop().value_or(0); }
-    LayoutUnit contentBoxLeft() const { return paddingBoxLeft() + paddingLeft().value_or(0); }
+    LayoutUnit borderAndPaddingStart() const { return borderStart() + paddingStart().value_or(0_lu); }
+    LayoutUnit borderAndPaddingEnd() const { return borderEnd() + paddingEnd().value_or(0_lu); }
+    LayoutUnit horizontalBorderAndPadding() const { return horizontalBorder() + horizontalPadding().value_or(0_lu); }
+    LayoutUnit verticalBorderAndPadding() const { return verticalBorder() + verticalPadding().value_or(0_lu); }
+
+    LayoutUnit contentBoxTop() const { return paddingBoxTop() + paddingBefore().value_or(0_lu); }
+    LayoutUnit contentBoxLeft() const { return paddingBoxLeft() + paddingStart().value_or(0_lu); }
     LayoutUnit contentBoxBottom() const { return contentBoxTop() + contentBoxHeight(); }
     LayoutUnit contentBoxRight() const { return contentBoxLeft() + contentBoxWidth(); }
     LayoutUnit contentBoxHeight() const;
     LayoutUnit contentBoxWidth() const;
 
-    LayoutUnit paddingBoxTop() const { return borderTop(); }
-    LayoutUnit paddingBoxLeft() const { return borderLeft(); }
+    LayoutUnit paddingBoxTop() const { return borderBefore(); }
+    LayoutUnit paddingBoxLeft() const { return borderStart(); }
     LayoutUnit paddingBoxBottom() const { return paddingBoxTop() + paddingBoxHeight(); }
     LayoutUnit paddingBoxRight() const { return paddingBoxLeft() + paddingBoxWidth(); }
-    LayoutUnit paddingBoxHeight() const { return paddingTop().value_or(0) + contentBoxHeight() + paddingBottom().value_or(0); }
-    LayoutUnit paddingBoxWidth() const { return paddingLeft().value_or(0) + contentBoxWidth() + paddingRight().value_or(0); }
+    LayoutUnit paddingBoxHeight() const { return paddingBefore().value_or(0_lu) + contentBoxHeight() + paddingAfter().value_or(0_lu); }
+    LayoutUnit paddingBoxWidth() const { return paddingStart().value_or(0_lu) + contentBoxWidth() + paddingEnd().value_or(0_lu); }
 
-    LayoutUnit borderBoxHeight() const { return borderTop() + paddingBoxHeight() + verticalSpaceForScrollbar() + borderBottom(); }
-    LayoutUnit borderBoxWidth() const { return borderLeft() + paddingBoxWidth() + horizontalSpaceForScrollbar() + borderRight(); }
+    LayoutUnit borderBoxHeight() const { return borderBefore() + paddingBoxHeight() + verticalSpaceForScrollbar() + borderAfter(); }
+    LayoutUnit borderBoxWidth() const { return borderStart() + paddingBoxWidth() + horizontalSpaceForScrollbar() + borderEnd(); }
     LayoutUnit marginBoxHeight() const { return marginBefore() + borderBoxHeight() + marginAfter(); }
     LayoutUnit marginBoxWidth() const { return marginStart() + borderBoxWidth() + marginEnd(); }
 
-    LayoutUnit verticalMarginBorderAndPadding() const { return marginBefore() + verticalBorder() + verticalPadding().value_or(0) + marginAfter(); }
-    LayoutUnit horizontalMarginBorderAndPadding() const { return marginStart() + horizontalBorder() + horizontalPadding().value_or(0) + marginEnd(); }
+    LayoutUnit marginBorderAndPaddingBefore() const { return marginBefore() + borderBefore() + paddingBefore().value_or(0_lu); }
+    LayoutUnit marginBorderAndPaddingAfter() const { return marginAfter() + borderAfter() + paddingAfter().value_or(0_lu); }
+    LayoutUnit verticalMarginBorderAndPadding() const { return marginBorderAndPaddingBefore() + marginBorderAndPaddingAfter(); }
+
+    LayoutUnit marginBorderAndPaddingStart() const { return marginStart() + borderStart() + paddingStart().value_or(0_lu); }
+    LayoutUnit marginBorderAndPaddingEnd() const { return marginEnd() + borderEnd() + paddingEnd().value_or(0_lu); }
+    LayoutUnit horizontalMarginBorderAndPadding() const { return marginBorderAndPaddingStart() + marginBorderAndPaddingEnd(); }
 
     LayoutUnit verticalSpaceForScrollbar() const { return m_verticalSpaceForScrollbar; }
     LayoutUnit horizontalSpaceForScrollbar() const { return m_horizontalSpaceForScrollbar; }
+
+    bool hasMarginBorderOrPadding() const { return horizontalMarginBorderAndPadding() || verticalMarginBorderAndPadding(); }
 
     Rect marginBox() const;
     Rect borderBox() const;
@@ -132,6 +142,8 @@ public:
 
     void setVerticalSpaceForScrollbar(LayoutUnit scrollbarHeight) { m_verticalSpaceForScrollbar = scrollbarHeight; }
     void setHorizontalSpaceForScrollbar(LayoutUnit scrollbarWidth) { m_horizontalSpaceForScrollbar = scrollbarWidth; }
+
+    BoxGeometry geometryForWritingModeAndDirection(bool isHorizontalWritingMode, bool isLeftToRightDirection, LayoutUnit containerLogicalWidth) const;
 
 private:
     LayoutUnit logicalTop() const;
@@ -339,7 +351,7 @@ inline LayoutUnit BoxGeometry::marginEnd() const
     return m_horizontalMargin.end;
 }
 
-inline std::optional<LayoutUnit> BoxGeometry::paddingTop() const
+inline std::optional<LayoutUnit> BoxGeometry::paddingBefore() const
 {
     ASSERT(m_hasValidPadding);
     if (!m_padding)
@@ -347,7 +359,7 @@ inline std::optional<LayoutUnit> BoxGeometry::paddingTop() const
     return m_padding->vertical.top;
 }
 
-inline std::optional<LayoutUnit> BoxGeometry::paddingLeft() const
+inline std::optional<LayoutUnit> BoxGeometry::paddingStart() const
 {
     ASSERT(m_hasValidPadding);
     if (!m_padding)
@@ -355,7 +367,7 @@ inline std::optional<LayoutUnit> BoxGeometry::paddingLeft() const
     return m_padding->horizontal.left;
 }
 
-inline std::optional<LayoutUnit> BoxGeometry::paddingBottom() const
+inline std::optional<LayoutUnit> BoxGeometry::paddingAfter() const
 {
     ASSERT(m_hasValidPadding);
     if (!m_padding)
@@ -363,7 +375,7 @@ inline std::optional<LayoutUnit> BoxGeometry::paddingBottom() const
     return m_padding->vertical.bottom;
 }
 
-inline std::optional<LayoutUnit> BoxGeometry::paddingRight() const
+inline std::optional<LayoutUnit> BoxGeometry::paddingEnd() const
 {
     ASSERT(m_hasValidPadding);
     if (!m_padding)
@@ -373,46 +385,85 @@ inline std::optional<LayoutUnit> BoxGeometry::paddingRight() const
 
 inline std::optional<LayoutUnit> BoxGeometry::verticalPadding() const
 {
-    auto paddingTop = this->paddingTop();
-    auto paddingBottom = this->paddingBottom();
+    auto paddingTop = this->paddingBefore();
+    auto paddingBottom = this->paddingAfter();
     if (!paddingTop && !paddingBottom)
         return { };
-    return paddingTop.value_or(0) + paddingBottom.value_or(0);
+    return paddingTop.value_or(0_lu) + paddingBottom.value_or(0_lu);
 }
 
 inline std::optional<LayoutUnit> BoxGeometry::horizontalPadding() const
 {
-    auto paddingLeft = this->paddingLeft();
-    auto paddingRight = this->paddingRight();
+    auto paddingLeft = this->paddingStart();
+    auto paddingRight = this->paddingEnd();
     if (!paddingLeft && !paddingRight)
         return { };
-    return paddingLeft.value_or(0) + paddingRight.value_or(0);
+    return paddingLeft.value_or(0_lu) + paddingRight.value_or(0_lu);
 }
 
-inline LayoutUnit BoxGeometry::borderTop() const
+inline LayoutUnit BoxGeometry::borderBefore() const
 {
     ASSERT(m_hasValidBorder);
     return m_border.vertical.top;
 }
 
-inline LayoutUnit BoxGeometry::borderLeft() const
+inline LayoutUnit BoxGeometry::borderStart() const
 {
     ASSERT(m_hasValidBorder);
     return m_border.horizontal.left;
 }
 
-inline LayoutUnit BoxGeometry::borderBottom() const
+inline LayoutUnit BoxGeometry::borderAfter() const
 {
     ASSERT(m_hasValidBorder);
     return m_border.vertical.bottom;
 }
 
-inline LayoutUnit BoxGeometry::borderRight() const
+inline LayoutUnit BoxGeometry::borderEnd() const
 {
     ASSERT(m_hasValidBorder);
     return m_border.horizontal.right;
 }
 
+inline BoxGeometry BoxGeometry::geometryForWritingModeAndDirection(bool isHorizontalWritingMode, bool isLeftToRightDirection, LayoutUnit containerLogicalWidth) const
+{
+    if (isHorizontalWritingMode && isLeftToRightDirection)
+        return *this;
+
+    auto visualGeometry = *this;
+    if (isHorizontalWritingMode) {
+        // Horizontal flip.
+        visualGeometry.m_horizontalMargin = { m_horizontalMargin.end, m_horizontalMargin.start };
+        visualGeometry.m_border.horizontal = { m_border.horizontal.right, m_border.horizontal.left };
+        if (m_padding)
+            visualGeometry.m_padding->horizontal = { m_padding->horizontal.right, m_padding->horizontal.left };
+
+        visualGeometry.m_topLeft.setX(containerLogicalWidth - (m_topLeft.x() + borderBoxWidth()));
+        return visualGeometry;
+    }
+
+    // Vertical flip.
+    visualGeometry.m_contentWidth = m_contentHeight;
+    visualGeometry.m_contentHeight = m_contentWidth;
+
+    visualGeometry.m_horizontalMargin = { m_verticalMargin.after, m_verticalMargin.before };
+    visualGeometry.m_verticalMargin = { m_horizontalMargin.start, m_horizontalMargin.end };
+
+    auto left = isLeftToRightDirection ? m_topLeft.x() : containerLogicalWidth - (m_topLeft.x() + borderBoxWidth());
+    auto marginBoxOffset = LayoutSize { left - m_horizontalMargin.start, m_topLeft.y() - m_verticalMargin.before }.transposedSize();
+    visualGeometry.m_topLeft = { visualGeometry.m_horizontalMargin.start, visualGeometry.m_verticalMargin.before };
+    visualGeometry.m_topLeft.move(marginBoxOffset);
+
+    visualGeometry.m_border = { { m_border.vertical.bottom, m_border.vertical.top }, { m_border.horizontal.left, m_border.horizontal.right } };
+
+    if (m_padding)
+        visualGeometry.m_padding = Layout::Edges { { m_padding->vertical.bottom, m_padding->vertical.top }, { m_padding->horizontal.left, m_padding->horizontal.right } };
+
+    visualGeometry.m_verticalSpaceForScrollbar = m_horizontalSpaceForScrollbar;
+    visualGeometry.m_horizontalSpaceForScrollbar = m_verticalSpaceForScrollbar;
+
+    return visualGeometry;
+}
+
 }
 }
-#endif

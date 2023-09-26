@@ -42,17 +42,13 @@ public:
 
     void setSource(const String& source) { m_source = source; }
 
-    bool isValid() const { return m_isValid; }
-    void setValid(bool valid) { m_isValid = valid; }
-
 private:
     WebGLShader(WebGLRenderingContextBase&, GCGLenum);
 
-    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) final;
+    void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) final;
 
     GCGLenum m_type;
     String m_source;
-    bool m_isValid;
 };
 
 } // namespace WebCore

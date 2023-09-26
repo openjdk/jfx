@@ -36,7 +36,7 @@
 
 namespace JSC {
 
-const ClassInfo IntlCollator::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlCollator) };
+const ClassInfo IntlCollator::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlCollator) };
 
 namespace IntlCollatorInternal {
 constexpr bool verbose = false;
@@ -44,7 +44,7 @@ constexpr bool verbose = false;
 
 IntlCollator* IntlCollator::create(VM& vm, Structure* structure)
 {
-    IntlCollator* format = new (NotNull, allocateCell<IntlCollator>(vm.heap)) IntlCollator(vm, structure);
+    IntlCollator* format = new (NotNull, allocateCell<IntlCollator>(vm)) IntlCollator(vm, structure);
     format->finishCreation(vm);
     return format;
 }
@@ -62,7 +62,7 @@ IntlCollator::IntlCollator(VM& vm, Structure* structure)
 void IntlCollator::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>
@@ -172,7 +172,7 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
     RETURN_IF_EXCEPTION(scope, void());
 
     {
-        String collation = intlStringOption(globalObject, options, vm.propertyNames->collation, { }, nullptr, nullptr);
+        String collation = intlStringOption(globalObject, options, vm.propertyNames->collation, { }, { }, { });
         RETURN_IF_EXCEPTION(scope, void());
         if (!collation.isNull()) {
             if (!isUnicodeLocaleIdentifierType(collation)) {
@@ -188,7 +188,7 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
     if (numeric != TriState::Indeterminate)
         localeOptions[static_cast<unsigned>(RelevantExtensionKey::Kn)] = String(numeric == TriState::True ? "true"_s : "false"_s);
 
-    String caseFirstOption = intlStringOption(globalObject, options, vm.propertyNames->caseFirst, { "upper", "lower", "false" }, "caseFirst must be either \"upper\", \"lower\", or \"false\"", nullptr);
+    String caseFirstOption = intlStringOption(globalObject, options, vm.propertyNames->caseFirst, { "upper"_s, "lower"_s, "false"_s }, "caseFirst must be either \"upper\", \"lower\", or \"false\""_s, { });
     RETURN_IF_EXCEPTION(scope, void());
     if (!caseFirstOption.isNull())
         localeOptions[static_cast<unsigned>(RelevantExtensionKey::Kf)] = caseFirstOption;
@@ -207,9 +207,9 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
     m_numeric = resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Kn)] == "true"_s;
 
     const String& caseFirstString = resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Kf)];
-    if (caseFirstString == "lower")
+    if (caseFirstString == "lower"_s)
         m_caseFirst = CaseFirst::Lower;
-    else if (caseFirstString == "upper")
+    else if (caseFirstString == "upper"_s)
         m_caseFirst = CaseFirst::Upper;
     else
         m_caseFirst = CaseFirst::False;
@@ -291,7 +291,7 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
 }
 
 // https://tc39.es/ecma402/#sec-collator-comparestrings
-JSValue IntlCollator::compareStrings(JSGlobalObject* globalObject, StringView x, StringView y) const
+UCollationResult IntlCollator::compareStrings(JSGlobalObject* globalObject, StringView x, StringView y) const
 {
     ASSERT(m_collator);
 
@@ -299,8 +299,7 @@ JSValue IntlCollator::compareStrings(JSGlobalObject* globalObject, StringView x,
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     UErrorCode status = U_ZERO_ERROR;
-    UCollationResult result = ([&]() -> UCollationResult {
-        if (x.isAllSpecialCharacters<canUseASCIIUCADUCETComparison>() && y.isAllSpecialCharacters<canUseASCIIUCADUCETComparison>()) {
+    std::optional<UCollationResult> result = ([&]() -> std::optional<UCollationResult> {
             if (canDoASCIIUCADUCETComparison()) {
                 if (x.is8Bit() && y.is8Bit())
                     return compareASCIIWithUCADUCET(x.characters8(), x.length(), y.characters8(), y.length());
@@ -311,14 +310,20 @@ JSValue IntlCollator::compareStrings(JSGlobalObject* globalObject, StringView x,
                 return compareASCIIWithUCADUCET(x.characters16(), x.length(), y.characters16(), y.length());
             }
 
-            if (x.is8Bit() && y.is8Bit())
+        if (x.is8Bit() && y.is8Bit() && x.isAllASCII() && y.isAllASCII())
                 return ucol_strcollUTF8(m_collator.get(), bitwise_cast<const char*>(x.characters8()), x.length(), bitwise_cast<const char*>(y.characters8()), y.length(), &status);
-        }
-        return ucol_strcoll(m_collator.get(), x.upconvertedCharacters(), x.length(), y.upconvertedCharacters(), y.length());
+
+        return std::nullopt;
     }());
-    if (U_FAILURE(status))
-        return throwException(globalObject, scope, createError(globalObject, "Failed to compare strings."_s));
-    return jsNumber(result);
+
+    if (!result)
+        result = ucol_strcoll(m_collator.get(), x.upconvertedCharacters(), x.length(), y.upconvertedCharacters(), y.length());
+
+    if (U_FAILURE(status)) {
+        throwException(globalObject, scope, createError(globalObject, "Failed to compare strings."_s));
+        return { };
+    }
+    return result.value();
 }
 
 ASCIILiteral IntlCollator::usageString(Usage usage)
@@ -330,7 +335,7 @@ ASCIILiteral IntlCollator::usageString(Usage usage)
         return "search"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlCollator::sensitivityString(Sensitivity sensitivity)
@@ -346,7 +351,7 @@ ASCIILiteral IntlCollator::sensitivityString(Sensitivity sensitivity)
         return "variant"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 ASCIILiteral IntlCollator::caseFirstString(CaseFirst caseFirst)
@@ -360,7 +365,7 @@ ASCIILiteral IntlCollator::caseFirstString(CaseFirst caseFirst)
         return "upper"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral::null();
+    return { };
 }
 
 // https://tc39.es/ecma402/#sec-intl.collator.prototype.resolvedoptions
@@ -445,15 +450,15 @@ void IntlCollator::checkICULocaleInvariants(const LocaleSet& locales)
             bool allAreGood = true;
             for (unsigned x = 0; x < 128; ++x) {
                 for (unsigned y = 0; y < 128; ++y) {
-                    if (canUseASCIIUCADUCETComparison(x) && canUseASCIIUCADUCETComparison(y)) {
+                    if (canUseASCIIUCADUCETComparison(static_cast<LChar>(x)) && canUseASCIIUCADUCETComparison(static_cast<LChar>(y))) {
                         UErrorCode status = U_ZERO_ERROR;
                         UChar xstring[] = { static_cast<UChar>(x), 0 };
                         UChar ystring[] = { static_cast<UChar>(y), 0 };
                         auto resultICU = ucol_strcoll(&collator, xstring, 1, ystring, 1);
                         ASSERT(U_SUCCESS(status));
                         auto resultJSC = compareASCIIWithUCADUCET(xstring, 1, ystring, 1);
-                        if (resultICU != resultJSC) {
-                            dataLogLn("BAD ", locale, " ", makeString(hex(x)), "(", StringView(xstring, 1), ") <=> ", makeString(hex(y)), "(", StringView(ystring, 1), ") ICU:(", static_cast<int32_t>(resultICU), "),JSC:(", static_cast<int32_t>(resultJSC), ")");
+                        if (resultJSC && resultICU != resultJSC.value()) {
+                            dataLogLn("BAD ", locale, " ", makeString(hex(x)), "(", StringView(xstring, 1), ") <=> ", makeString(hex(y)), "(", StringView(ystring, 1), ") ICU:(", static_cast<int32_t>(resultICU), "),JSC:(", static_cast<int32_t>(resultJSC.value()), ")");
                             allAreGood = false;
                         }
                     }

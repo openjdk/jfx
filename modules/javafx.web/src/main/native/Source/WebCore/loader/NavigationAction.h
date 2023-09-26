@@ -33,6 +33,7 @@
 #include "FrameLoaderTypes.h"
 #include "GlobalFrameIdentifier.h"
 #include "LayoutPoint.h"
+#include "NavigationRequester.h"
 #include "PrivateClickMeasurement.h"
 #include "ResourceRequest.h"
 #include "SecurityOrigin.h"
@@ -64,23 +65,7 @@ public:
     NavigationAction(NavigationAction&&);
     NavigationAction& operator=(NavigationAction&&);
 
-    class Requester {
-    public:
-        Requester(const Document&);
-
-        const URL& url() const { return m_url; }
-        SecurityOrigin& securityOrigin() const { return *m_origin; }
-        SecurityOrigin& topOrigin() const { return *m_topOrigin; }
-        CrossOriginOpenerPolicy crossOriginOpenerPolicy() const { return m_crossOriginOpenerPolicy; }
-        const GlobalFrameIdentifier& globalFrameIdentifier() const { return m_globalFrameIdentifier; }
-    private:
-        URL m_url;
-        RefPtr<SecurityOrigin> m_origin;
-        RefPtr<SecurityOrigin> m_topOrigin;
-        CrossOriginOpenerPolicy m_crossOriginOpenerPolicy;
-        GlobalFrameIdentifier m_globalFrameIdentifier;
-    };
-    const std::optional<Requester>& requester() const { return m_requester; }
+    const std::optional<NavigationRequester>& requester() const { return m_requester; }
 
     struct UIEventWithKeyStateData {
         UIEventWithKeyStateData(const UIEventWithKeyState&);
@@ -105,7 +90,7 @@ public:
 
     NavigationAction copyWithShouldOpenExternalURLsPolicy(ShouldOpenExternalURLsPolicy) const;
 
-    bool isEmpty() const { return !m_requester || m_requester->url().isEmpty() || m_resourceRequest.url().isEmpty(); }
+    bool isEmpty() const { return !m_requester || m_requester->url.isEmpty() || m_resourceRequest.url().isEmpty(); }
 
     URL url() const { return m_resourceRequest.url(); }
     const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
@@ -129,6 +114,9 @@ public:
     bool openedByDOMWithOpener() const { return m_openedByDOMWithOpener; }
     void setOpenedByDOMWithOpener() { m_openedByDOMWithOpener = true; }
 
+    NewFrameOpenerPolicy newFrameOpenerPolicy() const { return m_newFrameOpenerPolicy; }
+    void setNewFrameOpenerPolicy(NewFrameOpenerPolicy newFrameOpenerPolicy) { m_newFrameOpenerPolicy = newFrameOpenerPolicy; }
+
     void setTargetBackForwardItem(HistoryItem&);
     const std::optional<BackForwardItemIdentifier>& targetBackForwardItemIdentifier() const { return m_targetBackForwardItemIdentifier; }
 
@@ -144,26 +132,43 @@ public:
     const std::optional<PrivateClickMeasurement>& privateClickMeasurement() const { return m_privateClickMeasurement; };
     void setPrivateClickMeasurement(PrivateClickMeasurement&& privateClickMeasurement) { m_privateClickMeasurement = privateClickMeasurement; };
 
+    // The shouldReplaceDocumentIfJavaScriptURL parameter will go away when the FIXME to eliminate the
+    // corresponding parameter from ScriptController::executeIfJavaScriptURL() is addressed.
+    ShouldReplaceDocumentIfJavaScriptURL shouldReplaceDocumentIfJavaScriptURL() const { return m_shouldReplaceDocumentIfJavaScriptURL; }
+    void setShouldReplaceDocumentIfJavaScriptURL(ShouldReplaceDocumentIfJavaScriptURL shouldReplaceDocumentIfJavaScriptURL) { m_shouldReplaceDocumentIfJavaScriptURL = shouldReplaceDocumentIfJavaScriptURL; }
+
+    bool isRequestFromClientOrUserInput() const { return m_isRequestFromClientOrUserInput; }
+    void setIsRequestFromClientOrUserInput(bool isRequestFromClientOrUserInput) { m_isRequestFromClientOrUserInput = isRequestFromClientOrUserInput; }
+
+    bool isInitialFrameSrcLoad() const { return m_isInitialFrameSrcLoad; }
+    void setIsInitialFrameSrcLoad(bool isInitialFrameSrcLoad) { m_isInitialFrameSrcLoad = isInitialFrameSrcLoad; }
+
 private:
     // Do not add a strong reference to the originating document or a subobject that holds the
     // originating document. See comment above the class for more details.
-    std::optional<Requester> m_requester;
+    std::optional<NavigationRequester> m_requester;
     ResourceRequest m_resourceRequest;
-    NavigationType m_type;
-    ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy;
-    InitiatedByMainFrame m_initiatedByMainFrame;
     std::optional<UIEventWithKeyStateData> m_keyStateEventData;
     std::optional<MouseEventData> m_mouseEventData;
     RefPtr<UserGestureToken> m_userGestureToken { UserGestureIndicator::currentUserGesture() };
     AtomString m_downloadAttribute;
-    bool m_treatAsSameOriginNavigation;
-    bool m_hasOpenedFrames { false };
-    bool m_openedByDOMWithOpener { false };
     std::optional<BackForwardItemIdentifier> m_targetBackForwardItemIdentifier;
     std::optional<BackForwardItemIdentifier> m_sourceBackForwardItemIdentifier;
+    std::optional<PrivateClickMeasurement> m_privateClickMeasurement;
+    ShouldReplaceDocumentIfJavaScriptURL m_shouldReplaceDocumentIfJavaScriptURL { ReplaceDocumentIfJavaScriptURL };
+
+    NavigationType m_type;
+    ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy;
+    InitiatedByMainFrame m_initiatedByMainFrame;
+
+    bool m_treatAsSameOriginNavigation { false };
+    bool m_hasOpenedFrames { false };
+    bool m_openedByDOMWithOpener { false };
+    bool m_isRequestFromClientOrUserInput { false };
+    bool m_isInitialFrameSrcLoad { false };
     LockHistory m_lockHistory { LockHistory::No };
     LockBackForwardList m_lockBackForwardList { LockBackForwardList::No };
-    std::optional<PrivateClickMeasurement> m_privateClickMeasurement;
+    NewFrameOpenerPolicy m_newFrameOpenerPolicy { NewFrameOpenerPolicy::Allow };
 };
 
 } // namespace WebCore

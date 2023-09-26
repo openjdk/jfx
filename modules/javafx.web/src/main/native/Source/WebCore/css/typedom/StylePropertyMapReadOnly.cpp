@@ -30,50 +30,71 @@
 #include "config.h"
 #include "StylePropertyMapReadOnly.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSCustomPropertyValue.h"
 #include "CSSImageValue.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSProperty.h"
+#include "CSSPropertyNames.h"
 #include "CSSStyleImageValue.h"
-#include "CSSStyleValue.h"
+#include "CSSStyleValueFactory.h"
 #include "CSSUnitValue.h"
 #include "CSSUnparsedValue.h"
+#include "CSSValueList.h"
 #include "Document.h"
 
 namespace WebCore {
 
-RefPtr<CSSStyleValue> StylePropertyMapReadOnly::reifyValue(CSSValue* value, Document& document, Element*)
+RefPtr<CSSStyleValue> StylePropertyMapReadOnly::reifyValue(RefPtr<CSSValue>&& value, std::optional<CSSPropertyID> propertyID, Document& document)
 {
     if (!value)
         return nullptr;
-
-    // FIXME: Properly reify all length values.
-    if (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).primitiveType() == CSSUnitType::CSS_PX)
-        return CSSUnitValue::create(downcast<CSSPrimitiveValue>(*value).doubleValue(), "px");
-
-    if (is<CSSImageValue>(*value))
-        return CSSStyleImageValue::create(downcast<CSSImageValue>(*value), document);
-
-    return CSSStyleValue::create(makeRefPtr(value));
+    auto result = CSSStyleValueFactory::reifyValue(value.releaseNonNull(), propertyID, &document);
+    return (result.hasException() ? nullptr : RefPtr<CSSStyleValue> { result.releaseReturnValue() });
 }
 
-RefPtr<CSSStyleValue> StylePropertyMapReadOnly::customPropertyValueOrDefault(const String& name, Document& document, CSSValue* inputValue, Element* element)
+Vector<RefPtr<CSSStyleValue>> StylePropertyMapReadOnly::reifyValueToVector(RefPtr<CSSValue>&& value, std::optional<CSSPropertyID> propertyID, Document& document)
 {
-    if (!inputValue) {
-        auto* registered = document.getCSSRegisteredCustomPropertySet().get(name);
+    if (!value)
+        return { };
 
-        if (registered && registered->initialValue()) {
-            auto value = registered->initialValueCopy();
-            return StylePropertyMapReadOnly::reifyValue(value.get(), document, element);
+    if (auto* customPropertyValue = dynamicDowncast<CSSCustomPropertyValue>(*value)) {
+        if (std::holds_alternative<CSSCustomPropertyValue::SyntaxValueList>(customPropertyValue->value())) {
+            auto& list = std::get<CSSCustomPropertyValue::SyntaxValueList>(customPropertyValue->value());
+
+            Vector<RefPtr<CSSStyleValue>> result;
+            result.reserveInitialCapacity(list.values.size());
+            for (auto& listValue : list.values) {
+                auto styleValue = CSSStyleValueFactory::constructStyleValueForCustomPropertySyntaxValue(listValue);
+                if (!styleValue)
+        return { };
+                result.uncheckedAppend(WTFMove(styleValue));
+            }
+            return result;
         }
-
-        return CSSStyleValue::create();
     }
 
-    return StylePropertyMapReadOnly::reifyValue(inputValue, document, element);
+    if (!is<CSSValueList>(*value) || (propertyID && !CSSProperty::isListValuedProperty(*propertyID)))
+        return { StylePropertyMapReadOnly::reifyValue(WTFMove(value), propertyID, document) };
+
+    auto& valueList = downcast<CSSValueList>(*value);
+    Vector<RefPtr<CSSStyleValue>> result;
+    result.reserveInitialCapacity(valueList.length());
+    for (const auto& cssValue : valueList)
+        result.uncheckedAppend(StylePropertyMapReadOnly::reifyValue(cssValue.copyRef(), propertyID, document));
+    return result;
+}
+
+StylePropertyMapReadOnly::Iterator::Iterator(StylePropertyMapReadOnly& map, ScriptExecutionContext* context)
+    : m_values(map.entries(context))
+{
+}
+
+std::optional<StylePropertyMapReadOnly::StylePropertyMapEntry> StylePropertyMapReadOnly::Iterator::next()
+{
+    if (m_index >= m_values.size())
+        return std::nullopt;
+
+    return m_values[m_index++];
 }
 
 } // namespace WebCore
-
-#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "DisplayListItems.h"
 #include "DisplayListIterator.h"
+#include "DisplayListResourceHeap.h"
 #include "GraphicsContext.h"
 #include "InMemoryDisplayList.h"
 #include "Logging.h"
@@ -36,165 +37,148 @@
 namespace WebCore {
 namespace DisplayList {
 
-Replayer::Replayer(GraphicsContext& context, const DisplayList& displayList, const ImageBufferHashMap* imageBuffers, const NativeImageHashMap* nativeImages, const FontRenderingResourceMap* fonts, ImageBuffer* maskImageBuffer, Delegate* delegate)
+Replayer::Replayer(GraphicsContext& context, const DisplayList& displayList, const ResourceHeap* resourceHeap)
     : m_context(context)
-    , m_maskImageBuffer(maskImageBuffer)
     , m_displayList(displayList)
-    , m_imageBuffers(imageBuffers ? *imageBuffers : m_displayList.imageBuffers())
-    , m_nativeImages(nativeImages ? *nativeImages : m_displayList.nativeImages())
-    , m_fonts(fonts ? *fonts : m_displayList.fonts())
-    , m_delegate(delegate)
+    , m_resourceHeap(resourceHeap ? *resourceHeap : m_displayList.resourceHeap())
 {
-}
-
-Replayer::~Replayer() = default;
-
-GraphicsContext& Replayer::context() const
-{
-    return m_maskImageBuffer ? m_maskImageBuffer->context() : m_context;
 }
 
 template<class T>
-inline static std::optional<RenderingResourceIdentifier> applyImageBufferItem(GraphicsContext& context, const ImageBufferHashMap& imageBuffers, ItemHandle item, Replayer::Delegate* delegate)
+inline static std::optional<RenderingResourceIdentifier> applyImageBufferItem(GraphicsContext& context, const ResourceHeap& resourceHeap, ItemHandle item)
 {
     auto& imageBufferItem = item.get<T>();
     auto resourceIdentifier = imageBufferItem.imageBufferIdentifier();
-    if (auto* imageBuffer = imageBuffers.get(resourceIdentifier)) {
+    if (auto* imageBuffer = resourceHeap.getImageBuffer(resourceIdentifier)) {
         imageBufferItem.apply(context, *imageBuffer);
-        if (delegate)
-            delegate->recordResourceUse(resourceIdentifier);
         return std::nullopt;
     }
     return resourceIdentifier;
 }
 
 template<class T>
-inline static std::optional<RenderingResourceIdentifier> applyNativeImageItem(GraphicsContext& context, const NativeImageHashMap& nativeImages, ItemHandle item, Replayer::Delegate* delegate)
+inline static std::optional<RenderingResourceIdentifier> applyNativeImageItem(GraphicsContext& context, const ResourceHeap& resourceHeap, ItemHandle item)
 {
     auto& nativeImageItem = item.get<T>();
     auto resourceIdentifier = nativeImageItem.imageIdentifier();
-    if (auto* image = nativeImages.get(resourceIdentifier)) {
+    if (auto* image = resourceHeap.getNativeImage(resourceIdentifier)) {
         nativeImageItem.apply(context, *image);
-        if (delegate)
-            delegate->recordResourceUse(resourceIdentifier);
         return std::nullopt;
     }
     return resourceIdentifier;
-}
-
-inline static std::optional<RenderingResourceIdentifier> applySetStateItem(GraphicsContext& context, const NativeImageHashMap& nativeImages, ItemHandle item, Replayer::Delegate* delegate)
-{
-    auto& setStateItem = item.get<SetState>();
-
-    RenderingResourceIdentifier strokePatternRenderingResourceIdentifier;
-    NativeImage* strokePatternImage = nullptr;
-    RenderingResourceIdentifier fillPatternRenderingResourceIdentifier;
-    NativeImage* fillPatternImage = nullptr;
-
-    if ((strokePatternRenderingResourceIdentifier = setStateItem.strokePatternImageIdentifier())) {
-        strokePatternImage = nativeImages.get(strokePatternRenderingResourceIdentifier);
-        if (!strokePatternImage)
-            return strokePatternRenderingResourceIdentifier;
-    }
-
-    if ((fillPatternRenderingResourceIdentifier = setStateItem.fillPatternImageIdentifier())) {
-        fillPatternImage = nativeImages.get(fillPatternRenderingResourceIdentifier);
-        if (!fillPatternImage)
-            return fillPatternRenderingResourceIdentifier;
-    }
-
-    setStateItem.apply(context, strokePatternImage, fillPatternImage);
-
-    if (!delegate)
-        return std::nullopt;
-
-    if (strokePatternRenderingResourceIdentifier)
-        delegate->recordResourceUse(strokePatternRenderingResourceIdentifier);
-    if (fillPatternRenderingResourceIdentifier)
-        delegate->recordResourceUse(fillPatternRenderingResourceIdentifier);
-    return std::nullopt;
 }
 
 template<class T>
-inline static std::optional<RenderingResourceIdentifier> applyFontItem(GraphicsContext& context, const FontRenderingResourceMap& fonts, ItemHandle item, Replayer::Delegate* delegate)
+inline static std::optional<RenderingResourceIdentifier> applySourceImageItem(GraphicsContext& context, const ResourceHeap& resourceHeap, ItemHandle item)
 {
-    auto& fontItem = item.get<T>();
-    auto resourceIdentifier = fontItem.fontIdentifier();
-    if (auto* font = fonts.get(resourceIdentifier)) {
-        fontItem.apply(context, *font);
-        if (delegate)
-            delegate->recordResourceUse(resourceIdentifier);
+    auto& sourceImageItem = item.get<T>();
+    auto resourceIdentifier = sourceImageItem.imageIdentifier();
+    if (auto sourceImage = resourceHeap.getSourceImage(resourceIdentifier)) {
+        sourceImageItem.apply(context, *sourceImage);
         return std::nullopt;
     }
     return resourceIdentifier;
 }
 
-std::pair<std::optional<StopReplayReason>, std::optional<RenderingResourceIdentifier>> Replayer::applyItem(ItemHandle item)
+inline static std::optional<RenderingResourceIdentifier> applySetStateItem(GraphicsContext& context, const ResourceHeap& resourceHeap, ItemHandle item)
 {
-    if (m_delegate && m_delegate->apply(item, context()))
-        return { std::nullopt, std::nullopt };
+    auto& setStateItem = item.get<SetState>();
 
-    if (item.is<DrawImageBuffer>()) {
-        if (auto missingCachedResourceIdentifier = applyImageBufferItem<DrawImageBuffer>(context(), m_imageBuffers, item, m_delegate))
+    auto fixPatternTileImage = [&](Pattern* pattern) -> std::optional<RenderingResourceIdentifier> {
+        if (!pattern)
+            return std::nullopt;
+
+        auto imageIdentifier = pattern->tileImage().imageIdentifier();
+        auto sourceImage = resourceHeap.getSourceImage(imageIdentifier);
+        if (!sourceImage)
+            return imageIdentifier;
+
+        pattern->setTileImage(WTFMove(*sourceImage));
+        return std::nullopt;
+    };
+
+    if (auto imageIdentifier = fixPatternTileImage(setStateItem.state().strokeBrush().pattern()))
+        return *imageIdentifier;
+
+    if (auto imageIdentifier = fixPatternTileImage(setStateItem.state().fillBrush().pattern()))
+        return *imageIdentifier;
+
+    setStateItem.apply(context);
+    return std::nullopt;
+}
+
+inline static std::optional<RenderingResourceIdentifier> applyDrawGlyphs(GraphicsContext& context, const ResourceHeap& resourceHeap, DrawGlyphs& drawGlyphsItem)
+{
+    auto resourceIdentifier = drawGlyphsItem.fontIdentifier();
+    if (auto* font = resourceHeap.getFont(resourceIdentifier)) {
+        drawGlyphsItem.apply(context, *font);
+        return std::nullopt;
+    }
+    return resourceIdentifier;
+}
+
+inline static std::optional<RenderingResourceIdentifier> applyDrawDecomposedGlyphs(GraphicsContext& context, const ResourceHeap& resourceHeap, DrawDecomposedGlyphs& drawDecomposedGlyphsItem)
+{
+    auto fontIdentifier = drawDecomposedGlyphsItem.fontIdentifier();
+    auto* font = resourceHeap.getFont(fontIdentifier);
+    if (!font)
+        return fontIdentifier;
+
+    auto drawGlyphsIdentifier = drawDecomposedGlyphsItem.decomposedGlyphsIdentifier();
+    auto* decomposedGlyphs = resourceHeap.getDecomposedGlyphs(drawGlyphsIdentifier);
+    if (!decomposedGlyphs)
+        return drawGlyphsIdentifier;
+
+    drawDecomposedGlyphsItem.apply(context, *font, *decomposedGlyphs);
+    return std::nullopt;
+}
+
+auto Replayer::applyItem(ItemHandle item) -> ApplyItemResult
+{
+    switch (item.type()) {
+    case ItemType::ClipToImageBuffer:
+        if (auto missingCachedResourceIdentifier = applyImageBufferItem<ClipToImageBuffer>(m_context, m_resourceHeap, item))
             return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
-        return { std::nullopt, std::nullopt };
-    }
+        return { };
 
-    if (item.is<ClipToImageBuffer>()) {
-        if (auto missingCachedResourceIdentifier = applyImageBufferItem<ClipToImageBuffer>(context(), m_imageBuffers, item, m_delegate))
+    case ItemType::DrawGlyphs: {
+        if (auto missingCachedResourceIdentifier = applyDrawGlyphs(m_context, m_resourceHeap, item.get<DrawGlyphs>()))
             return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
-        return { std::nullopt, std::nullopt };
+        return { };
     }
 
-    if (item.is<DrawNativeImage>()) {
-        if (auto missingCachedResourceIdentifier = applyNativeImageItem<DrawNativeImage>(context(), m_nativeImages, item, m_delegate))
+    case ItemType::DrawDecomposedGlyphs: {
+        if (auto missingCachedResourceIdentifier = applyDrawDecomposedGlyphs(m_context, m_resourceHeap, item.get<DrawDecomposedGlyphs>()))
             return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
-        return { std::nullopt, std::nullopt };
+        return { };
     }
 
-    if (item.is<DrawGlyphs>()) {
-        if (auto missingCachedResourceIdentifier = applyFontItem<DrawGlyphs>(context(), m_fonts, item, m_delegate))
+    case ItemType::DrawImageBuffer:
+        if (auto missingCachedResourceIdentifier = applyImageBufferItem<DrawImageBuffer>(m_context, m_resourceHeap, item))
             return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
-        return { std::nullopt, std::nullopt };
-    }
+        return { };
 
-    if (item.is<DrawPattern>()) {
-        if (auto missingCachedResourceIdentifier = applyNativeImageItem<DrawPattern>(context(), m_nativeImages, item, m_delegate))
+    case ItemType::DrawNativeImage:
+        if (auto missingCachedResourceIdentifier = applyNativeImageItem<DrawNativeImage>(m_context, m_resourceHeap, item))
             return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
-        return { std::nullopt, std::nullopt };
-    }
+        return { };
 
-    if (item.is<SetState>()) {
-        if (auto missingCachedResourceIdentifier = applySetStateItem(context(), m_nativeImages, item, m_delegate))
+    case ItemType::DrawPattern:
+        if (auto missingCachedResourceIdentifier = applySourceImageItem<DrawPattern>(m_context, m_resourceHeap, item))
             return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
-        return { std::nullopt, std::nullopt };
+        return { };
+
+    case ItemType::SetState:
+        if (auto missingCachedResourceIdentifier = applySetStateItem(m_context, m_resourceHeap, item))
+            return { StopReplayReason::MissingCachedResource, WTFMove(missingCachedResourceIdentifier) };
+        return { };
+
+    default:
+        item.apply(m_context);
+        return { };
     }
 
-    if (item.is<BeginClipToDrawingCommands>()) {
-        if (m_maskImageBuffer)
-            return { StopReplayReason::InvalidItemOrExtent, std::nullopt };
-        auto& clipItem = item.get<BeginClipToDrawingCommands>();
-        m_maskImageBuffer = ImageBuffer::createCompatibleBuffer(clipItem.destination().size(), clipItem.colorSpace(), m_context);
-        if (!m_maskImageBuffer)
-            return { StopReplayReason::OutOfMemory, std::nullopt };
-        if (m_delegate)
-            m_delegate->didCreateMaskImageBuffer(*m_maskImageBuffer);
-        return { std::nullopt, std::nullopt };
-    }
-
-    if (item.is<EndClipToDrawingCommands>()) {
-        if (!m_maskImageBuffer)
-            return { StopReplayReason::InvalidItemOrExtent, std::nullopt };
-        auto& clipItem = item.get<EndClipToDrawingCommands>();
-        m_context.clipToImageBuffer(*m_maskImageBuffer, clipItem.destination());
-        m_maskImageBuffer = nullptr;
-        if (m_delegate)
-            m_delegate->didResetMaskImageBuffer();
-        return { std::nullopt, std::nullopt };
-    }
-
-    item.apply(context());
-    return { std::nullopt, std::nullopt };
+    return { };
 }
 
 ReplayResult Replayer::replay(const FloatRect& initialClip, bool trackReplayList)
@@ -216,36 +200,21 @@ ReplayResult Replayer::replay(const FloatRect& initialClip, bool trackReplayList
             break;
         }
 
-        auto [item, extent, itemSizeInBuffer] = displayListItem.value();
-
-        if (!initialClip.isZero() && extent && !extent->intersects(initialClip)) {
-            LOG_WITH_STREAM(DisplayLists, stream << "skipping " << i++ << " " << item);
-            result.numberOfBytesRead += itemSizeInBuffer;
-            continue;
-        }
+        auto [item, itemSizeInBuffer] = displayListItem.value();
 
         LOG_WITH_STREAM(DisplayLists, stream << "applying " << i++ << " " << item);
 
-        if (item.is<MetaCommandChangeDestinationImageBuffer>()) {
-            result.numberOfBytesRead += itemSizeInBuffer;
-            result.reasonForStopping = StopReplayReason::ChangeDestinationImageBuffer;
-            result.nextDestinationImageBuffer = item.get<MetaCommandChangeDestinationImageBuffer>().identifier();
-            break;
-        }
-
-        if (auto [reasonForStopping, missingCachedResourceIdentifier] = applyItem(item); reasonForStopping) {
-            result.reasonForStopping = *reasonForStopping;
-            result.missingCachedResourceIdentifier = WTFMove(missingCachedResourceIdentifier);
+        auto applyResult = applyItem(item);
+        if (applyResult.stopReason) {
+            result.reasonForStopping = *applyResult.stopReason;
+            result.missingCachedResourceIdentifier = WTFMove(applyResult.resourceIdentifier);
             break;
         }
 
         result.numberOfBytesRead += itemSizeInBuffer;
 
-        if (UNLIKELY(trackReplayList)) {
+        if (UNLIKELY(trackReplayList))
             replayList->append(item);
-            if (item.isDrawingItem())
-                replayList->addDrawingItemExtent(WTFMove(extent));
-        }
     }
 
     result.trackedDisplayList = WTFMove(replayList);

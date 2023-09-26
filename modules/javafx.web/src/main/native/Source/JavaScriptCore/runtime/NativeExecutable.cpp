@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,18 +26,25 @@
 #include "config.h"
 #include "NativeExecutable.h"
 
+#include "Debugger.h"
 #include "ExecutableBaseInlines.h"
 #include "JSCInlines.h"
+#include "VMInlines.h"
 
 namespace JSC {
 
-const ClassInfo NativeExecutable::s_info = { "NativeExecutable", &ExecutableBase::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(NativeExecutable) };
+const ClassInfo NativeExecutable::s_info = { "NativeExecutable"_s, &ExecutableBase::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(NativeExecutable) };
 
-NativeExecutable* NativeExecutable::create(VM& vm, Ref<JITCode>&& callThunk, TaggedNativeFunction function, Ref<JITCode>&& constructThunk, TaggedNativeFunction constructor, const String& name)
+NativeExecutable* NativeExecutable::create(VM& vm, Ref<JITCode>&& callThunk, TaggedNativeFunction function, Ref<JITCode>&& constructThunk, TaggedNativeFunction constructor, ImplementationVisibility implementationVisibility, const String& name)
 {
     NativeExecutable* executable;
-    executable = new (NotNull, allocateCell<NativeExecutable>(vm.heap)) NativeExecutable(vm, function, constructor);
+    executable = new (NotNull, allocateCell<NativeExecutable>(vm)) NativeExecutable(vm, function, constructor, implementationVisibility);
     executable->finishCreation(vm, WTFMove(callThunk), WTFMove(constructThunk), name);
+
+    vm.forEachDebugger([&] (Debugger& debugger) {
+        debugger.didCreateNativeExecutable(*executable);
+    });
+
     return executable;
 }
 
@@ -60,16 +67,17 @@ void NativeExecutable::finishCreation(VM& vm, Ref<JITCode>&& callThunk, Ref<JITC
     m_jitCodeForConstructWithArityCheck = m_jitCodeForConstruct->addressForCall(MustCheckArity);
     m_name = name;
 
-    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCall->addressForCall(ArityCheckNotRequired).executableAddress());
-    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstruct->addressForCall(ArityCheckNotRequired).executableAddress());
-    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCallWithArityCheck.executableAddress());
-    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstructWithArityCheck.executableAddress());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCall->addressForCall(ArityCheckNotRequired).taggedPtr());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstruct->addressForCall(ArityCheckNotRequired).taggedPtr());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForCallWithArityCheck.taggedPtr());
+    assertIsTaggedWith<JSEntryPtrTag>(m_jitCodeForConstructWithArityCheck.taggedPtr());
 }
 
-NativeExecutable::NativeExecutable(VM& vm, TaggedNativeFunction function, TaggedNativeFunction constructor)
+NativeExecutable::NativeExecutable(VM& vm, TaggedNativeFunction function, TaggedNativeFunction constructor, ImplementationVisibility implementationVisibility)
     : ExecutableBase(vm, vm.nativeExecutableStructure.get())
     , m_function(function)
     , m_constructor(constructor)
+    , m_implementationVisibility(static_cast<unsigned>(implementationVisibility))
 {
 }
 

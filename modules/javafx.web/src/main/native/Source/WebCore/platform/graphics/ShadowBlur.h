@@ -38,7 +38,7 @@ namespace WebCore {
 
 class AffineTransform;
 class GraphicsContext;
-struct GraphicsContextState;
+struct DropShadow;
 class ImageBuffer;
 
 class ShadowBlur {
@@ -52,7 +52,7 @@ public:
 
     ShadowBlur();
     ShadowBlur(const FloatSize& radius, const FloatSize& offset, const Color&, bool shadowsIgnoreTransforms = false);
-    ShadowBlur(const GraphicsContextState&);
+    ShadowBlur(const DropShadow&, bool shadowsIgnoreTransforms = false);
 
     void setShadowValues(const FloatSize&, const FloatSize& , const Color&, bool ignoreTransforms = false);
 
@@ -62,11 +62,11 @@ public:
     void drawRectShadow(GraphicsContext&, const FloatRoundedRect&);
     void drawInsetShadow(GraphicsContext&, const FloatRect&, const FloatRoundedRect& holeRect);
 
-    using DrawBufferCallback = WTF::Function<void(ImageBuffer&, const FloatPoint&, const FloatSize&)>;
-    using DrawImageCallback = WTF::Function<void(ImageBuffer&, const FloatRect&, const FloatRect&)>;
-    using FillRectCallback = WTF::Function<void(const FloatRect&, const Color&)>;
-    using FillRectWithHoleCallback = WTF::Function<void(const FloatRect&, const FloatRect&, const Color&)>;
-    using DrawShadowCallback = WTF::Function<void(GraphicsContext&)>;
+    using DrawBufferCallback = Function<void(ImageBuffer&, const FloatPoint&, const FloatSize&)>;
+    using DrawImageCallback = Function<void(ImageBuffer&, const FloatRect&, const FloatRect&)>;
+    using FillRectCallback = Function<void(const FloatRect&, const Color&)>;
+    using FillRectWithHoleCallback = Function<void(const FloatRect&, const FloatRect&, const Color&)>;
+    using DrawShadowCallback = Function<void(GraphicsContext&)>;
 
     // DrawBufferCallback is for drawing shadow without tiling.
     // DrawImageCallback and FillRectCallback is for drawing shadow with tiling.

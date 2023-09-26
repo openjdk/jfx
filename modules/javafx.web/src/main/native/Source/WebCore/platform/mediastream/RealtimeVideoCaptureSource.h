@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "ImageBuffer.h"
-#include "MediaSample.h"
 #include "RealtimeMediaSource.h"
 #include "VideoPreset.h"
 #include <wtf/Lock.h>
@@ -38,6 +37,8 @@ namespace WebCore {
 
 class ImageTransferSessionVT;
 
+enum class VideoFrameRotation : uint16_t;
+
 class WEBCORE_EXPORT RealtimeVideoCaptureSource : public RealtimeMediaSource {
 public:
     virtual ~RealtimeVideoCaptureSource();
@@ -46,17 +47,18 @@ public:
 
     bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
     virtual void generatePresets() = 0;
-    virtual MediaSample::VideoRotation sampleRotation() const { return MediaSample::VideoRotation::None; }
+    virtual VideoFrameRotation videoFrameRotation() const;
 
     double observedFrameRate() const { return m_observedFrameRate; }
     Vector<VideoPresetData> presetsData();
 
     void ensureIntrinsicSizeMaintainsAspectRatio();
 
-protected:
-    RealtimeVideoCaptureSource(String&& name, String&& id, String&& hashSalt);
+    const VideoPreset* currentPreset() const { return m_currentPreset.get(); }
 
-    void prepareToProduceData();
+protected:
+    RealtimeVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, PageIdentifier);
+
     void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
 
     virtual bool prefersPreset(VideoPreset&) { return true; }
@@ -72,8 +74,9 @@ protected:
 
     void updateCapabilities(RealtimeMediaSourceCapabilities&);
 
-    void dispatchMediaSampleToObservers(MediaSample&);
-    const Vector<IntSize>& standardVideoSizes();
+    void dispatchVideoFrameToObservers(VideoFrame&, VideoFrameTimeMetadata);
+
+    static Span<const IntSize> standardVideoSizes();
 
 private:
     struct CaptureSizeAndFrameRate {
@@ -89,6 +92,7 @@ private:
     const char* logClassName() const override { return "RealtimeVideoCaptureSource"; }
 #endif
 
+    RefPtr<VideoPreset> m_currentPreset;
     Vector<Ref<VideoPreset>> m_presets;
     Deque<double> m_observedFrameTimeStamps;
     double m_observedFrameRate { 0 };

@@ -24,7 +24,9 @@
 
 #pragma once
 
+#include "CommonAtomStrings.h"
 #include "QualifiedName.h"
+#include <wtf/Hasher.h>
 
 namespace WebCore {
 
@@ -74,6 +76,11 @@ private:
     AtomString m_value;
 };
 
+inline void add(Hasher& hasher, const Attribute& attribute)
+{
+    add(hasher, attribute.name(), attribute.value());
+}
+
 inline bool Attribute::nameMatchesFilter(const QualifiedName& name, const AtomString& filterPrefix, const AtomString& filterLocalName, const AtomString& filterNamespaceURI)
 {
     if (filterLocalName != name.localName())
@@ -87,3 +94,10 @@ inline bool Attribute::matches(const AtomString& prefix, const AtomString& local
 }
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<>
+struct VectorTraits<WebCore::Attribute> : SimpleClassVectorTraits { };
+
+} // namespace WTF

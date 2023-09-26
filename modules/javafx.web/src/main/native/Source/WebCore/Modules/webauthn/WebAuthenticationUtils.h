@@ -28,12 +28,17 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "AttestationConveyancePreference.h"
+#include "BufferSource.h"
 #include "CBORValue.h"
+#include "SecurityOrigin.h"
+#include "WebAuthenticationConstants.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 WEBCORE_EXPORT Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t length);
+
+WEBCORE_EXPORT Vector<uint8_t> convertArrayBufferToVector(ArrayBuffer*);
 
 // Produce a SHA-256 hash of the given RP ID.
 WEBCORE_EXPORT Vector<uint8_t> produceRpIdHash(const String& rpId);
@@ -46,9 +51,21 @@ WEBCORE_EXPORT Vector<uint8_t> buildAttestedCredentialData(const Vector<uint8_t>
 // https://www.w3.org/TR/webauthn/#sec-authenticator-data
 WEBCORE_EXPORT Vector<uint8_t> buildAuthData(const String& rpId, const uint8_t flags, const uint32_t counter, const Vector<uint8_t>& optionalAttestedCredentialData);
 
+WEBCORE_EXPORT cbor::CBORValue::MapValue buildAttestationMap(Vector<uint8_t>&&, String&&, cbor::CBORValue::MapValue&&, const AttestationConveyancePreference&);
+
+WEBCORE_EXPORT cbor::CBORValue::MapValue buildCredentialDescriptor(const Vector<uint8_t>& credentialId);
+
 // https://www.w3.org/TR/webauthn/#attestation-object
 WEBCORE_EXPORT Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference&);
 
+WEBCORE_EXPORT Ref<ArrayBuffer> buildClientDataJson(ClientDataType /*type*/, const BufferSource& challenge, const SecurityOrigin& /*origin*/, WebAuthn::Scope);
+
+WEBCORE_EXPORT Vector<uint8_t> buildClientDataJsonHash(const ArrayBuffer& clientDataJson);
+
+WEBCORE_EXPORT cbor::CBORValue::MapValue buildUserEntityMap(const Vector<uint8_t>& userId, const String& name, const String& displayName);
+
+// encodeRawPublicKey takes X & Y and returns them as a 0x04 || X || Y byte array.
+WEBCORE_EXPORT Vector<uint8_t> encodeRawPublicKey(const Vector<uint8_t>& X, const Vector<uint8_t>& Y);
 } // namespace WebCore
 
 #endif // ENABLE(WEB_AUTHN)

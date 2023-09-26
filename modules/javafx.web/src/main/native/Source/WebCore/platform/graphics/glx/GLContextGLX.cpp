@@ -20,11 +20,17 @@
 #include "GLContextGLX.h"
 
 #if USE(GLX)
-#include "OpenGLShims.h"
+
 #include "PlatformDisplayX11.h"
 #include "XErrorTrapper.h"
-#include <GL/glx.h>
 #include <cairo.h>
+
+#if USE(LIBEPOXY)
+#include <epoxy/glx.h>
+#else
+#include "OpenGLShims.h"
+#include <GL/glx.h>
+#endif
 
 namespace WebCore {
 
@@ -394,7 +400,7 @@ void GLContextGLX::swapInterval(int interval)
     glXSwapIntervalSGI(interval);
 }
 
-PlatformGraphicsContextGL GLContextGLX::platformContext()
+GCGLContext GLContextGLX::platformContext()
 {
     return m_context.get();
 }

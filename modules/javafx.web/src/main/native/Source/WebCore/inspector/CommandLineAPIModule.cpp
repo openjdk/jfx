@@ -26,8 +26,8 @@
 #include "config.h"
 #include "CommandLineAPIModule.h"
 
-#include "CommandLineAPIModuleSource.h"
 #include "JSDOMGlobalObject.h"
+#include "WebCoreJSBuiltinInternals.h"
 #include "WebInjectedScriptManager.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/InjectedScript.h>
@@ -48,9 +48,14 @@ CommandLineAPIModule::CommandLineAPIModule()
 {
 }
 
-String CommandLineAPIModule::source() const
+JSFunction* CommandLineAPIModule::injectModuleFunction(JSC::JSGlobalObject* lexicalGlobalObject) const
 {
-    return StringImpl::createWithoutCopying(CommandLineAPIModuleSource_js, sizeof(CommandLineAPIModuleSource_js));
+    if (auto* globalObject = jsCast<JSDOMGlobalObject*>(lexicalGlobalObject))
+        return globalObject->builtinInternalFunctions().commandLineAPIModuleSource().m_injectModuleFunction.get();
+
+    WTFLogAlways("Attempted to get `injectModule` function from `CommandLineAPIModule` for non-`JSDOMGlobalObject`.");
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 JSValue CommandLineAPIModule::host(InjectedScriptManager* injectedScriptManager, JSGlobalObject* lexicalGlobalObject) const

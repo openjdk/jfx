@@ -39,7 +39,7 @@ class ApplicationCacheGroup;
 class ApplicationCacheHost;
 class ApplicationCacheResource;
 class SecurityOrigin;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 template<typename> class StorageIDJournal;
 
 class ApplicationCacheStorage : public RefCounted<ApplicationCacheStorage> {
@@ -56,6 +56,7 @@ public:
     }
 
 
+    const String& cacheDirectory() const { return m_cacheDirectory; }
     WEBCORE_EXPORT void setMaximumSize(int64_t size);
     WEBCORE_EXPORT int64_t maximumSize() const;
     bool isMaximumSizeReached() const;
@@ -122,7 +123,7 @@ private:
     bool ensureOriginRecord(const SecurityOrigin*);
     static bool shouldStoreResourceAsFlatFile(ApplicationCacheResource*);
     void deleteTables();
-    bool writeDataToUniqueFileInDirectory(SharedBuffer&, const String& directory, String& outFilename, const String& fileExtension);
+    bool writeDataToUniqueFileInDirectory(FragmentedSharedBuffer&, const String& directory, String& outFilename, StringView fileExtension);
 
     void loadManifestHostHashes();
 
@@ -154,7 +155,7 @@ private:
 
     HashMap<String, ApplicationCacheGroup*> m_cachesInMemory; // Excludes obsolete cache groups.
 
-    friend class WTF::NeverDestroyed<ApplicationCacheStorage>;
+    friend class NeverDestroyed<ApplicationCacheStorage>;
 };
 
 } // namespace WebCore

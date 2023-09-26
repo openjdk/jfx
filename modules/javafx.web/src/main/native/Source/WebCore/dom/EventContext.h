@@ -91,6 +91,7 @@ private:
     int m_closedShadowDepth { 0 };
     bool m_currentTargetIsInShadowTree { false };
     bool m_contextNodeIsFormElement { false };
+    bool m_relatedTargetIsSet { false };
     Type m_type { Type::Normal };
 };
 
@@ -112,14 +113,14 @@ inline EventContext::EventContext(Type type, Node* node, RefPtr<EventTarget>&& c
 }
 
 inline EventContext::EventContext(Type type, Node* node, EventTarget* currentTarget, EventTarget* origin, int closedShadowDepth)
-    : EventContext(type, node, makeRefPtr(currentTarget), origin, closedShadowDepth)
+    : EventContext(type, node, RefPtr { currentTarget }, origin, closedShadowDepth)
 {
     ASSERT(!is<Node>(currentTarget));
 }
 
 // This variant avoids calling EventTarget::ref() which is a virtual function call.
 inline EventContext::EventContext(Type type, Node& node, Node* currentTarget, EventTarget* origin, int closedShadowDepth)
-    : EventContext(type, &node, makeRefPtr(currentTarget), origin, closedShadowDepth, currentTarget && currentTarget->isInShadowTree())
+    : EventContext(type, &node, RefPtr { currentTarget }, origin, closedShadowDepth, currentTarget && currentTarget->isInShadowTree())
 {
     m_contextNodeIsFormElement = is<HTMLFormElement>(node);
 }
@@ -128,6 +129,7 @@ inline void EventContext::setRelatedTarget(Node* relatedTarget)
 {
     ASSERT(!isUnreachableNode(relatedTarget));
     m_relatedTarget = relatedTarget;
+    m_relatedTargetIsSet = true;
 }
 
 #if ENABLE(TOUCH_EVENTS)

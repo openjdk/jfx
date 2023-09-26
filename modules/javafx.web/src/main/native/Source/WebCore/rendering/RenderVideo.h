@@ -38,7 +38,7 @@ public:
     RenderVideo(HTMLVideoElement&, RenderStyle&&);
     virtual ~RenderVideo();
 
-    HTMLVideoElement& videoElement() const;
+    WEBCORE_EXPORT HTMLVideoElement& videoElement() const;
 
     WEBCORE_EXPORT IntRect videoBox() const;
 
@@ -53,6 +53,9 @@ public:
     bool failedToLoadPosterImage() const;
 
     void updateFromElement() final;
+    bool hasVideoMetadata() const;
+    bool hasPosterFrameSize() const;
+    bool hasDefaultObjectSize() const;
 
 private:
     void willBeDestroyed() override;
@@ -64,7 +67,7 @@ private:
 
     void imageChanged(WrappedImagePtr, const IntRect*) final;
 
-    const char* renderName() const final { return "RenderVideo"; }
+    ASCIILiteral renderName() const final { return "RenderVideo"_s; }
 
     bool requiresLayer() const final { return true; }
     bool isVideo() const final { return true; }
@@ -77,13 +80,6 @@ private:
 
     LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const final;
     LayoutUnit minimumReplacedHeight() const final;
-
-#if ENABLE(FULLSCREEN_API)
-    LayoutUnit offsetLeft() const final;
-    LayoutUnit offsetTop() const final;
-    LayoutUnit offsetWidth() const final;
-    LayoutUnit offsetHeight() const final;
-#endif
 
     void updatePlayer();
 

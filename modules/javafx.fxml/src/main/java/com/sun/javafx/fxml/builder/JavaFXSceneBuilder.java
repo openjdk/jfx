@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public class JavaFXSceneBuilder implements Builder<Scene> {
     private double width = -1;
     private double height = -1;
     private Paint fill = Color.WHITE;
-    private ArrayList<String> stylesheets = new ArrayList<String>();
+    private ArrayList<String> stylesheets = new ArrayList<>();
 
     public Parent getRoot() {
         return root;

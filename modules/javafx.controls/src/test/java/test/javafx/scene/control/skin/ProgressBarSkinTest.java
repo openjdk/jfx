@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,8 +64,8 @@ public class ProgressBarSkinTest {
      * Helper method to init the stage only if really needed.
      */
     private void initStage() {
-        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();

@@ -56,7 +56,7 @@
 #include "IDBTransaction.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
-#include "ScriptState.h"
+#include "JSDOMWindowCustom.h"
 #include "SecurityOrigin.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 #include <JavaScriptCore/HeapInlines.h>
@@ -103,7 +103,7 @@ public:
     void handleEvent(ScriptExecutionContext&, Event& event) final
     {
         if (event.type() != eventNames().successEvent) {
-            m_executableWithDatabase->requestCallback().sendFailure("Unexpected event type.");
+            m_executableWithDatabase->requestCallback().sendFailure("Unexpected event type."_s);
             return;
         }
 
@@ -111,17 +111,17 @@ public:
 
         auto result = request.result();
         if (result.hasException()) {
-            m_executableWithDatabase->requestCallback().sendFailure("Could not get result in callback.");
+            m_executableWithDatabase->requestCallback().sendFailure("Could not get result in callback."_s);
             return;
         }
 
         auto resultValue = result.releaseReturnValue();
-        if (!WTF::holds_alternative<RefPtr<IDBDatabase>>(resultValue)) {
-            m_executableWithDatabase->requestCallback().sendFailure("Unexpected result type.");
+        if (!std::holds_alternative<RefPtr<IDBDatabase>>(resultValue)) {
+            m_executableWithDatabase->requestCallback().sendFailure("Unexpected result type."_s);
             return;
         }
 
-        auto databaseResult = WTF::get<RefPtr<IDBDatabase>>(resultValue);
+        auto databaseResult = std::get<RefPtr<IDBDatabase>>(resultValue);
         m_executableWithDatabase->execute(*databaseResult);
         databaseResult->close();
     }
@@ -136,13 +136,13 @@ private:
 void ExecutableWithDatabase::start(IDBFactory* idbFactory, SecurityOrigin*, const String& databaseName)
 {
     if (!context()) {
-        requestCallback().sendFailure("Could not open database.");
+        requestCallback().sendFailure("Could not open database."_s);
         return;
     }
 
     auto result = idbFactory->open(*context(), databaseName, std::nullopt);
     if (result.hasException()) {
-        requestCallback().sendFailure("Could not open database.");
+        requestCallback().sendFailure("Could not open database."_s);
         return;
     }
 
@@ -167,7 +167,7 @@ static Ref<Protocol::IndexedDB::KeyPath> keyPathFromIDBKeyPath(const std::option
         keyPath->setArray(WTFMove(array));
         return keyPath;
     });
-    return WTF::visit(visitor, idbKeyPath.value());
+    return std::visit(visitor, idbKeyPath.value());
 }
 
 static RefPtr<IDBTransaction> transactionForDatabase(IDBDatabase* idbDatabase, const String& objectStoreName, IDBTransactionMode mode = IDBTransactionMode::Readonly)
@@ -349,7 +349,7 @@ public:
     void handleEvent(ScriptExecutionContext& context, Event& event) override
     {
         if (event.type() != eventNames().successEvent) {
-            m_requestCallback->sendFailure("Unexpected event type.");
+            m_requestCallback->sendFailure("Unexpected event type."_s);
             return;
         }
 
@@ -357,21 +357,21 @@ public:
 
         auto result = request.result();
         if (result.hasException()) {
-            m_requestCallback->sendFailure("Could not get result in callback.");
+            m_requestCallback->sendFailure("Could not get result in callback."_s);
             return;
         }
 
         auto resultValue = result.releaseReturnValue();
-        if (!WTF::holds_alternative<RefPtr<IDBCursor>>(resultValue)) {
+        if (!std::holds_alternative<RefPtr<IDBCursor>>(resultValue)) {
             end(false);
             return;
         }
 
-        auto cursor = WTF::get<RefPtr<IDBCursor>>(resultValue);
+        auto cursor = std::get<RefPtr<IDBCursor>>(resultValue);
 
         if (m_skipCount) {
             if (cursor->advance(m_skipCount).hasException())
-                m_requestCallback->sendFailure("Could not advance cursor.");
+                m_requestCallback->sendFailure("Could not advance cursor."_s);
             m_skipCount = 0;
             return;
         }
@@ -383,7 +383,7 @@ public:
 
         // Continue cursor before making injected script calls, otherwise transaction might be finished.
         if (cursor->continueFunction(nullptr).hasException()) {
-            m_requestCallback->sendFailure("Could not continue cursor.");
+            m_requestCallback->sendFailure("Could not continue cursor."_s);
             return;
         }
 
@@ -449,41 +449,36 @@ public:
 
         auto idbTransaction = transactionForDatabase(&database, m_objectStoreName);
         if (!idbTransaction) {
-            m_requestCallback->sendFailure("Could not get transaction");
+            m_requestCallback->sendFailure("Could not get transaction"_s);
             return;
         }
 
         auto idbObjectStore = objectStoreForTransaction(idbTransaction.get(), m_objectStoreName);
         if (!idbObjectStore) {
-            m_requestCallback->sendFailure("Could not get object store");
+            m_requestCallback->sendFailure("Could not get object store"_s);
             return;
         }
 
         TransactionActivator activator(idbTransaction.get());
         RefPtr<IDBRequest> idbRequest;
-        auto* exec = context() ? context()->globalObject() : nullptr;
         if (!m_indexName.isEmpty()) {
             auto idbIndex = indexForObjectStore(idbObjectStore.get(), m_indexName);
             if (!idbIndex) {
-                m_requestCallback->sendFailure("Could not get index");
+                m_requestCallback->sendFailure("Could not get index"_s);
                 return;
             }
 
-            if (exec) {
-                auto result = idbIndex->openCursor(*exec, m_idbKeyRange.get(), IDBCursorDirection::Next);
-                if (!result.hasException())
-                    idbRequest = result.releaseReturnValue();
-            }
+            auto result = idbIndex->openCursor(m_idbKeyRange.get(), IDBCursorDirection::Next);
+            if (!result.hasException())
+                idbRequest = result.releaseReturnValue();
         } else {
-            if (exec) {
-                auto result = idbObjectStore->openCursor(*exec, m_idbKeyRange.get(), IDBCursorDirection::Next);
-                if (!result.hasException())
-                    idbRequest = result.releaseReturnValue();
-            }
+            auto result = idbObjectStore->openCursor(m_idbKeyRange.get(), IDBCursorDirection::Next);
+            if (!result.hasException())
+                idbRequest = result.releaseReturnValue();
         }
 
         if (!idbRequest) {
-            m_requestCallback->sendFailure("Could not open cursor to populate database data");
+            m_requestCallback->sendFailure("Could not open cursor to populate database data"_s);
             return;
         }
 
@@ -622,14 +617,17 @@ void InspectorIndexedDBAgent::requestData(const String& securityOrigin, const St
     if (!getDocumentAndIDBFactoryFromFrameOrSendFailure(frame, document, idbFactory, callback))
         return;
 
-    InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(mainWorldExecState(frame));
-    RefPtr<IDBKeyRange> idbKeyRange = keyRange ? idbKeyRangeFromKeyRange(*keyRange) : nullptr;
-    if (keyRange && !idbKeyRange) {
-        callback->sendFailure("Could not parse key range."_s);
-        return;
+    RefPtr<IDBKeyRange> idbKeyRange;
+    if (keyRange) {
+        idbKeyRange = idbKeyRangeFromKeyRange(*keyRange);
+        if (!idbKeyRange) {
+            callback->sendFailure("Could not parse key range."_s);
+            return;
+        }
     }
 
-    Ref<DataLoader> dataLoader = DataLoader::create(document, WTFMove(callback), injectedScript, objectStoreName, indexName, WTFMove(idbKeyRange), skipCount, pageSize);
+    auto injectedScript = m_injectedScriptManager.injectedScriptFor(&mainWorldGlobalObject(*frame));
+    auto dataLoader = DataLoader::create(document, WTFMove(callback), injectedScript, objectStoreName, indexName, WTFMove(idbKeyRange), skipCount, pageSize);
     dataLoader->start(idbFactory, &document->securityOrigin(), databaseName);
 }
 
@@ -655,7 +653,7 @@ public:
         if (!m_requestCallback->isActive())
             return;
         if (event.type() != eventNames().completeEvent) {
-            m_requestCallback->sendFailure("Unexpected event type.");
+            m_requestCallback->sendFailure("Unexpected event type."_s);
             return;
         }
 
@@ -692,26 +690,22 @@ public:
 
         auto idbTransaction = transactionForDatabase(&database, m_objectStoreName, IDBTransactionMode::Readwrite);
         if (!idbTransaction) {
-            m_requestCallback->sendFailure("Could not get transaction");
+            m_requestCallback->sendFailure("Could not get transaction"_s);
             return;
         }
 
         auto idbObjectStore = objectStoreForTransaction(idbTransaction.get(), m_objectStoreName);
         if (!idbObjectStore) {
-            m_requestCallback->sendFailure("Could not get object store");
+            m_requestCallback->sendFailure("Could not get object store"_s);
             return;
         }
 
         TransactionActivator activator(idbTransaction.get());
-        RefPtr<IDBRequest> idbRequest;
-        if (auto* exec = context() ? context()->globalObject() : nullptr) {
-            auto result = idbObjectStore->clear(*exec);
-            ASSERT(!result.hasException());
-            if (result.hasException()) {
-                m_requestCallback->sendFailure(makeString("Could not clear object store '", m_objectStoreName, "': ", static_cast<int>(result.releaseException().code())));
-                return;
-            }
-            idbRequest = result.releaseReturnValue();
+        auto result = idbObjectStore->clear();
+        ASSERT(!result.hasException());
+        if (result.hasException()) {
+            m_requestCallback->sendFailure(makeString("Could not clear object store '", m_objectStoreName, "': ", static_cast<int>(result.releaseException().code())));
+            return;
         }
 
         idbTransaction->addEventListener(eventNames().completeEvent, ClearObjectStoreListener::create(m_requestCallback.copyRef()), false);

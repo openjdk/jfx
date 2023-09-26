@@ -105,7 +105,8 @@ WebXRRigidTransform::WebXRRigidTransform(const TransformationMatrix& transform)
     }
 
     TransformationMatrix::Decomposed4Type decomp = { };
-    transform.decompose4(decomp);
+    if (!transform.decompose4(decomp))
+        return;
 
     m_position = DOMPointReadOnly::create(decomp.translateX, decomp.translateY, decomp.translateZ, 1.0f);
 
@@ -153,7 +154,7 @@ const WebXRRigidTransform& WebXRRigidTransform::inverse()
 
     m_inverse = WebXRRigidTransform::create(*inverseTransform);
     // The inverse of a inverse object should return the original object.
-    m_inverse->m_parentInverse = makeWeakPtr(this);
+    m_inverse->m_parentInverse = *this;
 
     return *m_inverse;
 }

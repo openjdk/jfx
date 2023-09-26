@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,14 +27,14 @@
 typedef (
 #if defined(ENABLE_WEBGL) && ENABLE_WEBGL
     WebGLRenderingContext or
-#endif
-#if defined(ENABLE_WEBGL2) && ENABLE_WEBGL2
     WebGL2RenderingContext or
 #endif
+    GPUCanvasContext or
     ImageBitmapRenderingContext or 
     CanvasRenderingContext2D) RenderingContext;
 
 [
+    ExportMacro=WEBCORE_EXPORT,
     ActiveDOMObject,
     JSCustomMarkFunction,
     JSGenerateToNativeObject,
@@ -45,11 +45,11 @@ typedef (
     [CEReactions=NotNeeded, CallTracer=InspectorCanvasCallTracer] attribute unsigned long width;
     [CEReactions=NotNeeded, CallTracer=InspectorCanvasCallTracer] attribute unsigned long height;
 
-    [CallWith=GlobalObject] RenderingContext? getContext(DOMString contextId, any... arguments);
+    [CallWith=CurrentGlobalObject] RenderingContext? getContext(DOMString contextId, any... arguments);
 
     DOMString toDataURL(optional DOMString type, optional any quality);
-    [CallWith=ScriptExecutionContext] undefined toBlob(BlobCallback callback, optional DOMString type, optional any quality);
-    [Conditional=OFFSCREEN_CANVAS, EnabledAtRuntime=OffscreenCanvas, CallWith=ScriptExecutionContext] OffscreenCanvas transferControlToOffscreen();
+    undefined toBlob(BlobCallback callback, optional DOMString type, optional any quality);
+    [Conditional=OFFSCREEN_CANVAS, EnabledBySetting=OffscreenCanvasEnabled, NewObject] OffscreenCanvas transferControlToOffscreen();
 
-    [Conditional=MEDIA_STREAM, CallWith=Document, NewObject] MediaStream captureStream(optional double frameRequestRate);
+    [Conditional=MEDIA_STREAM, NewObject] MediaStream captureStream(optional double frameRequestRate);
 };

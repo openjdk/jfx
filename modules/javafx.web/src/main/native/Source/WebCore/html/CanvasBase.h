@@ -28,13 +28,16 @@
 #include "IntSize.h"
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
 class AffineTransform;
 class CanvasBase;
+class CanvasObserver;
 class CanvasRenderingContext;
 class Element;
+class GraphicsClient;
 class GraphicsContext;
 class GraphicsContextStateSaver;
 class Image;
@@ -42,16 +45,13 @@ class ImageBuffer;
 class FloatRect;
 class ScriptExecutionContext;
 class SecurityOrigin;
+class WebCoreOpaqueRoot;
 
-class CanvasObserver {
+class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
 public:
-    virtual ~CanvasObserver() = default;
+    virtual ~CanvasDisplayBufferObserver() = default;
 
-    virtual bool isCanvasObserverProxy() const { return false; }
-
-    virtual void canvasChanged(CanvasBase&, const std::optional<FloatRect>& changedRect) = 0;
-    virtual void canvasResized(CanvasBase&) = 0;
-    virtual void canvasDestroyed(CanvasBase&) = 0;
+    virtual void canvasDisplayBufferPrepared(CanvasBase&) = 0;
 };
 
 class CanvasBase {
@@ -60,6 +60,8 @@ public:
 
     virtual void refCanvasBase() = 0;
     virtual void derefCanvasBase() = 0;
+    void ref() { refCanvasBase(); }
+    void deref() { derefCanvasBase(); }
 
     virtual bool isHTMLCanvasElement() const { return false; }
     virtual bool isOffscreenCanvas() const { return false; }
@@ -70,6 +72,8 @@ public:
     const IntSize& size() const { return m_size; }
 
     ImageBuffer* buffer() const;
+
+    virtual void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) { }
 
     virtual AffineTransform baseTransform() const;
 
@@ -92,11 +96,17 @@ public:
     void notifyObserversCanvasChanged(const std::optional<FloatRect>&);
     void notifyObserversCanvasResized();
     void notifyObserversCanvasDestroyed(); // Must be called in destruction before clearing m_context.
+    void addDisplayBufferObserver(CanvasDisplayBufferObserver&);
+    void removeDisplayBufferObserver(CanvasDisplayBufferObserver&);
+    void notifyObserversCanvasDisplayBufferPrepared();
+    bool hasDisplayBufferObservers() const { return !m_displayBufferObservers.isEmptyIgnoringNullReferences(); }
 
     HashSet<Element*> cssCanvasClients() const;
 
     virtual GraphicsContext* drawingContext() const;
     virtual GraphicsContext* existingDrawingContext() const;
+
+    GraphicsClient* graphicsClient() const;
 
     virtual void didDraw(const std::optional<FloatRect>&) = 0;
 
@@ -104,6 +114,13 @@ public:
     virtual void clearCopiedImage() const = 0;
 
     bool hasActiveInspectorCanvasCallTracer() const;
+
+    bool shouldAccelerate(const IntSize&) const;
+    bool shouldAccelerate(unsigned area) const;
+
+    WEBCORE_EXPORT static size_t maxActivePixelMemory();
+    WEBCORE_EXPORT static void setMaxPixelMemoryForTesting(std::optional<size_t>);
+    WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
 
 protected:
     explicit CanvasBase(IntSize);
@@ -118,6 +135,8 @@ protected:
 
     void resetGraphicsContextState() const;
 
+    RefPtr<ImageBuffer> allocateImageBuffer(bool usesDisplayListDrawing, bool avoidBackendSizeCheckForTesting) const;
+
 private:
     virtual void createImageBuffer() const { }
 
@@ -131,8 +150,11 @@ private:
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };
 #endif
-    HashSet<CanvasObserver*> m_observers;
+    WeakHashSet<CanvasObserver> m_observers;
+    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
 };
+
+WebCoreOpaqueRoot root(CanvasBase*);
 
 } // namespace WebCore
 

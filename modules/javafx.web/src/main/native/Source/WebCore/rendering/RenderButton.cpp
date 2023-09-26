@@ -1,5 +1,6 @@
 /**
- * Copyright (C) 2005 Apple Inc.
+ * Copyright (C) 2005-2022 Apple Inc.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -66,7 +67,7 @@ bool RenderButton::hasLineIfEmpty() const
 void RenderButton::setInnerRenderer(RenderBlock& innerRenderer)
 {
     ASSERT(!m_inner.get());
-    m_inner = makeWeakPtr(innerRenderer);
+    m_inner = innerRenderer;
     updateAnonymousChildStyle(m_inner->mutableStyle());
 }
 
@@ -103,7 +104,7 @@ void RenderButton::setText(const String& str)
 
     if (!m_buttonText) {
         auto newButtonText = createRenderer<RenderTextFragment>(document(), str);
-        m_buttonText = makeWeakPtr(*newButtonText);
+        m_buttonText = *newButtonText;
         // FIXME: This mutation should go through the normal RenderTreeBuilder path.
         if (RenderTreeBuilder::current())
             RenderTreeBuilder::current()->attach(*this, WTFMove(newButtonText));
@@ -150,7 +151,7 @@ static LayoutUnit synthesizedBaselineFromContentBox(const RenderBox& box, LineDi
 
 LayoutUnit RenderButton::baselinePosition(FontBaseline fontBaseline, bool firstLine, LineDirectionMode direction, LinePositionMode mode) const
 {
-    if (shouldApplyLayoutContainment(*this))
+    if (shouldApplyLayoutContainment())
         return RenderFlexibleBox::baselinePosition(fontBaseline, firstLine, direction, mode);
     // We cannot rely on RenderFlexibleBox::baselinePosition() because of flexboxes have some special behavior
     // regarding baselines that shouldn't apply to buttons.
@@ -168,5 +169,11 @@ void RenderButton::layout()
     RenderThemeIOS::adjustRoundBorderRadius(mutableStyle(), *this);
 }
 #endif
+
+// Only clip overflow on input elements, to match other browsers.
+bool RenderButton::hasControlClip() const
+{
+    return is<HTMLInputElement>(formControlElement());
+}
 
 } // namespace WebCore

@@ -39,10 +39,16 @@ namespace WebCore {
 // N bytes : CueSettingsBox : box : optional
 // N bytes : CuePayloadBox : box : required
 
-class WEBCORE_EXPORT ISOWebVTTCue final : public ISOBox {
+class ISOWebVTTCue final : public ISOBox {
 public:
     ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& duration);
-    ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, String&& sourceID, String&& id, String&& originalStartTime, String&& settings, String&& cueText);
+    WEBCORE_EXPORT ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, AtomString&& cueID, String&& cueText, String&& settings = { }, String&& sourceID = { }, String&& originalStartTime = { });
+    ISOWebVTTCue(const ISOWebVTTCue&) = default;
+    WEBCORE_EXPORT ISOWebVTTCue(ISOWebVTTCue&&);
+    WEBCORE_EXPORT ~ISOWebVTTCue();
+
+    ISOWebVTTCue& operator=(const ISOWebVTTCue&) = default;
+    ISOWebVTTCue& operator=(ISOWebVTTCue&&) = default;
 
     static FourCC boxTypeName() { return "vttc"; }
 
@@ -50,7 +56,7 @@ public:
     const MediaTime& duration() const { return m_duration; }
 
     const String& sourceID() const { return m_sourceID; }
-    const String& id() const { return m_identifier; }
+    const AtomString& id() const { return m_identifier; }
     const String& originalStartTime() const { return m_originalStartTime; }
     const String& settings() const { return m_settings; }
     const String& cueText() const { return m_cueText; }
@@ -87,7 +93,7 @@ public:
         if (!sourceID)
             return std::nullopt;
 
-        std::optional<String> identifier;
+        std::optional<AtomString> identifier;
         decoder >> identifier;
         if (!identifier)
             return std::nullopt;
@@ -110,11 +116,11 @@ public:
         return {{
             WTFMove(*presentationTime),
             WTFMove(*duration),
-            WTFMove(*sourceID),
             WTFMove(*identifier),
-            WTFMove(*originalStartTime),
+            WTFMove(*cueText),
             WTFMove(*settings),
-            WTFMove(*cueText)
+            WTFMove(*sourceID),
+            WTFMove(*originalStartTime)
         }};
     }
 
@@ -125,7 +131,7 @@ private:
     MediaTime m_duration;
 
     String m_sourceID;
-    String m_identifier;
+    AtomString m_identifier;
     String m_originalStartTime;
     String m_settings;
     String m_cueText;

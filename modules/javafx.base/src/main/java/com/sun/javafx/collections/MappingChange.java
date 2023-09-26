@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,30 +27,20 @@ package com.sun.javafx.collections;
 
 import java.util.AbstractList;
 import java.util.List;
+import java.util.function.Function;
+
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 
 public final class MappingChange<E, F> extends Change<F>{
-    private final Map<E, F> map;
+    private final Function<E, F> mapper;
     private final Change<? extends E> original;
     private List<F> removed;
 
-    public static final Map NOOP_MAP = new Map() {
-
-        @Override
-        public Object map(Object original) {
-            return original;
-        }
-    };
-
-    public static interface Map<E, F> {
-        F map(E original);
-    }
-
-    public MappingChange(Change<? extends E> original, Map<E, F> map, ObservableList<F> list) {
+    public MappingChange(Change<? extends E> original, Function<E, F> mapper, ObservableList<F> list) {
         super(list);
         this.original = original;
-        this.map = map;
+        this.mapper = mapper;
     }
 
     @Override
@@ -76,11 +66,11 @@ public final class MappingChange<E, F> extends Change<F>{
     @Override
     public List<F> getRemoved() {
         if (removed == null) {
-            removed = new AbstractList<F>() {
+            removed = new AbstractList<>() {
 
                 @Override
                 public F get(int index) {
-                    return map.map(original.getRemoved().get(index));
+                    return mapper.apply(original.getRemoved().get(index));
                 }
 
                 @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,41 +26,49 @@
 #include "config.h"
 #include "MacroAssemblerCodeRef.h"
 
+#include "CodeBlock.h"
 #include "Disassembler.h"
+#include "JITCode.h"
 #include "JSCPtrTag.h"
+#include "WasmCompilationMode.h"
 #include <wtf/StringPrintStream.h>
 
 namespace JSC {
 
-void MacroAssemblerCodePtrBase::dumpWithName(void* executableAddress, void* dataLocation, const char* name, PrintStream& out)
-{
-    if (!executableAddress) {
-        out.print(name, "(null)");
-        return;
-    }
-    if (executableAddress == dataLocation) {
-        out.print(name, "(", RawPointer(executableAddress), ")");
-        return;
-    }
-    out.print(name, "(executable = ", RawPointer(executableAddress), ", dataLocation = ", RawPointer(dataLocation), ")");
-}
-
-bool MacroAssemblerCodeRefBase::tryToDisassemble(MacroAssemblerCodePtr<DisassemblyPtrTag> codePtr, size_t size, const char* prefix, PrintStream& out)
+bool MacroAssemblerCodeRefBase::tryToDisassemble(CodePtr<DisassemblyPtrTag> codePtr, size_t size, const char* prefix, PrintStream& out)
 {
     return JSC::tryToDisassemble(codePtr, size, prefix, out);
 }
 
-bool MacroAssemblerCodeRefBase::tryToDisassemble(MacroAssemblerCodePtr<DisassemblyPtrTag> codePtr, size_t size, const char* prefix)
+bool MacroAssemblerCodeRefBase::tryToDisassemble(CodePtr<DisassemblyPtrTag> codePtr, size_t size, const char* prefix)
 {
     return tryToDisassemble(codePtr, size, prefix, WTF::dataFile());
 }
 
-CString MacroAssemblerCodeRefBase::disassembly(MacroAssemblerCodePtr<DisassemblyPtrTag> codePtr, size_t size)
+CString MacroAssemblerCodeRefBase::disassembly(CodePtr<DisassemblyPtrTag> codePtr, size_t size)
 {
     StringPrintStream out;
     if (!tryToDisassemble(codePtr, size, "", out))
         return CString();
     return out.toCString();
+}
+
+bool shouldDumpDisassemblyFor(CodeBlock* codeBlock)
+{
+    if (codeBlock && JITCode::isOptimizingJIT(codeBlock->jitType()) && Options::dumpDFGDisassembly())
+        return true;
+    return Options::dumpDisassembly();
+}
+
+bool shouldDumpDisassemblyFor(Wasm::CompilationMode mode)
+{
+    if (Options::asyncDisassembly() || Options::dumpDisassembly() || Options::dumpWasmDisassembly())
+        return true;
+    if (Wasm::isAnyBBQ(mode))
+        return Options::dumpBBQDisassembly();
+    if (Wasm::isAnyOMG(mode))
+        return Options::dumpOMGDisassembly();
+    return false;
 }
 
 } // namespace JSC

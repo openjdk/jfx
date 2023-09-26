@@ -38,6 +38,7 @@ class Page;
 class PlatformMouseEvent;
 class PlatformWheelEvent;
 class VoidCallback;
+class WeakPtrImplWithEventTargetData;
 
 class PointerLockController {
     WTF_MAKE_NONCOPYABLE(PointerLockController);
@@ -64,14 +65,22 @@ private:
     void clearElement();
     void enqueueEvent(const AtomString& type, Element*);
     void enqueueEvent(const AtomString& type, Document*);
+    void elementWasRemovedInternal();
+
     Page& m_page;
     bool m_lockPending { false };
     bool m_unlockPending { false };
     bool m_forceCursorVisibleUponUnlock { false };
     RefPtr<Element> m_element;
-    WeakPtr<Document> m_documentOfRemovedElementWhileWaitingForUnlock;
-    WeakPtr<Document> m_documentAllowedToRelockWithoutUserGesture;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_documentOfRemovedElementWhileWaitingForUnlock;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_documentAllowedToRelockWithoutUserGesture;
 };
+
+inline void PointerLockController::elementWasRemoved(Element& element)
+{
+    if (m_element == &element)
+        elementWasRemovedInternal();
+}
 
 } // namespace WebCore
 

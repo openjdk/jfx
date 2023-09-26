@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2020 Sony Interactive Entertainment Inc. All Rights reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +30,6 @@
 #if PLATFORM(COCOA)
 OBJC_CLASS CALayer;
 using PlatformLayer = CALayer;
-#elif PLATFORM(WIN) && USE(CA)
-typedef struct _CACFLayer PlatformLayer;
 #elif PLATFORM(JAVA)
 namespace WebCore {
 class TextureMapperPlatformLayer;
@@ -57,12 +56,12 @@ using PlatformLayer = void*;
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
-using PlatformLayerContainer = WTF::RetainPtr<PlatformLayer>;
+using PlatformLayerContainer = RetainPtr<PlatformLayer>;
 #elif PLATFORM(JAVA)
 using PlatformLayerContainer = std::unique_ptr<PlatformLayer>;
 #elif USE(TEXTURE_MAPPER)
 using PlatformLayerContainer = std::unique_ptr<PlatformLayer>;
 #else
 #include <wtf/RefPtr.h>
-using PlatformLayerContainer = WTF::RefPtr<PlatformLayer>;
+using PlatformLayerContainer = RefPtr<PlatformLayer>;
 #endif

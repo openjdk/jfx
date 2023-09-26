@@ -274,7 +274,8 @@ public:
         m_promise->resolve<IDLType>(std::forward<typename IDLType::ParameterType>(value));
     }
 
-    void settle(ExceptionOr<typename IDLType::ParameterType>&& result)
+    template<typename U>
+    void settle(ExceptionOr<U>&& result)
     {
         if (result.hasException()) {
             reject(result.releaseException());
@@ -322,7 +323,7 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(vm, &lexicalGlobalObject);
+    auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(&lexicalGlobalObject);
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise);
 
@@ -341,7 +342,7 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(vm, &lexicalGlobalObject);
+    auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(&lexicalGlobalObject);
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise);
 

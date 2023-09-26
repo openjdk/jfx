@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (C) 2014 Apple Inc. All rights reserved.
 #
@@ -113,6 +113,7 @@ struct SelectorPseudoTypeEntry {
 %readonly-tables
 %global-table
 %compare-strncmp
+%ignore-case
 %enum
 
 struct SelectorPseudoTypeEntry;

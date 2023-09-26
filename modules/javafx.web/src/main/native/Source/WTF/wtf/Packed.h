@@ -186,7 +186,10 @@ public:
     }
 
     T* operator->() const { return get(); }
-    T& operator*() const { return *get(); }
+
+    template <typename U = T>
+    typename std::enable_if<!std::is_void_v<U>, U&>::type operator*() const { return *get(); }
+
     bool operator!() const { return !get(); }
 
     // This conversion operator allows implicit conversion to bool but not to other integer types.
@@ -259,6 +262,42 @@ template <typename T>
 struct IsSmartPtr<PackedPtr<T>> {
     static constexpr bool value = true;
 };
+
+template<typename T, typename U>
+inline bool operator==(const PackedPtr<T>& a, const PackedPtr<U>& b)
+{
+    return a.get() == b.get();
+}
+
+template<typename T, typename U>
+inline bool operator!=(const PackedPtr<T>& a, const PackedPtr<U>& b)
+{
+    return a.get() != b.get();
+}
+
+template<typename T, typename U>
+inline bool operator==(const PackedPtr<T>& a, U* b)
+{
+    return a.get() == b;
+}
+
+template<typename T, typename U>
+inline bool operator==(T* a, const PackedPtr<U>& b)
+{
+    return a == b.get();
+}
+
+template<typename T, typename U>
+inline bool operator!=(const PackedPtr<T>& a, U* b)
+{
+    return !(a == b);
+}
+
+template<typename T, typename U>
+inline bool operator!=(T* a, const PackedPtr<U>& b)
+{
+    return !(a == b);
+}
 
 template<typename T>
 struct PackedPtrTraits {

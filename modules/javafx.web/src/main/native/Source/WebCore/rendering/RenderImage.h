@@ -81,12 +81,14 @@ public:
 
     String accessibilityDescription() const { return imageResource().image()->accessibilityDescription(); }
 
+    bool hasAnimatedImage() const;
+
 protected:
     void willBeDestroyed() override;
 
     bool needsPreferredWidthsRecalculation() const final;
     RenderBox* embeddedContentBox() const final;
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const final;
+    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const final;
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const override;
 
     void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
@@ -104,7 +106,7 @@ protected:
     }
 
 private:
-    const char* renderName() const override { return "RenderImage"; }
+    ASCIILiteral renderName() const override { return "RenderImage"_s; }
 
     bool canHaveChildren() const override;
 
@@ -120,8 +122,6 @@ private:
 
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
-
-    bool boxShadowShouldBeAppliedToBackground(const LayoutPoint& paintOffset, BackgroundBleedAvoidance, LegacyInlineFlowBox*) const final;
 
     IntSize imageSizeForError(CachedImage*) const;
     void repaintOrMarkForLayout(ImageSizeChangeType, const IntRect* = nullptr);

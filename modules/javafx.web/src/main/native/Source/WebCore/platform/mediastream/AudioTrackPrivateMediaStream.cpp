@@ -30,6 +30,11 @@
 
 #include "AudioMediaStreamTrackRenderer.h"
 #include "Logging.h"
+#include "RealtimeIncomingAudioSource.h"
+
+#if USE(LIBWEBRTC)
+#include "LibWebRTCAudioModule.h"
+#endif
 
 namespace WebCore {
 
@@ -48,20 +53,33 @@ AudioTrackPrivateMediaStream::~AudioTrackPrivateMediaStream()
     clear();
 }
 
+#if USE(LIBWEBRTC)
+static RefPtr<LibWebRTCAudioModule> audioModuleFromSource(RealtimeMediaSource& source)
+{
+    if (!is<RealtimeIncomingAudioSource>(source))
+        return nullptr;
+    return downcast<RealtimeIncomingAudioSource>(source).audioModule();
+}
+#endif
+
 std::unique_ptr<AudioMediaStreamTrackRenderer> AudioTrackPrivateMediaStream::createRenderer(AudioTrackPrivateMediaStream& stream)
 {
-    auto renderer = AudioMediaStreamTrackRenderer::create();
-    if (!renderer)
-        return nullptr;
 #if !RELEASE_LOG_DISABLED
     auto& track = stream.m_streamTrack.get();
-    renderer->setLogger(track.logger(), track.logIdentifier());
 #endif
-    renderer->setCrashCallback([stream = makeWeakPtr(stream)] {
-        if (stream)
-            stream->createNewRenderer();
+    return AudioMediaStreamTrackRenderer::create(AudioMediaStreamTrackRenderer::Init {
+        [stream = WeakPtr { stream }] {
+            if (stream)
+                stream->createNewRenderer();
+        }
+#if USE(LIBWEBRTC)
+        , audioModuleFromSource(stream.m_audioSource.get())
+#endif
+#if !RELEASE_LOG_DISABLED
+        , track.logger()
+        , track.logIdentifier()
+#endif
     });
-    return renderer;
 }
 
 void AudioTrackPrivateMediaStream::clear()
@@ -158,7 +176,7 @@ void AudioTrackPrivateMediaStream::startRenderer()
         return;
 
     m_isPlaying = true;
-    m_renderer->start([protectedThis = makeRef(*this)] {
+    m_renderer->start([protectedThis = Ref { *this }] {
         if (protectedThis->m_isPlaying)
             protectedThis->m_audioSource->addAudioSampleObserver(protectedThis.get());
     });

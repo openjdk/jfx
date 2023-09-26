@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -64,9 +64,9 @@ public:
     static constexpr uintptr_t rareDataTag = 0x1;
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.functionSpace;
+        return &vm.functionSpace();
     }
 
     typedef JSCallee Base;
@@ -80,7 +80,7 @@ public:
 
     static Structure* selectStructureForNewFuncExp(JSGlobalObject*, FunctionExecutable*);
 
-    JS_EXPORT_PRIVATE static JSFunction* create(VM&, JSGlobalObject*, unsigned length, const String& name, NativeFunction, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor, const DOMJIT::Signature* = nullptr);
+    JS_EXPORT_PRIVATE static JSFunction* create(VM&, JSGlobalObject*, unsigned length, const String& name, NativeFunction, ImplementationVisibility, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor, const DOMJIT::Signature* = nullptr);
 
     static JSFunction* createWithInvalidatedReallocationWatchpoint(VM&, FunctionExecutable*, JSScope*);
 
@@ -92,7 +92,7 @@ public:
     JS_EXPORT_PRIVATE const String calculatedDisplayName(VM&);
     JS_EXPORT_PRIVATE JSString* toString(JSGlobalObject*);
 
-    JSString* asStringConcurrently(VM&) const;
+    JSString* asStringConcurrently() const;
 
     ExecutableBase* executable() const
     {
@@ -150,6 +150,7 @@ public:
     bool isBuiltinFunction() const;
     JS_EXPORT_PRIVATE bool isHostFunctionNonInline() const;
     bool isClassConstructorFunction() const;
+    bool isRemoteFunction() const;
 
     void setFunctionName(JSGlobalObject*, JSValue name);
 
@@ -167,6 +168,7 @@ public:
     PropertyStatus reifyLazyPropertyIfNeeded(VM&, JSGlobalObject*, PropertyName);
 
     bool canAssumeNameAndLengthAreOriginal(VM&);
+    bool mayHaveNonReifiedPrototype();
 
 protected:
     JS_EXPORT_PRIVATE JSFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*);
@@ -188,8 +190,8 @@ protected:
 private:
     static JSFunction* createImpl(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
     {
-        JSFunction* function = new (NotNull, allocateCell<JSFunction>(vm.heap)) JSFunction(vm, executable, scope, structure);
-        ASSERT(function->structure(vm)->globalObject());
+        JSFunction* function = new (NotNull, allocateCell<JSFunction>(vm)) JSFunction(vm, executable, scope, structure);
+        ASSERT(function->structure()->globalObject());
         function->finishCreation(vm);
         return function;
     }
@@ -201,13 +203,14 @@ private:
     bool hasReifiedLength() const;
     bool hasReifiedName() const;
     void reifyLength(VM&);
-    void reifyName(VM&, JSGlobalObject*);
-    void reifyName(VM&, JSGlobalObject*, String name);
+    PropertyStatus reifyName(VM&, JSGlobalObject*);
+    PropertyStatus reifyName(VM&, JSGlobalObject*, String name);
 
     static bool isLazy(PropertyStatus property) { return property == PropertyStatus::Lazy || property == PropertyStatus::Reified; }
     static bool isReified(PropertyStatus property) { return property == PropertyStatus::Reified; }
 
     PropertyStatus reifyLazyPropertyForHostOrBuiltinIfNeeded(VM&, JSGlobalObject*, PropertyName);
+    PropertyStatus reifyLazyPrototypeIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyLengthIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyNameIfNeeded(VM&, JSGlobalObject*, PropertyName);
     PropertyStatus reifyLazyBoundNameIfNeeded(VM&, JSGlobalObject*, PropertyName);

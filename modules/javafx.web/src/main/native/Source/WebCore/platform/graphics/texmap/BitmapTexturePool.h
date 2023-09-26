@@ -69,7 +69,7 @@ private:
 #endif
 
     Vector<Entry> m_textures;
-    RunLoop::Timer<BitmapTexturePool> m_releaseUnusedTexturesTimer;
+    RunLoop::Timer m_releaseUnusedTexturesTimer;
 };
 
 } // namespace WebCore

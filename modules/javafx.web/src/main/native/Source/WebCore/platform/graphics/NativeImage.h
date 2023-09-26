@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  * Copyright (C) 2012 Company 100 Inc.
  *
@@ -28,17 +28,21 @@
 #pragma once
 
 #include "Color.h"
+#include "ImagePaintingOptions.h"
 #include "IntSize.h"
 #include "PlatformImage.h"
 #include "RenderingResourceIdentifier.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
-class NativeImage : public RefCounted<NativeImage>, public CanMakeWeakPtr<NativeImage> {
+class GraphicsContext;
+
+class NativeImage final
+    : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<NativeImage> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     class Observer {
@@ -53,12 +57,17 @@ public:
 
     WEBCORE_EXPORT ~NativeImage();
 
+    WEBCORE_EXPORT void setPlatformImage(PlatformImagePtr&&);
     const PlatformImagePtr& platformImage() const { return m_platformImage; }
+
     RenderingResourceIdentifier renderingResourceIdentifier() const { return m_renderingResourceIdentifier; }
 
     WEBCORE_EXPORT IntSize size() const;
     bool hasAlpha() const;
     Color singlePixelSolidColor() const;
+    WEBCORE_EXPORT DestinationColorSpace colorSpace() const;
+
+    void draw(GraphicsContext&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&);
 
     void addObserver(Observer& observer) { m_observers.add(&observer); }
     void removeObserver(Observer& observer) { m_observers.remove(&observer); }
@@ -73,7 +82,5 @@ private:
     HashSet<Observer*> m_observers;
     RenderingResourceIdentifier m_renderingResourceIdentifier;
 };
-
-using NativeImageHashMap = HashMap<RenderingResourceIdentifier, Ref<NativeImage>>;
 
 } // namespace WebCore

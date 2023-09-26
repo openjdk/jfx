@@ -44,7 +44,7 @@ class ThreadableBlobRegistry {
 public:
     static void registerFileBlobURL(const URL&, const String& path, const String& replacementPath, const String& contentType);
     static void registerBlobURL(const URL&, Vector<BlobPart>&& blobParts, const String& contentType);
-    static void registerBlobURL(SecurityOrigin*, const PolicyContainer&, const URL&, const URL& srcURL);
+    static void registerBlobURL(SecurityOrigin*, PolicyContainer&&, const URL&, const URL& srcURL);
     static void registerBlobURLOptionallyFileBacked(const URL&, const URL& srcURL, const String& fileBackedPath, const String& contentType);
     static void registerBlobURLForSlice(const URL& newURL, const URL& srcURL, long long start, long long end, const String& contentType);
     static void unregisterBlobURL(const URL&);
@@ -52,7 +52,7 @@ public:
     static void registerBlobURLHandle(const URL&);
     static void unregisterBlobURLHandle(const URL&);
 
-    static unsigned long long blobSize(const URL&);
+    WEBCORE_EXPORT static unsigned long long blobSize(const URL&);
 
     // Returns the origin for the given blob URL. This is because we are not able to embed the unique security origin or the origin of file URL
     // in the blob URL.

@@ -94,6 +94,12 @@ add_compile_options(
     /wd4722 # 'function' : destructor never returns, potential memory leak
             # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4722
 
+    /wd4723 # The second operand in a divide operation evaluated to zero at compile time, giving undefined results.
+            # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-3-c4723
+
+    /wd4805 # 'operation' : unsafe mix of type 'type' and type 'type' in operation
+            # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4805
+            
     /wd4838 # conversion from 'type_1' to 'type_2' requires a narrowing conversion
             # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4838
 
@@ -103,14 +109,27 @@ add_compile_options(
     /wd4996 # Your code uses a function, class member, variable, or typedef that's marked deprecated
 
     /wd5205 # delete of an abstract class 'type-name' that has a non-virtual destructor results in undefined behavior
+
+    /wd5054 # operator 'operator-name': deprecated between enumerations of different types
+
+    /wd5055 # operator 'operator-name': deprecated between enumerations and floating-point types
 )
 
 if (NOT WTF_CPU_X86)
+    if (PORT STREQUAL "Java")
+    # Suppress creation of pdb files for Release builds
+    # FIXME: Need to re-enable the flag for Debug builds
+    #add_compile_options(/Zi /GS)
+
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /OPT:ICF /OPT:REF")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /OPT:ICF /OPT:REF")
+    else()
     # Create pdb files for debugging purposes, also for Release builds
     add_compile_options(/Zi /GS)
 
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:ICF /OPT:REF")
+    endif()
 endif ()
 
 # We do not use exceptions
@@ -125,6 +144,8 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 if (NOT COMPILER_IS_CLANG_CL)
     add_definitions(-D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1)
 endif ()
+
+add_compile_options(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
 
 # Specify the source code encoding
 add_compile_options(/utf-8 /validate-charset)
@@ -155,31 +176,6 @@ if (NOT ${CMAKE_CXX_FLAGS} STREQUAL "")
     WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(/W4)
 endif ()
 
-if (MSVC_STATIC_RUNTIME)
-    message(STATUS "Using multithreaded, static version of the run-time library")
-    set(MSVC_RUNTIME_COMPILE_FLAG "/MT")
-    set(MSVC_RUNTIME_LINKER_FLAGS "/NODEFAULTLIB:MSVCRT /NODEFAULTLIB:MSVCRTD")
-else ()
-    message(STATUS "Using multithreaded, dynamic version of the run-time library")
-    set(MSVC_RUNTIME_COMPILE_FLAG "/MD")
-    # No linker flags are required
-endif ()
-
-foreach (flag_var
-    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-    CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-    CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-    CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-    # Use the multithreaded static runtime library instead of the default DLL runtime.
-    string(REGEX REPLACE "/MD" "${MSVC_RUNTIME_COMPILE_FLAG}" ${flag_var} "${${flag_var}}")
-
-    # No debug runtime, even in debug builds.
-    if (NOT DEBUG_SUFFIX)
-        string(REGEX REPLACE "${MSVC_RUNTIME_COMPILE_FLAG}d" "${MSVC_RUNTIME_COMPILE_FLAG}" ${flag_var} "${${flag_var}}")
-        string(REGEX REPLACE "/D_DEBUG" "" ${flag_var} "${${flag_var}}")
-    endif ()
-endforeach ()
-
 # Make sure incremental linking is turned off, as it creates unacceptably long link times.
 string(REPLACE "INCREMENTAL:YES" "INCREMENTAL:NO" replace_CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS})
 set(CMAKE_SHARED_LINKER_FLAGS "${replace_CMAKE_SHARED_LINKER_FLAGS} /INCREMENTAL:NO")
@@ -206,4 +202,9 @@ if (COMPILER_IS_CLANG_CL)
     # FIXME: Building with clang-cl seemed to fail with 128 bit int support
     set(HAVE_INT128_T OFF)
     list(REMOVE_ITEM _WEBKIT_CONFIG_FILE_VARIABLES HAVE_INT128_T)
+endif ()
+
+# Enable the new lambda processor for better C++ conformance
+if (NOT COMPILER_IS_CLANG_CL AND MSVC_VERSION GREATER_EQUAL 1928)
+    add_compile_options(/Zc:lambda)
 endif ()

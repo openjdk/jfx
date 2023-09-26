@@ -52,6 +52,9 @@ void printInternal(PrintStream& out, Type type)
     case Double:
         out.print("Double");
         return;
+    case V128:
+        out.print("V128");
+        return;
     case Tuple:
         out.print("Tuple");
         return;
@@ -59,7 +62,7 @@ void printInternal(PrintStream& out, Type type)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-static_assert(std::is_pod_v<JSC::B3::TypeKind>);
+static_assert(std::is_standard_layout_v<JSC::B3::TypeKind> && std::is_trivial_v<JSC::B3::TypeKind>);
 } // namespace WTF
 
 

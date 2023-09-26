@@ -33,187 +33,27 @@
 #include "ScrollingTreeFrameScrollingNode.h"
 
 namespace WebCore {
-class ScrollAnimation;
-class ScrollAnimationKinetic;
 
 ScrollingTreeScrollingNodeDelegateNicosia::ScrollingTreeScrollingNodeDelegateNicosia(ScrollingTreeScrollingNode& scrollingNode, bool scrollAnimatorEnabled)
-    : ScrollingTreeScrollingNodeDelegate(scrollingNode)
+    : ThreadedScrollingTreeScrollingNodeDelegate(scrollingNode)
     , m_scrollAnimatorEnabled(scrollAnimatorEnabled)
 {
 }
 
-ScrollingTreeScrollingNodeDelegateNicosia::~ScrollingTreeScrollingNodeDelegateNicosia()
-{
-}
-
-std::unique_ptr<Nicosia::SceneIntegration::UpdateScope> ScrollingTreeScrollingNodeDelegateNicosia::createUpdateScope()
-{
-    auto* scrollLayer = static_cast<Nicosia::PlatformLayer*>(scrollingNode().scrollContainerLayer());
-    if (is<ScrollingTreeFrameScrollingNode>(scrollingNode()))
-        scrollLayer = static_cast<Nicosia::PlatformLayer*>(scrollingNode().scrolledContentsLayer());
-
-    ASSERT(scrollLayer);
-    auto& compositionLayer = downcast<Nicosia::CompositionLayer>(*scrollLayer);
-    return compositionLayer.createUpdateScope();
-}
-
-void ScrollingTreeScrollingNodeDelegateNicosia::resetCurrentPosition()
-{
-#if ENABLE(SMOOTH_SCROLLING)
-    if (m_smoothAnimation)
-        m_smoothAnimation->setCurrentPosition(scrollingNode().currentScrollPosition());
-#endif
-}
+ScrollingTreeScrollingNodeDelegateNicosia::~ScrollingTreeScrollingNodeDelegateNicosia() = default;
 
 void ScrollingTreeScrollingNodeDelegateNicosia::updateVisibleLengths()
 {
-#if ENABLE(SMOOTH_SCROLLING)
-    if (m_smoothAnimation)
-        m_smoothAnimation->updateVisibleLengths();
-#endif
+    m_scrollController.contentsSizeChanged();
 }
 
-#if ENABLE(KINETIC_SCROLLING)
-void ScrollingTreeScrollingNodeDelegateNicosia::ensureScrollAnimationKinetic()
+bool ScrollingTreeScrollingNodeDelegateNicosia::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
 {
-    if (m_kineticAnimation)
-        return;
+    auto deferrer = ScrollingTreeWheelEventTestMonitorCompletionDeferrer { scrollingTree(), scrollingNode().scrollingNodeID(), WheelEventTestMonitor::HandlingWheelEvent };
 
-    m_kineticAnimation = makeUnique<ScrollAnimationKinetic>(
-        [this]() -> ScrollExtents {
-            return { IntPoint(minimumScrollPosition()), IntPoint(maximumScrollPosition()), IntSize(scrollableAreaSize()) };
-        },
-        [this](FloatPoint&& position) {
-#if ENABLE(SMOOTH_SCROLLING)
-            if (m_smoothAnimation)
-                m_smoothAnimation->setCurrentPosition(position);
-#endif
-            auto updateScope = createUpdateScope();
-            scrollingNode().scrollTo(position);
-        });
-}
-#endif
+    updateUserScrollInProgressForEvent(wheelEvent);
 
-#if ENABLE(SMOOTH_SCROLLING)
-void ScrollingTreeScrollingNodeDelegateNicosia::ensureScrollAnimationSmooth()
-{
-    if (m_smoothAnimation)
-        return;
-
-    m_smoothAnimation = makeUnique<ScrollAnimationSmooth>(
-        [this]() -> ScrollExtents {
-            return { IntPoint(minimumScrollPosition()), IntPoint(maximumScrollPosition()), IntSize(scrollableAreaSize()) };
-        },
-        currentScrollPosition(),
-        [this](FloatPoint&& position) {
-            auto updateScope = createUpdateScope();
-            scrollingNode().scrollTo(position);
-        },
-        [] { });
-}
-#endif
-
-WheelEventHandlingResult ScrollingTreeScrollingNodeDelegateNicosia::handleWheelEvent(const PlatformWheelEvent& wheelEvent, EventTargeting eventTargeting)
-{
-    if (!scrollingNode().canHandleWheelEvent(wheelEvent, eventTargeting))
-        return WheelEventHandlingResult::unhandled();
-
-    bool canHaveHorizontalScrollbar = scrollingNode().canHaveHorizontalScrollbar();
-    bool canHaveVerticalScrollbar = scrollingNode().canHaveVerticalScrollbar();
-#if ENABLE(KINETIC_SCROLLING)
-    ensureScrollAnimationKinetic();
-    m_kineticAnimation->appendToScrollHistory(wheelEvent);
-    m_kineticAnimation->stop();
-    if (wheelEvent.isEndOfNonMomentumScroll()) {
-        m_kineticAnimation->start(currentScrollPosition(), m_kineticAnimation->computeVelocity(), canHaveHorizontalScrollbar, canHaveVerticalScrollbar);
-        m_kineticAnimation->clearScrollHistory();
-        return WheelEventHandlingResult::handled();
-    }
-    if (wheelEvent.isTransitioningToMomentumScroll()) {
-        m_kineticAnimation->start(currentScrollPosition(), wheelEvent.swipeVelocity(), canHaveHorizontalScrollbar, canHaveVerticalScrollbar);
-        m_kineticAnimation->clearScrollHistory();
-        return WheelEventHandlingResult::handled();
-    }
-#endif
-
-    float deltaX = canHaveHorizontalScrollbar ? wheelEvent.deltaX() : 0;
-    float deltaY = canHaveVerticalScrollbar ? wheelEvent.deltaY() : 0;
-    if ((deltaX < 0 && currentScrollPosition().x() >= maximumScrollPosition().x())
-        || (deltaX > 0 && currentScrollPosition().x() <= minimumScrollPosition().x()))
-        deltaX = 0;
-    if ((deltaY < 0 && currentScrollPosition().y() >= maximumScrollPosition().y())
-        || (deltaY > 0 && currentScrollPosition().y() <= minimumScrollPosition().y()))
-        deltaY = 0;
-
-    if (!deltaX && !deltaY)
-        return WheelEventHandlingResult::unhandled();
-
-    if (wheelEvent.granularity() == ScrollByPageWheelEvent) {
-        if (deltaX) {
-            bool negative = deltaX < 0;
-            deltaX = Scrollbar::pageStepDelta(scrollableAreaSize().width());
-            if (negative)
-                deltaX = -deltaX;
-        }
-        if (deltaY) {
-            bool negative = deltaY < 0;
-            deltaY = Scrollbar::pageStepDelta(scrollableAreaSize().height());
-            if (negative)
-                deltaY = -deltaY;
-        }
-    }
-
-    deltaX = -deltaX;
-    deltaY = -deltaY;
-
-    if (!scrollingNode().snapOffsetsInfo().isEmpty()) {
-        float scale = pageScaleFactor();
-        FloatPoint originalOffset = LayoutPoint(scrollingNode().currentScrollOffset().x() / scale, scrollingNode().currentScrollOffset().y() / scale);
-        auto newOffset = (scrollingNode().currentScrollOffset() + FloatSize(deltaX, deltaY));
-        newOffset.scale(1.0 / scale);
-
-        auto offsetX = scrollingNode().snapOffsetsInfo().closestSnapOffset(ScrollEventAxis::Horizontal, scrollableAreaSize(), newOffset, deltaX, originalOffset.x()).first;
-        auto offsetY = scrollingNode().snapOffsetsInfo().closestSnapOffset(ScrollEventAxis::Vertical, scrollableAreaSize(), newOffset, deltaY, originalOffset.y()).first;
-
-        deltaX = (offsetX - originalOffset.x()) * scale;
-        deltaY = (offsetY - originalOffset.y()) * scale;
-    }
-
-#if ENABLE(SMOOTH_SCROLLING)
-    if (m_scrollAnimatorEnabled && !wheelEvent.hasPreciseScrollingDeltas()) {
-        ensureScrollAnimationSmooth();
-        m_smoothAnimation->scroll(HorizontalScrollbar, ScrollByPixel, 1, deltaX);
-        m_smoothAnimation->scroll(VerticalScrollbar, ScrollByPixel, 1, deltaY);
-        return WheelEventHandlingResult::handled();
-    }
-#endif
-
-    auto updateScope = createUpdateScope();
-    scrollingNode().scrollBy({ deltaX, deltaY });
-
-    return WheelEventHandlingResult::handled();
-}
-
-void ScrollingTreeScrollingNodeDelegateNicosia::stopScrollAnimations()
-{
-#if ENABLE(KINETIC_SCROLLING)
-    if (m_kineticAnimation) {
-        m_kineticAnimation->stop();
-        m_kineticAnimation->clearScrollHistory();
-    }
-#endif
-#if ENABLE(SMOOTH_SCROLLING)
-    if (m_smoothAnimation)
-        m_smoothAnimation->stop();
-#endif
-}
-
-float ScrollingTreeScrollingNodeDelegateNicosia::pageScaleFactor()
-{
-    // FIXME: What should this return for non-root frames, and overflow?
-    // Also, this should not have to access ScrollingTreeFrameScrollingNode.
-    return is<ScrollingTreeFrameScrollingNode>(scrollingNode()) ?
-        downcast<ScrollingTreeFrameScrollingNode>(scrollingNode()).frameScaleFactor() : 1.;
+    return m_scrollController.handleWheelEvent(wheelEvent);
 }
 
 } // namespace WebCore

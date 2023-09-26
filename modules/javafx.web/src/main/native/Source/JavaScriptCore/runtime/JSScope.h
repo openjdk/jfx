@@ -80,9 +80,7 @@ public:
 
     JSObject* globalThis();
 
-    SymbolTable* symbolTable(VM&);
-
-    JS_EXPORT_PRIVATE static JSValue toThis(JSCell*, JSGlobalObject*, ECMAMode);
+    SymbolTable* symbolTable();
 
 protected:
     JSScope(VM&, Structure*, JSScope* next);

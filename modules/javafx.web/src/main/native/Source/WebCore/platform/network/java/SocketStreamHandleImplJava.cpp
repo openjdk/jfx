@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, Page* page,
     , m_storageSessionProvider(provider)
 {
     String host = url.host().toString();
-    bool ssl = url.protocolIs("wss");
+    bool ssl = url.protocolIs("wss"_s);
     int port = url.port().value_or(ssl ? 443 : 80);
 
     JNIEnv* env = WTF::GetJavaEnv();

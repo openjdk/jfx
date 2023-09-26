@@ -27,6 +27,7 @@
 #include "FileBasedFuzzerAgentBase.h"
 
 #include "CodeBlock.h"
+#include "JSCellInlines.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
@@ -50,7 +51,7 @@ String FileBasedFuzzerAgentBase::createLookupKey(const String& sourceFilename, O
 
 OpcodeID FileBasedFuzzerAgentBase::opcodeAliasForLookupKey(const OpcodeID& opcodeId)
 {
-    if (opcodeId == op_call_varargs || opcodeId == op_call_eval || opcodeId == op_tail_call || opcodeId == op_tail_call_varargs)
+    if (opcodeId == op_call_varargs || opcodeId == op_call_direct_eval || opcodeId == op_tail_call || opcodeId == op_tail_call_varargs)
         return op_call;
     if (opcodeId == op_enumerator_get_by_val || opcodeId == op_get_by_val_with_this)
         return op_get_by_val;
@@ -75,8 +76,8 @@ SpeculatedType FileBasedFuzzerAgentBase::getPrediction(CodeBlock* codeBlock, con
     Vector<String> urlParts = sourceURL.split('/');
     predictionTarget.sourceFilename = urlParts.isEmpty() ? sourceURL : urlParts.last();
 
-    const InstructionStream& instructions = codeBlock->instructions();
-    const Instruction* anInstruction = instructions.at(bytecodeIndex).ptr();
+    const auto& instructions = codeBlock->instructions();
+    const auto* anInstruction = instructions.at(bytecodeIndex).ptr();
     predictionTarget.opcodeId = anInstruction->opcodeID();
 
     int startLocation = predictionTarget.divot - predictionTarget.startOffset;

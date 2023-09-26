@@ -33,6 +33,7 @@
 
 #if ENABLE(VIDEO)
 
+#include "ActiveDOMObject.h"
 #include "DocumentFragment.h"
 #include "HTMLElement.h"
 #include <wtf/JSONValues.h>
@@ -40,6 +41,7 @@
 
 namespace WebCore {
 
+class SpeechSynthesis;
 class TextTrack;
 class TextTrackCue;
 
@@ -59,23 +61,19 @@ protected:
 
 private:
 
-    WeakPtr<TextTrackCue> m_cue;
+    WeakPtr<TextTrackCue, WeakPtrImplWithEventTargetData> m_cue;
 };
 
-class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData, public ActiveDOMObject {
+class TextTrackCue : public RefCounted<TextTrackCue>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
-    static const AtomString& cueShadowPseudoId();
-    static const AtomString& cueBackdropShadowPseudoId();
-    static const AtomString& cueBoxShadowPseudoId();
-
     static ExceptionOr<Ref<TextTrackCue>> create(Document&, double start, double end, DocumentFragment&);
 
     TextTrack* track() const;
     void setTrack(TextTrack*);
 
-    const String& id() const { return m_id; }
-    void setId(const String&);
+    const AtomString& id() const { return m_id; }
+    void setId(const AtomString&);
 
     double startTime() const { return startMediaTime().toDouble(); }
     void setStartTime(double);
@@ -114,6 +112,7 @@ public:
     virtual void removeDisplayTree();
 
     virtual RefPtr<DocumentFragment> getCueAsHTML();
+    virtual const String& text() const { return emptyString(); }
 
     String toJSONString() const;
 
@@ -126,10 +125,16 @@ public:
 
     unsigned cueIndex() const;
 
+    using SpeakCueCompletionHandler = Function<void(const TextTrackCue&)>;
+    virtual void prepareToSpeak(SpeechSynthesis&, double, double, SpeakCueCompletionHandler&&) { }
+    virtual void beginSpeaking() { }
+    virtual void pauseSpeaking() { }
+    virtual void cancelSpeaking() { }
+
 protected:
     TextTrackCue(Document&, const MediaTime& start, const MediaTime& end);
 
-    Document& ownerDocument() { return m_document; }
+    Document* document() const;
 
     virtual bool cueContentsMatch(const TextTrackCue&) const;
     virtual void toJSON(JSON::Object&) const;
@@ -150,14 +155,12 @@ private:
 
     void rebuildDisplayTree();
 
-    String m_id;
+    AtomString m_id;
     MediaTime m_startTime;
     MediaTime m_endTime;
     int m_processingCueChanges { 0 };
 
     TextTrack* m_track { nullptr };
-
-    Document& m_document;
 
     RefPtr<DocumentFragment> m_cueNode;
     RefPtr<TextTrackCueBox> m_displayTree;

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,36 +47,64 @@ public:
     static JSC::JSGlobalObject* currentState()
     {
         return threadGlobalData().currentState();
-    };
+    }
 
     static JSC::JSValue call(JSC::JSGlobalObject* lexicalGlobalObject, JSC::JSValue functionObject, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException)
     {
-        JSExecState currentState(lexicalGlobalObject);
-        return JSC::call(lexicalGlobalObject, functionObject, callData, thisValue, args, returnedException);
-    };
+        JSC::VM& vm = JSC::getVM(lexicalGlobalObject);
+        auto scope = DECLARE_CATCH_SCOPE(vm);
+        JSC::JSValue returnValue;
+        {
+            JSExecState currentState(lexicalGlobalObject);
+            returnValue = JSC::call(lexicalGlobalObject, functionObject, callData, thisValue, args, returnedException);
+        }
+        scope.assertNoExceptionExceptTermination();
+        return returnValue;
+    }
 
     static JSC::JSValue evaluate(JSC::JSGlobalObject* lexicalGlobalObject, const JSC::SourceCode& source, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException)
     {
-        JSExecState currentState(lexicalGlobalObject);
-        return JSC::evaluate(lexicalGlobalObject, source, thisValue, returnedException);
-    };
+        JSC::VM& vm = JSC::getVM(lexicalGlobalObject);
+        auto scope = DECLARE_CATCH_SCOPE(vm);
+        JSC::JSValue returnValue;
+        {
+            JSExecState currentState(lexicalGlobalObject);
+            returnValue = JSC::evaluate(lexicalGlobalObject, source, thisValue, returnedException);
+        }
+        scope.assertNoExceptionExceptTermination();
+        return returnValue;
+    }
 
     static JSC::JSValue evaluate(JSC::JSGlobalObject* lexicalGlobalObject, const JSC::SourceCode& source, JSC::JSValue thisValue = JSC::JSValue())
     {
         NakedPtr<JSC::Exception> unused;
         return evaluate(lexicalGlobalObject, source, thisValue, unused);
-    };
+    }
 
     static JSC::JSValue profiledCall(JSC::JSGlobalObject* lexicalGlobalObject, JSC::ProfilingReason reason, JSC::JSValue functionObject, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException)
     {
-        JSExecState currentState(lexicalGlobalObject);
-        return JSC::profiledCall(lexicalGlobalObject, reason, functionObject, callData, thisValue, args, returnedException);
+        JSC::VM& vm = JSC::getVM(lexicalGlobalObject);
+        auto scope = DECLARE_CATCH_SCOPE(vm);
+        JSC::JSValue returnValue;
+        {
+            JSExecState currentState(lexicalGlobalObject);
+            returnValue = JSC::profiledCall(lexicalGlobalObject, reason, functionObject, callData, thisValue, args, returnedException);
+        }
+        scope.assertNoExceptionExceptTermination();
+        return returnValue;
     }
 
     static JSC::JSValue profiledEvaluate(JSC::JSGlobalObject* lexicalGlobalObject, JSC::ProfilingReason reason, const JSC::SourceCode& source, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException)
     {
-        JSExecState currentState(lexicalGlobalObject);
-        return JSC::profiledEvaluate(lexicalGlobalObject, reason, source, thisValue, returnedException);
+        JSC::VM& vm = JSC::getVM(lexicalGlobalObject);
+        auto scope = DECLARE_CATCH_SCOPE(vm);
+        JSC::JSValue returnValue;
+        {
+            JSExecState currentState(lexicalGlobalObject);
+            returnValue = JSC::profiledEvaluate(lexicalGlobalObject, reason, source, thisValue, returnedException);
+        }
+        scope.assertNoExceptionExceptTermination();
+        return returnValue;
     }
 
     static JSC::JSValue profiledEvaluate(JSC::JSGlobalObject* lexicalGlobalObject, JSC::ProfilingReason reason, const JSC::SourceCode& source, JSC::JSValue thisValue = JSC::JSValue())
@@ -91,10 +119,10 @@ public:
         task.run(lexicalGlobalObject);
     }
 
-    static JSC::JSInternalPromise& loadModule(JSC::JSGlobalObject& lexicalGlobalObject, const String& moduleName, JSC::JSValue parameters, JSC::JSValue scriptFetcher)
+    static JSC::JSInternalPromise& loadModule(JSC::JSGlobalObject& lexicalGlobalObject, const URL& topLevelModuleURL, JSC::JSValue parameters, JSC::JSValue scriptFetcher)
     {
         JSExecState currentState(&lexicalGlobalObject);
-        return *JSC::loadModule(&lexicalGlobalObject, moduleName, parameters, scriptFetcher);
+        return *JSC::loadModule(&lexicalGlobalObject, JSC::Identifier::fromString(lexicalGlobalObject.vm(), topLevelModuleURL.string()), parameters, scriptFetcher);
     }
 
     static JSC::JSInternalPromise& loadModule(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::SourceCode& sourceCode, JSC::JSValue scriptFetcher)
@@ -107,14 +135,18 @@ public:
     {
         JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_CATCH_SCOPE(vm);
-
-        JSExecState currentState(&lexicalGlobalObject);
-        auto returnValue = JSC::linkAndEvaluateModule(&lexicalGlobalObject, moduleKey, scriptFetcher);
-        if (UNLIKELY(scope.exception())) {
-            returnedException = scope.exception();
-            scope.clearException();
-            return JSC::jsUndefined();
+        JSC::JSValue returnValue;
+        {
+            JSExecState currentState(&lexicalGlobalObject);
+            returnValue = JSC::linkAndEvaluateModule(&lexicalGlobalObject, moduleKey, scriptFetcher);
+            if (UNLIKELY(scope.exception())) {
+                returnedException = scope.exception();
+                if (!vm.hasPendingTerminationException())
+                    scope.clearException();
+                return JSC::jsUndefined();
+            }
         }
+        scope.assertNoExceptionExceptTermination();
         return returnValue;
     }
 
@@ -131,8 +163,8 @@ private:
     ~JSExecState()
     {
         JSC::VM& vm = currentState()->vm();
-        auto scope = DECLARE_CATCH_SCOPE(vm);
-        scope.assertNoException();
+        auto scope = DECLARE_THROW_SCOPE(vm);
+        scope.assertNoExceptionExceptTermination();
 
         JSC::JSGlobalObject* lexicalGlobalObject = currentState();
         bool didExitJavaScript = lexicalGlobalObject && !m_previousState;
@@ -142,7 +174,8 @@ private:
         if (didExitJavaScript) {
             didLeaveScriptContext(lexicalGlobalObject);
             // We need to clear any exceptions from microtask drain.
-            scope.clearException();
+            if (!vm.hasPendingTerminationException())
+                scope.clearException();
         }
     }
 
@@ -151,7 +184,7 @@ private:
         threadGlobalData().setCurrentState(lexicalGlobalObject);
     }
 
-    JSC::JSGlobalObject* m_previousState;
+    JSC::JSGlobalObject* const m_previousState;
     JSC::JSLockHolder m_lock;
 
     static void didLeaveScriptContext(JSC::JSGlobalObject*);
@@ -178,11 +211,13 @@ public:
     }
 
 private:
-    JSC::JSGlobalObject* m_previousState;
+    JSC::JSGlobalObject* const m_previousState;
     CustomElementReactionStack m_customElementReactionStack;
 };
 
 JSC::JSValue functionCallHandlerFromAnyThread(JSC::JSGlobalObject*, JSC::JSValue functionObject, const JSC::CallData&, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException);
 JSC::JSValue evaluateHandlerFromAnyThread(JSC::JSGlobalObject*, const JSC::SourceCode&, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException);
+
+ScriptExecutionContext* executionContext(JSC::JSGlobalObject*);
 
 } // namespace WebCore

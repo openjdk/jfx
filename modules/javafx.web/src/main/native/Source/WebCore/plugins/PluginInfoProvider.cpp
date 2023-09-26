@@ -35,7 +35,7 @@ namespace WebCore {
 
 PluginInfoProvider::~PluginInfoProvider()
 {
-    ASSERT(m_pages.computesEmpty());
+    ASSERT(m_pages.isEmptyIgnoringNullReferences());
 }
 
 void PluginInfoProvider::clearPagesPluginData()
@@ -56,8 +56,11 @@ void PluginInfoProvider::refresh(bool reloadPages)
         if (!reloadPages)
             continue;
 
-        for (auto* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-            if (frame->loader().subframeLoader().containsPlugins())
+        for (AbstractFrame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            if (!localFrame)
+                continue;
+            if (localFrame->loader().subframeLoader().containsPlugins())
                 framesNeedingReload.append(page.mainFrame());
         }
     }

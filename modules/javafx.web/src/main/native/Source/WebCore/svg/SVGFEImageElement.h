@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,7 +23,6 @@
 
 #include "CachedImageClient.h"
 #include "CachedResourceHandle.h"
-#include "SVGFEImage.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGURIReference.h"
 
@@ -36,7 +35,7 @@ public:
 
     virtual ~SVGFEImageElement();
 
-    bool hasSingleSecurityOrigin() const;
+    bool renderingTaintsOrigin() const;
 
     const SVGPreserveAspectRatioValue& preserveAspectRatio() const { return m_preserveAspectRatio->currentValue(); }
     SVGAnimatedPreserveAspectRatio& preserveAspectRatioAnimated() { return m_preserveAspectRatio; }
@@ -45,7 +44,6 @@ private:
     SVGFEImageElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEImageElement, SVGFilterPrimitiveStandardAttributes, SVGURIReference>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
@@ -55,7 +53,9 @@ private:
 
     void didFinishInsertingNode() override;
 
-    RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) const override;
+    std::tuple<RefPtr<ImageBuffer>, FloatRect> imageBufferForEffect(const GraphicsContext& destinationContext) const;
+
+    RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 
     void clearResourceReferences();
     void requestImageResource();
@@ -64,7 +64,6 @@ private:
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
 
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedPreserveAspectRatio> m_preserveAspectRatio { SVGAnimatedPreserveAspectRatio::create(this) };
     CachedResourceHandle<CachedImage> m_cachedImage;
 };

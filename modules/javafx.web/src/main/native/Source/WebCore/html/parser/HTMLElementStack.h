@@ -48,16 +48,16 @@ public:
     class ElementRecord {
         WTF_MAKE_NONCOPYABLE(ElementRecord); WTF_MAKE_FAST_ALLOCATED;
     public:
-        ElementRecord(Ref<HTMLStackItem>&&, std::unique_ptr<ElementRecord>);
+        ElementRecord(HTMLStackItem&&, std::unique_ptr<ElementRecord>);
         ~ElementRecord();
 
-        Element& element() const { return m_item->element(); }
-        ContainerNode& node() const { return m_item->node(); }
-        const AtomString& namespaceURI() const { return m_item->namespaceURI(); }
-        HTMLStackItem& stackItem() { return m_item.get(); }
-        const HTMLStackItem& stackItem() const { return m_item.get(); }
+        Element& element() const { return m_item.element(); }
+        ContainerNode& node() const { return m_item.node(); }
+        ElementName elementName() const { return m_item.elementName(); }
+        HTMLStackItem& stackItem() { return m_item; }
+        const HTMLStackItem& stackItem() const { return m_item; }
 
-        void replaceElement(Ref<HTMLStackItem>&&);
+        void replaceElement(HTMLStackItem&&);
 
         bool isAbove(ElementRecord&) const;
 
@@ -69,7 +69,7 @@ public:
         std::unique_ptr<ElementRecord> releaseNext() { return WTFMove(m_next); }
         void setNext(std::unique_ptr<ElementRecord> next) { m_next = WTFMove(next); }
 
-        Ref<HTMLStackItem> m_item;
+        HTMLStackItem m_item;
         std::unique_ptr<ElementRecord> m_next;
     };
 
@@ -77,41 +77,29 @@ public:
 
     // Inlining this function is a (small) performance win on the parsing
     // benchmark.
-    Element& top() const
-    {
-        return m_top->element();
-    }
-
-    ContainerNode& topNode() const
-    {
-        return m_top->node();
-    }
-
-    HTMLStackItem& topStackItem() const
-    {
-        return m_top->stackItem();
-    }
+    Element& top() const { return m_top->element(); }
+    ContainerNode& topNode() const { return m_top->node(); }
+    ElementName topElementName() const { return m_top->elementName(); }
+    HTMLStackItem& topStackItem() const { return m_top->stackItem(); }
 
     HTMLStackItem* oneBelowTop() const;
     ElementRecord& topRecord() const;
     ElementRecord* find(Element&) const;
     ElementRecord* furthestBlockForFormattingElement(Element&) const;
-    ElementRecord* topmost(const AtomString& tagName) const;
+    ElementRecord* topmost(ElementName) const;
 
-    void insertAbove(Ref<HTMLStackItem>&&, ElementRecord&);
+    void insertAbove(HTMLStackItem&&, ElementRecord&);
 
-    void push(Ref<HTMLStackItem>&&);
-    void pushRootNode(Ref<HTMLStackItem>&&);
-    void pushHTMLHtmlElement(Ref<HTMLStackItem>&&);
-    void pushHTMLHeadElement(Ref<HTMLStackItem>&&);
-    void pushHTMLBodyElement(Ref<HTMLStackItem>&&);
+    void push(HTMLStackItem&&);
+    void pushRootNode(HTMLStackItem&&);
+    void pushHTMLHtmlElement(HTMLStackItem&&);
+    void pushHTMLHeadElement(HTMLStackItem&&);
+    void pushHTMLBodyElement(HTMLStackItem&&);
 
     void pop();
-    void popUntil(const AtomString& tagName);
+    void popUntil(ElementName);
     void popUntil(Element&);
-    void popUntilPopped(const AtomString& tagName);
-    void popUntilPopped(const QualifiedName& tagName) { popUntilPopped(tagName.localName()); }
-
+    void popUntilPopped(ElementName);
     void popUntilPopped(Element&);
     void popUntilNumberedHeaderElementPopped();
     void popUntilTableScopeMarker(); // "clear the stack back to a table context" in the spec.
@@ -129,19 +117,13 @@ public:
     void removeHTMLHeadElement(Element&);
 
     bool contains(Element&) const;
-    bool contains(const AtomString& tagName) const;
 
     bool inScope(Element&) const;
-    bool inScope(const AtomString& tagName) const;
-    bool inScope(const QualifiedName&) const;
-    bool inListItemScope(const AtomString& tagName) const;
-    bool inListItemScope(const QualifiedName&) const;
-    bool inTableScope(const AtomString& tagName) const;
-    bool inTableScope(const QualifiedName&) const;
-    bool inButtonScope(const AtomString& tagName) const;
-    bool inButtonScope(const QualifiedName&) const;
-    bool inSelectScope(const AtomString& tagName) const;
-    bool inSelectScope(const QualifiedName&) const;
+    bool inScope(ElementName) const;
+    bool inListItemScope(ElementName) const;
+    bool inTableScope(ElementName) const;
+    bool inButtonScope(ElementName) const;
+    bool inSelectScope(ElementName) const;
 
     bool hasNumberedHeaderElementInScope() const;
 
@@ -159,8 +141,8 @@ public:
 #endif
 
 private:
-    void pushCommon(Ref<HTMLStackItem>&&);
-    void pushRootNodeCommon(Ref<HTMLStackItem>&&);
+    void pushCommon(HTMLStackItem&&);
+    void pushRootNodeCommon(HTMLStackItem&&);
     void popCommon();
     void removeNonTopCommon(Element&);
 

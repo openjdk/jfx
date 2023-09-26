@@ -38,32 +38,27 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MouseRelatedEvent);
 
 MouseRelatedEvent::MouseRelatedEvent(const AtomString& eventType, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed,
     MonotonicTime timestamp, RefPtr<WindowProxy>&& view, int detail,
-    const IntPoint& screenLocation, const IntPoint& windowLocation, const IntPoint& movementDelta, OptionSet<Modifier> modifiers, IsSimulated isSimulated, IsTrusted isTrusted)
+    const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier> modifiers, IsSimulated isSimulated, IsTrusted isTrusted)
     : UIEventWithKeyState(eventType, canBubble, isCancelable, isComposed, timestamp, WTFMove(view), detail, modifiers, isTrusted)
     , m_screenLocation(screenLocation)
-#if ENABLE(POINTER_LOCK)
-    , m_movementDelta(movementDelta)
-#endif
+    , m_movementX(movementX)
+    , m_movementY(movementY)
     , m_isSimulated(isSimulated == IsSimulated::Yes)
 {
-#if !ENABLE(POINTER_LOCK)
-    UNUSED_PARAM(movementDelta);
-#endif
     init(m_isSimulated, windowLocation);
 }
 
 MouseRelatedEvent::MouseRelatedEvent(const AtomString& type, IsCancelable isCancelable, MonotonicTime timestamp, RefPtr<WindowProxy>&& view, const IntPoint& globalLocation, OptionSet<Modifier> modifiers)
     : MouseRelatedEvent(type, CanBubble::Yes, isCancelable, IsComposed::Yes, timestamp,
-        WTFMove(view), 0, globalLocation, globalLocation /* Converted in init */, { }, modifiers, IsSimulated::No)
+        WTFMove(view), 0, globalLocation, globalLocation /* Converted in init */, 0, 0, modifiers, IsSimulated::No)
 {
 }
 
 MouseRelatedEvent::MouseRelatedEvent(const AtomString& eventType, const MouseRelatedEventInit& initializer, IsTrusted isTrusted)
     : UIEventWithKeyState(eventType, initializer)
     , m_screenLocation(IntPoint(initializer.screenX, initializer.screenY))
-#if ENABLE(POINTER_LOCK)
-    , m_movementDelta(IntPoint(0, 0))
-#endif
+    , m_movementX(initializer.movementX)
+    , m_movementY(initializer.movementY)
 {
     ASSERT_UNUSED(isTrusted, isTrusted == IsTrusted::No);
     init(false, IntPoint(0, 0));

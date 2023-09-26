@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,6 @@
 #include "Disassembler.h"
 #include "JITCode.h"
 #include "Options.h"
-#include "WasmCompilationMode.h"
 
 #if OS(LINUX)
 #include "PerfLog.h"
@@ -42,29 +41,6 @@ namespace JSC {
 
 size_t LinkBuffer::s_profileCummulativeLinkedSizes[LinkBuffer::numberOfProfiles];
 size_t LinkBuffer::s_profileCummulativeLinkedCounts[LinkBuffer::numberOfProfiles];
-
-bool shouldDumpDisassemblyFor(CodeBlock* codeBlock)
-{
-    if (codeBlock && JITCode::isOptimizingJIT(codeBlock->jitType()) && Options::dumpDFGDisassembly())
-        return true;
-    return Options::dumpDisassembly();
-}
-
-bool shouldDumpDisassemblyFor(Wasm::CompilationMode mode)
-{
-    if (Options::asyncDisassembly() || Options::dumpDisassembly() || Options::dumpWasmDisassembly())
-        return true;
-    switch (mode) {
-    case Wasm::CompilationMode::BBQMode:
-        return Options::dumpBBQDisassembly();
-    case Wasm::CompilationMode::OMGMode:
-    case Wasm::CompilationMode::OMGForOSREntryMode:
-        return Options::dumpOMGDisassembly();
-    default:
-        break;
-    }
-    return false;
-}
 
 LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithoutDisassemblyImpl()
 {
@@ -89,7 +65,7 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
         va_start(argList, format);
         out.vprintf(format, argList);
         va_end(argList);
-        PerfLog::log(out.toCString(), result.code().untaggedExecutableAddress<const uint8_t*>(), result.size());
+        PerfLog::log(out.toCString(), result.code().untaggedPtr<const uint8_t*>(), result.size());
     }
 #endif
 
@@ -99,11 +75,29 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
     out.printf("Generated JIT code for ");
     va_list argList;
     va_start(argList, format);
-    out.vprintf(format, argList);
+
+    if (m_isThunk) {
+        va_list preflightArgs;
+        va_copy(preflightArgs, argList);
+        size_t stringLength = vsnprintf(nullptr, 0, format, preflightArgs);
+        va_end(preflightArgs);
+
+        const char prefix[] = "thunk: ";
+        char* buffer = 0;
+        size_t length = stringLength + sizeof(prefix);
+        CString label = CString::newUninitialized(length, buffer);
+        snprintf(buffer, length, "%s", prefix);
+        vsnprintf(buffer + sizeof(prefix) - 1, stringLength + 1, format, argList);
+        out.printf("%s", buffer);
+
+        registerLabel(result.code().untaggedPtr(), WTFMove(label));
+    } else
+        out.vprintf(format, argList);
+
     va_end(argList);
     out.printf(":\n");
 
-    uint8_t* executableAddress = result.code().untaggedExecutableAddress<uint8_t*>();
+    uint8_t* executableAddress = result.code().untaggedPtr<uint8_t*>();
     out.printf("    Code at [%p, %p)%s\n", executableAddress, executableAddress + result.size(), justDumpingHeader ? "." : ":");
 
     CString header = out.toCString();
@@ -114,14 +108,17 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
         return result;
     }
 
+    void* codeStart = entrypoint<DisassemblyPtrTag>().untaggedPtr();
+    void* codeEnd = bitwise_cast<uint8_t*>(codeStart) + size();
+
     if (Options::asyncDisassembly()) {
         CodeRef<DisassemblyPtrTag> codeRefForDisassembly = result.retagged<DisassemblyPtrTag>();
-        disassembleAsynchronously(header, WTFMove(codeRefForDisassembly), m_size, "    ");
+        disassembleAsynchronously(header, WTFMove(codeRefForDisassembly), m_size, codeStart, codeEnd, "    ");
         return result;
     }
 
     dataLog(header);
-    disassemble(result.retaggedCode<DisassemblyPtrTag>(), m_size, "    ", WTF::dataFile());
+    disassemble(result.retaggedCode<DisassemblyPtrTag>(), m_size, codeStart, codeEnd, "    ", WTF::dataFile());
 
     return result;
 }
@@ -245,8 +242,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
     m_assemblerStorage = macroAssembler.m_assembler.buffer().releaseAssemblerData();
     uint8_t* inData = bitwise_cast<uint8_t*>(m_assemblerStorage.buffer());
 #if CPU(ARM64E)
-    void* bufferPtr = &macroAssembler.m_assembler.buffer();
-    ARM64EHash verifyUncompactedHash { bufferPtr };
+    ARM64EHash<ShouldSign::No> verifyUncompactedHash;
     m_assemblerHashesStorage = macroAssembler.m_assembler.buffer().releaseAssemblerHashes();
     uint32_t* inHashes = bitwise_cast<uint32_t*>(m_assemblerHashesStorage.buffer());
 #endif
@@ -269,7 +265,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
         InstructionType value = *ptr;
 #if CPU(ARM64E)
         unsigned index = (bitwise_cast<uint8_t*>(ptr) - inData) / 4;
-        uint32_t hash = verifyUncompactedHash.update(value, index, bufferPtr);
+        uint32_t hash = verifyUncompactedHash.update(value, index);
         RELEASE_ASSERT(inHashes[index] == hash);
 #endif
         return value;
@@ -415,7 +411,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompi
 void LinkBuffer::linkCode(MacroAssembler& macroAssembler, JITCompilationEffort effort)
 {
     // Ensure that the end of the last invalidation point does not extend beyond the end of the buffer.
-    macroAssembler.label();
+    macroAssembler.padBeforePatch();
 
 #if !ENABLE(BRANCH_COMPACTION)
 #if defined(ASSEMBLER_HAS_CONSTANT_POOL) && ASSEMBLER_HAS_CONSTANT_POOL
@@ -442,6 +438,8 @@ void LinkBuffer::linkCode(MacroAssembler& macroAssembler, JITCompilationEffort e
 
     m_linkTasks = WTFMove(macroAssembler.m_linkTasks);
     m_lateLinkTasks = WTFMove(macroAssembler.m_lateLinkTasks);
+
+    linkComments(macroAssembler);
 }
 
 void LinkBuffer::allocate(MacroAssembler& macroAssembler, JITCompilationEffort effort)
@@ -462,12 +460,33 @@ void LinkBuffer::allocate(MacroAssembler& macroAssembler, JITCompilationEffort e
         initialSize = macroAssembler.m_assembler.codeSize();
     }
 
+#if CPU(ARM64E)
+    macroAssembler.m_assembler.buffer().arm64eHash().deallocatePinForCurrentThread();
+#endif
+
     m_executableMemory = ExecutableAllocator::singleton().allocate(initialSize, effort);
     if (!m_executableMemory)
         return;
-    m_code = MacroAssemblerCodePtr<LinkBufferPtrTag>(m_executableMemory->start().retaggedPtr<LinkBufferPtrTag>());
+    m_code = CodePtr<LinkBufferPtrTag>(m_executableMemory->start().retaggedPtr<LinkBufferPtrTag>());
     m_size = initialSize;
     m_didAllocate = true;
+}
+
+void LinkBuffer::linkComments(MacroAssembler& assembler)
+{
+    if (LIKELY(!Options::needDisassemblySupport()) || !m_executableMemory)
+        return;
+    AssemblyCommentRegistry::CommentMap map;
+    for (const auto& [label, str] : assembler.m_comments) {
+        void* commentLocation = locationOf<DisassemblyPtrTag>(label).dataLocation();
+        auto key = reinterpret_cast<uintptr_t>(commentLocation);
+        String strCopy = str.isolatedCopy();
+        if (map.contains(key))
+            strCopy = map.get(key).isolatedCopy() + "\n; " + strCopy;
+        map.set(key, WTFMove(strCopy));
+    }
+
+    AssemblyCommentRegistry::singleton().registerCodeRange(m_executableMemory->start().untaggedPtr(), m_executableMemory->end().untaggedPtr(), WTFMove(map));
 }
 
 void LinkBuffer::performFinalization()

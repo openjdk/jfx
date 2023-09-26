@@ -34,17 +34,21 @@ class XMLDocument : public Document {
 public:
     static Ref<XMLDocument> create(Frame* frame, const Settings& settings, const URL& url)
     {
-        return adoptRef(*new XMLDocument(frame, settings, url));
+        auto document = adoptRef(*new XMLDocument(frame, settings, url, { DocumentClass::XML }));
+        document->addToContextsMap();
+        return document;
     }
 
     static Ref<XMLDocument> createXHTML(Frame* frame, const Settings& settings, const URL& url)
     {
-        return adoptRef(*new XMLDocument(frame, settings, url, XHTMLDocumentClass));
+        auto document = adoptRef(*new XMLDocument(frame, settings, url, { DocumentClass::XML, DocumentClass::XHTML }));
+        document->addToContextsMap();
+        return document;
     }
 
 protected:
-    XMLDocument(Frame* frame, const Settings& settings, const URL& url, unsigned documentClasses = DefaultDocumentClass)
-        : Document(frame, settings, url, XMLDocumentClass | documentClasses)
+    XMLDocument(Frame* frame, const Settings& settings, const URL& url, DocumentClasses documentClasses = { })
+        : Document(frame, settings, url, documentClasses | DocumentClasses(DocumentClass::XML))
     {
     }
 };

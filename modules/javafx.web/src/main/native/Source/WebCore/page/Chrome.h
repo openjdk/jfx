@@ -26,13 +26,20 @@
 #include "FocusDirection.h"
 #include "HostWindow.h"
 #include <wtf/Forward.h>
+#include <wtf/FunctionDispatcher.h>
 #include <wtf/RefPtr.h>
 
 #if PLATFORM(COCOA)
 OBJC_CLASS NSView;
 #endif
 
+namespace PAL::WebGPU {
+class GPU;
+}
+
 namespace WebCore {
+
+enum class TextDirection : bool;
 
 class ChromeClient;
 class ColorChooser;
@@ -56,6 +63,7 @@ class PopupMenu;
 class PopupMenuClient;
 class PopupOpeningObserver;
 class SearchPopupMenu;
+class WorkerClient;
 
 struct AppHighlight;
 struct ContactInfo;
@@ -85,11 +93,14 @@ public:
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, bool avoidBackendSizeCheck = false) const override;
+    RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) override;
 
 #if ENABLE(WEBGL)
     RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
 #endif
+
+    RefPtr<PAL::WebGPU::GPU> createGPUForWebGPU() const;
 
     PlatformDisplayID displayID() const override;
     void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond>) override;
@@ -140,7 +151,7 @@ public:
     bool canRunBeforeUnloadConfirmPanel();
     bool runBeforeUnloadConfirmPanel(const String& message, Frame&);
 
-    void closeWindowSoon();
+    void closeWindow();
 
     void runJavaScriptAlert(Frame&, const String&);
     bool runJavaScriptConfirm(Frame&, const String&);
@@ -165,6 +176,8 @@ public:
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);
 #endif
+
+    std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 
 #if ENABLE(APP_HIGHLIGHTS)
     void storeAppHighlight(AppHighlight&&) const;

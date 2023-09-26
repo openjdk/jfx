@@ -29,14 +29,15 @@
 
 #include "ExceptionOr.h"
 #include "LegacyCDM.h"
-#include <JavaScriptCore/Uint8Array.h>
+#include <JavaScriptCore/Forward.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class Document;
+class WeakPtrImplWithEventTargetData;
 class HTMLMediaElement;
-class ScriptExecutionContext;
 class WebKitMediaKeySession;
 
 class WebKitMediaKeys final : public RefCounted<WebKitMediaKeys>, private LegacyCDMClient {
@@ -44,7 +45,7 @@ public:
     static ExceptionOr<Ref<WebKitMediaKeys>> create(const String& keySystem);
     virtual ~WebKitMediaKeys();
 
-    ExceptionOr<Ref<WebKitMediaKeySession>> createSession(ScriptExecutionContext&, const String& mimeType, Ref<Uint8Array>&& initData);
+    ExceptionOr<Ref<WebKitMediaKeySession>> createSession(Document&, const String& mimeType, Ref<Uint8Array>&& initData);
     static bool isTypeSupported(const String& keySystem, const String& mimeType);
     const String& keySystem() const { return m_keySystem; }
 
@@ -61,7 +62,7 @@ private:
     WebKitMediaKeys(const String& keySystem, std::unique_ptr<LegacyCDM>&&);
 
     Vector<Ref<WebKitMediaKeySession>> m_sessions;
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
     String m_keySystem;
     std::unique_ptr<LegacyCDM> m_cdm;
 };

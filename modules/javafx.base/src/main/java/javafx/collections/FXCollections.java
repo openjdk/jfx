@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,7 +61,6 @@ import com.sun.javafx.collections.SortableList;
 import com.sun.javafx.collections.SourceAdapterChange;
 import java.util.RandomAccess;
 import javafx.beans.Observable;
-import javafx.collections.ListChangeListener.Change;
 import javafx.util.Callback;
 
 /**
@@ -97,8 +96,8 @@ public class FXCollections {
         if (list == null) {
             throw new NullPointerException();
         }
-        return list instanceof RandomAccess ? new ObservableListWrapper<E>(list) :
-                new ObservableSequentialListWrapper<E>(list);
+        return list instanceof RandomAccess ? new ObservableListWrapper<>(list) :
+                new ObservableSequentialListWrapper<>(list);
     }
 
     /**
@@ -125,8 +124,8 @@ public class FXCollections {
         if (list == null || extractor == null) {
             throw new NullPointerException();
         }
-        return list instanceof RandomAccess ? new ObservableListWrapper<E>(list, extractor) :
-            new ObservableSequentialListWrapper<E>(list, extractor);
+        return list instanceof RandomAccess ? new ObservableListWrapper<>(list, extractor) :
+            new ObservableSequentialListWrapper<>(list, extractor);
     }
 
     /**
@@ -144,7 +143,7 @@ public class FXCollections {
         if (map == null) {
             throw new NullPointerException();
         }
-        return new ObservableMapWrapper<K, V>(map);
+        return new ObservableMapWrapper<>(map);
     }
 
     /**
@@ -162,7 +161,7 @@ public class FXCollections {
         if (set == null) {
             throw new NullPointerException();
         }
-        return new ObservableSetWrapper<E>(set);
+        return new ObservableSetWrapper<>(set);
     }
 
     /**
@@ -177,9 +176,9 @@ public class FXCollections {
         if (elements == null) {
             throw new NullPointerException();
         }
-        Set<E> set = new HashSet<E>(elements.length);
+        Set<E> set = new HashSet<>(elements.length);
         Collections.addAll(set, elements);
-        return new ObservableSetWrapper<E>(set);
+        return new ObservableSetWrapper<>(set);
     }
 
     /**
@@ -196,7 +195,7 @@ public class FXCollections {
         if (map == null) {
             throw new NullPointerException();
         }
-        return new com.sun.javafx.collections.UnmodifiableObservableMap<K, V>(map);
+        return new com.sun.javafx.collections.UnmodifiableObservableMap<>(map);
     }
 
     /**
@@ -214,7 +213,7 @@ public class FXCollections {
         if (map == null || keyType == null || valueType == null) {
             throw new NullPointerException();
         }
-        return new CheckedObservableMap<K, V>(map, keyType, valueType);
+        return new CheckedObservableMap<>(map, keyType, valueType);
     }
 
     /**
@@ -230,10 +229,10 @@ public class FXCollections {
         if (map == null) {
             throw new NullPointerException();
         }
-        return new SynchronizedObservableMap<K, V>(map);
+        return new SynchronizedObservableMap<>(map);
     }
 
-    private static ObservableMap EMPTY_OBSERVABLE_MAP = new EmptyObservableMap();
+    private static final ObservableMap<?, ?> EMPTY_OBSERVABLE_MAP = new EmptyObservableMap<>();
 
     /**
      * Creates an empty unmodifiable observable map.
@@ -245,7 +244,7 @@ public class FXCollections {
      */
     @SuppressWarnings("unchecked")
     public static <K, V> ObservableMap<K, V> emptyObservableMap() {
-        return EMPTY_OBSERVABLE_MAP;
+        return (ObservableMap<K, V>) EMPTY_OBSERVABLE_MAP;
     }
 
     /**
@@ -314,9 +313,8 @@ public class FXCollections {
      * @param <E> The type of List to be wrapped
      * @return a newly created ObservableList
      */
-    @SuppressWarnings("unchecked")
     public static <E> ObservableList<E> observableArrayList() {
-        return observableList(new ArrayList());
+        return observableList(new ArrayList<>());
     }
 
     /**
@@ -336,7 +334,7 @@ public class FXCollections {
      * @since JavaFX 2.1
      */
     public static <E> ObservableList<E> observableArrayList(Callback<E, Observable[]> extractor) {
-        return observableList(new ArrayList(), extractor);
+        return observableList(new ArrayList<>(), extractor);
     }
 
     /**
@@ -385,7 +383,7 @@ public class FXCollections {
         if (lists.length == 1) {
             return observableArrayList(lists[0]);
         }
-        ArrayList<E> backingList = new ArrayList<E>();
+        ArrayList<E> backingList = new ArrayList<>();
         for (ObservableList<E> s : lists) {
             backingList.addAll(s);
         }
@@ -404,7 +402,7 @@ public class FXCollections {
         if (list == null) {
             throw new NullPointerException();
         }
-        return new UnmodifiableObservableListImpl<E>(list);
+        return new UnmodifiableObservableListImpl<>(list);
     }
 
     /**
@@ -419,7 +417,7 @@ public class FXCollections {
         if (list == null) {
             throw new NullPointerException();
         }
-        return new CheckedObservableList<E>(list, type);
+        return new CheckedObservableList<>(list, type);
     }
 
     /**
@@ -433,11 +431,10 @@ public class FXCollections {
         if (list == null) {
             throw new NullPointerException();
         }
-        return new SynchronizedObservableList<E>(list);
+        return new SynchronizedObservableList<>(list);
     }
 
-    private static ObservableList EMPTY_OBSERVABLE_LIST = new EmptyObservableList();
-
+    private static final ObservableList<?> EMPTY_OBSERVABLE_LIST = new EmptyObservableList<>();
 
     /**
      * Creates an empty unmodifiable observable list.
@@ -446,8 +443,8 @@ public class FXCollections {
      * @see Collections#emptyList()
      */
     @SuppressWarnings("unchecked")
-    public static<E> ObservableList<E> emptyObservableList() {
-        return EMPTY_OBSERVABLE_LIST;
+    public static <E> ObservableList<E> emptyObservableList() {
+        return (ObservableList<E>) EMPTY_OBSERVABLE_LIST;
     }
 
     /**
@@ -458,7 +455,7 @@ public class FXCollections {
      * @see Collections#singletonList(java.lang.Object)
      */
     public static<E> ObservableList<E> singletonObservableList(E e) {
-        return new SingletonObservableList<E>(e);
+        return new SingletonObservableList<>(e);
     }
 
     /**
@@ -473,7 +470,7 @@ public class FXCollections {
         if (set == null) {
             throw new NullPointerException();
         }
-        return new UnmodifiableObservableSet<E>(set);
+        return new UnmodifiableObservableSet<>(set);
     }
 
     /**
@@ -489,7 +486,7 @@ public class FXCollections {
         if (set == null) {
             throw new NullPointerException();
         }
-        return new CheckedObservableSet<E>(set, type);
+        return new CheckedObservableSet<>(set, type);
     }
 
     /**
@@ -504,10 +501,10 @@ public class FXCollections {
         if (set == null) {
             throw new NullPointerException();
         }
-        return new SynchronizedObservableSet<E>(set);
+        return new SynchronizedObservableSet<>(set);
     }
 
-    private static ObservableSet EMPTY_OBSERVABLE_SET = new EmptyObservableSet();
+    private static final ObservableSet<?> EMPTY_OBSERVABLE_SET = new EmptyObservableSet<>();
 
     /**
      * Creates an empty unmodifiable observable set.
@@ -517,8 +514,8 @@ public class FXCollections {
      * @since JavaFX 8.0
      */
     @SuppressWarnings("unchecked")
-    public static<E> ObservableSet<E> emptyObservableSet() {
-        return EMPTY_OBSERVABLE_SET;
+    public static <E> ObservableSet<E> emptyObservableSet() {
+        return (ObservableSet<E>) EMPTY_OBSERVABLE_SET;
     }
 
     /**
@@ -670,45 +667,40 @@ public class FXCollections {
     }
 
     /**
-     * Sorts the provided observable list.
+     * Sorts the provided observable list as specified in
+     * {@link java.util.Collections#sort(List) Collections.sort(List)}.
      * Fires only <b>one</b> change notification on the list.
-     * @param <T> The type of List to be wrapped
+     *
+     * @param <T> the type of elements in this list
      * @param list the list to be sorted
-     * @see Collections#sort(java.util.List)
      */
-    @SuppressWarnings("unchecked")
     public static <T extends Comparable<? super T>> void sort(ObservableList<T> list) {
-        if (list instanceof SortableList) {
-            ((SortableList<? extends T>)list).sort();
-        } else {
-            List<T> newContent = new ArrayList<T>(list);
-            Collections.sort(newContent);
-            list.setAll((Collection<T>)newContent);
-        }
+        sort(list, Comparator.naturalOrder());
     }
 
     /**
-     * Sorts the provided observable list using the c comparator.
+     * Sorts the provided observable list as specified in
+     * {@link java.util.Collections#sort(List, Comparator) Collections.sort(List, Comparator)}.
      * Fires only <b>one</b> change notification on the list.
-     * @param <T> The type of List to be wrapped
+     *
+     * @param <T> the type of elements in this list
      * @param list the list to sort
-     * @param c comparator used for sorting. Null if natural ordering is required.
-     * @see Collections#sort(java.util.List, java.util.Comparator)
+     * @param comparator the comparator to determine the order of the list. A {@code null} value indicates that the
+     *      elements' <i>natural ordering</i> should be used.
      */
-    @SuppressWarnings("unchecked")
-    public static <T> void sort(ObservableList<T> list, Comparator<? super T> c) {
+    public static <T> void sort(ObservableList<T> list, Comparator<? super T> comparator) {
         if (list instanceof SortableList) {
-            ((SortableList<? extends T>)list).sort(c);
+            list.sort(comparator);
         } else {
-            List<T> newContent = new ArrayList<T>(list);
-            Collections.sort(newContent, c);
-            list.setAll((Collection<T>)newContent);
+            List<T> newContent = new ArrayList<>(list);
+            newContent.sort(comparator);
+            list.setAll(newContent);
         }
     }
 
     private static class EmptyObservableList<E> extends AbstractList<E> implements ObservableList<E> {
 
-        private static final ListIterator iterator = new ListIterator() {
+        private final ListIterator<E> iterator = new ListIterator<>() {
 
             @Override
             public boolean hasNext() {
@@ -716,7 +708,7 @@ public class FXCollections {
             }
 
             @Override
-            public Object next() {
+            public E next() {
                 throw new NoSuchElementException();
             }
 
@@ -731,7 +723,7 @@ public class FXCollections {
             }
 
             @Override
-            public Object previous() {
+            public E previous() {
                 throw new NoSuchElementException();
             }
 
@@ -767,7 +759,6 @@ public class FXCollections {
         public final void removeListener(InvalidationListener listener) {
         }
 
-
         @Override
         public void addListener(ListChangeListener<? super E> o) {
         }
@@ -787,7 +778,6 @@ public class FXCollections {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public Iterator<E> iterator() {
             return iterator;
         }
@@ -813,13 +803,11 @@ public class FXCollections {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public ListIterator<E> listIterator() {
             return iterator;
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public ListIterator<E> listIterator(int index) {
             if (index != 0) {
                 throw new IndexOutOfBoundsException();
@@ -948,7 +936,7 @@ public class FXCollections {
 
     }
 
-    private static class UnmodifiableObservableListImpl<T> extends ObservableListBase<T> implements ObservableList<T> {
+    private static class UnmodifiableObservableListImpl<T> extends ObservableListBase<T> {
 
         private final ObservableList<T> backingList;
         private final ListChangeListener<T> listener;
@@ -956,9 +944,9 @@ public class FXCollections {
         public UnmodifiableObservableListImpl(ObservableList<T> backingList) {
             this.backingList = backingList;
             listener = c -> {
-                fireChange(new SourceAdapterChange<T>(UnmodifiableObservableListImpl.this, c));
+                fireChange(new SourceAdapterChange<>(UnmodifiableObservableListImpl.this, c));
             };
-            this.backingList.addListener(new WeakListChangeListener<T>(listener));
+            this.backingList.addListener(new WeakListChangeListener<>(listener));
         }
 
         @Override
@@ -1171,7 +1159,7 @@ public class FXCollections {
         @Override
         public List<T> subList(int fromIndex, int toIndex) {
             synchronized(mutex) {
-                return new SynchronizedList<T>(backingList.subList(fromIndex, toIndex),
+                return new SynchronizedList<>(backingList.subList(fromIndex, toIndex),
                         mutex);
             }
         }
@@ -1201,7 +1189,7 @@ public class FXCollections {
 
     private static class SynchronizedObservableList<T> extends SynchronizedList<T> implements ObservableList<T> {
 
-        private ListListenerHelper helper;
+        private ListListenerHelper<T> helper;
 
         private final ObservableList<T> backingList;
         private final ListChangeListener<T> listener;
@@ -1210,9 +1198,9 @@ public class FXCollections {
             super(seq);
             this.backingList = seq;
             listener = c -> {
-                ListListenerHelper.fireValueChangedEvent(helper, new SourceAdapterChange<T>(SynchronizedObservableList.this, c));
+                ListListenerHelper.fireValueChangedEvent(helper, new SourceAdapterChange<>(SynchronizedObservableList.this, c));
             };
-            backingList.addListener(new WeakListChangeListener<T>(listener));
+            backingList.addListener(new WeakListChangeListener<>(listener));
         }
 
         @Override
@@ -1288,7 +1276,7 @@ public class FXCollections {
 
     }
 
-    private static class CheckedObservableList<T> extends ObservableListBase<T> implements ObservableList<T> {
+    private static class CheckedObservableList<T> extends ObservableListBase<T> {
 
         private final ObservableList<T> list;
         private final Class<T> type;
@@ -1301,9 +1289,9 @@ public class FXCollections {
             this.list = list;
             this.type = type;
             listener = c -> {
-                fireChange(new SourceAdapterChange<T>(CheckedObservableList.this, c));
+                fireChange(new SourceAdapterChange<>(CheckedObservableList.this, c));
             };
-            list.addListener(new WeakListChangeListener<T>(listener));
+            list.addListener(new WeakListChangeListener<>(listener));
         }
 
         void typeCheck(Object o) {
@@ -1459,7 +1447,7 @@ public class FXCollections {
 
         @Override
         public ListIterator<T> listIterator(final int index) {
-            return new ListIterator<T>() {
+            return new ListIterator<>() {
 
                 ListIterator<T> i = list.listIterator(index);
 
@@ -1514,7 +1502,7 @@ public class FXCollections {
 
         @Override
         public Iterator<T> iterator() {
-            return new Iterator<T>() {
+            return new Iterator<>() {
 
                 private final Iterator<T> it = list.iterator();
 
@@ -1586,6 +1574,23 @@ public class FXCollections {
 
     private static class EmptyObservableSet<E> extends AbstractSet<E> implements ObservableSet<E> {
 
+        private final Iterator<E> iterator = new Iterator<>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public E next() {
+                throw new NoSuchElementException();
+            }
+
+            @Override
+            public void remove() {
+                throw new UnsupportedOperationException();
+            }
+        };
+
         public EmptyObservableSet() {
         }
 
@@ -1639,25 +1644,8 @@ public class FXCollections {
 
         @Override
         public Iterator<E> iterator() {
-            return new Iterator() {
-
-                @Override
-                public boolean hasNext() {
-                    return false;
-                }
-
-                @Override
-                public Object next() {
-                    throw new NoSuchElementException();
-                }
-
-                @Override
-                public void remove() {
-                    throw new UnsupportedOperationException();
-                }
-            };
+            return iterator;
         }
-
     }
 
     private static class UnmodifiableObservableSet<E> extends AbstractSet<E> implements ObservableSet<E> {
@@ -1674,9 +1662,9 @@ public class FXCollections {
         private void initListener() {
             if (listener == null) {
                 listener = c -> {
-                    callObservers(new SetAdapterChange<E>(UnmodifiableObservableSet.this, c));
+                    callObservers(new SetAdapterChange<>(UnmodifiableObservableSet.this, c));
                 };
-                this.backingSet.addListener(new WeakSetChangeListener<E>(listener));
+                this.backingSet.addListener(new WeakSetChangeListener<>(listener));
             }
         }
 
@@ -1686,7 +1674,7 @@ public class FXCollections {
 
         @Override
         public Iterator<E> iterator() {
-            return new Iterator<E>() {
+            return new Iterator<>() {
                 private final Iterator<? extends E> i = backingSet.iterator();
 
                 @Override
@@ -1893,16 +1881,16 @@ public class FXCollections {
     private static class SynchronizedObservableSet<E> extends SynchronizedSet<E> implements ObservableSet<E> {
 
         private final ObservableSet<E> backingSet;
-        private SetListenerHelper listenerHelper;
+        private SetListenerHelper<E> listenerHelper;
         private final SetChangeListener<E> listener;
 
         SynchronizedObservableSet(ObservableSet<E> set) {
             super(set);
             backingSet = set;
             listener = c -> {
-                SetListenerHelper.fireValueChangedEvent(listenerHelper, new SetAdapterChange<E>(SynchronizedObservableSet.this, c));
+                SetListenerHelper.fireValueChangedEvent(listenerHelper, new SetAdapterChange<>(SynchronizedObservableSet.this, c));
             };
-            backingSet.addListener(new WeakSetChangeListener<E>(listener));
+            backingSet.addListener(new WeakSetChangeListener<>(listener));
         }
 
         @Override
@@ -1937,7 +1925,7 @@ public class FXCollections {
 
         private final ObservableSet<E> backingSet;
         private final Class<E> type;
-        private SetListenerHelper listenerHelper;
+        private SetListenerHelper<E> listenerHelper;
         private final SetChangeListener<E> listener;
 
         CheckedObservableSet(ObservableSet<E> set, Class<E> type) {
@@ -1947,9 +1935,9 @@ public class FXCollections {
             backingSet = set;
             this.type = type;
             listener = c -> {
-                callObservers(new SetAdapterChange<E>(CheckedObservableSet.this, c));
+                callObservers(new SetAdapterChange<>(CheckedObservableSet.this, c));
             };
-            backingSet.addListener(new WeakSetChangeListener<E>(listener));
+            backingSet.addListener(new WeakSetChangeListener<>(listener));
         }
 
         private void callObservers(SetChangeListener.Change<? extends E> c) {
@@ -2067,7 +2055,7 @@ public class FXCollections {
         public Iterator<E> iterator() {
             final Iterator<E> it = backingSet.iterator();
 
-            return new Iterator<E>() {
+            return new Iterator<>() {
                 @Override
                 public boolean hasNext() {
                     return it.hasNext();
@@ -2164,7 +2152,7 @@ public class FXCollections {
         private final ObservableMap<K, V> backingMap;
         private final Class<K> keyType;
         private final Class<V> valueType;
-        private MapListenerHelper listenerHelper;
+        private MapListenerHelper<K, V> listenerHelper;
         private final MapChangeListener<K, V> listener;
 
         CheckedObservableMap(ObservableMap<K, V> map, Class<K> keyType, Class<V> valueType) {
@@ -2172,9 +2160,9 @@ public class FXCollections {
             this.keyType = keyType;
             this.valueType = valueType;
             listener = c -> {
-                callObservers(new MapAdapterChange<K, V>(CheckedObservableMap.this, c));
+                callObservers(new MapAdapterChange<>(CheckedObservableMap.this, c));
             };
-            backingMap.addListener(new WeakMapChangeListener<K, V>(listener));
+            backingMap.addListener(new WeakMapChangeListener<>(listener));
         }
 
         private void callObservers(MapChangeListener.Change<? extends K, ? extends V> c) {
@@ -2253,7 +2241,7 @@ public class FXCollections {
 
         @Override
         @SuppressWarnings("unchecked")
-        public void putAll(Map t) {
+        public void putAll(Map<? extends K, ? extends V> t) {
             // Satisfy the following goals:
             // - good diagnostics in case of type mismatch
             // - all-or-nothing semantics
@@ -2261,14 +2249,14 @@ public class FXCollections {
             // - correct behavior if t is a concurrent map
             Object[] entries = t.entrySet().toArray();
             List<Map.Entry<K,V>> checked =
-                new ArrayList<Map.Entry<K,V>>(entries.length);
+                new ArrayList<>(entries.length);
             for (Object o : entries) {
                 Map.Entry<?,?> e = (Map.Entry<?,?>) o;
                 Object k = e.getKey();
                 Object v = e.getValue();
                 typeCheck(k, v);
                 checked.add(
-                    new AbstractMap.SimpleImmutableEntry<K,V>((K) k, (V) v));
+                    new AbstractMap.SimpleImmutableEntry<>((K) k, (V) v));
             }
             for (Map.Entry<K,V> e : checked)
                 backingMap.put(e.getKey(), e.getValue());
@@ -2292,9 +2280,9 @@ public class FXCollections {
         private transient Set<Map.Entry<K,V>> entrySet = null;
 
         @Override
-        public Set entrySet() {
+        public Set<Entry<K, V>> entrySet() {
             if (entrySet==null)
-                entrySet = new CheckedEntrySet<K,V>(backingMap.entrySet(), valueType);
+                entrySet = new CheckedEntrySet<>(backingMap.entrySet(), valueType);
             return entrySet;
         }
 
@@ -2357,7 +2345,7 @@ public class FXCollections {
                 final Iterator<Map.Entry<K, V>> i = s.iterator();
                 final Class<V> valueType = this.valueType;
 
-                return new Iterator<Map.Entry<K,V>>() {
+                return new Iterator<>() {
                     @Override
                     public boolean hasNext() {
                         return i.hasNext();
@@ -2485,7 +2473,7 @@ public class FXCollections {
 
             static <K,V,T> CheckedEntry<K,V,T> checkedEntry(Map.Entry<K,V> e,
                                                             Class<T> valueType) {
-                return new CheckedEntry<K,V,T>(e, valueType);
+                return new CheckedEntry<>(e, valueType);
             }
 
             /**
@@ -2630,7 +2618,7 @@ public class FXCollections {
         public Set<K> keySet() {
             synchronized(mutex) {
                 if (keySet==null)
-                    keySet = new SynchronizedSet<K>(backingMap.keySet(), mutex);
+                    keySet = new SynchronizedSet<>(backingMap.keySet(), mutex);
                 return keySet;
             }
         }
@@ -2639,7 +2627,7 @@ public class FXCollections {
         public Collection<V> values() {
             synchronized(mutex) {
                 if (values==null)
-                    values = new SynchronizedCollection<V>(backingMap.values(), mutex);
+                    values = new SynchronizedCollection<>(backingMap.values(), mutex);
                 return values;
             }
         }
@@ -2648,7 +2636,7 @@ public class FXCollections {
         public Set<Entry<K, V>> entrySet() {
             synchronized(mutex) {
                 if (entrySet==null)
-                    entrySet = new SynchronizedSet<Map.Entry<K,V>>(backingMap.entrySet(), mutex);
+                    entrySet = new SynchronizedSet<>(backingMap.entrySet(), mutex);
                 return entrySet;
             }
         }
@@ -2779,16 +2767,16 @@ public class FXCollections {
     private static class SynchronizedObservableMap<K, V> extends SynchronizedMap<K, V> implements ObservableMap<K, V> {
 
         private final ObservableMap<K, V> backingMap;
-        private MapListenerHelper listenerHelper;
+        private MapListenerHelper<K, V> listenerHelper;
         private final MapChangeListener<K, V> listener;
 
         SynchronizedObservableMap(ObservableMap<K, V> map) {
             super(map);
             backingMap = map;
             listener = c -> {
-                MapListenerHelper.fireValueChangedEvent(listenerHelper, new MapAdapterChange<K, V>(SynchronizedObservableMap.this, c));
+                MapListenerHelper.fireValueChangedEvent(listenerHelper, new MapAdapterChange<>(SynchronizedObservableMap.this, c));
             };
-            backingMap.addListener(new WeakMapChangeListener<K, V>(listener));
+            backingMap.addListener(new WeakMapChangeListener<>(listener));
         }
 
         @Override

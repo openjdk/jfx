@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BorderValue.h"
 #include "Color.h"
 #include "FontCascade.h"
@@ -87,7 +85,7 @@ public:
     bool participatesInZOrderSorting() const { return isPositioned() || isStackingContext(); }
 
     const FontCascade& fontCascade() const { return m_fontCascade; }
-    const FontMetrics& fontMetrics() const { return m_fontCascade.fontMetrics(); }
+    const FontMetrics& metricsOfPrimaryFont() const { return m_fontCascade.metricsOfPrimaryFont(); }
 
     float opacity() const { return m_opacity; }
 
@@ -131,4 +129,3 @@ private:
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

@@ -30,10 +30,11 @@
  */
 
 [
+    EnabledBySetting=FileReaderAPIEnabled,
     Exposed=(Window,Worker),
     ActiveDOMObject,
 ] interface FileReader : EventTarget {
-    [CallWith=ScriptExecutionContext] constructor();
+    [CallWith=CurrentScriptExecutionContext] constructor();
 
     // ready states
     const unsigned short EMPTY = 0;

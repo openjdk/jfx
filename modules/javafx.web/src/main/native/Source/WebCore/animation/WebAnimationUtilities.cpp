@@ -27,13 +27,18 @@
 #include "WebAnimationUtilities.h"
 
 #include "Animation.h"
+#include "AnimationEventBase.h"
 #include "AnimationList.h"
+#include "AnimationPlaybackEvent.h"
 #include "CSSAnimation.h"
+#include "CSSAnimationEvent.h"
+#include "CSSPropertyNames.h"
+#include "CSSSelector.h"
 #include "CSSTransition.h"
+#include "CSSTransitionEvent.h"
 #include "DeclarativeAnimation.h"
 #include "Element.h"
 #include "KeyframeEffectStack.h"
-#include "PseudoElement.h"
 #include "WebAnimation.h"
 
 namespace WebCore {
@@ -110,12 +115,12 @@ static bool compareCSSTransitions(const CSSTransition& a, const CSSTransition& b
 
     // Otherwise, sort A and B in ascending order by the Unicode codepoints that make up the expanded transition property name of each transition
     // (i.e. without attempting case conversion and such that ‘-moz-column-width’ sorts before ‘column-width’).
-    return a.transitionProperty().utf8() < b.transitionProperty().utf8();
+    return codePointCompareLessThan(a.transitionProperty(), b.transitionProperty());
 }
 
 static bool compareCSSAnimations(const CSSAnimation& a, const CSSAnimation& b)
 {
-            // https://drafts.csswg.org/css-animations-2/#animation-composite-order
+    // https://drafts.csswg.org/css-animations-2/#animation-composite-order
     ASSERT(a.owningElement());
     ASSERT(b.owningElement());
     auto& aOwningElement = a.owningElement();
@@ -132,15 +137,14 @@ static bool compareCSSAnimations(const CSSAnimation& a, const CSSAnimation& b)
 
     auto& aBackingAnimation = a.backingAnimation();
     auto& bBackingAnimation = b.backingAnimation();
-            for (size_t i = 0; i < cssAnimationList->size(); ++i) {
-                auto& animation = cssAnimationList->animation(i);
-        if (animation == aBackingAnimation)
-                    return true;
-        if (animation == bBackingAnimation)
-                    return false;
-            }
+    for (auto& animation : *cssAnimationList) {
+        if (animation.ptr() == &aBackingAnimation)
+            return true;
+        if (animation.ptr() == &bBackingAnimation)
+            return false;
+    }
 
-            // We should have found either of those CSS animations in the CSS animations list.
+    // We should have found either of those CSS animations in the CSS animations list.
     RELEASE_ASSERT_NOT_REACHED();
 }
 
@@ -161,7 +165,7 @@ bool compareAnimationsByCompositeOrder(const WebAnimation& a, const WebAnimation
         if (aIsCSSTransition == bIsCSSTransition)
             return compareCSSTransitions(downcast<CSSTransition>(a), downcast<CSSTransition>(b));
         return !bIsCSSTransition;
-        }
+    }
 
     // CSS Animations sort next.
     bool aIsCSSAnimation = aHasOwningElement && is<CSSAnimation>(a);
@@ -176,6 +180,102 @@ bool compareAnimationsByCompositeOrder(const WebAnimation& a, const WebAnimation
     // https://drafts.csswg.org/web-animations-1/#animation-composite-order
     RELEASE_ASSERT(a.globalPosition() != b.globalPosition());
     return a.globalPosition() < b.globalPosition();
+}
+
+template <typename T>
+static std::optional<bool> compareDeclarativeAnimationEvents(const AnimationEventBase& a, const AnimationEventBase& b)
+{
+    bool aIsDeclarativeEvent = is<T>(a);
+    bool bIsDeclarativeEvent = is<T>(b);
+    if (!aIsDeclarativeEvent && !bIsDeclarativeEvent)
+        return std::nullopt;
+
+    if (aIsDeclarativeEvent != bIsDeclarativeEvent)
+        return !bIsDeclarativeEvent;
+
+    auto aScheduledTime = a.scheduledTime();
+    auto bScheduledTime = b.scheduledTime();
+    if (aScheduledTime != bScheduledTime)
+        return aScheduledTime < bScheduledTime;
+
+    auto* aTarget = a.target();
+    auto* bTarget = b.target();
+    if (aTarget == bTarget)
+        return false;
+
+    RELEASE_ASSERT(is<Element>(aTarget));
+    RELEASE_ASSERT(is<Element>(bTarget));
+
+    auto aStyleable = Styleable(downcast<Element>(*aTarget), downcast<T>(a).pseudoId());
+    auto bStyleable = Styleable(downcast<Element>(*bTarget), downcast<T>(b).pseudoId());
+    return compareDeclarativeAnimationOwningElementPositionsInDocumentTreeOrder(aStyleable, bStyleable);
+}
+
+bool compareAnimationEventsByCompositeOrder(const AnimationEventBase& a, const AnimationEventBase& b)
+{
+    // AnimationPlaybackEvent instances sort first.
+    bool aIsPlaybackEvent = is<AnimationPlaybackEvent>(a);
+    bool bIsPlaybackEvent = is<AnimationPlaybackEvent>(b);
+    if (aIsPlaybackEvent || bIsPlaybackEvent) {
+        if (aIsPlaybackEvent != bIsPlaybackEvent)
+            return !bIsPlaybackEvent;
+
+        if (a.animation() == b.animation())
+            return false;
+
+        // https://drafts.csswg.org/web-animations-1/#update-animations-and-send-events
+        // 1. Sort the events by their scheduled event time such that events that were scheduled to occur earlier, sort before
+        // events scheduled to occur later and events whose scheduled event time is unresolved sort before events with a
+        // resolved scheduled event time.
+        auto aScheduledTime = a.scheduledTime();
+        auto bScheduledTime = b.scheduledTime();
+        if (aScheduledTime != bScheduledTime) {
+            if (aScheduledTime && bScheduledTime)
+                return *aScheduledTime < *bScheduledTime;
+            return !bScheduledTime;
+        }
+
+        // 2. Within events with equal scheduled event times, sort by their composite order.
+
+        // CSS Transitions sort first.
+        bool aIsCSSTransition = is<CSSTransition>(a.animation());
+        bool bIsCSSTransition = is<CSSTransition>(b.animation());
+        if (aIsCSSTransition || bIsCSSTransition) {
+            if (aIsCSSTransition == bIsCSSTransition)
+                return false;
+            return !bIsCSSTransition;
+        }
+
+        // CSS Animations sort next.
+        bool aIsCSSAnimation = is<CSSAnimation>(a.animation());
+        bool bIsCSSAnimation = is<CSSAnimation>(b.animation());
+        if (aIsCSSAnimation || bIsCSSAnimation) {
+            if (aIsCSSAnimation == bIsCSSAnimation)
+                return false;
+            return !bIsCSSAnimation;
+        }
+
+        // JS-originated animations sort last based on their position in the global animation list.
+        auto* aAnimation = a.animation();
+        auto* bAnimation = b.animation();
+        if (aAnimation == bAnimation)
+            return false;
+
+        RELEASE_ASSERT(aAnimation);
+        RELEASE_ASSERT(bAnimation);
+        RELEASE_ASSERT(aAnimation->globalPosition() != bAnimation->globalPosition());
+        return aAnimation->globalPosition() < bAnimation->globalPosition();
+    }
+
+    // CSSTransitionEvent instances sort next.
+    if (auto sorted = compareDeclarativeAnimationEvents<CSSTransitionEvent>(a, b))
+        return *sorted;
+
+    // CSSAnimationEvent instances sort last.
+    if (auto sorted = compareDeclarativeAnimationEvents<CSSAnimationEvent>(a, b))
+        return *sorted;
+
+    return false;
 }
 
 String pseudoIdAsString(PseudoId pseudoId)
@@ -208,6 +308,40 @@ String pseudoIdAsString(PseudoId pseudoId)
     default:
         return emptyString();
     }
+}
+
+ExceptionOr<PseudoId> pseudoIdFromString(const String& pseudoElement)
+{
+    // https://drafts.csswg.org/web-animations/#dom-keyframeeffect-pseudoelement
+
+    // - If the provided value is not null and is an invalid <pseudo-element-selector>, the user agent must throw a DOMException with error
+    // name SyntaxError and leave the target pseudo-selector of this animation effect unchanged. Note, that invalid in this context follows
+    // the definition of an invalid selector defined in [SELECTORS-4] such that syntactically invalid pseudo-elements as well as pseudo-elements
+    // for which the user agent has no usable level of support are both deemed invalid.
+    // - If one of the legacy Selectors Level 2 single-colon selectors (':before', ':after', ':first-letter', or ':first-line') is specified,
+    // the target pseudo-selector must be set to the equivalent two-colon selector (e.g. '::before').
+    if (pseudoElement.isNull())
+        return PseudoId::None;
+
+    auto isLegacy = pseudoElement == ":before"_s || pseudoElement == ":after"_s || pseudoElement == ":first-letter"_s || pseudoElement == ":first-line"_s;
+    if (!isLegacy && !pseudoElement.startsWith("::"_s))
+        return Exception { SyntaxError };
+    auto pseudoType = CSSSelector::parsePseudoElementType(StringView(pseudoElement).substring(isLegacy ? 1 : 2));
+    if (pseudoType == CSSSelector::PseudoElementUnknown || pseudoType == CSSSelector::PseudoElementWebKitCustom)
+        return Exception { SyntaxError };
+    return CSSSelector::pseudoId(pseudoType);
+}
+
+AtomString animatablePropertyAsString(AnimatableProperty property)
+{
+    return WTF::switchOn(property,
+        [] (CSSPropertyID propertyId) {
+            return nameString(propertyId);
+        },
+        [] (const AtomString& customProperty) {
+            return customProperty;
+        }
+    );
 }
 
 } // namespace WebCore

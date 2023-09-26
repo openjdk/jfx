@@ -42,6 +42,7 @@ class ApplicationCache;
 class ApplicationCacheGroup;
 class ApplicationCacheResource;
 class ApplicationCacheStorage;
+class SharedBuffer;
 class DOMApplicationCache;
 class DocumentLoader;
 class Frame;
@@ -49,8 +50,8 @@ class ResourceError;
 class ResourceLoader;
 class ResourceRequest;
 class ResourceResponse;
-class SharedBuffer;
 class SubstituteData;
+class WeakPtrImplWithEventTargetData;
 
 class ApplicationCacheHost {
     WTF_MAKE_NONCOPYABLE(ApplicationCacheHost); WTF_MAKE_FAST_ALLOCATED;
@@ -95,7 +96,7 @@ public:
     void maybeLoadMainResource(const ResourceRequest&, SubstituteData&);
     void maybeLoadMainResourceForRedirect(const ResourceRequest&, SubstituteData&);
     bool maybeLoadFallbackForMainResponse(const ResourceRequest&, const ResourceResponse&);
-    void mainResourceDataReceived(const uint8_t* data, int length, long long encodedDataLength, bool allAtOnce);
+    void mainResourceDataReceived(const SharedBuffer&, long long encodedDataLength, bool allAtOnce);
     void finishedLoadingMainResource();
     void failedLoadingMainResource();
 
@@ -149,7 +150,7 @@ private:
     ApplicationCache* mainResourceApplicationCache() const { return m_mainResourceApplicationCache.get(); }
     bool maybeLoadFallbackForMainError(const ResourceRequest&, const ResourceError&);
 
-    WeakPtr<DOMApplicationCache> m_domApplicationCache;
+    WeakPtr<DOMApplicationCache, WeakPtrImplWithEventTargetData> m_domApplicationCache;
     DocumentLoader& m_documentLoader;
 
     bool m_defersEvents { true }; // Events are deferred until after document onload.

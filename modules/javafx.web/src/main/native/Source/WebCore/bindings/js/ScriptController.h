@@ -23,9 +23,11 @@
 
 #include "FrameLoaderTypes.h"
 #include "JSWindowProxy.h"
+#include "LoadableScript.h"
 #include "SerializedScriptValue.h"
 #include "WindowProxy.h"
 #include <JavaScriptCore/JSBase.h>
+#include <JavaScriptCore/ScriptFetchParameters.h>
 #include <JavaScriptCore/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
@@ -38,13 +40,11 @@ OBJC_CLASS JSContext;
 OBJC_CLASS WebScriptObject;
 #endif
 
-struct NPObject;
-
 namespace JSC {
+class AbstractModuleRecord;
 class CallFrame;
 class JSGlobalObject;
 class JSInternalPromise;
-class JSModuleRecord;
 
 namespace Bindings {
 class Instance;
@@ -107,30 +107,27 @@ public:
     JSC::JSValue evaluateIgnoringException(const ScriptSourceCode&);
     JSC::JSValue evaluateInWorldIgnoringException(const ScriptSourceCode&, DOMWrapperWorld&);
 
-    Expected<void, ExceptionDetails> shouldAllowUserAgentScripts(Document&) const;
-
     // This asserts that URL argument is a JavaScript URL.
+    void executeJavaScriptURL(const URL&, RefPtr<SecurityOrigin>, ShouldReplaceDocumentIfJavaScriptURL, bool& didReplaceDocument);
     void executeJavaScriptURL(const URL&, RefPtr<SecurityOrigin> = nullptr, ShouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
 
     static void initializeMainThread();
 
-    void loadModuleScriptInWorld(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&, DOMWrapperWorld&);
-    void loadModuleScript(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&);
+    void loadModuleScriptInWorld(LoadableModuleScript&, const URL& topLevelModuleURL, Ref<JSC::ScriptFetchParameters>&&, DOMWrapperWorld&);
+    void loadModuleScript(LoadableModuleScript&, const URL&, Ref<JSC::ScriptFetchParameters>&&);
     void loadModuleScriptInWorld(LoadableModuleScript&, const ScriptSourceCode&, DOMWrapperWorld&);
     void loadModuleScript(LoadableModuleScript&, const ScriptSourceCode&);
 
     JSC::JSValue linkAndEvaluateModuleScriptInWorld(LoadableModuleScript& , DOMWrapperWorld&);
     JSC::JSValue linkAndEvaluateModuleScript(LoadableModuleScript&);
 
-    JSC::JSValue evaluateModule(const URL&, JSC::JSModuleRecord&, DOMWrapperWorld&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
-    JSC::JSValue evaluateModule(const URL&, JSC::JSModuleRecord&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
+    JSC::JSValue evaluateModule(const URL&, JSC::AbstractModuleRecord&, DOMWrapperWorld&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
+    JSC::JSValue evaluateModule(const URL&, JSC::AbstractModuleRecord&, JSC::JSValue awaitedValue, JSC::JSValue resumeMode);
 
-    WTF::TextPosition eventHandlerPosition() const;
+    TextPosition eventHandlerPosition() const;
 
-    void enableEval();
-    void enableWebAssembly();
-    void disableEval(const String& errorMessage);
-    void disableWebAssembly(const String& errorMessage);
+    void setEvalEnabled(bool, const String& errorMessage = String());
+    void setWebAssemblyEnabled(bool, const String& errorMessage = String());
 
     static bool canAccessFromCurrentOrigin(Frame*, Document& accessingDocument);
     WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts);
@@ -166,16 +163,19 @@ public:
 
     WEBCORE_EXPORT JSC::JSObject* jsObjectForPluginElement(HTMLPlugInElement*);
 
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    WEBCORE_EXPORT NPObject* windowScriptNPObject();
-#endif
-
     void initScriptForWindowProxy(JSWindowProxy&);
 
     bool willReplaceWithResultOfExecutingJavascriptURL() const { return m_willReplaceWithResultOfExecutingJavascriptURL; }
 
+    void reportExceptionFromScriptError(LoadableScript::Error, bool);
+
+    void registerImportMap(const ScriptSourceCode&, const URL& baseURL);
+    bool isAcquiringImportMaps();
+    void setAcquiringImportMaps();
+    void setPendingImportMaps();
+    void clearPendingImportMaps();
+
 private:
-    ValueOrException executeUserAgentScriptInWorldInternal(DOMWrapperWorld&, RunJavaScriptParameters&&);
     ValueOrException executeScriptInWorld(DOMWrapperWorld&, RunJavaScriptParameters&&);
     ValueOrException callInWorld(RunJavaScriptParameters&&, DOMWrapperWorld&);
 
@@ -200,9 +200,6 @@ private:
     // This ensures they are still available when the page is restored.
     RefPtr<JSC::Bindings::RootObject> m_cacheableBindingRootObject;
     RootObjectMap m_rootObjects;
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    NPObject* m_windowScriptNPObject;
-#endif
 #if PLATFORM(COCOA)
     RetainPtr<WebScriptObject> m_windowScriptObject;
 #endif

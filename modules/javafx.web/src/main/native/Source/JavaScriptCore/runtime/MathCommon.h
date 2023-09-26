@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CPU.h"
+#include "JITOperationValidation.h"
 #include <cmath>
 
 namespace JSC {
@@ -47,6 +48,12 @@ constexpr double minSafeInteger()
     return -9007199254740991.0;
 }
 
+constexpr uint64_t maxSafeIntegerAsUInt64()
+{
+    // 2 ^ 53 - 1
+    return 9007199254740991ULL;
+}
+
 inline bool isInteger(double value)
 {
     return std::isfinite(value) && std::trunc(value) == value;
@@ -60,6 +67,11 @@ inline bool isInteger(float value)
 inline bool isSafeInteger(double value)
 {
     return std::trunc(value) == value && std::abs(value) <= maxSafeInteger();
+}
+
+inline bool isNegativeZero(double value)
+{
+    return std::signbit(value) && value == 0;
 }
 
 // This in the ToInt32 operation is defined in section 9.5 of the ECMA-262 spec.
@@ -207,14 +219,16 @@ inline std::optional<double> safeReciprocalForDivByConst(double constant)
 
 ALWAYS_INLINE bool canBeStrictInt32(double value)
 {
-    // Note: while this behavior is undefined for NaN and inf, the subsequent statement will catch these cases.
+    if (std::isinf(value) || std::isnan(value))
+        return false;
     const int32_t asInt32 = static_cast<int32_t>(value);
     return !(asInt32 != value || (!asInt32 && std::signbit(value))); // true for -0.0
 }
 
 ALWAYS_INLINE bool canBeInt32(double value)
 {
-    // Note: Strictly speaking this is an undefined behavior.
+    if (std::isinf(value) || std::isnan(value))
+        return false;
     return static_cast<int32_t>(value) == value;
 }
 
@@ -281,6 +295,29 @@ JSC_DECLARE_JIT_OPERATION(stdPowFloat, float, (float, float));
 JSC_DECLARE_JIT_OPERATION(fmodDouble, double, (double, double));
 JSC_DECLARE_JIT_OPERATION(roundDouble, double, (double));
 JSC_DECLARE_JIT_OPERATION(jsRoundDouble, double, (double));
+JSC_DECLARE_JIT_OPERATION(roundFloat, float, (float));
+
+JSC_DECLARE_JIT_OPERATION(f32_nearest, float, (float));
+JSC_DECLARE_JIT_OPERATION(f64_nearest, double, (double));
+
+JSC_DECLARE_JIT_OPERATION(i32_div_s, int32_t, (int32_t, int32_t));
+JSC_DECLARE_JIT_OPERATION(i32_div_u, uint32_t, (uint32_t, uint32_t));
+JSC_DECLARE_JIT_OPERATION(i32_rem_s, int32_t, (int32_t, int32_t));
+JSC_DECLARE_JIT_OPERATION(i32_rem_u, uint32_t, (uint32_t, uint32_t));
+JSC_DECLARE_JIT_OPERATION(i64_div_s, int64_t, (int64_t, int64_t));
+JSC_DECLARE_JIT_OPERATION(i64_div_u, uint64_t, (uint64_t, uint64_t));
+JSC_DECLARE_JIT_OPERATION(i64_rem_s, int64_t, (int64_t, int64_t));
+JSC_DECLARE_JIT_OPERATION(i64_rem_u, uint64_t, (uint64_t, uint64_t));
+
+JSC_DECLARE_JIT_OPERATION(i64_trunc_u_f32, uint64_t, (float));
+JSC_DECLARE_JIT_OPERATION(i64_trunc_s_f32, int64_t, (float));
+JSC_DECLARE_JIT_OPERATION(i64_trunc_u_f64, uint64_t, (double));
+JSC_DECLARE_JIT_OPERATION(i64_trunc_s_f64, int64_t, (double));
+
+JSC_DECLARE_JIT_OPERATION(f32_convert_u_i64, float, (uint64_t));
+JSC_DECLARE_JIT_OPERATION(f32_convert_s_i64, float, (int64_t));
+JSC_DECLARE_JIT_OPERATION(f64_convert_u_i64, double, (uint64_t));
+JSC_DECLARE_JIT_OPERATION(f64_convert_s_i64, double, (int64_t));
 
 } // namespace Math
 } // namespace JSC

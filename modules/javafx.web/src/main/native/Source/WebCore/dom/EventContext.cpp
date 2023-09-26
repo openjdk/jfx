@@ -45,9 +45,9 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
     event.setTarget(m_target.get());
     event.setCurrentTarget(m_currentTarget.get(), m_currentTargetIsInShadowTree);
 
-    if (m_relatedTarget) {
-        ASSERT(m_type == Type::MouseOrFocus);
-        event.setRelatedTarget(m_relatedTarget.get());
+    if (m_relatedTargetIsSet) {
+        ASSERT(!m_relatedTarget || m_type == Type::MouseOrFocus);
+        event.setRelatedTarget(m_relatedTarget.copyRef());
     }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -78,7 +78,8 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
 
     if (UNLIKELY(m_contextNodeIsFormElement)) {
         ASSERT(is<HTMLFormElement>(*m_node));
-        if ((event.type() == eventNames().submitEvent || event.type() == eventNames().resetEvent)
+        auto& eventNames = WebCore::eventNames();
+        if ((event.type() == eventNames.submitEvent || event.type() == eventNames.resetEvent)
             && event.eventPhase() != Event::CAPTURING_PHASE && event.target() != m_node && is<Node>(event.target())) {
             event.stopPropagation();
             return;

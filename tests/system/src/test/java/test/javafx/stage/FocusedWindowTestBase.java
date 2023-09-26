@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,28 +25,27 @@
 
 package test.javafx.stage;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
-import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import org.junit.Assert;
 
-import junit.framework.Assert;
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public abstract class FocusedWindowTestBase {
 
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
 
     public static void initFXBase() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        Platform.startup(startupLatch::countDown);
         Platform.setImplicitExit(false);
-        Assert.assertTrue("Timeout waiting for FX runtime to start",
-                startupLatch.await(15, TimeUnit.MILLISECONDS));
+        Util.startup(startupLatch, startupLatch::countDown);
     }
 
     WeakReference<Stage> closedFocusedStageWeak = null;
@@ -78,20 +77,6 @@ public abstract class FocusedWindowTestBase {
 
         closedFocusedStage.requestFocus();
         closedFocusedStage = null;
-        assertCollectable(closedFocusedStageWeak);
-    }
-
-    public static void assertCollectable(WeakReference weakReference) throws Exception {
-        int counter = 0;
-
-        System.gc();
-
-        while (counter < 10 && weakReference.get() != null) {
-            Thread.sleep(100);
-            counter = counter + 1;
-            System.gc();
-        }
-
-        Assert.assertNull(weakReference.get());
+        JMemoryBuddy.assertCollectable(closedFocusedStageWeak);
     }
 }

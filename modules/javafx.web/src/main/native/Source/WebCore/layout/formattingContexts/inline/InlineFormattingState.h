@@ -25,57 +25,61 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingState.h"
+#include "InlineDisplayBox.h"
+#include "InlineDisplayLine.h"
 #include "InlineItem.h"
 #include "InlineLineBox.h"
-#include "InlineLineGeometry.h"
-#include "InlineLineRun.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 namespace Layout {
 
 using InlineItems = Vector<InlineItem>;
-using InlineLines = Vector<LineGeometry>;
-using InlineLineBoxes = Vector<LineBox>;
-using InlineRuns = Vector<Run>;
+using DisplayLines = Vector<InlineDisplay::Line>;
+using DisplayBoxes = Vector<InlineDisplay::Box>;
 
 // InlineFormattingState holds the state for a particular inline formatting context tree.
 class InlineFormattingState : public FormattingState {
     WTF_MAKE_ISO_ALLOCATED(InlineFormattingState);
 public:
-    InlineFormattingState(Ref<FloatingState>&&, LayoutState&);
+    InlineFormattingState(LayoutState&);
     ~InlineFormattingState();
 
     InlineItems& inlineItems() { return m_inlineItems; }
     const InlineItems& inlineItems() const { return m_inlineItems; }
-    void addInlineItem(InlineItem&& inlineItem) { m_inlineItems.append(WTFMove(inlineItem)); }
+    void setInlineItems(InlineItems&& inlineItems) { m_inlineItems = WTFMove(inlineItems); }
+    void appendInlineItems(InlineItems&& inlineItems) { m_inlineItems.appendVector(WTFMove(inlineItems)); }
 
-    const InlineLines& lines() const { return m_lines; }
-    InlineLines& lines() { return m_lines; }
-    void addLine(const LineGeometry& line) { m_lines.append(line); }
+    const DisplayLines& lines() const { return m_displayLines; }
+    DisplayLines& lines() { return m_displayLines; }
+    void addLine(const InlineDisplay::Line& line) { m_displayLines.append(line); }
 
-    const InlineLineBoxes& lineBoxes() const { return m_lineBoxes; }
-    void addLineBox(LineBox&& lineBox) { m_lineBoxes.append(WTFMove(lineBox)); }
-
-    const InlineRuns& runs() const { return m_runs; }
-    InlineRuns& runs() { return m_runs; }
-    void addRun(Run&& run) { m_runs.append(WTFMove(run)); }
+    const DisplayBoxes& boxes() const { return m_displayBoxes; }
+    DisplayBoxes& boxes() { return m_displayBoxes; }
+    void addBoxes(DisplayBoxes&& boxes) { m_displayBoxes.appendVector(WTFMove(boxes)); }
 
     void setClearGapAfterLastLine(InlineLayoutUnit verticalGap);
     InlineLayoutUnit clearGapAfterLastLine() const { return m_clearGapAfterLastLine; }
 
-    void clearLineAndRuns();
+    void setClearGapBeforeFirstLine(InlineLayoutUnit verticalGap) { m_clearGapBeforeFirstLine = verticalGap; }
+    InlineLayoutUnit clearGapBeforeFirstLine() const { return m_clearGapBeforeFirstLine; }
+
+    void clearInlineItems() { m_inlineItems.clear(); }
     void shrinkToFit();
+
+    void addNestedListMarkerOffset(const ElementBox& listMarkerBox, LayoutUnit offset) { m_nestedListMarkerOffset.add(&listMarkerBox, offset); }
+    LayoutUnit nestedListMarkerOffset(const ElementBox& listMarkerBox) const { return m_nestedListMarkerOffset.get(&listMarkerBox); }
+    void resetNestedListMarkerOffsets() { return m_nestedListMarkerOffset.clear(); }
 
 private:
     // Cacheable input to line layout.
     InlineItems m_inlineItems;
-    InlineLines m_lines;
-    InlineLineBoxes m_lineBoxes;
-    InlineRuns m_runs;
+    DisplayLines m_displayLines;
+    DisplayBoxes m_displayBoxes;
+    // FIXME: This should be part of a non-persistent formatting state.
+    HashMap<const ElementBox*, LayoutUnit> m_nestedListMarkerOffset;
+    InlineLayoutUnit m_clearGapBeforeFirstLine { 0 };
     InlineLayoutUnit m_clearGapAfterLastLine { 0 };
 };
 
@@ -85,20 +89,11 @@ inline void InlineFormattingState::setClearGapAfterLastLine(InlineLayoutUnit ver
     m_clearGapAfterLastLine = verticalGap;
 }
 
-inline void InlineFormattingState::clearLineAndRuns()
-{
-    m_lines.clear();
-    m_lineBoxes.clear();
-    m_runs.clear();
-    m_clearGapAfterLastLine = { };
-}
-
 inline void InlineFormattingState::shrinkToFit()
 {
     m_inlineItems.shrinkToFit();
-    m_lines.shrinkToFit();
-    m_lineBoxes.shrinkToFit();
-    m_runs.shrinkToFit();
+    m_displayLines.shrinkToFit();
+    m_displayBoxes.shrinkToFit();
 }
 
 }
@@ -106,4 +101,3 @@ inline void InlineFormattingState::shrinkToFit()
 
 SPECIALIZE_TYPE_TRAITS_LAYOUT_FORMATTING_STATE(InlineFormattingState, isInlineFormattingState())
 
-#endif

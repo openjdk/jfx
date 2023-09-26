@@ -23,8 +23,10 @@
 #include "SVGForeignObjectElement.h"
 
 #include "CSSPropertyNames.h"
+#include "LegacyRenderSVGForeignObject.h"
 #include "RenderSVGForeignObject.h"
 #include "RenderSVGResource.h"
+#include "SVGElementInlines.h"
 #include "SVGLengthValue.h"
 #include "SVGNames.h"
 #include <wtf/Assertions.h>
@@ -36,7 +38,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGForeignObjectElement);
 
 inline SVGForeignObjectElement::SVGForeignObjectElement(const QualifiedName& tagName, Document& document)
-    : SVGGraphicsElement(tagName, document)
+    : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::foreignObjectTag));
     static std::once_flag onceFlag;
@@ -73,15 +75,15 @@ void SVGForeignObjectElement::parseAttribute(const QualifiedName& name, const At
 
 void SVGForeignObjectElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr) {
-        invalidateSVGPresentationalHintStyle();
-        return;
-    }
-
-    if (attrName == SVGNames::xAttr || attrName == SVGNames::yAttr) {
-        updateRelativeLengthsInformation();
-        if (auto renderer = this->renderer())
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        InstanceInvalidationGuard guard(*this);
+        if (attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr)
+            setPresentationalHintStyleIsDirty();
+        else {
+            ASSERT(attrName == SVGNames::xAttr || attrName == SVGNames::yAttr);
+            updateRelativeLengthsInformation();
+            updateSVGRendererForElementChange();
+        }
         return;
     }
 
@@ -91,7 +93,11 @@ void SVGForeignObjectElement::svgAttributeChanged(const QualifiedName& attrName)
 RenderPtr<RenderElement> SVGForeignObjectElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     document().setMayHaveRenderedSVGForeignObjects();
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
     return createRenderer<RenderSVGForeignObject>(*this, WTFMove(style));
+#endif
+    return createRenderer<LegacyRenderSVGForeignObject>(*this, WTFMove(style));
 }
 
 bool SVGForeignObjectElement::childShouldCreateRenderer(const Node& child) const
@@ -111,9 +117,12 @@ bool SVGForeignObjectElement::rendererIsNeeded(const RenderStyle& style)
     // Note that we currently do not support foreignObject instantiation via <use>, hence it is safe
     // to use parentElement() here. If that changes, this method should be updated to use
     // parentOrShadowHostElement() instead.
-    auto ancestor = makeRefPtr(parentElement());
+    RefPtr ancestor = parentElement();
+    if (!ancestor)
+        return false;
+
     while (ancestor && ancestor->isSVGElement()) {
-        if (ancestor->renderer() && ancestor->renderer()->isSVGHiddenContainer())
+        if (ancestor->renderer() && (ancestor->renderer()->isSVGHiddenContainer() || ancestor->renderer()->isLegacySVGHiddenContainer()))
             return false;
 
         ancestor = ancestor->parentElement();

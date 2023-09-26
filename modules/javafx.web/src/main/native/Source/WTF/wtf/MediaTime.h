@@ -135,9 +135,6 @@ public:
 
     MediaTime toTimeScale(uint32_t, RoundingFlags = RoundingFlags::HalfAwayFromZero) const;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, MediaTime&);
-
 private:
     void setTimeScale(uint32_t, RoundingFlags = RoundingFlags::HalfAwayFromZero);
 
@@ -164,7 +161,17 @@ constexpr MediaTime::MediaTime(int64_t value, uint32_t scale, uint8_t flags)
     if (scale || !(flags & Valid))
         return;
 
-    *this = value < 0 ? negativeInfiniteTime() : positiveInfiniteTime();
+    if (value < 0) {
+        // Negative infinite time
+        m_timeValue = -1;
+        m_timeScale = 1;
+        m_timeFlags = NegativeInfinite | Valid;
+    } else {
+        // Positive infinite time
+        m_timeValue = 0;
+        m_timeScale = 1;
+        m_timeFlags = PositiveInfinite | Valid;
+    }
 }
 
 inline MediaTime operator*(int32_t lhs, const MediaTime& rhs) { return rhs.operator*(lhs); }
@@ -180,20 +187,6 @@ struct WTF_EXPORT_PRIVATE MediaTimeRange {
     const MediaTime end;
 };
 
-template<class Encoder>
-void MediaTime::encode(Encoder& encoder) const
-{
-    encoder << m_timeValue << m_timeScale << m_timeFlags;
-}
-
-template<class Decoder>
-bool MediaTime::decode(Decoder& decoder, MediaTime& time)
-{
-    return decoder.decode(time.m_timeValue)
-        && decoder.decode(time.m_timeScale)
-        && decoder.decode(time.m_timeFlags);
-}
-
 template<typename> struct LogArgument;
 
 template<> struct LogArgument<MediaTime> {
@@ -203,9 +196,7 @@ template<> struct LogArgument<MediaTimeRange> {
     static String toString(const MediaTimeRange& range) { return range.toJSONString(); }
 };
 
-#ifndef NDEBUG
 WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, const MediaTime&);
-#endif
 
 }
 

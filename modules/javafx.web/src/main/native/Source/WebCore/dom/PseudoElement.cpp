@@ -29,7 +29,6 @@
 #include "PseudoElement.h"
 
 #include "ContentData.h"
-#include "DocumentTimeline.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeEffectStack.h"
 #include "RenderElement.h"
@@ -44,13 +43,13 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(PseudoElement);
 
 const QualifiedName& pseudoElementTagName()
 {
-    static NeverDestroyed<QualifiedName> name(nullAtom(), "<pseudo>", nullAtom());
+    static NeverDestroyed<QualifiedName> name(nullAtom(), "<pseudo>"_s, nullAtom());
     return name;
 }
 
 PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
     : Element(pseudoElementTagName(), host.document(), CreatePseudoElement)
-    , m_hostElement(&host)
+    , m_hostElement(host)
     , m_pseudoId(pseudoId)
 {
     ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
@@ -85,8 +84,8 @@ bool PseudoElement::rendererIsNeeded(const RenderStyle& style)
     if (pseudoElementRendererIsNeeded(&style))
         return true;
 
-    if (m_hostElement) {
-        if (auto* stack = m_hostElement->keyframeEffectStack(pseudoId()))
+    if (RefPtr element = m_hostElement.get()) {
+        if (auto* stack = element->keyframeEffectStack(pseudoId()))
             return stack->requiresPseudoElement();
     }
     return false;

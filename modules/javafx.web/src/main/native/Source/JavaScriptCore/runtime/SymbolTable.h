@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -454,14 +454,14 @@ public:
     typedef WTF::IteratorRange<typename PrivateNameEnvironment::iterator> PrivateNameIteratorRange;
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.symbolTableSpace;
+        return &vm.symbolTableSpace();
     }
 
     static SymbolTable* create(VM& vm)
     {
-        SymbolTable* symbolTable = new (NotNull, allocateCell<SymbolTable>(vm.heap)) SymbolTable(vm);
+        SymbolTable* symbolTable = new (NotNull, allocateCell<SymbolTable>(vm)) SymbolTable(vm);
         symbolTable->finishCreation(vm);
         return symbolTable;
     }
@@ -597,22 +597,27 @@ public:
         add(locker, key, std::forward<Entry>(entry));
     }
 
-    bool hasPrivateNames() const { return m_rareData && m_rareData->m_privateNames.size(); }
+    bool hasPrivateNames() const
+    {
+        if (auto* rareData = m_rareData.get())
+            return rareData->m_privateNames.size();
+        return false;
+    }
+
     ALWAYS_INLINE PrivateNameIteratorRange privateNames()
     {
         // Use of the IteratorRange must be guarded to prevent ASSERT failures in checkValidity().
         ASSERT(hasPrivateNames());
-        return makeIteratorRange(m_rareData->m_privateNames.begin(), m_rareData->m_privateNames.end());
+        auto& rareData = ensureRareData();
+        return makeIteratorRange(rareData.m_privateNames.begin(), rareData.m_privateNames.end());
     }
 
     void addPrivateName(const RefPtr<UniquedStringImpl>& key, PrivateNameEntry value)
     {
         ASSERT(key && !key->isSymbol());
-        if (!m_rareData)
-            m_rareData = WTF::makeUnique<SymbolTableRareData>();
-
-        ASSERT(m_rareData->m_privateNames.find(key) == m_rareData->m_privateNames.end());
-        m_rareData->m_privateNames.add(key, value);
+        auto& rareData = ensureRareData();
+        ASSERT(rareData.m_privateNames.find(key) == rareData.m_privateNames.end());
+        rareData.m_privateNames.add(key, value);
     }
 
     template<typename Entry>
@@ -740,17 +745,6 @@ public:
     void finalizeUnconditionally(VM&);
     void dump(PrintStream&) const;
 
-private:
-    JS_EXPORT_PRIVATE SymbolTable(VM&);
-    ~SymbolTable();
-
-    JS_EXPORT_PRIVATE void finishCreation(VM&);
-
-    Map m_map;
-    ScopeOffset m_maxScopeOffset;
-public:
-    mutable ConcurrentJSLock m_lock;
-
     struct SymbolTableRareData {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
         UniqueIDMap m_uniqueIDMap;
@@ -759,6 +753,24 @@ public:
         WriteBarrier<CodeBlock> m_codeBlock;
         PrivateNameEnvironment m_privateNames;
     };
+
+private:
+    JS_EXPORT_PRIVATE SymbolTable(VM&);
+    ~SymbolTable();
+    SymbolTableRareData& ensureRareData()
+    {
+        if (LIKELY(m_rareData))
+            return *m_rareData;
+        return ensureRareDataSlow();
+    }
+
+    JS_EXPORT_PRIVATE void finishCreation(VM&);
+    JS_EXPORT_PRIVATE SymbolTableRareData& ensureRareDataSlow();
+
+    Map m_map;
+    ScopeOffset m_maxScopeOffset;
+public:
+    mutable ConcurrentJSLock m_lock;
 
 private:
     unsigned m_usesNonStrictEval : 1;

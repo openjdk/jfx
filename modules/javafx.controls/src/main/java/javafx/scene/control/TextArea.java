@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,8 +36,6 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -46,7 +44,6 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
 
-import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
 import javafx.css.converter.SizeConverter;
@@ -85,12 +82,11 @@ import javafx.scene.AccessibleRole;
  */
 public class TextArea extends TextInputControl {
     // Text area content model
-    private static final class TextAreaContent implements Content {
-        private ExpressionHelper<String> helper = null;
-        private ArrayList<StringBuilder> paragraphs = new ArrayList<StringBuilder>();
+    private static final class TextAreaContent extends ContentBase {
+        private final List<StringBuilder> paragraphs = new ArrayList<>();
+        private final ParagraphList paragraphList = new ParagraphList();
+
         private int contentLength = 0;
-        private ParagraphList paragraphList = new ParagraphList();
-        private ListListenerHelper<CharSequence> listenerHelper;
 
         private TextAreaContent() {
             paragraphs.add(new StringBuilder(DEFAULT_PARAGRAPH_CAPACITY));
@@ -154,7 +150,7 @@ public class TextArea extends TextInputControl {
             int length = text.length();
             if (length > 0) {
                 // Split the text into lines
-                ArrayList<StringBuilder> lines = new ArrayList<StringBuilder>();
+                ArrayList<StringBuilder> lines = new ArrayList<>();
 
                 StringBuilder line = new StringBuilder(DEFAULT_PARAGRAPH_CAPACITY);
                 for (int i = 0; i < length; i++) {
@@ -215,7 +211,7 @@ public class TextArea extends TextInputControl {
                 // Update content length
                 contentLength += length;
                 if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper);
+                    fireValueChangedEvent();
                 }
             }
         }
@@ -281,7 +277,7 @@ public class TextArea extends TextInputControl {
                         Collections.singletonList((CharSequence)trailingParagraph));
 
                     if (trailingParagraphIndex - leadingParagraphIndex > 0) {
-                        List<CharSequence> removed = new ArrayList<CharSequence>(paragraphs.subList(leadingParagraphIndex,
+                        List<CharSequence> removed = new ArrayList<>(paragraphs.subList(leadingParagraphIndex,
                             trailingParagraphIndex));
                         paragraphs.subList(leadingParagraphIndex,
                             trailingParagraphIndex).clear();
@@ -298,7 +294,7 @@ public class TextArea extends TextInputControl {
                 // Update content length
                 contentLength -= length;
                 if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper);
+                    fireValueChangedEvent();
                 }
             }
         }
@@ -311,29 +307,13 @@ public class TextArea extends TextInputControl {
             return get(0, length());
         }
 
-        @Override public void addListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.addListener(helper, this, changeListener);
-        }
-
-        @Override public void removeListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.removeListener(helper, changeListener);
-        }
-
         @Override public String getValue() {
             return get();
         }
 
-        @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
         private void fireParagraphListChangeEvent(int from, int to, List<CharSequence> removed) {
             ParagraphListChange change = new ParagraphListChange(paragraphList, from, to, removed);
-            ListListenerHelper.fireValueChangedEvent(listenerHelper, change);
+            ListListenerHelper.fireValueChangedEvent(paragraphList.listenerHelper, change);
         }
     }
 
@@ -342,6 +322,7 @@ public class TextArea extends TextInputControl {
             implements ObservableList<CharSequence> {
 
         private TextAreaContent content;
+        private ListListenerHelper<CharSequence> listenerHelper;
 
         @Override
         public CharSequence get(int index) {
@@ -375,12 +356,12 @@ public class TextArea extends TextInputControl {
 
         @Override
         public void addListener(ListChangeListener<? super CharSequence> listener) {
-            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener);
+            listenerHelper = ListListenerHelper.addListener(listenerHelper, listener);
         }
 
         @Override
         public void removeListener(ListChangeListener<? super CharSequence> listener) {
-            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener);
+            listenerHelper = ListListenerHelper.removeListener(listenerHelper, listener);
         }
 
         @Override
@@ -400,12 +381,12 @@ public class TextArea extends TextInputControl {
 
         @Override
         public void addListener(InvalidationListener listener) {
-            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener);
+            listenerHelper = ListListenerHelper.addListener(listenerHelper, listener);
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
-            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener);
+            listenerHelper = ListListenerHelper.removeListener(listenerHelper, listener);
         }
     }
 
@@ -429,7 +410,7 @@ public class TextArea extends TextInputControl {
         protected int[] getPermutation() {
             return new int[0];
         }
-    };
+    }
 
     /**
      * The default value for {@link #prefColumnCountProperty() prefColumnCount}.
@@ -633,7 +614,7 @@ public class TextArea extends TextInputControl {
 
     private static class StyleableProperties {
         private static final CssMetaData<TextArea,Number> PREF_COLUMN_COUNT =
-            new CssMetaData<TextArea,Number>("-fx-pref-column-count",
+            new CssMetaData<>("-fx-pref-column-count",
                 SizeConverter.getInstance(), DEFAULT_PREF_COLUMN_COUNT) {
 
             @Override
@@ -643,12 +624,12 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)n.prefColumnCountProperty();
             }
         };
 
         private static final CssMetaData<TextArea,Number> PREF_ROW_COUNT =
-            new CssMetaData<TextArea,Number>("-fx-pref-row-count",
+            new CssMetaData<>("-fx-pref-row-count",
                 SizeConverter.getInstance(), DEFAULT_PREF_ROW_COUNT) {
 
             @Override
@@ -658,12 +639,12 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefRowCountProperty();
+                return (StyleableProperty<Number>)n.prefRowCountProperty();
             }
         };
 
         private static final CssMetaData<TextArea,Boolean> WRAP_TEXT =
-            new CssMetaData<TextArea,Boolean>("-fx-wrap-text",
+            new CssMetaData<>("-fx-wrap-text",
                 StyleConverter.getBooleanConverter(), false) {
 
             @Override
@@ -673,14 +654,14 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.wrapTextProperty();
+                return (StyleableProperty<Boolean>)n.wrapTextProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(TextInputControl.getClassCssMetaData());
+                new ArrayList<>(TextInputControl.getClassCssMetaData());
             styleables.add(PREF_COLUMN_COUNT);
             styleables.add(PREF_ROW_COUNT);
             styleables.add(WRAP_TEXT);

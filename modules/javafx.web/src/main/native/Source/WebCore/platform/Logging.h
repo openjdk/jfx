@@ -38,6 +38,7 @@ namespace WebCore {
 
 #define WEBCORE_LOG_CHANNELS(M) \
     M(Accessibility) \
+    M(ActivityState) \
     M(Animations) \
     M(AppHighlights) \
     M(ApplePay) \
@@ -49,6 +50,7 @@ namespace WebCore {
     M(CompositingOverlap) \
     M(ContentFiltering) \
     M(ContentObservation) \
+    M(Crypto) \
     M(DatabaseTracker) \
     M(DisplayLink) \
     M(DisplayLists) \
@@ -74,8 +76,10 @@ namespace WebCore {
     M(IndexedDB) \
     M(IndexedDBOperations) \
     M(Inspector) \
+    M(IntersectionObserver) \
     M(Layers) \
     M(Layout) \
+    M(LazyLoading) \
     M(FormattingContextLayout) \
     M(Loading) \
     M(Media) \
@@ -95,12 +99,16 @@ namespace WebCore {
     M(Plugins) \
     M(PopupBlocking) \
     M(PrivateClickMeasurement) \
+    M(Process) \
     M(Progress) \
+    M(Push) \
     M(RemoteInspector) \
     M(RequestAnimationFrame) \
+    M(ResizeObserver) \
     M(ResourceLoading) \
     M(ResourceLoadObserver) \
     M(ResourceLoadStatistics) \
+    M(ScrollAnimations) \
     M(ScrollSnap) \
     M(Scrolling) \
     M(ScrollingTree) \
@@ -108,6 +116,7 @@ namespace WebCore {
     M(Selection) \
     M(Services) \
     M(ServiceWorker) \
+    M(SharedWorker) \
     M(SpellingAndGrammar) \
     M(SQLDatabase) \
     M(Storage) \
@@ -115,6 +124,9 @@ namespace WebCore {
     M(StyleSheets) \
     M(SVG) \
     M(TextAutosizing) \
+    M(TextFragment) \
+    M(TextManipulation) \
+    M(TextShaping) \
     M(Tiling) \
     M(Threading) \
     M(URLParser) \
@@ -123,6 +135,7 @@ namespace WebCore {
     M(WebGL) \
     M(WebRTC) \
     M(WebRTCStats) \
+    M(Worker) \
     M(XR) \
     M(WheelEventTestMonitor) \
 

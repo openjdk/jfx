@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,16 +44,17 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class LineChartTest extends XYChartTestBase {
 
     LineChart<Number,Number> lineChart;
-    final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
+    final XYChart.Series<Number, Number> series1 = new XYChart.Series<>();
 
     @Override protected Chart createChart() {
         final NumberAxis xAxis = new NumberAxis(0, 90, 10);
-        final NumberAxis yAxis = new NumberAxis(0, 30, 2);;
-        lineChart = new LineChart<Number,Number>(xAxis,yAxis);
+        final NumberAxis yAxis = new NumberAxis(0, 30, 2);
+        lineChart = new LineChart<>(xAxis,yAxis);
         xAxis.setLabel("X Axis");
         yAxis.setLabel("Y Axis");
         lineChart.setTitle("HelloLineChart");
@@ -137,7 +138,7 @@ public class LineChartTest extends XYChartTestBase {
     public void testSeriesAddWithAnimation() {
         startApp();
         lineChart.setAnimated(true);
-        final XYChart.Series<Number, Number> series2 = new XYChart.Series<Number, Number>();
+        final XYChart.Series<Number, Number> series2 = new XYChart.Series<>();
         series1.getData().add(new XYChart.Data(15d, 40d));
         series1.getData().add(new XYChart.Data(25d, 10d));
         series1.getData().add(new XYChart.Data(40d, 35d));
@@ -677,6 +678,18 @@ public class LineChartTest extends XYChartTestBase {
         );
 
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    //JDK-8283675
+    @Test
+    public void testChartLineRemovedOnClearingSeries() {
+        startApp();
+        lineChart.getData().addAll(series1);
+        pulse();
+        assertTrue(0 < ((Path)series1.getNode()).getElements().size());
+        series1.getData().clear();
+        pulse();
+        assertEquals(0, ((Path)series1.getNode()).getElements().size());
     }
 
     private List<Point2D> convertSeriesDataToPoint2D(XYChart.Series<Number, Number> series) {

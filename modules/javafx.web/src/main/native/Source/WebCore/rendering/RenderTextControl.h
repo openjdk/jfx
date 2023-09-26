@@ -70,14 +70,14 @@ protected:
 private:
     void element() const = delete;
 
-    const char* renderName() const override { return "RenderTextControl"; }
+    ASCIILiteral renderName() const override { return "RenderTextControl"_s; }
     bool isTextControl() const final { return true; }
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
     bool avoidsFloats() const override { return true; }
     bool canHaveGeneratedChildren() const override { return false; }
 
-    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) override;
+    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const override;
 
     bool canBeProgramaticallyScrolled() const override { return true; }
 };

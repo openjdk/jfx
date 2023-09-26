@@ -29,12 +29,13 @@
 #include "AccessibilitySVGElement.h"
 
 #include "AXObjectCache.h"
-#include "ElementIterator.h"
+#include "ElementChildIterator.h"
 #include "HTMLNames.h"
 #include "RenderIterator.h"
 #include "RenderText.h"
 #include "SVGAElement.h"
 #include "SVGDescElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGGElement.h"
 #include "SVGTitleElement.h"
 #include "SVGUseElement.h"
@@ -43,16 +44,19 @@
 
 namespace WebCore {
 
-AccessibilitySVGElement::AccessibilitySVGElement(RenderObject* renderer)
+AccessibilitySVGElement::AccessibilitySVGElement(RenderObject* renderer, AXObjectCache* cache)
     : AccessibilityRenderObject(renderer)
+    , m_axObjectCache(cache)
 {
+    ASSERT(renderer);
+    ASSERT(cache);
 }
 
 AccessibilitySVGElement::~AccessibilitySVGElement() = default;
 
-Ref<AccessibilitySVGElement> AccessibilitySVGElement::create(RenderObject* renderer)
+Ref<AccessibilitySVGElement> AccessibilitySVGElement::create(RenderObject* renderer, AXObjectCache* cache)
 {
-    return adoptRef(*new AccessibilitySVGElement(renderer));
+    return adoptRef(*new AccessibilitySVGElement(renderer, cache));
 }
 
 AccessibilityObject* AccessibilitySVGElement::targetForUseElement() const
@@ -68,7 +72,10 @@ AccessibilityObject* AccessibilitySVGElement::targetForUseElement() const
     auto target = SVGURIReference::targetElementFromIRIString(href, use.treeScope());
     if (!target.element)
         return nullptr;
-    return axObjectCache()->getOrCreate(target.element.get());
+
+    if (auto* cache = axObjectCache())
+        return cache->getOrCreate(target.element.get());
+    return nullptr;
 }
 
 template <typename ChildrenType>
@@ -149,7 +156,7 @@ String AccessibilitySVGElement::accessibilityDescription() const
     // FIXME: This is here to not break the svg-image.html test. But 'alt' is not
     // listed as a supported attribute of the 'image' element in the SVG spec:
     // https://www.w3.org/TR/SVG/struct.html#ImageElement
-    if (m_renderer->isSVGImage()) {
+    if (m_renderer->isSVGImageOrLegacySVGImage()) {
         const AtomString& alt = getAttribute(HTMLNames::altAttr);
         if (!alt.isNull())
             return alt;
@@ -203,7 +210,7 @@ bool AccessibilitySVGElement::computeAccessibilityIsIgnored() const
     if (decision == AccessibilityObjectInclusion::IgnoreObject)
         return true;
 
-    if (m_renderer->isSVGHiddenContainer())
+    if (m_renderer->isLegacySVGHiddenContainer() || m_renderer->isSVGHiddenContainer())
         return true;
 
     // The SVG AAM states objects with at least one 'title' or 'desc' element MUST be included.
@@ -229,7 +236,7 @@ bool AccessibilitySVGElement::computeAccessibilityIsIgnored() const
 
     // SVG shapes should not be included unless there's a concrete reason for inclusion.
     // https://rawgit.com/w3c/aria/master/svg-aam/svg-aam.html#exclude_elements
-    if (m_renderer->isSVGShape()) {
+    if (m_renderer->isSVGShapeOrLegacySVGShape()) {
         if (canSetFocusAttribute() || element()->hasEventListeners())
             return false;
         if (auto* svgParent = Accessibility::findAncestor<AccessibilityObject>(*this, true, [] (const AccessibilityObject& object) {
@@ -281,11 +288,14 @@ AccessibilityRole AccessibilitySVGElement::determineAccessibilityRole()
     if ((m_ariaRole = determineAriaRoleAttribute()) != AccessibilityRole::Unknown)
         return m_ariaRole;
 
+    if (!m_renderer)
+        return AccessibilityRole::Unknown;
+
     Element* svgElement = element();
 
-    if (m_renderer->isSVGShape() || m_renderer->isSVGPath() || m_renderer->isSVGImage() || is<SVGUseElement>(svgElement))
+    if (m_renderer->isSVGShapeOrLegacySVGShape() || m_renderer->isSVGPathOrLegacySVGPath() || m_renderer->isSVGImageOrLegacySVGImage() || is<SVGUseElement>(svgElement))
         return AccessibilityRole::Image;
-    if (m_renderer->isSVGForeignObject() || is<SVGGElement>(svgElement))
+    if (m_renderer->isSVGForeignObjectOrLegacySVGForeignObject() || is<SVGGElement>(svgElement))
         return AccessibilityRole::Group;
     if (m_renderer->isSVGText())
         return AccessibilityRole::SVGText;

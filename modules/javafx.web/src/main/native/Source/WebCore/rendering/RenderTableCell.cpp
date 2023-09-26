@@ -25,7 +25,10 @@
 #include "config.h"
 #include "RenderTableCell.h"
 
+#include "BackgroundPainter.h"
+#include "BorderPainter.h"
 #include "CollapsedBorderValue.h"
+#include "ElementInlines.h"
 #include "FloatQuad.h"
 #include "GraphicsContext.h"
 #include "HTMLNames.h"
@@ -56,8 +59,8 @@ struct SameSizeAsRenderTableCell : public RenderBlockFlow {
     LayoutUnit padding[2];
 };
 
-COMPILE_ASSERT(sizeof(RenderTableCell) == sizeof(SameSizeAsRenderTableCell), RenderTableCell_should_stay_small);
-COMPILE_ASSERT(sizeof(CollapsedBorderValue) <= 24, CollapsedBorderValue_should_stay_small);
+static_assert(sizeof(RenderTableCell) == sizeof(SameSizeAsRenderTableCell), "RenderTableCell should stay small");
+static_assert(sizeof(CollapsedBorderValue) <= 24, "CollapsedBorderValue should stay small");
 
 RenderTableCell::RenderTableCell(Element& element, RenderStyle&& style)
     : RenderBlockFlow(element, WTFMove(style))
@@ -202,6 +205,17 @@ void RenderTableCell::computePreferredLogicalWidths()
     }
 }
 
+LayoutRect RenderTableCell::frameRectForStickyPositioning() const
+{
+    // RenderTableCell has the RenderTableRow as the container, but is positioned relatively
+    // to the RenderTableSection. The sticky positioning algorithm assumes that elements are
+    // positioned relatively to their container, so we correct for that here.
+    ASSERT(parentBox());
+    auto returnValue = frameRect();
+    returnValue.move(-parentBox()->locationOffset());
+    return returnValue;
+}
+
 void RenderTableCell::computeIntrinsicPadding(LayoutUnit rowHeight)
 {
     LayoutUnit oldIntrinsicPaddingBefore = intrinsicPaddingBefore();
@@ -255,9 +269,6 @@ void RenderTableCell::setCellLogicalWidth(LayoutUnit tableLayoutLogicalWidth)
 
     setNeedsLayout(MarkOnlyThis);
     row()->setChildNeedsLayout(MarkOnlyThis);
-
-    if (!table()->selfNeedsLayout() && checkForRepaintDuringLayout())
-        repaint();
 
     setLogicalWidth(tableLayoutLogicalWidth);
     setCellWidthChanged(true);
@@ -342,8 +353,8 @@ LayoutSize RenderTableCell::offsetFromContainer(RenderElement& container, const 
     ASSERT(&container == this->container());
 
     LayoutSize offset = RenderBlockFlow::offsetFromContainer(container, point, offsetDependsOnPoint);
-    if (parent())
-        offset -= parentBox()->locationOffset();
+    if (auto* containerOfRow = container.container(); containerOfRow && parent())
+        offset -= parentBox()->offsetFromContainer(*containerOfRow, point);
 
     return offset;
 }
@@ -1257,11 +1268,11 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
     borders.addBorder(leftVal, BoxSide::Left, renderLeft, borderRect.x(), borderRect.y(), borderRect.x() + leftWidth, borderRect.maxY(), leftStyle);
     borders.addBorder(rightVal, BoxSide::Right, renderRight, borderRect.maxX() - rightWidth, borderRect.y(), borderRect.maxX(), borderRect.maxY(), rightStyle);
 
-    bool antialias = shouldAntialiasLines(graphicsContext);
+    bool antialias = BorderPainter::shouldAntialiasLines(graphicsContext);
 
     for (CollapsedBorder* border = borders.nextBorder(); border; border = borders.nextBorder()) {
         if (border->borderValue.isSameIgnoringColor(*table()->currentBorderValue()))
-            drawLineForBoxSide(graphicsContext, LayoutRect(LayoutPoint(border->x1, border->y1), LayoutPoint(border->x2, border->y2)), border->side,
+            BorderPainter::drawLineForBoxSide(graphicsContext, document(), LayoutRect(LayoutPoint(border->x1, border->y1), LayoutPoint(border->x2, border->y2)), border->side,
                 border->borderValue.color(), border->style, 0, 0, antialias);
     }
 }
@@ -1304,7 +1315,7 @@ void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const Lay
         paintInfo.context().clip(clipRect);
     }
     auto compositeOp = document().compositeOperatorForBackgroundColor(color, *this);
-    paintFillLayers(paintInfo, color, bgLayer, LayoutRect(adjustedPaintOffset, frameRect().size()), BackgroundBleedNone, compositeOp, backgroundObject);
+    BackgroundPainter { *this, paintInfo }.paintFillLayers(color, bgLayer, LayoutRect(adjustedPaintOffset, frameRect().size()), BackgroundBleedNone, compositeOp, backgroundObject);
 }
 
 void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -1319,17 +1330,19 @@ void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoin
     LayoutRect paintRect = LayoutRect(paintOffset, frameRect().size());
     adjustBorderBoxRectForPainting(paintRect);
 
-    paintBoxShadow(paintInfo, paintRect, style(), ShadowStyle::Normal);
+    BackgroundPainter backgroundPainter { *this, paintInfo };
+    backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Normal);
 
     // Paint our cell background.
     paintBackgroundsBehindCell(paintInfo, paintOffset, this);
 
-    paintBoxShadow(paintInfo, paintRect, style(), ShadowStyle::Inset);
+    backgroundPainter.paintBoxShadow(paintRect, style(), ShadowStyle::Inset);
 
     if (!style().hasBorder() || table->collapseBorders())
         return;
 
-    paintBorder(paintInfo, paintRect, style());
+    BorderPainter borderPainter { *this, paintInfo };
+    borderPainter.paintBorder(paintRect, style());
 }
 
 void RenderTableCell::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -1345,11 +1358,6 @@ void RenderTableCell::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOf
     adjustBorderBoxRectForPainting(paintRect);
 
     paintMaskImages(paintInfo, paintRect);
-}
-
-bool RenderTableCell::boxShadowShouldBeAppliedToBackground(const LayoutPoint&, BackgroundBleedAvoidance, LegacyInlineFlowBox*) const
-{
-    return false;
 }
 
 void RenderTableCell::scrollbarsChanged(bool horizontalScrollbarChanged, bool verticalScrollbarChanged)

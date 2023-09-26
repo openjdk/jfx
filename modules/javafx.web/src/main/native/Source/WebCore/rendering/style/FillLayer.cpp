@@ -28,8 +28,7 @@
 namespace WebCore {
 
 struct SameSizeAsFillLayer : RefCounted<SameSizeAsFillLayer> {
-    FillLayer* next;
-
+    RefPtr<FillLayer> next;
     RefPtr<StyleImage> image;
 
     Length x;
@@ -37,11 +36,14 @@ struct SameSizeAsFillLayer : RefCounted<SameSizeAsFillLayer> {
 
     LengthSize sizeLength;
 
-    unsigned bitfields : 32;
-    unsigned bitfields2 : 11;
+    unsigned char repeatX;
+    unsigned char repeatY;
+
+    unsigned bitfields : 13;
+    unsigned bitfields2 : 26;
 };
 
-COMPILE_ASSERT(sizeof(FillLayer) == sizeof(SameSizeAsFillLayer), FillLayer_should_stay_small);
+static_assert(sizeof(FillLayer) == sizeof(SameSizeAsFillLayer), "FillLayer should stay small");
 
 Ref<FillLayer> FillLayer::create(FillLayerType type)
 {
@@ -57,21 +59,19 @@ FillLayer::FillLayer(FillLayerType type)
     : m_image(FillLayer::initialFillImage(type))
     , m_xPosition(FillLayer::initialFillXPosition(type))
     , m_yPosition(FillLayer::initialFillYPosition(type))
+    , m_repeat(FillLayer::initialFillRepeat(type))
     , m_attachment(static_cast<unsigned>(FillLayer::initialFillAttachment(type)))
     , m_clip(static_cast<unsigned>(FillLayer::initialFillClip(type)))
     , m_origin(static_cast<unsigned>(FillLayer::initialFillOrigin(type)))
-    , m_repeatX(static_cast<unsigned>(FillLayer::initialFillRepeatX(type)))
-    , m_repeatY(static_cast<unsigned>(FillLayer::initialFillRepeatY(type)))
     , m_composite(static_cast<unsigned>(FillLayer::initialFillComposite(type)))
     , m_sizeType(static_cast<unsigned>(FillSizeType::None))
     , m_blendMode(static_cast<unsigned>(FillLayer::initialFillBlendMode(type)))
-    , m_maskSourceType(static_cast<unsigned>(FillLayer::initialFillMaskSourceType(type)))
+    , m_maskMode(static_cast<unsigned>(FillLayer::initialFillMaskMode(type)))
     , m_imageSet(false)
     , m_attachmentSet(false)
     , m_clipSet(false)
     , m_originSet(false)
-    , m_repeatXSet(false)
-    , m_repeatYSet(false)
+    , m_repeatSet(false)
     , m_xPosSet(false)
     , m_yPosSet(false)
     , m_backgroundXOriginSet(false)
@@ -80,7 +80,7 @@ FillLayer::FillLayer(FillLayerType type)
     , m_backgroundYOrigin(static_cast<unsigned>(Edge::Top))
     , m_compositeSet(type == FillLayerType::Mask)
     , m_blendModeSet(false)
-    , m_maskSourceTypeSet(false)
+    , m_maskModeSet(false)
     , m_type(static_cast<unsigned>(type))
 {
 }
@@ -90,21 +90,19 @@ FillLayer::FillLayer(const FillLayer& o)
     , m_xPosition(o.m_xPosition)
     , m_yPosition(o.m_yPosition)
     , m_sizeLength(o.m_sizeLength)
+    , m_repeat(o.m_repeat)
     , m_attachment(o.m_attachment)
     , m_clip(o.m_clip)
     , m_origin(o.m_origin)
-    , m_repeatX(o.m_repeatX)
-    , m_repeatY(o.m_repeatY)
     , m_composite(o.m_composite)
     , m_sizeType(o.m_sizeType)
     , m_blendMode(o.m_blendMode)
-    , m_maskSourceType(o.m_maskSourceType)
+    , m_maskMode(o.m_maskMode)
     , m_imageSet(o.m_imageSet)
     , m_attachmentSet(o.m_attachmentSet)
     , m_clipSet(o.m_clipSet)
     , m_originSet(o.m_originSet)
-    , m_repeatXSet(o.m_repeatXSet)
-    , m_repeatYSet(o.m_repeatYSet)
+    , m_repeatSet(o.m_repeatSet)
     , m_xPosSet(o.m_xPosSet)
     , m_yPosSet(o.m_yPosSet)
     , m_backgroundXOriginSet(o.m_backgroundXOriginSet)
@@ -113,7 +111,7 @@ FillLayer::FillLayer(const FillLayer& o)
     , m_backgroundYOrigin(o.m_backgroundYOrigin)
     , m_compositeSet(o.m_compositeSet)
     , m_blendModeSet(o.m_blendModeSet)
-    , m_maskSourceTypeSet(o.m_maskSourceTypeSet)
+    , m_maskModeSet(o.m_maskModeSet)
     , m_type(o.m_type)
 {
     if (o.m_next)
@@ -132,6 +130,7 @@ FillLayer& FillLayer::operator=(const FillLayer& o)
         m_next = create(*o.m_next);
     else
         m_next = nullptr;
+
     m_image = o.m_image;
     m_xPosition = o.m_xPosition;
     m_yPosition = o.m_yPosition;
@@ -140,15 +139,14 @@ FillLayer& FillLayer::operator=(const FillLayer& o)
     m_backgroundXOriginSet = o.m_backgroundXOriginSet;
     m_backgroundYOriginSet = o.m_backgroundYOriginSet;
     m_sizeLength = o.m_sizeLength;
+    m_repeat = o.m_repeat;
     m_attachment = o.m_attachment;
     m_clip = o.m_clip;
     m_composite = o.m_composite;
     m_blendMode = o.m_blendMode;
     m_origin = o.m_origin;
-    m_repeatX = o.m_repeatX;
-    m_repeatY = o.m_repeatY;
     m_sizeType = o.m_sizeType;
-    m_maskSourceType = o.m_maskSourceType;
+    m_maskMode = o.m_maskMode;
 
     m_imageSet = o.m_imageSet;
     m_attachmentSet = o.m_attachmentSet;
@@ -156,11 +154,10 @@ FillLayer& FillLayer::operator=(const FillLayer& o)
     m_compositeSet = o.m_compositeSet;
     m_blendModeSet = o.m_blendModeSet;
     m_originSet = o.m_originSet;
-    m_repeatXSet = o.m_repeatXSet;
-    m_repeatYSet = o.m_repeatYSet;
+    m_repeatSet = o.m_repeatSet;
     m_xPosSet = o.m_xPosSet;
     m_yPosSet = o.m_yPosSet;
-    m_maskSourceTypeSet = o.m_maskSourceTypeSet;
+    m_maskModeSet = o.m_maskModeSet;
 
     m_type = o.m_type;
 
@@ -174,8 +171,8 @@ bool FillLayer::operator==(const FillLayer& o) const
     return arePointingToEqualData(m_image.get(), o.m_image.get()) && m_xPosition == o.m_xPosition && m_yPosition == o.m_yPosition
         && m_backgroundXOrigin == o.m_backgroundXOrigin && m_backgroundYOrigin == o.m_backgroundYOrigin
         && m_attachment == o.m_attachment && m_clip == o.m_clip && m_composite == o.m_composite
-        && m_blendMode == o.m_blendMode && m_origin == o.m_origin && m_repeatX == o.m_repeatX
-        && m_repeatY == o.m_repeatY && m_sizeType == o.m_sizeType && m_maskSourceType == o.m_maskSourceType
+        && m_blendMode == o.m_blendMode && m_origin == o.m_origin && m_repeat == o.m_repeat
+        && m_sizeType == o.m_sizeType && m_maskMode == o.m_maskMode
         && m_sizeLength == o.m_sizeLength && m_type == o.m_type
         && ((m_next && o.m_next) ? *m_next == *o.m_next : m_next == o.m_next);
 }
@@ -268,22 +265,11 @@ void FillLayer::fillUnsetProperties()
         }
     }
 
-    for (curr = this; curr && curr->isRepeatXSet(); curr = curr->next()) { }
+    for (curr = this; curr && curr->isRepeatSet(); curr = curr->next()) { }
     if (curr && curr != this) {
         // We need to fill in the remaining values with the pattern specified.
         for (FillLayer* pattern = this; curr; curr = curr->next()) {
-            curr->m_repeatX = pattern->m_repeatX;
-            pattern = pattern->next();
-            if (pattern == curr || !pattern)
-                pattern = this;
-        }
-    }
-
-    for (curr = this; curr && curr->isRepeatYSet(); curr = curr->next()) { }
-    if (curr && curr != this) {
-        // We need to fill in the remaining values with the pattern specified.
-        for (FillLayer* pattern = this; curr; curr = curr->next()) {
-            curr->m_repeatY = pattern->m_repeatY;
+            curr->m_repeat = pattern->m_repeat;
             pattern = pattern->next();
             if (pattern == curr || !pattern)
                 pattern = this;
@@ -321,7 +307,7 @@ static inline FillBox clipMax(FillBox clipA, FillBox clipB)
         return FillBox::Padding;
     if (clipA == FillBox::Content || clipB == FillBox::Content)
         return FillBox::Content;
-    return FillBox::Text;
+    return FillBox::NoClip;
 }
 
 void FillLayer::computeClipMax() const
@@ -329,7 +315,7 @@ void FillLayer::computeClipMax() const
     Vector<const FillLayer*, 4> layers;
     for (auto* layer = this; layer; layer = layer->m_next.get())
         layers.append(layer);
-    FillBox computedClipMax = FillBox::Text;
+    FillBox computedClipMax = FillBox::NoClip;
     for (unsigned i = layers.size(); i; --i) {
         auto& layer = *layers[i - 1];
         computedClipMax = clipMax(computedClipMax, layer.clip());
@@ -375,7 +361,7 @@ bool FillLayer::hasOpaqueImage(const RenderElement& renderer) const
 
 bool FillLayer::hasRepeatXY() const
 {
-    return repeatX() == FillRepeat::Repeat && repeatY() == FillRepeat::Repeat;
+    return repeat().x == FillRepeat::Repeat && repeat().y == FillRepeat::Repeat;
 }
 
 bool FillLayer::hasImageInAnyLayer() const
@@ -387,10 +373,10 @@ bool FillLayer::hasImageInAnyLayer() const
     return false;
 }
 
-bool FillLayer::hasFixedImage() const
+bool FillLayer::hasImageWithAttachment(FillAttachment attachment) const
 {
     for (auto* layer = this; layer; layer = layer->m_next.get()) {
-        if (layer->m_image && layer->attachment() == FillAttachment::FixedBackground)
+        if (layer->m_image && layer->attachment() == attachment)
             return true;
     }
     return false;
@@ -399,6 +385,11 @@ bool FillLayer::hasFixedImage() const
 TextStream& operator<<(TextStream& ts, FillSize fillSize)
 {
     return ts << fillSize.type << " " << fillSize.size;
+}
+
+TextStream& operator<<(TextStream& ts, FillRepeatXY repeat)
+{
+    return ts << repeat.x << " " << repeat.y;
 }
 
 TextStream& operator<<(TextStream& ts, const FillLayer& layer)
@@ -416,16 +407,13 @@ TextStream& operator<<(TextStream& ts, const FillLayer& layer)
     ts << "background-origin " << layer.backgroundXOrigin() << " " << layer.backgroundYOrigin();
     ts.endGroup();
 
-    ts.startGroup();
-    ts << "repeat " << layer.repeatX() << " " << layer.repeatY();
-    ts.endGroup();
-
+    ts.dumpProperty("repeat", layer.repeat());
     ts.dumpProperty("clip", layer.clip());
     ts.dumpProperty("origin", layer.origin());
 
     ts.dumpProperty("composite", layer.composite());
     ts.dumpProperty("blend-mode", layer.blendMode());
-    ts.dumpProperty("mask-type", layer.maskSourceType());
+    ts.dumpProperty("mask-mode", layer.maskMode());
 
     if (layer.next())
         ts << *layer.next();

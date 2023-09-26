@@ -34,7 +34,7 @@ namespace WebCore {
 
 InternalsMapLike::InternalsMapLike()
 {
-    m_values.add("init", 0);
+    m_values.add("init"_s, 0);
 }
 
 void InternalsMapLike::initializeMapLike(DOMMapAdapter& map)
@@ -68,7 +68,7 @@ Vector<String> InternalsMapLike::inspectKeys() const
 Vector<unsigned> InternalsMapLike::inspectValues() const
 {
     auto result = copyToVector(m_values.values());
-    std::sort(result.begin(), result.end(), std::less<unsigned>());
+    std::sort(result.begin(), result.end());
     return result;
 }
 

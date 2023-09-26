@@ -26,113 +26,283 @@
 #include "config.h"
 #include "TextUtil.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BreakLines.h"
 #include "FontCascade.h"
 #include "InlineTextItem.h"
+#include "Latin1TextIterator.h"
 #include "LayoutInlineTextBox.h"
 #include "RenderBox.h"
 #include "RenderStyle.h"
+#include "SurrogatePairAwareTextIterator.h"
+#include "TextRun.h"
+#include <unicode/ubidi.h>
+#include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
 namespace Layout {
 
-InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, InlineLayoutUnit contentLogicalLeft)
+static inline InlineLayoutUnit spaceWidth(const FontCascade& fontCascade, bool canUseSimplifiedContentMeasuring)
 {
-    return TextUtil::width(inlineTextItem, inlineTextItem.start(), inlineTextItem.end(), contentLogicalLeft);
+    if (canUseSimplifiedContentMeasuring)
+        return fontCascade.primaryFont().spaceWidth();
+    return fontCascade.widthOfSpaceString();
 }
 
-InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
-{
-    RELEASE_ASSERT(from >= inlineTextItem.start());
-    RELEASE_ASSERT(to <= inlineTextItem.end());
-    if (inlineTextItem.isWhitespace() && !InlineTextItem::shouldPreserveSpacesAndTabs(inlineTextItem)) {
-        auto spaceWidth = inlineTextItem.style().fontCascade().spaceWidth();
-        return std::isnan(spaceWidth) ? 0.0f : std::isinf(spaceWidth) ? maxInlineLayoutUnit() : spaceWidth;
-    }
-    return TextUtil::width(inlineTextItem.inlineTextBox(), from, to, contentLogicalLeft);
-}
-
-InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
+InlineLayoutUnit TextUtil::width(const InlineTextBox& inlineTextBox, const FontCascade& fontCascade, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft, UseTrailingWhitespaceMeasuringOptimization useTrailingWhitespaceMeasuringOptimization)
 {
     if (from == to)
         return 0;
 
-    auto& style = inlineTextBox.style();
-    auto& font = style.fontCascade();
+    if (inlineTextBox.isCombined())
+        return fontCascade.size();
+
     auto text = inlineTextBox.content();
     ASSERT(to <= text.length());
-    auto hasKerningOrLigatures = font.enableKerning() || font.requiresShaping();
-    auto measureWithEndSpace = hasKerningOrLigatures && to < text.length() && text[to] == ' ';
-    if (measureWithEndSpace)
+    auto hasKerningOrLigatures = fontCascade.enableKerning() || fontCascade.requiresShaping();
+    // The "non-whitespace" + "whitespace" pattern is very common for inline content and since most of the "non-whitespace" runs end up with
+    // their "whitespace" pair on the line (notable exception is when trailing whitespace is trimmed).
+    // Including the trailing whitespace here enables us to cut the number of text measures when placing content on the line.
+    auto extendedMeasuring = useTrailingWhitespaceMeasuringOptimization == UseTrailingWhitespaceMeasuringOptimization::Yes && hasKerningOrLigatures && to < text.length() && text[to] == space;
+    if (extendedMeasuring)
         ++to;
-    float width = 0;
-    if (inlineTextBox.canUseSimplifiedContentMeasuring())
-        width = font.widthForSimpleText(StringView(text).substring(from, to - from));
+    auto width = 0.f;
+    auto useSimplifiedContentMeasuring = inlineTextBox.canUseSimplifiedContentMeasuring();
+    if (useSimplifiedContentMeasuring)
+        width = fontCascade.widthForSimpleText(StringView(text).substring(from, to - from));
     else {
-        auto tabWidth = style.collapseWhiteSpace() ? TabSize(0) : style.tabSize();
-        WebCore::TextRun run(StringView(text).substring(from, to - from), contentLogicalLeft);
-        if (tabWidth)
-            run.setTabSize(true, tabWidth);
-        width = font.width(run);
+        auto& style = inlineTextBox.style();
+        auto directionalOverride = style.unicodeBidi() == UnicodeBidi::Override;
+        auto run = WebCore::TextRun { StringView(text).substring(from, to - from), contentLogicalLeft, { }, ExpansionBehavior::defaultBehavior(), directionalOverride ? style.direction() : TextDirection::LTR, directionalOverride };
+        if (!style.collapseWhiteSpace() && style.tabSize())
+            run.setTabSize(true, style.tabSize());
+        width = fontCascade.width(run);
     }
 
-    if (measureWithEndSpace)
-        width -= (font.spaceWidth() + font.wordSpacing());
+    if (extendedMeasuring)
+        width -= (spaceWidth(fontCascade, useSimplifiedContentMeasuring) + fontCascade.wordSpacing());
 
     return std::isnan(width) ? 0.0f : std::isinf(width) ? maxInlineLayoutUnit() : width;
 }
 
-TextUtil::MidWordBreak TextUtil::midWordBreak(const InlineTextItem& inlineTextItem, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft)
+InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const FontCascade& fontCascade, InlineLayoutUnit contentLogicalLeft)
 {
-    ASSERT(availableWidth >= 0);
-    auto startPosition = inlineTextItem.start();
-    auto length = inlineTextItem.length();
-    ASSERT(length);
+    return TextUtil::width(inlineTextItem, fontCascade, inlineTextItem.start(), inlineTextItem.end(), contentLogicalLeft);
+}
 
-    auto text = inlineTextItem.inlineTextBox().content();
-    auto surrogatePairAwareIndex = [&] (auto index) {
-        // We should never break in the middle of a surrogate pair. They are considered one joint entity.
-        RELEASE_ASSERT(index < text.length());
-        if (!U16_IS_LEAD(text[index]))
-            return index;
-        RELEASE_ASSERT(index + 1 < text.length());
-        ASSERT(U16_IS_TRAIL(text[index + 1]));
-        return ++index;
-    };
+InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, const FontCascade& fontCascade, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
+{
+    RELEASE_ASSERT(from >= inlineTextItem.start());
+    RELEASE_ASSERT(to <= inlineTextItem.end());
 
-    auto left = startPosition;
-    // Pathological case of (extremely)long string and narrow lines.
-    // Adjust the range so that we can pick a reasonable midpoint.
-    auto averageCharacterWidth = InlineLayoutUnit { textWidth / length };
-    unsigned offset = toLayoutUnit(2 * availableWidth / averageCharacterWidth).toUnsigned();
-    auto right = surrogatePairAwareIndex(std::min<unsigned>(left + offset, (startPosition + length - 1)));
-    // Preserve the left width for the final split position so that we don't need to remeasure the left side again.
-    auto leftSideWidth = InlineLayoutUnit { 0 };
-    while (left < right) {
-        auto middle = surrogatePairAwareIndex((left + right) / 2);
-        auto width = TextUtil::width(inlineTextItem, startPosition, middle + 1, contentLogicalLeft);
-        if (width < availableWidth) {
-            left = middle + 1;
-            leftSideWidth = width;
-        } else if (width > availableWidth) {
-            auto surrogatePairAwareStart = [&] (auto index) {
-                if (!U16_IS_TRAIL(text[middle]))
-                    return index;
-                RELEASE_ASSERT(index);
-                ASSERT(U16_IS_LEAD(text[index - 1]));
-                return --index;
-            };
-            // When the substring does not fit, the right side is supposed to be the start of the surrogate pair if applicable.
-            right = surrogatePairAwareStart(middle);
-        } else {
-            right = middle + 1;
-            leftSideWidth = width;
-            break;
+    if (inlineTextItem.isWhitespace()) {
+        auto& inlineTextBox = inlineTextItem.inlineTextBox();
+        auto useSimplifiedContentMeasuring = inlineTextBox.canUseSimplifiedContentMeasuring();
+        auto length = from - to;
+        auto singleWhiteSpace = length == 1 || !TextUtil::shouldPreserveSpacesAndTabs(inlineTextBox);
+
+        if (singleWhiteSpace) {
+            auto width = spaceWidth(fontCascade, useSimplifiedContentMeasuring);
+            return std::isnan(width) ? 0.0f : std::isinf(width) ? maxInlineLayoutUnit() : width;
         }
     }
-    return { startPosition, right - startPosition, leftSideWidth };
+    return width(inlineTextItem.inlineTextBox(), fontCascade, from, to, contentLogicalLeft);
+}
+
+InlineLayoutUnit TextUtil::trailingWhitespaceWidth(const InlineTextBox& inlineTextBox, const FontCascade& fontCascade, size_t startPosition, size_t endPosition)
+{
+    auto text = inlineTextBox.content();
+    ASSERT(endPosition > startPosition + 1);
+    ASSERT(text[endPosition - 1] == space);
+    return width(inlineTextBox, fontCascade, startPosition, endPosition, { }, UseTrailingWhitespaceMeasuringOptimization::Yes) -
+        width(inlineTextBox, fontCascade, startPosition, endPosition - 1, { }, UseTrailingWhitespaceMeasuringOptimization::No);
+}
+
+template <typename TextIterator>
+static void fallbackFontsForRunWithIterator(HashSet<const Font*>& fallbackFonts, const FontCascade& fontCascade, const TextRun& run, TextIterator& textIterator)
+{
+    auto isRTL = run.rtl();
+    auto isSmallCaps = fontCascade.isSmallCaps();
+    auto& primaryFont = fontCascade.primaryFont();
+
+    UChar32 currentCharacter = 0;
+    unsigned clusterLength = 0;
+    while (textIterator.consume(currentCharacter, clusterLength)) {
+
+        auto addFallbackFontForCharacterIfApplicable = [&](auto character) {
+            if (isSmallCaps && character != u_toupper(character))
+                character = u_toupper(character);
+
+            auto glyphData = fontCascade.glyphDataForCharacter(character, isRTL);
+            if (glyphData.glyph && glyphData.font && glyphData.font != &primaryFont) {
+                auto isNonSpacingMark = U_MASK(u_charType(character)) & U_GC_MN_MASK;
+                // If we include the synthetic bold expansion, then even zero-width glyphs will have their fonts added.
+                if (isNonSpacingMark || glyphData.font->widthForGlyph(glyphData.glyph, Font::SyntheticBoldInclusion::Exclude))
+                    fallbackFonts.add(glyphData.font);
+            }
+        };
+        addFallbackFontForCharacterIfApplicable(currentCharacter);
+        textIterator.advance(clusterLength);
+    }
+}
+
+TextUtil::FallbackFontList TextUtil::fallbackFontsForText(StringView textContent, const RenderStyle& style, IncludeHyphen includeHyphen)
+{
+    TextUtil::FallbackFontList fallbackFonts;
+
+    auto collectFallbackFonts = [&](const auto& textRun) {
+        if (textRun.text().isEmpty())
+            return;
+
+        if (textRun.is8Bit()) {
+            auto textIterator = Latin1TextIterator { textRun.data8(0), 0, textRun.length(), textRun.length() };
+            fallbackFontsForRunWithIterator(fallbackFonts, style.fontCascade(), textRun, textIterator);
+            return;
+        }
+        auto textIterator = SurrogatePairAwareTextIterator { textRun.data16(0), 0, textRun.length(), textRun.length() };
+        fallbackFontsForRunWithIterator(fallbackFonts, style.fontCascade(), textRun, textIterator);
+    };
+
+    if (includeHyphen == IncludeHyphen::Yes)
+        collectFallbackFonts(TextRun { StringView(style.hyphenString().string()), { }, { }, ExpansionBehavior::defaultBehavior(), style.direction() });
+    collectFallbackFonts(TextRun { textContent, { }, { }, ExpansionBehavior::defaultBehavior(), style.direction() });
+    return fallbackFonts;
+}
+
+template <typename TextIterator>
+static TextUtil::EnclosingAscentDescent enclosingGlyphBoundsForRunWithIterator(const FontCascade& fontCascade, bool isRTL, TextIterator& textIterator)
+{
+    auto enclosingAscent = std::optional<InlineLayoutUnit> { };
+    auto enclosingDescent = std::optional<InlineLayoutUnit> { };
+    auto isSmallCaps = fontCascade.isSmallCaps();
+    auto& primaryFont = fontCascade.primaryFont();
+
+    UChar32 currentCharacter = 0;
+    unsigned clusterLength = 0;
+    while (textIterator.consume(currentCharacter, clusterLength)) {
+
+        auto computeTopAndBottomForCharacter = [&](auto character) {
+            if (isSmallCaps && character != u_toupper(character))
+                character = u_toupper(character);
+
+            auto glyphData = fontCascade.glyphDataForCharacter(character, isRTL);
+            auto& font = glyphData.font ? *glyphData.font : primaryFont;
+            // FIXME: This may need some adjustment for ComplexTextController. See glyphOrigin.
+            auto bounds = font.boundsForGlyph(glyphData.glyph);
+
+            enclosingAscent = std::min(enclosingAscent.value_or(bounds.y()), bounds.y());
+            enclosingDescent = std::max(enclosingDescent.value_or(bounds.maxY()), bounds.maxY());
+        };
+        computeTopAndBottomForCharacter(currentCharacter);
+        textIterator.advance(clusterLength);
+    }
+    return { enclosingAscent.value_or(0.f), enclosingDescent.value_or(0.f) };
+}
+
+TextUtil::EnclosingAscentDescent TextUtil::enclosingGlyphBoundsForText(StringView textContent, const RenderStyle& style)
+{
+    if (textContent.isEmpty())
+        return { };
+
+    if (textContent.is8Bit()) {
+        auto textIterator = Latin1TextIterator { textContent.characters8(), 0, textContent.length(), textContent.length() };
+        return enclosingGlyphBoundsForRunWithIterator(style.fontCascade(), !style.isLeftToRightDirection(), textIterator);
+    }
+    auto textIterator = SurrogatePairAwareTextIterator { textContent.characters16(), 0, textContent.length(), textContent.length() };
+    return enclosingGlyphBoundsForRunWithIterator(style.fontCascade(), !style.isLeftToRightDirection(), textIterator);
+}
+
+TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextItem& inlineTextItem, const FontCascade& fontCascade, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft)
+{
+    return breakWord(inlineTextItem.inlineTextBox(), inlineTextItem.start(), inlineTextItem.length(), textWidth, availableWidth, contentLogicalLeft, fontCascade);
+}
+
+TextUtil::WordBreakLeft TextUtil::breakWord(const InlineTextBox& inlineTextBox, size_t startPosition, size_t length, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft, const FontCascade& fontCascade)
+{
+    ASSERT(availableWidth >= 0);
+    ASSERT(length);
+    auto text = inlineTextBox.content();
+
+    if (inlineTextBox.canUseSimpleFontCodePath()) {
+
+        auto findBreakingPositionInSimpleText = [&] {
+            auto userPerceivedCharacterBoundaryAlignedIndex = [&] (auto index) -> size_t {
+                if (text.is8Bit())
+                    return index;
+                auto alignedStartIndex = index;
+                U16_SET_CP_START(text, startPosition, alignedStartIndex);
+                ASSERT(alignedStartIndex >= startPosition);
+                return alignedStartIndex;
+            };
+
+            auto nextUserPerceivedCharacterIndex = [&] (auto index) -> size_t {
+                if (text.is8Bit())
+                    return index + 1;
+                U16_FWD_1(text, index, startPosition + length);
+                return index;
+            };
+
+            auto trySimplifiedBreakingPosition = [&] (auto start) -> std::optional<WordBreakLeft> {
+                auto mayUseSimplifiedBreakingPositionForFixedPitch = fontCascade.isFixedPitch() && inlineTextBox.canUseSimplifiedContentMeasuring();
+                if (!mayUseSimplifiedBreakingPositionForFixedPitch)
+                    return { };
+                // FIXME: Check if we could bring webkit.org/b/221581 back for system monospace fonts.
+                auto monospaceCharacterWidth = fontCascade.widthOfSpaceString();
+                size_t estimatedCharacterCount = floorf(availableWidth / monospaceCharacterWidth);
+                auto end = userPerceivedCharacterBoundaryAlignedIndex(std::min(start + estimatedCharacterCount, start + length - 1));
+                auto underflowWidth = TextUtil::width(inlineTextBox, fontCascade, start, end, contentLogicalLeft);
+                if (underflowWidth > availableWidth || underflowWidth + monospaceCharacterWidth < availableWidth) {
+                    // This does not look like a real fixed pitch font. Let's just fall back to regular bisect.
+                    // In some edge cases (float precision) using monospaceCharacterWidth here may produce an incorrect off-by-one visual overflow.
+                    return { };
+                }
+                return { WordBreakLeft { end - start, underflowWidth } };
+            };
+            if (auto leftSide = trySimplifiedBreakingPosition(startPosition))
+                return *leftSide;
+
+            auto left = startPosition;
+            auto right = left + length - 1;
+            // Pathological case of (extremely)long string and narrow lines.
+            // Adjust the range so that we can pick a reasonable midpoint.
+            auto averageCharacterWidth = InlineLayoutUnit { textWidth / length };
+            // Overshot the midpoint so that biscection starts at the left side of the content.
+            size_t startOffset = 2 * availableWidth / averageCharacterWidth;
+            right = userPerceivedCharacterBoundaryAlignedIndex(std::min(left + startOffset, right));
+            // Preserve the left width for the final split position so that we don't need to remeasure the left side again.
+            auto leftSideWidth = InlineLayoutUnit { 0 };
+            while (left < right) {
+                auto middle = userPerceivedCharacterBoundaryAlignedIndex((left + right) / 2);
+                ASSERT(middle >= left && middle < right);
+                auto endOfMiddleCharacter = nextUserPerceivedCharacterIndex(middle);
+                auto width = TextUtil::width(inlineTextBox, fontCascade, startPosition, endOfMiddleCharacter, contentLogicalLeft);
+                if (width < availableWidth) {
+                    left = endOfMiddleCharacter;
+                    leftSideWidth = width;
+                } else if (width > availableWidth)
+                    right = middle;
+                else {
+                    right = endOfMiddleCharacter;
+                    leftSideWidth = width;
+                    break;
+                }
+            }
+            RELEASE_ASSERT(right >= startPosition);
+            return WordBreakLeft { right - startPosition, leftSideWidth };
+        };
+        return findBreakingPositionInSimpleText();
+    }
+
+    auto graphemeClusterIterator = NonSharedCharacterBreakIterator { StringView { text }.substring(startPosition, length) };
+    auto leftSide = TextUtil::WordBreakLeft { };
+    for (auto clusterStartPosition = ubrk_next(graphemeClusterIterator); clusterStartPosition != UBRK_DONE; clusterStartPosition = ubrk_next(graphemeClusterIterator)) {
+        auto width = TextUtil::width(inlineTextBox, fontCascade, startPosition, startPosition + clusterStartPosition, contentLogicalLeft);
+        if (width > availableWidth)
+            return leftSide;
+        leftSide = { static_cast<size_t>(clusterStartPosition), width };
+    }
+    // This content is not supposed to fit availableWidth.
+    ASSERT_NOT_REACHED();
+    return leftSide;
 }
 
 unsigned TextUtil::findNextBreakablePosition(LazyLineBreakIterator& lineBreakIterator, unsigned startPosition, const RenderStyle& style)
@@ -171,6 +341,12 @@ bool TextUtil::shouldPreserveNewline(const Box& layoutBox)
     return whitespace == WhiteSpace::Pre || whitespace == WhiteSpace::PreWrap || whitespace == WhiteSpace::BreakSpaces || whitespace == WhiteSpace::PreLine;
 }
 
+bool TextUtil::isWrappingAllowed(const RenderStyle& style)
+{
+    // Do not try to wrap overflown 'pre' and 'no-wrap' content to next line.
+    return style.whiteSpace() != WhiteSpace::Pre && style.whiteSpace() != WhiteSpace::NoWrap;
+}
+
 LineBreakIteratorMode TextUtil::lineBreakIteratorMode(LineBreak lineBreak)
 {
     switch (lineBreak) {
@@ -189,6 +365,132 @@ LineBreakIteratorMode TextUtil::lineBreakIteratorMode(LineBreak lineBreak)
     return LineBreakIteratorMode::Default;
 }
 
+bool TextUtil::containsStrongDirectionalityText(StringView text)
+{
+    if (text.is8Bit())
+        return false;
+
+    auto length = text.length();
+    for (size_t position = 0; position < length;) {
+        UChar32 character;
+        U16_NEXT(text.characters16(), position, length, character);
+
+        auto bidiCategory = u_charDirection(character);
+        bool hasBidiContent = bidiCategory == U_RIGHT_TO_LEFT
+            || bidiCategory == U_RIGHT_TO_LEFT_ARABIC
+            || bidiCategory == U_RIGHT_TO_LEFT_EMBEDDING
+            || bidiCategory == U_RIGHT_TO_LEFT_OVERRIDE
+            || bidiCategory == U_LEFT_TO_RIGHT_EMBEDDING
+            || bidiCategory == U_LEFT_TO_RIGHT_OVERRIDE
+            || bidiCategory == U_POP_DIRECTIONAL_FORMAT;
+        if (hasBidiContent)
+            return true;
+    }
+
+    return false;
+}
+
+size_t TextUtil::firstUserPerceivedCharacterLength(const InlineTextBox& inlineTextBox, size_t startPosition, size_t length)
+{
+    auto textContent = inlineTextBox.content();
+    RELEASE_ASSERT(!textContent.isEmpty());
+
+    if (textContent.is8Bit())
+        return 1;
+    if (inlineTextBox.canUseSimpleFontCodePath()) {
+        UChar32 character;
+        size_t endOfCodePoint = startPosition;
+        U16_NEXT(textContent.characters16(), endOfCodePoint, textContent.length(), character);
+        ASSERT(endOfCodePoint > startPosition);
+        return endOfCodePoint - startPosition;
+    }
+    auto graphemeClustersIterator = NonSharedCharacterBreakIterator { textContent };
+    auto nextPosition = ubrk_following(graphemeClustersIterator, startPosition);
+    if (nextPosition == UBRK_DONE)
+        return length;
+    return nextPosition - startPosition;
+}
+
+size_t TextUtil::firstUserPerceivedCharacterLength(const InlineTextItem& inlineTextItem)
+{
+    return firstUserPerceivedCharacterLength(inlineTextItem.inlineTextBox(), inlineTextItem.start(), inlineTextItem.length());
+}
+
+TextDirection TextUtil::directionForTextContent(StringView content)
+{
+    if (content.is8Bit())
+        return TextDirection::LTR;
+    return ubidi_getBaseDirection(content.characters16(), content.length()) == UBIDI_RTL ? TextDirection::RTL : TextDirection::LTR;
+}
+
+TextRun TextUtil::ellipsisTextRun(bool isHorizontal)
+{
+    if (isHorizontal) {
+        static MainThreadNeverDestroyed<const AtomString> horizontalEllipsisStr(&horizontalEllipsis, 1);
+        return TextRun { horizontalEllipsisStr->string() };
+    }
+    static MainThreadNeverDestroyed<const AtomString> verticalEllipsisStr(&verticalEllipsis, 1);
+    return TextRun { verticalEllipsisStr->string() };
+}
+
+bool TextUtil::hasHangablePunctuationStart(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    if (!inlineTextItem.length() || !style.hangingPunctuation().contains(HangingPunctuation::First))
+        return false;
+    auto leadingCharacter = inlineTextItem.inlineTextBox().content()[inlineTextItem.start()];
+    return U_GET_GC_MASK(leadingCharacter) & (U_GC_PS_MASK | U_GC_PI_MASK | U_GC_PF_MASK);
+}
+
+float TextUtil::hangablePunctuationStartWidth(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    if (!hasHangablePunctuationStart(inlineTextItem, style))
+        return { };
+    ASSERT(inlineTextItem.length());
+    auto leadingPosition = inlineTextItem.start();
+    return width(inlineTextItem, style.fontCascade(), leadingPosition, leadingPosition + 1, { });
+}
+
+bool TextUtil::hasHangablePunctuationEnd(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    if (!inlineTextItem.length() || !style.hangingPunctuation().contains(HangingPunctuation::Last))
+        return false;
+    auto trailingCharacter = inlineTextItem.inlineTextBox().content()[inlineTextItem.end() - 1];
+    return U_GET_GC_MASK(trailingCharacter) & (U_GC_PE_MASK | U_GC_PI_MASK | U_GC_PF_MASK);
+}
+
+float TextUtil::hangablePunctuationEndWidth(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    if (!hasHangablePunctuationEnd(inlineTextItem, style))
+        return { };
+    ASSERT(inlineTextItem.length());
+    auto trailingPosition = inlineTextItem.end() - 1;
+    return width(inlineTextItem, style.fontCascade(), trailingPosition, trailingPosition + 1, { });
+}
+
+bool TextUtil::hasHangableStopOrCommaEnd(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    if (!inlineTextItem.length() || !style.hangingPunctuation().containsAny({ HangingPunctuation::AllowEnd, HangingPunctuation::ForceEnd }))
+        return false;
+    auto trailingPosition = inlineTextItem.end() - 1;
+    auto trailingCharacter = inlineTextItem.inlineTextBox().content()[trailingPosition];
+    auto isHangableStopOrComma = trailingCharacter == 0x002C
+        || trailingCharacter == 0x002E || trailingCharacter == 0x060C
+        || trailingCharacter == 0x06D4 || trailingCharacter == 0x3001
+        || trailingCharacter == 0x3002 || trailingCharacter == 0xFF0C
+        || trailingCharacter == 0xFF0E || trailingCharacter == 0xFE50
+        || trailingCharacter == 0xFE51 || trailingCharacter == 0xFE52
+        || trailingCharacter == 0xFF61 || trailingCharacter == 0xFF64;
+    return isHangableStopOrComma;
+}
+
+float TextUtil::hangableStopOrCommaEndWidth(const InlineTextItem& inlineTextItem, const RenderStyle& style)
+{
+    if (!hasHangableStopOrCommaEnd(inlineTextItem, style))
+        return { };
+    ASSERT(inlineTextItem.length());
+    auto trailingPosition = inlineTextItem.end() - 1;
+    return width(inlineTextItem, style.fontCascade(), trailingPosition, trailingPosition + 1, { });
+}
+
 }
 }
-#endif

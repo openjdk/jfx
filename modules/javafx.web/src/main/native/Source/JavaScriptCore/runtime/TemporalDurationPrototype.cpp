@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021 Sony Interactive Entertainment Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,7 +62,7 @@ static JSC_DECLARE_CUSTOM_GETTER(temporalDurationPrototypeGetterBlank);
 
 namespace JSC {
 
-const ClassInfo TemporalDurationPrototype::s_info = { "Temporal.Duration", &Base::s_info, &durationPrototypeTable, nullptr, CREATE_METHOD_TABLE(TemporalDurationPrototype) };
+const ClassInfo TemporalDurationPrototype::s_info = { "Temporal.Duration"_s, &Base::s_info, &durationPrototypeTable, nullptr, CREATE_METHOD_TABLE(TemporalDurationPrototype) };
 
 /* Source for TemporalDurationPrototype.lut.h
 @begin durationPrototypeTable
@@ -93,7 +94,7 @@ const ClassInfo TemporalDurationPrototype::s_info = { "Temporal.Duration", &Base
 
 TemporalDurationPrototype* TemporalDurationPrototype::create(VM& vm, Structure* structure)
 {
-    auto* prototype = new (NotNull, allocateCell<TemporalDurationPrototype>(vm.heap)) TemporalDurationPrototype(vm, structure);
+    auto* prototype = new (NotNull, allocateCell<TemporalDurationPrototype>(vm)) TemporalDurationPrototype(vm, structure);
     prototype->finishCreation(vm);
     return prototype;
 }
@@ -111,7 +112,7 @@ TemporalDurationPrototype::TemporalDurationPrototype(VM& vm, Structure* structur
 void TemporalDurationPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -120,7 +121,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncWith, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.with called on value that's not a Duration"_s);
 
@@ -128,7 +129,10 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncWith, (JSGlobalObject* glo
     if (!durationLike.isObject())
         return throwVMTypeError(globalObject, scope, "First argument to Temporal.Duration.prototype.with must be an object"_s);
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalDuration::tryCreateIfValid(globalObject, duration->with(globalObject, asObject(durationLike)))));
+    auto result = duration->with(globalObject, asObject(durationLike));
+    RETURN_IF_EXCEPTION(scope, { });
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalDuration::tryCreateIfValid(globalObject, WTFMove(result))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncNegated, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -136,7 +140,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncNegated, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.negated called on value that's not a Duration"_s);
 
@@ -148,7 +152,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncAbs, (JSGlobalObject* glob
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.abs called on value that's not a Duration"_s);
 
@@ -160,11 +164,14 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncAdd, (JSGlobalObject* glob
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.add called on value that's not a Duration"_s);
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalDuration::tryCreateIfValid(globalObject, duration->add(globalObject, callFrame->argument(0)))));
+    auto result = duration->add(globalObject, callFrame->argument(0));
+    RETURN_IF_EXCEPTION(scope, { });
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalDuration::tryCreateIfValid(globalObject, WTFMove(result))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncSubtract, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -172,11 +179,14 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncSubtract, (JSGlobalObject*
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.subtract called on value that's not a Duration"_s);
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalDuration::tryCreateIfValid(globalObject, duration->subtract(globalObject, callFrame->argument(0)))));
+    auto result = duration->subtract(globalObject, callFrame->argument(0));
+    RETURN_IF_EXCEPTION(scope, { });
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalDuration::tryCreateIfValid(globalObject, WTFMove(result))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncRound, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -184,7 +194,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncRound, (JSGlobalObject* gl
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.round called on value that's not a Duration"_s);
 
@@ -192,7 +202,10 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncRound, (JSGlobalObject* gl
     if (options.isUndefined())
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.round requires an options argument"_s);
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalDuration::tryCreateIfValid(globalObject, duration->round(globalObject, options))));
+    auto result = duration->round(globalObject, options);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalDuration::tryCreateIfValid(globalObject, WTFMove(result))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncTotal, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -200,7 +213,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncTotal, (JSGlobalObject* gl
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.total called on value that's not a Duration"_s);
 
@@ -216,7 +229,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncToString, (JSGlobalObject*
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.toString called on value that's not a Duration"_s);
 
@@ -228,11 +241,11 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncToJSON, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.toJSON called on value that's not a Duration"_s);
 
-    return JSValue::encode(jsString(vm, duration->toString()));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, duration->toString(globalObject))));
 }
 
 // This will be part of the ECMA-402 Intl.DurationFormat proposal; until then, we just follow ECMA-262 in mimicking toJSON.
@@ -241,11 +254,11 @@ JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncToLocaleString, (JSGlobalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, callFrame->thisValue());
+    auto* duration = jsDynamicCast<TemporalDuration*>(callFrame->thisValue());
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.toLocaleString called on value that's not a Duration"_s);
 
-    return JSValue::encode(jsString(vm, duration->toString()));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsString(vm, duration->toString(globalObject))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalDurationPrototypeFuncValueOf, (JSGlobalObject* globalObject, CallFrame*))
@@ -261,7 +274,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterYears, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.years called on value that's not a Duration"_s);
 
@@ -273,7 +286,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterMonths, (JSGlobalObject*
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.months called on value that's not a Duration"_s);
 
@@ -285,7 +298,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterWeeks, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.weeks called on value that's not a Duration"_s);
 
@@ -297,7 +310,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterDays, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.days called on value that's not a Duration"_s);
 
@@ -309,7 +322,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterHours, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.hours called on value that's not a Duration"_s);
 
@@ -321,7 +334,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterMinutes, (JSGlobalObject
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.minutes called on value that's not a Duration"_s);
 
@@ -333,7 +346,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterSeconds, (JSGlobalObject
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.seconds called on value that's not a Duration"_s);
 
@@ -345,7 +358,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterMilliseconds, (JSGlobalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.milliseconds called on value that's not a Duration"_s);
 
@@ -357,7 +370,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterMicroseconds, (JSGlobalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.microseconds called on value that's not a Duration"_s);
 
@@ -369,7 +382,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterNanoseconds, (JSGlobalOb
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.nanoseconds called on value that's not a Duration"_s);
 
@@ -381,7 +394,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterSign, (JSGlobalObject* g
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.sign called on value that's not a Duration"_s);
 
@@ -393,7 +406,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalDurationPrototypeGetterBlank, (JSGlobalObject* 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* duration = jsDynamicCast<TemporalDuration*>(vm, JSValue::decode(thisValue));
+    auto* duration = jsDynamicCast<TemporalDuration*>(JSValue::decode(thisValue));
     if (!duration)
         return throwVMTypeError(globalObject, scope, "Temporal.Duration.prototype.blank called on value that's not a Duration"_s);
 

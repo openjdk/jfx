@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -285,7 +285,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
 
     private Map<String, Integer> getVertexAttributes(boolean includePerVertexColor,
             int maxTexCoordIndex) {
-        Map<String, Integer> attributes = new HashMap<String, Integer>();
+        Map<String, Integer> attributes = new HashMap<>();
 
         boolean includePosition = true;
         if (includePosition) {

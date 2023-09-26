@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2004-2007, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +29,9 @@
 
 #include "AXObjectCache.h"
 #include "CachedImage.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDListElement.h"
@@ -320,8 +322,7 @@ bool isInline(const Node* node)
 // knowing about these kinds of special cases.
 Element* enclosingBlock(Node* node, EditingBoundaryCrossingRule rule)
 {
-    Node* enclosingNode = enclosingNodeOfType(firstPositionInOrBeforeNode(node), isBlock, rule);
-    return is<Element>(enclosingNode) ? downcast<Element>(enclosingNode) : nullptr;
+    return dynamicDowncast<Element>(enclosingNodeOfType(firstPositionInOrBeforeNode(node), isBlock, rule));
 }
 
 TextDirection directionOfEnclosingBlock(const Position& position)
@@ -356,7 +357,7 @@ bool isAmbiguousBoundaryCharacter(UChar character)
     return character == '\'' || character == '@' || character == rightSingleQuotationMark || character == hebrewPunctuationGershayim;
 }
 
-String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfParagraph, bool endIsEndOfParagraph)
+String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfParagraph, bool shouldEmitNBSPbeforeEnd)
 {
     StringBuilder rebalancedString;
 
@@ -369,7 +370,8 @@ String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfP
             continue;
         }
         LChar selectedWhitespaceCharacter;
-        if (previousCharacterWasSpace || (!i && startIsStartOfParagraph) || (i == length - 1 && endIsEndOfParagraph)) {
+        // We need to ensure there is no next sibling text node. See https://bugs.webkit.org/show_bug.cgi?id=123163
+        if (previousCharacterWasSpace || (!i && startIsStartOfParagraph) || (i == length - 1 && shouldEmitNBSPbeforeEnd)) {
             selectedWhitespaceCharacter = noBreakSpace;
             previousCharacterWasSpace = false;
         } else {
@@ -550,7 +552,7 @@ Node* highestNodeToRemoveInPruning(Node* node)
 {
     Node* previousNode = nullptr;
     auto* rootEditableElement = node ? node->rootEditableElement() : nullptr;
-    for (auto currentNode = makeRefPtr(node); currentNode; currentNode = currentNode->parentNode()) {
+    for (RefPtr currentNode = node; currentNode; currentNode = currentNode->parentNode()) {
         if (auto* renderer = currentNode->renderer()) {
             if (!renderer->canHaveChildren() || hasARenderedDescendant(currentNode.get(), previousNode) || rootEditableElement == currentNode.get())
                 return previousNode;
@@ -692,9 +694,8 @@ static Node* previousNodeConsideringAtomicNodes(const Node* node)
             n = n->lastChild();
         return n;
     }
-    if (node->parentNode())
+
         return node->parentNode();
-    return nullptr;
 }
 
 static Node* nextNodeConsideringAtomicNodes(const Node* node)
@@ -820,16 +821,16 @@ static Ref<Element> createTabSpanElement(Document& document, Text& tabTextNode)
     auto spanElement = HTMLSpanElement::create(document);
 
     spanElement->setAttributeWithoutSynchronization(classAttr, AppleTabSpanClass);
-    spanElement->setAttribute(styleAttr, "white-space:pre");
+    spanElement->setAttribute(styleAttr, "white-space:pre"_s);
 
     spanElement->appendChild(tabTextNode);
 
     return spanElement;
 }
 
-Ref<Element> createTabSpanElement(Document& document, const String& tabText)
+Ref<Element> createTabSpanElement(Document& document, String&& tabText)
 {
-    return createTabSpanElement(document, document.createTextNode(tabText));
+    return createTabSpanElement(document, document.createTextNode(WTFMove(tabText)));
 }
 
 Ref<Element> createTabSpanElement(Document& document)
@@ -888,7 +889,7 @@ bool isMailBlockquote(const Node* node)
     ASSERT(node);
     if (!node->hasTagName(blockquoteTag))
         return false;
-    return downcast<HTMLElement>(*node).attributeWithoutSynchronization(typeAttr) == "cite";
+    return downcast<HTMLElement>(*node).attributeWithoutSynchronization(typeAttr) == "cite"_s;
 }
 
 int caretMinOffset(const Node& node)
@@ -993,12 +994,12 @@ int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<Conta
 }
 
 // FIXME: Merge this function with the one above.
-int indexForVisiblePosition(Node& node, const VisiblePosition& visiblePosition, bool forSelectionPreservation)
+int indexForVisiblePosition(Node& node, const VisiblePosition& visiblePosition, TextIteratorBehaviors behaviors)
 {
+    if (visiblePosition.isNull())
+        return 0;
+
     auto range = makeSimpleRange(makeBoundaryPointBeforeNodeContents(node), visiblePosition);
-    TextIteratorBehaviors behaviors;
-    if (forSelectionPreservation)
-        behaviors.add(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
     return range ? characterCount(*range, behaviors) : 0;
 }
 
@@ -1012,11 +1013,11 @@ VisiblePosition visiblePositionForPositionWithOffset(const VisiblePosition& posi
     return visiblePositionForIndex(startIndex + offset, root.get());
 }
 
-VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope)
+VisiblePosition visiblePositionForIndex(int index, Node* scope, TextIteratorBehaviors behaviors)
 {
     if (!scope)
         return { };
-    return { makeDeprecatedLegacyPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*scope), index, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions)) };
+    return { makeDeprecatedLegacyPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*scope), index, behaviors)) };
 }
 
 VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node& node, int index)

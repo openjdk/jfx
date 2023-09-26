@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,7 +80,7 @@ public class ScriptMapper {
      * in the case where the caller interprets 'layout' to mean where
      * one 'char' (ie the java type char) does not map to one glyph
      */
-    private static final int MAX_LAYOUT_CHARCODE = 0x206F;
+    private static final int MAX_LAYOUT_CHARCODE = 0x12550F;
 
     /* If the character code falls into any of a number of unicode ranges
      * where we know that simple left->right layout mapping chars to glyphs
@@ -151,10 +151,22 @@ public class ScriptMapper {
         else if (code <= 0x11ff) { // U+1100 - U+11FF Old Hangul
             return true;
         }
+        else if (code < 0x13a0) {
+            return false;
+        }
+        else if (code <= 0x13ff) { // U+13A0 - U+13FF Cherokee
+            return true;
+        }
         else if (code < 0x1780) {
             return false;
         }
         else if (code <= 0x17ff) { // 1780 - 17FF Khmer
+            return true;
+        }
+        else if (code < 0x1c50) {
+            return false;
+        }
+        else if (code <= 0x1c7f) { // U+1C50 - U+1C7F Ol Chiki / Santali
             return true;
         }
         else if (code < 0x200c) {
@@ -167,6 +179,27 @@ public class ScriptMapper {
             return true;
         }
         else if (code >= 0x206a && code <= 0x206f) { // directional control
+            return true;
+        }
+        else if (code < 0xab70) {
+            return false;
+        }
+        else if (code <= 0xabbf) { // U+AB70 - U+ABBF - Cherokee Supplement
+            return true;
+        }
+        else if (code <= 0xabff) { // U+ABC0 - U+ABFF - Meeti Mayek
+            return true;
+        }
+        else if (code < 0x11080) {
+            return false;
+        }
+        else if (code <= 0x110cf) { // Kaithi
+            return true;
+        }
+        else if (code < 0x12000) {
+            return false;
+        }
+        else if (code >= 0x12000 && code <= 0x1254f) { // Cuneiform
             return true;
         }
         return false;

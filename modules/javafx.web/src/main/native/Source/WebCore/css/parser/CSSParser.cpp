@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2003 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2005 Allan Sandfeld Jensen (kde@carewolf.com)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Nicholas Shanks <webkit@nickshanks.com>
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -28,7 +28,6 @@
 #include "config.h"
 #include "CSSParser.h"
 
-#include "CSSCustomPropertyValue.h"
 #include "CSSKeyframeRule.h"
 #include "CSSParserFastPaths.h"
 #include "CSSParserImpl.h"
@@ -40,17 +39,14 @@
 #include "CSSSupportsParser.h"
 #include "CSSTokenizer.h"
 #include "CSSValuePool.h"
-#include "CSSVariableData.h"
-#include "CSSVariableReferenceValue.h"
 #include "Document.h"
 #include "Element.h"
+#include "ImmutableStyleProperties.h"
+#include "MutableStyleProperties.h"
 #include "Page.h"
-#include "RenderStyle.h"
 #include "RenderTheme.h"
 #include "Settings.h"
-#include "StyleBuilder.h"
 #include "StyleColor.h"
-#include "StyleResolver.h"
 #include "StyleRule.h"
 #include "StyleSheetContents.h"
 #include <wtf/NeverDestroyed.h>
@@ -65,9 +61,9 @@ CSSParser::CSSParser(const CSSParserContext& context)
 
 CSSParser::~CSSParser() = default;
 
-void CSSParser::parseSheet(StyleSheetContents& sheet, const String& string, RuleParsing ruleParsing)
+void CSSParser::parseSheet(StyleSheetContents& sheet, const String& string)
 {
-    return CSSParserImpl::parseStyleSheet(string, m_context, sheet, ruleParsing);
+    return CSSParserImpl::parseStyleSheet(string, m_context, sheet);
 }
 
 void CSSParser::parseSheetForInspector(const CSSParserContext& context, StyleSheetContents* sheet, const String& string, CSSParserObserver& observer)
@@ -94,24 +90,33 @@ bool CSSParser::parseSupportsCondition(const String& condition)
     return CSSSupportsParser::supportsCondition(parser.tokenizer()->tokenRange(), parser, CSSSupportsParser::ForWindowCSS) == CSSSupportsParser::Supported;
 }
 
-Color CSSParser::parseColor(const String& string, bool strict)
+static Color color(const RefPtr<CSSValue>& value)
+{
+    if (!value || !value->isColor())
+        return { };
+    return value->color();
+}
+
+Color CSSParser::parseColor(const String& string, const CSSParserContext& context)
+{
+    bool strict = !isQuirksModeBehavior(context.mode);
+    if (auto color = CSSParserFastPaths::parseSimpleColor(string, strict))
+        return *color;
+    return color(parseSingleValue(CSSPropertyColor, string, context));
+}
+
+Color CSSParser::parseColorWithoutContext(const String& string, bool strict)
 {
     if (auto color = CSSParserFastPaths::parseSimpleColor(string, strict))
         return *color;
     // FIXME: Unclear why we want to ignore the boolean argument "strict" and always pass strictCSSParserContext here.
-    auto value = parseSingleValue(CSSPropertyColor, string, strictCSSParserContext());
-    if (!is<CSSPrimitiveValue>(value))
-        return { };
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(*value);
-    if (!primitiveValue.isRGBColor())
-        return { };
-    return primitiveValue.color();
+    return color(parseSingleValue(CSSPropertyColor, string, strictCSSParserContext()));
 }
 
 Color CSSParser::parseSystemColor(StringView string)
 {
     auto keyword = cssValueKeywordID(string);
-    if (!StyleColor::isSystemColor(keyword))
+    if (!StyleColor::isSystemColorKeyword(keyword))
         return { };
     return RenderTheme::singleton().systemColor(keyword, { });
 }
@@ -155,9 +160,9 @@ CSSParser::ParseResult CSSParser::parseValue(MutableStyleProperties& declaration
     return CSSParserImpl::parseValue(&declaration, propertyID, string, important, m_context);
 }
 
-std::optional<CSSSelectorList> CSSParser::parseSelector(const String& string)
+std::optional<CSSSelectorList> CSSParser::parseSelector(const String& string, StyleSheetContents* styleSheet, CSSSelectorParser::IsNestedContext isNestedContext)
 {
-    return parseCSSSelector(CSSTokenizer(string).tokenRange(), m_context, nullptr);
+    return parseCSSSelector(CSSTokenizer(string).tokenRange(), m_context, styleSheet, isNestedContext);
 }
 
 Ref<ImmutableStyleProperties> CSSParser::parseInlineStyleDeclaration(const String& string, const Element* element)
@@ -173,69 +178,6 @@ bool CSSParser::parseDeclaration(MutableStyleProperties& declaration, const Stri
 void CSSParser::parseDeclarationForInspector(const CSSParserContext& context, const String& string, CSSParserObserver& observer)
 {
     CSSParserImpl::parseDeclarationListForInspector(string, context, observer);
-}
-
-RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propID, const CSSValue& value, Style::BuilderState& builderState)
-{
-    ASSERT((propID == CSSPropertyCustom && value.isCustomPropertyValue()) || (propID != CSSPropertyCustom && !value.isCustomPropertyValue()));
-    auto& style = builderState.style();
-    auto direction = style.direction();
-    auto writingMode = style.writingMode();
-
-    if (is<CSSPendingSubstitutionValue>(value)) {
-        // FIXME: Should have a resolvedShorthands cache to stop this from being done over and over for each longhand value.
-        auto& substitution = downcast<CSSPendingSubstitutionValue>(value);
-
-        auto shorthandID = substitution.shorthandPropertyId();
-        if (CSSProperty::isDirectionAwareProperty(shorthandID))
-            shorthandID = CSSProperty::resolveDirectionAwareProperty(shorthandID, direction, writingMode);
-
-        auto resolvedData = substitution.shorthandValue().resolveVariableReferences(builderState);
-        if (!resolvedData)
-            return nullptr;
-
-        ParsedPropertyVector parsedProperties;
-        if (!CSSPropertyParser::parseValue(shorthandID, false, resolvedData->tokens(), m_context, parsedProperties, StyleRuleType::Style))
-            return nullptr;
-
-        for (auto& property : parsedProperties) {
-            CSSPropertyID currentId = property.id();
-            if (CSSProperty::isDirectionAwareProperty(currentId))
-                currentId = CSSProperty::resolveDirectionAwareProperty(currentId, direction, writingMode);
-            if (currentId == propID)
-                return property.value();
-        }
-
-        return nullptr;
-    }
-
-    if (value.isVariableReferenceValue()) {
-        const CSSVariableReferenceValue& valueWithReferences = downcast<CSSVariableReferenceValue>(value);
-        auto resolvedData = valueWithReferences.resolveVariableReferences(builderState);
-        if (!resolvedData)
-            return nullptr;
-        return CSSPropertyParser::parseSingleValue(propID, resolvedData->tokens(), m_context);
-    }
-
-    const auto& customPropValue = downcast<CSSCustomPropertyValue>(value);
-    const auto& valueWithReferences = WTF::get<Ref<CSSVariableReferenceValue>>(customPropValue.value()).get();
-
-    auto& name = downcast<CSSCustomPropertyValue>(value).name();
-    auto* registered = builderState.document().getCSSRegisteredCustomPropertySet().get(name);
-    auto& syntax = registered ? registered->syntax : "*";
-    auto resolvedData = valueWithReferences.resolveVariableReferences(builderState);
-
-    if (!resolvedData)
-        return nullptr;
-
-    // FIXME handle REM cycles.
-    HashSet<CSSPropertyID> dependencies;
-    CSSPropertyParser::collectParsedCustomPropertyValueDependencies(syntax, false, dependencies, resolvedData->tokens(), m_context);
-
-    for (auto id : dependencies)
-        builderState.builder().applyProperty(id);
-
-    return CSSPropertyParser::parseTypedCustomPropertyValue(name, syntax, resolvedData->tokens(), builderState, m_context);
 }
 
 Vector<double> CSSParser::parseKeyframeKeyList(const String& selector)

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004, 2005, 2006, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc.  All rights reserved.
  * Copyright (C) 2008-2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,13 +55,19 @@ class Timer;
 
 class BitmapImage final : public Image {
 public:
-    static Ref<BitmapImage> create(PlatformImagePtr&& platformImage, ImageObserver* observer = nullptr)
+    static RefPtr<BitmapImage> create(PlatformImagePtr&& platformImage)
     {
-        return adoptRef(*new BitmapImage(NativeImage::create(WTFMove(platformImage)), observer));
+        return create(NativeImage::create(WTFMove(platformImage)));
     }
-    static Ref<BitmapImage> create(RefPtr<NativeImage>&& nativeImage, ImageObserver* observer = nullptr)
+    static RefPtr<BitmapImage> create(RefPtr<NativeImage>&& nativeImage)
     {
-        return adoptRef(*new BitmapImage(WTFMove(nativeImage), observer));
+        if (!nativeImage)
+            return nullptr;
+        return create(nativeImage.releaseNonNull());
+    }
+    static Ref<BitmapImage> create(Ref<NativeImage>&& nativeImage)
+    {
+        return adoptRef(*new BitmapImage(WTFMove(nativeImage)));
     }
     static Ref<BitmapImage> create(ImageObserver* observer = nullptr)
     {
@@ -77,8 +83,6 @@ public:
 
     void updateFromSettings(const Settings&);
 
-    bool hasSingleSecurityOrigin() const override { return true; }
-
     EncodedDataStatus dataChanged(bool allDataReceived) override;
     unsigned decodedSize() const { return m_source->decodedSize(); }
 
@@ -91,7 +95,7 @@ public:
     std::optional<IntPoint> hotSpot() const override { return m_source->hotSpot(); }
 
     // FloatSize due to override.
-    FloatSize size(ImageOrientation orientation = ImageOrientation::FromImage) const override { return m_source->size(orientation); }
+    FloatSize size(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const override { return m_source->size(orientation); }
     ImageOrientation orientation() const override { return m_source->orientation(); }
     Color singlePixelSolidColor() const override { return m_source->singlePixelSolidColor(); }
     bool frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(size_t index, const DecodingOptions& decodingOptions) const { return m_source->frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(index, decodingOptions); }
@@ -121,6 +125,8 @@ public:
     bool isLargeImageAsyncDecodingEnabledForTesting() const { return m_largeImageAsyncDecodingEnabledForTesting; }
     void stopAsyncDecodingQueue() { m_source->stopAsyncDecodingQueue(); }
 
+    DestinationColorSpace colorSpace() final;
+
     WEBCORE_EXPORT unsigned decodeCountForTesting() const;
 
     // Accessors for native image formats.
@@ -139,17 +145,17 @@ public:
 #endif
 
 #if PLATFORM(GTK)
-    GdkPixbuf* getGdkPixbuf() override;
+    GRefPtr<GdkPixbuf> gdkPixbuf() override;
 #if USE(GTK4)
-    GdkTexture* gdkTexture() override;
+    GRefPtr<GdkTexture> gdkTexture() override;
 #endif
 #endif
 
-    WEBCORE_EXPORT RefPtr<NativeImage> nativeImage(const GraphicsContext* = nullptr) override;
-    RefPtr<NativeImage> nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
-    RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool respectOrientation, const GraphicsContext* = nullptr) override;
+    WEBCORE_EXPORT RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) override;
+    RefPtr<NativeImage> nativeImageForCurrentFrame() override;
+    RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool respectOrientation) override;
 #if USE(CG)
-    RefPtr<NativeImage> nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) override;
+    RefPtr<NativeImage> nativeImageOfSize(const IntSize&) override;
     Vector<Ref<NativeImage>> framesNativeImages();
 #endif
 
@@ -157,11 +163,11 @@ public:
     void decode(Function<void()>&&);
 
 private:
-    WEBCORE_EXPORT BitmapImage(RefPtr<NativeImage>&&, ImageObserver* = nullptr);
+    WEBCORE_EXPORT BitmapImage(Ref<NativeImage>&&);
     WEBCORE_EXPORT BitmapImage(ImageObserver* = nullptr);
 
     RefPtr<NativeImage> frameImageAtIndex(size_t index) { return m_source->frameImageAtIndex(index); }
-    RefPtr<NativeImage> frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default, const GraphicsContext* = nullptr);
+    RefPtr<NativeImage> frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = { });
 
     // Called to invalidate cached data. When |destroyAll| is true, we wipe out
     // the entire frame buffer cache and tell the image source to destroy
@@ -175,7 +181,7 @@ private:
     // |destroyAll| along.
     void destroyDecodedDataIfNecessary(bool destroyAll = true);
 
-    FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::FromImage) const final { return m_source->sourceSize(orientation); }
+    FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::Orientation::FromImage) const final { return m_source->sourceSize(orientation); }
     bool hasDensityCorrectedSize() const override { return m_source->hasDensityCorrectedSize(); }
 
     ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) override;

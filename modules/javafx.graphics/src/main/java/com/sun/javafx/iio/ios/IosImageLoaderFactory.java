@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ public class IosImageLoaderFactory implements ImageLoaderFactory {
 
     private static IosImageLoaderFactory theInstance;
 
-    private IosImageLoaderFactory() {};
+    private IosImageLoaderFactory() {}
 
     /**
      * Returns an instance of IosImageLoaderFactory
@@ -56,6 +56,7 @@ public class IosImageLoaderFactory implements ImageLoaderFactory {
     /**
      * @inheritDoc
      */
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return IosDescriptor.getInstance();
     }
@@ -63,6 +64,7 @@ public class IosImageLoaderFactory implements ImageLoaderFactory {
     /**
      * @inheritDoc
      */
+    @Override
     public ImageLoader createImageLoader(final InputStream input) throws IOException {
         return new IosImageLoader(input, IosDescriptor.getInstance());
     }

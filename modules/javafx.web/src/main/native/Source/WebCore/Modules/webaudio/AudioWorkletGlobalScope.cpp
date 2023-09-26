@@ -40,6 +40,7 @@
 #include "JSAudioWorkletProcessor.h"
 #include "JSAudioWorkletProcessorConstructor.h"
 #include "JSDOMConvert.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/IsoMallocInlines.h>
@@ -53,7 +54,9 @@ RefPtr<AudioWorkletGlobalScope> AudioWorkletGlobalScope::tryCreate(AudioWorkletT
     auto vm = JSC::VM::tryCreate();
     if (!vm)
         return nullptr;
-    return adoptRef(*new AudioWorkletGlobalScope(thread, vm.releaseNonNull(), parameters));
+    auto scope = adoptRef(*new AudioWorkletGlobalScope(thread, vm.releaseNonNull(), parameters));
+    scope->addToContextsMap();
+    return scope;
 }
 
 AudioWorkletGlobalScope::AudioWorkletGlobalScope(AudioWorkletThread& thread, Ref<JSC::VM>&& vm, const WorkletParameters& parameters)
@@ -81,7 +84,7 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     auto& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (!jsConstructor->isConstructor(vm))
+    if (!jsConstructor->isConstructor())
         return Exception { TypeError, "Class definition passed to registerProcessor() is not a constructor"_s };
 
     auto prototype = jsConstructor->getPrototype(vm, globalObject);
@@ -90,7 +93,7 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     if (!prototype.isObject())
         return Exception { TypeError, "Class definition passed to registerProcessor() has invalid prototype"_s };
 
-    auto parameterDescriptorsValue = jsConstructor->get(globalObject, JSC::Identifier::fromString(vm, "parameterDescriptors"));
+    auto parameterDescriptorsValue = jsConstructor->get(globalObject, JSC::Identifier::fromString(vm, "parameterDescriptors"_s));
     RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
     Vector<AudioParamDescriptor> parameterDescriptors;
@@ -116,7 +119,7 @@ ExceptionOr<void> AudioWorkletGlobalScope::registerProcessor(String&& name, Ref<
     if (!addResult.isNewEntry)
         return Exception { NotSupportedError, "A processor was already registered with this name"_s };
 
-    thread().messagingProxy().postTaskToAudioWorklet([name = name.isolatedCopy(), parameterDescriptors = crossThreadCopy(parameterDescriptors)](AudioWorklet& worklet) mutable {
+    thread().messagingProxy().postTaskToAudioWorklet([name = WTFMove(name).isolatedCopy(), parameterDescriptors = crossThreadCopy(WTFMove(parameterDescriptors))](AudioWorklet& worklet) mutable {
         ASSERT(isMainThread());
         if (auto* audioContext = worklet.audioContext())
             audioContext->addAudioParamDescriptors(name, WTFMove(parameterDescriptors));
@@ -146,16 +149,15 @@ RefPtr<AudioWorkletProcessor> AudioWorkletGlobalScope::createProcessor(const Str
     args.append(arg);
     ASSERT(!args.hasOverflowed());
 
-    auto* object = JSC::construct(globalObject, jsConstructor, args, "Failed to construct AudioWorkletProcessor");
+    auto* object = JSC::construct(globalObject, jsConstructor, args, "Failed to construct AudioWorkletProcessor"_s);
     ASSERT(!!scope.exception() == !object);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    auto* jsProcessor = JSC::jsDynamicCast<JSAudioWorkletProcessor*>(vm, object);
+    auto* jsProcessor = JSC::jsDynamicCast<JSAudioWorkletProcessor*>(object);
     if (!jsProcessor)
         return nullptr;
 
-    jsProcessor->wrapped().setProcessCallback(makeUnique<JSCallbackDataStrong>(jsProcessor, globalObject));
-
+        m_processors.add(jsProcessor->wrapped());
     return &jsProcessor->wrapped();
 }
 
@@ -197,6 +199,18 @@ void AudioWorkletGlobalScope::handlePostRenderTasks(size_t currentFrame)
         // This takes care of processing the MicroTask queue after rendering.
         m_lockDuringRendering = std::nullopt;
     }
+}
+
+void AudioWorkletGlobalScope::processorIsNoLongerNeeded(AudioWorkletProcessor& processor)
+{
+    m_processors.remove(processor);
+}
+
+void AudioWorkletGlobalScope::visitProcessors(JSC::AbstractSlotVisitor& visitor)
+{
+    m_processors.forEach([&](auto& processor) {
+        addWebCoreOpaqueRoot(visitor, processor);
+    });
 }
 
 } // namespace WebCore

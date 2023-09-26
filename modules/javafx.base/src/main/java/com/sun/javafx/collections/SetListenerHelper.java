@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,6 @@ package com.sun.javafx.collections;
 import com.sun.javafx.binding.ExpressionHelperBase;
 import javafx.beans.InvalidationListener;
 import javafx.collections.SetChangeListener;
-import com.sun.javafx.logging.PlatformLogger;
-
 import java.util.Arrays;
 
 /**
@@ -43,7 +41,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
         if (listener == null) {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleInvalidation<E>(listener) : helper.addListener(listener);
+        return (helper == null)? new SingleInvalidation<>(listener) : helper.addListener(listener);
     }
 
     public static <E> SetListenerHelper<E> removeListener(SetListenerHelper<E> helper, InvalidationListener listener) {
@@ -57,7 +55,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
         if (listener == null) {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleChange<E>(listener) : helper.addListener(listener);
+        return (helper == null)? new SingleChange<>(listener) : helper.addListener(listener);
     }
 
     public static <E> SetListenerHelper<E> removeListener(SetListenerHelper<E> helper, SetChangeListener<? super E> listener) {
@@ -101,7 +99,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected SetListenerHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<E>(this.listener, listener);
+            return new Generic<>(this.listener, listener);
         }
 
         @Override
@@ -111,7 +109,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected SetListenerHelper<E> addListener(SetChangeListener<? super E> listener) {
-            return new Generic<E>(this.listener, listener);
+            return new Generic<>(this.listener, listener);
         }
 
         @Override
@@ -139,7 +137,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected SetListenerHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<E>(listener, this.listener);
+            return new Generic<>(listener, this.listener);
         }
 
         @Override
@@ -149,7 +147,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected SetListenerHelper<E> addListener(SetChangeListener<? super E> listener) {
-            return new Generic<E>(this.listener, listener);
+            return new Generic<>(this.listener, listener);
         }
 
         @Override
@@ -221,12 +219,12 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                     if (listener.equals(invalidationListeners[index])) {
                         if (invalidationSize == 1) {
                             if (changeSize == 1) {
-                                return new SingleChange<E>(changeListeners[0]);
+                                return new SingleChange<>(changeListeners[0]);
                             }
                             invalidationListeners = null;
                             invalidationSize = 0;
                         } else if ((invalidationSize == 2) && (changeSize == 0)) {
-                            return new SingleInvalidation<E>(invalidationListeners[1-index]);
+                            return new SingleInvalidation<>(invalidationListeners[1-index]);
                         } else {
                             final int numMoved = invalidationSize - index - 1;
                             final InvalidationListener[] oldListeners = invalidationListeners;
@@ -278,12 +276,12 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
                     if (listener.equals(changeListeners[index])) {
                         if (changeSize == 1) {
                             if (invalidationSize == 1) {
-                                return new SingleInvalidation<E>(invalidationListeners[0]);
+                                return new SingleInvalidation<>(invalidationListeners[0]);
                             }
                             changeListeners = null;
                             changeSize = 0;
                         } else if ((changeSize == 2) && (invalidationSize == 0)) {
-                            return new SingleChange<E>(changeListeners[1-index]);
+                            return new SingleChange<>(changeListeners[1-index]);
                         } else {
                             final int numMoved = changeSize - index - 1;
                             final SetChangeListener<? super E>[] oldListeners = changeListeners;

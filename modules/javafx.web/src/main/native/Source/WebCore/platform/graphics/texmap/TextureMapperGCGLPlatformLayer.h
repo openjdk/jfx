@@ -21,39 +21,25 @@
 
 #if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA)
 
-#include "GraphicsContextGLOpenGL.h"
+#include "GraphicsContextGLTextureMapperANGLE.h"
 #include "PlatformLayer.h"
 #include "TextureMapperPlatformLayer.h"
 #include "TextureMapperPlatformLayerProxyProvider.h"
 
 namespace WebCore {
 
-class ANGLEContext;
 class TextureMapperPlatformLayerProxy;
 
 class TextureMapperGCGLPlatformLayer : public PlatformLayer {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    TextureMapperGCGLPlatformLayer(GraphicsContextGLOpenGL&);
+    TextureMapperGCGLPlatformLayer(GraphicsContextGLTextureMapperANGLE&);
     virtual ~TextureMapperGCGLPlatformLayer();
 
-    bool makeContextCurrent();
-    PlatformGraphicsContextGL platformContext() const;
-
-#if USE(COORDINATED_GRAPHICS)
-    RefPtr<TextureMapperPlatformLayerProxy> proxy() const override;
-    void swapBuffersIfNeeded() override;
-#else
     virtual void paintToTextureMapper(TextureMapper&, const FloatRect& target, const TransformationMatrix&, float opacity);
-#endif
 
 private:
-    GraphicsContextGLOpenGL& m_context;
-    std::unique_ptr<ANGLEContext> m_glContext;
-
-#if USE(COORDINATED_GRAPHICS)
-    RefPtr<TextureMapperPlatformLayerProxy> m_platformLayerProxy;
-#endif
+    GraphicsContextGLTextureMapperANGLE& m_context;
 };
 
 } // namespace WebCore

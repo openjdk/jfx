@@ -25,12 +25,24 @@
 
 #pragma once
 
+#include "FetchOptions.h"
 #include <wtf/text/WTFString.h>
+
+namespace WTF::Persistence {
+
+class Decoder;
+class Encoder;
+
+}
 
 namespace WebCore {
 
+class Frame;
 class ResourceResponse;
 class ScriptExecutionContext;
+
+struct ReportingClient;
+class SecurityOriginData;
 
 // https://html.spec.whatwg.org/multipage/origin.html#embedder-policy-value
 enum class CrossOriginEmbedderPolicyValue : bool {
@@ -41,61 +53,27 @@ enum class CrossOriginEmbedderPolicyValue : bool {
 // https://html.spec.whatwg.org/multipage/origin.html#embedder-policy
 struct CrossOriginEmbedderPolicy {
     CrossOriginEmbedderPolicyValue value { CrossOriginEmbedderPolicyValue::UnsafeNone };
-    String reportingEndpoint;
     CrossOriginEmbedderPolicyValue reportOnlyValue { CrossOriginEmbedderPolicyValue::UnsafeNone };
+    String reportingEndpoint;
     String reportOnlyReportingEndpoint;
 
-    CrossOriginEmbedderPolicy isolatedCopy() const;
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<CrossOriginEmbedderPolicy> decode(Decoder&);
+    CrossOriginEmbedderPolicy isolatedCopy() const &;
+    CrossOriginEmbedderPolicy isolatedCopy() &&;
+    void encode(WTF::Persistence::Encoder&) const;
+    static std::optional<CrossOriginEmbedderPolicy> decode(WTF::Persistence::Decoder &);
+
+    void addPolicyHeadersTo(ResourceResponse&) const;
 };
 
 inline bool operator==(const CrossOriginEmbedderPolicy& a, const CrossOriginEmbedderPolicy& b)
 {
-    return a.value == b.value && a.reportingEndpoint == b.reportingEndpoint && a.reportOnlyValue == b.reportOnlyValue && a.reportOnlyReportingEndpoint == b.reportOnlyReportingEndpoint;
+    return a.value == b.value && a.reportOnlyValue == b.reportOnlyValue && a.reportingEndpoint == b.reportingEndpoint && a.reportOnlyReportingEndpoint == b.reportOnlyReportingEndpoint;
 }
 
-template<class Encoder>
-void CrossOriginEmbedderPolicy::encode(Encoder& encoder) const
-{
-    encoder << value << reportingEndpoint << reportOnlyValue << reportOnlyReportingEndpoint;
-}
+enum class COEPDisposition : bool { Reporting , Enforce };
 
-template<class Decoder>
-std::optional<CrossOriginEmbedderPolicy> CrossOriginEmbedderPolicy::decode(Decoder& decoder)
-{
-    std::optional<CrossOriginEmbedderPolicyValue> value;
-    decoder >> value;
-    if (!value)
-        return std::nullopt;
-
-    std::optional<String> reportingEndpoint;
-    decoder >> reportingEndpoint;
-    if (!reportingEndpoint)
-        return std::nullopt;
-
-    std::optional<CrossOriginEmbedderPolicyValue> reportOnlyValue;
-    decoder >> reportOnlyValue;
-    if (!reportOnlyValue)
-        return std::nullopt;
-
-    std::optional<String> reportOnlyReportingEndpoint;
-    decoder >> reportOnlyReportingEndpoint;
-    if (!reportOnlyReportingEndpoint)
-        return std::nullopt;
-
-    return {{
-        *value,
-        WTFMove(*reportingEndpoint),
-        *reportOnlyValue,
-        WTFMove(*reportOnlyReportingEndpoint)
-    }};
-}
-
-CrossOriginEmbedderPolicy obtainCrossOriginEmbedderPolicy(const ResourceResponse&, const ScriptExecutionContext&);
-WEBCORE_EXPORT void addCrossOriginEmbedderPolicyHeaders(ResourceResponse&, const CrossOriginEmbedderPolicy&);
-
-enum class IsSecureContext : bool { No, Yes };
-WEBCORE_EXPORT CrossOriginEmbedderPolicy obtainCrossOriginEmbedderPolicy(const ResourceResponse&, IsSecureContext);
+WEBCORE_EXPORT CrossOriginEmbedderPolicy obtainCrossOriginEmbedderPolicy(const ResourceResponse&, const ScriptExecutionContext*);
+WEBCORE_EXPORT void sendCOEPInheritenceViolation(ReportingClient&, const URL& embedderURL, const String& endpoint, COEPDisposition, const String& type, const URL& blockedURL);
+WEBCORE_EXPORT void sendCOEPCORPViolation(ReportingClient&, const URL& embedderURL, const String& endpoint, COEPDisposition, FetchOptions::Destination, const URL& blockedURL);
 
 } // namespace WebCore

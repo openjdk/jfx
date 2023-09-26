@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -329,6 +329,7 @@ public:
     LValue nonNegative32(LValue loadInstruction) { return loadInstruction; }
     LValue load32NonNegative(TypedPointer pointer) { return load32(pointer); }
     LValue load32NonNegative(LValue base, const AbstractHeap& field) { return load32(base, field); }
+    LValue load64NonNegative(LValue base, const AbstractHeap& field) { return load64(base, field); }
 
     LValue equal(LValue, LValue);
     LValue notEqual(LValue, LValue);
@@ -372,13 +373,13 @@ public:
 
     // These are relaxed atomics by default. Use AbstractHeapRepository::decorateFencedAccess() with a
     // non-null heap to make them seq_cst fenced.
-    LValue atomicXchgAdd(LValue operand, TypedPointer pointer, B3::Width);
-    LValue atomicXchgAnd(LValue operand, TypedPointer pointer, B3::Width);
-    LValue atomicXchgOr(LValue operand, TypedPointer pointer, B3::Width);
-    LValue atomicXchgSub(LValue operand, TypedPointer pointer, B3::Width);
-    LValue atomicXchgXor(LValue operand, TypedPointer pointer, B3::Width);
-    LValue atomicXchg(LValue operand, TypedPointer pointer, B3::Width);
-    LValue atomicStrongCAS(LValue expected, LValue newValue, TypedPointer pointer, B3::Width);
+    LValue atomicXchgAdd(LValue operand, TypedPointer pointer, Width);
+    LValue atomicXchgAnd(LValue operand, TypedPointer pointer, Width);
+    LValue atomicXchgOr(LValue operand, TypedPointer pointer, Width);
+    LValue atomicXchgSub(LValue operand, TypedPointer pointer, Width);
+    LValue atomicXchgXor(LValue operand, TypedPointer pointer, Width);
+    LValue atomicXchg(LValue operand, TypedPointer pointer, Width);
+    LValue atomicStrongCAS(LValue expected, LValue newValue, TypedPointer pointer, Width);
 
     template<typename VectorType>
     LValue call(LType type, LValue function, const VectorType& vector)
@@ -404,7 +405,7 @@ public:
     // https://bugs.webkit.org/show_bug.cgi?id=184324
     template<typename FunctionType>
     LValue operation(FunctionType function) { return constIntPtr(tagCFunctionPtr<void*, OperationPtrTag>(function)); }
-    LValue operation(FunctionPtr<OperationPtrTag> function) { return constIntPtr(function.executableAddress()); }
+    LValue operation(CodePtr<OperationPtrTag> function) { return constIntPtr(function.taggedPtr()); }
 
     void jump(LBasicBlock);
     void branch(LValue condition, LBasicBlock taken, Weight takenWeight, LBasicBlock notTaken, Weight notTakenWeight);

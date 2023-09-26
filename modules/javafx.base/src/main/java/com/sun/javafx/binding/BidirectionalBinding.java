@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,7 +68,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         new BidirectionalLongBinding((LongProperty) property1, (LongProperty) property2)
                 : ((property1 instanceof BooleanProperty) && (property2 instanceof BooleanProperty)) ?
                         new BidirectionalBooleanBinding((BooleanProperty) property1, (BooleanProperty) property2)
-                : new TypedGenericBidirectionalBinding<T>(property1, property2);
+                : new TypedGenericBidirectionalBinding<>(property1, property2);
         property1.setValue(property2.getValue());
         property1.getValue();
         property1.addListener(binding);
@@ -79,7 +79,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
     public static Object bind(Property<String> stringProperty, Property<?> otherProperty, Format format) {
         checkParameters(stringProperty, otherProperty);
         Objects.requireNonNull(format, "Format cannot be null");
-        final var binding = new StringFormatBidirectionalBinding(stringProperty, otherProperty, format);
+        final var binding = new StringFormatBidirectionalBinding<>(stringProperty, otherProperty, format);
         stringProperty.setValue(format.format(otherProperty.getValue()));
         stringProperty.getValue();
         stringProperty.addListener(binding);
@@ -736,7 +736,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
-                                property1.setValue((T)oldValue);
+                                property1.setValue(oldValue);
                                 property1.getValue();
                             } else {
                                 property2.setValue(oldValue);
@@ -854,11 +854,10 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         }
     }
 
-    private static class StringFormatBidirectionalBinding extends StringConversionBidirectionalBinding {
+    private static class StringFormatBidirectionalBinding<T> extends StringConversionBidirectionalBinding<T> {
         private final Format format;
 
-        @SuppressWarnings("unchecked")
-        public StringFormatBidirectionalBinding(Property<String> stringProperty, Property<?> otherProperty, Format format) {
+        public StringFormatBidirectionalBinding(Property<String> stringProperty, Property<T> otherProperty, Format format) {
             super(stringProperty, otherProperty);
             this.format = format;
         }
@@ -868,9 +867,10 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
             return format.format(value);
         }
 
+        @SuppressWarnings("unchecked")
         @Override
-        protected Object fromString(String value) throws ParseException {
-            return format.parseObject(value);
+        protected T fromString(String value) throws ParseException {
+            return (T) format.parseObject(value);  // May result in ClassCastException, this is expected
         }
     }
 

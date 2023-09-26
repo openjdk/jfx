@@ -70,6 +70,7 @@ public:
     void clientWillBeginAutoplaying() final;
     bool clientWillBeginPlayback() final;
     bool clientWillPausePlayback() final;
+    void clientCharacteristicsChanged(bool) final;
 
     void visibilityChanged();
     void isVisibleInViewportChanged();
@@ -94,7 +95,7 @@ public:
 
     bool isPlayingToWirelessPlaybackTarget() const override;
 
-    void mediaStateDidChange(MediaProducer::MediaStateFlags);
+    void mediaStateDidChange(MediaProducerMediaStateFlags);
 #endif
 
     bool requiresFullscreenForVideoPlayback() const;

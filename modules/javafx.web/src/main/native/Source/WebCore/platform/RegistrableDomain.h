@@ -29,6 +29,7 @@
 #include "SecurityOriginData.h"
 #include <wtf/HashTraits.h>
 #include <wtf/URL.h>
+#include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -44,17 +45,21 @@ public:
     }
 
     explicit RegistrableDomain(const SecurityOriginData& origin)
-        : RegistrableDomain(registrableDomainFromHost(origin.host))
+        : RegistrableDomain(registrableDomainFromHost(origin.host()))
     {
     }
 
+    static RegistrableDomain fromRawString(String&& origin)
+    {
+        return RegistrableDomain(WTFMove(origin));
+    }
+
     bool isEmpty() const { return m_registrableDomain.isEmpty() || m_registrableDomain == "nullOrigin"_s; }
-    String& string() { return m_registrableDomain; }
     const String& string() const { return m_registrableDomain; }
 
     bool operator!=(const RegistrableDomain& other) const { return m_registrableDomain != other.m_registrableDomain; }
     bool operator==(const RegistrableDomain& other) const { return m_registrableDomain == other.m_registrableDomain; }
-    bool operator==(const char* other) const { return m_registrableDomain == other; }
+    bool operator==(ASCIILiteral other) const { return m_registrableDomain == other; }
 
     bool matches(const URL& url) const
     {
@@ -63,10 +68,11 @@ public:
 
     bool matches(const SecurityOriginData& origin) const
     {
-        return matches(origin.host);
+        return matches(origin.host());
     }
 
-    RegistrableDomain isolatedCopy() const { return RegistrableDomain { m_registrableDomain.isolatedCopy() }; }
+    RegistrableDomain isolatedCopy() const & { return RegistrableDomain { m_registrableDomain.isolatedCopy() }; }
+    RegistrableDomain isolatedCopy() && { return RegistrableDomain { WTFMove(m_registrableDomain).isolatedCopy() }; }
 
     RegistrableDomain(WTF::HashTableDeletedValueType)
         : m_registrableDomain(WTF::HashTableDeletedValue) { }
@@ -74,8 +80,8 @@ public:
     unsigned hash() const { return m_registrableDomain.hash(); }
 
     struct RegistrableDomainHash {
-        static unsigned hash(const RegistrableDomain& registrableDomain) { return registrableDomain.m_registrableDomain.hash(); }
-        static bool equal(const RegistrableDomain& a, const RegistrableDomain& b) { return a == b; }
+        static unsigned hash(const RegistrableDomain& registrableDomain) { return ASCIICaseInsensitiveHash::hash(registrableDomain.m_registrableDomain.impl()); }
+        static bool equal(const RegistrableDomain& a, const RegistrableDomain& b) { return equalIgnoringASCIICase(a.string(), b.string()); }
         static const bool safeToCompareToEmptyOrDeleted = false;
     };
 
@@ -95,11 +101,6 @@ public:
         return uncheckedCreateFromRegistrableDomainString(host);
 #endif
     }
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<RegistrableDomain> decode(Decoder&);
-
-protected:
 
 private:
     explicit RegistrableDomain(String&& domain)
@@ -134,25 +135,6 @@ private:
 
     String m_registrableDomain;
 };
-
-template<class Encoder>
-void RegistrableDomain::encode(Encoder& encoder) const
-{
-    encoder << m_registrableDomain;
-}
-
-template<class Decoder>
-std::optional<RegistrableDomain> RegistrableDomain::decode(Decoder& decoder)
-{
-    std::optional<String> domain;
-    decoder >> domain;
-    if (!domain)
-        return std::nullopt;
-
-    RegistrableDomain registrableDomain;
-    registrableDomain.m_registrableDomain = WTFMove(*domain);
-    return registrableDomain;
-}
 
 inline bool areRegistrableDomainsEqual(const URL& a, const URL& b)
 {

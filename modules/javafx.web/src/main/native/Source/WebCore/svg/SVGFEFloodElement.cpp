@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007, 2008 Rob Buis <buis@kde.org>
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEFloodElement);
 
 inline SVGFEFloodElement::SVGFEFloodElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feFloodTag));
 }
@@ -42,34 +43,35 @@ Ref<SVGFEFloodElement> SVGFEFloodElement::create(const QualifiedName& tagName, D
     return adoptRef(*new SVGFEFloodElement(tagName, document));
 }
 
-bool SVGFEFloodElement::setFilterEffectAttribute(FilterEffect* effect, const QualifiedName& attrName)
+bool SVGFEFloodElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
 {
     RenderObject* renderer = this->renderer();
     ASSERT(renderer);
     const RenderStyle& style = renderer->style();
-    FEFlood* flood = static_cast<FEFlood*>(effect);
 
+    auto& feFlood = downcast<FEFlood>(effect);
     if (attrName == SVGNames::flood_colorAttr)
-        return flood->setFloodColor(style.svgStyle().floodColor());
+        return feFlood.setFloodColor(style.colorResolvingCurrentColor(style.svgStyle().floodColor()));
     if (attrName == SVGNames::flood_opacityAttr)
-        return flood->setFloodOpacity(style.svgStyle().floodOpacity());
+        return feFlood.setFloodOpacity(style.svgStyle().floodOpacity());
 
     ASSERT_NOT_REACHED();
     return false;
 }
 
-RefPtr<FilterEffect> SVGFEFloodElement::build(SVGFilterBuilder*, Filter& filter) const
+RefPtr<FilterEffect> SVGFEFloodElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
     RenderObject* renderer = this->renderer();
     if (!renderer)
         return nullptr;
 
-    const SVGRenderStyle& svgStyle = renderer->style().svgStyle();
+    auto& style = renderer->style();
+    const SVGRenderStyle& svgStyle = style.svgStyle();
 
-    Color color = renderer->style().colorByApplyingColorFilter(svgStyle.floodColor());
+    auto color = style.colorWithColorFilter(svgStyle.floodColor());
     float opacity = svgStyle.floodOpacity();
 
-    return FEFlood::create(filter, color, opacity);
+    return FEFlood::create(color, opacity);
 }
 
-}
+} // namespace WebCore

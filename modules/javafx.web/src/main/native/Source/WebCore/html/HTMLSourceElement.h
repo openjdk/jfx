@@ -25,12 +25,12 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "HTMLElement.h"
+#include "MediaQuery.h"
 #include "Timer.h"
 
 namespace WebCore {
-
-class MediaQuerySet;
 
 class HTMLSourceElement final : public HTMLElement, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLSourceElement);
@@ -41,7 +41,7 @@ public:
     void scheduleErrorEvent();
     void cancelPendingErrorEvent();
 
-    const MediaQuerySet* parsedMediaAttribute(Document&) const;
+    const MQ::MediaQueryList& parsedMediaAttribute(Document&) const;
 
 private:
     HTMLSourceElement(const QualifiedName&, Document&);
@@ -52,20 +52,15 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
     void stop() final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
-    void errorEventTimerFired();
-
-    Timer m_errorEventTimer;
-    bool m_shouldRescheduleErrorEventOnResume { false };
+    TaskCancellationGroup m_errorEventCancellationGroup;
     bool m_shouldCallSourcesChanged { false };
-    mutable std::optional<RefPtr<const MediaQuerySet>> m_cachedParsedMediaAttribute;
+    mutable std::optional<MQ::MediaQueryList> m_cachedParsedMediaAttribute;
 };
 
 } // namespace WebCore

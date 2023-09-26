@@ -1,7 +1,7 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
  * (C) 2002-2003 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2002, 2005, 2006, 2007, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2002-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,20 +34,18 @@ struct SameSizeAsCSSRule : public RefCounted<SameSizeAsCSSRule> {
     void* pointerUnion;
 };
 
-COMPILE_ASSERT(sizeof(CSSRule) == sizeof(SameSizeAsCSSRule), CSSRule_should_stay_small);
+static_assert(sizeof(CSSRule) == sizeof(SameSizeAsCSSRule), "CSSRule should stay small");
 
-COMPILE_ASSERT(StyleRuleType::Unknown == static_cast<StyleRuleType>(CSSRule::Type::UNKNOWN_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Style == static_cast<StyleRuleType>(CSSRule::Type::STYLE_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Charset == static_cast<StyleRuleType>(CSSRule::Type::CHARSET_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Import == static_cast<StyleRuleType>(CSSRule::Type::IMPORT_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Media == static_cast<StyleRuleType>(CSSRule::Type::MEDIA_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::FontFace == static_cast<StyleRuleType>(CSSRule::Type::FONT_FACE_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Page == static_cast<StyleRuleType>(CSSRule::Type::PAGE_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Keyframes == static_cast<StyleRuleType>(CSSRule::Type::KEYFRAMES_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Keyframe == static_cast<StyleRuleType>(CSSRule::Type::KEYFRAME_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Namespace == static_cast<StyleRuleType>(CSSRule::Type::NAMESPACE_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::CounterStyle == static_cast<StyleRuleType>(CSSRule::Type::COUNTER_STYLE_RULE), enums_should_match);
-COMPILE_ASSERT(StyleRuleType::Supports == static_cast<StyleRuleType>(CSSRule::Type::SUPPORTS_RULE), enums_should_match);
+unsigned short CSSRule::typeForCSSOM() const
+{
+    // "This enumeration is thus frozen in its current state, and no new new values will be
+    // added to reflect additional at-rules; all at-rules beyond the ones listed above will return 0."
+    // https://drafts.csswg.org/cssom/#the-cssrule-interface
+    if (styleRuleType() >= firstUnexposedStyleRuleType)
+        return 0;
+
+    return static_cast<unsigned short>(styleRuleType());
+}
 
 ExceptionOr<void> CSSRule::setCssText(const String&)
 {

@@ -26,16 +26,19 @@
 #include "config.h"
 #include "JSNavigator.h"
 
+#include "WebCoreJSBuiltinInternals.h"
 #include "WebCoreJSClientData.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSObjectInlines.h>
 
 namespace WebCore {
 
 template<typename Visitor>
 void JSNavigator::visitAdditionalChildren(Visitor& visitor)
 {
-    visitor.addOpaqueRoot(static_cast<NavigatorBase*>(&wrapped()));
+    addWebCoreOpaqueRoot(visitor, static_cast<NavigatorBase&>(wrapped()));
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSNavigator);
@@ -46,7 +49,7 @@ JSC::JSValue JSNavigator::getUserMedia(JSC::JSGlobalObject& lexicalGlobalObject,
     auto* function = globalObject()->builtinInternalFunctions().jsDOMBindingInternals().m_getUserMediaShimFunction.get();
     ASSERT(function);
 
-    auto callData = JSC::getCallData(lexicalGlobalObject.vm(), function);
+    auto callData = JSC::getCallData(function);
     ASSERT(callData.type != JSC::CallData::Type::None);
     JSC::MarkedArgumentBuffer arguments;
     for (size_t cptr = 0; cptr < callFrame.argumentCount(); ++cptr)

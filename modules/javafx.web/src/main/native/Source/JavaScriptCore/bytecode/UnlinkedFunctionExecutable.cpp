@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ namespace JSC {
 
 static_assert(sizeof(UnlinkedFunctionExecutable) <= 128, "UnlinkedFunctionExecutable should fit in a 128-byte cell to keep allocated blocks count to only one after initializing JSGlobalObject.");
 
-const ClassInfo UnlinkedFunctionExecutable::s_info = { "UnlinkedFunctionExecutable", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(UnlinkedFunctionExecutable) };
+const ClassInfo UnlinkedFunctionExecutable::s_info = { "UnlinkedFunctionExecutable"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(UnlinkedFunctionExecutable) };
 
 static UnlinkedFunctionCodeBlock* generateUnlinkedFunctionCodeBlock(
     VM& vm, UnlinkedFunctionExecutable* executable, const SourceCode& source,
@@ -57,7 +57,7 @@ static UnlinkedFunctionCodeBlock* generateUnlinkedFunctionCodeBlock(
     ASSERT(isFunctionParseMode(executable->parseMode()));
     auto* classFieldLocations = executable->classFieldLocations();
     std::unique_ptr<FunctionNode> function = parse<FunctionNode>(
-        vm, source, executable->name(), builtinMode, strictMode, scriptMode, executable->parseMode(), executable->superBinding(), error, nullptr, ConstructorKind::None, DerivedContextType::None, EvalContextType::None, nullptr, nullptr, classFieldLocations);
+        vm, source, executable->name(), executable->implementationVisibility(), builtinMode, strictMode, scriptMode, executable->parseMode(), executable->superBinding(), error, nullptr, ConstructorKind::None, DerivedContextType::None, EvalContextType::None, nullptr, nullptr, classFieldLocations);
 
     if (!function) {
         ASSERT(error.isValid());
@@ -107,6 +107,7 @@ UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* struct
     , m_features(0)
     , m_constructorKind(static_cast<unsigned>(node->constructorKind()))
     , m_sourceParseMode(node->parseMode())
+    , m_implementationVisibility(static_cast<unsigned>(node->implementationVisibility()))
     , m_lexicalScopeFeatures(node->lexicalScopeFeatures())
     , m_functionMode(static_cast<unsigned>(node->functionMode()))
     , m_derivedContextType(static_cast<unsigned>(derivedContextType))
@@ -116,6 +117,7 @@ UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(VM& vm, Structure* struct
     , m_ecmaName(node->ecmaName())
 {
     // Make sure these bitfields are adequately wide.
+    ASSERT(m_implementationVisibility == static_cast<unsigned>(node->implementationVisibility()));
     ASSERT(m_constructAbility == static_cast<unsigned>(constructAbility));
     ASSERT(m_constructorKind == static_cast<unsigned>(node->constructorKind()));
     ASSERT(m_functionMode == static_cast<unsigned>(node->functionMode()));
@@ -251,7 +253,8 @@ UnlinkedFunctionCodeBlock* UnlinkedFunctionExecutable::unlinkedCodeBlockFor(
         m_unlinkedCodeBlockForConstruct.set(vm, this, result);
         break;
     }
-    vm.unlinkedFunctionExecutableSpace.set.add(this);
+    // FIXME GlobalGC: Need syncrhonization here for accessing the Heap server.
+    vm.heap.unlinkedFunctionExecutableSpaceAndSet.set.add(this);
     return result;
 }
 
@@ -265,7 +268,7 @@ void UnlinkedFunctionExecutable::decodeCachedCodeBlocks(VM& vm)
     int32_t cachedCodeBlockForCallOffset = m_cachedCodeBlockForCallOffset;
     int32_t cachedCodeBlockForConstructOffset = m_cachedCodeBlockForConstructOffset;
 
-    DeferGC deferGC(vm.heap);
+    DeferGC deferGC(vm);
 
     // No need to clear m_unlinkedCodeBlockForCall here, since we moved the decoder out of the same slot
     if (cachedCodeBlockForCallOffset)
@@ -277,7 +280,7 @@ void UnlinkedFunctionExecutable::decodeCachedCodeBlocks(VM& vm)
 
     WTF::storeStoreFence();
     m_isCached = false;
-    vm.heap.writeBarrier(this);
+    vm.writeBarrier(this);
 }
 
 UnlinkedFunctionExecutable::RareData& UnlinkedFunctionExecutable::ensureRareDataSlow()
@@ -309,8 +312,10 @@ void UnlinkedFunctionExecutable::finalizeUnconditionally(VM& vm)
         };
         clearIfDead(m_unlinkedCodeBlockForCall);
         clearIfDead(m_unlinkedCodeBlockForConstruct);
-        if (isCleared && !isStillValid)
-            vm.unlinkedFunctionExecutableSpace.set.remove(this);
+        if (isCleared && !isStillValid) {
+            // FIXME GlobalGC: Need syncrhonization here for accessing the Heap server.
+            vm.heap.unlinkedFunctionExecutableSpaceAndSet.set.remove(this);
+        }
     }
 }
 

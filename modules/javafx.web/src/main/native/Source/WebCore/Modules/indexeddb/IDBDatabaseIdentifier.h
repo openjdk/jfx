@@ -27,8 +27,7 @@
 
 #include "ClientOrigin.h"
 #include "SecurityOriginData.h"
-#include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/ArgumentCoder.h>
 
 namespace WebCore {
 
@@ -44,21 +43,12 @@ public:
 
     WEBCORE_EXPORT IDBDatabaseIdentifier(const String& databaseName, SecurityOriginData&& openingOrigin, SecurityOriginData&& mainFrameOrigin, bool isTransient = false);
 
-    IDBDatabaseIdentifier isolatedCopy() const;
+    IDBDatabaseIdentifier isolatedCopy() const &;
+    IDBDatabaseIdentifier isolatedCopy() &&;
 
     bool isHashTableDeletedValue() const
     {
         return m_databaseName.isHashTableDeletedValue();
-    }
-
-    unsigned hash() const
-    {
-        unsigned nameHash = StringHash::hash(m_databaseName);
-        unsigned originHash = m_origin.hash();
-        unsigned transientHash = m_isTransient;
-
-        unsigned hashCodes[3] = { nameHash, originHash, transientHash };
-        return StringHasher::hashMemory<sizeof(hashCodes)>(hashCodes);
     }
 
     bool isValid() const
@@ -81,11 +71,8 @@ public:
     const ClientOrigin& origin() const { return m_origin; }
     bool isTransient() const { return m_isTransient; }
 
-    String databaseDirectoryRelativeToRoot(const String& rootDirectory, const String& versionString="v1") const;
-    static String databaseDirectoryRelativeToRoot(const SecurityOriginData& topLevelOrigin, const SecurityOriginData& openingOrigin, const String& rootDirectory, const String& versionString);
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<IDBDatabaseIdentifier> decode(Decoder&);
+    String databaseDirectoryRelativeToRoot(const String& rootDirectory, ASCIILiteral versionString = "v1"_s) const;
+    WEBCORE_EXPORT static String databaseDirectoryRelativeToRoot(const ClientOrigin&, const String& rootDirectory, ASCIILiteral versionString);
 
 #if !LOG_DISABLED
     String loggingString() const;
@@ -94,53 +81,29 @@ public:
     bool isRelatedToOrigin(const SecurityOriginData& other) const { return m_origin.isRelated(other); }
 
 private:
+    friend struct IPC::ArgumentCoder<IDBDatabaseIdentifier, void>;
+
     String m_databaseName;
     ClientOrigin m_origin;
     bool m_isTransient { false };
 };
 
+inline void add(Hasher& hasher, const IDBDatabaseIdentifier& identifier)
+{
+    add(hasher, identifier.databaseName(), identifier.origin(), identifier.isTransient());
+}
+
 struct IDBDatabaseIdentifierHash {
-    static unsigned hash(const IDBDatabaseIdentifier& a) { return a.hash(); }
+    static unsigned hash(const IDBDatabaseIdentifier& a) { return computeHash(a); }
     static bool equal(const IDBDatabaseIdentifier& a, const IDBDatabaseIdentifier& b) { return a == b; }
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
-struct IDBDatabaseIdentifierHashTraits : WTF::SimpleClassHashTraits<IDBDatabaseIdentifier> {
+struct IDBDatabaseIdentifierHashTraits : SimpleClassHashTraits<IDBDatabaseIdentifier> {
     static const bool hasIsEmptyValueFunction = true;
     static const bool emptyValueIsZero = false;
     static bool isEmptyValue(const IDBDatabaseIdentifier& info) { return info.isEmpty(); }
 };
-
-template<class Encoder>
-void IDBDatabaseIdentifier::encode(Encoder& encoder) const
-{
-    encoder << m_databaseName << m_origin << m_isTransient;
-}
-
-template<class Decoder>
-std::optional<IDBDatabaseIdentifier> IDBDatabaseIdentifier::decode(Decoder& decoder)
-{
-    std::optional<String> databaseName;
-    decoder >> databaseName;
-    if (!databaseName)
-        return std::nullopt;
-
-    std::optional<ClientOrigin> origin;
-    decoder >> origin;
-    if (!origin)
-        return std::nullopt;
-
-    std::optional<bool> isTransient;
-    decoder >> isTransient;
-    if (!isTransient)
-        return std::nullopt;
-
-    IDBDatabaseIdentifier identifier;
-    identifier.m_databaseName = WTFMove(*databaseName); // FIXME: When decoding from IPC, databaseName can be null, and the non-empty constructor asserts that this is not the case.
-    identifier.m_origin = WTFMove(*origin);
-    identifier.m_isTransient = *isTransient;
-    return identifier;
-}
 
 } // namespace WebCore
 

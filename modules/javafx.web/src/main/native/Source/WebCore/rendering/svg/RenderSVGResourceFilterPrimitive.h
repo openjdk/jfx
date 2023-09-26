@@ -33,7 +33,7 @@ namespace WebCore {
 class FilterEffect;
 class SVGFilterPrimitiveStandardAttributes;
 
-class RenderSVGResourceFilterPrimitive final : public RenderSVGHiddenContainer {
+class RenderSVGResourceFilterPrimitive final : public LegacyRenderSVGHiddenContainer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGResourceFilterPrimitive);
 public:
     RenderSVGResourceFilterPrimitive(SVGFilterPrimitiveStandardAttributes&, RenderStyle&&);
@@ -41,15 +41,11 @@ public:
 
     void styleDidChange(StyleDifference, const RenderStyle*) override;
 
-    const char* renderName() const override { return "RenderSVGResourceFilterPrimitive"; }
+    ASCIILiteral renderName() const override { return "RenderSVGResourceFilterPrimitive"_s; }
 
-    inline void primitiveAttributeChanged(const QualifiedName& attribute)
-    {
-        RenderObject* filter = parent();
-        if (!filter || !filter->isSVGResourceFilter())
-            return;
-        static_cast<RenderSVGResourceFilter*>(filter)->primitiveAttributeChanged(this, attribute);
-    }
+    void markFilterEffectForRepaint(FilterEffect*);
+    void markFilterEffectForRebuild();
+
 private:
     bool isSVGResourceFilterPrimitive() const override { return true; }
     void element() const = delete;

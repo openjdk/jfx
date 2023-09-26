@@ -89,7 +89,7 @@ class CompositionLayer : public PlatformLayer {
 public:
     class Impl {
     public:
-        using Factory = WTF::Function<std::unique_ptr<Impl>(uint64_t, CompositionLayer&)>;
+        using Factory = Function<std::unique_ptr<Impl>(uint64_t, CompositionLayer&)>;
 
         virtual ~Impl();
         virtual bool isTextureMapperImpl() const { return false; }
@@ -136,6 +136,7 @@ public:
                     bool repaintCounterChanged : 1;
                     bool debugBorderChanged : 1;
                     bool scrollingNodeChanged : 1;
+                    bool eventRegionChanged : 1;
                 };
                 uint32_t value { 0 };
             };
@@ -154,6 +155,7 @@ public:
                     bool contentsVisible : 1;
                     bool backfaceVisible : 1;
                     bool masksToBounds : 1;
+                    bool contentsRectClipsDescendants : 1;
                     bool preserves3D : 1;
                 };
                 uint32_t value { 0 };
@@ -203,14 +205,8 @@ public:
         } debugBorder;
 
         WebCore::ScrollingNodeID scrollingNodeID { 0 };
+        WebCore::EventRegion eventRegion;
     };
-
-    template<typename T>
-    void updateState(const T& functor)
-    {
-        Locker locker { PlatformLayer::m_state.lock };
-        functor(m_state.pending);
-    }
 
     template<typename T>
     void flushState(const T& functor)
@@ -276,6 +272,9 @@ public:
         if (pending.delta.scrollingNodeChanged)
             staging.scrollingNodeID = pending.scrollingNodeID;
 
+        if (pending.delta.eventRegionChanged)
+            staging.eventRegion = pending.eventRegion;
+
         if (pending.delta.backingStoreChanged)
             staging.backingStore = pending.backingStore;
         if (pending.delta.contentLayerChanged)
@@ -330,7 +329,7 @@ class ContentLayer : public PlatformLayer {
 public:
     class Impl {
     public:
-        using Factory = WTF::Function<std::unique_ptr<Impl>(ContentLayer&)>;
+        using Factory = Function<std::unique_ptr<Impl>(ContentLayer&)>;
 
         virtual ~Impl();
         virtual bool isTextureMapperImpl() const { return false; }
@@ -355,7 +354,7 @@ class BackingStore : public ThreadSafeRefCounted<BackingStore> {
 public:
     class Impl {
     public:
-        using Factory = WTF::Function<std::unique_ptr<Impl>(BackingStore&)>;
+        using Factory = Function<std::unique_ptr<Impl>(BackingStore&)>;
 
         virtual ~Impl();
         virtual bool isTextureMapperImpl() const { return false; }
@@ -379,7 +378,7 @@ class ImageBacking : public ThreadSafeRefCounted<ImageBacking> {
 public:
     class Impl {
     public:
-        using Factory = WTF::Function<std::unique_ptr<Impl>(ImageBacking&)>;
+        using Factory = Function<std::unique_ptr<Impl>(ImageBacking&)>;
 
         virtual ~Impl();
         virtual bool isTextureMapperImpl() const { return false; }

@@ -27,11 +27,13 @@
 
 #if ENABLE(WEBXR)
 
+#include "ExceptionOr.h"
 #include "FakeXRBoundsPoint.h"
 #include "FakeXRInputSourceInit.h"
 #include "FakeXRViewInit.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "PlatformXR.h"
+#include "Timer.h"
 #include "WebFakeXRInputController.h"
 #include "XRVisibilityState.h"
 #include <wtf/RefCounted.h>
@@ -78,12 +80,13 @@ public:
     void setFloorOrigin(std::optional<FrameData::Pose>&& origin) { m_frameData.floorTransform = WTFMove(origin); }
     void setEmulatedPosition(bool emulated) { m_frameData.isPositionEmulated = emulated; }
     void setSupportsShutdownNotification(bool supportsShutdownNotification) { m_supportsShutdownNotification = supportsShutdownNotification; }
+    void setVisibilityState(XRVisibilityState);
     void simulateShutdownCompleted();
     void scheduleOnNextFrame(Function<void()>&&);
     void addInputConnection(Ref<WebFakeXRInputController>&& input) { m_inputConnections.append(WTFMove(input)); };
 private:
     WebCore::IntSize recommendedResolution(PlatformXR::SessionMode) final;
-    void initializeTrackingAndRendering(PlatformXR::SessionMode) final;
+    void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, PlatformXR::SessionMode, const PlatformXR::Device::FeatureList&) final;
     void shutDownTrackingAndRendering() final;
     bool supportsSessionShutdownNotification() const final { return m_supportsShutdownNotification; }
     void initializeReferenceSpace(PlatformXR::ReferenceSpaceType) final { }

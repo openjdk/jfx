@@ -32,14 +32,16 @@
 
 namespace WebCore {
 
+struct MultiCacheQueryOptions;
+
 class DOMCacheStorage : public RefCounted<DOMCacheStorage>, public ActiveDOMObject {
 public:
-    static Ref<DOMCacheStorage> create(ScriptExecutionContext& context, Ref<CacheStorageConnection>&& connection) { return adoptRef(*new DOMCacheStorage(context, WTFMove(connection))); }
+    static Ref<DOMCacheStorage> create(ScriptExecutionContext&, Ref<CacheStorageConnection>&&);
     ~DOMCacheStorage();
 
     using KeysPromise = DOMPromiseDeferred<IDLSequence<IDLDOMString>>;
 
-    void match(DOMCache::RequestInfo&&, CacheQueryOptions&&, Ref<DeferredPromise>&&);
+    void match(DOMCache::RequestInfo&&, MultiCacheQueryOptions&&, Ref<DeferredPromise>&&);
     void has(const String&, DOMPromiseDeferred<IDLBoolean>&&);
     void open(const String&, DOMPromiseDeferred<IDLInterface<DOMCache>>&&);
     void remove(const String&, DOMPromiseDeferred<IDLBoolean>&&);

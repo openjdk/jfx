@@ -41,13 +41,16 @@
 #include "UserContentTypes.h"
 #include "UserStyleSheet.h"
 #include "UserStyleSheetTypes.h"
-#include <JavaScriptCore/HeapInlines.h>
-#include <JavaScriptCore/JSCellInlines.h>
-#include <JavaScriptCore/StructureInlines.h>
+#include <JavaScriptCore/JSObjectInlines.h>
 #include <wtf/Language.h>
 #include <wtf/unicode/Collator.h>
 
 namespace WebCore {
+
+Ref<CaptionUserPreferences> CaptionUserPreferences::create(PageGroup& group)
+{
+    return adoptRef(*new CaptionUserPreferences(group));
+}
 
 CaptionUserPreferences::CaptionUserPreferences(PageGroup& group)
     : m_pageGroup(group)
@@ -92,7 +95,7 @@ CaptionUserPreferences::CaptionDisplayMode CaptionUserPreferences::captionDispla
 void CaptionUserPreferences::setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode mode)
 {
     m_displayMode = mode;
-    if (m_testingMode && mode != AlwaysOn) {
+    if (testingMode() && mode != AlwaysOn) {
         setUserPrefersCaptions(false);
         setUserPrefersSubtitles(false);
     }
@@ -150,7 +153,8 @@ bool CaptionUserPreferences::userPrefersTextDescriptions() const
     if (!page)
         return false;
 
-    return page->settings().shouldDisplayTextDescriptions();
+    auto& settings = page->settings();
+    return settings.shouldDisplayTextDescriptions() && (settings.audioDescriptionsEnabled() || settings.extendedAudioDescriptionsEnabled());
 }
 
 void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
@@ -171,7 +175,7 @@ void CaptionUserPreferences::captionPreferencesChanged()
 Vector<String> CaptionUserPreferences::preferredLanguages() const
 {
     Vector<String> languages = userPreferredLanguages(ShouldMinimizeLanguages::No);
-    if (m_testingMode && !m_userPreferredLanguage.isEmpty())
+    if (testingMode() && !m_userPreferredLanguage.isEmpty())
         languages.insert(0, m_userPreferredLanguage);
 
     return languages;
@@ -218,12 +222,31 @@ String CaptionUserPreferences::displayNameForTrack(TextTrack* track) const
 
 MediaSelectionOption CaptionUserPreferences::mediaSelectionOptionForTrack(TextTrack* track) const
 {
-    auto type = MediaSelectionOption::Type::Regular;
+    auto legibleType = MediaSelectionOption::LegibleType::Regular;
     if (track == &TextTrack::captionMenuOffItem())
-        type = MediaSelectionOption::Type::LegibleOff;
+        legibleType = MediaSelectionOption::LegibleType::LegibleOff;
     else if (track == &TextTrack::captionMenuAutomaticItem())
-        type = MediaSelectionOption::Type::LegibleAuto;
-    return { displayNameForTrack(track), type };
+        legibleType = MediaSelectionOption::LegibleType::LegibleAuto;
+
+    auto mediaType = MediaSelectionOption::MediaType::Unknown;
+    switch (track->kind()) {
+    case TextTrack::Kind::Forced:
+    case TextTrack::Kind::Descriptions:
+    case TextTrack::Kind::Subtitles:
+        mediaType = MediaSelectionOption::MediaType::Subtitles;
+        break;
+    case TextTrack::Kind::Captions:
+        mediaType = MediaSelectionOption::MediaType::Captions;
+        break;
+    case TextTrack::Kind::Metadata:
+        mediaType = MediaSelectionOption::MediaType::Metadata;
+        break;
+    case TextTrack::Kind::Chapters:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+
+    return { mediaType, displayNameForTrack(track), legibleType };
 }
 
 Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList, HashSet<TextTrack::Kind> kinds)
@@ -268,7 +291,7 @@ String CaptionUserPreferences::displayNameForTrack(AudioTrack* track) const
 
 MediaSelectionOption CaptionUserPreferences::mediaSelectionOptionForTrack(AudioTrack* track) const
 {
-    return { displayNameForTrack(track), MediaSelectionOption::Type::Regular };
+    return { MediaSelectionOption::MediaType::Audio, displayNameForTrack(track), MediaSelectionOption::LegibleType::Regular };
 }
 
 Vector<RefPtr<AudioTrack>> CaptionUserPreferences::sortedTrackListForMenu(AudioTrackList* trackList)
@@ -293,16 +316,22 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferences::sortedTrackListForMenu(AudioT
 
 int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaElement* mediaElement) const
 {
+    if (!mediaElement || !mediaElement->player())
+        return 0;
+
     CaptionDisplayMode displayMode = captionDisplayMode();
-    if (displayMode == Manual)
+    auto kind = track->kind();
+    auto prefersTextDescriptions = kind == TextTrack::Kind::Descriptions && userPrefersTextDescriptions();
+    if (displayMode == Manual && !prefersTextDescriptions)
         return 0;
 
     bool legacyOverride = mediaElement->webkitClosedCaptionsVisible();
     if (displayMode == AlwaysOn && (!userPrefersSubtitles() && !userPrefersCaptions() && !legacyOverride))
         return 0;
-    if (track->kind() != TextTrack::Kind::Captions && track->kind() != TextTrack::Kind::Subtitles && track->kind() != TextTrack::Kind::Forced)
+
+    if (kind != TextTrack::Kind::Captions && kind != TextTrack::Kind::Subtitles && kind != TextTrack::Kind::Forced && !prefersTextDescriptions)
         return 0;
-    if (!track->isMainProgramContent())
+    if (!track->isMainProgramContent() && !prefersTextDescriptions)
         return 0;
 
     bool trackHasOnlyForcedSubtitles = track->containsOnlyForcedSubtitles();
@@ -311,10 +340,7 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
 
     Vector<String> userPreferredCaptionLanguages = preferredLanguages();
 
-    if ((displayMode == Automatic && !legacyOverride) || trackHasOnlyForcedSubtitles) {
-
-        if (!mediaElement || !mediaElement->player())
-            return 0;
+    if ((displayMode == Automatic && !legacyOverride) || trackHasOnlyForcedSubtitles || prefersTextDescriptions) {
 
         String textTrackLanguage = track->validBCP47Language();
         if (textTrackLanguage.isEmpty())
@@ -359,9 +385,11 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
 
     int trackScore = 0;
 
-    if (userPrefersCaptions()) {
+    if (kind == TextTrack::Kind::Descriptions && userPrefersTextDescriptions())
+        trackScore = 3;
+    else if (userPrefersCaptions()) {
         // When the user prefers accessibility tracks, rank is SDH, then CC, then subtitles.
-        if (track->kind() == TextTrack::Kind::Subtitles)
+        if (kind == TextTrack::Kind::Subtitles)
             trackScore = 1;
         else if (track->isClosedCaptions())
             trackScore = 2;
@@ -369,7 +397,7 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
             trackScore = 3;
     } else {
         // When the user prefers translation tracks, rank is subtitles, then SDH, then CC tracks.
-        if (track->kind() == TextTrack::Kind::Subtitles)
+        if (kind == TextTrack::Kind::Subtitles)
             trackScore = 3;
         else if (!track->isClosedCaptions())
             trackScore = 2;

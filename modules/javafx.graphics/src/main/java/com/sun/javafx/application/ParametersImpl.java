@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,17 +42,16 @@ import javafx.application.Application.Parameters;
  */
 public class ParametersImpl extends Parameters {
 
-    private List<String> rawArgs = new ArrayList<String>();
-    private Map<String, String> namedParams = new HashMap<String, String>();
-    private List<String> unnamedParams = new ArrayList<String>();
+    private List<String> rawArgs = new ArrayList<>();
+    private Map<String, String> namedParams = new HashMap<>();
+    private List<String> unnamedParams = new ArrayList<>();
 
     private List<String> readonlyRawArgs = null;
     private Map<String, String> readonlyNamedParams = null;
     private List<String> readonlyUnnamedParams = null;
 
     // Set of parameters for each application
-    private static Map<Application, Parameters> params =
-        new HashMap<Application, Parameters>();
+    private static Map<Application, Parameters> params = new HashMap<>();
 
 
     /**
@@ -221,7 +220,7 @@ public class ParametersImpl extends Parameters {
      * "--name=value".
      */
     private void computeRawArgs() {
-        ArrayList<String> keys = new ArrayList<String>();
+        ArrayList<String> keys = new ArrayList<>();
         keys.addAll(namedParams.keySet());
         Collections.sort(keys);
         for (String key : keys) {

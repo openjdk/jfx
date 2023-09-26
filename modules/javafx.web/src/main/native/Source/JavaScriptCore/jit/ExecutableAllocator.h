@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +31,12 @@
 #include "JSCConfig.h"
 #include "JSCPtrTag.h"
 #include "Options.h"
-#include <stddef.h> // for ptrdiff_t
 #include <limits>
 #include <wtf/Assertions.h>
 #include <wtf/Gigacage.h>
 #include <wtf/Lock.h>
 
-#if !USE(LIBPAS_JIT_HEAP)
+#if !ENABLE(LIBPAS_JIT_HEAP)
 #include <wtf/MetaAllocator.h>
 #endif
 
@@ -49,8 +48,6 @@
 #if CPU(MIPS) && OS(LINUX)
 #include <sys/cachectl.h>
 #endif
-
-#define JIT_ALLOCATOR_LARGE_ALLOC_SIZE (pageSize() * 4)
 
 #define EXECUTABLE_POOL_WRITABLE true
 
@@ -72,7 +69,7 @@ public:
 
     RefPtr<ExecutableMemoryHandle> allocate(size_t, JITCompilationEffort) { return nullptr; }
 
-    static void setJITEnabled(bool) { };
+    static void disableJIT() { };
 
     bool isValidExecutableMemory(const AbstractLocker&, void*) { return false; }
 
@@ -108,7 +105,10 @@ T endOfFixedExecutableMemoryPool()
     return bitwise_cast<T>(endOfFixedExecutableMemoryPoolImpl());
 }
 
-JS_EXPORT_PRIVATE bool isJITPC(void* pc);
+ALWAYS_INLINE bool isJITPC(void* pc)
+{
+    return g_jscConfig.startExecutableMemory <= pc && pc < g_jscConfig.endExecutableMemory;
+}
 
 JS_EXPORT_PRIVATE void dumpJITMemory(const void*, const void*, size_t);
 
@@ -169,7 +169,7 @@ public:
     static void dumpProfile() { }
 #endif
 
-    JS_EXPORT_PRIVATE static void setJITEnabled(bool);
+    JS_EXPORT_PRIVATE static void disableJIT();
 
     RefPtr<ExecutableMemoryHandle> allocate(size_t sizeInBytes, JITCompilationEffort);
 

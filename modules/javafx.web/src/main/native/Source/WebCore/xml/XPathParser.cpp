@@ -37,8 +37,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringHash.h>
 
-using namespace WebCore::XPath;
-
 extern int xpathyyparse(WebCore::XPath::Parser&);
 
 #include "XPathGrammar.h"
@@ -106,7 +104,7 @@ static MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> createAxisNam
 
 static bool parseAxisName(const String& name, Step::Axis& type)
 {
-    static const auto axisNames = makeNeverDestroyed(createAxisNamesMap());
+    static NeverDestroyed axisNames = createAxisNamesMap();
     auto it = axisNames.get().find(name);
     if (it == axisNames.get().end())
         return false;
@@ -310,7 +308,7 @@ inline Parser::Token Parser::nextTokenInternal()
         if (isBinaryOperatorContext())
             return makeTokenAndAdvance(MULOP, NumericOp::OP_Mul);
         ++m_nextPos;
-        return Token(NAMETEST, "*");
+        return Token(NAMETEST, "*"_s);
     case '$': { // $ QName
         m_nextPos++;
         String name;
@@ -327,13 +325,13 @@ inline Parser::Token Parser::nextTokenInternal()
     skipWS();
     // If we're in an operator context, check for any operator names
     if (isBinaryOperatorContext()) {
-        if (name == "and") //### hash?
+        if (name == "and"_s) // ### hash?
             return Token(AND);
-        if (name == "or")
+        if (name == "or"_s)
             return Token(OR);
-        if (name == "mod")
+        if (name == "mod"_s)
             return Token(MULOP, NumericOp::OP_Mod);
-        if (name == "div")
+        if (name == "div"_s)
             return Token(MULOP, NumericOp::OP_Div);
     }
 
@@ -374,13 +372,13 @@ inline Parser::Token Parser::nextTokenInternal()
 
         // Either node type oor function name.
 
-        if (name == "processing-instruction")
+        if (name == "processing-instruction"_s)
             return Token(PI);
-        if (name == "node")
+        if (name == "node"_s)
             return Token(NODE);
-        if (name == "text")
+        if (name == "text"_s)
             return Token(TEXT_);
-        if (name == "comment")
+        if (name == "comment"_s)
             return Token(COMMENT);
 
         return Token(FUNCTIONNAME, name);
@@ -431,7 +429,7 @@ int Parser::lex(YYSTYPE& yylval)
     return token.type;
 }
 
-bool Parser::expandQualifiedName(const String& qualifiedName, String& localName, String& namespaceURI)
+bool Parser::expandQualifiedName(const String& qualifiedName, AtomString& localName, AtomString& namespaceURI)
 {
     size_t colon = qualifiedName.find(':');
     if (colon != notFound) {
@@ -439,14 +437,14 @@ bool Parser::expandQualifiedName(const String& qualifiedName, String& localName,
             m_sawNamespaceError = true;
             return false;
         }
-        namespaceURI = m_resolver->lookupNamespaceURI(qualifiedName.left(colon));
+        namespaceURI = m_resolver->lookupNamespaceURI(StringView(qualifiedName).left(colon).toAtomString());
         if (namespaceURI.isNull()) {
             m_sawNamespaceError = true;
             return false;
         }
-        localName = qualifiedName.substring(colon + 1);
+        localName = StringView(qualifiedName).substring(colon + 1).toAtomString();
     } else
-        localName = qualifiedName;
+        localName = AtomString { qualifiedName };
     return true;
 }
 

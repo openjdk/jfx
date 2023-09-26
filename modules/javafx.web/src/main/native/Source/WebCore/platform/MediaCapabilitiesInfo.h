@@ -34,41 +34,12 @@ struct MediaCapabilitiesInfo {
     bool smooth { false };
     bool powerEfficient { false };
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<MediaCapabilitiesInfo> decode(Decoder&);
+    MediaCapabilitiesInfo isolatedCopy() const;
 };
 
-template<class Encoder>
-void MediaCapabilitiesInfo::encode(Encoder& encoder) const
+inline MediaCapabilitiesInfo MediaCapabilitiesInfo::isolatedCopy() const
 {
-    encoder << supported;
-    encoder << smooth;
-    encoder << powerEfficient;
-}
-
-template<class Decoder>
-std::optional<MediaCapabilitiesInfo> MediaCapabilitiesInfo::decode(Decoder& decoder)
-{
-    std::optional<bool> supported;
-    decoder >> supported;
-    if (!supported)
-        return std::nullopt;
-
-    std::optional<bool> smooth;
-    decoder >> smooth;
-    if (!smooth)
-        return std::nullopt;
-
-    std::optional<bool> powerEfficient;
-    decoder >> powerEfficient;
-    if (!powerEfficient)
-        return std::nullopt;
-
-    return {{
-        *supported,
-        *smooth,
-        *powerEfficient,
-    }};
+    return *this;
 }
 
 } // namespace WebCore

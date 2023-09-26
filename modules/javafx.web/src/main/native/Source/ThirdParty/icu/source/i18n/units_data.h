@@ -18,22 +18,6 @@ U_NAMESPACE_BEGIN
 namespace units {
 
 /**
- * Looks up the unit category of a base unit identifier.
- *
- * Only supports base units, other units must be resolved to base units before
- * passing to this function.
- *
- * Categories are found in `unitQuantities` in the `units` resource (see
- * `units.txt`).
- *
- * TODO(hugovdm): if we give units_data.cpp access to the functionality of
- * `extractCompoundBaseUnit` which is currently in units_converter.cpp, we could
- * support all units for which there is a category. Does it make sense to move
- * that function to units_data.cpp?
- */
-CharString U_I18N_API getUnitCategory(const char *baseUnitIdentifier, UErrorCode &status);
-
-/**
  * Encapsulates "convertUnits" information from units resources, specifying how
  * to convert from one unit to another.
  *
@@ -115,6 +99,13 @@ struct U_I18N_API UnitPreference : public UMemory {
     CharString unit;
     double geq;
     UnicodeString skeleton;
+
+    UnitPreference(const UnitPreference &other) {
+        UErrorCode status = U_ZERO_ERROR;
+        this->unit.append(other.unit, status);
+        this->geq = other.geq;
+        this->skeleton = other.skeleton;
+    }
 };
 
 /**
@@ -205,12 +196,11 @@ class U_I18N_API UnitPreferences {
      * @param preferenceCount The number of unit preferences that belong to the
      * result set.
      * @param status Receives status.
-     *
-     * TODO(hugovdm): maybe replace `UnitPreference **&outPreferences` with a slice class?
      */
-    void getPreferencesFor(StringPiece category, StringPiece usage, StringPiece region,
-                           const UnitPreference *const *&outPreferences, int32_t &preferenceCount,
-                           UErrorCode &status) const;
+    MaybeStackVector<UnitPreference> getPreferencesFor(StringPiece category, StringPiece usage,
+                                                       const Locale &locale,
+
+                                                       UErrorCode &status) const;
 
   protected:
     // Metadata about the sets of preferences, this is the index for looking up

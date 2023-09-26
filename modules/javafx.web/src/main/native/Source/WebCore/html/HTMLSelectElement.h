@@ -25,17 +25,20 @@
 
 #pragma once
 
-#include "HTMLFormControlElementWithState.h"
+#include "HTMLFormControlElement.h"
+#include "HTMLOptionElement.h"
 #include "TypeAhead.h"
+#include <wtf/CompletionHandler.h>
 
 namespace WebCore {
 
 class HTMLOptionsCollection;
 
-class HTMLSelectElement : public HTMLFormControlElementWithState, private TypeAheadDataSource {
+class HTMLSelectElement : public HTMLFormControlElement, private TypeAheadDataSource {
     WTF_MAKE_ISO_ALLOCATED(HTMLSelectElement);
 public:
     static Ref<HTMLSelectElement> create(const QualifiedName&, Document&, HTMLFormElement*);
+    static Ref<HTMLSelectElement> create(Document&);
 
     WEBCORE_EXPORT int selectedIndex() const;
     WEBCORE_EXPORT void setSelectedIndex(int);
@@ -52,8 +55,8 @@ public:
 
     bool usesMenuList() const;
 
-    using OptionOrOptGroupElement = Variant<RefPtr<HTMLOptionElement>, RefPtr<HTMLOptGroupElement>>;
-    using HTMLElementOrInt = Variant<RefPtr<HTMLElement>, int>;
+    using OptionOrOptGroupElement = std::variant<RefPtr<HTMLOptionElement>, RefPtr<HTMLOptGroupElement>>;
+    using HTMLElementOrInt = std::variant<RefPtr<HTMLElement>, int>;
     WEBCORE_EXPORT ExceptionOr<void> add(const OptionOrOptGroupElement&, const std::optional<HTMLElementOrInt>& before);
 
     using Node::remove;
@@ -69,11 +72,10 @@ public:
 
     void setRecalcListItems();
     void invalidateSelectedItems();
-    void updateListItemSelectedStates();
+    void updateListItemSelectedStates(AllowStyleInvalidation = AllowStyleInvalidation::Yes);
 
-    WEBCORE_EXPORT const Vector<HTMLElement*>& listItems() const;
+    WEBCORE_EXPORT const Vector<WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData>>& listItems() const;
 
-    bool accessKeyAction(bool sendMouseEvents) final;
     void accessKeySetSelectedIndex(int);
 
     WEBCORE_EXPORT void setMultiple(bool);
@@ -106,6 +108,11 @@ public:
     void optionSelectionStateChanged(HTMLOptionElement&, bool optionIsSelected);
     bool allowsNonContiguousSelection() const { return m_allowsNonContiguousSelection; };
 
+    CompletionHandlerCallingScope optionToSelectFromChildChangeScope(const ChildChange&, HTMLOptGroupElement* parentOptGroup = nullptr);
+
+    bool canContainRangeEndPoint() const override { return false; }
+    bool shouldSaveAndRestoreFormControlState() const final { return true; }
+
 protected:
     HTMLSelectElement(const QualifiedName&, Document&, HTMLFormElement*);
 
@@ -116,13 +123,13 @@ private:
     bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isMouseFocusable() const final;
 
-    void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection) final;
+    void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, const FocusOptions&) final;
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) final;
 
     bool canStartSelection() const final { return false; }
 
     bool isEnumeratable() const final { return true; }
-    bool supportLabels() const final { return true; }
+    bool isLabelable() const final { return true; }
 
     bool isInteractiveContent() const final { return true; }
 
@@ -134,18 +141,18 @@ private:
 
     bool childShouldCreateRenderer(const Node&) const final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool appendFormData(DOMFormData&, bool) final;
+    bool appendFormData(DOMFormData&) final;
 
     void reset() final;
 
     void defaultEventHandler(Event&) final;
-    bool willRespondToMouseClickEvents() final;
+    bool willRespondToMouseClickEventsWithEditability(Editability) const final;
 
     void dispatchChangeEventForMenuList();
 
     void didRecalcStyle(Style::Change) final;
 
-    void recalcListItems(bool updateSelectedStates = true) const;
+    void recalcListItems(bool updateSelectedStates = true, AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
 
     void deselectItems(HTMLOptionElement* excludeElement = nullptr);
     void typeAheadFind(KeyboardEvent&);
@@ -192,7 +199,7 @@ private:
 
 
     // m_listItems contains HTMLOptionElement, HTMLOptGroupElement, and HTMLHRElement objects.
-    mutable Vector<HTMLElement*> m_listItems;
+    mutable Vector<WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData>> m_listItems;
     Vector<bool> m_lastOnChangeSelection;
     Vector<bool> m_cachedStateForActiveSelection;
     TypeAhead m_typeAhead;

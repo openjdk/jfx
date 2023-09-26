@@ -69,6 +69,7 @@ exclude Source/ThirdParty
 exclude Source/WebCore/platform/audio/resources
 exclude Source/WebCore/bindings/scripts/test
 exclude Source/WebCore/Resources
+exclude Source/WTF/icu
 exclude Source/WebKit/.*
 exclude Source/cmake/OptionsWinCairo.cmake
 exclude Source/cmake/OptionsWindows.cmake
@@ -81,7 +82,7 @@ exclude Source/WebKit/Resources
 exclude Source/WebCore/Modules/modern-media-controls/images/(iOS|macOS)/*
 
 # Include Versions.xconfig
-file Source/WebKitLegacy/mac/Configurations/Version.xcconfig
+file Configurations/Version.xcconfig
 file Source/WebCore/en.lproj/mediaControlsLocalizedStrings.js
 file Source/WebCore/Resources/plugIns.js
 

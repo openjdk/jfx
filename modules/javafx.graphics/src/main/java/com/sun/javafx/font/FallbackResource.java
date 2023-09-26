@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,28 +34,49 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
 
 /*
- * Create a singleton fallback resource per style to be shared across
- * all physical fonts. "Per style" refers to the Bold and Italic styles,
- * thus will (eventually) be 4 in all.
+ * Fallback fonts may differ depending on the primary resource.
+ * Additionally it may differ based on style even if it is otherwise
+ * the same for multiple fonts.
  */
 
-class FallbackResource implements CompositeFontResource {
+public class FallbackResource implements CompositeFontResource {
 
 
-    private ArrayList<String> linkedFontFiles;
-    private ArrayList<String> linkedFontNames;
+    FontResource primaryResource;
+    private String[] linkedFontFiles;
+    private String[] linkedFontNames;
     private FontResource[] fallbacks;
     private FontResource[] nativeFallbacks;
     private boolean isBold, isItalic;
     private int aaMode;
     private CompositeGlyphMapper mapper;
 
-    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap =
-       new ConcurrentHashMap<FontStrikeDesc, WeakReference<FontStrike>>();
+    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap = new ConcurrentHashMap<>();
 
 
+    @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
         return strikeMap;
+    }
+
+    /*
+     * Initially this is used only on macOS where the cascading list for a
+     * resource may include font variations and system fonts that cannot
+     * be directly instantiated. So we need to install resources which already
+     * wrap a native reference to these fonts as we won't be successful
+     * in requesting them from native using name+file.
+     * I hope we should still be able to share these in the global
+     * name->font map so its not too wasteful.
+     */
+    FallbackResource(FontResource primary) {
+        primaryResource = primary;
+        aaMode = primaryResource.getDefaultAAMode();
+        isBold = primaryResource.isBold();
+        isItalic = primaryResource.isItalic();
+    }
+
+    static FallbackResource getFallbackResource(FontResource primaryResource) {
+        return new FallbackResource(primaryResource);
     }
 
     FallbackResource(boolean bold, boolean italic, int aaMode) {
@@ -84,6 +105,7 @@ class FallbackResource implements CompositeFontResource {
         return font;
     }
 
+    @Override
     public int getDefaultAAMode() {
         return aaMode;  // for now, has to be same as main font.
     }
@@ -97,64 +119,79 @@ class FallbackResource implements CompositeFontResource {
          throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public String getFullName() {
         return throwException();
     }
 
+    @Override
     public String getPSName() {
         return throwException();
     }
 
+    @Override
     public String getFamilyName() {
         return throwException();
     }
 
+    @Override
     public String getStyleName() {
         return throwException();
     }
 
+    @Override
     public String getLocaleFullName() {
         return throwException();
     }
 
+    @Override
     public String getLocaleFamilyName() {
         return throwException();
     }
 
+    @Override
     public String getLocaleStyleName() {
         return throwException();
     }
 
 
+    @Override
     public boolean isBold() {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public boolean isItalic() {
         throw new UnsupportedOperationException("Not supported");
 
     }
 
+    @Override
     public int getFeatures() {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public String getFileName() {
         return throwException();
     }
 
+    @Override
     public Object getPeer() {
         return null;
     }
 
+    @Override
     public void setPeer(Object peer) {
         throwException();
     }
 
+    @Override
     public boolean isEmbeddedFont() {
         return false;
     }
 
+    @Override
     public CharToGlyphMapper getGlyphMapper() {
         if (mapper == null) {
             mapper = new CompositeGlyphMapper(this);
@@ -162,7 +199,7 @@ class FallbackResource implements CompositeFontResource {
         return mapper;
     }
 
-    public int getSlotForFont(String fontName) {
+    private int getSlotForFontNoCreate(String fontName) {
         getLinkedFonts();
         int i = 0;
         for (String linkedFontName : linkedFontNames) {
@@ -179,8 +216,38 @@ class FallbackResource implements CompositeFontResource {
                 i++;
             }
         }
+        return -1;
+    }
 
-        if (i >= 0x7E) {
+    @Override
+    public int getSlotForFont(String fontName) {
+      int slot = getSlotForFontNoCreate(fontName);
+        if (slot >= 0) {
+            return slot;
+        }
+
+        PrismFontFactory factory = PrismFontFactory.getFontFactory();
+        FontResource fr = factory.getFontResource(fontName, null, false);
+
+        if (fr == null) {
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("\t Font name not supported \"" + fontName + "\".");
+            }
+            return -1;
+        }
+        slot = getSlotForFontNoCreate(fr.getFullName());
+        if (slot >= 0) {
+            return slot;
+        }
+
+        /* Add the font to the list of native fallbacks */
+        return addNativeFallback(fr);
+    }
+
+
+    private int addNativeFallback(FontResource fr) {
+        int ns = getNumSlots();
+        if (ns >= 0x7E) {
             /* There are 8bits (0xFF) reserved in a glyph code to store the slot
              * number. The first bit cannot be set to avoid negative values
              * (leaving 0x7F). The extra -1 (leaving 0x7E) is to account for
@@ -191,15 +258,6 @@ class FallbackResource implements CompositeFontResource {
             }
             return -1;
         }
-        PrismFontFactory factory = PrismFontFactory.getFontFactory();
-        FontResource fr = factory.getFontResource(fontName, null, false);
-        if (fr == null) {
-            if (PrismFontFactory.debugFonts) {
-                System.err.println("\t Font name not supported \"" + fontName + "\".");
-            }
-            return -1;
-        }
-
         /* Add the font to the list of native fallbacks */
         FontResource[] tmp;
         if (nativeFallbacks == null) {
@@ -210,46 +268,40 @@ class FallbackResource implements CompositeFontResource {
         }
         tmp[tmp.length - 1] = fr;
         nativeFallbacks = tmp;
-        return i;
+
+        return ns+1;
     }
 
-    /* To start with we will use the exact same fall back list for
-     * everything.
-     */
-    private void getLinkedFonts() {
-        if (fallbacks == null) {
-            if (PrismFontFactory.isLinux) {
-                FontConfigManager.FcCompFont font =
-                    FontConfigManager.getFontConfigFont("sans",
-                                                        isBold, isItalic);
-                linkedFontFiles = FontConfigManager.getFileNames(font, false);
-                linkedFontNames = FontConfigManager.getFontNames(font, false);
-                fallbacks = new FontResource[linkedFontFiles.size()];
-            } else {
-                ArrayList<String>[] linkedFontInfo;
-                if (PrismFontFactory.isMacOSX) {
-                    linkedFontInfo =
-                        PrismFontFactory.getLinkedFonts("Arial Unicode MS", true);
-                } else {
-                    linkedFontInfo =
-                        PrismFontFactory.getLinkedFonts("Tahoma", true);
-                }
-                linkedFontFiles = linkedFontInfo[0];
-                linkedFontNames = linkedFontInfo[1];
-                fallbacks = new FontResource[linkedFontFiles.size()];
-            }
+    public int addSlotFont(FontResource fr) {
+        int slot = getSlotForFont(fr.getFullName());
+        if (slot >= 0) {
+            return slot;
+        } else {
+            return addNativeFallback(fr);
         }
     }
 
+    private void getLinkedFonts() {
+        if (fallbacks == null) {
+            PrismFontFactory factory = PrismFontFactory.getFontFactory();
+            FontFallbackInfo fallbackInfo = factory.getFallbacks(primaryResource);
+            linkedFontNames = fallbackInfo.getFontNames();
+            linkedFontFiles = fallbackInfo.getFontFiles();
+            fallbacks       = fallbackInfo.getFonts();
+        }
+    }
+
+    @Override
     public int getNumSlots() {
         getLinkedFonts();
-        int num = linkedFontFiles.size();
+        int num = fallbacks.length;
         if (nativeFallbacks != null) {
             num += nativeFallbacks.length;
         }
         return num;
     }
 
+    @Override
     public float[] getGlyphBoundingBox(int glyphCode,
                                 float size, float[] retArr) {
         int slot = (glyphCode >>> 24);
@@ -258,6 +310,7 @@ class FallbackResource implements CompositeFontResource {
         return slotResource.getGlyphBoundingBox(slotglyphCode, size, retArr);
     }
 
+    @Override
     public float getAdvance(int glyphCode, float size) {
         int slot = (glyphCode >>> 24);
         int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
@@ -265,6 +318,7 @@ class FallbackResource implements CompositeFontResource {
         return slotResource.getAdvance(slotglyphCode, size);
     }
 
+    @Override
     public synchronized FontResource getSlotResource(int slot) {
         getLinkedFonts();
         if (slot >= fallbacks.length) {
@@ -275,8 +329,8 @@ class FallbackResource implements CompositeFontResource {
             return nativeFallbacks[slot];
         }
         if (fallbacks[slot] == null) {
-            String file = linkedFontFiles.get(slot);
-            String name = linkedFontNames.get(slot);
+            String file = linkedFontFiles[slot];
+            String name = linkedFontNames[slot];
             fallbacks[slot] =
                 PrismFontFactory.getFontFactory().
                 getFontResource(name, file, false);
@@ -284,10 +338,12 @@ class FallbackResource implements CompositeFontResource {
         return fallbacks[slot];
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform) {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
 
@@ -303,10 +359,24 @@ class FallbackResource implements CompositeFontResource {
             if (strike.disposer != null) {
                 ref = Disposer.addRecord(strike, strike.disposer);
             } else {
-                ref = new WeakReference<FontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }
         return strike;
+    }
+
+    public String toString() {
+        int ns = getNumSlots();
+        String s = "Fallback resource:\n";
+        for (int i=0; i<ns; i++) {
+            if ((getSlotResource(i) == null)) {
+                s += "Slot " + i + "=null\n";
+            } else {
+                s += "Slot " + i + "=" + getSlotResource(i).getFullName()+"\n";
+            }
+        }
+        s+= "\n";
+        return s;
     }
 }

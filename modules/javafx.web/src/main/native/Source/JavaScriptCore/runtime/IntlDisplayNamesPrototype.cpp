@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@ static JSC_DECLARE_HOST_FUNCTION(intlDisplayNamesPrototypeFuncResolvedOptions);
 
 namespace JSC {
 
-const ClassInfo IntlDisplayNamesPrototype::s_info = { "Intl.DisplayNames", &Base::s_info, &displayNamesPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlDisplayNamesPrototype) };
+const ClassInfo IntlDisplayNamesPrototype::s_info = { "Intl.DisplayNames"_s, &Base::s_info, &displayNamesPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlDisplayNamesPrototype) };
 
 /* Source for IntlDisplayNamesPrototype.lut.h
 @begin displayNamesPrototypeTable
@@ -51,7 +51,7 @@ const ClassInfo IntlDisplayNamesPrototype::s_info = { "Intl.DisplayNames", &Base
 
 IntlDisplayNamesPrototype* IntlDisplayNamesPrototype::create(VM& vm, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<IntlDisplayNamesPrototype>(vm.heap)) IntlDisplayNamesPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<IntlDisplayNamesPrototype>(vm)) IntlDisplayNamesPrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -69,7 +69,7 @@ IntlDisplayNamesPrototype::IntlDisplayNamesPrototype(VM& vm, Structure* structur
 void IntlDisplayNamesPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -79,7 +79,7 @@ JSC_DEFINE_HOST_FUNCTION(intlDisplayNamesPrototypeFuncOf, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* displayNames = jsDynamicCast<IntlDisplayNames*>(vm, callFrame->thisValue());
+    auto* displayNames = jsDynamicCast<IntlDisplayNames*>(callFrame->thisValue());
     if (!displayNames)
         return throwVMTypeError(globalObject, scope, "Intl.DisplayNames.prototype.of called on value that's not a DisplayNames"_s);
 
@@ -92,7 +92,7 @@ JSC_DEFINE_HOST_FUNCTION(intlDisplayNamesPrototypeFuncResolvedOptions, (JSGlobal
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* displayNames = jsDynamicCast<IntlDisplayNames*>(vm, callFrame->thisValue());
+    auto* displayNames = jsDynamicCast<IntlDisplayNames*>(callFrame->thisValue());
     if (!displayNames)
         return throwVMTypeError(globalObject, scope, "Intl.DisplayNames.prototype.resolvedOptions called on value that's not a DisplayNames"_s);
 

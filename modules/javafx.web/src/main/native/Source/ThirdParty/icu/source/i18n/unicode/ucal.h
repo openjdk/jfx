@@ -442,6 +442,33 @@ enum UCalendarDateFields {
    */
   UCAL_IS_LEAP_MONTH,
 
+#ifndef U_HIDE_DRAFT_API
+  /**
+   * Field number indicating the month. This is a calendar-specific value.
+   * Differ from UCAL_MONTH, this value is continuous and unique within a
+   * year and range from 0 to 11 or 0 to 12 depending on how many months in a
+   * year, the calendar system has leap month or not, and in leap year or not.
+   * It is the ordinal position of that month in the corresponding year of
+   * the calendar. For Chinese, Dangi, and Hebrew calendar, the range is
+   * 0 to 11 in non-leap years and 0 to 12 in leap years. For Coptic and Ethiopian
+   * calendar, the range is always 0 to 12. For other calendars supported by
+   * ICU now, the range is 0 to 11. When the number of months in a year of the
+   * identified calendar is variable, a different UCAL_ORDINAL_MONTH value can
+   * be used for dates that are part of the same named month in different years.
+   * For example, in the Hebrew calendar, "1 Nisan 5781" is associated with
+   * UCAL_ORDINAL_MONTH value 6 while "1 Nisan 5782" is associated with
+   * UCAL_ORDINAL_MONTH value 7 because 5782 is a leap year and Nisan follows
+   * the insertion of Adar I. In Chinese calendar, "Year 4664 Month 6 Day 2"
+   * is associated with UCAL_ORDINAL_MONTH value 5 while "Year 4665 Month 6 Day 2"
+   * is associated with UCAL_ORDINAL_MONTH value 6 because 4665 is a leap year
+   * and there is an extra "Leap Month 5" which associated with UCAL_ORDINAL_MONTH
+   * value 5 before "Month 6" of year 4664.
+   *
+   * @draft ICU 73
+   */
+  UCAL_ORDINAL_MONTH,
+#endif // U_HIDE_DRAFT_API
+
     /* Do not conditionalize the following with #ifndef U_HIDE_DEPRECATED_API,
      * it is needed for layout of Calendar, DateFormat, and other objects */
 #ifndef U_FORCE_HIDE_DEPRECATED_API
@@ -449,7 +476,13 @@ enum UCalendarDateFields {
      * One more than the highest normal UCalendarDateFields value.
      * @deprecated ICU 58 The numeric value may change over time, see ICU ticket #12420.
      */
-    UCAL_FIELD_COUNT,
+#ifdef U_HIDE_DRAFT_API
+    // Must include all fields that will be in structs
+    UCAL_FIELD_COUNT = UCAL_IS_LEAP_MONTH + 2,
+#else  // U_HIDE_DRAFT_API (for UCAL_ORDINAL_MONTH)
+    UCAL_FIELD_COUNT = UCAL_ORDINAL_MONTH + 1,
+#endif  // U_HIDE_DRAFT_API (for UCAL_ORDINAL_MONTH)
+
 #endif  // U_FORCE_HIDE_DEPRECATED_API
 
  /**
@@ -1289,7 +1322,7 @@ enum UCalendarLimitType {
   UCAL_MAXIMUM,
   /** Greatest minimum value */
   UCAL_GREATEST_MINIMUM,
-  /** Leaest maximum value */
+  /** Least maximum value */
   UCAL_LEAST_MAXIMUM,
   /** Actual minimum value */
   UCAL_ACTUAL_MINIMUM,
@@ -1616,6 +1649,98 @@ ucal_getWindowsTimeZoneID(const UChar* id, int32_t len,
 U_CAPI int32_t U_EXPORT2
 ucal_getTimeZoneIDForWindowsID(const UChar* winid, int32_t len, const char* region,
                                 UChar* id, int32_t idCapacity, UErrorCode* status);
+
+/**
+ * Options used by ucal_getTimeZoneOffsetFromLocal and BasicTimeZone::getOffsetFromLocal()
+ * to specify how to interpret an input time when it does not exist, or when it is ambiguous,
+ * around a time zone transition.
+ * @stable ICU 69
+ */
+enum UTimeZoneLocalOption {
+    /**
+     * An input time is always interpreted as local time before
+     * a time zone transition.
+     * @stable ICU 69
+     */
+    UCAL_TZ_LOCAL_FORMER = 0x04,
+    /**
+     * An input time is always interpreted as local time after
+     * a time zone transition.
+     * @stable ICU 69
+     */
+    UCAL_TZ_LOCAL_LATTER = 0x0C,
+    /**
+     * An input time is interpreted as standard time when local
+     * time is switched to/from daylight saving time. When both
+     * sides of a time zone transition are standard time,
+     * or daylight saving time, the local time before the
+     * transition is used.
+     * @stable ICU 69
+     */
+    UCAL_TZ_LOCAL_STANDARD_FORMER = UCAL_TZ_LOCAL_FORMER | 0x01,
+    /**
+     * An input time is interpreted as standard time when local
+     * time is switched to/from daylight saving time. When both
+     * sides of a time zone transition are standard time,
+     * or daylight saving time, the local time after the
+     * transition is used.
+     * @stable ICU 69
+     */
+    UCAL_TZ_LOCAL_STANDARD_LATTER = UCAL_TZ_LOCAL_LATTER | 0x01,
+    /**
+     * An input time is interpreted as daylight saving time when
+     * local time is switched to/from standard time. When both
+     * sides of a time zone transition are standard time,
+     * or daylight saving time, the local time before the
+     * transition is used.
+     * @stable ICU 69
+     */
+    UCAL_TZ_LOCAL_DAYLIGHT_FORMER = UCAL_TZ_LOCAL_FORMER | 0x03,
+    /**
+     * An input time is interpreted as daylight saving time when
+     * local time is switched to/from standard time. When both
+     * sides of a time zone transition are standard time,
+     * or daylight saving time, the local time after the
+     * transition is used.
+     * @stable ICU 69
+     */
+    UCAL_TZ_LOCAL_DAYLIGHT_LATTER = UCAL_TZ_LOCAL_LATTER | 0x03,
+};
+typedef enum UTimeZoneLocalOption UTimeZoneLocalOption; /**< @stable ICU 69 */
+
+/**
+* Returns the time zone raw and GMT offset for the given moment
+* in time.  Upon return, local-millis = GMT-millis + rawOffset +
+* dstOffset.  All computations are performed in the proleptic
+* Gregorian calendar.
+*
+* @param cal The UCalendar which specify the local date and time value to query.
+* @param nonExistingTimeOpt The option to indicate how to interpret the date and
+* time in the calendar represent a local time that skipped at a positive time
+* zone transitions (e.g. when the daylight saving time starts or the time zone
+* offset is increased due to a time zone rule change).
+* @param duplicatedTimeOpt The option to indicate how to interpret the date and
+* time in the calendar represent a local time that repeating multiple times at a
+* negative time zone transition (e.g. when the daylight saving time ends or the
+* time zone offset is decreased due to a time zone rule change)
+* @param rawOffset output parameter to receive the raw offset, that
+* is, the offset not including DST adjustments.
+* If the status is set to one of the error code, the value set is unspecified.
+* @param dstOffset output parameter to receive the DST offset,
+* that is, the offset to be added to `rawOffset' to obtain the
+* total offset between local and GMT time. If DST is not in
+* effect, this value is zero; otherwise it is a positive value,
+* typically one hour.
+* If the status is set to one of the error code, the value set is unspecified.
+* @param status A pointer to a UErrorCode to receive any errors.
+* @stable ICU 69
+*/
+U_CAPI void U_EXPORT2
+ucal_getTimeZoneOffsetFromLocal(
+    const UCalendar* cal,
+    UTimeZoneLocalOption nonExistingTimeOpt,
+    UTimeZoneLocalOption duplicatedTimeOpt,
+    int32_t* rawOffset, int32_t* dstOffset, UErrorCode* status);
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 

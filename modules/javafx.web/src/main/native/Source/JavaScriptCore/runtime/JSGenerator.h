@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,9 +29,9 @@
 
 namespace JSC {
 
-class JSGenerator final : public JSInternalFieldObjectImpl<5> {
+class JSGenerator final : public JSInternalFieldObjectImpl<6> {
 public:
-    using Base = JSInternalFieldObjectImpl<5>;
+    using Base = JSInternalFieldObjectImpl<6>;
 
     // JSGenerator has one inline storage slot, which is pointing internalField(0).
     static size_t allocationSize(Checked<size_t> inlineCapacity)
@@ -41,7 +41,7 @@ public:
     }
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.generatorSpace<mode>();
     }
@@ -77,13 +77,15 @@ public:
         Next,
         This,
         Frame,
+        Context,
     };
-    static_assert(numberOfInternalFields == 5);
+    static_assert(numberOfInternalFields == 6);
     static std::array<JSValue, numberOfInternalFields> initialValues()
     {
         return { {
             jsNull(),
             jsNumber(static_cast<int32_t>(State::Init)),
+            jsUndefined(),
             jsUndefined(),
             jsUndefined(),
             jsUndefined(),

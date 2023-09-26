@@ -396,8 +396,8 @@ static const char* typeWidthToStyleString(UListFormatterType type, UListFormatte
     return nullptr;
 }
 
-static const UChar solidus = 0x2F;
-static const UChar aliasPrefix[] = { 0x6C,0x69,0x73,0x74,0x50,0x61,0x74,0x74,0x65,0x72,0x6E,0x2F }; // "listPattern/"
+static const char16_t solidus = 0x2F;
+static const char16_t aliasPrefix[] = { 0x6C,0x69,0x73,0x74,0x50,0x61,0x74,0x74,0x65,0x72,0x6E,0x2F }; // "listPattern/"
 enum {
     kAliasPrefixLen = UPRV_LENGTHOF(aliasPrefix),
     kStyleLenMax = 24 // longest currently is 14
@@ -405,16 +405,9 @@ enum {
 
 struct ListFormatter::ListPatternsSink : public ResourceSink {
     UnicodeString two, start, middle, end;
-#if ((U_PLATFORM == U_PF_AIX) || (U_PLATFORM == U_PF_OS390)) && (U_CPLUSPLUS_VERSION < 11)
-    char aliasedStyle[kStyleLenMax+1];
-    ListPatternsSink() {
-      uprv_memset(aliasedStyle, 0, kStyleLenMax+1);
-    }
-#else
     char aliasedStyle[kStyleLenMax+1] = {0};
 
     ListPatternsSink() {}
-#endif
     virtual ~ListPatternsSink();
 
     void setAliasedStyle(UnicodeString alias) {
@@ -444,7 +437,7 @@ struct ListFormatter::ListPatternsSink : public ResourceSink {
     }
 
     virtual void put(const char *key, ResourceValue &value, UBool /*noFallback*/,
-            UErrorCode &errorCode) {
+            UErrorCode &errorCode) override {
         aliasedStyle[0] = 0;
         if (value.getType() == URES_ALIAS) {
             setAliasedStyle(value.getAliasUnicodeString(errorCode));
@@ -567,7 +560,7 @@ public:
                 start,
                 {UFIELD_CATEGORY_LIST, ULISTFMT_ELEMENT_FIELD},
                 status);
-            data->appendSpanInfo(0, start.length(), status);
+            data->appendSpanInfo(UFIELD_CATEGORY_LIST_SPAN, 0, -1, start.length(), status);
         }
     }
 
@@ -603,7 +596,7 @@ public:
                 next,
                 {UFIELD_CATEGORY_LIST, ULISTFMT_ELEMENT_FIELD},
                 status);
-            data->appendSpanInfo(position, next.length(), status);
+            data->appendSpanInfo(UFIELD_CATEGORY_LIST_SPAN, position, -1, next.length(), status);
             data->getStringRef().append(
                 temp.tempSubString(offsets[1]),
                 {UFIELD_CATEGORY_LIST, ULISTFMT_LITERAL_FIELD},
@@ -622,7 +615,7 @@ public:
                 next,
                 {UFIELD_CATEGORY_LIST, ULISTFMT_ELEMENT_FIELD},
                 status);
-            data->prependSpanInfo(position, next.length(), status);
+            data->prependSpanInfo(UFIELD_CATEGORY_LIST_SPAN, position, -1, next.length(), status);
             data->getStringRef().insert(
                 0,
                 temp.tempSubStringBetween(0, offsets[1]),

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,35 +35,9 @@ namespace WebCore {
 
 struct PublicKeyCredentialDescriptor {
     PublicKeyCredentialType type;
-    BufferSource id; // id becomes idVector once it is passed to UIProcess.
-    Vector<uint8_t> idVector;
+    BufferSource id;
     Vector<AuthenticatorTransport> transports;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<PublicKeyCredentialDescriptor> decode(Decoder&);
 };
-
-template<class Encoder>
-void PublicKeyCredentialDescriptor::encode(Encoder& encoder) const
-{
-    encoder << type;
-    encoder << static_cast<uint64_t>(id.length());
-    encoder.encodeFixedLengthData(id.data(), id.length(), 1);
-    encoder << transports;
-}
-
-template<class Decoder>
-std::optional<PublicKeyCredentialDescriptor> PublicKeyCredentialDescriptor::decode(Decoder& decoder)
-{
-    PublicKeyCredentialDescriptor result;
-    if (!decoder.decode(result.type))
-        return std::nullopt;
-    if (!decoder.decode(result.idVector))
-        return std::nullopt;
-    if (!decoder.decode(result.transports))
-        return std::nullopt;
-    return result;
-}
 
 } // namespace WebCore
 

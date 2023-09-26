@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,10 +60,15 @@ public:
     void addDisallowedURL(JSStringRef url);
     const std::set<std::string>& allowedHosts() const { return m_allowedHosts; }
     void setAllowedHosts(std::set<std::string> hosts) { m_allowedHosts = WTFMove(hosts); }
+    bool allowAnyHTTPSCertificateForAllowedHosts() const { return m_allowAnyHTTPSCertificateForAllowedHosts; }
+    void setAllowAnyHTTPSCertificateForAllowedHosts(bool allow) { m_allowAnyHTTPSCertificateForAllowedHosts = allow; }
+    const std::set<std::string>& localhostAliases() const { return m_localhostAliases; }
+    void setLocalhostAliases(std::set<std::string> hosts) { m_localhostAliases = WTFMove(hosts); }
     void addURLToRedirect(std::string origin, std::string destination);
     const char* redirectionDestinationForURL(const char*);
     void clearAllApplicationCaches();
     void clearAllDatabases();
+    void clearNotificationPermissionState();
     void clearApplicationCacheForOrigin(JSStringRef name);
     void clearBackForwardList();
     void clearPersistentUserStyleSheet();
@@ -76,6 +81,7 @@ public:
     void execCommand(JSStringRef name, JSStringRef value);
     bool findString(JSContextRef, JSStringRef, JSObjectRef optionsArray);
     void forceImmediateCompletion();
+    void stopLoading();
     void goBack();
     JSValueRef originsWithApplicationCache(JSContextRef);
     long long applicationCacheDiskUsageForOrigin(JSStringRef name);
@@ -94,6 +100,7 @@ public:
     void queueLoadingScript(JSStringRef script);
     void queueNonLoadingScript(JSStringRef script);
     void queueReload();
+    void removeAllCookies(JSValueRef callback);
     void removeAllVisitedLinks();
     void setAcceptsEditing(bool);
     void setAppCacheMaximumSize(unsigned long long quota);
@@ -131,6 +138,7 @@ public:
     void resetPageVisibility();
 
     static void setAllowsAnySSLCertificate(bool);
+    static bool allowsAnySSLCertificate();
 
     void waitForPolicyDelegate();
     size_t webHistoryItemCount();
@@ -229,9 +237,6 @@ public:
 
     bool canOpenWindows() const { return m_canOpenWindows; }
     void setCanOpenWindows(bool canOpenWindows) { m_canOpenWindows = canOpenWindows; }
-
-    bool closeRemainingWindowsWhenComplete() const { return m_closeRemainingWindowsWhenComplete; }
-    void setCloseRemainingWindowsWhenComplete(bool closeRemainingWindowsWhenComplete) { m_closeRemainingWindowsWhenComplete = closeRemainingWindowsWhenComplete; }
 
     bool newWindowsCopyBackForwardList() const { return m_newWindowsCopyBackForwardList; }
     void setNewWindowsCopyBackForwardList(bool newWindowsCopyBackForwardList) { m_newWindowsCopyBackForwardList = newWindowsCopyBackForwardList; }
@@ -336,8 +341,6 @@ public:
 
     void setPOSIXLocale(JSStringRef);
 
-    void setWebViewEditable(bool);
-
     void abortModal();
 
     static void setSerializeHTTPLoads(bool);
@@ -389,6 +392,10 @@ public:
     bool didCancelClientRedirect() const { return m_didCancelClientRedirect; }
     void setDidCancelClientRedirect(bool value) { m_didCancelClientRedirect = value; }
 
+    bool isSecureEventInputEnabled() const;
+
+    void generateTestReport(JSStringRef message, JSStringRef group);
+
 private:
     TestRunner(const std::string& testURL, const std::string& expectedPixelHash);
 
@@ -403,6 +410,7 @@ private:
 
     void setGeolocationPermissionCommon(bool allow);
 
+    bool m_allowAnyHTTPSCertificateForAllowedHosts { false };
     bool m_disallowIncreaseForApplicationCacheQuota { false };
     bool m_dumpApplicationCacheDelegateCallbacks { false };
     bool m_dumpAsAudio { false };
@@ -428,8 +436,7 @@ private:
     bool m_dumpWillCacheResponse { false };
     bool m_generatePixelResults { true };
     bool m_callCloseOnWebViews { true };
-    bool m_canOpenWindows { false };
-    bool m_closeRemainingWindowsWhenComplete { true };
+    bool m_canOpenWindows { true };
     bool m_newWindowsCopyBackForwardList { false };
     bool m_stopProvisionalFrameLoads { false };
     bool m_testOnscreen { false };
@@ -472,6 +479,7 @@ private:
 
     std::set<std::string> m_willSendRequestClearHeaders;
     std::set<std::string> m_allowedHosts;
+    std::set<std::string> m_localhostAliases;
 
     std::vector<uint8_t> m_audioResult;
 

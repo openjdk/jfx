@@ -47,33 +47,13 @@ struct MediaCapabilitiesEncodingInfo : MediaCapabilitiesInfo {
 
     MediaEncodingConfiguration supportedConfiguration;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<MediaCapabilitiesEncodingInfo> decode(Decoder&);
+    MediaCapabilitiesEncodingInfo isolatedCopy() const;
+
 };
 
-template<class Encoder>
-void MediaCapabilitiesEncodingInfo::encode(Encoder& encoder) const
+inline MediaCapabilitiesEncodingInfo MediaCapabilitiesEncodingInfo::isolatedCopy() const
 {
-    MediaCapabilitiesInfo::encode(encoder);
-    encoder << supportedConfiguration;
-}
-
-template<class Decoder>
-std::optional<MediaCapabilitiesEncodingInfo> MediaCapabilitiesEncodingInfo::decode(Decoder& decoder)
-{
-    auto info = MediaCapabilitiesInfo::decode(decoder);
-    if (!info)
-        return std::nullopt;
-
-    std::optional<MediaEncodingConfiguration> supportedConfiguration;
-    decoder >> supportedConfiguration;
-    if (!supportedConfiguration)
-        return std::nullopt;
-
-    return MediaCapabilitiesEncodingInfo(
-        WTFMove(*info),
-        WTFMove(*supportedConfiguration)
-    );
+    return { MediaCapabilitiesInfo::isolatedCopy(), supportedConfiguration.isolatedCopy() };
 }
 
 } // namespace WebCore

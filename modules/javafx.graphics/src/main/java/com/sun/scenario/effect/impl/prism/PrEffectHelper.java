@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -165,7 +165,9 @@ public class PrEffectHelper {
         do {
             ImageData res = effect.filter(fctx, transform, rclip, prinfo, defaultInput);
             if (res == null) return;
-            if (valid = res.validate(fctx)) {
+
+            valid = res.validate(fctx);
+            if (valid) {
                 Rectangle r = res.getUntransformedBounds();
                 // the actual image may be much larger than the region
                 // of interest ("r"), so to improve performance we render

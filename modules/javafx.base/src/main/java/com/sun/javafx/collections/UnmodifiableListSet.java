@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ public final class UnmodifiableListSet<E> extends AbstractSet<E> {
      */
     @Override public Iterator<E> iterator() {
         final Iterator<E> itr = backingList.iterator();
-        return new Iterator<E>() {
+        return new Iterator<>() {
             @Override public boolean hasNext() {
                 return itr.hasNext();
             }

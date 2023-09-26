@@ -22,13 +22,13 @@
 #pragma once
 
 #include "BlockDirectory.h"
-#include "IterationStatus.h"
 #include "MarkedBlock.h"
 #include "MarkedBlockSet.h"
 #include "PreciseAllocation.h"
 #include <array>
 #include <wtf/Bag.h>
 #include <wtf/HashSet.h>
+#include <wtf/IterationStatus.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/SentinelLinkedList.h>
@@ -57,7 +57,7 @@ public:
     // Sizes up to this amount get a size class for each size step.
     static constexpr size_t preciseCutoff = 80;
 
-    // The amount of available payload in a block is the block's size minus the footer.
+    // The amount of available payload in a block is the block's size minus the header.
     static constexpr size_t blockPayload = MarkedBlock::payloadSize;
 
     // The largest cell we're willing to allocate in a MarkedBlock the "normal way" (i.e. using size

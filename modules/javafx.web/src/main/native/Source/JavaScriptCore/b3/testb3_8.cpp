@@ -28,7 +28,7 @@
 
 #include <wtf/UniqueArray.h>
 
-#if ENABLE(B3_JIT)
+#if ENABLE(B3_JIT) && !CPU(ARM)
 
 template<typename T>
 void testAtomicWeakCAS()
@@ -41,7 +41,7 @@ void testAtomicWeakCAS()
             checkUsesInstruction(compilation, "lock");
             checkUsesInstruction(compilation, "cmpxchg");
         } else {
-            if (isARM64E())
+            if (isARM64_LSE())
                 checkUsesInstruction(compilation, "casal");
             else {
                 if (fenced) {
@@ -292,7 +292,7 @@ void testAtomicStrongCAS()
             checkUsesInstruction(compilation, "lock");
             checkUsesInstruction(compilation, "cmpxchg");
         } else {
-            if (isARM64E())
+            if (isARM64_LSE())
                 checkUsesInstruction(compilation, "casal");
             else {
                 if (fenced) {
@@ -635,7 +635,7 @@ void testAtomicXchg(B3::Opcode opcode)
             if (AtomicXchg != opcode)
                 checkUsesInstruction(compilation, "lock");
         } else {
-            if (isARM64E()) {
+            if (isARM64_LSE()) {
                 switch (opcode) {
                 case AtomicXchgAdd:
                     checkUsesInstruction(compilation, "ldaddal");
@@ -936,238 +936,422 @@ void addLoadTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
     RUN(testLoad<uint16_t>(Load16Z, -1000000000));
 }
 
-void testFastForwardCopy32()
+void testWasmAddressDoesNotCSE()
 {
-#if CPU(X86_64)
-    for (const bool aligned : { true, false }) {
-        for (const bool overlap : { false, true }) {
-            for (size_t arrsize : { 1, 4, 5, 6, 8, 10, 12, 16, 20, 40, 100, 1000}) {
-                size_t overlapAmount = 5;
+    Procedure proc;
+    GPRReg pinnedGPR = GPRInfo::argumentGPR0;
+    proc.pinRegister(pinnedGPR);
 
-                UniqueArray<uint32_t> array1, array2;
-                uint32_t* arr1, *arr2;
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* a = proc.addBlock();
+    BasicBlock* b = proc.addBlock();
+    BasicBlock* c = proc.addBlock();
+    BasicBlock* continuation = proc.addBlock();
 
-                if (overlap) {
-                    array1 = makeUniqueArray<uint32_t>(arrsize * 2);
-                    arr1 = &array1[0];
-                    arr2 = arr1 + (arrsize - overlapAmount);
-                } else {
-                    array1 = makeUniqueArray<uint32_t>(arrsize);
-                    array2 = makeUniqueArray<uint32_t>(arrsize);
-                    arr1 = &array1[0];
-                    arr2 = &array2[0];
-                }
+    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    auto* path = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
 
-                if (!aligned && arrsize < 3)
-                    continue;
-                if (overlap && arrsize <= overlapAmount + 3)
-                    continue;
+    auto* originalAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedGPR);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), originalAddress,
+        root->appendNew<WasmAddressValue>(proc, Origin(), root->appendNew<Const64Value>(proc, Origin(), 6*8), pinnedGPR), 0);
 
-                if (!aligned) {
-                    ++arr1;
-                    ++arr2;
-                    arrsize -= 1;
-                    overlapAmount -= 1;
-                }
+    SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
+    switchValue->setFallThrough(FrequentedBlock(c));
+    switchValue->appendCase(SwitchCase(0, FrequentedBlock(a)));
+    switchValue->appendCase(SwitchCase(1, FrequentedBlock(b)));
 
-                for (size_t i = 0; i < arrsize; ++i)
-                    arr1[i] = i;
+    PatchpointValue* patchpoint = b->appendNew<PatchpointValue>(proc, Void, Origin());
+    patchpoint->effects = Effects::forCall();
+    patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
+    patchpoint->clobber(RegisterSetBuilder(pinnedGPR));
+    patchpoint->setGenerator(
+        [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            CHECK(!params.size());
+            jit.add64(MacroAssembler::TrustedImm32(8), pinnedGPR);
+        });
 
-                fastForwardCopy32(arr2, arr1, arrsize);
-
-                if (overlap) {
-                    for (size_t i = 0; i < arrsize - overlapAmount; ++i)
-                        CHECK(arr2[i] == i);
-                    for (size_t i = arrsize - overlapAmount; i < arrsize; ++i)
-                        CHECK(arr2[i] == i - (arrsize - overlapAmount));
-                } else {
-                    for (size_t i = 0; i < arrsize; ++i)
-                        CHECK(arr2[i] == i);
-                }
-
-                if (!aligned) {
-                    --arr1;
-                    --arr2;
-                }
-            }
-        }
+    UpsilonValue* takeA = a->appendNew<UpsilonValue>(proc, Origin(), a->appendNew<Const32Value>(proc, Origin(), 10));
+    UpsilonValue* takeB = b->appendNew<UpsilonValue>(proc, Origin(), b->appendNew<Const32Value>(proc, Origin(), 20));
+    UpsilonValue* takeC = c->appendNew<UpsilonValue>(proc, Origin(), c->appendNew<Const32Value>(proc, Origin(), 30));
+    for (auto* i : { a, b, c }) {
+        i->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(continuation));
+        i->setSuccessors(FrequentedBlock(continuation));
     }
-#endif
+
+    // Continuation
+    auto* takenPhi = continuation->appendNew<Value>(proc, Phi, Int32, Origin());
+
+    auto* address2 = continuation->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedGPR);
+    continuation->appendNew<MemoryValue>(proc, Store, Origin(), takenPhi,
+        continuation->appendNew<WasmAddressValue>(proc, Origin(), continuation->appendNew<Const64Value>(proc, Origin(), 4*8), pinnedGPR),
+        0);
+
+    auto* returnVal = address2;
+    continuation->appendNewControlValue(proc, Return, Origin(), returnVal);
+
+    takeA->setPhi(takenPhi);
+    takeB->setPhi(takenPhi);
+    takeC->setPhi(takenPhi);
+
+    auto binary = compileProc(proc);
+
+    uint64_t* memory = new uint64_t[10];
+    uint64_t ptr = 8;
+
+    uint64_t finalPtr = reinterpret_cast<uint64_t>(static_cast<void*>(memory)) + ptr;
+
+    for (int i = 0; i < 10; ++i)
+        memory[i] = 0;
+
+    {
+        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 0);
+
+        CHECK_EQ(result, finalPtr);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 0ul);
+        CHECK_EQ(memory[2], 0ul);
+        CHECK_EQ(memory[4], 10ul);
+        CHECK_EQ(memory[6], finalPtr);
+    }
+
+    memory[4] = 0;
+    memory[5] = 0;
+    memory[6] = 0;
+    memory[7] = 0;
+
+    {
+        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 1);
+
+        CHECK_EQ(result, finalPtr + 8);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 0ul);
+        CHECK_EQ(memory[2], 0ul);
+        CHECK_EQ(memory[5], 20ul);
+        CHECK_EQ(memory[6], finalPtr);
+    }
+
+    memory[4] = 0;
+    memory[5] = 0;
+    memory[6] = 0;
+    memory[7] = 0;
+    {
+        uint64_t result = invoke<uint64_t>(*binary, memory, ptr, 2);
+
+        CHECK_EQ(result, finalPtr);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 0ul);
+        CHECK_EQ(memory[2], 0ul);
+        CHECK_EQ(memory[4], 30ul);
+        CHECK_EQ(memory[6], finalPtr);
+    }
+
+    delete[] memory;
 }
 
-void testByteCopyLoop()
+void testStoreAfterClobberExitsSideways()
 {
     Procedure proc;
+    GPRReg pinnedBaseGPR = GPRInfo::argumentGPR0;
+    GPRReg pinnedSizeGPR = GPRInfo::argumentGPR1;
+    proc.pinRegister(pinnedBaseGPR);
+    proc.pinRegister(pinnedSizeGPR);
+
+    // Please don't make me save anything.
+    RegisterSetBuilder csrs;
+    csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
+    csrs.exclude(RegisterSetBuilder::stackRegisters());
+    csrs.buildAndValidate().forEach(
+        [&] (Reg reg) {
+            CHECK(reg != pinnedBaseGPR);
+            CHECK(reg != pinnedSizeGPR);
+            proc.pinRegister(reg);
+        });
+
+    proc.setWasmBoundsCheckGenerator([=] (CCallHelpers& jit, GPRReg pinnedGPR) {
+        CHECK_EQ(pinnedGPR, pinnedSizeGPR);
+
+        jit.move(CCallHelpers::TrustedImm32(42), GPRInfo::returnValueGPR);
+        jit.emitFunctionEpilogue();
+        jit.ret();
+    });
+
     BasicBlock* root = proc.addBlock();
-    BasicBlock* head = proc.addBlock();
-    BasicBlock* update = proc.addBlock();
-    BasicBlock* continuation = proc.addBlock();
 
-    auto* arraySrc = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    auto* arrayDst = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-    auto* arraySize = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2));
-    auto* one = root->appendNew<Const32Value>(proc, Origin(), 1);
-    auto* two = root->appendNew<Const32Value>(proc, Origin(), 2);
-    UpsilonValue* startingIndex = root->appendNew<UpsilonValue>(proc, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
-    root->appendNew<Value>(proc, Jump, Origin());
-    root->setSuccessors(FrequentedBlock(head));
+    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+    auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 10), resultAddress, 0);
 
-    auto* index = head->appendNew<Value>(proc, Phi, Int32, Origin());
-    startingIndex->setPhi(index);
-    auto* loadIndex = head->appendNew<Value>(proc, Add, Origin(), arraySrc,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    auto* storeIndex = head->appendNew<Value>(proc, Add, Origin(), arrayDst,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    head->appendNew<MemoryValue>(proc, Store, Origin(), head->appendNew<MemoryValue>(proc, Load, Int32, Origin(), loadIndex), storeIndex);
-    auto* newIndex = head->appendNew<Value>(proc, Add, Origin(), index, one);
-    auto* cmpValue = head->appendNew<Value>(proc, GreaterThan, Origin(), newIndex, arraySize);
-    head->appendNew<Value>(proc, Branch, Origin(), cmpValue);
-    head->setSuccessors(FrequentedBlock(continuation), FrequentedBlock(update));
+    root->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, root->appendNew<Value>(proc, Trunc, Origin(), pointer), 0);
 
-    UpsilonValue* updateIndex = update->appendNew<UpsilonValue>(proc, Origin(), newIndex);
-    updateIndex->setPhi(index);
-    update->appendNew<Value>(proc, Jump, Origin());
-    update->setSuccessors(FrequentedBlock(head));
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 20), resultAddress, 0);
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 30));
 
-    continuation->appendNewControlValue(proc, Return, Origin());
+    auto binary = compileProc(proc);
 
-    int* arr1 = new int[3];
-    int* arr2 = new int[3];
+    uint64_t* memory = new uint64_t[10];
+    uint64_t ptr = 1*8;
 
-    arr1[0] = 0;
-    arr1[1] = 0;
-    arr1[2] = 0;
-    arr2[0] = 1;
-    arr2[1] = 2;
-    arr2[2] = 3;
+    for (int i = 0; i < 10; ++i)
+        memory[i] = 0;
 
-    compileAndRun<void>(proc, arr2, arr1, 3);
+    {
+        int result = invoke<int>(*binary, memory, 16, ptr);
 
-    CHECK_EQ(arr1[0], 1);
-    CHECK_EQ(arr1[1], 2);
-    CHECK_EQ(arr1[2], 3);
+        CHECK_EQ(result, 30);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 20ul);
+        CHECK_EQ(memory[2], 0ul);
+    }
 
-    delete[] arr1;
-    delete [] arr2;
+    memory[1] = 0;
+
+    {
+        int result = invoke<int>(*binary, memory, 1, ptr);
+
+        CHECK_EQ(result, 42);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 10ul);
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    memory[1] = 0;
+
+    delete[] memory;
 }
 
-void testByteCopyLoopStartIsLoopDependent()
+void testStoreAfterClobberDifferentWidth()
 {
     Procedure proc;
+    GPRReg pinnedBaseGPR = GPRInfo::argumentGPR0;
+    proc.pinRegister(pinnedBaseGPR);
+
     BasicBlock* root = proc.addBlock();
-    BasicBlock* head = proc.addBlock();
-    BasicBlock* update = proc.addBlock();
-    BasicBlock* continuation = proc.addBlock();
 
-    auto* arraySrc = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    auto* arrayDst = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-    auto* arraySize = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2));
-    auto* one = root->appendNew<Const32Value>(proc, Origin(), 1);
-    auto* two = root->appendNew<Const32Value>(proc, Origin(), 2);
-    root->appendNew<Value>(proc, Jump, Origin());
-    root->setSuccessors(FrequentedBlock(head));
+    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const32Value>(proc, Origin(), 20), resultAddress, 0);
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 30));
 
-    UpsilonValue* startingIndex = head->appendNew<UpsilonValue>(proc, Origin(), head->appendNew<Const32Value>(proc, Origin(), 0));
-    auto* index = head->appendNew<Value>(proc, Phi, Int32, Origin());
-    startingIndex->setPhi(index);
-    auto* loadIndex = head->appendNew<Value>(proc, Add, Origin(), arraySrc,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    auto* storeIndex = head->appendNew<Value>(proc, Add, Origin(), arrayDst,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    head->appendNew<MemoryValue>(proc, Store, Origin(), head->appendNew<MemoryValue>(proc, Load, Int32, Origin(), loadIndex), storeIndex);
-    auto* newIndex = head->appendNew<Value>(proc, Add, Origin(), index, one);
-    auto* cmpValue = head->appendNew<Value>(proc, GreaterThan, Origin(), newIndex, arraySize);
-    head->appendNew<Value>(proc, Branch, Origin(), cmpValue);
-    head->setSuccessors(FrequentedBlock(continuation), FrequentedBlock(update));
+    auto binary = compileProc(proc);
 
-    UpsilonValue* updateIndex = update->appendNew<UpsilonValue>(proc, Origin(), newIndex);
-    updateIndex->setPhi(index);
-    update->appendNew<Value>(proc, Jump, Origin());
-    update->setSuccessors(FrequentedBlock(head));
+    uint64_t* memory = new uint64_t[10];
+    uint64_t ptr = 1*8;
 
-    continuation->appendNewControlValue(proc, Return, Origin());
+    for (int i = 0; i < 10; ++i)
+        memory[i] = 0;
 
-    int* arr1 = new int[3];
-    int* arr2 = new int[3];
+    {
+        int result = invoke<int>(*binary, memory, ptr);
 
-    arr1[0] = 0;
-    arr1[1] = 0;
-    arr1[2] = 0;
-    arr2[0] = 1;
-    arr2[1] = 2;
-    arr2[2] = 3;
+        CHECK_EQ(result, 30);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], (0xFFFFFFFF00000000ul | 20ul));
+        CHECK_EQ(memory[2], 0ul);
+    }
 
-    compileAndRun<void>(proc, arr2, arr1, 0);
-
-    CHECK_EQ(arr1[0], 1);
-    CHECK_EQ(arr1[1], 0);
-    CHECK_EQ(arr1[2], 0);
-
-    delete[] arr1;
-    delete [] arr2;
+    delete[] memory;
 }
 
-void testByteCopyLoopBoundIsLoopDependent()
+void testStoreAfterClobberDifferentWidthSuccessor()
 {
     Procedure proc;
+    GPRReg pinnedBaseGPR = GPRInfo::argumentGPR0;
+    proc.pinRegister(pinnedBaseGPR);
+
     BasicBlock* root = proc.addBlock();
-    BasicBlock* head = proc.addBlock();
-    BasicBlock* update = proc.addBlock();
+    BasicBlock* a = proc.addBlock();
+    BasicBlock* b = proc.addBlock();
+    BasicBlock* c = proc.addBlock();
     BasicBlock* continuation = proc.addBlock();
 
-    auto* arraySrc = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    auto* arrayDst = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-    auto* one = root->appendNew<Const32Value>(proc, Origin(), 1);
-    auto* two = root->appendNew<Const32Value>(proc, Origin(), 2);
-    UpsilonValue* startingIndex = root->appendNew<UpsilonValue>(proc, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
-    root->appendNew<Value>(proc, Jump, Origin());
-    root->setSuccessors(FrequentedBlock(head));
+    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    auto* path = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+    auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
 
-    auto* index = head->appendNew<Value>(proc, Phi, Int32, Origin());
-    startingIndex->setPhi(index);
-    auto* loadIndex = head->appendNew<Value>(proc, Add, Origin(), arraySrc,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    auto* storeIndex = head->appendNew<Value>(proc, Add, Origin(), arrayDst,
-        head->appendNew<Value>(proc, ZExt32, Origin(), head->appendNew<Value>(proc, Shl, Origin(), index, two)));
-    head->appendNew<MemoryValue>(proc, Store, Origin(), head->appendNew<MemoryValue>(proc, Load, Int32, Origin(), loadIndex), storeIndex);
-    auto* newIndex = head->appendNew<Value>(proc, Add, Origin(), index, one);
-    auto* cmpValue = head->appendNew<Value>(proc, GreaterThan, Origin(), newIndex, index);
-    head->appendNew<Value>(proc, Branch, Origin(), cmpValue);
-    head->setSuccessors(FrequentedBlock(continuation), FrequentedBlock(update));
+    SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
+    switchValue->setFallThrough(FrequentedBlock(c));
+    switchValue->appendCase(SwitchCase(0, FrequentedBlock(a)));
+    switchValue->appendCase(SwitchCase(1, FrequentedBlock(b)));
 
-    UpsilonValue* updateIndex = update->appendNew<UpsilonValue>(proc, Origin(), newIndex);
-    updateIndex->setPhi(index);
-    update->appendNew<Value>(proc, Jump, Origin());
-    update->setSuccessors(FrequentedBlock(head));
+    a->appendNew<MemoryValue>(proc, Store, Origin(), a->appendNew<Const32Value>(proc, Origin(), 10), resultAddress, 0);
+    b->appendNew<MemoryValue>(proc, Store, Origin(), b->appendNew<Const32Value>(proc, Origin(), 20), resultAddress, 0);
+    c->appendNew<MemoryValue>(proc, Store, Origin(), c->appendNew<Const32Value>(proc, Origin(), 30), resultAddress, 0);
 
-    continuation->appendNewControlValue(proc, Return, Origin());
+    for (auto* i : { a, b, c }) {
+        i->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(continuation));
+        i->setSuccessors(FrequentedBlock(continuation));
+    }
 
-    int* arr1 = new int[3];
-    int* arr2 = new int[3];
+    continuation->appendNewControlValue(proc, Return, Origin(), continuation->appendNew<Const32Value>(proc, Origin(), 40));
 
-    arr1[0] = 0;
-    arr1[1] = 0;
-    arr1[2] = 0;
-    arr2[0] = 1;
-    arr2[1] = 2;
-    arr2[2] = 3;
+    auto binary = compileProc(proc);
 
-    compileAndRun<void>(proc, arr2, arr1, 3);
+    uint64_t* memory = new uint64_t[10];
+    uint64_t ptr = 1*8;
 
-    CHECK_EQ(arr1[0], 1);
-    CHECK_EQ(arr1[1], 0);
-    CHECK_EQ(arr1[2], 0);
+    for (int i = 0; i < 10; ++i)
+        memory[i] = 0;
 
-    delete[] arr1;
-    delete [] arr2;
+    {
+        int result = invoke<int>(*binary, memory, ptr, 0);
+
+        CHECK_EQ(result, 40);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], (0xFFFFFFFF00000000ul | 10ul));
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    memory[1] = 0;
+
+    {
+        int result = invoke<int>(*binary, memory, ptr, 1);
+
+        CHECK_EQ(result, 40);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], (0xFFFFFFFF00000000ul | 20ul));
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    memory[1] = 0;
+
+    {
+        int result = invoke<int>(*binary, memory, ptr, 2);
+
+        CHECK_EQ(result, 40);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], (0xFFFFFFFF00000000ul | 30ul));
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    delete[] memory;
 }
 
-void addCopyTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void testStoreAfterClobberExitsSidewaysSuccessor()
 {
-    RUN(testFastForwardCopy32());
-    RUN(testByteCopyLoop());
-    RUN(testByteCopyLoopStartIsLoopDependent());
-    RUN(testByteCopyLoopBoundIsLoopDependent());
+    Procedure proc;
+    GPRReg pinnedBaseGPR = GPRInfo::argumentGPR0;
+    GPRReg pinnedSizeGPR = GPRInfo::argumentGPR1;
+    proc.pinRegister(pinnedBaseGPR);
+    proc.pinRegister(pinnedSizeGPR);
+
+    // Please don't make me save anything.
+    RegisterSetBuilder csrs;
+    csrs.merge(RegisterSetBuilder::calleeSaveRegisters());
+    csrs.exclude(RegisterSetBuilder::stackRegisters());
+    csrs.buildAndValidate().forEach(
+        [&] (Reg reg) {
+            CHECK(reg != pinnedBaseGPR);
+            CHECK(reg != pinnedSizeGPR);
+            proc.pinRegister(reg);
+        });
+
+    proc.setWasmBoundsCheckGenerator([=] (CCallHelpers& jit, GPRReg pinnedGPR) {
+        CHECK_EQ(pinnedGPR, pinnedSizeGPR);
+
+        jit.move(CCallHelpers::TrustedImm32(42), GPRInfo::returnValueGPR);
+        jit.emitFunctionEpilogue();
+        jit.ret();
+    });
+
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* a = proc.addBlock();
+    BasicBlock* b = proc.addBlock();
+    BasicBlock* c = proc.addBlock();
+    BasicBlock* continuation = proc.addBlock();
+
+    auto* pointer = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+    auto* path = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR3);
+    auto* resultAddress = root->appendNew<WasmAddressValue>(proc, Origin(), pointer, pinnedBaseGPR);
+    root->appendNew<MemoryValue>(proc, Store, Origin(), root->appendNew<Const64Value>(proc, Origin(), -1), resultAddress, 0);
+
+    SwitchValue* switchValue = root->appendNew<SwitchValue>(proc, Origin(), path);
+    switchValue->setFallThrough(FrequentedBlock(c));
+    switchValue->appendCase(SwitchCase(0, FrequentedBlock(a)));
+    switchValue->appendCase(SwitchCase(1, FrequentedBlock(b)));
+
+    b->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinnedSizeGPR, b->appendNew<Value>(proc, Trunc, Origin(), pointer), 0);
+
+    UpsilonValue* takeA = a->appendNew<UpsilonValue>(proc, Origin(), a->appendNew<Const64Value>(proc, Origin(), 10));
+    UpsilonValue* takeB = b->appendNew<UpsilonValue>(proc, Origin(), b->appendNew<Const64Value>(proc, Origin(), 20));
+    UpsilonValue* takeC = c->appendNew<UpsilonValue>(proc, Origin(), c->appendNew<Const64Value>(proc, Origin(), 30));
+
+    for (auto* i : { a, b, c }) {
+        i->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(continuation));
+        i->setSuccessors(FrequentedBlock(continuation));
+    }
+
+    auto* takenPhi = continuation->appendNew<Value>(proc, Phi, Int64, Origin());
+    continuation->appendNew<MemoryValue>(proc, Store, Origin(), takenPhi, resultAddress, 0);
+    continuation->appendNewControlValue(proc, Return, Origin(), continuation->appendNew<Const32Value>(proc, Origin(), 40));
+
+    takeA->setPhi(takenPhi);
+    takeB->setPhi(takenPhi);
+    takeC->setPhi(takenPhi);
+
+    auto binary = compileProc(proc);
+
+    uint64_t* memory = new uint64_t[10];
+    uint64_t ptr = 1*8;
+
+    for (int i = 0; i < 10; ++i)
+        memory[i] = 0;
+
+    {
+        int result = invoke<int>(*binary, memory, 16, ptr, 0);
+
+        CHECK_EQ(result, 40);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 10ul);
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    memory[1] = 0;
+
+    {
+        int result = invoke<int>(*binary, memory, 16, ptr, 1);
+
+        CHECK_EQ(result, 40);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 20ul);
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    memory[1] = 0;
+
+    {
+        int result = invoke<int>(*binary, memory, 16, ptr, 2);
+
+        CHECK_EQ(result, 40);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 30ul);
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    memory[1] = 0;
+
+    {
+        int result = invoke<int>(*binary, memory, 1, ptr, 2);
+
+        CHECK_EQ(result, 40);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], 30ul);
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    memory[1] = 0;
+
+    {
+        int result = invoke<int>(*binary, memory, 1, ptr, 1);
+
+        CHECK_EQ(result, 42);
+        CHECK_EQ(memory[0], 0ul);
+        CHECK_EQ(memory[1], (0xFFFFFFFFFFFFFFFFul));
+        CHECK_EQ(memory[2], 0ul);
+    }
+
+    delete[] memory;
 }
 
 #endif // ENABLE(B3_JIT)

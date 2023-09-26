@@ -24,12 +24,14 @@
  */
 
 [
-    EnabledAtRuntime=TransformStreamAPI,
-    Exposed=(Window,Worker),
+    EnabledBySetting=TransformStreamAPIEnabled,
+    Exposed=*,
     JSBuiltin,
     PrivateIdentifier,
     PublicIdentifier
 ] interface TransformStreamDefaultController {
+    constructor();
+
     readonly attribute unrestricted double? desiredSize;
 
     undefined enqueue(optional any chunk);

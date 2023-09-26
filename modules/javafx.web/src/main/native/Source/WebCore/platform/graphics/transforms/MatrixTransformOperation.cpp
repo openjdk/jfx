@@ -28,6 +28,22 @@
 
 namespace WebCore {
 
+Ref<MatrixTransformOperation> MatrixTransformOperation::create(const TransformationMatrix& t)
+{
+    return adoptRef(*new MatrixTransformOperation(t));
+}
+
+MatrixTransformOperation::MatrixTransformOperation(const TransformationMatrix& t)
+    : TransformOperation(TransformOperation::Type::Matrix)
+    , m_a(t.a())
+    , m_b(t.b())
+    , m_c(t.c())
+    , m_d(t.d())
+    , m_e(t.e())
+    , m_f(t.f())
+{
+}
+
 bool MatrixTransformOperation::operator==(const TransformOperation& other) const
 {
     if (!isSameType(other))
@@ -39,11 +55,11 @@ bool MatrixTransformOperation::operator==(const TransformOperation& other) const
 Ref<TransformOperation> MatrixTransformOperation::blend(const TransformOperation* from, const BlendingContext& context, bool blendToIdentity)
 {
     auto createOperation = [] (TransformationMatrix& to, TransformationMatrix& from, const BlendingContext& context) {
-        to.blend(from, context.progress);
+        to.blend(from, context.progress, context.compositeOperation);
         return MatrixTransformOperation::create(to);
     };
 
-    if (from && !from->isSameType(*this))
+    if (!sharedPrimitiveType(from))
         return *this;
 
     // convert the TransformOperations into matrices

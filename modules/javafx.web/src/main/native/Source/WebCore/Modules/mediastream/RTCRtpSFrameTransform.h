@@ -29,7 +29,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
+#include "JSDOMPromiseDeferredForward.h"
 #include "RTCRtpSFrameTransformer.h"
 #include <wtf/WeakPtr.h>
 
@@ -45,7 +45,7 @@ class ReadableStream;
 class SimpleReadableStreamSource;
 class WritableStream;
 
-class RTCRtpSFrameTransform : public RefCounted<RTCRtpSFrameTransform>, public ActiveDOMObject, public EventTargetWithInlineData {
+class RTCRtpSFrameTransform : public RefCounted<RTCRtpSFrameTransform>, public ActiveDOMObject, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(RTCRtpSFrameTransform);
 public:
     enum class Role { Encrypt, Decrypt };
@@ -56,7 +56,7 @@ public:
         CompatibilityMode compatibilityMode { CompatibilityMode::None };
     };
 
-    static Ref<RTCRtpSFrameTransform> create(ScriptExecutionContext& context, Options options) { return adoptRef(*new RTCRtpSFrameTransform(context, options)); }
+    static Ref<RTCRtpSFrameTransform> create(ScriptExecutionContext&, Options);
     ~RTCRtpSFrameTransform();
 
     void setEncryptionKey(CryptoKey&, std::optional<uint64_t>, DOMPromiseDeferred<void>&&);
@@ -85,7 +85,7 @@ private:
     const char* activeDOMObjectName() const final { return "RTCRtpSFrameTransform"; }
     bool virtualHasPendingActivity() const final;
 
-    // EventTargetWithInlineData
+    // EventTarget
     EventTargetInterface eventTargetInterface() const final { return RTCRtpSFrameTransformEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
@@ -93,7 +93,7 @@ private:
 
     enum class Side { Sender, Receiver };
     void initializeTransformer(RTCRtpTransformBackend&, Side);
-    void createStreams(JSC::JSGlobalObject&);
+    ExceptionOr<void> createStreams();
 
     bool m_isAttached { false };
     bool m_hasWritable { false };

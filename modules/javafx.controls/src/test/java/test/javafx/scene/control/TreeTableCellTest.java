@@ -57,7 +57,7 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 import static org.junit.Assert.*;
 
 public class TreeTableCellTest {
-    private TreeTableCell<String, String> cell;
+    private TreeTableCellShim<String, String> cell;
     private TreeTableView<String> tree;
     private TreeTableRow<String> row;
 
@@ -83,7 +83,7 @@ public class TreeTableCellTest {
             }
         });
 
-        cell = new TreeTableCell<String, String>();
+        cell = new TreeTableCellShim<>();
 
         root = new TreeItem<>(ROOT);
         apples = new TreeItem<>(APPLES);
@@ -91,7 +91,7 @@ public class TreeTableCellTest {
         pears = new TreeItem<>(PEARS);
         root.getChildren().addAll(apples, oranges, pears);
 
-        tree = new TreeTableView<String>(root);
+        tree = new TreeTableView<>(root);
         root.setExpanded(true);
         editingColumn = new TreeTableColumn<>("TEST");
 
@@ -171,7 +171,7 @@ public class TreeTableCellTest {
     @Test public void itemIsUpdatedWhenItWasOutOfRangeButUpdatesToTreeTableViewItemsMakesItInRange() {
         cell.updateIndex(4);
         cell.updateTreeTableView(tree);
-        root.getChildren().addAll(new TreeItem<String>("Pumpkin"), new TreeItem<>("Lemon"));
+        root.getChildren().addAll(new TreeItem<>("Pumpkin"), new TreeItem<>("Lemon"));
         assertSame("Pumpkin", cell.getItem());
     }
 
@@ -234,7 +234,7 @@ public class TreeTableCellTest {
         TreeItem<String> newRoot = new TreeItem<>();
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(new TreeItem<>("Water"), new TreeItem<>("Juice"), new TreeItem<>("Soda"));
-        TreeTableView<String> treeView2 = new TreeTableView<String>(newRoot);
+        TreeTableView<String> treeView2 = new TreeTableView<>(newRoot);
         cell.updateTreeTableView(treeView2);
         assertEquals("Juice", cell.getItem());
     }
@@ -534,7 +534,7 @@ public class TreeTableCellTest {
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
-        cell = new TreeTableCellShim<String,String>() {
+        cell = new TreeTableCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 rt_29923_count++;
@@ -708,7 +708,6 @@ public class TreeTableCellTest {
      * The item of the {@link TreeTableRow} should not be null, when the {@link TreeTableCell} is not empty.
      * See also: JDK-8251483
      */
-    @Ignore("Fails currently but will be enabled again in JDK-8289357")
     @Test
     public void testRowItemIsNotNullForNonEmptyCell() {
         TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
@@ -1164,7 +1163,7 @@ public class TreeTableCellTest {
          }
          if (editingColumn != null ) cell.updateTableColumn(editingColumn);
          // force into editable state (not empty)
-         TreeTableCellShim.set_lockItemOnEdit(cell, true);
+         cell.setLockItemOnStartEdit(true);
          CellShim.updateItem(cell, "something", false);
      }
 

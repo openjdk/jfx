@@ -53,9 +53,9 @@ template<> struct SVGPropertyTraits<SVGLengthAdjustType> {
 
     static SVGLengthAdjustType fromString(const String& value)
     {
-        if (value == "spacingAndGlyphs")
+        if (value == "spacingAndGlyphs"_s)
             return SVGLengthAdjustSpacingAndGlyphs;
-        if (value == "spacing")
+        if (value == "spacing"_s)
             return SVGLengthAdjustSpacing;
         return SVGLengthAdjustUnknown;
     }
@@ -92,7 +92,7 @@ public:
     SVGAnimatedEnumeration& lengthAdjustAnimated() { return m_lengthAdjust; }
 
 protected:
-    SVGTextContentElement(const QualifiedName&, Document&);
+    SVGTextContentElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
 
     bool isValid() const override { return SVGTests::isValid(); }
 

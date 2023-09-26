@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,6 @@
 
 #include "config.h"
 
-#if ENABLE(INTERSECTION_OBSERVER)
 #include "IntersectionObserver.h"
 
 #include "CSSParserTokenRange.h"
@@ -33,10 +32,14 @@
 #include "CSSTokenizer.h"
 #include "DOMWindow.h"
 #include "Element.h"
+#include "FrameDestructionObserverInlines.h"
 #include "InspectorInstrumentation.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
+#include "JSNodeCustom.h"
+#include "Logging.h"
 #include "Performance.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/AbstractSlotVisitorInlines.h>
 #include <wtf/Vector.h>
 
@@ -49,16 +52,16 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
     Vector<Length, 4> margins;
     while (!tokenRange.atEnd()) {
         if (margins.size() == 4)
-            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin." };
+            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin."_s };
         RefPtr<CSSPrimitiveValue> parsedValue = CSSPropertyParserHelpers::consumeLengthOrPercent(tokenRange, HTMLStandardMode, ValueRange::All);
         if (!parsedValue || parsedValue->isCalculated())
-            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent." };
+            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
         if (parsedValue->isPercentage())
             margins.append(Length(parsedValue->doubleValue(), LengthType::Percent));
         else if (parsedValue->isPx())
             margins.append(Length(parsedValue->intValue(), LengthType::Fixed));
         else
-            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent." };
+            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
     }
     switch (margins.size()) {
     case 0:
@@ -102,36 +105,39 @@ ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& do
 
     Vector<double> thresholds;
     WTF::switchOn(init.threshold, [&thresholds] (double initThreshold) {
-        thresholds.reserveInitialCapacity(1);
-        thresholds.uncheckedAppend(initThreshold);
+        thresholds.append(initThreshold);
     }, [&thresholds] (Vector<double>& initThresholds) {
         thresholds = WTFMove(initThresholds);
     });
 
     for (auto threshold : thresholds) {
         if (!(threshold >= 0 && threshold <= 1))
-            return Exception { RangeError, "Failed to construct 'IntersectionObserver': all thresholds must lie in the range [0.0, 1.0]." };
+            return Exception { RangeError, "Failed to construct 'IntersectionObserver': all thresholds must lie in the range [0.0, 1.0]."_s };
     }
 
     return adoptRef(*new IntersectionObserver(document, WTFMove(callback), root.get(), rootMarginOrException.releaseReturnValue(), WTFMove(thresholds)));
 }
 
 IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionObserverCallback>&& callback, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds)
-    : m_root(makeWeakPtr(root))
+    : m_root(root)
     , m_rootMargin(WTFMove(parsedRootMargin))
     , m_thresholds(WTFMove(thresholds))
     , m_callback(WTFMove(callback))
 {
     if (is<Document>(root)) {
         auto& observerData = downcast<Document>(*root).ensureIntersectionObserverData();
-        observerData.observers.append(makeWeakPtr(this));
+        observerData.observers.append(*this);
     } else if (root) {
         auto& observerData = downcast<Element>(*root).ensureIntersectionObserverData();
-        observerData.observers.append(makeWeakPtr(this));
-    } else if (auto* frame = document.frame())
-        m_implicitRootDocument = makeWeakPtr(frame->mainFrame().document());
+        observerData.observers.append(*this);
+    } else if (auto* frame = document.frame()) {
+        if (auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame()))
+            m_implicitRootDocument = localFrame->document();
+    }
 
     std::sort(m_thresholds.begin(), m_thresholds.end());
+
+    LOG_WITH_STREAM(IntersectionObserver, stream << "Created IntersectionObserver " << this << " root " << root << " root margin " << m_rootMargin << " thresholds " << m_thresholds);
 }
 
 IntersectionObserver::~IntersectionObserver()
@@ -156,7 +162,7 @@ String IntersectionObserver::rootMargin() const
 
 bool IntersectionObserver::isObserving(const Element& element) const
 {
-    return m_observationTargets.findMatching([&](auto& target) {
+    return m_observationTargets.findIf([&](auto& target) {
         return target.get() == &element;
     }) != notFound;
 }
@@ -166,9 +172,14 @@ void IntersectionObserver::observe(Element& target)
     if (!trackingDocument() || !m_callback || isObserving(target))
         return;
 
-    target.ensureIntersectionObserverData().registrations.append({ makeWeakPtr(this), std::nullopt });
+    target.ensureIntersectionObserverData().registrations.append({ *this, std::nullopt });
     bool hadObservationTargets = hasObservationTargets();
-    m_observationTargets.append(makeWeakPtr(target));
+    m_observationTargets.append(target);
+
+    // Per the specification, we should dispatch at least one observation for the target. For this reason, we make sure to keep the
+    // target alive until this first observation. This, in turn, will keep the IntersectionObserver's JS wrapper alive via
+    // isReachableFromOpaqueRoots(), so the callback stays alive.
+    m_targetsWaitingForFirstObservation.append(target);
 
     // Per the specification, we should dispatch at least one observation for the target. For this reason, we make sure to keep the
     // target alive until this first observation. This, in turn, will keep the IntersectionObserver's JS wrapper alive via
@@ -198,8 +209,10 @@ void IntersectionObserver::unobserve(Element& target)
 
 void IntersectionObserver::disconnect()
 {
-    if (!hasObservationTargets())
+    if (!hasObservationTargets()) {
+        ASSERT(m_targetsWaitingForFirstObservation.isEmpty());
         return;
+    }
 
     removeAllTargets();
     if (auto* document = trackingDocument())
@@ -293,6 +306,14 @@ void IntersectionObserver::notify()
     if (!context)
         return;
 
+#if !LOG_DISABLED
+    if (LogIntersectionObserver.state == WTFLogChannelState::On) {
+        TextStream recordsStream(TextStream::LineMode::MultipleLine);
+        recordsStream << takenRecords.records;
+        LOG_WITH_STREAM(IntersectionObserver, stream << "IntersectionObserver " << this << " notify - records " << recordsStream.release());
+    }
+#endif
+
     InspectorInstrumentation::willFireObserverCallback(*context, "IntersectionObserver"_s);
     m_callback->handleEvent(*this, WTFMove(takenRecords.records), *this);
     InspectorInstrumentation::didFireObserverCallback(*context);
@@ -301,16 +322,14 @@ void IntersectionObserver::notify()
 bool IntersectionObserver::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visitor) const
 {
     for (auto& target : m_observationTargets) {
-        if (auto* element = target.get(); element && visitor.containsOpaqueRoot(element->opaqueRoot()))
+        if (auto* element = target.get(); containsWebCoreOpaqueRoot(visitor, element))
             return true;
     }
     for (auto& target : m_pendingTargets) {
-        if (visitor.containsOpaqueRoot(target->opaqueRoot()))
+        if (containsWebCoreOpaqueRoot(visitor, target.get()))
             return true;
     }
     return !m_targetsWaitingForFirstObservation.isEmpty();
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INTERSECTION_OBSERVER)

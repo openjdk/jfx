@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2015 Roopesh Chander (roop@roopc.net)
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -57,6 +57,7 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "UserContentController.h"
+#include "ViolationReportType.h"
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -124,7 +125,7 @@ void PingLoader::sendPing(Frame& frame, const URL& pingURL, const URL& destinati
         return;
 
     ResourceRequest request(pingURL);
-    request.setRequester(ResourceRequest::Requester::Ping);
+    request.setRequester(ResourceRequestRequester::Ping);
 
 #if ENABLE(CONTENT_EXTENSIONS)
     if (processContentRuleListsForLoad(frame, request, ContentExtensions::ResourceType::Ping))
@@ -134,8 +135,8 @@ void PingLoader::sendPing(Frame& frame, const URL& pingURL, const URL& destinati
     auto& document = *frame.document();
     document.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(request, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    request.setHTTPMethod("POST");
-    request.setHTTPContentType("text/ping");
+    request.setHTTPMethod("POST"_s);
+    request.setHTTPContentType("text/ping"_s);
     request.setHTTPBody(FormData::create("PING"));
     request.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
 
@@ -145,9 +146,12 @@ void PingLoader::sendPing(Frame& frame, const URL& pingURL, const URL& destinati
     FrameLoader::addHTTPOriginIfNeeded(request, SecurityPolicy::generateOriginHeader(document.referrerPolicy(), request.url(), sourceOrigin));
 
     frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
-    request.setHTTPHeaderField(HTTPHeaderName::PingTo, destinationURL.string());
-    if (!SecurityPolicy::shouldHideReferrer(pingURL, frame.loader().outgoingReferrer()))
+
+    // https://html.spec.whatwg.org/multipage/links.html#hyperlink-auditing
+    if (document.securityOrigin().isSameOriginAs(SecurityOrigin::create(pingURL).get())
+        || !document.url().protocolIs("https"_s))
         request.setHTTPHeaderField(HTTPHeaderName::PingFrom, document.url().string());
+    request.setHTTPHeaderField(HTTPHeaderName::PingTo, destinationURL.string());
 
     startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes, ContentSecurityPolicyImposition::DoPolicyCheck, ReferrerPolicy::NoReferrer);
 }
@@ -156,9 +160,14 @@ void PingLoader::sendViolationReport(Frame& frame, const URL& reportURL, Ref<For
 {
     ASSERT(frame.document());
 
+    // FIXME: Add the concept of browsing context group like in the specification instead of treating the whole process as a group.
+    // https://bugs.webkit.org/show_bug.cgi?id=244945
+    if (reportType == ViolationReportType::CrossOriginOpenerPolicy && Page::nonUtilityPageCount() <= 1)
+        return;
+
     ResourceRequest request(reportURL);
 #if ENABLE(CONTENT_EXTENSIONS)
-    if (processContentRuleListsForLoad(frame, request, ContentExtensions::ResourceType::Other))
+    if (processContentRuleListsForLoad(frame, request, ContentExtensions::ResourceType::CSPReport))
         return;
 #endif
 
@@ -171,8 +180,13 @@ void PingLoader::sendViolationReport(Frame& frame, const URL& reportURL, Ref<For
     case ViolationReportType::ContentSecurityPolicy:
         request.setHTTPContentType("application/csp-report"_s);
         break;
-    case ViolationReportType::XSSAuditor:
-        request.setHTTPContentType("application/json"_s);
+    case ViolationReportType::COEPInheritenceViolation:
+    case ViolationReportType::CORPViolation:
+    case ViolationReportType::CrossOriginOpenerPolicy:
+    case ViolationReportType::Deprecation:
+    case ViolationReportType::StandardReportingAPIViolation:
+    case ViolationReportType::Test:
+        request.setHTTPContentType("application/reports+json"_s);
         break;
     }
 
@@ -184,18 +198,19 @@ void PingLoader::sendViolationReport(Frame& frame, const URL& reportURL, Ref<For
 
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
 
-    frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
+    if (reportType == ViolationReportType::ContentSecurityPolicy)
+        frame.loader().updateRequestAndAddExtraFields(request, IsMainResource::No);
 
     String referrer = SecurityPolicy::generateReferrerHeader(document.referrerPolicy(), reportURL, frame.loader().outgoingReferrer());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
 
-    startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::No, ContentSecurityPolicyImposition::SkipPolicyCheck, ReferrerPolicy::EmptyString);
+    startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::No, ContentSecurityPolicyImposition::SkipPolicyCheck, ReferrerPolicy::EmptyString, reportType);
 }
 
-void PingLoader::startPingLoad(Frame& frame, ResourceRequest& request, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects shouldFollowRedirects, ContentSecurityPolicyImposition policyCheck, ReferrerPolicy referrerPolicy)
+void PingLoader::startPingLoad(Frame& frame, ResourceRequest& request, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects shouldFollowRedirects, ContentSecurityPolicyImposition policyCheck, ReferrerPolicy referrerPolicy, std::optional<ViolationReportType> violationReportType)
 {
-    unsigned long identifier = frame.page()->progress().createUniqueIdentifier();
+    auto identifier = ResourceLoaderIdentifier::generate();
     // FIXME: Why activeDocumentLoader? I would have expected documentLoader().
     // It seems like the PingLoader should be associated with the current
     // Document in the Frame, but the activeDocumentLoader will be associated
@@ -211,11 +226,19 @@ void PingLoader::startPingLoad(Frame& frame, ResourceRequest& request, HTTPHeade
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.cache = FetchOptions::Cache::NoCache;
 
+    // https://www.w3.org/TR/reporting/#try-delivery
+    if (violationReportType && *violationReportType != ViolationReportType::ContentSecurityPolicy) {
+        options.credentials = FetchOptions::Credentials::SameOrigin;
+        options.mode = FetchOptions::Mode::Cors;
+        options.serviceWorkersMode = ServiceWorkersMode::None;
+        options.destination = FetchOptions::Destination::Report;
+    }
+
     // FIXME: Deprecate the ping load code path.
     if (platformStrategies()->loaderStrategy()->usePingLoad()) {
         InspectorInstrumentation::willSendRequestOfType(&frame, identifier, frame.loader().activeDocumentLoader(), request, InspectorInstrumentation::LoadType::Ping);
 
-        platformStrategies()->loaderStrategy()->startPingLoad(frame, request, WTFMove(originalRequestHeaders), options, policyCheck, [protectedFrame = makeRef(frame), identifier] (const ResourceError& error, const ResourceResponse& response) {
+        platformStrategies()->loaderStrategy()->startPingLoad(frame, request, WTFMove(originalRequestHeaders), options, policyCheck, [protectedFrame = Ref { frame }, identifier] (const ResourceError& error, const ResourceResponse& response) {
             if (!response.isNull())
                 InspectorInstrumentation::didReceiveResourceResponse(protectedFrame, identifier, protectedFrame->loader().activeDocumentLoader(), response, nullptr);
             if (!error.isNull()) {
@@ -231,4 +254,13 @@ void PingLoader::startPingLoad(Frame& frame, ResourceRequest& request, HTTPHeade
     frame.document()->cachedResourceLoader().requestPingResource(WTFMove(cachedResourceRequest));
 }
 
+// // https://html.spec.whatwg.org/multipage/origin.html#sanitize-url-report
+String PingLoader::sanitizeURLForReport(const URL& url)
+{
+    URL sanitizedURL = url;
+    sanitizedURL.removeCredentials();
+    sanitizedURL.removeFragmentIdentifier();
+    return sanitizedURL.string();
 }
+
+} // namespace WebCore

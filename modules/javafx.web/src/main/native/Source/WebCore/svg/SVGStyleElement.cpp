@@ -24,7 +24,9 @@
 #include "SVGStyleElement.h"
 
 #include "CSSStyleSheet.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
+#include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
@@ -34,7 +36,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGStyleElement);
 
 inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , m_styleSheetOwner(document, createdByParser)
     , m_loadEventTimer(*this, &SVGElement::loadEventTimerFired)
 {
@@ -58,15 +60,14 @@ bool SVGStyleElement::disabled() const
 
 void SVGStyleElement::setDisabled(bool setDisabled)
 {
-    if (auto styleSheet = makeRefPtr(sheet()))
+    if (RefPtr styleSheet = sheet())
         styleSheet->setDisabled(setDisabled);
 }
 
 const AtomString& SVGStyleElement::type() const
 {
-    static MainThreadNeverDestroyed<const AtomString> defaultValue("text/css", AtomString::ConstructFromLiteral);
-    const AtomString& n = getAttribute(SVGNames::typeAttr);
-    return n.isNull() ? defaultValue.get() : n;
+    auto& typeValue = getAttribute(SVGNames::typeAttr);
+    return typeValue.isNull() ? cssContentTypeAtom() : typeValue;
 }
 
 void SVGStyleElement::setType(const AtomString& type)
@@ -76,9 +77,8 @@ void SVGStyleElement::setType(const AtomString& type)
 
 const AtomString& SVGStyleElement::media() const
 {
-    static MainThreadNeverDestroyed<const AtomString> defaultValue("all", AtomString::ConstructFromLiteral);
-    const AtomString& n = attributeWithoutSynchronization(SVGNames::mediaAttr);
-    return n.isNull() ? defaultValue.get() : n;
+    auto& value = attributeWithoutSynchronization(SVGNames::mediaAttr);
+    return value.isNull() ? allAtom() : value;
 }
 
 void SVGStyleElement::setMedia(const AtomString& media)

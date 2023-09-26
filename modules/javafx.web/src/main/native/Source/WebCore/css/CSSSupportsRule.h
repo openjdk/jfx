@@ -34,7 +34,6 @@
 
 namespace WebCore {
 
-class CSSRule;
 class StyleRuleSupports;
 
 class CSSSupportsRule final : public CSSConditionRule {
@@ -43,13 +42,12 @@ public:
 
     String cssText() const final;
     String conditionText() const final;
-    void setConditionText(const String&) final;
 
 private:
     CSSSupportsRule(StyleRuleSupports&, CSSStyleSheet*);
-    CSSRule::Type type() const final { return SUPPORTS_RULE; }
+    StyleRuleType styleRuleType() const final { return StyleRuleType::Supports; }
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSSupportsRule, CSSRule::SUPPORTS_RULE)
+SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSSupportsRule, StyleRuleType::Supports)

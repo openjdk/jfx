@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2010-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +34,10 @@
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/dtoa.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
 
 namespace WebCore {
 
@@ -80,7 +85,7 @@ String serializeForNumberType(const Decimal& number)
 {
     if (number.isZero()) {
         // Decimal::toString appends exponent, e.g. "0e-18"
-        return number.isNegative() ? "-0" : "0";
+        return number.isNegative() ? "-0"_s : "0"_s;
     }
     return number.toString();
 }
@@ -92,9 +97,11 @@ String serializeForNumberType(double number)
     return String::number(number);
 }
 
-Decimal parseToDecimalForNumberType(const String& string, const Decimal& fallbackValue)
+Decimal parseToDecimalForNumberType(StringView string, const Decimal& fallbackValue)
 {
-    // See HTML5 2.5.4.3 `Real numbers.' and parseToDoubleForNumberType
+    // https://html.spec.whatwg.org/#floating-point-numbers and parseToDoubleForNumberType
+    if (string.isEmpty())
+        return fallbackValue;
 
     // String::toDouble() accepts leading + and whitespace characters, which are not valid here.
     const UChar firstCharacter = string[0];
@@ -105,50 +112,57 @@ Decimal parseToDecimalForNumberType(const String& string, const Decimal& fallbac
     if (!value.isFinite())
         return fallbackValue;
 
-    // Numbers are considered finite IEEE 754 single-precision floating point values.
-    // See HTML5 2.5.4.3 `Real numbers.'
-    // FIXME: We should use numeric_limits<double>::max for number input type.
-    const Decimal floatMax = Decimal::fromDouble(std::numeric_limits<float>::max());
-    if (value < -floatMax || value > floatMax)
+    // Numbers are considered finite IEEE 754 Double-precision floating point values.
+    const Decimal doubleMax = Decimal::fromDouble(std::numeric_limits<double>::max());
+    if (value < -doubleMax || value > doubleMax)
         return fallbackValue;
 
     // We return +0 for -0 case.
     return value.isZero() ? Decimal(0) : value;
 }
 
-Decimal parseToDecimalForNumberType(const String& string)
+Decimal parseToDecimalForNumberType(StringView string)
 {
     return parseToDecimalForNumberType(string, Decimal::nan());
 }
 
-double parseToDoubleForNumberType(const String& string, double fallbackValue)
+double parseToDoubleForNumberType(StringView string, double fallbackValue)
 {
-    // See HTML5 2.5.4.3 `Real numbers.'
+    // https://html.spec.whatwg.org/#floating-point-numbers
+    if (string.isEmpty())
+        return fallbackValue;
 
     // String::toDouble() accepts leading + and whitespace characters, which are not valid here.
     UChar firstCharacter = string[0];
     if (firstCharacter != '-' && firstCharacter != '.' && !isASCIIDigit(firstCharacter))
         return fallbackValue;
 
+    bool allowStringsThatEndWithFullStop = false;
+#if PLATFORM(COCOA)
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DoesNotParseStringEndingWithFullStopAsFloatingPointNumber))
+        allowStringsThatEndWithFullStop = true;
+#endif
+
+    if (string.endsWith('.') && !allowStringsThatEndWithFullStop)
+        return fallbackValue;
+
     bool valid = false;
-    double value = string.toDouble(&valid);
+    double value = string.toDouble(valid);
     if (!valid)
         return fallbackValue;
 
-    // NaN and infinity are considered valid by String::toDouble, but not valid here.
+    // NaN and infinity are considered valid by StringView::toDouble, but not valid here.
     if (!std::isfinite(value))
         return fallbackValue;
 
-    // Numbers are considered finite IEEE 754 single-precision floating point values.
-    // See HTML5 2.5.4.3 `Real numbers.'
-    if (-std::numeric_limits<float>::max() > value || value > std::numeric_limits<float>::max())
-        return fallbackValue;
+    // Numbers are considered finite IEEE 754 Double-precision floating point values.
+    ASSERT(-std::numeric_limits<double>::max() <= value || value < std::numeric_limits<double>::max());
 
     // The following expression converts -0 to +0.
     return value ? value : 0;
 }
 
-double parseToDoubleForNumberType(const String& string)
+double parseToDoubleForNumberType(StringView string)
 {
     return parseToDoubleForNumberType(string, std::numeric_limits<double>::quiet_NaN());
 }
@@ -350,7 +364,7 @@ String parseCORSSettingsAttribute(const AtomString& value)
 {
     if (value.isNull())
         return String();
-    if (equalIgnoringASCIICase(value, "use-credentials"))
+    if (equalLettersIgnoringASCIICase(value, "use-credentials"_s))
         return "use-credentials"_s;
     return "anonymous"_s;
 }
@@ -449,14 +463,14 @@ static bool parseHTTPRefreshInternal(const CharacterType* position, const Charac
     if (quote != '\0') {
         size_t index = url.find(quote);
         if (index != notFound)
-            url = url.substring(0, index);
+            url = url.left(index);
     }
 
     parsedURL = url.toString();
     return true;
 }
 
-bool parseMetaHTTPEquivRefresh(const StringView& input, double& delay, String& url)
+bool parseMetaHTTPEquivRefresh(StringView input, double& delay, String& url)
 {
     if (LIKELY(input.is8Bit())) {
         auto* start = input.characters8();

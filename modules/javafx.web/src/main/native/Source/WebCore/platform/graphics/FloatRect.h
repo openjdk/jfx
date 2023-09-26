@@ -47,8 +47,6 @@ typedef struct _cairo_rectangle cairo_rectangle_t;
 
 #if PLATFORM(WIN)
 typedef struct tagRECT RECT;
-struct D2D_RECT_F;
-typedef D2D_RECT_F D2D1_RECT_F;
 #endif
 
 namespace WTF {
@@ -116,6 +114,11 @@ public:
     }
     void expand(float dw, float dh) { m_size.expand(dw, dh); }
     void contract(const FloatSize& size) { m_size -= size; }
+    void contract(const FloatBoxExtent& box)
+    {
+        m_location.move(box.left(), box.top());
+        m_size.expand(-(box.left() + box.right()), -(box.top() + box.bottom()));
+    }
     void contract(float dw, float dh) { m_size.expand(-dw, -dh); }
 
     void shiftXEdgeTo(float edge)
@@ -150,10 +153,20 @@ public:
         setWidth(std::max(0.0f, width() - delta));
     }
 
+    void shiftMaxXEdgeBy(float delta)
+    {
+        shiftMaxXEdgeTo(maxX() + delta);
+    }
+
     void shiftYEdgeBy(float delta)
     {
         move(0, delta);
         setHeight(std::max(0.0f, height() - delta));
+    }
+
+    void shiftMaxYEdgeBy(float delta)
+    {
+        shiftMaxYEdgeTo(maxY() + delta);
     }
 
     FloatPoint minXMinYCorner() const { return m_location; } // typically topLeft
@@ -191,6 +204,7 @@ public:
     }
     void inflate(float d) { inflateX(d); inflateY(d); }
     void inflate(FloatSize size) { inflateX(size.width()); inflateY(size.height()); }
+    void inflate(float dx, float dy, float dmaxX, float dmaxY);
 
     void scale(float s) { scale(s, s); }
     WEBCORE_EXPORT void scale(float sx, float sy);
@@ -220,8 +234,6 @@ public:
 
 #if PLATFORM(WIN)
     WEBCORE_EXPORT FloatRect(const RECT&);
-    WEBCORE_EXPORT FloatRect(const D2D1_RECT_F&);
-    WEBCORE_EXPORT operator D2D1_RECT_F() const;
 #endif
 
     static FloatRect infiniteRect();
@@ -278,6 +290,11 @@ inline bool operator!=(const FloatRect& a, const FloatRect& b)
     return a.location() != b.location() || a.size() != b.size();
 }
 
+inline bool areEssentiallyEqual(const FloatRect& a, const FloatRect& b)
+{
+    return areEssentiallyEqual(a.location(), b.location()) && areEssentiallyEqual(a.size(), b.size());
+}
+
 inline FloatRect FloatRect::infiniteRect()
 {
     static FloatRect infiniteRect(-std::numeric_limits<float>::max() / 2, -std::numeric_limits<float>::max() / 2, std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
@@ -289,9 +306,18 @@ inline bool FloatRect::isInfinite() const
     return *this == infiniteRect();
 }
 
+inline void FloatRect::inflate(float deltaX, float deltaY, float deltaMaxX, float deltaMaxY)
+{
+    setX(x() - deltaX);
+    setY(y() - deltaY);
+    setWidth(width() + deltaX + deltaMaxX);
+    setHeight(height() + deltaY + deltaMaxY);
+}
+
 FloatRect normalizeRect(const FloatRect&);
 WEBCORE_EXPORT FloatRect encloseRectToDevicePixels(const FloatRect&, float deviceScaleFactor);
 WEBCORE_EXPORT IntRect enclosingIntRect(const FloatRect&);
+WEBCORE_EXPORT IntRect enclosingIntRectPreservingEmptyRects(const FloatRect&);
 WEBCORE_EXPORT IntRect roundedIntRect(const FloatRect&);
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatRect&);

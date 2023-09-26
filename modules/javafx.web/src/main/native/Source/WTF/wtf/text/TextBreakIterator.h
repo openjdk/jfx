@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Lars Knoll <lars@trolltech.com>
- * Copyright (C) 2007-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,8 +22,8 @@
 #pragma once
 
 #include <mutex>
+#include <variant>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Variant.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/icu/TextBreakIteratorICU.h>
 
@@ -49,7 +49,8 @@ public:
     enum class Mode {
         Line,
         Caret,
-        Delete
+        Delete,
+        Character
     };
 
     TextBreakIterator() = delete;
@@ -102,7 +103,7 @@ private:
         return m_locale;
     }
 
-    Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> m_backing;
+    std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform> m_backing;
     Mode m_mode;
     AtomString m_locale;
 };
@@ -233,33 +234,33 @@ public:
 
     UChar lastCharacter() const
     {
-        static_assert(WTF_ARRAY_LENGTH(m_priorContext) == 2, "UBreakIterator unexpected prior context length");
+        static_assert(priorContextCapacity == 2, "UBreakIterator unexpected prior context length");
         return m_priorContext[1];
     }
 
     UChar secondToLastCharacter() const
     {
-        static_assert(WTF_ARRAY_LENGTH(m_priorContext) == 2, "UBreakIterator unexpected prior context length");
+        static_assert(priorContextCapacity == 2, "UBreakIterator unexpected prior context length");
         return m_priorContext[0];
     }
 
     void setPriorContext(UChar last, UChar secondToLast)
     {
-        static_assert(WTF_ARRAY_LENGTH(m_priorContext) == 2, "UBreakIterator unexpected prior context length");
+        static_assert(priorContextCapacity == 2, "UBreakIterator unexpected prior context length");
         m_priorContext[0] = secondToLast;
         m_priorContext[1] = last;
     }
 
     void updatePriorContext(UChar last)
     {
-        static_assert(WTF_ARRAY_LENGTH(m_priorContext) == 2, "UBreakIterator unexpected prior context length");
+        static_assert(priorContextCapacity == 2, "UBreakIterator unexpected prior context length");
         m_priorContext[0] = m_priorContext[1];
         m_priorContext[1] = last;
     }
 
     void resetPriorContext()
     {
-        static_assert(WTF_ARRAY_LENGTH(m_priorContext) == 2, "UBreakIterator unexpected prior context length");
+        static_assert(priorContextCapacity == 2, "UBreakIterator unexpected prior context length");
         m_priorContext[0] = 0;
         m_priorContext[1] = 0;
     }
@@ -267,7 +268,7 @@ public:
     unsigned priorContextLength() const
     {
         unsigned priorContextLength = 0;
-        static_assert(WTF_ARRAY_LENGTH(m_priorContext) == 2, "UBreakIterator unexpected prior context length");
+        static_assert(priorContextCapacity == 2, "UBreakIterator unexpected prior context length");
         if (m_priorContext[1]) {
             ++priorContextLength;
             if (m_priorContext[0])

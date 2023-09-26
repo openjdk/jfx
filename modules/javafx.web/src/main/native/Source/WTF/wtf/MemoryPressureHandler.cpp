@@ -26,6 +26,7 @@
 #include "config.h"
 #include <wtf/MemoryPressureHandler.h>
 
+#include <atomic>
 #include <wtf/Logging.h>
 #include <wtf/MemoryFootprint.h>
 #include <wtf/NeverDestroyed.h>
@@ -45,14 +46,22 @@ static const double s_strictThresholdFraction = 0.5;
 static const std::optional<double> s_killThresholdFraction;
 static const Seconds s_pollInterval = 30_s;
 
+static std::atomic<bool> s_hasCreatedMemoryPressureHandler;
+
 MemoryPressureHandler& MemoryPressureHandler::singleton()
 {
     static LazyNeverDestroyed<MemoryPressureHandler> memoryPressureHandler;
     static std::once_flag onceKey;
     std::call_once(onceKey, [&] {
         memoryPressureHandler.construct();
+        s_hasCreatedMemoryPressureHandler.store(true);
     });
     return memoryPressureHandler;
+}
+
+static MemoryPressureHandler* memoryPressureHandlerIfExists()
+{
+    return s_hasCreatedMemoryPressureHandler.load() ? &MemoryPressureHandler::singleton() : nullptr;
 }
 
 MemoryPressureHandler::MemoryPressureHandler()
@@ -76,7 +85,7 @@ void MemoryPressureHandler::setShouldUsePeriodicMemoryMonitor(bool use)
     }
 
     if (use) {
-        m_measurementTimer = makeUnique<RunLoop::Timer<MemoryPressureHandler>>(RunLoop::main(), this, &MemoryPressureHandler::measurementTimerFired);
+        m_measurementTimer = makeUnique<RunLoop::Timer>(RunLoop::main(), this, &MemoryPressureHandler::measurementTimerFired);
         m_measurementTimer->startRepeating(m_configuration.pollInterval);
     } else
         m_measurementTimer = nullptr;
@@ -95,9 +104,20 @@ static const char* toString(MemoryUsagePolicy policy)
 }
 #endif
 
+static size_t thresholdForMemoryKillOfActiveProcess(unsigned tabCount)
+{
+#if CPU(ADDRESS64)
+    size_t baseThreshold = ramSize() > 16 * GB ? 15 * GB : 7 * GB;
+    return baseThreshold + tabCount * GB;
+#else
+    UNUSED_PARAM(tabCount);
+    return std::min(3 * GB, static_cast<size_t>(ramSize() * 0.9));
+#endif
+}
+
 static size_t thresholdForMemoryKillOfInactiveProcess(unsigned tabCount)
 {
-#if CPU(X86_64) || CPU(ARM64)
+#if CPU(ADDRESS64)
     size_t baseThreshold = 3 * GB + tabCount * GB;
 #else
     size_t baseThreshold = tabCount > 1 ? 3 * GB : 2 * GB;
@@ -121,7 +141,7 @@ std::optional<size_t> MemoryPressureHandler::thresholdForMemoryKill()
     case WebsamProcessState::Inactive:
         return thresholdForMemoryKillOfInactiveProcess(m_pageCount);
     case WebsamProcessState::Active:
-        break;
+        return thresholdForMemoryKillOfActiveProcess(m_pageCount);
     }
     return std::nullopt;
 }
@@ -209,25 +229,6 @@ void MemoryPressureHandler::measurementTimerFired()
         releaseMemory(Critical::Yes, Synchronous::No);
         break;
     }
-
-    if (processState() == WebsamProcessState::Active && footprint > thresholdForMemoryKillOfInactiveProcess(m_pageCount))
-        doesExceedInactiveLimitWhileActive();
-    else
-        doesNotExceedInactiveLimitWhileActive();
-}
-
-void MemoryPressureHandler::doesExceedInactiveLimitWhileActive()
-{
-    if (m_hasInvokedDidExceedInactiveLimitWhileActiveCallback)
-        return;
-    if (m_didExceedInactiveLimitWhileActiveCallback)
-        m_didExceedInactiveLimitWhileActiveCallback();
-    m_hasInvokedDidExceedInactiveLimitWhileActiveCallback = true;
-}
-
-void MemoryPressureHandler::doesNotExceedInactiveLimitWhileActive()
-{
-    m_hasInvokedDidExceedInactiveLimitWhileActiveCallback = false;
 }
 
 void MemoryPressureHandler::setProcessState(WebsamProcessState state)
@@ -235,6 +236,19 @@ void MemoryPressureHandler::setProcessState(WebsamProcessState state)
     if (m_processState == state)
         return;
     m_processState = state;
+}
+
+ASCIILiteral MemoryPressureHandler::processStateDescription()
+{
+    if (auto handler = memoryPressureHandlerIfExists()) {
+        switch (handler->processState()) {
+        case WebsamProcessState::Active:
+            return "active"_s;
+        case WebsamProcessState::Inactive:
+            return "inactive"_s;
+        }
+    }
+    return "unknown"_s;
 }
 
 void MemoryPressureHandler::beginSimulatedMemoryPressure()
@@ -264,18 +278,19 @@ void MemoryPressureHandler::releaseMemory(Critical critical, Synchronous synchro
     platformReleaseMemory(critical);
 }
 
-void MemoryPressureHandler::setUnderMemoryPressure(bool underMemoryPressure)
+void MemoryPressureHandler::setMemoryPressureStatus(MemoryPressureStatus memoryPressureStatus)
 {
-    if (m_underMemoryPressure == underMemoryPressure)
+    if (m_memoryPressureStatus == memoryPressureStatus)
         return;
-    m_underMemoryPressure = underMemoryPressure;
+
+    m_memoryPressureStatus = memoryPressureStatus;
     memoryPressureStatusChanged();
 }
 
 void MemoryPressureHandler::memoryPressureStatusChanged()
 {
     if (m_memoryPressureStatusChangedCallback)
-        m_memoryPressureStatusChangedCallback(isUnderMemoryPressure());
+        m_memoryPressureStatusChangedCallback(m_memoryPressureStatus);
 }
 
 void MemoryPressureHandler::ReliefLogger::logMemoryUsageChange()

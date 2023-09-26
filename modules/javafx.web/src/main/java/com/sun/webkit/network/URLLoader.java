@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.webkit.network;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.Invoker;
@@ -56,7 +57,6 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLHandshakeException;
@@ -242,7 +242,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
            return;
         }
 
-        if (System.getProperty("os.name").startsWith("Windows")) {
+        if (PlatformUtil.isWindows()) {
             String path = null;
             try {
                 path = URLDecoder.decode(url.getPath(), "UTF-8");
@@ -620,7 +620,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         twkDidSendData(totalBytesSent, totalBytesToBeSent, data);
     }
 
-    private void willSendRequest(URLConnection c) throws InterruptedException
+    private void willSendRequest(URLConnection c)
     {
         final int status = extractStatus(c);
         final String contentType = c.getContentType();

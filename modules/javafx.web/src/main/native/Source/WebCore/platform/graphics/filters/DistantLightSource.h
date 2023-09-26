@@ -23,16 +23,14 @@
 #pragma once
 
 #include "LightSource.h"
+#include <wtf/ArgumentCoder.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
 class DistantLightSource : public LightSource {
 public:
-    static Ref<DistantLightSource> create(float azimuth, float elevation)
-    {
-        return adoptRef(*new DistantLightSource(azimuth, elevation));
-    }
+    WEBCORE_EXPORT static Ref<DistantLightSource> create(float azimuth, float elevation);
 
     // These are in degrees.
     float azimuth() const { return m_azimuth; }
@@ -41,18 +39,14 @@ public:
     bool setAzimuth(float) override;
     bool setElevation(float) override;
 
-    void initPaintingData(const FilterEffect&, PaintingData&) override;
+    void initPaintingData(const Filter&, const FilterImage& result, PaintingData&) const override;
     ComputedLightingData computePixelLightingData(const PaintingData&, int x, int y, float z) const final;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&) const override;
 
 private:
-    DistantLightSource(float azimuth, float elevation)
-        : LightSource(LS_DISTANT)
-        , m_azimuth(azimuth)
-        , m_elevation(elevation)
-    {
-    }
+    friend struct IPC::ArgumentCoder<DistantLightSource, void>;
+    DistantLightSource(float azimuth, float elevation);
 
     float m_azimuth;
     float m_elevation;

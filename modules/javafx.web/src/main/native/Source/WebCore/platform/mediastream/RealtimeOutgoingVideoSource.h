@@ -36,10 +36,12 @@
 #include <wtf/Lock.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/media_stream_interface.h>
 
 ALLOW_UNUSED_PARAMETERS_END
+ALLOW_COMMA_END
 
 #include <wtf/LoggerHelper.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -50,7 +52,7 @@ class RealtimeOutgoingVideoSource
     : public ThreadSafeRefCounted<RealtimeOutgoingVideoSource, WTF::DestructionThread::Main>
     , public webrtc::VideoTrackSourceInterface
     , private MediaStreamTrackPrivate::Observer
-    , private RealtimeMediaSource::VideoSampleObserver
+    , private RealtimeMediaSource::VideoFrameObserver
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
@@ -102,7 +104,8 @@ private:
     void unobserveSource();
 
     using MediaStreamTrackPrivate::Observer::weakPtrFactory;
-    using WeakValueType = MediaStreamTrackPrivate::Observer::WeakValueType;
+    using MediaStreamTrackPrivate::Observer::WeakValueType;
+    using MediaStreamTrackPrivate::Observer::WeakPtrImplType;
 
     // Notifier API
     void RegisterObserver(webrtc::ObserverInterface*) final { }
@@ -134,8 +137,8 @@ private:
     void trackSettingsChanged(MediaStreamTrackPrivate&) final { initializeFromSource(); }
     void trackEnded(MediaStreamTrackPrivate&) final { }
 
-    // RealtimeMediaSource::VideoSampleObserver API
-    void videoSampleAvailable(MediaSample&) override { }
+    // RealtimeMediaSource::VideoFrameObserver API
+    void videoFrameAvailable(VideoFrame&, VideoFrameTimeMetadata) override { }
 
     Ref<MediaStreamTrackPrivate> m_videoSource;
     Timer m_blackFrameTimer;

@@ -140,7 +140,7 @@ public class SubScene extends Node {
             @Override
             public boolean isDepthBuffer(SubScene subScene) {
                 return subScene.isDepthBufferInternal();
-            };
+            }
 
             @Override
             public Camera getEffectiveCamera(SubScene subScene) {
@@ -272,7 +272,7 @@ public class SubScene extends Node {
 
     public final ObjectProperty<Parent> rootProperty() {
         if (root == null) {
-            root = new ObjectPropertyBase<Parent>() {
+            root = new ObjectPropertyBase<>() {
                 private Parent oldRoot;
 
                 private void forceUnbind() {
@@ -316,6 +316,7 @@ public class SubScene extends Node {
                     if (oldRoot != null) {
                         StyleManager.getInstance().forget(SubScene.this);
                         oldRoot.setScenes(null, null);
+                        oldRoot.getStyleClass().remove("root");
                     }
                     oldRoot = _value;
                     _value.getStyleClass().add(0, "root");
@@ -363,7 +364,7 @@ public class SubScene extends Node {
 
     public final ObjectProperty<Camera> cameraProperty() {
         if (camera == null) {
-            camera = new ObjectPropertyBase<Camera>() {
+            camera = new ObjectPropertyBase<>() {
                 Camera oldCamera = null;
 
                 @Override
@@ -655,7 +656,7 @@ public class SubScene extends Node {
      */
     public final ObjectProperty<String> userAgentStylesheetProperty() {
         if (userAgentStylesheet == null) {
-            userAgentStylesheet = new SimpleObjectProperty<String>(SubScene.this, "userAgentStylesheet", null) {
+            userAgentStylesheet = new SimpleObjectProperty<>(SubScene.this, "userAgentStylesheet", null) {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(SubScene.this);
                     reapplyCSS();

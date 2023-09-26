@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -363,7 +363,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     }
 
     private final EventHandler<TreeModificationEvent<Object>> itemListener =
-        new EventHandler<TreeModificationEvent<Object>>() {
+        new EventHandler<>() {
             @Override public void handle(TreeModificationEvent<Object> event) {
                 expandedDescendentCountDirty = true;
             }
@@ -456,9 +456,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      */
     public final ObjectProperty<T> valueProperty() {
         if (value == null) {
-            value = new ObjectPropertyBase<T>() {
+            value = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
-                    fireEvent(new TreeModificationEvent<T>(VALUE_CHANGED_EVENT, TreeItem.this, get()));
+                    fireEvent(new TreeModificationEvent<>(VALUE_CHANGED_EVENT, TreeItem.this, get()));
                 }
 
                 @Override public Object getBean() {
@@ -500,9 +500,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      */
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new ObjectPropertyBase<Node>() {
+            graphic = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
-                    fireEvent(new TreeModificationEvent<T>(GRAPHIC_CHANGED_EVENT, TreeItem.this));
+                    fireEvent(new TreeModificationEvent<>(GRAPHIC_CHANGED_EVENT, TreeItem.this));
                 }
 
                 @Override
@@ -560,7 +560,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
                     EventType<?> evtType = isExpanded() ?
                         BRANCH_EXPANDED_EVENT : BRANCH_COLLAPSED_EVENT;
 
-                    fireEvent(new TreeModificationEvent<T>(evtType, TreeItem.this, isExpanded()));
+                    fireEvent(new TreeModificationEvent<>(evtType, TreeItem.this, isExpanded()));
                 }
 
                 @Override
@@ -612,7 +612,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
     // --- Parent
-    private ReadOnlyObjectWrapper<TreeItem<T>> parent = new ReadOnlyObjectWrapper<TreeItem<T>>(this, "parent");
+    private ReadOnlyObjectWrapper<TreeItem<T>> parent = new ReadOnlyObjectWrapper<>(this, "parent");
     private void setParent(TreeItem<T> value) { parent.setValue(value); }
 
     /**
@@ -773,8 +773,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         // To allow for a TreeView (and its skin) to be notified of changes in the
         // tree, this method recursively calls up to the root node, at which point
         // it fires a ROOT_NOTIFICATION_EVENT, which the TreeView may be watching for.
@@ -785,39 +785,42 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     }
 
     /**
-     * Registers an event handler to this TreeItem. The TreeItem class allows
-     * registration of listeners which will be notified as the
-     * number of items changes, their position or if the values themselves change.
-     * Note however that a TreeItem is <b>not</b> a Node, and therefore no visual
-     * events will be fired on the TreeItem. To get these events, it is necessary to
-     * add relevant observers to the TreeCell instances (via a custom cell factory -
-     * see the {@link Cell} class documentation for more details).
-     *
-     * @param <E> The event
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
+     * {@inheritDoc}
+     * <p>
+     * The {@code TreeItem} class allows registration of listeners which will be notified as the number of items
+     * changes, their position, or if the values themselves change. Note that {@code TreeItem} is <b>not</b> a
+     * {@link Node}, and therefore no visual events will be fired on it. To get these events, it is necessary to
+     * add relevant observers to the {@code TreeCell} instances via a custom cell factory (see the {@link Cell}
+     * class documentation for more details).
      */
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
+    @Override
+    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
 
-    /**
-     * Unregisters a previously registered event handler from this TreeItem. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <E> The event
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
-     */
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
+    @Override
+    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@code TreeItem} class allows registration of listeners which will be notified as the number of items
+     * changes, their position, or if the values themselves change. Note that {@code TreeItem} is <b>not</b> a
+     * {@link Node}, and therefore no visual events will be fired on it. To get these events, it is necessary to
+     * add relevant observers to the {@code TreeCell} instances via a custom cell factory (see the {@link Cell}
+     * class documentation for more details).
+     */
+    @Override
+    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventFilter(eventType, eventHandler);
+    }
 
+    @Override
+    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.removeEventFilter(eventType, eventHandler);
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -840,7 +843,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // if we're at the root node, we'll fire an event so that the control
         // can update its display
         if (getParent() == null) {
-            TreeModificationEvent<T> e = new TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this);
+            TreeModificationEvent<T> e = new TreeModificationEvent<>(TreeItem.childrenModificationEvent(), this);
             e.wasPermutated = true;
             fireEvent(e);
         }
@@ -940,7 +943,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
         // fire an event up the parent hierarchy such that any listening
         // TreeViews (which only listen to their root node) can redraw
-        fireEvent(new TreeModificationEvent<T>(
+        fireEvent(new TreeModificationEvent<>(
                 CHILDREN_MODIFICATION_EVENT, this, added, removed, c));
     }
 

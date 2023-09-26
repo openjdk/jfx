@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -307,7 +307,7 @@ class PaintHelper {
         stopVals.rewind();
         shader.setConstants("fractions", stopVals, 0, MULTI_MAX_FRACTIONS);
         float index_y = initGradient(paint);
-        shader.setConstant("offset", index_y / (float)MULTI_CACHE_SIZE + HALF_TEXEL_Y);
+        shader.setConstant("offset", index_y / MULTI_CACHE_SIZE + HALF_TEXEL_Y);
 
         // Note that the colors image/texture has already been updated
         // in BaseShaderContext.validatePaintOp()...
@@ -630,7 +630,7 @@ class PaintHelper {
 
         // clamp the focus point so that it does not rest on, or outside
         // of, the circumference of the gradient circle
-        fd = (float) Math.min(fd, 0.99f);
+        fd = Math.min(fd, 0.99f);
 
         // pack a few unrelated, precalculated values into a single float4
         float denom = 1.0f - (fd * fd);
@@ -699,7 +699,7 @@ class PaintHelper {
 
         // clamp the focus point so that it does not rest on, or outside
         // of, the circumference of the gradient circle
-        fd = (float) Math.min(fd, 0.99f);
+        fd = Math.min(fd, 0.99f);
 
         // pack a few unrelated, precalculated values into a single float4
         float denom = 1.0f - (fd * fd);

@@ -46,14 +46,12 @@ private:
     void messagePortDisentangled(const MessagePortIdentifier& local) final;
     void messagePortClosed(const MessagePortIdentifier& local) final;
     void postMessageToRemote(MessageWithMessagePorts&&, const MessagePortIdentifier& remoteTarget) final;
-    void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&&) final;
-    void checkRemotePortForActivity(const MessagePortIdentifier& remoteTarget, CompletionHandler<void(HasActivity)>&& callback) final;
+    void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&&) final;
 
     WorkerOrWorkletGlobalScope& m_scope;
 
     uint64_t m_lastCallbackIdentifier { 0 };
     HashMap<uint64_t, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>> m_takeAllMessagesCallbacks;
-    HashMap<uint64_t, CompletionHandler<void(HasActivity)>> m_activityCallbacks;
 };
 
 } // namespace WebCore

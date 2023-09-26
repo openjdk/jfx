@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Apple Inc.
  * Copyright (C) 2009 Google, Inc.
+ * Copyright (C) 2020, 2021, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,10 +21,12 @@
 
 #pragma once
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "AffineTransform.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "RenderSVGBlock.h"
+#include "SVGBoundingBoxComputation.h"
 
 namespace WebCore {
 
@@ -39,41 +42,39 @@ public:
 
     void paint(PaintInfo&, const LayoutPoint&) override;
 
-    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
-    std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
-    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
-
-    bool requiresLayer() const override { return false; }
     void layout() override;
 
-    FloatRect objectBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
-    FloatRect strokeBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
-    FloatRect repaintRectInLocalCoordinates() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
-
-    bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
-
-    void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
-    void setNeedsTransformUpdate() override { m_needsTransformUpdate = true; }
+    FloatRect objectBoundingBox() const final { return m_viewport; }
+    FloatRect strokeBoundingBox() const final { return m_viewport; }
+    FloatRect repaintRectInLocalCoordinates() const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
 
 private:
     bool isSVGForeignObject() const override { return true; }
     void graphicsElement() const = delete;
-    const char* renderName() const override { return "RenderSVGForeignObject"; }
+    ASCIILiteral renderName() const override { return "RenderSVGForeignObject"_s; }
+
+    LayoutPoint paintingLocation() const { return toLayoutPoint(location() - flooredLayoutPoint(m_viewport.minXMinYCorner())); }
 
     void updateLogicalWidth() override;
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 
-    const AffineTransform& localToParentTransform() const override;
-    AffineTransform localTransform() const override { return m_localTransform; }
+    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
 
-    AffineTransform m_localTransform;
-    mutable AffineTransform m_localToParentTransform;
+    void updateFromStyle() final;
+
+    // Enforce <fO> to carry a transform: <fO> should behave as absolutely positioned container
+    // for CSS content. Thus it needs to become a rootPaintingLayer during paint() such that
+    // fixed position content uses the <fO> as ancestor layer (when computing offsets from the container).
+    bool needsHasSVGTransformFlags() const final { return true; }
+
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const final;
+
     FloatRect m_viewport;
-    bool m_needsTransformUpdate { true };
+    AffineTransform m_supplementalLayerTransform;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGForeignObject, isSVGForeignObject())
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 #include "JSCConfig.h"
 #include "JSExportMacros.h"
 #include <stdint.h>
-#include <stdio.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
@@ -73,6 +72,7 @@ public:
         OptionRange,
         OptionString,
         GCLogLevel,
+        OSLogType,
     };
 
     class AllowUnfinalizedAccessScope {
@@ -111,13 +111,13 @@ public:
 
     // Parses a single command line option in the format "<optionName>=<value>"
     // (no spaces allowed) and set the specified option if appropriate.
-    JS_EXPORT_PRIVATE static bool setOption(const char* arg);
+    JS_EXPORT_PRIVATE static bool setOption(const char* arg, bool verify = true);
 
-    JS_EXPORT_PRIVATE static void dumpAllOptions(FILE*, DumpLevel, const char* title = nullptr);
+    JS_EXPORT_PRIVATE static void dumpAllOptions(DumpLevel, const char* title = nullptr);
     JS_EXPORT_PRIVATE static void dumpAllOptionsInALine(StringBuilder&);
 
-    JS_EXPORT_PRIVATE static void ensureOptionsAreCoherent();
-    static void recomputeDependentOptions();
+    JS_EXPORT_PRIVATE static void assertOptionsAreCoherent();
+    JS_EXPORT_PRIVATE static void notifyOptionsChanged();
 
 #define DECLARE_OPTION_ACCESSORS(type_, name_, defaultValue_, availability_, description_) \
 private: \
@@ -156,9 +156,11 @@ private:
     static void dumpOption(StringBuilder&, DumpLevel, ID,
         const char* optionHeader, const char* optionFooter, DumpDefaultsOption);
 
-    static bool setOptionWithoutAlias(const char* arg);
-    static bool setAliasedOption(const char* arg);
+    static bool setOptionWithoutAlias(const char* arg, bool verify = true);
+    static bool setAliasedOption(const char* arg, bool verify = true);
+#if !PLATFORM(COCOA)
     static bool overrideAliasedOptionWithHeuristic(const char* name);
+#endif
 
     inline static void* addressOfOption(Options::ID);
     inline static void* addressOfOptionDefault(Options::ID);

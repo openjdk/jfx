@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -69,5 +70,6 @@ enum class TestHeaderKeyType : uint8_t {
     Unknown
 };
 TestFeatures featureDefaultsFromTestHeaderForTest(const TestCommand&, const std::unordered_map<std::string, TestHeaderKeyType>&);
+TestFeatures featureDefaultsFromSelfComparisonHeader(const TestCommand&, const std::unordered_map<std::string, TestHeaderKeyType>&);
 
 }

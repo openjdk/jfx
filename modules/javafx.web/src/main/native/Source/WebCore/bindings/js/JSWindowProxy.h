@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,30 +42,27 @@ namespace WebCore {
 class AbstractDOMWindow;
 class AbstractFrame;
 
-class JSWindowProxy final : public JSC::JSProxy {
+class WEBCORE_EXPORT JSWindowProxy final : public JSC::JSProxy {
 public:
     using Base = JSC::JSProxy;
     static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
-    template<typename CellType, JSC::SubspaceAccess>
-    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
-    {
-        return subspaceForImpl(vm);
-    }
+    template<typename CellType, JSC::SubspaceAccess> static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm) { return subspaceForImpl(vm); }
 
     static JSWindowProxy& create(JSC::VM&, AbstractDOMWindow&, DOMWrapperWorld&);
 
     DECLARE_INFO;
 
     JSDOMGlobalObject* window() const { return static_cast<JSDOMGlobalObject*>(target()); }
+
     void setWindow(JSC::VM&, JSDOMGlobalObject&);
     void setWindow(AbstractDOMWindow&);
 
     WindowProxy* windowProxy() const;
 
     AbstractDOMWindow& wrapped() const;
-    static WEBCORE_EXPORT WindowProxy* toWrapped(JSC::VM&, JSC::JSValue);
+    static WindowProxy* toWrapped(JSC::VM&, JSC::JSValue);
 
     DOMWrapperWorld& world() { return m_world; }
 
@@ -74,7 +71,7 @@ public:
 private:
     JSWindowProxy(JSC::VM&, JSC::Structure&, DOMWrapperWorld&);
     void finishCreation(JSC::VM&, AbstractDOMWindow&);
-    static JSC::IsoSubspace* subspaceForImpl(JSC::VM&);
+    static JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM&);
 
     Ref<DOMWrapperWorld> m_world;
 };

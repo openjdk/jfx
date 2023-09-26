@@ -1,5 +1,5 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -28,6 +28,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pragma once
+
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -35,20 +36,31 @@ namespace WebCore {
 enum CSSAtRuleID {
     CSSAtRuleInvalid = 0,
 
-    CSSAtRuleCharset = 1,
-    CSSAtRuleFontFace = 2,
-    CSSAtRuleImport = 3,
-    CSSAtRuleKeyframes = 4,
-    CSSAtRuleMedia = 5,
-    CSSAtRuleNamespace = 6,
-    CSSAtRulePage = 7,
-    CSSAtRuleSupports = 8,
-    CSSAtRuleViewport = 9,
+    CSSAtRuleCharset,
+    CSSAtRuleFontFace,
+    CSSAtRuleImport,
+    CSSAtRuleKeyframes,
+    CSSAtRuleMedia,
+    CSSAtRuleNamespace,
+    CSSAtRulePage,
+    CSSAtRuleSupports,
+    CSSAtRuleViewport,
 
-    CSSAtRuleWebkitKeyframes = 10,
-    CSSAtRuleApply = 11,
-    CSSAtRuleCounterStyle = 12,
-    CSSAtRuleLayer = 13,
+    CSSAtRuleWebkitKeyframes,
+    CSSAtRuleCounterStyle,
+    CSSAtRuleLayer,
+    CSSAtRuleContainer,
+    CSSAtRuleProperty,
+
+    CSSAtRuleFontFeatureValues,
+    CSSAtRuleStylistic,
+    CSSAtRuleStyleset,
+    CSSAtRuleCharacterVariant,
+    CSSAtRuleSwash,
+    CSSAtRuleOrnaments,
+    CSSAtRuleAnnotation,
+
+    CSSAtRuleFontPaletteValues,
 };
 
 CSSAtRuleID cssAtRuleID(StringView name);

@@ -23,11 +23,15 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+// https://drafts.css-houdini.org/css-typed-om/#cssstylepropertymap
 [
-    EnabledAtRuntime=CSSTypedOM,
-    Conditional=CSS_TYPED_OM,
+    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=Window,
     SkipVTableValidation,
     JSGenerateToJSObject
 ] interface StylePropertyMap : StylePropertyMapReadOnly {
+    [CallWith=CurrentDocument] undefined set([AtomString] USVString property, (CSSStyleValue or USVString)... values);
+    [CallWith=CurrentDocument] undefined append([AtomString] USVString property, (CSSStyleValue or USVString)... values);
+    [ImplementedAs=remove, CallWith=CurrentDocument] undefined delete([AtomString] USVString property);
+    undefined clear();
 };

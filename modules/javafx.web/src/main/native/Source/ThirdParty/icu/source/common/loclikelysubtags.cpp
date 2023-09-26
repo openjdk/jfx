@@ -233,7 +233,7 @@ private:
                 return false;
             }
             for (int i = 0; i < length; ++i) {
-                stringArray.getValue(i, value);  // returns TRUE because i < length
+                stringArray.getValue(i, value);  // returns true because i < length
                 rawIndexes[i] = strings.add(value.getUnicodeString(errorCode), errorCode);
                 if (U_FAILURE(errorCode)) { return false; }
             }
@@ -245,13 +245,13 @@ private:
 namespace {
 
 XLikelySubtags *gLikelySubtags = nullptr;
-UInitOnce gInitOnce = U_INITONCE_INITIALIZER;
+UInitOnce gInitOnce {};
 
 UBool U_CALLCONV cleanup() {
     delete gLikelySubtags;
     gLikelySubtags = nullptr;
     gInitOnce.reset();
-    return TRUE;
+    return true;
 }
 
 }  // namespace
@@ -320,7 +320,8 @@ XLikelySubtags::~XLikelySubtags() {
 LSR XLikelySubtags::makeMaximizedLsrFrom(const Locale &locale, UErrorCode &errorCode) const {
     const char *name = locale.getName();
     if (uprv_isAtSign(name[0]) && name[1] == 'x' && name[2] == '=') {  // name.startsWith("@x=")
-        // Private use language tag x-subtag-subtag...
+        // Private use language tag x-subtag-subtag... which CLDR changes to
+        // und-x-subtag-subtag...
         return LSR(name, "", "", LSR::EXPLICIT_LSR);
     }
     return makeMaximizedLsr(locale.getLanguage(), locale.getScript(), locale.getCountry(),

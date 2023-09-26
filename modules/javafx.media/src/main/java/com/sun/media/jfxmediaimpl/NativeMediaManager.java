@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.media.jfxmediaimpl;
 
 import com.sun.glass.utils.NativeLibLoader;
+import com.sun.javafx.PlatformUtil;
 import com.sun.media.jfxmedia.*;
 import com.sun.media.jfxmedia.events.MediaErrorListener;
 import com.sun.media.jfxmedia.locator.Locator;
@@ -36,7 +37,6 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -107,16 +107,16 @@ public class NativeMediaManager {
         try {
             AccessController.doPrivileged((PrivilegedExceptionAction) () -> {
                 ArrayList<String> dependencies = new ArrayList<>();
-                if (HostUtils.isWindows() || HostUtils.isMacOSX()) {
+                if (PlatformUtil.isWindows() || PlatformUtil.isMac()) {
                     NativeLibLoader.loadLibrary("glib-lite");
                 }
 
-                if (!HostUtils.isLinux() && !HostUtils.isIOS()) {
+                if (!PlatformUtil.isLinux() && !PlatformUtil.isIOS()) {
                     NativeLibLoader.loadLibrary("gstreamer-lite");
                 } else {
                     dependencies.add("gstreamer-lite");
                 }
-                if (HostUtils.isLinux()) {
+                if (PlatformUtil.isLinux()) {
                     dependencies.add("fxplugins");
                     dependencies.add("avplugin");
                     dependencies.add("avplugin-54");
@@ -125,13 +125,14 @@ public class NativeMediaManager {
                     dependencies.add("avplugin-ffmpeg-56");
                     dependencies.add("avplugin-ffmpeg-57");
                     dependencies.add("avplugin-ffmpeg-58");
+                    dependencies.add("avplugin-ffmpeg-59");
                 }
-                if (HostUtils.isMacOSX()) {
+                if (PlatformUtil.isMac()) {
                     dependencies.add("fxplugins");
                     dependencies.add("glib-lite");
                     dependencies.add("jfxmedia_avf");
                 }
-                if (HostUtils.isWindows()) {
+                if (PlatformUtil.isWindows()) {
                     dependencies.add("fxplugins");
                     dependencies.add("glib-lite");
                 }
@@ -335,7 +336,7 @@ public class NativeMediaManager {
                 }
             }
 
-            this.errorListeners.add(new WeakReference<MediaErrorListener>(listener));
+            this.errorListeners.add(new WeakReference<>(listener));
         }
     }
 
@@ -378,7 +379,7 @@ public class NativeMediaManager {
         List<MediaPlayer> allPlayers = null;
 
         if (!allMediaPlayers.isEmpty()) {
-            allPlayers = new ArrayList<MediaPlayer>(allMediaPlayers.keySet());
+            allPlayers = new ArrayList<>(allMediaPlayers.keySet());
         }
 
         return allPlayers;
@@ -393,6 +394,7 @@ public class NativeMediaManager {
 
     private static class NativeMediaPlayerDisposer implements MediaDisposer.ResourceDisposer {
 
+        @Override
         public void disposeResource(Object resource) {
             // resource is a MediaPlayer
             MediaPlayer player = (MediaPlayer) resource;

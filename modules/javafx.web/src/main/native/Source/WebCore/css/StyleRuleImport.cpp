@@ -26,29 +26,38 @@
 #include "CachedCSSStyleSheet.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "Document.h"
 #include "MediaList.h"
-#include "MediaQueryParser.h"
+#include "MediaQueryParserContext.h"
 #include "SecurityOrigin.h"
 #include "StyleSheetContents.h"
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
-Ref<StyleRuleImport> StyleRuleImport::create(const String& href, Ref<MediaQuerySet>&& media)
+Ref<StyleRuleImport> StyleRuleImport::create(const String& href, MQ::MediaQueryList&& mediaQueries, std::optional<CascadeLayerName>&& cascadeLayerName)
 {
-    return adoptRef(*new StyleRuleImport(href, WTFMove(media)));
+    return adoptRef(*new StyleRuleImport(href, WTFMove(mediaQueries), WTFMove(cascadeLayerName)));
 }
 
-StyleRuleImport::StyleRuleImport(const String& href, Ref<MediaQuerySet>&& media)
+StyleRuleImport::StyleRuleImport(const String& href, MQ::MediaQueryList&& mediaQueries, std::optional<CascadeLayerName>&& cascadeLayerName)
     : StyleRuleBase(StyleRuleType::Import)
     , m_styleSheetClient(this)
     , m_strHref(href)
-    , m_mediaQueries(WTFMove(media))
+    , m_mediaQueries(WTFMove(mediaQueries))
+    , m_cascadeLayerName(WTFMove(cascadeLayerName))
 {
-    if (!m_mediaQueries)
-        m_mediaQueries = MediaQuerySet::create(String(), MediaQueryParserContext());
+}
+
+void StyleRuleImport::cancelLoad()
+{
+    if (!isLoading())
+        return;
+
+    m_loading = false;
+    if (m_parentStyleSheet)
+        m_parentStyleSheet->checkLoaded();
 }
 
 StyleRuleImport::~StyleRuleImport()
@@ -73,12 +82,16 @@ void StyleRuleImport::setCSSStyleSheet(const String& href, const URL& baseURL, c
     m_styleSheet = StyleSheetContents::create(this, href, context);
     if ((m_parentStyleSheet && m_parentStyleSheet->isContentOpaque()) || !cachedStyleSheet->isCORSSameOrigin())
         m_styleSheet->setAsOpaque();
-    m_styleSheet->parseAuthorStyleSheet(cachedStyleSheet, document ? &document->securityOrigin() : nullptr);
+
+    bool parseSucceeded = m_styleSheet->parseAuthorStyleSheet(cachedStyleSheet, document ? &document->securityOrigin() : nullptr);
 
     m_loading = false;
 
     if (m_parentStyleSheet) {
+        if (parseSucceeded)
         m_parentStyleSheet->notifyLoadedSheet(cachedStyleSheet);
+        else
+            m_parentStyleSheet->setLoadErrorOccured();
         m_parentStyleSheet->checkLoaded();
     }
 }
@@ -119,7 +132,7 @@ void StyleRuleImport::requestStyleSheet()
     // FIXME: Skip Content Security Policy check when stylesheet is in a user agent shadow tree.
     // See <https://bugs.webkit.org/show_bug.cgi?id=146663>.
     CachedResourceRequest request(absURL, CachedResourceLoader::defaultCachedResourceOptions(), std::nullopt, String(m_parentStyleSheet->charset()));
-    request.setInitiator(cachedResourceRequestInitiators().css);
+    request.setInitiatorType(cachedResourceRequestInitiatorTypes().css);
     if (m_cachedSheet)
         m_cachedSheet->removeClient(m_styleSheetClient);
     if (m_parentStyleSheet->isUserStyleSheet()) {

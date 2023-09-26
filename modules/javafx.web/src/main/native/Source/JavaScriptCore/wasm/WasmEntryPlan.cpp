@@ -32,6 +32,7 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/SystemTracing.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 #if ENABLE(WEBASSEMBLY)
 
@@ -41,16 +42,16 @@ namespace WasmEntryPlanInternal {
 static constexpr bool verbose = false;
 }
 
-EntryPlan::EntryPlan(Context* context, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(context, WTFMove(info), WTFMove(task))
+EntryPlan::EntryPlan(VM& vm, Ref<ModuleInformation> info, CompilerMode compilerMode, CompletionTask&& task)
+    : Base(vm, WTFMove(info), WTFMove(task))
     , m_streamingParser(m_moduleInformation.get(), *this)
     , m_state(State::Validated)
     , m_compilerMode(compilerMode)
 {
 }
 
-EntryPlan::EntryPlan(Context* context, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
-    : Base(context, WTFMove(task))
+EntryPlan::EntryPlan(VM& vm, Vector<uint8_t>&& source, CompilerMode compilerMode, CompletionTask&& task)
+    : Base(vm, WTFMove(task))
     , m_source(WTFMove(source))
     , m_streamingParser(m_moduleInformation.get(), *this)
     , m_state(State::Initial)
@@ -114,7 +115,7 @@ void EntryPlan::prepare()
 
     const auto& functions = m_moduleInformation->functions;
     m_numberOfFunctions = functions.size();
-    if (!tryReserveCapacity(m_wasmToWasmExitStubs, m_moduleInformation->importFunctionSignatureIndices.size(), " WebAssembly to JavaScript stubs")
+    if (!tryReserveCapacity(m_wasmToWasmExitStubs, m_moduleInformation->importFunctionTypeIndices.size(), " WebAssembly to JavaScript stubs")
         || !tryReserveCapacity(m_unlinkedWasmToWasmCalls, functions.size(), " unlinked WebAssembly to WebAssembly calls"))
         return;
 

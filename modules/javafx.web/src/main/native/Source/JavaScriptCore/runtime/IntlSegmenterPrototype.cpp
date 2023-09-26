@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@ static JSC_DECLARE_HOST_FUNCTION(intlSegmenterPrototypeFuncResolvedOptions);
 
 namespace JSC {
 
-const ClassInfo IntlSegmenterPrototype::s_info = { "Intl.Segmenter", &Base::s_info, &segmenterPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlSegmenterPrototype) };
+const ClassInfo IntlSegmenterPrototype::s_info = { "Intl.Segmenter"_s, &Base::s_info, &segmenterPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlSegmenterPrototype) };
 
 /* Source for IntlSegmenterPrototype.lut.h
 @begin segmenterPrototypeTable
@@ -51,7 +51,7 @@ const ClassInfo IntlSegmenterPrototype::s_info = { "Intl.Segmenter", &Base::s_in
 
 IntlSegmenterPrototype* IntlSegmenterPrototype::create(VM& vm, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<IntlSegmenterPrototype>(vm.heap)) IntlSegmenterPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<IntlSegmenterPrototype>(vm)) IntlSegmenterPrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -69,7 +69,7 @@ IntlSegmenterPrototype::IntlSegmenterPrototype(VM& vm, Structure* structure)
 void IntlSegmenterPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -79,7 +79,7 @@ JSC_DEFINE_HOST_FUNCTION(intlSegmenterPrototypeFuncSegment, (JSGlobalObject* glo
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* segmenter = jsDynamicCast<IntlSegmenter*>(vm, callFrame->thisValue());
+    auto* segmenter = jsDynamicCast<IntlSegmenter*>(callFrame->thisValue());
     if (!segmenter)
         return throwVMTypeError(globalObject, scope, "Intl.Segmenter.prototype.segment called on value that's not a Segmenter"_s);
 
@@ -92,7 +92,7 @@ JSC_DEFINE_HOST_FUNCTION(intlSegmenterPrototypeFuncResolvedOptions, (JSGlobalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* segmenter = jsDynamicCast<IntlSegmenter*>(vm, callFrame->thisValue());
+    auto* segmenter = jsDynamicCast<IntlSegmenter*>(callFrame->thisValue());
     if (!segmenter)
         return throwVMTypeError(globalObject, scope, "Intl.Segmenter.prototype.resolvedOptions called on value that's not a Segmenter"_s);
 

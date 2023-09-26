@@ -32,7 +32,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMarkerElement);
 
 inline SVGMarkerElement::SVGMarkerElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGFitToViewBox(this)
 {
     // Spec: If the markerWidth/markerHeight attribute is not specified, the effect is as if a value of "3" were specified.
@@ -98,14 +98,12 @@ void SVGMarkerElement::svgAttributeChanged(const QualifiedName& attrName)
         InstanceInvalidationGuard guard(*this);
         if (PropertyRegistry::isAnimatedLengthAttribute(attrName))
             updateRelativeLengthsInformation();
-        if (RenderObject* object = renderer())
-            object->setNeedsLayout();
+        updateSVGRendererForElementChange();
         return;
     }
 
     if (SVGFitToViewBox::isKnownAttribute(attrName)) {
-        if (RenderObject* object = renderer())
-            object->setNeedsLayout();
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -119,16 +117,15 @@ void SVGMarkerElement::childrenChanged(const ChildChange& change)
     if (change.source == ChildChange::Source::Parser)
         return;
 
-    if (RenderObject* object = renderer())
-        object->setNeedsLayout();
+    updateSVGRendererForElementChange();
 }
 
-String SVGMarkerElement::orient() const
+AtomString SVGMarkerElement::orient() const
 {
     return getAttribute(SVGNames::orientAttr);
 }
 
-void SVGMarkerElement::setOrient(const String& orient)
+void SVGMarkerElement::setOrient(const AtomString& orient)
 {
     setAttribute(SVGNames::orientAttr, orient);
 }

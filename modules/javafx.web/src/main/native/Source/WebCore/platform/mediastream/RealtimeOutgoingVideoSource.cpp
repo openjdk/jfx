@@ -52,6 +52,7 @@ RealtimeOutgoingVideoSource::RealtimeOutgoingVideoSource(Ref<MediaStreamTrackPri
     , m_logIdentifier(m_videoSource->logIdentifier())
 #endif
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
 }
 
 RealtimeOutgoingVideoSource::~RealtimeOutgoingVideoSource()
@@ -74,7 +75,7 @@ void RealtimeOutgoingVideoSource::observeSource()
 void RealtimeOutgoingVideoSource::unobserveSource()
 {
     m_videoSource->removeObserver(*this);
-    m_videoSource->source().removeVideoSampleObserver(*this);
+    m_videoSource->source().removeVideoFrameObserver(*this);
 }
 
 void RealtimeOutgoingVideoSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
@@ -82,6 +83,8 @@ void RealtimeOutgoingVideoSource::setSource(Ref<MediaStreamTrackPrivate>&& newSo
     ASSERT(isMainThread());
     ASSERT(!m_videoSource->hasObserver(*this));
     m_videoSource = WTFMove(newSource);
+
+    ALWAYS_LOG(LOGIDENTIFIER, "track ", m_videoSource->logIdentifier());
 
     if (!m_areSinksAskingToApplyRotation)
         return;
@@ -91,7 +94,7 @@ void RealtimeOutgoingVideoSource::setSource(Ref<MediaStreamTrackPrivate>&& newSo
 
 void RealtimeOutgoingVideoSource::applyRotation()
 {
-    ensureOnMainThread([this, protectedThis = makeRef(*this)] {
+    ensureOnMainThread([this, protectedThis = Ref { *this }] {
         if (m_areSinksAskingToApplyRotation)
             return;
 
@@ -111,13 +114,13 @@ void RealtimeOutgoingVideoSource::stop()
 void RealtimeOutgoingVideoSource::updateBlackFramesSending()
 {
     if (!m_muted && m_enabled) {
-        m_videoSource->source().addVideoSampleObserver(*this);
+        m_videoSource->source().addVideoFrameObserver(*this);
         if (m_blackFrameTimer.isActive())
             m_blackFrameTimer.stop();
         return;
     }
 
-    m_videoSource->source().removeVideoSampleObserver(*this);
+    m_videoSource->source().removeVideoFrameObserver(*this);
     sendBlackFramesIfNeeded();
 }
 

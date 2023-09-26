@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 
 namespace JSC {
 
-const ClassInfo WebAssemblyLinkErrorPrototype::s_info = { "WebAssembly.LinkError", &Base::s_info, &prototypeTableWebAssemblyLinkError, nullptr, CREATE_METHOD_TABLE(WebAssemblyLinkErrorPrototype) };
+const ClassInfo WebAssemblyLinkErrorPrototype::s_info = { "WebAssembly.LinkError"_s, &Base::s_info, &prototypeTableWebAssemblyLinkError, nullptr, CREATE_METHOD_TABLE(WebAssemblyLinkErrorPrototype) };
 
 /* Source for WebAssemblyLinkErrorPrototype.lut.h
  @begin prototypeTableWebAssemblyLinkError
@@ -44,7 +44,7 @@ const ClassInfo WebAssemblyLinkErrorPrototype::s_info = { "WebAssembly.LinkError
 
 WebAssemblyLinkErrorPrototype* WebAssemblyLinkErrorPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<WebAssemblyLinkErrorPrototype>(vm.heap)) WebAssemblyLinkErrorPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<WebAssemblyLinkErrorPrototype>(vm)) WebAssemblyLinkErrorPrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -57,7 +57,7 @@ Structure* WebAssemblyLinkErrorPrototype::createStructure(VM& vm, JSGlobalObject
 void WebAssemblyLinkErrorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     putDirectWithoutTransition(vm, vm.propertyNames->name, jsNontrivialString(vm, "LinkError"_s), static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->message, jsEmptyString(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
 }

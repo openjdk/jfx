@@ -26,6 +26,7 @@
 #include "HTMLTableColElement.h"
 
 #include "CSSPropertyNames.h"
+#include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLTableElement.h"
@@ -90,7 +91,7 @@ void HTMLTableColElement::parseAttribute(const QualifiedName& name, const AtomSt
         HTMLTablePartElement::parseAttribute(name, value);
 }
 
-const StyleProperties* HTMLTableColElement::additionalPresentationalHintStyle() const
+const MutableStyleProperties* HTMLTableColElement::additionalPresentationalHintStyle() const
 {
     if (!hasTagName(colgroupTag))
         return nullptr;

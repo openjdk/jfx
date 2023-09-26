@@ -30,8 +30,6 @@
 #include "AbstractFrame.h"
 #include "AdjustViewSizeOrNot.h"
 #include "Document.h"
-#include "FrameIdentifier.h"
-#include "FrameTree.h"
 #include "PageIdentifier.h"
 #include "ScrollTypes.h"
 #include "UserScriptTypes.h"
@@ -55,6 +53,9 @@ OBJC_CLASS NSArray;
 #if PLATFORM(WIN)
 typedef struct HBITMAP__* HBITMAP;
 #endif
+
+typedef const struct OpaqueJSContext* JSContextRef;
+typedef const struct OpaqueJSValue* JSValueRef;
 
 namespace JSC { namespace Yarr {
 class RegularExpression;
@@ -116,18 +117,18 @@ using NodeQualifier = Function<Node* (const HitTestResult&, Node* terminationNod
 // FIXME: Rename Frame to LocalFrame and AbstractFrame to Frame.
 class Frame final : public AbstractFrame {
 public:
-    WEBCORE_EXPORT static Ref<Frame> create(Page*, HTMLFrameOwnerElement*, UniqueRef<FrameLoaderClient>&&);
+    WEBCORE_EXPORT static Ref<Frame> create(Page*, HTMLFrameOwnerElement*, UniqueRef<FrameLoaderClient>&&, FrameIdentifier);
 
     WEBCORE_EXPORT void init();
 #if PLATFORM(IOS_FAMILY)
     // Creates <html><body style="..."></body></html> doing minimal amount of work.
-    WEBCORE_EXPORT void initWithSimpleHTMLDocument(const String& style, const URL&);
+    WEBCORE_EXPORT void initWithSimpleHTMLDocument(const AtomString& style, const URL&);
 #endif
     WEBCORE_EXPORT void setView(RefPtr<FrameView>&&);
     WEBCORE_EXPORT void createView(const IntSize&, const std::optional<Color>& backgroundColor,
         const IntSize& fixedLayoutSize, const IntRect& fixedVisibleContentRect,
-        bool useFixedLayout = false, ScrollbarMode = ScrollbarAuto, bool horizontalLock = false,
-        ScrollbarMode = ScrollbarAuto, bool verticalLock = false);
+        bool useFixedLayout = false, ScrollbarMode = ScrollbarMode::Auto, bool horizontalLock = false,
+        ScrollbarMode = ScrollbarMode::Auto, bool verticalLock = false);
 
     WEBCORE_EXPORT ~Frame();
 
@@ -137,14 +138,9 @@ public:
     void removeDestructionObserver(FrameDestructionObserver&);
 
     WEBCORE_EXPORT void willDetachPage();
-    void detachFromPage();
-    void disconnectOwnerElement();
 
-    Frame& mainFrame() const;
+    AbstractFrame& mainFrame() const;
     bool isMainFrame() const { return this == static_cast<void*>(&m_mainFrame); }
-
-    WEBCORE_EXPORT Page* page() const;
-    WEBCORE_EXPORT HTMLFrameOwnerElement* ownerElement() const;
 
     Document* document() const;
     FrameView* view() const;
@@ -158,13 +154,11 @@ public:
     NavigationScheduler& navigationScheduler() const;
     FrameSelection& selection() { return document()->selection(); }
     const FrameSelection& selection() const { return document()->selection(); }
-    FrameTree& tree() const;
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
     void resetScript();
 
     WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
-    WEBCORE_EXPORT std::optional<FrameIdentifier> frameID() const;
 
     WEBCORE_EXPORT RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
     WEBCORE_EXPORT RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
@@ -174,9 +168,12 @@ public:
     bool hasHadUserInteraction() const { return m_hasHadUserInteraction; }
     void setHasHadUserInteraction() { m_hasHadUserInteraction = true; }
 
-    bool requestDOMPasteAccess();
+    bool requestDOMPasteAccess(DOMPasteAccessCategory = DOMPasteAccessCategory::General);
 
     String debugDescription() const;
+
+    WEBCORE_EXPORT static Frame* fromJSContext(JSContextRef);
+    WEBCORE_EXPORT static Frame* contentFrameFromWindowOrFrameElement(JSContextRef, JSValueRef);
 
 // ======== All public functions below this point are candidates to move out of Frame into another class. ========
 
@@ -192,7 +189,7 @@ public:
 
     Settings& settings() const { return *m_settings; }
 
-    void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot);
+    WEBCORE_EXPORT void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot);
     bool shouldUsePrintingLayout() const;
     WEBCORE_EXPORT FloatSize resizePageRectsKeepingRatio(const FloatSize& originalSize, const FloatSize& expectedSize);
 
@@ -258,8 +255,8 @@ public:
     WEBCORE_EXPORT std::optional<SimpleRange> rangeForPoint(const IntPoint& framePoint);
 
     WEBCORE_EXPORT String searchForLabelsAboveCell(const JSC::Yarr::RegularExpression&, HTMLTableCellElement*, size_t* resultDistanceFromStartOfCell);
-    String searchForLabelsBeforeElement(const Vector<String>& labels, Element*, size_t* resultDistance, bool* resultIsInCellAbove);
-    String matchLabelsAgainstElement(const Vector<String>& labels, Element*);
+    WEBCORE_EXPORT String searchForLabelsBeforeElement(const Vector<String>& labels, Element*, size_t* resultDistance, bool* resultIsInCellAbove);
+    WEBCORE_EXPORT String matchLabelsAgainstElement(const Vector<String>& labels, Element*);
 
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT int preferredHeight() const;
@@ -287,9 +284,6 @@ public:
     void resumeActiveDOMObjectsAndAnimations();
     bool activeDOMObjectsAndAnimationsSuspended() const { return m_activeDOMObjectsAndAnimationsSuspendedCount > 0; }
 
-    void didPrewarmLocalStorage();
-    bool mayPrewarmLocalStorage() const;
-
     enum class InvalidateContentEventRegionsReason { Layout, EventHandlerChange };
     void invalidateContentEventRegionsIfNeeded(InvalidateContentEventRegionsReason);
 
@@ -304,13 +298,14 @@ public:
 private:
     friend class NavigationDisabler;
 
-    Frame(Page&, HTMLFrameOwnerElement*, UniqueRef<FrameLoaderClient>&&);
+    Frame(Page&, HTMLFrameOwnerElement*, UniqueRef<FrameLoaderClient>&&, FrameIdentifier);
 
     void dropChildren();
 
-    bool isLocalFrame() const final { return true; }
-    bool isRemoteFrame() const final { return false; }
+    FrameType frameType() const final { return FrameType::Local; }
+    void frameDetached();
 
+    AbstractFrameView* virtualView() const final;
     AbstractDOMWindow* virtualWindow() const final;
 
     HashSet<FrameDestructionObserver*> m_destructionObservers;
@@ -318,13 +313,10 @@ private:
     Vector<std::pair<Ref<DOMWrapperWorld>, UniqueRef<UserScript>>> m_userScriptsAwaitingNotification;
 
     Frame& m_mainFrame;
-    WeakPtr<Page> m_page;
     const RefPtr<Settings> m_settings;
-    mutable FrameTree m_treeNode;
     UniqueRef<FrameLoader> m_loader;
     mutable UniqueRef<NavigationScheduler> m_navigationScheduler;
 
-    WeakPtr<HTMLFrameOwnerElement> m_ownerElement;
     RefPtr<FrameView> m_view;
     RefPtr<Document> m_doc;
 
@@ -357,12 +349,16 @@ private:
     unsigned m_navigationDisableCount { 0 };
     unsigned m_selfOnlyRefCount { 0 };
     bool m_hasHadUserInteraction { false };
-    unsigned m_localStoragePrewarmingCount { 0 };
 
     FloatSize m_overrideScreenSize;
 
     UniqueRef<EventHandler> m_eventHandler;
 };
+
+using LocalFrame = Frame;
+
+// FIXME: Remove after WebKitAdditions transitions to this change.
+#define WEBCORE_HAS_LOCAL_FRAME 1
 
 inline NavigationScheduler& Frame::navigationScheduler() const
 {
@@ -379,17 +375,7 @@ inline Document* Frame::document() const
     return m_doc.get();
 }
 
-inline FrameTree& Frame::tree() const
-{
-    return m_treeNode;
-}
-
-inline void Frame::detachFromPage()
-{
-    m_page = nullptr;
-}
-
-inline Frame& Frame::mainFrame() const
+inline AbstractFrame& Frame::mainFrame() const
 {
     return m_mainFrame;
 }
@@ -399,5 +385,5 @@ WTF::TextStream& operator<<(WTF::TextStream&, const Frame&);
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Frame)
-    static bool isType(const WebCore::AbstractFrame& frame) { return frame.isLocalFrame(); }
+static bool isType(const WebCore::AbstractFrame& frame) { return frame.frameType() == WebCore::AbstractFrame::FrameType::Local; }
 SPECIALIZE_TYPE_TRAITS_END()

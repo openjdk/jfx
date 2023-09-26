@@ -43,10 +43,46 @@
 #include "B3WasmBoundsCheckValue.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
+#include <wtf/StackTrace.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace B3 {
+
+#if ASSERT_ENABLED
+String Value::generateCompilerConstructionSite()
+{
+    if (!Options::dumpDisassembly() && !Options::dumpBBQDisassembly()
+        && !Options::dumpOMGDisassembly() && !Options::dumpFTLDisassembly()
+        && !Options::dumpDFGDisassembly())
+        return emptyString();
+
+    StringPrintStream s;
+    static constexpr int framesToShow = 3;
+    static constexpr int framesToSkip = 7;
+    void* samples[framesToShow + framesToSkip];
+    int frames = framesToShow + framesToSkip;
+
+    WTFGetBacktrace(samples, &frames);
+    if (frames > framesToSkip)
+        frames -= framesToSkip;
+    StackTraceSymbolResolver stackTrace({ samples + framesToSkip, static_cast<size_t>(frames) });
+
+    s.print("[");
+    bool firstPrinted = false;
+    stackTrace.forEach([&] (unsigned, void*, const char* cName) {
+        auto name = String::fromUTF8(cName);
+        if (firstPrinted)
+            s.print("|");
+        if (name.contains("enerator"_s)) {
+            s.print(name.left(name.find('(')));
+            firstPrinted = true;
+        }
+    });
+    s.print("]");
+    return s.toString();
+}
+#endif
 
 const char* const Value::dumpPrefix = "b@";
 void DeepValueDump::dump(PrintStream& out) const
@@ -165,6 +201,12 @@ void Value::dump(PrintStream& out) const
         out.print("$", asInt64(), "(");
         isConstant = true;
         break;
+    case Const128: {
+        v128_t vector = asV128();
+        out.print("$", vector.u64x2[0], vector.u64x2[1], "(");
+        isConstant = true;
+        break;
+    }
     case ConstFloat:
         out.print("$", asFloat(), "(");
         isConstant = true;
@@ -289,6 +331,16 @@ Value* Value::uModConstant(Procedure&, const Value*) const
     return nullptr;
 }
 
+Value* Value::fMinConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::fMaxConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
 Value* Value::bitAndConstant(Procedure&, const Value*) const
 {
     return nullptr;
@@ -370,6 +422,21 @@ Value* Value::floorConstant(Procedure&) const
 }
 
 Value* Value::sqrtConstant(Procedure&) const
+{
+    return nullptr;
+}
+
+Value* Value::vectorAndConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::vectorOrConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::vectorXorConstant(Procedure&, const Value*) const
 {
     return nullptr;
 }
@@ -523,7 +590,7 @@ TriState Value::asTriState() const
 
 Effects Value::effects() const
 {
-    Effects result;
+    Effects result = Effects::none();
     switch (opcode()) {
     case Nop:
     case Identity:
@@ -532,6 +599,7 @@ Effects Value::effects() const
     case Const64:
     case ConstDouble:
     case ConstFloat:
+    case Const128:
     case BottomTuple:
     case SlotBase:
     case ArgumentReg:
@@ -577,6 +645,65 @@ Effects Value::effects() const
     case Select:
     case Depend:
     case Extract:
+    case FMin:
+    case FMax:
+    case VectorExtractLane:
+    case VectorReplaceLane:
+    case VectorDupElement:
+    case VectorEqual:
+    case VectorNotEqual:
+    case VectorLessThan:
+    case VectorLessThanOrEqual:
+    case VectorBelow:
+    case VectorBelowOrEqual:
+    case VectorGreaterThan:
+    case VectorGreaterThanOrEqual:
+    case VectorAbove:
+    case VectorAboveOrEqual:
+    case VectorAdd:
+    case VectorSub:
+    case VectorAddSat:
+    case VectorSubSat:
+    case VectorMul:
+    case VectorDotProduct:
+    case VectorDiv:
+    case VectorMin:
+    case VectorMax:
+    case VectorPmin:
+    case VectorPmax:
+    case VectorNarrow:
+    case VectorNot:
+    case VectorAnd:
+    case VectorAndnot:
+    case VectorOr:
+    case VectorXor:
+    case VectorShl:
+    case VectorShr:
+    case VectorAbs:
+    case VectorNeg:
+    case VectorPopcnt:
+    case VectorCeil:
+    case VectorFloor:
+    case VectorTrunc:
+    case VectorTruncSat:
+    case VectorConvert:
+    case VectorConvertLow:
+    case VectorNearest:
+    case VectorSqrt:
+    case VectorExtendLow:
+    case VectorExtendHigh:
+    case VectorPromote:
+    case VectorDemote:
+    case VectorSplat:
+    case VectorAnyTrue:
+    case VectorAllTrue:
+    case VectorAvgRound:
+    case VectorBitmask:
+    case VectorBitwiseSelect:
+    case VectorExtaddPairwise:
+    case VectorMulSat:
+    case VectorSwizzle:
+    case VectorMulByElement:
         break;
     case Div:
     case UDiv:
@@ -657,6 +784,7 @@ Effects Value::effects() const
             break;
         }
         result.exitsSideways = true;
+        result.reads = HeapRange::top();
         break;
     case Upsilon:
     case Set:
@@ -717,6 +845,8 @@ ValueKey Value::key() const
     case UDiv:
     case Mod:
     case UMod:
+    case FMax:
+    case FMin:
     case BitAnd:
     case BitOr:
     case BitXor:
@@ -744,6 +874,8 @@ ValueKey Value::key() const
         return ValueKey(Const32, type(), static_cast<int64_t>(asInt32()));
     case Const64:
         return ValueKey(Const64, type(), asInt64());
+    case Const128:
+        return ValueKey(Const128, type(), asV128());
     case ConstDouble:
         return ValueKey(ConstDouble, type(), asDouble());
     case ConstFloat:
@@ -758,6 +890,76 @@ ValueKey Value::key() const
         return ValueKey(
             SlotBase, type(),
             static_cast<int64_t>(as<SlotBaseValue>()->slot()->index()));
+    case VectorNot:
+    case VectorSplat:
+    case VectorAbs:
+    case VectorNeg:
+    case VectorPopcnt:
+    case VectorCeil:
+    case VectorFloor:
+    case VectorTrunc:
+    case VectorTruncSat:
+    case VectorConvert:
+    case VectorConvertLow:
+    case VectorNearest:
+    case VectorSqrt:
+    case VectorExtendLow:
+    case VectorExtendHigh:
+    case VectorPromote:
+    case VectorDemote:
+    case VectorBitmask:
+    case VectorAnyTrue:
+    case VectorAllTrue:
+    case VectorExtaddPairwise:
+        numChildrenForKind(kind(), 1);
+        return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0));
+    case VectorExtractLane:
+    case VectorDupElement:
+        numChildrenForKind(kind(), 1);
+        return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), as<SIMDValue>()->immediate());
+    case VectorEqual:
+    case VectorNotEqual:
+    case VectorLessThan:
+    case VectorLessThanOrEqual:
+    case VectorBelow:
+    case VectorBelowOrEqual:
+    case VectorGreaterThan:
+    case VectorGreaterThanOrEqual:
+    case VectorAbove:
+    case VectorAboveOrEqual:
+    case VectorAdd:
+    case VectorSub:
+    case VectorAddSat:
+    case VectorSubSat:
+    case VectorMul:
+    case VectorDotProduct:
+    case VectorDiv:
+    case VectorMin:
+    case VectorMax:
+    case VectorPmin:
+    case VectorPmax:
+    case VectorNarrow:
+    case VectorAnd:
+    case VectorAndnot:
+    case VectorOr:
+    case VectorXor:
+    case VectorShl:
+    case VectorShr:
+    case VectorMulSat:
+    case VectorAvgRound:
+        numChildrenForKind(kind(), 2);
+        return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1));
+    case VectorReplaceLane:
+    case VectorMulByElement:
+        numChildrenForKind(kind(), 2);
+        return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), as<SIMDValue>()->immediate());
+    case VectorBitwiseSelect:
+        numChildrenForKind(kind(), 3);
+        return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), child(2));
+    case VectorSwizzle:
+        if (numChildren() == 2)
+            return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), nullptr);
+        return ValueKey(kind(), type(), as<SIMDValue>()->simdInfo(), child(0), child(1), child(2));
     default:
         return ValueKey();
     }
@@ -815,6 +1017,8 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case UDiv:
     case Mod:
     case UMod:
+    case FMax:
+    case FMin:
     case Neg:
     case BitAnd:
     case BitOr:
@@ -873,6 +1077,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
             return Int32;
         case Void:
         case Tuple:
+        case V128:
             ASSERT_NOT_REACHED();
         }
         return Void;

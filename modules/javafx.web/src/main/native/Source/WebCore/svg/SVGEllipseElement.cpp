@@ -22,8 +22,10 @@
 #include "config.h"
 #include "SVGEllipseElement.h"
 
+#include "LegacyRenderSVGEllipse.h"
 #include "RenderSVGEllipse.h"
 #include "RenderSVGResource.h"
+#include "SVGElementInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -31,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGEllipseElement);
 
 inline SVGEllipseElement::SVGEllipseElement(const QualifiedName& tagName, Document& document)
-    : SVGGeometryElement(tagName, document)
+    : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::ellipseTag));
 
@@ -71,7 +73,7 @@ void SVGEllipseElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationalHintStyle();
+        setPresentationalHintStyleIsDirty();
         return;
     }
 
@@ -80,7 +82,12 @@ void SVGEllipseElement::svgAttributeChanged(const QualifiedName& attrName)
 
 RenderPtr<RenderElement> SVGEllipseElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGEllipse>(*this, WTFMove(style));
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return createRenderer<RenderSVGEllipse>(*this, WTFMove(style));
+#endif
+
+    return createRenderer<LegacyRenderSVGEllipse>(*this, WTFMove(style));
 }
 
 }

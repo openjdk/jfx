@@ -48,7 +48,7 @@ inline auto HTMLCollection::rootTypeFromCollectionType(CollectionType type) -> R
     case DocumentNamedItems:
     case DocumentAllNamedItems:
     case FormControls:
-        return HTMLCollection::IsRootedAtDocument;
+        return HTMLCollection::IsRootedAtTreeScope;
     case AllDescendants:
     case ByClass:
     case ByTag:
@@ -186,7 +186,7 @@ const Vector<AtomString>& HTMLCollection::supportedPropertyNames()
     return m_namedElementCache->propertyNames();
 }
 
-bool HTMLCollection::isSupportedPropertyName(const String& name)
+bool HTMLCollection::isSupportedPropertyName(const AtomString& name)
 {
     updateNamedElementCache();
     ASSERT(m_namedElementCache);

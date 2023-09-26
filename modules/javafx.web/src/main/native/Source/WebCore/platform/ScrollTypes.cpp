@@ -40,6 +40,16 @@ TextStream& operator<<(TextStream& ts, ScrollType scrollType)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, NativeScrollbarVisibility scrollBarHidden)
+{
+    switch (scrollBarHidden) {
+    case NativeScrollbarVisibility::Visible: ts << 0; break;
+    case NativeScrollbarVisibility::HiddenByStyle: ts << 1; break;
+    case NativeScrollbarVisibility::ReplacedByCustomScrollbar: ts << 2; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, ScrollClamping clamping)
 {
     switch (clamping) {
@@ -57,6 +67,89 @@ TextStream& operator<<(TextStream& ts, ScrollBehaviorForFixedElements behavior)
         break;
     case ScrollBehaviorForFixedElements::StickToViewportBounds:
         ts << 1;
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollElasticity behavior)
+{
+    switch (behavior) {
+    case ScrollElasticity::Automatic:
+        ts << 0;
+        break;
+    case ScrollElasticity::None:
+        ts << 1;
+        break;
+    case ScrollElasticity::Allowed:
+        ts << 2;
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollbarMode behavior)
+{
+    switch (behavior) {
+    case ScrollbarMode::Auto:
+        ts << 0;
+        break;
+    case ScrollbarMode::AlwaysOff:
+        ts << 1;
+        break;
+    case ScrollbarMode::AlwaysOn:
+        ts << 2;
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, OverflowAnchor behavior)
+{
+    switch (behavior) {
+    case OverflowAnchor::Auto:
+        ts << 0;
+        break;
+    case OverflowAnchor::None:
+        ts << 1;
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollDirection direction)
+{
+    switch (direction) {
+    case ScrollDirection::ScrollUp:
+        ts << "up";
+        break;
+    case ScrollDirection::ScrollDown:
+        ts << "down";
+        break;
+    case ScrollDirection::ScrollLeft:
+        ts << "left";
+        break;
+    case ScrollDirection::ScrollRight:
+        ts << "right";
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollGranularity granularity)
+{
+    switch (granularity) {
+    case ScrollGranularity::Line:
+        ts << "line";
+        break;
+    case ScrollGranularity::Page:
+        ts << "page";
+        break;
+    case ScrollGranularity::Document:
+        ts << "document";
+        break;
+    case ScrollGranularity::Pixel:
+        ts << "pixel";
         break;
     }
     return ts;

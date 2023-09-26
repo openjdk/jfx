@@ -40,7 +40,8 @@ class CompositeEditCommand;
 class Document;
 class Element;
 
-String inputTypeNameForEditingAction(EditAction);
+ASCIILiteral inputTypeNameForEditingAction(EditAction);
+bool isInputMethodComposingForEditingAction(EditAction);
 
 class EditCommand : public RefCounted<EditCommand> {
 public:

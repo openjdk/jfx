@@ -134,6 +134,10 @@ void printInternal(PrintStream& out, LocationKind kind)
         out.print("HasIndexedPorpertyLoc");
         return;
 
+    case EnumeratorNextUpdateIndexAndModeLoc:
+        out.print("EnumeratorNextUpdateIndexAndModeLoc");
+        return;
+
     case IndexedPropertyDoubleLoc:
         out.print("IndexedPropertyDoubleLoc");
         return;
@@ -180,6 +184,14 @@ void printInternal(PrintStream& out, LocationKind kind)
 
     case TypedArrayByteOffsetLoc:
         out.print("TypedArrayByteOffsetLoc");
+        return;
+
+    case TypedArrayByteOffsetInt52Loc:
+        out.print("TypedArrayByteOffsetInt52Loc");
+        return;
+
+    case TypedArrayLengthInt52Loc:
+        out.print("TypedArrayLengthInt52Loc");
         return;
 
     case PrototypeLoc:

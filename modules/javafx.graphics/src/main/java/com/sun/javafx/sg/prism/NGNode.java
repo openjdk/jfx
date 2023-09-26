@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -330,12 +330,14 @@ public abstract class NGNode {
         // cache needs to be regenerated. So we will not invalidate it here.
         if (dirtyBounds.isEmpty()) {
             dirtyBounds = dirtyBounds.deriveWithNewBounds(transformedBounds);
-            dirtyBounds = dirtyBounds.deriveWithUnion(bounds);
         } else {
-            // TODO I think this is vestigial from Scenario and will never
-            // actually occur in real life... (RT-23956)
+            // Non-empty dirty bounds mean that renderer did not consume them yet
+            // (ex. because the Node was not yet visible). We need to unionize dirty
+            // bounds with transformed bounds in case transformed bounds had changed
+            // and then proceed with updating dirty bounds to their new value.
             dirtyBounds = dirtyBounds.deriveWithUnion(transformedBounds);
         }
+        dirtyBounds = dirtyBounds.deriveWithUnion(bounds);
         transformedBounds = transformedBounds.deriveWithNewBounds(bounds);
         if (hasVisuals() && !byTransformChangeOnly) {
             markDirty();

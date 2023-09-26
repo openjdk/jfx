@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,8 @@ import java.util.Iterator;
  * @since JavaFX 2.0
  */
 public class ScatterChart<X,Y> extends XYChart<X,Y> {
+
+    private ParallelTransition parallelTransition;
 
     // -------------- CONSTRUCTORS ----------------------------------------------
 
@@ -138,8 +140,8 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
         // remove all symbol nodes
         if (shouldAnimate()) {
-            ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(event -> {
+            parallelTransition = new ParallelTransition();
+            parallelTransition.setOnFinished(event -> {
                 removeSeriesFromDisplay(series);
             });
             for (final Data<X,Y> d : series.getData()) {
@@ -151,9 +153,9 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
                     getPlotChildren().remove(symbol);
                     symbol.setOpacity(1.0);
                 });
-                pt.getChildren().add(ft);
+                parallelTransition.getChildren().add(ft);
             }
-            pt.play();
+            parallelTransition.play();
         } else {
              for (final Data<X,Y> d : series.getData()) {
                 final Node symbol = d.getNode();
@@ -193,5 +195,17 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
             legendItem.getSymbol().getStyleClass().addAll(node.getStyleClass());
         }
         return legendItem;
+    }
+
+    /** {@inheritDoc} */
+    @Override void seriesBeingRemovedIsAdded(Series<X,Y> series) {
+        if (parallelTransition != null) {
+            parallelTransition.setOnFinished(null);
+            parallelTransition.stop();
+            parallelTransition = null;
+            getPlotChildren().remove(series.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
+            removeSeriesFromDisplay(series);
+        }
     }
 }

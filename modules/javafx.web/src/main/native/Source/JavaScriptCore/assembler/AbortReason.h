@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,7 @@ enum AbortReason {
     AHIsNotJSNumber                                   =  80,
     AHIsNotNull                                       =  90,
     AHStackPointerMisaligned                          = 100,
+    AHInvalidCodeBlock                                = 101,
     AHStructureIDIsValid                              = 110,
     AHNotCellMaskNotInPlace                           = 120,
     AHNumberTagNotInPlace                             = 130,
@@ -75,6 +76,8 @@ enum AbortReason {
     TGInvalidPointer                                  = 320,
     TGNotSupported                                    = 330,
     UncheckedOverflow                                 = 335,
+    VMCreationDisallowed                              = 998,
+    VMEntryDisallowed                                 = 999,
 };
 
 // This enum is for CRASH_WITH_SECURITY_IMPLICATION_AND_INFO so we can easily identify which assertion

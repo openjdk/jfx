@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -134,6 +134,10 @@ JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMed
         return (jint)uErrCode;
     jlong jlAudioSyncDelay = (jlong)lAudioSyncDelay;
     env->SetLongArrayRegion(jrglAudioSyncDelay, 0, 1, &jlAudioSyncDelay);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return ERROR_JNI_UNEXPECTED;
+    }
 
     LOWLEVELPERF_EXECTIMESTOP("gstGetAudioSyncDelay()");
 
@@ -294,6 +298,10 @@ JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMed
         return uRetCode;
     jfloat jfRate = (jfloat)fRate;
     env->SetFloatArrayRegion (jrgfRate, 0, 1, &jfRate);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return ERROR_JNI_UNEXPECTED;
+    }
 
     LOWLEVELPERF_EXECTIMESTOP("gstGetRate()");
 
@@ -349,6 +357,10 @@ JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMed
         return uRetCode;
     jdouble jdPresentationTime = (double)dPresentationTime;
     env->SetDoubleArrayRegion (jrgdPresentationTime, 0, 1, &jdPresentationTime);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return ERROR_JNI_UNEXPECTED;
+    }
 
     LOWLEVELPERF_EXECTIMESTOP("gstGetPresentationTime()");
 
@@ -379,6 +391,10 @@ JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMed
         return uRetCode;
     jfloat jfVolume = (jfloat)fVolume;
     env->SetFloatArrayRegion (jrgfVolume, 0, 1, &jfVolume);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return ERROR_JNI_UNEXPECTED;
+    }
 
     LOWLEVELPERF_EXECTIMESTOP("gstGetVolume()");
 
@@ -434,6 +450,10 @@ JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMed
         return uErrCode;
     jfloat jfBalance = (jfloat)fBalance;
     env->SetFloatArrayRegion (jrgfBalance, 0, 1, &jfBalance);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return ERROR_JNI_UNEXPECTED;
+    }
 
     LOWLEVELPERF_EXECTIMESTOP("gstGetBalance()");
 
@@ -489,6 +509,10 @@ JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMed
         return uErrCode;
     jdouble jdDuration = (jdouble)dDuration;
     env->SetDoubleArrayRegion (jrgdDuration, 0, 1, &jdDuration);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return ERROR_JNI_UNEXPECTED;
+    }
 
     LOWLEVELPERF_EXECTIMESTOP("gstGetDuration()");
 

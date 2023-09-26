@@ -25,13 +25,11 @@
 
 #pragma once
 
-#include "ConcreteImageBuffer.h"
 #include "DisplayListImageBuffer.h"
+#include "ImageBuffer.h"
 
 #if USE(CG)
 #include "ImageBufferCGBitmapBackend.h"
-#elif USE(DIRECT2D)
-#include "ImageBufferDirect2DBackend.h"
 #elif USE(CAIRO)
 #include "ImageBufferCairoImageSurfaceBackend.h"
 #elif PLATFORM(JAVA)
@@ -46,8 +44,6 @@ namespace WebCore {
 
 #if USE(CG)
 using UnacceleratedImageBufferBackend = ImageBufferCGBitmapBackend;
-#elif USE(DIRECT2D)
-using UnacceleratedImageBufferBackend = ImageBufferDirect2DBackend;
 #elif USE(CAIRO)
 using UnacceleratedImageBufferBackend = ImageBufferCairoImageSurfaceBackend;
 #elif PLATFORM(JAVA)
@@ -60,31 +56,25 @@ using AcceleratedImageBufferBackend = ImageBufferIOSurfaceBackend;
 using AcceleratedImageBufferBackend = UnacceleratedImageBufferBackend;
 #endif
 
-using UnacceleratedImageBuffer = ConcreteImageBuffer<UnacceleratedImageBufferBackend>;
-using DisplayListUnacceleratedImageBuffer = DisplayList::ImageBuffer<UnacceleratedImageBufferBackend>;
-using DisplayListAcceleratedImageBuffer = DisplayList::ImageBuffer<AcceleratedImageBufferBackend>;
-
 #if HAVE(IOSURFACE)
-class IOSurfaceImageBuffer final : public ConcreteImageBuffer<ImageBufferIOSurfaceBackend> {
-    using Base = ConcreteImageBuffer<ImageBufferIOSurfaceBackend>;
+class IOSurfaceImageBuffer final : public ImageBuffer {
 public:
-    static auto create(const WebCore::FloatSize& size, float resolutionScale, const WebCore::DestinationColorSpace& colorSpace, WebCore::PixelFormat pixelFormat, const HostWindow* hostWindow = nullptr)
+    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const ImageBufferCreationContext& creationContext = { })
     {
-        return Base::create<IOSurfaceImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, hostWindow);
+        return ImageBuffer::create<ImageBufferIOSurfaceBackend, IOSurfaceImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
     }
-    static auto create(const FloatSize& size, const GraphicsContext& context)
-    {
-        return Base::create<IOSurfaceImageBuffer>(size, context);
-    }
-    using Base::Base;
 
-    IOSurface& surface() { return *m_backend->surface(); }
+    static auto create(const FloatSize& size, const GraphicsContext& context, RenderingPurpose purpose)
+    {
+        return ImageBuffer::create<ImageBufferIOSurfaceBackend, IOSurfaceImageBuffer>(size, context, purpose);
+    }
+
+    IOSurface& surface() { return *static_cast<ImageBufferIOSurfaceBackend&>(*m_backend).surface(); }
+
+protected:
+    using ImageBuffer::ImageBuffer;
 };
-using AcceleratedImageBuffer = IOSurfaceImageBuffer;
-#else
-using AcceleratedImageBuffer = ConcreteImageBuffer<UnacceleratedImageBufferBackend>;
 #endif
-
 
 } // namespace WebCore
 

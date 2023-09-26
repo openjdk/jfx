@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,16 +30,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+
+import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ModifiableObservableListBase;
-import javafx.collections.ObservableList;
 import javafx.util.Callback;
 
-public final class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements ObservableList<E>, SortableList<E>{
+public class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E> {
+
     private final List<E> backingList;
-    private final ElementObserver elementObserver;
-    private SortHelper helper;
+    private final ElementObserver<E> elementObserver;
 
     public ObservableSequentialListWrapper(List<E> list) {
         backingList = list;
@@ -48,7 +50,7 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
 
     public ObservableSequentialListWrapper(List<E> list, Callback<E, Observable[]> extractor) {
         backingList = list;
-        this.elementObserver = new ElementObserver(extractor, new Callback<E, InvalidationListener>() {
+        this.elementObserver = new ElementObserver<>(extractor, new Callback<E, InvalidationListener>() {
 
             @Override
             public InvalidationListener call(final E e) {
@@ -96,7 +98,7 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
 
     @Override
     public ListIterator<E> listIterator(final int index) {
-        return new ListIterator<E>() {
+        return new ListIterator<>() {
 
             private final ListIterator<E> backingIt = backingList.listIterator(index);
             private E lastReturned;
@@ -176,6 +178,15 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
 
     @Override
     public boolean addAll(int index, Collection<? extends E> c) {
+        if (index < 0 || index > size()) {
+            throw new IndexOutOfBoundsException("Index: " + index);
+        }
+
+        // implicit check to ensure c != null
+        if (c.isEmpty()) {
+            return false;
+        }
+
         try {
             beginChange();
             boolean modified = false;
@@ -230,23 +241,12 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
         }
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public void sort() {
-        if (backingList.isEmpty()) {
-            return;
-        }
-        int[] perm = getSortHelper().sort((List<? extends Comparable>)backingList);
-        fireChange(new NonIterableChange.SimplePermutationChange<E>(0, size(), perm, this));
-    }
+    private SortHelper helper;
 
     @Override
-    public void sort(Comparator<? super E> comparator) {
-        if (backingList.isEmpty()) {
-            return;
-        }
+    public void doSort(Comparator<? super E> comparator) {
         int[] perm = getSortHelper().sort(backingList, comparator);
-        fireChange(new NonIterableChange.SimplePermutationChange<E>(0, size(), perm, this));
+        fireChange(new SimplePermutationChange<>(0, size(), perm, this));
     }
 
     private SortHelper getSortHelper() {
@@ -255,5 +255,4 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
         }
         return helper;
     }
-
 }

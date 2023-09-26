@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,14 @@
 #include "Document.h"
 #include "EventLoop.h"
 #include "FontFace.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "JSDOMBinding.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFontFace.h"
 #include "JSFontFaceSet.h"
+#include "Quirks.h"
+#include "ScriptExecutionContext.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -107,23 +110,31 @@ FontFaceSet::PendingPromise::~PendingPromise() = default;
 
 bool FontFaceSet::has(FontFace& face) const
 {
+    if (face.backing().cssConnection())
+        m_backing->updateStyleIfNeeded();
     return m_backing->hasFace(face.backing());
 }
 
-size_t FontFaceSet::size() const
+size_t FontFaceSet::size()
 {
+    m_backing->updateStyleIfNeeded();
     return m_backing->faceCount();
 }
 
-FontFaceSet& FontFaceSet::add(FontFace& face)
+ExceptionOr<FontFaceSet&> FontFaceSet::add(FontFace& face)
 {
-    if (!m_backing->hasFace(face.backing()))
-        m_backing->add(face.backing());
+    if (m_backing->hasFace(face.backing()))
+        return *this;
+    if (face.backing().cssConnection())
+        return Exception(InvalidModificationError);
+    m_backing->add(face.backing());
     return *this;
 }
 
 bool FontFaceSet::remove(FontFace& face)
 {
+    if (face.backing().cssConnection())
+        return false;
     bool result = m_backing->hasFace(face.backing());
     if (result)
         m_backing->remove(face.backing());
@@ -141,6 +152,7 @@ void FontFaceSet::clear()
 
 void FontFaceSet::load(const String& font, const String& text, LoadPromise&& promise)
 {
+    m_backing->updateStyleIfNeeded();
     auto matchingFacesResult = m_backing->matchingFacesExcludingPreinstalledFonts(font, text);
     if (matchingFacesResult.hasException()) {
         promise.reject(matchingFacesResult.releaseException());
@@ -155,6 +167,30 @@ void FontFaceSet::load(const String& font, const String& text, LoadPromise&& pro
 
     for (auto& face : matchingFaces)
         face.get().load();
+
+    if (is<Document>(scriptExecutionContext()) && downcast<Document>(scriptExecutionContext())->quirks().shouldEnableFontLoadingAPIQuirk()) {
+        // HBOMax.com expects that loading fonts will succeed, and will totally break when it doesn't. But when lockdown mode is enabled, fonts
+        // fail to load, because that's the whole point of lockdown mode.
+        //
+        // This is a bit of a hack to say "When lockdown mode is enabled, and lockdown mode has removed all the remote fonts, then just pretend
+        // that the fonts loaded successfully." If there are any non-remote fonts still present, don't make any behavior change.
+        //
+        // See also: https://github.com/w3c/csswg-drafts/issues/7680
+
+        bool hasSource = false;
+        for (auto& face : matchingFaces) {
+            if (face.get().sourceCount()) {
+                hasSource = true;
+                break;
+            }
+        }
+        if (!hasSource) {
+            promise.resolve(matchingFaces.map([scriptExecutionContext = scriptExecutionContext()] (const auto& matchingFace) {
+                return matchingFace.get().wrapper(scriptExecutionContext);
+            }));
+            return;
+        }
+    }
 
     for (auto& face : matchingFaces) {
         if (face.get().status() == CSSFontFace::Status::Failure) {
@@ -181,11 +217,14 @@ void FontFaceSet::load(const String& font, const String& text, LoadPromise&& pro
 
 ExceptionOr<bool> FontFaceSet::check(const String& family, const String& text)
 {
+    m_backing->updateStyleIfNeeded();
     return m_backing->check(family, text);
 }
 
 auto FontFaceSet::status() const -> LoadStatus
 {
+    m_backing->updateStyleIfNeeded();
+
     switch (m_backing->status()) {
     case CSSFontFaceSet::Status::Loading:
         return LoadStatus::Loading;

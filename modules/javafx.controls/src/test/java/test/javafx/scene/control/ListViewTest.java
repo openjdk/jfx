@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,9 +50,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListCellShim;
 import javafx.scene.control.ListView;
@@ -64,6 +66,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -78,8 +81,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.collections.FXCollections.*;
 
@@ -96,10 +103,29 @@ public class ListViewTest {
     private MultipleSelectionModel<String> sm;
     private FocusModel<String> fm;
 
+    private StageLoader stageLoader;
+
     @Before public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
+
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
     }
 
 
@@ -138,7 +164,7 @@ public class ListViewTest {
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final ListView<String> b2 = new ListView<String>(null);
+        final ListView<String> b2 = new ListView<>(null);
         assertNull(b2.getItems());
     }
 
@@ -159,7 +185,7 @@ public class ListViewTest {
     }
 
     @Test public void noArgConstructorSetsVerticalPseudoclass() {
-        ListView<?> listView = new ListView<String>();
+        ListView<?> listView = new ListView<>();
         assertTrue(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
         assertFalse(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
     }
@@ -181,7 +207,7 @@ public class ListViewTest {
 
     @Test public void selectionModelCanBeBound() {
         MultipleSelectionModel<String> sm = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
-        ObjectProperty<MultipleSelectionModel<String>> other = new SimpleObjectProperty<MultipleSelectionModel<String>>(sm);
+        ObjectProperty<MultipleSelectionModel<String>> other = new SimpleObjectProperty<>(sm);
         listView.selectionModelProperty().bind(other);
         assertSame(sm, sm);
     }
@@ -527,7 +553,7 @@ public class ListViewTest {
     }
 
     @Test public void test_rt28534() {
-        ListView<Person> list = new ListView<Person>();
+        ListView<Person> list = new ListView<>();
         list.setItems(FXCollections.observableArrayList(
                 new Person("Jacob", "Smith", "jacob.smith@example.com"),
                 new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
@@ -549,7 +575,7 @@ public class ListViewTest {
     }
 
     @Test public void test_rt22463() {
-        final ListView<RT_22463_Person> list = new ListView<RT_22463_Person>();
+        final ListView<RT_22463_Person> list = new ListView<>();
 
         // before the change things display fine
         RT_22463_Person p1 = new RT_22463_Person();
@@ -579,7 +605,7 @@ public class ListViewTest {
     @Test public void test_rt28637() {
         ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
 
-        final ListView<String> listView = new ListView<String>();
+        final ListView<String> listView = new ListView<>();
         listView.setItems(items);
 
         listView.getSelectionModel().select(0);
@@ -596,7 +622,7 @@ public class ListViewTest {
     @Test public void test_rt28819_1() {
         ObservableList<String> emptyModel = FXCollections.observableArrayList();
 
-        final ListView<String> listView = new ListView<String>();
+        final ListView<String> listView = new ListView<>();
         listView.setItems(emptyModel);
         VirtualFlowTestUtils.assertRowsEmpty(listView, 0, 5);
 
@@ -611,7 +637,7 @@ public class ListViewTest {
     @Test public void test_rt28819_2() {
         ObservableList<String> emptyModel = FXCollections.observableArrayList();
 
-        final ListView<String> listView = new ListView<String>();
+        final ListView<String> listView = new ListView<>();
         listView.setItems(emptyModel);
         VirtualFlowTestUtils.assertRowsEmpty(listView, 0, 5);
 
@@ -631,7 +657,7 @@ public class ListViewTest {
                 "String1", "String2", "String3", "String4"
         );
 
-        final ListView<String> listView = new ListView<String>(items);
+        final ListView<String> listView = new ListView<>(items);
         listView.setMaxHeight(50);
         listView.setPrefHeight(50);
 
@@ -654,7 +680,7 @@ public class ListViewTest {
     @Test public void test_rt30400() {
         // create a listview that'll render cells using the check box cell factory
         ObservableList<String> items = FXCollections.observableArrayList("String1");
-        final ListView<String> listView = new ListView<String>(items);
+        final ListView<String> listView = new ListView<>(items);
         listView.setMinHeight(100);
         listView.setPrefHeight(100);
         listView.setCellFactory(CheckBoxListCell.forListView(param -> new ReadOnlyBooleanWrapper(true)));
@@ -669,7 +695,7 @@ public class ListViewTest {
     }
 
     @Test public void test_rt29420() {
-        final ListView<String> listView = new ListView<String>();
+        final ListView<String> listView = new ListView<>();
 
         VBox vbox = new VBox(listView);
         StageLoader sl = new StageLoader(vbox);
@@ -745,9 +771,9 @@ public class ListViewTest {
         listView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
             @Override
             public ListCell<String> call(ListView<String> param) {
-                return new ListCellShim<String>() {
+                return new ListCellShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -785,9 +811,9 @@ public class ListViewTest {
         final ListView listView = new ListView();
         listView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
             @Override public ListCell<String> call(ListView<String> param) {
-                return new ListCellShim<String>() {
+                return new ListCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
@@ -882,7 +908,7 @@ public class ListViewTest {
 
     @Test
     public void test_rt35857_selectLast_retainAllSelected() {
-        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        final ListView<String> listView = new ListView<>(observableArrayList("A", "B", "C"));
         listView.getSelectionModel().select(listView.getItems().size() - 1);
 
         assert_rt35857(listView.getItems(), listView.getSelectionModel(), true);
@@ -890,7 +916,7 @@ public class ListViewTest {
 
     @Test
     public void test_rt35857_selectLast_removeAllSelected() {
-        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        final ListView<String> listView = new ListView<>(observableArrayList("A", "B", "C"));
         listView.getSelectionModel().select(listView.getItems().size() - 1);
 
         assert_rt35857(listView.getItems(), listView.getSelectionModel(), false);
@@ -898,7 +924,7 @@ public class ListViewTest {
 
     @Test
     public void test_rt35857_selectFirst_retainAllSelected() {
-        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        final ListView<String> listView = new ListView<>(observableArrayList("A", "B", "C"));
         listView.getSelectionModel().select(0);
 
         assert_rt35857(listView.getItems(), listView.getSelectionModel(), true);
@@ -926,7 +952,7 @@ public class ListViewTest {
 
     @Test public void test_rt35857() {
         ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
-        final ListView<String> listView = new ListView<String>(fxList);
+        final ListView<String> listView = new ListView<>(fxList);
 
         listView.getSelectionModel().select(0);
 
@@ -944,7 +970,7 @@ public class ListViewTest {
 
     private int rt_35889_cancel_count = 0;
     @Test public void test_rt35889() {
-        final ListView<String> textFieldListView = new ListView<String>();
+        final ListView<String> textFieldListView = new ListView<>();
         textFieldListView.setItems(FXCollections.observableArrayList("A", "B", "C"));
         textFieldListView.setEditable(true);
         textFieldListView.setCellFactory(TextFieldListCell.forListView());
@@ -973,7 +999,7 @@ public class ListViewTest {
     @Test public void test_rt25679() {
         Button focusBtn = new Button("Focus here");
 
-        final ListView<String> listView = new ListView<String>();
+        final ListView<String> listView = new ListView<>();
         SelectionModel sm = listView.getSelectionModel();
         listView.setItems(FXCollections.observableArrayList("A", "B", "C"));
 
@@ -1093,7 +1119,7 @@ public class ListViewTest {
         if (useFixedCellSize) {
             listView.setFixedCellSize(24);
         }
-        listView.setCellFactory(lv -> new ListCellShim<String>() {
+        listView.setCellFactory(lv -> new ListCellShim<>() {
             @Override
             public void updateItem(String color, boolean empty) {
                 rt_35395_counter += 1;
@@ -1141,7 +1167,7 @@ public class ListViewTest {
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 17 : 71, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 17 : 101, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });
@@ -2175,6 +2201,67 @@ public class ListViewTest {
         assertNull("ListView item is not GCed.", itemRef.get());
     }
 
+    @Test
+    public void testSelectWithNullFocusModelDoesNotThrowNPE() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        assertDoesNotThrow(() -> listView.getSelectionModel().select(1));
+    }
+
+    @Test
+    public void testItemChangeWithNullFocusModelDoesNotThrowNPE() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        listView.getSelectionModel().clearAndSelect(1);
+        assertDoesNotThrow(() -> listView.getItems().add("3"));
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel() {
+        listView.getItems().addAll("1", "2");
+        listView.setSelectionModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.SELECTED_ITEMS);
+
+        // Should be an empty observable array list
+        assertEquals(FXCollections.observableArrayList(), result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModel() {
+        listView.getItems().addAll("1", "2");
+        listView.setFocusModel(null);
+
+        stageLoader = new StageLoader(listView);
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        assertNull(result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModelAndNoItems() {
+        listView.setFocusModel(null);
+        Label placeholderNode = new Label("No items set");
+        listView.setPlaceholder(placeholderNode);
+
+        stageLoader = new StageLoader(listView);
+
+        Object result = listView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        // Should be the placeholder node we set above
+        assertNotNull(result);
+        assertSame(placeholderNode, result);
+    }
+
     private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
         for (int i = 0; i < n; i++) {
             System.gc();
@@ -2196,7 +2283,7 @@ public class ListViewTest {
         final ListView<Integer> listView = new ListView(items);
         listView.setPrefHeight(400);
         double viewportLength = 398; // it would be better to calculate this from listView but there is no API for this
-        listView.setCellFactory(lv -> new ListCell<Integer>() {
+        listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
@@ -2254,7 +2341,7 @@ public class ListViewTest {
         final ListView<Integer> listView = new ListView(items);
         listView.setPrefHeight(400);
         double viewportLength = 398;
-        listView.setCellFactory(lv -> new ListCell<Integer>() {
+        listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
@@ -2331,9 +2418,9 @@ public class ListViewTest {
     }
 
     public void testScrollTo(boolean addIncremental, boolean layoutTwice, boolean selectIndex, int listViewHeight, int scrollToIndex, Integer[] heights) {
-        final ListView<Integer> listView = new ListView<Integer>();
+        final ListView<Integer> listView = new ListView<>();
         listView.setPrefHeight(listViewHeight);
-        listView.setCellFactory(lv -> new ListCell<Integer>() {
+        listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
@@ -2424,7 +2511,52 @@ public class ListViewTest {
             listView.requestLayout();
             Toolkit.getToolkit().firePulse();
             assertEquals("Upper cell shouldn't move after changing heights", previousLayoutY, scrollToCell.getLayoutY(), 1.);
+            VirtualFlow vf = VirtualFlowTestUtils.getVirtualFlow(listView);
+            vf.scrollPixels(-1);
+            assertEquals("Upper cell should move 1 pixels, after scrolling 1 pixel", previousLayoutY + 1, scrollToCell.getLayoutY(), 1.);
         }
+
+    }
+
+    @Test
+    public void fixListViewCrash_JDK_8303680() {
+        final ListView<String> listView = new ListView<>();
+
+        // add 100 entries
+        listView.setPrefSize(200, 200);
+        for (int i = 0; i < 100; i++) {
+            listView.getItems().add("Item " + i);
+        }
+        StageLoader sl = new StageLoader(new VBox(listView, new Button()));
+
+        // pulse
+        Toolkit.getToolkit().firePulse();
+
+        // get virtual flow
+        VirtualFlow vf = VirtualFlowTestUtils.getVirtualFlow(listView);
+
+        // scroll to 50 and scroll 1 pixel
+        vf.scrollTo(50);
+        vf.scrollPixels(1);
+
+        // another pulse
+        Toolkit.getToolkit().firePulse();
+
+        // scroll to cell
+        IndexedCell<Integer> cell = vf.getCell(50);//VirtualFlowTestUtils.getCell(listView, 70);
+
+        // shouldn't be null
+        assertNotNull(cell);
+
+        // should be visible
+        assertTrue("Cell should be visible", cell.isVisible());
+
+        // should have parent
+        assertNotNull("Cell should have parent", cell.getParent());
+
+        // Note:
+        // We don't check for the position of the cell, because it's currently don't work properly.
+        // But we wan't to ensure, that the VirtualFlow "Doesn't crash" - which was the case before.
 
     }
 

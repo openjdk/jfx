@@ -44,7 +44,7 @@ const char* NavigatorCredentials::supplementName()
     return "NavigatorCredentials";
 }
 
-CredentialsContainer* NavigatorCredentials::credentials(WeakPtr<Document>&& document)
+CredentialsContainer* NavigatorCredentials::credentials(WeakPtr<Document, WeakPtrImplWithEventTargetData>&& document)
 {
     if (!m_credentialsContainer)
         m_credentialsContainer = CredentialsContainer::create(WTFMove(document));
@@ -56,7 +56,7 @@ CredentialsContainer* NavigatorCredentials::credentials(Navigator& navigator)
 {
     if (!navigator.frame() || !navigator.frame()->document())
         return nullptr;
-    return NavigatorCredentials::from(&navigator)->credentials(makeWeakPtr(*navigator.frame()->document()));
+    return NavigatorCredentials::from(&navigator)->credentials(*navigator.frame()->document());
 }
 
 NavigatorCredentials* NavigatorCredentials::from(Navigator* navigator)

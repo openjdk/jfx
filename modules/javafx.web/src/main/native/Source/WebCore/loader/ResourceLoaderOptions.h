@@ -33,6 +33,7 @@
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginAccessControl.h"
 #include "CrossOriginEmbedderPolicy.h"
+#include "FetchIdentifier.h"
 #include "FetchOptions.h"
 #include "HTTPHeaderNames.h"
 #include "ServiceWorkerTypes.h"
@@ -112,6 +113,18 @@ enum class InitiatorContext : uint8_t {
 };
 static constexpr unsigned bitWidthOfInitiatorContext = 1;
 
+// https://fetch.spec.whatwg.org/#concept-request-initiator
+enum class Initiator : uint8_t {
+    EmptyString,
+    Download,
+    Imageset,
+    Manifest,
+    Prefetch,
+    Prerender,
+    Xslt
+};
+static constexpr unsigned bitWidthOfInitiator = 3;
+
 enum class ServiceWorkersMode : uint8_t {
     All,
     None,
@@ -125,11 +138,9 @@ enum class ApplicationCacheMode : uint8_t {
 };
 static constexpr unsigned bitWidthOfApplicationCacheMode = 1;
 
-// FIXME: These options are named poorly. We only implement force disabling content encoding sniffing, not enabling it,
-// and even that only on some platforms.
 enum class ContentEncodingSniffingPolicy : bool {
-    Sniff,
-    DoNotSniff
+    Default,
+    Disable
 };
 static constexpr unsigned bitWidthOfContentEncodingSniffingPolicy = 1;
 
@@ -146,6 +157,12 @@ enum class LoadedFromOpaqueSource : uint8_t {
 };
 static constexpr unsigned bitWidthOfLoadedFromOpaqueSource = 1;
 
+enum class LoadedFromPluginElement : bool {
+    No,
+    Yes
+};
+static constexpr unsigned bitWidthOfLoadedFromPluginElement = 1;
+
 struct ResourceLoaderOptions : public FetchOptions {
     ResourceLoaderOptions()
         : ResourceLoaderOptions(FetchOptions())
@@ -156,7 +173,7 @@ struct ResourceLoaderOptions : public FetchOptions {
         : FetchOptions { WTFMove(options) }
         , sendLoadCallbacks(SendCallbackPolicy::DoNotSendCallbacks)
         , sniffContent(ContentSniffingPolicy::DoNotSniffContent)
-        , sniffContentEncoding(ContentEncodingSniffingPolicy::Sniff)
+        , contentEncodingSniffingPolicy(ContentEncodingSniffingPolicy::Default)
         , dataBufferingPolicy(DataBufferingPolicy::BufferData)
         , storedCredentialsPolicy(StoredCredentialsPolicy::DoNotUse)
         , securityCheck(SecurityCheckPolicy::DoSecurityCheck)
@@ -166,17 +183,19 @@ struct ResourceLoaderOptions : public FetchOptions {
         , cachingPolicy(CachingPolicy::AllowCaching)
         , sameOriginDataURLFlag(SameOriginDataURLFlag::Unset)
         , initiatorContext(InitiatorContext::Document)
+        , initiator(Initiator::EmptyString)
         , serviceWorkersMode(ServiceWorkersMode::All)
         , applicationCacheMode(ApplicationCacheMode::Use)
         , clientCredentialPolicy(ClientCredentialPolicy::CannotAskClientForCredentials)
         , preflightPolicy(PreflightPolicy::Consider)
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
+        , loadedFromPluginElement(LoadedFromPluginElement::No)
     { }
 
     ResourceLoaderOptions(SendCallbackPolicy sendLoadCallbacks, ContentSniffingPolicy sniffContent, DataBufferingPolicy dataBufferingPolicy, StoredCredentialsPolicy storedCredentialsPolicy, ClientCredentialPolicy credentialPolicy, FetchOptions::Credentials credentials, SecurityCheckPolicy securityCheck, FetchOptions::Mode mode, CertificateInfoPolicy certificateInfoPolicy, ContentSecurityPolicyImposition contentSecurityPolicyImposition, DefersLoadingPolicy defersLoadingPolicy, CachingPolicy cachingPolicy)
         : sendLoadCallbacks(sendLoadCallbacks)
         , sniffContent(sniffContent)
-        , sniffContentEncoding(ContentEncodingSniffingPolicy::Sniff)
+        , contentEncodingSniffingPolicy(ContentEncodingSniffingPolicy::Default)
         , dataBufferingPolicy(dataBufferingPolicy)
         , storedCredentialsPolicy(storedCredentialsPolicy)
         , securityCheck(securityCheck)
@@ -186,11 +205,13 @@ struct ResourceLoaderOptions : public FetchOptions {
         , cachingPolicy(cachingPolicy)
         , sameOriginDataURLFlag(SameOriginDataURLFlag::Unset)
         , initiatorContext(InitiatorContext::Document)
+        , initiator(Initiator::EmptyString)
         , serviceWorkersMode(ServiceWorkersMode::All)
         , applicationCacheMode(ApplicationCacheMode::Use)
         , clientCredentialPolicy(credentialPolicy)
         , preflightPolicy(PreflightPolicy::Consider)
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
+        , loadedFromPluginElement(LoadedFromPluginElement::No)
 
     {
         this->credentials = credentials;
@@ -202,12 +223,13 @@ struct ResourceLoaderOptions : public FetchOptions {
 #endif
     Markable<ContentSecurityPolicyResponseHeaders, ContentSecurityPolicyResponseHeaders::MarkableTraits> cspResponseHeaders;
     std::optional<CrossOriginEmbedderPolicy> crossOriginEmbedderPolicy;
-    OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeep;
+
     uint8_t maxRedirectCount { 20 };
+    OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeep;
 
     SendCallbackPolicy sendLoadCallbacks : bitWidthOfSendCallbackPolicy;
     ContentSniffingPolicy sniffContent : bitWidthOfContentSniffingPolicy;
-    ContentEncodingSniffingPolicy sniffContentEncoding : bitWidthOfContentEncodingSniffingPolicy;
+    ContentEncodingSniffingPolicy contentEncodingSniffingPolicy : bitWidthOfContentEncodingSniffingPolicy;
     DataBufferingPolicy dataBufferingPolicy : bitWidthOfDataBufferingPolicy;
     StoredCredentialsPolicy storedCredentialsPolicy : bitWidthOfStoredCredentialsPolicy;
     SecurityCheckPolicy securityCheck : bitWidthOfSecurityCheckPolicy;
@@ -217,11 +239,16 @@ struct ResourceLoaderOptions : public FetchOptions {
     CachingPolicy cachingPolicy : bitWidthOfCachingPolicy;
     SameOriginDataURLFlag sameOriginDataURLFlag : bitWidthOfSameOriginDataURLFlag;
     InitiatorContext initiatorContext : bitWidthOfInitiatorContext;
+    Initiator initiator : bitWidthOfInitiator;
     ServiceWorkersMode serviceWorkersMode : bitWidthOfServiceWorkersMode;
     ApplicationCacheMode applicationCacheMode : bitWidthOfApplicationCacheMode;
     ClientCredentialPolicy clientCredentialPolicy : bitWidthOfClientCredentialPolicy;
     PreflightPolicy preflightPolicy : bitWidthOfPreflightPolicy;
     LoadedFromOpaqueSource loadedFromOpaqueSource : bitWidthOfLoadedFromOpaqueSource;
+    LoadedFromPluginElement loadedFromPluginElement : bitWidthOfLoadedFromPluginElement;
+
+    FetchIdentifier navigationPreloadIdentifier;
+    String nonce;
 };
 
 } // namespace WebCore

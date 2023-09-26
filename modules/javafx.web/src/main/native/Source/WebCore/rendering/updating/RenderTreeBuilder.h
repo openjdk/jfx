@@ -30,7 +30,6 @@
 
 namespace WebCore {
 
-class RenderFullScreen;
 class RenderGrid;
 class RenderTreeUpdater;
 
@@ -58,10 +57,6 @@ public:
     void destroyAndCleanUpAnonymousWrappers(RenderObject& child);
     void normalizeTreeAfterStyleChange(RenderElement&, RenderStyle& oldStyle);
 
-#if ENABLE(FULLSCREEN_API)
-    void createPlaceholderForFullScreen(RenderFullScreen&, std::unique_ptr<RenderStyle>, const LayoutRect&);
-#endif
-
     bool hasBrokenContinuation() const { return m_hasBrokenContinuation; }
 
 private:
@@ -77,7 +72,7 @@ private:
     void attachToRenderElementInternal(RenderElement& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild = nullptr, RenderObject::IsInternalMove = RenderObject::IsInternalMove::No);
 
     enum class WillBeDestroyed { No, Yes };
-    RenderPtr<RenderObject> detachFromRenderElement(RenderElement& parent, RenderObject& child, WillBeDestroyed = WillBeDestroyed::Yes, RenderObject::IsInternalMove = RenderObject::IsInternalMove::No) WARN_UNUSED_RETURN;
+    RenderPtr<RenderObject> detachFromRenderElement(RenderElement& parent, RenderObject& child, WillBeDestroyed = WillBeDestroyed::Yes) WARN_UNUSED_RETURN;
     RenderPtr<RenderObject> detachFromRenderGrid(RenderGrid& parent, RenderObject& child) WARN_UNUSED_RETURN;
 
     void move(RenderBoxModelObject& from, RenderBoxModelObject& to, RenderObject& child, RenderObject* beforeChild, NormalizeAfterInsertion);
@@ -113,9 +108,6 @@ private:
     class MathML;
 #endif
     class Continuation;
-#if ENABLE(FULLSCREEN_API)
-    class FullScreen;
-#endif
 
     FirstLetter& firstLetterBuilder() { return *m_firstLetterBuilder; }
     List& listBuilder() { return *m_listBuilder; }
@@ -131,9 +123,6 @@ private:
     MathML& mathMLBuilder() { return *m_mathMLBuilder; }
 #endif
     Continuation& continuationBuilder() { return *m_continuationBuilder; }
-#if ENABLE(FULLSCREEN_API)
-    FullScreen& fullScreenBuilder() { return *m_fullScreenBuilder; }
-#endif
 
     WidgetHierarchyUpdatesSuspensionScope m_widgetHierarchyUpdatesSuspensionScope;
     RenderView& m_view;
@@ -154,10 +143,8 @@ private:
     std::unique_ptr<MathML> m_mathMLBuilder;
 #endif
     std::unique_ptr<Continuation> m_continuationBuilder;
-#if ENABLE(FULLSCREEN_API)
-    std::unique_ptr<FullScreen> m_fullScreenBuilder;
-#endif
     bool m_hasBrokenContinuation { false };
+    RenderObject::IsInternalMove m_internalMovesType { RenderObject::IsInternalMove::No };
 };
 
 }

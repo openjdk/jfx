@@ -26,11 +26,11 @@
 #include "FormDataBuilder.h"
 
 #include "Blob.h"
-#include "TextEncoding.h"
 #include <limits>
+#include <pal/text/TextEncoding.h>
 #include <wtf/Assertions.h>
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HexNumber.h>
-#include <wtf/RandomNumber.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringView.h>
 
@@ -90,7 +90,8 @@ static void appendFormURLEncoded(Vector<char>& buffer, const uint8_t* string, si
     static const char safeCharacters[] = "-._*";
     for (size_t i = 0; i < length; ++i) {
         auto character = string[i];
-        if (isASCIIAlphanumeric(character) || strchr(safeCharacters, character))
+        if (isASCIIAlphanumeric(character)
+            || (character != '\0' && strchr(safeCharacters, character)))
             append(buffer, character);
         else if (character == ' ')
             append(buffer, '+');
@@ -135,18 +136,15 @@ Vector<char> generateUniqueBoundaryString()
     // Start with an informative prefix.
     append(boundary, "----WebKitFormBoundary");
 
-    // Append 16 random 7bit ascii AlphaNumeric characters.
-    Vector<char> randomBytes;
-
+    // Append 16 random 7-bit ASCII alphanumeric characters.
     for (unsigned i = 0; i < 4; ++i) {
-        unsigned randomness = static_cast<unsigned>(randomNumber() * (std::numeric_limits<unsigned>::max() + 1.0));
-        randomBytes.append(alphaNumericEncodingMap[(randomness >> 24) & 0x3F]);
-        randomBytes.append(alphaNumericEncodingMap[(randomness >> 16) & 0x3F]);
-        randomBytes.append(alphaNumericEncodingMap[(randomness >> 8) & 0x3F]);
-        randomBytes.append(alphaNumericEncodingMap[randomness & 0x3F]);
+        unsigned randomness = cryptographicallyRandomNumber<unsigned>();
+        boundary.append(alphaNumericEncodingMap[(randomness >> 24) & 0x3F]);
+        boundary.append(alphaNumericEncodingMap[(randomness >> 16) & 0x3F]);
+        boundary.append(alphaNumericEncodingMap[(randomness >> 8) & 0x3F]);
+        boundary.append(alphaNumericEncodingMap[randomness & 0x3F]);
     }
 
-    boundary.appendVector(randomBytes);
     boundary.append(0); // Add a 0 at the end so we can use this as a C-style string.
     return boundary;
 }
@@ -173,10 +171,10 @@ void addBoundaryToMultiPartHeader(Vector<char>& buffer, const CString& boundary,
     append(buffer, "\r\n");
 }
 
-void addFilenameToMultiPartHeader(Vector<char>& buffer, const TextEncoding& encoding, const String& filename)
+void addFilenameToMultiPartHeader(Vector<char>& buffer, const PAL::TextEncoding& encoding, const String& filename)
 {
     append(buffer, "; filename=\"");
-    appendQuoted(buffer, encoding.encode(filename, UnencodableHandling::Entities));
+    appendQuoted(buffer, encoding.encode(filename, PAL::UnencodableHandling::Entities));
     append(buffer, '"');
 }
 
@@ -194,12 +192,11 @@ void finishMultiPartHeader(Vector<char>& buffer)
 
 void addKeyValuePairAsFormData(Vector<char>& buffer, const Vector<uint8_t>& key, const Vector<uint8_t>& value, FormData::EncodingType encodingType)
 {
-    if (encodingType == FormData::TextPlain) {
-        if (!buffer.isEmpty())
-            append(buffer, "\r\n");
+    if (encodingType == FormData::EncodingType::TextPlain) {
         append(buffer, key);
         append(buffer, '=');
         append(buffer, value);
+        append(buffer, "\r\n");
     } else {
         if (!buffer.isEmpty())
             append(buffer, '&');

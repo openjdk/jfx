@@ -25,14 +25,11 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "FormattingConstraints.h"
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include "LayoutUnit.h"
 #include "LayoutUnits.h"
 #include <wtf/IsoMalloc.h>
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -42,7 +39,7 @@ struct Length;
 namespace Layout {
 
 class BoxGeometry;
-class ContainerBox;
+class ElementBox;
 struct ConstraintsForInFlowContent;
 struct ConstraintsForOutOfFlowContent;
 struct HorizontalConstraints;
@@ -50,7 +47,6 @@ class FormattingGeometry;
 class FormattingState;
 class FormattingQuirks;
 struct IntrinsicWidthConstraints;
-class InvalidationState;
 class LayoutState;
 
 class FormattingContext {
@@ -58,12 +54,12 @@ class FormattingContext {
 public:
     virtual ~FormattingContext();
 
-    virtual void layoutInFlowContent(InvalidationState&, const ConstraintsForInFlowContent&) = 0;
-    void layoutOutOfFlowContent(InvalidationState&, const ConstraintsForOutOfFlowContent&);
+    virtual void layoutInFlowContent(const ConstraintsForInFlowContent&) = 0;
+    void layoutOutOfFlowContent(const ConstraintsForOutOfFlowContent&);
     virtual IntrinsicWidthConstraints computedIntrinsicWidthConstraints() = 0;
     virtual LayoutUnit usedContentHeight() const = 0;
 
-    const ContainerBox& root() const { return *m_root; }
+    const ElementBox& root() const { return m_root; }
     LayoutState& layoutState() const;
     const FormattingState& formattingState() const { return m_formattingState; }
     virtual const FormattingGeometry& formattingGeometry() const = 0;
@@ -86,23 +82,28 @@ public:
     bool isTableWrapperBlockFormattingContext() const { return isBlockFormattingContext() && root().isTableWrapperBox(); }
     bool isFlexFormattingContext() const { return root().establishesFlexFormattingContext(); }
 
+    static const InitialContainingBlock& initialContainingBlock(const Box&);
+    static const ElementBox& containingBlock(const Box&);
+#if ASSERT_ENABLED
+    static const ElementBox& formattingContextRoot(const Box&);
+#endif
+
 protected:
-    FormattingContext(const ContainerBox& formattingContextRoot, FormattingState&);
+    FormattingContext(const ElementBox& formattingContextRoot, FormattingState&);
 
     FormattingState& formattingState() { return m_formattingState; }
     void computeBorderAndPadding(const Box&, const HorizontalConstraints&);
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     virtual void validateGeometryConstraintsAfterLayout() const;
 #endif
 
-    using LayoutQueue = Vector<const Box*>;
 private:
     void collectOutOfFlowDescendantsIfNeeded();
     void computeOutOfFlowVerticalGeometry(const Box&, const ConstraintsForOutOfFlowContent&);
     void computeOutOfFlowHorizontalGeometry(const Box&, const ConstraintsForOutOfFlowContent&);
 
-    WeakPtr<const ContainerBox> m_root;
+    CheckedRef<const ElementBox> m_root;
     FormattingState& m_formattingState;
 };
 
@@ -114,4 +115,3 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Layout::ToValueTypeName) \
     static bool isType(const WebCore::Layout::FormattingContext& formattingContext) { return formattingContext.predicate; } \
 SPECIALIZE_TYPE_TRAITS_END()
 
-#endif

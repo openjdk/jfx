@@ -33,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEMergeNodeElement);
 
 inline SVGFEMergeNodeElement::SVGFEMergeNodeElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feMergeNodeTag));
 
@@ -60,9 +60,10 @@ void SVGFEMergeNodeElement::parseAttribute(const QualifiedName& name, const Atom
 
 void SVGFEMergeNodeElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::inAttr) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::inAttr);
         InstanceInvalidationGuard guard(*this);
-        invalidateFilterPrimitiveParent(this);
+        SVGFilterPrimitiveStandardAttributes::invalidateFilterPrimitiveParent(this);
         return;
     }
 

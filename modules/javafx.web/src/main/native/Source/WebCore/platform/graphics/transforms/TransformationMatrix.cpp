@@ -160,7 +160,7 @@ static double determinant4x4(const TransformationMatrix::Matrix4& m)
 //  The matrix B = (b  ) is the adjoint of A
 //                   ij
 
-static void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
+static inline void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
 {
     // Assign to individual variable names to aid
     // selecting correct values
@@ -209,9 +209,6 @@ static void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationM
 // Returns false if the matrix is not invertible
 static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
 {
-    // Calculate the adjoint matrix
-    adjoint(matrix, result);
-
     // Calculate the 4x4 determinant
     // If the determinant is zero,
     // then the inverse matrix is not unique.
@@ -220,12 +217,129 @@ static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationM
     if (fabs(det) < SMALL_NUMBER)
         return false;
 
-    // Scale the adjoint matrix to get the inverse
+#if CPU(ARM64) && CPU(ADDRESS64)
+    double rdet = 1 / det;
+    const double* mat = &(matrix[0][0]);
+    double* pr = &(result[0][0]);
+    asm volatile(
+        // mat: v16 - v23
+        // m11, m12, m13, m14
+        // m21, m22, m23, m24
+        // m31, m32, m33, m34
+        // m41, m42, m43, m44
+        "ld1 {v16.2d - v19.2d}, [%[mat]], 64  \n\t"
+        "ld1 {v20.2d - v23.2d}, [%[mat]]      \n\t"
+        "ins v30.d[0], %[rdet]         \n\t"
+        // Determinant: right mat2x2
+        "trn1 v0.2d, v17.2d, v21.2d    \n\t"
+        "trn2 v1.2d, v19.2d, v23.2d    \n\t"
+        "trn2 v2.2d, v17.2d, v21.2d    \n\t"
+        "trn1 v3.2d, v19.2d, v23.2d    \n\t"
+        "trn2 v5.2d, v21.2d, v23.2d    \n\t"
+        "trn1 v4.2d, v17.2d, v19.2d    \n\t"
+        "trn2 v6.2d, v17.2d, v19.2d    \n\t"
+        "trn1 v7.2d, v21.2d, v23.2d    \n\t"
+        "trn2 v25.2d, v23.2d, v21.2d   \n\t"
+        "trn1 v27.2d, v23.2d, v21.2d   \n\t"
+        "fmul v0.2d, v0.2d, v1.2d      \n\t"
+        "fmul v1.2d, v4.2d, v5.2d      \n\t"
+        "fmls v0.2d, v2.2d, v3.2d      \n\t"
+        "fmul v2.2d, v4.2d, v25.2d     \n\t"
+        "fmls v1.2d, v6.2d, v7.2d      \n\t"
+        "fmls v2.2d, v6.2d, v27.2d     \n\t"
+        // Adjoint:
+        // v24: A11A12, v25: A13A14
+        // v26: A21A22, v27: A23A24
+        "fmul v3.2d, v18.2d, v0.d[1]   \n\t"
+        "fmul v4.2d, v16.2d, v0.d[1]   \n\t"
+        "fmul v5.2d, v16.2d, v1.d[1]   \n\t"
+        "fmul v6.2d, v16.2d, v2.d[1]   \n\t"
+        "fmls v3.2d, v20.2d, v1.d[1]   \n\t"
+        "fmls v4.2d, v20.2d, v2.d[0]   \n\t"
+        "fmls v5.2d, v18.2d, v2.d[0]   \n\t"
+        "fmls v6.2d, v18.2d, v1.d[0]   \n\t"
+        "fmla v3.2d, v22.2d, v2.d[1]   \n\t"
+        "fmla v4.2d, v22.2d, v1.d[0]   \n\t"
+        "fmla v5.2d, v22.2d, v0.d[0]   \n\t"
+        "fmla v6.2d, v20.2d, v0.d[0]   \n\t"
+        "fneg v3.2d, v3.2d             \n\t"
+        "fneg v5.2d, v5.2d             \n\t"
+        "trn1 v26.2d, v3.2d, v4.2d     \n\t"
+        "trn1 v27.2d, v5.2d, v6.2d     \n\t"
+        "trn2 v24.2d, v3.2d, v4.2d     \n\t"
+        "trn2 v25.2d, v5.2d, v6.2d     \n\t"
+        "fneg v24.2d, v24.2d           \n\t"
+        "fneg v25.2d, v25.2d           \n\t"
+        // Inverse
+        // v24: I11I12, v25: I13I14
+        // v26: I21I22, v27: I23I24
+        "fmul v24.2d, v24.2d, v30.d[0] \n\t"
+        "fmul v25.2d, v25.2d, v30.d[0] \n\t"
+        "fmul v26.2d, v26.2d, v30.d[0] \n\t"
+        "fmul v27.2d, v27.2d, v30.d[0] \n\t"
+        "st1 {v24.2d - v27.2d}, [%[pr]], 64 \n\t"
+        // Determinant: left mat2x2
+        "trn1 v0.2d, v16.2d, v20.2d    \n\t"
+        "trn2 v1.2d, v18.2d, v22.2d    \n\t"
+        "trn2 v2.2d, v16.2d, v20.2d    \n\t"
+        "trn1 v3.2d, v18.2d, v22.2d    \n\t"
+        "trn2 v5.2d, v20.2d, v22.2d    \n\t"
+        "trn1 v4.2d, v16.2d, v18.2d    \n\t"
+        "trn2 v6.2d, v16.2d, v18.2d    \n\t"
+        "trn1 v7.2d, v20.2d, v22.2d    \n\t"
+        "trn2 v25.2d, v22.2d, v20.2d   \n\t"
+        "trn1 v27.2d, v22.2d, v20.2d   \n\t"
+        "fmul v0.2d, v0.2d, v1.2d      \n\t"
+        "fmul v1.2d, v4.2d, v5.2d      \n\t"
+        "fmls v0.2d, v2.2d, v3.2d      \n\t"
+        "fmul v2.2d, v4.2d, v25.2d     \n\t"
+        "fmls v1.2d, v6.2d, v7.2d      \n\t"
+        "fmls v2.2d, v6.2d, v27.2d     \n\t"
+        // Adjoint:
+        // v24: A31A32, v25: A33A34
+        // v26: A41A42, v27: A43A44
+        "fmul v3.2d, v19.2d, v0.d[1]   \n\t"
+        "fmul v4.2d, v17.2d, v0.d[1]   \n\t"
+        "fmul v5.2d, v17.2d, v1.d[1]   \n\t"
+        "fmul v6.2d, v17.2d, v2.d[1]   \n\t"
+        "fmls v3.2d, v21.2d, v1.d[1]   \n\t"
+        "fmls v4.2d, v21.2d, v2.d[0]   \n\t"
+        "fmls v5.2d, v19.2d, v2.d[0]   \n\t"
+        "fmls v6.2d, v19.2d, v1.d[0]   \n\t"
+        "fmla v3.2d, v23.2d, v2.d[1]   \n\t"
+        "fmla v4.2d, v23.2d, v1.d[0]   \n\t"
+        "fmla v5.2d, v23.2d, v0.d[0]   \n\t"
+        "fmla v6.2d, v21.2d, v0.d[0]   \n\t"
+        "fneg v3.2d, v3.2d             \n\t"
+        "fneg v5.2d, v5.2d             \n\t"
+        "trn1 v26.2d, v3.2d, v4.2d     \n\t"
+        "trn1 v27.2d, v5.2d, v6.2d     \n\t"
+        "trn2 v24.2d, v3.2d, v4.2d     \n\t"
+        "trn2 v25.2d, v5.2d, v6.2d     \n\t"
+        "fneg v24.2d, v24.2d           \n\t"
+        "fneg v25.2d, v25.2d           \n\t"
+        // Inverse
+        // v24: I31I32, v25: I33I34
+        // v26: I41I42, v27: I43I44
+        "fmul v24.2d, v24.2d, v30.d[0] \n\t"
+        "fmul v25.2d, v25.2d, v30.d[0] \n\t"
+        "fmul v26.2d, v26.2d, v30.d[0] \n\t"
+        "fmul v27.2d, v27.2d, v30.d[0] \n\t"
+        "st1 {v24.2d - v27.2d}, [%[pr]] \n\t"
+        : [mat]"+r"(mat), [pr]"+r"(pr)
+        : [rdet]"r"(rdet)
+        : "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
+        "v19", "v20", "v21", "v22", "v23", "24", "25", "v26", "v27", "v28", "v29", "v30"
+    );
+#else
+    // Calculate the adjoint matrix
+    adjoint(matrix, result);
 
+    // Scale the adjoint matrix to get the inverse
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
             result[i][j] = result[i][j] / det;
-
+#endif
     return true;
 }
 
@@ -397,7 +511,8 @@ static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationM
         // rightHandSide by the inverse. (This is the easiest way, not
         // necessarily the best.)
         TransformationMatrix::Matrix4 inversePerspectiveMatrix, transposedInversePerspectiveMatrix;
-        inverse(perspectiveMatrix, inversePerspectiveMatrix);
+        if (!inverse(perspectiveMatrix, inversePerspectiveMatrix))
+            return false;
         transposeMatrix4(inversePerspectiveMatrix, transposedInversePerspectiveMatrix);
 
         Vector4 perspectivePoint;
@@ -1169,10 +1284,21 @@ TransformationMatrix TransformationMatrix::rectToRect(const FloatRect& from, con
                                 to.y() - from.y());
 }
 
+TransformationMatrix& TransformationMatrix::zoom(double zoomFactor)
+{
+    m_matrix[0][3] /= zoomFactor;
+    m_matrix[1][3] /= zoomFactor;
+    m_matrix[2][3] /= zoomFactor;
+    m_matrix[3][0] *= zoomFactor;
+    m_matrix[3][1] *= zoomFactor;
+    m_matrix[3][2] *= zoomFactor;
+    return *this;
+}
+
 // this = mat * this.
 TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix& mat)
 {
-#if CPU(ARM64) && defined(_LP64)
+#if CPU(ARM64) && CPU(ADDRESS64)
     double* leftMatrix = &(m_matrix[0][0]);
     const double* rightMatrix = &(mat.m_matrix[0][0]);
     asm volatile (
@@ -1545,6 +1671,17 @@ TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix&
     return *this;
 }
 
+TransformationMatrix& TransformationMatrix::multiplyAffineTransform(const AffineTransform& matrix)
+{
+    if (matrix.isIdentity())
+        return *this;
+
+    if (matrix.isIdentityOrTranslation())
+        return translate(matrix.e(), matrix.f());
+
+    return multiply(matrix.toTransformationMatrix());
+}
+
 void TransformationMatrix::multVecMatrix(double x, double y, double& resultX, double& resultY) const
 {
     resultX = m_matrix[3][0] + x * m_matrix[0][0] + y * m_matrix[1][0];
@@ -1647,13 +1784,24 @@ AffineTransform TransformationMatrix::toAffineTransform() const
                            m_matrix[1][1], m_matrix[3][0], m_matrix[3][1]);
 }
 
-static inline void blendFloat(double& from, double to, double progress)
+static inline void blendFloat(double& from, double to, double progress, CompositeOperation compositeOperation)
 {
-    if (from != to)
+    switch (compositeOperation) {
+    case CompositeOperation::Replace:
         from = from + (to - from) * progress;
+        break;
+    case CompositeOperation::Accumulate:
+        ASSERT(progress == 1.0);
+        from += to - 1;
+        break;
+    case CompositeOperation::Add:
+        ASSERT(progress == 1.0);
+        from += to;
+        break;
+    }
 }
 
-void TransformationMatrix::blend2(const TransformationMatrix& from, double progress)
+void TransformationMatrix::blend2(const TransformationMatrix& from, double progress, CompositeOperation compositeOperation)
 {
     Decomposed2Type fromDecomp;
     Decomposed2Type toDecomp;
@@ -1683,20 +1831,46 @@ void TransformationMatrix::blend2(const TransformationMatrix& from, double progr
             toDecomp.angle -= 360;
     }
 
-    blendFloat(fromDecomp.m11, toDecomp.m11, progress);
-    blendFloat(fromDecomp.m12, toDecomp.m12, progress);
-    blendFloat(fromDecomp.m21, toDecomp.m21, progress);
-    blendFloat(fromDecomp.m22, toDecomp.m22, progress);
-    blendFloat(fromDecomp.translateX, toDecomp.translateX, progress);
-    blendFloat(fromDecomp.translateY, toDecomp.translateY, progress);
-    blendFloat(fromDecomp.scaleX, toDecomp.scaleX, progress);
-    blendFloat(fromDecomp.scaleY, toDecomp.scaleY, progress);
-    blendFloat(fromDecomp.angle, toDecomp.angle, progress);
-
+    // When compositeOperation is accumulate, if the decomposed function is a 1-based value (for affine matrix these properties are
+    // m11, m22, scaleX and scaleY), use one based accumulation. Otherwise, use behavior for add.
+    auto operationForNonOneBasedValues = compositeOperation == CompositeOperation::Accumulate ? CompositeOperation::Add : compositeOperation;
+    blendFloat(fromDecomp.m11, toDecomp.m11, progress, compositeOperation);
+    blendFloat(fromDecomp.m12, toDecomp.m12, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.m21, toDecomp.m21, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.m22, toDecomp.m22, progress, compositeOperation);
+    blendFloat(fromDecomp.translateX, toDecomp.translateX, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.translateY, toDecomp.translateY, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.scaleX, toDecomp.scaleX, progress, compositeOperation);
+    blendFloat(fromDecomp.scaleY, toDecomp.scaleY, progress, compositeOperation);
+    blendFloat(fromDecomp.angle, toDecomp.angle, progress, operationForNonOneBasedValues);
     recompose2(fromDecomp);
 }
 
-void TransformationMatrix::blend4(const TransformationMatrix& from, double progress)
+// Compute quaternion multiplication
+static void accumulateQuaternion(double qa[4], const double qb[4])
+{
+    auto qx = (qb[3] * qa[0]) + (qb[0] * qa[3]) + (qb[1] * qa[2]) - (qb[2] * qa[1]);
+    auto qy = (qb[3] * qa[1]) + (qb[1] * qa[3]) + (qb[2] * qa[0]) - (qb[0] * qa[2]);
+    auto qz = (qb[3] * qa[2]) + (qb[2] * qa[3]) + (qb[0] * qa[1]) - (qb[1] * qa[0]);
+    auto qw = (qb[3] * qa[3]) - (qb[0] * qa[0]) - (qb[1] * qa[1]) - (qb[2] * qa[2]);
+    qa[0] = qx; qa[1] = qy; qa[2] = qz; qa[3] = qw;
+}
+
+static void interpolateQuaternion(TransformationMatrix::Decomposed4Type& fromDecomp, TransformationMatrix::Decomposed4Type& toDecomp, double progress, CompositeOperation compositeOperation)
+{
+    double qa[4] = { fromDecomp.quaternionX, fromDecomp.quaternionY, fromDecomp.quaternionZ, fromDecomp.quaternionW };
+    double qb[4] = { toDecomp.quaternionX, toDecomp.quaternionY, toDecomp.quaternionZ, toDecomp.quaternionW };
+    if (compositeOperation == CompositeOperation::Accumulate)
+        accumulateQuaternion(qa, qb);
+    else
+        slerp(qa, qb, progress);
+    fromDecomp.quaternionX = qa[0];
+    fromDecomp.quaternionY = qa[1];
+    fromDecomp.quaternionZ = qa[2];
+    fromDecomp.quaternionW = qa[3];
+
+}
+void TransformationMatrix::blend4(const TransformationMatrix& from, double progress, CompositeOperation compositeOperation)
 {
     Decomposed4Type fromDecomp;
     Decomposed4Type toDecomp;
@@ -1706,42 +1880,46 @@ void TransformationMatrix::blend4(const TransformationMatrix& from, double progr
         return;
     }
 
-    blendFloat(fromDecomp.scaleX, toDecomp.scaleX, progress);
-    blendFloat(fromDecomp.scaleY, toDecomp.scaleY, progress);
-    blendFloat(fromDecomp.scaleZ, toDecomp.scaleZ, progress);
-    blendFloat(fromDecomp.skewXY, toDecomp.skewXY, progress);
-    blendFloat(fromDecomp.skewXZ, toDecomp.skewXZ, progress);
-    blendFloat(fromDecomp.skewYZ, toDecomp.skewYZ, progress);
-    blendFloat(fromDecomp.translateX, toDecomp.translateX, progress);
-    blendFloat(fromDecomp.translateY, toDecomp.translateY, progress);
-    blendFloat(fromDecomp.translateZ, toDecomp.translateZ, progress);
-    blendFloat(fromDecomp.perspectiveX, toDecomp.perspectiveX, progress);
-    blendFloat(fromDecomp.perspectiveY, toDecomp.perspectiveY, progress);
-    blendFloat(fromDecomp.perspectiveZ, toDecomp.perspectiveZ, progress);
-    blendFloat(fromDecomp.perspectiveW, toDecomp.perspectiveW, progress);
+    // When compositeOperation is accumulate, if the decomposed function is a 1-based value (for non-affine matrix these properties are
+    // scaleX, scaleY, scaleZ, and perspectiveW), use one based accumulation. Otherwise, use behavior for add.
+    auto operationForNonOneBasedValues = compositeOperation == CompositeOperation::Accumulate ? CompositeOperation::Add : compositeOperation;
 
-    slerp(&fromDecomp.quaternionX, &toDecomp.quaternionX, progress);
+    blendFloat(fromDecomp.scaleX, toDecomp.scaleX, progress, compositeOperation);
+    blendFloat(fromDecomp.scaleY, toDecomp.scaleY, progress, compositeOperation);
+    blendFloat(fromDecomp.scaleZ, toDecomp.scaleZ, progress, compositeOperation);
+    blendFloat(fromDecomp.skewXY, toDecomp.skewXY, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.skewXZ, toDecomp.skewXZ, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.skewYZ, toDecomp.skewYZ, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.translateX, toDecomp.translateX, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.translateY, toDecomp.translateY, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.translateZ, toDecomp.translateZ, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.perspectiveX, toDecomp.perspectiveX, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.perspectiveY, toDecomp.perspectiveY, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.perspectiveZ, toDecomp.perspectiveZ, progress, operationForNonOneBasedValues);
+    blendFloat(fromDecomp.perspectiveW, toDecomp.perspectiveW, progress, compositeOperation);
+    interpolateQuaternion(fromDecomp, toDecomp, progress, compositeOperation);
 
     recompose4(fromDecomp);
 }
 
-void TransformationMatrix::blend(const TransformationMatrix& from, double progress)
+void TransformationMatrix::blend(const TransformationMatrix& from, double progress, CompositeOperation compositeOperation)
 {
-    if (!progress) {
+
+    if (!progress && compositeOperation == CompositeOperation::Replace) {
         *this = from;
         return;
     }
 
-    if (progress == 1)
+    if (progress == 1 && compositeOperation == CompositeOperation::Replace)
         return;
 
     if (from.isIdentity() && isIdentity())
         return;
 
     if (from.isAffine() && isAffine())
-        blend2(from, progress);
+        blend2(from, progress, compositeOperation);
     else
-        blend4(from, progress);
+        blend4(from, progress, compositeOperation);
 }
 
 bool TransformationMatrix::decompose2(Decomposed2Type& decomp) const

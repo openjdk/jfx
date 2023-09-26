@@ -32,7 +32,7 @@ struct SameSizeAsCSSProperty {
     void* value;
 };
 
-COMPILE_ASSERT(sizeof(CSSProperty) == sizeof(SameSizeAsCSSProperty), CSSProperty_should_stay_small);
+static_assert(sizeof(CSSProperty) == sizeof(SameSizeAsCSSProperty), "CSSProperty should stay small");
 
 CSSPropertyID StylePropertyMetadata::shorthandID() const
 {
@@ -49,6 +49,22 @@ void CSSProperty::wrapValueInCommaSeparatedList()
     auto list = CSSValueList::createCommaSeparated();
     list.get().append(m_value.releaseNonNull());
     m_value = WTFMove(list);
+}
+
+Ref<CSSValueList> CSSProperty::createListForProperty(CSSPropertyID propertyID)
+{
+    switch (listValuedPropertySeparator(propertyID)) {
+    case ' ':
+        return CSSValueList::createSpaceSeparated();
+    case ',':
+        return CSSValueList::createCommaSeparated();
+    case '/':
+        return CSSValueList::createSlashSeparated();
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+    return CSSValueList::createCommaSeparated();
 }
 
 } // namespace WebCore

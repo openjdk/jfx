@@ -41,9 +41,13 @@
 #include "ReadableStream.h"
 #include "ReadableStreamSource.h"
 #include "ScriptExecutionContext.h"
+#include "SecurityOrigin.h"
 #include "SharedBuffer.h"
 #include "ThreadableBlobRegistry.h"
+#include "WebCoreOpaqueRoot.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/Lock.h>
+#include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/CString.h>
@@ -54,21 +58,55 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Blob);
 
 class BlobURLRegistry final : public URLRegistry {
 public:
-    void registerURL(ScriptExecutionContext&, const URL&, URLRegistrable&) final;
+    void registerURL(const ScriptExecutionContext&, const URL&, URLRegistrable&) final;
     void unregisterURL(const URL&) final;
+    void unregisterURLsForContext(const ScriptExecutionContext&) final;
 
     static URLRegistry& registry();
+
+    Lock m_urlsPerContextLock;
+    HashMap<ScriptExecutionContextIdentifier, HashSet<URL>> m_urlsPerContext WTF_GUARDED_BY_LOCK(m_urlsPerContextLock);
 };
 
-void BlobURLRegistry::registerURL(ScriptExecutionContext& context, const URL& publicURL, URLRegistrable& blob)
+void BlobURLRegistry::registerURL(const ScriptExecutionContext& context, const URL& publicURL, URLRegistrable& blob)
 {
     ASSERT(&blob.registry() == this);
+    {
+        Locker locker { m_urlsPerContextLock };
+        m_urlsPerContext.add(context.identifier(), HashSet<URL>()).iterator->value.add(publicURL.isolatedCopy());
+    }
     ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, static_cast<Blob&>(blob).url());
 }
 
 void BlobURLRegistry::unregisterURL(const URL& url)
 {
+    bool isURLRegistered = false;
+    {
+        Locker locker { m_urlsPerContextLock };
+        for (auto& [contextIdentifier, urls] : m_urlsPerContext) {
+            if (!urls.remove(url))
+                continue;
+            if (urls.isEmpty())
+                m_urlsPerContext.remove(contextIdentifier);
+            isURLRegistered = true;
+            break;
+        }
+    }
+    if (!isURLRegistered)
+        return;
+
     ThreadableBlobRegistry::unregisterBlobURL(url);
+}
+
+void BlobURLRegistry::unregisterURLsForContext(const ScriptExecutionContext& context)
+{
+    HashSet<URL> urlsForContext;
+    {
+        Locker locker { m_urlsPerContextLock };
+        urlsForContext = m_urlsPerContext.take(context.identifier());
+    }
+    for (auto& url : urlsForContext)
+        ThreadableBlobRegistry::unregisterBlobURL(url);
 }
 
 URLRegistry& BlobURLRegistry::registry()
@@ -81,6 +119,7 @@ Blob::Blob(UninitializedContructor, ScriptExecutionContext* context, URL&& url, 
     : ActiveDOMObject(context)
     , m_type(WTFMove(type))
     , m_internalURL(WTFMove(url))
+    , m_topOrigin(context ? context->topOrigin().data() : SecurityOriginData::createOpaque())
 {
 }
 
@@ -88,8 +127,26 @@ Blob::Blob(ScriptExecutionContext* context)
     : ActiveDOMObject(context)
     , m_size(0)
     , m_internalURL(BlobURL::createInternalURL())
+    , m_topOrigin(context ? context->topOrigin().data() : SecurityOriginData::createOpaque())
 {
     ThreadableBlobRegistry::registerBlobURL(m_internalURL, { }, { });
+}
+
+static size_t computeMemoryCost(const Vector<BlobPartVariant>& blobPartVariants)
+{
+    size_t memoryCost = 0;
+    for (auto& blobPartVariant : blobPartVariants) {
+        WTF::switchOn(blobPartVariant, [&](const RefPtr<Blob>& blob) {
+            memoryCost += blob->memoryCost();
+        }, [&](const RefPtr<JSC::ArrayBufferView>& view) {
+            memoryCost += view->byteLength();
+        }, [&](const RefPtr<JSC::ArrayBuffer>& array) {
+            memoryCost += array->byteLength();
+        }, [&](const String& string) {
+            memoryCost += string.sizeInBytes();
+        });
+    }
+    return memoryCost;
 }
 
 static Vector<BlobPart> buildBlobData(Vector<BlobPartVariant>&& blobPartVariants, const BlobPropertyBag& propertyBag)
@@ -108,7 +165,9 @@ static Vector<BlobPart> buildBlobData(Vector<BlobPartVariant>&& blobPartVariants
 Blob::Blob(ScriptExecutionContext& context, Vector<BlobPartVariant>&& blobPartVariants, const BlobPropertyBag& propertyBag)
     : ActiveDOMObject(&context)
     , m_type(normalizedContentType(propertyBag.type))
+    , m_memoryCost(computeMemoryCost(blobPartVariants))
     , m_internalURL(BlobURL::createInternalURL())
+    , m_topOrigin(context.topOrigin().data())
 {
     ThreadableBlobRegistry::registerBlobURL(m_internalURL, buildBlobData(WTFMove(blobPartVariants), propertyBag), m_type);
 }
@@ -117,7 +176,9 @@ Blob::Blob(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String
     : ActiveDOMObject(context)
     , m_type(contentType)
     , m_size(data.size())
+    , m_memoryCost(data.size())
     , m_internalURL(BlobURL::createInternalURL())
+    , m_topOrigin(context ? context->topOrigin().data() : SecurityOriginData::createOpaque())
 {
     ThreadableBlobRegistry::registerBlobURL(m_internalURL, { BlobPart(WTFMove(data)) }, contentType);
 }
@@ -126,16 +187,20 @@ Blob::Blob(ReferencingExistingBlobConstructor, ScriptExecutionContext* context, 
     : ActiveDOMObject(context)
     , m_type(blob.type())
     , m_size(blob.size())
+    , m_memoryCost(blob.memoryCost())
     , m_internalURL(BlobURL::createInternalURL())
+    , m_topOrigin(context ? context->topOrigin().data() : SecurityOriginData::createOpaque())
 {
     ThreadableBlobRegistry::registerBlobURL(m_internalURL, { BlobPart(blob.url()) } , m_type);
 }
 
-Blob::Blob(DeserializationContructor, ScriptExecutionContext* context, const URL& srcURL, const String& type, std::optional<unsigned long long> size, const String& fileBackedPath)
+Blob::Blob(DeserializationContructor, ScriptExecutionContext* context, const URL& srcURL, const String& type, std::optional<unsigned long long> size, unsigned long long memoryCost, const String& fileBackedPath)
     : ActiveDOMObject(context)
     , m_type(normalizedContentType(type))
     , m_size(size)
+    , m_memoryCost(memoryCost)
     , m_internalURL(BlobURL::createInternalURL())
+    , m_topOrigin(context ? context->topOrigin().data() : SecurityOriginData::createOpaque())
 {
     if (fileBackedPath.isEmpty())
         ThreadableBlobRegistry::registerBlobURL(nullptr, { }, m_internalURL, srcURL);
@@ -143,10 +208,12 @@ Blob::Blob(DeserializationContructor, ScriptExecutionContext* context, const URL
         ThreadableBlobRegistry::registerBlobURLOptionallyFileBacked(m_internalURL, srcURL, fileBackedPath, m_type);
 }
 
-Blob::Blob(ScriptExecutionContext* context, const URL& srcURL, long long start, long long end, const String& type)
+Blob::Blob(ScriptExecutionContext* context, const URL& srcURL, long long start, long long end, unsigned long long memoryCost, const String& type)
     : ActiveDOMObject(context)
     , m_type(normalizedContentType(type))
+    , m_memoryCost(memoryCost)
     , m_internalURL(BlobURL::createInternalURL())
+    , m_topOrigin(context ? context->topOrigin().data() : SecurityOriginData::createOpaque())
     // m_size is not necessarily equal to end - start so we do not initialize it here.
 {
     ThreadableBlobRegistry::registerBlobURLForSlice(m_internalURL, srcURL, start, end, m_type);
@@ -154,13 +221,22 @@ Blob::Blob(ScriptExecutionContext* context, const URL& srcURL, long long start, 
 
 Blob::~Blob()
 {
+    ThreadableBlobRegistry::unregisterBlobURL(m_internalURL);
     while (!m_blobLoaders.isEmpty())
         (*m_blobLoaders.begin())->cancel();
 }
 
-Ref<Blob> Blob::slice(ScriptExecutionContext& context, long long start, long long end, const String& contentType) const
+Ref<Blob> Blob::slice(long long start, long long end, const String& contentType) const
 {
-    auto blob = adoptRef(*new Blob(&context, m_internalURL, start, end, contentType));
+    unsigned long long sliceMemoryCost = 0;
+    if (auto totalMemoryCost = memoryCost()) {
+        unsigned long long positiveStart = start > 0 ? std::min<unsigned long long>(start, totalMemoryCost) : totalMemoryCost - std::min<unsigned long long>(-start, totalMemoryCost);
+        unsigned long long positiveEnd = end > 0 ? std::min<unsigned long long>(end, totalMemoryCost) : totalMemoryCost - std::min<unsigned long long>(-end, totalMemoryCost);
+        if (positiveStart < positiveEnd)
+            sliceMemoryCost = positiveEnd - positiveStart;
+        ASSERT(sliceMemoryCost <= totalMemoryCost);
+    }
+    auto blob = adoptRef(*new Blob(scriptExecutionContext(), m_internalURL, start, end, sliceMemoryCost, contentType));
     blob->suspendIfNeeded();
     return blob;
 }
@@ -195,22 +271,22 @@ String Blob::normalizedContentType(const String& contentType)
     return contentType.convertToASCIILowercase();
 }
 
-void Blob::loadBlob(ScriptExecutionContext& context, FileReaderLoader::ReadType readType, CompletionHandler<void(BlobLoader&)>&& completionHandler)
+void Blob::loadBlob(FileReaderLoader::ReadType readType, CompletionHandler<void(BlobLoader&)>&& completionHandler)
 {
     auto blobLoader = makeUnique<BlobLoader>([this, pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
         completionHandler(blobLoader);
         m_blobLoaders.take(&blobLoader);
     });
 
-    blobLoader->start(*this, &context, readType);
+    blobLoader->start(*this, scriptExecutionContext(), readType);
 
     if (blobLoader->isLoading())
         m_blobLoaders.add(WTFMove(blobLoader));
 }
 
-void Blob::text(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
+void Blob::text(Ref<DeferredPromise>&& promise)
 {
-    loadBlob(context, FileReaderLoader::ReadAsText, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
+    loadBlob(FileReaderLoader::ReadAsText, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
         if (auto optionalErrorCode = blobLoader.errorCode()) {
             promise->reject(Exception { *optionalErrorCode });
             return;
@@ -219,9 +295,9 @@ void Blob::text(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
     });
 }
 
-void Blob::arrayBuffer(ScriptExecutionContext& context, Ref<DeferredPromise>&& promise)
+void Blob::arrayBuffer(Ref<DeferredPromise>&& promise)
 {
-    loadBlob(context, FileReaderLoader::ReadAsArrayBuffer, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
+    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
         if (auto optionalErrorCode = blobLoader.errorCode()) {
             promise->reject(Exception { *optionalErrorCode });
             return;
@@ -235,12 +311,12 @@ void Blob::arrayBuffer(ScriptExecutionContext& context, Ref<DeferredPromise>&& p
     });
 }
 
-ExceptionOr<Ref<ReadableStream>> Blob::stream(ScriptExecutionContext& scriptExecutionContext)
+ExceptionOr<Ref<ReadableStream>> Blob::stream()
 {
     class BlobStreamSource : public FileReaderLoaderClient, public ReadableStreamSource {
     public:
         BlobStreamSource(ScriptExecutionContext& scriptExecutionContext, Blob& blob)
-            : m_loader(makeUniqueRef<FileReaderLoader>(FileReaderLoader::ReadType::ReadAsArrayBuffer, this))
+            : m_loader(makeUniqueRef<FileReaderLoader>(FileReaderLoader::ReadType::ReadAsBinaryChunks, this))
         {
             m_loader->start(&scriptExecutionContext, blob);
         }
@@ -264,19 +340,11 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream(ScriptExecutionContext& scriptExec
 
         // FileReaderLoaderClient
         void didStartLoading() final { }
-        void didReceiveData() final
+        void didReceiveData() final { }
+        void didReceiveBinaryChunk(const SharedBuffer& buffer) final
         {
-            auto result = m_loader->arrayBufferResult();
-            if (!result)
-                return;
-
-            if (m_loader->isCompleted() && !m_bytesRead)
-                controller().enqueue(WTFMove(result));
-            else {
-                auto bytesLoaded = m_loader->bytesLoaded();
-                controller().enqueue(result->slice(m_bytesRead, bytesLoaded));
-                m_bytesRead = bytesLoaded;
-            }
+            if (!controller().enqueue(buffer.tryCreateArrayBuffer()))
+                doCancel();
         }
         void didFinishLoading() final
         {
@@ -293,15 +361,15 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream(ScriptExecutionContext& scriptExec
         }
 
         UniqueRef<FileReaderLoader> m_loader;
-        size_t m_bytesRead { 0 };
         bool m_isStarted { false };
         std::optional<Exception> m_exception;
     };
 
-    auto* globalObject = scriptExecutionContext.globalObject();
+    auto* context = scriptExecutionContext();
+    auto* globalObject = context ? context->globalObject() : nullptr;
     if (!globalObject)
         return Exception { InvalidStateError };
-    return ReadableStream::create(*globalObject, adoptRef(*new BlobStreamSource(scriptExecutionContext, *this)));
+    return ReadableStream::create(*globalObject, adoptRef(*new BlobStreamSource(*context, *this)));
 }
 
 #if ASSERT_ENABLED
@@ -343,9 +411,14 @@ const char* Blob::activeDOMObjectName() const
     return "Blob";
 }
 
-BlobURLHandle Blob::handle() const
+URLKeepingBlobAlive Blob::handle() const
 {
-    return BlobURLHandle { m_internalURL };
+    return { m_internalURL, m_topOrigin };
+}
+
+WebCoreOpaqueRoot root(Blob* blob)
+{
+    return WebCoreOpaqueRoot { blob };
 }
 
 } // namespace WebCore

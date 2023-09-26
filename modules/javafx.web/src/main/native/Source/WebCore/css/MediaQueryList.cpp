@@ -22,16 +22,22 @@
 
 #include "AddEventListenerOptions.h"
 #include "EventNames.h"
+#include "HTMLFrameOwnerElement.h"
+#include "MediaQueryEvaluator.h"
+#include "MediaQueryListEvent.h"
+#include "MediaQueryParser.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(MediaQueryList);
 
-MediaQueryList::MediaQueryList(Document& document, MediaQueryMatcher& matcher, Ref<MediaQuerySet>&& media, bool matches)
+MediaQueryList::MediaQueryList(Document& document, MediaQueryMatcher& matcher, MQ::MediaQueryList&& mediaQueries, bool matches)
     : ActiveDOMObject(&document)
     , m_matcher(&matcher)
-    , m_media(WTFMove(media))
+    , m_mediaQueries(WTFMove(mediaQueries))
+    , m_dynamicDependencies(MQ::MediaQueryEvaluator { matcher.mediaType() }.collectDynamicDependencies(m_mediaQueries))
     , m_evaluationRound(matcher.evaluationRound())
     , m_changeRound(m_evaluationRound - 1) // Any value that is not the same as m_evaluationRound would do.
     , m_matches(matches)
@@ -39,9 +45,9 @@ MediaQueryList::MediaQueryList(Document& document, MediaQueryMatcher& matcher, R
     matcher.addMediaQueryList(*this);
 }
 
-Ref<MediaQueryList> MediaQueryList::create(Document& document, MediaQueryMatcher& matcher, Ref<MediaQuerySet>&& media, bool matches)
+Ref<MediaQueryList> MediaQueryList::create(Document& document, MediaQueryMatcher& matcher, MQ::MediaQueryList&& mediaQueries, bool matches)
 {
-    auto list = adoptRef(*new MediaQueryList(document, matcher, WTFMove(media), matches));
+    auto list = adoptRef(*new MediaQueryList(document, matcher, WTFMove(mediaQueries), matches));
     list->suspendIfNeeded();
     return list;
 }
@@ -59,7 +65,9 @@ void MediaQueryList::detachFromMatcher()
 
 String MediaQueryList::media() const
 {
-    return m_media->mediaText();
+    StringBuilder builder;
+    MQ::serialize(builder, m_mediaQueries);
+    return builder.toString();
 }
 
 void MediaQueryList::addListener(RefPtr<EventListener>&& listener)
@@ -78,16 +86,23 @@ void MediaQueryList::removeListener(RefPtr<EventListener>&& listener)
     removeEventListener(eventNames().changeEvent, *listener, { });
 }
 
-void MediaQueryList::evaluate(MediaQueryEvaluator& evaluator, bool& notificationNeeded)
+void MediaQueryList::evaluate(MQ::MediaQueryEvaluator& evaluator, MediaQueryMatcher::EventMode eventMode)
 {
-    if (!m_matcher) {
-        notificationNeeded = false;
-        return;
-    }
-
+    RELEASE_ASSERT(m_matcher);
     if (m_evaluationRound != m_matcher->evaluationRound())
-        setMatches(evaluator.evaluate(m_media.get()));
-    notificationNeeded = m_changeRound == m_matcher->evaluationRound();
+        setMatches(evaluator.evaluate(m_mediaQueries));
+
+    m_needsNotification = m_changeRound == m_matcher->evaluationRound() || m_needsNotification;
+    if (!m_needsNotification || eventMode == MediaQueryMatcher::EventMode::Schedule)
+        return;
+    ASSERT(eventMode == MediaQueryMatcher::EventMode::DispatchNow);
+
+    RefPtr document = dynamicDowncast<Document>(scriptExecutionContext());
+    if (document && document->quirks().shouldSilenceMediaQueryListChangeEvents())
+        return;
+
+    dispatchEvent(MediaQueryListEvent::create(eventNames().changeEvent, media(), matches()));
+    m_needsNotification = false;
 }
 
 void MediaQueryList::setMatches(bool newValue)
@@ -104,8 +119,21 @@ void MediaQueryList::setMatches(bool newValue)
 
 bool MediaQueryList::matches()
 {
-    if (m_matcher && m_evaluationRound != m_matcher->evaluationRound())
-        setMatches(m_matcher->evaluate(m_media.get()));
+    if (!m_matcher)
+        return m_matches;
+
+    if (m_dynamicDependencies.contains(MQ::MediaQueryDynamicDependency::Viewport))  {
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext())) {
+        if (RefPtr ownerElement = document->ownerElement()) {
+                ownerElement->document().updateLayout();
+                m_matcher->evaluateAll(MediaQueryMatcher::EventMode::Schedule);
+            }
+        }
+    }
+
+    if (m_evaluationRound != m_matcher->evaluationRound())
+        setMatches(m_matcher->evaluate(m_mediaQueries));
+
     return m_matches;
 }
 

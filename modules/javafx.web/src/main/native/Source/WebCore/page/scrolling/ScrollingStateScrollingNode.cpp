@@ -53,6 +53,7 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(const ScrollingStateScr
 #endif
     , m_scrollableAreaParameters(stateNode.scrollableAreaParameters())
     , m_requestedScrollData(stateNode.requestedScrollData())
+    , m_keyboardScrollData(stateNode.keyboardScrollData())
 #if ENABLE(SCROLLING_THREAD)
     , m_synchronousScrollingReasons(stateNode.synchronousScrollingReasons())
 #endif
@@ -199,11 +200,23 @@ void ScrollingStateScrollingNode::setSynchronousScrollingReasons(OptionSet<Synch
 }
 #endif
 
+
+void ScrollingStateScrollingNode::setKeyboardScrollData(const RequestedKeyboardScrollData& scrollData)
+{
+    m_keyboardScrollData = scrollData;
+    setPropertyChanged(Property::KeyboardScrollData);
+}
+
 void ScrollingStateScrollingNode::setRequestedScrollData(const RequestedScrollData& scrollData)
 {
     // Scroll position requests are imperative, not stateful, so we can't early return here.
     m_requestedScrollData = scrollData;
     setPropertyChanged(Property::RequestedScrollPosition);
+}
+
+bool ScrollingStateScrollingNode::hasScrollPositionRequest() const
+{
+    return hasChangedProperty(Property::RequestedScrollPosition) && m_requestedScrollData.requestType == ScrollRequestType::PositionUpdate;
 }
 
 void ScrollingStateScrollingNode::setIsMonitoringWheelEvents(bool isMonitoringWheelEvents)
@@ -257,7 +270,7 @@ void ScrollingStateScrollingNode::setScrollerImpsFromScrollbars(Scrollbar*, Scro
 }
 #endif
 
-void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ScrollingStateNode::dumpProperties(ts, behavior);
 
@@ -297,6 +310,9 @@ void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateT
     if (m_requestedScrollData.clamping == ScrollClamping::Unclamped)
         ts.dumpProperty("requested scroll position clamping", m_requestedScrollData.clamping);
 
+    if (m_requestedScrollData.animated == ScrollIsAnimated::Yes)
+        ts.dumpProperty("requested scroll position is animated", true);
+
     if (m_scrollOrigin != IntPoint())
         ts.dumpProperty("scroll origin", m_scrollOrigin);
 
@@ -322,7 +338,7 @@ void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateT
     if (m_isMonitoringWheelEvents)
         ts.dumpProperty("expects wheel event test trigger", m_isMonitoringWheelEvents);
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerIDs) {
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs) {
         if (m_scrollContainerLayer.layerID())
             ts.dumpProperty("scroll container layer", m_scrollContainerLayer.layerID());
         if (m_scrolledContentsLayer.layerID())

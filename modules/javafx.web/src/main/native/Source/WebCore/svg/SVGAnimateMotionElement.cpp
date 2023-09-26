@@ -23,9 +23,12 @@
 #include "SVGAnimateMotionElement.h"
 
 #include "AffineTransform.h"
+#include "CommonAtomStrings.h"
 #include "ElementIterator.h"
 #include "PathTraversalState.h"
+#include "RenderLayerModelObject.h"
 #include "RenderSVGResource.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
 #include "SVGMPathElement.h"
 #include "SVGNames.h"
@@ -58,7 +61,7 @@ Ref<SVGAnimateMotionElement> SVGAnimateMotionElement::create(const QualifiedName
 
 bool SVGAnimateMotionElement::hasValidAttributeType() const
 {
-    auto targetElement = makeRefPtr(this->targetElement());
+    RefPtr targetElement = this->targetElement();
     if (!targetElement)
         return false;
 
@@ -108,10 +111,9 @@ void SVGAnimateMotionElement::parseAttribute(const QualifiedName& name, const At
 
 SVGAnimateMotionElement::RotateMode SVGAnimateMotionElement::rotateMode() const
 {
-    static MainThreadNeverDestroyed<const AtomString> autoVal("auto", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> autoReverse("auto-reverse", AtomString::ConstructFromLiteral);
-    const AtomString& rotate = getAttribute(SVGNames::rotateAttr);
-    if (rotate == autoVal)
+    static MainThreadNeverDestroyed<const AtomString> autoReverse("auto-reverse"_s);
+    auto& rotate = getAttribute(SVGNames::rotateAttr);
+    if (rotate == autoAtom())
         return RotateAuto;
     if (rotate == autoReverse)
         return RotateAutoReverse;
@@ -142,10 +144,10 @@ void SVGAnimateMotionElement::startAnimation()
 {
     if (!hasValidAttributeType())
         return;
-    auto targetElement = makeRefPtr(this->targetElement());
+    RefPtr targetElement = this->targetElement();
     if (!targetElement)
         return;
-    if (AffineTransform* transform = targetElement->supplementalTransform())
+    if (auto* transform = targetElement->ensureSupplementalTransform())
         transform->makeIdentity();
 }
 
@@ -153,33 +155,33 @@ void SVGAnimateMotionElement::stopAnimation(SVGElement* targetElement)
 {
     if (!targetElement)
         return;
-    if (AffineTransform* transform = targetElement->supplementalTransform())
+    if (auto* transform = targetElement->ensureSupplementalTransform())
         transform->makeIdentity();
     applyResultsToTarget();
 }
 
-bool SVGAnimateMotionElement::calculateToAtEndOfDurationValue(const String& toAtEndOfDurationString)
-{
-    m_toPointAtEndOfDuration = parsePoint(toAtEndOfDurationString).value_or(FloatPoint { });
-    return true;
-}
-
-bool SVGAnimateMotionElement::calculateFromAndToValues(const String& fromString, const String& toString)
+bool SVGAnimateMotionElement::setFromAndToValues(const String& fromString, const String& toString)
 {
     m_toPointAtEndOfDuration = std::nullopt;
-    m_fromPoint = parsePoint(fromString).value_or(FloatPoint { });
-    m_toPoint = parsePoint(toString).value_or(FloatPoint { });
+    m_fromPoint = valueOrDefault(parsePoint(fromString));
+    m_toPoint = valueOrDefault(parsePoint(toString));
     return true;
 }
 
-bool SVGAnimateMotionElement::calculateFromAndByValues(const String& fromString, const String& byString)
+bool SVGAnimateMotionElement::setFromAndByValues(const String& fromString, const String& byString)
 {
     m_toPointAtEndOfDuration = std::nullopt;
     if (animationMode() == AnimationMode::By && !isAdditive())
         return false;
-    m_fromPoint = parsePoint(fromString).value_or(FloatPoint { });
-    auto byPoint = parsePoint(byString).value_or(FloatPoint { });
+    m_fromPoint = valueOrDefault(parsePoint(fromString));
+    auto byPoint = valueOrDefault(parsePoint(byString));
     m_toPoint = FloatPoint(m_fromPoint.x() + byPoint.x(), m_fromPoint.y() + byPoint.y());
+    return true;
+}
+
+bool SVGAnimateMotionElement::setToAtEndOfDurationValue(const String& toAtEndOfDurationString)
+{
+    m_toPointAtEndOfDuration = valueOrDefault(parsePoint(toAtEndOfDurationString));
     return true;
 }
 
@@ -206,11 +208,11 @@ void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transfo
 
 void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned repeatCount)
 {
-    auto targetElement = makeRefPtr(this->targetElement());
+    RefPtr targetElement = this->targetElement();
     if (!targetElement)
         return;
 
-    AffineTransform* transform = targetElement->supplementalTransform();
+    auto* transform = targetElement->ensureSupplementalTransform();
     if (!transform)
         return;
 
@@ -244,29 +246,38 @@ void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned 
 void SVGAnimateMotionElement::applyResultsToTarget()
 {
     // We accumulate to the target element transform list so there is not much to do here.
-    auto targetElement = makeRefPtr(this->targetElement());
+    RefPtr targetElement = this->targetElement();
     if (!targetElement)
         return;
 
-    if (RenderElement* renderer = targetElement->renderer()) {
-        renderer->setNeedsTransformUpdate();
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-    }
+    auto updateTargetElement = [](SVGElement& element) {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (element.document().settings().layerBasedSVGEngineEnabled()) {
+            if (auto* layerRenderer = dynamicDowncast<RenderLayerModelObject>(element.renderer()))
+                layerRenderer->updateHasSVGTransformFlags();
+            // TODO: [LBSE] Avoid relayout upon transform changes (not possible in legacy, but should be in LBSE).
+            element.updateSVGRendererForElementChange();
+            return;
+        }
+#endif
+        if (auto* renderer = element.renderer())
+            renderer->setNeedsTransformUpdate();
+        element.updateSVGRendererForElementChange();
+    };
 
-    AffineTransform* targetSupplementalTransform = targetElement->supplementalTransform();
+    updateTargetElement(*targetElement);
+
+    auto* targetSupplementalTransform = targetElement->ensureSupplementalTransform();
     if (!targetSupplementalTransform)
         return;
 
     // ...except in case where we have additional instances in <use> trees.
     for (auto& instance : copyToVectorOf<Ref<SVGElement>>(targetElement->instances())) {
-        AffineTransform* transform = instance->supplementalTransform();
+        auto* transform = instance->ensureSupplementalTransform();
         if (!transform || *transform == *targetSupplementalTransform)
             continue;
         *transform = *targetSupplementalTransform;
-        if (RenderElement* renderer = instance->renderer()) {
-            renderer->setNeedsTransformUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        }
+        updateTargetElement(instance);
     }
 }
 

@@ -21,19 +21,12 @@
 
 #pragma once
 
+#include "PropertyAllowlist.h"
 #include "SelectorFilter.h"
 #include "StyleRule.h"
 
 namespace WebCore {
 namespace Style {
-
-enum PropertyAllowlistType {
-    PropertyAllowlistNone   = 0,
-    PropertyAllowlistMarker,
-#if ENABLE(VIDEO)
-    PropertyAllowlistCue
-#endif
-};
 
 enum class MatchBasedOnRuleHash : unsigned {
     None,
@@ -53,7 +46,12 @@ public:
 
     const StyleRule& styleRule() const { return *m_styleRule; }
 
-    const CSSSelector* selector() const { return m_styleRule->selectorList().selectorAt(m_selectorIndex); }
+    const CSSSelector* selector() const
+    {
+        auto& selectorList = m_styleRule->resolvedSelectorList();
+        return selectorList.selectorAt(m_selectorIndex);
+    }
+
 #if ENABLE(CSS_SELECTOR_JIT)
     CompiledSelector& compiledSelector() const { return m_styleRule->compiledSelectorForListIndex(m_selectorListIndex); }
 #endif
@@ -65,7 +63,7 @@ public:
     MatchBasedOnRuleHash matchBasedOnRuleHash() const { return static_cast<MatchBasedOnRuleHash>(m_matchBasedOnRuleHash); }
     bool containsUncommonAttributeSelector() const { return m_containsUncommonAttributeSelector; }
     unsigned linkMatchType() const { return m_linkMatchType; }
-    PropertyAllowlistType propertyAllowlistType() const { return static_cast<PropertyAllowlistType>(m_propertyAllowlistType); }
+    PropertyAllowlist propertyAllowlist() const { return static_cast<PropertyAllowlist>(m_propertyAllowlist); }
     bool isEnabled() const { return m_isEnabled; }
     void setEnabled(bool value) { m_isEnabled = value; }
 
@@ -84,7 +82,7 @@ private:
     unsigned m_canMatchPseudoElement : 1;
     unsigned m_containsUncommonAttributeSelector : 1;
     unsigned m_linkMatchType : 2; //  SelectorChecker::LinkMatchMask
-    unsigned m_propertyAllowlistType : 2;
+    unsigned m_propertyAllowlist : 2;
     unsigned m_isEnabled : 1;
     SelectorFilter::Hashes m_descendantSelectorIdentifierHashes;
 };

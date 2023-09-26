@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,9 +54,8 @@ public:
     void fireInternal(VM&, const FireDetail&);
 
 private:
-    // Own destructor may not be called. Keep members trivially destructible.
-    JSC_WATCHPOINT_FIELD(PackedPtr<WatchpointsOnStructureStubInfo>, m_holder);
-    JSC_WATCHPOINT_FIELD(ObjectPropertyCondition, m_key);
+    PackedPtr<WatchpointsOnStructureStubInfo> m_holder;
+    ObjectPropertyCondition m_key;
 };
 
 class AdaptiveValueStructureStubClearingWatchpoint final : public AdaptiveInferredPropertyValueWatchpointBase {
@@ -89,7 +88,7 @@ public:
     {
     }
 
-    using Node = Variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>;
+    using Node = std::variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>;
 
     Node& addWatchpoint(const ObjectPropertyCondition& key);
 
@@ -106,11 +105,11 @@ public:
     bool isValid() const;
 
 private:
-    CodeBlock* m_codeBlock;
-    StructureStubInfo* m_stubInfo;
+    CodeBlock* const m_codeBlock;
+    StructureStubInfo* const m_stubInfo;
     // FIXME: use less memory for the entries in this Bag:
     // https://bugs.webkit.org/show_bug.cgi?id=202380
-    Bag<WTF::Variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>> m_watchpoints;
+    Bag<std::variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>> m_watchpoints;
 };
 
 } // namespace JSC

@@ -30,48 +30,24 @@
 
 #if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
 
-#include "NicosiaPlatformLayer.h"
-#include "ScrollingStateOverflowScrollingNode.h"
-#include "ThreadedScrollingTree.h"
-
-#if ENABLE(KINETIC_SCROLLING)
-#include "ScrollAnimationKinetic.h"
-#endif
-
-#if ENABLE(SMOOTH_SCROLLING)
-#include "ScrollAnimationSmooth.h"
-#endif
+#include "NicosiaSceneIntegration.h"
+#include "ThreadedScrollingTreeScrollingNodeDelegate.h"
 
 namespace WebCore {
 
-class ScrollingTreeScrollingNodeDelegateNicosia : public ScrollingTreeScrollingNodeDelegate {
+class ScrollingTreeScrollingNodeDelegateNicosia final : public ThreadedScrollingTreeScrollingNodeDelegate {
 public:
     explicit ScrollingTreeScrollingNodeDelegateNicosia(ScrollingTreeScrollingNode&, bool scrollAnimatorEnabled);
     virtual ~ScrollingTreeScrollingNodeDelegateNicosia();
 
-    std::unique_ptr<Nicosia::SceneIntegration::UpdateScope> createUpdateScope();
-    void resetCurrentPosition();
     void updateVisibleLengths();
-    WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting);
-    void stopScrollAnimations();
+    bool handleWheelEvent(const PlatformWheelEvent&);
 
 private:
+    // ScrollingEffectsControllerClient.
+    bool scrollAnimationEnabled() const final { return m_scrollAnimatorEnabled; }
+
     bool m_scrollAnimatorEnabled { false };
-    float pageScaleFactor();
-
-#if ENABLE(KINETIC_SCROLLING)
-    void ensureScrollAnimationKinetic();
-#endif
-#if ENABLE(SMOOTH_SCROLLING)
-    void ensureScrollAnimationSmooth();
-#endif
-
-#if ENABLE(KINETIC_SCROLLING)
-    std::unique_ptr<ScrollAnimationKinetic> m_kineticAnimation;
-#endif
-#if ENABLE(SMOOTH_SCROLLING)
-    std::unique_ptr<ScrollAnimation> m_smoothAnimation;
-#endif
 };
 
 } // namespace WebCore

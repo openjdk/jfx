@@ -248,7 +248,7 @@ RenderMathMLUnderOver::VerticalParameters RenderMathMLUnderOver::verticalParamet
         parameters.overGapMin = 3 * defaultLineThickness;
         parameters.underExtraDescender = defaultLineThickness;
         parameters.overExtraAscender = defaultLineThickness;
-        parameters.accentBaseHeight = style().fontMetrics().xHeight();
+        parameters.accentBaseHeight = style().metricsOfPrimaryFont().xHeight();
         parameters.useUnderOverBarFallBack = true;
         return parameters;
     }
@@ -289,6 +289,11 @@ RenderMathMLUnderOver::VerticalParameters RenderMathMLUnderOver::verticalParamet
 void RenderMathMLUnderOver::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight)
 {
     ASSERT(needsLayout());
+
+    for (auto& box : childrenOfType<RenderBox>(*this)) {
+        if (box.isOutOfFlowPositioned())
+            box.containingBlock()->insertPositionedObject(box);
+    }
 
     if (!relayoutChildren && simplifiedLayout())
         return;

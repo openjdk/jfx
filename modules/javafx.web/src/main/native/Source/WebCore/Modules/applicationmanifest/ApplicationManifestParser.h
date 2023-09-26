@@ -50,6 +50,8 @@ private:
     String parseDescription(const JSON::Object&);
     String parseShortName(const JSON::Object&);
     URL parseScope(const JSON::Object&, const URL&, const URL&);
+    Vector<ApplicationManifest::Icon> parseIcons(const JSON::Object&);
+    URL parseId(const JSON::Object&, const URL&);
 
     Color parseColor(const JSON::Object&, const String& propertyName);
     String parseGenericString(const JSON::Object&, const String&);

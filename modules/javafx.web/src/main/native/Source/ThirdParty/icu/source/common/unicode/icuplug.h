@@ -117,14 +117,13 @@
 /* === Basic types === */
 
 #ifndef U_HIDE_INTERNAL_API
+struct UPlugData;
 /**
  * @{
- * Opaque structure passed to/from a plugin.
- * use the APIs to access it.
+ * Typedef for opaque structure passed to/from a plugin.
+ * Use the APIs to access it.
  * @internal ICU 4.4 Technology Preview
  */
-
-struct UPlugData;
 typedef struct UPlugData UPlugData;
 
 /** @} */
@@ -189,7 +188,11 @@ typedef enum {
 /**
  * Entrypoint for an ICU plugin.
  * @param plug the UPlugData handle.
- * @param status the plugin's extended status code.
+ * @param reason the reason code for the entrypoint's call.
+ * @param status Standard ICU error code. Its input value must
+ *               pass the U_SUCCESS() test, or else the function returns
+ *               immediately. Check for U_FAILURE() on output or use with
+ *               function chaining. (See User Guide for details.)
  * @return A valid plugin must return UPLUG_TOKEN
  * @internal ICU 4.4 Technology Preview
  */

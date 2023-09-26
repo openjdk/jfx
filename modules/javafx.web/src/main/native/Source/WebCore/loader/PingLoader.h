@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,6 +33,7 @@
 #pragma once
 
 #include "ReferrerPolicy.h"
+#include "SecurityOriginData.h"
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 
@@ -43,12 +44,8 @@ class Frame;
 class HTTPHeaderMap;
 class ResourceRequest;
 
-enum class ViolationReportType {
-    ContentSecurityPolicy,
-    XSSAuditor,
-};
-
 enum class ContentSecurityPolicyImposition : uint8_t;
+enum class ViolationReportType : uint8_t;
 
 class PingLoader {
 public:
@@ -56,9 +53,11 @@ public:
     static void sendPing(Frame&, const URL& pingURL, const URL& destinationURL);
     WEBCORE_EXPORT static void sendViolationReport(Frame&, const URL& reportURL, Ref<FormData>&& report, ViolationReportType);
 
+    static String sanitizeURLForReport(const URL&);
+
 private:
     enum class ShouldFollowRedirects { No, Yes };
-    static void startPingLoad(Frame&, ResourceRequest&, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects, ContentSecurityPolicyImposition, ReferrerPolicy);
+    static void startPingLoad(Frame&, ResourceRequest&, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects, ContentSecurityPolicyImposition, ReferrerPolicy, std::optional<ViolationReportType> = std::nullopt);
 };
 
 } // namespace WebCore

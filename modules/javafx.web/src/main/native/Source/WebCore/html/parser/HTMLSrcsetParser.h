@@ -78,7 +78,7 @@ struct ImageCandidate {
     {
     }
 
-    ImageCandidate(const StringView& source, const DescriptorParsingResult& result, OriginAttribute originAttribute)
+    ImageCandidate(StringView source, const DescriptorParsingResult& result, OriginAttribute originAttribute)
         : string(source)
         , density(result.hasDensity() ? result.density() : UninitializedDescriptor)
         , resourceWidth(result.hasWidth() ? result.resourceWidth() : UninitializedDescriptor)
@@ -102,7 +102,7 @@ struct ImageCandidate {
     OriginAttribute originAttribute;
 };
 
-ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, const AtomString& srcAttribute, const AtomString& srcsetAttribute, float sourceSize);
+ImageCandidate bestFitSourceForImageAttributes(float deviceScaleFactor, StringView srcAttribute, StringView srcsetAttribute, float sourceSize);
 
 Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(StringView attribute);
 

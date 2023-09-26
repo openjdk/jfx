@@ -30,7 +30,8 @@
 #include "BreakBlockquoteCommand.h"
 #include "DataTransfer.h"
 #include "DeleteSelectionCommand.h"
-#include "Document.h"
+#include "DocumentInlines.h"
+#include "EditCommand.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "Element.h"
@@ -384,9 +385,14 @@ void TypingCommand::doApply()
     ASSERT_NOT_REACHED();
 }
 
-String TypingCommand::inputEventTypeName() const
+AtomString TypingCommand::inputEventTypeName() const
 {
     return inputTypeNameForEditingAction(m_currentTypingEditAction);
+}
+
+bool TypingCommand::isInputMethodComposing() const
+{
+    return isInputMethodComposingForEditingAction(m_currentTypingEditAction);
 }
 
 bool TypingCommand::isBeforeInputEventCancelable() const
@@ -557,7 +563,7 @@ void TypingCommand::insertLineBreakAndNotifyAccessibility()
 {
     AccessibilityReplacedText replacedText(document().selection().selection());
     insertLineBreak();
-    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n", document().selection().selection());
+    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n"_s, document().selection().selection());
     composition()->setRangeDeletedByUnapply(replacedText.replacedRange());
 }
 
@@ -577,7 +583,7 @@ void TypingCommand::insertParagraphSeparatorAndNotifyAccessibility()
 {
     AccessibilityReplacedText replacedText(document().selection().selection());
     insertParagraphSeparator();
-    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n", document().selection().selection());
+    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n"_s, document().selection().selection());
     composition()->setRangeDeletedByUnapply(replacedText.replacedRange());
 }
 
@@ -601,7 +607,7 @@ void TypingCommand::insertParagraphSeparatorInQuotedContentAndNotifyAccessibilit
 {
     AccessibilityReplacedText replacedText(document().selection().selection());
     insertParagraphSeparatorInQuotedContent();
-    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n", document().selection().selection());
+    replacedText.postTextStateChangeNotification(document().existingAXObjectCache(), AXTextEditTypeTyping, "\n"_s, document().selection().selection());
     composition()->setRangeDeletedByUnapply(replacedText.replacedRange());
 }
 
@@ -611,7 +617,7 @@ bool TypingCommand::makeEditableRootEmpty()
     if (!root || !root->firstChild())
         return false;
 
-    if (root->firstChild() == root->lastChild() && root->firstElementChild() && root->firstElementChild()->hasTagName(brTag)) {
+    if (root->firstChild() == root->lastChild() && root->firstChild()->hasTagName(brTag)) {
         // If there is a single child and it could be a placeholder, leave it alone.
         if (root->renderer() && root->renderer()->isRenderBlockFlow())
             return false;

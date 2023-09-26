@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@
 #include "BitmapTextureJava.h"
 #include "ImageBuffer.h"
 #include "TextureMapper.h"
-
+#include "GraphicsContext.h"
 #if USE(TEXTURE_MAPPER)
 namespace WebCore {
 
@@ -49,6 +49,7 @@ public:
     IntSize maxTextureSize() const final;
     Ref<BitmapTexture> createTexture() final { return BitmapTextureJava::create(); }
     Ref<BitmapTexture> createTexture(GCGLint) final { return createTexture(); }
+        void setDepthRange(double zNear, double zFar) final;
     void clearColor(const Color&) final;
 
     inline GraphicsContext* currentContext()

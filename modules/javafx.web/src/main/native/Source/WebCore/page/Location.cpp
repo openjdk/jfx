@@ -36,6 +36,9 @@
 #include "NavigationScheduler.h"
 #include "SecurityOrigin.h"
 #include <wtf/IsoMallocInlines.h>
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaEnv.h>
+#endif
 #include <wtf/URL.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -53,7 +56,7 @@ inline const URL& Location::url() const
     if (!frame())
         return aboutBlankURL();
 
-    const URL& url = frame()->document()->url();
+    const URL& url = frame()->document()->urlForBindings();
     if (!url.isValid())
         return aboutBlankURL(); // Use "about:blank" while the page is still loading (before we have a frame).
 
@@ -112,8 +115,10 @@ Ref<DOMStringList> Location::ancestorOrigins() const
     auto* frame = this->frame();
     if (!frame)
         return origins;
-    for (auto* ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent())
-        origins->append(ancestor->document()->securityOrigin().toString());
+    for (auto* ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent()) {
+        if (auto* localAncestor = dynamicDowncast<LocalFrame>(ancestor))
+            origins->append(localAncestor->document()->securityOrigin().toString());
+    }
     return origins;
 }
 
@@ -198,9 +203,9 @@ ExceptionOr<void> Location::setHash(DOMWindow& incumbentWindow, DOMWindow& first
     ASSERT(frame->document());
     auto url = frame->document()->url();
     auto oldFragmentIdentifier = url.fragmentIdentifier();
-    auto newFragmentIdentifier = hash;
-    if (hash[0] == '#')
-        newFragmentIdentifier = hash.substring(1);
+    StringView newFragmentIdentifier { hash };
+    if (hash.startsWith('#'))
+        newFragmentIdentifier = newFragmentIdentifier.substring(1);
     url.setFragmentIdentifier(newFragmentIdentifier);
     // Note that by parsing the URL and *then* comparing fragments, we are
     // comparing fragments post-canonicalization, and so this handles the
@@ -217,6 +222,13 @@ ExceptionOr<void> Location::assign(DOMWindow& activeWindow, DOMWindow& firstWind
     return setLocation(activeWindow, firstWindow, url);
 }
 
+#if PLATFORM(JAVA)
+bool startsWith(const std::string &str, const std::string &prefix)
+{
+    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+}
+#endif
+
 ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString)
 {
     auto* frame = this->frame();
@@ -232,6 +244,20 @@ ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWin
     URL completedURL = firstFrame->document()->completeURL(urlString);
     if (!completedURL.isValid())
         return Exception { SyntaxError };
+
+    if (!activeWindow.document()->canNavigate(frame, completedURL))
+        return Exception { SecurityError };
+
+#if PLATFORM(JAVA)
+    std::string url_string =  completedURL.string().convertToASCIILowercase().utf8().data();
+
+    /* check for url schema */
+    if (!startsWith(url_string, "http:") && !startsWith(url_string,"https:") && !startsWith(url_string,"file:")) {
+        if (!handleCustomProtocol(url_string)) {
+            return { };
+        }
+    }
+#endif
 
     // We call DOMWindow::setLocation directly here because replace() always operates on the current frame.
     frame->document()->domWindow()->setLocation(activeWindow, completedURL, LockHistoryAndBackForwardList);
@@ -283,10 +309,33 @@ ExceptionOr<void> Location::setLocation(DOMWindow& incumbentWindow, DOMWindow& f
     if (!incumbentWindow.document()->canNavigate(frame, completedURL))
         return Exception { SecurityError };
 
+#if PLATFORM(JAVA)
+    std::string url_string =  completedURL.string().convertToASCIILowercase().utf8().data();
+
+    /* check for url schema */
+    if (!startsWith(url_string, "http:") && !startsWith(url_string,"https:") && !startsWith(url_string,"file:")) {
+        if (!handleCustomProtocol(url_string)) {
+            return { };
+        }
+    }
+#endif
+
     ASSERT(frame->document());
     ASSERT(frame->document()->domWindow());
     frame->document()->domWindow()->setLocation(incumbentWindow, completedURL);
     return { };
 }
+
+#if PLATFORM(JAVA)
+/* url schema also known as custom protocol handler not supported*/
+bool Location::handleCustomProtocol(const std::string& url)
+{
+    // check for internal value based protocol
+    if (startsWith(url, "about:blank"))
+        return true;
+
+    return false;
+}
+#endif
 
 } // namespace WebCore

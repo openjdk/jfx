@@ -44,6 +44,7 @@ namespace WebCore {
 
 DocumentTimelinesController::DocumentTimelinesController(Document& document)
     : m_document(document)
+    , m_frameRateAligner()
 {
     if (auto* page = document.page()) {
         if (page->settings().hiddenPageCSSAnimationSuspensionEnabled() && !page->isVisible())
@@ -72,26 +73,40 @@ void DocumentTimelinesController::detachFromDocument()
 {
     m_currentTimeClearingTaskCancellationGroup.cancel();
 
-    while (!m_timelines.computesEmpty())
+    while (!m_timelines.isEmptyIgnoringNullReferences())
         m_timelines.begin()->detachFromDocument();
 }
 
 void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutionSeconds timestamp)
 {
+    auto previousMaximumAnimationFrameRate = maximumAnimationFrameRate();
+    // This will hold the frame rate at which we would schedule updates not
+    // accounting for the frame rate of animations.
+    std::optional<FramesPerSecond> defaultTimelineFrameRate;
+    // This will hold the frame rate used for this timeline until now.
+    std::optional<FramesPerSecond> previousTimelineFrameRate;
+    if (auto* page = m_document.page()) {
+        defaultTimelineFrameRate = page->preferredRenderingUpdateFramesPerSecond({ Page::PreferredRenderingUpdateOption::IncludeThrottlingReasons });
+        previousTimelineFrameRate = page->preferredRenderingUpdateFramesPerSecond({
+            Page::PreferredRenderingUpdateOption::IncludeThrottlingReasons,
+            Page::PreferredRenderingUpdateOption::IncludeAnimationsFrameRate
+        });
+    }
+
     LOG_WITH_STREAM(Animations, stream << "DocumentTimelinesController::updateAnimationsAndSendEvents for time " << timestamp);
 
     ASSERT(!m_timelines.hasNullReferences());
 
     // We need to copy m_timelines before iterating over its members since the steps in this procedure may mutate m_timelines.
-    Vector<Ref<DocumentTimeline>> protectedTimelines;
-    for (auto& timeline : m_timelines)
-        protectedTimelines.append(timeline);
+    auto protectedTimelines = copyToVectorOf<Ref<DocumentTimeline>>(m_timelines);
 
     // We need to freeze the current time even if no animation is running.
     // document.timeline.currentTime may be called from a rAF callback and
     // it has to match the rAF timestamp.
     if (!m_isSuspended)
         cacheCurrentTime(timestamp);
+
+    m_frameRateAligner.beginUpdate(timestamp, previousTimelineFrameRate);
 
     // 1. Update the current time of all timelines associated with document passing now as the timestamp.
     Vector<Ref<DocumentTimeline>> timelinesToUpdate;
@@ -110,18 +125,51 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
                 continue;
             }
 
+            // Even though this animation is relevant, its frame rate may be such that it should
+            // be disregarded during this update. If it does not specify an explicit frame rate,
+            // this means this animation uses the default frame rate at which we typically schedule
+            // updates not accounting for the frame rate of animations.
+            auto animationFrameRate = animation->frameRate();
+            if (!animationFrameRate)
+                animationFrameRate = defaultTimelineFrameRate;
+
+            if (animationFrameRate) {
+                ASSERT(*animationFrameRate > 0);
+                auto shouldUpdate = m_frameRateAligner.updateFrameRate(*animationFrameRate);
+                // Even if we're told not to update, any newly-added animation should fire right away,
+                // it will align with other animations of that frame rate at the next opportunity.
+                if (shouldUpdate == FrameRateAligner::ShouldUpdate::No && !animation->pending())
+                    continue;
+            }
+
             // This will notify the animation that timing has changed and will call automatically
             // schedule invalidation if required for this animation.
             animation->tick();
 
             if (!animation->isRelevant() && !animation->needsTick())
-                animationsToRemove.append(*animation);
+                animationsToRemove.append(animation);
 
-            if (is<CSSTransition>(*animation)) {
-                auto& transition = downcast<CSSTransition>(*animation);
-                if (!transition.needsTick() && transition.playState() == WebAnimation::PlayState::Finished && transition.owningElement())
-                    completedTransitions.append(transition);
+            if (auto* transition = dynamicDowncast<CSSTransition>(animation.get())) {
+                if (!transition->needsTick() && transition->playState() == WebAnimation::PlayState::Finished && transition->owningElement())
+                    completedTransitions.append(*transition);
             }
+        }
+    }
+
+    m_frameRateAligner.finishUpdate();
+
+    // If the maximum frame rate we've encountered is the same as the default frame rate,
+    // let's reset it to not have an explicit value which will indicate that there is no
+    // need to override the default animation frame rate to service animations.
+    auto maximumAnimationFrameRate = m_frameRateAligner.maximumFrameRate();
+    if (maximumAnimationFrameRate == defaultTimelineFrameRate)
+        maximumAnimationFrameRate = std::nullopt;
+
+    // Ensure the timeline updates at the maximum frame rate we've encountered for our animations.
+    if (previousMaximumAnimationFrameRate != maximumAnimationFrameRate) {
+        if (auto* page = m_document.page()) {
+            if (previousTimelineFrameRate != maximumAnimationFrameRate)
+                page->timelineControllerMaximumAnimationFrameRateDidChange(*this);
         }
     }
 
@@ -133,7 +181,7 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
         timeline->removeReplacedAnimations();
 
     // 3. Perform a microtask checkpoint.
-    makeRef(m_document)->eventLoop().performMicrotaskCheckpoint();
+    Ref { m_document }->eventLoop().performMicrotaskCheckpoint();
 
     // 4. Let events to dispatch be a copy of doc's pending animation event queue.
     // 5. Clear doc's pending animation event queue.
@@ -143,10 +191,7 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
 
     // 6. Perform a stable sort of the animation events in events to dispatch as follows.
     std::stable_sort(events.begin(), events.end(), [] (const Ref<AnimationEventBase>& lhs, const Ref<AnimationEventBase>& rhs) {
-        // 1. Sort the events by their scheduled event time such that events that were scheduled to occur earlier, sort before events scheduled to occur later
-        // and events whose scheduled event time is unresolved sort before events with a resolved scheduled event time.
-        // 2. Within events with equal scheduled event times, sort by their composite order. FIXME: Need to do this.
-        return lhs->timelineTime() < rhs->timelineTime();
+        return compareAnimationEventsByCompositeOrder(lhs.get(), rhs.get());
     });
 
     // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
@@ -167,13 +212,20 @@ void DocumentTimelinesController::updateAnimationsAndSendEvents(ReducedResolutio
     // This needs to happen after dealing with the list of animations to remove as the animation may have been
     // removed from the list of completed transitions otherwise.
     for (auto& completedTransition : completedTransitions) {
-        if (auto timeline = completedTransition->timeline())
-            downcast<DocumentTimeline>(*timeline).transitionDidComplete(WTFMove(completedTransition));
+        if (auto documentTimeline = dynamicDowncast<DocumentTimeline>(completedTransition->timeline()))
+            documentTimeline->transitionDidComplete(WTFMove(completedTransition));
     }
 
     for (auto& timeline : timelinesToUpdate)
         timeline->documentDidUpdateAnimationsAndSendEvents();
 }
+
+std::optional<Seconds> DocumentTimelinesController::timeUntilNextTickForAnimationsWithFrameRate(FramesPerSecond frameRate) const
+{
+    if (!m_cachedCurrentTime)
+        return std::nullopt;
+    return m_frameRateAligner.timeUntilNextUpdateForFrameRate(frameRate, *m_cachedCurrentTime);
+};
 
 void DocumentTimelinesController::suspendAnimations()
 {
@@ -236,7 +288,7 @@ void DocumentTimelinesController::cacheCurrentTime(ReducedResolutionSeconds newC
     }
     // We extent the associated Document's lifecycle until the VM became idle since the DocumentTimelinesController
     // is owned by the Document.
-    m_document.vm().whenIdle([this, protectedDocument = makeRefPtr(m_document)]() {
+    m_document.vm().whenIdle([this, protectedDocument = Ref { m_document }]() {
         m_waitingOnVMIdle = false;
         maybeClearCachedCurrentTime();
     });

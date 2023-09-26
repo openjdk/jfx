@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,9 @@
 
 // NVertex<1>, SkinVertex
 
-struct ObjVertex {
-    float4  Pos       : position;
-
-    float2  TexD      : texcoord0;
-    float4  Tangent   : texcoord1;
+struct VsInput {
+    // model space = local space = object space
+    float4  modelVertexPos    : position;
+    float2  texD              : texcoord0;
+    float4  modelVertexNormal : texcoord1;
 };

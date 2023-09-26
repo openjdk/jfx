@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ import java.util.Locale;
 import java.util.ResourceBundle;
 import static com.sun.javafx.FXPermissions.*;
 
-class WindowStage extends GlassStage {
+public class WindowStage extends GlassStage {
 
     protected Window platformWindow;
 
@@ -223,7 +223,7 @@ class WindowStage extends GlassStage {
         }
     }
 
-    final Window getPlatformWindow() {
+    public final Window getPlatformWindow() {
         return platformWindow;
     }
 
@@ -273,7 +273,6 @@ class WindowStage extends GlassStage {
                 newScene.updateSceneState();
                 return null;
             });
-            requestFocus();
         } else {
             QuantumToolkit.runWithRenderLock(() -> {
                 // platformWindow can be null here, if this window is owned,
@@ -414,12 +413,12 @@ class WindowStage extends GlassStage {
                     //larger than 1/scaleFactor
                     double scaleDivider = Math.ceil(1.0 / scaleFactor);
                     scaleFactor = 1.0 / scaleDivider;
-                    adjw = (int)Math.round((double)iw / scaleDivider);
-                    adjh = (int)Math.round((double)ih / scaleDivider);
+                    adjw = (int)Math.round(iw / scaleDivider);
+                    adjh = (int)Math.round(ih / scaleDivider);
                     scaleMeasure = 1.0 - 1.0 / scaleDivider;
                 }
-                double similarity = ((double)width - (double)adjw) / (double)width +
-                    ((double)height - (double)adjh) / (double)height + //Large padding is bad
+                double similarity = ((double)width - (double)adjw) / width +
+                    ((double)height - (double)adjh) / height + //Large padding is bad
                     scaleMeasure; //Large rescale is bad
                 if (similarity < bestSimilarity) {
                     bestSimilarity = similarity;

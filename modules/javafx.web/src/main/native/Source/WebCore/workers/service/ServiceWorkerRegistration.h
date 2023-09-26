@@ -29,23 +29,34 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "JSDOMPromiseDeferredForward.h"
+#include "Notification.h"
+#include "NotificationOptions.h"
+#include "PushPermissionState.h"
+#include "PushSubscription.h"
 #include "SWClientConnection.h"
 #include "ServiceWorkerRegistrationData.h"
+#include "Supplementable.h"
 #include "Timer.h"
+#include <wtf/ListHashSet.h>
+#include <wtf/Vector.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
 class DeferredPromise;
+class NavigationPreloadManager;
 class ScriptExecutionContext;
 class ServiceWorker;
 class ServiceWorkerContainer;
+class WebCoreOpaqueRoot;
 
-class ServiceWorkerRegistration final : public RefCounted<ServiceWorkerRegistration>, public EventTargetWithInlineData, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(ServiceWorkerRegistration);
+class ServiceWorkerRegistration final : public RefCounted<ServiceWorkerRegistration>, public Supplementable<ServiceWorkerRegistration>, public EventTarget, public ActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(ServiceWorkerRegistration, WEBCORE_EXPORT);
 public:
     static Ref<ServiceWorkerRegistration> getOrCreate(ScriptExecutionContext&, Ref<ServiceWorkerContainer>&&, ServiceWorkerRegistrationData&&);
 
-    ~ServiceWorkerRegistration();
+    WEBCORE_EXPORT ~ServiceWorkerRegistration();
 
     ServiceWorkerRegistrationIdentifier identifier() const { return m_registrationData.identifier; }
 
@@ -68,6 +79,11 @@ public:
     void update(Ref<DeferredPromise>&&);
     void unregister(Ref<DeferredPromise>&&);
 
+    void subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&&);
+    void unsubscribeFromPushService(PushSubscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&&);
+    void getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&&);
+    void getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&&);
+
     using RefCounted::ref;
     using RefCounted::deref;
 
@@ -75,6 +91,18 @@ public:
 
     void updateStateFromServer(ServiceWorkerRegistrationState, RefPtr<ServiceWorker>&&);
     void queueTaskToFireUpdateFoundEvent();
+
+    NavigationPreloadManager& navigationPreload();
+    ServiceWorkerContainer& container() { return m_container.get(); }
+
+#if ENABLE(NOTIFICATION_EVENT)
+    struct GetNotificationOptions {
+        String tag;
+    };
+
+    void showNotification(ScriptExecutionContext&, String&& title, NotificationOptions&&, Ref<DeferredPromise>&&);
+    void getNotifications(const GetNotificationOptions& filter, DOMPromiseDeferred<IDLSequence<IDLInterface<Notification>>>);
+#endif
 
 private:
     ServiceWorkerRegistration(ScriptExecutionContext&, Ref<ServiceWorkerContainer>&&, ServiceWorkerRegistrationData&&);
@@ -95,7 +123,11 @@ private:
     RefPtr<ServiceWorker> m_installingWorker;
     RefPtr<ServiceWorker> m_waitingWorker;
     RefPtr<ServiceWorker> m_activeWorker;
+
+    std::unique_ptr<NavigationPreloadManager> m_navigationPreload;
 };
+
+WebCoreOpaqueRoot root(ServiceWorkerRegistration*);
 
 } // namespace WebCore
 

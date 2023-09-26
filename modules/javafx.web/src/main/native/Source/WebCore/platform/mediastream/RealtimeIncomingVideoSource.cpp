@@ -33,10 +33,12 @@
 
 #if USE(LIBWEBRTC)
 
+#include "FrameRateMonitor.h"
+
 namespace WebCore {
 
 RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&& videoTrack, String&& videoTrackId)
-    : RealtimeMediaSource(Type::Video, "remote video"_s, WTFMove(videoTrackId))
+    : RealtimeMediaSource(CaptureDevice { WTFMove(videoTrackId), CaptureDevice::DeviceType::Camera, "remote video"_s })
     , m_videoTrack(WTFMove(videoTrack))
 {
     ASSERT(m_videoTrack);
@@ -56,6 +58,20 @@ RealtimeIncomingVideoSource::~RealtimeIncomingVideoSource()
     m_videoTrack->UnregisterObserver(this);
 }
 
+void RealtimeIncomingVideoSource::enableFrameRatedMonitoring()
+{
+#if !RELEASE_LOG_DISABLED
+    if (m_frameRateMonitor)
+        return;
+    m_frameRateMonitor = makeUnique<FrameRateMonitor>([this](auto info) {
+        auto frameTime = info.frameTime.secondsSinceEpoch().value();
+        auto lastFrameTime = info.lastFrameTime.secondsSinceEpoch().value();
+        ALWAYS_LOG_IF(loggerPtr(), LOGIDENTIFIER, "frame at ", frameTime, " previous frame was at ", lastFrameTime, ", observed frame rate is ", info.observedFrameRate, ", delay since last frame is ", (frameTime - lastFrameTime) * 1000, " ms, frame count is ", info.frameCount);
+    });
+#endif
+
+}
+
 void RealtimeIncomingVideoSource::startProducingData()
 {
     m_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
@@ -68,7 +84,7 @@ void RealtimeIncomingVideoSource::stopProducingData()
 
 void RealtimeIncomingVideoSource::OnChanged()
 {
-    callOnMainThread([protectedThis = makeRef(*this)] {
+    callOnMainThread([protectedThis = Ref { *this }] {
         if (protectedThis->m_videoTrack->state() == webrtc::MediaStreamTrackInterface::kEnded)
             protectedThis->end();
     });
@@ -102,6 +118,31 @@ void RealtimeIncomingVideoSource::settingsDidChange(OptionSet<RealtimeMediaSourc
 {
     if (settings.containsAny({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height }))
         m_currentSettings = std::nullopt;
+}
+
+VideoFrameTimeMetadata RealtimeIncomingVideoSource::metadataFromVideoFrame(const webrtc::VideoFrame& frame)
+{
+    VideoFrameTimeMetadata metadata;
+    if (frame.ntp_time_ms() > 0)
+        metadata.captureTime = Seconds::fromMilliseconds(frame.ntp_time_ms());
+    if (isInBounds<uint32_t>(frame.timestamp()))
+        metadata.rtpTimestamp = frame.timestamp();
+    auto lastPacketTimestamp = std::max_element(frame.packet_infos().cbegin(), frame.packet_infos().cend(), [](const auto& a, const auto& b) {
+        return a.receive_time() < b.receive_time();
+    });
+    metadata.receiveTime = Seconds::fromMicroseconds(lastPacketTimestamp->receive_time().us());
+    if (frame.processing_time())
+        metadata.processingDuration = Seconds::fromMilliseconds(frame.processing_time()->Elapsed().ms()).value();
+
+    return metadata;
+}
+
+void RealtimeIncomingVideoSource::notifyNewFrame()
+{
+#if !RELEASE_LOG_DISABLED
+    if (m_frameRateMonitor)
+        m_frameRateMonitor->update();
+#endif
 }
 
 } // namespace WebCore

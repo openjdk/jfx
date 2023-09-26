@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "JSFunction.h"
+#include "JSImmutableButterfly.h"
 
 namespace JSC {
 
@@ -40,24 +41,33 @@ class JSBoundFunction final : public JSFunction {
 public:
     typedef JSFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags & ~ImplementsDefaultHasInstance;
-    static_assert(StructureFlags & ImplementsHasInstance, "");
+    static_assert(StructureFlags & ImplementsHasInstance);
+
+    static constexpr unsigned maxNumberOfCloningBoundArguments = 64;
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.boundFunctionSpace<mode>();
     }
 
-    static JSBoundFunction* create(VM&, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, double length, JSString* nameMayBeNull);
+    JS_EXPORT_PRIVATE static JSBoundFunction* create(VM&, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSImmutableButterfly* boundArgs, double length, JSString* nameMayBeNull);
 
     static bool customHasInstance(JSObject*, JSGlobalObject*, JSValue);
+
+    // If boundArgs' length is too large, we should not clone boundArgs when wrapping the bound function again.
+    bool canCloneBoundArgs() const
+    {
+        return boundArgsLength() <= JSBoundFunction::maxNumberOfCloningBoundArguments;
+    }
 
     JSObject* targetFunction() { return m_targetFunction.get(); }
     JSValue boundThis() { return m_boundThis.get(); }
     JSImmutableButterfly* boundArgs() { return m_boundArgs.get(); } // DO NOT allow this array to be mutated!
+    unsigned boundArgsLength() const { return m_boundArgs ? m_boundArgs->length() : 0; }
     JSArray* boundArgsCopy(JSGlobalObject*);
     JSString* nameMayBeNull() { return m_nameMayBeNull.get(); }
-    const String& nameString()
+    String nameString()
     {
         if (!m_nameMayBeNull)
             return emptyString();

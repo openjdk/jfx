@@ -33,6 +33,7 @@
 #include <TargetConditionals.h>
 #endif
 
+#define BPLATFORM_JAVA 1
 #define BPLATFORM(PLATFORM) (defined BPLATFORM_##PLATFORM && BPLATFORM_##PLATFORM)
 #define BOS(OS) (defined BOS_##OS && BOS_##OS)
 
@@ -93,7 +94,17 @@
 #endif
 
 #if defined(__SCE__)
-#define BPLATORM_PLAYSTATION 1
+#define BPLATFORM_PLAYSTATION 1
+#endif
+
+#if defined(BUILDING_GTK__)
+#define BPLATFORM_GTK 1
+#elif defined(BUILDING_WPE__)
+#define BPLATFORM_WPE 1
+#elif defined(BUILDING_JSCONLY__)
+/* JSCOnly does not provide BPLATFORM() macro */
+#elif BOS(WINDOWS)
+#define BPLATFORM_WIN 1
 #endif
 
 /* ==== Feature decision macros: these define feature choices for a particular port. ==== */
@@ -133,6 +144,9 @@
 /* BCPU(ARM64) */
 #if defined(__arm64__) || defined(__aarch64__)
 #define BCPU_ARM64 1
+#if defined(__arm64e__)
+#define BCPU_ARM64E 1
+#endif
 #endif
 
 /* BCPU(ARM) - ARM, any version*/
@@ -214,7 +228,9 @@
 || defined(__ARM_ARCH_7K__) \
 || defined(__ARM_ARCH_7M__) \
 || defined(__ARM_ARCH_7R__) \
-|| defined(__ARM_ARCH_7S__)
+|| defined(__ARM_ARCH_7S__) \
+|| defined(__ARM_ARCH_8__) \
+|| defined(__ARM_ARCH_8A__)
 #define BTHUMB_ARCH_VERSION 4
 
 /* RVCT sets __TARGET_ARCH_THUMB */
@@ -311,8 +327,11 @@
 
 /* BENABLE(LIBPAS) is enabling libpas build. But this does not mean we use libpas for bmalloc replacement. */
 #if !defined(BENABLE_LIBPAS)
-#if BCPU(ARM64) && BOS(MAC)
+#if BCPU(ADDRESS64) && (BOS(DARWIN) || (!BOS(LINUX) && !BPLATFORM(GTK) && !BPLATFORM(WPE)))
 #define BENABLE_LIBPAS 1
+#ifndef PAS_BMALLOC
+#define PAS_BMALLOC 1
+#endif
 #else
 #define BENABLE_LIBPAS 0
 #endif
@@ -320,7 +339,11 @@
 
 /* BUSE(LIBPAS) is using libpas for bmalloc replacement. */
 #if !defined(BUSE_LIBPAS)
+#if defined(BENABLE_LIBPAS) && BENABLE_LIBPAS
+#define BUSE_LIBPAS 1
+#else
 #define BUSE_LIBPAS 0
+#endif
 #endif
 
 #if !defined(BUSE_PRECOMPUTED_CONSTANTS_VMPAGE4K)
@@ -347,4 +370,13 @@
 #define BENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 0
 #else
 #define BENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 1
+#endif
+
+/* We only export the mallocSize and mallocGoodSize APIs if they're supported by the DebugHeap allocator (currently only Darwin) and the current bmalloc allocator (currently only libpas). */
+#if BUSE(LIBPAS) && BOS(DARWIN)
+#define BENABLE_MALLOC_SIZE 1
+#define BENABLE_MALLOC_GOOD_SIZE 1
+#else
+#define BENABLE_MALLOC_SIZE 0
+#define BENABLE_MALLOC_GOOD_SIZE 0
 #endif

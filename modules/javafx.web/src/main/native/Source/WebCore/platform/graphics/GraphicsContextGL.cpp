@@ -30,13 +30,14 @@
 
 #if ENABLE(WEBGL)
 
-#include "ExtensionsGL.h"
 #include "FormatConverter.h"
-#include "GraphicsContextGLOpenGL.h"
+#include "GCGLSpan.h"
+#include "GraphicsContext.h"
 #include "HostWindow.h"
 #include "Image.h"
 #include "ImageObserver.h"
 #include "PixelBuffer.h"
+#include "VideoFrame.h"
 
 namespace WebCore {
 
@@ -347,27 +348,16 @@ static bool packPixels(const uint8_t* sourceData, GraphicsContextGL::DataFormat 
     return true;
 }
 
-RefPtr<GraphicsContextGL> GraphicsContextGL::create(const GraphicsContextGLAttributes& attributes, HostWindow* hostWindow)
-{
-    RefPtr<GraphicsContextGL> result;
-    if (hostWindow)
-        result = hostWindow->createGraphicsContextGL(attributes);
-    if (!result)
-        result = GraphicsContextGLOpenGL::create(attributes, hostWindow);
-    return result;
-}
+GraphicsContextGL::Client::Client() = default;
 
-GraphicsContextGL::GraphicsContextGL(GraphicsContextGLAttributes attrs, GraphicsContextGL*)
+GraphicsContextGL::Client::~Client() = default;
+
+GraphicsContextGL::GraphicsContextGL(GraphicsContextGLAttributes attrs)
     : m_attrs(attrs)
 {
 }
 
-void GraphicsContextGL::enablePreserveDrawingBuffer()
-{
-    // Canvas capture should not call this unless necessary.
-    ASSERT(!m_attrs.preserveDrawingBuffer);
-    m_attrs.preserveDrawingBuffer = true;
-}
+GraphicsContextGL::~GraphicsContextGL() = default;
 
 bool GraphicsContextGL::computeFormatAndTypeParameters(GCGLenum format, GCGLenum type, unsigned* componentsPerPixel, unsigned* bytesPerComponent)
 {
@@ -387,13 +377,13 @@ bool GraphicsContextGL::computeFormatAndTypeParameters(GCGLenum format, GCGLenum
         break;
     case GraphicsContextGL::RGB:
     case GraphicsContextGL::RGB_INTEGER:
-    case ExtensionsGL::SRGB_EXT:
+    case GraphicsContextGL::SRGB_EXT:
         *componentsPerPixel = 3;
         break;
     case GraphicsContextGL::RGBA:
     case GraphicsContextGL::RGBA_INTEGER:
-    case ExtensionsGL::BGRA_EXT: // GL_EXT_texture_format_BGRA8888
-    case ExtensionsGL::SRGB_ALPHA_EXT:
+    case GraphicsContextGL::BGRA_EXT: // GL_EXT_texture_format_BGRA8888
+    case GraphicsContextGL::SRGB_ALPHA_EXT:
         *componentsPerPixel = 4;
         break;
     default:
@@ -582,13 +572,13 @@ bool GraphicsContextGL::extractPixelBuffer(const PixelBuffer& pixelBuffer, DataF
         return false;
     data.resize(packedSize);
 
-    if (!packPixels(pixelBuffer.data().data(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
+    if (!packPixels(pixelBuffer.bytes(), sourceDataFormat, width, height, sourceImageSubRectangle, depth, 0, unpackImageHeight, format, type, premultiplyAlpha ? AlphaOp::DoPremultiply : AlphaOp::DoNothing, data.data(), flipY))
         return false;
 
     return true;
 }
 
-bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGLenum format, GCGLenum type, const PixelStoreParams& unpackParams, bool flipY, bool premultiplyAlpha, const void* pixels, Vector<uint8_t>& data)
+bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGLenum format, GCGLenum type, const PixelStoreParams& unpackParams, bool flipY, bool premultiplyAlpha, GCGLSpan<const GCGLvoid> pixels, Vector<uint8_t>& data)
 {
     // Assumes format, type, etc. have already been validated.
     DataFormat sourceDataFormat = getDataFormat(format, type);
@@ -603,7 +593,7 @@ bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGL
 
     unsigned imageSizeInBytes, skipSizeInBytes;
     computeImageSizeInBytes(format, type, width, height, 1, unpackParams, &imageSizeInBytes, nullptr, &skipSizeInBytes);
-    const uint8_t* srcData = static_cast<const uint8_t*>(pixels);
+    const uint8_t* srcData = static_cast<const uint8_t*>(pixels.data());
     if (skipSizeInBytes)
         srcData += skipSizeInBytes;
 
@@ -612,6 +602,114 @@ bool GraphicsContextGL::extractTextureData(unsigned width, unsigned height, GCGL
 
     return true;
 }
+
+GCGLfloat GraphicsContextGL::getFloat(GCGLenum pname)
+{
+    GCGLfloat value[1] { };
+    getFloatv(pname, value);
+    return value[0];
+}
+
+GCGLboolean GraphicsContextGL::getBoolean(GCGLenum pname)
+{
+    GCGLboolean value[1] { };
+    getBooleanv(pname, value);
+    return value[0];
+}
+
+GCGLint GraphicsContextGL::getInteger(GCGLenum pname)
+{
+    GCGLint value[1] { };
+    getIntegerv(pname, value);
+    return value[0];
+}
+
+GCGLint GraphicsContextGL::getIntegeri(GCGLenum pname, GCGLuint index)
+{
+    GCGLint value[4] { };
+    getIntegeri_v(pname, index, value);
+    return value[0];
+}
+
+GCGLint GraphicsContextGL::getActiveUniformBlocki(GCGLuint program, GCGLuint uniformBlockIndex, GCGLenum pname)
+{
+    GCGLint value[1] { };
+    getActiveUniformBlockiv(program, uniformBlockIndex, pname, value);
+    return value[0];
+}
+
+GCGLint GraphicsContextGL::getInternalformati(GCGLenum target, GCGLenum internalformat, GCGLenum pname)
+{
+    GCGLint value[1] { };
+    getInternalformativ(target, internalformat, pname, value);
+    return value[0];
+}
+
+void GraphicsContextGL::setDrawingBufferColorSpace(const DestinationColorSpace&)
+{
+}
+
+void GraphicsContextGL::markContextChanged()
+{
+    m_layerComposited = false;
+}
+
+bool GraphicsContextGL::layerComposited() const
+{
+    return m_layerComposited;
+}
+
+void GraphicsContextGL::setBuffersToAutoClear(GCGLbitfield buffers)
+{
+    if (!contextAttributes().preserveDrawingBuffer)
+        m_buffersToAutoClear = buffers;
+}
+
+GCGLbitfield GraphicsContextGL::getBuffersToAutoClear() const
+{
+    return m_buffersToAutoClear;
+}
+
+void GraphicsContextGL::markLayerComposited()
+{
+    m_layerComposited = true;
+    auto attrs = contextAttributes();
+    if (!attrs.preserveDrawingBuffer) {
+        m_buffersToAutoClear = GraphicsContextGL::COLOR_BUFFER_BIT;
+        if (attrs.depth)
+            m_buffersToAutoClear |= GraphicsContextGL::DEPTH_BUFFER_BIT;
+        if (attrs.stencil)
+            m_buffersToAutoClear |= GraphicsContextGL::STENCIL_BUFFER_BIT;
+    }
+    if (m_client)
+        m_client->didComposite();
+}
+
+
+void GraphicsContextGL::forceContextLost()
+{
+    if (m_client)
+        m_client->forceContextLost();
+}
+
+void GraphicsContextGL::dispatchContextChangedNotification()
+{
+    if (m_client)
+        m_client->dispatchContextChangedNotification();
+}
+
+#if ENABLE(VIDEO)
+RefPtr<Image> GraphicsContextGL::videoFrameToImage(VideoFrame& frame)
+{
+    IntSize size { static_cast<int>(frame.presentationSize().width()), static_cast<int>(frame.presentationSize().height()) };
+    auto imageBuffer = ImageBuffer::create(size, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    if (!imageBuffer)
+        return { };
+
+    imageBuffer->context().paintVideoFrame(frame, { { }, size }, true);
+    return imageBuffer->copyImage(DontCopyBackingStore);
+}
+#endif
 
 } // namespace WebCore
 

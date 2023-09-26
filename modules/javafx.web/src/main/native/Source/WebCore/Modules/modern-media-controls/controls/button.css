@@ -32,7 +32,7 @@ button {
     align-items: center;
     justify-content: center;
     background-color: transparent !important;
-    -webkit-appearance: none;
+    appearance: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
@@ -42,8 +42,8 @@ button {
 button > picture {
     background-color: var(--secondary-glyph-color);
     mix-blend-mode: plus-lighter;
-    -webkit-mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
     transition: transform 150ms;
     will-change: transform;
     /* Work around webkit.org/b/174565 by making the shrinking button's icon non-interactive */
@@ -80,6 +80,13 @@ button.corner {
     height: var(--inline-controls-bar-height) !important;
 }
 
+/* Rounded style */
+
+button.rounded {
+    width: var(--inline-controls-bar-height) !important;
+    height: var(--inline-controls-bar-height) !important;
+}
+
 /* Center style */
 
 button.center,
@@ -99,10 +106,9 @@ button.small-center {
     height: 31px !important;
 }
 
-button.center > .background-tint,
-button.small-center > .background-tint,
-button.center > .background-tint > div,
-button.small-center > .background-tint > div {
+button:is(.center, .small-center),
+button:is(.center, .small-center) > .background-tint,
+button:is(.center, .small-center) > .background-tint > div {
     border-radius: 50%;
 }
 

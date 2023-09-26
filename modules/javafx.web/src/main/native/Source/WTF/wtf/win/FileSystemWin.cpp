@@ -37,6 +37,7 @@
 #include <windows.h>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/win/WCharStringExtras.h>
@@ -112,6 +113,18 @@ std::optional<uint64_t> fileSize(PlatformFileHandle fileHandle)
     return getFileSizeFromByHandleFileInformationStructure(fileInformation);
 }
 
+std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
+{
+    // FIXME (246118): Implement this function properly.
+    return std::nullopt;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+{
+    // FIXME (246118): Implement this function properly.
+    return true;
+}
+
 std::optional<WallTime> fileCreationTime(const String& path)
 {
     WIN32_FIND_DATAW findData;
@@ -169,7 +182,7 @@ static String storageDirectory(DWORD pathIdentifier)
     buffer.shrink(wcslen(wcharFrom(buffer.data())));
     String directory = String::adopt(WTFMove(buffer));
 
-    directory = pathByAppendingComponent(directory, "Apple Computer\\" + bundleName());
+    directory = pathByAppendingComponent(directory, makeString("Apple Computer\\", bundleName()));
     if (!makeAllDirectories(directory))
         return String();
 
@@ -193,8 +206,8 @@ static String cachedStorageDirectory(DWORD pathIdentifier)
 static String generateTemporaryPath(const Function<bool(const String&)>& action)
 {
     wchar_t tempPath[MAX_PATH];
-    int tempPathLength = ::GetTempPathW(WTF_ARRAY_LENGTH(tempPath), tempPath);
-    if (tempPathLength <= 0 || tempPathLength > WTF_ARRAY_LENGTH(tempPath))
+    int tempPathLength = ::GetTempPathW(std::size(tempPath), tempPath);
+    if (tempPathLength <= 0 || tempPathLength > std::size(tempPath))
         return String();
 
     String proposedPath;
@@ -209,9 +222,9 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
         for (int i = 0; i < randomPartLength; ++i)
             tempFile[i] = validChars[tempFile[i] % (sizeof(validChars) - 1)];
 
-        ASSERT(wcslen(tempFile) == WTF_ARRAY_LENGTH(tempFile) - 1);
+        ASSERT(wcslen(tempFile) == std::size(tempFile) - 1);
 
-        proposedPath = pathByAppendingComponent(tempPath, tempFile);
+        proposedPath = pathByAppendingComponent(String(tempPath), String(tempFile));
         if (proposedPath.isEmpty())
             break;
     } while (!action(proposedPath));
@@ -219,7 +232,7 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
     return proposedPath;
 }
 
-String openTemporaryFile(const String&, PlatformFileHandle& handle, const String& suffix)
+String openTemporaryFile(StringView, PlatformFileHandle& handle, StringView suffix)
 {
     // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
@@ -250,7 +263,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
         creationDisposition = OPEN_EXISTING;
         shareMode = FILE_SHARE_READ;
         break;
-    case FileOpenMode::Write:
+    case FileOpenMode::Truncate:
         desiredAccess = GENERIC_WRITE;
         creationDisposition = CREATE_ALWAYS;
         break;
@@ -303,6 +316,12 @@ bool truncateFile(PlatformFileHandle handle, long long offset)
     return SetFileInformationByHandle(handle, FileEndOfFileInfo, &eofInfo, sizeof(FILE_END_OF_FILE_INFO));
 }
 
+bool flushFile(PlatformFileHandle handle)
+{
+    // Not implemented.
+    return false;
+}
+
 int writeToFile(PlatformFileHandle handle, const void* data, int length)
 {
     if (!isHandleValid(handle))
@@ -339,9 +358,9 @@ String roamingUserSpecificStorageDirectory()
     return cachedStorageDirectory(CSIDL_APPDATA);
 }
 
-std::optional<int32_t> getFileDeviceId(const CString& fsFile)
+std::optional<int32_t> getFileDeviceId(const String& fsFile)
 {
-    auto handle = openFile(fsFile.data(), FileOpenMode::Read);
+    auto handle = openFile(fsFile, FileOpenMode::Read);
     if (!isHandleValid(handle))
         return std::nullopt;
 
@@ -401,7 +420,7 @@ bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openM
         pageProtection = PAGE_READONLY;
         desiredAccess = FILE_MAP_READ;
         break;
-    case FileOpenMode::Write:
+    case FileOpenMode::Truncate:
         pageProtection = PAGE_READWRITE;
         desiredAccess = FILE_MAP_WRITE;
         break;

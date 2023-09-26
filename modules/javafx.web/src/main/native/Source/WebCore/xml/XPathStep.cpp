@@ -29,7 +29,9 @@
 #include "XPathStep.h"
 
 #include "Attr.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
+#include "ElementInlines.h"
 #include "HTMLElement.h"
 #include "NodeTraversal.h"
 #include "XMLNSNames.h"

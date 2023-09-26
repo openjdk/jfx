@@ -48,11 +48,13 @@ private:
     String stringValue() const final;
     void updateChildrenIfNecessary() final;
     void clearChildren() final;
-    void insertChild(AXCoreObject*, unsigned) final;
+    void insertChild(AXCoreObject*, unsigned, DescendIfIgnored = DescendIfIgnored::Yes) final;
     bool m_containsOnlyStaticTextDirty : 1;
     bool m_containsOnlyStaticText : 1;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityLabel, isLabel())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityLabel) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isLabel(); } \
+SPECIALIZE_TYPE_TRAITS_END()

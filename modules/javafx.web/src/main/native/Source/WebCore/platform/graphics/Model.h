@@ -25,10 +25,10 @@
 
 #pragma once
 
-#if ENABLE(MODEL_ELEMENT)
-
 #include "SharedBuffer.h"
 #include <wtf/RefCounted.h>
+#include <wtf/URL.h>
+#include <wtf/text/WTFString.h>
 
 namespace WTF {
 class TextStream;
@@ -38,50 +38,53 @@ namespace WebCore {
 
 class Model final : public RefCounted<Model> {
 public:
-    WEBCORE_EXPORT static Ref<Model> create(Ref<SharedBuffer>);
+    WEBCORE_EXPORT static Ref<Model> create(Ref<SharedBuffer>&&, String, URL);
     WEBCORE_EXPORT ~Model();
 
     Ref<SharedBuffer> data() const { return m_data; }
+    const String& mimeType() const { return m_mimeType; }
+    const URL& url() const { return m_url; }
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static RefPtr<Model> decode(Decoder&);
 
 private:
-    explicit Model(Ref<SharedBuffer>);
+    explicit Model(Ref<SharedBuffer>&&, String, URL);
 
     Ref<SharedBuffer> m_data;
+    String m_mimeType;
+    URL m_url;
 };
 
 template<class Encoder>
 void Model::encode(Encoder& encoder) const
 {
-    encoder << static_cast<size_t>(m_data->size());
-    encoder.encodeFixedLengthData(m_data->data(), m_data->size(), 1);
+    encoder << m_data;
+    encoder << m_mimeType;
+    encoder << m_url;
 }
 
 template<class Decoder>
 RefPtr<Model> Model::decode(Decoder& decoder)
 {
-    std::optional<size_t> length;
-    decoder >> length;
-    if (!length)
+    std::optional<Ref<SharedBuffer>> data;
+    decoder >> data;
+    if (!data)
         return nullptr;
 
-    if (!decoder.template bufferIsLargeEnoughToContain<uint8_t>(length.value())) {
-        decoder.markInvalid();
-        return nullptr;
-    }
-
-    Vector<uint8_t> data;
-    data.grow(*length);
-    if (!decoder.decodeFixedLengthData(data.data(), data.size(), 1))
+    std::optional<String> mimeType;
+    decoder >> mimeType;
+    if (!mimeType)
         return nullptr;
 
-    return Model::create(SharedBuffer::create(WTFMove(data)));
+    std::optional<URL> url;
+    decoder >> url;
+    if (!url)
+        return nullptr;
+
+    return Model::create(WTFMove(*data), WTFMove(*mimeType), WTFMove(*url));
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Model&);
 
 } // namespace WebCore
-
-#endif // ENABLE(MODEL_ELEMENT)

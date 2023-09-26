@@ -109,7 +109,7 @@ public:
     WEBCORE_EXPORT void setFixedElementsLayoutRelativeToFrame(bool);
 
     bool asyncFrameOrOverflowScrollingEnabled() const { return m_asyncFrameOrOverflowScrollingEnabled; }
-    void setAsyncFrameOrOverflowScrollingEnabled(bool);
+    WEBCORE_EXPORT void setAsyncFrameOrOverflowScrollingEnabled(bool);
 
     bool scrollingPerformanceTestingEnabled() const { return m_scrollingPerformanceTestingEnabled; }
     WEBCORE_EXPORT void setScrollingPerformanceTestingEnabled(bool);
@@ -117,7 +117,7 @@ public:
     bool wheelEventGesturesBecomeNonBlocking() const { return m_wheelEventGesturesBecomeNonBlocking; }
     WEBCORE_EXPORT void setWheelEventGesturesBecomeNonBlocking(bool);
 
-    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;
 
 private:
     ScrollingStateFrameScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);

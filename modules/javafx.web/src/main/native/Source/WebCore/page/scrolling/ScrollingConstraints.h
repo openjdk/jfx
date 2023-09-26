@@ -34,6 +34,7 @@ class AbsolutePositionConstraints {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     AbsolutePositionConstraints() = default;
+    WEBCORE_EXPORT AbsolutePositionConstraints(const FloatSize&, const FloatPoint&);
 
     bool operator==(const AbsolutePositionConstraints& other) const
     {
@@ -174,6 +175,7 @@ public:
             && m_rightOffset == other.m_rightOffset
             && m_topOffset == other.m_topOffset
             && m_bottomOffset == other.m_bottomOffset
+            && m_constrainingRectAtLastLayout == other.m_constrainingRectAtLastLayout
             && m_containingBlockRect == other.m_containingBlockRect
             && m_stickyBoxRect == other.m_stickyBoxRect
             && m_stickyOffsetAtLastLayout == other.m_stickyOffsetAtLastLayout

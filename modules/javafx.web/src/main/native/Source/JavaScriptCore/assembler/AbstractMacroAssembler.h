@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "AbortReason.h"
 #include "AssemblerBuffer.h"
 #include "AssemblerCommon.h"
+#include "AssemblyComments.h"
 #include "CPU.h"
 #include "CodeLocation.h"
 #include "JSCJSValue.h"
@@ -35,9 +36,9 @@
 #include "MacroAssemblerCodeRef.h"
 #include "MacroAssemblerHelpers.h"
 #include "Options.h"
-#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/SharedTask.h>
+#include <wtf/StringPrintStream.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakRandom.h>
 
@@ -54,6 +55,8 @@ template<typename T> class DisallowMacroScratchRegisterUsage;
 namespace DFG {
 struct OSRExit;
 }
+
+#define JIT_COMMENT(jit, ...) do { if (UNLIKELY(Options::needDisassemblySupport())) { (jit).comment(__VA_ARGS__); } else { (void) jit; } } while (0);
 
 class AbstractMacroAssemblerBase {
     WTF_MAKE_FAST_ALLOCATED;
@@ -74,6 +77,19 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
         return Success;
     }
+
+protected:
+    uint32_t random()
+    {
+        if (!m_randomSource)
+            initializeRandom();
+        return m_randomSource->getUint32();
+    }
+
+private:
+    JS_EXPORT_PRIVATE void initializeRandom();
+
+    std::optional<WeakRandom> m_randomSource;
 };
 
 template <class AssemblerType>
@@ -82,7 +98,6 @@ public:
     typedef AbstractMacroAssembler<AssemblerType> AbstractMacroAssemblerType;
     typedef AssemblerType AssemblerType_T;
 
-    template<PtrTag tag> using CodePtr = MacroAssemblerCodePtr<tag>;
     template<PtrTag tag> using CodeRef = MacroAssemblerCodeRef<tag>;
 
     enum class CPUIDCheckState {
@@ -123,6 +138,7 @@ public:
         TimesFour,
         TimesEight,
         ScalePtr = isAddress64Bit() ? TimesEight : TimesFour,
+        ScaleRegWord = isRegister64Bit() ? TimesEight : TimesFour,
     };
 
     enum class Extend : uint8_t {
@@ -177,39 +193,6 @@ public:
 
         RegisterID base;
         intptr_t offset;
-    };
-
-    // ImplicitAddress:
-    //
-    // This class is used for explicit 'load' and 'store' operations
-    // (as opposed to situations in which a memory operand is provided
-    // to a generic operation, such as an integer arithmetic instruction).
-    //
-    // In the case of a load (or store) operation we want to permit
-    // addresses to be implicitly constructed, e.g. the two calls:
-    //
-    //     load32(Address(addrReg), destReg);
-    //     load32(addrReg, destReg);
-    //
-    // Are equivalent, and the explicit wrapping of the Address in the former
-    // is unnecessary.
-    struct ImplicitAddress {
-        ImplicitAddress(RegisterID base)
-            : base(base)
-            , offset(0)
-        {
-            ASSERT(base != RegisterID::InvalidGPRReg);
-        }
-
-        ImplicitAddress(Address address)
-            : base(address.base)
-            , offset(address.offset)
-        {
-            ASSERT(base != RegisterID::InvalidGPRReg);
-        }
-
-        RegisterID base;
-        int32_t offset;
     };
 
     // BaseIndex:
@@ -298,9 +281,9 @@ public:
     // in a class requiring explicit construction in order to differentiate
     // from pointers used as absolute addresses to memory operations
     struct TrustedImmPtr : public TrustedImm {
-        TrustedImmPtr() { }
+        constexpr TrustedImmPtr() { }
 
-        explicit TrustedImmPtr(const void* value)
+        explicit constexpr TrustedImmPtr(const void* value)
             : m_value(value)
         {
         }
@@ -311,21 +294,21 @@ public:
         {
         }
 
-        explicit TrustedImmPtr(std::nullptr_t)
+        explicit constexpr TrustedImmPtr(std::nullptr_t)
         {
         }
 
-        explicit TrustedImmPtr(size_t value)
+        explicit constexpr TrustedImmPtr(size_t value)
             : m_value(reinterpret_cast<void*>(value))
         {
         }
 
-        intptr_t asIntptr()
+        constexpr intptr_t asIntptr()
         {
             return reinterpret_cast<intptr_t>(m_value);
         }
 
-        void* asPtr()
+        constexpr void* asPtr()
         {
             return const_cast<void*>(m_value);
         }
@@ -335,12 +318,12 @@ public:
 
     struct ImmPtr : private TrustedImmPtr
     {
-        explicit ImmPtr(const void* value)
+        explicit constexpr ImmPtr(const void* value)
             : TrustedImmPtr(value)
         {
         }
 
-        TrustedImmPtr asTrustedImmPtr() { return *this; }
+        constexpr TrustedImmPtr asTrustedImmPtr() { return *this; }
     };
 
     // TrustedImm32:
@@ -358,7 +341,7 @@ public:
         }
 
 #if !CPU(X86_64)
-        explicit TrustedImm32(TrustedImmPtr ptr)
+        explicit constexpr TrustedImm32(TrustedImmPtr ptr)
             : m_value(ptr.asIntptr())
         {
         }
@@ -369,17 +352,17 @@ public:
 
 
     struct Imm32 : private TrustedImm32 {
-        explicit Imm32(int32_t value)
+        explicit constexpr Imm32(int32_t value)
             : TrustedImm32(value)
         {
         }
 #if !CPU(X86_64)
-        explicit Imm32(TrustedImmPtr ptr)
+        explicit constexpr Imm32(TrustedImmPtr ptr)
             : TrustedImm32(ptr)
         {
         }
 #endif
-        const TrustedImm32& asTrustedImm32() const { return *this; }
+        constexpr const TrustedImm32& asTrustedImm32() const { return *this; }
 
     };
 
@@ -390,15 +373,15 @@ public:
     // (which are implemented as an enum) from accidentally being passed as
     // immediate values.
     struct TrustedImm64 : TrustedImm {
-        TrustedImm64() { }
+        constexpr TrustedImm64() { }
 
-        explicit TrustedImm64(int64_t value)
+        explicit constexpr TrustedImm64(int64_t value)
             : m_value(value)
         {
         }
 
 #if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
-        explicit TrustedImm64(TrustedImmPtr ptr)
+        explicit constexpr TrustedImm64(TrustedImmPtr ptr)
             : m_value(ptr.asIntptr())
         {
         }
@@ -409,17 +392,17 @@ public:
 
     struct Imm64 : private TrustedImm64
     {
-        explicit Imm64(int64_t value)
+        explicit constexpr Imm64(int64_t value)
             : TrustedImm64(value)
         {
         }
 #if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
-        explicit Imm64(TrustedImmPtr ptr)
+        explicit constexpr Imm64(TrustedImmPtr ptr)
             : TrustedImm64(ptr)
         {
         }
 #endif
-        const TrustedImm64& asTrustedImm64() const { return *this; }
+        constexpr const TrustedImm64& asTrustedImm64() const { return *this; }
     };
 
     // Section 2: MacroAssembler code buffer handles
@@ -443,9 +426,7 @@ public:
         friend class Watchpoint;
 
     public:
-        Label()
-        {
-        }
+        Label() = default;
 
         Label(AbstractMacroAssemblerType* masm)
             : m_label(masm->m_assembler.label())
@@ -578,8 +559,8 @@ public:
             Linkable = 0x1,
             Near = 0x2,
             Tail = 0x4,
-            LinkableNear = 0x3,
-            LinkableNearTail = 0x7,
+            LinkableNear = Linkable | Near,
+            LinkableNearTail = Linkable | Near | Tail,
         };
 
         Call()
@@ -886,7 +867,7 @@ public:
     }
 
     template<PtrTag aTag, PtrTag bTag>
-    static ptrdiff_t differenceBetweenCodePtr(const MacroAssemblerCodePtr<aTag>& a, const MacroAssemblerCodePtr<bTag>& b)
+    static ptrdiff_t differenceBetweenCodePtr(const CodePtr<aTag>& a, const CodePtr<bTag>& b)
     {
         return b.template dataLocation<ptrdiff_t>() - a.template dataLocation<ptrdiff_t>();
     }
@@ -910,9 +891,9 @@ public:
     }
 
     template<PtrTag tag>
-    static void linkPointer(void* code, AssemblerLabel label, MacroAssemblerCodePtr<tag> value)
+    static void linkPointer(void* code, AssemblerLabel label, CodePtr<tag> value)
     {
-        AssemblerType::linkPointer(code, label, value.executableAddress());
+        AssemblerType::linkPointer(code, label, value.taggedPtr());
     }
 
     template<PtrTag tag>
@@ -932,21 +913,15 @@ public:
         AssemblerType::relinkJump(jump.dataLocation(), destination.dataLocation());
     }
 
-    template<PtrTag jumpTag>
-    static void repatchJumpToNop(CodeLocationJump<jumpTag> jump)
-    {
-        AssemblerType::relinkJumpToNop(jump.dataLocation());
-    }
-
     template<PtrTag callTag, PtrTag destTag>
     static void repatchNearCall(CodeLocationNearCall<callTag> nearCall, CodeLocationLabel<destTag> destination)
     {
         switch (nearCall.callMode()) {
         case NearCallMode::Tail:
-            AssemblerType::relinkJump(nearCall.dataLocation(), destination.dataLocation());
+            AssemblerType::relinkTailCall(nearCall.dataLocation(), destination.dataLocation());
             return;
         case NearCallMode::Regular:
-            AssemblerType::relinkCall(nearCall.dataLocation(), destination.untaggedExecutableAddress());
+            AssemblerType::relinkCall(nearCall.dataLocation(), destination.untaggedPtr());
             return;
         }
         RELEASE_ASSERT_NOT_REACHED();
@@ -960,18 +935,13 @@ public:
         case NearCallMode::Tail:
             return CodeLocationLabel<destTag>(tagCodePtr<destTag>(AssemblerType::prepareForAtomicRelinkJumpConcurrently(nearCall.dataLocation(), destination.dataLocation())));
         case NearCallMode::Regular:
-            return CodeLocationLabel<destTag>(tagCodePtr<destTag>(AssemblerType::prepareForAtomicRelinkCallConcurrently(nearCall.dataLocation(), destination.untaggedExecutableAddress())));
+            return CodeLocationLabel<destTag>(tagCodePtr<destTag>(AssemblerType::prepareForAtomicRelinkCallConcurrently(nearCall.dataLocation(), destination.untaggedPtr())));
         }
+        RELEASE_ASSERT_NOT_REACHED();
 #else
         UNUSED_PARAM(nearCall);
         return destination;
 #endif
-    }
-
-    template<PtrTag tag>
-    static void repatchCompact(CodeLocationDataLabelCompact<tag> dataLabelCompact, int32_t value)
-    {
-        AssemblerType::repatchCompact(dataLabelCompact.template dataLocation(), value);
     }
 
     template<PtrTag tag>
@@ -1050,25 +1020,23 @@ public:
     ALWAYS_INLINE void removePtrTag(RegisterID) { }
     ALWAYS_INLINE void validateUntaggedPtr(RegisterID, RegisterID = RegisterID::InvalidGPRReg) { }
 
+    template<typename... Types>
+    void comment(const Types&... values)
+    {
+        if (LIKELY(!Options::needDisassemblySupport()))
+            return;
+        StringPrintStream s;
+        s.print(values...);
+        commentImpl(s.toString());
+    }
+
 protected:
     AbstractMacroAssembler()
-        : m_randomSource(0)
-        , m_assembler()
+        : m_assembler()
     {
         invalidateAllTempRegisters();
     }
 
-    uint32_t random()
-    {
-        if (!m_randomSourceIsInitialized) {
-            m_randomSourceIsInitialized = true;
-            m_randomSource.setSeed(cryptographicallyRandomNumber());
-        }
-        return m_randomSource.getUint32();
-    }
-
-    bool m_randomSourceIsInitialized { false };
-    WeakRandom m_randomSource;
 public:
     AssemblerType m_assembler;
 protected:
@@ -1086,9 +1054,9 @@ protected:
         UNREACHABLE_FOR_PLATFORM();
         return firstRegister();
     }
-    static bool canBlind() { return false; }
-    static bool shouldBlindForSpecificArch(uint32_t) { return false; }
-    static bool shouldBlindForSpecificArch(uint64_t) { return false; }
+    static constexpr bool canBlind() { return false; }
+    static constexpr bool shouldBlindForSpecificArch(uint32_t) { return false; }
+    static constexpr bool shouldBlindForSpecificArch(uint64_t) { return false; }
 
     class CachedTempRegister {
         friend class DataLabelPtr;
@@ -1111,7 +1079,7 @@ protected:
 
         ALWAYS_INLINE RegisterID registerIDNoInvalidate() { return m_registerID; }
 
-        bool value(intptr_t& value)
+        WARN_UNUSED_RETURN bool value(intptr_t& value)
         {
             value = m_value;
             return m_masm->isTempRegisterValid(m_validBit);
@@ -1152,11 +1120,15 @@ protected:
         m_tempRegistersValidBits |= registerMask;
     }
 
+    void commentImpl(String&& str) { m_comments.append({ labelIgnoringWatchpoints(), WTFMove(str) }); }
+
     friend class AllowMacroScratchRegisterUsage;
     friend class AllowMacroScratchRegisterUsageIf;
     template<typename T> friend class DisallowMacroScratchRegisterUsage;
     unsigned m_tempRegistersValidBits;
     bool m_allowScratchRegister { true };
+
+    Vector<std::pair<Label, String>> m_comments;
 
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_lateLinkTasks;

@@ -27,7 +27,9 @@
 
 #include "ContextDestructionObserver.h"
 #include "QualifiedName.h"
-#include <wtf/HashMap.h>
+#include <wtf/Lock.h>
+#include <wtf/RobinHoodHashMap.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -43,6 +45,7 @@ namespace WebCore {
 class CustomElementRegistry;
 class DOMWindow;
 class DeferredPromise;
+class Document;
 class Element;
 class JSCustomElementInterface;
 class Node;
@@ -52,6 +55,8 @@ class CustomElementRegistry : public RefCounted<CustomElementRegistry>, public C
 public:
     static Ref<CustomElementRegistry> create(DOMWindow&, ScriptExecutionContext*);
     ~CustomElementRegistry();
+
+    Document* document() const;
 
     RefPtr<DeferredPromise> addElementDefinition(Ref<JSCustomElementInterface>&&);
 
@@ -66,17 +71,21 @@ public:
     JSC::JSValue get(const AtomString&);
     void upgrade(Node& root);
 
-    HashMap<AtomString, Ref<DeferredPromise>>& promiseMap() { return m_promiseMap; }
+    MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>>& promiseMap() { return m_promiseMap; }
+    bool isShadowDisabled(const AtomString& name) const { return m_disabledShadowSet.contains(name); }
 
+    template<typename Visitor> void visitJSCustomElementInterfaces(Visitor&) const;
 private:
     CustomElementRegistry(DOMWindow&, ScriptExecutionContext*);
 
     DOMWindow& m_window;
     HashMap<AtomString, Ref<JSCustomElementInterface>> m_nameMap;
-    HashMap<const JSC::JSObject*, JSCustomElementInterface*> m_constructorMap;
-    HashMap<AtomString, Ref<DeferredPromise>> m_promiseMap;
+    HashMap<const JSC::JSObject*, JSCustomElementInterface*> m_constructorMap WTF_GUARDED_BY_LOCK(m_constructorMapLock);
+    MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>> m_promiseMap;
+    MemoryCompactRobinHoodHashSet<AtomString> m_disabledShadowSet;
 
     bool m_elementDefinitionIsRunning { false };
+    mutable Lock m_constructorMapLock;
 
     friend class ElementDefinitionIsRunningSetForScope;
 };

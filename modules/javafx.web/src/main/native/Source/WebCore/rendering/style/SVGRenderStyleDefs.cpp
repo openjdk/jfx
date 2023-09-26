@@ -45,7 +45,7 @@ StyleFillData::StyleFillData()
     , paintUri(SVGRenderStyle::initialFillPaintUri())
     , visitedLinkPaintUri(SVGRenderStyle::initialFillPaintUri())
     , paintType(SVGRenderStyle::initialFillPaintType())
-    , visitedLinkPaintType(SVGRenderStyle::initialStrokePaintType())
+    , visitedLinkPaintType(SVGRenderStyle::initialFillPaintType())
 {
 }
 
@@ -77,6 +77,8 @@ bool StyleFillData::operator==(const StyleFillData& other) const
         && visitedLinkPaintType == other.visitedLinkPaintType;
 
 }
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleStrokeData);
 
 StyleStrokeData::StyleStrokeData()
     : opacity(SVGRenderStyle::initialStrokeOpacity())
@@ -123,6 +125,8 @@ bool StyleStrokeData::operator==(const StyleStrokeData& other) const
         && visitedLinkPaintType == other.visitedLinkPaintType;
 }
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleStopData);
+
 StyleStopData::StyleStopData()
     : opacity(SVGRenderStyle::initialStopOpacity())
     , color(SVGRenderStyle::initialStopColor())
@@ -147,6 +151,8 @@ bool StyleStopData::operator==(const StyleStopData& other) const
         && color == other.color;
 }
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleTextData);
+
 StyleTextData::StyleTextData()
     : kerning(SVGRenderStyle::initialKerning())
 {
@@ -167,6 +173,8 @@ bool StyleTextData::operator==(const StyleTextData& other) const
 {
     return kerning == other.kerning;
 }
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleMiscData);
 
 StyleMiscData::StyleMiscData()
     : floodOpacity(SVGRenderStyle::initialFloodOpacity())
@@ -198,6 +206,8 @@ bool StyleMiscData::operator==(const StyleMiscData& other) const
         && baselineShiftValue == other.baselineShiftValue;
 }
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleShadowSVGData);
+
 StyleShadowSVGData::StyleShadowSVGData()
 {
 }
@@ -218,26 +228,7 @@ bool StyleShadowSVGData::operator==(const StyleShadowSVGData& other) const
     return arePointingToEqualData(shadow, other.shadow);
 }
 
-StyleResourceData::StyleResourceData()
-    : masker(SVGRenderStyle::initialMaskerResource())
-{
-}
-
-inline StyleResourceData::StyleResourceData(const StyleResourceData& other)
-    : RefCounted<StyleResourceData>()
-    , masker(other.masker)
-{
-}
-
-Ref<StyleResourceData> StyleResourceData::copy() const
-{
-    return adoptRef(*new StyleResourceData(*this));
-}
-
-bool StyleResourceData::operator==(const StyleResourceData& other) const
-{
-    return masker == other.masker;
-}
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleInheritedResourceData);
 
 StyleInheritedResourceData::StyleInheritedResourceData()
     : markerStart(SVGRenderStyle::initialMarkerStartResource())
@@ -265,6 +256,8 @@ bool StyleInheritedResourceData::operator==(const StyleInheritedResourceData& ot
         && markerMid == other.markerMid
         && markerEnd == other.markerEnd;
 }
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleLayoutData);
 
 StyleLayoutData::StyleLayoutData()
     : cx(RenderStyle::initialZeroLength())
@@ -502,12 +495,6 @@ TextStream& operator<<(TextStream& ts, const StyleShadowSVGData& data)
 {
     if (data.shadow)
         ts.dumpProperty("shadow", *data.shadow);
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, const StyleResourceData& data)
-{
-    ts.dumpProperty("masker", data.masker);
     return ts;
 }
 

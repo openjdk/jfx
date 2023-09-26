@@ -28,6 +28,7 @@
 #if ENABLE(VIDEO)
 
 #include "FloatPoint.h"
+#include "InlineIteratorInlineBox.h"
 #include "RenderBlockFlow.h"
 
 namespace WebCore {
@@ -42,30 +43,37 @@ public:
     RenderVTTCue(VTTCueBox&, RenderStyle&&);
 
 private:
+    bool isRenderVTTCue() const final { return true; }
+
     void layout() override;
 
     bool isOutside() const;
     bool rectIsWithinContainer(const IntRect&) const;
     bool isOverlapping() const;
-    RenderObject* overlappingObject() const;
-    RenderObject* overlappingObjectForRect(const IntRect&) const;
-    bool shouldSwitchDirection(LegacyInlineFlowBox*, LayoutUnit) const;
+    RenderVTTCue* overlappingObject() const;
+    RenderVTTCue* overlappingObjectForRect(const IntRect&) const;
+    bool shouldSwitchDirection(const InlineIterator::InlineBox&, LayoutUnit) const;
 
     void moveBoxesByStep(LayoutUnit);
     bool switchDirection(bool&, LayoutUnit&);
     void moveIfNecessaryToKeepWithinContainer();
     bool findNonOverlappingPosition(int& x, int& y) const;
 
-    bool initializeLayoutParameters(LegacyInlineFlowBox*&, LayoutUnit&, LayoutUnit&);
+    bool initializeLayoutParameters(LayoutUnit&, LayoutUnit&);
     void placeBoxInDefaultPosition(LayoutUnit, bool&);
     void repositionCueSnapToLinesSet();
     void repositionCueSnapToLinesNotSet();
     void repositionGenericCue();
+
+    RenderBlockFlow& backdropBox() const;
+    RenderInline& cueBox() const;
 
     VTTCue* m_cue;
     FloatPoint m_fallbackPosition;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderVTTCue, isRenderVTTCue())
 
 #endif // ENABLE(VIDEO)

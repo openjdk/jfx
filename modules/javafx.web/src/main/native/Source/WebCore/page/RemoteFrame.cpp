@@ -26,22 +26,58 @@
 #include "config.h"
 #include "RemoteFrame.h"
 
+#include "Document.h"
+#include "HTMLFrameOwnerElement.h"
 #include "RemoteDOMWindow.h"
+#include "RemoteFrameClient.h"
+#include "RemoteFrameView.h"
 
 namespace WebCore {
 
-RemoteFrame::RemoteFrame(GlobalFrameIdentifier&& frameIdentifier)
-    : m_identifier(WTFMove(frameIdentifier))
+RemoteFrame::RemoteFrame(Page& page, FrameIdentifier frameID, HTMLFrameOwnerElement* ownerElement, UniqueRef<RemoteFrameClient>&& client, LayerHostingContextIdentifier layerHostingContextIdentifier)
+    : AbstractFrame(page, frameID, ownerElement)
+    , m_window(RemoteDOMWindow::create(*this, GlobalWindowIdentifier { Process::identifier(), WindowIdentifier::generate() }))
+    , m_client(WTFMove(client))
+    , m_layerHostingContextIdentifier(layerHostingContextIdentifier)
 {
 }
 
-RemoteFrame::~RemoteFrame()
-{
-}
+RemoteFrame::~RemoteFrame() = default;
 
 AbstractDOMWindow* RemoteFrame::virtualWindow() const
 {
-    return window();
+    return &window();
+}
+
+RemoteDOMWindow& RemoteFrame::window() const
+{
+    return m_window.get();
+}
+
+void RemoteFrame::didFinishLoadInAnotherProcess()
+{
+    auto* ownerElement = this->ownerElement();
+    if (!ownerElement)
+        return;
+
+    // FIXME: Do something so that this would not have caused the load event to fire before a state change
+    // but now does cause the load event to fire.
+    ownerElement->document().checkCompleted();
+}
+
+AbstractFrameView* RemoteFrame::virtualView() const
+{
+    return m_view.get();
+}
+
+void RemoteFrame::setView(RefPtr<RemoteFrameView>&& view)
+{
+    m_view = WTFMove(view);
+}
+
+void RemoteFrame::frameDetached()
+{
+    m_client->frameDetached();
 }
 
 } // namespace WebCore

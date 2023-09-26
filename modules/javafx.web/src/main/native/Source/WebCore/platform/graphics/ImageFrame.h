@@ -33,6 +33,12 @@
 #include "NativeImage.h"
 #include <wtf/Seconds.h>
 
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
+#endif
+
 namespace WebCore {
 
 class ImageFrame {
@@ -92,7 +98,7 @@ private:
     SubsamplingLevel m_subsamplingLevel { SubsamplingLevel::Default };
     DecodingOptions m_decodingOptions;
 
-    ImageOrientation m_orientation { ImageOrientation::None };
+    ImageOrientation m_orientation { ImageOrientation::Orientation::None };
     std::optional<IntSize> m_densityCorrectedSize;
     Seconds m_duration;
     bool m_hasAlpha { true };

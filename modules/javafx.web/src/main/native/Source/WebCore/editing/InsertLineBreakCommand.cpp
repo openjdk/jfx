@@ -87,10 +87,10 @@ void InsertLineBreakCommand::doApply()
     if (shouldUseBreakElement(position))
         nodeToInsert = HTMLBRElement::create(document());
     else
-        nodeToInsert = document().createTextNode("\n");
+        nodeToInsert = document().createTextNode("\n"_s);
 
     // FIXME: Need to merge text nodes when inserting just after or before text.
-
+    document().updateLayoutIgnorePendingStylesheets();
     if (isEndOfParagraph(caret) && !lineBreakExistsAtVisiblePosition(caret)) {
         bool needExtraLineBreak = !is<HTMLHRElement>(*position.deprecatedNode()) && !is<HTMLTableElement>(*position.deprecatedNode());
 
@@ -132,7 +132,7 @@ void InsertLineBreakCommand::doApply()
             if (textNode.isConnected())
                 insertTextIntoNode(textNode, 0, nonBreakingSpaceString());
             else {
-                auto nbspNode = document().createTextNode(nonBreakingSpaceString());
+                auto nbspNode = document().createTextNode(String { nonBreakingSpaceString() });
                 auto* nbspNodePtr = nbspNode.ptr();
                 insertNodeAt(WTFMove(nbspNode), positionBeforeTextNode);
                 endingPosition = firstPositionInNode(nbspNodePtr);

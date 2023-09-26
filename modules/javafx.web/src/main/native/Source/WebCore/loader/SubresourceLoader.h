@@ -28,9 +28,11 @@
 
 #pragma once
 
+#include "CachedResourceLoader.h"
 #include "FrameLoaderTypes.h"
 #include "ResourceLoader.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -49,9 +51,10 @@ public:
 
     void cancelIfNotFinishing();
     bool isSubresourceLoader() const override;
-    CachedResource* cachedResource() const override { return m_resource; };
+    CachedResource* cachedResource() const override { return m_resource.get(); };
     WEBCORE_EXPORT const HTTPHeaderMap* originalHeaders() const;
 
+    const SecurityOrigin* origin() const { return m_origin.get(); }
     SecurityOrigin* origin() { return m_origin.get(); }
 #if PLATFORM(IOS_FAMILY)
     void startLoading() override;
@@ -65,6 +68,9 @@ public:
     void markInAsyncResponsePolicyCheck() { m_inAsyncResponsePolicyCheck = true; }
     void didReceiveResponsePolicy();
 
+    void clearRequestCountTracker() { m_requestCountTracker = std::nullopt; }
+    void resetRequestCountTracker(CachedResourceLoader& loader, const CachedResource& resource) { m_requestCountTracker = RequestCountTracker { loader, resource }; }
+
 private:
     SubresourceLoader(Frame&, CachedResource&, const ResourceLoaderOptions&);
 
@@ -73,8 +79,7 @@ private:
     void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&) override;
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
     void didReceiveResponse(const ResourceResponse&, CompletionHandler<void()>&& policyCompletionHandler) override;
-    void didReceiveData(const uint8_t*, unsigned, long long encodedDataLength, DataPayloadType) override;
-    void didReceiveBuffer(Ref<SharedBuffer>&&, long long encodedDataLength, DataPayloadType) override;
+    void didReceiveBuffer(const FragmentedSharedBuffer&, long long encodedDataLength, DataPayloadType) override;
     void didFinishLoading(const NetworkLoadMetrics&) override;
     void didFail(const ResourceError&) override;
     void willCancel(const ResourceError&) override;
@@ -92,7 +97,7 @@ private:
     Expected<void, String> checkResponseCrossOriginAccessControl(const ResourceResponse&);
     Expected<void, String> checkRedirectionCrossOriginAccessControl(const ResourceRequest& previousRequest, const ResourceResponse&, ResourceRequest& newRequest);
 
-    void didReceiveDataOrBuffer(const uint8_t*, int, RefPtr<SharedBuffer>&&, long long encodedDataLength, DataPayloadType);
+    void didReceiveDataOrBuffer(const FragmentedSharedBuffer&, long long encodedDataLength, DataPayloadType);
 
     void notifyDone(LoadCompletionType);
 
@@ -118,16 +123,18 @@ private:
 #endif
     public:
         RequestCountTracker(CachedResourceLoader&, const CachedResource&);
+        RequestCountTracker(RequestCountTracker&&);
+        RequestCountTracker& operator=(RequestCountTracker&&);
         ~RequestCountTracker();
     private:
-        CachedResourceLoader& m_cachedResourceLoader;
-        const CachedResource& m_resource;
+        WeakPtr<CachedResourceLoader> m_cachedResourceLoader;
+        WeakPtr<const CachedResource> m_resource;
     };
 
 #if PLATFORM(IOS_FAMILY)
     ResourceRequest m_iOSOriginalRequest;
 #endif
-    CachedResource* m_resource;
+    WeakPtr<CachedResource> m_resource;
     SubresourceLoaderState m_state;
     std::optional<RequestCountTracker> m_requestCountTracker;
     RefPtr<SecurityOrigin> m_origin;
@@ -135,6 +142,7 @@ private:
     unsigned m_redirectCount { 0 };
     bool m_loadingMultipartContent { false };
     bool m_inAsyncResponsePolicyCheck { false };
+    FetchMetadataSite m_site { FetchMetadataSite::SameOrigin };
 };
 
 }

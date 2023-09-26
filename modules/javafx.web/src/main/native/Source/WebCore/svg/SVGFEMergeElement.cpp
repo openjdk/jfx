@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,11 +22,10 @@
 #include "config.h"
 #include "SVGFEMergeElement.h"
 
-#include "ElementIterator.h"
+#include "ElementChildIterator.h"
 #include "FEMerge.h"
-#include "FilterEffect.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGFEMergeNodeElement.h"
-#include "SVGFilterBuilder.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -34,7 +34,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEMergeElement);
 
 inline SVGFEMergeElement::SVGFEMergeElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feMergeTag));
 }
@@ -44,24 +44,24 @@ Ref<SVGFEMergeElement> SVGFEMergeElement::create(const QualifiedName& tagName, D
     return adoptRef(*new SVGFEMergeElement(tagName, document));
 }
 
-RefPtr<FilterEffect> SVGFEMergeElement::build(SVGFilterBuilder* filterBuilder, Filter& filter) const
+void SVGFEMergeElement::childrenChanged(const ChildChange& change)
 {
-    auto effect = FEMerge::create(filter);
-    auto& mergeInputs = effect->inputEffects();
-
-    for (auto& mergeNode : childrenOfType<SVGFEMergeNodeElement>(*this)) {
-        auto mergeEffect = filterBuilder->getEffectById(mergeNode.in1());
-        if (!mergeEffect)
-            return nullptr;
-        mergeInputs.append(WTFMove(mergeEffect));
-    }
-
-    mergeInputs.shrinkToFit();
-
-    if (mergeInputs.isEmpty())
-        return nullptr;
-
-    return effect;
+    SVGFilterPrimitiveStandardAttributes::childrenChanged(change);
+    InstanceInvalidationGuard guard(*this);
+    markFilterEffectForRebuild();
 }
 
+Vector<AtomString> SVGFEMergeElement::filterEffectInputsNames() const
+{
+    Vector<AtomString> inputsNames;
+    for (auto& mergeNode : childrenOfType<SVGFEMergeNodeElement>(*this))
+        inputsNames.append(mergeNode.in1());
+    return inputsNames;
 }
+
+RefPtr<FilterEffect> SVGFEMergeElement::createFilterEffect(const FilterEffectVector& inputs, const GraphicsContext&) const
+{
+    return FEMerge::create(inputs.size());
+}
+
+} // namespace WebCore

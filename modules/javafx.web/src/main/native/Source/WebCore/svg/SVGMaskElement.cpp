@@ -26,7 +26,8 @@
 #include "config.h"
 #include "SVGMaskElement.h"
 
-#include "RenderSVGResourceMasker.h"
+#include "RenderSVGResourceMaskerInlines.h"
+#include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include "SVGRenderSupport.h"
 #include "SVGStringList.h"
@@ -40,7 +41,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMaskElement);
 
 inline SVGMaskElement::SVGMaskElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGTests(this)
 {
     // Spec: If the x/y attribute is not specified, the effect is as if a value of "-10%" were specified.
@@ -99,13 +100,12 @@ void SVGMaskElement::svgAttributeChanged(const QualifiedName& attrName)
 {
     if (PropertyRegistry::isAnimatedLengthAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationalHintStyle();
+        setPresentationalHintStyleIsDirty();
         return;
     }
 
     if (PropertyRegistry::isKnownAttribute(attrName)) {
-        if (auto* renderer = this->renderer())
-            renderer->setNeedsLayout();
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -119,8 +119,7 @@ void SVGMaskElement::childrenChanged(const ChildChange& change)
     if (change.source == ChildChange::Source::Parser)
         return;
 
-    if (RenderObject* object = renderer())
-        object->setNeedsLayout();
+    updateSVGRendererForElementChange();
 }
 
 RenderPtr<RenderElement> SVGMaskElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

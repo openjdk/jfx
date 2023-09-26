@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,14 +65,15 @@ public:
     void didBeginEditing() override;
     void respondToChangedContents() override;
     void respondToChangedSelection(Frame*) override;
-    void didEndUserTriggeredSelectionChanges() final { }
+    void didEndUserTriggeredSelectionChanges() override { }
     void updateEditorStateAfterLayoutIfEditabilityChanged() override;
     void didEndEditing() override;
     void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) override;
     void didWriteSelectionToPasteboard() override;
     void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
-    void didUpdateComposition() final { }
+    void didUpdateComposition() override { }
 
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
     void discardedComposition(Frame*) override;
     void canceledComposition() override;
 
@@ -91,14 +92,14 @@ public:
     void handleKeyboardEvent(KeyboardEvent&) override;
     void handleInputMethodKeydown(KeyboardEvent&) override;
 
-    void textFieldDidBeginEditing(Element*) override;
-    void textFieldDidEndEditing(Element*) override;
-    void textDidChangeInTextField(Element*) override;
-    bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) override;
-    void textWillBeDeletedInTextField(Element*) override;
-    void textDidChangeInTextArea(Element*) override;
+    void textFieldDidBeginEditing(Element&) override;
+    void textFieldDidEndEditing(Element&) override;
+    void textDidChangeInTextField(Element&) override;
+    bool doTextFieldCommandFromEvent(Element&, KeyboardEvent*) override;
+    void textWillBeDeletedInTextField(Element&) override;
+    void textDidChangeInTextArea(Element&) override;
     void overflowScrollPositionChanged() override;
-    void subFrameScrollPositionChanged() final { }
+    void subFrameScrollPositionChanged() override;
 
 #if USE(APPKIT)
     void uppercaseWord() override;
@@ -140,7 +141,6 @@ public:
     void ignoreWordInSpellDocument(const String&) override;
     void learnWord(const String&) override;
     void checkSpellingOfString(StringView, int* misspellingLocation, int* misspellingLength) override;
-    String getAutoCorrectSuggestionForMisspelledWord(const String& misspelledWord) override;
     void checkGrammarOfString(StringView, Vector<GrammarDetail>&, int* badGrammarLocation, int* badGrammarLength) override;
 
 #if USE(UNIFIED_TEXT_CHECKING)
@@ -153,9 +153,8 @@ public:
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
-    bool canShowFontPanel() const final { return false; }
+    bool canShowFontPanel() const  { return false; }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
 
 protected:
     JGObject m_webPage;

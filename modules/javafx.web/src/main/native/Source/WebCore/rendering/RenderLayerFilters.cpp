@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "CSSFilter.h"
 #include "CachedSVGDocument.h"
 #include "CachedSVGDocumentReference.h"
+#include "FilterTargetSwitcher.h"
 #include "Logging.h"
 #include "RenderSVGResourceFilter.h"
 #include <wtf/NeverDestroyed.h>
@@ -48,11 +49,6 @@ RenderLayerFilters::RenderLayerFilters(RenderLayer& layer)
 RenderLayerFilters::~RenderLayerFilters()
 {
     removeReferenceFilterClients();
-}
-
-void RenderLayerFilters::setFilter(RefPtr<CSSFilter>&& filter)
-{
-    m_filter = WTFMove(filter);
 }
 
 bool RenderLayerFilters::hasFilterThatMovesPixels() const
@@ -116,84 +112,94 @@ void RenderLayerFilters::removeReferenceFilterClients()
     m_internalSVGReferences.clear();
 }
 
-void RenderLayerFilters::buildFilter(RenderElement& renderer, float scaleFactor, RenderingMode renderingMode)
+bool RenderLayerFilters::isIdentity(RenderElement& renderer)
 {
-    if (!m_filter) {
-        m_filter = CSSFilter::create();
-        m_filter->setFilterScale(scaleFactor);
-        m_filter->setRenderingMode(renderingMode);
-    } else if (m_filter->filterScale() != scaleFactor) {
-        m_filter->setFilterScale(scaleFactor);
-        m_filter->clearIntermediateResults();
-    }
-
-    // If the filter fails to build, remove it from the layer. It will still attempt to
-    // go through regular processing (e.g. compositing), but never apply anything.
-    // FIXME: this rebuilds the entire effects chain even if the filter style didn't change.
-    if (!m_filter->build(renderer, renderer.style().filter(), FilterConsumer::FilterProperty))
-        m_filter = nullptr;
+    const auto& operations = renderer.style().filter();
+    return CSSFilter::isIdentity(renderer, operations);
 }
 
-GraphicsContext* RenderLayerFilters::beginFilterEffect(GraphicsContext& destinationContext, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect)
+IntOutsets RenderLayerFilters::calculateOutsets(RenderElement& renderer, const FloatRect& targetBoundingBox)
 {
+    const auto& operations = renderer.style().filter();
+
+    if (!operations.hasFilterThatMovesPixels())
+        return { };
+
+    return CSSFilter::calculateOutsets(renderer, operations, targetBoundingBox);
+}
+
+GraphicsContext* RenderLayerFilters::beginFilterEffect(RenderElement& renderer, GraphicsContext& context, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect)
+{
+    auto expandedDirtyRect = dirtyRect;
+    auto targetBoundingBox = intersection(filterBoxRect, dirtyRect);
+
+    auto outsets = calculateOutsets(renderer, targetBoundingBox);
+    if (!outsets.isZero()) {
+        LayoutBoxExtent flippedOutsets { outsets.bottom(), outsets.left(), outsets.top(), outsets.right() };
+        expandedDirtyRect.expand(flippedOutsets);
+    }
+
+    // Calculate targetBoundingBox since it will be used if the filter is created.
+    targetBoundingBox = intersection(filterBoxRect, expandedDirtyRect);
+    if (targetBoundingBox.isEmpty())
+        return nullptr;
+
+    if (!m_filter || m_targetBoundingBox != targetBoundingBox) {
+        m_targetBoundingBox = targetBoundingBox;
+        // FIXME: This rebuilds the entire effects chain even if the filter style didn't change.
+        m_filter = CSSFilter::create(renderer, renderer.style().filter(), m_preferredFilterRenderingModes, m_filterScale, m_targetBoundingBox, context);
+    }
+
     if (!m_filter)
         return nullptr;
 
     auto& filter = *m_filter;
-    auto filterSourceRect = filter.computeSourceImageRectForDirtyRect(filterBoxRect, dirtyRect);
-    if (filterSourceRect.isEmpty())
+
+    // For CSSFilter, filterRegion = targetBoundingBox + filter->outsets()
+    auto filterRegion = targetBoundingBox;
+    if (filter.hasFilterThatMovesPixels())
+        filterRegion.expand(toLayoutBoxExtent(outsets));
+
+    if (filterRegion.isEmpty())
         return nullptr;
 
-    bool hasUpdatedBackingStore = filter.updateBackingStoreRect(filterSourceRect);
+    // For CSSFilter, sourceImageRect = filterRegion.
+    bool hasUpdatedBackingStore = false;
+    if (m_filterRegion != filterRegion) {
+        m_filterRegion = filterRegion;
+        hasUpdatedBackingStore = true;
+    }
+
     if (!filter.hasFilterThatMovesPixels())
         m_repaintRect = dirtyRect;
-    else {
-        if (hasUpdatedBackingStore)
-            m_repaintRect = filterSourceRect;
+    else if (hasUpdatedBackingStore)
+            m_repaintRect = filterRegion;
         else {
             m_repaintRect = dirtyRect;
             m_repaintRect.unite(layerRepaintRect);
-            m_repaintRect.intersect(filterSourceRect);
+            m_repaintRect.intersect(filterRegion);
         }
-    }
-    m_paintOffset = filterSourceRect.location();
+
     resetDirtySourceRect();
+    filter.setFilterRegion(m_filterRegion);
 
-    filter.determineFilterPrimitiveSubregion();
+    if (!m_targetSwitcher || hasUpdatedBackingStore)
+        m_targetSwitcher = FilterTargetSwitcher::create(context, filter, m_targetBoundingBox, DestinationColorSpace::SRGB());
 
-    filter.allocateBackingStoreIfNeeded(destinationContext);
-    auto* sourceGraphicsContext = filter.inputContext();
-    if (!sourceGraphicsContext || filter.filterRegion().isEmpty() || ImageBuffer::sizeNeedsClamping(filter.filterRegion().size()))
+    if (!m_targetSwitcher)
         return nullptr;
 
-    // Translate the context so that the contents of the layer is captured in the offscreen memory buffer.
-    sourceGraphicsContext->save();
-    sourceGraphicsContext->translate(-m_paintOffset);
-    sourceGraphicsContext->clearRect(m_repaintRect);
-    sourceGraphicsContext->clip(m_repaintRect);
+    m_targetSwitcher->beginClipAndDrawSourceImage(context, m_repaintRect);
 
-    return sourceGraphicsContext;
+    return m_targetSwitcher->drawingContext(context);
 }
 
 void RenderLayerFilters::applyFilterEffect(GraphicsContext& destinationContext)
 {
-    ASSERT(m_filter->inputContext());
-
     LOG_WITH_STREAM(Filters, stream << "\nRenderLayerFilters " << this << " applyFilterEffect");
 
-    auto& filter = *m_filter;
-    filter.inputContext()->restore();
-
-    filter.apply();
-
-    // Get the filtered output and draw it in place.
-    LayoutRect destRect = filter.outputRect();
-    destRect.move(m_paintOffset.x(), m_paintOffset.y());
-
-    if (auto* outputBuffer = filter.output())
-        destinationContext.drawImageBuffer(*outputBuffer, snapRectToDevicePixels(destRect, m_layer.renderer().document().deviceScaleFactor()));
-
-    filter.clearIntermediateResults();
+    ASSERT(m_targetSwitcher);
+    m_targetSwitcher->endClipAndDrawSourceImage(destinationContext);
 
     LOG_WITH_STREAM(Filters, stream << "RenderLayerFilters " << this << " applyFilterEffect done\n");
 }

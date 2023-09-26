@@ -154,7 +154,7 @@ public:
         Type::Submit,
     };
 
-    static Ref<InputType> create(HTMLInputElement&, const AtomString&);
+    static RefPtr<InputType> createIfDifferent(HTMLInputElement&, const AtomString&, InputType* currentInputType = nullptr);
     static Ref<InputType> createText(HTMLInputElement&);
     virtual ~InputType();
 
@@ -163,6 +163,8 @@ public:
     static bool themeSupportsDataListUI(InputType*);
 
     virtual const AtomString& formControlType() const = 0;
+
+    bool isValidValue(const String&) const;
 
     // Type query functions.
 
@@ -200,12 +202,14 @@ public:
     bool isCheckable() const { return checkableTypes.contains(m_type); }
     bool isSteppable() const { return steppableTypes.contains(m_type); }
     bool supportsValidation() const { return !nonValidatingTypes.contains(m_type); }
-    bool canHaveTypeSpecificValue() const { return isFileUpload(); }
+
+    Type type() const { return m_type; }
 
     bool isInteractiveContent() const;
-    bool supportLabels() const;
+    bool isLabelable() const;
     bool isEnumeratable() const;
     bool needsShadowSubtree() const { return !nonShadowRootTypes.contains(m_type); }
+    bool hasCreatedShadowSubtree() const { return m_hasCreatedShadowSubtree; }
 
     // Form value functions.
 
@@ -213,15 +217,14 @@ public:
     virtual FormControlState saveFormControlState() const;
     virtual void restoreFormControlState(const FormControlState&);
     virtual bool isFormDataAppendable() const;
-    virtual bool appendFormData(DOMFormData&, bool multipart) const;
+    virtual bool appendFormData(DOMFormData&) const;
 
     // DOM property functions.
 
-    virtual bool getTypeSpecificValue(String&); // Checked first, before internal storage or the value attribute.
     virtual String fallbackValue() const; // Checked last, if both internal storage and value attribute are missing.
     virtual String defaultValue() const; // Checked after even fallbackValue, only when the valueWithDefault function is called.
-    virtual double valueAsDate() const;
-    virtual ExceptionOr<void> setValueAsDate(double) const;
+    virtual WallTime valueAsDate() const;
+    virtual ExceptionOr<void> setValueAsDate(WallTime) const;
     virtual double valueAsDouble() const;
     virtual ExceptionOr<void> setValueAsDouble(double, TextFieldEventBehavior) const;
     virtual ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const;
@@ -272,7 +275,10 @@ public:
     virtual void didDispatchClick(Event&, const InputElementClickState&);
     virtual void handleDOMActivateEvent(Event&);
 
-    enum ShouldCallBaseEventHandler { No, Yes };
+    virtual bool allowsShowPickerAcrossFrames();
+    virtual void showPicker();
+
+    enum ShouldCallBaseEventHandler : bool { No, Yes };
     virtual ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&);
 
     virtual void handleKeypressEvent(KeyboardEvent&);
@@ -306,14 +312,14 @@ public:
 
     // Shadow tree handling.
 
-    virtual void createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source, bool);
+    void createShadowSubtreeIfNeeded();
+    virtual void createShadowSubtree();
     virtual void destroyShadowSubtree();
 
     virtual HTMLElement* containerElement() const { return nullptr; }
     virtual HTMLElement* innerBlockElement() const { return nullptr; }
     virtual RefPtr<TextControlInnerTextElement> innerTextElement() const;
     virtual HTMLElement* innerSpinButtonElement() const { return nullptr; }
-    virtual HTMLElement* capsLockIndicatorElement() const { return nullptr; }
     virtual HTMLElement* autoFillButtonElement() const { return nullptr; }
     virtual HTMLElement* resultsButtonElement() const { return nullptr; }
     virtual HTMLElement* cancelButtonElement() const { return nullptr; }
@@ -323,6 +329,7 @@ public:
 #if ENABLE(DATALIST_ELEMENT)
     virtual HTMLElement* dataListButtonElement() const { return nullptr; }
 #endif
+    RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded();
 
     // Miscellaneous functions.
 
@@ -332,13 +339,10 @@ public:
     virtual void attach();
     virtual void detach();
     virtual bool shouldRespectAlignAttribute();
-    virtual FileList* files();
-    virtual void setFiles(RefPtr<FileList>&&, WasSetByJavaScript);
     virtual Icon* icon() const;
     virtual bool shouldSendChangeEventAfterCheckedChanged();
-    virtual bool canSetValue(const String&);
     virtual bool storesValueSeparateFromAttribute();
-    virtual void setValue(const String&, bool valueChanged, TextFieldEventBehavior);
+    virtual void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection);
     virtual bool shouldResetOnDocumentActivation();
     virtual bool shouldRespectListAttribute();
     virtual bool shouldRespectHeightAndWidthAttributes();
@@ -357,12 +361,10 @@ public:
     virtual bool shouldAppearIndeterminate() const;
     virtual bool isPresentingAttachedView() const;
     virtual bool supportsSelectionAPI() const;
-    virtual Color valueAsColor() const;
-    virtual void selectColor(StringView);
-    virtual Vector<Color> suggestedColors() const;
 #if ENABLE(DATALIST_ELEMENT)
     virtual bool isFocusingWithDataListDropdown() const { return false; };
 #endif
+    virtual void willUpdateCheckedness(bool /*nowChecked*/) { }
 
     // Parses the specified string for the type, and return
     // the Decimal value for the parsing result if the parsing
@@ -400,9 +402,12 @@ public:
     virtual String resultForDialogSubmit() const;
 
 protected:
-    explicit InputType(Type type, HTMLInputElement& element)
+    InputType(Type type, HTMLInputElement& element)
         : m_type(type)
-        , m_element(makeWeakPtr(element)) { }
+        , m_element(element)
+    {
+    }
+
     HTMLInputElement* element() const { return m_element.get(); }
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
@@ -412,8 +417,9 @@ private:
     ExceptionOr<void> applyStep(int count, AnyStepHandling, TextFieldEventBehavior);
 
     const Type m_type;
+    bool m_hasCreatedShadowSubtree { false };
     // m_element is null if this InputType is no longer associated with an element (either the element died or changed input type).
-    WeakPtr<HTMLInputElement> m_element;
+    WeakPtr<HTMLInputElement, WeakPtrImplWithEventTargetData> m_element;
 };
 
 template<typename DowncastedType>
@@ -425,7 +431,7 @@ ALWAYS_INLINE bool isInvalidInputType(const InputType& baseInputType, const Stri
 
 } // namespace WebCore
 
-#define SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(ToValueTypeName, predicate) \
+#define SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(ToValueTypeName, TypeEnumValue) \
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
-static bool isType(const WebCore::InputType& input) { return input.predicate; } \
+static bool isType(const WebCore::InputType& input) { return input.type() == WebCore::InputType::TypeEnumValue; } \
 SPECIALIZE_TYPE_TRAITS_END()

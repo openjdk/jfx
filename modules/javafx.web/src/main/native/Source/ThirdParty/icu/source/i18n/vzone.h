@@ -24,14 +24,12 @@
 #include "unicode/uobject.h"
 #include "ztrans.h"
 
-#ifndef UCNV_H
 struct VZone;
 /**
  * A UnicodeSet.  Use the vzone_* API to manipulate.  Create with
  * vzone_open*, and destroy with vzone_close.
  */
 typedef struct VZone VZone;
-#endif
 
 /*********************************************************************
  * VZone API
@@ -136,7 +134,7 @@ U_CAPI void U_EXPORT2
 vzone_write(VZone* zone, UChar* & result, int32_t & resultLength, UErrorCode& status);
 
 /**
- * Writes RFC2445 VTIMEZONE data for this time zone applicalbe
+ * Writes RFC2445 VTIMEZONE data for this time zone applicable
  * for dates after the specified start time.
  * @param zone, the vzone to use
  * @param start The start date.
@@ -148,7 +146,7 @@ U_CAPI void U_EXPORT2
 vzone_writeFromStart(VZone* zone, UDate start, UChar* & result, int32_t & resultLength, UErrorCode& status);
 
 /**
- * Writes RFC2445 VTIMEZONE data applicalbe for the specified date.
+ * Writes RFC2445 VTIMEZONE data applicable for the specified date.
  * Some common iCalendar implementations can only handle a single time
  * zone property or a pair of standard and daylight time properties using
  * BYDAY rule with day of week (such as BYDAY=1SUN).  This method produce

@@ -27,7 +27,6 @@
 
 #include "TextGranularity.h"
 #include "VisiblePosition.h"
-#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
@@ -117,6 +116,7 @@ public:
     Node* nonBoundaryShadowTreeRootNode() const;
 
     WEBCORE_EXPORT bool isInPasswordField() const;
+    WEBCORE_EXPORT bool isInAutoFilledAndViewableField() const;
 
     WEBCORE_EXPORT static Position adjustPositionForEnd(const Position& currentPosition, Node* startContainerNode);
     WEBCORE_EXPORT static Position adjustPositionForStart(const Position& currentPosition, Node* startContainerNode);
@@ -181,17 +181,3 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const VisibleSelect
 void showTree(const WebCore::VisibleSelection&);
 void showTree(const WebCore::VisibleSelection*);
 #endif
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::SelectionDirection> {
-    using values = EnumValues<
-        WebCore::SelectionDirection,
-        WebCore::SelectionDirection::Forward,
-        WebCore::SelectionDirection::Backward,
-        WebCore::SelectionDirection::Right,
-        WebCore::SelectionDirection::Left
-    >;
-};
-
-} // namespace WTF

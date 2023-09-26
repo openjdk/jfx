@@ -72,7 +72,7 @@ void DeviceOrientationAndMotionAccessController::shouldAllowAccess(const Documen
         return callback(accessState);
 
     bool mayPrompt = UserGestureIndicator::processingUserGesture(&document);
-    page->chrome().client().shouldAllowDeviceOrientationAndMotionAccess(*document.frame(), mayPrompt, [this, weakThis = makeWeakPtr(this), securityOrigin = makeRef(document.securityOrigin()), callback = WTFMove(callback)](DeviceOrientationOrMotionPermissionState permissionState) mutable {
+    page->chrome().client().shouldAllowDeviceOrientationAndMotionAccess(*document.frame(), mayPrompt, [this, weakThis = WeakPtr { *this }, securityOrigin = Ref { document.securityOrigin() }, callback = WTFMove(callback)](DeviceOrientationOrMotionPermissionState permissionState) mutable {
         if (!weakThis)
             return;
 
@@ -82,9 +82,12 @@ void DeviceOrientationAndMotionAccessController::shouldAllowAccess(const Documen
         if (permissionState != DeviceOrientationOrMotionPermissionState::Granted)
             return;
 
-        for (auto* frame = m_topDocument.frame(); frame && frame->window(); frame = frame->tree().traverseNext()) {
-            frame->window()->startListeningForDeviceOrientationIfNecessary();
-            frame->window()->startListeningForDeviceMotionIfNecessary();
+        for (AbstractFrame* frame = m_topDocument.frame(); frame && frame->window(); frame = frame->tree().traverseNext()) {
+            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            if (!localFrame)
+                continue;
+            localFrame->window()->startListeningForDeviceOrientationIfNecessary();
+            localFrame->window()->startListeningForDeviceMotionIfNecessary();
         }
     });
 }

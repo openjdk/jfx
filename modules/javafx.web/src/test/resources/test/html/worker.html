@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<body onload="startWorker()">
+
+<p id="result"></p>
+
+<script>
+
+var work;
+
+function startWorker() {
+  if (typeof(Worker) !== "undefined") {
+    if (typeof(work) == "undefined") {
+      work = new Worker("worker.js");
+    }
+    work.onmessage = function(event) {
+      document.getElementById("result").innerHTML = event.data;
+    };
+  }
+}
+
+function stopWorker() {
+  work.terminate();
+  work = undefined;
+}
+
+</script>
+
+</body>
+</html>
+

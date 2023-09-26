@@ -42,10 +42,10 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.base/com.sun.javafx=javafx.web"/>
+			<attribute name="add-exports" value="javafx.base/com.sun.javafx=javafx.web:javafx.base/test.util.memory=javafx.web"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4">
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">
 		<attributes>
 			<attribute name="test" value="true"/>
 		</attributes>

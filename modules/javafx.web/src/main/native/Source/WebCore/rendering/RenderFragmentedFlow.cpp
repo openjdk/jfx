@@ -470,7 +470,7 @@ void RenderFragmentedFlow::removeRenderBoxFragmentInfo(RenderBox& box)
 #ifndef NDEBUG
     // We have to make sure we did not leave any RenderBoxFragmentInfo attached.
     for (auto& fragment : m_fragmentList)
-        ASSERT(!fragment->renderBoxFragmentInfo(&box));
+        ASSERT_UNUSED(fragment, !fragment->renderBoxFragmentInfo(&box));
 #endif
 
     m_fragmentRangeMap.remove(&box);
@@ -846,7 +846,7 @@ void RenderFragmentedFlow::updateFragmentsFragmentedFlowPortionRect()
 
         fragment->setFragmentedFlowPortionRect(isHorizontalWritingMode() ? fragmentRect : fragmentRect.transposedRect());
 
-        m_fragmentIntervalTree.add({ logicalHeight, logicalHeight + fragmentLogicalHeight, makeWeakPtr(fragment) });
+        m_fragmentIntervalTree.add({ logicalHeight, logicalHeight + fragmentLogicalHeight, fragment });
 
         logicalHeight += fragmentLogicalHeight;
     }
@@ -948,7 +948,7 @@ void RenderFragmentedFlow::mapLocalToContainer(const RenderLayerModelObject* anc
 
         // If the repaint container is nullptr, we have to climb up to the RenderView, otherwise swap
         // it with the fragment's repaint container.
-        ancestorContainer = ancestorContainer ? fragment->containerForRepaint() : nullptr;
+        ancestorContainer = ancestorContainer ? fragment->containerForRepaint().renderer : nullptr;
 
         if (RenderFragmentedFlow* fragmentFragmentedFlow = fragment->enclosingFragmentedFlow()) {
             RenderFragmentContainer* startFragment = nullptr;

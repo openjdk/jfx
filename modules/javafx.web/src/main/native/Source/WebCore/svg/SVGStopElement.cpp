@@ -34,7 +34,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGStopElement);
 
 inline SVGStopElement::SVGStopElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::stopTag));
 
@@ -64,11 +64,10 @@ void SVGStopElement::parseAttribute(const QualifiedName& name, const AtomString&
 
 void SVGStopElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::offsetAttr) {
-        if (auto renderer = this->renderer()) {
-            InstanceInvalidationGuard guard(*this);
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        }
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::offsetAttr);
+        InstanceInvalidationGuard guard(*this);
+        updateSVGRendererForElementChange();
         return;
     }
 

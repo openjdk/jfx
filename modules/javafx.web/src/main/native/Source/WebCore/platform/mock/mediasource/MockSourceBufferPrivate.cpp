@@ -58,17 +58,14 @@ private:
     MediaTime decodeTime() const override { return m_box.decodeTimestamp(); }
     MediaTime duration() const override { return m_box.duration(); }
     AtomString trackID() const override { return m_id; }
-    void setTrackID(const String& id) override { m_id = id; }
     size_t sizeInBytes() const override { return sizeof(m_box); }
     SampleFlags flags() const override;
-    PlatformSample platformSample() override;
-    std::optional<ByteRange> byteRange() const override { return std::nullopt; }
+    PlatformSample platformSample() const override;
+    PlatformSample::Type platformSampleType() const override { return PlatformSample::MockSampleBoxType; }
     FloatSize presentationSize() const override { return FloatSize(); }
     void dump(PrintStream&) const override;
     void offsetTimestampsBy(const MediaTime& offset) override { m_box.offsetTimestampsBy(offset); }
     void setTimestamps(const MediaTime& presentationTimestamp, const MediaTime& decodeTimestamp) override { m_box.setTimestamps(presentationTimestamp, decodeTimestamp); }
-    bool isDivisable() const override { return false; }
-    std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime&, UseEndTime) override { return {nullptr, nullptr}; }
     Ref<MediaSample> createNonDisplayingCopy() const override;
 
     unsigned generation() const { return m_box.generation(); }
@@ -87,7 +84,7 @@ MediaSample::SampleFlags MockMediaSample::flags() const
     return SampleFlags(flags);
 }
 
-PlatformSample MockMediaSample::platformSample()
+PlatformSample MockMediaSample::platformSample() const
 {
     PlatformSample sample = { PlatformSample::MockSampleBoxType, { &m_box } };
     return sample;
@@ -138,10 +135,10 @@ MockSourceBufferPrivate::~MockSourceBufferPrivate() = default;
 
 void MockSourceBufferPrivate::append(Vector<uint8_t>&& data)
 {
-    m_inputBuffer.appendVector(data);
-    SourceBufferPrivateClient::AppendResult result = SourceBufferPrivateClient::AppendResult::AppendSucceeded;
+    m_inputBuffer.appendVector(WTFMove(data));
+    bool parsingSucceeded = true;
 
-    while (m_inputBuffer.size() && result == SourceBufferPrivateClient::AppendResult::AppendSucceeded) {
+    while (m_inputBuffer.size() && parsingSucceeded) {
         auto buffer = ArrayBuffer::create(m_inputBuffer.data(), m_inputBuffer.size());
         uint64_t boxLength = MockBox::peekLength(buffer.ptr());
         if (boxLength > buffer->byteLength())
@@ -155,17 +152,11 @@ void MockSourceBufferPrivate::append(Vector<uint8_t>&& data)
             MockSampleBox sampleBox = MockSampleBox(buffer.ptr());
             didReceiveSample(sampleBox);
         } else
-            result = SourceBufferPrivateClient::AppendResult::ParsingFailed;
-
+            parsingSucceeded = false;
         m_inputBuffer.remove(0, boxLength);
     }
 
-    // Resolve the changes in TrackBuffers' buffered ranges
-    // into the SourceBuffer's buffered ranges
-    updateBufferedFromTrackBuffers(m_mediaSource->isEnded());
-
-    if (m_client)
-        m_client->sourceBufferPrivateAppendComplete(result);
+    SourceBufferPrivate::appendCompleted(parsingSucceeded, m_mediaSource->isEnded());
 }
 
 void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitializationBox& initBox)
@@ -196,7 +187,7 @@ void MockSourceBufferPrivate::didReceiveInitializationSegment(const MockInitiali
         }
     }
 
-    SourceBufferPrivate::didReceiveInitializationSegment(WTFMove(segment), []() { });
+    SourceBufferPrivate::didReceiveInitializationSegment(WTFMove(segment), [](SourceBufferPrivateClient::ReceiveResult) { });
 }
 
 void MockSourceBufferPrivate::didReceiveSample(const MockSampleBox& sampleBox)

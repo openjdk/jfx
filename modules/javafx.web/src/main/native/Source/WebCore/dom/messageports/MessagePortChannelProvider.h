@@ -49,30 +49,9 @@ public:
     virtual void messagePortDisentangled(const MessagePortIdentifier& local) = 0;
     virtual void messagePortClosed(const MessagePortIdentifier& local) = 0;
 
-    virtual void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&&) = 0;
+    virtual void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&&) = 0;
 
     virtual void postMessageToRemote(MessageWithMessagePorts&&, const MessagePortIdentifier& remoteTarget) = 0;
-
-    enum class HasActivity {
-        Yes,
-        No,
-    };
-    virtual void checkRemotePortForActivity(const MessagePortIdentifier& remoteTarget, CompletionHandler<void(HasActivity)>&& callback) = 0;
-
-private:
-
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::MessagePortChannelProvider::HasActivity> {
-    using values = EnumValues<
-        WebCore::MessagePortChannelProvider::HasActivity,
-        WebCore::MessagePortChannelProvider::HasActivity::No,
-        WebCore::MessagePortChannelProvider::HasActivity::Yes
-    >;
-};
-
-}

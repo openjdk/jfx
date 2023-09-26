@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@
 
 namespace JSC {
 
-const ClassInfo WebAssemblyRuntimeErrorConstructor::s_info = { "Function", &Base::s_info, &constructorTableWebAssemblyRuntimeError, nullptr, CREATE_METHOD_TABLE(WebAssemblyRuntimeErrorConstructor) };
+const ClassInfo WebAssemblyRuntimeErrorConstructor::s_info = { "Function"_s, &Base::s_info, &constructorTableWebAssemblyRuntimeError, nullptr, CREATE_METHOD_TABLE(WebAssemblyRuntimeErrorConstructor) };
 
 static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyRuntimeError);
 static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyRuntimeError);
@@ -70,7 +70,7 @@ JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyRuntimeError, (JSGlobalObject* globalO
 
 WebAssemblyRuntimeErrorConstructor* WebAssemblyRuntimeErrorConstructor::create(VM& vm, Structure* structure, WebAssemblyRuntimeErrorPrototype* thisPrototype)
 {
-    auto* constructor = new (NotNull, allocateCell<WebAssemblyRuntimeErrorConstructor>(vm.heap)) WebAssemblyRuntimeErrorConstructor(vm, structure);
+    auto* constructor = new (NotNull, allocateCell<WebAssemblyRuntimeErrorConstructor>(vm)) WebAssemblyRuntimeErrorConstructor(vm, structure);
     constructor->finishCreation(vm, thisPrototype);
     return constructor;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,26 +24,25 @@
  */
 package com.sun.glass.ui;
 
-import java.util.*;
 import java.util.concurrent.*;
 
 /**
  * A dispatcher for Application.invokeLater() that submits deferred runnables
  * to the native system one by one.
  *
- * A native system may by default execute all submitted runnables before
+ * A native system may, by default, execute all submitted runnables before
  * actually leaving a nested event loop. However, there is an assumption that a
  * runnable that calls the Application.leaveNestedEventLoop() method must be
  * the last runnable executed in the current inner event loop. The next
- * runnable that might have already been submitted by client code, must be
- * invoked in the context of the outer event loop. To satisfy this requirement
+ * runnable that might have already been submitted by client code must be
+ * invoked in the context of the outer event loop. To satisfy this requirement,
  * the runnables must be submitted to the native system one by one. This allows
- * for fine grain control over executing the deferred tasks when it comes to
- * entering/leaving nested event loops despite of native system limitations.
+ * for a fine grained control over the execution of the deferred tasks when it comes to
+ * entering/leaving nested event loops despite native system limitations.
  */
 public final class InvokeLaterDispatcher extends Thread {
     // The runnables queue
-    private final BlockingDeque<Runnable> deque = new LinkedBlockingDeque<Runnable>();
+    private final BlockingDeque<Runnable> deque = new LinkedBlockingDeque<>();
 
     // Main lock
     private final Object LOCK = new StringBuilder("InvokeLaterLock");
@@ -83,7 +82,7 @@ public final class InvokeLaterDispatcher extends Thread {
         }
 
         /**
-         * Tells whether the runnbale has finished execution.
+         * Tells whether the runnable has finished execution.
          *
          * This method must be called under the LOCK lock.
          */

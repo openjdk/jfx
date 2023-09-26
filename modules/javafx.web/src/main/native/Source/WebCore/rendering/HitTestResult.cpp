@@ -25,6 +25,7 @@
 #include "CachedImage.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "File.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -37,12 +38,15 @@
 #include "HTMLParserIdioms.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
+#include "ImageOverlay.h"
+#include "Page.h"
 #include "PseudoElement.h"
 #include "Range.h"
 #include "RenderBlockFlow.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "SVGAElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
 #include "Scrollbar.h"
 #include "ShadowRoot.h"
@@ -50,6 +54,10 @@
 #include "UserGestureIndicator.h"
 #include "VisibleUnits.h"
 #include "XLinkNames.h"
+
+#if ENABLE(SERVICE_CONTROLS)
+#include "ImageControlsMac.h"
+#endif
 
 namespace WebCore {
 
@@ -185,7 +193,7 @@ Frame* HitTestResult::targetFrame() const
     if (!frame)
         return nullptr;
 
-    return frame->tree().find(m_innerURLElement->target(), *frame);
+    return dynamicDowncast<LocalFrame>(frame->tree().find(m_innerURLElement->target(), *frame));
 }
 
 bool HitTestResult::isSelected() const
@@ -276,16 +284,15 @@ String HitTestResult::title(TextDirection& dir) const
 
 String HitTestResult::innerTextIfTruncated(TextDirection& dir) const
 {
-    for (Node* truncatedNode = m_innerNode.get(); truncatedNode; truncatedNode = truncatedNode->parentInComposedTree()) {
+    for (auto* truncatedNode = m_innerNode.get(); truncatedNode; truncatedNode = truncatedNode->parentInComposedTree()) {
         if (!is<Element>(*truncatedNode))
             continue;
 
-        if (auto renderer = downcast<Element>(*truncatedNode).renderer()) {
-            if (is<RenderBlockFlow>(*renderer)) {
-                RenderBlockFlow& block = downcast<RenderBlockFlow>(*renderer);
+        if (auto* renderer = downcast<Element>(*truncatedNode).renderer(); renderer && is<RenderBlockFlow>(*renderer)) {
+            auto& block = downcast<RenderBlockFlow>(*renderer);
                 if (block.style().textOverflow() == TextOverflow::Ellipsis) {
-                    for (auto* line = block.firstRootBox(); line; line = line->nextRootBox()) {
-                        if (line->hasEllipsisBox()) {
+                for (auto lineBox = InlineIterator::firstLineBoxFor(block); lineBox; lineBox.traverseNext()) {
+                    if (lineBox->hasEllipsis()) {
                             dir = block.style().direction();
                             return downcast<Element>(*truncatedNode).innerText();
                         }
@@ -294,7 +301,6 @@ String HitTestResult::innerTextIfTruncated(TextDirection& dir) const
                 break;
             }
         }
-    }
 
     dir = TextDirection::LTR;
     return String();
@@ -330,8 +336,13 @@ RefPtr<Node> HitTestResult::nodeForImageData() const
     if (!m_innerNonSharedNode)
         return nullptr;
 
-    if (HTMLElement::isInsideImageOverlay(*m_innerNonSharedNode))
+    if (ImageOverlay::isInsideOverlay(*m_innerNonSharedNode))
         return m_innerNonSharedNode->shadowHost();
+
+#if ENABLE(SERVICE_CONTROLS)
+    if (ImageControlsMac::isInsideImageControls(*m_innerNonSharedNode))
+        return m_innerNonSharedNode->shadowHost();
+#endif
 
     return m_innerNonSharedNode;
 }
@@ -377,8 +388,12 @@ URL HitTestResult::absoluteImageURL() const
         || is<HTMLImageElement>(*imageNode)
         || is<HTMLInputElement>(*imageNode)
         || is<HTMLObjectElement>(*imageNode)
-        || is<SVGImageElement>(*imageNode))
-        return imageNode->document().completeURL(downcast<Element>(*imageNode).imageSourceURL());
+        || is<SVGImageElement>(*imageNode)) {
+        auto imageURL = imageNode->document().completeURL(downcast<Element>(*imageNode).imageSourceURL());
+        if (auto* page = imageNode->document().page())
+            return page->sanitizeLookalikeCharacters(imageURL, LookalikeCharacterSanitizationTrigger::Unspecified);
+        return imageURL;
+    }
 
     return { };
 }
@@ -396,7 +411,7 @@ URL HitTestResult::absolutePDFURL() const
     if (!url.isValid())
         return URL();
 
-    if (element.serviceType() == "application/pdf" || (element.serviceType().isEmpty() && url.path().endsWithIgnoringASCIICase(".pdf")))
+    if (element.serviceType() == "application/pdf"_s || (element.serviceType().isEmpty() && url.path().endsWithIgnoringASCIICase(".pdf"_s)))
         return url;
     return URL();
 }
@@ -404,12 +419,14 @@ URL HitTestResult::absolutePDFURL() const
 URL HitTestResult::absoluteMediaURL() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
-        return mediaElt->currentSrc();
-    return URL();
-#else
-    return URL();
+    if (auto* element = mediaElement()) {
+        auto sourceURL = element->currentSrc();
+        if (auto* page = element->document().page())
+            return page->sanitizeLookalikeCharacters(sourceURL, LookalikeCharacterSanitizationTrigger::Unspecified);
+        return sourceURL;
+    }
 #endif
+    return { };
 }
 
 bool HitTestResult::mediaSupportsFullscreen() const
@@ -450,6 +467,14 @@ void HitTestResult::toggleMediaLoopPlayback() const
 #if ENABLE(VIDEO)
     if (HTMLMediaElement* mediaElt = mediaElement())
         mediaElt->setLoop(!mediaElt->loop());
+#endif
+}
+
+void HitTestResult::toggleShowMediaStats() const
+{
+#if ENABLE(VIDEO)
+    if (HTMLMediaElement* mediaElt = mediaElement())
+        mediaElt->setShowingStats(!mediaElt->showingStats());
 #endif
 }
 
@@ -502,6 +527,15 @@ bool HitTestResult::mediaLoopEnabled() const
 #if ENABLE(VIDEO)
     if (HTMLMediaElement* mediaElt = mediaElement())
         return mediaElt->loop();
+#endif
+    return false;
+}
+
+bool HitTestResult::mediaStatsShowing() const
+{
+#if ENABLE(VIDEO)
+    if (HTMLMediaElement* mediaElt = mediaElement())
+        return mediaElt->showingStats();
 #endif
     return false;
 }
@@ -595,9 +629,14 @@ bool HitTestResult::isOverTextInsideFormControlElement() const
 
 URL HitTestResult::absoluteLinkURL() const
 {
-    if (m_innerURLElement)
-        return m_innerURLElement->absoluteLinkURL();
-    return URL();
+    if (!m_innerURLElement)
+        return { };
+
+    auto url = m_innerURLElement->absoluteLinkURL();
+    if (auto* page = m_innerURLElement->document().page())
+        return page->sanitizeLookalikeCharacters(url, LookalikeCharacterSanitizationTrigger::Unspecified);
+
+    return url;
 }
 
 bool HitTestResult::isOverLink() const
@@ -651,7 +690,7 @@ inline HitTestProgress HitTestResult::addNodeToListBasedTestResultCommon(Node* n
         return HitTestProgress::Continue;
 
     if ((request.disallowsUserAgentShadowContent() && node->isInUserAgentShadowTree())
-        || (request.disallowsUserAgentShadowContentExceptForImageOverlays() && !HTMLElement::isInsideImageOverlay(*node) && node->isInUserAgentShadowTree()))
+        || (request.disallowsUserAgentShadowContentExceptForImageOverlays() && !ImageOverlay::isInsideOverlay(*node) && node->isInUserAgentShadowTree()))
         node = node->document().ancestorNodeInThisScope(node);
 
     mutableListBasedTestResult().add(*node);
@@ -799,5 +838,40 @@ void HitTestResult::toggleEnhancedFullscreenForVideo() const
         videoElement.webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture);
 #endif
 }
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+HTMLImageElement* HitTestResult::imageElement() const
+{
+    if (auto* imageElement = dynamicDowncast<HTMLImageElement>(m_innerNonSharedNode.get()))
+        return imageElement;
+    return nullptr;
+}
+
+bool HitTestResult::isAnimating() const
+{
+    if (auto* imageElement = this->imageElement())
+        return imageElement->allowsAnimation();
+    return false;
+}
+
+void HitTestResult::playAnimation() const
+{
+    setAllowsAnimation(true);
+}
+
+void HitTestResult::pauseAnimation() const
+{
+    setAllowsAnimation(false);
+}
+
+void HitTestResult::setAllowsAnimation(bool allowAnimation) const
+{
+    if (auto* imageElement = this->imageElement()) {
+        imageElement->setAllowsAnimation(allowAnimation);
+        if (auto* renderer = m_innerNonSharedNode->renderer())
+            renderer->repaint();
+    }
+}
+#endif // ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
 
 } // namespace WebCore

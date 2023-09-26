@@ -28,7 +28,6 @@
 #if ENABLE(WEBGL)
 #include "WebGLDrawBuffers.h"
 
-#include "ExtensionsGL.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -38,7 +37,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLDrawBuffers);
 WebGLDrawBuffers::WebGLDrawBuffers(WebGLRenderingContextBase& context)
     : WebGLExtension(context)
 {
-    context.graphicsContextGL()->getExtensions().ensureEnabled("GL_EXT_draw_buffers");
+    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_draw_buffers"_s);
 }
 
 WebGLDrawBuffers::~WebGLDrawBuffers() = default;
@@ -50,123 +49,42 @@ WebGLExtension::ExtensionName WebGLDrawBuffers::getName() const
 
 bool WebGLDrawBuffers::supported(WebGLRenderingContextBase& context)
 {
-#if USE(ANGLE)
-    return context.graphicsContextGL()->getExtensions().supports("GL_EXT_draw_buffers");
-#else
-    return context.graphicsContextGL()->getExtensions().supports("GL_EXT_draw_buffers")
-        && satisfiesWebGLRequirements(context);
-#endif
+    return context.graphicsContextGL()->supportsExtension("GL_EXT_draw_buffers"_s);
 }
 
 void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GCGLenum>& buffers)
 {
-    if (!m_context || m_context->isContextLost())
+    auto context = WebGLExtensionScopedContext(this);
+    if (context.isLost())
         return;
     GCGLsizei n = buffers.size();
     const GCGLenum* bufs = buffers.data();
-    if (!m_context->m_framebufferBinding) {
+    if (!context->m_framebufferBinding) {
         if (n != 1) {
-            m_context->synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "drawBuffersWEBGL", "more than one buffer");
+            context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL", "more or fewer than one buffer");
             return;
         }
         if (bufs[0] != GraphicsContextGL::BACK && bufs[0] != GraphicsContextGL::NONE) {
-            m_context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL", "BACK or NONE");
+            context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL", "BACK or NONE");
             return;
         }
         // Because the backbuffer is simulated on all current WebKit ports, we need to change BACK to COLOR_ATTACHMENT0.
         GCGLenum value[1] { bufs[0] == GraphicsContextGL::BACK ? GraphicsContextGL::COLOR_ATTACHMENT0 : GraphicsContextGL::NONE };
-        m_context->graphicsContextGL()->getExtensions().drawBuffersEXT(value);
-        m_context->setBackDrawBuffer(bufs[0]);
+        context->graphicsContextGL()->drawBuffersEXT(value);
+        context->setBackDrawBuffer(bufs[0]);
     } else {
-        if (n > m_context->getMaxDrawBuffers()) {
-            m_context->synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "drawBuffersWEBGL", "more than max draw buffers");
+        if (n > context->getMaxDrawBuffers()) {
+            context->synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "drawBuffersWEBGL", "more than max draw buffers");
             return;
         }
         for (GCGLsizei i = 0; i < n; ++i) {
-            if (bufs[i] != GraphicsContextGL::NONE && bufs[i] != ExtensionsGL::COLOR_ATTACHMENT0_EXT + i) {
-                m_context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL", "COLOR_ATTACHMENTi_EXT or NONE");
+            if (bufs[i] != GraphicsContextGL::NONE && bufs[i] != GraphicsContextGL::COLOR_ATTACHMENT0_EXT + i) {
+                context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL", "COLOR_ATTACHMENTi_EXT or NONE");
                 return;
             }
         }
-        m_context->m_framebufferBinding->drawBuffers(buffers);
+        context->m_framebufferBinding->drawBuffers(buffers);
     }
-}
-
-// static
-bool WebGLDrawBuffers::satisfiesWebGLRequirements(WebGLRenderingContextBase& webglContext)
-{
-    GraphicsContextGL* context = webglContext.graphicsContextGL();
-
-    // This is called after we make sure GL_EXT_draw_buffers is supported.
-    GCGLint maxDrawBuffers = context->getInteger(ExtensionsGL::MAX_DRAW_BUFFERS_EXT);
-    GCGLint maxColorAttachments = context->getInteger(ExtensionsGL::MAX_COLOR_ATTACHMENTS_EXT);
-    if (maxDrawBuffers < 4 || maxColorAttachments < 4)
-        return false;
-
-    PlatformGLObject fbo = context->createFramebuffer();
-    context->bindFramebuffer(GraphicsContextGL::FRAMEBUFFER, fbo);
-
-    const unsigned char buffer[4] = { 0, 0, 0, 0 }; // textures are required to be initialized for other ports.
-    bool supportsDepth = context->getExtensions().supports("GL_OES_depth_texture")
-        || context->getExtensions().supports("GL_ARB_depth_texture");
-    bool supportsDepthStencil = (context->getExtensions().supports("GL_EXT_packed_depth_stencil")
-        || context->getExtensions().supports("GL_OES_packed_depth_stencil"));
-    PlatformGLObject depthStencil = 0;
-    if (supportsDepthStencil) {
-        depthStencil = context->createTexture();
-        context->bindTexture(GraphicsContextGL::TEXTURE_2D, depthStencil);
-        context->texImage2D(GraphicsContextGL::TEXTURE_2D, 0, GraphicsContextGL::DEPTH_STENCIL, 1, 1, 0, GraphicsContextGL::DEPTH_STENCIL, GraphicsContextGL::UNSIGNED_INT_24_8, buffer);
-    }
-    PlatformGLObject depth = 0;
-    if (supportsDepth) {
-        depth = context->createTexture();
-        context->bindTexture(GraphicsContextGL::TEXTURE_2D, depth);
-        context->texImage2D(GraphicsContextGL::TEXTURE_2D, 0, GraphicsContextGL::DEPTH_COMPONENT, 1, 1, 0, GraphicsContextGL::DEPTH_COMPONENT, GraphicsContextGL::UNSIGNED_INT, buffer);
-    }
-
-    Vector<PlatformGLObject> colors;
-    bool ok = true;
-    GCGLint maxAllowedBuffers = std::min(maxDrawBuffers, maxColorAttachments);
-    for (GCGLint i = 0; i < maxAllowedBuffers; ++i) {
-        PlatformGLObject color = context->createTexture();
-        colors.append(color);
-        context->bindTexture(GraphicsContextGL::TEXTURE_2D, color);
-        context->texImage2D(GraphicsContextGL::TEXTURE_2D, 0, GraphicsContextGL::RGBA, 1, 1, 0, GraphicsContextGL::RGBA, GraphicsContextGL::UNSIGNED_BYTE, buffer);
-        context->framebufferTexture2D(GraphicsContextGL::FRAMEBUFFER, GraphicsContextGL::COLOR_ATTACHMENT0 + i, GraphicsContextGL::TEXTURE_2D, color, 0);
-        if (context->checkFramebufferStatus(GraphicsContextGL::FRAMEBUFFER) != GraphicsContextGL::FRAMEBUFFER_COMPLETE) {
-            ok = false;
-            break;
-        }
-        if (supportsDepth) {
-            context->framebufferTexture2D(GraphicsContextGL::FRAMEBUFFER, GraphicsContextGL::DEPTH_ATTACHMENT, GraphicsContextGL::TEXTURE_2D, depth, 0);
-            if (context->checkFramebufferStatus(GraphicsContextGL::FRAMEBUFFER) != GraphicsContextGL::FRAMEBUFFER_COMPLETE) {
-                ok = false;
-                break;
-            }
-            context->framebufferTexture2D(GraphicsContextGL::FRAMEBUFFER, GraphicsContextGL::DEPTH_ATTACHMENT, GraphicsContextGL::TEXTURE_2D, 0, 0);
-        }
-        if (supportsDepthStencil) {
-            context->framebufferTexture2D(GraphicsContextGL::FRAMEBUFFER, GraphicsContextGL::DEPTH_ATTACHMENT, GraphicsContextGL::TEXTURE_2D, depthStencil, 0);
-            context->framebufferTexture2D(GraphicsContextGL::FRAMEBUFFER, GraphicsContextGL::STENCIL_ATTACHMENT, GraphicsContextGL::TEXTURE_2D, depthStencil, 0);
-            if (context->checkFramebufferStatus(GraphicsContextGL::FRAMEBUFFER) != GraphicsContextGL::FRAMEBUFFER_COMPLETE) {
-                ok = false;
-                break;
-            }
-            context->framebufferTexture2D(GraphicsContextGL::FRAMEBUFFER, GraphicsContextGL::DEPTH_ATTACHMENT, GraphicsContextGL::TEXTURE_2D, 0, 0);
-            context->framebufferTexture2D(GraphicsContextGL::FRAMEBUFFER, GraphicsContextGL::STENCIL_ATTACHMENT, GraphicsContextGL::TEXTURE_2D, 0, 0);
-        }
-    }
-
-    webglContext.restoreCurrentFramebuffer();
-    context->deleteFramebuffer(fbo);
-    webglContext.restoreCurrentTexture2D();
-    if (supportsDepth)
-        context->deleteTexture(depth);
-    if (supportsDepthStencil)
-        context->deleteTexture(depthStencil);
-    for (auto& color : colors)
-        context->deleteTexture(color);
-    return ok;
 }
 
 } // namespace WebCore

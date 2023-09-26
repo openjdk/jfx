@@ -62,7 +62,7 @@ static RefPtr<GeolocationPosition> createGeolocationPosition(std::optional<Geolo
     if (!position)
         return nullptr;
 
-    DOMTimeStamp timestamp = convertSecondsToDOMTimeStamp(position->timestamp);
+    EpochTimeStamp timestamp = convertSecondsToEpochTimeStamp(position->timestamp);
     return GeolocationPosition::create(GeolocationCoordinates::create(WTFMove(position.value())), timestamp);
 }
 
@@ -134,13 +134,13 @@ void Geolocation::Watchers::getNotifiersVector(GeoNotifierVector& copy) const
 Ref<Geolocation> Geolocation::create(Navigator& navigator)
 {
     auto geolocation = adoptRef(*new Geolocation(navigator));
-    geolocation.get().suspendIfNeeded();
+    geolocation->suspendIfNeeded();
     return geolocation;
 }
 
 Geolocation::Geolocation(Navigator& navigator)
     : ActiveDOMObject(navigator.scriptExecutionContext())
-    , m_navigator(makeWeakPtr(navigator))
+    , m_navigator(navigator)
     , m_resumeTimer(*this, &Geolocation::resumeTimerFired)
 {
 }
@@ -332,7 +332,7 @@ int Geolocation::watchPosition(Ref<PositionCallback>&& successCallback, RefPtr<P
     int watchID;
     // Keep asking for the next id until we're given one that we don't already have.
     do {
-        watchID = m_scriptExecutionContext->circularSequentialID();
+        watchID = scriptExecutionContext()->circularSequentialID();
     } while (!m_watchers.add(watchID, notifier.copyRef()));
     return watchID;
 }
@@ -354,15 +354,6 @@ static void logError(const String& target, const bool isSecure, const bool isMix
     document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, message.toString());
 }
 
-// FIXME: remove this function when rdar://problem/32137821 is fixed.
-static bool isRequestFromIBooks()
-{
-#if PLATFORM(COCOA)
-    return CocoaApplication::isIBooks();
-#endif
-    return false;
-}
-
 bool Geolocation::shouldBlockGeolocationRequests()
 {
     if (!isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Geolocation, *document(), LogFeaturePolicyFailure::Yes))
@@ -371,8 +362,8 @@ bool Geolocation::shouldBlockGeolocationRequests()
     bool isSecure = SecurityOrigin::isSecure(document()->url()) || document()->isSecureContext();
     bool hasMixedContent = !document()->foundMixedContent().isEmpty();
     bool isLocalOrigin = securityOrigin()->isLocal();
-    if (securityOrigin()->canRequestGeolocation()) {
-        if (isLocalOrigin || (isSecure && !hasMixedContent) || isRequestFromIBooks())
+    if (document()->canAccessResource(ScriptExecutionContext::ResourceType::Geolocation) != ScriptExecutionContext::HasResourceAccess::No) {
+        if (isLocalOrigin || (isSecure && !hasMixedContent))
             return false;
     }
 
@@ -479,7 +470,7 @@ bool Geolocation::haveSuitableCachedPosition(const PositionOptions& options)
         return false;
     if (!options.maximumAge)
         return false;
-    DOMTimeStamp currentTimeMillis = convertSecondsToDOMTimeStamp(WallTime::now().secondsSinceEpoch());
+    EpochTimeStamp currentTimeMillis = convertSecondsToEpochTimeStamp(WallTime::now().secondsSinceEpoch());
     return cachedPosition->timestamp() > currentTimeMillis - options.maximumAge;
 }
 

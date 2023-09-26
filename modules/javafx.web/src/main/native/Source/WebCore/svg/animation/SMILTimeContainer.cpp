@@ -29,6 +29,7 @@
 #include "Document.h"
 #include "ElementIterator.h"
 #include "Page.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGSMILElement.h"
 #include "SVGSVGElement.h"
 #include "ScopedEventQueue.h"
@@ -113,7 +114,8 @@ bool SMILTimeContainer::isStarted() const
 
 void SMILTimeContainer::begin()
 {
-    ASSERT(!m_beginTime);
+    if (isStarted())
+        return;
 
     ASSERT(Page::nonUtilityPageCount());
     if (!Page::nonUtilityPageCount())

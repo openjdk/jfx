@@ -30,6 +30,7 @@ namespace WebCore {
 
 class Element;
 class Frame;
+class HTMLImageElement;
 class HTMLMediaElement;
 class Image;
 class Node;
@@ -97,7 +98,7 @@ public:
     WEBCORE_EXPORT String spellingToolTip(TextDirection&) const;
     String replacedString() const;
     WEBCORE_EXPORT String title(TextDirection&) const;
-    String innerTextIfTruncated(TextDirection&) const;
+    WEBCORE_EXPORT String innerTextIfTruncated(TextDirection&) const;
     WEBCORE_EXPORT String altDisplayString() const;
     WEBCORE_EXPORT String titleDisplayString() const;
     WEBCORE_EXPORT Image* image() const;
@@ -111,11 +112,13 @@ public:
     WEBCORE_EXPORT bool isContentEditable() const;
     void toggleMediaControlsDisplay() const;
     void toggleMediaLoopPlayback() const;
+    void toggleShowMediaStats() const;
     WEBCORE_EXPORT bool mediaIsInFullscreen() const;
     void toggleMediaFullscreenState() const;
     void enterFullscreenForVideo() const;
     bool mediaControlsEnabled() const;
     bool mediaLoopEnabled() const;
+    bool mediaStatsShowing() const;
     bool mediaPlaying() const;
     bool mediaSupportsFullscreen() const;
     void toggleMediaPlayState() const;
@@ -126,6 +129,12 @@ public:
     bool mediaSupportsEnhancedFullscreen() const;
     bool mediaIsInEnhancedFullscreen() const;
     void toggleEnhancedFullscreenForVideo() const;
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    void pauseAnimation() const;
+    void playAnimation() const;
+    bool isAnimating() const;
+#endif
 
     WEBCORE_EXPORT bool isDownloadableMedia() const;
     WEBCORE_EXPORT bool isOverTextInsideFormControlElement() const;
@@ -150,6 +159,11 @@ private:
     template<typename RectType> HitTestProgress addNodeToListBasedTestResultCommon(Node*, const HitTestRequest&, const HitTestLocation&, const RectType&);
 
     RefPtr<Node> nodeForImageData() const;
+
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+    void setAllowsAnimation(bool /* allowAnimation */) const;
+    HTMLImageElement* imageElement() const;
+#endif
 
 #if ENABLE(VIDEO)
     HTMLMediaElement* mediaElement() const;

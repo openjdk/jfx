@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,6 +150,7 @@ public enum MediaError {
     ERROR_JNI_SEND_STOP_REACHED_EVENT(ERROR_BASE_JNI.code()+0x000C),
     ERROR_JNI_SEND_DURATION_UPDATE_EVENT(ERROR_BASE_JNI.code()+0x000D),
     ERROR_JNI_SEND_AUDIO_SPECTRUM_EVENT(ERROR_BASE_JNI.code()+0x000E),
+    ERROR_JNI_UNEXPECTED(ERROR_BASE_JNI.code()+0x000F),
 
     ERROR_OSX_INIT(ERROR_BASE_OSX.code() + 0x0001),
 
@@ -165,7 +166,7 @@ public enum MediaError {
     WARNING_GSTREAMER_AUDIO_BUFFER_FIELD(WARNING_BASE_GSTREAMER.code()+0x0008);
 
     private static ResourceBundle bundle;
-    private static final Map<Integer, MediaError> map = new HashMap<Integer, MediaError>();
+    private static final Map<Integer, MediaError> map = new HashMap<>();
 
     static {
         try {

@@ -3,6 +3,7 @@
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2010 Zoltan Herczeg <zherczeg@webkit.org>
+ * Copyright (C) 2021-2023 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,23 +25,20 @@
 
 #include "FilterEffect.h"
 #include "FloatPoint.h"
-#include "Filter.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-enum EdgeModeType {
-    EDGEMODE_UNKNOWN   = 0,
-    EDGEMODE_DUPLICATE = 1,
-    EDGEMODE_WRAP      = 2,
-    EDGEMODE_NONE      = 3
+enum class EdgeModeType {
+    Unknown,
+    Duplicate,
+    Wrap,
+    None
 };
 
 class FEConvolveMatrix : public FilterEffect {
 public:
-    static Ref<FEConvolveMatrix> create(Filter&, const IntSize&,
-            float, float, const IntPoint&, EdgeModeType, const FloatPoint&,
-            bool, const Vector<float>&);
+    WEBCORE_EXPORT static Ref<FEConvolveMatrix> create(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix);
 
     IntSize kernelSize() const { return m_kernelSize; }
     void setKernelSize(const IntSize&);
@@ -67,41 +65,13 @@ public:
     bool setPreserveAlpha(bool);
 
 private:
+    FEConvolveMatrix(const IntSize& kernelSize, float divisor, float bias, const IntPoint& targetOffset, EdgeModeType, const FloatPoint& kernelUnitLength, bool preserveAlpha, const Vector<float>& kernelMatrix);
 
-    struct PaintingData {
-        const Uint8ClampedArray& srcPixelArray;
-        Uint8ClampedArray& dstPixelArray;
-        int width;
-        int height;
-        float bias;
-        Vector<float> kernelMatrix;
-    };
+    FloatRect calculateImageRect(const Filter&, Span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    FEConvolveMatrix(Filter&, const IntSize&, float, float,
-            const IntPoint&, EdgeModeType, const FloatPoint&, bool, const Vector<float>&);
+    std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
-    const char* filterName() const final { return "FEConvolveMatrix"; }
-
-    void determineAbsolutePaintRect() override { setAbsolutePaintRect(enclosingIntRect(maxEffectRect())); }
-
-    void platformApplySoftware() override;
-
-    WTF::TextStream& externalRepresentation(WTF::TextStream&, RepresentationType) const override;
-
-    template<bool preserveAlphaValues>
-    ALWAYS_INLINE void fastSetInteriorPixels(PaintingData&, int clipRight, int clipBottom, int yStart, int yEnd);
-
-    ALWAYS_INLINE int getPixelValue(PaintingData&, int x, int y);
-
-    template<bool preserveAlphaValues>
-    void fastSetOuterPixels(PaintingData&, int x1, int y1, int x2, int y2);
-
-    // Wrapper functions
-    ALWAYS_INLINE void setInteriorPixels(PaintingData&, int clipRight, int clipBottom, int yStart, int yEnd);
-    ALWAYS_INLINE void setOuterPixels(PaintingData&, int x1, int y1, int x2, int y2);
-
-    // Parallelization parts
-    static const int s_minimalRectDimension = (100 * 100); // Empirical data limit for parallel jobs
+    WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 
     IntSize m_kernelSize;
     float m_divisor;
@@ -115,3 +85,19 @@ private:
 
 } // namespace WebCore
 
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::EdgeModeType> {
+    using values = EnumValues<
+        WebCore::EdgeModeType,
+
+        WebCore::EdgeModeType::Unknown,
+        WebCore::EdgeModeType::Duplicate,
+        WebCore::EdgeModeType::Wrap,
+        WebCore::EdgeModeType::None
+    >;
+};
+
+} // namespace WTF
+
+SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEConvolveMatrix)

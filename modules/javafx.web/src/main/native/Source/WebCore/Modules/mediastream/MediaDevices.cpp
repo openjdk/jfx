@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,20 +34,23 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "AudioSession.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaDeviceInfo.h"
+#include "Logging.h"
 #include "MediaTrackSupportedConstraints.h"
 #include "RealtimeMediaSourceSettings.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
 #include "UserMediaController.h"
 #include "UserMediaRequest.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/IsoMallocInlines.h>
-#include <wtf/RandomNumber.h>
 
 namespace WebCore {
 
@@ -55,12 +58,10 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MediaDevices);
 
 inline MediaDevices::MediaDevices(Document& document)
     : ActiveDOMObject(document)
-    , m_scheduledEventTimer(*this, &MediaDevices::scheduledEventTimerFired)
+    , m_scheduledEventTimer(RunLoop::main(), this, &MediaDevices::scheduledEventTimerFired)
     , m_eventNames(eventNames())
-    , m_groupIdHashSalt(createCanonicalUUIDString())
+    , m_groupIdHashSalt(createVersion4UUIDString())
 {
-    suspendIfNeeded();
-
     static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Monitor) == static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Monitor), "MediaDevices::DisplayCaptureSurfaceType::Monitor is not equal to RealtimeMediaSourceSettings::DisplaySurfaceType::Monitor as expected");
     static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Window) == static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Window), "MediaDevices::DisplayCaptureSurfaceType::Window is not RealtimeMediaSourceSettings::DisplaySurfaceType::Window as expected");
     static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Application) == static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Application), "MediaDevices::DisplayCaptureSurfaceType::Application is not RealtimeMediaSourceSettings::DisplaySurfaceType::Application as expected");
@@ -81,7 +82,9 @@ void MediaDevices::stop()
 
 Ref<MediaDevices> MediaDevices::create(Document& document)
 {
-    return adoptRef(*new MediaDevices(document));
+    auto result = adoptRef(*new MediaDevices(document));
+    result->suspendIfNeeded();
+    return result;
 }
 
 Document* MediaDevices::document() const
@@ -89,7 +92,7 @@ Document* MediaDevices::document() const
     return downcast<Document>(scriptExecutionContext());
 }
 
-static MediaConstraints createMediaConstraints(const Variant<bool, MediaTrackConstraints>& constraints)
+static MediaConstraints createMediaConstraints(const std::variant<bool, MediaTrackConstraints>& constraints)
 {
     return WTF::switchOn(constraints,
         [&] (bool isValid) {
@@ -107,7 +110,7 @@ bool MediaDevices::computeUserGesturePriviledge(GestureAllowedRequest requestTyp
 {
     auto* currentGestureToken = UserGestureIndicator::currentUserGesture().get();
     if (m_currentGestureToken.get() != currentGestureToken) {
-        m_currentGestureToken = makeWeakPtr(currentGestureToken);
+        m_currentGestureToken = currentGestureToken;
         m_requestTypesForCurrentGesture = { };
     }
 
@@ -116,16 +119,31 @@ bool MediaDevices::computeUserGesturePriviledge(GestureAllowedRequest requestTyp
     return isUserGesturePriviledged;
 }
 
-void MediaDevices::getUserMedia(const StreamConstraints& constraints, Promise&& promise)
+void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promise)
 {
+    auto audioConstraints = createMediaConstraints(constraints.audio);
+    auto videoConstraints = createMediaConstraints(constraints.video);
+
+    if (!audioConstraints.isValid && !videoConstraints.isValid) {
+        promise.reject(TypeError, "No constraints provided"_s);
+        return;
+    }
+
     auto* document = this->document();
     if (!document || !document->isFullyActive()) {
         promise.reject(Exception { InvalidStateError, "Document is not fully active"_s });
         return;
     }
 
-    auto audioConstraints = createMediaConstraints(constraints.audio);
-    auto videoConstraints = createMediaConstraints(constraints.video);
+#if USE(AUDIO_SESSION)
+    if (audioConstraints.isValid) {
+        auto categoryOverride = AudioSession::sharedSession().categoryOverride();
+        if (categoryOverride != AudioSessionCategory::None && categoryOverride != AudioSessionCategory::PlayAndRecord)  {
+            promise.reject(Exception { InvalidStateError, "AudioSession category is not compatible with audio capture."_s });
+            return;
+        }
+    }
+#endif
 
     bool isUserGesturePriviledged = false;
 
@@ -137,11 +155,90 @@ void MediaDevices::getUserMedia(const StreamConstraints& constraints, Promise&& 
         videoConstraints.setDefaultVideoConstraints();
     }
 
-    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::UserMedia, WTFMove(audioConstraints), WTFMove(videoConstraints), isUserGesturePriviledged }, WTFMove(promise));
-    request->start();
+    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::UserMedia, WTFMove(audioConstraints), WTFMove(videoConstraints), isUserGesturePriviledged, *document->pageID() }, WTFMove(constraints.audio), WTFMove(constraints.video), WTFMove(promise));
+
+    if (!document->settings().getUserMediaRequiresFocus()) {
+        request->start();
+        return;
+    }
+
+    // FIXME: We use hidden while the spec is using focus, let's revisit when when spec is made clearer.
+    document->whenVisible([request = WTFMove(request)] {
+        if (request->isContextStopped())
+            return;
+        request->start();
+    });
 }
 
-void MediaDevices::getDisplayMedia(const DisplayMediaStreamConstraints& constraints, Promise&& promise)
+static bool hasInvalidGetDisplayMediaConstraint(const MediaConstraints& constraints)
+{
+    // https://w3c.github.io/mediacapture-screen-share/#navigator-additions
+    // 1. Let constraints be the method's first argument.
+    // 2. For each member present in constraints whose value, value, is a dictionary, run the following steps:
+    //     1. If value contains a member named advanced, return a promise rejected with a newly created TypeError.
+    //     2. If value contains a member which in turn is a dictionary containing a member named either min or
+    //        exact, return a promise rejected with a newly created TypeError.
+    if (!constraints.isValid)
+        return true;
+
+    if (!constraints.advancedConstraints.isEmpty())
+        return true;
+
+    bool invalid = false;
+    constraints.mandatoryConstraints.filter([&invalid] (const MediaConstraint& constraint) mutable {
+        switch (constraint.constraintType()) {
+        case MediaConstraintType::Width:
+        case MediaConstraintType::Height: {
+            auto& intConstraint = downcast<IntConstraint>(constraint);
+            int value;
+            invalid = intConstraint.getExact(value) || intConstraint.getMin(value);
+            break;
+        }
+
+        case MediaConstraintType::AspectRatio:
+        case MediaConstraintType::FrameRate: {
+            auto& doubleConstraint = downcast<DoubleConstraint>(constraint);
+            double value;
+            invalid = doubleConstraint.getExact(value) || doubleConstraint.getMin(value);
+            break;
+        }
+
+        case MediaConstraintType::DisplaySurface:
+        case MediaConstraintType::LogicalSurface: {
+            auto& boolConstraint = downcast<BooleanConstraint>(constraint);
+            bool value;
+            invalid = boolConstraint.getExact(value);
+            break;
+        }
+
+        case MediaConstraintType::FacingMode:
+        case MediaConstraintType::DeviceId:
+        case MediaConstraintType::GroupId: {
+            auto& stringConstraint = downcast<StringConstraint>(constraint);
+            Vector<String> values;
+            invalid = stringConstraint.getExact(values);
+            break;
+        }
+
+        case MediaConstraintType::SampleRate:
+        case MediaConstraintType::SampleSize:
+        case MediaConstraintType::Volume:
+        case MediaConstraintType::EchoCancellation:
+            // Ignored.
+            break;
+
+        case MediaConstraintType::Unknown:
+            ASSERT_NOT_REACHED();
+            break;
+        }
+
+        return invalid;
+    });
+
+    return invalid;
+}
+
+void MediaDevices::getDisplayMedia(DisplayMediaStreamConstraints&& constraints, Promise&& promise)
 {
     auto* document = this->document();
     if (!document)
@@ -153,7 +250,19 @@ void MediaDevices::getDisplayMedia(const DisplayMediaStreamConstraints& constrai
         return;
     }
 
-    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::DisplayMedia, { }, createMediaConstraints(constraints.video), isUserGesturePriviledged }, WTFMove(promise));
+    auto videoConstraints = createMediaConstraints(constraints.video);
+    if (hasInvalidGetDisplayMediaConstraint(videoConstraints)) {
+        promise.reject(Exception { TypeError, "getDisplayMedia must be called with valid constraints."_s });
+        return;
+    }
+
+    // FIXME: We use hidden while the spec is using focus, let's revisit when when spec is made clearer.
+    if (!document->isFullyActive() || document->topDocument().hidden()) {
+        promise.reject(Exception { InvalidStateError, "Document is not fully active or does not have focus"_s });
+        return;
+    }
+
+    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::DisplayMedia, { }, WTFMove(videoConstraints), isUserGesturePriviledged, *document->pageID() }, WTFMove(constraints.audio), WTFMove(constraints.video), WTFMove(promise));
     request->start();
 }
 
@@ -185,13 +294,14 @@ static inline MediaDeviceInfo::Kind toMediaDeviceInfoKind(CaptureDevice::DeviceT
     case CaptureDevice::DeviceType::Screen:
     case CaptureDevice::DeviceType::Window:
         return MediaDeviceInfo::Kind::Videoinput;
+    case CaptureDevice::DeviceType::SystemAudio:
     case CaptureDevice::DeviceType::Unknown:
         ASSERT_NOT_REACHED();
     }
     return MediaDeviceInfo::Kind::Audioinput;
 }
 
-void MediaDevices::exposeDevices(const Vector<CaptureDevice>& newDevices, const String& deviceIDHashSalt, EnumerateDevicesPromise&& promise)
+void MediaDevices::exposeDevices(const Vector<CaptureDevice>& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts, EnumerateDevicesPromise&& promise)
 {
     if (isContextStopped())
         return;
@@ -213,8 +323,13 @@ void MediaDevices::exposeDevices(const Vector<CaptureDevice>& newDevices, const 
         if (!canAccessSpeaker && newDevice.type() == CaptureDevice::DeviceType::Speaker)
             continue;
 
-        auto deviceId = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalt);
-        auto groupId = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(newDevice.groupId(), m_groupIdHashSalt);
+        auto& center = RealtimeMediaSourceCenter::singleton();
+        String deviceId;
+        if (newDevice.isEphemeral())
+            deviceId = center.hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalts.ephemeralDeviceSalt);
+        else
+            deviceId = center.hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalts.persistentDeviceSalt);
+        auto groupId = center.hashStringWithSalt(newDevice.groupId(), m_groupIdHashSalt);
 
         if (newDevice.type() == CaptureDevice::DeviceType::Speaker)
             m_audioOutputDeviceIdToPersistentId.add(deviceId, newDevice.persistentId());
@@ -242,10 +357,10 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
         return;
     }
 
-    controller->enumerateMediaDevices(*document, [this, weakThis = makeWeakPtr(this), promise = WTFMove(promise)](const auto& newDevices, const auto& deviceIDHashSalt) mutable {
+    controller->enumerateMediaDevices(*document, [this, weakThis = WeakPtr { *this }, promise = WTFMove(promise)](const auto& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
         if (!weakThis)
             return;
-        exposeDevices(newDevices, deviceIDHashSalt, WTFMove(promise));
+        exposeDevices(newDevices, WTFMove(deviceIDHashSalts), WTFMove(promise));
     });
 }
 
@@ -264,6 +379,7 @@ MediaTrackSupportedConstraints MediaDevices::getSupportedConstraints()
     result.echoCancellation = supported.supportsEchoCancellation();
     result.deviceId = supported.supportsDeviceId();
     result.groupId = supported.supportsGroupId();
+    result.displaySurface = supported.supportsDisplaySurface();
 
     return result;
 }
@@ -299,11 +415,11 @@ void MediaDevices::listenForDeviceChanges()
 
     m_listeningForDeviceChanges = true;
 
-    m_deviceChangeToken = controller->addDeviceChangeObserver([weakThis = makeWeakPtr(*this), this]() {
+    m_deviceChangeToken = controller->addDeviceChangeObserver([weakThis = WeakPtr { *this }, this]() {
         if (!weakThis || isContextStopped() || m_scheduledEventTimer.isActive())
             return;
 
-        m_scheduledEventTimer.startOneShot(Seconds(randomNumber() / 2));
+        m_scheduledEventTimer.startOneShot(Seconds(cryptographicallyRandomUnitInterval() / 2));
     });
 }
 
@@ -312,7 +428,7 @@ bool MediaDevices::addEventListener(const AtomString& eventType, Ref<EventListen
     if (eventType == eventNames().devicechangeEvent)
         listenForDeviceChanges();
 
-    return EventTargetWithInlineData::addEventListener(eventType, WTFMove(listener), options);
+    return EventTarget::addEventListener(eventType, WTFMove(listener), options);
 }
 
 } // namespace WebCore

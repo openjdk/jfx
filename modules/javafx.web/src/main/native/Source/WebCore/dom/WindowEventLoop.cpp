@@ -34,14 +34,15 @@
 #include "MutationObserver.h"
 #include "SecurityOrigin.h"
 #include "ThreadGlobalData.h"
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/RunLoop.h>
 
 namespace WebCore {
 
-static HashMap<String, WindowEventLoop*>& windowEventLoopMap()
+static MemoryCompactRobinHoodHashMap<String, WindowEventLoop*>& windowEventLoopMap()
 {
     RELEASE_ASSERT(isMainThread());
-    static NeverDestroyed<HashMap<String, WindowEventLoop*>> map;
+    static NeverDestroyed<MemoryCompactRobinHoodHashMap<String, WindowEventLoop*>> map;
     return map.get();
 }
 
@@ -49,7 +50,7 @@ static String agentClusterKeyOrNullIfUnique(const SecurityOrigin& origin)
 {
     auto computeKey = [&] {
         // https://html.spec.whatwg.org/multipage/webappapis.html#obtain-agent-cluster-key
-        if (origin.isUnique())
+        if (origin.isOpaque())
             return origin.toString();
         RegistrableDomain registrableDomain { origin.data() };
         if (registrableDomain.isEmpty())
@@ -110,13 +111,13 @@ bool WindowEventLoop::isContextThread() const
 MicrotaskQueue& WindowEventLoop::microtaskQueue()
 {
     if (!m_microtaskQueue)
-        m_microtaskQueue = makeUnique<MicrotaskQueue>(commonVM());
+        m_microtaskQueue = makeUnique<MicrotaskQueue>(commonVM(), *this);
     return *m_microtaskQueue;
 }
 
 void WindowEventLoop::didReachTimeToRun()
 {
-    auto protectedThis = makeRef(*this); // Executing tasks may remove the last reference to this WindowEventLoop.
+    Ref protectedThis { *this }; // Executing tasks may remove the last reference to this WindowEventLoop.
     run();
 }
 
@@ -127,7 +128,7 @@ void WindowEventLoop::queueMutationObserverCompoundMicrotask()
     m_mutationObserverCompoundMicrotaskQueuedFlag = true;
     m_perpetualTaskGroupForSimilarOriginWindowAgents.queueMicrotask([this] {
         // We can't make a Ref to WindowEventLoop in the lambda capture as that would result in a reference cycle & leak.
-        auto protectedThis = makeRef(*this);
+        Ref protectedThis { *this };
         m_mutationObserverCompoundMicrotaskQueuedFlag = false;
 
         // FIXME: This check doesn't exist in the spec.
@@ -145,7 +146,7 @@ CustomElementQueue& WindowEventLoop::backupElementQueue()
         m_processingBackupElementQueue = true;
         m_perpetualTaskGroupForSimilarOriginWindowAgents.queueMicrotask([this] {
             // We can't make a Ref to WindowEventLoop in the lambda capture as that would result in a reference cycle & leak.
-            auto protectedThis = makeRef(*this);
+            Ref protectedThis { *this };
             m_processingBackupElementQueue = false;
             ASSERT(m_customElementQueue);
             CustomElementReactionQueue::processBackupQueue(*m_customElementQueue);

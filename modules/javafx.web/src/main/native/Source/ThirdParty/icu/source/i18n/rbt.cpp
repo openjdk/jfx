@@ -27,14 +27,14 @@ U_NAMESPACE_BEGIN
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(RuleBasedTransliterator)
 
-static Replaceable *gLockedText = NULL;
+static Replaceable *gLockedText = nullptr;
 
 void RuleBasedTransliterator::_construct(const UnicodeString& rules,
                                          UTransDirection direction,
                                          UParseError& parseError,
                                          UErrorCode& status) {
     fData = 0;
-    isDataOwned = TRUE;
+    isDataOwned = true;
     if (U_FAILURE(status)) {
         return;
     }
@@ -46,7 +46,7 @@ void RuleBasedTransliterator::_construct(const UnicodeString& rules,
     }
 
     if (parser.idBlockVector.size() != 0 ||
-        parser.compoundFilter != NULL ||
+        parser.compoundFilter != nullptr ||
         parser.dataVector.size() == 0) {
         status = U_INVALID_RBT_SYNTAX; // ::ID blocks disallowed in RBT
         return;
@@ -62,7 +62,7 @@ void RuleBasedTransliterator::_construct(const UnicodeString& rules,
  * @param rules         rules, separated by ';'
  * @param direction     either FORWARD or REVERSE.
  * @param adoptedFilter the filter for this transliterator.
- * @param parseError    Struct to recieve information on position
+ * @param parseError    Struct to receive information on position
  *                      of error if an error is encountered
  * @param status        Output param set to success/failure code.
  * @exception IllegalArgumentException if rules are malformed
@@ -101,7 +101,7 @@ RuleBasedTransliterator::RuleBasedTransliterator(
 }*/
 
 /**
- * Covenience constructor with no filter.
+ * Convenience constructor with no filter.
  */
 /*RuleBasedTransliterator::RuleBasedTransliterator(
                             const UnicodeString& id,
@@ -114,7 +114,7 @@ RuleBasedTransliterator::RuleBasedTransliterator(
 }*/
 
 /**
- * Covenience constructor with no filter and FORWARD direction.
+ * Convenience constructor with no filter and FORWARD direction.
  */
 /*RuleBasedTransliterator::RuleBasedTransliterator(
                             const UnicodeString& id,
@@ -126,7 +126,7 @@ RuleBasedTransliterator::RuleBasedTransliterator(
 }*/
 
 /**
- * Covenience constructor with FORWARD direction.
+ * Convenience constructor with FORWARD direction.
  */
 /*RuleBasedTransliterator::RuleBasedTransliterator(
                             const UnicodeString& id,
@@ -143,7 +143,7 @@ RuleBasedTransliterator::RuleBasedTransliterator(const UnicodeString& id,
                                  UnicodeFilter* adoptedFilter) :
     Transliterator(id, adoptedFilter),
     fData((TransliterationRuleData*)theData), // cast away const
-    isDataOwned(FALSE) {
+    isDataOwned(false) {
     setMaximumContextLength(fData->ruleSet.getMaximumContextLength());
 }
 
@@ -241,7 +241,7 @@ RuleBasedTransliterator::handleTransliterate(Replaceable& text, UTransPosition& 
     //   Double-locking must be prevented in these cases.
     //
 
-    UBool    lockedMutexAtThisLevel = FALSE;
+    UBool    lockedMutexAtThisLevel = false;
 
     // Test whether this request is operating on the same text string as
     //   some other transliteration that is still in progress and holding the
@@ -263,21 +263,21 @@ RuleBasedTransliterator::handleTransliterate(Replaceable& text, UTransPosition& 
         umtx_lock(&transliteratorDataMutex);  // Contention, longish waits possible here.
         Mutex m;
         gLockedText = &text;
-        lockedMutexAtThisLevel = TRUE;
+        lockedMutexAtThisLevel = true;
     }
 
     // Check to make sure we don't dereference a null pointer.
-    if (fData != NULL) {
-        while (index.start < index.limit &&
-               loopCount <= loopLimit &&
-               fData->ruleSet.transliterate(text, index, isIncremental)) {
-            ++loopCount;
-        }
+    if (fData != nullptr) {
+            while (index.start < index.limit &&
+                   loopCount <= loopLimit &&
+                   fData->ruleSet.transliterate(text, index, isIncremental)) {
+                ++loopCount;
+            }
     }
     if (lockedMutexAtThisLevel) {
         {
             Mutex m;
-            gLockedText = NULL;
+            gLockedText = nullptr;
         }
         umtx_unlock(&transliteratorDataMutex);
     }
@@ -292,14 +292,14 @@ UnicodeString& RuleBasedTransliterator::toRules(UnicodeString& rulesSource,
  * Implement Transliterator framework
  */
 void RuleBasedTransliterator::handleGetSourceSet(UnicodeSet& result) const {
-    fData->ruleSet.getSourceTargetSet(result, FALSE);
+    fData->ruleSet.getSourceTargetSet(result, false);
 }
 
 /**
  * Override Transliterator framework
  */
 UnicodeSet& RuleBasedTransliterator::getTargetSet(UnicodeSet& result) const {
-    return fData->ruleSet.getSourceTargetSet(result, TRUE);
+    return fData->ruleSet.getSourceTargetSet(result, true);
 }
 
 U_NAMESPACE_END

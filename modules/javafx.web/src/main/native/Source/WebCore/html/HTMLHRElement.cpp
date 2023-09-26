@@ -26,9 +26,10 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePool.h"
+#include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "StyleProperties.h"
+#include "MutableStyleProperties.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -63,10 +64,10 @@ bool HTMLHRElement::hasPresentationalHintsForAttribute(const QualifiedName& name
 void HTMLHRElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
-        if (equalLettersIgnoringASCIICase(value, "left")) {
+        if (equalLettersIgnoringASCIICase(value, "left"_s)) {
             addPropertyToPresentationalHintStyle(style, CSSPropertyMarginLeft, 0, CSSUnitType::CSS_PX);
             addPropertyToPresentationalHintStyle(style, CSSPropertyMarginRight, CSSValueAuto);
-        } else if (equalLettersIgnoringASCIICase(value, "right")) {
+        } else if (equalLettersIgnoringASCIICase(value, "right"_s)) {
             addPropertyToPresentationalHintStyle(style, CSSPropertyMarginLeft, CSSValueAuto);
             addPropertyToPresentationalHintStyle(style, CSSPropertyMarginRight, 0, CSSUnitType::CSS_PX);
         } else {
@@ -86,9 +87,9 @@ void HTMLHRElement::collectPresentationalHintsForAttribute(const QualifiedName& 
         if (!hasAttributeWithoutSynchronization(colorAttr)) {
             addPropertyToPresentationalHintStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
 
-            RefPtr<CSSPrimitiveValue> darkGrayValue = CSSValuePool::singleton().createColorValue(Color::darkGray);
-            style.setProperty(CSSPropertyBorderColor, darkGrayValue);
-            style.setProperty(CSSPropertyBackgroundColor, darkGrayValue);
+            auto darkGrayValue = CSSValuePool::singleton().createColorValue(Color::darkGray);
+            style.setProperty(CSSPropertyBorderColor, darkGrayValue.ptr());
+            style.setProperty(CSSPropertyBackgroundColor, WTFMove(darkGrayValue));
         }
     } else if (name == sizeAttr) {
         int size = parseHTMLInteger(value).value_or(0);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,11 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.Accessible;
+import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
+import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.quantum.WindowStage;
 import static javafx.scene.AccessibleAttribute.*;
 
 /*
@@ -101,6 +105,9 @@ final class WinAccessible extends Accessible {
     private static final int UIA_ToggleToggleStatePropertyId     = 30086;
     private static final int UIA_AriaRolePropertyId              = 30101;
     private static final int UIA_ProviderDescriptionPropertyId   = 30107;
+    private static final int UIA_PositionInSetPropertyId         = 30152;
+    private static final int UIA_SizeOfSetPropertyId             = 30153;
+    private static final int UIA_IsDialogPropertyId              = 30174;
 
     /* Control Pattern Identifiers */
     private static final int UIA_InvokePatternId                 = 10000;
@@ -292,14 +299,16 @@ final class WinAccessible extends Accessible {
                 break;
             }
             case INDETERMINATE: {
-                if (getAttribute(ROLE) == AccessibleRole.CHECK_BOX) {
+                Object role = getAttribute(ROLE);
+                if (role == AccessibleRole.CHECK_BOX || role == AccessibleRole.CHECK_BOX_TREE_ITEM) {
                     notifyToggleState();
                 }
                 break;
             }
             case SELECTED: {
                 Object role = getAttribute(ROLE);
-                if (role == AccessibleRole.CHECK_BOX || role == AccessibleRole.TOGGLE_BUTTON) {
+                if (role == AccessibleRole.CHECK_BOX || role == AccessibleRole.TOGGLE_BUTTON
+                        || role == AccessibleRole.CHECK_BOX_TREE_ITEM) {
                     notifyToggleState();
                     break;
                 }
@@ -424,6 +433,7 @@ final class WinAccessible extends Accessible {
                 case LIST_ITEM: return getContainerAccessible(AccessibleRole.LIST_VIEW);
                 case TAB_ITEM: return getContainerAccessible(AccessibleRole.TAB_PANE);
                 case PAGE_ITEM: return getContainerAccessible(AccessibleRole.PAGINATION);
+                case CHECK_BOX_TREE_ITEM:
                 case TREE_ITEM: return getContainerAccessible(AccessibleRole.TREE_VIEW);
                 case TREE_TABLE_ROW:
                 case TREE_TABLE_CELL: return getContainerAccessible(AccessibleRole.TREE_TABLE_VIEW);
@@ -470,6 +480,7 @@ final class WinAccessible extends Accessible {
             case COMBO_BOX: return UIA_ComboBoxControlTypeId;
             case HYPERLINK: return UIA_HyperlinkControlTypeId;
             case TREE_VIEW: return UIA_TreeControlTypeId;
+            case CHECK_BOX_TREE_ITEM:
             case TREE_ITEM: return UIA_TreeItemControlTypeId;
             case PROGRESS_INDICATOR: return UIA_ProgressBarControlTypeId;
             case TOOL_BAR: return UIA_ToolBarControlTypeId;
@@ -523,6 +534,7 @@ final class WinAccessible extends Accessible {
                 }
                 break;
             }
+            case CHECK_BOX_TREE_ITEM:
             case TREE_ITEM: {
                 Integer index = (Integer)getAttribute(INDEX);
                 if (index != null) {
@@ -620,6 +632,12 @@ final class WinAccessible extends Accessible {
             case TREE_VIEW:
                 impl = patternId == UIA_SelectionPatternId ||
                        patternId == UIA_ScrollPatternId;
+                break;
+            case CHECK_BOX_TREE_ITEM:
+                impl = patternId == UIA_SelectionItemPatternId ||
+                       patternId == UIA_ExpandCollapsePatternId ||
+                       patternId == UIA_ScrollItemPatternId ||
+                       patternId == UIA_TogglePatternId;
                 break;
             case TREE_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId ||
@@ -771,7 +789,7 @@ final class WinAccessible extends Accessible {
                 }
                 variant = new WinVariant();
                 variant.vt = WinVariant.VT_BSTR;
-                variant.bstrVal = (String)name;
+                variant.bstrVal = name;
                 break;
             }
             case UIA_HelpTextPropertyId: {
@@ -791,6 +809,7 @@ final class WinAccessible extends Accessible {
                     switch (role) {
                         case TITLED_PANE: description = "title pane"; break;
                         case PAGE_ITEM: description = "page"; break;
+                        case DIALOG: description = "dialog"; break;
                         default:
                     }
                 }
@@ -830,6 +849,39 @@ final class WinAccessible extends Accessible {
                 variant.boolVal = focus != null ? focus : false;
                 break;
             }
+            case UIA_SizeOfSetPropertyId: {
+                AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+                if (role == AccessibleRole.LIST_ITEM) {
+                    Accessible listAccessible = getContainer();
+                    if (listAccessible != null) {
+                        Integer count = (Integer)listAccessible.getAttribute(ITEM_COUNT);
+                        if (count != 0) {
+                            // Narrator misreads if count is 0; It reads two items at a time.
+                            // Default value of UIA_SizeOfSetPropertyId is 0,  so anyways
+                            // returning 0 can be skipped.
+                            variant = new WinVariant();
+                            variant.vt = WinVariant.VT_I4;
+                            variant.lVal = count;
+                        }
+                    }
+                }
+                break;
+            }
+            case UIA_PositionInSetPropertyId: {
+                AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+                if (role == AccessibleRole.LIST_ITEM) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_I4;
+                    variant.lVal = (Integer)(getAttribute(INDEX)) + 1;
+                }
+                break;
+            }
+            case UIA_IsDialogPropertyId: {
+                AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+                variant = new WinVariant();
+                variant.vt = WinVariant.VT_BOOL;
+                variant.boolVal = (role == AccessibleRole.DIALOG);
+            } break;
             case UIA_IsContentElementPropertyId:
             case UIA_IsControlElementPropertyId: {
                 //TODO how to handle ControlElement versus ContentElement
@@ -872,9 +924,39 @@ final class WinAccessible extends Accessible {
                 variant.bstrVal = "JavaFXProvider";
                 break;
             }
+            case UIA_ToggleToggleStatePropertyId: {
+                AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+                if (role == AccessibleRole.CHECK_BOX_TREE_ITEM) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_I4;
+                    variant.lVal = get_ToggleState();
+                }
+                break;
+            }
             default:
         }
         return variant;
+    }
+
+    private Screen getScreen() {
+        Scene scene = (Scene) getAttribute(SCENE);
+        if (scene == null || scene.getWindow() == null) return null;
+        TKStage tkStage = WindowHelper.getPeer(scene.getWindow());
+        if (!(tkStage instanceof WindowStage)) return null;
+        WindowStage windowStage = (WindowStage) tkStage;
+        if (windowStage.getPlatformWindow() == null) return null;
+        return windowStage.getPlatformWindow().getScreen();
+    }
+
+    float[] getPlatformBounds(float x, float y, float w, float h) {
+        float[] platformBounds = new float[] { x, y, w, h };
+        Screen screen = getScreen();
+        if (screen == null) return platformBounds;
+        platformBounds[0] = screen.toPlatformX(x);
+        platformBounds[1] = screen.toPlatformY(y);
+        platformBounds[2] = (float) Math.ceil(w * screen.getPlatformScaleX());
+        platformBounds[3] = (float) Math.ceil(h * screen.getPlatformScaleY());
+        return platformBounds;
     }
 
     /***********************************************/
@@ -887,8 +969,10 @@ final class WinAccessible extends Accessible {
 
         Bounds bounds = (Bounds)getAttribute(BOUNDS);
         if (bounds != null) {
-            return new float[] {(float)bounds.getMinX(), (float)bounds.getMinY(),
-                                (float)bounds.getWidth(), (float)bounds.getHeight()};
+            return getPlatformBounds((float) bounds.getMinX(),
+                                     (float) bounds.getMinY(),
+                                     (float) bounds.getWidth(),
+                                     (float) bounds.getHeight());
         }
         return null;
     }
@@ -944,7 +1028,8 @@ final class WinAccessible extends Accessible {
         if (isDisposed()) return 0;
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         /* special case for the tree item hierarchy, as expected by Windows */
-        boolean treeCell = role == AccessibleRole.TREE_ITEM;
+        boolean treeCell = (role == AccessibleRole.TREE_ITEM
+                            || role == AccessibleRole.CHECK_BOX_TREE_ITEM);
         Node node = null;
         switch (direction) {
             case NavigateDirection_Parent: {
@@ -1305,6 +1390,7 @@ final class WinAccessible extends Accessible {
                     executeAction(AccessibleAction.FIRE);
                     break;
                 case LIST_ITEM:
+                case CHECK_BOX_TREE_ITEM:
                 case TREE_ITEM:
                 case TABLE_CELL:
                 case TREE_TABLE_CELL:
@@ -1498,6 +1584,16 @@ final class WinAccessible extends Accessible {
 
     private int get_ToggleState() {
         if (isDisposed()) return 0;
+        if (getAttribute(ROLE) == AccessibleRole.CHECK_BOX_TREE_ITEM) {
+            ToggleState toggleState = (ToggleState)getAttribute(TOGGLE_STATE);
+            if (toggleState == ToggleState.INDETERMINATE) {
+                return ToggleState_Indeterminate;
+            } else if (toggleState == ToggleState.CHECKED) {
+                return ToggleState_On;
+            } else {
+                return ToggleState_Off;
+            }
+        }
         if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
             return ToggleState_Indeterminate;
         }
@@ -1824,6 +1920,7 @@ final class WinAccessible extends Accessible {
                 }
                 break;
             }
+            case CHECK_BOX_TREE_ITEM:
             case TREE_ITEM: {
                 Integer index = (Integer)getAttribute(INDEX);
                 if (index != null) {

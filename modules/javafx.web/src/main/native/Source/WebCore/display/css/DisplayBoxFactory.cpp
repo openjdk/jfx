@@ -26,8 +26,8 @@
 #include "config.h"
 #include "DisplayBoxFactory.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "CachedImage.h"
 #include "DisplayBoxClip.h"
 #include "DisplayBoxDecorationData.h"
 #include "DisplayBoxDecorationPainter.h"
@@ -39,11 +39,10 @@
 #include "DisplayTree.h"
 #include "DisplayTreeBuilder.h"
 #include "FloatPoint3D.h"
-#include "InlineLineGeometry.h"
+#include "InlineDisplayLine.h"
 #include "LayoutBoxGeometry.h"
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include "LayoutInitialContainingBlock.h"
-#include "LayoutReplacedBox.h"
 #include "Logging.h"
 #include "TransformationMatrix.h"
 
@@ -56,7 +55,7 @@ BoxFactory::BoxFactory(TreeBuilder& builder, float pixelSnappingFactor)
 {
 }
 
-RootBackgroundPropagation BoxFactory::determineRootBackgroundPropagation(const Layout::ContainerBox& rootLayoutBox)
+RootBackgroundPropagation BoxFactory::determineRootBackgroundPropagation(const Layout::ElementBox& rootLayoutBox)
 {
     auto* documentElementBox = documentElementBoxFromRootBox(rootLayoutBox);
     auto* bodyBox = bodyBoxFromRootBox(rootLayoutBox);
@@ -70,7 +69,7 @@ RootBackgroundPropagation BoxFactory::determineRootBackgroundPropagation(const L
     return RootBackgroundPropagation::None;
 }
 
-std::unique_ptr<ContainerBox> BoxFactory::displayBoxForRootBox(const Layout::ContainerBox& rootLayoutBox, const Layout::BoxGeometry& geometry, RootBackgroundPropagation rootBackgroundPropagation) const
+std::unique_ptr<ContainerBox> BoxFactory::displayBoxForRootBox(const Layout::ElementBox& rootLayoutBox, const Layout::BoxGeometry& geometry, RootBackgroundPropagation rootBackgroundPropagation) const
 {
     ASSERT(is<Layout::InitialContainingBlock>(rootLayoutBox));
 
@@ -120,15 +119,15 @@ std::unique_ptr<Box> BoxFactory::displayBoxForLayoutBox(const Layout::Box& layou
 
     // FIXME: Handle isAnonymous()
 
-    if (is<Layout::ReplacedBox>(layoutBox)) {
+    if (is<Layout::ElementBox>(layoutBox) && downcast<Layout::ElementBox>(layoutBox).cachedImage()) {
         // FIXME: Don't assume it's an image.
-        CachedResourceHandle<CachedImage> cachedImageHandle = downcast<Layout::ReplacedBox>(layoutBox).cachedImage();
+        CachedResourceHandle<CachedImage> cachedImageHandle = downcast<Layout::ElementBox>(layoutBox).cachedImage();
         auto imageBox = makeUnique<ImageBox>(m_treeBuilder.tree(), pixelSnappedBorderBoxRect, WTFMove(style), WTFMove(cachedImageHandle));
         setupBoxModelBox(*imageBox, layoutBox, geometry, containingBlockContext, styleForBackground);
         return imageBox;
     }
 
-    if (is<Layout::ContainerBox>(layoutBox)) {
+    if (is<Layout::ElementBox>(layoutBox)) {
         // FIXME: The decision to make a ContainerBox should be made based on whether this Display::Box will have children.
         auto containerBox = makeUnique<ContainerBox>(m_treeBuilder.tree(), pixelSnappedBorderBoxRect, WTFMove(style));
         setupBoxModelBox(*containerBox, layoutBox, geometry, containingBlockContext, styleForBackground);
@@ -143,16 +142,16 @@ std::unique_ptr<Box> BoxFactory::displayBoxForLayoutBox(const Layout::Box& layou
     return makeUnique<Box>(m_treeBuilder.tree(), pixelSnappedBorderBoxRect, WTFMove(style), flags);
 }
 
-std::unique_ptr<Box> BoxFactory::displayBoxForTextRun(const Layout::Run& run, const Layout::LineGeometry& lineGeometry, const ContainingBlockContext& containingBlockContext) const
+std::unique_ptr<Box> BoxFactory::displayBoxForTextRun(const InlineDisplay::Box& box, const InlineDisplay::Line& line, const ContainingBlockContext& containingBlockContext) const
 {
-    UNUSED_PARAM(lineGeometry);
-    ASSERT(run.text());
+    UNUSED_PARAM(line);
+    ASSERT(box.isTextOrSoftLineBreak());
 
-    auto runRect = LayoutRect { run.logicalLeft(), run.logicalTop(), run.logicalWidth(), run.logicalHeight() };
-    runRect.move(containingBlockContext.offsetFromRoot);
+    auto boxRect = LayoutRect { box.left(), box.top(), box.width(), box.height() };
+    boxRect.move(containingBlockContext.offsetFromRoot);
 
-    auto style = Style { run.layoutBox().style() };
-    return makeUnique<TextBox>(m_treeBuilder.tree(), UnadjustedAbsoluteFloatRect { snapRectToDevicePixels(runRect, m_pixelSnappingFactor) }, WTFMove(style), run);
+    auto style = Style { box.layoutBox().style() };
+    return makeUnique<TextBox>(m_treeBuilder.tree(), UnadjustedAbsoluteFloatRect { snapRectToDevicePixels(boxRect, m_pixelSnappingFactor) }, WTFMove(style), box);
 }
 
 void BoxFactory::setupBoxGeometry(BoxModelBox& box, const Layout::Box&, const Layout::BoxGeometry& layoutGeometry, const ContainingBlockContext& containingBlockContext) const
@@ -280,22 +279,22 @@ void BoxFactory::setupBoxModelBox(BoxModelBox& box, const Layout::Box& layoutBox
     }
 }
 
-const Layout::ContainerBox* BoxFactory::documentElementBoxFromRootBox(const Layout::ContainerBox& rootLayoutBox)
+const Layout::ElementBox* BoxFactory::documentElementBoxFromRootBox(const Layout::ElementBox& rootLayoutBox)
 {
     auto* documentBox = rootLayoutBox.firstChild();
-    if (!documentBox || !documentBox->isDocumentBox() || !is<Layout::ContainerBox>(documentBox))
+    if (!documentBox || !documentBox->isDocumentBox() || !is<Layout::ElementBox>(documentBox))
         return nullptr;
 
-    return downcast<Layout::ContainerBox>(documentBox);
+    return downcast<Layout::ElementBox>(documentBox);
 }
 
-const Layout::Box* BoxFactory::bodyBoxFromRootBox(const Layout::ContainerBox& rootLayoutBox)
+const Layout::Box* BoxFactory::bodyBoxFromRootBox(const Layout::ElementBox& rootLayoutBox)
 {
     auto* documentBox = rootLayoutBox.firstChild();
-    if (!documentBox || !documentBox->isDocumentBox() || !is<Layout::ContainerBox>(documentBox))
+    if (!documentBox || !documentBox->isDocumentBox() || !is<Layout::ElementBox>(documentBox))
         return nullptr;
 
-    auto* bodyBox = downcast<Layout::ContainerBox>(documentBox)->firstChild();
+    auto* bodyBox = downcast<Layout::ElementBox>(documentBox)->firstChild();
     if (!bodyBox || !bodyBox->isBodyBox())
         return nullptr;
 
@@ -305,4 +304,3 @@ const Layout::Box* BoxFactory::bodyBoxFromRootBox(const Layout::ContainerBox& ro
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

@@ -44,17 +44,17 @@ public:
     void atomCharacterClassBuiltIn(BuiltInCharacterClassID, bool) { }
     void atomCharacterClassEnd() { }
     void atomParenthesesSubpatternBegin(bool = true, std::optional<String> = std::nullopt) { }
-    void atomParentheticalAssertionBegin(bool = false) { }
+    void atomParentheticalAssertionBegin(bool, MatchDirection) { }
     void atomParenthesesEnd() { }
     void atomBackReference(unsigned) { }
     void atomNamedBackReference(const String&) { }
     void atomNamedForwardReference(const String&) { }
     void quantifyAtom(unsigned, unsigned, bool) { }
-    void disjunction() { }
+    void disjunction(CreateDisjunctionPurpose) { }
     void resetForReparsing() { }
 };
 
-ErrorCode checkSyntax(const String& pattern, const String& flags)
+ErrorCode checkSyntax(StringView pattern, StringView flags)
 {
     SyntaxChecker syntaxChecker;
 

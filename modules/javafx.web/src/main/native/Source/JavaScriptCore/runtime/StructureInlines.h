@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,12 @@
 #include "JSArrayBufferView.h"
 #include "JSCJSValueInlines.h"
 #include "JSGlobalObject.h"
-#include "PropertyMapHashTable.h"
+#include "PropertyTable.h"
 #include "Structure.h"
 #include "StructureChain.h"
 #include "StructureRareDataInlines.h"
+#include "Watchpoint.h"
+#include <wtf/CompactRefPtr.h>
 #include <wtf/Threading.h>
 
 namespace JSC {
@@ -40,14 +42,26 @@ namespace JSC {
 class DeferredStructureTransitionWatchpointFire final : public DeferredWatchpointFire {
     WTF_MAKE_NONCOPYABLE(DeferredStructureTransitionWatchpointFire);
 public:
-    JS_EXPORT_PRIVATE DeferredStructureTransitionWatchpointFire(VM&, Structure*);
-    JS_EXPORT_PRIVATE ~DeferredStructureTransitionWatchpointFire() final;
+    DeferredStructureTransitionWatchpointFire(VM& vm, Structure* structure)
+        : DeferredWatchpointFire()
+        , m_vm(vm)
+        , m_structure(structure)
+    {
+    }
 
-    void dump(PrintStream&) const final;
+    ~DeferredStructureTransitionWatchpointFire()
+    {
+        if (watchpointsToFire().state() == IsWatched)
+            fireAllSlow();
+    }
 
     const Structure* structure() const { return m_structure; }
 
+
 private:
+    JS_EXPORT_PRIVATE void fireAllSlow();
+
+    VM& m_vm;
     const Structure* m_structure;
 };
 
@@ -56,19 +70,20 @@ inline Structure* Structure::create(VM& vm, JSGlobalObject* globalObject, JSValu
     ASSERT(vm.structureStructure);
     ASSERT(classInfo);
     if (auto* object = prototype.getObject()) {
-        ASSERT(!object->anyObjectInChainMayInterceptIndexedAccesses(vm) || hasSlowPutArrayStorage(indexingModeIncludingHistory) || !hasIndexedProperties(indexingModeIncludingHistory));
+        ASSERT(!object->anyObjectInChainMayInterceptIndexedAccesses() || hasSlowPutArrayStorage(indexingModeIncludingHistory) || !hasIndexedProperties(indexingModeIncludingHistory));
         object->didBecomePrototype();
     }
 
-    Structure* structure = new (NotNull, allocateCell<Structure>(vm.heap)) Structure(vm, globalObject, prototype, typeInfo, classInfo, indexingModeIncludingHistory, inlineCapacity);
+    Structure* structure = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, globalObject, prototype, typeInfo, classInfo, indexingModeIncludingHistory, inlineCapacity);
     structure->finishCreation(vm);
+    ASSERT(structure->type() == StructureType);
     return structure;
 }
 
 inline Structure* Structure::createStructure(VM& vm)
 {
     ASSERT(!vm.structureStructure);
-    Structure* structure = new (NotNull, allocateCell<Structure>(vm.heap)) Structure(vm);
+    Structure* structure = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, CreatingEarlyCell);
     structure->finishCreation(vm, CreatingEarlyCell);
     return structure;
 }
@@ -78,11 +93,10 @@ inline Structure* Structure::create(VM& vm, Structure* previous, DeferredStructu
     ASSERT(vm.structureStructure);
     Structure* newStructure;
     if (previous->isBrandedStructure())
-        newStructure = new (NotNull, allocateCell<BrandedStructure>(vm.heap)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous), deferred);
+        newStructure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous));
     else
-        newStructure = new (NotNull, allocateCell<Structure>(vm.heap)) Structure(vm, previous, deferred);
-
-    newStructure->finishCreation(vm, previous);
+        newStructure = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, previous);
+    newStructure->finishCreation(vm, previous, deferred);
     return newStructure;
 }
 
@@ -162,21 +176,19 @@ ALWAYS_INLINE PropertyOffset Structure::get(VM& vm, PropertyName propertyName)
 ALWAYS_INLINE PropertyOffset Structure::get(VM& vm, PropertyName propertyName, unsigned& attributes)
 {
     ASSERT(!isCompilationThread());
-    ASSERT(structure(vm)->classInfo() == info());
+    ASSERT(structure()->classInfoForCells() == info());
 
-    if (m_seenProperties.ruleOut(bitwise_cast<uintptr_t>(propertyName.uid())))
+    if (m_seenProperties.ruleOut(CompactPtr<UniquedStringImpl>::encode(propertyName.uid())))
         return invalidOffset;
 
     PropertyTable* propertyTable = ensurePropertyTableIfNotEmpty(vm);
     if (!propertyTable)
         return invalidOffset;
 
-    PropertyMapEntry* entry = propertyTable->get(propertyName.uid());
-    if (!entry)
-        return invalidOffset;
-
-    attributes = entry->attributes;
-    return entry->offset;
+    auto [offset, entryAttributes] = propertyTable->get(propertyName.uid());
+    if (offset != invalidOffset)
+        attributes = entryAttributes;
+    return offset;
 }
 
 template<typename Functor>
@@ -208,7 +220,7 @@ void Structure::forEachPropertyConcurrently(const Functor& functor)
             break;
         }
 
-        if (!functor(PropertyMapEntry(structure->m_transitionPropertyName.get(), structure->transitionOffset(), structure->transitionPropertyAttributes()))) {
+        if (!functor(PropertyTableEntry(structure->m_transitionPropertyName.get(), structure->transitionOffset(), structure->transitionPropertyAttributes()))) {
             if (didFindStructure) {
                 assertIsHeld(tableStructure->m_lock); // Sadly Clang needs some help here.
                 tableStructure->m_lock.unlock();
@@ -219,15 +231,15 @@ void Structure::forEachPropertyConcurrently(const Functor& functor)
 
     if (didFindStructure) {
         assertIsHeld(tableStructure->m_lock); // Sadly Clang needs some help here.
-        for (auto& entry : *table) {
-            if (seenProperties.contains(entry.key))
-                continue;
+        table->forEachProperty([&](const auto& entry) {
+            if (seenProperties.contains(entry.key()))
+                return IterationStatus::Continue;
 
-            if (!functor(entry)) {
-                tableStructure->m_lock.unlock();
-                return;
-            }
-        }
+            if (!functor(entry))
+                return IterationStatus::Done;
+
+            return IterationStatus::Continue;
+        });
         tableStructure->m_lock.unlock();
     }
 }
@@ -236,10 +248,11 @@ template<typename Functor>
 void Structure::forEachProperty(VM& vm, const Functor& functor)
 {
     if (PropertyTable* table = ensurePropertyTableIfNotEmpty(vm)) {
-        for (auto& entry : *table) {
+        table->forEachProperty([&](const auto& entry) {
             if (!functor(entry))
-                return;
-        }
+                return IterationStatus::Done;
+            return IterationStatus::Continue;
+        });
         ensureStillAliveHere(table);
     }
 }
@@ -255,10 +268,11 @@ inline bool Structure::hasIndexingHeader(const JSCell* cell) const
     if (hasIndexedProperties(indexingType()))
         return true;
 
-    if (!isTypedView(typedArrayTypeForType(m_blob.type())))
+    if (!isTypedView(m_blob.type()))
         return false;
 
-    return jsCast<const JSArrayBufferView*>(cell)->mode() == WastefulTypedArray;
+    TypedArrayMode mode = jsCast<const JSArrayBufferView*>(cell)->mode();
+    return isWastefulTypedArray(mode);
 }
 
 inline bool Structure::masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject)
@@ -337,18 +351,14 @@ inline JSValue Structure::prototypeForLookup(JSGlobalObject* globalObject, JSCel
 
 inline StructureChain* Structure::prototypeChain(VM& vm, JSGlobalObject* globalObject, JSObject* base) const
 {
-    ASSERT(base->structure(vm) == this);
+    ASSERT(base->structure() == this);
     // We cache our prototype chain so our clients can share it.
     if (!isValid(globalObject, m_cachedPrototypeChain.get(), base)) {
         JSValue prototype = prototypeForLookup(globalObject, base);
+        const_cast<Structure*>(this)->clearCachedPrototypeChain();
         m_cachedPrototypeChain.set(vm, this, StructureChain::create(vm, prototype.isNull() ? nullptr : asObject(prototype)));
     }
     return m_cachedPrototypeChain.get();
-}
-
-inline StructureChain* Structure::prototypeChain(JSGlobalObject* globalObject, JSObject* base) const
-{
-    return prototypeChain(globalObject->vm(), globalObject, base);
 }
 
 inline bool Structure::isValid(JSGlobalObject* globalObject, StructureChain* cachedPrototypeChain, JSObject* base) const
@@ -356,14 +366,13 @@ inline bool Structure::isValid(JSGlobalObject* globalObject, StructureChain* cac
     if (!cachedPrototypeChain)
         return false;
 
-    VM& vm = globalObject->vm();
     JSValue prototype = prototypeForLookup(globalObject, base);
     StructureID* cachedStructure = cachedPrototypeChain->head();
     while (*cachedStructure && !prototype.isNull()) {
         if (asObject(prototype)->structureID() != *cachedStructure)
             return false;
         ++cachedStructure;
-        prototype = asObject(prototype)->getPrototypeDirect(vm);
+        prototype = asObject(prototype)->getPrototypeDirect();
     }
     return prototype.isNull() && !*cachedStructure;
 }
@@ -393,14 +402,14 @@ inline WatchpointSet* Structure::propertyReplacementWatchpointSet(PropertyOffset
 }
 
 template<typename DetailsFunc>
-ALWAYS_INLINE bool Structure::checkOffsetConsistency(PropertyTable* propertyTable, const DetailsFunc& detailsFunc) const
+ALWAYS_INLINE void Structure::checkOffsetConsistency(PropertyTable* propertyTable, const DetailsFunc& detailsFunc) const
 {
     // We cannot reliably assert things about the property table in the concurrent
     // compilation thread. It is possible for the table to be stolen and then have
     // things added to it, which leads to the offsets being all messed up. We could
     // get around this by grabbing a lock here, but I think that would be overkill.
     if (isCompilationThread())
-        return true;
+        return;
 
     unsigned totalSize = propertyTable->propertyStorageSize();
     unsigned inlineOverflowAccordingToTotalSize = totalSize < m_inlineCapacity ? 0 : totalSize - m_inlineCapacity;
@@ -424,33 +433,22 @@ ALWAYS_INLINE bool Structure::checkOffsetConsistency(PropertyTable* propertyTabl
         fail("numberOfSlotsForMaxOffset doesn't match totalSize");
     if (inlineOverflowAccordingToTotalSize != numberOfOutOfLineSlotsForMaxOffset(maxOffset()))
         fail("inlineOverflowAccordingToTotalSize doesn't match numberOfOutOfLineSlotsForMaxOffset");
-
-    return true;
 }
 
-ALWAYS_INLINE bool Structure::checkOffsetConsistency() const
+ALWAYS_INLINE void Structure::checkOffsetConsistency() const
 {
-    PropertyTable* propertyTable = propertyTableOrNull();
-
-    if (!propertyTable) {
+    if (auto* propertyTable = propertyTableOrNull())
+        checkOffsetConsistency(propertyTable, [] { });
+    else
         ASSERT(!isPinnedPropertyTable());
-        return true;
-    }
-
-    // We cannot reliably assert things about the property table in the concurrent
-    // compilation thread. It is possible for the table to be stolen and then have
-    // things added to it, which leads to the offsets being all messed up. We could
-    // get around this by grabbing a lock here, but I think that would be overkill.
-    if (isCompilationThread())
-        return true;
-
-    return checkOffsetConsistency(propertyTable, [] () { });
 }
 
+#if ASSERT_ENABLED
 inline void Structure::checkConsistency()
 {
     checkOffsetConsistency();
 }
+#endif
 
 inline size_t nextOutOfLineStorageCapacity(size_t currentCapacity)
 {
@@ -471,7 +469,7 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
 {
     PropertyTable* table = ensurePropertyTable(vm);
 
-    GCSafeConcurrentJSLocker locker(m_lock, vm.heap);
+    GCSafeConcurrentJSLocker locker(m_lock, vm);
 
     switch (shouldPin) {
     case ShouldPin::Yes:
@@ -495,11 +493,12 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
     PropertyOffset newOffset = table->nextOffset(m_inlineCapacity);
 
     m_propertyHash = m_propertyHash ^ rep->existingSymbolAwareHash();
-    m_seenProperties.add(bitwise_cast<uintptr_t>(rep));
+    m_seenProperties.add(CompactPtr<UniquedStringImpl>::encode(rep));
 
-    auto result = table->add(vm, PropertyMapEntry(rep, newOffset, attributes));
-    ASSERT_UNUSED(result, result.second);
-    ASSERT_UNUSED(result, result.first.first->offset == newOffset);
+    auto [offset, attribute, result] = table->add(vm, PropertyTableEntry(rep, newOffset, attributes));
+    ASSERT_UNUSED(result, result);
+    ASSERT_UNUSED(offset, offset == newOffset);
+    UNUSED_VARIABLE(attribute);
     auto newMaxOffset = std::max(newOffset, maxOffset());
 
     func(locker, newOffset, newMaxOffset);
@@ -514,7 +513,7 @@ template<Structure::ShouldPin shouldPin, typename Func>
 inline PropertyOffset Structure::remove(VM& vm, PropertyName propertyName, const Func& func)
 {
     PropertyTable* table = ensurePropertyTable(vm);
-    GCSafeConcurrentJSLocker locker(m_lock, vm.heap);
+    GCSafeConcurrentJSLocker locker(m_lock, vm);
 
     switch (shouldPin) {
     case ShouldPin::Yes:
@@ -531,15 +530,13 @@ inline PropertyOffset Structure::remove(VM& vm, PropertyName propertyName, const
 
     auto rep = propertyName.uid();
 
-    PropertyTable::find_iterator position = table->find(rep);
-    if (!position.first)
+    auto [offset, attributes] = table->take(vm, rep);
+    UNUSED_VARIABLE(attributes);
+    if (offset == invalidOffset)
         return invalidOffset;
 
     setIsQuickPropertyAccessAllowedForEnumeration(false);
 
-    PropertyOffset offset = position.first->offset;
-
-    table->remove(vm, position);
     table->addDeletedOffset(offset);
 
     PropertyOffset newMaxOffset = maxOffset();
@@ -558,7 +555,7 @@ inline PropertyOffset Structure::attributeChange(VM& vm, PropertyName propertyNa
 {
     PropertyTable* table = ensurePropertyTable(vm);
 
-    GCSafeConcurrentJSLocker locker(m_lock, vm.heap);
+    GCSafeConcurrentJSLocker locker(m_lock, vm);
 
     switch (shouldPin) {
     case ShouldPin::Yes:
@@ -572,18 +569,14 @@ inline PropertyOffset Structure::attributeChange(VM& vm, PropertyName propertyNa
     ASSERT(JSC::isValidOffset(get(vm, propertyName)));
 
     checkConsistency();
-    PropertyMapEntry* entry = table->get(propertyName.uid());
-    if (!entry)
-        return invalidOffset;
-
-    PropertyOffset offset = entry->offset;
+    PropertyOffset offset = table->updateAttributeIfExists(propertyName.uid(), attributes);
+    if (offset == invalidOffset)
+        return offset;
 
     if (attributes & PropertyAttribute::DontEnum)
         setIsQuickPropertyAccessAllowedForEnumeration(false);
     if (attributes & PropertyAttribute::ReadOnly)
         setContainsReadOnlyProperties();
-
-    entry->attributes = attributes;
 
     PropertyOffset newMaxOffset = maxOffset();
 
@@ -672,12 +665,11 @@ ALWAYS_INLINE bool Structure::shouldConvertToPolyProto(const Structure* a, const
     if (a->storedPrototype() == b->storedPrototype())
         return false;
 
-    VM& vm = a->vm();
     JSObject* aObj = a->storedPrototypeObject();
     JSObject* bObj = b->storedPrototypeObject();
     while (aObj && bObj) {
-        a = aObj->structure(vm);
-        b = bObj->structure(vm);
+        a = aObj->structure();
+        b = bObj->structure();
 
         if (a->propertyHash() != b->propertyHash())
             return false;
@@ -689,7 +681,7 @@ ALWAYS_INLINE bool Structure::shouldConvertToPolyProto(const Structure* a, const
     return !aObj && !bObj;
 }
 
-inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure, TransitionKind transitionKind)
+inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure, TransitionKind transitionKind, DeferredStructureTransitionWatchpointFire* deferred)
 {
     IndexingType indexingModeIncludingHistory = newIndexingType(structure->indexingModeIncludingHistory(), transitionKind);
 
@@ -698,14 +690,14 @@ inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure,
             if (globalObject->isOriginalArrayStructure(structure)) {
                 Structure* result = globalObject->originalArrayStructureForIndexingType(indexingModeIncludingHistory);
                 if (result->indexingModeIncludingHistory() == indexingModeIncludingHistory) {
-                    structure->didTransitionFromThisStructure();
+                    structure->didTransitionFromThisStructure(deferred);
                     return result;
                 }
             }
         }
     }
 
-    return nonPropertyTransitionSlow(vm, structure, transitionKind);
+    return nonPropertyTransitionSlow(vm, structure, transitionKind, deferred);
 }
 
 inline Structure* Structure::addPropertyTransitionToExistingStructureImpl(Structure* structure, UniquedStringImpl* uid, unsigned attributes, PropertyOffset& offset)
@@ -756,6 +748,38 @@ inline Structure* StructureTransitionTable::get(UniquedStringImpl* rep, unsigned
         return (transition && transition->m_transitionPropertyName == rep && transition->transitionPropertyAttributes() == attributes && transition->transitionKind() == transitionKind) ? transition : nullptr;
     }
     return map()->get(StructureTransitionTable::Hash::Key(rep, attributes, transitionKind));
+}
+
+inline void Structure::clearCachedPrototypeChain()
+{
+    m_cachedPrototypeChain.clear();
+    if (!hasRareData())
+        return;
+    rareData()->clearCachedPropertyNameEnumerator();
+}
+
+ALWAYS_INLINE bool Structure::canPerformFastPropertyEnumeration() const
+{
+    if (typeInfo().overridesGetOwnPropertySlot())
+        return false;
+    if (typeInfo().overridesAnyFormOfGetOwnPropertyNames())
+        return false;
+    // FIXME: Indexed properties can be handled.
+    // https://bugs.webkit.org/show_bug.cgi?id=185358
+    if (hasIndexedProperties(indexingType()))
+        return false;
+    if (hasGetterSetterProperties())
+        return false;
+    if (hasReadOnlyOrGetterSetterPropertiesExcludingProto())
+        return false;
+    if (hasCustomGetterSetterProperties())
+        return false;
+    if (isUncacheableDictionary())
+        return false;
+    // Cannot perform fast [[Put]] to |target| if the property names of the |source| contain "__proto__".
+    if (hasUnderscoreProtoPropertyExcludingOriginalProto())
+        return false;
+    return true;
 }
 
 } // namespace JSC

@@ -26,7 +26,10 @@
 #pragma once
 
 #include "BytecodeStructs.h"
+#include "ClonedArguments.h"
 #include "CommonSlowPaths.h"
+#include "DirectArguments.h"
+#include "ScopedArguments.h"
 
 namespace JSC {
 
@@ -75,11 +78,11 @@ inline void tryCachePutToScopeGlobal(
     if (resolveType == GlobalProperty || resolveType == GlobalPropertyWithVarInjectionChecks) {
         VM& vm = getVM(globalObject);
         JSGlobalObject* globalObject = codeBlock->globalObject();
-        ASSERT(globalObject == scope || globalObject->varInjectionWatchpoint()->hasBeenInvalidated());
+        ASSERT(globalObject == scope || globalObject->varInjectionWatchpointSet().hasBeenInvalidated());
         if (!slot.isCacheablePut()
             || slot.base() != scope
             || scope != globalObject
-            || !scope->structure(vm)->propertyAccessesAreCacheable())
+            || !scope->structure()->propertyAccessesAreCacheable())
             return;
 
         if (slot.type() == PutPropertySlot::NewProperty) {
@@ -88,10 +91,10 @@ inline void tryCachePutToScopeGlobal(
             return;
         }
 
-        scope->structure(vm)->didCachePropertyReplacement(vm, slot.cachedOffset());
+        scope->structure()->didCachePropertyReplacement(vm, slot.cachedOffset());
 
         ConcurrentJSLocker locker(codeBlock->m_lock);
-        metadata.m_structure.set(vm, codeBlock, scope->structure(vm));
+        metadata.m_structure.set(vm, codeBlock, scope->structure());
         metadata.m_operand = slot.cachedOffset();
     }
 }
@@ -136,9 +139,9 @@ inline void tryCacheGetFromScopeGlobal(
 
     // Covers implicit globals. Since they don't exist until they first execute, we didn't know how to cache them at compile time.
     if (resolveType == GlobalProperty || resolveType == GlobalPropertyWithVarInjectionChecks) {
-        ASSERT(scope == globalObject || globalObject->varInjectionWatchpoint()->hasBeenInvalidated());
-        if (slot.isCacheableValue() && slot.slotBase() == scope && scope == globalObject && scope->structure(vm)->propertyAccessesAreCacheable()) {
-            Structure* structure = scope->structure(vm);
+        ASSERT(scope == globalObject || globalObject->varInjectionWatchpointSet().hasBeenInvalidated());
+        if (slot.isCacheableValue() && slot.slotBase() == scope && scope == globalObject && scope->structure()->propertyAccessesAreCacheable()) {
+            Structure* structure = scope->structure();
             {
                 ConcurrentJSLocker locker(codeBlock->m_lock);
                 metadata.m_structure.set(vm, codeBlock, structure);
@@ -146,6 +149,48 @@ inline void tryCacheGetFromScopeGlobal(
             }
             structure->startWatchingPropertyForReplacements(vm, slot.cachedOffset());
         }
+    }
+}
+
+ALWAYS_INLINE JSImmutableButterfly* trySpreadFast(JSGlobalObject* globalObject, JSCell* iterable)
+{
+    if (isJSArray(iterable)) {
+        JSArray* array = jsCast<JSArray*>(iterable);
+        if (array->isIteratorProtocolFastAndNonObservable()) {
+            // JSImmutableButterfly::createFromArray does not consult the prototype chain,
+            // so we must be sure that not consulting the prototype chain would
+            // produce the same value during iteration.
+            return JSImmutableButterfly::createFromArray(globalObject, globalObject->vm(), array);
+        }
+        return nullptr;
+    }
+
+    switch (iterable->type()) {
+    case StringType: {
+        if (LIKELY(globalObject->isStringPrototypeIteratorProtocolFastAndNonObservable()))
+            return JSImmutableButterfly::createFromString(globalObject, jsCast<JSString*>(iterable));
+        return nullptr;
+    }
+    case ClonedArgumentsType: {
+        auto* arguments = jsCast<ClonedArguments*>(iterable);
+        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
+            return JSImmutableButterfly::createFromClonedArguments(globalObject, arguments);
+        return nullptr;
+    }
+    case DirectArgumentsType: {
+        auto* arguments = jsCast<DirectArguments*>(iterable);
+        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
+            return JSImmutableButterfly::createFromDirectArguments(globalObject, arguments);
+        return nullptr;
+    }
+    case ScopedArgumentsType: {
+        auto* arguments = jsCast<ScopedArguments*>(iterable);
+        if (LIKELY(arguments->isIteratorProtocolFastAndNonObservable()))
+            return JSImmutableButterfly::createFromScopedArguments(globalObject, arguments);
+        return nullptr;
+    }
+    default:
+        return nullptr;
     }
 }
 

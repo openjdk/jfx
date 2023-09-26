@@ -22,16 +22,17 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "BlobURL.h"
 #include "ExceptionOr.h"
 #include "FormData.h"
 #include "ResourceResponse.h"
+#include "SharedBuffer.h"
 #include "ThreadableLoaderClient.h"
+#include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
 #include <wtf/URL.h>
 #include "XMLHttpRequestEventTarget.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
-#include <wtf/Variant.h>
+#include <variant>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
@@ -45,7 +46,6 @@ class Blob;
 class Document;
 class DOMFormData;
 class SecurityOrigin;
-class SharedBuffer;
 class TextResourceDecoder;
 class ThreadableLoader;
 class URLSearchParams;
@@ -72,7 +72,7 @@ public:
     EventTargetInterface eventTargetInterface() const override { return XMLHttpRequestEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
 
-    using SendTypes = Variant<RefPtr<Document>, RefPtr<Blob>, RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<DOMFormData>, String, RefPtr<URLSearchParams>>;
+    using SendTypes = std::variant<RefPtr<Document>, RefPtr<Blob>, RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<DOMFormData>, String, RefPtr<URLSearchParams>>;
 
     const URL& url() const { return m_url; }
     String statusText() const;
@@ -143,7 +143,7 @@ private:
     // EventTarget.
     void eventListenersDidChange() final;
 
-    TextEncoding finalResponseCharset() const;
+    PAL::TextEncoding finalResponseCharset() const;
 
     // ActiveDOMObject
     void contextDestroyed() override;
@@ -161,9 +161,9 @@ private:
 
     // ThreadableLoaderClient
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
-    void didReceiveResponse(unsigned long identifier, const ResourceResponse&) override;
-    void didReceiveData(const uint8_t* data, int dataLength) override;
-    void didFinishLoading(unsigned long identifier) override;
+    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) override;
+    void didReceiveData(const SharedBuffer&) override;
+    void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) override;
     void didFail(const ResourceError&) override;
     void notifyIsDone(bool) final;
 
@@ -216,8 +216,7 @@ private:
 
     std::unique_ptr<XMLHttpRequestUpload> m_upload;
 
-    URL m_url;
-    BlobURLHandle m_blobURLLifetimeExtension;
+    URLKeepingBlobAlive m_url;
     String m_method;
     HTTPHeaderMap m_requestHeaders;
     RefPtr<FormData> m_requestEntityBody;
@@ -237,7 +236,7 @@ private:
 
     RefPtr<Document> m_responseDocument;
 
-    RefPtr<SharedBuffer> m_binaryResponseBuilder;
+    SharedBufferBuilder m_binaryResponseBuilder;
 
     StringBuilder m_responseBuilder;
 
@@ -255,6 +254,7 @@ private:
     std::optional<ExceptionCode> m_exceptionCode;
     RefPtr<UserGestureToken> m_userGestureToken;
     std::atomic<bool> m_hasRelevantEventListener;
+    bool m_wasDidSendDataCalledForTotalBytes { false };
 };
 
 inline auto XMLHttpRequest::responseType() const -> ResponseType

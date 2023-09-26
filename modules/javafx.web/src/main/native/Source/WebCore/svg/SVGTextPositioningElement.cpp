@@ -27,6 +27,7 @@
 #include "RenderSVGResource.h"
 #include "RenderSVGText.h"
 #include "SVGAltGlyphElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGTRefElement.h"
 #include "SVGTSpanElement.h"
@@ -37,8 +38,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGTextPositioningElement);
 
-SVGTextPositioningElement::SVGTextPositioningElement(const QualifiedName& tagName, Document& document)
-    : SVGTextContentElement(tagName, document)
+SVGTextPositioningElement::SVGTextPositioningElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
+    : SVGTextContentElement(tagName, document, WTFMove(propertyRegistry))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -105,9 +106,8 @@ void SVGTextPositioningElement::svgAttributeChanged(const QualifiedName& attrNam
         if (auto renderer = this->renderer()) {
             if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*renderer))
                 textAncestor->setNeedsPositioningValuesUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
         }
-
+        updateSVGRendererForElementChange();
         return;
     }
 

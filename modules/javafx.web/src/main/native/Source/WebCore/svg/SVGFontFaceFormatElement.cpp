@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGFontFaceFormatElement.h"
 
+#include "SVGElementTypeHelpers.h"
 #include "SVGFontFaceElement.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -31,7 +32,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFontFaceFormatElement);
 using namespace SVGNames;
 
 inline SVGFontFaceFormatElement::SVGFontFaceFormatElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(font_face_formatTag));
 }
@@ -48,7 +49,7 @@ void SVGFontFaceFormatElement::childrenChanged(const ChildChange& change)
     if (!parentNode() || !parentNode()->hasTagName(font_face_uriTag))
         return;
 
-    auto ancestor = makeRefPtr(parentNode()->parentNode());
+    RefPtr ancestor = parentNode()->parentNode();
     if (!ancestor || !ancestor->hasTagName(font_face_srcTag))
         return;
 

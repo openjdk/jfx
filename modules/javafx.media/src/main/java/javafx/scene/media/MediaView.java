@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.media;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -34,7 +35,6 @@ import com.sun.javafx.scene.media.MediaViewHelper;
 import com.sun.javafx.sg.prism.MediaFrameTracker;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmedia.control.MediaPlayerOverlay;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -42,7 +42,6 @@ import javafx.beans.Observable;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableObjectValue;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableMap;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
@@ -360,7 +359,7 @@ public class MediaView extends Node {
 
     public final ObjectProperty<MediaPlayer> mediaPlayerProperty() {
         if (mediaPlayer == null) {
-            mediaPlayer = new ObjectPropertyBase<MediaPlayer>() {
+            mediaPlayer = new ObjectPropertyBase<>() {
                 MediaPlayer oldValue = null;
                 @Override protected void invalidated() {
                     if (oldValue != null) {
@@ -438,7 +437,7 @@ public class MediaView extends Node {
 
     public final ObjectProperty<EventHandler<MediaErrorEvent>> onErrorProperty() {
         if (onError == null) {
-            onError = new ObjectPropertyBase<EventHandler<MediaErrorEvent>>() {
+            onError = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -472,7 +471,7 @@ public class MediaView extends Node {
      */
     public final void setPreserveRatio(boolean value) {
         preserveRatioProperty().set(value);
-    };
+    }
 
     /**
      * Returns whether the media aspect ratio is preserved when scaling.
@@ -488,7 +487,7 @@ public class MediaView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    if (HostUtils.isIOS()) {
+                    if (PlatformUtil.isIOS()) {
                         updateOverlayPreserveRatio();
                     }
                     else {
@@ -589,7 +588,7 @@ public class MediaView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    if (HostUtils.isIOS()) {
+                    if (PlatformUtil.isIOS()) {
                         updateOverlayX();
                     }
                     else {
@@ -639,7 +638,7 @@ public class MediaView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    if (HostUtils.isIOS()) {
+                    if (PlatformUtil.isIOS()) {
                         updateOverlayY();
                     }
                     else {
@@ -698,7 +697,7 @@ public class MediaView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    if (HostUtils.isIOS()) {
+                    if (PlatformUtil.isIOS()) {
                         updateOverlayWidth();
                     }
                     else {
@@ -741,7 +740,7 @@ public class MediaView extends Node {
      */
     public final void setFitHeight(double value) {
         fitHeightProperty().set(value);
-    };
+    }
 
     /**
      * Retrieves the height of the bounding box of the resized media.
@@ -757,7 +756,7 @@ public class MediaView extends Node {
 
                 @Override
                 protected void invalidated() {
-                    if (HostUtils.isIOS()) {
+                    if (PlatformUtil.isIOS()) {
                         updateOverlayHeight();
                     }
                     else {
@@ -797,7 +796,7 @@ public class MediaView extends Node {
      */
     public final void setViewport(Rectangle2D value) {
         viewportProperty().set(value);
-    };
+    }
 
     /**
      * Retrieves the rectangular viewport into the media frame.
@@ -809,7 +808,7 @@ public class MediaView extends Node {
 
     public final ObjectProperty<Rectangle2D> viewportProperty() {
         if (viewport == null) {
-            viewport = new ObjectPropertyBase<Rectangle2D>() {
+            viewport = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {

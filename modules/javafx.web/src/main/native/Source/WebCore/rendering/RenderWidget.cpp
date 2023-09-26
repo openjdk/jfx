@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,10 +24,14 @@
 #include "RenderWidget.h"
 
 #include "AXObjectCache.h"
+#include "BackgroundPainter.h"
+#include "DocumentInlines.h"
 #include "FloatRoundedRect.h"
 #include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HitTestResult.h"
+#include "RemoteFrame.h"
+#include "RemoteFrameView.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerScrollableArea.h"
@@ -48,6 +52,7 @@ static HashMap<const Widget*, RenderWidget*>& widgetRendererMap()
 }
 
 unsigned WidgetHierarchyUpdatesSuspensionScope::s_widgetHierarchyUpdateSuspendCount = 0;
+bool WidgetHierarchyUpdatesSuspensionScope::s_haveScheduledWidgetToMove = false;
 
 WidgetHierarchyUpdatesSuspensionScope::WidgetToParentMap& WidgetHierarchyUpdatesSuspensionScope::widgetNewParentMap()
 {
@@ -57,6 +62,7 @@ WidgetHierarchyUpdatesSuspensionScope::WidgetToParentMap& WidgetHierarchyUpdates
 
 void WidgetHierarchyUpdatesSuspensionScope::moveWidgets()
 {
+    ASSERT(s_haveScheduledWidgetToMove);
     while (!widgetNewParentMap().isEmpty()) {
         auto map = std::exchange(widgetNewParentMap(), { });
         for (auto& entry : map) {
@@ -71,6 +77,7 @@ void WidgetHierarchyUpdatesSuspensionScope::moveWidgets()
             }
         }
     }
+    s_haveScheduledWidgetToMove = false;
 }
 
 static void moveWidgetToParentSoon(Widget& child, FrameView* parent)
@@ -136,7 +143,7 @@ bool RenderWidget::setWidgetGeometry(const LayoutRect& frame)
 
     m_clipRect = clipRect;
 
-    auto weakThis = makeWeakPtr(*this);
+    WeakPtr weakThis { *this };
     // These calls *may* cause this renderer to disappear from underneath...
     if (boundsChanged)
         m_widget->setFrameRect(newFrameRect);
@@ -186,7 +193,7 @@ void RenderWidget::setWidget(RefPtr<Widget>&& widget)
         // widget immediately, but we have to have really been fully constructed.
         if (hasInitializedStyle()) {
             if (!needsLayout()) {
-                auto weakThis = makeWeakPtr(*this);
+                WeakPtr weakThis { *this };
                 updateWidgetGeometry();
                 if (!weakThis)
                     return;
@@ -201,6 +208,9 @@ void RenderWidget::setWidget(RefPtr<Widget>&& widget)
         }
         moveWidgetToParentSoon(*m_widget, &view().frameView());
     }
+
+    if (auto* cache = document().existingAXObjectCache())
+        cache->childrenChanged(this);
 }
 
 void RenderWidget::layout()
@@ -317,10 +327,10 @@ void RenderWidget::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         paintInfo.context().save();
         FloatRoundedRect roundedInnerRect = FloatRoundedRect(style().getRoundedInnerBorderFor(borderRect,
             paddingTop() + borderTop(), paddingBottom() + borderBottom(), paddingLeft() + borderLeft(), paddingRight() + borderRight(), true, true));
-        clipRoundedInnerRect(paintInfo.context(), borderRect, roundedInnerRect);
+        BackgroundPainter::clipRoundedInnerRect(paintInfo.context(), borderRect, roundedInnerRect);
     }
 
-    if (m_widget)
+    if (m_widget && !shouldSkipContent())
         paintContents(paintInfo, paintOffset);
 
     if (style().hasBorderRadius())
@@ -331,8 +341,9 @@ void RenderWidget::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 
     // Paint a partially transparent wash over selected widgets.
     if (isSelected() && !document().printing()) {
-        // FIXME: selectionRect() is in absolute, not painting coordinates.
-        paintInfo.context().fillRect(snappedIntRect(selectionRect()), selectionBackgroundColor());
+        LayoutRect rect = localSelectionRect();
+        rect.moveBy(adjustedPaintOffset);
+        paintInfo.context().fillRect(snappedIntRect(rect), selectionBackgroundColor());
     }
 
     if (hasLayer() && layer()->canResize()) {
@@ -352,7 +363,7 @@ RenderWidget::ChildWidgetState RenderWidget::updateWidgetPosition()
     if (!m_widget)
         return ChildWidgetState::Destroyed;
 
-    auto weakThis = makeWeakPtr(*this);
+    WeakPtr weakThis { *this };
     bool widgetSizeChanged = updateWidgetGeometry();
     if (!weakThis || !m_widget)
         return ChildWidgetState::Destroyed;
@@ -362,7 +373,11 @@ RenderWidget::ChildWidgetState RenderWidget::updateWidgetPosition()
     if (is<FrameView>(*m_widget)) {
         FrameView& frameView = downcast<FrameView>(*m_widget);
         // Check the frame's page to make sure that the frame isn't in the process of being destroyed.
-        if ((widgetSizeChanged || frameView.needsLayout()) && frameView.frame().page() && frameView.frame().document())
+        auto* localFrame = dynamicDowncast<LocalFrame>(frameView.frame());
+        if ((widgetSizeChanged || frameView.needsLayout())
+            && localFrame
+            && localFrame->page()
+            && localFrame->document())
             frameView.layoutContext().layout();
     }
     return ChildWidgetState::Valid;
@@ -400,7 +415,10 @@ bool RenderWidget::nodeAtPoint(const HitTestRequest& request, HitTestResult& res
         HitTestRequest newHitTestRequest(request.type() | HitTestRequest::Type::ChildFrameHitTest);
         HitTestResult childFrameResult(newHitTestLocation);
 
-        auto* document = childFrameView.frame().document();
+        auto* localFrame = dynamicDowncast<LocalFrame>(childFrameView.frame());
+        if (!localFrame)
+            return false;
+        auto* document = localFrame->document();
         if (!document)
             return false;
         bool isInsideChildFrame = document->hitTest(newHitTestRequest, newHitTestLocation, childFrameResult);
@@ -436,7 +454,15 @@ bool RenderWidget::requiresAcceleratedCompositing() const
             return view->usesCompositing();
     }
 
+    if (is<RemoteFrameView>(widget()))
+        return true;
+
     return false;
+}
+
+RemoteFrame* RenderWidget::remoteFrame() const
+{
+    return dynamicDowncast<RemoteFrame>(frameOwnerElement().contentFrame());
 }
 
 bool RenderWidget::needsPreferredWidthsRecalculation() const

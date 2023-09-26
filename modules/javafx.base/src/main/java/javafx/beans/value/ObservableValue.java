@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,19 @@
 
 package javafx.beans.value;
 
+import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.sun.javafx.binding.ConditionalBinding;
 import com.sun.javafx.binding.FlatMappedBinding;
 import com.sun.javafx.binding.MappedBinding;
 import com.sun.javafx.binding.OrElseBinding;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.util.Subscription;
 
 /**
  * An {@code ObservableValue} is an entity that wraps a value and allows to
@@ -250,5 +255,122 @@ public interface ObservableValue<T> extends Observable {
      */
     default <U> ObservableValue<U> flatMap(Function<? super T, ? extends ObservableValue<? extends U>> mapper) {
         return new FlatMappedBinding<>(this, mapper);
+    }
+
+    /**
+     * Returns an {@code ObservableValue} that holds this value and is updated only
+     * when {@code condition} holds {@code true}.
+     * <p>
+     * The returned {@code ObservableValue} only observes this value when
+     * {@code condition} holds {@code true}. This allows this {@code ObservableValue}
+     * and the conditional {@code ObservableValue} to be garbage collected if neither is
+     * otherwise strongly referenced when {@code condition} holds {@code false}.
+     * This is in contrast to the general behavior of bindings, where the binding is
+     * only eligible for garbage collection when not observed itself.
+     * <p>
+     * A {@code condition} holding {@code null} is treated as holding {@code false}.
+     * <p>
+     * For example:
+     * <pre>{@code
+     * ObservableValue<Boolean> condition = new SimpleBooleanProperty(true);
+     * ObservableValue<String> longLivedProperty = new SimpleStringProperty("A");
+     * ObservableValue<String> whenProperty = longLivedProperty.when(condition);
+     *
+     * // observe whenProperty, which will in turn observe longLivedProperty
+     * whenProperty.addListener((ov, old, current) -> System.out.println(current));
+     *
+     * longLivedProperty.setValue("B");  // "B" is printed
+     *
+     * condition.setValue(false);
+     *
+     * // After condition becomes false, whenProperty stops observing longLivedProperty; condition
+     * // and whenProperty may now be eligible for GC despite being observed by the ChangeListener
+     *
+     * longLivedProperty.setValue("C");  // nothing is printed
+     * longLivedProperty.setValue("D");  // nothing is printed
+     *
+     * condition.setValue(true);  // longLivedProperty is observed again, and "D" is printed
+     * }</pre>
+     *
+     * @param condition a boolean {@code ObservableValue}, cannot be {@code null}
+     * @return an {@code ObservableValue} that holds this value whenever the given
+     *     condition evaluates to {@code true}, otherwise holds the last seen value;
+     *     never returns {@code null}
+     * @since 20
+     */
+    default ObservableValue<T> when(ObservableValue<Boolean> condition) {
+        return new ConditionalBinding<>(this, condition);
+    }
+
+    /**
+     * Creates a {@code Subscription} on this {@code ObservableValue} which calls the given
+     * {@code changeSubscriber} with the old and new value whenever its value changes.
+     * The provided subscriber is akin to a {@code ChangeListener} without the
+     * {@code ObservableValue} parameter.
+     * <p>
+     * The parameters supplied to the {@link BiConsumer} are the old and new values,
+     * respectively.
+     * <p>
+     * Note that the same subscriber instance may be safely subscribed for
+     * different {@code Observables}.
+     * <p>
+     * Also note that when subscribing on an {@code Observable} with a longer
+     * lifecycle than the subscriber, the subscriber must be unsubscribed
+     * when no longer needed as the subscription will otherwise keep the subscriber
+     * from being garbage collected. Considering creating a derived {@code ObservableValue}
+     * using {@link #when(ObservableValue)} and subscribing on this derived observable value
+     * to automatically decouple the lifecycle of the subscriber from this
+     * {@code ObservableValue} when some condition holds.
+     *
+     * @param changeSubscriber a {@code BiConsumer} to supply with the old and new values
+     *     of this {@code ObservableValue}, cannot be {@code null}
+     * @return a {@code Subscription} which can be used to cancel this
+     *     subscription, never {@code null}
+     * @throws NullPointerException if the subscriber is {@code null}
+     * @see #addListener(ChangeListener)
+     * @since 21
+     */
+    default Subscription subscribe(BiConsumer<? super T, ? super T> changeSubscriber) {
+      Objects.requireNonNull(changeSubscriber, "changeSubscriber cannot be null");
+      ChangeListener<T> listener = (obs, old, current) -> changeSubscriber.accept(old, current);
+
+      addListener(listener);
+
+      return () -> removeListener(listener);
+    }
+
+    /**
+     * Creates a {@code Subscription} on this {@code ObservableValue} which immediately
+     * provides the current value to the given {@code valueSubscriber}, followed by any
+     * subsequent values whenever its value changes. The {@code valueSubscriber} is called
+     * immediately for convenience, since usually the user will want to initialize a value
+     * and then update on changes.
+     * <p>
+     * Note that the same subscriber instance may be safely subscribed for
+     * different {@code Observables}.
+     * <p>
+     * Also note that when subscribing on an {@code Observable} with a longer
+     * lifecycle than the subscriber, the subscriber must be unsubscribed
+     * when no longer needed as the subscription will otherwise keep the subscriber
+     * from being garbage collected. Considering creating a derived {@code ObservableValue}
+     * using {@link #when(ObservableValue)} and subscribing on this derived observable value
+     * to automatically decouple the lifecycle of the subscriber from this
+     * {@code ObservableValue} when some condition holds.
+     *
+     * @param valueSubscriber a {@code Consumer} to supply with the values of this
+     *     {@code ObservableValue}, cannot be {@code null}
+     * @return a {@code Subscription} which can be used to cancel this
+     *     subscription, never {@code null}
+     * @throws NullPointerException if the subscriber is {@code null}
+     * @since 21
+     */
+    default Subscription subscribe(Consumer<? super T> valueSubscriber) {
+        Objects.requireNonNull(valueSubscriber, "valueSubscriber cannot be null");
+        ChangeListener<T> listener = (obs, old, current) -> valueSubscriber.accept(current);
+
+        valueSubscriber.accept(getValue());  // eagerly send current value
+        addListener(listener);
+
+        return () -> removeListener(listener);
     }
 }

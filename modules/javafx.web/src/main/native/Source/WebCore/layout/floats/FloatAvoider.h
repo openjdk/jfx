@@ -25,14 +25,11 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutPoint.h"
 #include "LayoutUnits.h"
 #include <wtf/IsoMalloc.h>
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -99,10 +96,9 @@ inline LayoutUnit FloatAvoider::right() const
 {
     auto right = left() + borderBoxWidth();
     if (isFloatingBox())
-        right += marginAfter();
+        right += marginEnd();
     return right;
 }
 
 }
 }
-#endif

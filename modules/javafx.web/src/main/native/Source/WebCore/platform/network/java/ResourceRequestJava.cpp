@@ -50,7 +50,7 @@ static void initRefs(JNIEnv* env)
 }
 
 namespace WebCore {
-
+#if 0
 unsigned initializeMaximumHTTPConnectionCountPerHost()
 {
     using namespace ResourceRequestJavaInternal;
@@ -69,5 +69,5 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
     ASSERT(result >= 0);
     return result;
 }
-
+#endif
 } // namespace WebCore

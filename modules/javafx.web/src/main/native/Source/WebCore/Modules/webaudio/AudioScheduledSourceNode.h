@@ -53,8 +53,6 @@ public:
         FINISHED_STATE = 3
     };
 
-    AudioScheduledSourceNode(BaseAudioContext&, NodeType);
-
     ExceptionOr<void> startLater(double when);
     ExceptionOr<void> stopLater(double when);
 
@@ -63,6 +61,8 @@ public:
     bool hasFinished() const { return m_playbackState == FINISHED_STATE; }
 
 protected:
+    AudioScheduledSourceNode(BaseAudioContext&, NodeType);
+
     // Get frame information for the current time quantum.
     // We handle the transition into PLAYING_STATE and FINISHED_STATE here,
     // zeroing out portions of the outputBus which are outside the range of startFrame and endFrame.
@@ -82,7 +82,8 @@ protected:
 
     bool requiresTailProcessing() const final { return false; }
 
-    PlaybackState m_playbackState { UNSCHEDULED_STATE };
+    // This is accessed from the main thread and the audio thread.
+    std::atomic<PlaybackState> m_playbackState { UNSCHEDULED_STATE };
 
     // m_startTime is the time to start playing based on the context's timeline (0 or a time less than the context's current time means "now").
     double m_startTime { 0 }; // in seconds

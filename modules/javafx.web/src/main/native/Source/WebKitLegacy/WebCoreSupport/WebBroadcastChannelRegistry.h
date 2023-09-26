@@ -24,7 +24,7 @@
  */
 
 #include <WebCore/BroadcastChannelRegistry.h>
-#include <WebCore/SecurityOriginData.h>
+#include <WebCore/PartitionedSecurityOrigin.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
 
@@ -34,14 +34,13 @@ class WebBroadcastChannelRegistry : public WebCore::BroadcastChannelRegistry, pu
 public:
     static Ref<WebBroadcastChannelRegistry> getOrCreate(bool privateSession);
 
-    void registerChannel(const WebCore::SecurityOriginData&, const String& name, WebCore::BroadcastChannelIdentifier) final;
-    void unregisterChannel(const WebCore::SecurityOriginData&, const String& name, WebCore::BroadcastChannelIdentifier) final;
-    void postMessage(const WebCore::SecurityOriginData&, const String& name, WebCore::BroadcastChannelIdentifier source, Ref<WebCore::SerializedScriptValue>&&, CompletionHandler<void()>&&) final;
+    void registerChannel(const WebCore::PartitionedSecurityOrigin&, const String& name, WebCore::BroadcastChannelIdentifier) final;
+    void unregisterChannel(const WebCore::PartitionedSecurityOrigin&, const String& name, WebCore::BroadcastChannelIdentifier) final;
+    void postMessage(const WebCore::PartitionedSecurityOrigin&, const String& name, WebCore::BroadcastChannelIdentifier source, Ref<WebCore::SerializedScriptValue>&&, CompletionHandler<void()>&&) final;
 
 private:
     WebBroadcastChannelRegistry() = default;
 
-    // FIXME: BroadcastChannel needs partitioning (https://github.com/whatwg/html/issues/5803).
     using NameToChannelIdentifiersMap = HashMap<String, Vector<WebCore::BroadcastChannelIdentifier>>;
-    HashMap<WebCore::SecurityOriginData, NameToChannelIdentifiersMap> m_channels;
+    HashMap<WebCore::PartitionedSecurityOrigin, NameToChannelIdentifiersMap> m_channels;
 };

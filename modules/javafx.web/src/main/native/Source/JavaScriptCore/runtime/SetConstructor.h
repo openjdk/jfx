@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ public:
 
     static SetConstructor* create(VM& vm, Structure* structure, SetPrototype* setPrototype, GetterSetter* speciesSymbol)
     {
-        SetConstructor* constructor = new (NotNull, allocateCell<SetConstructor>(vm.heap)) SetConstructor(vm, structure);
+        SetConstructor* constructor = new (NotNull, allocateCell<SetConstructor>(vm)) SetConstructor(vm, structure);
         constructor->finishCreation(vm, setPrototype, speciesSymbol);
         return constructor;
     }
@@ -59,5 +59,6 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(SetConstructor, InternalFunction);
 JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketHead);
 JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketNext);
 JSC_DECLARE_HOST_FUNCTION(setPrivateFuncSetBucketKey);
+JSC_DECLARE_HOST_FUNCTION(setPrivateFuncClone);
 
 } // namespace JSC

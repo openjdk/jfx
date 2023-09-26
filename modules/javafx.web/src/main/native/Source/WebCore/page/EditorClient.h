@@ -36,14 +36,16 @@
 
 namespace WebCore {
 
+enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
 
+class SharedBuffer;
 class DocumentFragment;
 class Element;
 class Frame;
 class KeyboardEvent;
 class Node;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 class StyleProperties;
 class TextCheckerClient;
 class VisibleSelection;
@@ -78,7 +80,7 @@ public:
     virtual bool shouldMoveRangeAfterDelete(const SimpleRange&, const SimpleRange&) = 0;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    virtual void registerAttachmentIdentifier(const String& /* identifier */, const String& /* contentType */, const String& /* preferredFileName */, Ref<SharedBuffer>&&) { }
+    virtual void registerAttachmentIdentifier(const String& /* identifier */, const String& /* contentType */, const String& /* preferredFileName */, Ref<FragmentedSharedBuffer>&&) { }
     virtual void registerAttachmentIdentifier(const String& /* identifier */, const String& /* contentType */, const String& /* filePath */) { }
     virtual void registerAttachments(Vector<SerializedAttachmentData>&&) { }
     virtual void registerAttachmentIdentifier(const String& /* identifier */) { }
@@ -101,7 +103,7 @@ public:
     virtual void requestCandidatesForSelection(const VisibleSelection&) { }
     virtual void handleAcceptedCandidateWithSoftSpaces(TextCheckingResult) { }
 
-    virtual DOMPasteAccessResponse requestDOMPasteAccess(const String& originIdentifier) = 0;
+    virtual DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) = 0;
 
     // Notify an input method that a composition was voluntarily discarded by WebCore, so that it could clean up too.
     // This function is not called when a composition is closed per a request from an input method.
@@ -125,12 +127,12 @@ public:
     virtual void handleInputMethodKeydown(KeyboardEvent&) = 0;
     virtual void didDispatchInputMethodKeydown(KeyboardEvent&) { }
 
-    virtual void textFieldDidBeginEditing(Element*) = 0;
-    virtual void textFieldDidEndEditing(Element*) = 0;
-    virtual void textDidChangeInTextField(Element*) = 0;
-    virtual bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) = 0;
-    virtual void textWillBeDeletedInTextField(Element*) = 0;
-    virtual void textDidChangeInTextArea(Element*) = 0;
+    virtual void textFieldDidBeginEditing(Element&) = 0;
+    virtual void textFieldDidEndEditing(Element&) = 0;
+    virtual void textDidChangeInTextField(Element&) = 0;
+    virtual bool doTextFieldCommandFromEvent(Element&, KeyboardEvent*) = 0;
+    virtual void textWillBeDeletedInTextField(Element&) = 0;
+    virtual void textDidChangeInTextArea(Element&) = 0;
     virtual void overflowScrollPositionChanged() = 0;
     virtual void subFrameScrollPositionChanged() = 0;
 
@@ -152,6 +154,8 @@ public:
     virtual void uppercaseWord() = 0;
     virtual void lowercaseWord() = 0;
     virtual void capitalizeWord() = 0;
+
+    virtual void setCaretDecorationVisibility(bool) = 0;
 #endif
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
@@ -188,8 +192,6 @@ public:
     virtual bool supportsGlobalSelection() { return false; }
 
     virtual bool performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove) = 0;
-
-    virtual bool canShowFontPanel() const = 0;
 
     virtual bool shouldAllowSingleClickToChangeSelection(Node&, const VisibleSelection&) const { return true; }
 

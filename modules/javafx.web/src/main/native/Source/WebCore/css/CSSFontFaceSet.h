@@ -26,9 +26,9 @@
 #pragma once
 
 #include "CSSFontFace.h"
+#include <variant>
 #include <wtf/HashMap.h>
 #include <wtf/Observer.h>
-#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/StringHash.h>
@@ -36,7 +36,10 @@
 namespace WebCore {
 
 class CSSPrimitiveValue;
+class CSSSegmentedFontFace;
 class FontFaceSet;
+
+template<typename> class ExceptionOr;
 
 class CSSFontFaceSet final : public RefCounted<CSSFontFaceSet>, public CSSFontFace::Client {
 public:
@@ -56,6 +59,9 @@ public:
         virtual void completedLoading() = 0;
     };
     void addFontEventClient(const FontEventClient&);
+
+    // Calling updateStyleIfNeeded() might delete |this|.
+    void updateStyleIfNeeded();
 
     bool hasFace(const CSSFontFace&) const;
     size_t faceCount() const { return m_faces.size(); }
@@ -84,6 +90,8 @@ public:
     // CSSFontFace::Client needs to be able to be held in a RefPtr.
     void ref() final { RefCounted::ref(); }
     void deref() final { RefCounted::deref(); }
+    // FIXME: Should this be implemented?
+    void updateStyleIfNeeded(CSSFontFace&) final { }
 
 private:
     CSSFontFaceSet(CSSFontSelector*);
@@ -97,7 +105,7 @@ private:
     void fontStateChanged(CSSFontFace&, CSSFontFace::Status oldState, CSSFontFace::Status newState) final;
     void fontPropertyChanged(CSSFontFace&, CSSValueList* oldFamilies = nullptr) final;
 
-    void ensureLocalFontFacesForFamilyRegistered(const String&);
+    void ensureLocalFontFacesForFamilyRegistered(const AtomString&);
 
     static String familyNameFromPrimitive(const CSSPrimitiveValue&);
 

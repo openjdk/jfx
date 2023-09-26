@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Forward.h>
+
 namespace JSC {
 
 class CallFrame;
@@ -40,6 +42,7 @@ enum class ErrorCode : uint8_t {
     QuantifierWithoutAtom,
     QuantifierTooLarge,
     QuantifierIncomplete,
+    CantQuantifyAtom,
     MissingParentheses,
     BracketUnmatched,
     ParenthesesUnmatched,
@@ -63,7 +66,7 @@ enum class ErrorCode : uint8_t {
     InvalidRegularExpressionFlags,
 };
 
-JS_EXPORT_PRIVATE const char* errorMessage(ErrorCode);
+JS_EXPORT_PRIVATE ASCIILiteral errorMessage(ErrorCode);
 inline bool hasError(ErrorCode errorCode)
 {
     return errorCode != ErrorCode::NoError;

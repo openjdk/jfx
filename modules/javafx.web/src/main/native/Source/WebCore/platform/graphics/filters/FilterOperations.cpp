@@ -26,7 +26,9 @@
 #include "config.h"
 #include "FilterOperations.h"
 
+#include "AnimationUtilities.h"
 #include "FEGaussianBlur.h"
+#include "ImageBuffer.h"
 #include "IntSize.h"
 #include "LengthFunctions.h"
 #include <wtf/text/TextStream.h>
@@ -60,7 +62,7 @@ bool FilterOperations::operationsMatch(const FilterOperations& other) const
 bool FilterOperations::hasReferenceFilter() const
 {
     for (auto& operation : m_operations) {
-        if (operation->type() == FilterOperation::REFERENCE)
+        if (operation->type() == FilterOperation::Type::Reference)
             return true;
     }
     return false;
@@ -71,7 +73,7 @@ IntOutsets FilterOperations::outsets() const
     IntOutsets totalOutsets;
     for (auto& operation : m_operations) {
         switch (operation->type()) {
-        case FilterOperation::BLUR: {
+        case FilterOperation::Type::Blur: {
             auto& blurOperation = downcast<BlurFilterOperation>(*operation);
             float stdDeviation = floatValueForLength(blurOperation.stdDeviation(), 0);
             IntSize outsetSize = FEGaussianBlur::calculateOutsetSize({ stdDeviation, stdDeviation });
@@ -79,20 +81,21 @@ IntOutsets FilterOperations::outsets() const
             totalOutsets += outsets;
             break;
         }
-        case FilterOperation::DROP_SHADOW: {
+        case FilterOperation::Type::DropShadow: {
             auto& dropShadowOperation = downcast<DropShadowFilterOperation>(*operation);
             float stdDeviation = dropShadowOperation.stdDeviation();
             IntSize outsetSize = FEGaussianBlur::calculateOutsetSize({ stdDeviation, stdDeviation });
-            IntOutsets outsets {
-                std::max(0, outsetSize.height() - dropShadowOperation.y()),
-                std::max(0, outsetSize.width() + dropShadowOperation.x()),
-                std::max(0, outsetSize.height() + dropShadowOperation.y()),
-                std::max(0, outsetSize.width() - dropShadowOperation.x())
-            };
+
+            int top = std::max(0, outsetSize.height() - dropShadowOperation.y());
+            int right = std::max(0, outsetSize.width() + dropShadowOperation.x());
+            int bottom = std::max(0, outsetSize.height() + dropShadowOperation.y());
+            int left = std::max(0, outsetSize.width() - dropShadowOperation.x());
+
+            auto outsets = IntOutsets { top, right, bottom, left };
             totalOutsets += outsets;
             break;
         }
-        case FilterOperation::REFERENCE:
+        case FilterOperation::Type::Reference:
             ASSERT_NOT_REACHED();
             break;
         default:
@@ -110,7 +113,7 @@ bool FilterOperations::transformColor(Color& color) const
     if (color.isSemantic())
         return false;
 
-    auto sRGBAColor = color.toSRGBALossy<float>();
+    auto sRGBAColor = color.toColorTypeLossy<SRGBA<float>>();
 
     for (auto& operation : m_operations) {
         if (!operation->transformColor(sRGBAColor))
@@ -129,7 +132,7 @@ bool FilterOperations::inverseTransformColor(Color& color) const
     if (color.isSemantic())
         return false;
 
-    auto sRGBAColor = color.toSRGBALossy<float>();
+    auto sRGBAColor = color.toColorTypeLossy<SRGBA<float>>();
 
     for (auto& operation : m_operations) {
         if (!operation->inverseTransformColor(sRGBAColor))
@@ -165,6 +168,48 @@ bool FilterOperations::hasFilterThatShouldBeRestrictedBySecurityOrigin() const
             return true;
     }
     return false;
+}
+
+FilterOperations FilterOperations::blend(const FilterOperations& to, const BlendingContext& context) const
+{
+    if (context.compositeOperation == CompositeOperation::Add) {
+        ASSERT(context.progress == 1.0);
+        FilterOperations result;
+        result.operations().appendVector(m_operations);
+        result.operations().appendVector(to.operations());
+        return result;
+    }
+
+    if (context.isDiscrete) {
+        ASSERT(!context.progress || context.progress == 1.0);
+        return context.progress ? to : *this;
+    }
+
+    FilterOperations result;
+    auto fromSize = m_operations.size();
+    auto toSize = to.operations().size();
+    auto size = std::max(fromSize, toSize);
+    for (size_t i = 0; i < size; ++i) {
+        RefPtr<FilterOperation> fromOp = (i < fromSize) ? m_operations[i].get() : nullptr;
+        RefPtr<FilterOperation> toOp = (i < toSize) ? to.operations()[i].get() : nullptr;
+
+        RefPtr<FilterOperation> blendedOp;
+        if (toOp)
+            blendedOp = toOp->blend(fromOp.get(), context);
+        else if (fromOp)
+            blendedOp = fromOp->blend(nullptr, context, true);
+
+        if (blendedOp)
+            result.operations().append(blendedOp);
+        else {
+            auto identityOp = PassthroughFilterOperation::create();
+            if (context.progress > 0.5)
+                result.operations().append(toOp ? toOp : WTFMove(identityOp));
+            else
+                result.operations().append(fromOp ? fromOp : WTFMove(identityOp));
+        }
+    }
+    return result;
 }
 
 TextStream& operator<<(TextStream& ts, const FilterOperations& filters)

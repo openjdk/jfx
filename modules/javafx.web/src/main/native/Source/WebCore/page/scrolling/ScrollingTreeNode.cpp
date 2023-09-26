@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,7 +57,7 @@ void ScrollingTreeNode::removeChild(ScrollingTreeNode& node)
 {
     RELEASE_ASSERT(m_scrollingTree.inCommitTreeState());
 
-    size_t index = m_children.findMatching([&](auto& child) {
+    size_t index = m_children.findIf([&](auto& child) {
         return &node == child.ptr();
     });
 
@@ -84,31 +84,31 @@ bool ScrollingTreeNode::isRootNode() const
     return m_scrollingTree.rootNode() == this;
 }
 
-void ScrollingTreeNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreeNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs)
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
         ts.dumpProperty("nodeID", scrollingNodeID());
 }
 
-ScrollingTreeFrameScrollingNode* ScrollingTreeNode::enclosingFrameNodeIncludingSelf()
+RefPtr<ScrollingTreeFrameScrollingNode> ScrollingTreeNode::enclosingFrameNodeIncludingSelf()
 {
-    auto* node = this;
+    RefPtr node = this;
     while (node && !node->isFrameScrollingNode())
         node = node->parent();
 
-    return downcast<ScrollingTreeFrameScrollingNode>(node);
+    return downcast<ScrollingTreeFrameScrollingNode>(node.get());
 }
 
-ScrollingTreeScrollingNode* ScrollingTreeNode::enclosingScrollingNodeIncludingSelf()
+RefPtr<ScrollingTreeScrollingNode> ScrollingTreeNode::enclosingScrollingNodeIncludingSelf()
 {
-    auto* node = this;
+    RefPtr node = this;
     while (node && !node->isScrollingNode())
         node = node->parent();
 
-    return downcast<ScrollingTreeScrollingNode>(node);
+    return downcast<ScrollingTreeScrollingNode>(node.get());
 }
 
-void ScrollingTreeNode::dump(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreeNode::dump(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     dumpProperties(ts, behavior);
 

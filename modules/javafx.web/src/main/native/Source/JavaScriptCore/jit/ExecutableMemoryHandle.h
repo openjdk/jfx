@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +25,29 @@
 
 #pragma once
 
-#if USE(LIBPAS_JIT_HEAP)
-#include <wtf/MetaAllocatorPtr.h>
+#if ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
+#include <wtf/CodePtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
-#include <bmalloc/jit_heap.h>
 #else
 #include <wtf/MetaAllocatorHandle.h>
 #endif
 
+#if !USE(SYSTEM_MALLOC)
+#include <bmalloc/BPlatform.h>
+#if BENABLE(LIBPAS) && (OS(DARWIN) || OS(LINUX))
+#define ENABLE_LIBPAS_JIT_HEAP 1
+#endif
+#endif
+
 namespace JSC {
 
-#if USE(LIBPAS_JIT_HEAP)
+#if ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ExecutableMemoryHandle);
 class ExecutableMemoryHandle : public ThreadSafeRefCounted<ExecutableMemoryHandle> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ExecutableMemoryHandle);
 
 public:
-    using MemoryPtr = MetaAllocatorPtr<WTF::HandleMemoryPtrTag>;
+    using MemoryPtr = CodePtr<WTF::HandleMemoryPtrTag>;
 
     // Don't call this directly - for proper accounting it's necessary to call
     // ExecutableAllocator::allocate().
@@ -55,7 +62,7 @@ public:
 
     MemoryPtr end() const
     {
-        return MemoryPtr::makeFromRawPointer(reinterpret_cast<void*>(endAsInteger()));
+        return MemoryPtr::fromUntaggedPtr(reinterpret_cast<void*>(endAsInteger()));
     }
 
     uintptr_t startAsInteger() const
@@ -105,9 +112,9 @@ private:
     unsigned m_sizeInBytes;
     MemoryPtr m_start;
 };
-#else // USE(LIBPAS_JIT_HEAP) -> so start of !USE(LIBPAS_JIT_HEAP) case
+#else // not (ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT))
 typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
-#endif // USE(LIBPAS_JIT_HEAP) -> so end of !USE(LIBPAS_JIT_HEAP) case
+#endif // ENABLE(LIBPAS_JIT_HEAP) && ENABLE(JIT)
 
 } // namespace JSC
 

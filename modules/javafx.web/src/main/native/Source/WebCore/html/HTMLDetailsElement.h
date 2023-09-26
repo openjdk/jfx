@@ -48,8 +48,8 @@ private:
     bool isInteractiveContent() const final { return true; }
 
     bool m_isOpen { false };
-    HTMLSlotElement* m_summarySlot { nullptr };
-    HTMLSummaryElement* m_defaultSummary { nullptr };
+    WeakPtr<HTMLSlotElement, WeakPtrImplWithEventTargetData> m_summarySlot;
+    WeakPtr<HTMLSummaryElement, WeakPtrImplWithEventTargetData> m_defaultSummary;
     RefPtr<HTMLSlotElement> m_defaultSlot;
     bool m_isToggleEventTaskQueued { false };
 };

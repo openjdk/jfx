@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -222,10 +222,10 @@ public class Reflection extends CoreEffect<RenderState> {
         Effect input = getDefaultedInput(0, defaultInput);
         BaseBounds r = input.getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput);
         r.roundOut(); // NOTE is this really necessary?
-        float x1 = (float) r.getMinX();
-        float y1 = (float) (r.getMaxY() + topOffset);
-        float x2 = (float) r.getMaxX();
-        float y2 = (float) (y1 + (fraction * r.getHeight()));
+        float x1 = r.getMinX();
+        float y1 = r.getMaxY() + topOffset;
+        float x2 = r.getMaxX();
+        float y2 = y1 + (fraction * r.getHeight());
         BaseBounds ret = new RectBounds(x1, y1, x2, y2);
         ret = ret.deriveWithUnion(r);
         return transformBounds(transform, ret);

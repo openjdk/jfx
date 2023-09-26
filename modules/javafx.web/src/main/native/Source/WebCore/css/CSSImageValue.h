@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "CSSParserContext.h"
 #include "CSSValue.h"
 #include "CachedResourceHandle.h"
 #include "ResourceLoaderOptions.h"
@@ -33,52 +34,47 @@ class CachedResourceLoader;
 class DeprecatedCSSOMValue;
 class CSSStyleDeclaration;
 class RenderElement;
+class StyleImage;
 
 namespace Style {
 class BuilderState;
 }
 
-struct ResolvedURL {
-    String specifiedURLString;
-    URL resolvedURL;
-};
-
 class CSSImageValue final : public CSSValue {
 public:
-    static Ref<CSSImageValue> create(ResolvedURL&&, LoadedFromOpaqueSource);
-    static Ref<CSSImageValue> create(URL&&, LoadedFromOpaqueSource);
-    static Ref<CSSImageValue> create(CachedImage&);
+    static Ref<CSSImageValue> create(ResolvedURL, LoadedFromOpaqueSource, AtomString = { });
+    static Ref<CSSImageValue> create(URL, LoadedFromOpaqueSource, AtomString = { });
     ~CSSImageValue();
 
     bool isPending() const;
     CachedImage* loadImage(CachedResourceLoader&, const ResourceLoaderOptions&);
     CachedImage* cachedImage() const { return m_cachedImage ? m_cachedImage.value().get() : nullptr; }
 
+    // Take care when using this, and read https://drafts.csswg.org/css-values/#relative-urls
     const URL& imageURL() const { return m_location.resolvedURL; }
+
+    URL reresolvedURL(const Document&) const;
 
     String customCSSText() const;
 
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
-    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+    bool customTraverseSubresources(const Function<bool(const CachedResource&)>&) const;
 
     bool equals(const CSSImageValue&) const;
 
     bool knownToBeOpaque(const RenderElement&) const;
 
-    void setInitiator(const AtomString& name) { m_initiatorName = name; }
+    RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
 
-    Ref<CSSImageValue> valueWithStylesResolved(Style::BuilderState&);
+    bool isLoadedFromOpaqueSource() const { return m_loadedFromOpaqueSource == LoadedFromOpaqueSource::Yes; }
 
 private:
-    CSSImageValue(ResolvedURL&&, LoadedFromOpaqueSource);
-    explicit CSSImageValue(CachedImage&);
-
-    URL reresolvedURL(const Document&) const;
+    CSSImageValue(ResolvedURL&&, LoadedFromOpaqueSource, AtomString&&);
 
     ResolvedURL m_location;
     std::optional<CachedResourceHandle<CachedImage>> m_cachedImage;
-    AtomString m_initiatorName;
+    AtomString m_initiatorType;
     LoadedFromOpaqueSource m_loadedFromOpaqueSource { LoadedFromOpaqueSource::No };
     RefPtr<CSSImageValue> m_unresolvedValue;
 };

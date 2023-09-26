@@ -53,7 +53,7 @@ public:
     void setSupportedSessionTypes(Vector<MediaKeySessionType>&& types) { m_supportedSessionTypes = WTFMove(types); }
 
     const Vector<AtomString>& supportedRobustness() const { return m_supportedRobustness; }
-    void setSupportedRobustness(Vector<String>&&);
+    void setSupportedRobustness(Vector<AtomString>&& supportedRobustness) { m_supportedRobustness = WTFMove(supportedRobustness); }
 
     MediaKeysRequirement distinctiveIdentifiersRequirement() const { return m_distinctiveIdentifiersRequirement; }
     void setDistinctiveIdentifiersRequirement(MediaKeysRequirement requirement) { m_distinctiveIdentifiersRequirement = requirement; }
@@ -75,15 +75,15 @@ public:
 
     void unregister();
 
-    bool hasSessionWithID(const String& id) { return m_sessions.contains(id); }
-    void removeSessionWithID(const String& id) { m_sessions.remove(id); }
+    bool hasSessionWithID(const String& id);
+    void removeSessionWithID(const String& id);
     void addKeysToSessionWithID(const String& id, Vector<Ref<SharedBuffer>>&&);
     const Vector<Ref<SharedBuffer>>* keysForSessionWithID(const String& id) const;
     Vector<Ref<SharedBuffer>> removeKeysFromSessionWithID(const String& id);
 
 private:
     MockCDMFactory();
-    std::unique_ptr<CDMPrivate> createCDM(const String&) final;
+    std::unique_ptr<CDMPrivate> createCDM(const String&, const CDMPrivateClient&) final;
     bool supportsKeySystem(const String&) final;
 
     MediaKeysRequirement m_distinctiveIdentifiersRequirement { MediaKeysRequirement::Optional };

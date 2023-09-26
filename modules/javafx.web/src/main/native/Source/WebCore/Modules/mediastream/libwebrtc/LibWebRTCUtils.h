@@ -24,11 +24,16 @@
 
 #pragma once
 
-#if USE(LIBWEBRTC)
+#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "ExceptionCode.h"
+#include "RTCIceCandidateFields.h"
 #include <webrtc/api/media_types.h>
 #include <wtf/text/WTFString.h>
+
+namespace cricket {
+class Candidate;
+}
 
 namespace webrtc {
 struct RtpParameters;
@@ -45,12 +50,13 @@ enum class RtpTransceiverDirection;
 namespace WebCore {
 
 class Exception;
+class RTCError;
 
 struct RTCRtpParameters;
 struct RTCRtpSendParameters;
 struct RTCRtpTransceiverInit;
 
-enum class RTCPriorityType;
+enum class RTCPriorityType : uint8_t;
 enum class RTCRtpTransceiverDirection;
 
 RTCRtpParameters toRTCRtpParameters(const webrtc::RtpParameters&);
@@ -64,6 +70,7 @@ webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit&, 
 
 ExceptionCode toExceptionCode(webrtc::RTCErrorType);
 Exception toException(const webrtc::RTCError&);
+RefPtr<RTCError> toRTCError(const webrtc::RTCError&);
 
 RTCPriorityType toRTCPriorityType(webrtc::Priority);
 webrtc::Priority fromRTCPriorityType(RTCPriorityType);
@@ -73,6 +80,8 @@ inline String fromStdString(const std::string& value)
     return String::fromUTF8(value.data(), value.length());
 }
 
+RTCIceCandidateFields convertIceCandidate(const cricket::Candidate&);
+
 } // namespace WebCore
 
-#endif // USE(LIBWEBRTC)
+#endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

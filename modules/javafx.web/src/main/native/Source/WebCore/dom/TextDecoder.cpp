@@ -26,12 +26,12 @@
 #include "TextDecoder.h"
 
 #include "HTMLParserIdioms.h"
-#include "TextCodec.h"
-#include "TextEncodingRegistry.h"
+#include <pal/text/TextCodec.h>
+#include <pal/text/TextEncodingRegistry.h>
 
 namespace WebCore {
 
-TextDecoder::TextDecoder(const char* label, Options options)
+TextDecoder::TextDecoder(StringView label, Options options)
     : m_textEncoding(label)
     , m_options(options)
 {
@@ -45,7 +45,7 @@ ExceptionOr<Ref<TextDecoder>> TextDecoder::create(const String& label, Options o
     const UChar nullCharacter = '\0';
     if (strippedLabel.contains(nullCharacter))
         return Exception { RangeError };
-    auto decoder = adoptRef(*new TextDecoder(strippedLabel.utf8().data(), options));
+    auto decoder = adoptRef(*new TextDecoder(strippedLabel, options));
     if (!decoder->m_textEncoding.isValid() || !strcmp(decoder->m_textEncoding.name(), "replacement"))
         return Exception { RangeError };
     return decoder;
@@ -81,7 +81,7 @@ ExceptionOr<String> TextDecoder::decode(std::optional<BufferSource::VariantType>
 
 String TextDecoder::encoding() const
 {
-    return String(m_textEncoding.name()).convertToASCIILowercase();
+    return makeString(asASCIILowercase(StringView::fromLatin1(m_textEncoding.name())));
 }
 
 }

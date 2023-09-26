@@ -35,10 +35,13 @@
 #include "IntrinsicGetterAccessCase.h"
 #include "ModuleNamespaceAccessCase.h"
 #include "PolymorphicAccess.h"
+#include "ProxyObjectAccessCase.h"
 #include "StructureStubInfo.h"
 #include <wtf/ListDump.h>
 
 namespace JSC {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GetByStatus);
 
 bool GetByStatus::appendVariant(const GetByVariant& variant)
 {
@@ -70,15 +73,15 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         identifier = &(profiledBlock->identifier(instruction->as<OpGetById>().m_property));
         break;
     }
+
+    case op_try_get_by_id:
+        structureID = instruction->as<OpTryGetById>().metadata(profiledBlock).m_structureID;
+        identifier = &(profiledBlock->identifier(instruction->as<OpTryGetById>().m_property));
+        break;
     case op_get_by_id_direct:
         structureID = instruction->as<OpGetByIdDirect>().metadata(profiledBlock).m_structureID;
         identifier = &(profiledBlock->identifier(instruction->as<OpGetByIdDirect>().m_property));
         break;
-    case op_try_get_by_id: {
-        // FIXME: We should not just bail if we see a try_get_by_id.
-        // https://bugs.webkit.org/show_bug.cgi?id=158039
-        return GetByStatus(NoInformation, false);
-    }
 
     case op_get_by_val:
         return GetByStatus(NoInformation, false);
@@ -127,7 +130,7 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
     if (!structureID)
         return GetByStatus(NoInformation, false);
 
-    Structure* structure = vm.heap.structureIDTable().get(structureID);
+    Structure* structure = structureID.decode();
 
     if (structure->takesSlowPathInDFGForImpureProperty())
         return GetByStatus(NoInformation, false);
@@ -169,7 +172,7 @@ GetByStatus GetByStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, 
 }
 
 #if ENABLE(JIT)
-GetByStatus::GetByStatus(StubInfoSummary summary, StructureStubInfo& stubInfo)
+GetByStatus::GetByStatus(StubInfoSummary summary, StructureStubInfo* stubInfo)
     : m_wasSeenInJIT(true)
 {
     switch (summary) {
@@ -181,10 +184,12 @@ GetByStatus::GetByStatus(StubInfoSummary summary, StructureStubInfo& stubInfo)
         RELEASE_ASSERT_NOT_REACHED();
         return;
     case StubInfoSummary::TakesSlowPath:
-        m_state = stubInfo.tookSlowPath ? ObservedTakesSlowPath : LikelyTakesSlowPath;
+        ASSERT(stubInfo);
+        m_state = stubInfo->tookSlowPath ? ObservedTakesSlowPath : LikelyTakesSlowPath;
         return;
     case StubInfoSummary::TakesSlowPathAndMakesCalls:
-        m_state = stubInfo.tookSlowPath ? ObservedSlowPathAndMakesCalls : MakesCalls;
+        ASSERT(stubInfo);
+        m_state = stubInfo->tookSlowPath ? ObservedSlowPathAndMakesCalls : MakesCalls;
         return;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -197,12 +202,18 @@ GetByStatus::GetByStatus(const ModuleNamespaceAccessCase& accessCase)
 {
 }
 
+GetByStatus::GetByStatus(const ProxyObjectAccessCase&)
+    : m_state(ProxyObject)
+    , m_wasSeenInJIT(true)
+{
+}
+
 GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
     const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CallLinkStatus::ExitSiteData callExitSiteData)
 {
     StubInfoSummary summary = StructureStubInfo::summary(profiledBlock->vm(), stubInfo);
     if (!isInlineable(summary))
-        return GetByStatus(summary, *stubInfo);
+        return GetByStatus(summary, stubInfo);
 
     // Finally figure out if we can derive an access strategy.
     GetByStatus result;
@@ -213,9 +224,9 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
         return GetByStatus(NoInformation);
 
     case CacheType::GetByIdSelf: {
-        Structure* structure = stubInfo->m_inlineAccessBaseStructure.get();
+        Structure* structure = stubInfo->inlineAccessBaseStructure();
         if (structure->takesSlowPathInDFGForImpureProperty())
-            return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+            return GetByStatus(JSC::slowVersion(summary), stubInfo);
         CacheableIdentifier identifier = stubInfo->identifier();
         UniquedStringImpl* uid = identifier.uid();
         RELEASE_ASSERT(uid);
@@ -223,9 +234,9 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
         unsigned attributes;
         variant.m_offset = structure->getConcurrently(uid, attributes);
         if (!isValidOffset(variant.m_offset))
-            return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+            return GetByStatus(JSC::slowVersion(summary), stubInfo);
         if (attributes & PropertyAttribute::CustomAccessorOrValue)
-            return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+            return GetByStatus(JSC::slowVersion(summary), stubInfo);
 
         variant.m_structureSet.add(structure);
         bool didAppend = result.appendVariant(variant);
@@ -234,12 +245,21 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
     }
 
     case CacheType::Stub: {
-        PolymorphicAccess* list = stubInfo->u.stub;
+        PolymorphicAccess* list = stubInfo->m_stub.get();
         if (list->size() == 1) {
             const AccessCase& access = list->at(0);
             switch (access.type()) {
             case AccessCase::ModuleNamespaceLoad:
                 return GetByStatus(access.as<ModuleNamespaceAccessCase>());
+            case AccessCase::ProxyObjectLoad: {
+                auto& accessCase = access.as<ProxyObjectAccessCase>();
+                auto status = GetByStatus(accessCase);
+                auto callLinkStatus = makeUnique<CallLinkStatus>();
+                if (CallLinkInfo* callLinkInfo = accessCase.callLinkInfo())
+                    *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
+                status.appendVariant(GetByVariant(accessCase.identifier(), { }, invalidOffset, { }, WTFMove(callLinkStatus)));
+                return status;
+            }
             default:
                 break;
             }
@@ -248,16 +268,16 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
         for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
             const AccessCase& access = list->at(listIndex);
             if (access.viaProxy())
-                return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                return GetByStatus(JSC::slowVersion(summary), stubInfo);
 
             if (access.usesPolyProto())
-                return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                return GetByStatus(JSC::slowVersion(summary), stubInfo);
 
             if (!access.requiresIdentifierNameMatch()) {
                 // FIXME: We could use this for indexed loads in the future. This is pretty solid profiling
                 // information, and probably better than ArrayProfile when it's available.
                 // https://bugs.webkit.org/show_bug.cgi?id=204215
-                return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                return GetByStatus(JSC::slowVersion(summary), stubInfo);
             }
 
             Structure* structure = access.structure();
@@ -268,7 +288,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
                 // shouldn't have to use value profiling to discover something that the AccessCase
                 // could have told us. But, it works well enough. So, our only concern here is to not
                 // crash on null structure.
-                return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                return GetByStatus(JSC::slowVersion(summary), stubInfo);
             }
 
             ComplexGetStatus complexGetStatus = ComplexGetStatus::computeFor(
@@ -279,12 +299,12 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
                 continue;
 
             case ComplexGetStatus::TakesSlowPath:
-                return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                return GetByStatus(JSC::slowVersion(summary), stubInfo);
 
             case ComplexGetStatus::Inlineable: {
                 std::unique_ptr<CallLinkStatus> callLinkStatus;
                 JSFunction* intrinsicFunction = nullptr;
-                FunctionPtr<CustomAccessorPtrTag> customAccessorGetter;
+                CodePtr<CustomAccessorPtrTag> customAccessorGetter;
                 std::unique_ptr<DOMAttributeAnnotation> domAttribute;
                 bool haveDOMAttribute = false;
 
@@ -309,7 +329,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
                 case AccessCase::CustomAccessorGetter: {
                     customAccessorGetter = access.as<GetterSetterAccessCase>().customAccessor();
                     if (!access.as<GetterSetterAccessCase>().domAttribute())
-                        return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                        return GetByStatus(JSC::slowVersion(summary), stubInfo);
                     domAttribute = WTF::makeUnique<DOMAttributeAnnotation>(*access.as<GetterSetterAccessCase>().domAttribute());
                     haveDOMAttribute = true;
                     result.m_state = Custom;
@@ -318,7 +338,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
                 default: {
                     // FIXME: It would be totally sweet to support more of these at some point in the
                     // future. https://bugs.webkit.org/show_bug.cgi?id=133052
-                    return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                    return GetByStatus(JSC::slowVersion(summary), stubInfo);
                 } }
 
                 ASSERT((AccessCase::Miss == access.type() || access.isCustom()) == (access.offset() == invalidOffset));
@@ -329,16 +349,16 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
                     WTFMove(domAttribute));
 
                 if (!result.appendVariant(variant))
-                    return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                    return GetByStatus(JSC::slowVersion(summary), stubInfo);
 
                 if (haveDOMAttribute) {
                     // Give up when custom accesses are not merged into one.
                     if (result.numVariants() != 1)
-                        return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                        return GetByStatus(JSC::slowVersion(summary), stubInfo);
                 } else {
                     // Give up when custom access and simple access are mixed.
                     if (result.m_state == Custom)
-                        return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+                        return GetByStatus(JSC::slowVersion(summary), stubInfo);
                 }
                 break;
             } }
@@ -349,7 +369,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
     }
 
     default:
-        return GetByStatus(JSC::slowVersion(summary), *stubInfo);
+        return GetByStatus(JSC::slowVersion(summary), stubInfo);
     }
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -459,6 +479,7 @@ bool GetByStatus::makesCalls() const
                 return true;
         }
         return false;
+    case ProxyObject:
     case MakesCalls:
     case ObservedSlowPathAndMakesCalls:
         return true;
@@ -494,6 +515,7 @@ void GetByStatus::merge(const GetByStatus& other)
 
     case Simple:
     case Custom:
+    case ProxyObject:
         if (m_state != other.m_state)
             return mergeSlow();
 
@@ -597,6 +619,9 @@ void GetByStatus::dump(PrintStream& out) const
         break;
     case ModuleNamespace:
         out.print("ModuleNamespace");
+        break;
+    case ProxyObject:
+        out.print("ProxyObject");
         break;
     case LikelyTakesSlowPath:
         out.print("LikelyTakesSlowPath");

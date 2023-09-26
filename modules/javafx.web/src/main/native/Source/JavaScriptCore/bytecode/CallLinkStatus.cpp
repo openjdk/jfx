@@ -30,15 +30,16 @@
 #include "CallLinkInfo.h"
 #include "CodeBlock.h"
 #include "JSCInlines.h"
-#include "LLIntCallLinkInfo.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
 
 namespace JSC {
 
+#if ENABLE(JIT)
 namespace CallLinkStatusInternal {
 static constexpr bool verbose = false;
 }
+#endif
 
 CallLinkStatus::CallLinkStatus(JSValue value)
     : m_couldTakeSlowPath(false)
@@ -50,47 +51,6 @@ CallLinkStatus::CallLinkStatus(JSValue value)
     }
 
     m_variants.append(CallVariant(value.asCell()));
-}
-
-CallLinkStatus CallLinkStatus::computeFromLLInt(const ConcurrentJSLocker&, CodeBlock* profiledBlock, BytecodeIndex bytecodeIndex)
-{
-    UNUSED_PARAM(profiledBlock);
-    UNUSED_PARAM(bytecodeIndex);
-#if ENABLE(DFG_JIT)
-    if (profiledBlock->unlinkedCodeBlock()->hasExitSite(DFG::FrequentExitSite(bytecodeIndex, BadConstantValue))) {
-        // We could force this to be a closure call, but instead we'll just assume that it
-        // takes slow path.
-        return takesSlowPath();
-    }
-#endif
-
-    auto instruction = profiledBlock->instructions().at(bytecodeIndex.offset());
-    OpcodeID op = instruction->opcodeID();
-
-    LLIntCallLinkInfo* callLinkInfo;
-    switch (op) {
-    case op_call:
-        callLinkInfo = &instruction->as<OpCall>().metadata(profiledBlock).m_callLinkInfo;
-        break;
-    case op_construct:
-        callLinkInfo = &instruction->as<OpConstruct>().metadata(profiledBlock).m_callLinkInfo;
-        break;
-    case op_tail_call:
-        callLinkInfo = &instruction->as<OpTailCall>().metadata(profiledBlock).m_callLinkInfo;
-        break;
-    case op_iterator_open:
-        callLinkInfo = &instruction->as<OpIteratorOpen>().metadata(profiledBlock).m_callLinkInfo;
-        break;
-    case op_iterator_next:
-        callLinkInfo = &instruction->as<OpIteratorNext>().metadata(profiledBlock).m_callLinkInfo;
-        break;
-
-    default:
-        return CallLinkStatus();
-    }
-
-
-    return CallLinkStatus(callLinkInfo->lastSeenCallee());
 }
 
 CallLinkStatus CallLinkStatus::computeFor(
@@ -105,10 +65,19 @@ CallLinkStatus CallLinkStatus::computeFor(
     UNUSED_PARAM(exitSiteData);
 #if ENABLE(DFG_JIT)
     CallLinkInfo* callLinkInfo = map.get(CodeOrigin(bytecodeIndex)).callLinkInfo;
-    if (!callLinkInfo) {
+    if (!callLinkInfo)
+        return CallLinkStatus();
+    // doneLocation is nullptr when it is tied to LLInt (not Baseline).
+    if (!callLinkInfo->doneLocation()) {
         if (exitSiteData.takesSlowPath)
             return takesSlowPath();
-        return computeFromLLInt(locker, profiledBlock, bytecodeIndex);
+#if ENABLE(DFG_JIT)
+        if (profiledBlock->unlinkedCodeBlock()->hasExitSite(DFG::FrequentExitSite(bytecodeIndex, BadConstantValue))) {
+            // We could force this to be a closure call, but instead we'll just assume that it
+            // takes slow path.
+            return takesSlowPath();
+        }
+#endif
     }
 
     return computeFor(locker, profiledBlock, *callLinkInfo, exitSiteData);
@@ -161,7 +130,7 @@ CallLinkStatus CallLinkStatus::computeFor(
     UNUSED_PARAM(profiledBlock);
 
     CallLinkStatus result = computeFromCallLinkInfo(locker, callLinkInfo);
-    result.m_maxArgumentCountIncludingThis = callLinkInfo.maxArgumentCountIncludingThis();
+    result.m_maxArgumentCountIncludingThisForVarargs = callLinkInfo.maxArgumentCountIncludingThisForVarargs();
     return result;
 }
 
@@ -357,8 +326,7 @@ CallLinkStatus CallLinkStatus::computeFor(
             if (!status.callLinkInfo)
                 return CallLinkStatus();
 
-            if (CallLinkStatusInternal::verbose)
-                dataLog("Have CallLinkInfo with CodeOrigin = ", status.callLinkInfo->codeOrigin(), "\n");
+            dataLogLnIf(CallLinkStatusInternal::verbose, "Have CallLinkInfo with CodeOrigin = ", codeOrigin, "\n");
             CallLinkStatus result;
             {
                 ConcurrentJSLocker locker(context->optimizedCodeBlock->m_lock);
@@ -448,11 +416,11 @@ void CallLinkStatus::merge(const CallLinkStatus& other)
     }
 }
 
-void CallLinkStatus::filter(VM& vm, JSValue value)
+void CallLinkStatus::filter(JSValue value)
 {
     m_variants.removeAllMatching(
         [&] (CallVariant& variant) -> bool {
-            variant.filter(vm, value);
+            variant.filter(value);
             return !variant;
         });
 }
@@ -478,8 +446,8 @@ void CallLinkStatus::dump(PrintStream& out) const
     if (!m_variants.isEmpty())
         out.print(comma, listDump(m_variants));
 
-    if (m_maxArgumentCountIncludingThis)
-        out.print(comma, "maxArgumentCountIncludingThis = ", m_maxArgumentCountIncludingThis);
+    if (m_maxArgumentCountIncludingThisForVarargs)
+        out.print(comma, "maxArgumentCountIncludingThisForVarargs = ", m_maxArgumentCountIncludingThisForVarargs);
 }
 
 } // namespace JSC

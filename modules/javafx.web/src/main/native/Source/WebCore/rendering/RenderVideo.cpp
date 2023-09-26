@@ -35,15 +35,12 @@
 #include "HTMLNames.h"
 #include "HTMLVideoElement.h"
 #include "MediaPlayer.h"
+#include "MediaPlayerEnums.h"
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderView.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
-
-#if ENABLE(FULLSCREEN_API)
-#include "RenderFullScreen.h"
-#endif
 
 namespace WebCore {
 
@@ -66,14 +63,8 @@ void RenderVideo::willBeDestroyed()
 {
     visibleInViewportStateChanged();
 
-#if ENABLE(VIDEO_PRESENTATION_MODE)
-    auto player = videoElement().player();
-    if (player && videoElement().webkitPresentationMode() != HTMLVideoElement::VideoPresentationMode::PictureInPicture)
-        player->setPageIsVisible(false);
-#else
     if (auto player = videoElement().player())
-        player->setPageIsVisible(false);
-#endif
+        player->renderVideoWillBeDestroyed();
 
     RenderMedia::willBeDestroyed();
 }
@@ -123,8 +114,8 @@ bool RenderVideo::updateIntrinsicSize()
 
 LayoutSize RenderVideo::calculateIntrinsicSize()
 {
-    if (shouldApplySizeContainment(*this))
-        return LayoutSize();
+    if (shouldApplySizeContainment())
+        return intrinsicSize();
 
     // Spec text from 4.8.6
     //
@@ -142,7 +133,7 @@ LayoutSize RenderVideo::calculateIntrinsicSize()
             return size;
     }
 
-    if (videoElement().shouldDisplayPosterImage() && !m_cachedImageSize.isEmpty() && !imageResource().errorOccurred())
+    if (hasPosterFrameSize())
         return m_cachedImageSize;
 
     // <video> in standalone media documents should not use the default 300x150
@@ -230,14 +221,29 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
     if (clip)
         context.clip(contentRect);
 
-    if (displayingPoster)
+    if (displayingPoster) {
         paintIntoRect(paintInfo, rect);
-    else if (!videoElement().isFullscreen() || !videoElement().supportsAcceleratedRendering()) {
-        if (paintInfo.paintBehavior.contains(PaintBehavior::FlattenCompositingLayers))
-            context.paintFrameForMedia(*mediaPlayer, rect);
-        else
-            mediaPlayer->paint(context, rect);
+        return;
     }
+
+    if (!mediaPlayer)
+        return;
+
+    // Painting contents during fullscreen playback causes stutters on iOS when the device is rotated.
+    // https://bugs.webkit.org/show_bug.cgi?id=142097
+    if (videoElement().supportsAcceleratedRendering() && videoElement().isFullscreen())
+        return;
+
+    // Avoid unnecessary paints by skipping software painting if
+    // the renderer is accelerated, and the paint operation does
+    // not flatten compositing layers and is not snapshotting.
+    if (hasAcceleratedCompositing()
+        && videoElement().supportsAcceleratedRendering()
+        && !paintInfo.paintBehavior.contains(PaintBehavior::FlattenCompositingLayers)
+        && !paintInfo.paintBehavior.contains(PaintBehavior::Snapshotting))
+        return;
+
+    context.paintFrameForMedia(*mediaPlayer, rect);
 }
 
 void RenderVideo::layout()
@@ -272,23 +278,15 @@ void RenderVideo::updatePlayer()
     if (!mediaPlayer)
         return;
 
-    if (!videoElement().inActiveDocument()) {
-        mediaPlayer->setPageIsVisible(false);
-        return;
-    }
+    if (videoElement().inActiveDocument())
+        contentChanged(VideoChanged);
 
-    contentChanged(VideoChanged);
-
-    IntRect videoBounds = videoBox();
-    mediaPlayer->setSize(IntSize(videoBounds.width(), videoBounds.height()));
-    mediaPlayer->setPageIsVisible(!videoElement().elementIsHidden());
-    mediaPlayer->setVisibleInViewport(videoElement().isVisibleInViewport());
-    mediaPlayer->setShouldMaintainAspectRatio(style().objectFit() != ObjectFit::Fill);
+    videoElement().updateMediaPlayer(videoBox().size(), style().objectFit() != ObjectFit::Fill);
 }
 
 LayoutUnit RenderVideo::computeReplacedLogicalWidth(ShouldComputePreferred shouldComputePreferred) const
 {
-    return RenderReplaced::computeReplacedLogicalWidth(shouldComputePreferred);
+    return computeReplacedLogicalWidthRespectingMinMaxWidth(RenderReplaced::computeReplacedLogicalWidth(shouldComputePreferred), shouldComputePreferred);
 }
 
 LayoutUnit RenderVideo::minimumReplacedHeight() const
@@ -313,44 +311,6 @@ bool RenderVideo::requiresImmediateCompositing() const
     return player && player->requiresImmediateCompositing();
 }
 
-#if ENABLE(FULLSCREEN_API)
-
-static const RenderBlock* placeholder(const RenderVideo& renderer)
-{
-    auto* parent = renderer.parent();
-    return is<RenderFullScreen>(parent) ? downcast<RenderFullScreen>(*parent).placeholder() : nullptr;
-}
-
-LayoutUnit RenderVideo::offsetLeft() const
-{
-    if (auto* block = placeholder(*this))
-        return block->offsetLeft();
-    return RenderMedia::offsetLeft();
-}
-
-LayoutUnit RenderVideo::offsetTop() const
-{
-    if (auto* block = placeholder(*this))
-        return block->offsetTop();
-    return RenderMedia::offsetTop();
-}
-
-LayoutUnit RenderVideo::offsetWidth() const
-{
-    if (auto* block = placeholder(*this))
-        return block->offsetWidth();
-    return RenderMedia::offsetWidth();
-}
-
-LayoutUnit RenderVideo::offsetHeight() const
-{
-    if (auto* block = placeholder(*this))
-        return block->offsetHeight();
-    return RenderMedia::offsetHeight();
-}
-
-#endif
-
 bool RenderVideo::foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const
 {
     if (videoElement().shouldDisplayPosterImage())
@@ -363,6 +323,21 @@ bool RenderVideo::foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect,
         return player->hasAvailableVideoFrame();
 
     return false;
+}
+
+bool RenderVideo::hasVideoMetadata() const
+{
+    return videoElement().player() && videoElement().player()->readyState() >= MediaPlayerEnums::ReadyState::HaveMetadata;
+}
+
+bool RenderVideo::hasPosterFrameSize() const
+{
+    return videoElement().shouldDisplayPosterImage() && !m_cachedImageSize.isEmpty() && !imageResource().errorOccurred();
+}
+
+bool RenderVideo::hasDefaultObjectSize() const
+{
+    return !hasVideoMetadata() && !hasPosterFrameSize() && !shouldApplySizeContainment();
 }
 
 } // namespace WebCore

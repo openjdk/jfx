@@ -149,7 +149,6 @@ private:
 };
 
 template<typename T, typename U> Ref<T, U> adoptRef(T&);
-template<typename T> Ref<T> makeRef(T&);
 
 template<typename T, typename U>
 inline Ref<T, U>& Ref<T, U>::operator=(T& reference)
@@ -236,21 +235,15 @@ inline Ref<T, U> Ref<T, U>::replace(Ref<X, Y>&& reference)
 }
 
 template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
-inline Ref<T, U> static_reference_cast(Ref<X, Y>& reference)
-{
-    return Ref<T, U>(static_cast<T&>(reference.get()));
-}
-
-template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
 inline Ref<T, U> static_reference_cast(Ref<X, Y>&& reference)
 {
     return adoptRef(static_cast<T&>(reference.leakRef()));
 }
 
 template<typename T, typename U = RawPtrTraits<T>, typename X, typename Y>
-inline Ref<T, U> static_reference_cast(const Ref<X, Y>& reference)
+ALWAYS_INLINE Ref<T, U> static_reference_cast(const Ref<X, Y>& reference)
 {
-    return Ref<T, U>(static_cast<T&>(reference.copyRef().get()));
+    return static_reference_cast<T, U>(reference.copyRef());
 }
 
 template <typename T, typename U>
@@ -271,12 +264,6 @@ inline Ref<T, U> adoptRef(T& reference)
     return Ref<T, U>(reference, Ref<T, U>::Adopt);
 }
 
-template<typename T>
-inline Ref<T> makeRef(T& reference)
-{
-    return Ref<T>(reference);
-}
-
 template<typename ExpectedType, typename ArgType, typename PtrTraits>
 inline bool is(Ref<ArgType, PtrTraits>& source)
 {
@@ -289,45 +276,8 @@ inline bool is(const Ref<ArgType, PtrTraits>& source)
     return is<ExpectedType>(source.get());
 }
 
-template<typename T, typename U, typename V, typename W>
-inline bool operator==(const Ref<T, U>& a, const Ref<V, W>& b)
-{
-    return a.ptr() == b.ptr();
-}
-
-template<typename T, typename U, typename V>
-inline bool operator==(const Ref<T, U>& a, V& b)
-{
-    return a.ptr() == &b;
-}
-
-template<typename T, typename U, typename V>
-inline bool operator==(T& a, const Ref<U, V>& b)
-{
-    return &a == b.ptr();
-}
-
-template<typename T, typename U, typename V, typename W>
-inline bool operator!=(const Ref<T, U>& a, const Ref<V, W>& b)
-{
-    return a.ptr() != b.ptr();
-}
-
-template<typename T, typename U, typename V>
-inline bool operator!=(const Ref<T, U>& a, V& b)
-{
-    return a.ptr() != &b;
-}
-
-template<typename T, typename U, typename V>
-inline bool operator!=(T& a, const Ref<U, V>& b)
-{
-    return &a != b.ptr();
-}
-
 } // namespace WTF
 
 using WTF::Ref;
 using WTF::adoptRef;
-using WTF::makeRef;
 using WTF::static_reference_cast;

@@ -187,13 +187,13 @@ void Worklist::completePlanSynchronously(Plan& plan)
     plan.waitForCompletion();
 }
 
-void Worklist::stopAllPlansForContext(Context& context)
+void Worklist::stopAllPlansForContext(VM& vm)
 {
     Locker locker { *m_lock };
     Vector<QueueElement> elements;
     while (!m_queue.isEmpty()) {
         QueueElement element = m_queue.dequeue();
-        bool didCancel = element.plan->tryRemoveContextAndCancelIfLast(context);
+        bool didCancel = element.plan->tryRemoveContextAndCancelIfLast(vm);
         if (!didCancel)
             elements.append(WTFMove(element));
     }
@@ -203,7 +203,7 @@ void Worklist::stopAllPlansForContext(Context& context)
 
     for (auto& thread : m_threads) {
         if (thread->element.plan) {
-            bool didCancel = thread->element.plan->tryRemoveContextAndCancelIfLast(context);
+            bool didCancel = thread->element.plan->tryRemoveContextAndCancelIfLast(vm);
             if (didCancel) {
                 // We don't have to worry about the deadlocking since the thread can't block without checking for a new plan and must hold the lock to do so.
                 thread->synchronize.wait(*m_lock);
@@ -217,9 +217,9 @@ Worklist::Worklist()
     , m_planEnqueued(AutomaticThreadCondition::create())
 {
     unsigned numberOfCompilationThreads = Options::useConcurrentJIT() ? kernTCSMAwareNumberOfProcessorCores() : 1;
-    m_threads.reserveCapacity(numberOfCompilationThreads);
+    m_threads.reserveInitialCapacity(numberOfCompilationThreads);
     Locker locker { *m_lock };
-    for (unsigned i = 0; i < numberOfCompilationThreads; i++)
+    for (unsigned i = 0; i < numberOfCompilationThreads; ++i)
         m_threads.uncheckedAppend(makeUnique<Worklist::Thread>(locker, *this));
 }
 

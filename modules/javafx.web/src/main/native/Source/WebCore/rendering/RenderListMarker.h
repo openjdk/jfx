@@ -26,9 +26,11 @@
 
 namespace WebCore {
 
+class CSSCounterStyle;
 class RenderListItem;
+class StyleRuleCounterStyle;
 
-String listMarkerText(ListStyleType, int value);
+String listMarkerText(ListStyleType, int value, CSSCounterStyle* = nullptr);
 
 // Used to render the list item's marker.
 // The RenderListMarker always has to be a child of a RenderListItem.
@@ -46,9 +48,14 @@ public:
     void updateMarginsAndContent();
     void addOverflowFromListMarker();
 
+    bool isImage() const final;
+
+    LayoutUnit lineLogicalOffsetForListItem() const { return m_lineLogicalOffsetForListItem; }
+    const RenderListItem* listItem() const;
+
 private:
     void willBeDestroyed() final;
-    const char* renderName() const final { return "RenderListMarker"; }
+    ASCIILiteral renderName() const final { return "RenderListMarker"_s; }
     void computePreferredLogicalWidths() final;
     bool isListMarker() const final { return true; }
     bool canHaveChildren() const final { return false; }
@@ -58,7 +65,6 @@ private:
     std::unique_ptr<LegacyInlineElementBox> createInlineBox() final;
     LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode) const final;
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode) const final;
-    bool isImage() const final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent) final;
     bool canBeSelectionLeaf() const final { return true; }
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
@@ -74,12 +80,15 @@ private:
     struct TextRunWithUnderlyingString;
     TextRunWithUnderlyingString textRun() const;
 
+    CSSCounterStyle* counterStyle() const;
+
     String m_textWithSuffix;
     uint8_t m_textWithoutSuffixLength { 0 };
     bool m_textIsLeftToRightDirection { true };
     RefPtr<StyleImage> m_image;
     WeakPtr<RenderListItem> m_listItem;
     LayoutUnit m_lineOffsetForListItem;
+    LayoutUnit m_lineLogicalOffsetForListItem;
 };
 
 } // namespace WebCore

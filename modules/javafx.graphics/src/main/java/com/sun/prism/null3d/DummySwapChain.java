@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,40 +52,49 @@ class DummySwapChain extends DummyResource implements Presentable {
         super.dispose();
     }
 
+    @Override
     public boolean lockResources(PresentableState pState) {
         texBackBuffer.lock();
         return false;
     }
 
+    @Override
     public boolean prepare(Rectangle clip) {
         texBackBuffer.unlock();
         return true;
     }
 
+    @Override
     public boolean present() {
         return true;
     }
 
+    @Override
     public int getPhysicalWidth() {
         return w;
     }
 
+    @Override
     public int getPhysicalHeight() {
         return h;
     }
 
+    @Override
     public int getContentWidth() {
         return getPhysicalWidth();
     }
 
+    @Override
     public int getContentHeight() {
         return getPhysicalHeight();
     }
 
+    @Override
     public int getContentX() {
         return 0;
     }
 
+    @Override
     public int getContentY() {
         return 0;
     }
@@ -100,18 +109,22 @@ class DummySwapChain extends DummyResource implements Presentable {
         return 1.0f;
     }
 
+    @Override
     public Graphics createGraphics() {
         return DummyGraphics.create(texBackBuffer, context);
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return context.getAssociatedScreen();
     }
 
+    @Override
     public boolean isOpaque() {
         return opaque;
     }
 
+    @Override
     public void setOpaque(boolean opaque) {
         this.opaque = opaque;
     }

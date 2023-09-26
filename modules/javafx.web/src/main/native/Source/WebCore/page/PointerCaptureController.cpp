@@ -142,10 +142,9 @@ void PointerCaptureController::pointerLockWasApplied()
     updateHaveAnyCapturingElement();
 }
 
-void PointerCaptureController::elementWasRemoved(Element& element)
+void PointerCaptureController::elementWasRemovedSlow(Element& element)
 {
-    if (!m_haveAnyCapturingElement)
-        return;
+    ASSERT(m_haveAnyCapturingElement);
 
     for (auto [pointerId, capturingData] : m_activePointerIdsToCapturingData) {
         if (capturingData->pendingTargetOverride == &element || capturingData->targetOverride == &element) {
@@ -210,11 +209,11 @@ void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target,
 {
     RELEASE_ASSERT(is<Element>(target));
 
-    auto dispatchOverOrOutEvent = [&](const String& type, EventTarget* target) {
+    auto dispatchOverOrOutEvent = [&](const AtomString& type, EventTarget* target) {
         dispatchEvent(PointerEvent::create(type, platformTouchEvent, index, isPrimary, view), target);
     };
 
-    auto dispatchEnterOrLeaveEvent = [&](const String& type, Element& targetElement) {
+    auto dispatchEnterOrLeaveEvent = [&](const AtomString& type, Element& targetElement) {
         bool hasCapturingListenerInHierarchy = false;
         for (RefPtr<ContainerNode> currentNode = &targetElement; currentNode; currentNode = currentNode->parentInComposedTree()) {
             if (currentNode->hasCapturingEventListeners(type)) {
@@ -230,7 +229,7 @@ void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target,
         }
 
         if (type == eventNames().pointerenterEvent) {
-            for (auto& element : WTF::makeReversedRange(targetChain))
+            for (auto& element : makeReversedRange(targetChain))
                 dispatchEvent(PointerEvent::create(type, platformTouchEvent, index, isPrimary, view), element.ptr());
         } else {
             for (auto& element : targetChain)
@@ -285,7 +284,7 @@ void PointerCaptureController::dispatchEventForTouchAtIndex(EventTarget& target,
         if (currentTarget)
             dispatchOverOrOutEvent(eventNames().pointeroverEvent, currentTarget.get());
 
-        for (auto& chain : WTF::makeReversedRange(enteredElementsChain)) {
+        for (auto& chain : makeReversedRange(enteredElementsChain)) {
             if (hasCapturingPointerEnterListener || chain->hasEventListeners(eventNames().pointerenterEvent))
                 dispatchEvent(PointerEvent::create(eventNames().pointerenterEvent, platformTouchEvent, index, isPrimary, view), chain.ptr());
         }
@@ -494,10 +493,11 @@ void PointerCaptureController::cancelPointer(PointerID pointerId, const IntPoint
     // After firing the pointercancel event, a user agent MUST also fire a pointer event named pointerout
     // followed by firing a pointer event named pointerleave.
     auto isPrimary = capturingData->isPrimary ? PointerEvent::IsPrimary::Yes : PointerEvent::IsPrimary::No;
-    auto cancelEvent = PointerEvent::create(eventNames().pointercancelEvent, pointerId, capturingData->pointerType, isPrimary);
+    auto& eventNames = WebCore::eventNames();
+    auto cancelEvent = PointerEvent::create(eventNames.pointercancelEvent, pointerId, capturingData->pointerType, isPrimary);
     target->dispatchEvent(cancelEvent);
-    target->dispatchEvent(PointerEvent::create(eventNames().pointeroutEvent, pointerId, capturingData->pointerType, isPrimary));
-    target->dispatchEvent(PointerEvent::create(eventNames().pointerleaveEvent, pointerId, capturingData->pointerType, isPrimary));
+    target->dispatchEvent(PointerEvent::create(eventNames.pointeroutEvent, pointerId, capturingData->pointerType, isPrimary));
+    target->dispatchEvent(PointerEvent::create(eventNames.pointerleaveEvent, pointerId, capturingData->pointerType, isPrimary));
     processPendingPointerCapture(pointerId);
 }
 

@@ -26,11 +26,14 @@
 #pragma once
 
 #include "Region.h"
+#include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+struct EventNames;
 
 enum class TrackingType : uint8_t {
     NotTracking = 0,
@@ -38,21 +41,46 @@ enum class TrackingType : uint8_t {
     Synchronous = 2
 };
 
+enum class EventTrackingRegionsEventType : uint8_t {
+        Mousedown,
+        Mousemove,
+        Mouseup,
+        Mousewheel,
+        Pointerdown,
+        Pointerenter,
+        Pointerleave,
+        Pointermove,
+        Pointerout,
+        Pointerover,
+        Pointerup,
+        Touchend,
+        Touchforcechange,
+        Touchmove,
+        Touchstart,
+        Wheel,
+};
+
 struct EventTrackingRegions {
+    using EventType = EventTrackingRegionsEventType;
+
+    WEBCORE_EXPORT static ASCIILiteral eventName(EventType);
+    WEBCORE_EXPORT static const AtomString& eventNameAtomString(const EventNames&, EventType);
+
     // Region for which events can be dispatched without blocking scrolling.
     Region asynchronousDispatchRegion;
 
     // Regions for which events must be sent before performing the default behavior.
-    // The key is the Event Name with an active handler.
-    HashMap<String, Region> eventSpecificSynchronousDispatchRegions;
+    // The key is the EventType with an active handler.
+    using EventSpecificSynchronousDispatchRegions = HashMap<EventType, Region, WTF::IntHash<EventType>, WTF::StrongEnumHashTraits<EventType>>;
+    EventSpecificSynchronousDispatchRegions eventSpecificSynchronousDispatchRegions;
 
     bool isEmpty() const;
 
     void translate(IntSize);
-    void uniteSynchronousRegion(const String& eventName, const Region&);
+    void uniteSynchronousRegion(EventType, const Region&);
     void unite(const EventTrackingRegions&);
 
-    TrackingType trackingTypeForPoint(const String& eventName, const IntPoint&);
+    TrackingType trackingTypeForPoint(EventType, const IntPoint&);
 };
 
 bool operator==(const EventTrackingRegions&, const EventTrackingRegions&);

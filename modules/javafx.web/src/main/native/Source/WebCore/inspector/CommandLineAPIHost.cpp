@@ -120,7 +120,7 @@ CommandLineAPIHost::EventListenersRecord CommandLineAPIHost::getEventListeners(J
             auto& jsListener = downcast<JSEventListener>(eventListener->callback());
 
             // Hide listeners from other contexts.
-            if (&jsListener.isolatedWorld() != &currentWorld(lexicalGlobalObject))
+            if (jsListener.isolatedWorld() != &currentWorld(lexicalGlobalObject))
                 continue;
 
             auto* function = jsListener.ensureJSFunction(*scriptExecutionContext);
@@ -196,7 +196,7 @@ JSValue CommandLineAPIHost::wrapper(JSGlobalObject* exec, JSDOMGlobalObject* glo
 
     JSObject* prototype = JSCommandLineAPIHost::createPrototype(exec->vm(), *globalObject);
     Structure* structure = JSCommandLineAPIHost::createStructure(exec->vm(), globalObject, prototype);
-    JSCommandLineAPIHost* commandLineAPIHost = JSCommandLineAPIHost::create(structure, globalObject, makeRef(*this));
+    JSCommandLineAPIHost* commandLineAPIHost = JSCommandLineAPIHost::create(structure, globalObject, Ref { *this });
     m_wrappers.addWrapper(globalObject, commandLineAPIHost);
 
     return commandLineAPIHost;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "JSImmutableButterfly.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSString.h"
+#include "StructureChain.h"
 #include "StructureRareData.h"
 
 namespace JSC {
@@ -37,6 +38,9 @@ namespace JSC {
 struct SpecialPropertyCacheEntry {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     ~SpecialPropertyCacheEntry();
+
+    static ptrdiff_t offsetOfValue() { return OBJECT_OFFSETOF(SpecialPropertyCacheEntry, m_value); }
+
     Bag<CachedSpecialPropertyAdaptiveStructureWatchpoint> m_missWatchpoints;
     std::unique_ptr<CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint> m_equivalenceWatchpoint;
     WriteBarrier<Unknown> m_value;
@@ -45,6 +49,25 @@ struct SpecialPropertyCacheEntry {
 struct SpecialPropertyCache {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     SpecialPropertyCacheEntry m_cache[numberOfCachedSpecialPropertyKeys];
+
+    static ptrdiff_t offsetOfCache(CachedSpecialPropertyKey key)
+    {
+        return OBJECT_OFFSETOF(SpecialPropertyCache, m_cache) + sizeof(SpecialPropertyCacheEntry) * static_cast<unsigned>(key);
+    }
+};
+
+class StructureChainInvalidationWatchpoint final : public Watchpoint {
+public:
+    StructureChainInvalidationWatchpoint()
+        : Watchpoint(Watchpoint::Type::StructureChainInvalidation)
+        , m_structureRareData(nullptr)
+    { }
+
+    void install(StructureRareData*, Structure*);
+    void fireInternal(VM&, const FireDetail&);
+
+private:
+    PackedCellPtr<StructureRareData> m_structureRareData;
 };
 
 inline void StructureRareData::setPreviousID(VM& vm, Structure* structure)
@@ -74,12 +97,20 @@ inline JSValue StructureRareData::cachedSpecialProperty(CachedSpecialPropertyKey
 
 inline JSPropertyNameEnumerator* StructureRareData::cachedPropertyNameEnumerator() const
 {
-    return m_cachedPropertyNameEnumerator.get();
+    return bitwise_cast<JSPropertyNameEnumerator*>(m_cachedPropertyNameEnumeratorAndFlag & cachedPropertyNameEnumeratorMask);
 }
 
-inline void StructureRareData::setCachedPropertyNameEnumerator(VM& vm, JSPropertyNameEnumerator* enumerator)
+inline uintptr_t StructureRareData::cachedPropertyNameEnumeratorAndFlag() const
 {
-    m_cachedPropertyNameEnumerator.set(vm, this, enumerator);
+    return m_cachedPropertyNameEnumeratorAndFlag;
+}
+
+inline void StructureRareData::setCachedPropertyNameEnumerator(VM& vm, Structure* baseStructure, JSPropertyNameEnumerator* enumerator, StructureChain* chain)
+{
+    m_cachedPropertyNameEnumeratorWatchpoints = FixedVector<StructureChainInvalidationWatchpoint>();
+    bool validatedViaWatchpoint = tryCachePropertyNameEnumeratorViaWatchpoint(vm, baseStructure, chain);
+    m_cachedPropertyNameEnumeratorAndFlag = ((validatedViaWatchpoint ? 0 : cachedPropertyNameEnumeratorIsValidatedViaTraversingFlag) | bitwise_cast<uintptr_t>(enumerator));
+    vm.writeBarrier(this, enumerator);
 }
 
 inline JSImmutableButterfly* StructureRareData::cachedPropertyNames(CachedPropertyNamesKind kind) const
@@ -138,6 +169,49 @@ inline void StructureRareData::cacheSpecialProperty(JSGlobalObject* globalObject
     if (!canCacheSpecialProperty(key))
         return;
     return cacheSpecialPropertySlow(globalObject, vm, ownStructure, value, key, slot);
+}
+
+inline void StructureChainInvalidationWatchpoint::install(StructureRareData* structureRareData, Structure* structure)
+{
+    m_structureRareData = structureRareData;
+    structure->addTransitionWatchpoint(this);
+}
+
+inline void StructureChainInvalidationWatchpoint::fireInternal(VM&, const FireDetail&)
+{
+    if (!m_structureRareData->isLive())
+        return;
+    m_structureRareData->clearCachedPropertyNameEnumerator();
+}
+
+inline bool StructureRareData::tryCachePropertyNameEnumeratorViaWatchpoint(VM&, Structure* baseStructure, StructureChain* chain)
+{
+    if (baseStructure->hasPolyProto())
+        return false;
+
+    unsigned size = 0;
+    for (auto* current = chain->head(); *current; ++current) {
+        ++size;
+        StructureID structureID = *current;
+        Structure* structure = structureID.decode();
+        if (!structure->propertyNameEnumeratorShouldWatch())
+            return false;
+    }
+    m_cachedPropertyNameEnumeratorWatchpoints = FixedVector<StructureChainInvalidationWatchpoint>(size);
+    unsigned index = 0;
+    for (auto* current = chain->head(); *current; ++current) {
+        StructureID structureID = *current;
+        Structure* structure = structureID.decode();
+        m_cachedPropertyNameEnumeratorWatchpoints[index].install(this, structure);
+        ++index;
+    }
+    return true;
+}
+
+inline void StructureRareData::clearCachedPropertyNameEnumerator()
+{
+    m_cachedPropertyNameEnumeratorAndFlag = 0;
+    m_cachedPropertyNameEnumeratorWatchpoints = FixedVector<StructureChainInvalidationWatchpoint>();
 }
 
 } // namespace JSC

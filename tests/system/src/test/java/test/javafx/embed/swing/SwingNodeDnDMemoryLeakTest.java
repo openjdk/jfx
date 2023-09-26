@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,59 +25,59 @@
 
 package test.javafx.embed.swing;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.embed.swing.SwingNode;
-import javafx.scene.Scene;
-import javafx.scene.layout.BorderPane;
-import javafx.stage.Stage;
+import static org.junit.Assert.assertEquals;
 
 import java.awt.dnd.DropTarget;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
 import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
+
+import java.lang.reflect.InvocationTargetException;
+
+import javafx.application.Application;
+import javafx.embed.swing.SwingNode;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import test.util.Util;
-import static test.util.Util.TIMEOUT;
-import org.junit.Test;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import test.util.memory.JMemoryBuddy;
 
 public class SwingNodeDnDMemoryLeakTest {
 
     final static int TOTAL_SWINGNODE = 10;
-    static CountDownLatch launchLatch;
-    final static int GC_ATTEMPTS = 10;
+    static CountDownLatch launchLatch = new CountDownLatch(1);
     ArrayList<WeakReference<SwingNode>> weakRefArrSN =
                                       new ArrayList(TOTAL_SWINGNODE);
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        launchLatch = new CountDownLatch(1);
-        // Start the Application
-        new Thread(() -> Application.launch(SwingNodeDnDMemoryLeakTest.MyApp.class,
-                                            (String[])null)).start();
-
-        assertTrue("Timeout waiting for Application to launch",
-                    launchLatch.await(10, TimeUnit.SECONDS));
+        Util.launch(launchLatch, MyApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test
-    public void testSwingNodeMemoryLeak() {
+    public void testSwingNodeMemoryLeak() throws InvocationTargetException, InterruptedException {
         Util.runAndWait(() -> {
             testSwingNodeObjectsInStage();
         });
-        attemptGCSwingNode();
-        assertEquals(TOTAL_SWINGNODE, getCleanedUpSwingNodeCount());
+
+        // Invoke a noop on EDT thread and wait for a bit to make sure EDT processed node objects
+        SwingUtilities.invokeAndWait(() -> {});
+        Util.sleep(500);
+
+        JMemoryBuddy.assertCollectable(weakRefArrSN);
     }
 
     private void testSwingNodeObjectsInStage() {
@@ -115,21 +115,6 @@ public class SwingNodeDnDMemoryLeakTest {
             if (tempStage[i] != null) {
                 tempStage[i].close();
                 tempStage[i] = null;
-            }
-        }
-    }
-
-    private void attemptGCSwingNode() {
-        // Attempt gc GC_ATTEMPTS times
-        for (int i = 0; i < GC_ATTEMPTS; i++) {
-            System.gc();
-            if (getCleanedUpSwingNodeCount() == TOTAL_SWINGNODE) {
-                break;
-            }
-            try {
-                Thread.sleep(250);
-            } catch (InterruptedException e) {
-                System.err.println("InterruptedException occurred during Thread.sleep()");
             }
         }
     }

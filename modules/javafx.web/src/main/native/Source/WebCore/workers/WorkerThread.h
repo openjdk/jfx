@@ -28,19 +28,26 @@
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
 #include "FetchRequestCredentials.h"
+#include "NotificationPermission.h"
+#include "ScriptExecutionContextIdentifier.h"
+#include "ServiceWorkerRegistrationData.h"
+#include "WorkerClient.h"
 #include "WorkerOrWorkletThread.h"
 #include "WorkerRunLoop.h"
 #include "WorkerType.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <memory>
+#include <pal/SessionID.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
 class NotificationClient;
+class Page;
 class ScriptBuffer;
 class SecurityOrigin;
 class SocketProvider;
+class WorkerBadgeProxy;
 class WorkerGlobalScope;
 class WorkerLoaderProxy;
 class WorkerDebuggerProxy;
@@ -60,8 +67,9 @@ struct WorkerThreadStartupData;
 struct WorkerParameters {
 public:
     URL scriptURL;
+    URL ownerURL;
     String name;
-    String identifier;
+    String inspectorIdentifier;
     String userAgent;
     bool isOnline;
     ContentSecurityPolicyResponseHeaders contentSecurityPolicyResponseHeaders;
@@ -72,6 +80,12 @@ public:
     WorkerType workerType;
     FetchRequestCredentials credentials;
     Settings::Values settingsValues;
+    WorkerThreadMode workerThreadMode { WorkerThreadMode::CreateNewThread };
+    PAL::SessionID sessionID;
+#if ENABLE(SERVICE_WORKER)
+    std::optional<ServiceWorkerData> serviceWorkerData;
+#endif
+    ScriptExecutionContextIdentifier clientIdentifier;
 
     WorkerParameters isolatedCopy() const;
 };
@@ -80,8 +94,9 @@ class WorkerThread : public WorkerOrWorkletThread {
 public:
     virtual ~WorkerThread();
 
-    WorkerLoaderProxy& workerLoaderProxy() final { return m_workerLoaderProxy; }
+    WorkerBadgeProxy& workerBadgeProxy() const { return m_workerBadgeProxy; }
     WorkerDebuggerProxy* workerDebuggerProxy() const final { return &m_workerDebuggerProxy; }
+    WorkerLoaderProxy& workerLoaderProxy() final { return m_workerLoaderProxy; }
     WorkerReportingProxy& workerReportingProxy() const { return m_workerReportingProxy; }
 
     // Number of active worker threads.
@@ -93,9 +108,12 @@ public:
 #endif
 
     JSC::RuntimeFlags runtimeFlags() const { return m_runtimeFlags; }
+    bool isInStaticScriptEvaluation() const { return m_isInStaticScriptEvaluation; }
 
+    void setWorkerClient(std::unique_ptr<WorkerClient>&& client) { m_workerClient = WTFMove(client); }
+    WorkerClient* workerClient() { return m_workerClient.get(); }
 protected:
-    WorkerThread(const WorkerParameters&, const ScriptBuffer& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
+    WorkerThread(const WorkerParameters&, const ScriptBuffer& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerBadgeProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
 
     // Factory method for creating a new worker context for the thread.
     virtual Ref<WorkerGlobalScope> createWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, Ref<SecurityOrigin>&& topOrigin) = 0;
@@ -105,13 +123,14 @@ protected:
     IDBClient::IDBConnectionProxy* idbConnectionProxy();
     SocketProvider* socketProvider();
 
+    std::unique_ptr<WorkerClient> m_workerClient;
 private:
-    virtual bool isServiceWorkerThread() const { return false; }
+    virtual ASCIILiteral threadName() const = 0;
 
     virtual void finishedEvaluatingScript() { }
 
     // WorkerOrWorkletThread.
-    Ref<WTF::Thread> createThread() final;
+    Ref<Thread> createThread() final;
     RefPtr<WorkerOrWorkletGlobalScope> createGlobalScope() final;
     void evaluateScriptIfNecessary(String& exceptionMessage) final;
     bool shouldWaitForWebInspectorOnStartup() const final;
@@ -119,6 +138,7 @@ private:
     WorkerLoaderProxy& m_workerLoaderProxy;
     WorkerDebuggerProxy& m_workerDebuggerProxy;
     WorkerReportingProxy& m_workerReportingProxy;
+    WorkerBadgeProxy& m_workerBadgeProxy;
     JSC::RuntimeFlags m_runtimeFlags;
 
     std::unique_ptr<WorkerThreadStartupData> m_startupData;
@@ -129,6 +149,7 @@ private:
 
     RefPtr<IDBClient::IDBConnectionProxy> m_idbConnectionProxy;
     RefPtr<SocketProvider> m_socketProvider;
+    bool m_isInStaticScriptEvaluation { false };
 };
 
 } // namespace WebCore

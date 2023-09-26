@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -291,7 +291,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RangeImpl_createContextualFragme
     , jstring html)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DocumentFragment>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createContextualFragment(String(env, html)))));
+    return JavaReturn<DocumentFragment>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createContextualFragment(AtomString {String(env, html)}))));
 }
 
 
@@ -351,7 +351,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_expandImpl(JNIEnv* env,
     , jstring unit)
 {
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->expand(String(env, unit)));
+    raiseOnDOMError(env, IMPL->expand(AtomString{String(env, unit)}));
 }
 
 

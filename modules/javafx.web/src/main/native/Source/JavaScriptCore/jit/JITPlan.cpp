@@ -31,6 +31,7 @@
 #include "AbstractSlotVisitor.h"
 #include "CodeBlock.h"
 #include "HeapInlines.h"
+#include "JSCellInlines.h"
 #include "VMInlines.h"
 #include <wtf/CompilationThread.h>
 
@@ -77,6 +78,7 @@ auto JITPlan::tier() const -> Tier
     case JITCompilationMode::Baseline:
         return Tier::Baseline;
     case JITCompilationMode::DFG:
+    case JITCompilationMode::UnlinkedDFG:
         return Tier::DFG;
     case JITCompilationMode::FTL:
     case JITCompilationMode::FTLForOSREntry:
@@ -87,7 +89,12 @@ auto JITPlan::tier() const -> Tier
 
 JITCompilationKey JITPlan::key()
 {
-    return JITCompilationKey(m_codeBlock->baselineAlternative(), m_mode);
+    JSCell* codeBlock;
+    if (m_mode == JITCompilationMode::Baseline)
+        codeBlock = m_codeBlock->unlinkedCodeBlock();
+    else
+        codeBlock = m_codeBlock->baselineAlternative();
+    return JITCompilationKey(codeBlock, m_mode);
 }
 
 bool JITPlan::isKnownToBeLiveAfterGC()
@@ -140,7 +147,7 @@ bool JITPlan::reportCompileTimes() const
 {
     return Options::reportCompileTimes()
         || (Options::reportBaselineCompileTimes() && m_mode == JITCompilationMode::Baseline)
-        || (Options::reportDFGCompileTimes() && m_mode == JITCompilationMode::DFG)
+        || (Options::reportDFGCompileTimes() && isDFG())
         || (Options::reportFTLCompileTimes() && isFTL());
 }
 

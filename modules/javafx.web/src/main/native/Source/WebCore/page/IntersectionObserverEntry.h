@@ -25,13 +25,15 @@
 
 #pragma once
 
-#if ENABLE(INTERSECTION_OBSERVER)
-
 #include "DOMRectReadOnly.h"
 #include "Element.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
@@ -53,7 +55,7 @@ public:
 
     static Ref<IntersectionObserverEntry> create(const Init& init)
     {
-        return WTF::adoptRef(*new IntersectionObserverEntry(init));
+        return adoptRef(*new IntersectionObserverEntry(init));
     }
 
     double time() const { return m_time; }
@@ -77,7 +79,6 @@ private:
     bool m_isIntersecting { false };
 };
 
+TextStream& operator<<(TextStream&, const IntersectionObserverEntry&);
 
 } // namespace WebCore
-
-#endif // ENABLE(INTERSECTION_OBSERVER)

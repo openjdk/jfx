@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,12 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
     gDelegate = delegate; // notice, there is no retain
 }
 
-+ (void)flushWithMask:(jint)mask
++ (BOOL)isDelegateSet
+{
+    return (gDelegate != nil);
+}
+
++ (void)flushWithMask:(jint)mask withItems:(NSArray<NSDraggingItem*>*)items
 {
     LOG("GlassDragSource:flushWithMask: %d", mask);
 
@@ -59,12 +64,12 @@ static jint supportedActions = com_sun_glass_ui_Clipboard_ACTION_NONE;
         NSDragOperation operation = [GlassDragSource mapJavaMaskToNsOperation:mask];
         if (operation != NSDragOperationNone)
         {
-            LOG("[gDelegate startDrag:operation]");
-                [gDelegate startDrag:operation];
+            LOG("[gDelegate startDrag:operation withItems:items] gDelegate %p", gDelegate);
+            [gDelegate startDrag:operation withItems:items];
         }
         else
         {
-            LOG("[gDelegate startDrag:operation] NOT TAKEN!");
+            LOG("[gDelegate startDrag:operation withItems:items] NOT TAKEN!");
         }
     }
     else

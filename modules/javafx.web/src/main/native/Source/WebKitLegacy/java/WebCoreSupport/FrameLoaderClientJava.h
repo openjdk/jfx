@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-class FrameLoaderClientJava final : public FrameLoaderClient {
+class FrameLoaderClientJava : public FrameLoaderClient {
 public:
     FrameLoaderClientJava(const JLObject &webPage);
     ~FrameLoaderClientJava();
@@ -54,20 +54,19 @@ public:
     void forceLayoutForNonHTML() override;
 
     std::optional<PageIdentifier> pageID() const final;
-    std::optional<FrameIdentifier> frameID() const final;
 
     void setCopiesOnScroll() override;
 
     void detachedFromParent2() override;
     void detachedFromParent3() override;
 
-    void assignIdentifierToInitialRequest(unsigned long identifier, DocumentLoader*, const ResourceRequest&) override;
+    void assignIdentifierToInitialRequest(ResourceLoaderIdentifier, DocumentLoader*, const ResourceRequest&) override;
 
-    void dispatchWillSendRequest(DocumentLoader*, unsigned long  identifier, ResourceRequest&, const ResourceResponse& redirectResponse) override;
-    void dispatchDidReceiveResponse(DocumentLoader*, unsigned long  identifier, const ResourceResponse&) override;
-    void dispatchDidReceiveContentLength(DocumentLoader*, unsigned long identifier, int lengthReceived) override;
-    void dispatchDidFinishLoading(DocumentLoader*, unsigned long  identifier) override;
-    void dispatchDidFailLoading(DocumentLoader*, unsigned long  identifier, const ResourceError&) override;
+    void dispatchWillSendRequest(DocumentLoader*, ResourceLoaderIdentifier, ResourceRequest&, const ResourceResponse& redirectResponse) override;
+    void dispatchDidReceiveResponse(DocumentLoader*, ResourceLoaderIdentifier, const ResourceResponse&) override;
+    void dispatchDidReceiveContentLength(DocumentLoader*, ResourceLoaderIdentifier, int lengthReceived) override;
+    void dispatchDidFinishLoading(DocumentLoader*, ResourceLoaderIdentifier) override;
+    void dispatchDidFailLoading(DocumentLoader*, ResourceLoaderIdentifier, const ResourceError&) override;
     bool dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int length) override;
 
     void dispatchDidDispatchOnloadEvents() override;
@@ -83,8 +82,8 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>) override;
-    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
+    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>, std::optional<WasPrivateRelayed>) override;
+    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading,WillInternallyHandleFailure) override;
     void dispatchDidFailLoad(const ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;
@@ -93,7 +92,7 @@ public:
     Frame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
-    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, BrowsingContextGroupSwitchDecision, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, PolicyCheckIdentifier, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) override;
     void cancelPolicyCheck() override;
@@ -108,11 +107,11 @@ public:
     void revertToProvisionalState(DocumentLoader*) override;
     void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
 
-    RefPtr<Frame> createFrame(const String& name, HTMLFrameOwnerElement& ownerElement) override;
+    RefPtr<Frame> createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
+    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually) override;
     void redirectDataToPlugin(Widget&) override;
-    String overrideMediaType() const override;
+    AtomString overrideMediaType() const override;
 
     void setMainFrameDocumentReady(bool) override;
 
@@ -121,7 +120,7 @@ public:
     void willChangeTitle(DocumentLoader*) override;
     void didChangeTitle(DocumentLoader*) override;
 
-    void committedLoad(DocumentLoader*, const uint8_t*, int) override;
+    void committedLoad(DocumentLoader*, const SharedBuffer&) override;
     void finishedLoading(DocumentLoader*) override;
 
     void updateGlobalHistory() override;
@@ -137,7 +136,6 @@ public:
     // script) from an insecure source.  Note that the insecure content can
     // spread to other frames in the same origin.
     void didRunInsecureContent(SecurityOrigin&, const URL&) override;
-    void didDetectXSS(const URL&, bool) override;
 
     ResourceError cancelledError(const ResourceRequest&) const override;
     ResourceError blockedByContentBlockerError(const ResourceRequest& request) const override;
@@ -151,14 +149,14 @@ public:
 
     bool shouldFallBack(const ResourceError&) const override;
 
-    bool shouldUseCredentialStorage(DocumentLoader*, unsigned long identifier) override;
-    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long identifier, const AuthenticationChallenge&) override;
+    bool shouldUseCredentialStorage(DocumentLoader*, ResourceLoaderIdentifier) override;
+    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, ResourceLoaderIdentifier, const AuthenticationChallenge&) override;
 
     bool canHandleRequest(const ResourceRequest&) const override;
     bool canShowMIMEType(const String&) const override;
     bool canShowMIMETypeAsHTML(const String& MIMEType) const override;
-    bool representationExistsForURLScheme(const String&) const override;
-    String generatedMIMETypeForURLScheme(const String&) const override;
+    bool representationExistsForURLScheme(StringView URLScheme) const override;
+    String generatedMIMETypeForURLScheme(StringView URLScheme) const override;
 
     void frameLoadCompleted() override;
     void saveViewStateToItem(HistoryItem&) override;
@@ -197,7 +195,7 @@ private:
     Page* m_page;
     Frame* m_frame;
     ResourceResponse m_response;
-    unsigned long m_mainResourceRequestID;
+    ResourceLoaderIdentifier m_mainResourceRequestID;
     bool m_isPageRedirected;
     bool m_hasRepresentation;
 
@@ -206,11 +204,11 @@ private:
     Page* page();
     Frame* frame();
 
-    void setRequestURL(Frame* f, int identifier, String url);
-    void removeRequestURL(Frame* f, int identifier);
+    void setRequestURL(Frame* f,  ResourceLoaderIdentifier identifier, String url);
+    void removeRequestURL(Frame* f, ResourceLoaderIdentifier identifier);
 
     void postLoadEvent(Frame* f, int state, String url, String contentType, double progress, int errorCode = 0);
-    void postResourceLoadEvent(Frame* f, int state, int id, String contentType, double progress, int errorCode = 0);
+    void postResourceLoadEvent(Frame* f, int state, ResourceLoaderIdentifier id, String contentType, double progress, int errorCode = 0);
     // Plugin widget for handling data redirection
 //        PluginWidgetJava* m_pluginWidget;
 };

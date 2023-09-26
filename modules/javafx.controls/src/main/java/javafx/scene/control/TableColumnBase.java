@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -255,7 +255,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
     private ReadOnlyObjectWrapper<TableColumnBase<S,?>> parentColumnPropertyImpl() {
         if (parentColumn == null) {
-            parentColumn = new ReadOnlyObjectWrapper<TableColumnBase<S,?>>(this, "parentColumn");
+            parentColumn = new ReadOnlyObjectWrapper<>(this, "parentColumn");
         }
         return parentColumn;
     }
@@ -271,7 +271,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final ContextMenu getContextMenu() { return contextMenu == null ? null : contextMenu.get(); }
     public final ObjectProperty<ContextMenu> contextMenuProperty() {
         if (contextMenu == null) {
-            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+            contextMenu = new SimpleObjectProperty<>(this, "contextMenu") {
                 private WeakReference<ContextMenu> contextMenuRef;
 
                 @Override protected void invalidated() {
@@ -369,7 +369,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     }
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new SimpleObjectProperty<Node>(this, "graphic");
+            graphic = new SimpleObjectProperty<>(this, "graphic");
         }
         return graphic;
     }
@@ -391,7 +391,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * and if so, whether the sort is ascending or descending, and what position in
      * the sort order it is in.
      */
-    private ObjectProperty<Node> sortNode = new SimpleObjectProperty<Node>(this, "sortNode");
+    private ObjectProperty<Node> sortNode = new SimpleObjectProperty<>(this, "sortNode");
     public final void setSortNode(Node value) { sortNodeProperty().set(value); }
     public final Node getSortNode() { return sortNode.get(); }
     public final ObjectProperty<Node> sortNodeProperty() { return sortNode; }
@@ -551,7 +551,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     private ObjectProperty<Comparator<T>> comparator;
     public final ObjectProperty<Comparator<T>> comparatorProperty() {
         if (comparator == null) {
-            comparator = new SimpleObjectProperty<Comparator<T>>(this, "comparator", DEFAULT_COMPARATOR);
+            comparator = new SimpleObjectProperty<>(this, "comparator", DEFAULT_COMPARATOR);
         }
         return comparator;
     }
@@ -599,7 +599,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      */
     public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }
@@ -726,42 +726,30 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      */
     public abstract ObservableValue<T> getCellObservableValue(S item);
 
-    /** {@inheritDoc} */
-    @Override public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
+    @Override
+    public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
         return tail.prepend(eventHandlerManager);
     }
 
-    /**
-     * Registers an event handler to this table column. The TableColumnBase class allows
-     * registration of listeners which will be notified when editing occurs.
-     * Note however that TableColumnBase is <b>not</b> a Node, and therefore no visual
-     * events will be fired on it.
-     *
-     * @param <E> The type of event
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
-     */
-    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
+    @Override
+    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.addEventHandler(eventType, eventHandler);
     }
 
-    /**
-     * Unregisters a previously registered event handler from this table column. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <E> The type of event
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
-     */
-    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
+    @Override
+    public <E extends Event> void removeEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         eventHandlerManager.removeEventHandler(eventType, eventHandler);
     }
 
+    @Override
+    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.addEventFilter(eventType, eventHandler);
+    }
 
+    @Override
+    public <E extends Event> void removeEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
+        eventHandlerManager.removeEventFilter(eventType, eventHandler);
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -806,6 +794,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     /**
      * {@inheritDoc}
      */
+    @Override
     public final ObservableSet<PseudoClass> getPseudoClassStates() {
         return FXCollections.emptyObservableSet();
     }

@@ -44,7 +44,7 @@ class U_I18N_API UsagePrefsHandler : public MicroPropsGenerator, public UMemory 
      * micros.outputUnit.
      */
     void processQuantity(DecimalQuantity &quantity, MicroProps &micros,
-                         UErrorCode &status) const U_OVERRIDE;
+                         UErrorCode &status) const override;
 
     /**
      * Returns the list of possible output units, i.e. the full set of
@@ -97,20 +97,21 @@ class U_I18N_API UnitConversionHandler : public MicroPropsGenerator, public UMem
     /**
      * Constructor.
      *
-     * @param inputUnit Specifies the input MeasureUnit. Mixed units are not
-     *     supported as input (because input is just a single decimal quantity).
-     * @param outputUnit Specifies the output MeasureUnit.
+     * @param targetUnit Specifies the output MeasureUnit. The input MeasureUnit
+     *     is derived from it: in case of a mixed unit, the biggest unit is
+     *     taken as the input unit. If not a mixed unit, the input unit will be
+     *     the same as the output unit and no unit conversion takes place.
      * @param parent The parent MicroPropsGenerator.
      * @param status Receives status.
      */
-    UnitConversionHandler(const MeasureUnit &inputUnit, const MeasureUnit &outputUnit,
-                          const MicroPropsGenerator *parent, UErrorCode &status);
+    UnitConversionHandler(const MeasureUnit &targetUnit, const MicroPropsGenerator *parent,
+                          UErrorCode &status);
 
     /**
      * Obtains the appropriate output values from the Unit Converter.
      */
     void processQuantity(DecimalQuantity &quantity, MicroProps &micros,
-                         UErrorCode &status) const U_OVERRIDE;
+                         UErrorCode &status) const override;
   private:
     MeasureUnit fOutputUnit;
     LocalPointer<ComplexUnitsConverter> fUnitConverter;

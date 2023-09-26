@@ -35,15 +35,12 @@ struct BlendingContext;
 
 class TranslateTransformOperation final : public TransformOperation {
 public:
-    static Ref<TranslateTransformOperation> create(const Length& tx, const Length& ty, OperationType type)
+    static Ref<TranslateTransformOperation> create(const Length& tx, const Length& ty, TransformOperation::Type type)
     {
         return adoptRef(*new TranslateTransformOperation(tx, ty, Length(0, LengthType::Fixed), type));
     }
 
-    static Ref<TranslateTransformOperation> create(const Length& tx, const Length& ty, const Length& tz, OperationType type)
-    {
-        return adoptRef(*new TranslateTransformOperation(tx, ty, tz, type));
-    }
+    WEBCORE_EXPORT static Ref<TranslateTransformOperation> create(const Length&, const Length&, const Length&, TransformOperation::Type);
 
     Ref<TransformOperation> clone() const override
     {
@@ -58,6 +55,12 @@ public:
     Length y() const { return m_y; }
     Length z() const { return m_z; }
 
+    void setX(Length newX) { m_x = newX; }
+    void setY(Length newY) { m_y = newY; }
+    void setZ(Length newZ) { m_z = newZ; }
+
+    TransformOperation::Type primitiveType() const final { return isRepresentableIn2D() ? Type::Translate : Type::Translate3D; }
+
     bool apply(TransformationMatrix& transform, const FloatSize& borderBoxSize) const final
     {
         transform.translate3d(xAsFloat(borderBoxSize), yAsFloat(borderBoxSize), zAsFloat());
@@ -66,6 +69,7 @@ public:
 
     bool isIdentity() const final { return !floatValueForLength(m_x, 1) && !floatValueForLength(m_y, 1) && !floatValueForLength(m_z, 1); }
 
+    bool operator==(const TranslateTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
     bool operator==(const TransformOperation&) const final;
 
     Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) final;
@@ -76,14 +80,7 @@ private:
 
     void dump(WTF::TextStream&) const final;
 
-    TranslateTransformOperation(const Length& tx, const Length& ty, const Length& tz, OperationType type)
-        : TransformOperation(type)
-        , m_x(tx)
-        , m_y(ty)
-        , m_z(tz)
-    {
-        ASSERT(isTranslateTransformOperationType());
-    }
+    TranslateTransformOperation(const Length&, const Length&, const Length&, TransformOperation::Type);
 
     Length m_x;
     Length m_y;
@@ -92,4 +89,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::TranslateTransformOperation, isTranslateTransformOperationType())
+SPECIALIZE_TYPE_TRAITS_TRANSFORMOPERATION(WebCore::TranslateTransformOperation, WebCore::TransformOperation::isTranslateTransformOperationType)

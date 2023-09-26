@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,22 +27,21 @@ package test.javafx.util.converter;
 
 import java.util.Arrays;
 import java.time.LocalDate;
-import java.time.chrono.Chronology;
 import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Collection;
 import java.util.Locale;
 
-import javafx.util.StringConverter;
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.LocalDateStringConverter;
 import javafx.util.converter.LocalDateStringConverterShim;
 
 import static org.junit.Assert.*;
+
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -52,42 +51,96 @@ import org.junit.runners.Parameterized;
 public class LocalDateStringConverterTest {
     private static final LocalDate VALID_DATE = LocalDate.of(1985, 1, 12);
 
-    private static final DateTimeFormatter aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy");
-    private static final DateTimeFormatter aParser = DateTimeFormatter.ofPattern("yyyy MM dd");
+    private static Locale oldLocale = null;
+    private static DateTimeFormatter aFormatter = null;
+    private static DateTimeFormatter aParser = null;
 
+    // We can only create LocalDateStringConverter object after Locale is set.
+    // Unfortunately, due to unpredictability of @Parameterized.Parameters methods
+    // in JUnit, we have to allocate it after @BeforeClass sets up Locale and
+    // necessary static fields. Otherwise, the test may collide with other
+    // Local*StringConverter tests and cause unpredictable results.
+    private enum LocalDateStringConverterVariant {
+        NO_PARAM,
+        WITH_FORMATTER_PARSER,
+        WITH_FORMAT_STYLES,
+    };
 
     @Parameterized.Parameters public static Collection implementations() {
         return Arrays.asList(new Object[][] {
-            { new LocalDateStringConverter(),
-              Locale.getDefault(Locale.Category.FORMAT), FormatStyle.SHORT,
-              VALID_DATE, null, null },
+            { LocalDateStringConverterVariant.NO_PARAM,
+              FormatStyle.SHORT, VALID_DATE },
 
-            { new LocalDateStringConverter(aFormatter, aParser),
-              Locale.getDefault(Locale.Category.FORMAT), null,
-              VALID_DATE, aFormatter, aParser },
+            { LocalDateStringConverterVariant.WITH_FORMATTER_PARSER,
+              null, VALID_DATE },
 
-            { new LocalDateStringConverter(FormatStyle.SHORT, Locale.UK, IsoChronology.INSTANCE),
-              Locale.UK, FormatStyle.SHORT,
-              VALID_DATE, null, null },
+            { LocalDateStringConverterVariant.WITH_FORMAT_STYLES,
+              FormatStyle.SHORT, VALID_DATE },
         });
     }
 
-    private LocalDateStringConverter converter;
-    private Locale locale;
+    private LocalDateStringConverterVariant converterVariant;
     private FormatStyle dateStyle;
-    private DateTimeFormatter formatter, parser;
     private LocalDate validDate;
 
-    public LocalDateStringConverterTest(LocalDateStringConverter converter, Locale locale, FormatStyle dateStyle, LocalDate validDate, DateTimeFormatter formatter, DateTimeFormatter parser) {
-        this.converter = converter;
-        this.locale = locale;
+    private LocalDateStringConverter converter;
+    private Locale locale;
+    private DateTimeFormatter formatter, parser;
+
+    public LocalDateStringConverterTest(LocalDateStringConverterVariant converterVariant, FormatStyle dateStyle, LocalDate validDate) {
+        this.converterVariant = converterVariant;
         this.dateStyle = dateStyle;
         this.validDate = validDate;
-        this.formatter = formatter;
-        this.parser = parser;
+
+        // initialized after Locale is established
+        this.converter = null;
+        this.locale = null;
+        this.formatter = null;
+        this.parser = null;
     }
 
-    @Before public void setup() {
+    @BeforeClass
+    public static void setupBeforeAll() {
+        // Tests require that default locale is en_US
+        oldLocale = Locale.getDefault();
+        Locale.setDefault(Locale.US);
+
+        // DateTimeFormatter uses default locale, so we can init this after updating locale
+        aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy");
+        aParser = DateTimeFormatter.ofPattern("yyyy MM dd");
+    }
+
+    @AfterClass
+    public static void teardownAfterAll() {
+        // Restore VM's old locale
+        Locale.setDefault(oldLocale);
+    }
+
+    @Before
+    public void setup() {
+        // Locale is established now, so we can allocate objects depending on it
+        switch (this.converterVariant) {
+        case NO_PARAM:
+            this.converter = new LocalDateStringConverter();
+            this.locale = Locale.getDefault(Locale.Category.FORMAT);
+            this.formatter = null;
+            this.parser = null;
+            break;
+        case WITH_FORMATTER_PARSER:
+            this.converter = new LocalDateStringConverter(aFormatter, aParser);
+            this.locale = Locale.getDefault(Locale.Category.FORMAT);
+            this.formatter = aFormatter;
+            this.parser = aParser;
+            break;
+        case WITH_FORMAT_STYLES:
+            this.converter = new LocalDateStringConverter(FormatStyle.SHORT, Locale.UK, IsoChronology.INSTANCE);
+            this.locale = Locale.UK;
+            this.formatter = null;
+            this.parser = null;
+            break;
+        default:
+            fail("Invalid converter variant: " + this.converterVariant.toString());
+        }
     }
 
     /*********************************************************************

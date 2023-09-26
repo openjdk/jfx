@@ -50,10 +50,13 @@ public:
     AnimationCollection& animations() { return m_animations; }
     CSSAnimationCollection& animationsCreatedByMarkup() { return m_animationsCreatedByMarkup; }
     void setAnimationsCreatedByMarkup(CSSAnimationCollection&&);
-    PropertyToTransitionMap& completedTransitionsByProperty() { return m_completedTransitionsByProperty; }
-    PropertyToTransitionMap& runningTransitionsByProperty() { return m_runningTransitionsByProperty; }
+    AnimatablePropertyToTransitionMap& completedTransitionsByProperty() { return m_completedTransitionsByProperty; }
+    AnimatablePropertyToTransitionMap& runningTransitionsByProperty() { return m_runningTransitionsByProperty; }
     const RenderStyle* lastStyleChangeEventStyle() const { return m_lastStyleChangeEventStyle.get(); }
-    void setLastStyleChangeEventStyle(std::unique_ptr<const RenderStyle>&& style) { m_lastStyleChangeEventStyle = WTFMove(style); }
+    void setLastStyleChangeEventStyle(std::unique_ptr<const RenderStyle>&&);
+    void cssAnimationsDidUpdate() { m_hasPendingKeyframesUpdate = false; }
+    void keyframesRuleDidChange() { m_hasPendingKeyframesUpdate = true; }
+    bool hasPendingKeyframesUpdate() const { return m_hasPendingKeyframesUpdate; }
 
 private:
 
@@ -61,9 +64,10 @@ private:
     std::unique_ptr<const RenderStyle> m_lastStyleChangeEventStyle;
     AnimationCollection m_animations;
     CSSAnimationCollection m_animationsCreatedByMarkup;
-    PropertyToTransitionMap m_completedTransitionsByProperty;
-    PropertyToTransitionMap m_runningTransitionsByProperty;
+    AnimatablePropertyToTransitionMap m_completedTransitionsByProperty;
+    AnimatablePropertyToTransitionMap m_runningTransitionsByProperty;
     PseudoId m_pseudoId;
+    bool m_hasPendingKeyframesUpdate { false };
 };
 
 } // namespace WebCore

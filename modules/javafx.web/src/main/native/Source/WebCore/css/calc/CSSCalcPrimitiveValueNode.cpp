@@ -31,6 +31,7 @@
 #include "CSSPrimitiveValueMappings.h"
 #include "CalcExpressionLength.h"
 #include "CalcExpressionNumber.h"
+#include "CalculationValue.h"
 #include "Logging.h"
 #include <wtf/text/TextStream.h>
 
@@ -67,7 +68,7 @@ CSSCalcPrimitiveValueNode::CSSCalcPrimitiveValueNode(Ref<CSSPrimitiveValue>&& va
 // FIXME: Use calcUnitCategory?
 bool CSSCalcPrimitiveValueNode::isNumericValue() const
 {
-    return m_value->isLength() || m_value->isNumber() || m_value->isPercentage() || m_value->isAngle()
+    return m_value->isLength() || m_value->isNumber() || m_value->isInteger() || m_value->isPercentage() || m_value->isAngle()
         || m_value->isTime() || m_value->isResolution() || m_value->isFlex() || m_value->isFrequency();
 }
 
@@ -85,9 +86,6 @@ void CSSCalcPrimitiveValueNode::negate()
 void CSSCalcPrimitiveValueNode::invert()
 {
     ASSERT(isNumericValue());
-    if (!m_value->doubleValue())
-        m_value = CSSPrimitiveValue::create(std::numeric_limits<double>::infinity(), m_value->primitiveType());
-
     m_value = CSSPrimitiveValue::create(1.0 / m_value->doubleValue(), m_value->primitiveType());
 }
 
@@ -104,9 +102,7 @@ void CSSCalcPrimitiveValueNode::add(const CSSCalcPrimitiveValueNode& node, UnitC
         m_value = CSSPrimitiveValue::create(m_value->doubleValue() + node.doubleValue(valueType), valueType);
         break;
     case UnitConversion::Canonicalize: {
-        auto valueCategory = unitCategory(valueType);
-        // FIXME: It's awkward that canonicalUnitTypeForCategory() has special handling for CSSUnitCategory::Percent.
-        auto canonicalType = valueCategory == CSSUnitCategory::Percent ? CSSUnitType::CSS_PERCENTAGE : canonicalUnitTypeForCategory(valueCategory);
+        auto canonicalType = canonicalUnitTypeForUnitType(valueType);
         ASSERT(canonicalType != CSSUnitType::CSS_UNKNOWN);
         double leftValue = m_value->doubleValue(canonicalType);
         double rightValue = node.doubleValue(canonicalType);
@@ -161,6 +157,7 @@ std::unique_ptr<CalcExpressionNode> CSSCalcPrimitiveValueNode::createCalcExpress
     case CalculationCategory::Angle:
     case CalculationCategory::Time:
     case CalculationCategory::Frequency:
+    case CalculationCategory::Resolution:
     case CalculationCategory::Other:
         ASSERT_NOT_REACHED();
     }
@@ -196,6 +193,7 @@ double CSSCalcPrimitiveValueNode::computeLengthPx(const CSSToLengthConversionDat
     case CalculationCategory::Angle:
     case CalculationCategory::Time:
     case CalculationCategory::Frequency:
+    case CalculationCategory::Resolution:
     case CalculationCategory::Other:
         ASSERT_NOT_REACHED();
         break;
@@ -204,14 +202,14 @@ double CSSCalcPrimitiveValueNode::computeLengthPx(const CSSToLengthConversionDat
     return 0;
 }
 
-void CSSCalcPrimitiveValueNode::collectDirectComputationalDependencies(HashSet<CSSPropertyID>& values) const
+void CSSCalcPrimitiveValueNode::collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const
 {
-    m_value->collectDirectComputationalDependencies(values);
+    m_value->collectComputedStyleDependencies(dependencies);
 }
 
-void CSSCalcPrimitiveValueNode::collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>& values) const
+bool CSSCalcPrimitiveValueNode::convertingToLengthRequiresNonNullStyle(int lengthConversion) const
 {
-    m_value->collectDirectRootComputationalDependencies(values);
+    return m_value->convertingToLengthRequiresNonNullStyle(lengthConversion);
 }
 
 bool CSSCalcPrimitiveValueNode::isZero() const

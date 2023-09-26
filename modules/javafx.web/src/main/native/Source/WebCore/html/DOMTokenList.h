@@ -26,13 +26,14 @@
 #pragma once
 
 #include "Element.h"
+#include <wtf/FixedVector.h>
 
 namespace WebCore {
 
 class DOMTokenList {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    using IsSupportedTokenFunction = WTF::Function<bool(Document&, StringView)>;
+    using IsSupportedTokenFunction = Function<bool(Document&, StringView)>;
     DOMTokenList(Element&, const QualifiedName& attributeName, IsSupportedTokenFunction&& isSupportedToken = { });
 
     void associatedAttributeValueChanged(const AtomString&);
@@ -44,9 +45,9 @@ public:
     const AtomString& item(unsigned index) const;
 
     WEBCORE_EXPORT bool contains(const AtomString&) const;
-    ExceptionOr<void> add(const Vector<String>&);
+    ExceptionOr<void> add(const FixedVector<AtomString>&);
     ExceptionOr<void> add(const AtomString&);
-    ExceptionOr<void> remove(const Vector<String>&);
+    ExceptionOr<void> remove(const FixedVector<AtomString>&);
     ExceptionOr<void> remove(const AtomString&);
     WEBCORE_EXPORT ExceptionOr<bool> toggle(const AtomString&, std::optional<bool> force);
     ExceptionOr<bool> replace(const AtomString& token, const AtomString& newToken);
@@ -54,20 +55,20 @@ public:
 
     Element& element() const { return m_element; }
 
-    WEBCORE_EXPORT void setValue(const String&);
+    WEBCORE_EXPORT void setValue(const AtomString&);
     WEBCORE_EXPORT const AtomString& value() const;
 
 private:
-    void updateTokensFromAttributeValue(const String&);
+    void updateTokensFromAttributeValue(StringView);
     void updateAssociatedAttributeFromTokens();
 
     WEBCORE_EXPORT Vector<AtomString>& tokens();
     const Vector<AtomString>& tokens() const { return const_cast<DOMTokenList&>(*this).tokens(); }
 
-    static ExceptionOr<void> validateToken(const String&);
-    static ExceptionOr<void> validateTokens(const String* tokens, size_t length);
-    ExceptionOr<void> addInternal(const String* tokens, size_t length);
-    ExceptionOr<void> removeInternal(const String* tokens, size_t length);
+    static ExceptionOr<void> validateToken(StringView);
+    static ExceptionOr<void> validateTokens(const AtomString* tokens, size_t length);
+    ExceptionOr<void> addInternal(const AtomString* tokens, size_t length);
+    ExceptionOr<void> removeInternal(const AtomString* tokens, size_t length);
 
     Element& m_element;
     const WebCore::QualifiedName& m_attributeName;

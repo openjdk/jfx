@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,31 +25,30 @@
 
 package test.javafx.scene.web;
 
-import com.sun.webkit.WebPage;
-import com.sun.webkit.WebPageShim;
+import static javafx.concurrent.Worker.State.SUCCEEDED;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
-import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-import java.io.*;
+
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.sun.javafx.PlatformUtil;
+
 import test.util.Util;
-
-import java.util.concurrent.CountDownLatch;
-import static org.junit.Assert.assertEquals;
-
-import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class StraightLineTest {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -88,15 +87,12 @@ public class StraightLineTest {
 
     @BeforeClass
     public static void setupOnce() {
-        // Start the Test Application
-        new Thread(() -> Application.launch(StraightLineTestApp.class, (String[])null)).start();
-
-        assertTrue("Timeout waiting for FX runtime to start", Util.await(launchLatch));
+        Util.launch(launchLatch, StraightLineTestApp.class);
     }
 
     @AfterClass
     public static void tearDownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Before
@@ -110,6 +106,7 @@ public class StraightLineTest {
     }
 
     @Test public void testLine() {
+
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
 
         Util.runAndWait(() -> {
@@ -137,6 +134,7 @@ public class StraightLineTest {
                     "margin:0px;\n"+
                     "}\n" +
                     "div {\n" +
+                    "white-space:nowrap;\n"+
                     "padding:0px;\n"+
                     "width:150px;\n"+
                     "height:20px;\n"+
@@ -154,6 +152,8 @@ public class StraightLineTest {
         });
 
         assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+        //introduce sleep , so that web contents would be loaded , then take snapshot for testing
+        Util.sleep(1000);
 
         Util.runAndWait(() -> {
             WritableImage snapshot = straightLineTestApp.primaryStage.getScene().snapshot(null);

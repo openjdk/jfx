@@ -89,10 +89,12 @@ void ManetteGamepadProvider::startMonitoringGamepads(GamepadProviderClient& clie
     // devices that were already connected, so we suppress notifying clients of these.
     m_initialGamepadsConnectedTimer.startOneShot(connectionDelayInterval);
 
-    ManetteDevice* device;
-    GUniquePtr<ManetteMonitorIter> iter(manette_monitor_iterate(m_monitor.get()));
-    while (manette_monitor_iter_next(iter.get(), &device))
-        deviceConnected(device);
+    RunLoop::current().dispatch([this] {
+        ManetteDevice* device;
+        GUniquePtr<ManetteMonitorIter> iter(manette_monitor_iterate(m_monitor.get()));
+        while (manette_monitor_iter_next(iter.get(), &device))
+            deviceConnected(device);
+    });
 }
 
 void ManetteGamepadProvider::stopMonitoringGamepads(GamepadProviderClient& client)
@@ -192,6 +194,18 @@ std::unique_ptr<ManetteGamepad> ManetteGamepadProvider::removeGamepadForDevice(M
         m_gamepadVector[index] = nullptr;
 
     return result;
+}
+
+void ManetteGamepadProvider::playEffect(unsigned, const String&, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&& completionHandler)
+{
+    // Not supported by this provider.
+    completionHandler(false);
+}
+
+void ManetteGamepadProvider::stopEffects(unsigned, const String&, CompletionHandler<void()>&& completionHandler)
+{
+    // Not supported by this provider.
+    completionHandler();
 }
 
 } // namespace WebCore

@@ -29,6 +29,7 @@
 #include "FloatPoint.h"
 #include "RadialGradientAttributes.h"
 #include "RenderSVGResourceRadialGradient.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGStopElement.h"
 #include "SVGUnitTypes.h"
@@ -40,7 +41,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGRadialGradientElement);
 
 inline SVGRadialGradientElement::SVGRadialGradientElement(const QualifiedName& tagName, Document& document)
-    : SVGGradientElement(tagName, document)
+    : SVGGradientElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     // Spec: If the cx/cy/r/fr attribute is not specified, the effect is as if a value of "50%" were specified.
     ASSERT(hasTagName(SVGNames::radialGradientTag));
@@ -88,8 +89,7 @@ void SVGRadialGradientElement::svgAttributeChanged(const QualifiedName& attrName
     if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         updateRelativeLengthsInformation();
-        if (RenderObject* object = renderer())
-            object->setNeedsLayout();
+        updateSVGRendererForElementChange();
         return;
     }
 

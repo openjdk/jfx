@@ -25,16 +25,16 @@
 
 #pragma once
 
+#include "DOMWindow.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class DOMWindow;
 class Frame;
 
 class DOMWindowProperty {
 public:
-    Frame* frame() const;
+    WEBCORE_EXPORT Frame* frame() const;
     DOMWindow* window() const;
 
 protected:
@@ -42,7 +42,7 @@ protected:
     ~DOMWindowProperty() = default;
 
 private:
-    WeakPtr<DOMWindow> m_window;
+    WeakPtr<DOMWindow, WeakPtrImplWithEventTargetData> m_window;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "Gate.h"
 #include "Opcode.h"
 #include "OptionsList.h"
+#include "SecureARM64EHashPins.h"
 #include <wtf/WTFConfig.h>
 
 namespace JSC {
@@ -56,17 +57,19 @@ struct Config {
 
     bool isPermanentlyFrozen() { return g_wtfConfig.isPermanentlyFrozen; }
 
-            // All the fields in this struct should be chosen such that their
-            // initial value is 0 / null / falsy because Config is instantiated
-            // as a global singleton.
+    // All the fields in this struct should be chosen such that their
+    // initial value is 0 / null / falsy because Config is instantiated
+    // as a global singleton.
 
-            bool disabledFreezingForTesting;
-            bool restrictedOptionsEnabled;
-            bool jitDisabled;
+    bool disabledFreezingForTesting;
+    bool restrictedOptionsEnabled;
+    bool jitDisabled;
+    bool vmCreationDisallowed;
+    bool vmEntryDisallowed;
 
     bool useFastJITPermissions;
 
-            // The following HasBeenCalled flags are for auditing call_once initialization functions.
+    // The following HasBeenCalled flags are for auditing call_once initialization functions.
     bool initializeHasBeenCalled;
 
     struct {
@@ -76,28 +79,38 @@ struct Config {
         bool canUseJIT;
     } vm;
 
-            ExecutableAllocator* executableAllocator;
-            FixedVMPoolExecutableAllocator* fixedVMPoolExecutableAllocator;
-            void* startExecutableMemory;
-            void* endExecutableMemory;
-            uintptr_t startOfFixedWritableMemoryPool;
-
-#if ENABLE(SEPARATED_WX_HEAP)
-            JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
+#if CPU(ARM64E)
+    bool canUseFPAC;
 #endif
 
-            OptionsStorage options;
+    ExecutableAllocator* executableAllocator;
+    FixedVMPoolExecutableAllocator* fixedVMPoolExecutableAllocator;
+    void* startExecutableMemory;
+    void* endExecutableMemory;
+    uintptr_t startOfFixedWritableMemoryPool;
+    uintptr_t startOfStructureHeap;
+    uintptr_t sizeOfStructureHeap;
 
-            void (*shellTimeoutCheckCallback)(VM&);
+#if ENABLE(SEPARATED_WX_HEAP)
+    JITWriteSeparateHeapsFunction jitWriteSeparateHeaps;
+#endif
+
+    OptionsStorage options;
+
+    void (*shellTimeoutCheckCallback)(VM&);
 
     struct {
-        uint8_t exceptionInstructions[maxOpcodeLength + 1];
-        uint8_t wasmExceptionInstructions[maxOpcodeLength + 1];
+        uint8_t exceptionInstructions[maxBytecodeStructLength + 1];
+        uint8_t wasmExceptionInstructions[maxBytecodeStructLength + 1];
         const void* gateMap[numberOfGates];
     } llint;
 
 #if CPU(ARM64E) && ENABLE(PTRTAG_DEBUGGING)
     WTF::PtrTagLookup ptrTagLookupRecord;
+#endif
+
+#if CPU(ARM64E) && ENABLE(JIT)
+    SecureARM64EHashPins arm64eHashPins;
 #endif
 };
 
@@ -118,6 +131,7 @@ extern "C" JS_EXPORT_PRIVATE Config g_jscConfig;
 
 constexpr size_t offsetOfJSCConfigInitializeHasBeenCalled = offsetof(JSC::Config, initializeHasBeenCalled);
 constexpr size_t offsetOfJSCConfigGateMap = offsetof(JSC::Config, llint.gateMap);
+constexpr size_t offsetOfJSCConfigStartOfStructureHeap = offsetof(JSC::Config, startOfStructureHeap);
 
 } // namespace JSC
 

@@ -31,6 +31,7 @@
 
 #if ENABLE(MATHML)
 
+#include "ElementInlines.h"
 #include "EventHandler.h"
 #include "FrameLoader.h"
 #include "HTMLAnchorElement.h"
@@ -113,14 +114,31 @@ bool MathMLElement::hasPresentationalHintsForAttribute(const QualifiedName& name
     return StyledElement::hasPresentationalHintsForAttribute(name);
 }
 
+static inline bool isDisallowedMathSizeAttribute(const AtomString& value)
+{
+    // FIXME(https://webkit.org/b/245927): The CSS parser sometimes accept non-zero <number> font-size values on MathML elements, so explicitly disallow them.
+    bool ok;
+    value.toDouble(&ok);
+    if (ok && value != "0"_s)
+        return true;
+
+    // Keywords from CSS font-size are disallowed.
+    return equalIgnoringASCIICase(value, "medium"_s)
+        || value.endsWithIgnoringASCIICase("large"_s)
+        || value.endsWithIgnoringASCIICase("small"_s)
+        || equalIgnoringASCIICase(value, "smaller"_s)
+        || equalIgnoringASCIICase(value, "larger"_s)
+        || equalIgnoringASCIICase(value, "math"_s);
+}
+
 static String convertMathSizeIfNeeded(const AtomString& value)
 {
-    if (value == "small")
-        return "0.75em";
-    if (value == "normal")
-        return "1em";
-    if (value == "big")
-        return "1.5em";
+    if (value == "small"_s)
+        return "0.75em"_s;
+    if (value == "normal"_s)
+        return "1em"_s;
+    if (value == "big"_s)
+        return "1.5em"_s;
 
     // FIXME: mathsize accepts any MathML length, including named spaces (see parseMathMLLength).
     // FIXME: Might be better to use double than float.
@@ -136,17 +154,20 @@ void MathMLElement::collectPresentationalHintsForAttribute(const QualifiedName& 
 {
     if (name == mathbackgroundAttr)
         addPropertyToPresentationalHintStyle(style, CSSPropertyBackgroundColor, value);
-    else if (name == mathsizeAttr)
+    else if (name == mathsizeAttr) {
+        if (document().settings().coreMathMLEnabled()) {
+            if (!isDisallowedMathSizeAttribute(value))
+                addPropertyToPresentationalHintStyle(style, CSSPropertyFontSize, value);
+        } else
         addPropertyToPresentationalHintStyle(style, CSSPropertyFontSize, convertMathSizeIfNeeded(value));
-    else if (name == mathcolorAttr)
+    } else if (name == mathcolorAttr)
         addPropertyToPresentationalHintStyle(style, CSSPropertyColor, value);
-    else if (name == dirAttr) {
-        if (document().settings().coreMathMLEnabled() || hasTagName(mathTag) || hasTagName(mrowTag) || hasTagName(mstyleTag) || isMathMLToken())
+    else if (name == dirAttr)
             addPropertyToPresentationalHintStyle(style, CSSPropertyDirection, value);
-    } else if (name == displaystyleAttr) {
-        if (equalLettersIgnoringASCIICase(value, "false"))
+    else if (name == displaystyleAttr) {
+        if (equalLettersIgnoringASCIICase(value, "false"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyMathStyle, CSSValueCompact);
-        else if (equalLettersIgnoringASCIICase(value, "true"))
+        else if (equalLettersIgnoringASCIICase(value, "true"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyMathStyle, CSSValueNormal);
     } else {
         if (document().settings().coreMathMLEnabled()) {
@@ -179,9 +200,9 @@ bool MathMLElement::childShouldCreateRenderer(const Node& child) const
     return is<MathMLElement>(child);
 }
 
-bool MathMLElement::willRespondToMouseClickEvents()
+bool MathMLElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
-    return isLink() || StyledElement::willRespondToMouseClickEvents();
+    return isLink() || StyledElement::willRespondToMouseClickEventsWithEditability(editability);
 }
 
 void MathMLElement::defaultEventHandler(Event& event)
@@ -197,7 +218,7 @@ void MathMLElement::defaultEventHandler(Event& event)
             const auto& url = stripLeadingAndTrailingHTMLSpaces(href);
             event.setDefaultHandled();
             if (auto* frame = document().frame())
-                frame->loader().changeLocation(document().completeURL(url), "_self", &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
+                frame->loader().changeLocation(document().completeURL(url), selfTargetFrameName(), &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
             return;
         }
     }

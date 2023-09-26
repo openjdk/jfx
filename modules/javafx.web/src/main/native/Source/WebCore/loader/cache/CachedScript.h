@@ -36,8 +36,9 @@ public:
     CachedScript(CachedResourceRequest&&, PAL::SessionID, const CookieJar*);
     virtual ~CachedScript();
 
-    StringView script();
-    unsigned scriptHash();
+    enum class ShouldDecodeAsUTF8Only : bool { No, Yes };
+    WEBCORE_EXPORT StringView script(ShouldDecodeAsUTF8Only = ShouldDecodeAsUTF8Only::No);
+    WEBCORE_EXPORT unsigned scriptHash(ShouldDecodeAsUTF8Only = ShouldDecodeAsUTF8Only::No);
 
 private:
     bool mayTryReplaceEncodedData() const final { return true; }
@@ -47,7 +48,7 @@ private:
     void setEncoding(const String&) final;
     String encoding() const final;
     const TextResourceDecoder* textResourceDecoder() const final { return m_decoder.get(); }
-    void finishLoading(SharedBuffer*, const NetworkLoadMetrics&) final;
+    void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) final;
 
     void destroyDecodedData() final;
 
@@ -55,6 +56,7 @@ private:
 
     String m_script;
     unsigned m_scriptHash { 0 };
+    bool m_wasForceDecodedAsUTF8 { false };
 
     enum DecodingState { NeverDecoded, DataAndDecodedStringHaveSameBytes, DataAndDecodedStringHaveDifferentBytes };
     DecodingState m_decodingState { NeverDecoded };

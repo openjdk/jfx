@@ -46,10 +46,12 @@ public:
 
     // Any register that has been locked or acquired must be released
     // before calling prepareForTailCall() or prepareForSlowPath().
+    // Unless you know the register is not the target of a recovery.
     void lockGPR(GPRReg gpr)
     {
-        ASSERT(!m_lockedRegisters.get(gpr));
-        m_lockedRegisters.set(gpr);
+        ASSERT(!m_lockedRegisters.contains(gpr, IgnoreVectors));
+        ASSERT(Reg(gpr).isGPR());
+        m_lockedRegisters.add(gpr, IgnoreVectors);
         if (verbose)
             dataLog("   * Locking ", gpr, "\n");
     }
@@ -65,17 +67,19 @@ public:
 
     void releaseGPR(GPRReg gpr)
     {
+        ASSERT(Reg::fromIndex(gpr).isGPR());
         if (verbose) {
-            if (m_lockedRegisters.get(gpr))
+            if (m_lockedRegisters.contains(gpr, IgnoreVectors))
                 dataLog("   * Releasing ", gpr, "\n");
             else
                 dataLog("   * ", gpr, " was not locked\n");
         }
-        m_lockedRegisters.clear(gpr);
+        m_lockedRegisters.remove(gpr);
     }
 
     void restoreGPR(GPRReg gpr)
     {
+        ASSERT(Reg::fromIndex(gpr).isGPR());
         if (!m_newRegisters[gpr])
             return;
 
@@ -104,6 +108,7 @@ public:
         CallFrameShuffleData data;
         data.numLocals = numLocals();
         data.numPassedArgs = m_numPassedArgs;
+        data.numParameters = m_numParameters;
         data.callee = getNew(VirtualRegister { CallFrameSlot::callee })->recovery();
         data.args.resize(argCount());
         for (size_t i = 0; i < argCount(); ++i)
@@ -115,6 +120,15 @@ public:
 
 #if USE(JSVALUE64)
             data.registers[reg] = cachedRecovery->recovery();
+#elif USE(JSVALUE32_64)
+            ValueRecovery recovery = cachedRecovery->recovery();
+            if (reg.isGPR() && recovery.technique() == DisplacedInJSStack) {
+                JSValueRegs wantedJSValueReg = cachedRecovery->wantedJSValueRegs();
+                ASSERT(reg == wantedJSValueReg.payloadGPR() || reg == wantedJSValueReg.tagGPR());
+                bool inTag = reg == wantedJSValueReg.tagGPR();
+                data.registers[reg] = ValueRecovery::calleeSaveGPRDisplacedInJSStack(recovery.virtualRegister(), inTag);
+            } else
+                data.registers[reg] = recovery;
 #else
             RELEASE_ASSERT_NOT_REACHED();
 #endif
@@ -406,7 +420,7 @@ private:
     // We also use this to lock registers temporarily, for instance to
     // ensure that we have at least 2 available registers for loading
     // a pair on 32bits.
-    mutable RegisterSet m_lockedRegisters;
+    mutable ScalarRegisterSet m_lockedRegisters = { };
 
     // This stores the current recoveries present in registers. A null
     // CachedRecovery means we can trash the current value as we don't
@@ -435,7 +449,7 @@ private:
     {
         Reg nonTemp { };
         for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
-            if (m_lockedRegisters.get(reg))
+            if (m_lockedRegisters.contains(reg, IgnoreVectors))
                 continue;
 
             if (!check(reg))
@@ -451,8 +465,8 @@ private:
 
 #if USE(JSVALUE64)
         if (!nonTemp && m_numberTagRegister != InvalidGPRReg && check(Reg { m_numberTagRegister })) {
-            ASSERT(m_lockedRegisters.get(m_numberTagRegister));
-            m_lockedRegisters.clear(m_numberTagRegister);
+            ASSERT(m_lockedRegisters.contains(m_numberTagRegister, IgnoreVectors));
+            m_lockedRegisters.remove(m_numberTagRegister);
             nonTemp = Reg { m_numberTagRegister };
             m_numberTagRegister = InvalidGPRReg;
         }
@@ -507,7 +521,7 @@ private:
         // around twice the number of available registers on your
         // architecture), no spilling is going to take place anyways.
         for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
-            if (m_lockedRegisters.get(reg))
+            if (m_lockedRegisters.contains(reg, IgnoreVectors))
                 continue;
 
             CachedRecovery* cachedRecovery { m_newRegisters[reg] };
@@ -550,13 +564,13 @@ private:
         ensureRegister(
             [this] (const CachedRecovery& cachedRecovery) {
                 if (cachedRecovery.recovery().isInGPR())
-                    return !m_lockedRegisters.get(cachedRecovery.recovery().gpr());
+                    return !m_lockedRegisters.contains(cachedRecovery.recovery().gpr(), IgnoreVectors);
                 if (cachedRecovery.recovery().isInFPR())
-                    return !m_lockedRegisters.get(cachedRecovery.recovery().fpr());
+                    return !m_lockedRegisters.contains(cachedRecovery.recovery().fpr(), IgnoreVectors);
 #if USE(JSVALUE32_64)
                 if (cachedRecovery.recovery().technique() == InPair) {
-                    return !m_lockedRegisters.get(cachedRecovery.recovery().tagGPR())
-                        && !m_lockedRegisters.get(cachedRecovery.recovery().payloadGPR());
+                    return !m_lockedRegisters.contains(cachedRecovery.recovery().tagGPR(), IgnoreVectors)
+                        && !m_lockedRegisters.contains(cachedRecovery.recovery().payloadGPR(), IgnoreVectors);
                 }
 #endif
                 return false;
@@ -573,13 +587,13 @@ private:
         ensureRegister(
             [this] (const CachedRecovery& cachedRecovery) {
                 if (cachedRecovery.recovery().isInGPR()) {
-                    return !m_lockedRegisters.get(cachedRecovery.recovery().gpr())
+                    return !m_lockedRegisters.contains(cachedRecovery.recovery().gpr(), IgnoreVectors)
                         && !m_newRegisters[cachedRecovery.recovery().gpr()];
                 }
 #if USE(JSVALUE32_64)
                 if (cachedRecovery.recovery().technique() == InPair) {
-                    return !m_lockedRegisters.get(cachedRecovery.recovery().tagGPR())
-                        && !m_lockedRegisters.get(cachedRecovery.recovery().payloadGPR())
+                    return !m_lockedRegisters.contains(cachedRecovery.recovery().tagGPR(), IgnoreVectors)
+                        && !m_lockedRegisters.contains(cachedRecovery.recovery().payloadGPR(), IgnoreVectors)
                         && !m_newRegisters[cachedRecovery.recovery().tagGPR()]
                         && !m_newRegisters[cachedRecovery.recovery().payloadGPR()];
                 }
@@ -598,11 +612,11 @@ private:
         ensureRegister(
             [this] (const CachedRecovery& cachedRecovery) {
                 if (cachedRecovery.recovery().isInGPR())
-                    return !m_lockedRegisters.get(cachedRecovery.recovery().gpr());
+                    return !m_lockedRegisters.contains(cachedRecovery.recovery().gpr(), IgnoreVectors);
 #if USE(JSVALUE32_64)
                 if (cachedRecovery.recovery().technique() == InPair) {
-                    return !m_lockedRegisters.get(cachedRecovery.recovery().tagGPR())
-                        && !m_lockedRegisters.get(cachedRecovery.recovery().payloadGPR());
+                    return !m_lockedRegisters.contains(cachedRecovery.recovery().tagGPR(), IgnoreVectors)
+                        && !m_lockedRegisters.contains(cachedRecovery.recovery().payloadGPR(), IgnoreVectors);
                 }
 #endif
                 return false;
@@ -619,7 +633,7 @@ private:
         ensureRegister(
             [this] (const CachedRecovery& cachedRecovery) {
                 if (cachedRecovery.recovery().isInFPR())
-                    return !m_lockedRegisters.get(cachedRecovery.recovery().fpr());
+                    return !m_lockedRegisters.contains(cachedRecovery.recovery().fpr(), IgnoreVectors);
                 return false;
             });
     }
@@ -661,6 +675,32 @@ private:
         ASSERT(!cachedRecovery->wantedJSValueRegs());
         cachedRecovery->setWantedJSValueRegs(jsValueRegs);
     }
+
+#if USE(JSVALUE32_64)
+    void addNew(GPRReg gpr, ValueRecovery recovery)
+    {
+        ASSERT(gpr != InvalidGPRReg && !m_newRegisters[gpr]);
+        ASSERT(recovery.technique() == Int32DisplacedInJSStack
+            || recovery.technique() == Int32TagDisplacedInJSStack);
+        CachedRecovery* cachedRecovery = addCachedRecovery(recovery);
+        if (JSValueRegs oldRegs { cachedRecovery->wantedJSValueRegs() }) {
+            // Combine with the other CSR in the same virtual register slot
+            ASSERT(oldRegs.tagGPR() == InvalidGPRReg);
+            ASSERT(oldRegs.payloadGPR() != InvalidGPRReg && oldRegs.payloadGPR() != gpr);
+            if (recovery.technique() == Int32DisplacedInJSStack) {
+                ASSERT(cachedRecovery->recovery().technique() == Int32TagDisplacedInJSStack);
+                cachedRecovery->setWantedJSValueRegs(JSValueRegs(oldRegs.payloadGPR(), gpr));
+            } else {
+                ASSERT(cachedRecovery->recovery().technique() == Int32DisplacedInJSStack);
+                cachedRecovery->setWantedJSValueRegs(JSValueRegs(gpr, oldRegs.payloadGPR()));
+            }
+            cachedRecovery->setRecovery(
+                ValueRecovery::displacedInJSStack(recovery.virtualRegister(), DataFormatJS));
+        } else
+            cachedRecovery->setWantedJSValueRegs(JSValueRegs::payloadOnly(gpr));
+        m_newRegisters[gpr] = cachedRecovery;
+    }
+#endif
 
     void addNew(FPRReg fpr, ValueRecovery recovery)
     {
@@ -798,6 +838,7 @@ private:
     bool performSafeWrites();
 
     unsigned m_numPassedArgs { UINT_MAX };
+    unsigned m_numParameters { UINT_MAX };
 };
 
 } // namespace JSC

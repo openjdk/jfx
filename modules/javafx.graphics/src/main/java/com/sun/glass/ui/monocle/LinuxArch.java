@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,7 @@ public class LinuxArch {
     private static final int bits = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
         LinuxSystem system = LinuxSystem.getLinuxSystem();
         return (int) system.sysconf(LinuxSystem._SC_LONG_BIT);
-    });;
+    });
 
     static boolean is64Bit() {
         return bits == 64;

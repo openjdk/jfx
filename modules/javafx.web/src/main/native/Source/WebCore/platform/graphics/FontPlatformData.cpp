@@ -21,6 +21,13 @@
 #include "config.h"
 #include "FontPlatformData.h"
 
+#include "FontCache.h"
+#include "FontDescription.h"
+#include "RenderStyleConstants.h"
+#include "StyleFontSizeFunctions.h"
+
+#include <wtf/SortedArrayMap.h>
+
 namespace WebCore {
 
 FontPlatformData::FontPlatformData(WTF::HashTableDeletedValueType)
@@ -30,13 +37,6 @@ FontPlatformData::FontPlatformData(WTF::HashTableDeletedValueType)
 
 FontPlatformData::FontPlatformData()
 {
-}
-
-template<typename ValueType> static inline std::optional<ValueType> makeOptionalFromPointer(const ValueType* pointer)
-{
-    if (!pointer)
-        return std::nullopt;
-    return *pointer;
 }
 
 FontPlatformData::FontPlatformData(float size, bool syntheticBold, bool syntheticOblique, FontOrientation orientation, FontWidthVariant widthVariant, TextRenderingMode textRenderingMode, const CreationData* creationData)
@@ -64,12 +64,20 @@ FontPlatformData FontPlatformData::cloneWithSyntheticOblique(const FontPlatformD
     copy.m_syntheticOblique = syntheticOblique;
     return copy;
 }
+#endif
 
+#if !USE(FREETYPE) && (!USE(CORE_TEXT) || !PLATFORM(COCOA))
+// FIXME: Don't other platforms also need to reinstantiate their copy.m_font for scaled size?
 FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source, float size)
 {
     FontPlatformData copy(source);
-    copy.m_size = size;
+    copy.updateSize(size);
     return copy;
+}
+
+void FontPlatformData::updateSize(float size)
+{
+    m_size = size;
 }
 #endif
 
@@ -80,9 +88,22 @@ String FontPlatformData::familyName() const
     return { };
 }
 #endif
+void FontPlatformData::updateSizeWithFontSizeAdjust(const std::optional<float>& fontSizeAdjust)
+{
+    if (!fontSizeAdjust.has_value())
+        return;
 
-#if !PLATFORM(COCOA)
-Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes() const
+    auto tmpFont = FontCache::forCurrentThread().fontForPlatformData(*this);
+    auto adjustedFontSize = Style::adjustedFontSize(size(), fontSizeAdjust.value(), tmpFont->fontMetrics());
+
+    if (adjustedFontSize == size())
+        return;
+
+    updateSize(std::min(adjustedFontSize, maximumAllowedFontSize));
+}
+
+#if !PLATFORM(COCOA) && !USE(FREETYPE)
+Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes(ShouldLocalizeAxisNames) const
 {
     // FIXME: <webkit.org/b/219614> Not implemented yet.
     return { };

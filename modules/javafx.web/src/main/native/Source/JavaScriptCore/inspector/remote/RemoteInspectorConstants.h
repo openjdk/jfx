@@ -29,16 +29,19 @@
 // the WebInspector framework on the OS X side, webinspectord, and
 // iOS WebKit on the device side.
 
-#define WIRSimulatorTCPPortNumber               27753
 #define WIRXPCMachPortName                      "com.apple.webinspector"
 #define WIRXPCDebuggerServiceName               "com.apple.webinspector.debugger"
 #define WIRServiceAvailableNotification         "com.apple.webinspectord.available"
 #define WIRServiceAvailabilityCheckNotification "com.apple.webinspectord.availability_check"
 #define WIRServiceEnabledNotification           "com.apple.webinspectord.enabled"
 #define WIRServiceDisabledNotification          "com.apple.webinspectord.disabled"
-#define WIRAutomaticInspectionEnabledState      "com.apple.webinspectord.automatic_inspection_enabled"
 #define WIRRemoteAutomationEnabledNotification  "com.apple.webinspectord.remote_automation_enabled"
 #define WIRRemoteAutomationDisabledNotification "com.apple.webinspectord.remote_automation_disabled"
+
+// COMPATIBILITY(macOS 13): The key string is intentionally mismatched to support old relays.
+#define WIRGlobalNotifyStateName                    "com.apple.webinspectord.automatic_inspection_enabled"
+#define WIRGlobalNotifyStateAutomaticInspection     1ULL << 0
+#define WIRGlobalNotifyStateSimulateCustomerInstall 1ULL << 63
 
 #define WIRApplicationIdentifierKey             @"WIRApplicationIdentifierKey"
 #define WIRApplicationBundleIdentifierKey       @"WIRApplicationBundleIdentifierKey"
@@ -56,6 +59,7 @@
 #define WIRUserInfoKey                          @"WIRUserInfoKey"
 #define WIRApplicationDictionaryKey             @"WIRApplicationDictionaryKey"
 #define WIRMessageDataKey                       @"WIRMessageDataKey"
+#define WIRMessageDataTypeKey                   @"WIRMessageDataTypeKey"
 #define WIRApplicationGetListingMessage         @"WIRApplicationGetListingMessage"
 #define WIRApplicationWakeUpDebuggablesMessage  @"WIRApplicationWakeUpDebuggablesMessage"
 #define WIRIndicateMessage                      @"WIRIndicateMessage"
@@ -82,6 +86,12 @@
 #define WIRTypeWeb                              @"WIRTypeWeb" // COMPATIBILITY (iOS 13): "Web" was split into "Page" (WebCore::Page) and "WebPage" (WebKit::WebPageProxy).
 #define WIRTypeWebPage                          @"WIRTypeWebPage"
 #define WIRAutomaticallyPause                   @"WIRAutomaticallyPause"
+#define WIRMessageDataTypeChunkSupportedKey     @"WIRMessageDataTypeChunkSupportedKey"
+
+// Allowed values for WIRMessageDataTypeKey.
+#define WIRMessageDataTypeFull                  @"WIRMessageDataTypeFull"
+#define WIRMessageDataTypeChunk                 @"WIRMessageDataTypeChunk"
+#define WIRMessageDataTypeFinalChunk            @"WIRMessageDataTypeFinalChunk"
 
 // Allowed values for WIRAutomationAvailabilityKey.
 #define WIRAutomationAvailabilityNotAvailable     @"WIRAutomationAvailabilityNotAvailable"
@@ -103,6 +113,7 @@
 
 // The value for WIRSessionCapabilitiesKey is a dictionary that holds these capability key-value pairs.
 
+#define WIRAcceptInsecureCertificatesKey               @"org.webkit.webdriver.accept-insecure-certificates"
 #define WIRAllowInsecureMediaCaptureCapabilityKey      @"org.webkit.webdriver.webrtc.allow-insecure-media-capture"
 #define WIRSuppressICECandidateFilteringCapabilityKey  @"org.webkit.webdriver.webrtc.suppress-ice-candidate-filtering"
 

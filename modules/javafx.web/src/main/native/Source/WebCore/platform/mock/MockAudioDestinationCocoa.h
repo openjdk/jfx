@@ -53,8 +53,8 @@ private:
     void tick();
 
     Ref<WorkQueue> m_workQueue;
-    RunLoop::Timer<MockAudioDestinationCocoa> m_timer;
-    uint32_t m_numberOfFramesToProcess { 384 };
+    RunLoop::Timer m_timer;
+    size_t m_numberOfFramesToProcess { 384 };
 };
 
 } // namespace WebCore

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 
 #include "RealtimeMediaSourceSupportedConstraints.h"
 #include <cstdlib>
+#include <wtf/ArgumentCoder.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
@@ -237,7 +238,7 @@ public:
         return true;
     }
 
-    ValueType find(const WTF::Function<bool(ValueType)>& function) const
+    ValueType find(const Function<bool(ValueType)>& function) const
     {
         if (m_min && function(m_min.value()))
             return m_min.value();
@@ -305,7 +306,7 @@ public:
         }
 
         if (m_min) {
-            auto index = discreteCapabilityValues.findMatching([&](ValueType value) { return m_min.value() >= value; });
+            auto index = discreteCapabilityValues.findIf([&](ValueType value) { return m_min.value() >= value; });
             if (index != notFound) {
                 min = value = discreteCapabilityValues[index];
 
@@ -350,7 +351,14 @@ public:
     {
         if (!MediaConstraint::decode(decoder, constraint))
             return false;
-
+        static_assert(std::is_same_v<ValueType, int> || std::is_same_v<ValueType, double>);
+        if constexpr(std::is_same_v<ValueType, int>) {
+            if (!constraint.isInt())
+                return false;
+        } else if constexpr(std::is_same_v<ValueType, double>) {
+            if (!constraint.isDouble())
+                return false;
+        }
         if (!decoder.decode(constraint.m_min))
             return false;
         if (!decoder.decode(constraint.m_max))
@@ -524,6 +532,8 @@ public:
     {
         if (!MediaConstraint::decode(decoder, constraint))
             return false;
+        if (!constraint.isBoolean())
+            return false;
 
         if (!decoder.decode(constraint.m_exact))
             return false;
@@ -573,7 +583,7 @@ public:
 
     bool getExact(Vector<String>& exact) const
     {
-        if (!m_exact.isEmpty())
+        if (m_exact.isEmpty())
             return false;
 
         exact = m_exact;
@@ -582,7 +592,7 @@ public:
 
     bool getIdeal(Vector<String>& ideal) const
     {
-        if (!m_ideal.isEmpty())
+        if (m_ideal.isEmpty())
             return false;
 
         ideal = m_ideal;
@@ -592,7 +602,7 @@ public:
     double fitnessDistance(const String&) const;
     double fitnessDistance(const Vector<String>&) const;
 
-    const String& find(const WTF::Function<bool(const String&)>&) const;
+    const String& find(const Function<bool(const String&)>&) const;
 
     bool isEmpty() const { return m_exact.isEmpty() && m_ideal.isEmpty(); }
     bool isMandatory() const { return !m_exact.isEmpty(); }
@@ -609,6 +619,8 @@ public:
     template <class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder& decoder, StringConstraint& constraint)
     {
         if (!MediaConstraint::decode(decoder, constraint))
+            return false;
+        if (!constraint.isString())
             return false;
 
         if (!decoder.decode(constraint.m_exact))
@@ -649,8 +661,8 @@ private:
 
 class MediaTrackConstraintSetMap {
 public:
-    WEBCORE_EXPORT void forEach(WTF::Function<void(const MediaConstraint&)>&&) const;
-    void filter(const WTF::Function<bool(const MediaConstraint&)>&) const;
+    WEBCORE_EXPORT void forEach(Function<void(const MediaConstraint&)>&&) const;
+    void filter(const Function<bool(const MediaConstraint&)>&) const;
     bool isEmpty() const;
     WEBCORE_EXPORT size_t size() const;
 
@@ -676,63 +688,8 @@ public:
     std::optional<StringConstraint> deviceId() const { return m_deviceId; }
     std::optional<StringConstraint> groupId() const { return m_groupId; }
 
-    template <class Encoder> void encode(Encoder& encoder) const
-    {
-        encoder << m_width;
-        encoder << m_height;
-        encoder << m_sampleRate;
-        encoder << m_sampleSize;
-
-        encoder << m_aspectRatio;
-        encoder << m_frameRate;
-        encoder << m_volume;
-
-        encoder << m_echoCancellation;
-        encoder << m_displaySurface;
-        encoder << m_logicalSurface;
-
-        encoder << m_facingMode;
-        encoder << m_deviceId;
-        encoder << m_groupId;
-    }
-
-    template <class Decoder> static std::optional<MediaTrackConstraintSetMap> decode(Decoder& decoder)
-    {
-        MediaTrackConstraintSetMap map;
-        if (!decoder.decode(map.m_width))
-            return std::nullopt;
-        if (!decoder.decode(map.m_height))
-            return std::nullopt;
-        if (!decoder.decode(map.m_sampleRate))
-            return std::nullopt;
-        if (!decoder.decode(map.m_sampleSize))
-            return std::nullopt;
-
-        if (!decoder.decode(map.m_aspectRatio))
-            return std::nullopt;
-        if (!decoder.decode(map.m_frameRate))
-            return std::nullopt;
-        if (!decoder.decode(map.m_volume))
-            return std::nullopt;
-
-        if (!decoder.decode(map.m_echoCancellation))
-            return std::nullopt;
-        if (!decoder.decode(map.m_displaySurface))
-            return std::nullopt;
-        if (!decoder.decode(map.m_logicalSurface))
-            return std::nullopt;
-
-        if (!decoder.decode(map.m_facingMode))
-            return std::nullopt;
-        if (!decoder.decode(map.m_deviceId))
-            return std::nullopt;
-        if (!decoder.decode(map.m_groupId))
-            return std::nullopt;
-
-        return map;
-    }
-
 private:
+    friend struct IPC::ArgumentCoder<MediaTrackConstraintSetMap, void>;
     std::optional<IntConstraint> m_width;
     std::optional<IntConstraint> m_height;
     std::optional<IntConstraint> m_sampleRate;
@@ -894,7 +851,7 @@ private:
 
 struct MediaConstraints {
     void setDefaultVideoConstraints();
-    bool isConstraintSet(const WTF::Function<bool(const MediaTrackConstraintSetMap&)>&);
+    bool isConstraintSet(const Function<bool(const MediaTrackConstraintSetMap&)>&);
 
     MediaTrackConstraintSetMap mandatoryConstraints;
     Vector<MediaTrackConstraintSetMap> advancedConstraints;

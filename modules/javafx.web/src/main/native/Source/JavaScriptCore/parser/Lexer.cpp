@@ -32,9 +32,9 @@
 #include "ParseInt.h"
 #include <limits.h>
 #include <string.h>
+#include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/HexNumber.h>
-#include <wtf/Variant.h>
 #include <wtf/dtoa.h>
 
 namespace JSC {
@@ -492,7 +492,7 @@ Lexer<T>::Lexer(VM& vm, JSParserBuiltinMode builtinMode, JSParserScriptMode scri
     : m_positionBeforeLastNewline(0,0,0)
     , m_isReparsingFunction(false)
     , m_vm(vm)
-    , m_parsingBuiltinFunction(builtinMode == JSParserBuiltinMode::Builtin)
+    , m_parsingBuiltinFunction(builtinMode == JSParserBuiltinMode::Builtin || Options::exposePrivateIdentifiers())
     , m_scriptMode(scriptMode)
 {
 }
@@ -528,7 +528,7 @@ String Lexer<T>::invalidCharacterMessage() const
     case 96:
         return "Invalid character: '`'"_s;
     default:
-        return makeString("Invalid character '\\u", hex(m_current, 4, Lowercase), '\'');
+        return makeString("Invalid character '\\u"_s, hex(m_current, 4, Lowercase), '\'');
     }
 }
 
@@ -712,6 +712,7 @@ void Lexer<T>::shiftLineTerminator()
         shift();
 
     ++m_lineNumber;
+    m_lineStart = m_code;
 }
 
 template <typename T>
@@ -848,7 +849,7 @@ static inline bool isASCIIOctalDigitOrSeparator(CharacterType character)
 static inline LChar singleEscape(int c)
 {
     if (c < 128) {
-        ASSERT(static_cast<size_t>(c) < WTF_ARRAY_LENGTH(singleCharacterEscapeValuesForASCII));
+        ASSERT(static_cast<size_t>(c) < std::size(singleCharacterEscapeValuesForASCII));
         return singleCharacterEscapeValuesForASCII[c];
     }
     return 0;
@@ -986,7 +987,7 @@ template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType Lexer<LChar>::p
             ident = makeIdentifier(identifierStart, identifierLength);
             if (m_parsingBuiltinFunction) {
                 if (!isSafeBuiltinIdentifier(m_vm, ident)) {
-                    m_lexErrorMessage = makeString("The use of '", ident->string(), "' is disallowed in builtin functions.");
+                    m_lexErrorMessage = makeString("The use of '"_s, ident->string(), "' is disallowed in builtin functions."_s);
                     return ERRORTOK;
                 }
                 if (*ident == m_vm.propertyNames->undefinedKeyword)
@@ -1550,7 +1551,7 @@ ALWAYS_INLINE auto Lexer<T>::parseHex() -> std::optional<NumberParseResult>
     } while (isASCIIHexDigitOrSeparator(m_current) && maximumDigits >= 0);
 
     if (LIKELY(maximumDigits >= 0 && m_current != 'n'))
-        return NumberParseResult { hexValue };
+        return NumberParseResult { static_cast<double>(hexValue) };
 
     // No more place in the hexValue buffer.
     // The values are shifted out and placed into the m_buffer8 vector.
@@ -1609,7 +1610,7 @@ ALWAYS_INLINE auto Lexer<T>::parseBinary() -> std::optional<NumberParseResult>
     } while (isASCIIBinaryDigitOrSeparator(m_current) && digit >= 0);
 
     if (LIKELY(!isASCIIDigitOrSeparator(m_current) && digit >= 0 && m_current != 'n'))
-        return NumberParseResult { binaryValue };
+        return NumberParseResult { static_cast<double>(binaryValue) };
 
     for (int i = maximumDigits - 1; i > digit; --i)
         record8(digits[i]);
@@ -1665,7 +1666,7 @@ ALWAYS_INLINE auto Lexer<T>::parseOctal() -> std::optional<NumberParseResult>
     } while (isASCIIOctalDigitOrSeparator(m_current) && digit >= 0);
 
     if (LIKELY(!isASCIIDigitOrSeparator(m_current) && digit >= 0 && m_current != 'n'))
-        return NumberParseResult { octalValue };
+        return NumberParseResult { static_cast<double>(octalValue) };
 
     for (int i = maximumDigits - 1; i > digit; --i)
          record8(digits[i]);
@@ -1724,7 +1725,7 @@ ALWAYS_INLINE auto Lexer<T>::parseDecimal() -> std::optional<NumberParseResult>
         } while (isASCIIDigitOrSeparator(m_current) && digit >= 0);
 
         if (digit >= 0 && m_current != '.' && !isASCIIAlphaCaselessEqual(m_current, 'e') && m_current != 'n')
-            return NumberParseResult { decimalValue };
+            return NumberParseResult { static_cast<double>(decimalValue) };
 
         for (int i = maximumDigits - 1; i > digit; --i)
             record8(digits[i]);
@@ -1838,36 +1839,30 @@ ALWAYS_INLINE void Lexer<T>::parseCommentDirective()
     }
 }
 
-template <typename T>
-ALWAYS_INLINE String Lexer<T>::parseCommentDirectiveValue()
+IGNORE_WARNINGS_BEGIN("unused-but-set-variable")
+template<typename CharacterType> ALWAYS_INLINE String Lexer<CharacterType>::parseCommentDirectiveValue()
 {
     skipWhitespace();
-    bool hasNonLatin1 = false;
-    const T* stringStart = currentSourcePtr();
+    UChar mergedCharacterBits = 0;
+    auto stringStart = currentSourcePtr();
     while (!isWhiteSpace(m_current) && !isLineTerminator(m_current) && m_current != '"' && m_current != '\'' && !atEnd()) {
-        if (!isLatin1(m_current))
-            hasNonLatin1 = true;
+        if constexpr (std::is_same_v<CharacterType, UChar>)
+            mergedCharacterBits |= m_current;
         shift();
     }
-    const T* stringEnd = currentSourcePtr();
-    skipWhitespace();
+    unsigned length = currentSourcePtr() - stringStart;
 
+    skipWhitespace();
     if (!isLineTerminator(m_current) && !atEnd())
         return String();
 
-    unsigned length = stringEnd - stringStart;
-    if (hasNonLatin1) {
-        UChar* buffer = nullptr;
-        String result = StringImpl::createUninitialized(length, buffer);
-        StringImpl::copyCharacters(buffer, stringStart, length);
-        return result;
+    if constexpr (std::is_same_v<CharacterType, UChar>) {
+        if (isLatin1(mergedCharacterBits))
+            return String::make8Bit(stringStart, length);
     }
-
-    LChar* buffer = nullptr;
-    String result = StringImpl::createUninitialized(length, buffer);
-    StringImpl::copyCharacters(buffer, stringStart, length);
-    return result;
+    return { stringStart, length };
 }
+IGNORE_WARNINGS_END
 
 template <typename T>
 template <unsigned length>
@@ -2099,11 +2094,15 @@ start:
         }
         if (m_current == '*') {
             shift();
+            auto startLineNumber = m_lineNumber;
+            auto startLineStartOffset = currentLineStartOffset();
             if (parseMultilineComment())
                 goto start;
             m_lexErrorMessage = "Multiline comment was not closed properly"_s;
             token = UNTERMINATED_MULTILINE_COMMENT_ERRORTOK;
-            goto returnError;
+            m_error = true;
+            fillTokenInfo(tokenRecord, token, startLineNumber, currentOffset(), startLineStartOffset, currentPosition());
+            return token;
         }
         if (m_current == '=') {
             shift();
@@ -2297,12 +2296,12 @@ start:
             auto parseNumberResult = parseHex();
             if (!parseNumberResult)
                 tokenData->doubleValue = 0;
-            else if (WTF::holds_alternative<double>(*parseNumberResult))
-                tokenData->doubleValue = WTF::get<double>(*parseNumberResult);
+            else if (std::holds_alternative<double>(*parseNumberResult))
+                tokenData->doubleValue = std::get<double>(*parseNumberResult);
             else {
                 token = BIGINT;
                 shift();
-                tokenData->bigIntString = WTF::get<const Identifier*>(*parseNumberResult);
+                tokenData->bigIntString = std::get<const Identifier*>(*parseNumberResult);
                 tokenData->radix = 16;
             }
 
@@ -2336,12 +2335,12 @@ start:
             auto parseNumberResult = parseBinary();
             if (!parseNumberResult)
                 tokenData->doubleValue = 0;
-            else if (WTF::holds_alternative<double>(*parseNumberResult))
-                tokenData->doubleValue = WTF::get<double>(*parseNumberResult);
+            else if (std::holds_alternative<double>(*parseNumberResult))
+                tokenData->doubleValue = std::get<double>(*parseNumberResult);
             else {
                 token = BIGINT;
                 shift();
-                tokenData->bigIntString = WTF::get<const Identifier*>(*parseNumberResult);
+                tokenData->bigIntString = std::get<const Identifier*>(*parseNumberResult);
                 tokenData->radix = 2;
             }
 
@@ -2376,12 +2375,12 @@ start:
             auto parseNumberResult = parseOctal();
             if (!parseNumberResult)
                 tokenData->doubleValue = 0;
-            else if (WTF::holds_alternative<double>(*parseNumberResult))
-                tokenData->doubleValue = WTF::get<double>(*parseNumberResult);
+            else if (std::holds_alternative<double>(*parseNumberResult))
+                tokenData->doubleValue = std::get<double>(*parseNumberResult);
             else {
                 token = BIGINT;
                 shift();
-                tokenData->bigIntString = WTF::get<const Identifier*>(*parseNumberResult);
+                tokenData->bigIntString = std::get<const Identifier*>(*parseNumberResult);
                 tokenData->radix = 8;
             }
 
@@ -2417,8 +2416,8 @@ start:
         }
         if (isASCIIOctalDigit(m_current)) {
             auto parseNumberResult = parseOctal();
-            if (parseNumberResult && WTF::holds_alternative<double>(*parseNumberResult)) {
-                tokenData->doubleValue = WTF::get<double>(*parseNumberResult);
+            if (parseNumberResult && std::holds_alternative<double>(*parseNumberResult)) {
+                tokenData->doubleValue = std::get<double>(*parseNumberResult);
                 token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
             }
         }
@@ -2427,13 +2426,13 @@ start:
         if (LIKELY(token != INTEGER && token != DOUBLE)) {
             auto parseNumberResult = parseDecimal();
             if (parseNumberResult) {
-                if (WTF::holds_alternative<double>(*parseNumberResult)) {
-                    tokenData->doubleValue = WTF::get<double>(*parseNumberResult);
+                if (std::holds_alternative<double>(*parseNumberResult)) {
+                    tokenData->doubleValue = std::get<double>(*parseNumberResult);
                     token = tokenTypeForIntegerLikeToken(tokenData->doubleValue);
                 } else {
                     token = BIGINT;
                     shift();
-                    tokenData->bigIntString = WTF::get<const Identifier*>(*parseNumberResult);
+                    tokenData->bigIntString = std::get<const Identifier*>(*parseNumberResult);
                     tokenData->radix = 10;
                 }
             } else {
@@ -2472,6 +2471,8 @@ start:
         m_buffer8.shrink(0);
         break;
     case CharacterQuote: {
+        auto startLineNumber = m_lineNumber;
+        auto startLineStartOffset = currentLineStartOffset();
         StringParseResult result = StringCannotBeParsed;
         if (lexerFlags.contains(LexerFlags::DontBuildStrings))
             result = parseString<false>(tokenData, strictMode);
@@ -2480,12 +2481,16 @@ start:
 
         if (UNLIKELY(result != StringParsedSuccessfully)) {
             token = result == StringUnterminated ? UNTERMINATED_STRING_LITERAL_ERRORTOK : INVALID_STRING_LITERAL_ERRORTOK;
-            goto returnError;
+            m_error = true;
+            fillTokenInfo(tokenRecord, token, startLineNumber, currentOffset(), startLineStartOffset, currentPosition());
+            return token;
         }
         shift();
         token = STRING;
-        break;
-        }
+        m_atLineStart = false;
+        fillTokenInfo(tokenRecord, token, startLineNumber, currentOffset(), startLineStartOffset, currentPosition());
+        return token;
+    }
     case CharacterIdentifierStart: {
         if constexpr (ASSERT_ENABLED) {
             UChar32 codePoint;
@@ -2506,7 +2511,6 @@ start:
         shiftLineTerminator();
         m_atLineStart = true;
         m_hasLineTerminatorBeforeToken = true;
-        m_lineStart = m_code;
         goto start;
     case CharacterHash: {
         // Hashbang is only permitted at the start of the source text.
@@ -2567,7 +2571,6 @@ inSingleLineComment:
         shiftLineTerminator();
         m_atLineStart = true;
         m_hasLineTerminatorBeforeToken = true;
-        m_lineStart = m_code;
         if (!lastTokenWasRestrKeyword())
             goto start;
 
@@ -2627,7 +2630,7 @@ JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
             JSTokenType token = UNTERMINATED_REGEXP_LITERAL_ERRORTOK;
             fillTokenInfo(tokenRecord, token, m_lineNumber, currentOffset(), currentLineStartOffset(), currentPosition());
             m_error = true;
-            m_lexErrorMessage = makeString("Unterminated regular expression literal '", getToken(*tokenRecord), "'");
+            m_lexErrorMessage = makeString("Unterminated regular expression literal '"_s, getToken(*tokenRecord), '\'');
             return token;
         }
 
@@ -2676,8 +2679,8 @@ JSTokenType Lexer<T>::scanRegExp(JSToken* tokenRecord, UChar patternPrefix)
         m_error = true;
         String codePoint = String::fromCodePoint(currentCodePoint());
         if (!codePoint)
-            codePoint = "`invalid unicode character`";
-        m_lexErrorMessage = makeString("Invalid non-latin character in RexExp literal's flags '", getToken(*tokenRecord), codePoint, "'");
+            codePoint = "`invalid unicode character`"_s;
+        m_lexErrorMessage = makeString("Invalid non-latin character in RexExp literal's flags '"_s, getToken(*tokenRecord), codePoint, '\'');
         return token;
     }
 
@@ -2699,6 +2702,9 @@ JSTokenType Lexer<T>::scanTemplateString(JSToken* tokenRecord, RawStringsBuildMo
     ASSERT(!m_error);
     ASSERT(m_buffer16.isEmpty());
 
+    int startingLineStartOffset = currentLineStartOffset();
+    int startingLineNumber = lineNumber();
+
     // Leading backquote ` (for template head) or closing brace } (for template trailing) are already shifted in the previous token scan.
     // So in this re-scan phase, shift() is not needed here.
     StringParseResult result = parseTemplateLiteral(tokenData, rawStringsBuildMode);
@@ -2711,7 +2717,7 @@ JSTokenType Lexer<T>::scanTemplateString(JSToken* tokenRecord, RawStringsBuildMo
 
     // Since TemplateString always ends with ` or }, m_atLineStart always becomes false.
     m_atLineStart = false;
-    fillTokenInfo(tokenRecord, token, m_lineNumber, currentOffset(), currentLineStartOffset(), currentPosition());
+    fillTokenInfo(tokenRecord, token, startingLineNumber, currentOffset(), startingLineStartOffset, currentPosition());
     return token;
 }
 

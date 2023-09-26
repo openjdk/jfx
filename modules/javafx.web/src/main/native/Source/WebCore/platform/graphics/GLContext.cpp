@@ -41,8 +41,6 @@
 #include "GLContextGLX.h"
 #endif
 
-using WTF::ThreadSpecific;
-
 namespace WebCore {
 
 class ThreadGlobalGLContext {
@@ -67,7 +65,7 @@ inline ThreadGlobalGLContext* currentContext()
 
 static bool initializeOpenGLShimsIfNeeded()
 {
-#if USE(OPENGL_ES) || USE(LIBEPOXY) || USE(ANGLE)
+#if USE(OPENGL_ES) || USE(LIBEPOXY) || (USE(ANGLE) && !(PLATFORM(GTK) || PLATFORM(WPE)))
     return true;
 #else
     static bool initialized = false;
@@ -86,6 +84,19 @@ std::unique_ptr<GLContext> GLContext::createContextForWindow(GLNativeWindowType 
         return nullptr;
 
     PlatformDisplay& display = platformDisplay ? *platformDisplay : PlatformDisplay::sharedDisplay();
+    if (auto* sharingContext = display.sharingGLContext()) {
+        // Context for window should match the type of sharing context.
+#if USE(EGL)
+        if (sharingContext->isEGLContext())
+            return GLContextEGL::createContext(windowHandle, display);
+#endif
+#if USE(GLX)
+        if (display.type() == PlatformDisplay::Type::X11)
+            return GLContextGLX::createContext(windowHandle, display);
+#endif
+        return nullptr;
+    }
+
 #if PLATFORM(WAYLAND)
     if (display.type() == PlatformDisplay::Type::Wayland) {
         if (auto eglContext = GLContextEGL::createContext(windowHandle, display))
@@ -94,16 +105,18 @@ std::unique_ptr<GLContext> GLContext::createContextForWindow(GLNativeWindowType 
     }
 #endif
 
+#if USE(EGL)
+    if (auto eglContext = GLContextEGL::createContext(windowHandle, display))
+        return eglContext;
+#endif
+
 #if USE(GLX)
     if (display.type() == PlatformDisplay::Type::X11) {
         if (auto glxContext = GLContextGLX::createContext(windowHandle, display))
             return glxContext;
     }
 #endif
-#if USE(EGL)
-    if (auto eglContext = GLContextEGL::createContext(windowHandle, display))
-        return eglContext;
-#endif
+
     return nullptr;
 }
 
@@ -121,15 +134,23 @@ std::unique_ptr<GLContext> GLContext::createSharingContext(PlatformDisplay& disp
         return nullptr;
 
 #if USE(GLX)
+    bool forceGLX = display.type() == PlatformDisplay::Type::X11 && getenv("WEBKIT_FORCE_GLX");
+#else
+    bool forceGLX = false;
+#endif
+
+#if USE(EGL)
+    if (!forceGLX) {
+    if (auto eglContext = GLContextEGL::createSharingContext(display))
+        return eglContext;
+    }
+#endif
+
+#if USE(GLX)
     if (display.type() == PlatformDisplay::Type::X11) {
         if (auto glxContext = GLContextGLX::createSharingContext(display))
             return glxContext;
     }
-#endif
-
-#if USE(EGL) || PLATFORM(WAYLAND) || PLATFORM(WPE)
-    if (auto eglContext = GLContextEGL::createSharingContext(display))
-        return eglContext;
 #endif
 
     return nullptr;
@@ -178,11 +199,11 @@ unsigned GLContext::version()
     if (!m_version) {
         // Version string can start with the version number (all versions except GLES 1 and 2) or with
         // "OpenGL". Different fields inside the version string are separated by spaces.
-        String versionString = String(reinterpret_cast<const char*>(::glGetString(GL_VERSION)));
+        auto versionString = String::fromLatin1(reinterpret_cast<const char*>(::glGetString(GL_VERSION)));
         Vector<String> versionStringComponents = versionString.split(' ');
 
         Vector<String> versionDigits;
-        if (versionStringComponents[0] == "OpenGL") {
+        if (versionStringComponents[0] == "OpenGL"_s) {
             // If the version string starts with "OpenGL" it can be GLES 1 or 2. In GLES1 version string starts
             // with "OpenGL ES-<profile> major.minor" and in GLES2 with "OpenGL ES major.minor". Version is the
             // third component in both cases.

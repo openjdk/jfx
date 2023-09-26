@@ -44,6 +44,12 @@ namespace WTF {
     public:
         typedef SegmentedVectorIterator<T, SegmentSize> Iterator;
 
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = T;
+        using difference_type = ptrdiff_t;
+        using pointer = T*;
+        using reference = T&;
+
         ~SegmentedVectorIterator() { }
 
         T& operator*() const { return m_vector.at(m_index); }
@@ -96,7 +102,10 @@ namespace WTF {
         WTF_MAKE_FAST_ALLOCATED;
 
     public:
-        typedef SegmentedVectorIterator<T, SegmentSize> Iterator;
+        using Iterator = SegmentedVectorIterator<T, SegmentSize>;
+
+        using value_type = T;
+        using iterator = Iterator;
 
         SegmentedVector() = default;
 

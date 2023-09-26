@@ -24,6 +24,10 @@
 
 namespace WebCore {
 
+namespace InlineIterator {
+class LineBoxIteratorLegacyPath;
+}
+
 class HitTestRequest;
 class HitTestResult;
 
@@ -33,22 +37,26 @@ public:
     LegacyEllipsisBox(RenderBlockFlow&, const AtomString& ellipsisStr, LegacyInlineFlowBox* parent, int width, int height, int y, bool firstLine, bool isHorizontal, LegacyInlineBox* markupBox);
     void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) final;
-    void setSelectionState(RenderObject::HighlightState s) { m_selectionState = s; }
-    IntRect selectionRect();
+    IntRect selectionRect() const;
 
     RenderBlockFlow& blockFlow() const { return downcast<RenderBlockFlow>(LegacyInlineBox::renderer()); }
 
 private:
+    friend class InlineIterator::LineBoxIteratorLegacyPath;
+
+    bool isEllipsisBox() const final { return true; }
+
+    TextRun createTextRun() const;
+
     void paintMarkupBox(PaintInfo&, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom, const RenderStyle&);
     int height() const { return m_height; }
-    RenderObject::HighlightState selectionState() override { return m_selectionState; }
-    void paintSelection(GraphicsContext&, const LayoutPoint&, const RenderStyle&, const FontCascade&);
     LegacyInlineBox* markupBox() const;
 
     bool m_shouldPaintMarkupBox;
-    RenderObject::HighlightState m_selectionState { RenderObject::HighlightState::None };
     int m_height;
     AtomString m_str;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_INLINE_BOX(LegacyEllipsisBox, isEllipsisBox())

@@ -34,6 +34,7 @@
 #if ENABLE(VIDEO)
 
 #include "HTMLElement.h"
+#include "SpeechSynthesisUtterance.h"
 #include "TextTrackCue.h"
 #include "VTTRegion.h"
 #include <wtf/TypeCasts.h>
@@ -43,7 +44,6 @@ namespace WebCore {
 class DocumentFragment;
 class HTMLDivElement;
 class HTMLSpanElement;
-class ScriptExecutionContext;
 class VTTCue;
 class VTTScanner;
 class WebVTTCueData;
@@ -82,7 +82,7 @@ public:
     virtual ~VTTCue();
 
     enum AutoKeyword { Auto };
-    using LineAndPositionSetting = Variant<double, AutoKeyword>;
+    using LineAndPositionSetting = std::variant<double, AutoKeyword>;
 
     void setTrack(TextTrack*);
 
@@ -110,7 +110,7 @@ public:
     const String& align() const;
     ExceptionOr<void> setAlign(const String&);
 
-    const String& text() const { return m_content; }
+    const String& text() const final { return m_content; }
     void setText(const String&);
 
     const String& cueSettings() const { return m_settings; }
@@ -136,10 +136,11 @@ public:
     void removeDisplayTree() final;
     void markFutureAndPastNodes(ContainerNode*, const MediaTime&, const MediaTime&);
 
-    int calculateComputedLinePosition();
+    int calculateComputedLinePosition() const;
     std::pair<double, double> getPositionCoordinates() const;
 
-    std::pair<double, double> getCSSPosition() const;
+    using DisplayPosition = std::pair<std::optional<double>, std::optional<double>>;
+    const DisplayPosition& getCSSPosition() const { return m_displayPosition; };
 
     CSSValueID getCSSAlignment() const;
     int getCSSSize() const;
@@ -189,25 +190,27 @@ public:
 
     double calculateComputedTextPosition() const;
 
+#if ENABLE(SPEECH_SYNTHESIS)
+    RefPtr<SpeechSynthesisUtterance> speechUtterance() const { return m_speechUtterance; }
+#endif
+
 protected:
     VTTCue(Document&, const MediaTime& start, const MediaTime& end, String&& content);
 
     bool cueContentsMatch(const TextTrackCue&) const override;
 
-    virtual Ref<VTTCueBox> createDisplayTree();
-    VTTCueBox& displayTreeInternal();
+    virtual RefPtr<VTTCueBox> createDisplayTree();
+    VTTCueBox* displayTreeInternal();
 
     void toJSON(JSON::Object&) const override;
 
 private:
     VTTCue(Document&, const WebVTTCueData&);
 
-    void initialize();
+    void initialize(Document&);
     void createWebVTTNodeTree();
 
     void parseSettings(const String&);
-
-    bool textPositionIsAuto() const;
 
     void determineTextDirection();
     void calculateDisplayParameters();
@@ -223,13 +226,16 @@ private:
     };
     CueSetting settingName(VTTScanner&);
 
-    static constexpr double undefinedPosition = -1;
+    void prepareToSpeak(SpeechSynthesis&, double, double, SpeakCueCompletionHandler&&) final;
+    void beginSpeaking() final;
+    void pauseSpeaking() final;
+    void cancelSpeaking() final;
 
     String m_content;
     String m_settings;
-    double m_linePosition { std::numeric_limits<double>::quiet_NaN() };
-    double m_computedLinePosition { std::numeric_limits<double>::quiet_NaN() };
-    double m_textPosition { std::numeric_limits<double>::quiet_NaN() };
+    std::optional<double> m_linePosition;
+    std::optional<double> m_computedLinePosition;
+    std::optional<double> m_textPosition;
     int m_cueSize { 100 };
 
     WritingDirection m_writingDirection { Horizontal };
@@ -242,10 +248,14 @@ private:
     RefPtr<HTMLSpanElement> m_cueHighlightBox;
     RefPtr<HTMLDivElement> m_cueBackdropBox;
     RefPtr<VTTCueBox> m_displayTree;
+#if ENABLE(SPEECH_SYNTHESIS)
+    RefPtr<SpeechSynthesis> m_speechSynthesis;
+    RefPtr<SpeechSynthesisUtterance> m_speechUtterance;
+#endif
 
     CSSValueID m_displayDirection { CSSValueLtr };
     int m_displaySize { 0 };
-    std::pair<float, float> m_displayPosition;
+    DisplayPosition m_displayPosition;
 
     MediaTime m_originalStartTime;
 

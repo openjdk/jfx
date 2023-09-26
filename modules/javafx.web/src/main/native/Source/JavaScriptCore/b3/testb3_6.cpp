@@ -26,7 +26,7 @@
 #include "config.h"
 #include "testb3.h"
 
-#if ENABLE(B3_JIT)
+#if ENABLE(B3_JIT) && !CPU(ARM)
 
 static const char* const dmbIsh = "dmb      ish";
 static const char* const dmbIshst = "dmb      ishst";
@@ -1451,10 +1451,10 @@ void testSpillDefSmallerThanUse()
 
     // Make sure arg64 is on the stack.
     PatchpointValue* forceSpill = root->appendNew<PatchpointValue>(proc, Int64, Origin());
-    RegisterSet clobberSet = RegisterSet::allGPRs();
-    clobberSet.exclude(RegisterSet::stackRegisters());
-    clobberSet.exclude(RegisterSet::reservedHardwareRegisters());
-    clobberSet.clear(GPRInfo::returnValueGPR); // Force the return value for aliasing below.
+    RegisterSetBuilder clobberSet = RegisterSetBuilder::allGPRs();
+    clobberSet.exclude(RegisterSetBuilder::stackRegisters());
+    clobberSet.exclude(RegisterSetBuilder::reservedHardwareRegisters());
+    clobberSet.remove(GPRInfo::returnValueGPR); // Force the return value for aliasing below.
     forceSpill->clobberLate(clobberSet);
     forceSpill->setGenerator(
         [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -1478,9 +1478,9 @@ void testSpillUseLargerThanDef()
     BasicBlock* elseCase = proc.addBlock();
     BasicBlock* tail = proc.addBlock();
 
-    RegisterSet clobberSet = RegisterSet::allGPRs();
-    clobberSet.exclude(RegisterSet::stackRegisters());
-    clobberSet.exclude(RegisterSet::reservedHardwareRegisters());
+    RegisterSetBuilder clobberSet = RegisterSetBuilder::allGPRs();
+    clobberSet.exclude(RegisterSetBuilder::stackRegisters());
+    clobberSet.exclude(RegisterSetBuilder::reservedHardwareRegisters());
 
     Value* condition = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
     Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
@@ -1510,7 +1510,7 @@ void testSpillUseLargerThanDef()
     forceSpill->setGenerator(
         [&] (CCallHelpers& jit, const StackmapGenerationParams&) {
             AllowMacroScratchRegisterUsage allowScratch(jit);
-            clobberSet.forEach([&] (Reg reg) {
+            clobberSet.buildAndValidate().forEach([&] (Reg reg) {
                 jit.move(CCallHelpers::TrustedImm64(0xffffffffffffffff), reg.gpr());
             });
         });
@@ -1550,13 +1550,13 @@ void testLateRegister()
     // to use that LateRegister as the result for the first patchpoint. But of course it can not do that.
     // So it must issue a mov after the first patchpoint from the first's result into the second's input.
 
-    RegisterSet regs = RegisterSet::allGPRs();
-    regs.exclude(RegisterSet::stackRegisters());
-    regs.exclude(RegisterSet::reservedHardwareRegisters());
+    RegisterSetBuilder regs = RegisterSetBuilder::allGPRs();
+    regs.exclude(RegisterSetBuilder::stackRegisters());
+    regs.exclude(RegisterSetBuilder::reservedHardwareRegisters());
     Vector<Value*> lateUseArgs;
     unsigned result = 0;
     for (GPRReg reg = CCallHelpers::firstRegister(); reg <= CCallHelpers::lastRegister(); reg = CCallHelpers::nextRegister(reg)) {
-        if (!regs.get(reg))
+        if (!regs.buildAndValidate().contains(reg, IgnoreVectors))
             continue;
         result++;
         if (reg == GPRInfo::regT0)
@@ -1569,7 +1569,7 @@ void testLateRegister()
     {
         unsigned i = 0;
         for (GPRReg reg = CCallHelpers::firstRegister(); reg <= CCallHelpers::lastRegister(); reg = CCallHelpers::nextRegister(reg)) {
-            if (!regs.get(reg))
+            if (!regs.buildAndValidate().contains(reg, IgnoreVectors))
                 continue;
             if (reg == GPRInfo::regT0)
                 continue;
@@ -1657,7 +1657,7 @@ void testInterpreter()
     polyJump->effects = Effects();
     polyJump->effects.terminal = true;
     polyJump->appendSomeRegister(opcode);
-    polyJump->clobber(RegisterSet::macroScratchRegisters());
+    polyJump->clobber(RegisterSetBuilder::macroClobberedGPRs());
     polyJump->numGPScratchRegisters = 2;
     dispatch->appendSuccessor(FrequentedBlock(addToDataPointer));
     dispatch->appendSuccessor(FrequentedBlock(addToCodePointer));
@@ -1677,8 +1677,8 @@ void testInterpreter()
             AllowMacroScratchRegisterUsage allowScratch(jit);
             Vector<Box<CCallHelpers::Label>> labels = params.successorLabels();
 
-            MacroAssemblerCodePtr<JSSwitchPtrTag>* jumpTable = bitwise_cast<MacroAssemblerCodePtr<JSSwitchPtrTag>*>(
-                params.proc().addDataSection(sizeof(MacroAssemblerCodePtr<JSSwitchPtrTag>) * labels.size()));
+            CodePtr<JSSwitchPtrTag>* jumpTable = bitwise_cast<CodePtr<JSSwitchPtrTag>*>(
+                params.proc().addDataSection(sizeof(CodePtr<JSSwitchPtrTag>) * labels.size()));
 
             GPRReg scratch = params.gpScratch(0);
 
@@ -1796,7 +1796,7 @@ void testInterpreter()
     data.append(1);
     data.append(0);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("data = ", listDump(data), "\n");
 
     // We'll write a program that prints the numbers 1..100.
@@ -1832,7 +1832,7 @@ void testInterpreter()
 
     code.append(Stop);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("code = ", listDump(code), "\n");
 
     CHECK(!invoke<intptr_t>(*interpreter, data.data(), code.data(), &stream));
@@ -1841,7 +1841,7 @@ void testInterpreter()
     for (unsigned i = 0; i < 100; ++i)
         CHECK(stream[i] == i + 1);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("stream = ", listDump(stream), "\n");
 }
 
@@ -2366,7 +2366,7 @@ void testTerminalPatchpointThatNeedsToBeSpilled()
 
     PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Int32, Origin());
     patchpoint->effects.terminal = true;
-    patchpoint->clobber(RegisterSet::macroScratchRegisters());
+    patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
 
     root->appendSuccessor(success);
     root->appendSuccessor(FrequentedBlock(slowPath, FrequencyClass::Rare));
@@ -2391,7 +2391,7 @@ void testTerminalPatchpointThatNeedsToBeSpilled()
 
     Vector<Value*> args;
     {
-        RegisterSet fillAllGPRsSet = proc.mutableGPRs();
+        RegisterSetBuilder fillAllGPRsSet = proc.mutableGPRs();
         for (unsigned i = 0; i < fillAllGPRsSet.numberOfSetRegisters(); i++)
             args.append(success->appendNew<Const32Value>(proc, Origin(), i));
     }
@@ -2447,7 +2447,7 @@ void testTerminalPatchpointThatNeedsToBeSpilled2()
 
     PatchpointValue* patchpoint = one->appendNew<PatchpointValue>(proc, Int32, Origin());
     patchpoint->effects.terminal = true;
-    patchpoint->clobber(RegisterSet::macroScratchRegisters());
+    patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
     patchpoint->append(arg, ValueRep::SomeRegister);
 
     one->appendSuccessor(success);
@@ -2475,7 +2475,7 @@ void testTerminalPatchpointThatNeedsToBeSpilled2()
 
     Vector<Value*> args;
     {
-        RegisterSet fillAllGPRsSet = proc.mutableGPRs();
+        RegisterSetBuilder fillAllGPRsSet = proc.mutableGPRs();
         for (unsigned i = 0; i < fillAllGPRsSet.numberOfSetRegisters(); i++)
             args.append(success->appendNew<Const32Value>(proc, Origin(), i));
     }
@@ -2532,7 +2532,7 @@ void testPatchpointTerminalReturnValue(bool successIsRare)
 
     PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Int32, Origin());
     patchpoint->effects.terminal = true;
-    patchpoint->clobber(RegisterSet::macroScratchRegisters());
+    patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
 
     if (successIsRare) {
         root->appendSuccessor(FrequentedBlock(success, FrequencyClass::Rare));
@@ -2602,7 +2602,7 @@ void testMemoryFence()
     auto code = compileProc(proc);
     CHECK_EQ(invoke<int>(*code), 42);
     if (isX86())
-        checkUsesInstruction(*code, "lock or $0x0, (%rsp)");
+        checkUsesInstruction(*code, "lock orl $0x0, (%rsp)");
     if (isARM64())
         checkUsesInstruction(*code, dmbIsh);
     checkDoesNotUseInstruction(*code, "mfence");
@@ -2783,14 +2783,14 @@ void testMoveConstants()
     auto check = [] (Procedure& proc) {
         proc.resetReachability();
 
-        if (shouldBeVerbose()) {
+        if (shouldBeVerbose(proc)) {
             dataLog("IR before:\n");
             dataLog(proc);
         }
 
         moveConstants(proc);
 
-        if (shouldBeVerbose()) {
+        if (shouldBeVerbose(proc)) {
             dataLog("IR after:\n");
             dataLog(proc);
         }
@@ -2837,6 +2837,78 @@ void testMoveConstants()
         root->appendNew<Value>(proc, Return, Origin());
         check(proc);
     }
+}
+
+extern "C" {
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(testMoveConstantsWithLargeOffsetsFunc, double, (double));
+}
+JSC_DEFINE_JIT_OPERATION(testMoveConstantsWithLargeOffsetsFunc, double, (double a))
+{
+    return a;
+}
+
+void testMoveConstantsWithLargeOffsets()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* result = root->appendNew<ConstDoubleValue>(proc, Origin(), 0);
+    double rhs = 0;
+    for (size_t i = 0; i < 4100; i++) {
+        rhs += i;
+        Value* callResult = root->appendNew<CCallValue>(proc, Double, Origin(),
+            root->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(testMoveConstantsWithLargeOffsetsFunc)),
+            root->appendNew<ConstDoubleValue>(proc, Origin(), i));
+        result = root->appendNew<Value>(proc, Add, Origin(), result, callResult);
+    }
+    root->appendNewControlValue(proc, Return, Origin(), result);
+
+    CHECK_EQ(compileAndRun<double>(proc), rhs);
+}
+
+void testMoveConstantsSIMD()
+{
+    auto check = [] (Procedure& proc) {
+        proc.resetReachability();
+
+        if (shouldBeVerbose(proc)) {
+            dataLog("IR before:\n");
+            dataLog(proc);
+        }
+
+        moveConstants(proc);
+
+        if (shouldBeVerbose(proc)) {
+            dataLog("IR after:\n");
+            dataLog(proc);
+        }
+
+        UseCounts useCounts(proc);
+        unsigned count = 0;
+        for (Value* value : proc.values()) {
+            if (useCounts.numUses(value) && value->hasV128())
+                count++;
+        }
+
+        if (count == 0)
+            return;
+
+        crashLock.lock();
+        dataLog("Fail in testMoveConstants: non memory Const128:\n");
+        dataLog(proc);
+        CRASH();
+    };
+
+    v128_t vector { };
+    vector.u64x2[0] = 0x123412341334;
+    vector.u64x2[1] = 0x123412341334;
+
+    Procedure proc(/* usesSIMD */ true);
+    BasicBlock* root = proc.addBlock();
+    Value* a = root->appendNew<Const128Value>(proc, Origin(), vector);
+    Value* b = root->appendNew<Const128Value>(proc, Origin(), vector);
+    root->appendNew<CCallValue>(proc, Void, Origin(), a, b);
+    root->appendNew<Value>(proc, Return, Origin());
+    check(proc);
 }
 
 void testPCOriginMapDoesntInsertNops()

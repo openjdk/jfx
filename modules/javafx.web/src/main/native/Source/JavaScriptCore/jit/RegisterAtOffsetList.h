@@ -44,19 +44,19 @@ public:
 
     void dump(PrintStream&) const;
 
-    size_t size() const
-    {
-        return m_registers.size();
-    }
+    size_t registerCount() const { return m_registers.size(); }
+    size_t sizeOfAreaInBytes() const { return m_sizeOfAreaInBytes; }
 
     const RegisterAtOffset& at(size_t index) const
     {
         return m_registers.at(index);
     }
 
-    RegisterAtOffset& at(size_t index)
+    void adjustOffsets(ptrdiff_t addend)
     {
-        return m_registers.at(index);
+        // This preserves m_sizeOfAreaInBytes
+        for (RegisterAtOffset &item : m_registers)
+            item = RegisterAtOffset { item.reg(), item.offset() + addend, item.width() };
     }
 
     RegisterAtOffset* find(Reg) const;
@@ -65,10 +65,13 @@ public:
     FixedVector<RegisterAtOffset>::const_iterator begin() const { return m_registers.begin(); }
     FixedVector<RegisterAtOffset>::const_iterator end() const { return m_registers.end(); }
 
+
     static const RegisterAtOffsetList& llintBaselineCalleeSaveRegisters(); // Registers and Offsets saved and used by the LLInt.
+    static const RegisterAtOffsetList& dfgCalleeSaveRegisters(); // Registers and Offsets saved and used by DFG.
 
 private:
     FixedVector<RegisterAtOffset> m_registers;
+    size_t m_sizeOfAreaInBytes { 0 };
 };
 
 } // namespace JSC

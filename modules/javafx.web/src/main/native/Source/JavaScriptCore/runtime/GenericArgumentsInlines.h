@@ -60,7 +60,7 @@ bool GenericArguments<Type>::getOwnPropertySlot(JSObject* object, JSGlobalObject
             return true;
         }
         if (ident == vm.propertyNames->iteratorSymbol) {
-            slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), thisObject->globalObject(vm)->arrayProtoValuesFunction());
+            slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), thisObject->globalObject()->arrayProtoValuesFunction());
             return true;
         }
     }
@@ -276,7 +276,7 @@ void GenericArguments<Type>::initModifiedArgumentsDescriptor(JSGlobalObject* glo
     RELEASE_ASSERT(!m_modifiedArgumentsDescriptor);
 
     if (argsLength) {
-        void* backingStore = vm.gigacageAuxiliarySpace(m_modifiedArgumentsDescriptor.kind).allocateNonVirtual(vm, WTF::roundUpToMultipleOf<8>(argsLength), nullptr, AllocationFailureMode::ReturnNull);
+        void* backingStore = vm.gigacageAuxiliarySpace(m_modifiedArgumentsDescriptor.kind).allocate(vm, WTF::roundUpToMultipleOf<8>(argsLength), nullptr, AllocationFailureMode::ReturnNull);
         if (UNLIKELY(!backingStore)) {
             throwOutOfMemoryError(globalObject, scope);
             return;

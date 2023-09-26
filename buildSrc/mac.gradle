@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,13 +50,12 @@ MAC.libDest = "lib"
  * In extreme cases you can provide your own properties in your home dir to
  * override these settings or pass them on the command line.
  */
-def prefSdkVersion = "11.1"
+def prefSdkVersion = "13.3"
 def defaultSdkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${prefSdkVersion}.sdk";
 
 // Set the minimum API version that we require (developers do not need to override this)
 // Note that this is not necessarily the same as the preferred SDK version
-def isAarch64 = TARGET_ARCH == "aarch64" || TARGET_ARCH == "arm64";
-def macOSMinVersion = isAarch64 ? "11.0" : "10.12";
+def macOSMinVersion = "11.0";
 defineProperty("MACOSX_MIN_VERSION", macOSMinVersion);
 
 def macOSMinVersionArr = macOSMinVersion.split("\\.")
@@ -153,6 +152,7 @@ def dynamicLinkFlags = [
         commonParams,
         "-framework", "AppKit",
         "-framework", "ApplicationServices",
+        "-framework", "Carbon",
         "-framework", "OpenGL",
         "-framework", "QuartzCore",
         "-framework", "Security",
@@ -184,9 +184,11 @@ MAC.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/mac/*"]
-MAC.glass.nativeSource = file("${project("graphics").projectDir}/src/main/native-glass/mac")
+MAC.glass.nativeSource = [file("${project("graphics").projectDir}/src/main/native-glass/mac"),
+        file("${project("graphics").projectDir}/src/main/native-glass/mac/a11y")]
 MAC.glass.compiler = compiler
 MAC.glass.ccFlags = [ccFlags,
+    "-DGL_SILENCE_DEPRECATION",
     "-DMACOS_MIN_VERSION_MAJOR=$macOSMinVersionMajor",
     "-DMACOS_MIN_VERSION_MINOR=$macOSMinVersionMinor"].flatten()
 MAC.glass.linker = linker
@@ -237,7 +239,7 @@ MAC.prismES2.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-prism-es2/macosx")
 ]
 MAC.prismES2.compiler = compiler
-MAC.prismES2.ccFlags = ["-DMACOSX", ccFlags].flatten()
+MAC.prismES2.ccFlags = ["-DGL_SILENCE_DEPRECATION", "-DMACOSX", ccFlags].flatten()
 MAC.prismES2.linker = linker
 MAC.prismES2.linkFlags = [linkFlags].flatten()
 MAC.prismES2.lib = "prism_es2"

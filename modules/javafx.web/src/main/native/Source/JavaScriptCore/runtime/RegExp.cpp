@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-const ClassInfo RegExp::s_info = { "RegExp", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(RegExp) };
+const ClassInfo RegExp::s_info = { "RegExp"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(RegExp) };
 
 #if REGEXP_FUNC_TEST_DATA_GEN
 const char* const RegExpFunctionalTestCollector::s_fileName = "/tmp/RegExpTestsData";
@@ -192,7 +192,7 @@ size_t RegExp::estimatedSize(JSCell* cell, VM& vm)
 
 RegExp* RegExp::createWithoutCaching(VM& vm, const String& patternString, OptionSet<Yarr::Flags> flags)
 {
-    RegExp* regExp = new (NotNull, allocateCell<RegExp>(vm.heap)) RegExp(vm, patternString, flags);
+    RegExp* regExp = new (NotNull, allocateCell<RegExp>(vm)) RegExp(vm, patternString, flags);
     regExp->finishCreation(vm);
     return regExp;
 }
@@ -227,7 +227,7 @@ void RegExp::byteCodeCompileIfNecessary(VM* vm)
     }
 }
 
-void RegExp::compile(VM* vm, Yarr::CharSize charSize)
+void RegExp::compile(VM* vm, Yarr::CharSize charSize, std::optional<StringView> sampleString)
 {
     Locker locker { cellLock() };
 
@@ -249,9 +249,10 @@ void RegExp::compile(VM* vm, Yarr::CharSize charSize)
 #if !ENABLE(YARR_JIT_BACKREFERENCES)
         && !pattern.m_containsBackreferences
 #endif
+        && !pattern.m_containsLookbehinds
         ) {
         auto& jitCode = ensureRegExpJITCode();
-        Yarr::jitCompile(pattern, m_patternString, charSize, vm, jitCode, Yarr::JITCompileMode::IncludeSubpatterns);
+        Yarr::jitCompile(pattern, m_patternString, charSize, sampleString, vm, jitCode, Yarr::JITCompileMode::IncludeSubpatterns);
         if (!jitCode.failureReason()) {
             m_state = JITCode;
             return;
@@ -259,10 +260,10 @@ void RegExp::compile(VM* vm, Yarr::CharSize charSize)
     }
 #else
     UNUSED_PARAM(charSize);
+    UNUSED_PARAM(sampleString);
 #endif
 
-    if (Options::dumpCompiledRegExpPatterns())
-        dataLog("Can't JIT this regular expression: \"", m_patternString, "\"\n");
+    dataLogLnIf(Options::dumpCompiledRegExpPatterns(), "Can't JIT this regular expression: \"/", m_patternString, "/\"");
 
     m_state = ByteCode;
     m_regExpBytecode = byteCodeCompilePattern(vm, pattern, m_constructionErrorCode);
@@ -291,7 +292,7 @@ bool RegExp::matchConcurrently(
     return true;
 }
 
-void RegExp::compileMatchOnly(VM* vm, Yarr::CharSize charSize)
+void RegExp::compileMatchOnly(VM* vm, Yarr::CharSize charSize, std::optional<StringView> sampleString)
 {
     Locker locker { cellLock() };
 
@@ -313,9 +314,10 @@ void RegExp::compileMatchOnly(VM* vm, Yarr::CharSize charSize)
 #if !ENABLE(YARR_JIT_BACKREFERENCES)
         && !pattern.m_containsBackreferences
 #endif
+        && !pattern.m_containsLookbehinds
         ) {
         auto& jitCode = ensureRegExpJITCode();
-        Yarr::jitCompile(pattern, m_patternString, charSize, vm, jitCode, Yarr::JITCompileMode::MatchOnly);
+        Yarr::jitCompile(pattern, m_patternString, charSize, sampleString, vm, jitCode, Yarr::JITCompileMode::MatchOnly);
         if (!jitCode.failureReason()) {
             m_state = JITCode;
             return;
@@ -323,10 +325,10 @@ void RegExp::compileMatchOnly(VM* vm, Yarr::CharSize charSize)
     }
 #else
     UNUSED_PARAM(charSize);
+    UNUSED_PARAM(sampleString);
 #endif
 
-    if (Options::dumpCompiledRegExpPatterns())
-        dataLog("Can't JIT this regular expression: \"", m_patternString, "\"\n");
+    dataLogLnIf(Options::dumpCompiledRegExpPatterns(), "Can't JIT this regular expression: \"/", m_patternString, "/\"");
 
     m_state = ByteCode;
     m_regExpBytecode = byteCodeCompilePattern(vm, pattern, m_constructionErrorCode);
@@ -448,10 +450,10 @@ void RegExp::matchCompareWithInterpreter(const String& s, int startOffset, int* 
             break;
         case JITCode: {
             Yarr::YarrCodeBlock& codeBlock = *m_regExpJITCode.get();
-            snprintf(jit8BitMatchOnlyAddr, jitAddrSize, "0x%014lx", reinterpret_cast<uintptr_t>(codeBlock.get8BitMatchOnlyAddr()));
-            snprintf(jit16BitMatchOnlyAddr, jitAddrSize, "0x%014lx", reinterpret_cast<uintptr_t>(codeBlock.get16BitMatchOnlyAddr()));
-            snprintf(jit8BitMatchAddr, jitAddrSize, "0x%014lx", reinterpret_cast<uintptr_t>(codeBlock.get8BitMatchAddr()));
-            snprintf(jit16BitMatchAddr, jitAddrSize, "0x%014lx", reinterpret_cast<uintptr_t>(codeBlock.get16BitMatchAddr()));
+            snprintf(jit8BitMatchOnlyAddr, jitAddrSize, "0x%014" PRIxPTR, reinterpret_cast<uintptr_t>(codeBlock.get8BitMatchOnlyAddr()));
+            snprintf(jit16BitMatchOnlyAddr, jitAddrSize, "0x%014" PRIxPTR, reinterpret_cast<uintptr_t>(codeBlock.get16BitMatchOnlyAddr()));
+            snprintf(jit8BitMatchAddr, jitAddrSize, "0x%014" PRIxPTR, reinterpret_cast<uintptr_t>(codeBlock.get8BitMatchAddr()));
+            snprintf(jit16BitMatchAddr, jitAddrSize, "0x%014" PRIxPTR, reinterpret_cast<uintptr_t>(codeBlock.get16BitMatchAddr()));
             break;
         }
         }

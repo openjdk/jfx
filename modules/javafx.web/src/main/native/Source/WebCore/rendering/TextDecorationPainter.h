@@ -24,7 +24,7 @@
 
 #include "Color.h"
 #include "FloatPoint.h"
-#include "LayoutIntegrationRunIterator.h"
+#include "InlineTextBoxStyle.h"
 #include "RenderStyleConstants.h"
 #include <wtf/OptionSet.h>
 
@@ -32,58 +32,65 @@ namespace WebCore {
 
 class FilterOperations;
 class FontCascade;
-class FloatRect;
 class GraphicsContext;
-class LegacyInlineTextBox;
 class RenderObject;
 class RenderStyle;
-class RenderText;
 class ShadowData;
 class TextRun;
 
 class TextDecorationPainter {
 public:
-    struct Styles;
-    TextDecorationPainter(GraphicsContext&, OptionSet<TextDecoration> decorations, const RenderText&, bool isFirstLine, const FontCascade&, std::optional<Styles> = std::nullopt);
-
-    void setTextRunIterator(LayoutIntegration::TextRunIterator textRun) { m_textRun = textRun; }
-    void setIsHorizontal(bool isHorizontal) { m_isHorizontal = isHorizontal; }
-    void setWidth(float width) { m_width = width; }
-    void setTextShadow(const ShadowData* textShadow) { m_shadow = textShadow; }
-    void setShadowColorFilter(const FilterOperations* colorFilter) { m_shadowColorFilter = colorFilter; }
-
-    void paintTextDecoration(const TextRun&, const FloatPoint& textOrigin, const FloatPoint& boxOrigin);
+    TextDecorationPainter(GraphicsContext&, const FontCascade&, const ShadowData*, const FilterOperations*, bool isPrinting, bool isHorizontal);
 
     struct Styles {
         bool operator==(const Styles&) const;
         bool operator!=(const Styles& other) const { return !(*this == other); }
 
-        Color underlineColor;
-        Color overlineColor;
-        Color linethroughColor;
-        TextDecorationStyle underlineStyle;
-        TextDecorationStyle overlineStyle;
-        TextDecorationStyle linethroughStyle;
+        struct DecorationStyleAndColor {
+            Color color;
+            TextDecorationStyle decorationStyle { TextDecorationStyle::Solid };
+        };
+        DecorationStyleAndColor underline;
+        DecorationStyleAndColor overline;
+        DecorationStyleAndColor linethrough;
+
+        TextDecorationSkipInk skipInk { TextDecorationSkipInk::None };
     };
-    static Color decorationColor(const RenderStyle&);
-    static OptionSet<TextDecoration> textDecorationsInEffectForStyle(const Styles&);
-    static Styles stylesForRenderer(const RenderObject&, OptionSet<TextDecoration> requestedDecorations, bool firstLineStyle = false, PseudoId = PseudoId::None);
+    struct BackgroundDecorationGeometry {
+        FloatPoint textOrigin;
+        FloatPoint boxOrigin;
+        float textBoxWidth { 0.f };
+        float textDecorationThickness { 0.f };
+        float underlineOffset { 0.f };
+        float overlineOffset { 0.f };
+        float linethroughCenter { 0.f };
+        float clippingOffset { 0.f };
+        WavyStrokeParameters wavyStrokeParameters;
+    };
+    void paintBackgroundDecorations(const TextRun&, const BackgroundDecorationGeometry&, OptionSet<TextDecorationLine>, const Styles&);
+
+    struct ForegroundDecorationGeometry {
+        FloatPoint boxOrigin;
+        float textBoxWidth { 0.f };
+        float textDecorationThickness { 0.f };
+        float linethroughCenter { 0.f };
+        WavyStrokeParameters wavyStrokeParameters;
+    };
+    void paintForegroundDecorations(const ForegroundDecorationGeometry&, const Styles&);
+
+    static Color decorationColor(const RenderStyle&, OptionSet<PaintBehavior> paintBehavior = { });
+    static Styles stylesForRenderer(const RenderObject&, OptionSet<TextDecorationLine> requestedDecorations, bool firstLineStyle = false, OptionSet<PaintBehavior> paintBehavior = { }, PseudoId = PseudoId::None);
+    static OptionSet<TextDecorationLine> textDecorationsInEffectForStyle(const TextDecorationPainter::Styles&);
 
 private:
+    void paintLineThrough(const ForegroundDecorationGeometry&, const Color&, const Styles&);
+
     GraphicsContext& m_context;
-    OptionSet<TextDecoration> m_decorations;
-    float m_wavyOffset;
-    float m_width { 0 };
-    FloatPoint m_boxOrigin;
-    bool m_isPrinting;
+    bool m_isPrinting { false };
     bool m_isHorizontal { true };
     const ShadowData* m_shadow { nullptr };
     const FilterOperations* m_shadowColorFilter { nullptr };
-    LayoutIntegration::TextRunIterator m_textRun;
     const FontCascade& m_font;
-
-    Styles m_styles;
-    const RenderStyle& m_lineStyle;
 };
 
 } // namespace WebCore

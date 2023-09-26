@@ -239,13 +239,10 @@ public:
 
     void repaintInCompositedAncestor(RenderLayer&, const LayoutRect&);
 
-    // Notify us that a layer has been added or removed
-    void layerWasAdded(RenderLayer& parent, RenderLayer& child);
+    // Notify us that a layer has been removed
     void layerWillBeRemoved(RenderLayer& parent, RenderLayer& child);
 
     void layerStyleChanged(StyleDifference, RenderLayer&, const RenderStyle* oldStyle);
-
-    static bool canCompositeClipPath(const RenderLayer&);
 
     // Get the nearest ancestor layer that has overflow or clip, but is not a stacking context
     RenderLayer* enclosingNonStackingClippingLayer(const RenderLayer&) const;
@@ -266,7 +263,7 @@ public:
 
     GraphicsLayer* layerForClipping() const {  return m_clipLayer ? m_clipLayer.get() : m_scrollContainerLayer.get();  }
 
-#if ENABLE(RUBBER_BANDING)
+#if HAVE(RUBBER_BANDING)
     GraphicsLayer* headerLayer() const { return m_layerForHeader.get(); }
     GraphicsLayer* footerLayer() const { return m_layerForFooter.get(); }
 #endif
@@ -339,7 +336,7 @@ public:
     GraphicsLayer* layerForHorizontalScrollbar() const { return m_layerForHorizontalScrollbar.get(); }
     GraphicsLayer* layerForVerticalScrollbar() const { return m_layerForVerticalScrollbar.get(); }
     GraphicsLayer* layerForScrollCorner() const { return m_layerForScrollCorner.get(); }
-#if ENABLE(RUBBER_BANDING)
+#if HAVE(RUBBER_BANDING)
     GraphicsLayer* layerForOverhangAreas() const { return m_layerForOverhangAreas.get(); }
     GraphicsLayer* layerForContentShadow() const { return m_contentShadowLayer.get(); }
 
@@ -349,7 +346,7 @@ public:
     GraphicsLayer* updateLayerForFooter(bool wantsLayer);
 
     void updateLayerForOverhangAreasBackgroundColor();
-#endif // ENABLE(RUBBER_BANDING)
+#endif // HAVE(RUBBER_BANDING)
 
     // FIXME: make the coordinated/async terminology consistent.
     bool isViewportConstrainedFixedOrStickyLayer(const RenderLayer&) const;
@@ -402,6 +399,7 @@ private:
     // GraphicsLayerClient implementation
     void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, GraphicsLayerPaintBehavior) override;
     void customPositionForVisibleRectComputation(const GraphicsLayer*, FloatPoint&) const override;
+    bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char* propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
     bool isTrackingRepaints() const override { return m_isTrackingRepaints; }
 
     // GraphicsLayerUpdaterClient implementation
@@ -418,7 +416,6 @@ private:
     bool requiresCompositingLayer(const RenderLayer&, RequiresCompositingData&) const;
     // Whether the layer could ever be composited.
     bool canBeComposited(const RenderLayer&) const;
-    bool needsCompositingUpdateForStyleChangeOnNonCompositedLayer(RenderLayer&, const RenderStyle* oldStyle) const;
 
     // Make or destroy the backing for this layer; returns true if backing changed.
     enum class BackingRequired { No, Yes, Unknown };
@@ -541,7 +538,7 @@ private:
     FixedPositionViewportConstraints computeFixedViewportConstraints(RenderLayer&) const;
     StickyPositionViewportConstraints computeStickyViewportConstraints(RenderLayer&) const;
 
-    LayoutRect parentRelativeScrollableRect(const RenderLayer&, const RenderLayer* ancestorLayer) const;
+    RoundedRect parentRelativeScrollableRect(const RenderLayer&, const RenderLayer* ancestorLayer) const;
 
     // Returns list of layers and their clip rects required to clip the given layer, which include clips in the
     // containing block chain between the given layer and its composited ancestor.
@@ -551,7 +548,7 @@ private:
     bool requiresHorizontalScrollbarLayer() const;
     bool requiresVerticalScrollbarLayer() const;
     bool requiresScrollCornerLayer() const;
-#if ENABLE(RUBBER_BANDING)
+#if HAVE(RUBBER_BANDING)
     bool requiresOverhangAreasLayer() const;
     bool requiresContentShadowLayer() const;
 #endif
@@ -615,7 +612,7 @@ private:
     RefPtr<GraphicsLayer> m_layerForHorizontalScrollbar;
     RefPtr<GraphicsLayer> m_layerForVerticalScrollbar;
     RefPtr<GraphicsLayer> m_layerForScrollCorner;
-#if ENABLE(RUBBER_BANDING)
+#if HAVE(RUBBER_BANDING)
     RefPtr<GraphicsLayer> m_layerForOverhangAreas;
     RefPtr<GraphicsLayer> m_contentShadowLayer;
     RefPtr<GraphicsLayer> m_layerForTopOverhangArea;
@@ -645,7 +642,7 @@ private:
 #endif
 };
 
-void paintScrollbar(Scrollbar*, GraphicsContext&, const IntRect& clip);
+void paintScrollbar(Scrollbar*, GraphicsContext&, const IntRect& clip, const Color& backgroundColor = Color());
 
 WTF::TextStream& operator<<(WTF::TextStream&, CompositingUpdateType);
 WTF::TextStream& operator<<(WTF::TextStream&, CompositingPolicy);

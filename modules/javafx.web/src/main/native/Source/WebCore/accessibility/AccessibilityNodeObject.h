@@ -53,12 +53,12 @@ public:
 
     bool canvasHasFallbackContent() const override;
 
+    bool isBusy() const override;
     bool isControl() const override;
     bool isFieldset() const override;
     bool isGroup() const override;
     bool isHeading() const override;
     bool isHovered() const override;
-    bool isImageButton() const override;
     bool isInputImage() const override;
     bool isLink() const override;
     bool isMenu() const override;
@@ -67,11 +67,9 @@ public:
     bool isMenuItem() const override;
     bool isMenuRelated() const override;
     bool isMultiSelectable() const override;
-    virtual bool isNativeCheckboxOrRadio() const;
-    bool isNativeImage() const override;
+    bool isNativeImage() const;
     bool isNativeTextControl() const override;
     bool isPasswordField() const override;
-    AccessibilityObject* passwordFieldOrContainingPasswordField() override;
     bool isProgressIndicator() const override;
     bool isSearchField() const override;
     bool isSlider() const override;
@@ -89,8 +87,10 @@ public:
     Node* node() const override { return m_node; }
     Document* document() const override;
 
+    void setFocused(bool) override;
+    bool isFocused() const override;
     bool canSetFocusAttribute() const override;
-    int headingLevel() const override;
+    unsigned headingLevel() const override;
 
     bool canSetValueAttribute() const override;
 
@@ -99,6 +99,8 @@ public:
     float maxValueForRange() const override;
     float minValueForRange() const override;
     float stepValueForRange() const override;
+
+    AccessibilityOrientation orientation() const override;
 
     AXCoreObject* selectedRadioButton() override;
     AXCoreObject* selectedTabItem() override;
@@ -111,6 +113,8 @@ public:
     String helpText() const override;
     String title() const override;
     String text() const override;
+    void alternativeText(Vector<AccessibilityText>&) const;
+    void helpText(Vector<AccessibilityText>&) const;
     String stringValue() const override;
     SRGBA<uint8_t> colorValue() const override;
     String ariaLabeledByAttribute() const override;
@@ -131,8 +135,7 @@ public:
     AccessibilityObject* parentObject() const override;
     AccessibilityObject* parentObjectIfExists() const override;
 
-    void childrenChanged() override;
-    void updateAccessibilityRole() override;
+    void updateRole() override;
 
     void increment() override;
     void decrement() override;
@@ -152,23 +155,43 @@ protected:
     bool isDetached() const override { return !m_node; }
 
     virtual AccessibilityRole determineAccessibilityRole();
-    void addChildren() override;
-
-    bool canHaveChildren() const override;
+    enum class TreatStyleFormatGroupAsInline {
+        No,
+        Yes
+    };
+    AccessibilityRole determineAccessibilityRoleFromNode(TreatStyleFormatGroupAsInline = TreatStyleFormatGroupAsInline::No) const;
     AccessibilityRole ariaRoleAttribute() const override;
     virtual AccessibilityRole determineAriaRoleAttribute() const;
     AccessibilityRole remapAriaRoleDueToParent(AccessibilityRole) const;
+
+    void addChildren() override;
+    void clearChildren() override;
+    void updateChildrenIfNecessary() override;
+    bool canHaveChildren() const override;
     bool isDescendantOfBarrenParent() const override;
-    void alterSliderValue(bool increase);
-    void changeValueByStep(bool increase);
+
+    enum class StepAction : bool { Decrement, Increment };
+    void alterRangeValue(StepAction);
+    void changeValueByStep(StepAction);
     // This returns true if it's focusable but it's not content editable and it's not a control or ARIA control.
     bool isGenericFocusableElement() const;
+
+    bool elementAttributeValue(const QualifiedName&) const;
+
+    const String liveRegionStatus() const override;
+    const String liveRegionRelevant() const override;
+    bool liveRegionAtomic() const override;
+
     bool isLabelable() const;
+    AccessibilityObject* correspondingControlForLabelElement() const override;
+    AccessibilityObject* correspondingLabelForControlElement() const override;
     HTMLLabelElement* labelForElement(Element*) const;
     String textForLabelElement(Element*) const;
+    HTMLLabelElement* labelElementContainer() const;
+
     String ariaAccessibilityDescription() const;
-    void ariaLabeledByElements(Vector<Element*>& elements) const;
-    String accessibilityDescriptionForElements(Vector<Element*> &elements) const;
+    Vector<Element*> ariaLabeledByElements() const;
+    String descriptionForElements(Vector<Element*>&&) const;
     LayoutRect boundingBoxRect() const override;
     String ariaDescribedByAttribute() const override;
 
@@ -177,21 +200,27 @@ protected:
     AccessibilityObject* menuButtonForMenu() const;
     AccessibilityObject* captionForFigure() const;
     virtual void titleElementText(Vector<AccessibilityText>&) const;
+    bool exposesTitleUIElement() const override;
 
 private:
     bool isAccessibilityNodeObject() const final { return true; }
     void accessibilityText(Vector<AccessibilityText>&) const override;
-    void alternativeText(Vector<AccessibilityText>&) const;
     void visibleText(Vector<AccessibilityText>&) const;
-    void helpText(Vector<AccessibilityText>&) const;
     String alternativeTextForWebArea() const;
     void ariaLabeledByText(Vector<AccessibilityText>&) const;
     bool computeAccessibilityIsIgnored() const override;
     bool usesAltTagForTextComputation() const;
     bool roleIgnoresTitle() const;
-    bool postKeyboardKeysForValueChange(bool increase);
-    void setNodeValue(bool increase, float value);
+    bool postKeyboardKeysForValueChange(StepAction);
+    void setNodeValue(StepAction, float);
     bool performDismissAction() final;
+    bool hasTextAlternative() const;
+
+    void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
+    bool needsToUpdateChildren() const override { return m_childrenDirty; }
+    void setNeedsToUpdateSubtree() override { m_subtreeDirty = true; }
+
+    bool isDescendantOfElementType(const HashSet<QualifiedName>&) const;
 
     Node* m_node;
 };

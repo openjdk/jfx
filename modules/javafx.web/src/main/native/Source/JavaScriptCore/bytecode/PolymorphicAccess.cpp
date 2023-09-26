@@ -73,71 +73,78 @@ void AccessGenerationState::succeed()
 {
     restoreScratch();
     if (jit->codeBlock()->useDataIC())
-        jit->ret();
+        jit->farJump(CCallHelpers::Address(stubInfo->m_stubInfoGPR, StructureStubInfo::offsetOfDoneLocation()), JSInternalPtrTag);
     else
         success.append(jit->jump());
 }
 
-const RegisterSet& AccessGenerationState::liveRegistersForCall()
+const ScalarRegisterSet& AccessGenerationState::liveRegistersForCall()
 {
     if (!m_calculatedRegistersForCallAndExceptionHandling)
         calculateLiveRegistersForCallAndExceptionHandling();
     return m_liveRegistersForCall;
 }
 
-const RegisterSet& AccessGenerationState::liveRegistersToPreserveAtExceptionHandlingCallSite()
+const ScalarRegisterSet& AccessGenerationState::liveRegistersToPreserveAtExceptionHandlingCallSite()
 {
     if (!m_calculatedRegistersForCallAndExceptionHandling)
         calculateLiveRegistersForCallAndExceptionHandling();
     return m_liveRegistersToPreserveAtExceptionHandlingCallSite;
 }
 
-static RegisterSet calleeSaveRegisters()
+static RegisterSetBuilder calleeSaveRegisters()
 {
-    RegisterSet result = RegisterSet::registersToNotSaveForJSCall();
-    result.filter(RegisterSet::registersToNotSaveForCCall());
-    return result;
+    return RegisterSetBuilder(RegisterSetBuilder::vmCalleeSaveRegisters())
+        .filter(RegisterSetBuilder::calleeSaveRegisters())
+        .merge(RegisterSetBuilder::reservedHardwareRegisters())
+        .merge(RegisterSetBuilder::stackRegisters());
 }
 
-const RegisterSet& AccessGenerationState::calculateLiveRegistersForCallAndExceptionHandling()
+const ScalarRegisterSet& AccessGenerationState::calculateLiveRegistersForCallAndExceptionHandling()
 {
     if (!m_calculatedRegistersForCallAndExceptionHandling) {
         m_calculatedRegistersForCallAndExceptionHandling = true;
 
-        m_liveRegistersToPreserveAtExceptionHandlingCallSite = jit->codeBlock()->jitCode()->liveRegistersToPreserveAtExceptionHandlingCallSite(jit->codeBlock(), stubInfo->callSiteIndex);
+        m_liveRegistersToPreserveAtExceptionHandlingCallSite = jit->codeBlock()->jitCode()->liveRegistersToPreserveAtExceptionHandlingCallSite(jit->codeBlock(), stubInfo->callSiteIndex).buildScalarRegisterSet();
         m_needsToRestoreRegistersIfException = m_liveRegistersToPreserveAtExceptionHandlingCallSite.numberOfSetRegisters() > 0;
         if (m_needsToRestoreRegistersIfException)
             RELEASE_ASSERT(JITCode::isOptimizingJIT(jit->codeBlock()->jitType()));
 
-        m_liveRegistersForCall = RegisterSet(m_liveRegistersToPreserveAtExceptionHandlingCallSite, allocator->usedRegisters());
-        m_liveRegistersForCall.exclude(calleeSaveRegisters());
+        auto liveRegistersForCall = RegisterSetBuilder(m_liveRegistersToPreserveAtExceptionHandlingCallSite.toRegisterSet(), allocator->usedRegisters());
+        if (jit->codeBlock()->useDataIC())
+            liveRegistersForCall.add(stubInfo->m_stubInfoGPR, IgnoreVectors);
+        liveRegistersForCall.exclude(calleeSaveRegisters().buildAndValidate().includeWholeRegisterWidth());
+        m_liveRegistersForCall = liveRegistersForCall.buildScalarRegisterSet();
     }
     return m_liveRegistersForCall;
 }
 
 auto AccessGenerationState::preserveLiveRegistersToStackForCall(const RegisterSet& extra) -> SpillState
 {
-    RegisterSet liveRegisters = liveRegistersForCall();
+    RegisterSetBuilder liveRegisters = liveRegistersForCall().toRegisterSet();
     liveRegisters.merge(extra);
+    liveRegisters.filter(RegisterSetBuilder::allScalarRegisters());
 
     unsigned extraStackPadding = 0;
-    unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(*jit, liveRegisters, extraStackPadding);
+    unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(*jit, liveRegisters.buildAndValidate(), extraStackPadding);
     return SpillState {
-        WTFMove(liveRegisters),
+        liveRegisters.buildScalarRegisterSet(),
         numberOfStackBytesUsedForRegisterPreservation
     };
 }
 
-auto AccessGenerationState::preserveLiveRegistersToStackForCallWithoutExceptions(const RegisterSet& extra) -> SpillState
+auto AccessGenerationState::preserveLiveRegistersToStackForCallWithoutExceptions() -> SpillState
 {
-    RegisterSet liveRegisters = allocator->usedRegisters();
-    liveRegisters.exclude(calleeSaveRegisters());
-    liveRegisters.merge(extra);
+    RegisterSetBuilder liveRegisters = allocator->usedRegisters();
+    if (jit->codeBlock()->useDataIC())
+        liveRegisters.add(stubInfo->m_stubInfoGPR, IgnoreVectors);
+    liveRegisters.exclude(calleeSaveRegisters().buildAndValidate().includeWholeRegisterWidth());
+    liveRegisters.filter(RegisterSetBuilder::allScalarRegisters());
 
     constexpr unsigned extraStackPadding = 0;
-    unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(*jit, liveRegisters, extraStackPadding);
+    unsigned numberOfStackBytesUsedForRegisterPreservation = ScratchRegisterAllocator::preserveRegistersToStackForCall(*jit, liveRegisters.buildAndValidate(), extraStackPadding);
     return SpillState {
-        WTFMove(liveRegisters),
+        liveRegisters.buildScalarRegisterSet(),
         numberOfStackBytesUsedForRegisterPreservation
     };
 }
@@ -150,20 +157,20 @@ void AccessGenerationState::restoreLiveRegistersFromStackForCallWithThrownExcept
     // inline cache. The subtlety here is if the base and the result are the same register,
     // and the getter threw, we want OSR exit to see the original base value, not the result
     // of the getter call.
-    RegisterSet dontRestore = spillState.spilledRegisters;
+    RegisterSetBuilder dontRestore = spillState.spilledRegisters.toRegisterSet().includeWholeRegisterWidth();
     // As an optimization here, we only need to restore what is live for exception handling.
     // We can construct the dontRestore set to accomplish this goal by having it contain only
     // what is live for call but not live for exception handling. By ignoring things that are
     // only live at the call but not the exception handler, we will only restore things live
     // at the exception handler.
-    dontRestore.exclude(liveRegistersToPreserveAtExceptionHandlingCallSite());
-    restoreLiveRegistersFromStackForCall(spillState, dontRestore);
+    dontRestore.exclude(liveRegistersToPreserveAtExceptionHandlingCallSite().toRegisterSet().includeWholeRegisterWidth());
+    restoreLiveRegistersFromStackForCall(spillState, dontRestore.buildAndValidate());
 }
 
 void AccessGenerationState::restoreLiveRegistersFromStackForCall(const SpillState& spillState, const RegisterSet& dontRestore)
 {
     unsigned extraStackPadding = 0;
-    ScratchRegisterAllocator::restoreRegistersFromStackForCall(*jit, spillState.spilledRegisters, dontRestore, spillState.numberOfStackBytesUsedForRegisterPreservation, extraStackPadding);
+    ScratchRegisterAllocator::restoreRegistersFromStackForCall(*jit, spillState.spilledRegisters.toRegisterSet(), dontRestore, spillState.numberOfStackBytesUsedForRegisterPreservation, extraStackPadding);
 }
 
 CallSiteIndex AccessGenerationState::callSiteIndexForExceptionHandlingOrOriginal()
@@ -230,24 +237,31 @@ void AccessGenerationState::emitExplicitExceptionHandler()
                 linkBuffer.link(jumpToOSRExitExceptionHandler, originalHandler.nativeCode);
             });
     } else {
-#if ENABLE(EXTRA_CTI_THUNKS)
         CCallHelpers::Jump jumpToExceptionHandler = jit->jump();
         VM* vm = &m_vm;
         jit->addLinkTask(
             [=] (LinkBuffer& linkBuffer) {
                 linkBuffer.link(jumpToExceptionHandler, CodeLocationLabel(vm->getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
             });
-#else
-        jit->setupArguments<decltype(operationLookupExceptionHandler)>(CCallHelpers::TrustedImmPtr(&m_vm));
-        jit->prepareCallOperation(m_vm);
-        CCallHelpers::Call lookupExceptionHandlerCall = jit->call(OperationPtrTag);
-        jit->addLinkTask(
-            [=] (LinkBuffer& linkBuffer) {
-                linkBuffer.link(lookupExceptionHandlerCall, FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler));
-            });
-        jit->jumpToExceptionHandler(m_vm);
-#endif
     }
+}
+
+ScratchRegisterAllocator AccessGenerationState::makeDefaultScratchAllocator(GPRReg extraToLock)
+{
+    ScratchRegisterAllocator allocator(stubInfo->usedRegisters.toRegisterSet());
+    allocator.lock(stubInfo->baseRegs());
+    allocator.lock(stubInfo->valueRegs());
+    allocator.lock(stubInfo->m_extraGPR);
+    allocator.lock(stubInfo->m_extra2GPR);
+#if USE(JSVALUE32_64)
+    allocator.lock(stubInfo->m_extraTagGPR);
+    allocator.lock(stubInfo->m_extra2TagGPR);
+#endif
+    allocator.lock(stubInfo->m_stubInfoGPR);
+    allocator.lock(stubInfo->m_arrayProfileGPR);
+    allocator.lock(extraToLock);
+
+    return allocator;
 }
 
 PolymorphicAccess::PolymorphicAccess() { }
@@ -362,7 +376,7 @@ bool PolymorphicAccess::visitWeak(VM& vm) const
     }
     if (m_stubRoutine) {
         for (StructureID weakReference : m_stubRoutine->weakStructures()) {
-            Structure* structure = vm.getStructure(weakReference);
+            Structure* structure = weakReference.decode();
             if (!vm.heap.isMarked(structure))
                 return false;
         }
@@ -428,10 +442,6 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
     state.access = this;
     state.stubInfo = &stubInfo;
 
-    state.baseGPR = stubInfo.baseGPR;
-    state.u.thisGPR = stubInfo.regs.thisGPR;
-    state.valueRegs = stubInfo.valueRegs();
-
     // Regenerating is our opportunity to figure out what our list of cases should look like. We
     // do this here. The newly produced 'cases' list may be smaller than m_list. We don't edit
     // m_list in-place because we may still fail, in which case we want the PolymorphicAccess object
@@ -480,23 +490,8 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
     }
     m_list.resize(dstIndex);
 
-    ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+    auto allocator = state.makeDefaultScratchAllocator();
     state.allocator = &allocator;
-    allocator.lock(state.baseGPR);
-    if (state.u.thisGPR != InvalidGPRReg)
-        allocator.lock(state.u.thisGPR);
-    if (state.valueRegs)
-        allocator.lock(state.valueRegs);
-#if USE(JSVALUE32_64)
-    allocator.lock(stubInfo.baseTagGPR);
-    if (stubInfo.v.thisTagGPR != InvalidGPRReg)
-        allocator.lock(stubInfo.v.thisTagGPR);
-#endif
-    if (stubInfo.m_stubInfoGPR != InvalidGPRReg)
-        allocator.lock(stubInfo.m_stubInfoGPR);
-    if (stubInfo.m_arrayProfileGPR != InvalidGPRReg)
-        allocator.lock(stubInfo.m_arrayProfileGPR);
-
     state.scratchGPR = allocator.allocateScratchGPR();
 
     for (auto& accessCase : cases) {
@@ -521,7 +516,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
     dataLogLnIf(PolymorphicAccessInternal::verbose, "Optimized cases: ", listDump(cases));
 
     bool doesCalls = false;
-    bool doesJSGetterSetterCalls = false;
+    bool doesJSCalls = false;
     bool canBeShared = Options::useDataICSharing();
     Vector<JSCell*> cellsToMark;
     FixedVector<RefPtr<AccessCase>> keys(cases.size());
@@ -531,9 +526,10 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
         switch (entry->type()) {
         case AccessCase::Getter:
         case AccessCase::Setter:
-            // Getter / Setter relies on stack-pointer adjustment, which is tied to the linked CodeBlock, which makes this code unshareable.
+        case AccessCase::ProxyObjectLoad:
+            // Getter / Setter / ProxyObjectLoad relies on stack-pointer adjustment, which is tied to the linked CodeBlock, which makes this code unshareable.
             canBeShared = false;
-            doesJSGetterSetterCalls = true;
+            doesJSCalls = true;
             break;
         case AccessCase::CustomValueGetter:
         case AccessCase::CustomAccessorGetter:
@@ -549,7 +545,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
         ++index;
     }
     state.m_doesCalls = doesCalls;
-    state.m_doesJSGetterSetterCalls = doesJSGetterSetterCalls;
+    state.m_doesJSCalls = doesJSCalls;
 
     // At this point we're convinced that 'cases' contains the cases that we want to JIT now and we
     // won't change that set anymore.
@@ -596,16 +592,11 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
     CCallHelpers jit(codeBlock);
     state.jit = &jit;
 
-    if (codeBlock->useDataIC()) {
-        if (state.m_doesJSGetterSetterCalls) {
-            // We have no guarantee that stack-pointer is the expected one. This is not a problem if we do not have JS getter / setter calls since stack-pointer is
-            // a callee-save register in the C calling convension. However, our JS executable call does not save stack-pointer. So we are adjusting stack-pointer after
-            // JS getter / setter calls. But this could be different from the initial stack-pointer, and makes PAC tagging broken.
-            // To ensure PAC-tagging work, we first adjust stack-pointer to the appropriate one.
-            jit.addPtr(CCallHelpers::TrustedImm32(codeBlock->stackPointerOffset() * sizeof(Register)), GPRInfo::callFrameRegister, CCallHelpers::stackPointerRegister);
-            jit.tagReturnAddress();
-        } else
-            jit.tagReturnAddress();
+    if (!canBeShared && ASSERT_ENABLED) {
+        jit.addPtr(CCallHelpers::TrustedImm32(codeBlock->stackPointerOffset() * sizeof(Register)), GPRInfo::callFrameRegister, jit.scratchRegister());
+        auto ok = jit.branchPtr(CCallHelpers::Equal, CCallHelpers::stackPointerRegister, jit.scratchRegister());
+        jit.breakpoint();
+        ok.link(&jit);
     }
 
     state.preservedReusedRegisterState =
@@ -625,11 +616,12 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
 
                 if (!stubInfo.propertyIsInt32) {
 #if USE(JSVALUE64)
-                    notInt32 = jit.branchIfNotInt32(state.u.propertyGPR);
+                    notInt32 = jit.branchIfNotInt32(stubInfo.propertyGPR());
 #else
-                    notInt32 = jit.branchIfNotInt32(state.stubInfo->v.propertyTagGPR);
+                    notInt32 = jit.branchIfNotInt32(state.stubInfo->propertyTagGPR());
 #endif
                 }
+                JIT_COMMENT(jit, "Cases start (needsInt32PropertyCheck)");
                 for (unsigned i = cases.size(); i--;) {
                     fallThrough.link(&jit);
                     fallThrough.clear();
@@ -650,10 +642,10 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
 
             if (needsStringPropertyCheck) {
                 CCallHelpers::JumpList notString;
-                GPRReg propertyGPR = state.u.propertyGPR;
+                GPRReg propertyGPR = stubInfo.propertyGPR();
                 if (!stubInfo.propertyIsString) {
 #if USE(JSVALUE32_64)
-                    GPRReg propertyTagGPR = state.stubInfo->v.propertyTagGPR;
+                    GPRReg propertyTagGPR = state.stubInfo->propertyTagGPR();
                     notString.append(jit.branchIfNotCell(propertyTagGPR));
 #else
                     notString.append(jit.branchIfNotCell(propertyGPR));
@@ -665,6 +657,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
 
                 state.failAndRepatch.append(jit.branchIfRopeStringImpl(state.scratchGPR));
 
+                JIT_COMMENT(jit, "Cases start (needsStringPropertyCheck)");
                 for (unsigned i = cases.size(); i--;) {
                     fallThrough.link(&jit);
                     fallThrough.clear();
@@ -683,9 +676,9 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
             if (needsSymbolPropertyCheck) {
                 CCallHelpers::JumpList notSymbol;
                 if (!stubInfo.propertyIsSymbol) {
-                    GPRReg propertyGPR = state.u.propertyGPR;
+                    GPRReg propertyGPR = stubInfo.propertyGPR();
 #if USE(JSVALUE32_64)
-                    GPRReg propertyTagGPR = state.stubInfo->v.propertyTagGPR;
+                    GPRReg propertyTagGPR = state.stubInfo->propertyTagGPR();
                     notSymbol.append(jit.branchIfNotCell(propertyTagGPR));
 #else
                     notSymbol.append(jit.branchIfNotCell(propertyGPR));
@@ -693,6 +686,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
                     notSymbol.append(jit.branchIfNotSymbol(propertyGPR));
                 }
 
+                JIT_COMMENT(jit, "Cases start (needsSymbolPropertyCheck)");
                 for (unsigned i = cases.size(); i--;) {
                     fallThrough.link(&jit);
                     fallThrough.clear();
@@ -704,6 +698,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
             }
         } else {
             // Cascade through the list, preferring newer entries.
+            JIT_COMMENT(jit, "Cases start !(needsInt32PropertyCheck || needsStringPropertyCheck || needsSymbolPropertyCheck)");
             for (unsigned i = cases.size(); i--;) {
                 fallThrough.link(&jit);
                 fallThrough.clear();
@@ -714,8 +709,9 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
         state.failAndRepatch.append(fallThrough);
 
     } else {
+        JIT_COMMENT(jit, "Cases start (allGuardedByStructureCheck)");
         jit.load32(
-            CCallHelpers::Address(state.baseGPR, JSCell::structureIDOffset()),
+            CCallHelpers::Address(stubInfo.m_baseGPR, JSCell::structureIDOffset()),
             state.scratchGPR);
 
         Vector<int64_t> caseValues(cases.size());
@@ -730,13 +726,14 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
 
     if (!state.failAndIgnore.empty()) {
         state.failAndIgnore.link(&jit);
+        JIT_COMMENT(jit, "failAndIgnore");
 
         // Make sure that the inline cache optimization code knows that we are taking slow path because
         // of something that isn't patchable. The slow path will decrement "countdown" and will only
         // patch things if the countdown reaches zero. We increment the slow path count here to ensure
         // that the slow path does not try to patch.
         if (codeBlock->useDataIC()) {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86) || CPU(X86_64) || CPU(ARM64)
             jit.add8(CCallHelpers::TrustedImm32(1), CCallHelpers::Address(stubInfo.m_stubInfoGPR, StructureStubInfo::offsetOfCountdown()));
 #else
             jit.load8(CCallHelpers::Address(stubInfo.m_stubInfoGPR, StructureStubInfo::offsetOfCountdown()), state.scratchGPR);
@@ -744,7 +741,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
             jit.store8(state.scratchGPR, CCallHelpers::Address(stubInfo.m_stubInfoGPR, StructureStubInfo::offsetOfCountdown()));
 #endif
         } else {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86) || CPU(X86_64) || CPU(ARM64)
             jit.move(CCallHelpers::TrustedImmPtr(&stubInfo.countdown), state.scratchGPR);
             jit.add8(CCallHelpers::TrustedImm32(1), CCallHelpers::Address(state.scratchGPR));
 #else
@@ -765,23 +762,24 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
 
     CodeBlock* codeBlockThatOwnsExceptionHandlers = nullptr;
     DisposableCallSiteIndex callSiteIndexForExceptionHandling;
-    if (state.needsToRestoreRegistersIfException() && doesJSGetterSetterCalls) {
+    if (state.needsToRestoreRegistersIfException() && doesJSCalls) {
         // Emit the exception handler.
         // Note that this code is only reachable when doing genericUnwind from a pure JS getter/setter .
         // Note also that this is not reachable from custom getter/setter. Custom getter/setters will have
         // their own exception handling logic that doesn't go through genericUnwind.
         MacroAssembler::Label makeshiftCatchHandler = jit.label();
+        JIT_COMMENT(jit, "exception handler");
 
         int stackPointerOffset = codeBlock->stackPointerOffset() * sizeof(EncodedJSValue);
-        AccessGenerationState::SpillState spillStateForJSGetterSetter = state.spillStateForJSGetterSetter();
-        ASSERT(!spillStateForJSGetterSetter.isEmpty());
+        AccessGenerationState::SpillState spillStateForJSCall = state.spillStateForJSCall();
+        ASSERT(!spillStateForJSCall.isEmpty());
         stackPointerOffset -= state.preservedReusedRegisterState.numberOfBytesPreserved;
-        stackPointerOffset -= spillStateForJSGetterSetter.numberOfStackBytesUsedForRegisterPreservation;
+        stackPointerOffset -= spillStateForJSCall.numberOfStackBytesUsedForRegisterPreservation;
 
         jit.loadPtr(vm.addressOfCallFrameForCatch(), GPRInfo::callFrameRegister);
         jit.addPtr(CCallHelpers::TrustedImm32(stackPointerOffset), GPRInfo::callFrameRegister, CCallHelpers::stackPointerRegister);
 
-        state.restoreLiveRegistersFromStackForCallWithThrownException(spillStateForJSGetterSetter);
+        state.restoreLiveRegistersFromStackForCallWithThrownException(spillStateForJSCall);
         state.restoreScratch();
         CCallHelpers::Jump jumpToOSRExitExceptionHandler = jit.jump();
 
@@ -807,6 +805,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
 
     if (codeBlock->useDataIC()) {
         failure.link(&jit);
+        JIT_COMMENT(jit, "failure far jump");
         // In ARM64, we do not push anything on stack specially.
         // So we can just jump to the slow-path even though this thunk is called (not jumped).
         // FIXME: We should tail call to the thunk which calls the slow path function.
@@ -818,9 +817,10 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
     FixedVector<StructureID> weakStructures(WTFMove(state.weakStructures));
     if (codeBlock->useDataIC() && canBeShared) {
         SharedJITStubSet::Searcher searcher {
-            stubInfo.baseGPR,
-            stubInfo.valueGPR,
-            stubInfo.regs.thisGPR,
+            stubInfo.m_baseGPR,
+            stubInfo.m_valueGPR,
+            stubInfo.m_extraGPR,
+            stubInfo.m_extra2GPR,
             stubInfo.m_stubInfoGPR,
             stubInfo.m_arrayProfileGPR,
             stubInfo.usedRegisters,
@@ -859,7 +859,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(const GCSafeConcurrentJSLoc
 
     if (codeBlock->useDataIC()) {
         if (canBeShared)
-            vm.m_sharedJITStubs->add(SharedJITStubSet::Hash::Key(stubInfo.baseGPR, stubInfo.valueGPR, stubInfo.regs.thisGPR, stubInfo.m_stubInfoGPR, stubInfo.m_arrayProfileGPR, stubInfo.usedRegisters, stub.get()));
+            vm.m_sharedJITStubs->add(SharedJITStubSet::Hash::Key(stubInfo.m_baseGPR, stubInfo.m_valueGPR, stubInfo.m_extraGPR, stubInfo.m_extra2GPR, stubInfo.m_stubInfoGPR, stubInfo.m_arrayProfileGPR, stubInfo.usedRegisters, stub.get()));
     }
 
     return finishCodeGeneration(WTFMove(stub));
@@ -906,176 +906,15 @@ void printInternal(PrintStream& out, AccessGenerationResult::Kind kind)
 void printInternal(PrintStream& out, AccessCase::AccessType type)
 {
     switch (type) {
-    case AccessCase::Load:
-        out.print("Load");
+#define JSC_DEFINE_ACCESS_TYPE_CASE(name) \
+    case AccessCase::name: \
+        out.print(#name); \
         return;
-    case AccessCase::Transition:
-        out.print("Transition");
-        return;
-    case AccessCase::Delete:
-        out.print("Delete");
-        return;
-    case AccessCase::DeleteNonConfigurable:
-        out.print("DeleteNonConfigurable");
-        return;
-    case AccessCase::DeleteMiss:
-        out.print("DeleteMiss");
-        return;
-    case AccessCase::Replace:
-        out.print("Replace");
-        return;
-    case AccessCase::Miss:
-        out.print("Miss");
-        return;
-    case AccessCase::GetGetter:
-        out.print("GetGetter");
-        return;
-    case AccessCase::Getter:
-        out.print("Getter");
-        return;
-    case AccessCase::Setter:
-        out.print("Setter");
-        return;
-    case AccessCase::CustomValueGetter:
-        out.print("CustomValueGetter");
-        return;
-    case AccessCase::CustomAccessorGetter:
-        out.print("CustomAccessorGetter");
-        return;
-    case AccessCase::CustomValueSetter:
-        out.print("CustomValueSetter");
-        return;
-    case AccessCase::CustomAccessorSetter:
-        out.print("CustomAccessorSetter");
-        return;
-    case AccessCase::IntrinsicGetter:
-        out.print("IntrinsicGetter");
-        return;
-    case AccessCase::InHit:
-        out.print("InHit");
-        return;
-    case AccessCase::InMiss:
-        out.print("InMiss");
-        return;
-    case AccessCase::CheckPrivateBrand:
-        out.print("CheckPrivateBrand");
-        return;
-    case AccessCase::SetPrivateBrand:
-        out.print("SetPrivateBrand");
-        return;
-    case AccessCase::ArrayLength:
-        out.print("ArrayLength");
-        return;
-    case AccessCase::StringLength:
-        out.print("StringLength");
-        return;
-    case AccessCase::DirectArgumentsLength:
-        out.print("DirectArgumentsLength");
-        return;
-    case AccessCase::ScopedArgumentsLength:
-        out.print("ScopedArgumentsLength");
-        return;
-    case AccessCase::ModuleNamespaceLoad:
-        out.print("ModuleNamespaceLoad");
-        return;
-    case AccessCase::InstanceOfHit:
-        out.print("InstanceOfHit");
-        return;
-    case AccessCase::InstanceOfMiss:
-        out.print("InstanceOfMiss");
-        return;
-    case AccessCase::InstanceOfGeneric:
-        out.print("InstanceOfGeneric");
-        return;
-    case AccessCase::IndexedInt32Load:
-        out.print("IndexedInt32Load");
-        return;
-    case AccessCase::IndexedDoubleLoad:
-        out.print("IndexedDoubleLoad");
-        return;
-    case AccessCase::IndexedContiguousLoad:
-        out.print("IndexedContiguousLoad");
-        return;
-    case AccessCase::IndexedArrayStorageLoad:
-        out.print("IndexedArrayStorageLoad");
-        return;
-    case AccessCase::IndexedScopedArgumentsLoad:
-        out.print("IndexedScopedArgumentsLoad");
-        return;
-    case AccessCase::IndexedDirectArgumentsLoad:
-        out.print("IndexedDirectArgumentsLoad");
-        return;
-    case AccessCase::IndexedTypedArrayInt8Load:
-        out.print("IndexedTypedArrayInt8Load");
-        return;
-    case AccessCase::IndexedTypedArrayUint8Load:
-        out.print("IndexedTypedArrayUint8Load");
-        return;
-    case AccessCase::IndexedTypedArrayUint8ClampedLoad:
-        out.print("IndexedTypedArrayUint8ClampedLoad");
-        return;
-    case AccessCase::IndexedTypedArrayInt16Load:
-        out.print("IndexedTypedArrayInt16Load");
-        return;
-    case AccessCase::IndexedTypedArrayUint16Load:
-        out.print("IndexedTypedArrayUint16Load");
-        return;
-    case AccessCase::IndexedTypedArrayInt32Load:
-        out.print("IndexedTypedArrayInt32Load");
-        return;
-    case AccessCase::IndexedTypedArrayUint32Load:
-        out.print("IndexedTypedArrayUint32Load");
-        return;
-    case AccessCase::IndexedTypedArrayFloat32Load:
-        out.print("IndexedTypedArrayFloat32Load");
-        return;
-    case AccessCase::IndexedTypedArrayFloat64Load:
-        out.print("IndexedTypedArrayFloat64Load");
-        return;
-    case AccessCase::IndexedStringLoad:
-        out.print("IndexedStringLoad");
-        return;
-    case AccessCase::IndexedInt32Store:
-        out.print("IndexedInt32Store");
-        return;
-    case AccessCase::IndexedDoubleStore:
-        out.print("IndexedDoubleStore");
-        return;
-    case AccessCase::IndexedContiguousStore:
-        out.print("IndexedContiguousStore");
-        return;
-    case AccessCase::IndexedArrayStorageStore:
-        out.print("IndexedArrayStorageStore");
-        return;
-    case AccessCase::IndexedTypedArrayInt8Store:
-        out.print("IndexedTypedArrayInt8Store");
-        return;
-    case AccessCase::IndexedTypedArrayUint8Store:
-        out.print("IndexedTypedArrayUint8Store");
-        return;
-    case AccessCase::IndexedTypedArrayUint8ClampedStore:
-        out.print("IndexedTypedArrayUint8ClampedStore");
-        return;
-    case AccessCase::IndexedTypedArrayInt16Store:
-        out.print("IndexedTypedArrayInt16Store");
-        return;
-    case AccessCase::IndexedTypedArrayUint16Store:
-        out.print("IndexedTypedArrayUint16Store");
-        return;
-    case AccessCase::IndexedTypedArrayInt32Store:
-        out.print("IndexedTypedArrayInt32Store");
-        return;
-    case AccessCase::IndexedTypedArrayUint32Store:
-        out.print("IndexedTypedArrayUint32Store");
-        return;
-    case AccessCase::IndexedTypedArrayFloat32Store:
-        out.print("IndexedTypedArrayFloat32Store");
-        return;
-    case AccessCase::IndexedTypedArrayFloat64Store:
-        out.print("IndexedTypedArrayFloat64Store");
-        return;
-    }
 
+        JSC_FOR_EACH_ACCESS_TYPE(JSC_DEFINE_ACCESS_TYPE_CASE)
+
+#undef JSC_DEFINE_ACCESS_TYPE_CASE
+    }
     RELEASE_ASSERT_NOT_REACHED();
 }
 

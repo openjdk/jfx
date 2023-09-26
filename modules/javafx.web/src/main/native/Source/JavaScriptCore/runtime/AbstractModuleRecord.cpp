@@ -33,6 +33,7 @@
 #include "JSModuleEnvironment.h"
 #include "JSModuleNamespaceObject.h"
 #include "JSModuleRecord.h"
+#include "SyntheticModuleRecord.h"
 #include "VMTrapsInlines.h"
 #include "WebAssemblyModuleRecord.h"
 
@@ -41,7 +42,7 @@ namespace AbstractModuleRecordInternal {
 static constexpr bool verbose = false;
 } // namespace AbstractModuleRecordInternal
 
-const ClassInfo AbstractModuleRecord::s_info = { "AbstractModuleRecord", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AbstractModuleRecord) };
+const ClassInfo AbstractModuleRecord::s_info = { "AbstractModuleRecord"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AbstractModuleRecord) };
 
 AbstractModuleRecord::AbstractModuleRecord(VM& vm, Structure* structure, const Identifier& moduleKey)
     : Base(vm, structure)
@@ -51,19 +52,15 @@ AbstractModuleRecord::AbstractModuleRecord(VM& vm, Structure* structure, const I
 
 void AbstractModuleRecord::finishCreation(JSGlobalObject* globalObject, VM& vm)
 {
-    DeferTerminationForAWhile deferScope(vm);
-    auto scope = DECLARE_CATCH_SCOPE(vm);
-
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     auto values = initialValues();
     ASSERT(values.size() == numberOfInternalFields);
     for (unsigned index = 0; index < values.size(); ++index)
         Base::internalField(index).set(vm, this, values[index]);
 
-    JSMap* map = JSMap::create(globalObject, vm, globalObject->mapStructure());
-    scope.releaseAssertNoException();
+    JSMap* map = JSMap::create(vm, globalObject->mapStructure());
     m_dependenciesMap.set(vm, this, map);
     putDirect(vm, Identifier::fromString(vm, "dependenciesMap"_s), m_dependenciesMap.get());
 }
@@ -81,9 +78,9 @@ void AbstractModuleRecord::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(AbstractModuleRecord);
 
-void AbstractModuleRecord::appendRequestedModule(const Identifier& moduleName)
+void AbstractModuleRecord::appendRequestedModule(const Identifier& moduleName, RefPtr<ScriptFetchParameters>&& assertions)
 {
-    m_requestedModules.add(moduleName.impl());
+    m_requestedModules.append({ moduleName.impl(), WTFMove(assertions) });
 }
 
 void AbstractModuleRecord::addStarExportEntry(const Identifier& moduleName)
@@ -156,7 +153,7 @@ AbstractModuleRecord* AbstractModuleRecord::hostResolveImportedModule(JSGlobalOb
     JSValue moduleNameValue = identifierToJSValue(vm, moduleName);
     JSValue entry = m_dependenciesMap->JSMap::get(globalObject, moduleNameValue);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    RELEASE_AND_RETURN(scope, entry.getAs<AbstractModuleRecord*>(globalObject, Identifier::fromString(vm, "module")));
+    RELEASE_AND_RETURN(scope, entry.getAs<AbstractModuleRecord*>(globalObject, Identifier::fromString(vm, "module"_s)));
 }
 
 auto AbstractModuleRecord::resolveImport(JSGlobalObject* globalObject, const Identifier& localName) -> Resolution
@@ -818,13 +815,16 @@ void AbstractModuleRecord::setModuleEnvironment(JSGlobalObject* globalObject, JS
 
 Synchronousness AbstractModuleRecord::link(JSGlobalObject* globalObject, JSValue scriptFetcher)
 {
-    VM& vm = globalObject->vm();
-    if (auto* jsModuleRecord = jsDynamicCast<JSModuleRecord*>(vm, this))
+    if (auto* jsModuleRecord = jsDynamicCast<JSModuleRecord*>(this))
         return jsModuleRecord->link(globalObject, scriptFetcher);
 #if ENABLE(WEBASSEMBLY)
-    if (auto* wasmModuleRecord = jsDynamicCast<WebAssemblyModuleRecord*>(vm, this))
-        return wasmModuleRecord->link(globalObject, scriptFetcher, nullptr, Wasm::CreationMode::FromModuleLoader);
+    // WebAssembly module imports and exports are set up in the module record's
+    // evaluate() step. At this point, imports are just initialized as TDZ.
+    if (auto* wasmModuleRecord = jsDynamicCast<WebAssemblyModuleRecord*>(this))
+        return wasmModuleRecord->link(globalObject, scriptFetcher);
 #endif
+    if (auto* moduleRecord = jsDynamicCast<SyntheticModuleRecord*>(this))
+        return moduleRecord->link(globalObject, scriptFetcher);
     RELEASE_ASSERT_NOT_REACHED();
     return Synchronousness::Sync;
 }
@@ -832,12 +832,24 @@ Synchronousness AbstractModuleRecord::link(JSGlobalObject* globalObject, JSValue
 JS_EXPORT_PRIVATE JSValue AbstractModuleRecord::evaluate(JSGlobalObject* globalObject, JSValue sentValue, JSValue resumeMode)
 {
     VM& vm = globalObject->vm();
-    if (auto* jsModuleRecord = jsDynamicCast<JSModuleRecord*>(vm, this))
-        return jsModuleRecord->evaluate(globalObject, sentValue, resumeMode);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (auto* jsModuleRecord = jsDynamicCast<JSModuleRecord*>(this))
+        RELEASE_AND_RETURN(scope, jsModuleRecord->evaluate(globalObject, sentValue, resumeMode));
 #if ENABLE(WEBASSEMBLY)
-    if (auto* wasmModuleRecord = jsDynamicCast<WebAssemblyModuleRecord*>(vm, this))
-        return wasmModuleRecord->evaluate(globalObject);
+    if (auto* wasmModuleRecord = jsDynamicCast<WebAssemblyModuleRecord*>(this)) {
+        // WebAssembly imports need to be supplied during evaluation so that, e.g.,
+        // JS module exports are actually available to be read and installed as import
+        // bindings.
+        wasmModuleRecord->initializeImports(globalObject, nullptr, Wasm::CreationMode::FromModuleLoader);
+        RETURN_IF_EXCEPTION(scope, jsUndefined());
+        wasmModuleRecord->initializeExports(globalObject);
+        RETURN_IF_EXCEPTION(scope, jsUndefined());
+        RELEASE_AND_RETURN(scope, wasmModuleRecord->evaluate(globalObject));
+    }
 #endif
+    if (auto* moduleRecord = jsDynamicCast<SyntheticModuleRecord*>(this))
+        RELEASE_AND_RETURN(scope, moduleRecord->evaluate(globalObject));
     RELEASE_ASSERT_NOT_REACHED();
     return jsUndefined();
 }
@@ -859,8 +871,8 @@ void AbstractModuleRecord::dump()
     dataLog("\nAnalyzing ModuleRecord key(", printableName(m_moduleKey), ")\n");
 
     dataLog("    Dependencies: ", m_requestedModules.size(), " modules\n");
-    for (const auto& moduleName : m_requestedModules)
-        dataLog("      module(", printableName(moduleName), ")\n");
+    for (const auto& request : m_requestedModules)
+        dataLogLn("      module(", printableName(request.m_specifier), "),assertions(", RawPointer(request.m_assertions.get()), ")");
 
     dataLog("    Import: ", m_importEntries.size(), " entries\n");
     for (const auto& pair : m_importEntries) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "CustomElementFormValue.h"
 #include "GCReachableRef.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -42,6 +43,7 @@ namespace WebCore {
 class CustomElementReactionQueueItem;
 class Document;
 class Element;
+class HTMLFormElement;
 class JSCustomElementInterface;
 class QualifiedName;
 
@@ -54,6 +56,8 @@ public:
 
     void add(Element&);
     void processQueue(JSC::JSGlobalObject*);
+
+    Vector<GCReachableRef<Element>> takeElements();
 
 private:
     void invokeAll();
@@ -75,9 +79,19 @@ public:
     static void enqueueDisconnectedCallbackIfNeeded(Element&);
     static void enqueueAdoptedCallbackIfNeeded(Element&, Document& oldDocument, Document& newDocument);
     static void enqueueAttributeChangedCallbackIfNeeded(Element&, const QualifiedName&, const AtomString& oldValue, const AtomString& newValue);
+    static void enqueueFormAssociatedCallbackIfNeeded(Element&, HTMLFormElement*);
+    static void enqueueFormDisabledCallbackIfNeeded(Element&, bool isDisabled);
+    static void enqueueFormResetCallbackIfNeeded(Element&);
+    static void enqueueFormStateRestoreCallbackIfNeeded(Element&, CustomElementFormValue&&);
     static void enqueuePostUpgradeReactions(Element&);
 
     bool observesStyleAttribute() const;
+    bool isElementInternalsDisabled() const;
+    bool isElementInternalsAttached() const;
+    void setElementInternalsAttached();
+    bool isFormAssociated() const;
+    bool hasFormStateRestoreCallback() const;
+
     void invokeAll(Element&);
     void clear();
     bool isEmpty() const { return m_items.isEmpty(); }
@@ -87,11 +101,16 @@ public:
 
     static void processBackupQueue(CustomElementQueue&);
 
+    static void enqueueElementsOnAppropriateElementQueue(const Vector<Ref<Element>>&);
+
 private:
     static void enqueueElementOnAppropriateElementQueue(Element&);
 
+    using Item = CustomElementReactionQueueItem;
+
     Ref<JSCustomElementInterface> m_interface;
-    Vector<CustomElementReactionQueueItem> m_items;
+    Vector<Item> m_items;
+    bool m_elementInternalsAttached { false };
 };
 
 class CustomElementReactionDisallowedScope {
@@ -162,12 +181,14 @@ public:
         s_currentProcessingStack = m_previousProcessingStack;
     }
 
+    Vector<GCReachableRef<Element>> takeElements();
+
 private:
     WEBCORE_EXPORT void processQueue(JSC::JSGlobalObject*);
 
     CustomElementQueue* m_queue { nullptr }; // Use raw pointer to avoid generating delete in the destructor.
-    CustomElementReactionStack* m_previousProcessingStack;
-    JSC::JSGlobalObject* m_state;
+    CustomElementReactionStack* const m_previousProcessingStack;
+    JSC::JSGlobalObject* const m_state;
 
     WEBCORE_EXPORT static CustomElementReactionStack* s_currentProcessingStack;
 

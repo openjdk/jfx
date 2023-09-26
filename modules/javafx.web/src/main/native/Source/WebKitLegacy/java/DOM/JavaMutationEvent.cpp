@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,13 +87,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MutationEventImpl_initMutationEve
     , jshort attrChange)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->initMutationEvent(String(env, type)
+    IMPL->initMutationEvent(AtomString{String(env, type)}
             , canBubble
             , cancelable
             , static_cast<Node*>(jlong_to_ptr(relatedNode))
-            , String(env, prevValue)
-            , String(env, newValue)
-            , String(env, attrName)
+            , AtomString{String(env, prevValue)}
+            , AtomString{String(env, newValue)}
+            , AtomString{String(env, attrName)}
             , attrChange);
 }
 

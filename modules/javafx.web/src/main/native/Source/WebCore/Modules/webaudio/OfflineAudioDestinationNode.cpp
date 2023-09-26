@@ -38,6 +38,8 @@
 #include "HRTFDatabaseLoader.h"
 #include "OfflineAudioContext.h"
 #include "WorkerRunLoop.h"
+#include <JavaScriptCore/GenericTypedArrayViewInlines.h>
+#include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <algorithm>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
@@ -115,7 +117,7 @@ void OfflineAudioDestinationNode::startRendering(CompletionHandler<void(std::opt
         return completionHandler(Exception { InvalidStateError, "Already started rendering"_s });
 
     m_startedRendering = true;
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
 
     auto offThreadRendering = [this, protectedThis = WTFMove(protectedThis)]() mutable {
         auto result = renderOnAudioThread();

@@ -72,17 +72,17 @@ SpeculatedType FileBasedFuzzerAgent::getPredictionInternal(CodeBlock* codeBlock,
 
     case op_call: // op_call appears implicitly in for-of loops, generators, spread/rest elements, destructuring assignment
         if (!generated) {
-            if (sourceAfterDivot.containsIgnoringASCIICase("of "))
+            if (sourceAfterDivot.containsIgnoringASCIICase("of "_s))
                 return original;
-            if (sourceAfterDivot.containsIgnoringASCIICase("..."))
+            if (sourceAfterDivot.containsIgnoringASCIICase("..."_s))
                 return original;
-            if (sourceAfterDivot.containsIgnoringASCIICase("yield"))
+            if (sourceAfterDivot.containsIgnoringASCIICase("yield"_s))
                 return original;
-            if (sourceAfterDivot.startsWith('[') && sourceAfterDivot.endsWith("]"))
+            if (sourceAfterDivot.startsWith('[') && sourceAfterDivot.endsWith(']'))
                 return original;
-            if (sourceUpToDivot.containsIgnoringASCIICase("yield"))
+            if (sourceUpToDivot.containsIgnoringASCIICase("yield"_s))
                 return original;
-            if (sourceUpToDivot == "...")
+            if (sourceUpToDivot == "..."_s)
                 return original;
             if (!target.startOffset && !target.endOffset)
                 return original;
@@ -93,7 +93,7 @@ SpeculatedType FileBasedFuzzerAgent::getPredictionInternal(CodeBlock* codeBlock,
     case op_construct:
     case op_construct_varargs:
     case op_call_varargs:
-    case op_call_eval:
+    case op_call_direct_eval:
     case op_tail_call:
     case op_tail_call_varargs:
     case op_get_by_id_with_this:

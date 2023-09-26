@@ -53,7 +53,6 @@ private:
     SVGRadialGradientElement(const QualifiedName&, Document&);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGRadialGradientElement, SVGGradientElement>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
@@ -62,13 +61,12 @@ private:
 
     bool selfHasRelativeLengths() const override;
 
-    PropertyRegistry m_propertyRegistry { *this };
-    Ref<SVGAnimatedLength> m_cx { SVGAnimatedLength::create(this, SVGLengthMode::Width, "50%") };
-    Ref<SVGAnimatedLength> m_cy { SVGAnimatedLength::create(this, SVGLengthMode::Height, "50%") };
-    Ref<SVGAnimatedLength> m_r { SVGAnimatedLength::create(this, SVGLengthMode::Other, "50%") };
+    Ref<SVGAnimatedLength> m_cx { SVGAnimatedLength::create(this, SVGLengthMode::Width, "50%"_s) };
+    Ref<SVGAnimatedLength> m_cy { SVGAnimatedLength::create(this, SVGLengthMode::Height, "50%"_s) };
+    Ref<SVGAnimatedLength> m_r { SVGAnimatedLength::create(this, SVGLengthMode::Other, "50%"_s) };
     Ref<SVGAnimatedLength> m_fx { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
     Ref<SVGAnimatedLength> m_fy { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
-    Ref<SVGAnimatedLength> m_fr { SVGAnimatedLength::create(this, SVGLengthMode::Other, "0%") };
+    Ref<SVGAnimatedLength> m_fr { SVGAnimatedLength::create(this, SVGLengthMode::Other, "0%"_s) };
 };
 
 } // namespace WebCore

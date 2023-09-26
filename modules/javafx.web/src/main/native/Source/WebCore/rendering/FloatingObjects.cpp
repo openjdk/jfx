@@ -42,14 +42,14 @@ struct SameSizeAsFloatingObject {
     uint32_t bitfields : 8;
 };
 
-COMPILE_ASSERT(sizeof(FloatingObject) == sizeof(SameSizeAsFloatingObject), FloatingObject_should_stay_small);
+static_assert(sizeof(FloatingObject) == sizeof(SameSizeAsFloatingObject), "FloatingObject should stay small");
 #if !ASSERT_ENABLED
-COMPILE_ASSERT(sizeof(WeakPtr<RenderBox>) == sizeof(void*), WeakPtr_should_be_same_size_as_raw_pointer);
-COMPILE_ASSERT(sizeof(WeakPtr<LegacyRootInlineBox>) == sizeof(void*), WeakPtr_should_be_same_size_as_raw_pointer);
+static_assert(sizeof(WeakPtr<RenderBox>) == sizeof(void*), "WeakPtr should be same size as raw pointer");
+static_assert(sizeof(WeakPtr<LegacyRootInlineBox>) == sizeof(void*), "WeakPtr should be same size as raw pointer");
 #endif
 
 FloatingObject::FloatingObject(RenderBox& renderer)
-    : m_renderer(makeWeakPtr(renderer))
+    : m_renderer(renderer)
     , m_paintsFloat(true)
     , m_isDescendant(false)
     , m_isPlaced(false)
@@ -66,7 +66,7 @@ FloatingObject::FloatingObject(RenderBox& renderer)
 }
 
 FloatingObject::FloatingObject(RenderBox& renderer, Type type, const LayoutRect& frameRect, const LayoutSize& marginOffset, bool shouldPaint, bool isDescendant)
-    : m_renderer(makeWeakPtr(renderer))
+    : m_renderer(renderer)
     , m_frameRect(frameRect)
     , m_marginOffset(marginOffset)
     , m_type(type)
@@ -112,11 +112,22 @@ LayoutSize FloatingObject::translationOffsetToAncestor() const
     return locationOffsetOfBorderBox() - renderer().locationOffset();
 }
 
+#if ASSERT_ENABLED
+
+bool FloatingObject::isLowestPlacedFloatBottomInBlockFormattingContext() const
+{
+    if (auto bfcRoot = m_renderer->blockFormattingContextRoot())
+        return bfcRoot->lowestFloatLogicalBottom() == bfcRoot->logicalBottomForFloat(*this);
+    return false;
+}
+
+#endif
+
 #if ENABLE(TREE_DEBUGGING)
 
 TextStream& operator<<(TextStream& stream, const FloatingObject& object)
 {
-    stream << &object << " renderer " << &object.renderer();
+    stream << "(" << &object << ") renderer (" << &object.renderer() << ")";
     if (object.isPlaced())
         stream << " " << object.frameRect();
     else
@@ -152,7 +163,7 @@ public:
     typedef FloatingObjectInterval IntervalType;
 
     ComputeFloatOffsetAdapter(const RenderBlockFlow& renderer, LayoutUnit lineTop, LayoutUnit lineBottom, LayoutUnit offset)
-        : m_renderer(makeWeakPtr(renderer))
+        : m_renderer(renderer)
         , m_lineTop(lineTop)
         , m_lineBottom(lineBottom)
         , m_offset(offset)
@@ -213,7 +224,7 @@ public:
     typedef FloatingObjectInterval IntervalType;
 
     FindNextFloatLogicalBottomAdapter(const RenderBlockFlow& renderer, LayoutUnit belowLogicalHeight)
-        : m_renderer(makeWeakPtr(renderer))
+        : m_renderer(renderer)
         , m_belowLogicalHeight(belowLogicalHeight)
     {
     }
@@ -235,12 +246,13 @@ private:
 inline void FindNextFloatLogicalBottomAdapter::collectIfNeeded(const IntervalType& interval)
 {
     const auto& floatingObject = *interval.data();
-    if (!rangesIntersect(interval.low(), interval.high(), m_belowLogicalHeight, LayoutUnit::max()))
+    if (!floatingObject.height() || !rangesIntersect(interval.low(), interval.high(), m_belowLogicalHeight, LayoutUnit::max()))
         return;
 
     // All the objects returned from the tree should be already placed.
     ASSERT(floatingObject.isPlaced());
-    ASSERT(rangesIntersect(m_renderer->logicalTopForFloat(floatingObject), m_renderer->logicalBottomForFloat(floatingObject), m_belowLogicalHeight, LayoutUnit::max()));
+    // FIXME: Remove floor(). See <https://webkit.org/b/125831>.
+    ASSERT(rangesIntersect(m_renderer->logicalTopForFloat(floatingObject).floor(), m_renderer->logicalBottomForFloat(floatingObject).floor(), m_belowLogicalHeight, LayoutUnit::max()));
 
     LayoutUnit floatBottom = m_renderer->logicalBottomForFloat(floatingObject);
     if (m_nextLogicalBottom && m_nextLogicalBottom.value() < floatBottom)
@@ -275,7 +287,7 @@ LayoutUnit FloatingObjects::findNextFloatLogicalBottomBelowForBlock(LayoutUnit l
 
 FloatingObjects::FloatingObjects(const RenderBlockFlow& renderer)
     : m_horizontalWritingMode(renderer.isHorizontalWritingMode())
-    , m_renderer(makeWeakPtr(renderer))
+    , m_renderer(renderer)
 {
 }
 
@@ -328,8 +340,8 @@ void FloatingObjects::decreaseObjectsCount(FloatingObject::Type type)
 
 FloatingObjectInterval FloatingObjects::intervalForFloatingObject(FloatingObject* floatingObject)
 {
-    // FIXME The endpoints of the floating object interval shouldn't need to be
-    // floored. See http://wkb.ug/125831 for more details.
+    // FIXME: The endpoints of the floating object interval shouldn't need to be
+    // floored. See <https://webkit.org/b/125831> for more details.
     if (m_horizontalWritingMode)
         return FloatingObjectInterval(floatingObject->frameRect().y().floor(), floatingObject->frameRect().maxY().floor(), floatingObject);
     return FloatingObjectInterval(floatingObject->frameRect().x().floor(), floatingObject->frameRect().maxX().floor(), floatingObject);
@@ -340,27 +352,26 @@ void FloatingObjects::addPlacedObject(FloatingObject* floatingObject)
     ASSERT(!floatingObject->isInPlacedTree());
 
     floatingObject->setIsPlaced(true);
-    if (m_placedFloatsTree)
+    if (m_placedFloatsTree) {
         m_placedFloatsTree->add(intervalForFloatingObject(floatingObject));
-
 #if ASSERT_ENABLED
     floatingObject->setIsInPlacedTree(true);
 #endif
+    }
 }
 
 void FloatingObjects::removePlacedObject(FloatingObject* floatingObject)
 {
-    ASSERT(floatingObject->isPlaced() && floatingObject->isInPlacedTree());
+    ASSERT(floatingObject->isPlaced());
 
     if (m_placedFloatsTree) {
-        bool removed = m_placedFloatsTree->remove(intervalForFloatingObject(floatingObject));
+        auto removed = m_placedFloatsTree->remove(intervalForFloatingObject(floatingObject));
         ASSERT_UNUSED(removed, removed);
-    }
-
-    floatingObject->setIsPlaced(false);
 #if ASSERT_ENABLED
     floatingObject->setIsInPlacedTree(false);
 #endif
+    }
+    floatingObject->setIsPlaced(false);
 }
 
 FloatingObject* FloatingObjects::add(std::unique_ptr<FloatingObject> floatingObject)
@@ -477,12 +488,13 @@ template <FloatingObject::Type FloatTypeValue>
 inline void ComputeFloatOffsetAdapter<FloatTypeValue>::collectIfNeeded(const IntervalType& interval)
 {
     const auto& floatingObject = *interval.data();
-    if (floatingObject.type() != FloatTypeValue || !rangesIntersect(interval.low(), interval.high(), m_lineTop, m_lineBottom))
+    if (floatingObject.type() != FloatTypeValue || !floatingObject.height() || !rangesIntersect(interval.low(), interval.high(), m_lineTop, m_lineBottom))
         return;
 
     // All the objects returned from the tree should be already placed.
     ASSERT(floatingObject.isPlaced());
-    ASSERT(rangesIntersect(m_renderer->logicalTopForFloat(floatingObject), m_renderer->logicalBottomForFloat(floatingObject), m_lineTop, m_lineBottom));
+    // FIXME: Remove floor(). See <https://webkit.org/b/125831>.
+    ASSERT(rangesIntersect(m_renderer->logicalTopForFloat(floatingObject).floor(), m_renderer->logicalBottomForFloat(floatingObject).floor(), m_lineTop, m_lineBottom));
 
     bool floatIsNewExtreme = updateOffsetIfNeeded(floatingObject);
     if (floatIsNewExtreme)

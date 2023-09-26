@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -93,8 +94,15 @@ void RenderTableRow::styleDidChange(StyleDifference diff, const RenderStyle* old
             // If the border width changes on a row, we need to make sure the cells in the row know to lay out again.
             // This only happens when borders are collapsed, since they end up affecting the border sides of the cell
             // itself.
-            for (RenderTableCell* cell = firstCell(); cell; cell = cell->nextCell())
-                cell->setChildNeedsLayout(MarkOnlyThis);
+            auto propagageNeedsLayoutOnBorderSizeChange = [&] (auto& row) {
+                for (auto* cell = row.firstCell(); cell; cell = cell->nextCell())
+                    cell->setNeedsLayoutAndPrefWidthsRecalc();
+            };
+            propagageNeedsLayoutOnBorderSizeChange(*this);
+            if (auto* previousRow = this->previousRow())
+                propagageNeedsLayoutOnBorderSizeChange(*previousRow);
+            if (auto* nextRow = this->nextRow())
+                propagageNeedsLayoutOnBorderSizeChange(*nextRow);
         }
     }
 }
@@ -131,7 +139,7 @@ void RenderTableRow::layout()
     ASSERT(needsLayout());
 
     // Table rows do not add translation.
-    LayoutStateMaintainer statePusher(*this, LayoutSize(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(*this, LayoutSize(), isTransformed() || hasReflection() || style().isFlippedBlocksWritingMode());
 
     auto* layoutState = view().frameView().layoutContext().layoutState();
     bool paginated = layoutState->isPaginated();
@@ -141,7 +149,6 @@ void RenderTableRow::layout()
             cell->setChildNeedsLayout(MarkOnlyThis);
 
         if (cell->needsLayout()) {
-            cell->computeAndSetBlockDirectionMargins(*table());
             cell->layout();
         }
     }
@@ -188,7 +195,7 @@ bool RenderTableRow::nodeAtPoint(const HitTestRequest& request, HitTestResult& r
         // table-specific hit-test method (which we should do for performance reasons anyway),
         // then we can remove this check.
         if (!cell->hasSelfPaintingLayer()) {
-            LayoutPoint cellPoint = flipForWritingModeForChild(cell, accumulatedOffset);
+            LayoutPoint cellPoint = flipForWritingModeForChild(*cell, accumulatedOffset);
             if (cell->nodeAtPoint(request, result, locationInContainer, cellPoint, action)) {
                 updateHitTestResult(result, locationInContainer.point() - toLayoutSize(cellPoint));
                 return true;

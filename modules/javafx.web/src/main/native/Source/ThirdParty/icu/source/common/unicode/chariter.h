@@ -114,7 +114,7 @@ public:
      * character in the same character-storage object
      * @stable ICU 2.0
      */
-    virtual UBool operator==(const ForwardCharacterIterator& that) const = 0;
+    virtual bool operator==(const ForwardCharacterIterator& that) const = 0;
 
     /**
      * Returns true when the iterators refer to different
@@ -126,7 +126,7 @@ public:
      * same text-storage object
      * @stable ICU 2.0
      */
-    inline UBool operator!=(const ForwardCharacterIterator& that) const;
+    inline bool operator!=(const ForwardCharacterIterator& that) const;
 
     /**
      * Generates a hash code for this iterator.
@@ -142,7 +142,7 @@ public:
      * @return a UClassID for this ForwardCharacterIterator
      * @stable ICU 2.0
      */
-    virtual UClassID getDynamicClassID(void) const = 0;
+    virtual UClassID getDynamicClassID(void) const override = 0;
 
     /**
      * Gets the current code unit for returning and advances to the next code unit
@@ -297,7 +297,7 @@ protected:
  * \code
  *  void traverseForward(CharacterIterator& iter)
  *  {
- *      for(char16_t c = iter.first(); c != CharacterIterator.DONE; c = iter.next()) {
+ *      for(char16_t c = iter.first(); c != CharacterIterator::DONE; c = iter.next()) {
  *          processChar(c);
  *      }
  *  }
@@ -308,7 +308,7 @@ protected:
  * \code
  *  void traverseBackward(CharacterIterator& iter)
  *  {
- *      for(char16_t c = iter.last(); c != CharacterIterator.DONE; c = iter.previous()) {
+ *      for(char16_t c = iter.last(); c != CharacterIterator::DONE; c = iter.previous()) {
  *          processChar(c);
  *      }
  *  }
@@ -322,11 +322,11 @@ protected:
  * {
  *      char16_t c;
  *      for (c = iter.setIndex(pos);
- *      c != CharacterIterator.DONE && (Unicode::isLetter(c) || Unicode::isDigit(c));
+ *      c != CharacterIterator::DONE && (Unicode::isLetter(c) || Unicode::isDigit(c));
  *          c = iter.next()) {}
  *      int32_t end = iter.getIndex();
  *      for (c = iter.setIndex(pos);
- *          c != CharacterIterator.DONE && (Unicode::isLetter(c) || Unicode::isDigit(c));
+ *          c != CharacterIterator::DONE && (Unicode::isLetter(c) || Unicode::isDigit(c));
  *          c = iter.previous()) {}
  *      int32_t start = iter.getIndex() + 1;
  *
@@ -692,7 +692,7 @@ protected:
     int32_t  end;
 };
 
-inline UBool
+inline bool
 ForwardCharacterIterator::operator!=(const ForwardCharacterIterator& that) const {
     return !operator==(that);
 }
