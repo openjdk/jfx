@@ -27,6 +27,8 @@ package javafx.scene.control.behavior;
 
 /**
  * A function tag is a public handle for a function in the context of InputMap.
+ *
+ * @since 22
  */
 public final class FunctionTag {
     /** Constructs the function tag. */

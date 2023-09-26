@@ -45,6 +45,7 @@ import com.sun.javafx.scene.control.input.HList;
  * suitable mapping, and if so, fire the provided {@link EventHandler}.
  *
  * @param <C> The type of the Control that the InputMap is installed in.
+ * @since 22
  */
 public class InputMap<C extends Control> {
     /** contains user- and behavior-set key binding or function mappings */

@@ -36,8 +36,9 @@ import com.sun.javafx.PlatformUtil;
  * Key binding provides a way to map key event to a hash table key for easy matching.
  * Also it allows for encoding platform-specific keys without resorting to nested and/or
  * multiple key maps.
+ *
+ * @since 22
  */
-// TODO rename KeyBinding
 public class KeyBinding implements EventCriteria<KeyEvent> {
     /**
      * Condition used to build input key mappings.
@@ -403,41 +404,41 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     }
 
     // FIX remove, debug
-    private static String toString(KeyEvent ev) {
-        StringBuilder sb = new StringBuilder("KeyEvent{");
-        sb.append("type=").append(ev.getEventType());
-        sb.append(", char=").append(ev.getCharacter());
-
-        String ch = ev.getCharacter();
-        int sz = ch.length();
-        if (sz > 0) {
-            sb.append("(");
-            for (int i = 0; i < ch.length(); i++) {
-                sb.append(String.format("%02X", (int)ch.charAt(i)));
-            }
-            sb.append(")");
-        }
-
-        sb.append(", code=").append(ev.getCode());
-
-        if (ev.isShiftDown()) {
-            sb.append(", shift");
-        }
-        if (ev.isControlDown()) {
-            sb.append(", control");
-        }
-        if (ev.isAltDown()) {
-            sb.append(", alt");
-        }
-        if (ev.isMetaDown()) {
-            sb.append(", meta");
-        }
-        if (ev.isShortcutDown()) {
-            sb.append(", shortcut");
-        }
-
-        return sb.append("}").toString();
-    }
+//    private static String toString(KeyEvent ev) {
+//        StringBuilder sb = new StringBuilder("KeyEvent{");
+//        sb.append("type=").append(ev.getEventType());
+//        sb.append(", char=").append(ev.getCharacter());
+//
+//        String ch = ev.getCharacter();
+//        int sz = ch.length();
+//        if (sz > 0) {
+//            sb.append("(");
+//            for (int i = 0; i < ch.length(); i++) {
+//                sb.append(String.format("%02X", (int)ch.charAt(i)));
+//            }
+//            sb.append(")");
+//        }
+//
+//        sb.append(", code=").append(ev.getCode());
+//
+//        if (ev.isShiftDown()) {
+//            sb.append(", shift");
+//        }
+//        if (ev.isControlDown()) {
+//            sb.append(", control");
+//        }
+//        if (ev.isAltDown()) {
+//            sb.append(", alt");
+//        }
+//        if (ev.isMetaDown()) {
+//            sb.append(", meta");
+//        }
+//        if (ev.isShortcutDown()) {
+//            sb.append(", shortcut");
+//        }
+//
+//        return sb.append("}").toString();
+//    }
     
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -469,8 +470,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         return KeyBinding.from(ev).equals(this);
     }
 
-    // TODO other setters (platform, etc)
-    
     /** Key bindings builder */
     public static class Builder {
         private Object key; // KeyCode or String
@@ -739,6 +738,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         /**
          * Creates a new {@link KeyBinding} instance, or null if the key binding is not applicable to this platform.
          * TODO variant: KeyBinding.NA
+         * TODO alternatively, remove forMac and use Platform.isXXX
          *
          * @return a new key binding instance.
          */
