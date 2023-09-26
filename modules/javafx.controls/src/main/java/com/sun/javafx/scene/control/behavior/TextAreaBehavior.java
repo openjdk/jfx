@@ -71,7 +71,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     public void install() {
         super.install();
 
-        TextArea c = getNode();
+        TextArea c = getControl();
         
         focusListener = (src, ov, nv) -> handleFocusChange();
         // Register for change events
@@ -145,9 +145,12 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         addKeyPadMappings();
     }
 
-    @Override public void dispose() {
-        getNode().focusedProperty().removeListener(focusListener);
-        if (tlFocus != null) tlFocus.dispose();
+    @Override
+    public void dispose() {
+        getControl().focusedProperty().removeListener(focusListener);
+        if (tlFocus != null) {
+            tlFocus.dispose();
+        }
         super.dispose();
     }
 
@@ -165,7 +168,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         // The only real difference is that TextFieldBehavior selects all the text when the control
         // receives focus (when not gained by mouse click), whereas TextArea doesn't, and also the
         // TextArea doesn't lose selection on focus lost, whereas the TextField does.
-        final TextArea textArea = getNode();
+        final TextArea textArea = getControl();
         if (textArea.isFocused()) {
             if (!focusGainedByMouseClick) {
                 setCaretAnimating(true);
@@ -180,7 +183,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     private void insertNewLine() {
         if (isEditable()) {
             setEditing(true);
-            getNode().replaceSelection("\n");
+            getControl().replaceSelection("\n");
             setEditing(false);
         }
     }
@@ -188,21 +191,21 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     private void insertTab() {
         if (isEditable()) {
             setEditing(true);
-            getNode().replaceSelection("\t");
+            getControl().replaceSelection("\t");
             setEditing(false);
         }
     }
 
     @Override protected void deleteChar(boolean previous) {
         if (previous) {
-            getNode().deletePreviousChar();
+            getControl().deletePreviousChar();
         } else {
-            getNode().deleteNextChar();
+            getControl().deleteNextChar();
         }
     }
 
     @Override protected void deleteFromLineStart() {
-        TextArea textArea = getNode();
+        TextArea textArea = getControl();
         int end = textArea.getCaretPosition();
 
         if (end > 0) {
@@ -223,7 +226,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     @Override protected void replaceText(int start, int end, String txt) {
-        getNode().replaceText(start, end, txt);
+        getControl().replaceText(start, end, txt);
     }
 
     /**
@@ -235,7 +238,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     private boolean deferClick = false;
 
     @Override public void mousePressed(MouseEvent e) {
-        TextArea textArea = getNode();
+        TextArea textArea = getControl();
         // We never respond to events if disabled
         if (!textArea.isDisabled()) {
             // If the text field doesn't have focus, then we'll attempt to set
@@ -305,7 +308,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     @Override public void mouseDragged(MouseEvent e) {
-        final TextArea textArea = getNode();
+        final TextArea textArea = getControl();
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textArea.isDisabled() && !e.isSynthesized()) {
@@ -319,7 +322,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     @Override public void mouseReleased(final MouseEvent e) {
-        final TextArea textArea = getNode();
+        final TextArea textArea = getControl();
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textArea.isDisabled()) {
@@ -334,7 +337,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     @Override public void contextMenuRequested(ContextMenuEvent e) {
-        final TextArea textArea = getNode();
+        final TextArea textArea = getControl();
 
         if (contextMenu.isShowing()) {
             contextMenu.hide();
@@ -358,8 +361,8 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 }
 
                 if (menuPos != null) {
-                    Point2D p = getNode().localToScene(menuPos);
-                    Scene scene = getNode().getScene();
+                    Point2D p = getControl().localToScene(menuPos);
+                    Scene scene = getControl().getScene();
                     Window window = scene.getWindow();
                     Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
                                                    window.getY() + scene.getY() + p.getY());
@@ -376,18 +379,18 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             Rectangle2D bounds = currentScreen.getBounds();
 
             if (menuX < bounds.getMinX()) {
-                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                contextMenu.show(getNode(), bounds.getMinX(), screenY);
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getControl(), bounds.getMinX(), screenY);
             } else if (screenX + menuWidth > bounds.getMaxX()) {
                 double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
-                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                contextMenu.show(getNode(), screenX - leftOver, screenY);
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getControl(), screenX - leftOver, screenY);
             } else {
-                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
-                contextMenu.show(getNode(), menuX, screenY);
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                contextMenu.show(getControl(), menuX, screenY);
             }
         }
 
@@ -399,7 +402,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     protected void mouseDoubleClick(HitInfo hit) {
-        final TextArea textArea = getNode();
+        final TextArea textArea = getControl();
         textArea.previousWord();
         if (PlatformUtil.isWindows()) {
             textArea.selectNextWord();

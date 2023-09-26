@@ -99,7 +99,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     @Override
     public void install() {
-        TextInputControl c = getNode();
+        TextInputControl c = getControl();
 
         setOnKeyEventEnter(() -> setCaretAnimating(false));
         setOnKeyEventExit(() -> setCaretAnimating(true));
@@ -239,7 +239,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
             addHandler(KeyBinding.builder().with(KeyCode.DIGIT9).control().shift().build(), true, (ev) -> {
-                FXVK.toggleUseVK(getNode());
+                FXVK.toggleUseVK(getControl());
             });
         }
 
@@ -255,7 +255,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Binds keypad arrow keys to the same function tags as the regular arrow keys.
      */
     protected void addKeyPadMappings() {
-        InputMap m = getNode().getInputMap2();
+        InputMap m = getControl().getInputMap2();
         Set<KeyBinding> keys = m.getKeyBindings();
         for (KeyBinding k: keys) {
             KeyCode cd = k.getKeyCode();
@@ -300,8 +300,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Disposal methods                                                       *
      *************************************************************************/
 
-    @Override public void dispose() {
-        getNode().textProperty().removeListener(textListener);
+    @Override
+    public void dispose() {
+        getControl().textProperty().removeListener(textListener);
         super.dispose();
     }
 
@@ -330,7 +331,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * @param event not null
      */
     private void defaultKeyTyped(KeyEvent event) {
-        final TextInputControl textInput = getNode();
+        final TextInputControl textInput = getControl();
         // I'm not sure this case can actually ever happen, maybe this
         // should be an assert instead?
         if (!textInput.isEditable() || textInput.isDisabled()) return;
@@ -379,8 +380,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private Bidi getBidi() {
         if (bidi == null) {
-            bidi = new Bidi(getNode().textProperty().getValueSafe(),
-                    (getNode().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
+            bidi = new Bidi(getControl().textProperty().getValueSafe(),
+                    (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
                             ? Bidi.DIRECTION_RIGHT_TO_LEFT
                             : Bidi.DIRECTION_LEFT_TO_RIGHT);
         }
@@ -400,40 +401,40 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             rtlText =
                     (bidi.isRightToLeft() ||
                             (isMixed() &&
-                                getNode().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT));
+                                getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT));
         }
         return rtlText;
     }
 
     private void nextCharacterVisually(boolean moveRight) {
         if (isMixed()) {
-            TextInputControlSkin<?> skin = (TextInputControlSkin<?>)getNode().getSkin();
+            TextInputControlSkin<?> skin = (TextInputControlSkin<?>)getControl().getSkin();
             skin.moveCaret(TextUnit.CHARACTER, moveRight ? Direction.RIGHT : Direction.LEFT, false);
         } else if (moveRight != isRTLText()) {
-            getNode().forward();
+            getControl().forward();
         } else {
-            getNode().backward();
+            getControl().backward();
         }
     }
 
     private void selectLeft() {
         if (isRTLText()) {
-            getNode().selectForward();
+            getControl().selectForward();
         } else {
-            getNode().selectBackward();
+            getControl().selectBackward();
         }
     }
 
     private void selectRight() {
         if (isRTLText()) {
-            getNode().selectBackward();
+            getControl().selectBackward();
         } else {
-            getNode().selectForward();
+            getControl().selectForward();
         }
     }
     
     boolean isEditable() {
-        return getNode().isEditable();
+        return getControl().isEditable();
     }
 
     private void deletePreviousChar() {
@@ -454,7 +455,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     protected void deletePreviousWord() {
         setEditing(true);
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         int end = textInputControl.getCaretPosition();
 
         if (end > 0) {
@@ -467,7 +468,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     protected void deleteNextWord() {
         setEditing(true);
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         int start = textInputControl.getCaretPosition();
 
         if (start < textInputControl.getLength()) {
@@ -480,7 +481,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     public void deleteSelection() {
         setEditing(true);
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         IndexRange selection = textInputControl.getSelection();
 
         if (selection.getLength() > 0) {
@@ -492,7 +493,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     public void cut() {
         if (isEditable()) {
             setEditing(true);
-            getNode().cut();
+            getControl().cut();
             setEditing(false);
         }
     }
@@ -500,29 +501,29 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     public void paste() {
         if (isEditable()) {
             setEditing(true);
-            getNode().paste();
+            getControl().paste();
             setEditing(false);
         }
     }
 
     public void undo() {
         setEditing(true);
-        getNode().undo();
+        getControl().undo();
         setEditing(false);
     }
 
     public void redo() {
         setEditing(true);
-        getNode().redo();
+        getControl().redo();
         setEditing(false);
     }
 
     protected void selectPreviousWord() {
-        getNode().selectPreviousWord();
+        getControl().selectPreviousWord();
     }
 
     public void selectNextWord() {
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         if (isMac() || isLinux()) {
             textInputControl.selectEndOfNextWord();
         } else {
@@ -547,7 +548,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void selectWord() {
-        final TextInputControl textInputControl = getNode();
+        final TextInputControl textInputControl = getControl();
         textInputControl.previousWord();
         if (isWindows()) {
             textInputControl.selectNextWord();
@@ -560,18 +561,18 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void selectAll() {
-        getNode().selectAll();
+        getControl().selectAll();
         if (SHOW_HANDLES && contextMenu.isShowing()) {
             populateContextMenu();
         }
     }
 
     protected void previousWord() {
-        getNode().previousWord();
+        getControl().previousWord();
     }
 
     protected void nextWord() {
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         if (isMac() || isLinux()) {
             textInputControl.endOfNextWord();
         } else {
@@ -596,19 +597,19 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void selectHome() {
-        getNode().selectHome();
+        getControl().selectHome();
     }
 
     protected void selectEnd() {
-        getNode().selectEnd();
+        getControl().selectEnd();
     }
 
     protected void selectHomeExtend() {
-        getNode().extendSelection(0);
+        getControl().extendSelection(0);
     }
 
     protected void selectEndExtend() {
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         textInputControl.extendSelection(textInputControl.getLength());
     }
 
@@ -621,7 +622,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void populateContextMenu() {
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         boolean editable = textInputControl.isEditable();
         boolean hasText = (textInputControl.getLength() > 0);
         boolean hasSelection = (textInputControl.getSelection().getLength() > 0);
@@ -655,8 +656,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             } else {
                 items.setAll(copyMI, separatorMI, selectAllMI);
             }
-            undoMI.setDisable(!getNode().isUndoable());
-            redoMI.setDisable(!getNode().isRedoable());
+            undoMI.setDisable(!getControl().isUndoable());
+            redoMI.setDisable(!getControl().isRedoable());
             cutMI.setDisable(maskText || !hasSelection);
             copyMI.setDisable(maskText || !hasSelection);
             pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
@@ -674,7 +675,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private final MenuItem undoMI   = new ContextMenuItem("Undo", e -> undo());
     private final MenuItem redoMI   = new ContextMenuItem("Redo", e -> redo());
     private final MenuItem cutMI    = new ContextMenuItem("Cut", e -> cut());
-    private final MenuItem copyMI   = new ContextMenuItem("Copy", e -> getNode().copy());
+    private final MenuItem copyMI   = new ContextMenuItem("Copy", e -> getControl().copy());
     private final MenuItem pasteMI  = new ContextMenuItem("Paste", e -> paste());
     private final MenuItem deleteMI = new ContextMenuItem("DeleteSelection", e -> deleteSelection());
     private final MenuItem selectWordMI = new ContextMenuItem("SelectWord", e -> selectWord());

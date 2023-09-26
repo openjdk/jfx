@@ -76,11 +76,11 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         addHandler(MouseEvent.MOUSE_EXITED, this::mouseExited);
 
         // ComboBoxBase also cares about focus
-        getNode().focusedProperty().addListener(focusListener);
+        getControl().focusedProperty().addListener(focusListener);
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
-            tlFocus = new TwoLevelFocusComboBehavior(getNode()); // needs to be last.
+            tlFocus = new TwoLevelFocusComboBehavior(getControl()); // needs to be last.
         }
 
         regFunc(ComboBoxBase.TOGGLE_POPUP, this::togglePopup);
@@ -92,7 +92,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     @Override public void dispose() {
         if (tlFocus != null) tlFocus.dispose();
-        getNode().focusedProperty().removeListener(focusListener);
+        getControl().focusedProperty().removeListener(focusListener);
         super.dispose();
     }
 
@@ -105,7 +105,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     protected void focusChanged(Observable o) {
         // If we did have the key down, but are now not focused, then we must
         // disarm the box.
-        final ComboBoxBase<T> box = getNode();
+        final ComboBoxBase<T> box = getControl();
         if (keyDown && !box.isFocused()) {
             keyDown = false;
             box.disarm();
@@ -142,9 +142,9 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             }
         }
         else {
-            if (! getNode().isPressed() && ! getNode().isArmed()) {
+            if (! getControl().isPressed() && ! getControl().isArmed()) {
                 keyDown = true;
-                getNode().arm();
+                getControl().arm();
             }
         }
     }
@@ -160,16 +160,16 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         if (!Utils.isTwoLevelFocus()) {
             if (keyDown) {
                 keyDown = false;
-                if (getNode().isArmed()) {
-                    getNode().disarm();
+                if (getControl().isArmed()) {
+                    getControl().disarm();
                 }
             }
         }
     }
 
     private void forwardToParent(KeyEvent event) {
-        if (getNode().getParent() != null) {
-            getNode().getParent().fireEvent(event);
+        if (getControl().getParent() != null) {
+            getControl().getParent().fireEvent(event);
         }
     }
 
@@ -178,7 +178,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
          * This can be cleaned up if the editor property is moved up
          * to ComboBoxBase.
          */
-        ComboBoxBase comboBoxBase = getNode();
+        ComboBoxBase comboBoxBase = getControl();
         TextField textField = null;
         if (comboBoxBase instanceof DatePicker) {
             textField = ((DatePicker)comboBoxBase).getEditor();
@@ -221,7 +221,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     }
 
     public void mouseEntered(MouseEvent e) {
-        if (!getNode().isEditable()) {
+        if (!getControl().isEditable()) {
             mouseInsideButton = true;
         } else {
             // This is strongly tied to ComboBoxBaseSkin
@@ -247,23 +247,23 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             ! (e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
              e.isShiftDown() || e.isControlDown() || e.isAltDown() || e.isMetaDown()));
 
-        if (! getNode().isArmed() && valid) {
-            getNode().arm();
+        if (! getControl().isArmed() && valid) {
+            getControl().arm();
         }
     }
 
     public void show() {
-        if (! getNode().isShowing()) {
-            if (getNode().isFocusTraversable()) {
-                getNode().requestFocus();
+        if (! getControl().isShowing()) {
+            if (getControl().isFocusTraversable()) {
+                getControl().requestFocus();
             }
-            getNode().show();
+            getControl().show();
         }
     }
 
     public void hide() {
-        if (getNode().isShowing()) {
-            getNode().hide();
+        if (getControl().isShowing()) {
+            getControl().hide();
         }
     }
 
@@ -280,14 +280,14 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     }
 
     public void arm() {
-        if (getNode().isPressed()) {
-            getNode().arm();
+        if (getControl().isPressed()) {
+            getControl().arm();
         }
     }
 
     public void disarm() {
-        if (! keyDown && getNode().isArmed()) {
-            getNode().disarm();
+        if (! keyDown && getControl().isArmed()) {
+            getControl().disarm();
         }
     }
 
@@ -295,7 +295,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         // If popup is shown, KeyEvent causes popup to close
         showPopupOnMouseRelease = true;
 
-        if (getNode().isShowing()) {
+        if (getControl().isShowing()) {
             hide();
         } else {
             show();

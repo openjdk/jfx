@@ -58,10 +58,9 @@ public abstract class BehaviorBase<C extends Control> {
     
     /**
      * Returns the associated Control instance.
-     * TODO rename getControl()
      * @return the owner
      */
-    protected final C getNode() {
+    protected final C getControl() {
         return control;
     }
 

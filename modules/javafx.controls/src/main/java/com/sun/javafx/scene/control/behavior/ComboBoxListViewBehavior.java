@@ -63,7 +63,7 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
      **************************************************************************/
 
     private ComboBox<T> getComboBox() {
-        return (ComboBox<T>) getNode();
+        return (ComboBox<T>) getControl();
     }
 
     private void selectPrevious() {

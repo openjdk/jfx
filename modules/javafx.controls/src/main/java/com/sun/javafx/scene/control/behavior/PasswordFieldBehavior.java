@@ -58,6 +58,6 @@ public class PasswordFieldBehavior extends TextFieldBehavior {
     }
     @Override
     protected void mouseDoubleClick(HitInfo hit) {
-        getNode().selectAll();
+        getControl().selectAll();
     }
 }
