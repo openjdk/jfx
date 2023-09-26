@@ -255,7 +255,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Binds keypad arrow keys to the same function tags as the regular arrow keys.
      */
     protected void addKeyPadMappings() {
-        InputMap m = getControl().getInputMap2();
+        InputMap m = getInputMap();
         Set<KeyBinding> keys = m.getKeyBindings();
         for (KeyBinding k: keys) {
             KeyCode cd = k.getKeyCode();
