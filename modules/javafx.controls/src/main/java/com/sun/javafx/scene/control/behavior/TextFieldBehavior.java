@@ -35,7 +35,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
-import javafx.scene.control.input.KeyBinding2;
+import javafx.scene.control.behavior.KeyBinding2;
 import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;

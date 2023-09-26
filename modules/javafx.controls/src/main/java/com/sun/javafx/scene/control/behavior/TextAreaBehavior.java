@@ -30,7 +30,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.input.KeyBinding2;
+import javafx.scene.control.behavior.KeyBinding2;
 import javafx.scene.control.skin.TextAreaSkin;
 import javafx.scene.control.skin.TextInputControlSkin.Direction;
 import javafx.scene.control.skin.TextInputControlSkin.TextUnit;

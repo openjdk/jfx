@@ -57,7 +57,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
-import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.behavior.FunctionTag;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;

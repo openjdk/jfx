@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control.input;
+package javafx.scene.control.behavior;
 
 /**
  * A function tag is a public handle for a function in the context of InputMap.

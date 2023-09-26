@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control.input;
+package javafx.scene.control.behavior;
 
 import java.util.EnumSet;
 import java.util.Objects;
@@ -38,7 +38,6 @@ import com.sun.javafx.PlatformUtil;
  * multiple key maps.
  */
 // TODO rename KeyBinding
-// TODO alternative: key[Pressed](), keyReleased(), keyTyped(), and with(Predicate)
 public class KeyBinding2 implements EventCriteria<KeyEvent> {
     /**
      * Condition used to build input key mappings.
