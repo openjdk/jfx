@@ -49,7 +49,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.behavior.FunctionTag;
-import javafx.scene.control.behavior.InputMap2;
+import javafx.scene.control.behavior.InputMap;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
@@ -202,7 +202,7 @@ public abstract class Control extends Region implements Skinnable {
         }
     };
 
-    private InputMap2 inputMap2;
+    private InputMap inputMap2;
 
 
     /* *************************************************************************
@@ -469,15 +469,15 @@ public abstract class Control extends Region implements Skinnable {
      **************************************************************************/
 
     /**
-     * Returns the {@link InputMap2} for this {@code Control}.
+     * Returns the {@link InputMap} for this {@code Control}.
      *
      * @since 22
      * @return the input map
      */
     // TODO rename getInputMap()
-    public InputMap2 getInputMap2() {
+    public InputMap getInputMap2() {
         if (inputMap2 == null) {
-            inputMap2 = new InputMap2(this);
+            inputMap2 = new InputMap(this);
         }
         return inputMap2;
     }

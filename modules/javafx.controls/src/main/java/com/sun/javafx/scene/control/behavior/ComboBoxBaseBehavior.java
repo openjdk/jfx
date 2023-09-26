@@ -34,7 +34,7 @@ import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.TextField;
-import javafx.scene.control.behavior.BehaviorBase2;
+import javafx.scene.control.behavior.BehaviorBase;
 import javafx.scene.control.behavior.KeyBinding2;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -42,7 +42,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import com.sun.javafx.scene.control.skin.Utils;
 
-public class ComboBoxBaseBehavior<T> extends BehaviorBase2<ComboBoxBase<T>> {
+public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     private InvalidationListener focusListener = this::focusChanged;
 

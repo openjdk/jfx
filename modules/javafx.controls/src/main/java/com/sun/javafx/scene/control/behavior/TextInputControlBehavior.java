@@ -43,9 +43,9 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.control.behavior.BehaviorBase2;
+import javafx.scene.control.behavior.BehaviorBase;
 import javafx.scene.control.behavior.EventCriteria;
-import javafx.scene.control.behavior.InputMap2;
+import javafx.scene.control.behavior.InputMap;
 import javafx.scene.control.behavior.KeyBinding2;
 import javafx.scene.control.skin.TextInputControlSkin;
 import javafx.scene.control.skin.TextInputControlSkin.Direction;
@@ -67,7 +67,7 @@ import com.sun.javafx.scene.control.skin.FXVK;
  * class behaviors.
  *
  */
-public abstract class TextInputControlBehavior<T extends TextInputControl> extends BehaviorBase2<T> {
+public abstract class TextInputControlBehavior<T extends TextInputControl> extends BehaviorBase<T> {
 
     /**
      * Specifies whether we ought to show handles. We should do it on touch platforms
@@ -255,7 +255,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Binds keypad arrow keys to the same function tags as the regular arrow keys.
      */
     protected void addKeyPadMappings() {
-        InputMap2 m = getNode().getInputMap2();
+        InputMap m = getNode().getInputMap2();
         Set<KeyBinding2> keys = m.getKeyBindings();
         for (KeyBinding2 k: keys) {
             KeyCode cd = k.getKeyCode();

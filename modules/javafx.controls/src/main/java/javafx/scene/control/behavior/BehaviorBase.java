@@ -45,14 +45,13 @@ import javafx.scene.input.KeyCode;
  * The base class adds a dispose() method (called from Skin.dispose()),
  * which undoes the mappings done in install().
  * <p>
- * TODO rename BehaviorBase/Behavior
  */
-public abstract class BehaviorBase2<C extends Control> {
+public abstract class BehaviorBase<C extends Control> {
     /** the instance of Control associated with this behavior */
     protected final C control;
 
     /** The constructor. */
-    public BehaviorBase2(C control) {
+    public BehaviorBase(C control) {
         this.control = control;
     }
     
@@ -70,7 +69,7 @@ public abstract class BehaviorBase2<C extends Control> {
      * TODO rename getInputMap()
      * @return the input map
      */
-    protected final InputMap2 getInputMap2() {
+    protected final InputMap getInputMap2() {
         return control.getInputMap2();
     }
 
