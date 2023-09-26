@@ -760,7 +760,7 @@ public class RichTextArea extends Control {
 
     /**
      * When selection exists, deletes selected text.  Otherwise, deletes the symbol before the caret.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void backspace() {
         execute(BACKSPACE);
@@ -769,7 +769,7 @@ public class RichTextArea extends Control {
     /**
      * When selection exists, copies the selected rich text to the clipboard in all formats supported
      * by the model.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void copy() {
         execute(COPY);
@@ -789,7 +789,7 @@ public class RichTextArea extends Control {
 
     /**
      * When selection exists, removes the selected rich text and places it into the clipboard.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void cut() {
         execute(CUT);
@@ -797,7 +797,7 @@ public class RichTextArea extends Control {
 
     /**
      * When selection exists, deletes selected text.  Otherwise, deletes the symbol at the caret.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void delete() {
         execute(DELETE);
@@ -805,7 +805,7 @@ public class RichTextArea extends Control {
 
     /**
      * Inserts a line break at the caret.  If selection exists, first deletes the selected text.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void insertLineBreak() {
         execute(INSERT_LINE_BREAK);
@@ -813,7 +813,7 @@ public class RichTextArea extends Control {
     
     /**
      * Inserts a tab symbol at the caret.  If selection exists, first deletes the selected text.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void insertTab() {
         execute(INSERT_TAB);
@@ -821,7 +821,7 @@ public class RichTextArea extends Control {
     
     /**
      * Moves the caret to after the last character of the text, also clearing the selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveDocumentEnd() {
         execute(MOVE_DOCUMENT_END);
@@ -830,7 +830,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to before the first character of the text.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveDocumentStart() {
         execute(MOVE_DOCUMENT_START);
@@ -839,7 +839,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret down.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveDown() {
         execute(MOVE_DOWN);
@@ -848,7 +848,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret left.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveLeft() {
         execute(MOVE_LEFT);
@@ -857,7 +857,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the end of the current paragraph.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveParagraphEnd() {
         execute(MOVE_PARAGRAPH_END);
@@ -866,7 +866,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the start of the current paragraph.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveLineStart() {
         execute(MOVE_PARAGRAPH_START);
@@ -875,7 +875,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the next symbol.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveRight() {
         execute(MOVE_RIGHT);
@@ -884,7 +884,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret up.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveUp() {
         execute(MOVE_UP);
@@ -894,7 +894,7 @@ public class RichTextArea extends Control {
      * Moves the caret to the beginning of previous word in a left-to-right setting,
      * or the beginning of the next word in a right-to-left setting.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveLeftWord() {
         execute(MOVE_WORD_PREVIOUS);
@@ -904,7 +904,7 @@ public class RichTextArea extends Control {
      * Moves the caret to the beginning of next word in a left-to-right setting,
      * or the beginning of the previous word in a right-to-left setting.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveRightWord() {
         execute(MOVE_WORD_NEXT);
@@ -913,7 +913,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the beginning of previous word.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void movePreviousWord() {
         execute(MOVE_WORD_PREVIOUS);
@@ -922,7 +922,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the beginning of next word.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveNextWord() {
         execute(MOVE_WORD_NEXT);
@@ -931,7 +931,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the end of the next word.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void moveEndOfNextWord() {
         execute(MOVE_WORD_NEXT_END);
@@ -940,7 +940,7 @@ public class RichTextArea extends Control {
     /**
      * Move caret one page down.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void pageDown() {
         execute(PAGE_DOWN);
@@ -949,7 +949,7 @@ public class RichTextArea extends Control {
     /**
      * Move caret one page up.
      * This method has a side effect of clearing an existing selection.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void pageUp() {
         execute(PAGE_UP);
@@ -958,7 +958,7 @@ public class RichTextArea extends Control {
     /**
      * Pastes the clipboard content at the caret, or, if selection exists, replacing the selected text.
      * The model decides which format to use.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void paste() {
         execute(PASTE);
@@ -979,7 +979,7 @@ public class RichTextArea extends Control {
 
     /**
      * Pastes the plain text clipboard content at the caret, or, if selection exists, replacing the selected text.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void pastePlainText() {
         execute(PASTE_PLAIN_TEXT);
@@ -988,7 +988,7 @@ public class RichTextArea extends Control {
     /**
      * If possible, redoes the last undone modification. If {@link #isRedoable()} returns
      * false, then calling this method has no effect.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void redo() {
         execute(REDO);
@@ -996,7 +996,7 @@ public class RichTextArea extends Control {
     
     /**
      * Selects all the text in the document.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectAll() {
         execute(SELECT_ALL);
@@ -1004,7 +1004,7 @@ public class RichTextArea extends Control {
 
     /**
      * Selects from the anchor position to the document start.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectDocumentStart() {
         execute(SELECT_DOCUMENT_START);
@@ -1012,7 +1012,7 @@ public class RichTextArea extends Control {
 
     /**
      * Selects from the anchor position to the document end.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectDocumentEnd() {
         execute(SELECT_DOCUMENT_END);
@@ -1020,7 +1020,7 @@ public class RichTextArea extends Control {
     
     /**
      * Moves the caret down and extends selection to the new position.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectDown() {
         execute(SELECT_DOWN);
@@ -1028,7 +1028,7 @@ public class RichTextArea extends Control {
     
     /**
      * Moves the caret left and extends selection to the new position.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectLeft() {
         execute(SELECT_LEFT);
@@ -1036,7 +1036,7 @@ public class RichTextArea extends Control {
     
     /**
      * Moves the caret one page down and extends selection to the new position.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectPageDown() {
         execute(SELECT_PAGE_DOWN);
@@ -1044,7 +1044,7 @@ public class RichTextArea extends Control {
     
     /**
      * Moves the caret one page up and extends selection to the new position.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectPageUp() {
         execute(SELECT_PAGE_UP);
@@ -1052,7 +1052,7 @@ public class RichTextArea extends Control {
     
     /**
      * Selects the paragraph at the caret.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectParagraph() {
         execute(SELECT_PARAGRAPH);
@@ -1060,7 +1060,7 @@ public class RichTextArea extends Control {
     
     /**
      * Moves the caret right and extends selection to the new position.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectRight() {
         execute(SELECT_RIGHT);
@@ -1068,7 +1068,7 @@ public class RichTextArea extends Control {
     
     /**
      * Moves the caret up and extends selection to the new position.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectUp() {
         execute(SELECT_UP);
@@ -1076,7 +1076,7 @@ public class RichTextArea extends Control {
 
     /**
      * Selects a word at the caret.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectWord() {
         execute(SELECT_WORD);
@@ -1088,7 +1088,7 @@ public class RichTextArea extends Control {
      * This does not cause
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectLeftWord() {
         execute(SELECT_WORD_LEFT);
@@ -1100,7 +1100,7 @@ public class RichTextArea extends Control {
      * This does not cause
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectRightWord() {
         execute(SELECT_WORD_RIGHT);
@@ -1110,7 +1110,7 @@ public class RichTextArea extends Control {
      * Moves the caret to the beginning of next word. This does not cause
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of next word.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectNextWord() {
         execute(SELECT_WORD_NEXT);
@@ -1120,7 +1120,7 @@ public class RichTextArea extends Control {
      * Moves the caret to the beginning of previous word. This does not cause
      * the selection to be cleared. Rather, the anchor stays put and the caretPosition is
      * moved to the beginning of previous word.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectPreviousWord() {
         execute(SELECT_WORD_PREVIOUS);
@@ -1129,7 +1129,7 @@ public class RichTextArea extends Control {
     /**
      * Moves the caret to the end of the next word. This does not cause
      * the selection to be cleared.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void selectEndOfNextWord() {
         execute(SELECT_WORD_NEXT_END);
@@ -1138,7 +1138,7 @@ public class RichTextArea extends Control {
     /**
      * If possible, undoes the last modification. If {@link #isUndoable()} returns
      * false, then calling this method has no effect.
-     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap2()}.
+     * <p>This action can be changed by remapping the default behavior, @see {@link Control#getInputMap()}.
      */
     public void undo() {
         execute(UNDO);
