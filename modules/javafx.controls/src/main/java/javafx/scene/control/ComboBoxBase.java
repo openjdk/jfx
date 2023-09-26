@@ -34,7 +34,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
-import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.behavior.FunctionTag;
 
 /**
  * Abstract base class for ComboBox-like controls. A ComboBox typically has

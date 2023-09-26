@@ -22,14 +22,27 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene.control.behavior;
 
-package javafx.scene.control.input;
+import javafx.event.Event;
+import javafx.event.EventType;
 
 /**
- * A function tag is a public handle for a function in the context of InputMap.
+ * Determines whether an event passes certain criteria.
+ *
+ * @since 22
  */
-public final class FunctionTag {
-    /** Constructs the function tag. */
-    public FunctionTag() {
-    }
+public interface EventCriteria<T extends Event> {
+    /**
+     * Returns the event type for which this criteria are valid.
+     * @return the event type
+     */
+    public EventType<T> getEventType();
+
+    /**
+     * Returns true if the specified event matches this criteria.
+     * @param ev the event
+     * @return true if match occurs
+     */
+    public boolean isEventAcceptable(T ev);
 }

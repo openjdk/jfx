@@ -44,7 +44,7 @@ import javafx.collections.WeakListChangeListener;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.behavior.FunctionTag;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.util.Callback;
 import javafx.util.StringConverter;

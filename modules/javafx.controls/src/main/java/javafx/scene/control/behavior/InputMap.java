@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control.input;
+package javafx.scene.control.behavior;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -45,12 +45,13 @@ import com.sun.javafx.scene.control.input.HList;
  * suitable mapping, and if so, fire the provided {@link EventHandler}.
  *
  * @param <C> The type of the Control that the InputMap is installed in.
+ * @since 22
  */
-public class InputMap2<C extends Control> {
+public class InputMap<C extends Control> {
     /** contains user- and behavior-set key binding or function mappings */
     private static class Entry { // TODO prename to Mapping?
         Object value;
-        BehaviorBase2 behavior;
+        BehaviorBase behavior;
         Object behaviorValue;
 
         public Object getValue() {
@@ -77,7 +78,7 @@ public class InputMap2<C extends Control> {
      * The constructor.
      * @param control the owner
      */
-    public InputMap2(C control) {
+    public InputMap(C control) {
         if (control == null) {
             throw new IllegalArgumentException("control cannot be null");
         }
@@ -113,7 +114,7 @@ public class InputMap2<C extends Control> {
             return;
         }
 
-        KeyBinding2 k = KeyBinding2.from((KeyEvent)ev);
+        KeyBinding k = KeyBinding.from((KeyEvent)ev);
         Runnable f = getFunction(k);
         if (f != null) {
             handleKeyFunctionEnter();
@@ -169,7 +170,7 @@ public class InputMap2<C extends Control> {
      *
      * @param behavior
      */
-    void unregister(BehaviorBase2 behavior) {
+    void unregister(BehaviorBase behavior) {
         Objects.nonNull(behavior);
 
         for (Entry en: map.values()) {
@@ -181,7 +182,7 @@ public class InputMap2<C extends Control> {
     }
 
     <T extends Event> void addHandler(
-        BehaviorBase2 behavior,
+        BehaviorBase behavior,
         EventType<T> type,
         boolean consume,
         boolean tail,
@@ -201,7 +202,7 @@ public class InputMap2<C extends Control> {
     }
     
     <T extends Event> void addHandler(
-        BehaviorBase2 behavior,
+        BehaviorBase behavior,
         EventCriteria<T> criteria,
         boolean consume,
         boolean tail,
@@ -222,7 +223,7 @@ public class InputMap2<C extends Control> {
     }
 
     private <T extends Event> void extendHandlers(
-        BehaviorBase2 behavior,
+        BehaviorBase behavior,
         EventType<T> t,
         boolean tail,
         EventHandler<T> h
@@ -242,7 +243,7 @@ public class InputMap2<C extends Control> {
      * @param tag the function tag
      * @param function the function
      */
-    public void regFunc(FunctionTag tag, Runnable function) {
+    public void registerFunction(FunctionTag tag, Runnable function) {
         Objects.requireNonNull(tag, "function tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
         addFunction(tag, function, null);
@@ -250,13 +251,13 @@ public class InputMap2<C extends Control> {
 
     /**
      * Maps a function to the function tag, for use by the behavior.
-     * This method will not override any previous mapping added by {@link #regFunc(FunctionTag,Runnable)}.
+     * This method will not override any previous mapping added by {@link #registerFunction(FunctionTag,Runnable)}.
      *
      * @param behavior the owner
      * @param tag the function tag
      * @param function the function
      */
-    void regFunc(BehaviorBase2 behavior, FunctionTag tag, Runnable function) {
+    void registerFunction(BehaviorBase behavior, FunctionTag tag, Runnable function) {
         Objects.requireNonNull(behavior, "behavior must not be null");
         Objects.requireNonNull(tag, "tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
@@ -270,7 +271,7 @@ public class InputMap2<C extends Control> {
      * @param k the key binding
      * @param tag the function tag
      */
-    public void regKey(KeyBinding2 k, FunctionTag tag) {
+    public void registerKey(KeyBinding k, FunctionTag tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
         addBinding(k, tag, null);
@@ -279,13 +280,13 @@ public class InputMap2<C extends Control> {
     /**
      * Maps a key binding to the specified function tag, for use by the behavior.
      * A null key binding will result in no change to this input map.
-     * This method will not override a user mapping added by {@link #regKey(KeyBinding2,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #registerKey(KeyBinding,FunctionTag)}.
      *
      * @param behavior the owner
      * @param k the key binding, can be null TODO variant: KeyBinding.NA
      * @param tag the function tag
      */
-    void regKey(BehaviorBase2 behavior, KeyBinding2 k, FunctionTag tag) {
+    void registerKey(BehaviorBase behavior, KeyBinding k, FunctionTag tag) {
         if (k == null) {
             return;
         }
@@ -296,17 +297,17 @@ public class InputMap2<C extends Control> {
 
     /**
      * Maps a key binding to the specified function tag, as a part of the behavior.
-     * This method will not override a user mapping added by {@link #regKey(KeyBinding2,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #registerKey(KeyBinding,FunctionTag)}.
      *
      * @param behavior the owner
-     * @param code the key code to construct a {@link KeyBinding2}
+     * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag
      */
-    void regKey(BehaviorBase2 behavior, KeyCode code, FunctionTag tag) {
-        regKey(behavior, KeyBinding2.of(code), tag);
+    void registerKey(BehaviorBase behavior, KeyCode code, FunctionTag tag) {
+        registerKey(behavior, KeyBinding.of(code), tag);
     }
 
-    private void addFunction(FunctionTag tag, Runnable function, BehaviorBase2 behavior) {
+    private void addFunction(FunctionTag tag, Runnable function, BehaviorBase behavior) {
         Entry en = map.get(tag);
         if (en == null) {
             en = new Entry();
@@ -323,7 +324,7 @@ public class InputMap2<C extends Control> {
         }
     }
 
-    private void addBinding(KeyBinding2 k, FunctionTag tag, BehaviorBase2 behavior) {
+    private void addBinding(KeyBinding k, FunctionTag tag, BehaviorBase behavior) {
         Entry en = map.get(k);
         if (en == null) {
             en = new Entry();
@@ -377,13 +378,13 @@ public class InputMap2<C extends Control> {
     }
 
     /**
-     * Returns a {@code Runnable} mapped to the specified {@link KeyBinding2},
+     * Returns a {@code Runnable} mapped to the specified {@link KeyBinding},
      * or null if no such mapping exists.
      *
      * @param k the key binding
      * @return the function, or null
      */
-    public Runnable getFunction(KeyBinding2 k) {
+    public Runnable getFunction(KeyBinding k) {
         Entry en = map.get(k);
         if (en != null) {
             Object v = en.getValue();
@@ -395,13 +396,13 @@ public class InputMap2<C extends Control> {
     }
 
     /**
-     * Returns a default {@code Runnable} mapped to the specified {@link KeyBinding2},
+     * Returns a default {@code Runnable} mapped to the specified {@link KeyBinding},
      * or null if no such mapping exists.
      *
      * @param k the key binding
      * @return the function, or null
      */
-    public Runnable getDefaultFunction(KeyBinding2 k) {
+    public Runnable getDefaultFunction(KeyBinding k) {
         // TODO this needs to be tested
         Entry en = map.get(k);
         if (en != null) {
@@ -445,7 +446,7 @@ public class InputMap2<C extends Control> {
      *
      * @param k the key binding
      */
-    public void unbind(KeyBinding2 k) {
+    public void unbind(KeyBinding k) {
         Entry en = map.get(k);
         if (en != null) {
             en.value = NULL;
@@ -459,7 +460,7 @@ public class InputMap2<C extends Control> {
         Iterator<Map.Entry<Object, Entry>> it = map.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<Object, Entry> me = it.next();
-            if (me.getKey() instanceof KeyBinding2) {
+            if (me.getKey() instanceof KeyBinding) {
                 Entry en = me.getValue();
                 en.value = null;
             }
@@ -471,7 +472,7 @@ public class InputMap2<C extends Control> {
      *
      * @param k the key binding
      */
-    public void restoreDefaultKeyBinding(KeyBinding2 k) {
+    public void restoreDefaultKeyBinding(KeyBinding k) {
         Entry en = map.get(k);
         if (en != null) {
             en.value = null;
@@ -502,10 +503,10 @@ public class InputMap2<C extends Control> {
      *
      * @return a Set of key bindings
      */
-    public Set<KeyBinding2> getKeyBindings() {
+    public Set<KeyBinding> getKeyBindings() {
         return map.keySet().stream().
-            filter((k) -> (k instanceof KeyBinding2)).
-            map((x) -> (KeyBinding2)x).
+            filter((k) -> (k instanceof KeyBinding)).
+            map((x) -> (KeyBinding)x).
             collect(Collectors.toSet());
     }
 
@@ -517,7 +518,7 @@ public class InputMap2<C extends Control> {
      * @param k1 existing key binding
      * @param k2 new key binding
      */
-    public void addAlias(KeyBinding2 k1, KeyBinding2 k2) {
+    public void addAlias(KeyBinding k1, KeyBinding k2) {
         Entry en1 = map.get(k1);
         if (en1 != null) {
             Entry en2 = new Entry();
@@ -528,7 +529,7 @@ public class InputMap2<C extends Control> {
         }
     }
 
-    void setOnKeyEventEnter(BehaviorBase2 behavior, Runnable action) {
+    void setOnKeyEventEnter(BehaviorBase behavior, Runnable action) {
         Objects.nonNull(behavior);
         Entry en = map.get(ON_KEY_ENTER);
         if (en == null) {
@@ -544,7 +545,7 @@ public class InputMap2<C extends Control> {
         }
     }
 
-   void setOnKeyEventExit(BehaviorBase2 behavior, Runnable action) {
+   void setOnKeyEventExit(BehaviorBase behavior, Runnable action) {
         Objects.nonNull(behavior);
         Entry en = map.get(ON_KEY_EXIT);
         if (en == null) {

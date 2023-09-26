@@ -49,11 +49,11 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
     public void install() {
         super.install();
 
-        regFunc(ComboBox.SELECT_PREV, this::selectPrevious);
-        regFunc(ComboBox.SELECT_NEXT, this::selectNext);
+        registerFunction(ComboBox.SELECT_PREV, this::selectPrevious);
+        registerFunction(ComboBox.SELECT_NEXT, this::selectNext);
 
-        regKey(KeyCode.UP, ComboBox.SELECT_PREV);
-        regKey(KeyCode.DOWN, ComboBox.SELECT_NEXT);
+        registerKey(KeyCode.UP, ComboBox.SELECT_PREV);
+        registerKey(KeyCode.DOWN, ComboBox.SELECT_NEXT);
     }
 
     /***************************************************************************
@@ -63,7 +63,7 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
      **************************************************************************/
 
     private ComboBox<T> getComboBox() {
-        return (ComboBox<T>) getNode();
+        return (ComboBox<T>) getControl();
     }
 
     private void selectPrevious() {

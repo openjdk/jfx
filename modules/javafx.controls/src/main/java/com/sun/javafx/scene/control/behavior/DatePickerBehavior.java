@@ -55,14 +55,14 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
     @Override public void onAutoHide(PopupControl popup) {
         // when we click on some non-interactive part of the
         // calendar - we do not want to hide.
-        if (!popup.isShowing() && getNode().isShowing()) {
+        if (!popup.isShowing() && getControl().isShowing()) {
             // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
             // Make sure DatePicker button is in sync.
-            getNode().hide();
+            getControl().hide();
         }
         // if the DatePicker is no longer showing, then invoke the super method
         // to keep its show/hide state in sync.
-        if (!getNode().isShowing()) {
+        if (!getControl().isShowing()) {
             super.onAutoHide(popup);
         }
     }

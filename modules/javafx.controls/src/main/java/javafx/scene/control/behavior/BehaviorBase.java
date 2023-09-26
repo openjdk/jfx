@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control.input;
+package javafx.scene.control.behavior;
 
 import java.util.Objects;
 import javafx.event.Event;
@@ -45,23 +45,22 @@ import javafx.scene.input.KeyCode;
  * The base class adds a dispose() method (called from Skin.dispose()),
  * which undoes the mappings done in install().
  * <p>
- * TODO rename BehaviorBase/Behavior
+ * @since 22
  */
-public abstract class BehaviorBase2<C extends Control> {
+public abstract class BehaviorBase<C extends Control> {
     /** the instance of Control associated with this behavior */
     protected final C control;
 
     /** The constructor. */
-    public BehaviorBase2(C control) {
+    public BehaviorBase(C control) {
         this.control = control;
     }
     
     /**
      * Returns the associated Control instance.
-     * TODO rename getControl()
      * @return the owner
      */
-    protected final C getNode() {
+    protected final C getControl() {
         return control;
     }
 
@@ -70,8 +69,8 @@ public abstract class BehaviorBase2<C extends Control> {
      * TODO rename getInputMap()
      * @return the input map
      */
-    protected final InputMap2 getInputMap2() {
-        return control.getInputMap2();
+    protected final InputMap getInputMap() {
+        return control.getInputMap();
     }
 
     /**
@@ -83,18 +82,18 @@ public abstract class BehaviorBase2<C extends Control> {
      * Disposes of this behavior.
      */
     public void dispose() {
-        control.getInputMap2().unregister(this);
+        getInputMap().unregister(this);
     }
     
     /**
-     * Maps a function to the function tag.
-     * This method will not override any previous mapping added by {@link #regFunc(FunctionTag,Runnable)}.
+     * Maps a function to the specified function tag.
+     * This method will not override any previous mapping added by {@link #registerFunction(FunctionTag,Runnable)}.
      *
      * @param tag the function tag
      * @param function the function
      */
-    protected void regFunc(FunctionTag tag, Runnable function) {
-        getInputMap2().regFunc(this, tag, function);
+    protected void registerFunction(FunctionTag tag, Runnable function) {
+        getInputMap().registerFunction(this, tag, function);
     }
 
     /**
@@ -105,19 +104,19 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param k the key binding, can be null (TODO or KB.NA)
      * @param tag the function tag
      */
-    protected void regKey(KeyBinding2 k, FunctionTag tag) {
-        getInputMap2().regKey(this, k, tag);
+    protected void registerKey(KeyBinding k, FunctionTag tag) {
+        getInputMap().registerKey(this, k, tag);
     }
 
     /**
      * Maps a key binding to the specified function tag.
-     * This method will not override a user mapping added by {@link #regKey(KeyBinding2,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #registerKey(KeyBinding,FunctionTag)}.
      *
-     * @param code the key code to construct a {@link KeyBinding2}
+     * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag
      */
-    protected void regKey(KeyCode code, FunctionTag tag) {
-        getInputMap2().regKey(this, code, tag);
+    protected void registerKey(KeyCode code, FunctionTag tag) {
+        getInputMap().registerKey(this, code, tag);
     }
 
     /**
@@ -127,9 +126,9 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param k the key binding
      * @param func the function
      */
-    protected void reg(FunctionTag tag, KeyBinding2 k, Runnable func) {
-        getInputMap2().regFunc(tag, func);
-        getInputMap2().regKey(k, tag);
+    protected void register(FunctionTag tag, KeyBinding k, Runnable func) {
+        getInputMap().registerFunction(tag, func);
+        getInputMap().registerKey(k, tag);
     }
 
     /**
@@ -139,9 +138,9 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param code the key code
      * @param func the function
      */
-    protected void reg(FunctionTag tag, KeyCode code, Runnable func) {
-        getInputMap2().regFunc(tag, func);
-        getInputMap2().regKey(KeyBinding2.of(code), tag);
+    protected void register(FunctionTag tag, KeyCode code, Runnable func) {
+        getInputMap().registerFunction(tag, func);
+        getInputMap().registerKey(KeyBinding.of(code), tag);
     }
 
     /**
@@ -154,7 +153,7 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param handler the event handler
      */
     protected <T extends Event> void addHandler(EventType<T> type, EventHandler<T> handler) {
-        getInputMap2().addHandler(this, type, true, false, handler);
+        getInputMap().addHandler(this, type, true, false, handler);
     }
     
     /**
@@ -167,7 +166,7 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param handler the event handler
      */
     protected <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
-        getInputMap2().addHandler(this, type, consume, false, handler);
+        getInputMap().addHandler(this, type, consume, false, handler);
     }
     
     /**
@@ -181,7 +180,7 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param handler the event handler
      */
     protected <T extends Event> void addHandlerTail(EventType<T> type, EventHandler<T> handler) {
-        getInputMap2().addHandler(this, type, true, true, handler);
+        getInputMap().addHandler(this, type, true, true, handler);
     }
     
     /**
@@ -195,7 +194,7 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param handler the event handler
      */
     protected <T extends Event> void addHandlerTail(EventType<T> type, boolean consume, EventHandler<T> handler) {
-        getInputMap2().addHandler(this, type, consume, true, handler);
+        getInputMap().addHandler(this, type, consume, true, handler);
     }
 
     /**
@@ -209,7 +208,7 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param handler the event handler
      */
     protected <T extends Event> void addHandler(EventCriteria<T> criteria, boolean consume, EventHandler<T> handler) {
-        getInputMap2().addHandler(this, criteria, consume, false, handler);
+        getInputMap().addHandler(this, criteria, consume, false, handler);
     }
 
     /**
@@ -227,7 +226,7 @@ public abstract class BehaviorBase2<C extends Control> {
         boolean consume,
         EventHandler<T> handler
     ) {
-        getInputMap2().addHandler(this, criteria, consume, true, handler);
+        getInputMap().addHandler(this, criteria, consume, true, handler);
     }
 
     /**
@@ -235,7 +234,7 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param action the action or null
      */
     protected void setOnKeyEventEnter(Runnable action) {
-        getInputMap2().setOnKeyEventEnter(this, action);
+        getInputMap().setOnKeyEventEnter(this, action);
     }
 
     /**
@@ -243,6 +242,6 @@ public abstract class BehaviorBase2<C extends Control> {
      * @param action the action or null
      */
     protected void setOnKeyEventExit(Runnable action) {
-        getInputMap2().setOnKeyEventExit(this, action);
+        getInputMap().setOnKeyEventExit(this, action);
     }
 }

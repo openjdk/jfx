@@ -43,10 +43,10 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.control.input.BehaviorBase2;
-import javafx.scene.control.input.EventCriteria;
-import javafx.scene.control.input.InputMap2;
-import javafx.scene.control.input.KeyBinding2;
+import javafx.scene.control.behavior.BehaviorBase;
+import javafx.scene.control.behavior.EventCriteria;
+import javafx.scene.control.behavior.InputMap;
+import javafx.scene.control.behavior.KeyBinding;
 import javafx.scene.control.skin.TextInputControlSkin;
 import javafx.scene.control.skin.TextInputControlSkin.Direction;
 import javafx.scene.control.skin.TextInputControlSkin.TextUnit;
@@ -67,7 +67,7 @@ import com.sun.javafx.scene.control.skin.FXVK;
  * class behaviors.
  *
  */
-public abstract class TextInputControlBehavior<T extends TextInputControl> extends BehaviorBase2<T> {
+public abstract class TextInputControlBehavior<T extends TextInputControl> extends BehaviorBase<T> {
 
     /**
      * Specifies whether we ought to show handles. We should do it on touch platforms
@@ -99,108 +99,108 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     @Override
     public void install() {
-        TextInputControl c = getNode();
+        TextInputControl c = getControl();
 
         setOnKeyEventEnter(() -> setCaretAnimating(false));
         setOnKeyEventExit(() -> setCaretAnimating(true));
 
         c.textProperty().addListener(textListener);
 
-        regFunc(TextInputControl.COPY, c::copy);
-        regFunc(TextInputControl.CUT, this::cut);
-        regFunc(TextInputControl.DELETE_FROM_LINE_START, this::deleteFromLineStart);
-        regFunc(TextInputControl.DELETE_NEXT_CHAR, this::deleteNextChar);
-        regFunc(TextInputControl.DELETE_NEXT_WORD, this::deleteNextWord);
-        regFunc(TextInputControl.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
-        regFunc(TextInputControl.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
-        regFunc(TextInputControl.DESELECT, c::deselect);
-        regFunc(TextInputControl.DOCUMENT_START, c::home);
-        regFunc(TextInputControl.DOCUMENT_END, c::end);
-        regFunc(TextInputControl.LEFT, () -> nextCharacterVisually(false));
-        regFunc(TextInputControl.LEFT_WORD, this::leftWord);
-        regFunc(TextInputControl.PASTE, this::paste);
-        regFunc(TextInputControl.REDO, this::redo);
-        regFunc(TextInputControl.RIGHT, () -> nextCharacterVisually(true));
-        regFunc(TextInputControl.RIGHT_WORD, this::rightWord);
-        regFunc(TextInputControl.SELECT_ALL, this::selectAll);
-        regFunc(TextInputControl.SELECT_END, this::selectEnd);
-        regFunc(TextInputControl.SELECT_END_EXTEND, this::selectEndExtend);
-        regFunc(TextInputControl.SELECT_HOME, this::selectHome);
-        regFunc(TextInputControl.SELECT_HOME_EXTEND, this::selectHomeExtend);
-        regFunc(TextInputControl.SELECT_LEFT, this::selectLeft);
-        regFunc(TextInputControl.SELECT_LEFT_WORD, this::selectLeftWord);
-        regFunc(TextInputControl.SELECT_RIGHT, this::selectRight);
-        regFunc(TextInputControl.SELECT_RIGHT_WORD, this::selectRightWord);
-        regFunc(TextInputControl.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
-        regFunc(TextInputControl.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
-        regFunc(TextInputControl.UNDO, this::undo);
+        registerFunction(TextInputControl.COPY, c::copy);
+        registerFunction(TextInputControl.CUT, this::cut);
+        registerFunction(TextInputControl.DELETE_FROM_LINE_START, this::deleteFromLineStart);
+        registerFunction(TextInputControl.DELETE_NEXT_CHAR, this::deleteNextChar);
+        registerFunction(TextInputControl.DELETE_NEXT_WORD, this::deleteNextWord);
+        registerFunction(TextInputControl.DELETE_PREVIOUS_CHAR, this::deletePreviousChar);
+        registerFunction(TextInputControl.DELETE_PREVIOUS_WORD, this::deletePreviousWord);
+        registerFunction(TextInputControl.DESELECT, c::deselect);
+        registerFunction(TextInputControl.DOCUMENT_START, c::home);
+        registerFunction(TextInputControl.DOCUMENT_END, c::end);
+        registerFunction(TextInputControl.LEFT, () -> nextCharacterVisually(false));
+        registerFunction(TextInputControl.LEFT_WORD, this::leftWord);
+        registerFunction(TextInputControl.PASTE, this::paste);
+        registerFunction(TextInputControl.REDO, this::redo);
+        registerFunction(TextInputControl.RIGHT, () -> nextCharacterVisually(true));
+        registerFunction(TextInputControl.RIGHT_WORD, this::rightWord);
+        registerFunction(TextInputControl.SELECT_ALL, this::selectAll);
+        registerFunction(TextInputControl.SELECT_END, this::selectEnd);
+        registerFunction(TextInputControl.SELECT_END_EXTEND, this::selectEndExtend);
+        registerFunction(TextInputControl.SELECT_HOME, this::selectHome);
+        registerFunction(TextInputControl.SELECT_HOME_EXTEND, this::selectHomeExtend);
+        registerFunction(TextInputControl.SELECT_LEFT, this::selectLeft);
+        registerFunction(TextInputControl.SELECT_LEFT_WORD, this::selectLeftWord);
+        registerFunction(TextInputControl.SELECT_RIGHT, this::selectRight);
+        registerFunction(TextInputControl.SELECT_RIGHT_WORD, this::selectRightWord);
+        registerFunction(TextInputControl.TRAVERSE_NEXT, () -> FocusTraversalInputMap.traverseNext(c));
+        registerFunction(TextInputControl.TRAVERSE_PREVIOUS, () -> FocusTraversalInputMap.traversePrevious(c));
+        registerFunction(TextInputControl.UNDO, this::undo);
 
         // common key bindings
-        regKey(KeyBinding2.shortcut(KeyCode.C), TextInputControl.COPY);
-        regKey(KeyBinding2.of(KeyCode.COPY), TextInputControl.COPY);
-        regKey(KeyBinding2.shortcut(KeyCode.INSERT), TextInputControl.COPY);
-        regKey(KeyBinding2.of(KeyCode.CUT), TextInputControl.CUT);
-        regKey(KeyBinding2.shortcut(KeyCode.X), TextInputControl.CUT);
-        regKey(KeyBinding2.of(KeyCode.DELETE), TextInputControl.DELETE_NEXT_CHAR);
-        regKey(KeyBinding2.of(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_CHAR);
-        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).shift().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        regKey(KeyBinding2.of(KeyCode.HOME), TextInputControl.DOCUMENT_START);
-        regKey(KeyBinding2.with(KeyCode.HOME).shortcut().build(), TextInputControl.DOCUMENT_START);
-        regKey(KeyBinding2.of(KeyCode.UP), TextInputControl.DOCUMENT_START);
-        regKey(KeyBinding2.of(KeyCode.DOWN), TextInputControl.DOCUMENT_END);
-        regKey(KeyBinding2.of(KeyCode.END), TextInputControl.DOCUMENT_END);
-        regKey(KeyBinding2.with(KeyCode.END).shortcut().build(), TextInputControl.DOCUMENT_END);
-        regKey(KeyBinding2.of(KeyCode.LEFT), TextInputControl.LEFT);
-        regKey(KeyBinding2.of(KeyCode.PASTE), TextInputControl.PASTE);
-        regKey(KeyBinding2.shift(KeyCode.INSERT), TextInputControl.PASTE);
-        regKey(KeyBinding2.shortcut(KeyCode.V), TextInputControl.PASTE);
-        regKey(KeyBinding2.of(KeyCode.RIGHT), TextInputControl.RIGHT);
-        regKey(KeyBinding2.shift(KeyCode.DOWN), TextInputControl.SELECT_END);
-        regKey(KeyBinding2.with(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
-        regKey(KeyBinding2.with(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
-        regKey(KeyBinding2.shift(KeyCode.UP), TextInputControl.SELECT_HOME);
-        regKey(KeyBinding2.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
-        regKey(KeyBinding2.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
-        regKey(KeyBinding2.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
-        regKey(KeyBinding2.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
-        regKey(KeyBinding2.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
-        regKey(KeyBinding2.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
-        regKey(KeyBinding2.shortcut(KeyCode.Z), TextInputControl.UNDO);
+        registerKey(KeyBinding.shortcut(KeyCode.C), TextInputControl.COPY);
+        registerKey(KeyBinding.of(KeyCode.COPY), TextInputControl.COPY);
+        registerKey(KeyBinding.shortcut(KeyCode.INSERT), TextInputControl.COPY);
+        registerKey(KeyBinding.of(KeyCode.CUT), TextInputControl.CUT);
+        registerKey(KeyBinding.shortcut(KeyCode.X), TextInputControl.CUT);
+        registerKey(KeyBinding.of(KeyCode.DELETE), TextInputControl.DELETE_NEXT_CHAR);
+        registerKey(KeyBinding.of(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_CHAR);
+        registerKey(KeyBinding.with(KeyCode.BACK_SPACE).shift().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        registerKey(KeyBinding.of(KeyCode.HOME), TextInputControl.DOCUMENT_START);
+        registerKey(KeyBinding.with(KeyCode.HOME).shortcut().build(), TextInputControl.DOCUMENT_START);
+        registerKey(KeyBinding.of(KeyCode.UP), TextInputControl.DOCUMENT_START);
+        registerKey(KeyBinding.of(KeyCode.DOWN), TextInputControl.DOCUMENT_END);
+        registerKey(KeyBinding.of(KeyCode.END), TextInputControl.DOCUMENT_END);
+        registerKey(KeyBinding.with(KeyCode.END).shortcut().build(), TextInputControl.DOCUMENT_END);
+        registerKey(KeyBinding.of(KeyCode.LEFT), TextInputControl.LEFT);
+        registerKey(KeyBinding.of(KeyCode.PASTE), TextInputControl.PASTE);
+        registerKey(KeyBinding.shift(KeyCode.INSERT), TextInputControl.PASTE);
+        registerKey(KeyBinding.shortcut(KeyCode.V), TextInputControl.PASTE);
+        registerKey(KeyBinding.of(KeyCode.RIGHT), TextInputControl.RIGHT);
+        registerKey(KeyBinding.shift(KeyCode.DOWN), TextInputControl.SELECT_END);
+        registerKey(KeyBinding.with(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
+        registerKey(KeyBinding.with(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
+        registerKey(KeyBinding.shift(KeyCode.UP), TextInputControl.SELECT_HOME);
+        registerKey(KeyBinding.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
+        registerKey(KeyBinding.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
+        registerKey(KeyBinding.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        registerKey(KeyBinding.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        registerKey(KeyBinding.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
+        registerKey(KeyBinding.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
+        registerKey(KeyBinding.shortcut(KeyCode.Z), TextInputControl.UNDO);
 
         // macOS key bindings
-        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
-        regKey(KeyBinding2.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        regKey(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
-        regKey(KeyBinding2.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
-        regKey(KeyBinding2.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
-        regKey(KeyBinding2.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
-        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.END).shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.LEFT).shift().alt().forMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        registerKey(KeyBinding.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
+        registerKey(KeyBinding.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        registerKey(KeyBinding.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        registerKey(KeyBinding.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
+        registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
+        registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
+        registerKey(KeyBinding.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
+        registerKey(KeyBinding.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
+        registerKey(KeyBinding.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
+        registerKey(KeyBinding.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
+        registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
+        registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
+        registerKey(KeyBinding.with(KeyCode.END).shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
+        registerKey(KeyBinding.with(KeyCode.LEFT).shift().alt().forMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        registerKey(KeyBinding.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // windows key bindings
-        regKey(KeyBinding2.with(KeyCode.Y).control().forWindows().build(), TextInputControl.REDO);
+        registerKey(KeyBinding.with(KeyCode.Y).control().forWindows().build(), TextInputControl.REDO);
 
         // linux key bindings
-        regKey(KeyBinding2.with(KeyCode.Z).control().shift().forLinux().build(), TextInputControl.REDO);
+        registerKey(KeyBinding.with(KeyCode.Z).control().shift().forLinux().build(), TextInputControl.REDO);
 
         // not-mac key bindings
-        regKey(KeyBinding2.with(KeyCode.DELETE).control().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        regKey(KeyBinding2.with(KeyCode.H).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        regKey(KeyBinding2.with(KeyCode.BACK_SLASH).control().notForMac().build(), TextInputControl.DESELECT);
-        regKey(KeyBinding2.with(KeyCode.LEFT).control().notForMac().build(), TextInputControl.LEFT_WORD);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).control().notForMac().build(), TextInputControl.RIGHT_WORD);
-        regKey(KeyBinding2.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
-        regKey(KeyBinding2.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
-        regKey(KeyBinding2.with(KeyCode.LEFT).control().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).control().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        registerKey(KeyBinding.with(KeyCode.DELETE).control().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        registerKey(KeyBinding.with(KeyCode.H).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        registerKey(KeyBinding.with(KeyCode.BACK_SPACE).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        registerKey(KeyBinding.with(KeyCode.BACK_SLASH).control().notForMac().build(), TextInputControl.DESELECT);
+        registerKey(KeyBinding.with(KeyCode.LEFT).control().notForMac().build(), TextInputControl.LEFT_WORD);
+        registerKey(KeyBinding.with(KeyCode.RIGHT).control().notForMac().build(), TextInputControl.RIGHT_WORD);
+        registerKey(KeyBinding.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
+        registerKey(KeyBinding.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
+        registerKey(KeyBinding.with(KeyCode.LEFT).control().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        registerKey(KeyBinding.with(KeyCode.RIGHT).control().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // key pad mappings
         addKeyPadMappings();
@@ -238,8 +238,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-            addHandler(KeyBinding2.builder().with(KeyCode.DIGIT9).control().shift().build(), true, (ev) -> {
-                FXVK.toggleUseVK(getNode());
+            addHandler(KeyBinding.builder().with(KeyCode.DIGIT9).control().shift().build(), true, (ev) -> {
+                FXVK.toggleUseVK(getControl());
             });
         }
 
@@ -255,9 +255,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Binds keypad arrow keys to the same function tags as the regular arrow keys.
      */
     protected void addKeyPadMappings() {
-        InputMap2 m = getNode().getInputMap2();
-        Set<KeyBinding2> keys = m.getKeyBindings();
-        for (KeyBinding2 k: keys) {
+        InputMap m = getInputMap();
+        Set<KeyBinding> keys = m.getKeyBindings();
+        for (KeyBinding k: keys) {
             KeyCode cd = k.getKeyCode();
             if (cd != null) {
                 KeyCode newCode = null;
@@ -280,7 +280,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 }
 
                 if (newCode != null) {
-                    KeyBinding2 newBinding = KeyBinding2.
+                    KeyBinding newBinding = KeyBinding.
                         with(newCode).
                         alt(k.isAlt()).
                         command(k.isCommand()).
@@ -300,8 +300,9 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Disposal methods                                                       *
      *************************************************************************/
 
-    @Override public void dispose() {
-        getNode().textProperty().removeListener(textListener);
+    @Override
+    public void dispose() {
+        getControl().textProperty().removeListener(textListener);
         super.dispose();
     }
 
@@ -330,7 +331,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * @param event not null
      */
     private void defaultKeyTyped(KeyEvent event) {
-        final TextInputControl textInput = getNode();
+        final TextInputControl textInput = getControl();
         // I'm not sure this case can actually ever happen, maybe this
         // should be an assert instead?
         if (!textInput.isEditable() || textInput.isDisabled()) return;
@@ -379,8 +380,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private Bidi getBidi() {
         if (bidi == null) {
-            bidi = new Bidi(getNode().textProperty().getValueSafe(),
-                    (getNode().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
+            bidi = new Bidi(getControl().textProperty().getValueSafe(),
+                    (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
                             ? Bidi.DIRECTION_RIGHT_TO_LEFT
                             : Bidi.DIRECTION_LEFT_TO_RIGHT);
         }
@@ -400,40 +401,40 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             rtlText =
                     (bidi.isRightToLeft() ||
                             (isMixed() &&
-                                getNode().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT));
+                                getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT));
         }
         return rtlText;
     }
 
     private void nextCharacterVisually(boolean moveRight) {
         if (isMixed()) {
-            TextInputControlSkin<?> skin = (TextInputControlSkin<?>)getNode().getSkin();
+            TextInputControlSkin<?> skin = (TextInputControlSkin<?>)getControl().getSkin();
             skin.moveCaret(TextUnit.CHARACTER, moveRight ? Direction.RIGHT : Direction.LEFT, false);
         } else if (moveRight != isRTLText()) {
-            getNode().forward();
+            getControl().forward();
         } else {
-            getNode().backward();
+            getControl().backward();
         }
     }
 
     private void selectLeft() {
         if (isRTLText()) {
-            getNode().selectForward();
+            getControl().selectForward();
         } else {
-            getNode().selectBackward();
+            getControl().selectBackward();
         }
     }
 
     private void selectRight() {
         if (isRTLText()) {
-            getNode().selectBackward();
+            getControl().selectBackward();
         } else {
-            getNode().selectForward();
+            getControl().selectForward();
         }
     }
     
     boolean isEditable() {
-        return getNode().isEditable();
+        return getControl().isEditable();
     }
 
     private void deletePreviousChar() {
@@ -454,7 +455,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     protected void deletePreviousWord() {
         setEditing(true);
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         int end = textInputControl.getCaretPosition();
 
         if (end > 0) {
@@ -467,7 +468,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     protected void deleteNextWord() {
         setEditing(true);
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         int start = textInputControl.getCaretPosition();
 
         if (start < textInputControl.getLength()) {
@@ -480,7 +481,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     public void deleteSelection() {
         setEditing(true);
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         IndexRange selection = textInputControl.getSelection();
 
         if (selection.getLength() > 0) {
@@ -492,7 +493,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     public void cut() {
         if (isEditable()) {
             setEditing(true);
-            getNode().cut();
+            getControl().cut();
             setEditing(false);
         }
     }
@@ -500,29 +501,29 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     public void paste() {
         if (isEditable()) {
             setEditing(true);
-            getNode().paste();
+            getControl().paste();
             setEditing(false);
         }
     }
 
     public void undo() {
         setEditing(true);
-        getNode().undo();
+        getControl().undo();
         setEditing(false);
     }
 
     public void redo() {
         setEditing(true);
-        getNode().redo();
+        getControl().redo();
         setEditing(false);
     }
 
     protected void selectPreviousWord() {
-        getNode().selectPreviousWord();
+        getControl().selectPreviousWord();
     }
 
     public void selectNextWord() {
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         if (isMac() || isLinux()) {
             textInputControl.selectEndOfNextWord();
         } else {
@@ -547,7 +548,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void selectWord() {
-        final TextInputControl textInputControl = getNode();
+        final TextInputControl textInputControl = getControl();
         textInputControl.previousWord();
         if (isWindows()) {
             textInputControl.selectNextWord();
@@ -560,18 +561,18 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void selectAll() {
-        getNode().selectAll();
+        getControl().selectAll();
         if (SHOW_HANDLES && contextMenu.isShowing()) {
             populateContextMenu();
         }
     }
 
     protected void previousWord() {
-        getNode().previousWord();
+        getControl().previousWord();
     }
 
     protected void nextWord() {
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         if (isMac() || isLinux()) {
             textInputControl.endOfNextWord();
         } else {
@@ -596,19 +597,19 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void selectHome() {
-        getNode().selectHome();
+        getControl().selectHome();
     }
 
     protected void selectEnd() {
-        getNode().selectEnd();
+        getControl().selectEnd();
     }
 
     protected void selectHomeExtend() {
-        getNode().extendSelection(0);
+        getControl().extendSelection(0);
     }
 
     protected void selectEndExtend() {
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         textInputControl.extendSelection(textInputControl.getLength());
     }
 
@@ -621,7 +622,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void populateContextMenu() {
-        TextInputControl textInputControl = getNode();
+        TextInputControl textInputControl = getControl();
         boolean editable = textInputControl.isEditable();
         boolean hasText = (textInputControl.getLength() > 0);
         boolean hasSelection = (textInputControl.getSelection().getLength() > 0);
@@ -655,8 +656,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             } else {
                 items.setAll(copyMI, separatorMI, selectAllMI);
             }
-            undoMI.setDisable(!getNode().isUndoable());
-            redoMI.setDisable(!getNode().isRedoable());
+            undoMI.setDisable(!getControl().isUndoable());
+            redoMI.setDisable(!getControl().isRedoable());
             cutMI.setDisable(maskText || !hasSelection);
             copyMI.setDisable(maskText || !hasSelection);
             pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
@@ -674,7 +675,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private final MenuItem undoMI   = new ContextMenuItem("Undo", e -> undo());
     private final MenuItem redoMI   = new ContextMenuItem("Redo", e -> redo());
     private final MenuItem cutMI    = new ContextMenuItem("Cut", e -> cut());
-    private final MenuItem copyMI   = new ContextMenuItem("Copy", e -> getNode().copy());
+    private final MenuItem copyMI   = new ContextMenuItem("Copy", e -> getControl().copy());
     private final MenuItem pasteMI  = new ContextMenuItem("Paste", e -> paste());
     private final MenuItem deleteMI = new ContextMenuItem("DeleteSelection", e -> deleteSelection());
     private final MenuItem selectWordMI = new ContextMenuItem("SelectWord", e -> selectWord());
