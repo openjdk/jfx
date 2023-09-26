@@ -86,14 +86,14 @@ public abstract class BehaviorBase<C extends Control> {
     }
     
     /**
-     * Maps a function to the function tag.
-     * This method will not override any previous mapping added by {@link #regFunc(FunctionTag,Runnable)}.
+     * Maps a function to the specified function tag.
+     * This method will not override any previous mapping added by {@link #registerFunction(FunctionTag,Runnable)}.
      *
      * @param tag the function tag
      * @param function the function
      */
-    protected void regFunc(FunctionTag tag, Runnable function) {
-        getInputMap2().regFunc(this, tag, function);
+    protected void registerFunction(FunctionTag tag, Runnable function) {
+        getInputMap2().registerFunction(this, tag, function);
     }
 
     /**
@@ -104,19 +104,19 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding, can be null (TODO or KB.NA)
      * @param tag the function tag
      */
-    protected void regKey(KeyBinding k, FunctionTag tag) {
-        getInputMap2().regKey(this, k, tag);
+    protected void registerKey(KeyBinding k, FunctionTag tag) {
+        getInputMap2().registerKey(this, k, tag);
     }
 
     /**
      * Maps a key binding to the specified function tag.
-     * This method will not override a user mapping added by {@link #regKey(KeyBinding,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #registerKey(KeyBinding,FunctionTag)}.
      *
      * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag
      */
-    protected void regKey(KeyCode code, FunctionTag tag) {
-        getInputMap2().regKey(this, code, tag);
+    protected void registerKey(KeyCode code, FunctionTag tag) {
+        getInputMap2().registerKey(this, code, tag);
     }
 
     /**
@@ -126,9 +126,9 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding
      * @param func the function
      */
-    protected void reg(FunctionTag tag, KeyBinding k, Runnable func) {
-        getInputMap2().regFunc(tag, func);
-        getInputMap2().regKey(k, tag);
+    protected void register(FunctionTag tag, KeyBinding k, Runnable func) {
+        getInputMap2().registerFunction(tag, func);
+        getInputMap2().registerKey(k, tag);
     }
 
     /**
@@ -138,9 +138,9 @@ public abstract class BehaviorBase<C extends Control> {
      * @param code the key code
      * @param func the function
      */
-    protected void reg(FunctionTag tag, KeyCode code, Runnable func) {
-        getInputMap2().regFunc(tag, func);
-        getInputMap2().regKey(KeyBinding.of(code), tag);
+    protected void register(FunctionTag tag, KeyCode code, Runnable func) {
+        getInputMap2().registerFunction(tag, func);
+        getInputMap2().registerKey(KeyBinding.of(code), tag);
     }
 
     /**

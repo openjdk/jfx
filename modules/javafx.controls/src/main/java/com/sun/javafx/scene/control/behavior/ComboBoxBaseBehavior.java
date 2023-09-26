@@ -83,11 +83,11 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             tlFocus = new TwoLevelFocusComboBehavior(getControl()); // needs to be last.
         }
 
-        regFunc(ComboBoxBase.TOGGLE_POPUP, this::togglePopup);
+        registerFunction(ComboBoxBase.TOGGLE_POPUP, this::togglePopup);
 
-        regKey(KeyBinding.withRelease(KeyCode.F4).build(), ComboBoxBase.TOGGLE_POPUP);
-        regKey(KeyBinding.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
-        regKey(KeyBinding.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
+        registerKey(KeyBinding.withRelease(KeyCode.F4).build(), ComboBoxBase.TOGGLE_POPUP);
+        registerKey(KeyBinding.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
+        registerKey(KeyBinding.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
     }
 
     @Override public void dispose() {
