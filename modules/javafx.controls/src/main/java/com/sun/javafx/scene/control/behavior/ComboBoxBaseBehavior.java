@@ -35,7 +35,7 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.TextField;
 import javafx.scene.control.behavior.BehaviorBase;
-import javafx.scene.control.behavior.KeyBinding2;
+import javafx.scene.control.behavior.KeyBinding;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -63,12 +63,12 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     @Override
     public void install() {
-        addHandler(KeyBinding2.with(KeyCode.SPACE).build(), true, this::keyPressed);
-        addHandler(KeyBinding2.withRelease(KeyCode.SPACE).build(), true, this::keyReleased);
-        addHandler(KeyBinding2.with(KeyCode.ENTER).build(), false, this::keyPressed);
-        addHandler(KeyBinding2.withRelease(KeyCode.ENTER).build(), false, this::keyReleased);
-        addHandler(KeyBinding2.with(KeyCode.ESCAPE).build(), true, this::cancelEdit);
-        addHandler(KeyBinding2.with(KeyCode.F10).build(), true, this::forwardToParent);
+        addHandler(KeyBinding.with(KeyCode.SPACE).build(), true, this::keyPressed);
+        addHandler(KeyBinding.withRelease(KeyCode.SPACE).build(), true, this::keyReleased);
+        addHandler(KeyBinding.with(KeyCode.ENTER).build(), false, this::keyPressed);
+        addHandler(KeyBinding.withRelease(KeyCode.ENTER).build(), false, this::keyReleased);
+        addHandler(KeyBinding.with(KeyCode.ESCAPE).build(), true, this::cancelEdit);
+        addHandler(KeyBinding.with(KeyCode.F10).build(), true, this::forwardToParent);
         
         addHandler(MouseEvent.MOUSE_PRESSED, this::mousePressed);
         addHandler(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
@@ -85,9 +85,9 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
         regFunc(ComboBoxBase.TOGGLE_POPUP, this::togglePopup);
 
-        regKey(KeyBinding2.withRelease(KeyCode.F4).build(), ComboBoxBase.TOGGLE_POPUP);
-        regKey(KeyBinding2.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
-        regKey(KeyBinding2.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
+        regKey(KeyBinding.withRelease(KeyCode.F4).build(), ComboBoxBase.TOGGLE_POPUP);
+        regKey(KeyBinding.alt(KeyCode.DOWN), ComboBoxBase.TOGGLE_POPUP);
+        regKey(KeyBinding.alt(KeyCode.UP), ComboBoxBase.TOGGLE_POPUP);
     }
 
     @Override public void dispose() {

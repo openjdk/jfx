@@ -46,7 +46,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.control.behavior.BehaviorBase;
 import javafx.scene.control.behavior.EventCriteria;
 import javafx.scene.control.behavior.InputMap;
-import javafx.scene.control.behavior.KeyBinding2;
+import javafx.scene.control.behavior.KeyBinding;
 import javafx.scene.control.skin.TextInputControlSkin;
 import javafx.scene.control.skin.TextInputControlSkin.Direction;
 import javafx.scene.control.skin.TextInputControlSkin.TextUnit;
@@ -136,71 +136,71 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         regFunc(TextInputControl.UNDO, this::undo);
 
         // common key bindings
-        regKey(KeyBinding2.shortcut(KeyCode.C), TextInputControl.COPY);
-        regKey(KeyBinding2.of(KeyCode.COPY), TextInputControl.COPY);
-        regKey(KeyBinding2.shortcut(KeyCode.INSERT), TextInputControl.COPY);
-        regKey(KeyBinding2.of(KeyCode.CUT), TextInputControl.CUT);
-        regKey(KeyBinding2.shortcut(KeyCode.X), TextInputControl.CUT);
-        regKey(KeyBinding2.of(KeyCode.DELETE), TextInputControl.DELETE_NEXT_CHAR);
-        regKey(KeyBinding2.of(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_CHAR);
-        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).shift().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        regKey(KeyBinding2.of(KeyCode.HOME), TextInputControl.DOCUMENT_START);
-        regKey(KeyBinding2.with(KeyCode.HOME).shortcut().build(), TextInputControl.DOCUMENT_START);
-        regKey(KeyBinding2.of(KeyCode.UP), TextInputControl.DOCUMENT_START);
-        regKey(KeyBinding2.of(KeyCode.DOWN), TextInputControl.DOCUMENT_END);
-        regKey(KeyBinding2.of(KeyCode.END), TextInputControl.DOCUMENT_END);
-        regKey(KeyBinding2.with(KeyCode.END).shortcut().build(), TextInputControl.DOCUMENT_END);
-        regKey(KeyBinding2.of(KeyCode.LEFT), TextInputControl.LEFT);
-        regKey(KeyBinding2.of(KeyCode.PASTE), TextInputControl.PASTE);
-        regKey(KeyBinding2.shift(KeyCode.INSERT), TextInputControl.PASTE);
-        regKey(KeyBinding2.shortcut(KeyCode.V), TextInputControl.PASTE);
-        regKey(KeyBinding2.of(KeyCode.RIGHT), TextInputControl.RIGHT);
-        regKey(KeyBinding2.shift(KeyCode.DOWN), TextInputControl.SELECT_END);
-        regKey(KeyBinding2.with(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
-        regKey(KeyBinding2.with(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
-        regKey(KeyBinding2.shift(KeyCode.UP), TextInputControl.SELECT_HOME);
-        regKey(KeyBinding2.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
-        regKey(KeyBinding2.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
-        regKey(KeyBinding2.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
-        regKey(KeyBinding2.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
-        regKey(KeyBinding2.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
-        regKey(KeyBinding2.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
-        regKey(KeyBinding2.shortcut(KeyCode.Z), TextInputControl.UNDO);
+        regKey(KeyBinding.shortcut(KeyCode.C), TextInputControl.COPY);
+        regKey(KeyBinding.of(KeyCode.COPY), TextInputControl.COPY);
+        regKey(KeyBinding.shortcut(KeyCode.INSERT), TextInputControl.COPY);
+        regKey(KeyBinding.of(KeyCode.CUT), TextInputControl.CUT);
+        regKey(KeyBinding.shortcut(KeyCode.X), TextInputControl.CUT);
+        regKey(KeyBinding.of(KeyCode.DELETE), TextInputControl.DELETE_NEXT_CHAR);
+        regKey(KeyBinding.of(KeyCode.BACK_SPACE), TextInputControl.DELETE_PREVIOUS_CHAR);
+        regKey(KeyBinding.with(KeyCode.BACK_SPACE).shift().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        regKey(KeyBinding.of(KeyCode.HOME), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding.with(KeyCode.HOME).shortcut().build(), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding.of(KeyCode.UP), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding.of(KeyCode.DOWN), TextInputControl.DOCUMENT_END);
+        regKey(KeyBinding.of(KeyCode.END), TextInputControl.DOCUMENT_END);
+        regKey(KeyBinding.with(KeyCode.END).shortcut().build(), TextInputControl.DOCUMENT_END);
+        regKey(KeyBinding.of(KeyCode.LEFT), TextInputControl.LEFT);
+        regKey(KeyBinding.of(KeyCode.PASTE), TextInputControl.PASTE);
+        regKey(KeyBinding.shift(KeyCode.INSERT), TextInputControl.PASTE);
+        regKey(KeyBinding.shortcut(KeyCode.V), TextInputControl.PASTE);
+        regKey(KeyBinding.of(KeyCode.RIGHT), TextInputControl.RIGHT);
+        regKey(KeyBinding.shift(KeyCode.DOWN), TextInputControl.SELECT_END);
+        regKey(KeyBinding.with(KeyCode.END).shortcut().shift().build(), TextInputControl.SELECT_END);
+        regKey(KeyBinding.with(KeyCode.HOME).shortcut().shift().build(), TextInputControl.SELECT_HOME);
+        regKey(KeyBinding.shift(KeyCode.UP), TextInputControl.SELECT_HOME);
+        regKey(KeyBinding.shift(KeyCode.LEFT), TextInputControl.SELECT_LEFT);
+        regKey(KeyBinding.shift(KeyCode.RIGHT), TextInputControl.SELECT_RIGHT);
+        regKey(KeyBinding.of(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        regKey(KeyBinding.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
+        regKey(KeyBinding.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
+        regKey(KeyBinding.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
+        regKey(KeyBinding.shortcut(KeyCode.Z), TextInputControl.UNDO);
 
         // macOS key bindings
-        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
-        regKey(KeyBinding2.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        regKey(KeyBinding2.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
-        regKey(KeyBinding2.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
-        regKey(KeyBinding2.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
-        regKey(KeyBinding2.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
-        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.END).shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.LEFT).shift().alt().forMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        regKey(KeyBinding.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
+        regKey(KeyBinding.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        regKey(KeyBinding.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        regKey(KeyBinding.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
+        regKey(KeyBinding.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
+        regKey(KeyBinding.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
+        regKey(KeyBinding.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
+        regKey(KeyBinding.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
+        regKey(KeyBinding.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
+        regKey(KeyBinding.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
+        regKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
+        regKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
+        regKey(KeyBinding.with(KeyCode.END).shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
+        regKey(KeyBinding.with(KeyCode.LEFT).shift().alt().forMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        regKey(KeyBinding.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // windows key bindings
-        regKey(KeyBinding2.with(KeyCode.Y).control().forWindows().build(), TextInputControl.REDO);
+        regKey(KeyBinding.with(KeyCode.Y).control().forWindows().build(), TextInputControl.REDO);
 
         // linux key bindings
-        regKey(KeyBinding2.with(KeyCode.Z).control().shift().forLinux().build(), TextInputControl.REDO);
+        regKey(KeyBinding.with(KeyCode.Z).control().shift().forLinux().build(), TextInputControl.REDO);
 
         // not-mac key bindings
-        regKey(KeyBinding2.with(KeyCode.DELETE).control().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        regKey(KeyBinding2.with(KeyCode.H).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        regKey(KeyBinding2.with(KeyCode.BACK_SPACE).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        regKey(KeyBinding2.with(KeyCode.BACK_SLASH).control().notForMac().build(), TextInputControl.DESELECT);
-        regKey(KeyBinding2.with(KeyCode.LEFT).control().notForMac().build(), TextInputControl.LEFT_WORD);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).control().notForMac().build(), TextInputControl.RIGHT_WORD);
-        regKey(KeyBinding2.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
-        regKey(KeyBinding2.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
-        regKey(KeyBinding2.with(KeyCode.LEFT).control().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).control().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        regKey(KeyBinding.with(KeyCode.DELETE).control().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
+        regKey(KeyBinding.with(KeyCode.H).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+        regKey(KeyBinding.with(KeyCode.BACK_SPACE).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+        regKey(KeyBinding.with(KeyCode.BACK_SLASH).control().notForMac().build(), TextInputControl.DESELECT);
+        regKey(KeyBinding.with(KeyCode.LEFT).control().notForMac().build(), TextInputControl.LEFT_WORD);
+        regKey(KeyBinding.with(KeyCode.RIGHT).control().notForMac().build(), TextInputControl.RIGHT_WORD);
+        regKey(KeyBinding.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
+        regKey(KeyBinding.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
+        regKey(KeyBinding.with(KeyCode.LEFT).control().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
+        regKey(KeyBinding.with(KeyCode.RIGHT).control().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
 
         // key pad mappings
         addKeyPadMappings();
@@ -238,7 +238,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-            addHandler(KeyBinding2.builder().with(KeyCode.DIGIT9).control().shift().build(), true, (ev) -> {
+            addHandler(KeyBinding.builder().with(KeyCode.DIGIT9).control().shift().build(), true, (ev) -> {
                 FXVK.toggleUseVK(getNode());
             });
         }
@@ -256,8 +256,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      */
     protected void addKeyPadMappings() {
         InputMap m = getNode().getInputMap2();
-        Set<KeyBinding2> keys = m.getKeyBindings();
-        for (KeyBinding2 k: keys) {
+        Set<KeyBinding> keys = m.getKeyBindings();
+        for (KeyBinding k: keys) {
             KeyCode cd = k.getKeyCode();
             if (cd != null) {
                 KeyCode newCode = null;
@@ -280,7 +280,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 }
 
                 if (newCode != null) {
-                    KeyBinding2 newBinding = KeyBinding2.
+                    KeyBinding newBinding = KeyBinding.
                         with(newCode).
                         alt(k.isAlt()).
                         command(k.isCommand()).

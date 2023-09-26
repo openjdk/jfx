@@ -30,7 +30,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.behavior.KeyBinding2;
+import javafx.scene.control.behavior.KeyBinding;
 import javafx.scene.control.skin.TextAreaSkin;
 import javafx.scene.control.skin.TextInputControlSkin.Direction;
 import javafx.scene.control.skin.TextInputControlSkin.TextUnit;
@@ -108,39 +108,39 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         
         // common keys
         regKey(KeyCode.DOWN, TextArea.DOWN);
-        regKey(KeyBinding2.shift(KeyCode.DOWN), TextArea.SELECT_DOWN);
-        regKey(KeyBinding2.shift(KeyCode.END), TextArea.SELECT_LINE_END);
+        regKey(KeyBinding.shift(KeyCode.DOWN), TextArea.SELECT_DOWN);
+        regKey(KeyBinding.shift(KeyCode.END), TextArea.SELECT_LINE_END);
         regKey(KeyCode.END, TextArea.LINE_END);
         regKey(KeyCode.ENTER, TextArea.INSERT_NEW_LINE);
         regKey(KeyCode.HOME, TextArea.LINE_START);
-        regKey(KeyBinding2.shift(KeyCode.HOME), TextArea.SELECT_LINE_START);
+        regKey(KeyBinding.shift(KeyCode.HOME), TextArea.SELECT_LINE_START);
         regKey(KeyCode.PAGE_UP, TextArea.PAGE_UP);
-        regKey(KeyBinding2.shift(KeyCode.PAGE_UP), TextArea.SELECT_PAGE_UP);
+        regKey(KeyBinding.shift(KeyCode.PAGE_UP), TextArea.SELECT_PAGE_UP);
         regKey(KeyCode.PAGE_DOWN, TextArea.PAGE_DOWN);
-        regKey(KeyBinding2.shift(KeyCode.PAGE_DOWN), TextArea.SELECT_PAGE_DOWN);
+        regKey(KeyBinding.shift(KeyCode.PAGE_DOWN), TextArea.SELECT_PAGE_DOWN);
         regKey(KeyCode.TAB, TextArea.INSERT_TAB);
         regKey(KeyCode.UP, TextArea.UP);
-        regKey(KeyBinding2.shift(KeyCode.UP), TextArea.SELECT_UP);
+        regKey(KeyBinding.shift(KeyCode.UP), TextArea.SELECT_UP);
         
         // macOS specific mappings
-        regKey(KeyBinding2.with(KeyCode.DOWN).alt().forMac().build(), TextArea.PARAGRAPH_DOWN);
-        regKey(KeyBinding2.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
-        regKey(KeyBinding2.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
-        regKey(KeyBinding2.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
-        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.LINE_START);
-        regKey(KeyBinding2.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.LINE_END);
-        regKey(KeyBinding2.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
-        regKey(KeyBinding2.with(KeyCode.UP).alt().forMac().build(), TextArea.PARAGRAPH_UP);
-        regKey(KeyBinding2.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
-        regKey(KeyBinding2.with(KeyCode.UP).shortcut().forMac().build(), TextArea.DOCUMENT_START);
-        regKey(KeyBinding2.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
+        regKey(KeyBinding.with(KeyCode.DOWN).alt().forMac().build(), TextArea.PARAGRAPH_DOWN);
+        regKey(KeyBinding.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        regKey(KeyBinding.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
+        regKey(KeyBinding.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
+        regKey(KeyBinding.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.LINE_START);
+        regKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
+        regKey(KeyBinding.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.LINE_END);
+        regKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
+        regKey(KeyBinding.with(KeyCode.UP).alt().forMac().build(), TextArea.PARAGRAPH_UP);
+        regKey(KeyBinding.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+        regKey(KeyBinding.with(KeyCode.UP).shortcut().forMac().build(), TextArea.DOCUMENT_START);
+        regKey(KeyBinding.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
 
         // non-macOS specific mappings
-        regKey(KeyBinding2.with(KeyCode.DOWN).control().notForMac().build(), TextArea.PARAGRAPH_DOWN);
-        regKey(KeyBinding2.with(KeyCode.DOWN).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
-        regKey(KeyBinding2.with(KeyCode.UP).control().notForMac().build(), TextArea.PARAGRAPH_UP);
-        regKey(KeyBinding2.with(KeyCode.UP).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+        regKey(KeyBinding.with(KeyCode.DOWN).control().notForMac().build(), TextArea.PARAGRAPH_DOWN);
+        regKey(KeyBinding.with(KeyCode.DOWN).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+        regKey(KeyBinding.with(KeyCode.UP).control().notForMac().build(), TextArea.PARAGRAPH_UP);
+        regKey(KeyBinding.with(KeyCode.UP).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
 
         addKeyPadMappings();
     }

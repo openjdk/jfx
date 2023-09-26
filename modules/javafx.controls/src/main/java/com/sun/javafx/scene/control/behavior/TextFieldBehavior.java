@@ -35,7 +35,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
-import javafx.scene.control.behavior.KeyBinding2;
+import javafx.scene.control.behavior.KeyBinding;
 import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
@@ -119,8 +119,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             tlFocus = new TwoLevelFocusBehavior(textField); // needs to be last.
         }
         
-        addHandler(KeyBinding2.of(KeyCode.ENTER), false, this::fire);
-        addHandler(KeyBinding2.of(KeyCode.ESCAPE), false, this::cancelEdit);
+        addHandler(KeyBinding.of(KeyCode.ENTER), false, this::fire);
+        addHandler(KeyBinding.of(KeyCode.ESCAPE), false, this::cancelEdit);
     }
 
     @Override

@@ -104,15 +104,15 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding, can be null (TODO or KB.NA)
      * @param tag the function tag
      */
-    protected void regKey(KeyBinding2 k, FunctionTag tag) {
+    protected void regKey(KeyBinding k, FunctionTag tag) {
         getInputMap2().regKey(this, k, tag);
     }
 
     /**
      * Maps a key binding to the specified function tag.
-     * This method will not override a user mapping added by {@link #regKey(KeyBinding2,FunctionTag)}.
+     * This method will not override a user mapping added by {@link #regKey(KeyBinding,FunctionTag)}.
      *
-     * @param code the key code to construct a {@link KeyBinding2}
+     * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag
      */
     protected void regKey(KeyCode code, FunctionTag tag) {
@@ -126,7 +126,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param k the key binding
      * @param func the function
      */
-    protected void reg(FunctionTag tag, KeyBinding2 k, Runnable func) {
+    protected void reg(FunctionTag tag, KeyBinding k, Runnable func) {
         getInputMap2().regFunc(tag, func);
         getInputMap2().regKey(k, tag);
     }
@@ -140,7 +140,7 @@ public abstract class BehaviorBase<C extends Control> {
      */
     protected void reg(FunctionTag tag, KeyCode code, Runnable func) {
         getInputMap2().regFunc(tag, func);
-        getInputMap2().regKey(KeyBinding2.of(code), tag);
+        getInputMap2().regKey(KeyBinding.of(code), tag);
     }
 
     /**

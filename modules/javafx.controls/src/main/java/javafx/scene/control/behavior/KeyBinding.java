@@ -38,7 +38,7 @@ import com.sun.javafx.PlatformUtil;
  * multiple key maps.
  */
 // TODO rename KeyBinding
-public class KeyBinding2 implements EventCriteria<KeyEvent> {
+public class KeyBinding implements EventCriteria<KeyEvent> {
     /**
      * Condition used to build input key mappings.
      * <p>
@@ -103,7 +103,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
     private final Object key; // KeyCode or String
     private final EnumSet<KCondition> modifiers;
 
-    private KeyBinding2(Object key, EnumSet<KCondition> modifiers) {
+    private KeyBinding(Object key, EnumSet<KCondition> modifiers) {
         this.key = key;
         this.modifiers = modifiers;
     }
@@ -114,7 +114,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
      * @param code key code
      * @return KeyBinding
      */
-    public static KeyBinding2 of(KeyCode code) {
+    public static KeyBinding of(KeyCode code) {
         return create(code, KCondition.KEY_PRESS);
     }
 
@@ -124,7 +124,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
      * @param code key code
      * @return KeyBinding
      */
-    public static KeyBinding2 command(KeyCode code) {
+    public static KeyBinding command(KeyCode code) {
         return create(code, KCondition.KEY_PRESS, KCondition.COMMAND);
     }
 
@@ -134,7 +134,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
      * @param code key code
      * @return KeyBinding
      */
-    public static KeyBinding2 alt(KeyCode code) {
+    public static KeyBinding alt(KeyCode code) {
         return create(code, KCondition.KEY_PRESS, KCondition.ALT);
     }
 
@@ -144,7 +144,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
      * @param code key code
      * @return KeyBinding
      */
-    public static KeyBinding2 ctrl(KeyCode code) {
+    public static KeyBinding ctrl(KeyCode code) {
         return create(code, KCondition.KEY_PRESS, KCondition.CTRL);
     }
     
@@ -154,7 +154,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
      * @param code key code
      * @return KeyBinding
      */
-    public static KeyBinding2 shift(KeyCode code) {
+    public static KeyBinding shift(KeyCode code) {
         return create(code, KCondition.KEY_PRESS, KCondition.SHIFT);
     }
 
@@ -164,11 +164,11 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
      * @param code key code
      * @return KeyBinding
      */
-    public static KeyBinding2 shortcut(KeyCode code) {
+    public static KeyBinding shortcut(KeyCode code) {
         return create(code, KCondition.KEY_PRESS, KCondition.SHORTCUT);
     }
 
-    private static KeyBinding2 create(Object key, KCondition... mods) {
+    private static KeyBinding create(Object key, KCondition... mods) {
         return builder().init(key, mods).build();
     }
 
@@ -278,7 +278,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
 
     @Override
     public int hashCode() {
-        int h = KeyBinding2.class.hashCode();
+        int h = KeyBinding.class.hashCode();
         h = 31 * h + key.hashCode();
         h = 31 * h + modifiers.hashCode();
         return h;
@@ -288,7 +288,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
     public boolean equals(Object x) {
         if (x == this) {
             return true;
-        } else if (x instanceof KeyBinding2 k) {
+        } else if (x instanceof KeyBinding k) {
             return
                 Objects.equals(key, k.key) &&
                 modifiers.equals(k.modifiers);
@@ -329,7 +329,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
      * @param ev key event
      * @return the key binding
      */
-    public static KeyBinding2 from(KeyEvent ev) {
+    public static KeyBinding from(KeyEvent ev) {
         Object key;
         EnumSet<KCondition> m = EnumSet.noneOf(KCondition.class);
         EventType<KeyEvent> t = ev.getEventType();
@@ -397,7 +397,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
             m.add(KCondition.SHIFT);
         }
 
-        KeyBinding2 keyBinding = new KeyBinding2(key, m);
+        KeyBinding keyBinding = new KeyBinding(key, m);
         //System.err.println("kb=" + keyBinding + " ev=" + toString(ev)); // FIX
         return keyBinding;
     }
@@ -466,7 +466,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
 
     @Override
     public boolean isEventAcceptable(KeyEvent ev) {
-        return KeyBinding2.from(ev).equals(this);
+        return KeyBinding.from(ev).equals(this);
     }
 
     // TODO other setters (platform, etc)
@@ -737,12 +737,12 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Creates a new {@link KeyBinding2} instance, or null if the key binding is not applicable to this platform.
+         * Creates a new {@link KeyBinding} instance, or null if the key binding is not applicable to this platform.
          * TODO variant: KeyBinding.NA
          *
          * @return a new key binding instance.
          */
-        public KeyBinding2 build() {
+        public KeyBinding build() {
             // mac-windows for now.  we might rethink the logic later if necessary.
             boolean mac = PlatformUtil.isMac();
             boolean win = PlatformUtil.isWindows();
@@ -832,7 +832,7 @@ public class KeyBinding2 implements EventCriteria<KeyEvent> {
             m.add(t);
 
             // TODO validate: shortcut and !(other shortcut modifier)
-            return new KeyBinding2(key, m);
+            return new KeyBinding(key, m);
         }
     }
 }

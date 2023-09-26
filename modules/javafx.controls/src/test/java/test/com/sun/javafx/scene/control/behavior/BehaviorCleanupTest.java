@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,16 @@
 
 package test.com.sun.javafx.scene.control.behavior;
 
+import static javafx.collections.FXCollections.observableArrayList;
+import static javafx.scene.control.skin.TextInputSkinShim.isCaretBlinking;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createBehavior;
 import java.lang.ref.WeakReference;
 import java.util.Set;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
-import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
-import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
-
-import static com.sun.javafx.scene.control.behavior.TextBehaviorShim.*;
-import static javafx.collections.FXCollections.*;
-import static javafx.scene.control.skin.TextInputSkinShim.*;
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
@@ -53,11 +44,17 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.control.behavior.KeyBinding2;
+import javafx.scene.control.behavior.KeyBinding;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 
 /**
  * Test for misbehavior of individual implementations that turned
@@ -223,9 +220,9 @@ public class BehaviorCleanupTest {
             KeyCode.KP_UP,
         };
 
-        Set<KeyBinding2> keys = control.getInputMap2().getKeyBindings();
+        Set<KeyBinding> keys = control.getInputMap2().getKeyBindings();
         for (KeyCode c: codes) {
-            KeyBinding2 k = KeyBinding2.of(c);
+            KeyBinding k = KeyBinding.of(c);
             assertTrue(keys.contains(k));
         }
     }
@@ -268,15 +265,15 @@ public class BehaviorCleanupTest {
             KeyCode.KP_RIGHT,
         };
 
-        Set<KeyBinding2> keys = control.getInputMap2().getKeyBindings();
+        Set<KeyBinding> keys = control.getInputMap2().getKeyBindings();
         System.out.println(keys);
         for (KeyCode c: codes) {
             if (PlatformUtil.isMac()) {
-                KeyBinding2 expectedMac = KeyBinding2.command(c);
+                KeyBinding expectedMac = KeyBinding.command(c);
                 System.out.println(expectedMac);
                 assertTrue("code=" + c, keys.contains(expectedMac));
             } else {
-                KeyBinding2 expectedNotMac = KeyBinding2.ctrl(c);
+                KeyBinding expectedNotMac = KeyBinding.ctrl(c);
                 assertTrue("code=" + c, keys.contains(expectedNotMac));
             }
         }
