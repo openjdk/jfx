@@ -907,8 +907,6 @@ public class VFlow extends Pane implements StyleResolver {
         rightSide = computeSideWidth(rightDecorator);
 
         int paragraphCount = getParagraphCount();
-        int tabSize = control.getTabSize();
-
         boolean useContentHeight = control.isUseContentHeight();
         boolean useContentWidth = control.isUseContentWidth();
         boolean wrap = control.isWrapText() && !useContentWidth;
@@ -1071,9 +1069,6 @@ public class VFlow extends Pane implements StyleResolver {
             if (!r.maxHeightProperty().isBound()) {
                 r.setMaxHeight(USE_COMPUTED_SIZE);
             }
-            if (r instanceof TextFlow f) {
-                f.setTabSize(tabSize);
-            }
 
             r.applyCss();
             r.layout();
@@ -1185,7 +1180,6 @@ public class VFlow extends Pane implements StyleResolver {
         if(r instanceof TextFlow f) {
             return f.getLineSpacing();
         }
-        // TODO what if this paragraph attribute is set and we have a paragraph node?
         return 0.0;
     }
 
@@ -1311,13 +1305,13 @@ public class VFlow extends Pane implements StyleResolver {
         }
     }
 
-    public void updateTabSize() {
-        //CaretInfo c = getCaretInfo();
-        requestLayout();
-        // TODO remember caret line position, do layout pass, block move to preserve the caret y position
-        // as it might shift (only if wrapping is enabled)
-        // also if wrap is off, might need a horizontal block scroll to keep caret in the same x position
-    }
+//    public void updateTabSize() {
+//        //CaretInfo c = getCaretInfo();
+//        requestLayout();
+//        // TODO remember caret line position, do layout pass, block move to preserve the caret y position
+//        // as it might shift (only if wrapping is enabled)
+//        // also if wrap is off, might need a horizontal block scroll to keep caret in the same x position
+//    }
 
     // TODO this implementation might be more advanced to reduce the amount of re-computation and re-flow
     public void handleTextUpdated(TextPos start, TextPos end, int addedTop, int linesAdded, int addedBottom) {

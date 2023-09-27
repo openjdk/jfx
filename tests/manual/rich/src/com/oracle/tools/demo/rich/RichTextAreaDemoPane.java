@@ -148,12 +148,12 @@ public class RichTextAreaDemoPane extends BorderPane {
             control.setHighlightCurrentParagraph(on);
         });
         
-        ComboBox<Integer> tabSize = new ComboBox<>();
-        FX.name(tabSize, "tabSize");
-        tabSize.getItems().setAll(1, 2, 3, 4, 8, 16);
-        tabSize.getSelectionModel().selectedItemProperty().addListener((s,p,v) -> {
-            control.setTabSize(v);
-        });
+//        ComboBox<Integer> tabSize = new ComboBox<>();
+//        FX.name(tabSize, "tabSize");
+//        tabSize.getItems().setAll(1, 2, 3, 4, 8, 16);
+//        tabSize.getSelectionModel().selectedItemProperty().addListener((s,p,v) -> {
+//            control.setTabSize(v);
+//        });
         
         Button reloadModelButton = new Button("Reload Model");
         reloadModelButton.setOnAction((ev) -> reloadModel());
@@ -236,8 +236,8 @@ public class RichTextAreaDemoPane extends BorderPane {
         op.option(fatCaret);
         op.option(fastBlink);
         op.option(highlightCurrentLine);
-        op.label("Tab Size:");
-        op.option(tabSize);
+//        op.label("Tab Size:");
+//        op.option(tabSize);
         op.option(customPopup);
         op.label("Content Padding:");
         op.option(contentPadding);

@@ -673,30 +673,30 @@ public class RichTextArea extends Control {
      * @defaultValue 8
      */
     // FIX this makes sense only in the context of CodeArea
-    public final ReadOnlyIntegerProperty tabSizeProperty() {
-        return tabSizePropertyPrivate().getReadOnlyProperty();
-    }
-
-    public final void setTabSize(int n) {
-        if ((n < 1) || (n > Params.MAX_TAB_SIZE)) {
-            throw new IllegalArgumentException("tab size out of range (1-" + Params.MAX_TAB_SIZE + ") " + n);
-        }
-        tabSizePropertyPrivate().set(n);
-    }
-
-    public final int getTabSize() {
-        if (tabSizeProperty == null) {
-            return 8;
-        }
-        return tabSizeProperty.get();
-    }
-
-    private ReadOnlyIntegerWrapper tabSizePropertyPrivate() {
-        if (tabSizeProperty == null) {
-            tabSizeProperty = new ReadOnlyIntegerWrapper(8);
-        }
-        return tabSizeProperty;
-    }
+//    public final ReadOnlyIntegerProperty tabSizeProperty() {
+//        return tabSizePropertyPrivate().getReadOnlyProperty();
+//    }
+//
+//    public final void setTabSize(int n) {
+//        if ((n < 1) || (n > Params.MAX_TAB_SIZE)) {
+//            throw new IllegalArgumentException("tab size out of range (1-" + Params.MAX_TAB_SIZE + ") " + n);
+//        }
+//        tabSizePropertyPrivate().set(n);
+//    }
+//
+//    public final int getTabSize() {
+//        if (tabSizeProperty == null) {
+//            return 8;
+//        }
+//        return tabSizeProperty.get();
+//    }
+//
+//    private ReadOnlyIntegerWrapper tabSizePropertyPrivate() {
+//        if (tabSizeProperty == null) {
+//            tabSizeProperty = new ReadOnlyIntegerWrapper(8);
+//        }
+//        return tabSizeProperty;
+//    }
 
     /**
      * Determines whether the preferred width is the same as the content width.
