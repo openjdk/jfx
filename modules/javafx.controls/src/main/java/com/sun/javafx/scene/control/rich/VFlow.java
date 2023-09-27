@@ -851,14 +851,17 @@ public class VFlow extends Pane implements StyleResolver {
         reflow();
     }
 
-    protected CellArrangement reflow() {
+    protected void reflow() {
 //        System.out.println("reflow"); // FIX
         inReflow = true;
         try {
-            removeCells();
+            // remove old nodes, if any
+            if (arrangement != null) {
+                arrangement.removeNodesFrom(flow);
+                arrangement = null;
+            }
     
-            CellArrangement ar = new CellArrangement(this);
-            arrangement = ar;
+            arrangement = new CellArrangement(this);
             layoutCells();
     
             checkForExcessiveWhitespaceAtTheEnd();
@@ -869,18 +872,8 @@ public class VFlow extends Pane implements StyleResolver {
             if (!vsbPressed) {
                 updateVerticalScrollBar();
             }
-    
-            // layout might get invalidated in the process, but we must return a non-null value
-            return ar;
         } finally {
             inReflow = false;
-        }
-    }
-
-    protected void removeCells() {
-        if (arrangement != null) {
-            arrangement.removeNodesFrom(flow);
-            arrangement = null;
         }
     }
 
