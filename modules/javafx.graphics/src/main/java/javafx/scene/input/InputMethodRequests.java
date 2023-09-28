@@ -62,7 +62,9 @@ public interface InputMethodRequests {
      *         composed text; 0 otherwise
      * @return a point representing the Scene location of the offset
      */
-    Point2D getTextLocationRelative(int offset);
+    default Point2D getTextLocationRelative(int offset) {
+        return new Point2D(0D, 0D);
+    }
 
     /**
      * Gets the offset within the composed text for the specified absolute x
