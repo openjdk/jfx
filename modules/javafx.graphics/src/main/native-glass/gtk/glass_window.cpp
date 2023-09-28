@@ -743,6 +743,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             owner(_owner),
             geometry(),
             resizable(),
+            map_received(false),
             on_top(false),
             is_fullscreen(false) {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
@@ -1189,8 +1190,12 @@ void WindowContextTop::exit_fullscreen() {
     gtk_window_unfullscreen(GTK_WINDOW(gtk_widget));
 }
 
+void WindowContextTop::process_map() {
+    map_received = true;
+}
+
 void WindowContextTop::request_focus() {
-    if (is_visible()) {
+    if (map_received) {
         gtk_window_present(GTK_WINDOW(gtk_widget));
     }
 }

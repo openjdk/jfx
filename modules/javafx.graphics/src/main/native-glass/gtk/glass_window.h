@@ -142,6 +142,7 @@ public:
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
     virtual void process_key(GdkEventKey*) = 0;
     virtual void process_state(GdkEventWindowState*) = 0;
+    virtual void process_map() = 0;
 
     virtual void notify_state(jint) = 0;
     virtual void notify_on_top(bool) {}
@@ -314,6 +315,8 @@ public:
 
     GtkWindow *get_gtk_window();
     void detach_from_java();
+
+    void process_map();
 protected:
     void applyShapeMask(void*, uint width, uint height);
 private:
