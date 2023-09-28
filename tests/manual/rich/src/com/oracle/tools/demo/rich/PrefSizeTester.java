@@ -27,8 +27,10 @@ package com.oracle.tools.demo.rich;
 
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 
 public class PrefSizeTester extends Pane {
     private final ComboBox prefWidth;
@@ -36,6 +38,8 @@ public class PrefSizeTester extends Pane {
     private final GridPane p;
     
     public PrefSizeTester() {
+        setBackground(Background.fill(Color.LIGHTSTEELBLUE));
+
         prefWidth = new ComboBox();
         prefWidth.getItems().addAll(
             -1.0,
@@ -63,7 +67,7 @@ public class PrefSizeTester extends Pane {
         p.add(prefWidth, 1, 0);
         p.add(new Label("Pref Height:"), 0, 1);
         p.add(prefHeight, 1, 1);
-        
+
         getChildren().add(p);
         //setCenter(p);
     }

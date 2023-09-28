@@ -203,8 +203,7 @@ public class VFlow extends Pane implements StyleResolver {
         setContentWidth(0.0);
         setOrigin(new Origin(0, -topPadding));
         setOffsetX(-leftPadding);
-        cellCache.clear();
-        requestControlLayout();
+        requestControlLayout(true);
     }
 
     protected double wrappedWidth() {
@@ -224,14 +223,13 @@ public class VFlow extends Pane implements StyleResolver {
 
         updateHorizontalScrollBar();
         updateVerticalScrollBar();
-        cellCache.clear();
-        requestControlLayout();
+        requestControlLayout(true);
     }
 
     public void handleDecoratorChange() {
         leftCache = updateSideCache(control.getLeftDecorator(), leftCache);
         rightCache = updateSideCache(control.getRightDecorator(), rightCache);
-        requestControlLayout();
+        requestControlLayout(false);
     }
 
     private FastCache<Node> updateSideCache(SideDecorator decorator, FastCache<Node> cache) {
@@ -1379,7 +1377,7 @@ public class VFlow extends Pane implements StyleResolver {
             setOrigin(new Origin(0, -topPadding));
             setOffsetX(-leftPadding);
         }
-        requestControlLayout();
+        requestControlLayout(false);
     }
 
     public void handleUseContentWidth() {
@@ -1389,7 +1387,7 @@ public class VFlow extends Pane implements StyleResolver {
             setOrigin(new Origin(0, -topPadding));
             setOffsetX(-leftPadding);
         }
-        requestControlLayout();
+        requestControlLayout(false);
     }
 
     @Override
@@ -1398,7 +1396,14 @@ public class VFlow extends Pane implements StyleResolver {
         super.requestLayout();
     }
 
-    private void requestControlLayout() {
+    /**
+     * Requests full layout with optional clearing of the cached cells.
+     * @param clearCache if true, clears the cell cache
+     */
+    public void requestControlLayout(boolean clearCache) {
+        if (clearCache) {
+            cellCache.clear();
+        }
         requestParentLayout();
         requestLayout();
     }
@@ -1422,7 +1427,7 @@ public class VFlow extends Pane implements StyleResolver {
 
                 //D.p("control.getParent().requestLayout();");
                 control.getParent().requestLayout();
-                requestControlLayout();
+                requestControlLayout(false);
             }
         }
     }
@@ -1444,7 +1449,7 @@ public class VFlow extends Pane implements StyleResolver {
 
                 //D.p("control.getParent().requestLayout();");
                 control.getParent().requestLayout();
-                requestControlLayout();
+                requestControlLayout(false);
             }
         }
     }

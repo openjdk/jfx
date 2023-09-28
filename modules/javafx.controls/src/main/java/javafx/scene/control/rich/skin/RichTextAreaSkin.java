@@ -259,6 +259,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     }
 
     private void handleFontChange() {
+        // TODO use the default paragraph style
         Font f = getSkinnable().getFont();
         if (f != null) {
             String family = f.getFamily();
@@ -275,7 +276,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 ";";
             mainPane.setStyle(s);
             getSkinnable().requestLayout();
-            vflow.requestLayout();
+            vflow.requestControlLayout(true);
         }
     }
 

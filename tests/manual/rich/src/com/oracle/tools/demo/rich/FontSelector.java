@@ -49,10 +49,6 @@ public class FontSelector {
         FX.name(sizeField, id + "_SIZE");
         sizeField.getItems().setAll(
             1,
-            2,
-            3,
-            4,
-            5,
             6,
             7,
             8,
@@ -60,6 +56,7 @@ public class FontSelector {
             10,
             11,
             12,
+            16,
             24,
             48,
             72,

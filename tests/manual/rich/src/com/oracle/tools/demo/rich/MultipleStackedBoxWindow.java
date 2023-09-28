@@ -36,6 +36,7 @@ import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.skin.LineNumberDecorator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 /**
@@ -44,9 +45,19 @@ import javafx.stage.Stage;
 public class MultipleStackedBoxWindow extends Stage {
 
     public MultipleStackedBoxWindow(boolean vertical) {
+        Font font = new Font("System Regular", 24);
+
+        StyleAttrs def = StyleAttrs.builder().
+            setFontFamily("Iosevka Fixed SS16").
+            // TODO font size in points / in percent ?
+            setFontSize(100).
+            create();
+
         RichTextArea a1 = new RichTextArea(NotebookModelStacked.m1());
         a1.setWrapText(true);
         a1.setLeftDecorator(new LineNumberDecorator());
+        //a1.setFont(font);
+        a1.setDefaultParagraphAttributes(def);
         createPopupMenu(a1);
         
         TextArea t1 = new TextArea("This TextArea has wrap text property set to false.");
@@ -57,6 +68,8 @@ public class MultipleStackedBoxWindow extends Stage {
         RichTextArea a2 = new RichTextArea(NotebookModelStacked.m2());
         a2.setWrapText(true);
         a2.setLeftDecorator(new LineNumberDecorator());
+        //a2.setFont(font);
+        a2.setDefaultParagraphAttributes(def);
         createPopupMenu(a2);
 
         PrefSizeTester tester = new PrefSizeTester();
