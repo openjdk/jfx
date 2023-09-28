@@ -59,7 +59,7 @@ public interface InputMethodRequests {
      * inserted.
      *
      * @param offset the offset within the composed text, if there is
-     *         composed text; null otherwise
+     *         composed text; 0 otherwise
      * @return a point representing the Scene location of the offset
      */
     Point2D getTextLocationRelative(int offset);
