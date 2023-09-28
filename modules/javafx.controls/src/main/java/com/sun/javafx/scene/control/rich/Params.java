@@ -43,14 +43,11 @@ public class Params {
     /** "slow" autoscroll step, in pixels. */
     public static final double AUTO_SCROLL_STEP_SLOW = 20;
 
-    /** cell cache size (default 512). */
+    /** cell cache size. */
     public static final int CELL_CACHE_SIZE = 512;
 
     /** default caret blink period, in milliseconds. */
     public static final int DEFAULT_CARET_BLINK_PERIOD = 500;
-
-    /** default line spacing */
-    //public static final double DEFAULT_LINE_SPACING = 0.0;
 
     /** default paragraph attributes */
     public static final StyleAttrs DEFAULT_PARAGRAPH_ATTRIBUTES;
@@ -69,9 +66,6 @@ public class Params {
 
     /** min width of the content area when use content width = true and empty model */
     public static final double LAYOUT_MIN_WIDTH = 20;
-
-    /** maximum tab size. */
-    public static final int MAX_TAB_SIZE = 256;
 
     /** maximum width for unwrapped TextFlow layout. Neither Double.MAX_VALUE nor 1e20 work, probably bc float */
     public static final double MAX_WIDTH_FOR_LAYOUT = 1_000_000_000.0;
