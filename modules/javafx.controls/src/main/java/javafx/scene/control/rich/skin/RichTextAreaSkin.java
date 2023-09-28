@@ -110,7 +110,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         
         vscroll = createVScrollBar();
         vscroll.setOrientation(Orientation.VERTICAL);
-        //vscroll.setManaged(false);
         vscroll.setMin(0.0);
         vscroll.setMax(1.0);
         vscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
@@ -123,7 +122,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
         hscroll = createHScrollBar();
         hscroll.setOrientation(Orientation.HORIZONTAL);
-        //hscroll.setManaged(false);
         hscroll.setMin(0.0);
         hscroll.setMax(1.0);
         hscroll.setUnitIncrement(Params.SCROLL_BARS_UNIT_INCREMENT);
@@ -136,7 +134,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
         ));
 
         vflow = new VFlow(this, config, vscroll, hscroll);
-        //vflow.setManaged(false);
 
         // TODO corner? only when both scroll bars are visible
 
@@ -217,7 +214,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
             listenerHelper.disconnect();
             behavior.dispose();
             vflow.dispose();
-    
             super.dispose();
         }
     }

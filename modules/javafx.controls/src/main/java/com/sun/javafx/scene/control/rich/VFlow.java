@@ -94,6 +94,7 @@ public class VFlow extends Pane implements StyleResolver {
     private final Timeline caretAnimation;
     private final FastCache<TextCell> cellCache;
     private CellArrangement arrangement;
+    private boolean dirty = true;
     private FastCache<Node> leftCache;
     private FastCache<Node> rightCache;
     private boolean handleScrollEvents = true;
@@ -106,7 +107,6 @@ public class VFlow extends Pane implements StyleResolver {
     private double rightSide;
     private boolean inReflow;
     private static final Text measurer = makeMeasurer();
-    // TODO introduce 'dirty' flag to force the reflow when it's needed
 
     public VFlow(RichTextAreaSkin skin, ConfigurationParameters c, ScrollBar vscroll, ScrollBar hscroll) {
         this.control = skin.getSkinnable();
@@ -118,10 +118,10 @@ public class VFlow extends Pane implements StyleResolver {
 
         getStyleClass().add("flow");
 
-        // TODO consider creating upond demand
+        // TODO consider creating on demand
         leftGutter = new ClippedPane("left-side");
         leftGutter.setManaged(false);
-        // TODO consider creating upond demand
+        // TODO consider creating on demand
         rightGutter = new ClippedPane("right-side");
         rightGutter.setManaged(false);
 
@@ -365,10 +365,9 @@ public class VFlow extends Pane implements StyleResolver {
             setContentWidth(w);
         } else {
             double w = getOffsetX() + flow.getWidth();
-            if (arrangement != null) {
-                if (arrangement.getUnwrappedWidth() > w) {
-                    w = arrangement.getUnwrappedWidth();
-                }
+            double uw = arrangement.getUnwrappedWidth();
+            if (uw > w) {
+                w = uw;
             }
 
             if (w > getContentWidth()) {
@@ -624,7 +623,7 @@ public class VFlow extends Pane implements StyleResolver {
     protected void updateVerticalScrollBar() {
         double visible;
         double val;
-        if (arrangement == null || (getParagraphCount() == 0)) {
+        if (getParagraphCount() == 0) {
             visible = 1.0;
             val = 0.0;
         } else {
@@ -704,7 +703,7 @@ public class VFlow extends Pane implements StyleResolver {
 
             setOffsetX(snapPositionX(off));
             // no need to recompute the flow
-            placeNodes();
+            placeCells();
             updateCaretAndSelection();
         }
     }
@@ -873,13 +872,14 @@ public class VFlow extends Pane implements StyleResolver {
                 updateVerticalScrollBar();
             }
         } finally {
+            dirty = false;
             inReflow = false;
         }
     }
 
     /** returns a non-null layout, laying out cells if necessary */
     protected CellArrangement arrangement() {
-        if(arrangement == null) {
+        if (!inReflow && dirty || (arrangement == null)) {
             reflow();
         }
         return arrangement;
@@ -1125,10 +1125,10 @@ public class VFlow extends Pane implements StyleResolver {
             updatePrefHeight();
         }
 
-        placeNodes();
+        placeCells();
     }
 
-    protected void placeNodes() {
+    protected void placeCells() {
         boolean wrap = control.isWrapText() && !control.isUseContentWidth();
         double w = wrap ? getContentWidth() : Params.MAX_WIDTH_FOR_LAYOUT;
         double x = snapPositionX(-getOffsetX());
@@ -1218,7 +1218,7 @@ public class VFlow extends Pane implements StyleResolver {
         }
         setOffsetX(off - leftPadding);
         // no need to recompute the flow
-        placeNodes();
+        placeCells();
         updateCaretAndSelection();
     }
 
@@ -1281,7 +1281,7 @@ public class VFlow extends Pane implements StyleResolver {
             }
 
             setOffsetX(off);
-            placeNodes();
+            placeCells();
             updateCaretAndSelection();
         }
     }
@@ -1392,16 +1392,22 @@ public class VFlow extends Pane implements StyleResolver {
         requestControlLayout();
     }
 
+    @Override
+    public void requestLayout() {
+        dirty = true;
+        super.requestLayout();
+    }
+
     private void requestControlLayout() {
-        D.p();
-        // FIX does not help!!!
-        control.requestLayout();
+        dirty = true;
         requestParentLayout();
         requestLayout();
     }
 
     private void updatePrefWidth() {
-        if (arrangement != null) {
+        // not null at this point
+        //if (arrangement != null)
+        {
             if (!control.prefWidthProperty().isBound()) {
                 double w = getFlowWidth();
                 if (w >= 0.0) {
@@ -1410,7 +1416,8 @@ public class VFlow extends Pane implements StyleResolver {
                     }
                 }
                 
-                D.p(w); // FIX
+                D.p("w=", w); // FIX
+
                 if (mainPane().getPrefWidth() != w) {
                     //setPrefWidth(w);
                     mainPane().setPrefWidth(w);
@@ -1426,7 +1433,9 @@ public class VFlow extends Pane implements StyleResolver {
 
     // TODO move to caller?
     private void updatePrefHeight() {
-        if (arrangement != null) {
+        // never null at this point
+        //if (arrangement != null) 
+        {
             if (!control.prefHeightProperty().isBound()) {
                 double h = getFlowHeight();
                 if (h >= 0.0) {
@@ -1435,7 +1444,7 @@ public class VFlow extends Pane implements StyleResolver {
                     }
                 }
 
-                D.p(h); // FIX
+                D.p("h=", h); // FIX
 
                 if (mainPane().getPrefHeight() != h) {
                     //setPrefHeight(h);
@@ -1456,20 +1465,20 @@ public class VFlow extends Pane implements StyleResolver {
 
     // TODO move to caller
     public double getFlowHeight() {
-        if (arrangement == null) {
-            return Region.USE_COMPUTED_SIZE;
-        }
+//        if (arrangement == null) {
+//            return Region.USE_COMPUTED_SIZE;
+//        }
         return
-            snapSizeY(Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement.bottomHeight())) +
+            snapSizeY(Math.max(Params.LAYOUT_MIN_HEIGHT, arrangement().bottomHeight())) +
             snapSizeY(Params.LAYOUT_FOCUS_BORDER) * 2;
     }
 
     public double getFlowWidth() {
-        if (arrangement == null) {
-            return Region.USE_COMPUTED_SIZE;
-        }
+//        if (arrangement == null) {
+//            return Region.USE_COMPUTED_SIZE;
+//        }
         return
-            arrangement.getUnwrappedWidth() +
+            arrangement().getUnwrappedWidth() +
             snapSizeX(leftSide) +
             snapSizeX(rightSide) +
             leftPadding +

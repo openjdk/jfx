@@ -42,6 +42,10 @@ public class RichTextAreaDemoApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        new RichTextAreaWindow(false).show();
+        try {
+            new RichTextAreaWindow(false).show();
+        } catch(Throwable e) {
+            e.printStackTrace();
+        }
     }
 }
