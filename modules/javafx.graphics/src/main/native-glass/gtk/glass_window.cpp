@@ -1035,6 +1035,10 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     }
 }
 
+void WindowContextTop::process_map() {
+    map_received = true;
+}
+
 void WindowContextTop::update_window_constraints() {
     GdkGeometry hints;
 
@@ -1188,10 +1192,6 @@ void WindowContextTop::enter_fullscreen() {
 
 void WindowContextTop::exit_fullscreen() {
     gtk_window_unfullscreen(GTK_WINDOW(gtk_widget));
-}
-
-void WindowContextTop::process_map() {
-    map_received = true;
 }
 
 void WindowContextTop::request_focus() {
