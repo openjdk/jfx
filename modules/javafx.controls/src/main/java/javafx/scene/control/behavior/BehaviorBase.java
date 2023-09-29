@@ -147,6 +147,16 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
+     * This convenience method registers a copy of the behavior-specific mappings from one key binding to another.
+     * The method does nothing if no behavior specific mapping can be found.
+     * @param existing the existing key binding
+     * @param newk the new key binding
+     */
+    protected void duplicateMapping(KeyBinding existing, KeyBinding newk) {
+        getInputMap().duplicateMapping(existing, newk);
+    }
+
+    /**
      * Adds an event handler for the specified event type, in the context of this Behavior.
      * The handler will get removed in {@link#dispose()} method.
      * This mapping always consumes the matching event.

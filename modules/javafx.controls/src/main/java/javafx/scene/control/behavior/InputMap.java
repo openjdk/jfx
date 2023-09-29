@@ -534,17 +534,19 @@ public final class InputMap<C extends Control> {
      * This method does nothing if there is no mapping for k1.
      * Subsequent changes to the original mapping are not propagated to the alias.
      *
-     * @param k1 existing key binding
-     * @param k2 new key binding
+     * @param existing the existing key binding
+     * @param newk the new key binding
      */
-    public void addAlias(KeyBinding k1, KeyBinding k2) {
-        Entry en1 = map.get(k1);
-        if (en1 != null) {
-            Entry en2 = new Entry();
+    void duplicateMapping(KeyBinding existing, KeyBinding newk) {
+        Entry en1 = map.get(existing);
+        if ((en1 != null) && (en1.behaviorValue != null)) {
+            Entry en2 = map.get(newk);
+            if (en2 == null) {
+                en2 = new Entry();
+            }
             en2.behavior = en1.behavior;
             en2.behaviorValue = en1.behaviorValue;
-            en2.value = en1.value;
-            map.put(k2, en2);
+            map.put(newk, en2);
         }
     }
 
