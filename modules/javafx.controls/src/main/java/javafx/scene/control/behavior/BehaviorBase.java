@@ -24,12 +24,10 @@
  */
 package javafx.scene.control.behavior;
 
-import java.util.Objects;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
-import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 
 /**
@@ -79,7 +77,12 @@ public abstract class BehaviorBase<C extends Control> {
     public abstract void install();
 
     /**
-     * Disposes of this behavior.
+     * Disposes of this behavior by unregistering all key mappings and event handlers registered by
+     * this behavior.  This method gets invoked by {@code Skin.dispose()}, the application should not need
+     * to call it directly.
+     * <p>
+     * If a subclass overrides this method, it is important to call the superclass
+     * implementation.
      */
     public void dispose() {
         getInputMap().unregister(this);
@@ -179,7 +182,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param type the event type
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandlerTail(EventType<T> type, EventHandler<T> handler) {
+    protected <T extends Event> void addHandlerLast(EventType<T> type, EventHandler<T> handler) {
         getInputMap().addHandler(this, type, true, true, handler);
     }
     
@@ -193,7 +196,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandlerTail(EventType<T> type, boolean consume, EventHandler<T> handler) {
+    protected <T extends Event> void addHandlerLast(EventType<T> type, boolean consume, EventHandler<T> handler) {
         getInputMap().addHandler(this, type, consume, true, handler);
     }
 
@@ -221,7 +224,7 @@ public abstract class BehaviorBase<C extends Control> {
      * @param consume determines whether the matching event is consumed or not
      * @param handler the event handler
      */
-    protected <T extends Event> void addHandlerTail(
+    protected <T extends Event> void addHandlerLast(
         EventCriteria<T> criteria,
         boolean consume,
         EventHandler<T> handler
