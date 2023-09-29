@@ -482,12 +482,13 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     /**
-     * Executes function mapped to the {@link FunctionTag}, if any.
-     * 
+     * Executes function mapped to the {@link FunctionTag}.
+     * This method does nothing if no mapping is found.
+     *
      * @since 22
      * @param tag the function tag
      */
-    protected void execute(FunctionTag tag) {
+    protected final void execute(FunctionTag tag) {
         Runnable f = getInputMap().getFunction(tag);
         if (f != null) {
             f.run();

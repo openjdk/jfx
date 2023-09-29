@@ -209,7 +209,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         // However, we want to consume other key press / release events too, for
         // things that would have been handled by the InputCharacter normally
-        addHandlerTail(
+        addHandlerLast(
             new EventCriteria<KeyEvent>() {
                 @Override
                 public EventType<KeyEvent> getEventType() {

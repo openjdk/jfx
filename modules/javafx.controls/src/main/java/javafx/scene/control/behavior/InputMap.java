@@ -47,7 +47,7 @@ import com.sun.javafx.scene.control.input.HList;
  * @param <C> The type of the Control that the InputMap is installed in.
  * @since 22
  */
-public class InputMap<C extends Control> {
+public final class InputMap<C extends Control> {
     /** contains user- and behavior-set key binding or function mappings */
     private static class Entry { // TODO prename to Mapping?
         Object value;
@@ -380,16 +380,35 @@ public class InputMap<C extends Control> {
     /**
      * Returns a {@code Runnable} mapped to the specified {@link KeyBinding},
      * or null if no such mapping exists.
+     * <p>
+     * @implNote
+     * This method is a functional equivalent of calling {@link #getFunctionTag(KeyBinding)}
+     * followed by {@link #getFunction(FunctionTag)} (if the tag is not null).
      *
      * @param k the key binding
      * @return the function, or null
      */
     public Runnable getFunction(KeyBinding k) {
+        FunctionTag tag = getFunctionTag(k);
+        if (tag != null) {
+            return getFunction(tag);
+        }
+        return null;
+    }
+
+    /**
+     * Returns a {@code FunctionTag} mapped to the specified {@link KeyBinding},
+     * or null if no such mapping exists.
+     *
+     * @param k the key binding
+     * @return the function tag, or null
+     */
+    public FunctionTag getFunctionTag(KeyBinding k) {
         Entry en = map.get(k);
         if (en != null) {
             Object v = en.getValue();
             if (v instanceof FunctionTag tag) {
-                return getFunction(tag);
+                return tag;
             }
         }
         return null;
