@@ -1012,7 +1012,7 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
 
     int x, y;
     gdk_window_get_origin(gdk_window, &x, &y);
-    if (frame_type == TITLED) {
+    if (frame_type == TITLED && !is_fullscreen) {
         x -= geometry.extents.left;
         y -= geometry.extents.top;
     }
