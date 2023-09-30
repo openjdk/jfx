@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,33 +22,27 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.fx.monkey.pages;
+package com.oracle.tools.fx.monkey.tools;
 
-import java.util.function.Supplier;
-import javafx.scene.layout.Pane;
+import javafx.application.Platform;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.BorderPane;
 
 /**
- * Descriptor for an individual test (a "demo").
- * Encapsulates the title and a generator that creates the Pane.
+ * Tool shows the System Info
  */
-public class DemoPage {
-    private final String title;
-    private final Supplier<Pane> generator;
+public class SystemInfoViewer extends BorderPane {
+    private final TextArea textField;
 
-    public DemoPage(String title, Supplier<Pane> generator) {
-        this.title = title;
-        this.generator = generator;
-    }
+    public SystemInfoViewer() {
+        textField = new TextArea();
+        textField.setEditable(false);
+        textField.setWrapText(false);
+        setCenter(textField);
 
-    public Pane createPane() {
-        return generator.get();
-    }
-
-    public String toString() {
-        return title;
-    }
-
-    public String getTitle() {
-        return title;
+        Platform.runLater(() -> {
+            String s = SystemInfo.generateReport();
+            textField.setText(s);
+        });
     }
 }

@@ -28,57 +28,56 @@ import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
 /**
- * HBox Page.
+ * VBox Page.
  */
-public class HBoxPage extends BoxPageBase {
-    public HBoxPage() {
-        super("HBoxPage");
+public class VBoxPage extends BoxPageBase {
+    public VBoxPage() {
+        super("VBoxPage");
     }
 
-    @Override
     protected void setGrow(Node n, Priority p) {
-        HBox.setHgrow(n, p);
+        VBox.setVgrow(n, p);
     }
 
     @Override
     protected Pane createPane() {
-        return new HBox();
+        return new VBox();
     }
 
     @Override
     protected void setMin(Region r, double v) {
-        r.setMinWidth(v);
+        r.setMinHeight(v);
     }
 
     @Override
     protected void setPref(Region r, double v) {
-        r.setPrefWidth(v);
+        r.setPrefHeight(v);
     }
 
     @Override
     protected void setMax(Region r, double v) {
-        r.setMaxWidth(v);
+        r.setMaxHeight(v);
     }
 
     @Override
     protected Region createRegion() {
         Region r = new Region();
-        r.setPrefWidth(30);
-        r.setMinWidth(10);
+        r.setPrefHeight(30);
+        r.setMinHeight(10);
         ContextMenu m = new ContextMenu();
         r.setOnContextMenuRequested((ev) -> {
             m.getItems().setAll(
-                new MenuItem("width=" + r.getWidth()),
+                new MenuItem("height=" + r.getHeight()),
                 new SeparatorMenuItem(),
-                new MenuItem("min width=" + r.getMinWidth()),
-                new MenuItem("pref width=" + r.getPrefWidth()),
-                new MenuItem("max width=" + r.getMaxWidth()));
+                new MenuItem("min height=" + r.getMinHeight()),
+                new MenuItem("pref height=" + r.getPrefHeight()),
+                new MenuItem("max height=" + r.getMaxHeight()));
             m.show(r, ev.getScreenX(), ev.getScreenY());
         });
         return r;

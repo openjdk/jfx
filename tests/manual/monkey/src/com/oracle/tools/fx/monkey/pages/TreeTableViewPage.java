@@ -25,6 +25,7 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import java.util.List;
+import java.util.function.Consumer;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -37,12 +38,17 @@ import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableView.ResizeFeatures;
+import javafx.scene.control.cell.TextFieldTreeTableCell;
+import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.ItemSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
@@ -50,8 +56,9 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
 /**
  * TreeTableView page
  */
-public class TreeTableViewPage extends TestPaneBase {
-    enum Demo {
+public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
+    enum Data {
+        //CELL_TYPES("various cell types"), // FIX
         PREF("pref only"),
         VARIABLE("variable cell height"),
         ALL("all set: min, pref, max"),
@@ -69,12 +76,13 @@ public class TreeTableViewPage extends TestPaneBase {
         MAX_IN_CENTER("max widths set in middle columns"),
         NO_NESTED("no nested columns"),
         NESTED("nested columns"),
-        MILLION("million rows"),
+        THOUSAND("1,000 rows"),
+        MILLION("10,000,000 rows"),
         MANY_COLUMNS("many columns"),
         MANY_COLUMNS_SAME("many columns, same pref");
 
         private final String text;
-        Demo(String text) { this.text = text; }
+        Data(String text) { this.text = text; }
         public String toString() { return text; }
     }
 
@@ -109,85 +117,139 @@ public class TreeTableViewPage extends TestPaneBase {
         PREF,
         MAX,
         COMBINE,
-        COL_WITH_GRAPHIC
+        COL_WITH_GRAPHIC,
+//        COL_CHECKBOX,
+//        COL_CHOICE_BOX,
+//        COL_COMBO_BOX,
+//        COL_TEXT_FIELD,
     }
 
-    protected final ComboBox<Demo> demoSelector;
-    protected final ComboBox<ResizePolicy> policySelector;
-    protected final ComboBox<Selection> selectionSelector;
-    protected final CheckBox nullFocusModel;
-    protected final CheckBox addGraphics;
-    protected final CheckBox addSubNodes;
-    protected TreeTableView<String> tree;
+    private enum Cells {
+        DEFAULT,
+        EDITABLE_TEXT_FIELD,
+    }
+
+    private final ComboBox<Data> dataSelector;
+    private final ComboBox<ResizePolicy> policySelector;
+    private final ComboBox<Selection> selectionSelector;
+    private final CheckBox nullFocusModel;
+    private final CheckBox addGraphics;
+    private final CheckBox addSubNodes;
+    private final ItemSelector<Double> fixedSize;
+    private final CheckBox menuButtonVisible;
+    private final CheckBox editable;
+    private final ComboBox<Cells> cellFactorySelector;
+    private TreeTableView<String> control;
+    private Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> defaultCellFactory;
 
     public TreeTableViewPage() {
-        setId("TreeTableViewPage");
+        FX.name(this, "TreeTableViewPage");
 
         // selector
-        demoSelector = new ComboBox<>();
-        demoSelector.setId("demoSelector");
-        demoSelector.getItems().addAll(Demo.values());
-        demoSelector.setEditable(false);
-        demoSelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
+        dataSelector = new ComboBox<>();
+        FX.name(dataSelector, "dataSelector");
+        dataSelector.getItems().addAll(Data.values());
+        dataSelector.setEditable(false);
+        onChange(dataSelector, false, () -> {
             updatePane();
         });
 
         policySelector = new ComboBox<>();
-        policySelector.setId("policySelector");
+        FX.name(policySelector, "policySelector");
         policySelector.getItems().addAll(ResizePolicy.values());
         policySelector.setEditable(false);
-        policySelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
+        onChange(policySelector, false, () -> {
             updatePane();
         });
 
         selectionSelector = new ComboBox<>();
-        selectionSelector.setId("selectionSelector");
+        FX.name(selectionSelector, "selectionSelector");
         selectionSelector.getItems().addAll(Selection.values());
         selectionSelector.setEditable(false);
-        selectionSelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
+        onChange(selectionSelector, false, () -> {
             updatePane();
         });
 
         nullFocusModel = new CheckBox("null focus model");
-        nullFocusModel.setId("nullFocusModel");
-        nullFocusModel.selectedProperty().addListener((s, p, c) -> {
+        FX.name(nullFocusModel, "nullFocusModel");
+        onChange(nullFocusModel, false, () -> {
             updatePane();
         });
 
         addGraphics = new CheckBox("add graphics");
         addGraphics.setId("addGraphics");
-        addGraphics.selectedProperty().addListener((s, p, c) -> {
+        onChange(addGraphics, false, () -> {
             updatePane();
         });
 
         addSubNodes = new CheckBox("add sub-nodes");
         addSubNodes.setId("addSubNodes");
-        addSubNodes.selectedProperty().addListener((s, p, c) -> {
+        onChange(addSubNodes, false, () -> {
             updatePane();
         });
 
         Button clearButton = new Button("Clear Items");
         clearButton.setOnAction((ev) -> {
-            tree.setRoot(new TreeItem(null));
-            tree.setShowRoot(false);
+            control.setRoot(new TreeItem(null));
+            control.setShowRoot(false);
+        });
+
+        Button refresh = new Button("Refresh");
+        refresh.setOnAction((ev) -> {
+            control.refresh();
+        });
+
+        fixedSize = new ItemSelector<Double>(
+            "fixedSize",
+            (x) -> {
+                control.setFixedCellSize(x);
+            },
+            "<none>", 0.0,
+            "18", 18.0,
+            "24", 24.0,
+            "66", 66.0
+        );
+
+        menuButtonVisible = new CheckBox("menu button visible");
+        FX.name(menuButtonVisible, "menuButton");
+
+        editable = new CheckBox("editable");
+        editable.setOnAction((ev) -> {
+            updateEditable();
+        });
+        FX.name(editable, "editable");
+
+        cellFactorySelector = new ComboBox<>();
+        FX.name(cellFactorySelector, "cellSelector");
+        cellFactorySelector.getItems().addAll(Cells.values());
+        cellFactorySelector.setEditable(false);
+        cellFactorySelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
+            updatePane();
         });
 
         // layout
 
-        OptionPane p = new OptionPane();
-        p.label("Data:");
-        p.option(demoSelector);
-        p.option(clearButton);
-        p.label("Column Resize Policy:");
-        p.option(policySelector);
-        p.label("Selection Model:");
-        p.option(selectionSelector);
-        p.option(nullFocusModel);
-        p.option(addGraphics);
-        p.option(addSubNodes);
-        setOptions(p);
+        OptionPane op = new OptionPane();
+        op.label("Data:");
+        op.option(dataSelector);
+        op.option(clearButton);
+        op.option(editable);
+        op.label("Column Resize Policy:");
+        op.option(policySelector);
+        op.label("Selection Model:");
+        op.option(selectionSelector);
+        op.option(nullFocusModel);
+        op.label("Fixed Cell Size:");
+        op.option(fixedSize.node());
+        op.label("Cell Factory:");
+        op.option(cellFactorySelector);
+        op.option(refresh);
+        op.option(menuButtonVisible);
+        op.option(addGraphics);
+        op.option(addSubNodes);
+        setOptions(op);
 
-        demoSelector.getSelectionModel().selectFirst();
+        dataSelector.getSelectionModel().selectFirst();
         policySelector.getSelectionModel().selectFirst();
         selectionSelector.getSelectionModel().select(Selection.MULTIPLE_CELL);
     }
@@ -248,7 +310,7 @@ public class TreeTableViewPage extends TestPaneBase {
         }
     }
 
-    protected Object[] createSpec(Demo d) {
+    protected Object[] createSpec(Data d) {
         switch (d) {
         case ALL:
             return new Object[] {
@@ -259,6 +321,17 @@ public class TreeTableViewPage extends TestPaneBase {
                 Cmd.COL, Cmd.PREF, 300, Cmd.MAX, 400,
                 Cmd.COL
             };
+// FIX
+//        case CELL_TYPES:
+//            return new Object[] {
+//                Cmd.ROWS, 300,
+//                Cmd.COL,
+//                Cmd.COL_CHECKBOX,
+//                Cmd.COL_CHOICE_BOX,
+//                Cmd.COL_COMBO_BOX,
+//                Cmd.COL_TEXT_FIELD,
+//                Cmd.COL_WITH_GRAPHIC
+//            };
         case PREF:
             return new Object[] {
                 Cmd.ROWS, 3,
@@ -450,7 +523,17 @@ public class TreeTableViewPage extends TestPaneBase {
             };
         case MILLION:
             return new Object[] {
-                Cmd.ROWS, 1_000_000,
+                Cmd.ROWS, 10_000_000,
+                Cmd.COL,
+                Cmd.COL,
+                Cmd.COL,
+                Cmd.COL
+            };
+        case THOUSAND:
+            return new Object[] {
+                Cmd.ROWS, 1_000,
+                Cmd.COL,
+                Cmd.COL,
                 Cmd.COL,
                 Cmd.COL
             };
@@ -460,7 +543,7 @@ public class TreeTableViewPage extends TestPaneBase {
     }
 
     protected void updatePane() {
-        Demo d = demoSelector.getSelectionModel().getSelectedItem();
+        Data d = dataSelector.getSelectionModel().getSelectedItem();
         ResizePolicy p = policySelector.getSelectionModel().getSelectedItem();
         Object[] spec = createSpec(d);
 
@@ -479,7 +562,7 @@ public class TreeTableViewPage extends TestPaneBase {
         t.getColumns().add(ix, tc);
     }
 
-    protected Pane createPane(Demo demo, ResizePolicy policy, Object[] spec) {
+    protected Pane createPane(Data demo, ResizePolicy policy, Object[] spec) {
         if ((demo == null) || (spec == null) || (policy == null)) {
             return new BorderPane();
         }
@@ -510,18 +593,22 @@ public class TreeTableViewPage extends TestPaneBase {
             }
         }
 
-        tree = new TreeTableView<>(new TreeItem<>(null));
-        tree.getSelectionModel().setCellSelectionEnabled(cellSelection);
-        tree.getSelectionModel().setSelectionMode(selectionMode);
+        control = new TreeTableView<>(new TreeItem<>(null));
+        control.getSelectionModel().setCellSelectionEnabled(cellSelection);
+        control.getSelectionModel().setSelectionMode(selectionMode);
         if (nullSelectionModel) {
-            tree.setSelectionModel(null);
+            control.setSelectionModel(null);
         }
         if (nullFocusModel.isSelected()) {
-            tree.setFocusModel(null);
+            control.setFocusModel(null);
         }
+        control.setFixedCellSize(fixedSize.getSelectedItem());
+
+        control.setTableMenuButtonVisible(menuButtonVisible.isSelected());
+        menuButtonVisible.selectedProperty().bindBidirectional(control.tableMenuButtonVisibleProperty());
 
         Callback<ResizeFeatures, Boolean> p = createPolicy(policy);
-        tree.setColumnResizePolicy(p);
+        control.setColumnResizePolicy(p);
 
         TreeTableColumn<String, String> lastColumn = null;
         int id = 1;
@@ -531,35 +618,46 @@ public class TreeTableViewPage extends TestPaneBase {
             if (x instanceof Cmd cmd) {
                 switch (cmd) {
                 case COL:
-                    {
-                        TreeTableColumn<String,String> c = new TreeTableColumn<>();
-                        tree.getColumns().add(c);
-                        c.setText("C" + tree.getColumns().size());
+                    lastColumn = makeColumn((c) -> {
                         c.setCellValueFactory((f) -> new SimpleStringProperty(describe(c)));
-                        lastColumn = c;
-                    }
+                    });
                     break;
                 case COL_WITH_GRAPHIC:
-                    {
-                        TreeTableColumn<String,String> c = new TreeTableColumn<>();
-                        tree.getColumns().add(c);
-                        c.setText("C" + tree.getColumns().size());
+                    lastColumn = makeColumn((c) -> {
                         c.setCellValueFactory((f) -> new SimpleStringProperty(describe(c)));
                         c.setCellFactory((r) -> {
                             return new TreeTableCell<>() {
                                 @Override
                                 protected void updateItem(String item, boolean empty) {
                                     super.updateItem(item, empty);
-                                    Text t = new Text("11111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n2\n3\n");
-                                    t.wrappingWidthProperty().bind(widthProperty());
+                                    if (empty) {
+                                        setGraphic(null);
+                                    } else {
+                                        Text t = new Text("11111111111111111111111111111111111111111111111111111111111111111111111111111111111111\n2\n3\n");
+                                        t.wrappingWidthProperty().bind(widthProperty());
+                                        setGraphic(t);
+                                    }
                                     setPrefHeight(USE_COMPUTED_SIZE);
-                                    setGraphic(t);
                                 }
                             };
                         });
-                        lastColumn = c;
-                    }
+                    });
                     break;
+//                case COL_CHECKBOX:
+//                    lastColumn = makeColumn((c) -> { });
+//                    break;
+//                case COL_CHOICE_BOX:
+//                    lastColumn = makeColumn((c) -> {
+//                    });
+//                    break;
+//                case COL_COMBO_BOX:
+//                    lastColumn = makeColumn((c) -> {
+//                    });
+//                    break;
+//                case COL_TEXT_FIELD:
+//                    lastColumn = makeColumn((c) -> {
+//                    });
+//                    break;
                 case MAX:
                     {
                         int w = (int)(spec[i++]);
@@ -594,14 +692,14 @@ public class TreeTableViewPage extends TestPaneBase {
                                     subNodeTreeItem.setGraphic(new Rectangle(10, 10));
                                 }
                             }
-                            tree.getRoot().getChildren().add(treeItem);
+                            control.getRoot().getChildren().add(treeItem);
                         }
                     }
                     break;
                 case COMBINE:
                     int ix = (int)(spec[i++]);
                     int ct = (int)(spec[i++]);
-                    combineColumns(tree, ix, ct, id++);
+                    combineColumns(control, ix, ct, id++);
                     break;
                 default:
                     throw new Error("?" + cmd);
@@ -612,12 +710,67 @@ public class TreeTableViewPage extends TestPaneBase {
         }
 
         BorderPane bp = new BorderPane();
-        bp.setCenter(tree);
+        bp.setCenter(control);
         return bp;
+    }
+
+    protected TreeTableColumn<String, String> makeColumn(Consumer<TreeTableColumn<String, String>> updater) {
+        TreeTableColumn<String, String> c = new TreeTableColumn<>();
+        control.getColumns().add(c);
+        c.setText("C" + control.getColumns().size());
+        updater.accept(c);
+
+        if (defaultCellFactory == null) {
+            defaultCellFactory = c.getCellFactory();
+        }
+
+        Cells t = cellFactorySelector.getSelectionModel().getSelectedItem();
+        Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> f = getCellFactory(t);
+        c.setCellFactory(f);
+
+        c.setOnEditCommit((ev) -> {
+            if ("update".equals(ev.getNewValue())) {
+                var item = ev.getRowValue();
+                item.setValue("UPDATED!");
+                System.out.println("committing the value `UPDATED!`");
+            } else {
+                System.out.println("discarding the new value: " + ev.getNewValue());
+            }
+        });
+
+        return c;
+    }
+
+    private Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> getCellFactory(Cells t) {
+        if (t != null) {
+            switch (t) {
+            case EDITABLE_TEXT_FIELD:
+                return TextFieldTreeTableCell.forTreeTableColumn();
+            }
+        }
+        return defaultCellFactory;
     }
 
     protected String newItem() {
         return SequenceNumber.next();
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new TreeTableViewSkin<>(control));
+    }
+
+    protected void updateEditable() {
+        boolean on = editable.isSelected();
+        control.setEditable(on);
+        if (on) {
+            cellFactorySelector.getSelectionModel().select(Cells.EDITABLE_TEXT_FIELD);
+        }
     }
 
     /**
