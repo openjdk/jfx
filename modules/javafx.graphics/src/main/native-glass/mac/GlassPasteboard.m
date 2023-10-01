@@ -144,7 +144,8 @@ static inline jbyteArray ByteArrayFromPixels(JNIEnv *env, void *data, size_t wid
 {
     jbyteArray javaArray = NULL;
 
-    if (data != NULL)
+    if ((data != NULL) && (width > 0) && (height > 0) &&
+        (width <= ((INT_MAX / 4) - 2) / height))
     {
         jsize length = 4*(jsize)(width*height);
 
@@ -624,7 +625,13 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
 
                     size_t width = CGImageGetWidth(cgImage);
                     size_t height = CGImageGetHeight(cgImage);
-                    uint32_t *pixels = malloc(4*width*height);
+                    uint32_t *pixels = NULL;
+                    if (width > 0 && height > 0 &&
+                        width <= (INT_MAX / 4) / height)
+                    {
+                        pixels = malloc(4 * width * height);
+                    }
+
                     if (pixels != NULL)
                     {
                         CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();

@@ -54,4 +54,13 @@
     return [super accessibilityParent];
 }
 
+- (id)accessibilityValue
+{
+    if ([self accessibilityRole] == NSAccessibilityButtonRole) {
+        return NULL;
+    } else {
+        return [super accessibilityValue];
+    }
+}
+
 @end

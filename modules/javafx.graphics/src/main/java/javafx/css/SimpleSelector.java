@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.StyleClassSet;
 
@@ -111,6 +112,7 @@ final public class SimpleSelector extends Selector {
     // a mask of bits corresponding to the pseudoclasses (immutable)
     private final Set<PseudoClass> pseudoClassState;
 
+    // for test purposes
     Set<PseudoClass> getPseudoClassStates() {
         return pseudoClassState;
     }
@@ -181,7 +183,7 @@ final public class SimpleSelector extends Selector {
             }
         }
 
-        this.pseudoClassState = Collections.unmodifiableSet(pcs);
+        this.pseudoClassState = ImmutablePseudoClassSetsCache.of(pcs);
         this.nodeOrientation = dir;
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id

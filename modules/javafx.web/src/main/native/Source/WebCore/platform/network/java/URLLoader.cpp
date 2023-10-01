@@ -365,8 +365,7 @@ void URLLoader::SynchronousTarget::didReceiveResponse(
 
 void URLLoader::SynchronousTarget::didReceiveData(const SharedBuffer* data, int length)
 {
-    UNUSED_PARAM(length);
-    m_data.append(*data->data());
+    m_data.append(data->data(), (size_t)length);
 }
 
 void URLLoader::SynchronousTarget::didFinishLoading()

@@ -35,7 +35,9 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.junit.Test;
 import test.robot.testharness.VisualTestBase;
+import com.sun.javafx.PlatformUtil;
 
+import static org.junit.Assume.assumeTrue;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static test.util.Util.TIMEOUT;
@@ -124,6 +126,7 @@ public class IconifyTest extends VisualTestBase {
 
     @Test(timeout = 15000)
     public void canIconifyDecoratedStage() throws Exception {
+        assumeTrue(!PlatformUtil.isLinux()); // Skip due to JDK-8316891
         canIconifyStage(StageStyle.DECORATED, true);
     }
 

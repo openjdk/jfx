@@ -24,83 +24,137 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
-import javafx.geometry.Pos;
-import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckBoxTreeItem;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Tooltip;
+import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.layout.HBox;
+import javafx.scene.control.cell.CheckBoxTreeCell;
+import javafx.scene.control.cell.TextFieldTreeCell;
+import javafx.util.Callback;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- * Test code from CheckBoxTreeEditor, see https://bugs.openjdk.org/browse/JDK-8209017
- *
- * FIX don't see checkboxes for some reason!
+ * TreeView Page
  */
 public class TreeViewPage extends TestPaneBase {
-    private TreeView<String> tree;
+    private enum Cells {
+        DEFAULT,
+        EDITABLE_TEXT_FIELD,
+    }
+
+    private final TreeView<String> control;
+    private final CheckBox editable;
+    private final ComboBox<Cells> cellFactorySelector;
     private int childNum;
+    private Callback<TreeView<String>, TreeCell<String>> defaultCellFactory;
 
     public TreeViewPage() {
-        setId("TreeViewPage");
+        FX.name(this, "TreeViewPage");
+
+        control = new TreeView<>(new CheckBoxTreeItem<>("root"));
+        control.getRoot().setExpanded(true);
+        control.setCellFactory(CheckBoxTreeCell.<String>forTreeView());
+        control.setTooltip(new Tooltip("edit to 'update' to commit the change"));
+        addChild(true, true);
+        setContent(control);
+        defaultCellFactory = control.getCellFactory();
+        control.setOnEditCommit((ev) -> {
+            if ("update".equals(ev.getNewValue())) {
+                TreeItem<String> item = ev.getTreeItem();
+                item.setValue("UPDATED!");
+                System.out.println("committing the value `UPDATED!`");
+            } else {
+                System.out.println("discarding the new value: " + ev.getNewValue());
+            }
+        });
 
         CheckBox indeterminate = new CheckBox("Indeterminate");
-        indeterminate.setId("indeterminate");
+        FX.name(indeterminate, "indeterminate");
 
         CheckBox selected = new CheckBox("Selected");
-        selected.setId("selected");
+        FX.name(selected, "selected");
 
-        Button add = new Button("Add");
-        add.setOnAction((ev) -> {
+        Button addButton = new Button("Add");
+        addButton.setOnAction((ev) -> {
             addChild(indeterminate.isSelected(), selected.isSelected());
         });
 
-        Button remove = new Button("Remove");
-        remove.setOnAction((ev) -> {
+        Button removeButton = new Button("Remove");
+        removeButton.setOnAction((ev) -> {
             removeChild();
         });
 
-        toolbar().addAll(
-            add,
-            remove,
-            indeterminate,
-            selected
-        );
+        editable = new CheckBox("editable");
+        editable.setOnAction((ev) -> {
+            updateEditable();
+        });
+        FX.name(editable, "editable");
 
-        updatePane();
+        cellFactorySelector = new ComboBox<>();
+        FX.name(cellFactorySelector, "cellSelector");
+        cellFactorySelector.getItems().addAll(Cells.values());
+        cellFactorySelector.setEditable(false);
+        cellFactorySelector.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
+            updateCellFactory();
+        });
+
+        OptionPane op = new OptionPane();
+        op.option(addButton);
+        op.option(indeterminate);
+        op.option(selected);
+        op.option(removeButton);
+        op.option(editable);
+        op.label("Cell Factory:");
+        op.option(cellFactorySelector);
+        setOptions(op);
+
+        control.getSelectionModel().select(control.getRoot());
+        FX.selectFirst(cellFactorySelector);
     }
 
-    protected void updatePane() {
-        tree = new TreeView<>(new CheckBoxTreeItem<>("root"));
+    protected void updateEditable() {
+        boolean on = editable.isSelected();
+        control.setEditable(on);
+        if (on) {
+            cellFactorySelector.getSelectionModel().select(Cells.EDITABLE_TEXT_FIELD);
+        }
+    }
 
-        Button button = new Button("0");
-        tree.getRoot().setGraphic(button);
-        tree.getRoot().setExpanded(true);
-        tree.getSelectionModel().select(tree.getRoot());
+    protected void updateCellFactory() {
+        Cells t = cellFactorySelector.getSelectionModel().getSelectedItem();
+        var f = getCellFactory(t);
+        control.setCellFactory(f);
+    }
 
-        // add children for initial setup as needed
-        addChild(true, true);
-
-        setContent(tree);
+    private Callback<TreeView<String>, TreeCell<String>> getCellFactory(Cells t) {
+        if (t != null) {
+            switch (t) {
+            case EDITABLE_TEXT_FIELD:
+                return TextFieldTreeCell.forTreeView();
+            }
+        }
+        return defaultCellFactory;
     }
 
     private void addChild(boolean indeterminate, boolean selected) {
         CheckBoxTreeItem<String> item = new CheckBoxTreeItem<>("child " + childNum++);
-        Button button = new Button("" + childNum);
-        item.setGraphic(button);
         item.setSelected(selected);
         item.setIndeterminate(indeterminate);
         item.setExpanded(true);
 
-        if (tree.getSelectionModel().getSelectedItem() != null) {
-            tree.getSelectionModel().getSelectedItem().getChildren().add(item);
+        if (control.getSelectionModel().getSelectedItem() != null) {
+            control.getSelectionModel().getSelectedItem().getChildren().add(item);
         }
     }
 
     private void removeChild() {
-        TreeItem<String> sel = tree.getSelectionModel().getSelectedItem();
+        TreeItem<String> sel = control.getSelectionModel().getSelectedItem();
         if (sel != null) {
             TreeItem<String> parent = sel.getParent();
             if (parent != null) {

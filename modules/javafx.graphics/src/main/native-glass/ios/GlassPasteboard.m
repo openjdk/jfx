@@ -93,11 +93,12 @@ static inline void DumpPasteboard(UIPasteboard *pasteboard)
 }
 #endif //VERBOSE
 
-static inline jbyteArray ByteArrayFromPixels(JNIEnv *env, void *data, int width, int height)
+static inline jbyteArray ByteArrayFromPixels(JNIEnv *env, void *data, size_t width, size_t height)
 {
     jbyteArray javaArray = NULL;
 
-    if ((data != NULL) && (width > 0) && (height > 0))
+    if ((data != NULL) && (width > 0) && (height > 0) &&
+        (width <= ((INT_MAX / 4) - 2) / height))
     {
         javaArray = (*env)->NewByteArray(env, 4*(width*height) + 4*(1+1));
         GLASS_CHECK_EXCEPTION(env);
@@ -364,7 +365,13 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_ios_IosPasteboard__1getItemAs
 
             size_t width = CGImageGetWidth(cgImage);
             size_t height = CGImageGetHeight(cgImage);
-            uint32_t *pixels = malloc(4*width*height);
+            uint32_t *pixels = NULL;
+            if (width > 0 && height > 0 &&
+                width <= (INT_MAX / 4) / height)
+            {
+                pixels = malloc(4 * width * height);
+            }
+
             if (pixels != NULL)
             {
                 CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();

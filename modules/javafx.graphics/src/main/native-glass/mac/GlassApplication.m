@@ -53,7 +53,7 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
-static BOOL isNormalTaskbarApp = NO;
+static BOOL triggerReactivation = NO;
 static BOOL disableSyncRendering = NO;
 static BOOL firstActivation = YES;
 static BOOL shouldReactivate = NO;
@@ -265,7 +265,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (isNormalTaskbarApp && firstActivation) {
+    if (triggerReactivation && firstActivation) {
         LOG("-> deactivate (hide)  app");
         firstActivation = NO;
         shouldReactivate = YES;
@@ -298,7 +298,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (isNormalTaskbarApp && shouldReactivate) {
+    if (triggerReactivation && shouldReactivate) {
         LOG("-> reactivate  app");
         shouldReactivate = NO;
         [NSApp activateIgnoringOtherApps:YES];
@@ -362,6 +362,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     LOG("GlassApplication:application:openFiles");
 
     GET_MAIN_JENV;
+    NSApplicationDelegateReply reply = NSApplicationDelegateReplySuccess;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
         NSUInteger count = [filenames count];
@@ -371,21 +372,26 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
         jobjectArray files = (*env)->NewObjectArray(env, (jsize)count, stringClass, NULL);
         GLASS_CHECK_EXCEPTION(env);
-        for (NSUInteger i=0; i<count; i++)
-        {
-            NSString *file = [filenames objectAtIndex:i];
-            if (file != nil)
+        if (files != NULL) {
+            for (NSUInteger i=0; i<count; i++)
             {
-                (*env)->SetObjectArrayElement(env, files, (jsize)i, (*env)->NewStringUTF(env, [file UTF8String]));
-                GLASS_CHECK_EXCEPTION(env);
+                NSString *file = [filenames objectAtIndex:i];
+                if (file != nil)
+                {
+                    (*env)->SetObjectArrayElement(env, files, (jsize)i, (*env)->NewStringUTF(env, [file UTF8String]));
+                    GLASS_CHECK_EXCEPTION(env);
+                }
             }
+            (*env)->CallVoidMethod(env, self->jApplication, [GlassHelper ApplicationNotifyOpenFilesMethod], files);
+        } else {
+            fprintf(stderr, "NewObjectArray failed in GlassApplication_application\n");
+            reply = NSApplicationDelegateReplyFailure;
         }
-        (*env)->CallVoidMethod(env, self->jApplication, [GlassHelper ApplicationNotifyOpenFilesMethod], files);
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    [theApplication replyToOpenOrPrint:NSApplicationDelegateReplySuccess];
+    [theApplication replyToOpenOrPrint:reply];
 }
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)filename
@@ -530,7 +536,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             }
             if (self->jTaskBarApp == JNI_TRUE)
             {
-                isNormalTaskbarApp = YES;
+                triggerReactivation = YES;
+
+                // The workaround of deactivating and reactivating
+                // the application so that the system menu bar works
+                // correctly is no longer needed (and no longer works
+                // anyway) as of macOS 14
+                if (@available(macOS 14.0, *)) {
+                    triggerReactivation = NO;
+                }
+
                 // move process from background only to full on app with visible Dock icon
                 ProcessSerialNumber psn;
                 if (GetCurrentProcess(&psn) == noErr)
@@ -1060,14 +1075,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSy
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _isNormalTaskbarApp
+ * Method:    _isTriggerReactivation
  * Signature: ()Z;
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isTriggerReactivation
 (JNIEnv *env, jobject japplication)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp");
-    return isNormalTaskbarApp;
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1isTriggerReactivation");
+    return triggerReactivation;
 }
 
 /*
