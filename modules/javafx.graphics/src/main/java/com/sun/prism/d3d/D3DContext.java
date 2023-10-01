@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,6 @@ class D3DContext extends BaseShaderContext {
 
     private State state;
     private boolean isLost = false;
-    private boolean isHung = false;
 
     private final long pContext;
 
@@ -129,14 +128,6 @@ class D3DContext extends BaseShaderContext {
     }
 
     /**
-     * Returns whether D3DERR_DEVICEHUNG error has been occurred.
-     * @return true if hung error occurred, false otherwise
-     */
-    boolean isHung() {
-        return isHung;
-    }
-
-    /**
      * Does D3D native return value validation for DEBUG interests
      */
     static void validate(int res) {
@@ -151,13 +142,6 @@ class D3DContext extends BaseShaderContext {
      */
     private void setLost() {
         isLost = true;
-    }
-
-    /**
-     * set device to hung state
-     */
-    private void setHung() {
-        isHung = true;
     }
 
     /**
@@ -220,20 +204,8 @@ class D3DContext extends BaseShaderContext {
             }
         }
 
-        if (hr == D3DERR_DEVICEREMOVED) {
+        if (hr == D3DERR_DEVICEREMOVED || hr == D3DERR_DEVICEHUNG) {
             setLost();
-
-            // Reinitialize the D3DPipeline. This will dispose and recreate
-            // the resource factory and context for each adapter.
-            D3DPipeline.getInstance().reinitialize();
-        }
-
-        if (hr == D3DERR_DEVICEHUNG) {
-            setHung();
-        }
-
-        if (isHung && hr == D3D_OK) {
-            isHung = false;
 
             // Reinitialize the D3DPipeline. This will dispose and recreate
             // the resource factory and context for each adapter.
@@ -536,14 +508,16 @@ class D3DContext extends BaseShaderContext {
 
     public static String hResultToString(long hResult) {
         switch ((int)hResult) {
-            case D3DERR_DEVICENOTRESET:
-                return "D3DERR_DEVICENOTRESET";
             case D3DERR_DEVICELOST:
                 return "D3DERR_DEVICELOST";
-            case D3DERR_OUTOFVIDEOMEMORY:
-                return "D3DERR_OUTOFVIDEOMEMORY";
+            case D3DERR_DEVICENOTRESET:
+                return "D3DERR_DEVICENOTRESET";
             case D3DERR_DEVICEREMOVED:
                 return "D3DERR_DEVICEREMOVED";
+            case D3DERR_DEVICEHUNG:
+                return "D3DERR_DEVICEHUNG";
+            case D3DERR_OUTOFVIDEOMEMORY:
+                return "D3DERR_OUTOFVIDEOMEMORY";
             case D3D_OK:
                 return "D3D_OK";
             default:

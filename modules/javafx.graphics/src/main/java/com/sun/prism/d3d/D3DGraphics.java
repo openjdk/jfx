@@ -56,14 +56,8 @@ class D3DGraphics extends BaseShaderGraphics implements D3DContextSource {
             return null;
         }
 
-        if (PrismSettings.verbose) {
-            if (context.isLost()) {
-                System.err.println("Create graphics while the device is lost");
-            }
-
-            if (context.isHung()) {
-                System.err.println("Create graphics while the device is hung");
-            }
+        if (PrismSettings.verbose && context.isLost()) {
+            System.err.println("Create graphics while the device is lost");
         }
 
         return new D3DGraphics(context, target);
