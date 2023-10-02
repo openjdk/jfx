@@ -638,19 +638,20 @@ if (sourceDateEpoch != null) {
     def epochSeconds = Long.parseLong(sourceDateEpoch)
     buildInstant = Instant.ofEpochSecond(epochSeconds)
 }
-// Creates the timestamp in UTC using the ISO 8601 extended format
-def buildTimestamp = buildInstant.toString()
+// Creates the timestamp in UTC using the ISO 8601 extended format.
+def extendedTimestamp = buildInstant.toString()
+// Creates the timestamp in UTC using the historical ad hoc format, which is
+// valid for the OPT field of the version string. An alternative to the ad hoc
+// format is the ISO 8601 basic format with the pattern "yyyyMMdd'T'HHmmssX".
+def zonedTime = ZonedDateTime.ofInstant(buildInstant, ZoneOffset.UTC)
+def formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
+def buildTimestamp = zonedTime.format(formatter)
 defineProperty("BUILD_TIMESTAMP", buildTimestamp)
 def relSuffix = ""
 def relOpt = ""
 if (HUDSON_JOB_NAME == "not_hudson") {
-    // The version OPT field matches the regular expression "([-a-zA-Z0-9.]+)".
-    // For the ISO 8601 basic format, use the pattern "yyyyMMdd'T'HHmmssX".
-    def zonedTime = ZonedDateTime.ofInstant(buildInstant, ZoneOffset.UTC)
-    def formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
-    String versionTimestamp = zonedTime.format(formatter)
     relSuffix = "-internal"
-    relOpt = "-${versionTimestamp}"
+    relOpt = "-${buildTimestamp}"
 } else {
     relSuffix = IS_MILESTONE_FCS ? "" : jfxReleaseSuffix
 }
@@ -2187,10 +2188,9 @@ project(":base") {
         "BUILD_TIMESTAMP": BUILD_TIMESTAMP,
         "HUDSON_JOB_NAME": HUDSON_JOB_NAME,
         "HUDSON_BUILD_NUMBER": HUDSON_BUILD_NUMBER,
-        "PROMOTED_BUILD_NUMBER": PROMOTED_BUILD_NUMBER,
-        "PRODUCT_NAME": PRODUCT_NAME,
-        "RELEASE_VERSION": RELEASE_VERSION,
-        "RELEASE_SUFFIX": RELEASE_SUFFIX];
+        "RELEASE_SUFFIX": RELEASE_SUFFIX,
+        "RELEASE_VERSION_SHORT": RELEASE_VERSION_SHORT,
+        "RELEASE_VERSION_LONG": RELEASE_VERSION_LONG];
     task processVersionInfo(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
         doFirst { mkdir "$buildDir/gensrc/java" }
         from "src/main/version-info"
@@ -5635,7 +5635,7 @@ compileTargets { t ->
                         // https://bugs.openjdk.org/browse/JDK-8278766
                         def status = compareJdkVersion(jdkVersion, "19")
                         if (sourceDateEpoch != null && status >= 0) {
-                            args("--date", buildTimestamp)
+                            args("--date", extendedTimestamp)
                         }
                         args(jmodFile)
                     }
