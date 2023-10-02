@@ -46,17 +46,29 @@ public class StyleAttribute<T> {
 
     private final String name;
     private final Class<T> type;
+    private final boolean isParagraph;
     private final Generator generator;
 
     /**
      * Constructs a style attribute.
      * @param name the attribute name
      * @param type the attribute type
+     * @param isParagraph true specifies a paragraph attribute, false specifies a character attribute
+     * @param generator the CSS style generator, can be null
      */
-    public StyleAttribute(String name, Class<T> type, Generator<T> generator) {
+    public StyleAttribute(String name, Class<T> type, boolean isParagraph, Generator<T> generator) {
         this.name = name;
         this.type = type;
+        this.isParagraph = isParagraph;
         this.generator = generator;
+    }
+
+    /**
+     * Attribute name.
+     * @return attribute name
+     */
+    public String getName() {
+        return name;
     }
 
     /**
@@ -69,11 +81,11 @@ public class StyleAttribute<T> {
     }
 
     /**
-     * Attribute name.
-     * @return attribute name
+     * Returns true for a paragraph attribute, false for a character attribute.
+     * @return true for a paragraph attribute, false for a character attribute
      */
-    public String getName() {
-        return name;
+    public boolean isParagraphAttribute() {
+        return isParagraph;
     }
 
     /**

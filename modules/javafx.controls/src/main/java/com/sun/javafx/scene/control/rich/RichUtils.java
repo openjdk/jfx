@@ -211,6 +211,35 @@ public class RichUtils {
         return "normal"; // 400, see FontWeight
     }
 
+    /**
+     * Returns true if the specified lowercased font name is determined to be bold.
+     * This method is not guaranteed to work in any circumstances, see JDK-8092191
+     * @param lowerCaseFontName the font name converted to lower case
+     * @return true if the font is bold
+     */
+    public static boolean isBold(String lowerCaseFontName) {
+        // any others?
+        // non-english names?
+        return
+            lowerCaseFontName.contains("bold") ||
+            lowerCaseFontName.contains("extrabold") ||
+            lowerCaseFontName.contains("heavy");
+    }
+
+    /**
+     * Returns true if the specified lowercased font name is determined to be italic or oblique.
+     * This method is not guaranteed to work in any circumstances, see JDK-8092191
+     * @param lowerCaseFontName the font name converted to lower case
+     * @return true if the font is italic
+     */
+    public static boolean isItalic(String lowerCaseFontName) {
+        // any others?
+        // non-english names?
+        return
+            lowerCaseFontName.contains("italic") ||
+            lowerCaseFontName.contains("oblique");
+    }
+
     /** dumps the path element array to a compact human-readable string */
     public static String dump(PathElement[] elements) {
         StringBuilder sb = new StringBuilder();

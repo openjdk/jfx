@@ -46,13 +46,13 @@ public class StyleAttrs {
     public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
 
     /** Paragraph background attribute */
-    public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, (a, sb, v) -> {
+    public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, false, (a, sb, v) -> {
         String color = RichUtils.toCssColor(v);
         sb.append("-fx-background-color:").append(color).append("; ");
     });
 
     /** Bold typeface attribute */
-    public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, (a, sb, v) -> {
+    public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false, (a, sb, v) -> {
         if (Boolean.TRUE.equals(v)) {
             sb.append("-fx-font-weight:bold; ");
         } else {
@@ -60,44 +60,44 @@ public class StyleAttrs {
         }
     });
 
-    public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, null);
+    public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, false, null);
 
     /** Font family attribute */
-    public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, (a, sb, v) -> {
+    public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false, (a, sb, v) -> {
         sb.append("-fx-font-family:'").append(v).append("'; ");
     });
 
     /** Font size attribute, in percent, relative to the base font size. */
-    public static final StyleAttribute<Integer> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Integer.class, (a, sb, v) -> {
+    public static final StyleAttribute<Integer> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Integer.class, false, (a, sb, v) -> {
         sb.append("-fx-font-size:").append(v).append("%; ");
     });
 
     /** Italic type face attribute */
-    public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, (a, sb, v) -> {
+    public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, false, (a, sb, v) -> {
         if (Boolean.TRUE.equals(v)) {
             sb.append("-fx-font-style:italic; ");
         }
     });
 
     /** Line spacing paragraph attribute */
-    public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, (a, sb, v) -> {
+    public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true, (a, sb, v) -> {
         sb.append("-fx-line-spacing:").append(v).append("; ");
     });
 
     /** Space above the paragraph (top padding) attribute */
-    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, null);
+    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true, null);
 
     /** Space below the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, null);
+    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true, null);
 
     /** Space to the left of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, null);
+    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true, null);
 
     /** Space to the right of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, null);
+    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true, null);
 
     /** Space above the paragraph (top padding) attribute */
-    public static final StyleAttribute<Boolean> SPACE = new StyleAttribute<>("SPACE", Boolean.class, (a, sb, v) -> {
+    public static final StyleAttribute<Boolean> SPACE = new StyleAttribute<>("SPACE", Boolean.class, true, (a, sb, v) -> {
         if (Boolean.TRUE.equals(v)) {
             double top = a.getDouble(SPACE_ABOVE, 0);
             double right = a.getDouble(SPACE_RIGHT, 0);
@@ -116,26 +116,26 @@ public class StyleAttrs {
     });
 
     /** Strike-through style attribute */
-    public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, (a, sb, v) -> {
+    public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false, (a, sb, v) -> {
         if (Boolean.TRUE.equals(v)) {
             sb.append("-fx-strikethrough:true; ");
         }
     });
 
     /** Paragraph text alignment attribute */
-    public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, (a, sb, v) -> {
+    public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true, (a, sb, v) -> {
         String alignment = RichUtils.toCss(v);
         sb.append("-fx-text-alignment:").append(alignment).append("; ");
     });
 
     /** Text color attrbute */
-    public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, (a, sb, v) -> {
+    public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, false, (a, sb, v) -> {
         String color = RichUtils.toCssColor(v);
         sb.append("-fx-fill:").append(color).append("; ");
     });
 
     /** Underline style attribute */
-    public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, (a, sb, v) -> {
+    public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, false, (a, sb, v) -> {
         if (Boolean.TRUE.equals(v)) {
             sb.append("-fx-underline:true; ");
         }
@@ -382,16 +382,49 @@ public class StyleAttrs {
     }
 
     /**
-     * Creates a style attributes instance from a Text node.
+     * Returns a new StyleAttrs instance which contains only character attributes,
+     * or null if no character attributes found.
+     * @return the instance
+     */
+    public StyleAttrs getCharacterAttrs() {
+        return filterAttributes(false);
+    }
+
+    /**
+     * Returns a new StyleAttrs instance which contains only paragraph attributes,
+     * or null if no paragraph attributes found.
+     * @return the instance
+     */
+    public StyleAttrs getParagraphAttrs() {
+        return filterAttributes(true);
+    }
+    
+    private StyleAttrs filterAttributes(boolean isParagraph) {
+        Builder b = null;
+        for(StyleAttribute<?> a: attributes.keySet()) {
+            if(a.isParagraphAttribute() == isParagraph) {
+                if(b == null) {
+                    b = StyleAttrs.builder();
+                }
+                Object v = attributes.get(a);
+                b.setUnguarded(a, v);
+            }
+        }
+        return (b == null) ? null : b.build();
+    }
+
+
+    /**
+     * Creates an instance of StyleAttrs which contains character attributes found in the Text node.
      * @param textNode the text node
-     * @return a StyleAttrs instance
+     * @return the StyleAttrs instance
      */
     public static StyleAttrs from(Text textNode) {
         StyleAttrs.Builder b = StyleAttrs.builder();
         Font f = textNode.getFont();
         String st = f.getStyle().toLowerCase(Locale.US);
-        boolean bold = st.contains("bold");
-        boolean italic = st.contains("italic"); // oblique? any other names?
+        boolean bold = RichUtils.isBold(st);
+        boolean italic = RichUtils.isItalic(st);
 
         if (bold) {
             b.setBold(true);
@@ -479,6 +512,11 @@ public class StyleAttrs {
             return this;
         }
 
+        private Builder setUnguarded(StyleAttribute<?> a, Object value) {
+            attributes.put(a, value);
+            return this;
+        }
+
         /** 
          * Merges the specified attributes with the attributes in this instance.
          * The new values override any existing ones.
@@ -486,10 +524,9 @@ public class StyleAttrs {
          * @return this Builder instance
          */
         public Builder merge(StyleAttrs attrs) {
-            for (StyleAttribute a : attrs.attributes.keySet()) {
+            for (StyleAttribute<?> a : attrs.attributes.keySet()) {
                 Object v = attrs.get(a);
-                // safe setter because the value has already been vetted
-                set(a, v);
+                setUnguarded(a, v);
             }
             return this;
         }

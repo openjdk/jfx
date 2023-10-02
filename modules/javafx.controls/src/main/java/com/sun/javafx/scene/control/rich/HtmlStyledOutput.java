@@ -47,7 +47,7 @@ import javafx.scene.paint.Color;
 // TODO should we size down font on windows?
 public class HtmlStyledOutput implements StyledOutput {
     // a synthetic attribute used only in Key
-    private static final StyleAttribute SS_AND_UNDERLINE = new StyleAttribute("SS_AND_UNDERLINE", Key.class, null);
+    private static final StyleAttribute<Key> SS_AND_UNDERLINE = new StyleAttribute<>("SS_AND_UNDERLINE", Key.class, false, null);
     private final StyleResolver resolver;
     private final Writer wr;
     private final boolean inlineStyles;
