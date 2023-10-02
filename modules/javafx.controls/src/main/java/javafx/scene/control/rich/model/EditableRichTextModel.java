@@ -142,9 +142,9 @@ public class EditableRichTextModel extends StyledTextModel {
         // TODO
     }
 
+    // TODO move to the base class?
     @Override
     protected boolean applyStyleImpl(TextPos start, TextPos end, StyleAttrs a) {
-        a = dedup(a);
         int ix = start.index();
         RParagraph par = paragraphs.get(ix);
 
@@ -583,7 +583,8 @@ public class EditableRichTextModel extends StyledTextModel {
 
         /** 
          * applies style to the segment.
-         * if the new style is the same as the previous segment, merges text with the previous segment.
+         * if the new style is exactly the same as the style of the previous segment,
+         * it simply merges the two segments.
          * @return true if this segment has been merged with the previous segment
          */
         private boolean applyStyle(int ix, RSegment seg, StyleAttrs a, Function<StyleAttrs,StyleAttrs> dedup) {

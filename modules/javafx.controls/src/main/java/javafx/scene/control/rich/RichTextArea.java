@@ -1178,10 +1178,12 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Applies the speicified style to the selected range.
-     * @param start start of the text range
-     * @param end end of the text range
-     * @param attrs style attributes to apply
+     * Applies the specified style to the selected range.  The specified attributes
+     * will override any existing attributes.  When applying paragraph attributes, the affected range
+     * might be wider than specified.
+     * @param start the start of text range
+     * @param end the end of text range
+     * @param attrs the style attributes to apply
      */
     public void applyStyle(TextPos start, TextPos end, StyleAttrs attrs) {
         if (canEdit()) {

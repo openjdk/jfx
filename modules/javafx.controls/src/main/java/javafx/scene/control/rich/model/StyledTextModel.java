@@ -156,6 +156,7 @@ public abstract class StyledTextModel {
      * @param end end position
      * @param attrs non-null attribute map
      * @return true if the model has changed as a result of this call
+     * TODO convert to a single paragraph one?
      */
     protected abstract boolean applyStyleImpl(TextPos start, TextPos end, StyleAttrs attrs);
     
@@ -555,11 +556,14 @@ public abstract class StyledTextModel {
     }
 
     /**
-     * Applies a style to the specified text range.
+     * Applies the specified style to the specified range.
+     * The specified attributes
+     * will override any existing attributes.  When applying paragraph attributes, the affected range
+     * might be wider than specified.
      * 
-     * @param start start position
-     * @param end end position
-     * @param attrs non-null attribute map
+     * @param start the start of text range
+     * @param end the end of text range
+     * @param attrs the style attributes to apply
      */
     public final void applyStyle(TextPos start, TextPos end, StyleAttrs attrs) {
         if (isEditable()) {
@@ -569,6 +573,7 @@ public abstract class StyledTextModel {
                 end = p;
             }
 
+            // TODO detect if paragraph attributes are used and adjust the range
             UndoableChange ch = UndoableChange.create(this, start, end);
             boolean changed = applyStyleImpl(start, end, attrs);
             if (changed) {

@@ -423,19 +423,19 @@ public class RichTextAreaDemoPane extends BorderPane {
             items.add(new SeparatorMenuItem());
 
             items.add(m = new MenuItem("Bold"));
-            m.setOnAction((ev) -> apply(StyleAttrs.BOLD, !a.getBoolean(StyleAttrs.BOLD)));
+            m.setOnAction((ev) -> applyStyle(StyleAttrs.BOLD, !a.getBoolean(StyleAttrs.BOLD)));
             m.setDisable(!sel);
 
             items.add(m = new MenuItem("Italic"));
-            m.setOnAction((ev) -> apply(StyleAttrs.ITALIC, !a.getBoolean(StyleAttrs.ITALIC)));
+            m.setOnAction((ev) -> applyStyle(StyleAttrs.ITALIC, !a.getBoolean(StyleAttrs.ITALIC)));
             m.setDisable(!sel);
 
             items.add(m = new MenuItem("Strike Through"));
-            m.setOnAction((ev) -> apply(StyleAttrs.STRIKE_THROUGH, !a.getBoolean(StyleAttrs.STRIKE_THROUGH)));
+            m.setOnAction((ev) -> applyStyle(StyleAttrs.STRIKE_THROUGH, !a.getBoolean(StyleAttrs.STRIKE_THROUGH)));
             m.setDisable(!sel);
 
             items.add(m = new MenuItem("Underline"));
-            m.setOnAction((ev) -> apply(StyleAttrs.UNDERLINE, !a.getBoolean(StyleAttrs.UNDERLINE)));
+            m.setOnAction((ev) -> applyStyle(StyleAttrs.UNDERLINE, !a.getBoolean(StyleAttrs.UNDERLINE)));
             m.setDisable(!sel);
 
             items.add(m2 = new Menu("Text Color"));
@@ -472,27 +472,44 @@ public class RichTextAreaDemoPane extends BorderPane {
             fontMenu(m2, sel, "null");
         }
 
+        if (styled) {
+            StyleAttrs a = control.getActiveStyleAttrs();
+            items.add(new SeparatorMenuItem());
+
+            items.add(m2 = new Menu("Line Spacing"));
+            lineSpacingMenu(m2, 0);
+            lineSpacingMenu(m2, 1);
+            lineSpacingMenu(m2, 10);
+            lineSpacingMenu(m2, 30);
+        }
+
         items.add(new SeparatorMenuItem());
 
         items.add(m = new MenuItem("Select All"));
         m.setOnAction((ev) -> control.selectAll());
     }
 
-    protected void fontMenu(Menu menu, boolean selected, String family) {
+    private void lineSpacingMenu(Menu menu, double value) {
+        MenuItem m = new MenuItem(String.valueOf(value));
+        menu.getItems().add(m);
+        m.setOnAction((ev) -> applyStyle(StyleAttrs.LINE_SPACING, value));
+    }
+
+    private void fontMenu(Menu menu, boolean selected, String family) {
         MenuItem m = new MenuItem(family);
         m.setDisable(!selected);
-        m.setOnAction((ev) -> apply(StyleAttrs.FONT_FAMILY, family));
+        m.setOnAction((ev) -> applyStyle(StyleAttrs.FONT_FAMILY, family));
         menu.getItems().add(m);
     }
 
-    protected void sizeMenu(Menu menu, boolean selected, int percent) {
+    private void sizeMenu(Menu menu, boolean selected, int percent) {
         MenuItem m = new MenuItem(percent + "%");
         m.setDisable(!selected);
-        m.setOnAction((ev) -> apply(StyleAttrs.FONT_SIZE, percent));
+        m.setOnAction((ev) -> applyStyle(StyleAttrs.FONT_SIZE, percent));
         menu.getItems().add(m);
     }
     
-    protected void colorMenu(Menu menu, boolean selected, Color color) {
+    private void colorMenu(Menu menu, boolean selected, Color color) {
         int w = 16;
         int h = 16;
         Canvas c = new Canvas(w, h);
@@ -506,11 +523,11 @@ public class RichTextAreaDemoPane extends BorderPane {
         
         MenuItem m = new MenuItem(null, c);
         m.setDisable(!selected);
-        m.setOnAction((ev) -> apply(StyleAttrs.TEXT_COLOR, color));
+        m.setOnAction((ev) -> applyStyle(StyleAttrs.TEXT_COLOR, color));
         menu.getItems().add(m);
     }
     
-    protected void apply(StyleAttribute a, Object val) {
+    private void applyStyle(StyleAttribute a, Object val) {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
         StyleAttrs m = StyleAttrs.of(a, val);
