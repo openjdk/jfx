@@ -28,9 +28,9 @@ package javafx.scene.control.rich.model;
 /**
  * Style Attribute provides a way to specify style in the RichTextArea.
  */
-public class StyleAttribute {
+public class StyleAttribute<T> {
     @FunctionalInterface
-    public interface Generator {
+    public interface Generator<T> {
         /**
          * Appends a direct style string derived from the attribute value.
          * This method must append a valid CSS style followed by a semicolon, for example:
@@ -41,11 +41,11 @@ public class StyleAttribute {
          * @param sb the StringBuilder to append the style to
          * @param value the attribute value
          */
-        public void appendStyleString(StyleAttrs a, StringBuilder sb, Object value);
+        public void appendStyleString(StyleAttrs a, StringBuilder sb, T value);
     }
 
     private final String name;
-    private final Class<?> type;
+    private final Class<T> type;
     private final Generator generator;
 
     /**
@@ -53,7 +53,7 @@ public class StyleAttribute {
      * @param name the attribute name
      * @param type the attribute type
      */
-    public StyleAttribute(String name, Class<?> type, Generator generator) {
+    public StyleAttribute(String name, Class<T> type, Generator<T> generator) {
         this.name = name;
         this.type = type;
         this.generator = generator;
@@ -64,7 +64,7 @@ public class StyleAttribute {
      * The value must be Serializable.
      * @return attribute type
      */
-    public final Class<?> getType() {
+    public final Class<T> getType() {
         return type;
     }
 

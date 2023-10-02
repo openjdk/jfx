@@ -63,7 +63,7 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setBackground(Color.LIGHTSALMON).
             setItalic(true).
-            create());
+            build());
         addSegment("- background").nl();
         nl(2);
 

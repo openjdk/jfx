@@ -90,7 +90,7 @@ public class AttrSet {
             setItalic(getBoolean(StyleAttrs.ITALIC)).
             setTextColor(getColor(StyleAttrs.TEXT_COLOR)).
             setUnderline(getBoolean(StyleAttrs.UNDERLINE)).
-            create();
+            build();
     }
 
     private boolean getBoolean(Object attr) {

@@ -780,7 +780,7 @@ public class VFlow extends Pane implements StyleResolver {
             if (a == null) {
                 a = defaultAttrs;
             } else {
-                a = defaultAttrs.builder().merge(a).create();
+                a = defaultAttrs.builder().merge(a).build();
             }
         }
         if (a != null) {

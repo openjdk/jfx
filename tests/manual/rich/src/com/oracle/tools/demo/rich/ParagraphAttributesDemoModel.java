@@ -33,7 +33,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
     private final StyleAttrs TITLE = StyleAttrs.builder().
         setFontSize(200).
         setUnderline(true).
-        create();
+        build();
 
     public ParagraphAttributesDemoModel() {
         addSegment("Paragraph Attributes", TITLE);
@@ -43,14 +43,14 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
         setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.LIGHTGREEN).
-            create());
+            build());
         nl();
 
         addSegment("✓ Translucent Background Color");
         setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(FX.alpha(Color.LIGHTGREEN, 0.5)).
-            create());
+            build());
         nl();
 
         // space
@@ -60,7 +60,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setSpaceAbove(20).
             setBackground(Color.gray(0.95, 0.5)).
-            create());
+            build());
         nl();
 
         addSegment("✓ Space Below");
@@ -68,7 +68,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setSpaceBelow(20).
             setBackground(Color.gray(0.9, 0.5)).
-            create());
+            build());
         nl();
 
         addSegment("✓ Space Left");
@@ -76,7 +76,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setSpaceLeft(20).
             setBackground(Color.gray(0.85, 0.5)).
-            create());
+            build());
         nl();
 
         addSegment("✓ Space Right " + words(10));
@@ -84,7 +84,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setSpaceRight(20).
             setBackground(Color.gray(0.8, 0.5)).
-            create());
+            build());
         nl();
 
         // text alignment
@@ -94,7 +94,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setBackground(Color.gray(0.95, 0.5)).
             setTextAlignment(TextAlignment.LEFT).
-            create());
+            build());
         nl();
 
         addSegment("✓ Text Alignment Right " + words(20));
@@ -102,7 +102,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setBackground(Color.gray(0.9, 0.5)).
             setTextAlignment(TextAlignment.RIGHT).
-            create());
+            build());
         nl();
 
         addSegment("✓ Text Alignment Center " + words(20));
@@ -110,7 +110,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setBackground(Color.gray(0.85, 0.5)).
             setTextAlignment(TextAlignment.CENTER).
-            create());
+            build());
         nl();
 
         addSegment("✓ Text Alignment Justify " + words(20));
@@ -118,7 +118,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setBackground(Color.gray(0.8, 0.5)).
             setTextAlignment(TextAlignment.JUSTIFY).
-            create());
+            build());
         nl();
 
         // line spacing
@@ -129,7 +129,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setBackground(Color.gray(0.95, 0.5)).
             setLineSpacing(0).
-            create());
+            build());
         nl();
 
         addSegment("✓ Line Spacing 20 " + words(200));
@@ -138,7 +138,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setBackground(Color.gray(0.9, 0.5)).
             setLineSpacing(20).
-            create());
+            build());
         nl();
 
         addSegment("✓ Line Spacing 40 " + words(200));
@@ -147,7 +147,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setBackground(Color.gray(0.9, 0.5)).
             setLineSpacing(40).
-            create());
+            build());
         nl();
     }
 

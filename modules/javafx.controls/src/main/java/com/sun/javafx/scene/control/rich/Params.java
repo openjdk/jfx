@@ -86,6 +86,6 @@ public class Params {
     public static final float SLIDING_WINDOW_EXTENT = 3.0f;
 
     static {
-        DEFAULT_PARAGRAPH_ATTRIBUTES = StyleAttrs.builder().create(); // or EMPTY?
+        DEFAULT_PARAGRAPH_ATTRIBUTES = StyleAttrs.builder().build(); // or EMPTY?
     }
 }

@@ -257,7 +257,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     b.setFontSize(percent);
                     break;
                 case '`':
-                    StyleAttrs a = b.create();
+                    StyleAttrs a = b.build();
                     attrs.add(a);
                     return a;
                 default:

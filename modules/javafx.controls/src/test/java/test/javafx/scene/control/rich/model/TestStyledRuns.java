@@ -91,7 +91,7 @@ public class TestStyledRuns {
             }
             b.set(a, v);
         }
-        return b.create();
+        return b.build();
     }
 
     private void t(Object[] initial, int ix1, int off1, int ix2, int off2, StyleAttrs a, Object[] expected) throws IOException {
