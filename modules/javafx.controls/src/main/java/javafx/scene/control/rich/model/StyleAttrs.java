@@ -69,8 +69,7 @@ public class StyleAttrs {
 
     /** Font size attribute, in percent, relative to the base font size. */
     public static final StyleAttribute<Integer> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Integer.class, (a, sb, v) -> {
-        int n = (Integer)v;
-        sb.append("-fx-font-size:").append(n).append("%; ");
+        sb.append("-fx-font-size:").append(v).append("%; ");
     });
 
     /** Italic type face attribute */
@@ -125,16 +124,14 @@ public class StyleAttrs {
 
     /** Paragraph text alignment attribute */
     public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, (a, sb, v) -> {
-        String alignment = RichUtils.toCss((TextAlignment)v);
+        String alignment = RichUtils.toCss(v);
         sb.append("-fx-text-alignment:").append(alignment).append("; ");
     });
 
     /** Text color attrbute */
     public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, (a, sb, v) -> {
-        if (v instanceof Color c) {
-            String color = RichUtils.toCssColor(c);
-            sb.append("-fx-fill:").append(color).append("; ");
-        }
+        String color = RichUtils.toCssColor(v);
+        sb.append("-fx-fill:").append(color).append("; ");
     });
 
     /** Underline style attribute */
