@@ -365,7 +365,7 @@ class GlassSystemMenu implements TKSystemMenu {
             }
         }
 
-        if (kcc instanceof KeyCodeCombination) {
+        if (!PlatformUtil.isMac() && kcc instanceof KeyCodeCombination) {
             KeyCode kcode = ((KeyCodeCombination)kcc).getCode();
             int     code  = kcode.getCode();
 
