@@ -150,16 +150,27 @@ public abstract class StyledTextModel {
     protected abstract void insertParagraph(int index, Supplier<Region> generator);
     
     /**
-     * Applies a style to the specified text range, where {@code start} is guaranteed to precede {@code end}.
-     * 
-     * @param start start position
-     * @param end end position
-     * @param attrs non-null attribute map
-     * @return true if the model has changed as a result of this call
-     * TODO convert to a single paragraph one?
+     * Applies the paragraph styles to the specified paragraph.
+     * The new attributes override any existing attributes.
+     *
+     * @param ix the paragraph index
+     * @param paragraphAttrs the paragraph attributes
      */
-    protected abstract boolean applyStyleImpl(TextPos start, TextPos end, StyleAttrs attrs);
-    
+    protected abstract void applyStyle(int ix, StyleAttrs paragraphAttrs);
+
+    /**
+     * Applies style to the specified text range within a single paragraph.
+     * The new attributes override any existing attributes.
+     * The {@code end} argument may exceed the paragraph length, in which case the outcome should be the same
+     * as supplying the paragraph length value.
+     *
+     * @param ix the paragraph index
+     * @param start the start offset
+     * @param end the end offset
+     * @param a the character attributes
+     */
+    protected abstract void applyStyle(int ix, int start, int end, StyleAttrs a);
+
     /**
      * Returns the {@link StyleAttrs} of the first character at the specified position.
      * When at the end of the document, returns the attributes of the last character.
@@ -557,8 +568,8 @@ public abstract class StyledTextModel {
 
     /**
      * Applies the specified style to the specified range.
-     * The specified attributes
-     * will override any existing attributes.  When applying paragraph attributes, the affected range
+     * The specified attributes will override any existing attributes.
+     * When applying paragraph attributes, the affected range
      * might be wider than specified.
      * 
      * @param start the start of text range
@@ -573,11 +584,50 @@ public abstract class StyledTextModel {
                 end = p;
             }
 
-            // TODO detect if paragraph attributes are used and adjust the range
-            UndoableChange ch = UndoableChange.create(this, start, end);
-            boolean changed = applyStyleImpl(start, end, attrs);
+            TextPos evStart;
+            TextPos evEnd;
+            boolean changed;
+
+            StyleAttrs pa = attrs.getParagraphAttrs();
+            if (pa == null) {
+                evStart = start;
+                evEnd = end;
+                changed = false;
+            } else {
+                evStart = new TextPos(start.index(), 0, 0, true);
+                evEnd = getEndOfParagraphTextPos(end.index());
+                changed = true;
+            }
+
+            UndoableChange ch = UndoableChange.create(this, evStart, evEnd);
+
+            if (pa != null) {
+                // apply paragraph attributes
+                for (int ix = start.index(); ix <= end.index(); ix++) {
+                    applyStyle(ix, pa);
+                }
+            }
+
+            // apply character styles
+            StyleAttrs ca = attrs.getCharacterAttrs();
+            if(ca != null) {
+                int ix = start.index();
+                if (ix == end.index()) {
+                    applyStyle(ix, start.offset(), end.offset(), attrs);
+                } else {
+                    applyStyle(ix, start.offset(), Integer.MAX_VALUE, attrs);
+                    ix++;
+                    while (ix < end.index()) {
+                        applyStyle(ix, 0, Integer.MAX_VALUE, attrs);
+                        ix++;
+                    }
+                    applyStyle(ix, 0, end.offset(), attrs);
+                }
+                changed = true;
+            }
+
             if (changed) {
-                fireStyleChangeEvent(start, end);
+                fireStyleChangeEvent(evStart, evEnd);
                 add(ch, end);
             }
         }

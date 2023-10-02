@@ -154,12 +154,15 @@ public class NotebookModelStacked extends StyledTextModel {
     }
 
     @Override
-    protected boolean applyStyleImpl(TextPos start, TextPos end, StyleAttrs attrs) {
-        return false;
+    public StyleAttrs getStyleAttrs(TextPos pos) {
+        return StyleAttrs.EMPTY;
     }
 
     @Override
-    public StyleAttrs getStyleAttrs(TextPos pos) {
-        return StyleAttrs.EMPTY;
+    protected void applyStyle(int ix, StyleAttrs paragraphAttrs) {
+    }
+
+    @Override
+    protected void applyStyle(int ix, int start, int end, StyleAttrs a) {
     }
 }

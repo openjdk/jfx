@@ -163,12 +163,6 @@ public class BasePlainTextModel extends StyledTextModel {
     }
 
     @Override
-    protected boolean applyStyleImpl(TextPos start, TextPos end, StyleAttrs attrs) {
-        // no-op
-        return false;
-    }
-
-    @Override
     public StyleAttrs getStyleAttrs(TextPos pos) {
         return StyleAttrs.EMPTY;
     }
@@ -179,5 +173,15 @@ public class BasePlainTextModel extends StyledTextModel {
      */
     public void addParagraph(String text) {
         paragraphs.add(text);
+    }
+
+    @Override
+    protected final void applyStyle(int ix, StyleAttrs a) {
+        // no-op
+    }
+
+    @Override
+    protected final void applyStyle(int ix, int start, int end, StyleAttrs a) {
+        // no-op
     }
 }
