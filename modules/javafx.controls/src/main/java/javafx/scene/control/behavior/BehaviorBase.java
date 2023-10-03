@@ -87,7 +87,7 @@ public abstract class BehaviorBase<C extends Control> {
     public void dispose() {
         getInputMap().unregister(this);
     }
-    
+
     /**
      * Maps a function to the specified function tag.
      * This method will not override any previous mapping added by {@link #registerFunction(FunctionTag,Runnable)}.
@@ -168,7 +168,7 @@ public abstract class BehaviorBase<C extends Control> {
     protected <T extends Event> void addHandler(EventType<T> type, EventHandler<T> handler) {
         getInputMap().addHandler(this, type, true, false, handler);
     }
-    
+
     /**
      * Adds an event handler for the specified event type, in the context of this Behavior.
      * The handler will get removed in {@link#dispose()} method.
@@ -181,7 +181,7 @@ public abstract class BehaviorBase<C extends Control> {
     protected <T extends Event> void addHandler(EventType<T> type, boolean consume, EventHandler<T> handler) {
         getInputMap().addHandler(this, type, consume, false, handler);
     }
-    
+
     /**
      * Adds an event handler for the specified event type, in the context of this Behavior.
      * This event handler will get invoked after all handlers added via map() methods.
@@ -195,7 +195,7 @@ public abstract class BehaviorBase<C extends Control> {
     protected <T extends Event> void addHandlerLast(EventType<T> type, EventHandler<T> handler) {
         getInputMap().addHandler(this, type, true, true, handler);
     }
-    
+
     /**
      * Adds an event handler for the specified event type, in the context of this Behavior.
      * This event handler will get invoked after all handlers added via map() methods.

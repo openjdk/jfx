@@ -108,7 +108,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         this.key = key;
         this.modifiers = modifiers;
     }
-    
+
     /**
      * Utility method creates a KeyBinding corresponding to a key press.
      *
@@ -148,7 +148,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
     public static KeyBinding ctrl(KeyCode code) {
         return create(code, KCondition.KEY_PRESS, KCondition.CTRL);
     }
-    
+
     /**
      * Utility method creates a KeyBinding corresponding to a shift-code key press.
      *

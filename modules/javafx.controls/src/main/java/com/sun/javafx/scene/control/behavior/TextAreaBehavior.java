@@ -72,7 +72,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         super.install();
 
         TextArea c = getControl();
-        
+
         focusListener = (src, ov, nv) -> handleFocusChange();
         // Register for change events
         c.focusedProperty().addListener(focusListener);
@@ -105,7 +105,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         registerFunction(TextArea.UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, false));
         registerFunction(TextArea.INSERT_NEW_LINE, this::insertNewLine);
         registerFunction(TextArea.INSERT_TAB, this::insertTab);
-        
+
         // common keys
         registerKey(KeyCode.DOWN, TextArea.DOWN);
         registerKey(KeyBinding.shift(KeyCode.DOWN), TextArea.SELECT_DOWN);
@@ -121,7 +121,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         registerKey(KeyCode.TAB, TextArea.INSERT_TAB);
         registerKey(KeyCode.UP, TextArea.UP);
         registerKey(KeyBinding.shift(KeyCode.UP), TextArea.SELECT_UP);
-        
+
         // macOS specific mappings
         registerKey(KeyBinding.with(KeyCode.DOWN).alt().forMac().build(), TextArea.PARAGRAPH_DOWN);
         registerKey(KeyBinding.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);

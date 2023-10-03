@@ -69,7 +69,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         addHandler(KeyBinding.withRelease(KeyCode.ENTER).build(), false, this::keyReleased);
         addHandler(KeyBinding.with(KeyCode.ESCAPE).build(), true, this::cancelEdit);
         addHandler(KeyBinding.with(KeyCode.F10).build(), true, this::forwardToParent);
-        
+
         addHandler(MouseEvent.MOUSE_PRESSED, this::mousePressed);
         addHandler(MouseEvent.MOUSE_RELEASED, this::mouseReleased);
         addHandler(MouseEvent.MOUSE_ENTERED, this::mouseEntered);
