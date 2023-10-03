@@ -757,7 +757,7 @@ public class PrismTextLayout implements TextLayout {
 
         int lineCount = getLineCount();
         while (index < lineCount) {
-            if (text != null) {
+            if (!textFound) {
                 for (TextRun r : lines[index].runs) {
                     if (r.getTextSpan() == null || r.getTextSpan().getText().equals(text)) {
                         /* Span will present only for Rich Text.
