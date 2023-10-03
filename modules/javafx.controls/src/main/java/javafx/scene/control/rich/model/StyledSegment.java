@@ -67,14 +67,14 @@ public abstract class StyledSegment {
     public String getText() { return null; }
 
     /**
-     * This method must return a non-null value when {@link isInlineNode()} is true, 
+     * This method must return a non-null value for a segment of {@code INLINE_NODE} type, 
      * or null in any other case.
      * @return code that creates a Node instance, or null
      */
     public Supplier<Node> getInlineNodeGenerator() { return null; }
 
     /**
-     * This method must return a non-null value when {@link isParagraph()} is true, 
+     * This method must return a non-null value for a segment of {@code REGION} type, 
      * or null in any other case.
      * @return code that creates a Region instance, or null
      */
