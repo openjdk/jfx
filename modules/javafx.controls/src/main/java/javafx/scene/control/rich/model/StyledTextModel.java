@@ -137,8 +137,8 @@ public abstract class StyledTextModel {
 
     /**
      * Inserts a line break.
-     * @param index model index
-     * @param offset text offset
+     * @param index the model index
+     * @param offset the text offset
      */
     protected abstract void insertLineBreak(int index, int offset);
     

@@ -43,6 +43,7 @@ import javafx.scene.control.rich.CaretInfo;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.DataFormatHandler;
+import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.util.Util;
@@ -289,8 +290,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             return;
         }
 
-        // TODO specify style?
-        TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
+        StyleAttrs a = control.getActiveStyleAttrs();
+        TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n", a), true);
         control.moveCaret(pos, false);
         clearPhantomX();
     }

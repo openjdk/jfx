@@ -95,9 +95,9 @@ public abstract class StyledSegment {
     /**
      * This method returns StyleAttrs (or null) for this segment.
      * When the model manages style names (instead of actual attributes), an instance of {@link StyleResolver}
-     * may be used to convert the style names to the attributes.
-     * Keep in mind that different views might have different CSS styles applied and as a result a different
-     * set of attributes might be produced for the same segment.
+     * may be used to convert the style names to individual attributes.
+     * Keep in mind that different views might have different stylesheet applied and
+     * resulting in a different set of attributes.
      * @param resolver the style resolver to use
      * @return style attributes
      */
