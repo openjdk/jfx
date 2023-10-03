@@ -72,13 +72,13 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
     }
-    
+
     @Override
     public void install() {
         super.install();
-        
+
         TextField textField = getControl();
-        
+
         focusListener = (observable, oldValue, newValue) -> {
             handleFocusChange();
         };
@@ -118,7 +118,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(textField); // needs to be last.
         }
-        
+
         addHandler(KeyBinding.of(KeyCode.ENTER), false, this::fire);
         addHandler(KeyBinding.of(KeyCode.ESCAPE), false, this::cancelEdit);
     }

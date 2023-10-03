@@ -823,11 +823,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
-    
+
     @Override
     public void install() {
         super.install();
-
         behavior.install();
     }
 
@@ -836,11 +835,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         if (getSkinnable() != null) {
             getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
             getChildren().remove(scrollPane);
-            
+
             if (behavior != null) {
                 behavior.dispose();
             }
-            
+
             super.dispose();
         }
     }

@@ -234,7 +234,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             false,
             (ev) -> ev.consume()
         );
-        
+
         // VK
         // TODO can PlatformImpl.isSupported(ConditionalFeature) change at runtime?
         if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
@@ -287,7 +287,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                         control(k.isControl()).
                         meta(k.isMeta()).
                         option(k.isOption()).
-                        shift(k.isShift()).                        
+                        shift(k.isShift()).
                         build();
                     duplicateMapping(k, newBinding);
                 }
@@ -432,7 +432,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             getControl().selectForward();
         }
     }
-    
+
     boolean isEditable() {
         return getControl().isEditable();
     }

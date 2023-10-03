@@ -143,7 +143,7 @@ public final class InputMap<C extends Control> {
             }
         }
     }
-    
+
     private void handleKeyFunctionEnter() {
         Entry en = map.get(ON_KEY_ENTER);
         if (en != null) {
@@ -153,7 +153,7 @@ public final class InputMap<C extends Control> {
             }
         }
     }
-    
+
     private void handleKeyFunctionExit() {
         Entry en = map.get(ON_KEY_EXIT);
         if (en != null) {
@@ -200,7 +200,7 @@ public final class InputMap<C extends Control> {
             extendHandlers(behavior, type, tail, handler);
         }
     }
-    
+
     <T extends Event> void addHandler(
         BehaviorBase behavior,
         EventCriteria<T> criteria,
@@ -236,7 +236,7 @@ public final class InputMap<C extends Control> {
         en.behavior = behavior;
         en.behaviorValue = handlers;
     }
-    
+
     /**
      * Adds a user-specified function under the given function tag.
      * This function will override any function set by the behavior.
@@ -263,7 +263,7 @@ public final class InputMap<C extends Control> {
         Objects.requireNonNull(function, "function must not be null");
         addFunction(tag, function, behavior);
     }
-    
+
     /**
      * Link a key binding to the specified function tag.
      * This method will override a mapping set by the behavior.
@@ -276,7 +276,7 @@ public final class InputMap<C extends Control> {
         Objects.requireNonNull(tag, "function tag must not be null");
         addBinding(k, tag, null);
     }
-    
+
     /**
      * Maps a key binding to the specified function tag, for use by the behavior.
      * A null key binding will result in no change to this input map.
@@ -330,7 +330,7 @@ public final class InputMap<C extends Control> {
             en = new Entry();
             map.put(k, en);
         }
-        
+
         if (behavior == null) {
             // user mapping
         } else {

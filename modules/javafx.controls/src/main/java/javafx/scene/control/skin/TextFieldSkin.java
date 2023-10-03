@@ -377,7 +377,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
     @Override
     public void install() {
         super.install();
-        
+
         var c = getSkinnable();
         behavior = (c instanceof PasswordField f) ?
             new PasswordFieldBehavior(f, this) :
@@ -390,7 +390,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         if (getSkinnable() != null) {
             getChildren().removeAll(textGroup, handleGroup);
             super.dispose();
-    
+
             if (behavior != null) {
                 behavior.dispose();
                 behavior = null;
