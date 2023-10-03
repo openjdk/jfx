@@ -536,7 +536,7 @@ public abstract class StyledTextModel {
                     offset = 0;
                     btm = 0;
                     break;
-                case PARAGRAPH:
+                case REGION:
                     offset = 0;
                     btm = 0;
                     index++;

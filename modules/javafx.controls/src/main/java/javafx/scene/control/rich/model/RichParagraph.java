@@ -80,7 +80,7 @@ public class RichParagraph {
 
             @Override
             public void export(int start, int end, StyledOutput out) throws IOException {
-                StyledSegment seg = StyledSegment.nodeParagraph(paragraphGenerator);
+                StyledSegment seg = StyledSegment.ofRegion(paragraphGenerator);
                 out.append(seg);
             }
         };
@@ -173,7 +173,7 @@ public class RichParagraph {
      * @param generator the generator that provides the actual {@code Node}
      */
     public void addInlineNode(Supplier<Node> generator) {
-        StyledSegment seg = StyledSegment.inlineNode(generator);
+        StyledSegment seg = StyledSegment.ofInlineNode(generator);
         segments().add(seg);
     }
 

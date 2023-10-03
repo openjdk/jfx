@@ -48,7 +48,7 @@ public abstract class StyledSegment {
     public enum Type {
         INLINE_NODE,
         LINE_BREAK,
-        PARAGRAPH,
+        REGION,
         TEXT
     }
 
@@ -180,7 +180,7 @@ public abstract class StyledSegment {
      * @param generator the code to create a Node instance
      * @return a new StyledSegment instance
      */
-    public static StyledSegment inlineNode(Supplier<Node> generator) {
+    public static StyledSegment ofInlineNode(Supplier<Node> generator) {
         return new StyledSegment() {
             @Override
             public Type getType() {
@@ -205,15 +205,15 @@ public abstract class StyledSegment {
     }
 
     /**
-     * Creates a StyledSegment for a paragraph that contains a Region.
+     * Creates a StyledSegment for a paragraph that contains a single Region.
      * @param generator the code to create a Region instance
      * @return a new StyledSegment instance
      */
-    public static StyledSegment nodeParagraph(Supplier<Region> generator) {
+    public static StyledSegment ofRegion(Supplier<Region> generator) {
         return new StyledSegment() {
             @Override
             public Type getType() {
-                return Type.PARAGRAPH;
+                return Type.REGION;
             }
 
             @Override

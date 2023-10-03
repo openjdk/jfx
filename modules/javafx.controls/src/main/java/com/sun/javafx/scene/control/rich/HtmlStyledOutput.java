@@ -86,7 +86,7 @@ public class HtmlStyledOutput implements StyledOutput {
                 wr.write("</span>");
             }
             break;
-        case PARAGRAPH:
+        case REGION:
             Region r = seg.getParagraphNodeGenerator().get();
             writeParagraph(r);
             break;

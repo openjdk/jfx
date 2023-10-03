@@ -177,7 +177,7 @@ public class RtfStyledOutput implements StyledOutput {
             writeEndOfLine();
             writeNewLine();
             break;
-        case PARAGRAPH:
+        case REGION:
             Node n = seg.getParagraphNodeGenerator().get();
             writeParagraph(n);
             writeNewLine();
