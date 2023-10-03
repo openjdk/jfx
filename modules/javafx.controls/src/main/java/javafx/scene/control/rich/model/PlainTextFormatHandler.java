@@ -63,12 +63,15 @@ public class PlainTextFormatHandler extends DataFormatHandler {
         StyledOutput so = new StyledOutput() {
             @Override
             public void append(StyledSegment seg) throws IOException {
-                if (seg.isLineBreak()) {
+                switch (seg.getType()) {
+                case LINE_BREAK:
                     out.write(newline);
-                } else if (seg.isText()) {
+                    break;
+                case TEXT:
                     String text = seg.getText();
                     byte[] b = text.getBytes(charset);
                     out.write(b);
+                    break;
                 }
             }
 

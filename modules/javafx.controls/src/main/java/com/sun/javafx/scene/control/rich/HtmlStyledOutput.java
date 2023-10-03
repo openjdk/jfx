@@ -62,10 +62,16 @@ public class HtmlStyledOutput implements StyledOutput {
 
     @Override
     public void append(StyledSegment seg) throws IOException {
-        if (seg.isLineBreak()) {
+        switch (seg.getType()) {
+        case INLINE_NODE:
+            Node n = seg.getInlineNodeGenerator().get();
+            writeInlineNode(n);
+            break;
+        case LINE_BREAK:
             // TODO perhaps use a boolean flag to emit separate p and /p tags
             wr.write("<p/>\n");
-        } else if (seg.isText()) {
+            break;
+        case TEXT:
             StyleAttrs a = seg.getStyleAttrs(resolver);
             boolean div = ((a != null) && (!a.isEmpty()));
             if(div) {
@@ -79,12 +85,11 @@ public class HtmlStyledOutput implements StyledOutput {
             if(div) {
                 wr.write("</span>");
             }
-        } else if (seg.isInlineNode()) {
-            Node n = seg.getInlineNodeGenerator().get();
-            writeInlineNode(n);
-        } else if (seg.isParagraph()) {
+            break;
+        case PARAGRAPH:
             Region r = seg.getParagraphNodeGenerator().get();
             writeParagraph(r);
+            break;
         }
     }
 
@@ -262,7 +267,7 @@ public class HtmlStyledOutput implements StyledOutput {
         return new StyledOutput() {
             @Override
             public void append(StyledSegment seg) throws IOException {
-                if (seg.isText()) {
+                if (seg.getType() == StyledSegment.Type.TEXT) {
                     StyleAttrs attrs = seg.getStyleAttrs(resolver);
                     if ((attrs != null) && (!attrs.isEmpty())) {
                         for (StyleAttribute a : attrs.getAttributes()) {

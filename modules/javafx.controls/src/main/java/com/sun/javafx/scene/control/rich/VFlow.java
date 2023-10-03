@@ -762,12 +762,15 @@ public class VFlow extends Pane implements StyleResolver {
                 cell.add(new Text(""));
             } else {
                 for (StyledSegment seg : segments) {
-                    if (seg.isText()) {
-                        Text t = createTextNode(seg);
-                        cell.add(t);
-                    } else if (seg.isInlineNode()) {
+                    switch (seg.getType()) {
+                    case INLINE_NODE:
                         Node n = seg.getInlineNodeGenerator().get();
                         cell.add(n);
+                        break;
+                    case TEXT:
+                        Text t = createTextNode(seg);
+                        cell.add(t);
+                        break;
                     }
                 }
             }

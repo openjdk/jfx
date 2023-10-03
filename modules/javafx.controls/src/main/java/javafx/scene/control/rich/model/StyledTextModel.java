@@ -529,24 +529,28 @@ public abstract class StyledTextModel {
 
             StyledSegment seg;
             while ((seg = input.nextSegment()) != null) {
-                if (seg.isParagraph()) {
+                switch (seg.getType()) {
+                case LINE_BREAK:
+                    insertLineBreak(index, offset);
+                    index++;
+                    offset = 0;
+                    btm = 0;
+                    break;
+                case PARAGRAPH:
                     offset = 0;
                     btm = 0;
                     index++;
                     Supplier<Region> gen = seg.getParagraphNodeGenerator();
                     insertParagraph(index, gen);
-                } else if (seg.isText()) {
+                    break;
+                case TEXT:
                     int len = insertTextSegment(resolver, index, offset, seg);
                     if (index == start.index()) {
                         top += len;
                     }
                     offset += len;
                     btm += len;
-                } else if (seg.isLineBreak()) {
-                    insertLineBreak(index, offset);
-                    index++;
-                    offset = 0;
-                    btm = 0;
+                    break;
                 }
             }
 

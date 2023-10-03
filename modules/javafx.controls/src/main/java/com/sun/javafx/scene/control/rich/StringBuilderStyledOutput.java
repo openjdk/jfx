@@ -47,11 +47,14 @@ public class StringBuilderStyledOutput implements StyledOutput {
 
     @Override
     public void append(StyledSegment seg) {
-        if (seg.isLineBreak()) {
+        switch (seg.getType()) {
+        case LINE_BREAK:
             sb.append(newline);
-        } else if (seg.isText()) {
+            break;
+        case TEXT:
             String text = seg.getText();
             sb.append(text);
+            break;
         }
     }
 

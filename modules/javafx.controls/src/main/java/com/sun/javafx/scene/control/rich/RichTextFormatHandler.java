@@ -342,13 +342,17 @@ public class RichTextFormatHandler extends DataFormatHandler {
 
         @Override
         public void append(StyledSegment seg) throws IOException {
-            if(seg.isInlineNode()) {
+            switch (seg.getType()) {
+            case INLINE_NODE:
                 // TODO
-            } else if(seg.isLineBreak()) {
+                break;
+            case LINE_BREAK:
                 wr.write("\n");
-            } else if(seg.isParagraph()) {
+                break;
+            case PARAGRAPH:
                 // TODO
-            } else if(seg.isText()) {
+                break;
+            case TEXT:
                 // TODO use caching resolver with #
                 // the model manages actual attributes
                 StyleAttrs a = seg.getStyleAttrs(resolver);
@@ -405,6 +409,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 String text = seg.getText();
                 text = encode(text);
                 wr.write(text);
+                break;
             }
         }
 

@@ -73,7 +73,7 @@ public class RtfStyledOutput implements StyledOutput {
         return new StyledOutput() {
             @Override
             public void append(StyledSegment seg) throws IOException {
-                if (seg.isText()) {
+                if (seg.getType() == StyledSegment.Type.TEXT) {
                     StyleAttrs a = seg.getStyleAttrs(resolver);
                     if (a != null) {
                         // colors
@@ -172,15 +172,19 @@ public class RtfStyledOutput implements StyledOutput {
 
     @Override
     public void append(StyledSegment seg) throws IOException {
-        if (seg.isLineBreak()) {
+        switch (seg.getType()) {
+        case LINE_BREAK:
             writeEndOfLine();
             writeNewLine();
-        } else if (seg.isText()) {
-            writeTextSegment(seg);
-        } else if (seg.isParagraph()) {
+            break;
+        case PARAGRAPH:
             Node n = seg.getParagraphNodeGenerator().get();
             writeParagraph(n);
             writeNewLine();
+            break;
+        case TEXT:
+            writeTextSegment(seg);
+            break;
         }
     }
 

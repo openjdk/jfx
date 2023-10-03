@@ -33,42 +33,30 @@ import javafx.scene.layout.Region;
 /**
  * Data structure used to modify the styled text model.
  * <p>
- * Represents:
+ * Each instance represents:
  * <ol>
- * <li> a single text segment with direct style and/or style names
- * <li> a line break
- * <li> an inline Node
- * <li> a paragraph containing a single Region
+ * <li>a single text segment with direct style and/or style names
+ * <li>a line break
+ * <li>an inline Node
+ * <li>a paragraph containing a single Region
  * </ol>
  */
-// TODO in addition to is*(), add getType() returning an enum { TEXT, PARAGRAPH, INLINE_NODE, LINE_BREAK }
 // TODO perhaps add guarded/unguarded factory methods (of(), ofGuarded()) that check for <0x20, or specify that
 // text must not include those characters.
 public abstract class StyledSegment {
-    /**
-     * Returns true if this segment is a text segment.
-     * @return true for a text segment
-     */
-    public boolean isText() { return false; }
+    /** StyledSegment type */
+    public enum Type {
+        INLINE_NODE,
+        LINE_BREAK,
+        PARAGRAPH,
+        TEXT
+    }
 
     /**
-     * Returns true if this segment is a paragraph which contains a single Region.
-     * @return true for a paragraph segment
+     * Returns the type of this StyledSegment.
+     * @return the type
      */
-    public boolean isParagraph() { return false; }
-
-    /**
-     * Returns true if this segment is a line break.
-     * @return true for a line break segment
-     */
-    public boolean isLineBreak() { return false; }
-
-    /**
-     * Returns true if this segment represents an inline Node.
-     * TODO not yet supported due to https://bugs.openjdk.org/browse/JDK-8305001
-     * @return true for an inline node segment
-     */
-    public boolean isInlineNode() { return false; }
+    public abstract Type getType();
 
     /**
      * Returns the text associated with this segment.
@@ -117,8 +105,8 @@ public abstract class StyledSegment {
     /** A styled segment that represents a line break */
     public static final StyledSegment LINE_BREAK = new StyledSegment() {
         @Override
-        public boolean isLineBreak() {
-            return true;
+        public Type getType() {
+            return Type.LINE_BREAK;
         }
 
         @Override
@@ -155,8 +143,8 @@ public abstract class StyledSegment {
     public static StyledSegment of(String text, StyleAttrs attrs) {
         return new StyledSegment() {
             @Override
-            public boolean isText() {
-                return true;
+            public Type getType() {
+                return Type.TEXT;
             }
 
             @Override
@@ -195,8 +183,8 @@ public abstract class StyledSegment {
     public static StyledSegment inlineNode(Supplier<Node> generator) {
         return new StyledSegment() {
             @Override
-            public boolean isInlineNode() {
-                return true;
+            public Type getType() {
+                return Type.INLINE_NODE;
             }
 
             @Override
@@ -224,8 +212,8 @@ public abstract class StyledSegment {
     public static StyledSegment nodeParagraph(Supplier<Region> generator) {
         return new StyledSegment() {
             @Override
-            public boolean isParagraph() {
-                return true;
+            public Type getType() {
+                return Type.PARAGRAPH;
             }
 
             @Override
