@@ -267,7 +267,8 @@ public class HtmlStyledOutput implements StyledOutput {
         return new StyledOutput() {
             @Override
             public void append(StyledSegment seg) throws IOException {
-                if (seg.getType() == StyledSegment.Type.TEXT) {
+                switch (seg.getType()) {
+                case TEXT:
                     StyleAttrs attrs = seg.getStyleAttrs(resolver);
                     if ((attrs != null) && (!attrs.isEmpty())) {
                         for (StyleAttribute a : attrs.getAttributes()) {
@@ -287,6 +288,10 @@ public class HtmlStyledOutput implements StyledOutput {
                             }
                         }
                     }
+                    break;
+                case PARAGRAPH_ATTRIBUTES:
+                    // TODO
+                    break;
                 }
             }
 

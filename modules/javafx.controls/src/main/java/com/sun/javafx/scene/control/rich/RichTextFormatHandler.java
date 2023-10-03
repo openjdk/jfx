@@ -349,6 +349,9 @@ public class RichTextFormatHandler extends DataFormatHandler {
             case LINE_BREAK:
                 wr.write("\n");
                 break;
+            case PARAGRAPH_ATTRIBUTES:
+                // TODO
+                break;
             case REGION:
                 // TODO
                 break;

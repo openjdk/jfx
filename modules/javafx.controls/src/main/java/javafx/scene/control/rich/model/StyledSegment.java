@@ -39,6 +39,7 @@ import javafx.scene.layout.Region;
  * <li>a line break
  * <li>an inline Node
  * <li>a paragraph containing a single Region
+ * <li>paragraph attributes
  * </ol>
  */
 // TODO perhaps add guarded/unguarded factory methods (of(), ofGuarded()) that check for <0x20, or specify that
@@ -48,6 +49,7 @@ public abstract class StyledSegment {
     public enum Type {
         INLINE_NODE,
         LINE_BREAK,
+        PARAGRAPH_ATTRIBUTES,
         REGION,
         TEXT
     }
@@ -124,7 +126,7 @@ public abstract class StyledSegment {
      * Creates a StyleSegment from a non-null plain text.
      * Important: text must not contain any characters &lt; 0x20, except for TAB.
      * @param text the segment text
-     * @return a new StyledSegment instance
+     * @return the StyledSegment instance
      */
     // TODO guarded of() ?
     public static StyledSegment of(String text) {
@@ -137,7 +139,7 @@ public abstract class StyledSegment {
      *
      * @param text the segment text
      * @param attrs the segment style attributes
-     * @return a new StyledSegment instance
+     * @return the StyledSegment instance
      */
     // TODO guarded of() ?
     public static StyledSegment of(String text, StyleAttrs attrs) {
@@ -178,7 +180,7 @@ public abstract class StyledSegment {
     /**
      * Creates a StyledSegment which consists of a single inline Node.
      * @param generator the code to create a Node instance
-     * @return a new StyledSegment instance
+     * @return the StyledSegment instance
      */
     public static StyledSegment ofInlineNode(Supplier<Node> generator) {
         return new StyledSegment() {
@@ -207,7 +209,7 @@ public abstract class StyledSegment {
     /**
      * Creates a StyledSegment for a paragraph that contains a single Region.
      * @param generator the code to create a Region instance
-     * @return a new StyledSegment instance
+     * @return the StyledSegment instance
      */
     public static StyledSegment ofRegion(Supplier<Region> generator) {
         return new StyledSegment() {
@@ -219,6 +221,33 @@ public abstract class StyledSegment {
             @Override
             public Supplier<Region> getParagraphNodeGenerator() {
                 return generator;
+            }
+
+            @Override
+            public StyledSegment subSegment(int start, int end) {
+                return this;
+            }
+        };
+    }
+
+    /**
+     * Creates a StyledSegment which contains paragraph attributes.
+     * @param attrs the paragraph attributes
+     * @return the StyledSegment instance
+     */
+    public static StyledSegment withParagraphAttributes(StyleAttrs attrs) {
+        return new StyledSegment() {
+            @Override
+            public Type getType() {
+                return Type.PARAGRAPH_ATTRIBUTES;
+            }
+
+            @Override
+            public StyleAttrs getStyleAttrs(StyleResolver resolver) {
+                if (resolver != null) {
+                    return resolver.resolveStyles(attrs);
+                }
+                return attrs;
             }
 
             @Override
