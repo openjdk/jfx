@@ -324,7 +324,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         return builder().with(c);
     }
 
-    /** 
+    /**
      * Creates a KeyBinding from a KeyEvent.  This call drops multiple key modifiers, performing
      * translation when necessary.  May return null if the event does not correspond to a valid KeyBinding.
      * @param ev key event
@@ -346,18 +346,18 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         } else {
             return null;
         }
-        
+
         boolean alt = ev.isAltDown();
         boolean ctrl = ev.isControlDown();
         boolean meta = ev.isMetaDown();
         boolean shortcut = ev.isShortcutDown();
         boolean option = false;
         boolean command = false;
-        
+
         boolean mac = PlatformUtil.isMac();
         boolean win = PlatformUtil.isWindows();
 
-        // drop multiple modifiers, translating when necessary 
+        // drop multiple modifiers, translating when necessary
 
         if (mac) {
             if (alt) {
@@ -439,7 +439,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
 //
 //        return sb.append("}").toString();
 //    }
-    
+
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("KeyBinding{key=");
@@ -794,7 +794,7 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
                 replace(KCondition.WINDOWS, KCondition.META);
             }
 
-            // remove platform 
+            // remove platform entries
             m.remove(KCondition.FOR_LINUX);
             m.remove(KCondition.NOT_FOR_LINUX);
             m.remove(KCondition.FOR_MAC);

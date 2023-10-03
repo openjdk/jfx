@@ -53,7 +53,7 @@ public abstract class BehaviorBase<C extends Control> {
     public BehaviorBase(C control) {
         this.control = control;
     }
-    
+
     /**
      * Returns the associated Control instance.
      * @return the owner

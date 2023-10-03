@@ -231,7 +231,7 @@ public class BehaviorCleanupTest {
      * Sanity test: child mappings to key pad keys.
      */
     /*
-    // this test relies on too many internal assumptions 
+    // this test relies on too many assumptions on internals
     @Test
     public void testKeyPadMappingChildInputMap() {
         TextField control = new TextField("some text");
