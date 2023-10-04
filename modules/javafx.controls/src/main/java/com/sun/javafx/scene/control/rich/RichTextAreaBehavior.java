@@ -893,13 +893,9 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 if (sel == null) {
                     return;
                 }
-                
+
                 TextPos start = sel.getMin();
                 TextPos end = sel.getMax();
-
-                if (control.hasNonEmptySelection()) {
-                    deleteSelection();
-                }
 
                 StyledTextModel m = control.getModel();
                 DataFormatHandler h = m.getDataFormatHandler(f, false);
@@ -912,7 +908,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             }
         }
     }
-    
+
     public void paste(DataFormat f) {
         if (canEdit()) {
             Clipboard c = Clipboard.getSystemClipboard();
