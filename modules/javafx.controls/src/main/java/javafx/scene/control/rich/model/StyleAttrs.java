@@ -46,99 +46,70 @@ public class StyleAttrs {
     public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
 
     /** Paragraph background attribute */
-    public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, false, (a, sb, v) -> {
+    public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, false, (a, v) -> {
         String color = RichUtils.toCssColor(v);
-        sb.append("-fx-background-color:").append(color).append("; ");
+        return "-fx-background-color:" + color + ";";
     });
 
     /** Bold typeface attribute */
-    public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false, (a, sb, v) -> {
-        if (Boolean.TRUE.equals(v)) {
-            sb.append("-fx-font-weight:bold; ");
-        } else {
-            sb.append("-fx-font-weight:normal; ");
-        }
+    public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false, (a, v) -> {
+        return v ? "-fx-font-weight:bold;" : "-fx-font-weight:normal;";
     });
 
     public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, false, null);
 
     /** Font family attribute */
-    public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false, (a, sb, v) -> {
-        sb.append("-fx-font-family:'").append(v).append("'; ");
+    public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false, (a, v) -> {
+        return "-fx-font-family:'" + v + "';";
     });
 
     /** Font size attribute, in percent, relative to the base font size. */
-    public static final StyleAttribute<Integer> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Integer.class, false, (a, sb, v) -> {
-        sb.append("-fx-font-size:").append(v).append("%; ");
+    public static final StyleAttribute<Integer> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Integer.class, false, (a, v) -> {
+        return "-fx-font-size:" + v + "%;";
     });
 
     /** Italic type face attribute */
-    public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, false, (a, sb, v) -> {
-        if (Boolean.TRUE.equals(v)) {
-            sb.append("-fx-font-style:italic; ");
-        }
+    public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, false, (a, v) -> {
+        return v ? "-fx-font-style:italic;" : "";
     });
 
     /** Line spacing paragraph attribute */
-    public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true, (a, sb, v) -> {
-        sb.append("-fx-line-spacing:").append(v).append("; ");
+    public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true, (a, v) -> {
+        return "-fx-line-spacing:" + v + ";";
     });
 
     /** Space above the paragraph (top padding) attribute */
-    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true, null);
+    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true, StyleAttrs::generateSpaceStyle);
 
     /** Space below the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true, null);
+    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true, StyleAttrs::generateSpaceStyle);
 
     /** Space to the left of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true, null);
+    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true, StyleAttrs::generateSpaceStyle);
 
     /** Space to the right of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true, null);
-
-    /** Space above the paragraph (top padding) attribute */
-    public static final StyleAttribute<Boolean> SPACE = new StyleAttribute<>("SPACE", Boolean.class, true, (a, sb, v) -> {
-        if (Boolean.TRUE.equals(v)) {
-            double top = a.getDouble(SPACE_ABOVE, 0);
-            double right = a.getDouble(SPACE_RIGHT, 0);
-            double bottom = a.getDouble(SPACE_BELOW, 0);
-            double left = a.getDouble(SPACE_LEFT, 0);
-            sb.append("-fx-padding:");
-            sb.append(top);
-            sb.append(' ');
-            sb.append(right);
-            sb.append(' ');
-            sb.append(bottom);
-            sb.append(' ');
-            sb.append(left);
-            sb.append("; ");
-        }
-    });
+    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true, StyleAttrs::generateSpaceStyle);
 
     /** Strike-through style attribute */
-    public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false, (a, sb, v) -> {
-        if (Boolean.TRUE.equals(v)) {
-            sb.append("-fx-strikethrough:true; ");
-        }
+    public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false, (a, v) -> {
+        return v ? "-fx-strikethrough:true;" : "";
     });
 
     /** Paragraph text alignment attribute */
-    public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true, (a, sb, v) -> {
+    public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true, (a, v) -> {
         String alignment = RichUtils.toCss(v);
-        sb.append("-fx-text-alignment:").append(alignment).append("; ");
+        return "-fx-text-alignment:" + alignment + ";";
     });
 
     /** Text color attrbute */
-    public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, false, (a, sb, v) -> {
+    public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, false, (a, v) -> {
         String color = RichUtils.toCssColor(v);
-        sb.append("-fx-fill:").append(color).append("; ");
+        return "-fx-fill:" + color + ";";
     });
 
     /** Underline style attribute */
-    public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, false, (a, sb, v) -> {
-        if (Boolean.TRUE.equals(v)) {
-            sb.append("-fx-underline:true; ");
-        }
+    public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, false, (a, v) -> {
+        return v ? "-fx-underline:true;" : "";
     });
     
     private final HashMap<StyleAttribute<?>,Object> attributes;
@@ -172,6 +143,14 @@ public class StyleAttrs {
             names = new String[0];
         }
         return new Builder().set(CSS, new CssStyles(style, names)).build();
+    }
+
+    private static String generateSpaceStyle(StyleAttrs a, Double value) {
+        double top = a.getDouble(SPACE_ABOVE, 0);
+        double right = a.getDouble(SPACE_RIGHT, 0);
+        double bottom = a.getDouble(SPACE_BELOW, 0);
+        double left = a.getDouble(SPACE_LEFT, 0);
+        return "-fx-padding:" + top + ' ' + right + ' ' + bottom + ' ' + left + ";";
     }
 
     @Override
@@ -231,14 +210,23 @@ public class StyleAttrs {
             return null;
         }
 
-        StringBuilder sb = new StringBuilder(32);
+        // the idea here is to avoid duplicate css strings in a situation when one css rule
+        // depends on multiple attributes.
+        HashSet<String> dedup = new HashSet<>();
         for (StyleAttribute<?> a : attributes.keySet()) {
             Object v = attributes.get(a);
             StyleAttribute.Generator g = a.getGenerator();
             if (g != null) {
-                g.appendStyleString(this, sb, v);
+                String s = g.createCssStyle(this, v);
+                dedup.add(s);
             }
         }
+
+        StringBuilder sb = new StringBuilder(32);
+        for (String s : dedup) {
+            sb.append(s);
+        }
+
         return sb.toString();
     }
 
@@ -601,7 +589,6 @@ public class StyleAttrs {
          */
         public Builder setSpaceAbove(double value) {
             set(SPACE_ABOVE, value);
-            set(SPACE, Boolean.TRUE);
             return this;
         }
 
@@ -613,7 +600,6 @@ public class StyleAttrs {
          */
         public Builder setSpaceBelow(double value) {
             set(SPACE_BELOW, value);
-            set(SPACE, Boolean.TRUE);
             return this;
         }
 
@@ -625,7 +611,6 @@ public class StyleAttrs {
          */
         public Builder setSpaceLeft(double value) {
             set(SPACE_LEFT, value);
-            set(SPACE, Boolean.TRUE);
             return this;
         }
 
@@ -637,7 +622,6 @@ public class StyleAttrs {
          */
         public Builder setSpaceRight(double value) {
             set(SPACE_RIGHT, value);
-            set(SPACE, Boolean.TRUE);
             return this;
         }
 

@@ -32,16 +32,16 @@ public class StyleAttribute<T> {
     @FunctionalInterface
     public interface Generator<T> {
         /**
-         * Appends a direct style string derived from the attribute value.
-         * This method must append a valid CSS style followed by a semicolon, for example:
+         * Creates a direct style string derived from the attribute value.
+         * This method must return a valid CSS style followed by a semicolon, for example:
          * {@code "-fx-font-weight:bold;"}
          * This method must silently ignore any errors or values of incorrect type.
          *
          * @param a the parent StyleAttrs instance
-         * @param sb the StringBuilder to append the style to
          * @param value the attribute value
+         * @return the direct style string
          */
-        public void appendStyleString(StyleAttrs a, StringBuilder sb, T value);
+        public String createCssStyle(StyleAttrs a, T value);
     }
 
     private final String name;
@@ -54,7 +54,7 @@ public class StyleAttribute<T> {
      * @param name the attribute name
      * @param type the attribute type
      * @param isParagraph true specifies a paragraph attribute, false specifies a character attribute
-     * @param generator the CSS style generator, can be null
+     * @param generator the CSS style generator (can be null)
      */
     public StyleAttribute(String name, Class<T> type, boolean isParagraph, Generator<T> generator) {
         this.name = name;

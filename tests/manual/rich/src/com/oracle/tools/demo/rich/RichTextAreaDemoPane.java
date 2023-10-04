@@ -481,6 +481,14 @@ public class RichTextAreaDemoPane extends BorderPane {
             lineSpacingMenu(m2, 1);
             lineSpacingMenu(m2, 10);
             lineSpacingMenu(m2, 30);
+
+            items.add(m2 = new Menu("Space"));
+            spaceMenu(m2, "All", 30, 30, 30, 30);
+            spaceMenu(m2, "Above", 30, 0, 0, 0);
+            spaceMenu(m2, "Below", 0, 0, 30, 0);
+            spaceMenu(m2, "Left", 0, 0, 0, 30);
+            spaceMenu(m2, "Right", 0, 30, 0, 0);
+            spaceMenu(m2, "None", 0, 0, 0, 0);
         }
 
         items.add(new SeparatorMenuItem());
@@ -493,6 +501,17 @@ public class RichTextAreaDemoPane extends BorderPane {
         MenuItem m = new MenuItem(String.valueOf(value));
         menu.getItems().add(m);
         m.setOnAction((ev) -> applyStyle(StyleAttrs.LINE_SPACING, value));
+    }
+
+    private void spaceMenu(Menu menu, String name, double top, double right, double bottom, double left) {
+        MenuItem m = new MenuItem(name);
+        menu.getItems().add(m);
+        m.setOnAction((ev) -> {
+            applyStyle(StyleAttrs.SPACE_ABOVE, top);
+            applyStyle(StyleAttrs.SPACE_BELOW, bottom);
+            applyStyle(StyleAttrs.SPACE_LEFT, left);
+            applyStyle(StyleAttrs.SPACE_RIGHT, right);
+        });
     }
 
     private void fontMenu(Menu menu, boolean selected, String family) {
