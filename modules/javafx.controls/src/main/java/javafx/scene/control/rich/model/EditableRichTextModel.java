@@ -372,7 +372,6 @@ public class EditableRichTextModel extends StyledTextModel {
         /**
          * Trims this paragraph and returns the remaining text to be inserted after the line break.
          * @param offset the offset
-         * @param pa the paragraph attributes, can be null
          * @return the remaining portion of paragraph
          */
         public RParagraph insertLineBreak(int offset) {
