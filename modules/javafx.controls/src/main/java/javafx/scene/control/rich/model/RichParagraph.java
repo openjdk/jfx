@@ -203,9 +203,11 @@ public class RichParagraph {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
-                if (off >= end) {
-                    return;
-                }
+                // will check at the end in order to emit the empty segment
+                // for its attributes
+//                if (off >= end) {
+//                    return;
+//                }
 
                 StyledSegment seg = segments.get(i);
                 String text = seg.getText();
@@ -217,6 +219,9 @@ public class RichParagraph {
                     out.append(ss);
                 }
                 off += len;
+                if (off >= end) {
+                    return;
+                }
             }
         }
     }

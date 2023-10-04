@@ -106,10 +106,7 @@ public class EditableRichTextModel extends StyledTextModel {
             paragraphs.add(par);
         } else {
             RParagraph par = paragraphs.get(index);
-            // TODO style attrs!  the logic to get the actual char/par styles should be here.
-            StyleAttrs ca = null;
-            StyleAttrs pa = null;
-            RParagraph par2 = par.insertLineBreak(offset, pa, ca);
+            RParagraph par2 = par.insertLineBreak(offset);
             paragraphs.add(index + 1, par2);
         }
     }
@@ -376,15 +373,11 @@ public class EditableRichTextModel extends StyledTextModel {
          * Trims this paragraph and returns the remaining text to be inserted after the line break.
          * @param offset the offset
          * @param pa the paragraph attributes, can be null
-         * @param ca character attributes, can be null
          * @return the remaining portion of paragraph
          */
-        public RParagraph insertLineBreak(int offset, StyleAttrs pa, StyleAttrs ca) {
-            // FIX styles!
-            // problem: has no segments to store style info, initially.
-            // perhaps it needs a zero width segment with styles
+        public RParagraph insertLineBreak(int offset) {
             RParagraph next = new RParagraph();
-            next.setParagraphAttributes(pa);
+            next.setParagraphAttributes(getParagraphAttributes());
 
             int off = 0;
             int i;
@@ -416,14 +409,26 @@ public class EditableRichTextModel extends StyledTextModel {
                 next.add(seg);
             }
 
-            // TODO add empty segment with styles
+            // preserve attributes using zero width segment
+            if (size() == 0) {
+                if (next.size() > 0) {
+                    StyleAttrs a = next.get(0).getStyleAttrs();
+                    add(new RSegment("", a));
+                }
+            }
+            if (next.size() == 0) {
+                if (size() > 0) {
+                    StyleAttrs a = get(size() - 1).getStyleAttrs();
+                    next.add(new RSegment("", a));
+                }
+            }
 
             return next;
         }
 
         /**
-         * Appends the specified paragraph.
-         * @param p paragraph to append
+         * Appends the specified paragraph by adding all of its segments.
+         * @param p the paragraph to append
          */
         public void append(RParagraph p) {
             addAll(p);

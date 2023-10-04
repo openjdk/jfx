@@ -62,13 +62,12 @@ public class TestEditableRichTextModel {
         );
 
         // in front of 1st segment
-        // FIX wrong, need to keep styles in the first part
         t(
             "`B`I``0123",
             (m) -> {
                 m.replace(null, TextPos.ZERO, TextPos.ZERO, "\n", false);
             },
-            "\n`B`I``0123"
+            "`B`I``\n`0``0123"
         );
 
         // in the middle of segment: both parts retain styles
@@ -81,13 +80,12 @@ public class TestEditableRichTextModel {
         );
 
         // at the end of segment
-        // FIX wrong, need to keep styles
         t(
             "`B`I``0123",
             (m) -> {
                 m.replace(null, new TextPos(0, 4), new TextPos(0, 4), "\n", false);
             },
-            "`B`I``0123\n"
+            "`B`I``0123\n`0``"
         );
     }
 
