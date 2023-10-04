@@ -67,8 +67,11 @@ import javafx.scene.paint.Color;
  *   <li>`T - strike-through
  *   <li>`U - underline
  *   <li>`Zpercent - font size
- * <\ol>
- * In addition, any subsequent occurence of a style is simplified by providing its number using {@code 'num} sequence.
+ * </ol>
+ * In addition, any subsequent occurence of a style is simplified by providing its number using {@code 'num} sequence:
+ * <pre>
+ *   `0 ... `2147483647
+ * </pre>
  */
 public class RichTextFormatHandler extends DataFormatHandler {
     public RichTextFormatHandler() {
@@ -84,7 +87,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     @Override
     public Object copy(StyledTextModel m, StyleResolver r, TextPos start, TextPos end) throws IOException {
         StringWriter wr = new StringWriter();
-        RichStyledOutput so = createStyledOutput(r, wr);
+        StyledOutput so = createStyledOutput(r, wr);
         m.exportText(start, end, so);
         return wr.toString();
     }
@@ -93,11 +96,11 @@ public class RichTextFormatHandler extends DataFormatHandler {
     public void save(StyledTextModel m, StyleResolver r, TextPos start, TextPos end, OutputStream out) throws IOException {
         Charset cs = Charset.forName("utf-8");
         Writer wr = new OutputStreamWriter(out, cs);
-        RichStyledOutput so = createStyledOutput(r, wr);
+        StyledOutput so = createStyledOutput(r, wr);
         m.exportText(start, end, so);
     }
 
-    public RichStyledOutput createStyledOutput(StyleResolver r, Writer wr) {
+    public StyledOutput createStyledOutput(StyleResolver r, Writer wr) {
         Charset cs = Charset.forName("utf-8");
         boolean buffered = isBuffered(wr);
         if (buffered) {
@@ -402,7 +405,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             wr.write(toHex8(c.getBlue()));
                         }                        
                     } else {
-                        // write style info
+                        // write cached style id number
                         wr.write("`");
                         wr.write(String.valueOf(num));
                     }

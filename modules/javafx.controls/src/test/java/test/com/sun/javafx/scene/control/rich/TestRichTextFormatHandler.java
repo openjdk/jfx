@@ -31,8 +31,8 @@ import java.util.ArrayList;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
 
 /**
@@ -71,6 +71,6 @@ public class TestRichTextFormatHandler {
         out.flush();
 
         String result = wr.toString();
-        Assert.assertEquals(text, result);
+        Assertions.assertEquals(text, result);
     }
 }

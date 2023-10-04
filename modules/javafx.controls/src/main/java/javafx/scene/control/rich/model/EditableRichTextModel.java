@@ -101,10 +101,15 @@ public class EditableRichTextModel extends StyledTextModel {
     @Override
     protected void insertLineBreak(int index, int offset) {
         if(index >= size()) {
-            paragraphs.add(new RParagraph());
+            // unlikely to happen
+            RParagraph par = new RParagraph();
+            paragraphs.add(par);
         } else {
             RParagraph par = paragraphs.get(index);
-            RParagraph par2 = par.insertLineBreak(offset);
+            // TODO style attrs!  the logic to get the actual char/par styles should be here.
+            StyleAttrs ca = null;
+            StyleAttrs pa = null;
+            RParagraph par2 = par.insertLineBreak(offset, pa, ca);
             paragraphs.add(index + 1, par2);
         }
     }
@@ -165,7 +170,7 @@ public class EditableRichTextModel extends StyledTextModel {
         if(index < paragraphs.size()) {
             int off = pos.offset();
             RParagraph par = paragraphs.get(index);
-            return par.getStyleInfo(off);
+            return par.getStyleAttrs(off);
         }
         return StyleAttrs.EMPTY;
     }
@@ -199,7 +204,7 @@ public class EditableRichTextModel extends StyledTextModel {
             return attrs;
         }
         
-        private int length() {
+        private int getTextLength() {
             return text.length();
         }
 
@@ -254,6 +259,14 @@ public class EditableRichTextModel extends StyledTextModel {
         public RParagraph() {
         }
 
+        public StyleAttrs getParagraphAttributes() {
+            return paragraphAttrs;
+        }
+
+        public void setParagraphAttributes(StyleAttrs a) {
+            paragraphAttrs = a;
+        }
+
         public String getPlainText() {
             StringBuilder sb = new StringBuilder();
             for(RSegment s: this) {
@@ -262,21 +275,25 @@ public class EditableRichTextModel extends StyledTextModel {
             return sb.toString();
         }
 
-        public int length() {
-            return getPlainText().length();
+        public int getTextLength() {
+            int len = 0;
+            for(RSegment s: this) {
+                len += s.getTextLength();
+            }
+            return len;
         }
 
         /**
-         * Retrieves the style info from the previous character (or next, if at the beginning).
+         * Retrieves the style attributes from the previous character (or next, if at the beginning).
          * @param offset the offset
          * @return the style info
          */
-        public StyleAttrs getStyleInfo(int offset) {
+        public StyleAttrs getStyleAttrs(int offset) {
             int off = 0;
             int ct = size();
             for (int i = 0; i < ct; i++) {
                 RSegment seg = get(i);
-                int len = seg.length();
+                int len = seg.getTextLength();
                 if (offset < (off + len) || (i == ct - 1)) {
                     return seg.getStyleAttrs();
                 }
@@ -301,7 +318,7 @@ public class EditableRichTextModel extends StyledTextModel {
                     return;
                 } else {
                     RSegment seg = get(i);
-                    int len = seg.length();
+                    int len = seg.getTextLength();
                     if ((offset > off) && (offset <= off + len)) {
                         // split segment
                         StyleAttrs a = seg.attrs();
@@ -358,19 +375,23 @@ public class EditableRichTextModel extends StyledTextModel {
         /**
          * Trims this paragraph and returns the remaining text to be inserted after the line break.
          * @param offset the offset
+         * @param pa the paragraph attributes, can be null
+         * @param ca character attributes, can be null
          * @return the remaining portion of paragraph
          */
-        public RParagraph insertLineBreak(int offset) {
-            int off = 0;
+        public RParagraph insertLineBreak(int offset, StyleAttrs pa, StyleAttrs ca) {
             // FIX styles!
             // problem: has no segments to store style info, initially.
             // perhaps it needs a zero width segment with styles
             RParagraph next = new RParagraph();
+            next.setParagraphAttributes(pa);
+
+            int off = 0;
             int i;
             int ct = size();
             for (i = 0; i < ct; i++) {
                 RSegment seg = get(i);
-                int len = seg.length();
+                int len = seg.getTextLength();
                 if (offset < (off + len)) {
                     if (offset != off) {
                         // split segment
@@ -395,6 +416,8 @@ public class EditableRichTextModel extends StyledTextModel {
                 next.add(seg);
             }
 
+            // TODO add empty segment with styles
+
             return next;
         }
 
@@ -416,7 +439,7 @@ public class EditableRichTextModel extends StyledTextModel {
             int i = 0;
             for (; i < ct; i++) {
                 RSegment seg = get(i);
-                int len = seg.length();
+                int len = seg.getTextLength();
                 if (start < (off + len)) {
                     ix0 = i;
                     off0 = start - off;
@@ -435,7 +458,7 @@ public class EditableRichTextModel extends StyledTextModel {
             int off1 = -1;
             for (; i < ct; i++) {
                 RSegment seg = get(i);
-                int len = seg.length();
+                int len = seg.getTextLength();
                 if (end <= (off + len)) {
                     ix1 = i;
                     off1 = end - off;
@@ -482,7 +505,7 @@ public class EditableRichTextModel extends StyledTextModel {
             int i = 0;
             for ( ; i < size(); i++) {
                 RSegment seg = get(i);
-                int len = seg.length();
+                int len = seg.getTextLength();
                 int cs = whichCase(off, off + len, start, end);
                 switch (cs) {
                 case 0:

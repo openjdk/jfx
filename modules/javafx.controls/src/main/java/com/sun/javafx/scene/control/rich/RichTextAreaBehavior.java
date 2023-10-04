@@ -290,8 +290,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             return;
         }
 
-        StyleAttrs a = control.getActiveStyleAttrs();
-        TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n", a), true);
+        TextPos pos = m.replace(vflow, start, end, StyledInput.of("\n"), true);
         control.moveCaret(pos, false);
         clearPhantomX();
     }

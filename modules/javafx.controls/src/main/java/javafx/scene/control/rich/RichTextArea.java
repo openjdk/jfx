@@ -1259,7 +1259,7 @@ public class RichTextArea extends Control {
      */
     public TextPos getEndTextPos() {
         StyledTextModel m = getModel();
-        return (m == null) ? TextPos.ZERO : m.getEndTextPos();
+        return (m == null) ? TextPos.ZERO : m.getDocumentEnd();
     }
 
     /**

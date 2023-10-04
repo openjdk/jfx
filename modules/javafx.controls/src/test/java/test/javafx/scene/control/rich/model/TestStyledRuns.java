@@ -98,7 +98,7 @@ public class TestStyledRuns {
         EditableRichTextModel m = createModel(initial);
         
         {
-            TextPos fin = m.getEndTextPos();
+            TextPos fin = m.getDocumentEnd();
             StringBuilderStyledOutput out = new StringBuilderStyledOutput();
             m.exportText(TextPos.ZERO, fin, out);
             Object chk = out.getOutput();
@@ -111,7 +111,7 @@ public class TestStyledRuns {
         
         {
             TStyledOutput out = new TStyledOutput(null);
-            TextPos last = m.getEndTextPos();
+            TextPos last = m.getDocumentEnd();
             m.exportText(TextPos.ZERO, last, out);
             Object[] result = out.getResult();
             Assertions.assertArrayEquals(expected, result);
@@ -120,7 +120,7 @@ public class TestStyledRuns {
     
     private EditableRichTextModel createModel(Object[] initial) {
         EditableRichTextModel m = new EditableRichTextModel();
-        TextPos end = m.getEndTextPos();
+        TextPos end = m.getDocumentEnd();
         TStyledInput in = new TStyledInput(initial);
         m.replace(null, TextPos.ZERO, end, in, false);
         return m;
@@ -133,12 +133,12 @@ public class TestStyledRuns {
         TStyledInput in = new TStyledInput(input);
 
         if(end == null) {
-            end = m.getEndTextPos();
+            end = m.getDocumentEnd();
         }
         m.replace(null, start, end, in, false);
 
         TStyledOutput out = new TStyledOutput(null);
-        TextPos last = m.getEndTextPos();
+        TextPos last = m.getDocumentEnd();
         m.exportText(TextPos.ZERO, last, out);
         Object[] result = out.getResult();
         Assertions.assertArrayEquals(expected, result);

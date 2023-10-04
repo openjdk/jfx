@@ -327,7 +327,7 @@ public abstract class StyledTextModel {
      * This event indicates that only the styling has changed, with no  changes to any text positions.
      */
     protected void fireStylingUpdate() {
-        TextPos end = getEndTextPos();
+        TextPos end = getDocumentEnd();
         fireStyleChangeEvent(TextPos.ZERO, end);
     }
 
@@ -445,7 +445,7 @@ public abstract class StyledTextModel {
      * Returns a TextPos corresponding to the end of the document.
      * @return the text position
      */
-    public TextPos getEndTextPos() {
+    public TextPos getDocumentEnd() {
         int ix = size() - 1;
         if (ix < 0) {
             return TextPos.ZERO;
@@ -723,7 +723,7 @@ public abstract class StyledTextModel {
         StringBuilder sb = new StringBuilder(2048);
         try {
             sb.append("\n");
-            TextPos end = getEndTextPos();
+            TextPos end = getDocumentEnd();
             exportText(TextPos.ZERO, end, new StyledOutput() {
                 @Override
                 public void append(StyledSegment seg) throws IOException {
