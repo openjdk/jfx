@@ -745,7 +745,7 @@ public class VFlow extends Pane implements StyleResolver {
         } else {
             // it's a regular text cell
             cell = new TextCell(index);
-    
+
             // highlights
             List<Consumer<TextCell>> highlights = RichParagraphHelper.getHighlights(par);
             if (highlights != null) {
@@ -753,7 +753,7 @@ public class VFlow extends Pane implements StyleResolver {
                     h.accept(cell);
                 }
             }
-    
+
             // segments
             List<StyledSegment> segments = RichParagraphHelper.getSegments(par);
             if ((segments == null) || segments.isEmpty()) {

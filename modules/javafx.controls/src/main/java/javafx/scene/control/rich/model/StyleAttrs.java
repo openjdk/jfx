@@ -51,6 +51,9 @@ public class StyleAttrs {
         return "-fx-background-color:" + color + ";";
     });
 
+    /** Bullet point paragraph attribute */
+    public static final StyleAttribute<String> BULLET = new StyleAttribute<>("BULLET", String.class, false, null);
+
     /** Bold typeface attribute */
     public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false, (a, v) -> {
         return v ? "-fx-font-weight:bold;" : "-fx-font-weight:normal;";
@@ -79,16 +82,16 @@ public class StyleAttrs {
     });
 
     /** Space above the paragraph (top padding) attribute */
-    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true, StyleAttrs::generateSpaceStyle);
+    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true, StyleAttrs::generatePadding);
 
     /** Space below the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true, StyleAttrs::generateSpaceStyle);
+    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true, StyleAttrs::generatePadding);
 
     /** Space to the left of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true, StyleAttrs::generateSpaceStyle);
+    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true, StyleAttrs::generatePadding);
 
     /** Space to the right of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true, StyleAttrs::generateSpaceStyle);
+    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true, StyleAttrs::generatePadding);
 
     /** Strike-through style attribute */
     public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false, (a, v) -> {
@@ -145,7 +148,8 @@ public class StyleAttrs {
         return new Builder().set(CSS, new CssStyles(style, names)).build();
     }
 
-    private static String generateSpaceStyle(StyleAttrs a, Double value) {
+    private static String generatePadding(StyleAttrs a, Double value) {
+        // TODO check border attributes?
         double top = a.getDouble(SPACE_ABOVE, 0);
         double right = a.getDouble(SPACE_RIGHT, 0);
         double bottom = a.getDouble(SPACE_BELOW, 0);
