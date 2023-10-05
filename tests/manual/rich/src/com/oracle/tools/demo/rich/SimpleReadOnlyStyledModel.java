@@ -171,6 +171,6 @@ public class SimpleReadOnlyStyledModel extends StyledTextModelReadOnlyBase {
 
     public void setParagraphAttributes(StyleAttrs a) {
         RichParagraph p = lastParagraph();
-        p.setAttributes(a);
+        p.setParagraphAttributes(a);
     }
 }

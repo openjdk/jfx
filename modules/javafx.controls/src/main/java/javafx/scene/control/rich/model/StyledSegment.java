@@ -235,7 +235,7 @@ public abstract class StyledSegment {
      * @param attrs the paragraph attributes
      * @return the StyledSegment instance
      */
-    public static StyledSegment withParagraphAttributes(StyleAttrs attrs) {
+    public static StyledSegment ofParagraphAttributes(StyleAttrs attrs) {
         return new StyledSegment() {
             @Override
             public Type getType() {

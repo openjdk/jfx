@@ -41,7 +41,7 @@ public class RichParagraphHelper {
 
         public List<StyledSegment> getSegments(RichParagraph p);
 
-        public StyleAttrs getAttributes(RichParagraph p);
+        public StyleAttrs getParagraphAttributes(RichParagraph p);
     }
 
     static {
@@ -65,7 +65,7 @@ public class RichParagraphHelper {
         return accessor.getSegments(p);
     }
 
-    public static StyleAttrs getAttributes(RichParagraph p) {
-        return accessor.getAttributes(p);
+    public static StyleAttrs getParagraphAttributes(RichParagraph p) {
+        return accessor.getParagraphAttributes(p);
     }
 }

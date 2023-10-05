@@ -42,7 +42,7 @@ import com.sun.javafx.scene.control.rich.TextCell;
 public class RichParagraph {
     private ArrayList<StyledSegment> segments;
     private ArrayList<Consumer<TextCell>> highlights;
-    private StyleAttrs attrs;
+    private StyleAttrs paragraphAttributes;
 
     static {
         RichParagraphHelper.setAccessor(new RichParagraphHelper.Accessor() {
@@ -57,8 +57,8 @@ public class RichParagraph {
             }
 
             @Override
-            public StyleAttrs getAttributes(RichParagraph p) {
-                return p.attrs;
+            public StyleAttrs getParagraphAttributes(RichParagraph p) {
+                return p.paragraphAttributes;
             }
         });
     }
@@ -226,7 +226,11 @@ public class RichParagraph {
         }
     }
 
-    public void setAttributes(StyleAttrs a) {
-        attrs = a;
+    /**
+     * Sets the paragraph attributes.
+     * @param a the paragraph attributes
+     */
+    public void setParagraphAttributes(StyleAttrs a) {
+        paragraphAttributes = a;
     }
 }

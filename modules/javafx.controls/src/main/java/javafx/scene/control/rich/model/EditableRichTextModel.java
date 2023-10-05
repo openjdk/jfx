@@ -42,7 +42,8 @@ import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
  * nor storage of incremental changes.
  */
 public class EditableRichTextModel extends StyledTextModel {
-    /** Represents a styled text */
+    /** Internal data format */
+    // TODO add version?  "application/x-com-oracle-editable-rich-text-model-v1"
     public static final DataFormat DATA_FORMAT = new DataFormat("application/x-com-oracle-editable-rich-text-model");
     private final ArrayList<RParagraph> paragraphs = new ArrayList<>();
     private final HashMap<StyleAttrs,StyleAttrs> styleCache = new HashMap<>();
@@ -692,7 +693,7 @@ public class EditableRichTextModel extends StyledTextModel {
                 StyleAttrs a = seg.attrs();
                 par.addSegment(text, a);
             }
-            par.setAttributes(paragraphAttrs);
+            par.setParagraphAttributes(paragraphAttrs);
             return par;
         }
 

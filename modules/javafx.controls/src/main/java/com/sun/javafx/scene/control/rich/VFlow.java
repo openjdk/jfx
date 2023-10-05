@@ -778,7 +778,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         // merge with the default paragraph attributes
         StyleAttrs defaultAttrs = control.getDefaultParagraphAttributes();
-        StyleAttrs a = RichParagraphHelper.getAttributes(par);
+        StyleAttrs a = RichParagraphHelper.getParagraphAttributes(par);
         if ((defaultAttrs != null) && (!defaultAttrs.isEmpty())) {
             if (a == null) {
                 a = defaultAttrs;
