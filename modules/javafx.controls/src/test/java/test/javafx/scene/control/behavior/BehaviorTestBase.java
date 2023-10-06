@@ -79,7 +79,6 @@ public abstract class BehaviorTestBase<C extends Control> {
      *         closeStage();
      *     }
      * <pre>
-     * @param control the control being tested
      */
     protected void closeStage() {
         if (stageLoader != null) {

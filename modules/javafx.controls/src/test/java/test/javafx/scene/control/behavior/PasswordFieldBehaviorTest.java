@@ -24,10 +24,14 @@
  */
 package test.javafx.scene.control.behavior;
 
+import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.PasswordField;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 
 /**
  * Tests PasswordField behavior by exercising every key binding registered by the skin
@@ -60,13 +64,32 @@ public class PasswordFieldBehaviorTest extends TextInputControlTestBase<Password
     @Test
     @Override
     public void testCopy() {
-        // copy is disabled
+        ClipboardContent cc = new ClipboardContent();
+        cc.putString("abc");
+        Clipboard.getSystemClipboard().setContent(cc);
+
+        execute(
+            "012", checkSelection(3),
+            shortcut(A), checkSelection(0, 3),
+            // copy is disabled
+            shortcut(C),
+            END, checkSelection(3),
+            shortcut(V), checkSelection(6),
+            checkText("012abc")
+        );
     }
 
     @Test
     @Override
     public void testCut() {
-        // cut is disabled
+        execute(
+            "0123456789", checkSelection(10),
+            // select all
+            shortcut(A), checkSelection(0, 10),
+            // cut is disabled
+            shortcut(X), checkSelection(0, 10),
+            checkText("0123456789")
+        );
     }
 
     @Test
@@ -102,12 +125,110 @@ public class PasswordFieldBehaviorTest extends TextInputControlTestBase<Password
     @Test
     @Override
     public final void testWordMac() {
+        if (!isMac()) {
+            return;
+        }
+
         // word navigation is disabled
+
+        execute(
+            setText("one two three"),
+            // right word
+            alt(RIGHT), checkSelection(0),
+            alt(RIGHT), checkSelection(0),
+            // left word
+            END,
+            alt(LEFT), checkSelection(13),
+            // delete next word
+            LEFT, LEFT, LEFT, LEFT, LEFT, checkSelection(8),
+            alt(DELETE), checkText("one two three", 8),
+            // delete prev word
+            alt(BACK_SPACE), checkText("one two three", 8),
+
+            setText(""), "one two three",
+            // select left word
+            key(LEFT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(13),
+            // select right word
+            LEFT, LEFT, LEFT, LEFT, LEFT,
+            key(RIGHT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(8)
+        );
+
+        // keypad
+        execute(
+            setText("one two three"),
+            // right word
+            alt(KP_RIGHT), checkSelection(0),
+            alt(KP_RIGHT), checkSelection(0),
+            // left word
+            END,
+            alt(KP_LEFT), checkSelection(13),
+            // delete next word
+            KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, checkSelection(8),
+            alt(DELETE), checkText("one two three", 8),
+            // delete prev word
+            alt(BACK_SPACE), checkText("one two three", 8),
+
+            setText(""), "one two three",
+            // select left word
+            key(KP_LEFT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(13),
+            // select right word
+            KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT,
+            key(KP_RIGHT, KeyModifier.ALT, KeyModifier.SHIFT), checkSelection(8)
+        );
     }
 
     @Test
     @Override
     public final void testWordNonMac() {
+        if (isMac()) {
+            return;
+        }
+
         // word navigation is disabled
+
+        execute(
+            setText("one two three"),
+            // right word
+            ctrl(RIGHT), checkSelection(0),
+            ctrl(RIGHT), checkSelection(0),
+            // left word
+            END,
+            ctrl(LEFT), checkSelection(13),
+            // delete next word
+            LEFT, LEFT, LEFT, LEFT, LEFT, checkSelection(8),
+            ctrl(DELETE), checkText("one two three", 8),
+            // delete prev word
+            ctrl(BACK_SPACE), checkText("one two three", 8),
+
+            setText(""), "one two three",
+            // select left word
+            key(LEFT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(13),
+            // select right word
+            LEFT, LEFT, LEFT, LEFT, LEFT,
+            key(RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(8)
+        );
+
+        // keypad
+        execute(
+            setText("one two three"),
+            // right word
+            ctrl(KP_RIGHT), checkSelection(0),
+            ctrl(KP_RIGHT), checkSelection(0),
+            // left word
+            END,
+            ctrl(KP_LEFT), checkSelection(13),
+            // delete next word
+            KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, checkSelection(8),
+            ctrl(DELETE), checkText("one two three", 8),
+            // delete prev word
+            ctrl(BACK_SPACE), checkText("one two three", 8),
+
+            setText(""), "one two three",
+            // select left word
+            key(KP_LEFT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(13),
+            // select right word
+            KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT,
+            key(KP_RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(8)
+        );
     }
 }
