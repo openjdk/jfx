@@ -737,9 +737,9 @@ public class VFlow extends Pane implements StyleResolver {
     private TextCell createTextCell(int index, RichParagraph par) {
         TextCell cell;
 
-        // is this a paragraph node?
         Supplier<Region> gen = par.getParagraphRegion();
         if (gen != null) {
+            // it's a paragraph node
             Region content = gen.get();
             cell = new TextCell(index, content);
         } else {
@@ -934,28 +934,22 @@ public class VFlow extends Pane implements StyleResolver {
             TextCell cell = getCell(i);
             // TODO skip computation if layout width is the same
             Region r = cell.getContent();
-            r.setManaged(false);
-            flow.getChildren().add(r);
+            flow.getChildren().add(cell);
+            cell.setMaxWidth(maxWidth);
+            cell.setMaxHeight(USE_COMPUTED_SIZE);
 
-            if (!r.maxWidthProperty().isBound()) {
-                r.setMaxWidth(maxWidth);
-            }
-            if (!r.maxHeightProperty().isBound()) {
-                r.setMaxHeight(USE_COMPUTED_SIZE);
-            }
-
-            r.applyCss();
-            r.layout();
+            cell.applyCss();
+            cell.layout();
 
             arrangement.addCell(cell);
 
-            double h = r.prefHeight(forWidth) + getLineSpacing(r);
+            double h = cell.prefHeight(forWidth) + getLineSpacing(r);
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
             cell.setPosition(y, h/*, forWidth*/);
 
             if (!wrap) {
                 if (visible) {
-                    double w = r.prefWidth(-1);
+                    double w = cell.prefWidth(-1);
                     if (unwrappedWidth < w) {
                         unwrappedWidth = w;
                     }
@@ -979,7 +973,7 @@ public class VFlow extends Pane implements StyleResolver {
                     }
                 } else {
                     // remove invisible cell from layout after sizing
-                    flow.getChildren().remove(r);
+                    flow.getChildren().remove(cell);
     
                     if ((y > (height + margin)) && (count > bottomMarginCount)) {
                         break;
@@ -1054,29 +1048,23 @@ public class VFlow extends Pane implements StyleResolver {
             TextCell cell = getCell(i);
             // TODO maybe skip computation if layout width is the same
             Region r = cell.getContent();
-            r.setManaged(false); // FIX not needed, here and before.
-            flow.getChildren().add(r);
+            flow.getChildren().add(cell);
+            cell.setMaxWidth(maxWidth);
+            cell.setMaxHeight(USE_COMPUTED_SIZE);
 
-            if (!r.maxWidthProperty().isBound()) {
-                r.setMaxWidth(maxWidth);
-            }
-            if (!r.maxHeightProperty().isBound()) {
-                r.setMaxHeight(USE_COMPUTED_SIZE);
-            }
-
-            r.applyCss();
-            r.layout();
+            cell.applyCss();
+            cell.layout();
 
             arrangement.addCell(cell);
 
-            double h = r.prefHeight(forWidth) + getLineSpacing(r);
+            double h = cell.prefHeight(forWidth) + getLineSpacing(r);
             h = snapSizeY(h); // is this right?  or snap(y + h) - snap(y) ?
             y = snapPositionY(y - h);
             count++;
 
             cell.setPosition(y, h/*, forWidth*/);
 
-            flow.getChildren().remove(r);
+            flow.getChildren().remove(cell);
 
             // stop populating the top part of the sliding window
             // when exceeded both pixel and line count margins
@@ -1143,13 +1131,12 @@ public class VFlow extends Pane implements StyleResolver {
         int sz = arrangement.getVisibleCellCount();
         for (int i = 0; i < sz; i++) {
             TextCell cell = arrangement.getCellAt(i);
-            Region r = cell.getContent();
             double h = cell.getCellHeight();
             double y = cell.getY();
-            flow.layoutInArea(r, x, y, w, h);
+            flow.layoutInArea(cell, x, y, w, h);
 
             // this step is needed to get the correct caret path afterwards
-            r.layout();
+            cell.layout();
 
             // place side nodes
             if (addLeft) {
