@@ -22,33 +22,53 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.function.Consumer;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
-import javafx.scene.control.ComboBox;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
-/**
- * Alignment Option Selector.
- */
-public class PosSelector {
-    private final ComboBox<Pos> field = new ComboBox<>();
+public class EnterTextDialog extends Stage {
+    private final TextArea textField;
 
-    public PosSelector(Consumer<Pos> client) {
-        FX.name(field, "PosSelector");
-        field.getItems().setAll(Pos.values());
-        field.getSelectionModel().selectedItemProperty().addListener((p) -> {
-            Pos v = field.getSelectionModel().getSelectedItem();
-            client.accept(v);
+    public EnterTextDialog(Object owner, Consumer<String> onEdit) {
+        initOwner(FX.getParentWindow(owner));
+        initModality(Modality.APPLICATION_MODAL);
+
+        textField = new TextArea();
+
+        Button ok = new Button("OK");
+        ok.setOnAction((ev) -> {
+            String text = textField.getText();
+            onEdit.accept(text);
+            hide();
         });
-    }
 
-    public Node node() {
-        return field;
-    }
+        ButtonBar bp = new ButtonBar();
+        bp.setPadding(new Insets(5, 10, 5, 10));
+        bp.getButtons().add(ok);
 
-    public void select(Pos v) {
-        field.getSelectionModel().select(v);
+        BorderPane p = new BorderPane(textField);
+        p.setBottom(bp);
+        setScene(new Scene(p));
+
+        addEventHandler(KeyEvent.KEY_PRESSED, (ev) -> {
+            if (ev.getCode() == KeyCode.ESCAPE) {
+                hide();
+            }
+        });
+
+        setWidth(400);
+        setHeight(300);
+        setTitle("Enter Text");
     }
 }

@@ -22,33 +22,45 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.fx.monkey.util;
+package com.oracle.tools.fx.monkey;
 
-import java.util.function.Consumer;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
-import javafx.scene.control.ComboBox;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 
 /**
- * Alignment Option Selector.
+ * Test Modal Window
  */
-public class PosSelector {
-    private final ComboBox<Pos> field = new ComboBox<>();
+public class ModalWindow extends Stage {
+    public ModalWindow(Window owner) {
+        Button b1 = new Button("Does Nothing");
+        b1.setDefaultButton(false);
 
-    public PosSelector(Consumer<Pos> client) {
-        FX.name(field, "PosSelector");
-        field.getItems().setAll(Pos.values());
-        field.getSelectionModel().selectedItemProperty().addListener((p) -> {
-            Pos v = field.getSelectionModel().getSelectedItem();
-            client.accept(v);
-        });
-    }
+        Button b2 = new Button("Platform.exit()");
+        b2.setDefaultButton(false);
+        b2.setOnAction((ev) -> Platform.exit());
 
-    public Node node() {
-        return field;
-    }
+        Button b3 = new Button("OK");
+        b3.setOnAction((ev) -> hide());
 
-    public void select(Pos v) {
-        field.getSelectionModel().select(v);
+        HBox bp = new HBox(b1, b2, b3);
+        // FIX BUG: default button property ignored on macOS, ENTER goes to the first button
+        b3.setDefaultButton(true);
+
+        BorderPane p = new BorderPane();
+        p.setBottom(bp);
+        System.out.println(b2.isDefaultButton() + " " + b3.isDefaultButton());
+
+        setTitle("Modal Window");
+        setScene(new Scene(p));
+        initModality(Modality.APPLICATION_MODAL);
+        initOwner(owner);
+        setWidth(500);
+        setHeight(200);
     }
 }

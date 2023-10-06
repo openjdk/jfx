@@ -36,13 +36,21 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.GridPane;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import com.oracle.tools.fx.monkey.settings.FxSettingsSchema;
 
 /**
  * Shortcuts and convenience methods that perhaps could be added to JavaFX.
  */
 public class FX {
+    private static final String os = System.getProperty("os.name");
+    private static final boolean WINDOWS = os.startsWith("Windows");
+    private static final boolean MAC = os.startsWith("Mac");
+    private static final boolean LINUX = os.startsWith("Linux");
+
     public static Menu menu(MenuBar b, String text) {
         Menu m = new Menu(text);
         applyMnemonic(m);
@@ -144,5 +152,45 @@ public class FX {
                 w.setY(y + off);
             }
         }
+    }
+
+    /** adds a name property to the Node for the purposes of storing the preferences */
+    public static void name(Node n, String name) {
+        FxSettingsSchema.setName(n, name);
+    }
+
+    public static String getName(Node n) {
+        return FxSettingsSchema.getName(n);
+    }
+
+    /** adds a name property to the Window for the purposes of storing the preferences */
+    public static void name(Window w, String name) {
+        FxSettingsSchema.setName(w, name);
+    }
+
+    public static String getName(Window w) {
+        return FxSettingsSchema.getName(w);
+    }
+
+    /** perhaps it should be a method in TextFlow: getTextLength() */
+    public static int getTextLength(TextFlow f) {
+        int len = 0;
+        for (Node n : f.getChildrenUnmodifiable()) {
+            if (n instanceof Text t) {
+                len += t.getText().length();
+            } else {
+                // treat non-Text nodes as having 1 character
+                len++;
+            }
+        }
+        return len;
+    }
+
+    public static boolean isWindows() {
+        return WINDOWS;
+    }
+
+    public static boolean isMac() {
+        return MAC;
     }
 }

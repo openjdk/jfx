@@ -35,4 +35,11 @@ public class Utils {
         System.arraycopy(pairs, 0, rv, src.length, pairs.length);
         return rv;
     }
+
+    public static boolean isBlank(Object x) {
+        if(x == null) {
+            return true;
+        }
+        return (x.toString().trim().length() == 0);
+    }
 }
