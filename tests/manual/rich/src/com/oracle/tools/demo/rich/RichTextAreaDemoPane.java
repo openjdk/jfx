@@ -60,6 +60,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Window;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
@@ -476,6 +477,12 @@ public class RichTextAreaDemoPane extends BorderPane {
             StyleAttrs a = control.getActiveStyleAttrs();
             items.add(new SeparatorMenuItem());
 
+            items.add(m2 = new Menu("Alignment"));
+            alignmentMenu(m2, "Left", TextAlignment.LEFT);
+            alignmentMenu(m2, "Center", TextAlignment.CENTER);
+            alignmentMenu(m2, "Right", TextAlignment.RIGHT);
+            alignmentMenu(m2, "Justify", TextAlignment.JUSTIFY);
+
             items.add(m2 = new Menu("Line Spacing"));
             lineSpacingMenu(m2, 0);
             lineSpacingMenu(m2, 1);
@@ -495,6 +502,12 @@ public class RichTextAreaDemoPane extends BorderPane {
 
         items.add(m = new MenuItem("Select All"));
         m.setOnAction((ev) -> control.selectAll());
+    }
+
+    private void alignmentMenu(Menu menu, String name, TextAlignment a) {
+        MenuItem m = new MenuItem(name);
+        menu.getItems().add(m);
+        m.setOnAction((ev) -> applyStyle(StyleAttrs.TEXT_ALIGNMENT, a));
     }
 
     private void lineSpacingMenu(Menu menu, double value) {
