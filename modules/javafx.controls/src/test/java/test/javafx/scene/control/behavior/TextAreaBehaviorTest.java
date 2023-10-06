@@ -61,7 +61,9 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     @Test
     @Override
     public void testConsumeEnter() {
-        // does not consume ENTER
+        // consumes ENTER key press
+        Assertions.assertTrue(kb.keyPressed(ENTER));
+        Assertions.assertFalse(kb.keyReleased(ENTER));
     }
 
     @Test
@@ -76,34 +78,34 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
         super.testCut();
     }
 
-    @Test
+    //@Test
     @Override
     public void testNavigation() {
-        // needs graphics
+        // needs graphics, tested by TextAreaBehaviorRobotTest
     }
 
-    @Test
+    //@Test
     @Override
     public void testDeletion() {
-        // needs graphics
+        // needs graphics, tested by TextAreaBehaviorRobotTest
     }
 
-    @Test
+    //@Test
     @Override
     public void testSelection() {
-        // needs graphics
+        // needs graphics, tested by TextAreaBehaviorRobotTest
     }
 
-    @Test
+    //@Test
     @Override
     public void testMacBindings() {
-        // needs graphics
+        // needs graphics, tested by TextAreaBehaviorRobotTest
     }
 
-    @Test
+    //@Test
     @Override
     public void testNonMacBindings() {
-        // needs graphics
+        // needs graphics, tested by TextAreaBehaviorRobotTest
     }
 
     @Test

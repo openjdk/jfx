@@ -46,7 +46,7 @@ import com.sun.javafx.tk.Toolkit;
 public class KeyEventFirer {
     private final EventTarget target;
     private final Scene scene;
-    private static HashMap<Character,KeyCode> keyCodes;
+    private static HashMap<Character, KeyCode> keyCodes;
 
     /**
      * Instantiates a KeyEventFirer on the given event target. KeyEvents are
@@ -375,7 +375,7 @@ public class KeyEventFirer {
 
     private static HashMap<Character, KeyCode> createKeyCodes(Object ... pairs) {
         HashMap<Character, KeyCode> m = new HashMap<>();
-        for(int i=0; i<pairs.length; ) {
+        for (int i = 0; i < pairs.length;) {
             char c = ((String)pairs[i++]).charAt(0);
             KeyCode code = (KeyCode)pairs[i++];
             m.put(c, code);
