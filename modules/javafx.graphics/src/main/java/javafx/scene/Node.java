@@ -966,7 +966,7 @@ public abstract class Node implements EventTarget, Styleable {
                     final Parent newParent = get();
 
                     // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
-                    updateParentsFocusWithin(oldParent, newParent);
+                    updateFocusStates(oldParent, newParent);
 
                     if (newParent != null) {
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
@@ -8152,8 +8152,9 @@ public abstract class Node implements EventTarget, Styleable {
      * without firing change events. The value of {@link #focusWithin} is set
      * by the implementation of {@link #focused}.
      */
-    final void setFocusQuietly(boolean focused, boolean focusVisible) {
+    final void setFocusQuietly(boolean focused, boolean focusVisible, boolean focusOwner) {
         this.focused.set(focused);
+        this.focusOwner.set(focusOwner);
         this.focusVisible.set(focused && focusVisible);
     }
 
@@ -8164,11 +8165,13 @@ public abstract class Node implements EventTarget, Styleable {
      */
     final void notifyFocusListeners() {
         focused.notifyListeners();
+        focusOwner.notifyListeners();
         focusVisible.notifyListeners();
 
         Node node = this;
         do {
             node.focusWithin.notifyListeners();
+            node.focusOwnerWithin.notifyListeners();
             node = node.getParent();
         } while (node != null);
     }
@@ -8180,25 +8183,45 @@ public abstract class Node implements EventTarget, Styleable {
      * when a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
      * focus, we need to adjust the focus-within count on all parents of the node.
      */
-    private void updateParentsFocusWithin(Node oldParent, Node newParent) {
-        if (!focusWithin.get()) {
-            return;
+    private void updateFocusStates(Node oldParent, Node newParent) {
+        if (focusWithin.get()) {
+            Node node = oldParent;
+            while (node != null) {
+                node.focusWithin.adjust(-focusWithin.count);
+                node = node.getParent();
+            }
+
+            node = newParent;
+            while (node != null) {
+                node.focusWithin.adjust(focusWithin.count);
+                node = node.getParent();
+            }
         }
 
-        Node node = oldParent;
-        while (node != null) {
-            node.focusWithin.adjust(-focusWithin.count);
-            node = node.getParent();
+        if (oldParent != null) {
+            if (focusOwnerWithin.get()) {
+                Node node = oldParent;
+                while (node != null) {
+                    node.focusOwnerWithin.set(false);
+                    node = node.getParent();
+                }
+            }
+
+            if (focusOwner.get()) {
+                focusOwner.set(false);
+            }
         }
 
-        node = newParent;
-        while (node != null) {
-            node.focusWithin.adjust(focusWithin.count);
-            node = node.getParent();
-        };
+        if (newParent != null) {
+            Scene scene = newParent.getScene();
+            if (scene != null && scene.getFocusOwner() == this) {
+                focusOwner.set(true);
+            }
+        }
 
-        // Since focus changes are atomic, we only fire change notifications after
-        // all changes are committed on all old and new parents.
+        // Since focus changes are atomic, we only fire change notifications after all changes are committed.
+        notifyFocusListeners();
+
         if (oldParent != null) {
             oldParent.notifyFocusListeners();
         }
@@ -8254,7 +8277,7 @@ public abstract class Node implements EventTarget, Styleable {
     };
 
     protected final void setFocused(boolean value) {
-        setFocusQuietly(value, false);
+        setFocusQuietly(value, false, isFocusOwner());
         notifyFocusListeners();
     }
 
@@ -8332,6 +8355,73 @@ public abstract class Node implements EventTarget, Styleable {
 
     public final ReadOnlyBooleanProperty focusWithinProperty() {
         return focusWithin;
+    }
+
+    /**
+     * Indicates whether this {@code Node} is the scene's focus owner.
+     *
+     * @see Scene#getFocusOwner()
+     * @defaultValue false
+     * @since 22
+     */
+    private final FocusPropertyBase focusOwner = new FocusPropertyBase() {
+        @Override
+        protected PseudoClass getPseudoClass() {
+            return FOCUS_OWNER_PSEUDOCLASS_STATE;
+        }
+
+        @Override
+        public String getName() {
+            return "focusOwner";
+        }
+
+        @Override
+        public void set(boolean value) {
+            if (get() != value) {
+                super.set(value);
+
+                Node node = Node.this;
+                do {
+                    node.focusOwnerWithin.set(value);
+                    node = node.getParent();
+                } while (node != null);
+            }
+        }
+    };
+
+    public final boolean isFocusOwner() {
+        return focusOwner.get();
+    }
+
+    public final ReadOnlyBooleanProperty focusOwnerProperty() {
+        return focusOwner;
+    }
+
+    /**
+     * Indicates whether this {@code Node} or any of its descendants currently
+     * is the scene's focus owner.
+     *
+     * @defaultValue false
+     * @since 22
+     */
+    private final FocusPropertyBase focusOwnerWithin = new FocusPropertyBase() {
+        @Override
+        protected PseudoClass getPseudoClass() {
+            return FOCUS_OWNER_WITHIN_PSEUDOCLASS_STATE;
+        }
+
+        @Override
+        public String getName() {
+            return "focusOwnerWithin";
+        }
+    };
+
+    public final boolean isFocusOwnerWithin() {
+        return focusOwnerWithin.get();
+    }
+
+    public final ReadOnlyBooleanProperty focusOwnerWithinProperty() {
+        return focusOwnerWithin;
     }
 
     /**
@@ -9702,6 +9792,8 @@ public abstract class Node implements EventTarget, Styleable {
     private static final PseudoClass FOCUSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focused");
     private static final PseudoClass FOCUS_VISIBLE_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focus-visible");
     private static final PseudoClass FOCUS_WITHIN_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focus-within");
+    private static final PseudoClass FOCUS_OWNER_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focus-owner");
+    private static final PseudoClass FOCUS_OWNER_WITHIN_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focus-owner-within");
     private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
 
     private static abstract class LazyTransformProperty

@@ -177,6 +177,40 @@ public class FocusTest {
         } while (n != null);
     }
 
+    private void assertIsFocusOwner(Node n) {
+        assertTrue(n.isFocusOwner());
+        assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-owner")));
+    }
+
+    private void assertNotFocusOwner(Node n) {
+        assertFalse(n.isFocusOwner());
+        assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-owner")));
+    }
+
+    private void assertIsFocusOwnerWithin(Node n) {
+        assertTrue(n.isFocusOwnerWithin());
+        assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-owner-within")));
+    }
+
+    private void assertNotFocusOwnerWithin(Node n) {
+        assertFalse(n.isFocusOwnerWithin());
+        assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-owner-within")));
+    }
+
+    private void assertIsFocusOwnerWithinParents(Node n) {
+        do {
+            assertIsFocusOwnerWithin(n);
+            n = n.getParent();
+        } while (n != null);
+    }
+
+    private void assertNotFocusOwnerWithinParents(Node n) {
+        do {
+            assertNotFocusOwnerWithin(n);
+            n = n.getParent();
+        } while (n != null);
+    }
+
     /**
      * Test setting of initial focus.
      */
@@ -1162,4 +1196,149 @@ public class FocusTest {
         assertNotFocusWithin(node2);
     }
 
+    @Test public void testFocusOwnerIsSetWhenNodeIsFocused() {
+        class N extends Group { N(Node... children) { super(children); } }
+        N node;
+
+        scene.setRoot(
+            new N(
+                new N(
+                    node = new N()
+                )
+            )
+        );
+
+        assertNotFocusOwner(node);
+
+        node.requestFocus();
+
+        assertIsFocusOwner(node);
+    }
+
+    @Test public void testFocusOwnerIsClearedWhenNodeIsDefocused() {
+        class N extends Group { N(Node... children) { super(children); } }
+        N node1, node2;
+
+        scene.setRoot(
+            new N(
+                new N(
+                    node1 = new N(),
+                    node2 = new N()
+                )
+            )
+        );
+
+        assertNotFocusOwner(node1);
+        assertNotFocusOwner(node2);
+
+        node1.requestFocus();
+        assertIsFocusOwner(node1);
+        assertNotFocusOwner(node2);
+
+        node2.requestFocus();
+        assertNotFocusOwner(node1);
+        assertIsFocusOwner(node2);
+    }
+
+    @Test public void testFocusOwnerWithinIsSetWhenNodeIsFocused() {
+        class N extends Group { N(Node... children) { super(children); } }
+        N node1, node2, node3;
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N(
+                    node3 = new N()
+                )
+            )
+        );
+
+        assertNotFocusOwnerWithinParents(node3);
+
+        node3.requestFocus();
+
+        assertNotFocusOwner(node1);
+        assertNotFocusOwner(node2);
+        assertIsFocusOwner(node3);
+        assertIsFocusOwnerWithinParents(node3);
+    }
+
+    @Test public void testFocusOwnerWithinIsClearedWhenNodeIsDefocused() {
+        class N extends Group { N(Node... children) { super(children); } }
+        N node1, node2;
+
+        scene.setRoot(
+            new N(
+                new N(
+                    node1 = new N(),
+                    node2 = new N()
+                )
+            )
+        );
+
+        assertNotFocusOwnerWithinParents(node1);
+        assertNotFocusOwnerWithinParents(node2);
+
+        node1.requestFocus();
+        assertIsFocusOwnerWithin(node1);
+        assertIsFocusOwnerWithinParents(node1);
+        assertNotFocusOwnerWithin(node2);
+
+        node2.requestFocus();
+        assertIsFocusOwnerWithin(node2);
+        assertIsFocusOwnerWithinParents(node2);
+        assertNotFocusOwnerWithin(node1);
+    }
+
+    @Test public void testFocusOwnerIsClearedWhenNodeIsRemovedFromScene() {
+        class N extends Group { N(Node... children) { super(children); } }
+        N node2, node3;
+
+        scene.setRoot(
+            new N(
+                node2 = new N(
+                    node3 = new N()
+                )
+            )
+        );
+
+        node3.requestFocus();
+        assertIsFocusOwner(node3);
+        assertIsFocusOwnerWithinParents(node3);
+
+        node2.getChildren().clear();
+
+        // When node3 is removed from the scene graph, its focusOwner flag is cleared.
+        assertNotFocusOwner(node3);
+        assertNotFocusOwnerWithinParents(node2);
+
+        // Note: unless another node becomes the focus owner of the scene, node3 is still
+        // tracked by the scene as the focus owner.
+        assertSame(scene.getFocusOwner(), node3);
+    }
+
+    @Test public void testFocusOwnerIsSetWhenPreviousFocusOwnerIsAddedToScene() {
+        class N extends Group { N(Node... children) { super(children); } }
+        N node2, node3;
+
+        scene.setRoot(
+            new N(
+                node2 = new N(
+                    node3 = new N()
+                )
+            )
+        );
+
+        node3.requestFocus();
+
+        // node3.focusOwner is cleared when the node is removed from the scene graph
+        node2.getChildren().clear();
+        assertNotFocusOwner(node3);
+        assertNotFocusOwnerWithinParents(node2);
+
+        // Since node3 is still tracked by the scene as the current focus owner, the
+        // node3.focusOwner flag is set again when the node is added to the scene.
+        node2.getChildren().add(node3);
+        assertIsFocusOwner(node3);
+        assertIsFocusOwnerWithinParents(node3);
+    }
 }

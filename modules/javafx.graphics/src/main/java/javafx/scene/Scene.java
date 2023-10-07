@@ -2116,7 +2116,7 @@ public class Scene implements EventTarget {
 
         Node node = getFocusOwner();
         if (node != null) {
-            node.setFocusQuietly(windowFocused, focusOwner.focusVisible);
+            node.setFocusQuietly(windowFocused, focusOwner.focusVisible, true);
             node.notifyFocusListeners();
         }
 
@@ -2233,11 +2233,11 @@ public class Scene implements EventTarget {
         @Override
         protected void invalidated() {
             if (oldFocusOwner != null) {
-                oldFocusOwner.setFocusQuietly(false, false);
+                oldFocusOwner.setFocusQuietly(false, false, false);
             }
             Node value = get();
             if (value != null) {
-                value.setFocusQuietly(windowFocused, focusVisible);
+                value.setFocusQuietly(windowFocused, focusVisible, true);
                 if (value != oldFocusOwner) {
                     value.getScene().enableInputMethodEvents(
                             value.getInputMethodRequests() != null
