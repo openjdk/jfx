@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,14 +29,13 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableHeaderRowShim;
-import javafx.scene.control.skin.TableViewSkin;
+import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.layout.Region;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -44,7 +43,7 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class TableViewSkinTest {
+class TreeTableViewSkinTest {
 
     private StageLoader stageLoader;
 
@@ -56,42 +55,23 @@ class TableViewSkinTest {
     }
 
     @Test
-    void test_JDK_8188164() {
-        TableView<String> tableView = new TableView<>();
-        for (int i = 0; i < 5; i++) {
-            TableColumn<String, String> column = new TableColumn<>("Col " + i);
-            tableView.getColumns().add(column);
-        }
-
-        Scene scene = new Scene(tableView);
-        scene.getStylesheets().add(TableViewSkinTest.class.getResource("TableViewSkinTest.css").toExternalForm());
-
-        stageLoader = new StageLoader(scene);
-
-        Toolkit.getToolkit().firePulse();
-
-        TableHeaderRow header = (TableHeaderRow) tableView.lookup("TableHeaderRow");
-        assertEquals(100.0, header.getHeight(), 0.001, "Table Header height specified in CSS");
-    }
-
-    @Test
     void testInitialColumnResizeNodePositions() {
-        TableView<String> tableView = new TableView<>();
+        TreeTableView<String> treeTableView = new TreeTableView<>();
         for (int i = 0; i < 5; i++) {
-            TableColumn<String, String> column = new TableColumn<>("Col " + i);
+            TreeTableColumn<String, String> column = new TreeTableColumn<>("Col " + i);
             column.setMinWidth(100);
             column.setMaxWidth(100);
-            tableView.getColumns().add(column);
+            treeTableView.getColumns().add(column);
         }
 
-        stageLoader = new StageLoader(tableView);
+        stageLoader = new StageLoader(treeTableView);
 
-        Node columnResizeLine = tableView.lookup(".column-resize-line");
-        Node columnReorderOverlay = tableView.lookup(".column-overlay");
+        Node columnResizeLine = treeTableView.lookup(".column-resize-line");
+        Node columnReorderOverlay = treeTableView.lookup(".column-overlay");
 
-        TableHeaderRow header = (TableHeaderRow) tableView.lookup("TableHeaderRow");
+        TableHeaderRow header = (TableHeaderRow) treeTableView.lookup("TableHeaderRow");
         header.setReordering(true);
-        TableHeaderRowShim.setReorderingColumn(header, tableView.getColumns().get(0));
+        TableHeaderRowShim.setReorderingColumn(header, treeTableView.getColumns().get(0));
         TableHeaderRowShim.setReorderingRegion(header, header.getRootHeader().getColumnHeaders().get(0));
 
         Toolkit.getToolkit().firePulse();
@@ -105,23 +85,23 @@ class TableViewSkinTest {
 
     @Test
     void testColumnResizeNodePositionsWithPadding() {
-        TableView<String> tableView = new TableView<>();
-        tableView.setPadding(new Insets(5, 5, 5, 5));
+        TreeTableView<String> treeTableView = new TreeTableView<>();
+        treeTableView.setPadding(new Insets(5, 5, 5, 5));
         for (int i = 0; i < 5; i++) {
-            TableColumn<String, String> column = new TableColumn<>("Col " + i);
+            TreeTableColumn<String, String> column = new TreeTableColumn<>("Col " + i);
             column.setMinWidth(100);
             column.setMaxWidth(100);
-            tableView.getColumns().add(column);
+            treeTableView.getColumns().add(column);
         }
 
-        stageLoader = new StageLoader(tableView);
+        stageLoader = new StageLoader(treeTableView);
 
-        Node columnResizeLine = tableView.lookup(".column-resize-line");
-        Node columnReorderOverlay = tableView.lookup(".column-overlay");
+        Node columnResizeLine = treeTableView.lookup(".column-resize-line");
+        Node columnReorderOverlay = treeTableView.lookup(".column-overlay");
 
-        TableHeaderRow header = (TableHeaderRow) tableView.lookup("TableHeaderRow");
+        TableHeaderRow header = (TableHeaderRow) treeTableView.lookup("TableHeaderRow");
         header.setReordering(true);
-        TableHeaderRowShim.setReorderingColumn(header, tableView.getColumns().get(0));
+        TableHeaderRowShim.setReorderingColumn(header, treeTableView.getColumns().get(0));
         TableHeaderRowShim.setReorderingRegion(header, header.getRootHeader().getColumnHeaders().get(0));
 
         Toolkit.getToolkit().firePulse();
@@ -135,23 +115,23 @@ class TableViewSkinTest {
 
     @Test
     void testColumnResizeNodePositionsWithCustomSkin() {
-        TableView<String> tableView = new TableView<>();
-        tableView.setSkin(new CustomTableViewSkin<>(tableView));
+        TreeTableView<String> treeTableView = new TreeTableView<>();
+        treeTableView.setSkin(new CustomTreeTableViewSkin<>(treeTableView));
         for (int i = 0; i < 5; i++) {
-            TableColumn<String, String> column = new TableColumn<>("Col " + i);
+            TreeTableColumn<String, String> column = new TreeTableColumn<>("Col " + i);
             column.setMinWidth(100);
             column.setMaxWidth(100);
-            tableView.getColumns().add(column);
+            treeTableView.getColumns().add(column);
         }
 
-        stageLoader = new StageLoader(tableView);
+        stageLoader = new StageLoader(treeTableView);
 
-        Node columnResizeLine = tableView.lookup(".column-resize-line");
-        Node columnReorderOverlay = tableView.lookup(".column-overlay");
+        Node columnResizeLine = treeTableView.lookup(".column-resize-line");
+        Node columnReorderOverlay = treeTableView.lookup(".column-overlay");
 
-        TableHeaderRow header = (TableHeaderRow) tableView.lookup("TableHeaderRow");
+        TableHeaderRow header = (TableHeaderRow) treeTableView.lookup("TableHeaderRow");
         header.setReordering(true);
-        TableHeaderRowShim.setReorderingColumn(header, tableView.getColumns().get(0));
+        TableHeaderRowShim.setReorderingColumn(header, treeTableView.getColumns().get(0));
         TableHeaderRowShim.setReorderingRegion(header, header.getRootHeader().getColumnHeaders().get(0));
 
         Toolkit.getToolkit().firePulse();
@@ -165,18 +145,18 @@ class TableViewSkinTest {
 
     @Test
     void testColumnHeaderReorderCorrectTranslateX() {
-        TableView<String> tableView = new TableView<>();
-        tableView.setPadding(new Insets(0, 10, 0, 30));
+        TreeTableView<String> treeTableView = new TreeTableView<>();
+        treeTableView.setPadding(new Insets(0, 10, 0, 30));
         for (int i = 0; i < 5; i++) {
-            TableColumn<String, String> column = new TableColumn<>("Col " + i);
+            TreeTableColumn<String, String> column = new TreeTableColumn<>("Col " + i);
             column.setMinWidth(100);
             column.setMaxWidth(100);
-            tableView.getColumns().add(column);
+            treeTableView.getColumns().add(column);
         }
 
-        stageLoader = new StageLoader(tableView);
+        stageLoader = new StageLoader(treeTableView);
 
-        TableHeaderRow header = (TableHeaderRow) tableView.lookup("TableHeaderRow");
+        TableHeaderRow header = (TableHeaderRow) treeTableView.lookup("TableHeaderRow");
         Node columnDragHeader = header.lookup(".column-drag-header");
 
         assertEquals(0, columnDragHeader.getTranslateX());
@@ -188,9 +168,9 @@ class TableViewSkinTest {
         assertEquals(20, columnDragHeader.getTranslateX());
     }
 
-    private static class CustomTableViewSkin<S> extends TableViewSkin<S> {
+    private static class CustomTreeTableViewSkin<S> extends TreeTableViewSkin<S> {
 
-        CustomTableViewSkin(TableView<S> control) {
+        CustomTreeTableViewSkin(TreeTableView<S> control) {
             super(control);
         }
 
