@@ -44,6 +44,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class LineChartTest extends XYChartTestBase {
 
@@ -677,6 +678,18 @@ public class LineChartTest extends XYChartTestBase {
         );
 
         assertArrayEquals(convertSeriesDataToPoint2D(expectedSeries).toArray(), findDataPointsFromPathLine(lineChart).toArray());
+    }
+
+    //JDK-8283675
+    @Test
+    public void testChartLineRemovedOnClearingSeries() {
+        startApp();
+        lineChart.getData().addAll(series1);
+        pulse();
+        assertTrue(0 < ((Path)series1.getNode()).getElements().size());
+        series1.getData().clear();
+        pulse();
+        assertEquals(0, ((Path)series1.getNode()).getElements().size());
     }
 
     private List<Point2D> convertSeriesDataToPoint2D(XYChart.Series<Number, Number> series) {
