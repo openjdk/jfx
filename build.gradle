@@ -1600,7 +1600,7 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
                project.files(project.sourceSets.jslc.java.getDestinationDirectory().get().getAsFile()) +
                project.configurations.antlr
         source = [project.file("src/main/jsl-$lowerName")]
-        destinationDir = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
+        destinationDirectory = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
 
         options.compilerArgs.addAll([
             "-implicit:none",
@@ -1951,7 +1951,7 @@ void addJCov(p, test) {
             p.javaexec {
                 workingDir = p.file("build/reports/jcov")
                 classpath = p.files(p.configurations.testClasspath.files.find { it.name.startsWith('jcov') })
-                main = "com.sun.tdk.jcov.Helper"
+                mainClass = "com.sun.tdk.jcov.Helper"
                 args = [
                         "RepGen",
                         "-exclude", "\"**.test\"",
@@ -2306,7 +2306,7 @@ project(":graphics") {
         executable = JAVA
         classpath = project.configurations.antlr
         workingDir = wd
-        main = "org.antlr.v4.Tool"
+        mainClass = "org.antlr.v4.Tool"
 
         args = [
             "-o",
@@ -2500,7 +2500,7 @@ project(":graphics") {
             javaexec {
                 executable = JAVA
                 workingDir = project.projectDir
-                main = settings.generator
+                mainClass = settings.generator
                 classpath = configurations.compileClasspath + configurations.antlr
                 classpath += files(project.sourceSets.jslc.java.getDestinationDirectory().get().getAsFile())
 
@@ -2589,7 +2589,7 @@ project(":graphics") {
             javaexec {
                 executable = JAVA
                 workingDir = project.projectDir
-                main = "CompileJSL"
+                mainClass = "CompileJSL"
                 classpath = configurations.compileClasspath + configurations.antlr
                 classpath += files(project.sourceSets.jslc.java.getDestinationDirectory().get().getAsFile())
                 classpath += files(project.sourceSets.jslc.resources)
@@ -2728,7 +2728,7 @@ project(":controls") {
                 jvmArgs += patchModuleArgs
                 jvmArgs += "--module-path=$modulePath"
                 jvmArgs += "--add-modules=javafx.graphics"
-                main = "com.sun.javafx.css.parser.Css2Bin"
+                mainClass = "com.sun.javafx.css.parser.Css2Bin"
                 args css
             }
         }
@@ -3764,7 +3764,7 @@ project(":web") {
 
         def compileJavaDOMBindingTask = task("compileJavaDOMBinding${t.capital}", type: JavaCompile,
                 dependsOn: [compileJava, compileNativeTask, copyNativeTask]) {
-            destinationDir = file("$buildDir/classes/java/main")
+            destinationDirectory = file("$buildDir/classes/java/main")
             classpath = configurations.compileClasspath
             source = project.sourceSets.main.java.srcDirs
             options.compilerArgs.addAll([
@@ -5233,11 +5233,9 @@ compileTargets { t ->
                 }
             }
         }
-
-        buildModuleBaseTask.mustRunAfter([
-            baseProject.tasks.getByName("copyLibFilesStandalone$t.capital"),
-            baseProject.tasks.getByName("copyLibFiles$t.capital"),
-            baseProject.tasks.getByName("modularPublicationJar$t.capital")])
+        baseProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleBaseTask)
+        baseProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleBaseTask)
+        baseProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleBaseTask)
 
         def buildModuleGraphicsTask = task("buildModuleGraphics$t.capital", type: Copy, dependsOn: graphicsProject.assemble) {
             group = "Basic"
@@ -5306,10 +5304,9 @@ compileTargets { t ->
                 }
             }
         }
-        buildModuleGraphicsTask.mustRunAfter([
-            graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital"),
-            graphicsProject.tasks.getByName("copyLibFiles$t.capital"),
-            graphicsProject.tasks.getByName("modularPublicationJar$t.capital")])
+        graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
+        graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleGraphicsTask)
+        graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleGraphicsTask)
 
         def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
@@ -5381,10 +5378,9 @@ compileTargets { t ->
                 }
             }
         }
-        buildModuleMediaTask.mustRunAfter([
-            mediaProject.tasks.getByName("copyLibFilesStandalone$t.capital"),
-            mediaProject.tasks.getByName("copyLibFiles$t.capital"),
-            mediaProject.tasks.getByName("modularPublicationJar$t.capital")])
+        mediaProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
+        mediaProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleMediaTask)
+        mediaProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleMediaTask)
 
         def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
@@ -5434,10 +5430,9 @@ compileTargets { t ->
                 }
             }
         }
-        buildModuleWeb.mustRunAfter([
-            webProject.tasks.getByName("copyLibFilesStandalone$t.capital"),
-            webProject.tasks.getByName("copyLibFiles$t.capital"),
-            webProject.tasks.getByName("modularPublicationJar$t.capital")])
+        webProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleWeb)
+        webProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleWeb)
+        webProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleWeb)
 
         def buildModuleSWT = task("buildModuleSWT$t.capital", type: Copy) {
             group = "Basic"
@@ -5459,10 +5454,9 @@ compileTargets { t ->
             from "${swtProject.buildDir}/libs/javafx-swt.jar"
             into "${graphicsProject.buildDir}/${platformPrefix}module-lib"
         }
-        buildModuleSWT.mustRunAfter([
-            graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital"),
-            graphicsProject.tasks.getByName("copyLibFiles$t.capital"),
-            graphicsProject.tasks.getByName("modularPublicationJar$t.capital")])
+        graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleSWT)
+        graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleSWT)
+        graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleSWT)
 
         dependsOn(
             buildModuleBaseTask,
