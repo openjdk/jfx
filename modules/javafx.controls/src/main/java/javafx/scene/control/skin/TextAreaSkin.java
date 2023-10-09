@@ -503,7 +503,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 switch (dir) {
                     case LEFT:
                     case RIGHT:
-                        nextCharacterVisually(dir == Direction.RIGHT);
+                        nextCharacterLeftRight(dir == Direction.RIGHT);
                         break;
                     default:
                         throw new IllegalArgumentException(""+dir);
@@ -566,9 +566,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         }
     }
 
-    private void nextCharacterVisually(boolean moveRight) {
+    private void nextCharacterLeftRight(boolean moveRight) {
+        // left/right arrow keys should move the cursor left/right
+        // in LTR orientation: within LTR text blocks
+        // in RTL orientation: within RTL text blocks
         if (isRTL()) {
-            // Text node is mirrored.
             moveRight = !moveRight;
         }
 

@@ -756,7 +756,7 @@ public abstract class TextInputControl extends Control {
 
     /**
      * Returns a cached instance of character break iterator, creating it if necessary.
-     * The instance is initialized with the given text.
+     * The instance is updated with the current text present in this control.
      * @return the character iterator instance, always non null
      */
     private BreakIterator charIterator() {
@@ -769,7 +769,7 @@ public abstract class TextInputControl extends Control {
 
     /**
      * Returns a cached instance of word break iterator, creating it if necessary.
-     * The instance is initialized with the text present in this control.
+     * The instance is updated with the current text present in this control.
      * @return the word iterator instance, always non null
      */
     private BreakIterator wordIterator() {
