@@ -1767,6 +1767,139 @@ assertEquals(0, firstCell.getIndex());
         assertEquals(29, idx);
     }
 
+    /**
+     * Scrolling via the trough (-> {@link com.sun.javafx.scene.control.VirtualScrollBar#adjustValue(double)}) should
+     * not throw any exception.
+     * This happened in the past when scrolling up (more) when we already only see the uppermost cell with the index 0.
+     * This index was subtracted by 1, leading to an {@link IndexOutOfBoundsException}.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8311983">JDK-8311983</a>
+     */
+    @Test
+    public void testScrollBarValueAdjustmentShouldNotThrowIOOBE() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(2);
+        flow.resize(250, 300);
+
+        pulse();
+
+        // Scroll down.
+        flow.shim_getVbar().adjustValue(0.9605263157894737);
+        // Scroll up.
+        flow.shim_getVbar().adjustValue(0.05263157894736842);
+
+        // This should not throw any exception. It used to throw an IndexOutOfBoundsException.
+        flow.shim_getVbar().adjustValue(0.05263157894736842);
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentShouldScrollOneDown() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(5);
+        flow.resize(250, 300);
+
+        pulse();
+
+        assertEquals(0, flow.getLastVisibleCell().getIndex());
+
+        // Scroll down.
+        flow.shim_getVbar().adjustValue(1);
+        pulse();
+
+        assertEquals(1, flow.getLastVisibleCell().getIndex());
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentShouldScrollOneUp() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(5);
+        flow.resize(250, 300);
+
+        pulse();
+
+        assertEquals(0, flow.getFirstVisibleCell().getIndex());
+
+        // Scroll completely down.
+        flow.shim_getVbar().setValue(1.0);
+        pulse();
+
+        assertEquals(4, flow.getFirstVisibleCell().getIndex());
+
+        // Scroll up.
+        flow.shim_getVbar().adjustValue(0.0);
+        pulse();
+
+        assertEquals(3, flow.getFirstVisibleCell().getIndex());
+    }
+
+    /**
+     * The first cell should always be the same when scrolling down just a little bit.
+     * This is mainly a regression test to check that no leading cells are added where they should not be.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8316590">JDK-8316590</a>
+     */
+    @Test
+    public void testFirstCellShouldBeTheSameOnScroll() {
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(50);
+        flow.resize(250, 300);
+
+        pulse();
+
+        IndexedCell<?> cell1 = flow.cells_get(flow.cells, 0);
+
+        flow.scrollPixels(0.01);
+        IndexedCell<?> cell2 = flow.cells_get(flow.cells, 0);
+
+        assertSame(cell1, cell2);
+    }
+
+    @Test
+    public void testFirstCellShouldHaveTheSameIndexOnScroll() {
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(50);
+        flow.resize(250, 300);
+
+        pulse();
+
+        IndexedCell<?> cell1 = flow.cells_get(flow.cells, 0);
+        assertEquals(0, cell1.getIndex());
+
+        flow.scrollPixels(0.01);
+
+        assertEquals(0, cell1.getIndex());
+    }
+
+    /**
+     * The first cell should always be at the same position (when visible), no matter if we scroll down or not.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8316590">JDK-8316590</a>
+     */
+    @Test
+    public void testFirstCellShouldBeAtPosition0OnScroll() {
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(50);
+        flow.resize(250, 300);
+
+        pulse();
+
+        IndexedCell<?> cell1 = flow.cells_get(flow.cells, 0);
+        assertEquals(0.0, cell1.getLayoutY(), 0);
+
+        flow.scrollPixels(0.01);
+
+        assertEquals(0.0, cell1.getLayoutY(), 0);
+    }
+
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {

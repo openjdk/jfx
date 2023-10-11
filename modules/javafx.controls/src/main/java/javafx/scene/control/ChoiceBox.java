@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -315,8 +315,8 @@ public class ChoiceBox<T> extends Control {
      * @return the string converter property
      * @since JavaFX 2.1
      */
-    public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
-    private ObjectProperty<StringConverter<T>> converter =
+    public final ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
+    private final ObjectProperty<StringConverter<T>> converter =
             new SimpleObjectProperty<>(this, "converter", null);
     public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
     public final StringConverter<T> getConverter() {return converterProperty().get(); }
@@ -329,8 +329,8 @@ public class ChoiceBox<T> extends Control {
      * @return the value property
      * @since JavaFX 2.1
      */
-    public ObjectProperty<T> valueProperty() { return value; }
-    private ObjectProperty<T> value = new SimpleObjectProperty<>(this, "value") {
+    public final ObjectProperty<T> valueProperty() { return value; }
+    private final ObjectProperty<T> value = new SimpleObjectProperty<>(this, "value") {
         @Override protected void invalidated() {
             super.invalidated();
             fireEvent(new ActionEvent());

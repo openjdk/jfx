@@ -39,6 +39,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import com.sun.javafx.css.CascadingStyle;
+import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
+
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
@@ -80,7 +82,6 @@ final class CssStyleHelper {
     private static final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
 
     private CssStyleHelper() {
-        this.triggerStates = new PseudoClassState();
     }
 
     /**
@@ -514,7 +515,7 @@ final class CssStyleHelper {
      * *
      * Called "triggerStates" since they would trigger a CSS update.
      */
-    private PseudoClassState triggerStates = new PseudoClassState();
+    private final PseudoClassState triggerStates = new PseudoClassState();
 
     boolean pseudoClassStateChanged(PseudoClass pseudoClass) {
         return triggerStates.contains(pseudoClass);
@@ -553,7 +554,7 @@ final class CssStyleHelper {
         // .foo:hover { -fx-fill: red; } then only the hover state matters
         // but the transtion state could be [hover, focused]
         //
-        final Set<PseudoClass>[] retainedStates = new PseudoClassState[depth];
+        final Set<PseudoClass>[] retainedStates = new Set[depth];
 
         //
         // Note Well: The array runs from leaf to root. That is,
@@ -564,20 +565,25 @@ final class CssStyleHelper {
 
         int count = 0;
         parent = node;
+
         while (parent != null) { // This loop traverses through all ancestors till root
-            final CssStyleHelper helper = (parent instanceof Node) ? parent.styleHelper : null;
-            if (helper != null) {
-                final Set<PseudoClass> pseudoClassState = parent.pseudoClassStates;
-                retainedStates[count] = new PseudoClassState();
-                retainedStates[count].addAll(pseudoClassState);
-                // retainAll method takes the intersection of pseudoClassState and helper.triggerStates
-                retainedStates[count].retainAll(helper.triggerStates);
-                count += 1;
+            if (parent.styleHelper != null) {
+                PseudoClassState pseudoClassState = new PseudoClassState();
+
+                pseudoClassState.addAll(parent.pseudoClassStates);
+                pseudoClassState.retainAll(parent.styleHelper.triggerStates);
+
+                retainedStates[count++] = ImmutablePseudoClassSetsCache.of(pseudoClassState);
             }
+
             parent = parent.getParent();
         }
 
-        final Set<PseudoClass>[] transitionStates = new PseudoClassState[count];
+        if (count == depth) {
+          return retainedStates;
+        }
+
+        final Set<PseudoClass>[] transitionStates = new Set[count];
         System.arraycopy(retainedStates, 0, transitionStates, 0, count);
 
         return transitionStates;

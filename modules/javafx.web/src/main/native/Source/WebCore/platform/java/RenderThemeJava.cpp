@@ -67,7 +67,7 @@ RenderTheme& RenderTheme::singleton()
     return sm_defaultInstance;
 }
 
-RenderThemeJava::RenderThemeJava()
+RenderThemeJava::RenderThemeJava() : mediaResource(MediaControlResourceFactory::createResource())
 {
 }
 
@@ -494,8 +494,7 @@ Vector<String, 2> RenderThemeJava::mediaControlsScripts()
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
 {
-
-    return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+    return emptyString();
 
 }
 
@@ -553,7 +552,15 @@ bool RenderThemeJava::paintMediaControl(jint type, const RenderObject&, const Pa
     return true;
 }
 
+String RenderThemeJava::mediaControlsStyleSheet()
+{
+    return String(ModernMediaControlsUserAgentStyleSheet, sizeof(ModernMediaControlsUserAgentStyleSheet));
+}
 
+String RenderThemeJava::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
+{
+    return mediaResource->getValue(iconName);
+}
 #undef JNI_EXPAND_MEDIA
 
 #endif  // ENABLE(VIDEO)
