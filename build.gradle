@@ -5304,6 +5304,7 @@ compileTargets { t ->
                 }
             }
         }
+        graphicsProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
         graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
         graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleGraphicsTask)
         graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleGraphicsTask)
@@ -5378,6 +5379,7 @@ compileTargets { t ->
                 }
             }
         }
+        mediaProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
         mediaProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
         mediaProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleMediaTask)
         mediaProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleMediaTask)
@@ -5430,6 +5432,7 @@ compileTargets { t ->
                 }
             }
         }
+        webProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleWeb)
         webProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleWeb)
         webProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleWeb)
         webProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleWeb)
@@ -5454,6 +5457,7 @@ compileTargets { t ->
             from "${swtProject.buildDir}/libs/javafx-swt.jar"
             into "${graphicsProject.buildDir}/${platformPrefix}module-lib"
         }
+        graphicsProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleSWT)
         graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleSWT)
         graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleSWT)
         graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleSWT)
