@@ -421,7 +421,7 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public Hit getHitInfo(float x, float y, String text) {
+    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart) {
         int charIndex = -1;
         int insertionIndex = -1;
         boolean leading = false;
@@ -429,7 +429,7 @@ public class PrismTextLayout implements TextLayout {
         int textWidthPrevLine = 0;
 
         ensureLayout();
-        int lineIndex = getLineIndex(y, text);
+        int lineIndex = getLineIndex(y, text, curRunStart);
         if (lineIndex >= getLineCount()) {
             charIndex = getCharCount();
             insertionIndex = charIndex + 1;
@@ -455,7 +455,7 @@ public class PrismTextLayout implements TextLayout {
             } else {
                 for (int i = 0; i < lineIndex; i++) {
                     for (TextRun r: lines[i].runs) {
-                        if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
+                        if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text) && r.getStart() >= textRunStart) {
                             textWidthPrevLine += r.getLength();
                         }
                     }
@@ -463,8 +463,9 @@ public class PrismTextLayout implements TextLayout {
                 int prevNodeLength = 0;
                 boolean isPrevNodeExcluded = false;
                 for (TextRun r: runs) {
-                    if (!r.getTextSpan().getText().equals(text)) {
+                    if (!r.getTextSpan().getText().equals(text) || (r.getTextSpan().getText().equals(text) && r.getStart() < textRunStart)) {
                         prevNodeLength += r.getWidth();
+                        continue;
                     }
                     if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
                         BaseBounds textBounds = new BoxBounds();
@@ -748,7 +749,7 @@ public class PrismTextLayout implements TextLayout {
      *                                                                         *
      **************************************************************************/
 
-    private int getLineIndex(float y, String text) {
+    private int getLineIndex(float y, String text, int runStart) {
         int index = 0;
         float bottom = 0;
         /* Initializing textFound as true when text is null
@@ -759,7 +760,7 @@ public class PrismTextLayout implements TextLayout {
         while (index < lineCount) {
             if (!textFound) {
                 for (TextRun r : lines[index].runs) {
-                    if (r.getTextSpan() == null || r.getTextSpan().getText().equals(text)) {
+                    if (r.getTextSpan() == null || (r.getTextSpan().getText().equals(text) && r.getStart() == runStart)) {
                         /* Span will present only for Rich Text.
                          * Hence making textFound as true */
                         textFound = true;

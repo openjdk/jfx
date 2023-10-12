@@ -210,7 +210,7 @@ public interface TextLayout {
      *             and non-null in the case of {@link javafx.scene.text.Text}
      * @return returns a {@link Hit} object containing character index, insertion index and position of cursor on the character.
      */
-    public Hit getHitInfo(float x, float y, String text);
+    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart);
 
     public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y);

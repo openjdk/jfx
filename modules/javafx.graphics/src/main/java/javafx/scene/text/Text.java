@@ -46,6 +46,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.text.TextRun;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -1022,7 +1023,21 @@ public class Text extends Shape {
         TextLayout layout = getTextLayout();
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
-        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getText());
+        GlyphList[] runs = getRuns();
+        int runIndex = 0;
+        if (runs.length != 0) {
+            Point2D ptInParent = localToParent(x, y);
+            while (runIndex < runs.length - 1) {
+                if (ptInParent.getY() > runs[runIndex].getLocation().y
+                        && ptInParent.getY() < runs[runIndex + 1].getLocation().y) {
+                    break;
+                }
+                runIndex++;
+            }
+        }
+        int textRunStart = runs.length == 0 ? 0 : ((TextRun) runs[0]).getStart();
+        int curRunStart = runs.length == 0 ? 0 : ((TextRun) runs[runIndex]).getStart();
+        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getText(), textRunStart, curRunStart);
         return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
     }
 

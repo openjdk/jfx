@@ -114,6 +114,7 @@ public class TextCharacterIndexTest {
     static TextFlow textFlow;
     static Text textOne;
     static Text textTwo;
+    static Text textThree;
     static Text emoji;
 
     static volatile Stage stage;
@@ -216,36 +217,81 @@ public class TextCharacterIndexTest {
         });
     }
 
+    private void addMultipleTexNodeMultiLineRepeatedText() {
+        Util.runAndWait(() -> {
+            textOne = new Text("This is Text");
+            textOne.setFont(new Font(48));
+            textTwo = new Text("This is Text This is Text");
+            textTwo.setFont(new Font(48));
+            textFlow.getChildren().setAll(textOne, textTwo);
+        });
+    }
+
+    private void addMultipleTextNodeAlternativelyRepeatedText() {
+        Util.runAndWait(() -> {
+            textOne = new Text("Text");
+            textOne.setFont(new Font(48));
+            textTwo = new Text("😊💙🦋🏁🔥");
+            textTwo.setFont(new Font(48));
+            textThree = new Text("Text");
+            textThree.setFont(new Font(48));
+            textFlow.getChildren().setAll(textOne, textTwo, textThree);
+        });
+    }
+
+    private void addMultipleTexNodeMultiLineRepeatedEmojis() {
+        Util.runAndWait(() -> {
+            textOne = new Text("😊💙🦋🏁🔥");
+            textOne.setFont(new Font(48));
+            textTwo = new Text("😊💙🦋🏁🔥😊💙🦋🏁🔥");
+            textTwo.setFont(new Font(48));
+            textFlow.getChildren().setAll(textOne, textTwo);
+        });
+    }
+
+    private void addMultipleTextNodeAlternativelyRepeatedEmoji() {
+        Util.runAndWait(() -> {
+            textOne = new Text("😊💙🦋🏁🔥");
+            textOne.setFont(new Font(48));
+            textTwo = new Text("Text");
+            textTwo.setFont(new Font(48));
+            textThree = new Text("😊💙🦋🏁🔥");
+            textThree.setFont(new Font(48));
+            textFlow.getChildren().setAll(textOne, textTwo, textThree);
+        });
+    }
+
     @Test
-    public void testTwoTextNodesCharIndexEmbeddedInTexFlow() throws Exception {
+    public void testTwoTextNodesCharIndexEmbeddedInTextFlow() throws Exception {
         addTwoTextNodes();
         Util.waitForIdle(scene);
 
         int textOneLength = textOne.getText().length();
         int textTwoLength = textTwo.getText().length();
-        int totalLength = textOneLength + textTwoLength;
+
         double x = 0.0;
-        while (textFlowCharIndex < totalLength - 1) {
+        while (x < (WIDTH - X_LEADING_OFFSET)) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
                 Assert.assertEquals(charIndex, insertionIndex);
             } else {
                 Assert.assertEquals(charIndex, insertionIndex - 1);
             }
+            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
             x += step();
         }
     }
 
     @Test
-    public void testTextAndEmojiCharIndexEmbeddedInTexFlow() throws Exception {
+    public void testTextAndEmojiCharIndexEmbeddedInTextFlow() throws Exception {
         addTextAndEmojisNoes();
         Util.waitForIdle(scene);
 
         int textOneLength = textOne.getText().length();
         int textTwoLength = textTwo.getText().length();
-        int totalLength = textOneLength + textTwoLength;
+
         double x = 0.0;
-        while (textFlowCharIndex < totalLength - 1) {
+        while (x < (WIDTH - X_LEADING_OFFSET)) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
                 Assert.assertEquals(charIndex, insertionIndex);
@@ -254,20 +300,21 @@ public class TextCharacterIndexTest {
             } else {
                 Assert.assertEquals(charIndex, insertionIndex - 1);
             }
+            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
             x += step();
         }
     }
 
     @Test
-    public void testEmojiAndTextCharIndexEmbeddedInTexFlow() throws Exception {
+    public void testEmojiAndTextCharIndexEmbeddedInTextFlow() throws Exception {
         addEmojisAndTextNode();
         Util.waitForIdle(scene);
 
         int textOneLength = textOne.getText().length();
         int textTwoLength = textTwo.getText().length();
-        int totalLength = textOneLength + textTwoLength;
+
         double x = 0.0;
-        while (textFlowCharIndex < totalLength - 1) {
+        while (x < (WIDTH - X_LEADING_OFFSET)) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
                 Assert.assertEquals(charIndex, insertionIndex);
@@ -276,20 +323,21 @@ public class TextCharacterIndexTest {
             } else {
                 Assert.assertEquals(charIndex, insertionIndex - 1);
             }
+            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
             x += step();
         }
     }
 
     @Test
-    public void testTwoEmojiNodesCharIndexEmbeddedInTexFlow() throws Exception {
+    public void testTwoEmojiNodesCharIndexEmbeddedInTextFlow() throws Exception {
         addTwoEmojiNodes();
         Util.waitForIdle(scene);
 
         int textOneLength = textOne.getText().length();
         int textTwoLength = textTwo.getText().length();
-        int totalLength = textOneLength + textTwoLength;
+
         double x = 0.0;
-        while (textFlowCharIndex < totalLength - 1) {
+        while (x < (WIDTH - X_LEADING_OFFSET)) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
                 Assert.assertEquals(charIndex, insertionIndex);
@@ -299,18 +347,18 @@ public class TextCharacterIndexTest {
             else {
                 Assert.assertEquals(charIndex, insertionIndex - 1);
             }
+            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
             x += step();
         }
     }
 
     @Test
-    public void testWrappedTextNodesCharIndexEmbeddedInTexFlow() throws Exception {
+    public void testWrappedTextNodesCharIndexEmbeddedInTextFlow() throws Exception {
         addWrappedTextNodes();
         Util.waitForIdle(scene);
 
         int textOneLength = textOne.getText().length();
         int textTwoLength = textTwo.getText().length();
-        int totalLength = textOneLength + textTwoLength;
 
         for (int y = 0; y < 2; y++) {
             double x = 0.0;
@@ -323,19 +371,19 @@ public class TextCharacterIndexTest {
                 } else {
                     Assert.assertEquals(charIndex, insertionIndex - 1);
                 }
+                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
                 x += step();
             }
         }
     }
 
     @Test
-    public void testMultiLineTextNodesCharIndexEmbeddedInTexFlow() throws Exception {
+    public void testMultiLineTextNodesCharIndexEmbeddedInTextFlow() throws Exception {
         addMultiLineTextNodes();
         Util.waitForIdle(scene);
 
         int textOneLength = textOne.getText().length();
         int textTwoLength = textTwo.getText().length();
-        int totalLength = textOneLength + textTwoLength;
 
         for (int y = 0; y < 2; y++) {
             double x = 0.0;
@@ -348,19 +396,19 @@ public class TextCharacterIndexTest {
                 } else {
                     Assert.assertEquals(charIndex, insertionIndex - 1);
                 }
+                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
                 x += step();
             }
         }
     }
 
     @Test
-    public void testMultiLineEmojisCharIndexEmbeddedInTexFlow() throws Exception {
+    public void testMultiLineEmojisCharIndexEmbeddedInTextFlow() throws Exception {
         addMultiLineEmojisInTextNodes();
         Util.waitForIdle(scene);
 
         int textOneLength = textOne.getText().length();
         int textTwoLength = textTwo.getText().length();
-        int totalLength = textOneLength + textTwoLength;
 
         for (int y = 0; y < 2; y++) {
             double x = 0.0;
@@ -373,6 +421,106 @@ public class TextCharacterIndexTest {
                 } else {
                     Assert.assertEquals(charIndex, insertionIndex - 1);
                 }
+                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                x += step();
+            }
+        }
+    }
+
+    @Test
+    public void testMultiTextNodesMultiLineRepeatedTextEmbeddedInTextFlow() throws Exception {
+        addMultipleTexNodeMultiLineRepeatedText();
+        Util.waitForIdle(scene);
+
+        int textOneLength = textOne.getText().length();
+        int textTwoLength = textTwo.getText().length();
+
+        for (int y = 0; y < 2; y++) {
+            double x = 0.0;
+            while (x < (WIDTH - X_LEADING_OFFSET)) {
+                moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
+                if (isLeading) {
+                    Assert.assertEquals(charIndex, insertionIndex);
+                } else if (isSurrogatePair) {
+                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                } else {
+                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                }
+                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                x += step();
+            }
+        }
+    }
+
+    @Test
+    public void testMultiTextNodesAlternativelyRepeatedTextEmbeddedInTextFlow() throws Exception {
+        addMultipleTextNodeAlternativelyRepeatedText();
+        Util.waitForIdle(scene);
+
+        int textOneLength = textOne.getText().length();
+        int textTwoLength = textTwo.getText().length();
+
+        double x = 0.0;
+            while (x < (WIDTH - X_LEADING_OFFSET)) {
+                moveMouseOverTextFlow(x, Y_OFFSET);
+                if (isLeading) {
+                    Assert.assertEquals(charIndex, insertionIndex);
+                } else if (isSurrogatePair) {
+                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                } else {
+                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                }
+                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                x += step();
+            }
+    }
+
+    @Test
+    public void testMultiTextNodesMultiLineRepeatedTEmojiEmbeddedInTextFlow() throws Exception {
+        addMultipleTexNodeMultiLineRepeatedEmojis();
+        Util.waitForIdle(scene);
+
+        int textOneLength = textOne.getText().length();
+        int textTwoLength = textTwo.getText().length();
+
+        for (int y = 0; y < 2; y++) {
+            double x = 0.0;
+            while (x < (WIDTH - X_LEADING_OFFSET)) {
+                moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
+                if (isLeading) {
+                    Assert.assertEquals(charIndex, insertionIndex);
+                } else if (isSurrogatePair) {
+                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                } else {
+                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                }
+                Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+                x += step();
+            }
+        }
+    }
+
+    @Test
+    public void testMultiTextNodesAlternativelyRepeatedEmojisEmbeddedInTextFlow() throws Exception {
+        addMultipleTextNodeAlternativelyRepeatedEmoji();
+        Util.waitForIdle(scene);
+
+        int textOneLength = textOne.getText().length();
+        int textTwoLength = textTwo.getText().length();
+        int textThreeLength = textTwo.getText().length();
+
+        for (int y = 0; y < 2; y++) {
+            double x = 0.0;
+            while (x < (WIDTH - X_LEADING_OFFSET)) {
+                moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
+                if (isLeading) {
+                    Assert.assertEquals(charIndex, insertionIndex);
+                } else if (isSurrogatePair) {
+                    Assert.assertEquals(charIndex, insertionIndex - 2);
+                } else {
+                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                }
+                Assert.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
                 x += step();
             }
         }
