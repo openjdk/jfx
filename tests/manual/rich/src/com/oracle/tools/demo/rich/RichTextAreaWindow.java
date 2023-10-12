@@ -26,7 +26,9 @@ package com.oracle.tools.demo.rich;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.rich.RichTextArea;
@@ -40,13 +42,22 @@ import javafx.stage.Stage;
 public class RichTextAreaWindow extends Stage {
     public final RichTextAreaDemoPane demoPane;
     public final Label status;
-    
+
     public RichTextAreaWindow(boolean useContentSize) {
         demoPane = new RichTextAreaDemoPane(useContentSize);
-        
+
+        CheckMenuItem orientation = new CheckMenuItem("Orientation: RTL");
+        orientation.setOnAction((ev) -> {
+            NodeOrientation v = (orientation.isSelected()) ?
+                NodeOrientation.RIGHT_TO_LEFT :
+                NodeOrientation.LEFT_TO_RIGHT;
+            getScene().setNodeOrientation(v);
+        });
+        // TODO save orientation in settings
+
         MenuBar mb = new MenuBar();
         // file
-        FX.menu(mb, "File");
+        FX.menu(mb, "_File");
         FX.item(mb, "New Window", () -> newWindow(false));
         FX.item(mb, "New Window, Use Content Size", () -> newWindow(true));
         FX.separator(mb);
@@ -54,9 +65,12 @@ public class RichTextAreaWindow extends Stage {
         FX.separator(mb);
         FX.item(mb, "Quit", () -> Platform.exit());
         // tests
-        FX.menu(mb, "Tests");
+        FX.menu(mb, "_Tests");
         FX.item(mb, "Stacked Vertically", () -> openMultipeStacked(true));
         FX.item(mb, "Stacked Horizontally", () -> openMultipeStacked(false));
+        // window
+        FX.menu(mb, "_Window");
+        FX.item(mb, orientation);
 
         status = new Label();
         status.setPadding(new Insets(2, 10, 2, 10));
