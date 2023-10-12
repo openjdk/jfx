@@ -1,6 +1,6 @@
 # TextInputControl Behavior
 
-## Key Binginds
+## Key Bindings
 
 |Key Combination|Platform|Function|
 |---------------|--------|--------|
