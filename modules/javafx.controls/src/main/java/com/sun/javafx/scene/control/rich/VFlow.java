@@ -792,6 +792,12 @@ public class VFlow extends Pane implements StyleResolver {
             // - StyleAttrs.createStyleString() needs a boolean
             applyStyles(cell.getContent(), a);
         }
+
+        // finally adding paragraph attributes that affect TextCell
+        String bullet = a.get(StyleAttrs.BULLET);
+        if (bullet != null) {
+            // TODO bullet: glyph + offset
+        }
         return cell;
     }
 
