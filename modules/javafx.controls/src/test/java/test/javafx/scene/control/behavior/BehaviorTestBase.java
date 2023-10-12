@@ -63,11 +63,11 @@ public abstract class BehaviorTestBase<C extends Control> {
      * <pre>
      * @param control the control being tested
      */
-    protected void initStage(C c) {
-        this.control = c;
-        stageLoader = new StageLoader(c);
-        kb = new KeyEventFirer(c);
-        c.requestFocus();
+    protected void initStage(C control) {
+        this.control = control;
+        stageLoader = new StageLoader(control);
+        kb = new KeyEventFirer(control);
+        control.requestFocus();
         Toolkit.getToolkit().firePulse();
     }
 
