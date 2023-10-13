@@ -455,7 +455,7 @@ public class PrismTextLayout implements TextLayout {
             } else {
                 for (int i = 0; i < lineIndex; i++) {
                     for (TextRun r: lines[i].runs) {
-                        if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text) && r.getStart() >= textRunStart) {
+                        if (r.getTextSpan() != null && r.getStart() >= textRunStart && r.getTextSpan().getText().equals(text)) {
                             textWidthPrevLine += r.getLength();
                         }
                     }
@@ -463,7 +463,7 @@ public class PrismTextLayout implements TextLayout {
                 int prevNodeLength = 0;
                 boolean isPrevNodeExcluded = false;
                 for (TextRun r: runs) {
-                    if (!r.getTextSpan().getText().equals(text) || (r.getTextSpan().getText().equals(text) && r.getStart() < textRunStart)) {
+                    if (!r.getTextSpan().getText().equals(text) || (r.getStart() < textRunStart && r.getTextSpan().getText().equals(text))) {
                         prevNodeLength += r.getWidth();
                         continue;
                     }
@@ -760,7 +760,7 @@ public class PrismTextLayout implements TextLayout {
         while (index < lineCount) {
             if (!textFound) {
                 for (TextRun r : lines[index].runs) {
-                    if (r.getTextSpan() == null || (r.getTextSpan().getText().equals(text) && r.getStart() == runStart)) {
+                    if (r.getTextSpan() == null || (r.getStart() == runStart && r.getTextSpan().getText().equals(text))) {
                         /* Span will present only for Rich Text.
                          * Hence making textFound as true */
                         textFound = true;

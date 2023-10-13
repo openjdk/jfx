@@ -1026,17 +1026,20 @@ public class Text extends Shape {
         GlyphList[] runs = getRuns();
         int runIndex = 0;
         if (runs.length != 0) {
-            Point2D ptInParent = localToParent(x, y);
+            double ptY = localToParent(x, y).getY();
             while (runIndex < runs.length - 1) {
-                if (ptInParent.getY() > runs[runIndex].getLocation().y
-                        && ptInParent.getY() < runs[runIndex + 1].getLocation().y) {
+                if (ptY > runs[runIndex].getLocation().y && ptY < runs[runIndex + 1].getLocation().y) {
                     break;
                 }
                 runIndex++;
             }
         }
-        int textRunStart = runs.length == 0 ? 0 : ((TextRun) runs[0]).getStart();
-        int curRunStart = runs.length == 0 ? 0 : ((TextRun) runs[runIndex]).getStart();
+        int textRunStart = 0;
+        int curRunStart = 0;
+        if (runs.length != 0) {
+            textRunStart = ((TextRun) runs[0]).getStart();
+            curRunStart = ((TextRun) runs[runIndex]).getStart();
+        }
         TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getText(), textRunStart, curRunStart);
         return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
     }
