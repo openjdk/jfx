@@ -48,8 +48,8 @@ import com.sun.javafx.scene.control.input.HList;
  * @since 22
  */
 public final class InputMap<C extends Control> {
-    /** contains user- and behavior-set key binding or function mappings */
-    private static class Entry { // TODO prename to Mapping?
+    /** contains user- and behavior-specific key bindings and function mappings */
+    private static class Entry { // TODO rename to Mapping?
         Object value;
         BehaviorBase behavior;
         Object behaviorValue;
