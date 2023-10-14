@@ -1119,7 +1119,12 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
     if (newW > 0 || newH > 0) {
         // call update_window_constraints() to let gtk_window_resize succeed, because it's bound to geometry constraints
         update_window_constraints();
-        gtk_window_resize(GTK_WINDOW(gtk_widget), newW, newH);
+
+        if (gtk_widget_get_realized(gtk_widget)) {
+            gtk_window_resize(GTK_WINDOW(gtk_widget), newW, newH);
+        } else {
+            gtk_window_set_default_size(GTK_WINDOW(gtk_widget), newW, newH);
+        }
         geometry.size_assigned = true;
         notify_window_resize();
     }
