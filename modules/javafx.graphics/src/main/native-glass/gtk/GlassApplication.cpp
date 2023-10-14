@@ -511,10 +511,8 @@ static void process_events(GdkEvent* event, gpointer data)
                     process_dnd_target(ctx, &event->dnd);
                     break;
                 case GDK_MAP:
-                    ctx->process_map();
-                    break;
-                case GDK_UNMAP:
                     // fall-through
+                case GDK_UNMAP:
                 case GDK_CLIENT_EVENT:
                 case GDK_VISIBILITY_NOTIFY:
                 case GDK_SETTING:

@@ -130,6 +130,7 @@ public:
     virtual void set_level(int) = 0;
     virtual void set_background(float, float, float) = 0;
 
+    virtual void process_realize() = 0;
     virtual void process_property_notify(GdkEventProperty*) = 0;
     virtual void process_configure(GdkEventConfigure*) = 0;
     virtual void process_focus(GdkEventFocus*) = 0;
@@ -142,7 +143,6 @@ public:
     virtual void process_mouse_cross(GdkEventCrossing*) = 0;
     virtual void process_key(GdkEventKey*) = 0;
     virtual void process_state(GdkEventWindowState*) = 0;
-    virtual void process_map() = 0;
 
     virtual void notify_state(jint) = 0;
     virtual void notify_on_top(bool) {}
@@ -180,7 +180,7 @@ protected:
     jobject jwindow;
     jobject jview;
     GtkWidget* gtk_widget;
-    GdkWindow* gdk_window;
+    GdkWindow* gdk_window = NULL;
     GdkWMFunction gdk_windowManagerFunctions;
 
     bool is_iconified;
@@ -269,7 +269,6 @@ class WindowContextTop: public WindowContextBase {
         int minw, minh, maxw, maxh; //minimum and maximum window width/height;
     } resizable;
 
-    bool map_received;
     bool on_top;
     bool is_fullscreen;
 
@@ -279,6 +278,8 @@ class WindowContextTop: public WindowContextBase {
     WindowManager wmanager;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
+
+    void process_realize();
     void process_property_notify(GdkEventProperty*);
     void process_state(GdkEventWindowState*);
     void process_configure(GdkEventConfigure*);
@@ -316,7 +317,6 @@ public:
     GtkWindow *get_gtk_window();
     void detach_from_java();
 
-    void process_map();
 protected:
     void applyShapeMask(void*, uint width, uint height);
 private:
