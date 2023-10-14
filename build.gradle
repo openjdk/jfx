@@ -3792,6 +3792,8 @@ project(":web") {
     }
 
     if (IS_COMPILE_WEBKIT) {
+        drtJar.dependsOn compileJavaDOMBinding, processResources
+        compileShimsJava.dependsOn compileJavaDOMBinding
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
 
