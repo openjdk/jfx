@@ -996,7 +996,7 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     }
 
     // Do not report if iconified, because Java side would set the state to NORMAL
-    if (jwindow && !is_iconified && !is_fullscreen) {
+    if (jwindow && !is_iconified) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
                 (is_maximized)
                     ? com_sun_glass_events_WindowEvent_MAXIMIZE
