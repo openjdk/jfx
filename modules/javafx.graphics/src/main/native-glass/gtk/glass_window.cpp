@@ -660,12 +660,8 @@ void WindowContextBase::set_cursor(GdkCursor* cursor) {
 }
 
 void WindowContextBase::set_background(float r, float g, float b) {
-    GdkRGBA transparent;
-    transparent.red = 0.0;
-    transparent.green = 0.0;
-    transparent.blue = 0.0;
-    transparent.alpha = 0.0;
-    gtk_widget_override_background_color(gtk_widget, GTK_STATE_FLAG_NORMAL, &transparent);
+    GdkRGBA rgba = {r, g, b, 1.};
+    gtk_widget_override_background_color(gtk_widget, GTK_STATE_FLAG_NORMAL, &rgba);
 }
 
 WindowContextBase::~WindowContextBase() {
