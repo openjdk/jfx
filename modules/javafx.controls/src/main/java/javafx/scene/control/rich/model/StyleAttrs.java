@@ -82,16 +82,16 @@ public class StyleAttrs {
     });
 
     /** Space above the paragraph (top padding) attribute */
-    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true, StyleAttrs::generatePadding);
+    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true, null);
 
     /** Space below the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true, StyleAttrs::generatePadding);
+    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true, null);
 
     /** Space to the left of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true, StyleAttrs::generatePadding);
+    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true, null);
 
     /** Space to the right of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true, StyleAttrs::generatePadding);
+    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true, null);
 
     /** Strike-through style attribute */
     public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false, (a, v) -> {
@@ -148,15 +148,6 @@ public class StyleAttrs {
         return new Builder().set(CSS, new CssStyles(style, names)).build();
     }
 
-    private static String generatePadding(StyleAttrs a, Double value) {
-        // TODO check border attributes?
-        double top = a.getDouble(SPACE_ABOVE, 0);
-        double right = a.getDouble(SPACE_RIGHT, 0);
-        double bottom = a.getDouble(SPACE_BELOW, 0);
-        double left = a.getDouble(SPACE_LEFT, 0);
-        return "-fx-padding:" + top + ' ' + right + ' ' + bottom + ' ' + left + ";";
-    }
-
     @Override
     public boolean equals(Object x) {
         if (x == this) {
@@ -199,9 +190,20 @@ public class StyleAttrs {
     }
 
     /**
+     * Returns true if the attribute is present; false otherwise.
+     * @param a the attribute
+     * @return true if the attribute is present
+     */
+    public boolean contains(StyleAttribute<?> a) {
+        return attributes.containsKey(a);
+    }
+
+    /**
      * Converts the attributes into a single direct style string and returns the resulting (can be null).
      * @return the style string
      */
+    // TODO it is possible to remove this altogether from StyleAttrs, and instead generate the style string in VFlow
+    // (and even cache them there)
     public String getStyle() {
         if (style == null) {
             style = createStyleString();
@@ -542,6 +544,16 @@ public class StyleAttrs {
          */
         public Builder setBold(boolean on) {
             set(BOLD, Boolean.valueOf(on));
+            return this;
+        }
+
+        /**
+         * Sets the BULLET attribute.
+         * @param bullet the bullet character
+         * @return this Builder instance
+         */
+        public Builder setBullet(String bullet) {
+            set(BULLET, bullet);
             return this;
         }
 

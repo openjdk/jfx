@@ -28,7 +28,9 @@
 package com.sun.javafx.scene.control.rich;
 
 import java.util.Objects;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -235,5 +237,16 @@ public final class TextCell extends BorderPane {
      */
     public void addSquiggly(int start, int end, String... styles) {
         HighlightShape.addTo(content, HighlightShape.Type.SQUIGGLY, start, end, styles);
+    }
+
+    /**
+     * Sets the bullet decoration by adding a Label with the specified character.
+     * @param bullet
+     */
+    public void setBullet(String bullet) {
+        Label b = new Label(bullet);
+        b.setAlignment(Pos.TOP_CENTER);
+        // TODO get some attributes from the first text segment - font? color? or use default paragraph attrs?
+        setLeft(b);
     }
 }

@@ -135,6 +135,7 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         addParagraph(this::createRect);
         nl(2);
 
+        /*
         Random r = new Random();
         for(int line=0; line<100; line++) {
             int ct = r.nextInt(10);
@@ -156,6 +157,7 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
             }
             nl();
         }
+        */
 
         nl();
         addSegment("\t\t終 The End.", "-fx-font-size:200%;", null);

@@ -789,7 +789,7 @@ public class VFlow extends Pane implements StyleResolver {
         if (a != null) {
             // - need to resolve paragraph attributes only
             // - Resolver needs to separate character/paragraph attributes
-            // - StyleAttrs.createStyleString() needs a boolean
+            // - StyleAttrs.createStyleString() might need a boolean
             applyStyles(cell.getContent(), a);
         }
 
@@ -797,10 +797,45 @@ public class VFlow extends Pane implements StyleResolver {
         if (a != null) {
             String bullet = a.get(StyleAttrs.BULLET);
             if (bullet != null) {
-                // TODO bullet: glyph + offset
+                cell.setBullet(bullet);
             }
         }
+
+        // apply attributes to the TextCell (outer container)
+        if (a != null) {
+            String style = generateTextCellStyle(a);
+            cell.setStyle(style);
+        }
         return cell;
+    }
+
+    private String generateTextCellStyle(StyleAttrs a) {
+        StringBuilder sb = null;
+        if (
+            a.contains(StyleAttrs.SPACE_ABOVE) ||
+            a.contains(StyleAttrs.SPACE_RIGHT) ||
+            a.contains(StyleAttrs.SPACE_BELOW) ||
+            a.contains(StyleAttrs.SPACE_LEFT)) 
+        {
+            // TODO border attributes?
+            double top = a.getDouble(StyleAttrs.SPACE_ABOVE, 0);
+            double right = a.getDouble(StyleAttrs.SPACE_RIGHT, 0);
+            double bottom = a.getDouble(StyleAttrs.SPACE_BELOW, 0);
+            double left = a.getDouble(StyleAttrs.SPACE_LEFT, 0);
+            if (sb == null) {
+                sb = new StringBuilder();
+            }
+            sb.append("-fx-padding:");
+            sb.append(top);
+            sb.append(' ');
+            sb.append(right);
+            sb.append(' ');
+            sb.append(bottom);
+            sb.append(' ');
+            sb.append(left);
+            sb.append(";");
+        }
+        return sb == null ? null : sb.toString();
     }
 
     private Text createTextNode(StyledSegment seg) {

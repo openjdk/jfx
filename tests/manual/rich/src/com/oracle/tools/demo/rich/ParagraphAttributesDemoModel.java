@@ -60,6 +60,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setSpaceAbove(20).
             setBackground(Color.gray(0.95, 0.5)).
+            setBullet("•").
             build());
         nl();
 
@@ -68,14 +69,16 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setSpaceBelow(20).
             setBackground(Color.gray(0.9, 0.5)).
+            setBullet("◦").
             build());
         nl();
 
-        addSegment("✓ Space Left");
+        addSegment("✓ Space Left " + words(50));
         setParagraphAttributes(StyleAttrs.
             builder().
             setSpaceLeft(20).
             setBackground(Color.gray(0.85, 0.5)).
+            setBullet("∙").
             build());
         nl();
 
@@ -84,6 +87,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
             builder().
             setSpaceRight(20).
             setBackground(Color.gray(0.8, 0.5)).
+            setBullet("‣").
             build());
         nl();
 
