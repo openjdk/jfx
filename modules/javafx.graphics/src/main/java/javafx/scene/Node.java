@@ -1961,7 +1961,7 @@ public abstract class Node implements EventTarget, Styleable {
     public Node lookup(String selector) {
         if (selector == null) return null;
         Selector s = Selector.createSelector(selector);
-        return s != null && s.applies(this) ? this : null;
+        return selectorMatches(s) ? this : null;
     }
 
     /**
@@ -1990,7 +1990,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @param results The results. This will never be null.
      */
     List<Node> lookupAll(Selector selector, List<Node> results) {
-        if (selector.applies(this)) {
+        if (selectorMatches(selector)) {
             // Lazily create the set to reduce some trash.
             if (results == null) {
                 results = new LinkedList<>();
@@ -2022,6 +2022,19 @@ public abstract class Node implements EventTarget, Styleable {
         if (getParent() != null) {
             getParent().toFront(this);
         }
+    }
+
+    /**
+     * Checks whether the provided selector matches the node with both styles and pseudo states.
+     * @param s selector to match
+     * @return {@code true} if the selector matches
+     */
+    private boolean selectorMatches(Selector s){
+        boolean matches = s != null && s.applies(this);
+        if(matches && !s.createMatch().getPseudoClasses().isEmpty()){
+            matches = s.stateMatches(this, this.getPseudoClassStates());
+        }
+        return matches;
     }
 
     // TODO: need to verify whether this is OK to do starting from a node in

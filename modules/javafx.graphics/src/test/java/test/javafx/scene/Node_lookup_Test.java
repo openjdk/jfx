@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,34 +40,40 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class Node_lookup_Test {
-    //                   Group & #root
-    //                    /        \
-    //                 #a.c       .b.c:testPseudo
-    //                /    \         \
-    //    .d:testPseudo1    #e     .d:testPseudo1:testPseudo2
-    private Group root, ac, bc, d, e, d2;
+    //                  Group & #root
+    //                /      \        \
+    //              #a      .b.c       .f:testPseudo
+    //             /   \        \         /           \
+    //           .d    #e        .d   .g:testPseudo1   .h.g:testPseudo1:testPseudo2
+    private Group root, a, bc, d, e, d2, f, g, hg;
 
     @Before public void setup() {
         root = new Group();
         root.setId("root");
-        ac = new Group();
-        ac.setId("a");
-        ac.getStyleClass().addAll("c");
+        a = new Group();
+        a.setId("a");
         d = new Group();
         d.getStyleClass().add("d");
-        d.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"),true);
         e = new Group();
         e.setId("e");
         bc = new Group();
         bc.getStyleClass().addAll("b", "c");
-        bc.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo"),true);
         d2 = new Group();
         d2.getStyleClass().add("d");
-        d2.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"),true);
-        d2.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo2"),true);
-        ParentShim.getChildren(root).addAll(ac, bc);
-        ParentShim.getChildren(ac).addAll(d, e);
+        f = new Group();
+        f.getStyleClass().add("f");
+        f.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo"),true);
+        g = new Group();
+        g.getStyleClass().add("g");
+        g.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"),true);
+        hg = new Group();
+        hg.getStyleClass().addAll("h", "g");
+        hg.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"),true);
+        hg.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo2"),true);
+        ParentShim.getChildren(root).addAll(a, bc, f);
+        ParentShim.getChildren(a).addAll(d, e);
         ParentShim.getChildren(bc).addAll(d2);
+        ParentShim.getChildren(f).addAll(g, hg);
     }
 
     @Test public void quickTest() {
@@ -75,7 +81,7 @@ public class Node_lookup_Test {
         assertSame(root, found);
 
         found = root.lookup("#a");
-        assertSame(ac, found);
+        assertSame(a, found);
 
         found = root.lookup("#a > .d");
         assertSame(d, found);
@@ -87,7 +93,7 @@ public class Node_lookup_Test {
         assertSame(d2, found);
 
         found = root.lookup(".c .d");
-        assertSame(d, found);
+        assertSame(d2, found);
 
         found = root.lookup(".b");
         assertSame(bc, found);
@@ -96,7 +102,7 @@ public class Node_lookup_Test {
     @Test public void lookupAllTest() {
         Set<Node> nodes = root.lookupAll("#a");
         assertEquals(1, nodes.size());
-        assertTrue(nodes.contains(ac));
+        assertTrue(nodes.contains(a));
 
         nodes = root.lookupAll(".d");
         assertEquals(2, nodes.size());
@@ -106,30 +112,38 @@ public class Node_lookup_Test {
 
     @Test
     public void lookupPsuedoTest(){
-        Set<Node> nodes = root.lookupAll(".d:testPseudo2");
+        Set<Node> nodes = root.lookupAll(".h:testPseudo2");
         assertEquals(1, nodes.size());
-        assertTrue(nodes.contains(d2));
+        assertTrue(nodes.contains(hg));
 
-        Node found = root.lookup(".d:testPseudo2");
-        assertSame(d2, found);
+        Node found = root.lookup(".h:testPseudo2");
+        assertSame(hg, found);
 
-        found = root.lookup(".d:testPseudo1:testPseudo2");
-        assertSame(d2, found);
+        found = root.lookup(":testPseudo2");
+        assertSame(hg, found);
 
-        nodes = root.lookupAll(".d:testPseudo1");
+        found = root.lookup(".h:testPseudo1:testPseudo2");
+        assertSame(hg, found);
+
+        nodes = root.lookupAll(".g:testPseudo1");
         assertEquals(2, nodes.size());
-        assertTrue(nodes.contains(d));
-        assertTrue(nodes.contains(d2));
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
 
-        nodes = root.lookupAll("#a > .d:testPseudo1");
+        nodes = root.lookupAll(":testPseudo1");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f > .h:testPseudo1");
         assertEquals(1, nodes.size());
-        assertTrue(nodes.contains(d));
+        assertTrue(nodes.contains(hg));
 
-        nodes = root.lookupAll(".c:testPseudo > .d:testPseudo1");
+        nodes = root.lookupAll(".f:testPseudo > .h:testPseudo1");
         assertEquals(1, nodes.size());
-        assertTrue(nodes.contains(d2));
+        assertTrue(nodes.contains(hg));
 
-        nodes = root.lookupAll(".d:randomPseudo");
+        nodes = root.lookupAll(".f:randomPseudo");
         assertEquals(0, nodes.size());
     }
 }
