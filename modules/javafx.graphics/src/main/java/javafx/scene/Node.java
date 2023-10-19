@@ -1986,8 +1986,8 @@ public abstract class Node implements EventTarget, Styleable {
      * Used by Node and Parent for traversing the tree and adding all nodes which
      * match the given selector.
      *
-     * @param selector The Selector. This will never be null.
-     * @param results The results. This will never be null.
+     * @param selector The Selector.
+     * @param results The results.
      */
     List<Node> lookupAll(Selector selector, List<Node> results) {
         if (selectorMatches(selector)) {

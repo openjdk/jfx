@@ -111,7 +111,7 @@ public class Node_lookup_Test {
     }
 
     @Test
-    public void lookupPsuedoTest(){
+    public void lookupPseudoTest(){
         Set<Node> nodes = root.lookupAll(".h:testPseudo2");
         assertEquals(1, nodes.size());
         assertTrue(nodes.contains(hg));
