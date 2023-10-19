@@ -1988,6 +1988,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param selector The Selector.
      * @param results The results.
+     * @return List of matching nodes. The returned value can be null.
      */
     List<Node> lookupAll(Selector selector, List<Node> results) {
         if (selectorMatches(selector)) {
