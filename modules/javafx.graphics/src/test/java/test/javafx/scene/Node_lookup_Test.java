@@ -111,7 +111,7 @@ public class Node_lookup_Test {
     }
 
     @Test
-    public void lookupPseudoTest(){
+    public void lookupPseudoTest() {
         Set<Node> nodes = root.lookupAll(".h:testPseudo2");
         assertEquals(1, nodes.size());
         assertTrue(nodes.contains(hg));
@@ -144,6 +144,54 @@ public class Node_lookup_Test {
         assertTrue(nodes.contains(hg));
 
         nodes = root.lookupAll(".f:randomPseudo");
+        assertEquals(0, nodes.size());
+    }
+
+    /**
+     * Verifies that the lookup ignores pseudo classes when selector contains no explicit pseudo class.
+     */
+    @Test
+    public void lookupPseudoTest2() {
+        // Except root node all the other nodes (f, g, hg) have pseudo classes set to them
+        Set<Node> nodes = root.lookupAll(".g");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll("#root .g");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f .g");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f .h");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f > .h");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".h");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll("#root > .f");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(f));
+
+        nodes = root.lookupAll("#root .f");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(f));
+
+        nodes = root.lookupAll(".random");
+        assertEquals(0, nodes.size());
+
+        nodes = root.lookupAll(".random .h");
         assertEquals(0, nodes.size());
     }
 }
