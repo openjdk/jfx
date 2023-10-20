@@ -148,7 +148,7 @@ public class Node_lookup_Test {
     }
 
     /**
-     * Verifies that the lookup ignores pseudo classes when selector contains no explicit pseudo class.
+     * Verifies that the lookup ignores pseudo classes when selector contains no explicit pseudo class, but all the nodes have pseudo classes set to them.
      */
     @Test
     public void lookupPseudoTest2() {
@@ -193,5 +193,48 @@ public class Node_lookup_Test {
 
         nodes = root.lookupAll(".random .h");
         assertEquals(0, nodes.size());
+    }
+
+    /**
+     * Verifies that the lookup ignores pseudo classes when selector contains no explicit pseudo class.
+     */
+    @Test
+    public void lookupPseudoTest3() {
+        Group root = new Group();
+        root.setId("root");
+
+        Group xy = new Group();
+        xy.getStyleClass().addAll("x", "y");
+
+        Group x = new Group();
+        x.getStyleClass().addAll("x");
+
+        Group x1 = new Group();
+        x1.getStyleClass().addAll("x");
+        x1.pseudoClassStateChanged(PseudoClass.getPseudoClass("pseudo"), true);
+
+        ParentShim.getChildren(root).addAll(x, x1, xy);
+
+        Set<Node> nodes = root.lookupAll(".x");
+        assertEquals(3, nodes.size());
+        assertTrue(nodes.contains(x));
+        assertTrue(nodes.contains(x1));
+        assertTrue(nodes.contains(xy));
+
+        nodes = root.lookupAll(".x:pseudo");
+        assertTrue(nodes.contains(x1));
+
+        nodes = root.lookupAll("#root .x");
+        assertEquals(3, nodes.size());
+        assertTrue(nodes.contains(x));
+        assertTrue(nodes.contains(x1));
+        assertTrue(nodes.contains(xy));
+
+        nodes = root.lookupAll("#root .x:pseudo");
+        assertTrue(nodes.contains(x1));
+
+        nodes = root.lookupAll(".x:random");
+        assertEquals(0, nodes.size());
+
     }
 }
