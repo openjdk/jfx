@@ -57,19 +57,6 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         addSegment("RichTextArea Control", "-fx-font-size:200%;", UNDERLINE);
         nl(2);
 
-        addSegment("Paragraph Attributes", null, BOLD, UNDERLINE);
-        nl();
-        setParagraphAttributes(StyleAttrs.
-            builder().
-            setBackground(Color.LIGHTSALMON).
-            setItalic(true).
-            build());
-        addSegment("- background").nl();
-        nl(2);
-
-        addImage(DemoModel.class.getResourceAsStream("animated.gif"));
-        addSegment("  Fig. 1 Embedded animated GIF image.", null, GRAY, ITALIC);
-        nl(2);
         addSegment("/**", null, RED, CODE);
         nl();
         addSegment(" * Syntax Highlight Demo.", null, RED, CODE);
@@ -136,6 +123,10 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         nl(2);
 
         ParagraphAttributesDemoModel.insert(this);
+
+        addImage(DemoModel.class.getResourceAsStream("animated.gif"));
+        addSegment("  Fig. 1 Embedded animated GIF image.", null, GRAY, ITALIC);
+        nl(2);
 
         /*
         Random r = new Random();

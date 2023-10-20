@@ -37,8 +37,7 @@ public class StyleAttribute<T> {
      * Constructs a style attribute.
      * @param name the attribute name
      * @param type the attribute type
-     * @param isParagraph true specifies a paragraph attribute, false specifies a character attribute
-     * @param generator the CSS style generator (can be null)
+     * @param isParagraph specifies a paragraph attribute (true), or a character attribute (false)
      */
     public StyleAttribute(String name, Class<T> type, boolean isParagraph) {
         this.name = name;

@@ -134,7 +134,7 @@ public class CellArrangement {
             } else if (y < cell.getCellHeight()) {
                 if (r instanceof TextFlow t) {
                     double x = cellX - pad.getLeft();
-                    Point2D p = new Point2D(x, y);
+                    Point2D p = new Point2D(x - r.getLayoutX(), y - r.getLayoutY());
                     HitInfo h = t.hitTest(p);
                     int ii = h.getInsertionIndex();
                     int ci = h.getCharIndex();
@@ -206,7 +206,10 @@ public class CellArrangement {
                 } else {
                     sp = 0.0;
                 }
-                return CaretInfo.create(xoff - xoffset, cell.getY() + yoff, sp, path);
+
+                double dx = r.getLayoutX() + xoff - xoffset;
+                double dy = r.getLayoutY() + cell.getY() + yoff;
+                return CaretInfo.create(dx, dy, sp, path);
             }
         }
         return null;
