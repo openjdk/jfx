@@ -235,6 +235,5 @@ public class Node_lookup_Test {
 
         nodes = root.lookupAll(".x:random");
         assertEquals(0, nodes.size());
-
     }
 }
