@@ -62,21 +62,21 @@ public class Node_lookup_Test {
         d2.getStyleClass().add("d");
         f = new Group();
         f.getStyleClass().add("f");
-        f.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo"),true);
+        f.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo"), true);
         g = new Group();
         g.getStyleClass().add("g");
-        g.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"),true);
+        g.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"), true);
         hg = new Group();
         hg.getStyleClass().addAll("h", "g");
-        hg.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"),true);
-        hg.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo2"),true);
+        hg.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"), true);
+        hg.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo2"), true);
         ParentShim.getChildren(root).addAll(a, bc, f);
         ParentShim.getChildren(a).addAll(d, e);
         ParentShim.getChildren(bc).addAll(d2);
         ParentShim.getChildren(f).addAll(g, hg);
     }
 
-    @Test public void quickTest() {
+    @Test public void test_lookup_on_nodes_without_pseudo_classes() {
         Node found = root.lookup("Group");
         assertSame(root, found);
 
@@ -99,7 +99,7 @@ public class Node_lookup_Test {
         assertSame(bc, found);
     }
 
-    @Test public void lookupAllTest() {
+    @Test public void test_lookupAll_on_nodes_without_pseudo_classes() {
         Set<Node> nodes = root.lookupAll("#a");
         assertEquals(1, nodes.size());
         assertTrue(nodes.contains(a));
@@ -111,7 +111,7 @@ public class Node_lookup_Test {
     }
 
     @Test
-    public void lookupPseudoTest() {
+    public void test_lookup_and_lookupAll_on_nodes_with_pseudo_classes() {
         Set<Node> nodes = root.lookupAll(".h:testPseudo2");
         assertEquals(1, nodes.size());
         assertTrue(nodes.contains(hg));
@@ -151,7 +151,7 @@ public class Node_lookup_Test {
      * Verifies that the lookup ignores pseudo classes when selector contains no explicit pseudo class, but all the nodes have pseudo classes set to them.
      */
     @Test
-    public void lookupPseudoTest2() {
+    public void test_lookupAll_on_nodes_with_pseudo_classes_ignoring_pseudo_classes_in_selector() {
         // Except root node all the other nodes (f, g, hg) have pseudo classes set to them
         Set<Node> nodes = root.lookupAll(".g");
         assertEquals(2, nodes.size());
@@ -199,7 +199,7 @@ public class Node_lookup_Test {
      * Verifies that the lookup ignores pseudo classes when selector contains no explicit pseudo class.
      */
     @Test
-    public void lookupPseudoTest3() {
+    public void test_lookupAll_on_nodes_with_same_style_and_different_pseudo_classes() {
         Group root = new Group();
         root.setId("root");
 

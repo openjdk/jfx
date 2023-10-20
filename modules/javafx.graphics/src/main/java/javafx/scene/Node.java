@@ -2032,7 +2032,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private boolean selectorMatches(Selector s) {
         boolean matches = s != null && s.applies(this);
-        if(matches && !s.createMatch().getPseudoClasses().isEmpty()){
+        if (matches && !s.createMatch().getPseudoClasses().isEmpty()) {
             matches = s.stateMatches(this, this.getPseudoClassStates());
         }
         return matches;
