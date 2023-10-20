@@ -46,74 +46,51 @@ public class StyleAttrs {
     public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
 
     /** Paragraph background attribute */
-    public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, false, (a, v) -> {
-        String color = RichUtils.toCssColor(v);
-        return "-fx-background-color:" + color + ";";
-    });
+    public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, true);
 
     /** Bullet point paragraph attribute */
-    public static final StyleAttribute<String> BULLET = new StyleAttribute<>("BULLET", String.class, false, null);
+    public static final StyleAttribute<String> BULLET = new StyleAttribute<>("BULLET", String.class, false);
 
     /** Bold typeface attribute */
-    public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false, (a, v) -> {
-        return v ? "-fx-font-weight:bold;" : "-fx-font-weight:normal;";
-    });
+    public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false);
 
-    public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, false, null);
+    public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, false);
 
     /** Font family attribute */
-    public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false, (a, v) -> {
-        return "-fx-font-family:'" + v + "';";
-    });
+    public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false);
 
     /** Font size attribute, in percent, relative to the base font size. */
-    public static final StyleAttribute<Integer> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Integer.class, false, (a, v) -> {
-        return "-fx-font-size:" + v + "%;";
-    });
+    public static final StyleAttribute<Integer> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Integer.class, false);
 
     /** Italic type face attribute */
-    public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, false, (a, v) -> {
-        return v ? "-fx-font-style:italic;" : "";
-    });
+    public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, false);
 
     /** Line spacing paragraph attribute */
-    public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true, (a, v) -> {
-        return "-fx-line-spacing:" + v + ";";
-    });
+    public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true);
 
     /** Space above the paragraph (top padding) attribute */
-    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true, null);
+    public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true);
 
     /** Space below the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true, null);
+    public static final StyleAttribute<Double> SPACE_BELOW = new StyleAttribute<>("SPACE_BELOW", Double.class, true);
 
     /** Space to the left of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true, null);
+    public static final StyleAttribute<Double> SPACE_LEFT = new StyleAttribute<>("SPACE_LEFT", Double.class, true);
 
     /** Space to the right of the paragraph (bottom padding) attribute */
-    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true, null);
+    public static final StyleAttribute<Double> SPACE_RIGHT = new StyleAttribute<>("SPACE_RIGHT", Double.class, true);
 
     /** Strike-through style attribute */
-    public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false, (a, v) -> {
-        return v ? "-fx-strikethrough:true;" : "";
-    });
+    public static final StyleAttribute<Boolean> STRIKE_THROUGH = new StyleAttribute<>("STRIKE_THROUGH", Boolean.class, false);
 
     /** Paragraph text alignment attribute */
-    public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true, (a, v) -> {
-        String alignment = RichUtils.toCss(v);
-        return "-fx-text-alignment:" + alignment + ";";
-    });
+    public static final StyleAttribute<TextAlignment> TEXT_ALIGNMENT = new StyleAttribute<>("TEXT_ALIGNMENT", TextAlignment.class, true);
 
     /** Text color attrbute */
-    public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, false, (a, v) -> {
-        String color = RichUtils.toCssColor(v);
-        return "-fx-fill:" + color + ";";
-    });
+    public static final StyleAttribute<Color> TEXT_COLOR = new StyleAttribute<>("TEXT_COLOR", Color.class, false);
 
     /** Underline style attribute */
-    public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, false, (a, v) -> {
-        return v ? "-fx-underline:true;" : "";
-    });
+    public static final StyleAttribute<Boolean> UNDERLINE = new StyleAttribute<>("UNDERLINE", Boolean.class, false);
     
     private final HashMap<StyleAttribute<?>,Object> attributes;
     private transient String style;
@@ -204,37 +181,37 @@ public class StyleAttrs {
      */
     // TODO it is possible to remove this altogether from StyleAttrs, and instead generate the style string in VFlow
     // (and even cache them there)
-    public String getStyle() {
-        if (style == null) {
-            style = createStyleString();
-        }
-        return style;
-    }
+//    public String getStyle() {
+//        if (style == null) {
+//            style = createStyleString();
+//        }
+//        return style;
+//    }
 
-    private String createStyleString() {
-        if (attributes.size() == 0) {
-            return null;
-        }
-
-        // the idea here is to avoid duplicate css strings in a situation when one css rule
-        // depends on multiple attributes.
-        HashSet<String> dedup = new HashSet<>();
-        for (StyleAttribute<?> a : attributes.keySet()) {
-            Object v = attributes.get(a);
-            StyleAttribute.Generator g = a.getGenerator();
-            if (g != null) {
-                String s = g.createCssStyle(this, v);
-                dedup.add(s);
-            }
-        }
-
-        StringBuilder sb = new StringBuilder(32);
-        for (String s : dedup) {
-            sb.append(s);
-        }
-
-        return sb.toString();
-    }
+//    private String createStyleString() {
+//        if (attributes.size() == 0) {
+//            return null;
+//        }
+//
+//        // the idea here is to avoid duplicate css strings in a situation when one css rule
+//        // depends on multiple attributes.
+//        HashSet<String> dedup = new HashSet<>();
+//        for (StyleAttribute<?> a : attributes.keySet()) {
+//            Object v = attributes.get(a);
+//            StyleAttribute.Generator g = a.getGenerator();
+//            if (g != null) {
+//                String s = g.createCssStyle(this, v);
+//                dedup.add(s);
+//            }
+//        }
+//
+//        StringBuilder sb = new StringBuilder(32);
+//        for (String s : dedup) {
+//            sb.append(s);
+//        }
+//
+//        return sb.toString();
+//    }
 
     /** 
      * Creates a new StyleAttrs instance by first copying attrirutes from this instance,

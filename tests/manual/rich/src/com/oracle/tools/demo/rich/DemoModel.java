@@ -72,19 +72,19 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         nl(2);
         addSegment("/**", null, RED, CODE);
         nl();
-        addSegment(" * RichTextArea Demo.", null, RED, CODE);
+        addSegment(" * Syntax Highlight Demo.", null, RED, CODE);
         nl();
         addSegment(" */", null, RED, CODE);
         nl();
         addSegment("public class ", null, GREEN, CODE);
-        addSegment("RichTextAreaDemo ", null, CODE);
+        addSegment("SyntaxHighlightDemo ", null, CODE);
         addSegment("extends ", null, GREEN, CODE);
         addSegment("Application {", null, CODE);
         nl();
         addSegment("\tpublic static void", null, GREEN, CODE);
         addSegment(" main(String[] args) {", null, CODE);
         nl();
-        addSegment("\t\tApplication.launch(RichTextAreaDemoApp.", null, CODE);
+        addSegment("\t\tApplication.launch(SyntaxHighlightDemo.", null, CODE);
         addSegment("class", null, CODE, GREEN);
         addSegment(", args);", null, CODE);
         nl();
@@ -134,6 +134,8 @@ public class DemoModel extends SimpleReadOnlyStyledModel {
         
         addParagraph(this::createRect);
         nl(2);
+
+        ParagraphAttributesDemoModel.insert(this);
 
         /*
         Random r = new Random();

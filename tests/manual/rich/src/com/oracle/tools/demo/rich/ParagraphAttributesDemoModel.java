@@ -30,129 +30,133 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 
 public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
-    private final StyleAttrs TITLE = StyleAttrs.builder().
+    private final static StyleAttrs TITLE = StyleAttrs.builder().
         setFontSize(200).
         setUnderline(true).
         build();
 
     public ParagraphAttributesDemoModel() {
-        addSegment("Paragraph Attributes", TITLE);
-        nl(2);
+        insert(this);
+    }
+    
+    public static void insert(SimpleReadOnlyStyledModel m) {
+        m.addSegment("Paragraph Attributes", TITLE);
+        m.nl(2);
 
-        addSegment("✓ Opaque Background Color");
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Opaque Background Color");
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.LIGHTGREEN).
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Translucent Background Color");
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Translucent Background Color");
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(FX.alpha(Color.LIGHTGREEN, 0.5)).
             build());
-        nl();
+        m.nl();
 
         // space
 
-        addSegment("✓ Space Above");
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Space Above");
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setSpaceAbove(20).
             setBackground(Color.gray(0.95, 0.5)).
             setBullet("•").
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Space Below");
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Space Below");
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setSpaceBelow(20).
             setBackground(Color.gray(0.9, 0.5)).
             setBullet("◦").
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Space Left " + words(50));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Space Left " + words(50));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setSpaceLeft(20).
             setBackground(Color.gray(0.85, 0.5)).
             setBullet("∙").
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Space Right " + words(10));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Space Right " + words(10));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setSpaceRight(20).
             setBackground(Color.gray(0.8, 0.5)).
             setBullet("‣").
             build());
-        nl();
+        m.nl();
 
         // text alignment
 
-        addSegment("✓ Text Alignment Left " + words(20));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Text Alignment Left " + words(20));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.gray(0.95, 0.5)).
             setTextAlignment(TextAlignment.LEFT).
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Text Alignment Right " + words(20));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Text Alignment Right " + words(20));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.gray(0.9, 0.5)).
             setTextAlignment(TextAlignment.RIGHT).
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Text Alignment Center " + words(20));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Text Alignment Center " + words(20));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.gray(0.85, 0.5)).
             setTextAlignment(TextAlignment.CENTER).
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Text Alignment Justify " + words(20));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Text Alignment Justify " + words(20));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.gray(0.8, 0.5)).
             setTextAlignment(TextAlignment.JUSTIFY).
             build());
-        nl();
+        m.nl();
 
         // line spacing
 
-        addSegment("✓ Line Spacing 0 " + words(200));
-        highlight(50, 100, FX.alpha(Color.RED, 0.4));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Line Spacing 0 " + words(200));
+        m.highlight(50, 100, FX.alpha(Color.RED, 0.4));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.gray(0.95, 0.5)).
             setLineSpacing(0).
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Line Spacing 20 " + words(200));
-        highlight(50, 100, FX.alpha(Color.RED, 0.4));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Line Spacing 20 " + words(200));
+        m.highlight(50, 100, FX.alpha(Color.RED, 0.4));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.gray(0.9, 0.5)).
             setLineSpacing(20).
             build());
-        nl();
+        m.nl();
 
-        addSegment("✓ Line Spacing 40 " + words(200));
-        highlight(50, 100, FX.alpha(Color.RED, 0.4));
-        setParagraphAttributes(StyleAttrs.
+        m.addSegment("✓ Line Spacing 40 " + words(200));
+        m.highlight(50, 100, FX.alpha(Color.RED, 0.4));
+        m.setParagraphAttributes(StyleAttrs.
             builder().
             setBackground(Color.gray(0.9, 0.5)).
             setLineSpacing(40).
             build());
-        nl();
+        m.nl();
     }
 
     private static String words(int count) {

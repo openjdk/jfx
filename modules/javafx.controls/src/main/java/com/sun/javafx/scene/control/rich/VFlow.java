@@ -790,7 +790,7 @@ public class VFlow extends Pane implements StyleResolver {
             // - need to resolve paragraph attributes only
             // - Resolver needs to separate character/paragraph attributes
             // - StyleAttrs.createStyleString() might need a boolean
-            applyStyles(cell.getContent(), a);
+            applyStyles(cell.getContent(), a, true);
         }
 
         // finally adding paragraph attributes that affect TextCell
@@ -803,39 +803,10 @@ public class VFlow extends Pane implements StyleResolver {
 
         // apply attributes to the TextCell (outer container)
         if (a != null) {
-            String style = generateTextCellStyle(a);
+            String style = StyleUtil.generateTextCellStyle(a);
             cell.setStyle(style);
         }
         return cell;
-    }
-
-    private String generateTextCellStyle(StyleAttrs a) {
-        StringBuilder sb = null;
-        if (
-            a.contains(StyleAttrs.SPACE_ABOVE) ||
-            a.contains(StyleAttrs.SPACE_RIGHT) ||
-            a.contains(StyleAttrs.SPACE_BELOW) ||
-            a.contains(StyleAttrs.SPACE_LEFT)) 
-        {
-            // TODO border attributes?
-            double top = a.getDouble(StyleAttrs.SPACE_ABOVE, 0);
-            double right = a.getDouble(StyleAttrs.SPACE_RIGHT, 0);
-            double bottom = a.getDouble(StyleAttrs.SPACE_BELOW, 0);
-            double left = a.getDouble(StyleAttrs.SPACE_LEFT, 0);
-            if (sb == null) {
-                sb = new StringBuilder();
-            }
-            sb.append("-fx-padding:");
-            sb.append(top);
-            sb.append(' ');
-            sb.append(right);
-            sb.append(' ');
-            sb.append(bottom);
-            sb.append(' ');
-            sb.append(left);
-            sb.append(";");
-        }
-        return sb == null ? null : sb.toString();
     }
 
     private Text createTextNode(StyledSegment seg) {
@@ -843,15 +814,15 @@ public class VFlow extends Pane implements StyleResolver {
         Text t = new Text(text);
         StyleAttrs a = seg.getStyleAttrs(this);
         if (a != null) {
-            applyStyles(t, a);
+            applyStyles(t, a, false);
         }
         return t;
     }
 
-    private void applyStyles(Node n, StyleAttrs a) {
+    private void applyStyles(Node n, StyleAttrs a, boolean forParagraph) {
         CssStyles css = a.getCssStyles();
         if (css == null) {
-            String style = a.getStyle();
+            String style = StyleUtil.getStyleString(a, forParagraph);
             n.setStyle(style);
         } else {
             n.setStyle(css.style());

@@ -29,25 +29,9 @@ package javafx.scene.control.rich.model;
  * Style Attribute provides a way to specify style in the RichTextArea.
  */
 public class StyleAttribute<T> {
-    @FunctionalInterface
-    public interface Generator<T> {
-        /**
-         * Creates a direct style string derived from the attribute value.
-         * This method must return a valid CSS style followed by a semicolon, for example:
-         * {@code "-fx-font-weight:bold;"}
-         * This method must silently ignore any errors or values of incorrect type.
-         *
-         * @param a the parent StyleAttrs instance
-         * @param value the attribute value
-         * @return the direct style string
-         */
-        public String createCssStyle(StyleAttrs a, T value);
-    }
-
     private final String name;
     private final Class<T> type;
     private final boolean isParagraph;
-    private final Generator generator;
 
     /**
      * Constructs a style attribute.
@@ -56,11 +40,10 @@ public class StyleAttribute<T> {
      * @param isParagraph true specifies a paragraph attribute, false specifies a character attribute
      * @param generator the CSS style generator (can be null)
      */
-    public StyleAttribute(String name, Class<T> type, boolean isParagraph, Generator<T> generator) {
+    public StyleAttribute(String name, Class<T> type, boolean isParagraph) {
         this.name = name;
         this.type = type;
         this.isParagraph = isParagraph;
-        this.generator = generator;
     }
 
     /**
@@ -86,14 +69,6 @@ public class StyleAttribute<T> {
      */
     public boolean isParagraphAttribute() {
         return isParagraph;
-    }
-
-    /**
-     * Returns the generator instance.
-     * @return the generator instance
-     */
-    public Generator getGenerator() {
-        return generator;
     }
 
     @Override
