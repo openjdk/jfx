@@ -41,6 +41,7 @@ import javafx.beans.property.StringProperty;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPolicy;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import java.security.AccessController;
@@ -750,7 +751,16 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
         checkThread();
-        getEventHelper().addEventHandler(eventType, eventHandler);
+        getEventHelper().addEventHandler(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+    }
+
+    @Override
+    public final <T extends Event> void addEventHandler(
+            final EventType<T> eventType,
+            final EventHandler<? super T> eventHandler,
+            final EventHandlerPolicy eventHandlerPolicy) {
+        checkThread();
+        getEventHelper().addEventHandler(eventType, eventHandler, eventHandlerPolicy);
     }
 
     /**
@@ -774,7 +784,16 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
         checkThread();
-        getEventHelper().addEventFilter(eventType, eventFilter);
+        getEventHelper().addEventFilter(eventType, eventFilter, EventHandlerPolicy.DEFAULT);
+    }
+
+    @Override
+    public final <T extends Event> void addEventFilter(
+            final EventType<T> eventType,
+            final EventHandler<? super T> eventFilter,
+            final EventHandlerPolicy eventFilterPolicy) {
+        checkThread();
+        getEventHelper().addEventFilter(eventType, eventFilter, eventFilterPolicy);
     }
 
     /**

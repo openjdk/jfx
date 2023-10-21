@@ -123,12 +123,14 @@ class EventHelper {
      * @param <T> the specific event class of the handler
      * @param eventType the type of the events to receive by the handler
      * @param eventHandler the handler to register
+     * @param eventHandlerPolicy the policy
      */
     final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
-            final EventHandler<? super T> eventHandler) {
+            final EventHandler<? super T> eventHandler,
+            final EventHandlerPolicy eventHandlerPolicy) {
         getInternalEventDispatcher()
-                .addEventHandler(eventType, eventHandler);
+                .addEventHandler(eventType, eventHandler, eventHandlerPolicy);
     }
 
     /**
@@ -155,12 +157,14 @@ class EventHelper {
      * @param <T> the specific event class of the filter
      * @param eventType the type of the events to receive by the filter
      * @param eventFilter the filter to register
+     * @param eventFilterPolicy the policy
      */
     final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
-            final EventHandler<? super T> eventFilter) {
+            final EventHandler<? super T> eventFilter,
+            final EventHandlerPolicy eventFilterPolicy) {
         getInternalEventDispatcher()
-                .addEventFilter(eventType, eventFilter);
+                .addEventFilter(eventType, eventFilter, eventFilterPolicy);
     }
 
     /**

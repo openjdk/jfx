@@ -46,6 +46,7 @@ import javafx.css.Styleable;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPolicy;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -733,7 +734,13 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
     @Override
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler);
+        eventHandlerManager.addEventHandler(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+    }
+
+    @Override
+    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler,
+                                                  EventHandlerPolicy eventHandlerPolicy) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler, eventHandlerPolicy);
     }
 
     @Override
@@ -743,7 +750,13 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
 
     @Override
     public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventFilter(eventType, eventHandler);
+        eventHandlerManager.addEventFilter(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+    }
+
+    @Override
+    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler,
+                                                 EventHandlerPolicy eventFilterPolicy) {
+        eventHandlerManager.addEventFilter(eventType, eventHandler, eventFilterPolicy);
     }
 
     @Override

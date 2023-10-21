@@ -30,6 +30,7 @@ import java.util.Map;
 
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPolicy;
 import javafx.event.EventType;
 
 /**
@@ -59,14 +60,16 @@ public class EventHandlerManager extends BasicEventDispatcher {
      */
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
-            final EventHandler<? super T> eventHandler) {
+            final EventHandler<? super T> eventHandler,
+            final EventHandlerPolicy policy) {
         validateEventType(eventType);
         validateEventHandler(eventHandler);
+        validateEventHandlerPolicy(policy);
 
         final CompositeEventHandler<T> compositeEventHandler =
                 createGetCompositeEventHandler(eventType);
 
-        compositeEventHandler.addEventHandler(eventHandler);
+        compositeEventHandler.addEventHandler(eventHandler, policy);
     }
 
     /**
@@ -101,14 +104,16 @@ public class EventHandlerManager extends BasicEventDispatcher {
      */
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
-            final EventHandler<? super T> eventFilter) {
+            final EventHandler<? super T> eventFilter,
+            final EventHandlerPolicy policy) {
         validateEventType(eventType);
         validateEventFilter(eventFilter);
+        validateEventHandlerPolicy(policy);
 
         final CompositeEventHandler<T> compositeEventHandler =
                 createGetCompositeEventHandler(eventType);
 
-        compositeEventHandler.addEventFilter(eventFilter);
+        compositeEventHandler.addEventFilter(eventFilter, policy);
     }
 
     /**
@@ -259,6 +264,13 @@ public class EventHandlerManager extends BasicEventDispatcher {
             final EventHandler<?> eventFilter) {
         if (eventFilter == null) {
             throw new NullPointerException("Event filter must not be null");
+        }
+    }
+
+    private static void validateEventHandlerPolicy(
+            final EventHandlerPolicy policy) {
+        if (policy == null) {
+            throw new NullPointerException("EventHandlerPolicy must not be null");
         }
     }
 }

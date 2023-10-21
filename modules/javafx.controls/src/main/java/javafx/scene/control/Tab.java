@@ -42,6 +42,7 @@ import javafx.css.PseudoClass;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPolicy;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -827,7 +828,13 @@ public class Tab implements EventTarget, Styleable {
 
     @Override
     public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler);
+        eventHandlerManager.addEventHandler(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+    }
+
+    @Override
+    public final <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler,
+                                                        EventHandlerPolicy eventHandlerPolicy) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler, eventHandlerPolicy);
     }
 
     @Override
@@ -837,7 +844,13 @@ public class Tab implements EventTarget, Styleable {
 
     @Override
     public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
-        eventHandlerManager.addEventFilter(eventType, eventFilter);
+        eventHandlerManager.addEventFilter(eventType, eventFilter, EventHandlerPolicy.DEFAULT);
+    }
+
+    @Override
+    public final <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter,
+                                                       EventHandlerPolicy eventFilterPolicy) {
+        eventHandlerManager.addEventFilter(eventType, eventFilter, eventFilterPolicy);
     }
 
     @Override

@@ -39,6 +39,7 @@ import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPolicy;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -795,7 +796,24 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      */
     @Override
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler);
+        eventHandlerManager.addEventHandler(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@code TreeItem} class allows registration of listeners which will be notified as the number of items
+     * changes, their position, or if the values themselves change. Note that {@code TreeItem} is <b>not</b> a
+     * {@link Node}, and therefore no visual events will be fired on it. To get these events, it is necessary to
+     * add relevant observers to the {@code TreeCell} instances via a custom cell factory (see the {@link Cell}
+     * class documentation for more details).
+     *
+     * @since 22
+     */
+    @Override
+    public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler,
+                                                  EventHandlerPolicy eventHandlerPolicy) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler, eventHandlerPolicy);
     }
 
     @Override
@@ -814,7 +832,24 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      */
     @Override
     public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventFilter(eventType, eventHandler);
+        eventHandlerManager.addEventFilter(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The {@code TreeItem} class allows registration of listeners which will be notified as the number of items
+     * changes, their position, or if the values themselves change. Note that {@code TreeItem} is <b>not</b> a
+     * {@link Node}, and therefore no visual events will be fired on it. To get these events, it is necessary to
+     * add relevant observers to the {@code TreeCell} instances via a custom cell factory (see the {@link Cell}
+     * class documentation for more details).
+     *
+     * @since 22
+     */
+    @Override
+    public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventHandler,
+                                                 EventHandlerPolicy eventFilterPolicy) {
+        eventHandlerManager.addEventFilter(eventType, eventHandler, eventFilterPolicy);
     }
 
     @Override

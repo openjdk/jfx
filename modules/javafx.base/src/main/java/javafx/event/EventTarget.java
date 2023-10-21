@@ -56,7 +56,7 @@ public interface EventTarget {
     EventDispatchChain buildEventDispatchChain(EventDispatchChain tail);
 
     /**
-     * Registers an event handler for this target.
+     * Registers an event handler for this target with the {@link EventHandlerPolicy#DEFAULT} policy.
      * <p>
      * The handler is called when the target receives an {@link Event} of the specified
      * type during the bubbling phase of event delivery.
@@ -71,6 +71,35 @@ public interface EventTarget {
      */
     default <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Registers an event handler for this target with the specified policy.
+     * <p>
+     * The handler is called when the target receives an {@link Event} of the specified
+     * type during the bubbling phase of event delivery. The specified priority determines
+     * the order in which event handlers are invoked on this target. The invocation order
+     * of handlers with the same priority is unspecified.
+     *
+     * @param <E> the event class of the handler
+     * @param eventType the type of the events received by the handler
+     * @param eventHandler the event handler
+     * @param eventHandlerPolicy the event handler policy
+     * @throws NullPointerException if {@code eventType}, {@code eventHandler}, or {@code eventHandlerPolicy} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event handlers with the specified policy
+     * @implSpec The default implementation of this method calls {@link #addEventHandler(EventType, EventHandler)}
+     *           if the policy is equal to {@link EventHandlerPolicy#DEFAULT}. In all other cases, it throws
+     *           {@link UnsupportedOperationException}.
+     * @since 22
+     */
+    default <E extends Event> void addEventHandler(EventType<E> eventType,
+                                                   EventHandler<? super E> eventHandler,
+                                                   EventHandlerPolicy eventHandlerPolicy) {
+        if (EventHandlerPolicy.DEFAULT.equals(eventHandlerPolicy)) {
+            addEventHandler(eventType, eventHandler);
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /**
@@ -92,7 +121,7 @@ public interface EventTarget {
     }
 
     /**
-     * Registers an event filter for this target.
+     * Registers an event filter for this target with the {@link EventHandlerPolicy#DEFAULT} policy.
      * <p>
      * The filter is called when the target receives an {@link Event} of the specified
      * type during the capturing phase of event delivery.
@@ -107,6 +136,35 @@ public interface EventTarget {
      */
     default <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Registers an event filter for this target with the specified policy.
+     * <p>
+     * The filter is called when the target receives an {@link Event} of the specified
+     * type during the capturing phase of event delivery. The specified priority determines
+     * the order in which event filters are invoked on this target. The invocation order
+     * of filters with the same priority is unspecified.
+     *
+     * @param <E> the event class of the filter
+     * @param eventType the type of the events received by the filter
+     * @param eventFilter the event filter
+     * @param eventFilterPolicy the event filter policy
+     * @throws NullPointerException if {@code eventType}, {@code eventFilter}, or {@code eventFilterPolicy} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event filters with the specified policy
+     * @implSpec The default implementation of this method calls {@link #addEventFilter(EventType, EventHandler)}
+     *           if the policy is equal to {@link EventHandlerPolicy#DEFAULT}. In all other cases, it throws
+     *           {@link UnsupportedOperationException}.
+     * @since 22
+     */
+    default <E extends Event> void addEventFilter(EventType<E> eventType,
+                                                  EventHandler<? super E> eventFilter,
+                                                  EventHandlerPolicy eventFilterPolicy) {
+        if (EventHandlerPolicy.DEFAULT.equals(eventFilterPolicy)) {
+            addEventFilter(eventType, eventFilter);
+        } else {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /**

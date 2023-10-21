@@ -27,6 +27,8 @@ package com.sun.javafx.event;
 
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventHandlerPolicy;
+import javafx.event.EventHandlerPriority;
 import javafx.event.WeakEventHandler;
 
 public final class CompositeEventHandler<T extends Event> {
@@ -43,9 +45,10 @@ public final class CompositeEventHandler<T extends Event> {
         return eventHandler;
     }
 
-    public void addEventHandler(final EventHandler<? super T> eventHandler) {
+    public void addEventHandler(final EventHandler<? super T> eventHandler,
+                                final EventHandlerPolicy policy) {
         if (find(eventHandler, false) == null) {
-            append(lastRecord, createEventHandlerRecord(eventHandler));
+            append(findInsertAfter(policy.priority()), createEventHandlerRecord(eventHandler, policy));
         }
     }
 
@@ -56,9 +59,10 @@ public final class CompositeEventHandler<T extends Event> {
         }
     }
 
-    public void addEventFilter(final EventHandler<? super T> eventFilter) {
+    public void addEventFilter(final EventHandler<? super T> eventFilter,
+                               final EventHandlerPolicy policy) {
         if (find(eventFilter, true) == null) {
-            append(lastRecord, createEventFilterRecord(eventFilter));
+            append(findInsertAfter(policy.priority()), createEventFilterRecord(eventFilter, policy));
         }
     }
 
@@ -121,19 +125,17 @@ public final class CompositeEventHandler<T extends Event> {
     }
 
     private EventProcessorRecord<T> createEventHandlerRecord(
-            final EventHandler<? super T> eventHandler) {
+            final EventHandler<? super T> eventHandler, final EventHandlerPolicy policy) {
         return (eventHandler instanceof WeakEventHandler)
-                   ? new WeakEventHandlerRecord(
-                             (WeakEventHandler<? super T>) eventHandler)
-                   : new NormalEventHandlerRecord(eventHandler);
+                   ? new WeakEventHandlerRecord<>((WeakEventHandler<? super T>) eventHandler, policy)
+                   : new NormalEventHandlerRecord<>(eventHandler, policy);
     }
 
     private EventProcessorRecord<T> createEventFilterRecord(
-            final EventHandler<? super T> eventFilter) {
+            final EventHandler<? super T> eventFilter, final EventHandlerPolicy policy) {
         return (eventFilter instanceof WeakEventHandler)
-                   ? new WeakEventFilterRecord(
-                             (WeakEventHandler<? super T>) eventFilter)
-                   : new NormalEventFilterRecord(eventFilter);
+                   ? new WeakEventFilterRecord<>((WeakEventHandler<? super T>) eventFilter, policy)
+                   : new NormalEventFilterRecord<>(eventFilter, policy);
     }
 
     private void remove(final EventProcessorRecord<T> record) {
@@ -206,9 +208,29 @@ public final class CompositeEventHandler<T extends Event> {
         return false;
     }
 
+    private EventProcessorRecord<T> findInsertAfter(EventHandlerPriority priority) {
+        EventProcessorRecord<T> record = firstRecord;
+        while (record != null) {
+            if (record.isDisconnected()) {
+                remove(record);
+            } else if (record.policy.priority().compareTo(priority) < 0) {
+                return record.prevRecord;
+            }
+
+            record = record.nextRecord;
+        }
+
+        return lastRecord;
+    }
+
     private static abstract class EventProcessorRecord<T extends Event> {
+        final EventHandlerPolicy policy;
         private EventProcessorRecord<T> nextRecord;
         private EventProcessorRecord<T> prevRecord;
+
+        EventProcessorRecord(EventHandlerPolicy policy) {
+            this.policy = policy;
+        }
 
         public abstract boolean stores(EventHandler<? super T> eventProcessor,
                                        boolean isFilter);
@@ -226,8 +248,9 @@ public final class CompositeEventHandler<T extends Event> {
             extends EventProcessorRecord<T> {
         private final EventHandler<? super T> eventHandler;
 
-        public NormalEventHandlerRecord(
-                final EventHandler<? super T> eventHandler) {
+        public NormalEventHandlerRecord(final EventHandler<? super T> eventHandler,
+                                        final EventHandlerPolicy policy) {
+            super(policy);
             this.eventHandler = eventHandler;
         }
 
@@ -244,7 +267,9 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleBubblingEvent(final T event) {
-            eventHandler.handle(event);
+            if (!event.isConsumed() || policy.handleConsumedEvents()) {
+                eventHandler.handle(event);
+            }
         }
 
         @Override
@@ -261,8 +286,9 @@ public final class CompositeEventHandler<T extends Event> {
             extends EventProcessorRecord<T> {
         private final WeakEventHandler<? super T> weakEventHandler;
 
-        public WeakEventHandlerRecord(
-                final WeakEventHandler<? super T> weakEventHandler) {
+        public WeakEventHandlerRecord(final WeakEventHandler<? super T> weakEventHandler,
+                                      final EventHandlerPolicy policy) {
+            super(policy);
             this.weakEventHandler = weakEventHandler;
         }
 
@@ -279,7 +305,9 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleBubblingEvent(final T event) {
-            weakEventHandler.handle(event);
+            if (!event.isConsumed() || policy.handleConsumedEvents()) {
+                weakEventHandler.handle(event);
+            }
         }
 
         @Override
@@ -296,8 +324,9 @@ public final class CompositeEventHandler<T extends Event> {
             extends EventProcessorRecord<T> {
         private final EventHandler<? super T> eventFilter;
 
-        public NormalEventFilterRecord(
-                final EventHandler<? super T> eventFilter) {
+        public NormalEventFilterRecord(final EventHandler<? super T> eventFilter,
+                                       final EventHandlerPolicy policy) {
+            super(policy);
             this.eventFilter = eventFilter;
         }
 
@@ -318,7 +347,9 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleCapturingEvent(final T event) {
-            eventFilter.handle(event);
+            if (!event.isConsumed() || policy.handleConsumedEvents()) {
+                eventFilter.handle(event);
+            }
         }
 
         @Override
@@ -331,8 +362,9 @@ public final class CompositeEventHandler<T extends Event> {
             extends EventProcessorRecord<T> {
         private final WeakEventHandler<? super T> weakEventFilter;
 
-        public WeakEventFilterRecord(
-                final WeakEventHandler<? super T> weakEventFilter) {
+        public WeakEventFilterRecord(final WeakEventHandler<? super T> weakEventFilter,
+                                     final EventHandlerPolicy policy) {
+            super(policy);
             this.weakEventFilter = weakEventFilter;
         }
 
@@ -353,7 +385,9 @@ public final class CompositeEventHandler<T extends Event> {
 
         @Override
         public void handleCapturingEvent(final T event) {
-            weakEventFilter.handle(event);
+            if (!event.isConsumed() || policy.handleConsumedEvents()) {
+                weakEventFilter.handle(event);
+            }
         }
 
         @Override
