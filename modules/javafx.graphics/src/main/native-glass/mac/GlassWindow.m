@@ -208,6 +208,22 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
 
 @implementation GlassWindow_Normal
 GLASS_NS_WINDOW_IMPLEMENTATION
+
+-(NSRect)windowWillUseStandardFrame:(NSWindow*)window defaultFrame:(NSRect)newFrame
+{
+    // For windows without titlebars the OS will suggest a frame that's the
+    // same size as the existing window, not the screen.
+    if (window.screen != nil && (window.styleMask & NSWindowStyleMaskTitled) == 0) {
+        return window.screen.visibleFrame;
+    }
+    return newFrame;
+}
+
+-(BOOL)isZoomed
+{
+    // Ensure the window is not reported as maximized during initialization
+    return self.screen != nil && [super isZoomed];
+}
 @end
 
 @implementation GlassWindow_Panel

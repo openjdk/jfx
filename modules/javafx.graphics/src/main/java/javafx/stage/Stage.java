@@ -1138,19 +1138,9 @@ public class Stage extends Window {
      * This can be replaced by listening for the onShowing/onHiding events
      * Note: This method MUST only be called via its accessor method.
      */
-    private boolean postVisibleFullScreen;
-    private boolean postVisibleIconified;
-    private boolean postVisibleMaximized;
-
     private void doVisibleChanging(boolean value) {
         Toolkit toolkit = Toolkit.getToolkit();
         if (value && (getPeer() == null)) {
-            // In case the platform window alters these
-            // properties while we're finishing installation.
-            postVisibleFullScreen = isFullScreen();
-            postVisibleIconified = isIconified();
-            postVisibleMaximized = isMaximized();
-
             // Setup the peer
             Window window = getOwner();
             TKStage tkStage = (window == null ? null : window.getPeer());
@@ -1191,10 +1181,10 @@ public class Stage extends Window {
             TKStage peer = getPeer();
             peer.setImportant(isImportant());
             peer.setResizable(isResizable());
-            peer.setFullScreen(postVisibleFullScreen);
+            peer.setFullScreen(isFullScreen());
             peer.setAlwaysOnTop(isAlwaysOnTop());
-            peer.setIconified(postVisibleIconified);
-            peer.setMaximized(postVisibleMaximized);
+            peer.setIconified(isIconified());
+            peer.setMaximized(isMaximized());
             peer.setTitle(getTitle());
 
             if (!isIconified()) {

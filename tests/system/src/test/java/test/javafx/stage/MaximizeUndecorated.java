@@ -77,8 +77,6 @@ public class MaximizeUndecorated {
 
     @Test
     public void testMaximize() throws Exception {
-        // temporary until JDK-8255835 is fixed
-        assumeTrue(!PlatformUtil.isMac());
         Util.sleep(200);
 
         boolean movedToTopCorner = stage.getY() != POS && stage.getX() != POS;
