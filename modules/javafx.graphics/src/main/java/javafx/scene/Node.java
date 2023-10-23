@@ -1973,7 +1973,7 @@ public abstract class Node implements EventTarget, Styleable {
      * Finds all {@code Node}s, including this one and any children, which match
      * the given CSS selector. If no matches are found, an empty unmodifiable set is
      * returned. The set is explicitly unordered.
-     *<p>
+     * <p>
      *     For example, if there are multiple nodes with same style class "myStyle", then the lookupAll method can
      *     be used to find all these nodes as follows: <code>scene.lookupAll(".myStyle");</code>.
      * </p>
