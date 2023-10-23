@@ -450,14 +450,19 @@ public class RichTextAreaDemoPane extends BorderPane {
             colorMenu(m2, sel, null);
 
             items.add(m2 = new Menu("Text Size"));
-            sizeMenu(m2, sel, 300);
-            sizeMenu(m2, sel, 200);
-            sizeMenu(m2, sel, 150);
-            sizeMenu(m2, sel, 125);
-            sizeMenu(m2, sel, 100);
-            sizeMenu(m2, sel, 75);
-            sizeMenu(m2, sel, 60);
-            sizeMenu(m2, sel, 50);
+            sizeMenu(m2, sel, 96);
+            sizeMenu(m2, sel, 72);
+            sizeMenu(m2, sel, 48);
+            sizeMenu(m2, sel, 36);
+            sizeMenu(m2, sel, 24);
+            sizeMenu(m2, sel, 18);
+            sizeMenu(m2, sel, 16);
+            sizeMenu(m2, sel, 14);
+            sizeMenu(m2, sel, 12);
+            sizeMenu(m2, sel, 10);
+            sizeMenu(m2, sel, 9);
+            sizeMenu(m2, sel, 8);
+            sizeMenu(m2, sel, 6);
 
             items.add(m2 = new Menu("Font Family"));
             fontMenu(m2, sel, "System");
@@ -534,10 +539,10 @@ public class RichTextAreaDemoPane extends BorderPane {
         menu.getItems().add(m);
     }
 
-    private void sizeMenu(Menu menu, boolean selected, int percent) {
-        MenuItem m = new MenuItem(percent + "%");
+    private void sizeMenu(Menu menu, boolean selected, double size) {
+        MenuItem m = new MenuItem(String.valueOf(size));
         m.setDisable(!selected);
-        m.setOnAction((ev) -> applyStyle(StyleAttrs.FONT_SIZE, percent));
+        m.setOnAction((ev) -> applyStyle(StyleAttrs.FONT_SIZE, size));
         menu.getItems().add(m);
     }
     
@@ -559,7 +564,7 @@ public class RichTextAreaDemoPane extends BorderPane {
         menu.getItems().add(m);
     }
     
-    private void applyStyle(StyleAttribute a, Object val) {
+    private <T> void applyStyle(StyleAttribute<T> a, T val) {
         TextPos ca = control.getCaretPosition();
         TextPos an = control.getAnchorPosition();
         StyleAttrs m = StyleAttrs.of(a, val);

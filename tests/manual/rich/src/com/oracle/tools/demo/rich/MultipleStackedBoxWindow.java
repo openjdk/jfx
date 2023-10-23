@@ -49,8 +49,7 @@ public class MultipleStackedBoxWindow extends Stage {
 
         StyleAttrs def = StyleAttrs.builder().
             setFontFamily("Iosevka Fixed SS16").
-            // TODO font size in points / in percent ?
-            setFontSize(100).
+            setFontSize(12).
             build();
 
         RichTextArea a1 = new RichTextArea(NotebookModelStacked.m1());

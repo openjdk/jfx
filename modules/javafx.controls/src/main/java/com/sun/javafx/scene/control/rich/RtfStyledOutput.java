@@ -62,7 +62,7 @@ public class RtfStyledOutput implements StyledOutput {
     private boolean under;
     private boolean strike;
     private String fontFamily;
-    private Integer fontSize;
+    private Double fontSize;
 
     public RtfStyledOutput(StyleResolver r, Writer wr) {
         this.resolver = new CachingStyleResolver(r);
@@ -259,7 +259,7 @@ public class RtfStyledOutput implements StyledOutput {
             boolean und;
             boolean str;
             String fam;
-            Integer fsize;
+            Double fsize;
 
             if (a == null) {
                 col = null;
@@ -295,10 +295,8 @@ public class RtfStyledOutput implements StyledOutput {
 
             if (RichUtils.notEquals(fontSize, fsize)) {
                 write("\\fs");
-                double fs = 24.0; // twice the points
-                if (fsize != null) {
-                    fs = fs * (fsize / 100.0);
-                }
+                // twice the points
+                double fs = (fsize == null) ? 24.0 : (fsize * 2.0);
                 write(String.valueOf((int)Math.round(fs)));
                 fontSize = fsize;
             }

@@ -43,7 +43,7 @@ public class TestRichTextFormatHandler {
     public void testRoundTrip() throws IOException {
         String[] ss = {
             "`B``A`I``B\n`0``C`1``D\n",
-            "`Z200`C808080``name1`0``: `Z200``val`1``1`1``\n\n`0``name2`0``: `1``val2\n\n",
+            "`Z12.5`C808080``name1`0``: `Z9.35``val`1``1`1``\n\n`0``name2`0``: `1``val2\n\n",
             "%60%25",
         };
 

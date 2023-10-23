@@ -127,8 +127,7 @@ public class StyleUtil {
         });
 
         put(m, StyleAttrs.FONT_SIZE, (v) -> {
-            // TODO switch to size
-            return "-fx-font-size:" + v + "%;";
+            return "-fx-font-size:" + v + "pt;";
         });
 
         put(m, StyleAttrs.ITALIC, (v) -> {

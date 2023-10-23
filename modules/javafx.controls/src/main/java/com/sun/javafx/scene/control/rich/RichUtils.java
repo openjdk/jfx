@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import java.text.DecimalFormat;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
@@ -42,6 +43,8 @@ import javafx.scene.text.TextFlow;
  * RichTextArea specific utility methods.
  */
 public class RichUtils {
+    private static final DecimalFormat format = new DecimalFormat("#0.##");
+
     /**
      * A safe substring method which is tolerant to null text, and offsets being outside of the text boundaries.
      *
@@ -284,5 +287,9 @@ public class RichUtils {
         default:
             return "left";
         }
+    }
+
+    public static String formatDouble(Double value) {
+        return format.format(value);
     }
 }

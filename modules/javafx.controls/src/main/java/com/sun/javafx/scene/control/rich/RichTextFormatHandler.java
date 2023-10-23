@@ -62,11 +62,11 @@ import javafx.scene.paint.Color;
  * <ol>
  *   <li>`B - bold typeface
  *   <li>`Crrggbb - text color with hex RGB values
- *   <li>`Ffont-family - font family
+ *   <li>`Fstring - font family
  *   <li>`I - italic typeface
  *   <li>`T - strike-through
  *   <li>`U - underline
- *   <li>`Zpercent - font size
+ *   <li>`Zdouble - font size
  * </ol>
  * In addition, any subsequent occurence of a style is simplified by providing its number using {@code 'num} sequence:
  * <pre>
@@ -256,8 +256,8 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     b.setUnderline(true);
                     break;
                 case 'Z':
-                    int percent = decodeInt();
-                    b.setFontSize(percent);
+                    double size = decodeDouble();
+                    b.setFontSize(size);
                     break;
                 case '`':
                     StyleAttrs a = b.build();
@@ -330,6 +330,31 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 index++;
             }
         }
+
+        private double decodeDouble() throws IOException {
+            String payload = decodePayload();
+            try {
+                return Double.parseDouble(payload);
+            } catch(NumberFormatException e) {
+                throw new IOException("expecting double: " + payload, e);
+            }
+        }
+
+        private String decodePayload() throws IOException {
+            int start = index;
+            int i = 0;
+            for(;;) {
+                int c = charAt(i);
+                switch(c) {
+                case -1:
+                    throw new IOException("unexpected end of token");
+                case '`':
+                    index = start + i;
+                    return text.substring(start, index);
+                }
+                i++;
+            }
+        }
     }
 
     /** exporter */
@@ -364,46 +389,46 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 StyleAttrs a = seg.getStyleAttrs(resolver);
                 if ((a != null) && (!a.isEmpty())) {
                     Integer num = styles.get(a);
-                    if(num == null) {
+                    if (num == null) {
                         int sz = styles.size();
                         styles.put(a, Integer.valueOf(sz));
-                        
+
                         // write style info
-                        if(a.isBold()) {
+                        if (a.isBold()) {
                             wr.write("`B");
                         }
-                        
-                        if(a.isItalic()) {
+
+                        if (a.isItalic()) {
                             wr.write("`I");
                         }
-                        
-                        if(a.isStrikeThrough()) {
+
+                        if (a.isStrikeThrough()) {
                             wr.write("`T");
                         }
-                        
-                        if(a.isUnderline()) {
+
+                        if (a.isUnderline()) {
                             wr.write("`U");
                         }
-                        
+
                         String s = a.getFontFamily();
-                        if(s != null) {
+                        if (s != null) {
                             wr.write("`F");
                             wr.write(encode(s));
                         }
-                        
-                        Integer n = a.getFontSize();
-                        if(n != null) {
+
+                        Double n = a.getFontSize();
+                        if (n != null) {
                             wr.write("`Z");
-                            wr.write(String.valueOf(n));
+                            wr.write(RichUtils.formatDouble(n));
                         }
-                        
+
                         Color c = a.getTextColor();
-                        if(c != null) {
+                        if (c != null) {
                             wr.write("`C");
                             wr.write(toHex8(c.getRed()));
                             wr.write(toHex8(c.getGreen()));
                             wr.write(toHex8(c.getBlue()));
-                        }                        
+                        }
                     } else {
                         // write cached style id number
                         wr.write("`");
@@ -411,7 +436,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     }
                     wr.write("``");
                 }
-    
+
                 String text = seg.getText();
                 text = encode(text);
                 wr.write(text);

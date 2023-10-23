@@ -59,8 +59,8 @@ public class StyleAttrs {
     /** Font family attribute */
     public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false);
 
-    /** Font size attribute, in percent, relative to the base font size. */
-    public static final StyleAttribute<Integer> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Integer.class, false);
+    /** Font size attribute, in points. */
+    public static final StyleAttribute<Double> FONT_SIZE = new StyleAttribute<>("FONT_SIZE", Double.class, false);
 
     /** Italic type face attribute */
     public static final StyleAttribute<Boolean> ITALIC = new StyleAttribute<>("ITALIC", Boolean.class, false);
@@ -331,8 +331,8 @@ public class StyleAttrs {
      * This convenience method returns the value of the {@link #FONT_SIZE} attribute.
      * @return the font size
      */
-    public final Integer getFontSize() {
-        return (Integer)get(FONT_SIZE);
+    public final Double getFontSize() {
+        return (Double)get(FONT_SIZE);
     }
 
     /**
@@ -417,10 +417,8 @@ public class StyleAttrs {
         b.setFontFamily(family);
 
         double sz = f.getSize();
-        // TODO use the default font
-        int size = (int)Math.round(sz / 0.12); // in percent relative to size 12
-        if (size != 100) {
-            b.setFontSize(size);
+        if (sz != 12.0) {
+            b.setFontSize(sz);
         }
 
         Paint x = textNode.getFill();
@@ -545,11 +543,11 @@ public class StyleAttrs {
         }
 
         /**
-         * Sets the font size attribute (as percentage relative to the default paragraph font).
-         * @param size the font size in percent
+         * Sets the font size attribute.
+         * @param size the font size in points
          * @return this Builder instance
          */
-        public Builder setFontSize(int size) {
+        public Builder setFontSize(double size) {
             set(FONT_SIZE, size);
             return this;
         }

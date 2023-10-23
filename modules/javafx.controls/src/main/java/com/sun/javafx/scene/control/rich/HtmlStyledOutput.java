@@ -307,7 +307,7 @@ public class HtmlStyledOutput implements StyledOutput {
         } else if (a == StyleAttrs.FONT_FAMILY) {
             return "font-family: \"" + encodeFontFamily(v.toString()) + "\";";
         } else if (a == StyleAttrs.FONT_SIZE) {
-            return "font-size: " + v + "%;";
+            return "font-size: " + v + "pt;";
         } else if (a == StyleAttrs.ITALIC) {
             return  "font-style: italic;";
         } else if (a == StyleAttrs.STRIKE_THROUGH) {

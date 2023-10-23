@@ -31,7 +31,7 @@ import javafx.scene.text.TextAlignment;
 
 public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
     private final static StyleAttrs TITLE = StyleAttrs.builder().
-        setFontSize(200).
+        setFontSize(24).
         setUnderline(true).
         build();
     private final static StyleAttrs BULLET = StyleAttrs.builder().
