@@ -1953,6 +1953,11 @@ public abstract class Node implements EventTarget, Styleable {
      *     For example, if a Node is given the id of "myId", then the lookup method can
      *     be used to find this node as follows: <code>scene.lookup("#myId");</code>.
      * </p>
+     * <p>
+     *     If two nodes, lets say NodeA and NodeB have same style class "myStyle" and NodeA has
+     *     a pseudo state "myPseudo", then to find NodeA, the lookup method can be used as follows:
+     *     <code>scene.lookup(".myStyle:myPseudo");</code> or <code>scene.lookup(":myPseudo");</code>
+     * </p>
      *
      * @param selector The css selector of the node to find
      * @return The first node, starting from this {@code Node}, which matches
@@ -1968,6 +1973,15 @@ public abstract class Node implements EventTarget, Styleable {
      * Finds all {@code Node}s, including this one and any children, which match
      * the given CSS selector. If no matches are found, an empty unmodifiable set is
      * returned. The set is explicitly unordered.
+     *<p>
+     *     For example, if there are multiple nodes with same style class "myStyle", then the lookupAll method can
+     *     be used to find all these nodes as follows: <code>scene.lookupAll(".myStyle");</code>.
+     * </p>
+     * <p>
+     *     If multiple nodes have same style class "myStyle" and few nodes have
+     *     a pseudo state "myPseudo", then to find all nodes with "myPseudo" state, the lookupAll method can be used as follows:
+     *     <code>scene.lookupAll(".myStyle:myPseudo");</code> or <code>scene.lookupAll(":myPseudo");</code>
+     * </p>
      *
      * @param selector The css selector of the nodes to find
      * @return All nodes, starting from and including this {@code Node}, which match
