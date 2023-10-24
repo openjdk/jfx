@@ -6496,7 +6496,7 @@ public abstract class Node implements EventTarget, Styleable {
      * top right corner causing the node to layout children and draw from
      * right to left using a mirroring transformation.  Some nodes may wish
      * to draw from right to left without using a transformation.  These
-     * nodes will will answer {@code false} and implement right-to-left
+     * nodes will answer {@code false} and implement right-to-left
      * orientation without using the automatic transformation.
      * </p>
      * @return true if this {@code Node} should be mirrored
