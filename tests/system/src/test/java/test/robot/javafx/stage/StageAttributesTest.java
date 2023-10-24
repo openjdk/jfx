@@ -216,6 +216,9 @@ public class StageAttributesTest extends VisualTestBase {
         // Skip on Mac due to:
         //  - JDK-8305675
         assumeTrue(!PlatformUtil.isMac());
+        // Skip on Linux due to:
+        //  - JDK-8316423
+        assumeTrue(!PlatformUtil.isLinux());
 
         setupStages(true, false);
 
