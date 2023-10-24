@@ -126,6 +126,7 @@ public class NativeMediaManager {
                     dependencies.add("avplugin-ffmpeg-57");
                     dependencies.add("avplugin-ffmpeg-58");
                     dependencies.add("avplugin-ffmpeg-59");
+                    dependencies.add("avplugin-ffmpeg-60");
                 }
                 if (PlatformUtil.isMac()) {
                     dependencies.add("fxplugins");

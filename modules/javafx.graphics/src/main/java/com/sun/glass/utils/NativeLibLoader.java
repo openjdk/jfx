@@ -237,6 +237,8 @@ public class NativeLibLoader {
 
     private static String cacheLibrary(InputStream is, String name, Class caller) throws IOException {
         String jfxVersion = System.getProperty("javafx.runtime.version", "versionless");
+        // This fixes an issue with windows - ":" is not allowed for file on Windows.
+        jfxVersion = jfxVersion.replace(":", "-");
         String userCache = System.getProperty("javafx.cachedir", "");
         String arch = System.getProperty("os.arch");
         if (userCache.isEmpty()) {

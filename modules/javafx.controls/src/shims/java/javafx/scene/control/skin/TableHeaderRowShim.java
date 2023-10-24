@@ -41,4 +41,12 @@ public class TableHeaderRowShim {
     public static Pane getCornerRegion(TableHeaderRow tableHeaderRow) {
         return tableHeaderRow.getCornerRegion();
     }
+
+    public static void setReorderingColumn(TableHeaderRow tableHeaderRow, TableColumnBase<?, ?> tableColumnBase) {
+        tableHeaderRow.setReorderingColumn(tableColumnBase);
+    }
+
+    public static void setReorderingRegion(TableHeaderRow tableHeaderRow, TableColumnHeader tableColumnHeader) {
+        tableHeaderRow.setReorderingRegion(tableColumnHeader);
+    }
 }

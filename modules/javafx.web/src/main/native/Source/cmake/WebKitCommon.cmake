@@ -189,10 +189,24 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     find_package(Perl 5.10.0 REQUIRED)
     find_package(PerlModules COMPONENTS English FindBin JSON::PP REQUIRED)
 
-    # This module looks preferably for version 3 of Python. If not found, version 2 is searched.
-    find_package(Python COMPONENTS Interpreter REQUIRED)
-    # Set the variable with uppercase name to keep compatibility with code and users expecting it.
-    set(PYTHON_EXECUTABLE ${Python_EXECUTABLE} CACHE FILEPATH "Path to the Python interpreter")
+    # This module looks preferably for version 3 of Python.
+    if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+        find_package(Python3 3.8.0 REQUIRED)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        # Set the variable with uppercase name to keep compatibility with code and users expecting it.
+        set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE} CACHE FILEPATH "Path to the Python interpreter")
+        if (NOT PYTHON_EXECUTABLE OR Python3_VERSION VERSION_LESS 3.8.0)
+           message(FATAL_ERROR "Python 3.8 or higher is required.")
+        endif ()
+    else ()
+        find_package(Python3 3.6.0 REQUIRED)
+        find_package(Python3 COMPONENTS Interpreter REQUIRED)
+        # Set the variable with uppercase name to keep compatibility with code and users expecting it.
+        set(PYTHON_EXECUTABLE ${Python3_EXECUTABLE} CACHE FILEPATH "Path to the Python interpreter")
+        if (NOT PYTHON_EXECUTABLE OR Python3_VERSION VERSION_LESS 3.6.0)
+            message(FATAL_ERROR "Python 3.6 or higher is required.")
+        endif ()
+    endif ()
 
     # We cannot check for RUBY_FOUND because it is set only when the full package is installed and
     # the only thing we need is the interpreter. Unlike Python, cmake does not provide a macro
