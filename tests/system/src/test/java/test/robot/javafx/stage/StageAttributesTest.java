@@ -113,6 +113,10 @@ public class StageAttributesTest extends VisualTestBase {
 
     @Test
     public void testIconifiedStage() throws InterruptedException {
+        // Skip on Linux due to:
+        //  - JDK-8316423
+        assumeTrue(!PlatformUtil.isLinux());
+
         setupStages(true, true);
 
         runAndWait(() -> {
@@ -134,6 +138,10 @@ public class StageAttributesTest extends VisualTestBase {
 
     @Test
     public void testMaximizedStage() throws InterruptedException {
+        // Skip on Linux due to:
+        //  - JDK-8316423
+        assumeTrue(!PlatformUtil.isLinux());
+
         setupStages(false, true);
 
         runAndWait(() -> {
@@ -168,6 +176,10 @@ public class StageAttributesTest extends VisualTestBase {
 
     @Test
     public void testFullScreenStage() throws InterruptedException {
+        // Skip on Linux due to:
+        //  - JDK-8316423
+        assumeTrue(!PlatformUtil.isLinux());
+
         setupStages(false, true);
 
         runAndWait(() -> {
@@ -204,6 +216,7 @@ public class StageAttributesTest extends VisualTestBase {
         // Skip on Mac due to:
         //  - JDK-8305675
         assumeTrue(!PlatformUtil.isMac());
+
         setupStages(true, false);
 
         runAndWait(() -> {
@@ -232,6 +245,10 @@ public class StageAttributesTest extends VisualTestBase {
         // Skip on Mac due to:
         //  - JDK-8316419
         assumeTrue(!PlatformUtil.isMac());
+        // Skip on Linux due to:
+        //  - JDK-8316423
+        //  - JDK-8316425
+        assumeTrue(!PlatformUtil.isLinux());
 
         setupStages(false, false);
 
@@ -268,6 +285,11 @@ public class StageAttributesTest extends VisualTestBase {
 
     @Test
     public void testFullScreenStageBeforeShow() throws InterruptedException {
+        // Skip on Linux due to:
+        //  - JDK-8316423
+        //  - JDK-8316425
+        assumeTrue(!PlatformUtil.isLinux());
+
         setupStages(false, false);
 
         runAndWait(() -> {

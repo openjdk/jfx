@@ -2101,6 +2101,7 @@ allprojects {
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
+        testLogging.showStandardStreams = true;
         scanForTestClasses = true;
         include("**/*.*");
         if (BUILD_CLOSED && DO_JCOV) {
