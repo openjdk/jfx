@@ -102,6 +102,7 @@ void WindowContextBase::notify_state(jint glass_state) {
 
 void WindowContextBase::process_state(GdkEventWindowState* event) {
     if (event->changed_mask & (GDK_WINDOW_STATE_ICONIFIED | GDK_WINDOW_STATE_MAXIMIZED)) {
+
         if (event->changed_mask & GDK_WINDOW_STATE_ICONIFIED) {
             is_iconified = event->new_window_state & GDK_WINDOW_STATE_ICONIFIED;
         }
@@ -1191,8 +1192,7 @@ void WindowContextTop::exit_fullscreen() {
 }
 
 void WindowContextTop::request_focus() {
-    // gdk_window_is_visible will check if it's mapped
-    if (gdk_window_is_visible(gdk_window)) {
+    if (is_visible()) {
         gtk_window_present(GTK_WINDOW(gtk_widget));
     }
 }
