@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,7 +85,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         // We need to spin up a nested event loop and wait for the reactivation
         // to finish prior to allowing the rest of the initialization to run.
         final Runnable wrappedRunnable = () -> {
-            if (isNormalTaskbarApp()) {
+            if (isTriggerReactivation()) {
                 waitForReactivation();
             }
             launchable.run();
@@ -367,9 +367,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     // NOTE: this will not return a valid result until the native _runloop
     // method has been executed and called the Runnable passed to that method.
-    native private boolean _isNormalTaskbarApp();
-    boolean isNormalTaskbarApp() {
-        return _isNormalTaskbarApp();
+    native private boolean _isTriggerReactivation();
+    boolean isTriggerReactivation() {
+        return _isTriggerReactivation();
     }
 
     private native String _getDataDirectory();

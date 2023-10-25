@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,50 +97,19 @@ public class VersionInfo {
     private static final String HUDSON_BUILD_NUMBER = "@HUDSON_BUILD_NUMBER@";
 
     /**
-     * Promoted build number used as part of the runtime version string.
-     */
-    private static final String PROMOTED_BUILD_NUMBER = "@PROMOTED_BUILD_NUMBER@";
-
-    /**
-     * Raw Version number string. (without milestone tag)
-     */
-    private static final String RELEASE_VERSION = "@RELEASE_VERSION@";
-
-    /**
      * Release suffix.
      */
     private static final String RELEASE_SUFFIX = "@RELEASE_SUFFIX@";
 
     /**
-     * The composite version string. This is composed in the static
-     * initializer for this class.
+     * The composite version string.
      */
-    private static final String VERSION;
+    private static final String VERSION = "@RELEASE_VERSION_SHORT@";
 
     /**
      * The composite version string include build number.
-     * This is composed in the static initializer for this class.
      */
-    private static final String RUNTIME_VERSION;
-
-    // The static initializer composes the VERSION and RUNTIME_VERSION strings
-    static {
-        String tmpVersion = RELEASE_VERSION;
-
-        // Construct the VERSION string adding milestone information,
-        // such as beta, if present.
-        // Note: RELEASE_SUFFIX is expected to be empty for fcs versions
-        tmpVersion += RELEASE_SUFFIX;
-        VERSION = tmpVersion;
-
-        // Append the RUNTIME_VERSION string that follow the VERSION string
-        tmpVersion += "+" + PROMOTED_BUILD_NUMBER;
-        if (getHudsonJobName().length() == 0) {
-            // Non hudson (developer) build
-            tmpVersion += "-" + BUILD_TIMESTAMP;
-        }
-        RUNTIME_VERSION = tmpVersion;
-    }
+    private static final String RUNTIME_VERSION = "@RELEASE_VERSION_LONG@";
 
     /**
      * Setup the System properties with JavaFX API version information.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -673,10 +673,6 @@ public class RobotTest {
 
     @Test
     public void testPixelCaptureAverage() throws Exception {
-        if (PlatformUtil.isWindows() && Screen.getPrimary().getOutputScaleX() > 1) {
-            // Mark this test as unstable on Windows when HiDPI scale is more than 100%
-            Assume.assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8255079
-        }
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         Pane pane = new StackPane();
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
@@ -694,8 +690,8 @@ public class RobotTest {
         AtomicReference<Color> captureColor = new AtomicReference<>();
         Thread.sleep(1000);
         Util.runAndWait(() -> {
-            int x = (int) stage.getX();
-            int y = (int) stage.getY();
+            int x = (int)(Math.round(stage.getX()));
+            int y = (int)(Math.round(stage.getY()));
             // Subtracting one pixel from x makes the result RED, so we are on the border.
             // If the implementation of getPixelColor is ever chaged to interpolate the
             // colors on HiDPI screens, this test will fail and the resulting color will

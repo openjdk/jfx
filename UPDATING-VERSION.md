@@ -24,7 +24,7 @@ feature version number from `N` to `N+1`:
 
 * In
 `modules/javafx.base/src/test/java/test/com/sun/javafx/runtime/VersionInfoTest.java`,
-modify the testMajorVersion method to increment the feature version number
+modify the `FEATURE` variable to increment the feature version number
 from `N` to `N+1`.
 
 ## Incrementing the security version

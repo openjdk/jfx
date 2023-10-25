@@ -367,7 +367,7 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 // some changes on assumptions on what should be built (like SWT / Swing) and
 // such and we could probably make it work.
 if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) fail("Unsupported build OS ${OS_NAME}")
-if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
+if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64" && !IS_AARCH64) {
     logger.warn("Unknown and unsupported build architecture: $OS_ARCH")
 } else if (IS_MAC && OS_ARCH != "x86_64" && OS_ARCH != "aarch64") {
     logger.warn("Unknown and unsupported build architecture: $OS_ARCH")
@@ -638,19 +638,20 @@ if (sourceDateEpoch != null) {
     def epochSeconds = Long.parseLong(sourceDateEpoch)
     buildInstant = Instant.ofEpochSecond(epochSeconds)
 }
-// Creates the timestamp in UTC using the ISO 8601 extended format
-def buildTimestamp = buildInstant.toString()
+// Creates the timestamp in UTC using the ISO 8601 extended format.
+def extendedTimestamp = buildInstant.toString()
+// Creates the timestamp in UTC using the historical ad hoc format, which is
+// valid for the OPT field of the version string. An alternative to the ad hoc
+// format is the ISO 8601 basic format with the pattern "yyyyMMdd'T'HHmmssX".
+def zonedTime = ZonedDateTime.ofInstant(buildInstant, ZoneOffset.UTC)
+def formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
+def buildTimestamp = zonedTime.format(formatter)
 defineProperty("BUILD_TIMESTAMP", buildTimestamp)
 def relSuffix = ""
 def relOpt = ""
 if (HUDSON_JOB_NAME == "not_hudson") {
-    // The version OPT field matches the regular expression "([-a-zA-Z0-9.]+)".
-    // For the ISO 8601 basic format, use the pattern "yyyyMMdd'T'HHmmssX".
-    def zonedTime = ZonedDateTime.ofInstant(buildInstant, ZoneOffset.UTC)
-    def formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
-    String versionTimestamp = zonedTime.format(formatter)
     relSuffix = "-internal"
-    relOpt = "-${versionTimestamp}"
+    relOpt = "-${buildTimestamp}"
 } else {
     relSuffix = IS_MILESTONE_FCS ? "" : jfxReleaseSuffix
 }
@@ -1040,9 +1041,9 @@ List<String> computeModulePathArgs(String  pname, List<String> deps, boolean tes
 
             File dir;
             if (test && proj.sourceSets.hasProperty('shims')) {
-                dir = new File(proj.sourceSets.shims.java.outputDir, proj.ext.moduleName);
+                dir = new File(proj.sourceSets.shims.java.getDestinationDirectory().get().getAsFile(), proj.ext.moduleName);
             } else {
-                dir = new File(proj.sourceSets.main.java.outputDir, proj.ext.moduleName);
+                dir = new File(proj.sourceSets.main.java.getDestinationDirectory().get().getAsFile(), proj.ext.moduleName);
             }
             if (mp == null) {
                 mp = dir.path
@@ -1140,9 +1141,9 @@ void commonModuleSetup(Project p, List<String> moduleChain) {
     p.ext.moduleChain = moduleChain
 
     if (p.hasProperty("moduleName")) {
-        p.ext.moduleDir = new File (p.sourceSets.main.java.outputDir, "${p.moduleName}")
+        p.ext.moduleDir = new File (p.sourceSets.main.java.getDestinationDirectory().get().getAsFile(), "${p.moduleName}")
         if (p.sourceSets.hasProperty('shims')) {
-            p.ext.moduleShimsDir = new File (p.sourceSets.shims.java.outputDir, "${p.moduleName}")
+            p.ext.moduleShimsDir = new File (p.sourceSets.shims.java.getDestinationDirectory().get().getAsFile(), "${p.moduleName}")
         }
     }
 
@@ -1589,7 +1590,7 @@ void addNative(Project project, String name) {
 void addJSL(Project project, String name, String pkg, List<String> addExports, Closure compile) {
     def lowerName = name.toLowerCase()
 
-    def modulePath = "${project.sourceSets.main.java.outputDir}"
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
     def compileCompilers = project.task("compile${name}Compilers",
             type: JavaCompile,
@@ -1597,10 +1598,10 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
         description = "Compile the $name JSL Compilers"
 
         classpath =
-               project.files(project.sourceSets.jslc.java.outputDir) +
+               project.files(project.sourceSets.jslc.java.getDestinationDirectory().get().getAsFile()) +
                project.configurations.antlr
         source = [project.file("src/main/jsl-$lowerName")]
-        destinationDir = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
+        destinationDirectory = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
 
         options.compilerArgs.addAll([
             "-implicit:none",
@@ -1951,7 +1952,7 @@ void addJCov(p, test) {
             p.javaexec {
                 workingDir = p.file("build/reports/jcov")
                 classpath = p.files(p.configurations.testClasspath.files.find { it.name.startsWith('jcov') })
-                main = "com.sun.tdk.jcov.Helper"
+                mainClass = "com.sun.tdk.jcov.Helper"
                 args = [
                         "RepGen",
                         "-exclude", "\"**.test\"",
@@ -2187,10 +2188,9 @@ project(":base") {
         "BUILD_TIMESTAMP": BUILD_TIMESTAMP,
         "HUDSON_JOB_NAME": HUDSON_JOB_NAME,
         "HUDSON_BUILD_NUMBER": HUDSON_BUILD_NUMBER,
-        "PROMOTED_BUILD_NUMBER": PROMOTED_BUILD_NUMBER,
-        "PRODUCT_NAME": PRODUCT_NAME,
-        "RELEASE_VERSION": RELEASE_VERSION,
-        "RELEASE_SUFFIX": RELEASE_SUFFIX];
+        "RELEASE_SUFFIX": RELEASE_SUFFIX,
+        "RELEASE_VERSION_SHORT": RELEASE_VERSION_SHORT,
+        "RELEASE_VERSION_LONG": RELEASE_VERSION_LONG];
     task processVersionInfo(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
         doFirst { mkdir "$buildDir/gensrc/java" }
         from "src/main/version-info"
@@ -2306,7 +2306,7 @@ project(":graphics") {
         executable = JAVA
         classpath = project.configurations.antlr
         workingDir = wd
-        main = "org.antlr.v4.Tool"
+        mainClass = "org.antlr.v4.Tool"
 
         args = [
             "-o",
@@ -2337,7 +2337,7 @@ project(":graphics") {
         source += "$buildDir/gensrc/java"
         source += project.sourceSets.shaders.output
 
-        destinationDir = project.sourceSets.main.java.outputDir
+        destinationDirectory = project.sourceSets.main.java.destinationDirectory
         options.compilerArgs.addAll([
             '-h', "$buildDir/gensrc/headers/",  // Note: this creates the native headers
             '-implicit:none',
@@ -2484,7 +2484,7 @@ project(":graphics") {
     // a new task for each of the decora files, preferring instead just to create a rule?? Also
     // need "clean" tasks for each compile task.
 
-    def modulePath = "${project.sourceSets.main.java.outputDir}"
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
     addJSL(project, "Decora", "com/sun/scenario/effect/impl/hw/d3d/hlsl", decoraAddExports) { sourceDir, destinationDir ->
         [[fileName: "ColorAdjust", generator: "CompileJSL", outputs: "-all"],
@@ -2500,9 +2500,9 @@ project(":graphics") {
             javaexec {
                 executable = JAVA
                 workingDir = project.projectDir
-                main = settings.generator
+                mainClass = settings.generator
                 classpath = configurations.compileClasspath + configurations.antlr
-                classpath += files(project.sourceSets.jslc.java.outputDir)
+                classpath += files(project.sourceSets.jslc.java.getDestinationDirectory().get().getAsFile())
 
                 classpath += files("${project.projectDir}/src/jslc/resources")
 
@@ -2542,7 +2542,7 @@ project(":graphics") {
             def capitalVariant = variant.capitalize()
             def ccOutput = variant == "" ? nativeDir : file("$nativeDir/$variant")
 
-            def ccTask = task("compileDecoraNativeShaders$capitalTarget$capitalVariant", type: CCTask ) {
+            def ccTask = task("compileDecoraNativeShaders$capitalTarget$capitalVariant", type: CCTask, dependsOn: generateDecoraShaders) {
                 description = "Compiles Decora SSE natives for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 matches = ".*\\.cc"
                 source file("$buildDir/gensrc/jsl-decora")
@@ -2589,9 +2589,9 @@ project(":graphics") {
             javaexec {
                 executable = JAVA
                 workingDir = project.projectDir
-                main = "CompileJSL"
+                mainClass = "CompileJSL"
                 classpath = configurations.compileClasspath + configurations.antlr
-                classpath += files(project.sourceSets.jslc.java.outputDir)
+                classpath += files(project.sourceSets.jslc.java.getDestinationDirectory().get().getAsFile())
                 classpath += files(project.sourceSets.jslc.resources)
                 classpath += files("$buildDir/classes/jsl-compilers/prism",
                     project.projectDir.path + "/src/main/jsl-prism") // for the .stg
@@ -2712,7 +2712,7 @@ project(":controls") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
 
-    def modulePath = "${project.sourceSets.main.java.outputDir}"
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
     processResources {
@@ -2728,18 +2728,21 @@ project(":controls") {
                 jvmArgs += patchModuleArgs
                 jvmArgs += "--module-path=$modulePath"
                 jvmArgs += "--add-modules=javafx.graphics"
-                main = "com.sun.javafx.css.parser.Css2Bin"
+                mainClass = "com.sun.javafx.css.parser.Css2Bin"
                 args css
             }
         }
       }
     }
 
-    processShimsResources.dependsOn(project.task("copyShimBss", type: Copy) {
+    def copyShimBssTask = project.task("copyShimBss", type: Copy,
+                            dependsOn: [project.tasks.getByName("compileJava"),
+                                        project.tasks.getByName("processResources")]) {
         from project.moduleDir
         into project.moduleShimsDir
         include "**/*.bss"
-    })
+    }
+    processShimsResources.dependsOn(copyShimBssTask)
 
     addMavenPublication(project, [ 'graphics' ])
 
@@ -2942,6 +2945,7 @@ project(":media") {
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
             media name: "ffmpeg-4.0.2", ext: "tar.gz"
             media name: "ffmpeg-5.1.2", ext: "tar.gz"
+            media name: "ffmpeg-6.0", ext: "tar.gz"
         }
         implementation project(":base")
         implementation project(":graphics")
@@ -2958,7 +2962,7 @@ project(":media") {
 
     compileToolsJava {
         enabled = IS_COMPILE_MEDIA
-        def modulePath = "${project.sourceSets.main.java.outputDir}"
+        def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
         options.compilerArgs.addAll([
             "--module-path=$modulePath",
             "--add-modules=javafx.media",
@@ -2982,7 +2986,7 @@ project(":media") {
 
             mkdir generatedHeadersDir;
 
-            def modulePath = "${project.sourceSets.main.java.outputDir}"
+            def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
             modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
             modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
@@ -3084,7 +3088,7 @@ project(":media") {
             if (t.name == "linux") {
                 // Pre-defined command line arguments
                 def cfgCMDArgs = ["sh", "configure"]
-                def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-yasm", "--disable-doc", "--disable-programs", "--disable-everything"]
+                def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-asm", "--disable-doc", "--disable-programs", "--disable-everything"]
                 def codecsCfgArgs = ["--enable-decoder=aac,mp3,mp3float,h264,hevc", "--enable-parser=aac,h264,hevc", "--enable-demuxer=aac,h264,hevc,mpegts,mpegtsraw"]
 
                 def copyLibAVStubs = {String fromDir, String toDir ->
@@ -3288,8 +3292,8 @@ project(":media") {
                     doLast {
                         project.ext.libav = [:]
                         project.ext.libav.basedir = "${buildDir}/native/linux/ffmpeg"
-                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2" ]
-                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59" ]
+                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2", "6.0" ]
+                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59", "6.0" : "60" ]
 
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/ffmpeg-${version}"
@@ -3369,7 +3373,7 @@ project(":media") {
                             project.ext.libav.libavffmpeg.versions = [ "56" ]
                             project.ext.libav.ffmpeg = [:]
                             project.ext.libav.ffmpeg.basedir = "${buildDir}/native/linux/ffmpeg/ffmpeg"
-                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59" ]
+                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59", "60" ]
 
                             project.ext.libav.versions.each { version ->
                                 def libavDir = "${project.ext.libav.basedir}-${version}"
@@ -3761,7 +3765,7 @@ project(":web") {
 
         def compileJavaDOMBindingTask = task("compileJavaDOMBinding${t.capital}", type: JavaCompile,
                 dependsOn: [compileJava, compileNativeTask, copyNativeTask]) {
-            destinationDir = file("$buildDir/classes/java/main")
+            destinationDirectory = file("$buildDir/classes/java/main")
             classpath = configurations.compileClasspath
             source = project.sourceSets.main.java.srcDirs
             options.compilerArgs.addAll([
@@ -3789,6 +3793,8 @@ project(":web") {
     }
 
     if (IS_COMPILE_WEBKIT) {
+        drtJar.dependsOn compileJavaDOMBinding, processResources
+        compileShimsJava.dependsOn compileJavaDOMBinding
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
 
@@ -3909,7 +3915,7 @@ project(":systemTests") {
         destinationDirectory = file("$buildDir/testapp1")
         archiveFileName = testapp1JarName
         includeEmptyDirs = false
-        from project.sourceSets.testapp1.java.outputDir
+        from project.sourceSets.testapp1.java.getDestinationDirectory().get().getAsFile()
         include("testapp/**")
         include("com/javafx/main/**")
 
@@ -3930,7 +3936,7 @@ project(":systemTests") {
         destinationDirectory = file("$buildDir/testapp1")
         archiveFileName = "jar2.jar";
         includeEmptyDirs = false
-        from project.sourceSets.testapp1.java.outputDir
+        from project.sourceSets.testapp1.java.getDestinationDirectory().get().getAsFile()
         include("pkg2/**")
     }
 
@@ -3944,7 +3950,7 @@ project(":systemTests") {
     modtestapps.each { testapp ->
         def testappCapital = testapp.capitalize()
         def copyTestAppTask = task("copy${testappCapital}", type: Copy) {
-            from project.sourceSets."${testapp}".java.outputDir
+            from project.sourceSets."${testapp}".java.getDestinationDirectory().get().getAsFile()
             from project.sourceSets."${testapp}".output.resourcesDir
             into "${project.buildDir}/modules/${testapp}"
         }
@@ -4124,7 +4130,7 @@ allprojects {
         project.compileShimsJava.dependsOn(project.compileJava)
 
         def copyGeneratedShimsTask = task("copyGeneratedShims", type: Copy, dependsOn: [compileShimsJava, processShimsResources]) {
-            from project.sourceSets.shims.java.outputDir
+            from project.sourceSets.shims.java.getDestinationDirectory().get().getAsFile()
             into "${rootProject.buildDir}/shims"
             if (HAS_JAVAFX_MODULES) {
                 exclude("*/module-info.class")
@@ -4258,6 +4264,8 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
 
     options.addStringOption("-since").setValue((9..jfxReleaseMajorVersion.toInteger()).join(","))
     options.addStringOption("-since-label").setValue("New API since JavaFX 9")
+    options.addStringOption("Xmaxwarns").setValue("1000")
+    options.addStringOption("Xmaxerrs").setValue("1000")
 
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
@@ -4324,7 +4332,8 @@ task sdk() {
     } else {
         gradle.taskGraph.whenReady { taskGraph ->
             taskGraph.allTasks.each { task ->
-                if (!isTestTask(task) && !task.name.equals("verifyJava")) {
+                if (!isTestTask(task) && !task.name.equals("verifyJava") &&
+                    !task.name.equals("validateSourceSets")) {
                     task.enabled = false
                 }
             }
@@ -5150,6 +5159,16 @@ compileTargets { t ->
                 */
         }
         buildModulesTask.dependsOn(buildModuleClassesTask)
+
+        if (project.tasks.getByName("modularJarStandalone$t.capital") != null) {
+            project.tasks.getByName("modularJarStandalone$t.capital").dependsOn(buildModuleClassesTask)
+        }
+        if (project.tasks.getByName("copyClassFiles$t.capital") != null) {
+            project.tasks.getByName("copyClassFiles$t.capital").dependsOn(buildModuleClassesTask)
+        }
+        if (project.tasks.getByName("modularPublicationJar$t.capital") != null) {
+            project.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleClassesTask)
+        }
     }
 
     def buildModuleLibsTask = task("buildModuleLibs$t.capital") {
@@ -5217,6 +5236,9 @@ compileTargets { t ->
                 }
             }
         }
+        baseProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleBaseTask)
+        baseProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleBaseTask)
+        baseProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleBaseTask)
 
         def buildModuleGraphicsTask = task("buildModuleGraphics$t.capital", type: Copy, dependsOn: graphicsProject.assemble) {
             group = "Basic"
@@ -5285,6 +5307,10 @@ compileTargets { t ->
                 }
             }
         }
+        graphicsProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
+        graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleGraphicsTask)
+        graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleGraphicsTask)
+        graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleGraphicsTask)
 
         def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
@@ -5356,6 +5382,10 @@ compileTargets { t ->
                 }
             }
         }
+        mediaProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
+        mediaProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleMediaTask)
+        mediaProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleMediaTask)
+        mediaProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleMediaTask)
 
         def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
@@ -5405,6 +5435,10 @@ compileTargets { t ->
                 }
             }
         }
+        webProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleWeb)
+        webProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleWeb)
+        webProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleWeb)
+        webProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleWeb)
 
         def buildModuleSWT = task("buildModuleSWT$t.capital", type: Copy) {
             group = "Basic"
@@ -5426,6 +5460,10 @@ compileTargets { t ->
             from "${swtProject.buildDir}/libs/javafx-swt.jar"
             into "${graphicsProject.buildDir}/${platformPrefix}module-lib"
         }
+        graphicsProject.tasks.getByName("copyNativeFilesStandalone$t.capital").dependsOn(buildModuleSWT)
+        graphicsProject.tasks.getByName("copyLibFilesStandalone$t.capital").dependsOn(buildModuleSWT)
+        graphicsProject.tasks.getByName("copyLibFiles$t.capital").dependsOn(buildModuleSWT)
+        graphicsProject.tasks.getByName("modularPublicationJar$t.capital").dependsOn(buildModuleSWT)
 
         dependsOn(
             buildModuleBaseTask,
@@ -5632,7 +5670,7 @@ compileTargets { t ->
                         // https://bugs.openjdk.org/browse/JDK-8278766
                         def status = compareJdkVersion(jdkVersion, "19")
                         if (sourceDateEpoch != null && status >= 0) {
-                            args("--date", buildTimestamp)
+                            args("--date", extendedTimestamp)
                         }
                         args(jmodFile)
                     }

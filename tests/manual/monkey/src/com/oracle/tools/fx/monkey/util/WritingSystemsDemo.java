@@ -98,23 +98,26 @@ public class WritingSystemsDemo {
         "Vietnamese", "Tiếng Việt",
     };
 
-    public static String getText() {
+    public static String getText(boolean showUnicode) {
         StringBuilder sb = new StringBuilder();
-        for(int i=0; i<PAIRS.length; ) {
+        for (int i = 0; i < PAIRS.length;) {
             String a = PAIRS[i++];
             String b = PAIRS[i++];
-            t(sb, a, b);
+            t(sb, a, b, showUnicode);
         }
         return sb.toString();
     }
 
-    private static void t(StringBuilder sb, String name, String text) {
+    private static void t(StringBuilder sb, String name, String text, boolean showUnicode) {
         sb.append(name);
         sb.append(": ");
         sb.append(text);
-        sb.append(" (");
-        native2ascii(sb, text);
-        sb.append(") \n");
+        if (showUnicode) {
+            sb.append(" (");
+            native2ascii(sb, text);
+            sb.append(")");
+        }
+        sb.append("\n");
     }
 
     private static void native2ascii(StringBuilder sb, String text) {
