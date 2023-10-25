@@ -34,7 +34,6 @@ import javafx.event.WeakEventHandler;
 public final class CompositeEventHandler<T extends Event> {
     private EventProcessorRecord<T> firstRecord;
     private EventProcessorRecord<T> lastRecord;
-
     private EventHandler<? super T> eventHandler;
 
     public void setEventHandler(final EventHandler<? super T> eventHandler) {
@@ -73,45 +72,45 @@ public final class CompositeEventHandler<T extends Event> {
         }
     }
 
-    public void dispatchBubblingEvent(final Event event) {
+    public void dispatchBubblingEvent(final Event event, final EventHandlerPriority priority) {
         final T specificEvent = (T) event;
 
         EventProcessorRecord<T> record = firstRecord;
         while (record != null) {
             if (record.isDisconnected()) {
                 remove(record);
-            } else {
+            } else if (record.policy.priority() == priority) {
                 record.handleBubblingEvent(specificEvent);
             }
             record = record.nextRecord;
         }
 
-        if (eventHandler != null) {
+        if (eventHandler != null && priority == EventHandlerPriority.DEFAULT) {
             eventHandler.handle(specificEvent);
         }
     }
 
-    public void dispatchCapturingEvent(final Event event) {
+    public void dispatchCapturingEvent(final Event event, final EventHandlerPriority priority) {
         final T specificEvent = (T) event;
 
         EventProcessorRecord<T> record = firstRecord;
         while (record != null) {
             if (record.isDisconnected()) {
                 remove(record);
-            } else {
+            } else if (record.policy.priority() == priority) {
                 record.handleCapturingEvent(specificEvent);
             }
             record = record.nextRecord;
         }
     }
 
-    public boolean hasFilter() {
-        return find(true);
+    public boolean hasFilter(EventHandlerPriority priority) {
+        return find(true, priority);
     }
 
-    public boolean hasHandler() {
+    public boolean hasHandler(EventHandlerPriority priority) {
         if (getEventHandler() != null) return true;
-        return find(false);
+        return find(false, priority);
     }
 
     /* Used for testing. */
@@ -195,12 +194,12 @@ public final class CompositeEventHandler<T extends Event> {
         return null;
     }
 
-    private boolean find(boolean isFilter) {
+    private boolean find(boolean isFilter, EventHandlerPriority priority) {
         EventProcessorRecord<T> record = firstRecord;
         while (record != null) {
             if (record.isDisconnected()) {
                 remove(record);
-            } else if (isFilter == record.isFilter()) {
+            } else if (isFilter == record.isFilter() && priority == record.policy.priority()) {
                 return true;
             }
             record = record.nextRecord;

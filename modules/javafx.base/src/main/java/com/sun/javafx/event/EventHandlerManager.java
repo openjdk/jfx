@@ -25,12 +25,15 @@
 
 package com.sun.javafx.event;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventHandlerPolicy;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventType;
 
 /**
@@ -39,6 +42,14 @@ import javafx.event.EventType;
  * events to the appropriate registered handlers / filters.
  */
 public class EventHandlerManager extends BasicEventDispatcher {
+    private static final EventHandlerPriority[] EVENT_HANDLER_PRIORITIES;
+
+    static {
+        var priorities = Arrays.asList(EventHandlerPriority.values());
+        Collections.reverse(priorities);
+        EVENT_HANDLER_PRIORITIES = priorities.toArray(EventHandlerPriority[]::new);
+    }
+
     private final Map<EventType<? extends Event>,
                       CompositeEventHandler<? extends Event>> eventHandlerMap;
 
@@ -178,22 +189,26 @@ public class EventHandlerManager extends BasicEventDispatcher {
 
     @Override
     public final Event dispatchCapturingEvent(Event event) {
-        EventType<? extends Event> eventType = event.getEventType();
-        do {
-            event = dispatchCapturingEvent(eventType, event);
-            eventType = eventType.getSuperType();
-        } while (eventType != null);
+        for (EventHandlerPriority priority : EVENT_HANDLER_PRIORITIES) {
+            EventType<? extends Event> eventType = event.getEventType();
+            do {
+                event = dispatchCapturingEvent(eventType, event, priority);
+                eventType = eventType.getSuperType();
+            } while (eventType != null);
+        }
 
         return event;
     }
 
     @Override
     public final Event dispatchBubblingEvent(Event event) {
-        EventType<? extends Event> eventType = event.getEventType();
-        do {
-            event = dispatchBubblingEvent(eventType, event);
-            eventType = eventType.getSuperType();
-        } while (eventType != null);
+        for (EventHandlerPriority priority : EVENT_HANDLER_PRIORITIES) {
+            EventType<? extends Event> eventType = event.getEventType();
+            do {
+                event = dispatchBubblingEvent(eventType, event, priority);
+                eventType = eventType.getSuperType();
+            } while (eventType != null);
+        }
 
         return event;
     }
@@ -215,26 +230,26 @@ public class EventHandlerManager extends BasicEventDispatcher {
     }
 
     private Event dispatchCapturingEvent(
-            final EventType<? extends Event> handlerType, Event event) {
+            final EventType<? extends Event> handlerType, Event event, EventHandlerPriority priority) {
         final CompositeEventHandler<? extends Event> compositeEventHandler =
                 eventHandlerMap.get(handlerType);
 
-        if (compositeEventHandler != null && compositeEventHandler.hasFilter()) {
+        if (compositeEventHandler != null && compositeEventHandler.hasFilter(priority)) {
             event = fixEventSource(event, eventSource);
-            compositeEventHandler.dispatchCapturingEvent(event);
+            compositeEventHandler.dispatchCapturingEvent(event, priority);
         }
 
         return event;
     }
 
     private Event dispatchBubblingEvent(
-            final EventType<? extends Event> handlerType, Event event) {
+            final EventType<? extends Event> handlerType, Event event, EventHandlerPriority priority) {
         final CompositeEventHandler<? extends Event> compositeEventHandler =
                 eventHandlerMap.get(handlerType);
 
-        if (compositeEventHandler != null && compositeEventHandler.hasHandler()) {
+        if (compositeEventHandler != null && compositeEventHandler.hasHandler(priority)) {
             event = fixEventSource(event, eventSource);
-            compositeEventHandler.dispatchBubblingEvent(event);
+            compositeEventHandler.dispatchBubblingEvent(event, priority);
         }
 
         return event;
