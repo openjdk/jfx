@@ -43,7 +43,7 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
-import javafx.event.EventHandlerPolicy;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -476,13 +476,13 @@ public class MenuItem implements EventTarget, Styleable {
 
     @Override
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventHandler(eventType, eventHandler, EventHandlerPriority.DEFAULT);
     }
 
     @Override
     public <E extends Event> void addEventHandler(EventType<E> eventType, EventHandler<? super E> eventHandler,
-                                                  EventHandlerPolicy eventHandlerPolicy) {
-        eventHandlerManager.addEventHandler(eventType, eventHandler, eventHandlerPolicy);
+                                                  EventHandlerPriority priority) {
+        eventHandlerManager.addEventHandler(eventType, eventHandler, priority);
     }
 
     @Override
@@ -492,13 +492,13 @@ public class MenuItem implements EventTarget, Styleable {
 
     @Override
     public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter) {
-        eventHandlerManager.addEventFilter(eventType, eventFilter, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventFilter(eventType, eventFilter, EventHandlerPriority.DEFAULT);
     }
 
     @Override
     public <E extends Event> void addEventFilter(EventType<E> eventType, EventHandler<? super E> eventFilter,
-                                                 EventHandlerPolicy eventFilterPolicy) {
-        eventHandlerManager.addEventFilter(eventType, eventFilter, eventFilterPolicy);
+                                                 EventHandlerPriority priority) {
+        eventHandlerManager.addEventFilter(eventType, eventFilter, priority);
     }
 
     @Override

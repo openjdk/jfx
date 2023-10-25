@@ -32,7 +32,6 @@ import java.util.Map;
 
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventHandlerPolicy;
 import javafx.event.EventHandlerPriority;
 import javafx.event.EventType;
 
@@ -67,20 +66,21 @@ public class EventHandlerManager extends BasicEventDispatcher {
      * @param <T> the specific event class of the handler
      * @param eventType the type of the events to receive by the handler
      * @param eventHandler the handler to register
+     * @param priority the invocation priority
      * @throws NullPointerException if the event type or handler is null
      */
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler,
-            final EventHandlerPolicy policy) {
+            final EventHandlerPriority priority) {
         validateEventType(eventType);
         validateEventHandler(eventHandler);
-        validateEventHandlerPolicy(policy);
+        validatePriority(priority);
 
         final CompositeEventHandler<T> compositeEventHandler =
                 createGetCompositeEventHandler(eventType);
 
-        compositeEventHandler.addEventHandler(eventHandler, policy);
+        compositeEventHandler.addEventHandler(eventHandler, priority);
     }
 
     /**
@@ -111,20 +111,21 @@ public class EventHandlerManager extends BasicEventDispatcher {
      * @param <T> the specific event class of the filter
      * @param eventType the type of the events to receive by the filter
      * @param eventFilter the filter to register
+     * @param priority the invocation priority
      * @throws NullPointerException if the event type or filter is null
      */
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter,
-            final EventHandlerPolicy policy) {
+            final EventHandlerPriority priority) {
         validateEventType(eventType);
         validateEventFilter(eventFilter);
-        validateEventHandlerPolicy(policy);
+        validatePriority(priority);
 
         final CompositeEventHandler<T> compositeEventHandler =
                 createGetCompositeEventHandler(eventType);
 
-        compositeEventHandler.addEventFilter(eventFilter, policy);
+        compositeEventHandler.addEventFilter(eventFilter, priority);
     }
 
     /**
@@ -282,10 +283,10 @@ public class EventHandlerManager extends BasicEventDispatcher {
         }
     }
 
-    private static void validateEventHandlerPolicy(
-            final EventHandlerPolicy policy) {
-        if (policy == null) {
-            throw new NullPointerException("EventHandlerPolicy must not be null");
+    private static void validatePriority(
+            final EventHandlerPriority priority) {
+        if (priority == null) {
+            throw new NullPointerException("EventHandlerPriority must not be null");
         }
     }
 }

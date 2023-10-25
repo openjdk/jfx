@@ -44,7 +44,7 @@ import javafx.beans.property.StringProperty;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
-import javafx.event.EventHandlerPolicy;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import java.util.concurrent.Callable;
@@ -1258,16 +1258,16 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
         checkThread();
-        getEventHelper().addEventHandler(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+        getEventHelper().addEventHandler(eventType, eventHandler, EventHandlerPriority.DEFAULT);
     }
 
     @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler,
-            final EventHandlerPolicy eventHandlerPolicy) {
+            final EventHandlerPriority priority) {
         checkThread();
-        getEventHelper().addEventHandler(eventType, eventHandler, eventHandlerPolicy);
+        getEventHelper().addEventHandler(eventType, eventHandler, priority);
     }
 
     /**
@@ -1291,16 +1291,16 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
         checkThread();
-        getEventHelper().addEventFilter(eventType, eventFilter, EventHandlerPolicy.DEFAULT);
+        getEventHelper().addEventFilter(eventType, eventFilter, EventHandlerPriority.DEFAULT);
     }
 
     @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter,
-            final EventHandlerPolicy eventFilterPolicy) {
+            final EventHandlerPriority priority) {
         checkThread();
-        getEventHelper().addEventFilter(eventType, eventFilter, eventFilterPolicy);
+        getEventHelper().addEventFilter(eventType, eventFilter, priority);
     }
 
     /**

@@ -31,13 +31,13 @@ import org.junit.Test;
 
 import com.sun.javafx.event.EventHandlerManager;
 
+import static javafx.event.EventHandlerPriority.DEFAULT;
 import static org.junit.Assert.*;
 
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
-import javafx.event.EventHandlerPolicy;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
 import javafx.event.WeakEventHandlerUtil;
@@ -88,7 +88,7 @@ public final class EventHandlerManagerTest {
         // add handler
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                eventHandler, EventHandlerPolicy.DEFAULT);
+                eventHandler, DEFAULT);
         ValueEvent sent = new ValueEvent(0);
         assertDispatch(sent, 5);
         // remove handler
@@ -106,7 +106,7 @@ public final class EventHandlerManagerTest {
         // add filter
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_A,
-                eventFilter, EventHandlerPolicy.DEFAULT);
+                eventFilter, DEFAULT);
         ValueEvent sent = new ValueEvent(0);
         assertDispatch(sent, 5);
         // remove filter
@@ -125,7 +125,7 @@ public final class EventHandlerManagerTest {
         // add weak handler
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                weakHandler, EventHandlerPolicy.DEFAULT);
+                weakHandler, DEFAULT);
         ValueEvent sent = new ValueEvent(0);
         assertDispatch(sent, 5);
         // clear weak handler
@@ -144,7 +144,7 @@ public final class EventHandlerManagerTest {
         // add filter
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_A,
-                weakFilter, EventHandlerPolicy.DEFAULT);
+                weakFilter, DEFAULT);
 
         ValueEvent sent = new ValueEvent(0);
         assertDispatch(sent, 5);
@@ -251,28 +251,28 @@ public final class EventHandlerManagerTest {
     public void shouldCallCorrectAddedHandlers() {
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                new EventChangingHandler(Operation.add(5)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.add(5)), DEFAULT);
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_B,
-                new EventChangingHandler(Operation.mul(3)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.mul(3)), DEFAULT);
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_C,
-                new EventChangingHandler(Operation.mul(7)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.mul(7)), DEFAULT);
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                new EventChangingHandler(Operation.add(2)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.add(2)), DEFAULT);
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_B,
-                new EventChangingHandler(Operation.mul(4)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.mul(4)), DEFAULT);
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_C,
-                new EventChangingHandler(Operation.mul(6)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.mul(6)), DEFAULT);
 
         final EventCountingHandler<EmptyEvent> emptyEventCountingHandler =
                 new EventCountingHandler<>();
         eventHandlerManager.addEventHandler(
                 EmptyEvent.EMPTY,
-                emptyEventCountingHandler, EventHandlerPolicy.DEFAULT);
+                emptyEventCountingHandler, DEFAULT);
 
         testValueEventDispatch(
                 eventHandlerManager, ValueEvent.VALUE_A, 11, 18);
@@ -294,28 +294,28 @@ public final class EventHandlerManagerTest {
     public void shouldCallCorrectAddedFilters() {
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_A,
-                new EventChangingHandler(Operation.add(5)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.add(5)), DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_B,
-                new EventChangingHandler(Operation.mul(3)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.mul(3)), DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_C,
-                new EventChangingHandler(Operation.mul(7)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.mul(7)), DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_A,
-                new EventChangingHandler(Operation.add(2)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.add(2)), DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_B,
-                new EventChangingHandler(Operation.mul(4)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.mul(4)), DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_C,
-                new EventChangingHandler(Operation.mul(6)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.mul(6)), DEFAULT);
 
         final EventCountingHandler<EmptyEvent> emptyEventCountingHandler =
                 new EventCountingHandler<>();
         eventHandlerManager.addEventFilter(
                 EmptyEvent.EMPTY,
-                emptyEventCountingHandler, EventHandlerPolicy.DEFAULT);
+                emptyEventCountingHandler, DEFAULT);
 
         testValueEventDispatch(
                 eventHandlerManager, ValueEvent.VALUE_A, 11, 18);
@@ -340,13 +340,13 @@ public final class EventHandlerManagerTest {
 
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                handlerFilterToRemove, EventHandlerPolicy.DEFAULT);
+                handlerFilterToRemove, DEFAULT);
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                new EventChangingHandler(Operation.add(2)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.add(2)), DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_A,
-                handlerFilterToRemove, EventHandlerPolicy.DEFAULT);
+                handlerFilterToRemove, DEFAULT);
 
         testValueEventDispatch(
                 eventHandlerManager, ValueEvent.VALUE_A, 11, 23);
@@ -369,13 +369,13 @@ public final class EventHandlerManagerTest {
 
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                eventHandler, EventHandlerPolicy.DEFAULT);
+                eventHandler, DEFAULT);
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_B,
-                eventHandler, EventHandlerPolicy.DEFAULT);
+                eventHandler, DEFAULT);
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                eventHandler, EventHandlerPolicy.DEFAULT);
+                eventHandler, DEFAULT);
 
         testValueEventDispatch(
                 eventHandlerManager, ValueEvent.VALUE_A, 1, 2);
@@ -398,13 +398,13 @@ public final class EventHandlerManagerTest {
 
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_A,
-                eventFilter, EventHandlerPolicy.DEFAULT);
+                eventFilter, DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_B,
-                eventFilter, EventHandlerPolicy.DEFAULT);
+                eventFilter, DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_A,
-                eventFilter, EventHandlerPolicy.DEFAULT);
+                eventFilter, DEFAULT);
 
         testValueEventDispatch(
                 eventHandlerManager, ValueEvent.VALUE_A, 1, 2);
@@ -434,10 +434,10 @@ public final class EventHandlerManagerTest {
                 new EventChangingHandler(Operation.mul(2)));
         eventHandlerManager.addEventHandler(
                 ValueEvent.VALUE_A,
-                new EventChangingHandler(Operation.add(5)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.add(5)), DEFAULT);
         eventHandlerManager.addEventFilter(
                 ValueEvent.VALUE_A,
-                new EventChangingHandler(Operation.div(7)), EventHandlerPolicy.DEFAULT);
+                new EventChangingHandler(Operation.div(7)), DEFAULT);
 
         ValueEvent valueEvent;
 
@@ -460,15 +460,15 @@ public final class EventHandlerManagerTest {
                 new EventCountingHandler<>();
 
         eventHandlerManager.addEventHandler(
-                EventType.ROOT, rootEventCounter, EventHandlerPolicy.DEFAULT);
+                EventType.ROOT, rootEventCounter, DEFAULT);
         eventHandlerManager.addEventHandler(
-                ValueEvent.ANY, valueEventCounter, EventHandlerPolicy.DEFAULT);
+                ValueEvent.ANY, valueEventCounter, DEFAULT);
         eventHandlerManager.addEventHandler(
-                ValueEvent.VALUE_A, valueAEventCounter, EventHandlerPolicy.DEFAULT);
+                ValueEvent.VALUE_A, valueAEventCounter, DEFAULT);
         eventHandlerManager.addEventHandler(
-                ValueEvent.VALUE_B, valueBEventCounter, EventHandlerPolicy.DEFAULT);
+                ValueEvent.VALUE_B, valueBEventCounter, DEFAULT);
         eventHandlerManager.addEventHandler(
-                EmptyEvent.EMPTY, emptyEventCounter, EventHandlerPolicy.DEFAULT);
+                EmptyEvent.EMPTY, emptyEventCounter, DEFAULT);
 
         dispatchEmptyEvent(eventHandlerManager);
         dispatchValueEvent(eventHandlerManager, ValueEvent.VALUE_A);
@@ -497,15 +497,15 @@ public final class EventHandlerManagerTest {
                 new EventCountingHandler<>();
 
         eventHandlerManager.addEventFilter(
-                EventType.ROOT, rootEventCounter, EventHandlerPolicy.DEFAULT);
+                EventType.ROOT, rootEventCounter, DEFAULT);
         eventHandlerManager.addEventFilter(
-                ValueEvent.ANY, valueEventCounter, EventHandlerPolicy.DEFAULT);
+                ValueEvent.ANY, valueEventCounter, DEFAULT);
         eventHandlerManager.addEventFilter(
-                ValueEvent.VALUE_A, valueAEventCounter, EventHandlerPolicy.DEFAULT);
+                ValueEvent.VALUE_A, valueAEventCounter, DEFAULT);
         eventHandlerManager.addEventFilter(
-                ValueEvent.VALUE_B, valueBEventCounter, EventHandlerPolicy.DEFAULT);
+                ValueEvent.VALUE_B, valueBEventCounter, DEFAULT);
         eventHandlerManager.addEventFilter(
-                EmptyEvent.EMPTY, emptyEventCounter, EventHandlerPolicy.DEFAULT);
+                EmptyEvent.EMPTY, emptyEventCounter, DEFAULT);
 
         dispatchEmptyEvent(eventHandlerManager);
         dispatchValueEvent(eventHandlerManager, ValueEvent.VALUE_A);
@@ -536,11 +536,11 @@ public final class EventHandlerManagerTest {
         final EventConsumingHandler eventConsumingHandler =
                 new EventConsumingHandler();
 
-        eventHandlerManager.addEventFilter(Event.ANY, eventCountingFilter, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventFilter(Event.ANY, eventCountingFilter, DEFAULT);
 
         // add counting first, consuming second
-        eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler, EventHandlerPolicy.DEFAULT);
-        eventHandlerManager.addEventHandler(Event.ANY, eventConsumingHandler, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler, DEFAULT);
+        eventHandlerManager.addEventHandler(Event.ANY, eventConsumingHandler, DEFAULT);
 
         Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
         Assert.assertEquals(1, eventCountingFilter.getEventCount());
@@ -554,8 +554,8 @@ public final class EventHandlerManagerTest {
                 Event.ANY, eventConsumingHandler);
 
         // add consuming first, counting second
-        eventHandlerManager.addEventHandler(Event.ANY, eventConsumingHandler, EventHandlerPolicy.DEFAULT);
-        eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventHandler(Event.ANY, eventConsumingHandler, DEFAULT);
+        eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler, DEFAULT);
 
         Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
         Assert.assertEquals(2, eventCountingFilter.getEventCount());
@@ -580,11 +580,11 @@ public final class EventHandlerManagerTest {
         final EventCountingHandler<Event> eventCountingHandler =
                 new EventCountingHandler<>();
 
-        eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler, DEFAULT);
 
         // add counting first, consuming second
-        eventHandlerManager.addEventFilter(Event.ANY, eventCountingFilter, EventHandlerPolicy.DEFAULT);
-        eventHandlerManager.addEventFilter(Event.ANY, eventConsumingFilter, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventFilter(Event.ANY, eventCountingFilter, DEFAULT);
+        eventHandlerManager.addEventFilter(Event.ANY, eventConsumingFilter, DEFAULT);
 
         Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
         Assert.assertEquals(1, eventCountingFilter.getEventCount());
@@ -596,8 +596,8 @@ public final class EventHandlerManagerTest {
         eventHandlerManager.removeEventFilter(Event.ANY, eventConsumingFilter);
 
         // add consuming first, counting second
-        eventHandlerManager.addEventFilter(Event.ANY, eventConsumingFilter, EventHandlerPolicy.DEFAULT);
-        eventHandlerManager.addEventFilter(Event.ANY, eventCountingFilter, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventFilter(Event.ANY, eventConsumingFilter, DEFAULT);
+        eventHandlerManager.addEventFilter(Event.ANY, eventCountingFilter, DEFAULT);
 
         Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
         Assert.assertEquals(2, eventCountingFilter.getEventCount());
@@ -611,12 +611,12 @@ public final class EventHandlerManagerTest {
         eventHandlerManager.addEventHandler(
                 null,
                 event -> {
-                }, EventHandlerPolicy.DEFAULT);
+                }, DEFAULT);
     }
 
     @Test(expected=NullPointerException.class)
     public void addEventHandlerShouldThrowNPEForNullEventHandler() {
-        eventHandlerManager.addEventHandler(Event.ANY, null, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventHandler(Event.ANY, null, DEFAULT);
     }
 
     @Test(expected=NullPointerException.class)
@@ -637,12 +637,12 @@ public final class EventHandlerManagerTest {
         eventHandlerManager.addEventFilter(
                 null,
                 event -> {
-                }, EventHandlerPolicy.DEFAULT);
+                }, DEFAULT);
     }
 
     @Test(expected=NullPointerException.class)
     public void addEventFilterShouldThrowNPEForNullEventHandler() {
-        eventHandlerManager.addEventFilter(Event.ANY, null, EventHandlerPolicy.DEFAULT);
+        eventHandlerManager.addEventFilter(Event.ANY, null, DEFAULT);
     }
 
     @Test(expected=NullPointerException.class)

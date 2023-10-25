@@ -68,7 +68,7 @@ import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
-import javafx.event.EventHandlerPolicy;
+import javafx.event.EventHandlerPriority;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.BoundingBox;
@@ -8743,16 +8743,16 @@ public abstract class Node implements EventTarget, Styleable {
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
         getInternalEventDispatcher().getEventHandlerManager()
-                                    .addEventHandler(eventType, eventHandler, EventHandlerPolicy.DEFAULT);
+                                    .addEventHandler(eventType, eventHandler, EventHandlerPriority.DEFAULT);
     }
 
     @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler,
-            final EventHandlerPolicy eventHandlerPolicy) {
+            final EventHandlerPriority priority) {
         getInternalEventDispatcher().getEventHandlerManager()
-                                    .addEventHandler(eventType, eventHandler, eventHandlerPolicy);
+                                    .addEventHandler(eventType, eventHandler, priority);
     }
 
     @Override
@@ -8769,16 +8769,16 @@ public abstract class Node implements EventTarget, Styleable {
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
         getInternalEventDispatcher().getEventHandlerManager()
-                                    .addEventFilter(eventType, eventFilter, EventHandlerPolicy.DEFAULT);
+                                    .addEventFilter(eventType, eventFilter, EventHandlerPriority.DEFAULT);
     }
 
     @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter,
-            final EventHandlerPolicy eventFilterPolicy) {
+            final EventHandlerPriority priority) {
         getInternalEventDispatcher().getEventHandlerManager()
-                                    .addEventFilter(eventType, eventFilter, eventFilterPolicy);
+                                    .addEventFilter(eventType, eventFilter, priority);
     }
 
     @Override

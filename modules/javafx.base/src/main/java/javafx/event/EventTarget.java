@@ -56,7 +56,7 @@ public interface EventTarget {
     EventDispatchChain buildEventDispatchChain(EventDispatchChain tail);
 
     /**
-     * Registers an event handler for this target with the {@link EventHandlerPolicy#DEFAULT} policy.
+     * Registers an event handler for this target with {@link EventHandlerPriority#DEFAULT} priority.
      * <p>
      * The handler is called when the target receives an {@link Event} of the specified
      * type during the bubbling phase of event delivery.
@@ -74,7 +74,7 @@ public interface EventTarget {
     }
 
     /**
-     * Registers an event handler for this target with the specified policy.
+     * Registers an event handler for this target with the specified invocation priority.
      * <p>
      * The handler is called when the target receives an {@link Event} of the specified
      * type during the bubbling phase of event delivery. The specified priority determines
@@ -84,18 +84,18 @@ public interface EventTarget {
      * @param <E> the event class of the handler
      * @param eventType the type of the events received by the handler
      * @param eventHandler the event handler
-     * @param eventHandlerPolicy the event handler policy
-     * @throws NullPointerException if {@code eventType}, {@code eventHandler}, or {@code eventHandlerPolicy} is {@code null}
-     * @throws UnsupportedOperationException if this target does not support event handlers with the specified policy
+     * @param priority the invocation priority
+     * @throws NullPointerException if {@code eventType}, {@code eventHandler}, or {@code priority} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event handlers with the specified priority
      * @implSpec The default implementation of this method calls {@link #addEventHandler(EventType, EventHandler)}
-     *           if the policy is equal to {@link EventHandlerPolicy#DEFAULT}. In all other cases, it throws
+     *           if the priority is {@link EventHandlerPriority#DEFAULT}. In all other cases, it throws
      *           {@link UnsupportedOperationException}.
      * @since 22
      */
     default <E extends Event> void addEventHandler(EventType<E> eventType,
                                                    EventHandler<? super E> eventHandler,
-                                                   EventHandlerPolicy eventHandlerPolicy) {
-        if (EventHandlerPolicy.DEFAULT.equals(eventHandlerPolicy)) {
+                                                   EventHandlerPriority priority) {
+        if (priority == EventHandlerPriority.DEFAULT) {
             addEventHandler(eventType, eventHandler);
         } else {
             throw new UnsupportedOperationException();
@@ -121,7 +121,7 @@ public interface EventTarget {
     }
 
     /**
-     * Registers an event filter for this target with the {@link EventHandlerPolicy#DEFAULT} policy.
+     * Registers an event filter for this target with {@link EventHandlerPriority#DEFAULT} priority.
      * <p>
      * The filter is called when the target receives an {@link Event} of the specified
      * type during the capturing phase of event delivery.
@@ -139,7 +139,7 @@ public interface EventTarget {
     }
 
     /**
-     * Registers an event filter for this target with the specified policy.
+     * Registers an event filter for this target with the specified invocation priority.
      * <p>
      * The filter is called when the target receives an {@link Event} of the specified
      * type during the capturing phase of event delivery. The specified priority determines
@@ -149,18 +149,18 @@ public interface EventTarget {
      * @param <E> the event class of the filter
      * @param eventType the type of the events received by the filter
      * @param eventFilter the event filter
-     * @param eventFilterPolicy the event filter policy
-     * @throws NullPointerException if {@code eventType}, {@code eventFilter}, or {@code eventFilterPolicy} is {@code null}
-     * @throws UnsupportedOperationException if this target does not support event filters with the specified policy
+     * @param priority the invocation priority
+     * @throws NullPointerException if {@code eventType}, {@code eventFilter}, or {@code priority} is {@code null}
+     * @throws UnsupportedOperationException if this target does not support event filters with the specified priority
      * @implSpec The default implementation of this method calls {@link #addEventFilter(EventType, EventHandler)}
-     *           if the policy is equal to {@link EventHandlerPolicy#DEFAULT}. In all other cases, it throws
+     *           if the priority is {@link EventHandlerPriority#DEFAULT}. In all other cases, it throws
      *           {@link UnsupportedOperationException}.
      * @since 22
      */
     default <E extends Event> void addEventFilter(EventType<E> eventType,
                                                   EventHandler<? super E> eventFilter,
-                                                  EventHandlerPolicy eventFilterPolicy) {
-        if (EventHandlerPolicy.DEFAULT.equals(eventFilterPolicy)) {
+                                                  EventHandlerPriority priority) {
+        if (priority == EventHandlerPriority.DEFAULT) {
             addEventFilter(eventType, eventFilter);
         } else {
             throw new UnsupportedOperationException();
