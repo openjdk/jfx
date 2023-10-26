@@ -1982,7 +1982,7 @@ public abstract class Node implements EventTarget, Styleable {
      *     If multiple nodes have same style class "myStyle" and few nodes have
      *     a pseudo state "myPseudo", then to find all nodes with "myPseudo" state, the lookupAll method can be used as follows:
      *     {@code scene.lookupAll(".myStyle:myPseudo");} or {@code scene.lookupAll(":myPseudo");}. If no pseudo class is specified
-     *     by the lookupAll selector, irrespective of their pseudo states the result will contain all nodes matching the selector.
+     *     by the lookupAll selector, irrespective of the nodes pseudo states the result will contain all nodes matching the selector.
      * </p>
      *
      * @param selector The css selector of the nodes to find
