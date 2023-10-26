@@ -43,6 +43,7 @@ public interface StyleResolver {
      * @param attrs the style attributes
      * @return the resolved style attributes
      */
+    // TODO this can take CssStyles argument instead
     public StyleAttrs resolveStyles(StyleAttrs attrs);
 
     /**

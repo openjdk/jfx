@@ -1207,7 +1207,7 @@ public class RichTextArea extends Control {
         return false;
     }
 
-    private StyleAttrs getActiveStyleInfo() {
+    private StyleAttrs getModelStyleAttrs() {
         StyledTextModel m = getModel();
         if (m != null) {
             TextPos pos = getCaretPosition();
@@ -1232,24 +1232,33 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * When selection exists, returns the attributes of the first selected character.
-     * When no selection exists, returns the attributes of a character immediately preceding the caret.
+     * Returns {@code StyleAttrs} which contains character and paragraph attributes.
+     * <br>
+     * When selection exists, returns the attributes at the first selected character.
+     * <br>
+     * When no selection exists, returns the attributes at the character which immediately precedes the caret.
      * When at the beginning of the document, returns the attributes of the first character.
      * If the model uses CSS styles, this method resolves individual attributes (bold, font size, etc.)
      * according to the stylesheet for this instance of {@code RichTextArea}.
      *
-     * @return non-null {@link StyleAttrs}.
+     * @return the non-null {@code StyleAttrs} instance
      */
+    // FIX add paragraph attributes
+    // FIX: problem - char attrs may need to be resolved; paragraph - don't 
     public StyleAttrs getActiveStyleAttrs() {
-        StyleAttrs a = getActiveStyleInfo();
+        StyleAttrs a = getModelStyleAttrs();
         RichTextAreaSkin skin = richTextAreaSkin();
         if (skin != null) {
             StyleResolver resolver = skin.getStyleResolver();
             if (resolver != null) {
-                return resolver.resolveStyles(a);
+                a = resolver.resolveStyles(a);
             }
         }
-        return a;
+        StyleAttrs pa = getDefaultParagraphAttributes();
+        if ((pa == null) || pa.isEmpty()) {
+            return a;
+        }
+        return pa.combine(a);
     }
 
     /**

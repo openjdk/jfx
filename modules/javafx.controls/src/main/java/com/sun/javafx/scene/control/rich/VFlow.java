@@ -42,6 +42,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.event.EventType;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -829,6 +830,13 @@ public class VFlow extends Pane implements StyleResolver {
             String[] names = css.names();
             if (names != null) {
                 n.getStyleClass().addAll(names);
+            }
+        }
+
+        if (forParagraph) {
+            // FIX might be incorrect, as it should always override the value inherited from parent
+            if (a.getBoolean(StyleAttrs.RTL)) {
+                n.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
             }
         }
     }

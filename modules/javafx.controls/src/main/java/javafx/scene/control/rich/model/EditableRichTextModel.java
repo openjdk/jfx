@@ -168,14 +168,19 @@ public class EditableRichTextModel extends StyledTextModel {
         if(index < paragraphs.size()) {
             int off = pos.offset();
             RParagraph par = paragraphs.get(index);
-            return par.getStyleAttrs(off);
+            StyleAttrs pa = par.getParagraphAttributes();
+            StyleAttrs a = par.getStyleAttrs(off);
+            if (pa == null) {
+                return a;
+            } else {
+                return pa.combine(a);
+            }
         }
         return StyleAttrs.EMPTY;
     }
 
     /**
-     * Model rich text segment.
-     * TODO add paragraph segment
+     * Represents a rich text segment having the same style attributes.
      */
     private static class RSegment {
         private String text;

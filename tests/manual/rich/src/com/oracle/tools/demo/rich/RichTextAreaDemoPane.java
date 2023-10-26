@@ -38,6 +38,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
@@ -369,6 +370,7 @@ public class RichTextAreaDemoPane extends BorderPane {
 
         Menu m2;
         MenuItem m;
+        CheckMenuItem cm;
         items.add(m = new MenuItem("Undo"));
         m.setOnAction((ev) -> control.undo());
         m.setDisable(!control.isUndoable());
@@ -501,6 +503,10 @@ public class RichTextAreaDemoPane extends BorderPane {
             spaceMenu(m2, "Left", 0, 0, 0, 30);
             spaceMenu(m2, "Right", 0, 30, 0, 0);
             spaceMenu(m2, "None", 0, 0, 0, 0);
+            
+            items.add(cm = new CheckMenuItem("RTL Orientation"));
+            cm.setSelected(a.getBoolean(StyleAttrs.RTL));
+            cm.setOnAction((ev) -> applyStyle(StyleAttrs.RTL, !a.getBoolean(StyleAttrs.RTL)));
         }
 
         items.add(new SeparatorMenuItem());

@@ -50,6 +50,59 @@ public class StyleUtil {
 
     private static final HashMap<StyleAttribute<?>, Generator> generators = initGenerators();
 
+    private static HashMap<StyleAttribute<?>, Generator> initGenerators() {
+        HashMap<StyleAttribute<?>, Generator> m = new HashMap<>();
+
+        put(m, StyleAttrs.BACKGROUND, (v) -> {
+            String color = RichUtils.toCssColor(v);
+            return "-fx-background-color:" + color + ";";
+        });
+
+        put(m, StyleAttrs.BOLD, (v) -> {
+            return v ? "-fx-font-weight:bold;" : "-fx-font-weight:normal;";
+        });
+
+        put(m, StyleAttrs.FONT_FAMILY, (v) -> {
+            return "-fx-font-family:'" + v + "';";
+        });
+
+        put(m, StyleAttrs.FONT_SIZE, (v) -> {
+            return "-fx-font-size:" + v + "pt;";
+        });
+
+        put(m, StyleAttrs.ITALIC, (v) -> {
+            return v ? "-fx-font-style:italic;" : "";
+        });
+
+        put(m, StyleAttrs.LINE_SPACING, (v) -> {
+            return "-fx-line-spacing:" + v + ";";
+        });
+
+//        put(m, StyleAttrs.RTL, (v) -> {
+//            return "-fx // nope, no css rule for orientation
+//        });
+
+        put(m, StyleAttrs.STRIKE_THROUGH, (v) -> {
+            return v ? "-fx-strikethrough:true;" : "";
+        });
+
+        put(m, StyleAttrs.TEXT_ALIGNMENT, (v) -> {
+          String alignment = RichUtils.toCss(v);
+          return "-fx-text-alignment:" + alignment + ";";
+        });
+
+        put(m, StyleAttrs.TEXT_COLOR, (v) -> {
+            String color = RichUtils.toCssColor(v);
+            return "-fx-fill:" + color + ";";
+        });
+
+        put(m, StyleAttrs.UNDERLINE, (v) -> {
+            return v ? "-fx-underline:true;" : "";
+        });
+
+        return m;
+    }
+
     /**
      * Creates an fx style string from the given StyleAttrs, using either character or paragraph attributes.
      * @param attrs the style attributes
@@ -108,55 +161,6 @@ public class StyleUtil {
                 "-fx-padding:" + top + ' ' + right + ' ' + bottom + ' ' + left + ";";
         }
         return null;
-    }
-
-    private static HashMap<StyleAttribute<?>, Generator> initGenerators() {
-        HashMap<StyleAttribute<?>, Generator> m = new HashMap<>();
-
-        put(m, StyleAttrs.BACKGROUND, (v) -> {
-            String color = RichUtils.toCssColor(v);
-            return "-fx-background-color:" + color + ";";
-        });
-
-        put(m, StyleAttrs.BOLD, (v) -> {
-            return v ? "-fx-font-weight:bold;" : "-fx-font-weight:normal;";
-        });
-
-        put(m, StyleAttrs.FONT_FAMILY, (v) -> {
-            return "-fx-font-family:'" + v + "';";
-        });
-
-        put(m, StyleAttrs.FONT_SIZE, (v) -> {
-            return "-fx-font-size:" + v + "pt;";
-        });
-
-        put(m, StyleAttrs.ITALIC, (v) -> {
-            return v ? "-fx-font-style:italic;" : "";
-        });
-
-        put(m, StyleAttrs.LINE_SPACING, (v) -> {
-            return "-fx-line-spacing:" + v + ";";
-        });
-
-        put(m, StyleAttrs.STRIKE_THROUGH, (v) -> {
-            return v ? "-fx-strikethrough:true;" : "";
-        });
-
-        put(m, StyleAttrs.TEXT_ALIGNMENT, (v) -> {
-          String alignment = RichUtils.toCss(v);
-          return "-fx-text-alignment:" + alignment + ";";
-        });
-
-        put(m, StyleAttrs.TEXT_COLOR, (v) -> {
-            String color = RichUtils.toCssColor(v);
-            return "-fx-fill:" + color + ";";
-        });
-
-        put(m, StyleAttrs.UNDERLINE, (v) -> {
-            return v ? "-fx-underline:true;" : "";
-        });
-
-        return m;
     }
 
     // a tick to work around the generics

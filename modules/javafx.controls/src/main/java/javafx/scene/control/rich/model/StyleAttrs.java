@@ -54,6 +54,7 @@ public class StyleAttrs {
     /** Bold typeface attribute */
     public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false);
 
+    /** This special attribute contains CSS direct style and style names */
     public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, false);
 
     /** Font family attribute */
@@ -67,6 +68,9 @@ public class StyleAttrs {
 
     /** Line spacing paragraph attribute */
     public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true);
+
+    /** Paragraph right-to-left orientation attribute */
+    public static final StyleAttribute<Boolean> RTL = new StyleAttribute<>("RTL", Boolean.class, true);
 
     /** Space above the paragraph (top padding) attribute */
     public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true);
@@ -175,49 +179,11 @@ public class StyleAttrs {
         return attributes.containsKey(a);
     }
 
-    /**
-     * Converts the attributes into a single direct style string and returns the resulting (can be null).
-     * @return the style string
-     */
-    // TODO it is possible to remove this altogether from StyleAttrs, and instead generate the style string in VFlow
-    // (and even cache them there)
-//    public String getStyle() {
-//        if (style == null) {
-//            style = createStyleString();
-//        }
-//        return style;
-//    }
-
-//    private String createStyleString() {
-//        if (attributes.size() == 0) {
-//            return null;
-//        }
-//
-//        // the idea here is to avoid duplicate css strings in a situation when one css rule
-//        // depends on multiple attributes.
-//        HashSet<String> dedup = new HashSet<>();
-//        for (StyleAttribute<?> a : attributes.keySet()) {
-//            Object v = attributes.get(a);
-//            StyleAttribute.Generator g = a.getGenerator();
-//            if (g != null) {
-//                String s = g.createCssStyle(this, v);
-//                dedup.add(s);
-//            }
-//        }
-//
-//        StringBuilder sb = new StringBuilder(32);
-//        for (String s : dedup) {
-//            sb.append(s);
-//        }
-//
-//        return sb.toString();
-//    }
-
     /** 
-     * Creates a new StyleAttrs instance by first copying attrirutes from this instance,
+     * Creates a new StyleAttrs instance by first copying attributes from this instance,
      * then adding (and/or overwriting) the attributes from the specified instance.
      * @param attrs the attributes to combine
-     * @return a new instance combining the attributes
+     * @return the new instance combining the attributes
      */
     public StyleAttrs combine(StyleAttrs attrs) {
         return 
