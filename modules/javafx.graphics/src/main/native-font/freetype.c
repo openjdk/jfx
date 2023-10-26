@@ -30,6 +30,7 @@
 #include <com_sun_javafx_font_freetype_OSFreetype.h>
 #include <dlfcn.h>
 #include <ft2build.h>
+#include <stdint.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
 #include FT_LCD_FILTER_H
@@ -375,6 +376,8 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(getBitmapData)(JNIEnv *env, jclass that, 
     FT_Bitmap bitmap = slot->bitmap;
     unsigned char* src = bitmap.buffer;
     if (!src) return NULL;
+    if (bitmap.pitch <= 0) return NULL;
+    if (bitmap.rows > INT_MAX / bitmap.pitch) return NULL;
     size_t size = bitmap.pitch * bitmap.rows;
     jbyteArray result = (*env)->NewByteArray(env, size);
     if (result) {
