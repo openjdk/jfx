@@ -814,9 +814,7 @@ public class JFXPanel extends JComponent {
         try {
             ComponentOrientation cor = this.getComponentOrientation();
             if (!cor.equals(ComponentOrientation.UNKNOWN)) {
-                String orient = cor.equals(ComponentOrientation.LEFT_TO_RIGHT)
-                                           ? "LTR" : "RTL";
-                getScene().setNodeOrientation(orient.equals("RTL") ?
+                getScene().setNodeOrientation(cor.equals(ComponentOrientation.RIGHT_TO_LEFT) ?
                             NodeOrientation.RIGHT_TO_LEFT :
                             NodeOrientation.LEFT_TO_RIGHT);
             }
