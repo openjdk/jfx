@@ -821,9 +821,10 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     private void applyStyles(Node n, StyleAttrs a, boolean forParagraph) {
+        boolean unwrapped = !control.isWrapText();
         CssStyles css = a.getCssStyles();
         if (css == null) {
-            String style = StyleUtil.getStyleString(a, forParagraph);
+            String style = StyleUtil.getStyleString(a, forParagraph, unwrapped);
             n.setStyle(style);
         } else {
             n.setStyle(css.style());
@@ -833,10 +834,12 @@ public class VFlow extends Pane implements StyleResolver {
             }
         }
 
-        if (forParagraph) {
-            // FIX might be incorrect, as it should always override the value inherited from parent
-            if (a.getBoolean(StyleAttrs.RTL)) {
-                n.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        // FIX perhaps it should always force orientation
+        if(!unwrapped) {
+            if (forParagraph) {
+                if (a.getBoolean(StyleAttrs.RTL)) {
+                    n.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+                }
             }
         }
     }

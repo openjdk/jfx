@@ -55,8 +55,6 @@ public final class CaretInfo {
      * convert path coordinates (which come in the frame of reference of its {@code TextFlow}) to the view port
      * coordinates.
      *
-     * @param dx the translation x offset
-     * @param dy the translation y offset
      * @param lineSpacing the line spacing
      * @param path the caret path
      * @return the CaretInfo instance

@@ -48,7 +48,13 @@ public class StyleUtil {
         public String createCssStyle(T value);
     }
 
+    private final static class Context {
+        public StyleAttrs attrs;
+        public boolean unwrapped;
+    }
+
     private static final HashMap<StyleAttribute<?>, Generator> generators = initGenerators();
+    private static final Context context = new Context();
 
     private static HashMap<StyleAttribute<?>, Generator> initGenerators() {
         HashMap<StyleAttribute<?>, Generator> m = new HashMap<>();
@@ -83,7 +89,9 @@ public class StyleUtil {
         });
 
         put(m, StyleAttrs.TEXT_ALIGNMENT, (v) -> {
-            // FIX disable in RTL
+            if(context.unwrapped) {
+                return "";
+            }
             String alignment = RichUtils.toCss(v);
             return "-fx-text-alignment:" + alignment + ";";
         });
@@ -103,13 +111,18 @@ public class StyleUtil {
     /**
      * Creates an fx style string from the given StyleAttrs, using either character or paragraph attributes.
      * @param attrs the style attributes
-     * @param forParagraph when true, use the paragraph attributes, otherwise use character attributes 
+     * @param forParagraph when true, use the paragraph attributes, otherwise use character attributes
+     * @param unwrapped true when style string is for paragraph with text wrap off
      * @return the style string
      */
-    public static String getStyleString(StyleAttrs attrs, boolean forParagraph) {
+    public static String getStyleString(StyleAttrs attrs, boolean forParagraph, boolean unwrapped) {
         if ((attrs == null) || attrs.isEmpty()) {
             return null;
         }
+
+        // ok to access static context because this code is always executed in the FX thread
+        context.attrs = attrs; // TODO may not be needed
+        context.unwrapped = unwrapped;
 
         StringBuilder sb = null;
         for (StyleAttribute<?> a : attrs.getAttributes()) {
