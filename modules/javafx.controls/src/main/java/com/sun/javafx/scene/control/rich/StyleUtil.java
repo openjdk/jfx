@@ -78,17 +78,14 @@ public class StyleUtil {
             return "-fx-line-spacing:" + v + ";";
         });
 
-//        put(m, StyleAttrs.RTL, (v) -> {
-//            return "-fx // nope, no css rule for orientation
-//        });
-
         put(m, StyleAttrs.STRIKE_THROUGH, (v) -> {
             return v ? "-fx-strikethrough:true;" : "";
         });
 
         put(m, StyleAttrs.TEXT_ALIGNMENT, (v) -> {
-          String alignment = RichUtils.toCss(v);
-          return "-fx-text-alignment:" + alignment + ";";
+            // FIX disable in RTL
+            String alignment = RichUtils.toCss(v);
+            return "-fx-text-alignment:" + alignment + ";";
         });
 
         put(m, StyleAttrs.TEXT_COLOR, (v) -> {

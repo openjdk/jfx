@@ -187,29 +187,20 @@ public class CellArrangement {
         return null;
     }
 
-    public CaretInfo getCaretInfo(double xoffset, TextPos p) {
+    public CaretInfo getCaretInfo(Region target, double xoffset, TextPos p) {
         if (p != null) {
             int ix = p.index();
             TextCell cell = getCell(ix);
             if (cell != null) {
                 int charIndex = p.charIndex();
                 boolean leading = p.isLeading();
-                PathElement[] path = cell.getCaretShape(charIndex, leading);
-                Insets m = cell.getContent().getInsets();
-                // snapping?
-                double xoff = (m == null) ? 0.0 : m.getLeft();
-                double yoff = (m == null) ? 0.0 : m.getTop();
-                double sp;
-                Region r = cell.getContent();
-                if (r instanceof TextFlow f) {
-                    sp = f.getLineSpacing();
-                } else {
-                    sp = 0.0;
+                PathElement[] path = cell.getCaretShape(target, charIndex, leading, -contentPadding.getLeft(), 0.0);
+                if (path == null) {
+                    return null;
                 }
 
-                double dx = r.getLayoutX() + xoff - xoffset;
-                double dy = r.getLayoutY() + cell.getY() + yoff;
-                return CaretInfo.create(dx, dy, sp, path);
+                double lineSpacing = cell.getLineSpacing();
+                return CaretInfo.create(lineSpacing, path);
             }
         }
         return null;

@@ -145,15 +145,21 @@ public class RichUtils {
         return len;
     }
 
-    public static PathElement[] translatePath(double xoffset, Region target, Region src, PathElement[] elements) {
-        Point2D p = src.localToScreen(src.snappedLeftInset(), src.snappedTopInset());
-        if (p == null) {
+    // TODO javadoc
+    // translates path elements from src frame of reference to target, with additional shift by dx, dy
+    // only MoveTo, LineTo are supported
+    // may return null
+    public static PathElement[] translatePath(Region tgt, Region src, PathElement[] elements, double deltax, double deltay) {
+        //System.out.println("translatePath from=" + dump(elements) + " dx=" + deltax + " dy=" + deltay); // FIX
+        Point2D ps = src.localToScreen(0.0, 0.0);
+        if (ps == null) {
             return null;
         }
 
-        p = target.screenToLocal(p);
-        double dx = p.getX() + xoffset;
-        double dy = p.getY();
+        Point2D pt = tgt.localToScreen(tgt.snappedLeftInset(), tgt.snappedTopInset());
+        double dx = ps.getX() - pt.getX() + deltax;
+        double dy = ps.getY() - pt.getY() + deltay;
+        //System.out.println("dx=" + dx + " dy=" + dy); // FIX
 
         for (int i = 0; i < elements.length; i++) {
             PathElement em = elements[i];
@@ -167,6 +173,7 @@ public class RichUtils {
 
             elements[i] = em;
         }
+        //System.out.println("translatePath to=" + dump(elements)); // FIX
         return elements;
     }
 

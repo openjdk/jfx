@@ -146,9 +146,21 @@ public final class TextCell extends BorderPane {
         b.lineto(x, y0);
     }
 
-    public PathElement[] getCaretShape(int charIndex, boolean leading) {
+    /**
+     * Returns the {@code PathElement} array for the caret at the given character index and bias,
+     * translated to the {@code target} frame of reference.
+     *
+     * @param target the Region that provides the target frame of reference
+     * @param charIndex the character index
+     * @param leading the character bias
+     * @param dx the additional X offset
+     * @param dy the additional Y offset
+     * @return the array of path elements translated to the target coordinates
+     */
+    public PathElement[] getCaretShape(Region target, int charIndex, boolean leading, double dx, double dy) {
+        PathElement[] p;
         if (content instanceof TextFlow f) {
-            PathElement[] p = f.caretShape(charIndex, leading);
+            p = f.caretShape(charIndex, leading);
             if (p.length == 2) {
                 PathElement p0 = p[0];
                 PathElement p1 = p[1];
@@ -162,33 +174,41 @@ public final class TextCell extends BorderPane {
                     }
                 }
             }
-            return p;
         } else {
-            return new PathElement[] {
+            p = new PathElement[] {
                 new MoveTo(0.0, 0.0),
                 new LineTo(0.0, content.getHeight())
             };
         }
+        return RichUtils.translatePath(target, content, p, dx, dy);
     }
 
-    public PathElement[] getRangeShape(int start, int end) {
+    /**
+     * Returns the {@code PathElement} array for the range shape,
+     * translated to the {@code target} frame of reference.
+     *
+     * @param target the Region that provides the target frame of reference
+     * @param start the start offset
+     * @param end the end offset
+     * @param dx the additional X offset
+     * @param dy the additional Y offset
+     * @return the array of path elements translated to the target coordinates
+     */
+    public PathElement[] getRangeShape(Region target, int start, int end, double dx, double dy) {
+        PathElement[] p;
         if (content instanceof TextFlow f) {
-            PathElement[] p = f.rangeShape(start, end);
-            if (p != null) {
-                if (p.length > 0) {
-                    return p;
-                }
+            p = f.rangeShape(start, end);
+            if ((p == null) || (p.length == 0)) {
+                p = new PathElement[] {
+                    new MoveTo(0.0, 0.0),
+                    new LineTo(0.0, f.getHeight())
+                };
             }
-
-            return new PathElement[] {
-                new MoveTo(0.0, 0.0),
-                new LineTo(0.0, f.getHeight())
-            };
         } else {
             double w = getWidth();
             double h = getHeight();
 
-            return new PathElement[] {
+            p = new PathElement[] {
                 new MoveTo(0.0, 0.0),
                 new LineTo(w, 0.0),
                 new LineTo(w, h),
@@ -196,6 +216,7 @@ public final class TextCell extends BorderPane {
                 new LineTo(0.0, 0.0)
             };
         }
+        return RichUtils.translatePath(target, content, p, dx, dy);
     }
 
     /**
@@ -248,5 +269,16 @@ public final class TextCell extends BorderPane {
         b.setAlignment(Pos.TOP_CENTER);
         // TODO get some attributes from the first text segment - font? color? or use default paragraph attrs?
         setLeft(b);
+    }
+
+    /**
+     * Returns line spacing if the content is a {@code TextFlow}, 0.0 otherwise.
+     * @return the line spacing
+     */
+    public double getLineSpacing() {
+        if (content instanceof TextFlow f) {
+            return f.getLineSpacing();
+        }
+        return 0.0;
     }
 }

@@ -509,9 +509,10 @@ public class VFlow extends Pane implements StyleResolver {
         return arrangement().getTextPos(x, localY);
     }
 
-    /** uses vflow.content coordinates */
+    /** in vflow.flow coordinates */
+    // TODO vflow.flow? or content?
     protected CaretInfo getCaretInfo(TextPos p) {
-        return arrangement().getCaretInfo(getOffsetX() + leftPadding, p);
+        return arrangement().getCaretInfo(flow, getOffsetX() + leftPadding, p);
     }
 
     /** returns caret sizing info using vflow.content coordinates, or null */
@@ -560,19 +561,18 @@ public class VFlow extends Pane implements StyleResolver {
             endOffset = cell.getTextLength();
         }
 
-        // TODO don't need helper here: can get TextFlow instance!
+        Insets m = contentPadding();
+        double dx = -m.getLeft();
+        double dy = 0.0;
+
         PathElement[] pe;
         if (startOffset == endOffset) {
-            pe = cell.getCaretShape(startOffset, true);
+            // TODO handle split caret!
+            pe = cell.getCaretShape(flow, startOffset, true, dx, dy);
         } else {
-            pe = cell.getRangeShape(startOffset, endOffset);
+            pe = cell.getRangeShape(flow, startOffset, endOffset, dx, dy);
         }
-        
-        if (pe == null) {
-            return null;
-        } else {
-            return RichUtils.translatePath(-leftPadding, flow, cell.getContent(), pe);
-        }
+        return pe;
     }
 
     public void setSuppressBlink(boolean on) {
@@ -1266,6 +1266,7 @@ public class VFlow extends Pane implements StyleResolver {
             }
             
             if (!control.isWrapText()) {
+                // FIX primary caret
                 double x = c.getMinX();
                 if (x + leftPadding < 0.0) {
                     scrollHorizontalToVisible(x);

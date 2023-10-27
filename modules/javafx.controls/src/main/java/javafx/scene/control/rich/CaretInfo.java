@@ -26,7 +26,6 @@
 package javafx.scene.control.rich;
 
 import java.util.Objects;
-import javafx.scene.control.util.Util;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
@@ -62,7 +61,7 @@ public final class CaretInfo {
      * @param path the caret path
      * @return the CaretInfo instance
      */
-    public static CaretInfo create(double dx, double dy, double lineSpacing, PathElement[] path) {
+    public static CaretInfo create(double lineSpacing, PathElement[] path) {
         Objects.requireNonNull(path);
         if (path.length == 0) {
             throw new IllegalArgumentException("non-empty path is required");
@@ -73,15 +72,12 @@ public final class CaretInfo {
         double ymin = Double.POSITIVE_INFINITY;
         double ymax = Double.NEGATIVE_INFINITY;
 
-        // also translate full path
         int sz = path.length;
-        PathElement[] newPath = new PathElement[sz];
         for (int i = 0; i < sz; i++) {
             PathElement em = path[i];
             if (em instanceof LineTo lineto) {
-                double x = lineto.getX() + dx;
-                double y = lineto.getY() + dy;
-                newPath[i] = new LineTo(x, y);
+                double x = lineto.getX();
+                double y = lineto.getY();
 
                 x = halfPixel(x);
                 if (x < xmin) {
@@ -97,9 +93,8 @@ public final class CaretInfo {
                     ymax = y;
                 }
             } else if (em instanceof MoveTo moveto) {
-                double x = moveto.getX() + dx;
-                double y = moveto.getY() + dy;
-                newPath[i] = new MoveTo(x, y);
+                double x = moveto.getX();
+                double y = moveto.getY();
 
                 x = halfPixel(x);
                 if (x < xmin) {
@@ -119,7 +114,7 @@ public final class CaretInfo {
             }
         }
 
-        return new CaretInfo(xmin, xmax, ymin, ymax, lineSpacing, newPath);
+        return new CaretInfo(xmin, xmax, ymin, ymax, lineSpacing, path);
     }
 
     /**
@@ -163,9 +158,8 @@ public final class CaretInfo {
     }
 
     /**
-     * Returns the caret path in the visual flow coordinates.
-     *
-     * @return array of path elements
+     * Returns the caret path.
+     * @return the non-null array of path elements
      */
     public final PathElement[] path() {
         return path;
@@ -175,7 +169,7 @@ public final class CaretInfo {
      * Returns true if the specified y coordinate is between the smallest and largest y coordinate of the
      * caret bounding box.
      *
-     * @param y y coordinate
+     * @param y the Y coordinate
      * @return true if the coordinate is within the caret bounding box
      */
     public final boolean containsY(double y) {
