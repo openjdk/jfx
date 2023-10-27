@@ -835,8 +835,8 @@ public class VFlow extends Pane implements StyleResolver {
         }
 
         // FIX perhaps it should always force orientation
-        if(!unwrapped) {
-            if (forParagraph) {
+        if (forParagraph) {
+            if (!unwrapped) {
                 if (a.getBoolean(StyleAttrs.RTL)) {
                     n.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
                 }
