@@ -5,10 +5,7 @@ Updating gradle in OpenJFX:
 NOTE: only update the minimum when necessary (e.g., when replacing deprecated APIs in preparation for updating to a major version of gradle)
 
 
-2. Update the version in gradle/legal/gradle.md.
-
-
-3. Update gradle wrapper:
+2. Update gradle wrapper:
 
 * Update the version number in the URL in gradle/wrapper/gradle-wrapper.properties
 * Run: bash gradlew wrapper --gradle-version VERSION

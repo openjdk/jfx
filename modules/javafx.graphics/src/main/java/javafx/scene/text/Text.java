@@ -46,6 +46,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.text.TextRun;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -1022,7 +1023,24 @@ public class Text extends Shape {
         TextLayout layout = getTextLayout();
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
-        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y);
+        GlyphList[] runs = getRuns();
+        int runIndex = 0;
+        if (runs.length != 0) {
+            double ptY = localToParent(x, y).getY();
+            while (runIndex < runs.length - 1) {
+                if (ptY > runs[runIndex].getLocation().y && ptY < runs[runIndex + 1].getLocation().y) {
+                    break;
+                }
+                runIndex++;
+            }
+        }
+        int textRunStart = 0;
+        int curRunStart = 0;
+        if (runs.length != 0) {
+            textRunStart = ((TextRun) runs[0]).getStart();
+            curRunStart = ((TextRun) runs[runIndex]).getStart();
+        }
+        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getText(), textRunStart, curRunStart);
         return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
     }
 
