@@ -25,9 +25,6 @@
 
 package com.sun.javafx.util;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -206,14 +203,54 @@ public class DataURI {
         return result;
     }
 
+    /**
+     * Decodes percent-encoded text as specified by RFC 3986, section 2.1
+     * This method does not make any assumptions about the allowed character set.
+     *
+     * @param input the input string
+     * @return the decoded byte array
+     */
     private static byte[] decodePercentEncoding(String input) {
-        try (var output = new ByteArrayOutputStream(size(input))) {
-            decodePercentEncodingToStream(input, output);
-            return output.toByteArray();
-        } catch (IOException ex) {
-            // can never happen for ByteArrayOutputStream
-            throw new AssertionError(ex);
+        enum ExpectedCharacter {
+            DEFAULT,
+            FIRST_HEX_DIGIT,
+            SECOND_HEX_DIGIT
         }
+
+        ExpectedCharacter expectedCharacter = ExpectedCharacter.DEFAULT;
+        byte[] output = new byte[computePayloadSize(input)];
+        int firstDigit = 0;
+
+        for (int i = 0, j = 0; i < input.length(); ++i) {
+            char c = input.charAt(i);
+
+            expectedCharacter = switch (expectedCharacter) {
+                case DEFAULT -> {
+                    if (c == '%') {
+                        yield ExpectedCharacter.FIRST_HEX_DIGIT;
+                    } else {
+                        output[j++] = (byte)c;
+                        yield ExpectedCharacter.DEFAULT;
+                    }
+                }
+
+                case FIRST_HEX_DIGIT -> {
+                    firstDigit = hexDigit(c);
+                    yield ExpectedCharacter.SECOND_HEX_DIGIT;
+                }
+
+                case SECOND_HEX_DIGIT -> {
+                    output[j++] = (byte)(firstDigit << 4 | hexDigit(c));
+                    yield ExpectedCharacter.DEFAULT;
+                }
+            };
+        }
+
+        if (expectedCharacter != ExpectedCharacter.DEFAULT) {
+            throw new IllegalArgumentException("Incomplete character escape sequence");
+        }
+
+        return output;
     }
 
     /**
@@ -222,7 +259,7 @@ public class DataURI {
      * @param input the input string
      * @return the payload size in bytes
      */
-    private static int size(String input) {
+    private static int computePayloadSize(String input) {
         int count = 0;
 
         for (int i = 0, max = input.length(); i < max; ++i) {
@@ -234,50 +271,6 @@ public class DataURI {
         }
 
         return count;
-    }
-
-    /**
-     * Decodes percent-encoded text as specified by RFC 3986, section 2.1
-     * This method does not make any assumptions about the allowed character set.
-     */
-    private static void decodePercentEncodingToStream(String input, OutputStream output) throws IOException {
-        enum ExpectedCharacter {
-            DEFAULT,
-            FIRST_HEX_DIGIT,
-            SECOND_HEX_DIGIT
-        }
-
-        ExpectedCharacter expectedCharacter = ExpectedCharacter.DEFAULT;
-        int firstDigit = 0;
-
-        for (int i = 0; i < input.length(); ++i) {
-            char c = input.charAt(i);
-
-            expectedCharacter = switch (expectedCharacter) {
-                case DEFAULT -> {
-                    if (c == '%') {
-                        yield ExpectedCharacter.FIRST_HEX_DIGIT;
-                    } else {
-                        output.write(c);
-                        yield ExpectedCharacter.DEFAULT;
-                    }
-                }
-
-                case FIRST_HEX_DIGIT -> {
-                    firstDigit = hexDigit(c);
-                    yield ExpectedCharacter.SECOND_HEX_DIGIT;
-                }
-
-                case SECOND_HEX_DIGIT -> {
-                    output.write(firstDigit << 4 | hexDigit(c));
-                    yield ExpectedCharacter.DEFAULT;
-                }
-            };
-        }
-
-        if (expectedCharacter != ExpectedCharacter.DEFAULT) {
-            throw new IllegalArgumentException("Incomplete character escape sequence");
-        }
     }
 
     private static int hexDigit(char c) {
