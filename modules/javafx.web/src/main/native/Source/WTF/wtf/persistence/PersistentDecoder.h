@@ -28,10 +28,11 @@
 #include <wtf/EnumTraits.h>
 #include <wtf/SHA1.h>
 #include <wtf/Span.h>
-#include <wtf/persistence/PersistentCoder.h>
+#include <wtf/persistence/PersistentCoders.h>
 
-namespace WTF {
-namespace Persistence {
+namespace WTF::Persistence {
+
+template<typename> struct Coder;
 
 class Decoder {
     WTF_MAKE_FAST_ALLOCATED;
@@ -74,7 +75,7 @@ public:
         *this >> value;
         if (!value)
             return *this;
-        if (!isValidEnum<E>(*value))
+        if (!isValidEnumForPersistence<E>(*value))
             return *this;
         result = static_cast<E>(*value);
         return *this;
@@ -101,5 +102,4 @@ private:
     SHA1 m_sha1;
 };
 
-}
 }

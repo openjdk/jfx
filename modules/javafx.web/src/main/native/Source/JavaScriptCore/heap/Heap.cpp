@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
  *  This library is free software; you can redistribute it and/or
@@ -269,7 +269,7 @@ private:
     , name ISO_SUBSPACE_INIT(*this, heapCellType, type)
 
 #define INIT_SERVER_STRUCTURE_ISO_SUBSPACE(name, heapCellType, type) \
-    , name("Isolated" #name "Space", *this, heapCellType, WTF::roundUpToMultipleOf<type::atomSize>(sizeof(type)), type::numberOfLowerTierCells, makeUnique<StructureAlignedMemoryAllocator>("Structure"))
+    , name("IsoSubspace" #name, *this, heapCellType, WTF::roundUpToMultipleOf<type::atomSize>(sizeof(type)), type::numberOfLowerTierCells, makeUnique<StructureAlignedMemoryAllocator>("Structure"))
 
 Heap::Heap(VM& vm, HeapType heapType)
     : m_heapType(heapType)
@@ -318,6 +318,7 @@ Heap::Heap(VM& vm, HeapType heapType)
     , injectedScriptHostSpaceHeapCellType(IsoHeapCellType::Args<Inspector::JSInjectedScriptHost>())
     , javaScriptCallFrameHeapCellType(IsoHeapCellType::Args<Inspector::JSJavaScriptCallFrame>())
     , jsModuleRecordHeapCellType(IsoHeapCellType::Args<JSModuleRecord>())
+    , syntheticModuleRecordHeapCellType(IsoHeapCellType::Args<SyntheticModuleRecord>())
     , moduleNamespaceObjectHeapCellType(IsoHeapCellType::Args<JSModuleNamespaceObject>())
     , nativeStdFunctionHeapCellType(IsoHeapCellType::Args<JSNativeStdFunction>())
     , weakMapHeapCellType(IsoHeapCellType::Args<JSWeakMap>())
@@ -334,6 +335,7 @@ Heap::Heap(VM& vm, HeapType heapType)
     , intlCollatorHeapCellType(IsoHeapCellType::Args<IntlCollator>())
     , intlDateTimeFormatHeapCellType(IsoHeapCellType::Args<IntlDateTimeFormat>())
     , intlDisplayNamesHeapCellType(IsoHeapCellType::Args<IntlDisplayNames>())
+    , intlDurationFormatHeapCellType(IsoHeapCellType::Args<IntlDurationFormat>())
     , intlListFormatHeapCellType(IsoHeapCellType::Args<IntlListFormat>())
     , intlLocaleHeapCellType(IsoHeapCellType::Args<IntlLocale>())
     , intlNumberFormatHeapCellType(IsoHeapCellType::Args<IntlNumberFormat>())
@@ -343,11 +345,13 @@ Heap::Heap(VM& vm, HeapType heapType)
     , intlSegmenterHeapCellType(IsoHeapCellType::Args<IntlSegmenter>())
     , intlSegmentsHeapCellType(IsoHeapCellType::Args<IntlSegments>())
 #if ENABLE(WEBASSEMBLY)
+    , webAssemblyArrayHeapCellType(IsoHeapCellType::Args<JSWebAssemblyArray>())
     , webAssemblyExceptionHeapCellType(IsoHeapCellType::Args<JSWebAssemblyException>())
     , webAssemblyFunctionHeapCellType(IsoHeapCellType::Args<WebAssemblyFunction>())
     , webAssemblyGlobalHeapCellType(IsoHeapCellType::Args<JSWebAssemblyGlobal>())
     , webAssemblyInstanceHeapCellType(IsoHeapCellType::Args<JSWebAssemblyInstance>())
     , webAssemblyMemoryHeapCellType(IsoHeapCellType::Args<JSWebAssemblyMemory>())
+    , webAssemblyStructHeapCellType(IsoHeapCellType::Args<JSWebAssemblyStruct>())
     , webAssemblyModuleHeapCellType(IsoHeapCellType::Args<JSWebAssemblyModule>())
     , webAssemblyModuleRecordHeapCellType(IsoHeapCellType::Args<WebAssemblyModuleRecord>())
     , webAssemblyTableHeapCellType(IsoHeapCellType::Args<JSWebAssemblyTable>())
@@ -814,6 +818,7 @@ void Heap::beginMarking()
     TimingScope timingScope(*this, "Heap::beginMarking");
     m_jitStubRoutines->clearMarks();
     m_objectSpace.beginMarking();
+    vm().beginMarking();
     setMutatorShouldBeFenced(true);
 }
 
@@ -1253,10 +1258,10 @@ void Heap::checkConn(GCConductor conn)
     unsigned worldState = m_worldState.load();
     switch (conn) {
     case GCConductor::Mutator:
-        RELEASE_ASSERT(worldState & mutatorHasConnBit, worldState, asInt(m_lastPhase), asInt(m_currentPhase), asInt(m_nextPhase), vm().id(), VM::numberOfIDs(), vm().isEntered());
+        RELEASE_ASSERT(worldState & mutatorHasConnBit, worldState, asInt(m_lastPhase), asInt(m_currentPhase), asInt(m_nextPhase), vm().identifier().toUInt64(), vm().isEntered());
         return;
     case GCConductor::Collector:
-        RELEASE_ASSERT(!(worldState & mutatorHasConnBit), worldState, asInt(m_lastPhase), asInt(m_currentPhase), asInt(m_nextPhase), vm().id(), VM::numberOfIDs(), vm().isEntered());
+        RELEASE_ASSERT(!(worldState & mutatorHasConnBit), worldState, asInt(m_lastPhase), asInt(m_currentPhase), asInt(m_nextPhase), vm().identifier().toUInt64(), vm().isEntered());
         return;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -1340,7 +1345,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
     m_beforeGC = MonotonicTime::now();
 
     if (!Options::seedOfVMRandomForFuzzer())
-        vm().random().setSeed(cryptographicallyRandomNumber());
+        vm().random().setSeed(cryptographicallyRandomNumber<uint32_t>());
 
     if (m_collectionScope) {
         dataLogLn("Collection scope already set during GC: ", *m_collectionScope);
@@ -2834,9 +2839,11 @@ void Heap::addCoreConstraints()
                 scanExternalRememberedSet(vm, visitor);
             }
 
-            if (vm.smallStrings.needsToBeVisited(*m_collectionScope)) {
+            {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::StrongReferences);
+                if (vm.smallStrings.needsToBeVisited(*m_collectionScope))
                 vm.smallStrings.visitStrongReferences(visitor);
+                vm.visitAggregate(visitor);
             }
 
             {
@@ -2847,7 +2854,7 @@ void Heap::addCoreConstraints()
 
             if (!m_markListSet.isEmpty()) {
                 SetRootMarkReasonScope rootScope(visitor, RootMarkReason::ConservativeScan);
-                MarkedArgumentBufferBase::markLists(visitor, m_markListSet);
+                MarkedVectorBase::markLists(visitor, m_markListSet);
             }
 
             {

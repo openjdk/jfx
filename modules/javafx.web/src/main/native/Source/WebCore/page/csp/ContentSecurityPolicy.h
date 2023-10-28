@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google, Inc. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "SecurityOrigin.h"
 #include "SecurityOriginHash.h"
 #include <functional>
+#include <wtf/CheckedPtr.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/TextPosition.h>
@@ -62,8 +63,12 @@ class ResourceRequest;
 class ScriptExecutionContext;
 class SecurityOrigin;
 struct ContentSecurityPolicyClient;
+struct ReportingClient;
 
 enum class ParserInserted : bool { No, Yes };
+static constexpr unsigned bitWidthOfParserInserted = 1;
+static_assert(static_cast<unsigned>(ParserInserted::Yes) <= ((1U << bitWidthOfParserInserted) - 1));
+
 enum class LogToConsole : bool { No, Yes };
 enum class CheckUnsafeHashes : bool { No, Yes };
 
@@ -79,11 +84,12 @@ class ContentSecurityPolicy {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit ContentSecurityPolicy(URL&&, ScriptExecutionContext&);
-    WEBCORE_EXPORT explicit ContentSecurityPolicy(URL&&, ContentSecurityPolicyClient* = nullptr);
+    WEBCORE_EXPORT explicit ContentSecurityPolicy(URL&&, ContentSecurityPolicyClient*, ReportingClient*);
     WEBCORE_EXPORT ~ContentSecurityPolicy();
 
     enum class ShouldMakeIsolatedCopy : bool { No, Yes };
     void copyStateFrom(const ContentSecurityPolicy*, ShouldMakeIsolatedCopy = ShouldMakeIsolatedCopy::No);
+    void inheritHeadersFrom(const ContentSecurityPolicyResponseHeaders&);
     void copyUpgradeInsecureRequestStateFrom(const ContentSecurityPolicy&, ShouldMakeIsolatedCopy = ShouldMakeIsolatedCopy::No);
     void createPolicyForPluginDocumentFrom(const ContentSecurityPolicy&);
 
@@ -123,6 +129,7 @@ public:
     WEBCORE_EXPORT bool allowScriptFromSource(const URL&, RedirectResponseReceived = RedirectResponseReceived::No, const URL& preRedirectURL = URL(), const String& = nullString(), const String& nonce = nullString()) const;
     WEBCORE_EXPORT bool allowWorkerFromSource(const URL&, RedirectResponseReceived = RedirectResponseReceived::No, const URL& preRedirectURL = URL()) const;
     bool allowImageFromSource(const URL&, RedirectResponseReceived = RedirectResponseReceived::No, const URL& preRedirectURL = URL()) const;
+    bool allowPrefetchFromSource(const URL&, RedirectResponseReceived = RedirectResponseReceived::No, const URL& preRedirectURL = URL()) const;
     bool allowStyleFromSource(const URL&, RedirectResponseReceived = RedirectResponseReceived::No, const URL& preRedirectURL = URL(), const String& nonce = nullString()) const;
     bool allowFontFromSource(const URL&, RedirectResponseReceived = RedirectResponseReceived::No, const URL& preRedirectURL = URL()) const;
 #if ENABLE(APPLICATION_MANIFEST)
@@ -164,6 +171,7 @@ public:
     void reportInvalidSandboxFlags(const String&) const;
     void reportInvalidDirectiveInReportOnlyMode(const String&) const;
     void reportInvalidDirectiveInHTTPEquivMeta(const String&) const;
+    void reportMissingReportToTokens(const String&) const;
     void reportMissingReportURI(const String&) const;
     void reportUnsupportedDirective(const String&) const;
     void enforceSandboxFlags(SandboxFlags sandboxFlags) { m_sandboxFlags |= sandboxFlags; }
@@ -207,7 +215,7 @@ private:
     void logToConsole(const String& message, const String& contextURL = String(), const OrdinalNumber& contextLine = OrdinalNumber::beforeFirst(), const OrdinalNumber& contextColumn = OrdinalNumber::beforeFirst(), JSC::JSGlobalObject* = nullptr) const;
     void applyPolicyToScriptExecutionContext();
 
-    String createURLForReporting(const URL&, const String&) const;
+    String createURLForReporting(const URL&, const String&, bool usesReportingAPI) const;
 
     const PAL::TextEncoding documentEncoding() const;
 
@@ -240,6 +248,8 @@ private:
     // We can never have both a script execution context and a ContentSecurityPolicyClient.
     ScriptExecutionContext* m_scriptExecutionContext { nullptr };
     ContentSecurityPolicyClient* m_client { nullptr };
+    mutable ReportingClient* m_reportingClient { nullptr };
+
     URL m_protectedURL;
     std::optional<URL> m_documentURL;
     std::unique_ptr<ContentSecurityPolicySource> m_selfSource;

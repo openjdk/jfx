@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,9 @@ import javafx.scene.chart.ValueAxisShim;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChartShim;
 import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -407,6 +409,29 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
         assertEquals(2, ValueAxisShim.get_dataMinValue(yAxis), 1e-100);
         assertEquals(15, ValueAxisShim.get_dataMaxValue(yAxis), 1e-100);
+    }
+
+    /*
+     * JDK-8314779
+     * The test checks if the line and path element of the chart
+     * are removed when series data is cleared.
+     */
+    @Test
+    public void testChartLineAndAreaRemovedOnClearingSeries() {
+        startApp();
+        ac.getData().addAll(series1);
+        pulse();
+
+        final ObservableList<Node> children = ((Group)series1.getNode()).getChildren();
+        ObservableList<PathElement> fillElements = ((Path) children.get(0)).getElements();
+        ObservableList<PathElement> lineElements = ((Path) children.get(1)).getElements();
+
+        assertTrue(0 < fillElements.size());
+        assertTrue(0 < lineElements.size());
+        series1.getData().clear();
+        pulse();
+        assertEquals(0, fillElements.size());
+        assertEquals(0, lineElements.size());
     }
 
     @Override

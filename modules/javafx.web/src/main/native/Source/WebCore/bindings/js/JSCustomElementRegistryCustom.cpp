@@ -161,22 +161,40 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
     if (!disabledFeaturesValue.isUndefined()) {
         auto disabledFeatures = convert<IDLSequence<IDLDOMString>>(lexicalGlobalObject, disabledFeaturesValue);
         RETURN_IF_EXCEPTION(scope, { });
+
+        if (disabledFeatures.contains("internals"_s))
+            elementInterface->disableElementInternals();
         if (disabledFeatures.contains("shadow"_s))
             elementInterface->disableShadow();
     }
 
-    auto addToGlobalObjectWithPrivateName = [&] (JSObject* objectToAdd) {
-        if (objectToAdd) {
-            PrivateName uniquePrivateName;
-            globalObject()->putDirect(vm, uniquePrivateName, objectToAdd);
-        }
-    };
+    if (registry.document() && registry.document()->settings().formAssociatedCustomElementsEnabled()) {
+        auto formAssociatedValue = constructor->get(&lexicalGlobalObject, Identifier::fromString(vm, "formAssociated"_s));
+        RETURN_IF_EXCEPTION(scope, { });
+        if (formAssociatedValue.toBoolean(&lexicalGlobalObject)) {
+            elementInterface->setIsFormAssociated();
 
-    addToGlobalObjectWithPrivateName(constructor);
-    addToGlobalObjectWithPrivateName(connectedCallback);
-    addToGlobalObjectWithPrivateName(disconnectedCallback);
-    addToGlobalObjectWithPrivateName(adoptedCallback);
-    addToGlobalObjectWithPrivateName(attributeChangedCallback);
+            auto* formAssociatedCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "formAssociatedCallback"_s));
+            RETURN_IF_EXCEPTION(scope, { });
+            if (formAssociatedCallback)
+                elementInterface->setFormAssociatedCallback(formAssociatedCallback);
+
+            auto* formResetCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "formResetCallback"_s));
+            RETURN_IF_EXCEPTION(scope, { });
+            if (formResetCallback)
+                elementInterface->setFormResetCallback(formResetCallback);
+
+            auto* formDisabledCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "formDisabledCallback"_s));
+            RETURN_IF_EXCEPTION(scope, { });
+            if (formDisabledCallback)
+                elementInterface->setFormDisabledCallback(formDisabledCallback);
+
+            auto* formStateRestoreCallback = getCustomElementCallback(lexicalGlobalObject, prototypeObject, Identifier::fromString(vm, "formStateRestoreCallback"_s));
+            RETURN_IF_EXCEPTION(scope, { });
+            if (formStateRestoreCallback)
+                elementInterface->setFormStateRestoreCallback(formStateRestoreCallback);
+        }
+    }
 
     if (auto promise = registry.addElementDefinition(WTFMove(elementInterface)))
         promise->resolveWithJSValue(constructor);
@@ -230,5 +248,13 @@ JSValue JSCustomElementRegistry::whenDefined(JSGlobalObject& lexicalGlobalObject
 
     return promise;
 }
+
+template<typename Visitor>
+void JSCustomElementRegistry::visitAdditionalChildren(Visitor& visitor)
+{
+    wrapped().visitJSCustomElementInterfaces(visitor);
+}
+
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSCustomElementRegistry);
 
 } // namespace WebCore

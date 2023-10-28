@@ -35,8 +35,9 @@ typedef (HTMLImageElement
 #if defined(ENABLE_OFFSCREEN_CANVAS) && ENABLE_OFFSCREEN_CANVAS
     or OffscreenCanvas
 #endif
-#if defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
     or CSSStyleImageValue
+#if defined(ENABLE_WEB_CODECS) && ENABLE_WEB_CODECS
+    or WebCodecsVideoFrame
 #endif
 ) CanvasImageSource;
 
@@ -67,8 +68,8 @@ interface mixin WindowOrWorkerGlobalScope {
     [Custom] undefined queueMicrotask(VoidCallback callback);
 
     // ImageBitmap.
-    [EnabledByDeprecatedGlobalSetting=ImageBitmapEnabled] Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, optional ImageBitmapOptions options);
-    [EnabledByDeprecatedGlobalSetting=ImageBitmapEnabled] Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, long sx, long sy, long sw, long sh, optional ImageBitmapOptions options);
+    Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, optional ImageBitmapOptions options);
+    Promise<ImageBitmap> createImageBitmap(ImageBitmapSource image, long sx, long sy, long sw, long sh, optional ImageBitmapOptions options);
 
     // structured cloning
     [CallWith=CurrentGlobalObject&RelevantGlobalObject] any structuredClone(any value, optional StructuredSerializeOptions options);

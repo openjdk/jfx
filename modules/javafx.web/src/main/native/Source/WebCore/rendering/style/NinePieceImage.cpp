@@ -198,7 +198,7 @@ Vector<FloatSize> NinePieceImage::computeTileScales(const Vector<FloatRect>& des
     return scales;
 }
 
-void NinePieceImage::paint(GraphicsContext& graphicsContext, RenderElement* renderer, const RenderStyle& style, const LayoutRect& destination, const LayoutSize& source, float deviceScaleFactor, CompositeOperator op) const
+void NinePieceImage::paint(GraphicsContext& graphicsContext, const RenderElement* renderer, const RenderStyle& style, const LayoutRect& destination, const LayoutSize& source, float deviceScaleFactor, CompositeOperator op) const
 {
     StyleImage* styleImage = image();
     ASSERT(styleImage);
@@ -223,13 +223,13 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, RenderElement* rend
             continue;
 
         if (isCornerPiece(piece)) {
-            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], { op, ImageOrientation::FromImage });
+            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], { op, ImageOrientation::Orientation::FromImage });
             continue;
         }
 
         Image::TileRule hRule = isHorizontalPiece(piece) ? static_cast<Image::TileRule>(horizontalRule()) : Image::StretchTile;
         Image::TileRule vRule = isVerticalPiece(piece) ? static_cast<Image::TileRule>(verticalRule()) : Image::StretchTile;
-        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::FromImage });
+        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::Orientation::FromImage });
     }
 }
 

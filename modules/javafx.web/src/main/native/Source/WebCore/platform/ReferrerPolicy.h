@@ -58,7 +58,7 @@ String referrerPolicyToString(const ReferrerPolicy&);
 
 namespace WTF {
 
-template<> struct EnumTraits<WebCore::ReferrerPolicy> {
+template<> struct EnumTraitsForPersistence<WebCore::ReferrerPolicy> {
     using values = EnumValues<
         WebCore::ReferrerPolicy,
         WebCore::ReferrerPolicy::EmptyString,

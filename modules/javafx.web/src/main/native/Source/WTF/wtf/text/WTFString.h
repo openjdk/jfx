@@ -1,6 +1,6 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,9 +24,6 @@
 // This file would be called String.h, but that conflicts with <string.h>
 // on systems without case-sensitive file systems.
 
-#include <stdarg.h>
-#include <wtf/Function.h>
-#include <wtf/text/ASCIILiteral.h>
 #include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringImpl.h>
 
@@ -66,17 +63,6 @@ public:
     // Construct a string with UTF-16 data.
     WTF_EXPORT_PRIVATE String(const UChar* characters, unsigned length);
     ALWAYS_INLINE String(Span<const UChar> characters) : String(characters.data(), characters.size()) { }
-
-    // Construct a string by copying the contents of a vector.  To avoid
-    // copying, consider using String::adopt instead.
-    // This method will never create a null string. Vectors with size() == 0
-    // will return the empty string.
-    // NOTE: This is different from String(vector.data(), vector.size())
-    // which will sometimes return a null string when vector.data() is null
-    // which can only occur for vectors without inline capacity.
-    // See: https://bugs.webkit.org/show_bug.cgi?id=109792
-    template<size_t inlineCapacity, typename OverflowHandler>
-    explicit String(const Vector<UChar, inlineCapacity, OverflowHandler>&);
 
     // Construct a string with Latin-1 data.
     WTF_EXPORT_PRIVATE String(const LChar* characters, unsigned length);
@@ -122,6 +108,8 @@ public:
     unsigned length() const { return m_impl ? m_impl->length() : 0; }
     const LChar* characters8() const { return m_impl ? m_impl->characters8() : nullptr; }
     const UChar* characters16() const { return m_impl ? m_impl->characters16() : nullptr; }
+    Span<const LChar> span8() const { return { characters8(), length() }; }
+    Span<const UChar> span16() const { return { characters16(), length() }; }
 
     // Return characters8() or characters16() depending on CharacterType.
     template<typename CharacterType> const CharacterType* characters() const;
@@ -133,11 +121,12 @@ public:
     WTF_EXPORT_PRIVATE CString ascii() const;
     WTF_EXPORT_PRIVATE CString latin1() const;
 
-    WTF_EXPORT_PRIVATE CString utf8(ConversionMode) const;
-    WTF_EXPORT_PRIVATE CString utf8() const;
+    WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
 
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8(ConversionMode) const;
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8() const;
+    template<typename Func>
+    Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
+    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode) const;
+    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8() const;
 
     UChar characterAt(unsigned index) const;
     UChar operator[](unsigned index) const { return characterAt(index); }
@@ -160,6 +149,8 @@ public:
 
     // Find a single character or string, also with match function & latin1 forms.
     size_t find(UChar character, unsigned start = 0) const { return m_impl ? m_impl->find(character, start) : notFound; }
+    size_t find(LChar character, unsigned start = 0) const { return m_impl ? m_impl->find(character, start) : notFound; }
+    size_t find(char character, unsigned start = 0) const { return m_impl ? m_impl->find(character, start) : notFound; }
 
     size_t find(StringView) const;
     size_t find(StringView, unsigned start) const;
@@ -199,7 +190,7 @@ public:
     bool endsWith(char character) const { return endsWith(static_cast<UChar>(character)); }
     bool hasInfixEndingAt(StringView suffix, unsigned end) const;
 
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN substring(unsigned position, unsigned length = MaxLength) const;
+    String WARN_UNUSED_RETURN substring(unsigned position, unsigned length = MaxLength) const;
     WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN substringSharingImpl(unsigned position, unsigned length = MaxLength) const;
     String WARN_UNUSED_RETURN left(unsigned length) const { return substring(0, length); }
     String WARN_UNUSED_RETURN right(unsigned length) const { return substring(this->length() - length, length); }
@@ -288,29 +279,26 @@ public:
     WTF_EXPORT_PRIVATE Vector<wchar_t> wideCharacters() const;
 #endif
 
-    WTF_EXPORT_PRIVATE static String make8BitFrom16BitSource(const UChar*, size_t);
-    template<size_t inlineCapacity> static String make8BitFrom16BitSource(const Vector<UChar, inlineCapacity>&);
+    WTF_EXPORT_PRIVATE static String make8Bit(const UChar*, unsigned);
+    WTF_EXPORT_PRIVATE void convertTo16Bit();
 
-    WTF_EXPORT_PRIVATE static String make16BitFrom8BitSource(const LChar*, size_t);
-
-    // String::fromUTF8 will return a null string if
-    // the input data contains invalid UTF-8 sequences.
+    // String::fromUTF8 will return a null string if the input data contains invalid UTF-8 sequences.
     WTF_EXPORT_PRIVATE static String fromUTF8(const LChar*, size_t);
     WTF_EXPORT_PRIVATE static String fromUTF8(const LChar*);
-    static String fromUTF8(const char* characters, size_t length) { return fromUTF8(reinterpret_cast<const LChar*>(characters), length); };
-    static String fromUTF8(const char* string) { return fromUTF8(reinterpret_cast<const LChar*>(string)); };
+    static String fromUTF8(const char* characters, size_t length) { return fromUTF8(reinterpret_cast<const LChar*>(characters), length); }
+    static String fromUTF8(const char* string) { return fromUTF8(reinterpret_cast<const LChar*>(string)); }
     WTF_EXPORT_PRIVATE static String fromUTF8(const CString&);
     static String fromUTF8(const Vector<LChar>& characters);
     static String fromUTF8ReplacingInvalidSequences(const LChar*, size_t);
 
     // Tries to convert the passed in string to UTF-8, but will fall back to Latin-1 if the string is not valid UTF-8.
     WTF_EXPORT_PRIVATE static String fromUTF8WithLatin1Fallback(const LChar*, size_t);
-    static String fromUTF8WithLatin1Fallback(const char* characters, size_t length) { return fromUTF8WithLatin1Fallback(reinterpret_cast<const LChar*>(characters), length); };
+    static String fromUTF8WithLatin1Fallback(const char* characters, size_t length) { return fromUTF8WithLatin1Fallback(reinterpret_cast<const LChar*>(characters), length); }
 
     WTF_EXPORT_PRIVATE static String fromCodePoint(UChar32 codePoint);
 
     // Determines the writing direction using the Unicode Bidi Algorithm rules P2 and P3.
-    UCharDirection defaultWritingDirection(bool* hasStrongDirectionality = nullptr) const;
+    std::optional<UCharDirection> defaultWritingDirection() const;
 
     bool isAllASCII() const { return !m_impl || m_impl->isAllASCII(); }
     bool isAllLatin1() const { return !m_impl || m_impl->isAllLatin1(); }
@@ -411,10 +399,13 @@ template<> struct IntegerToStringConversionTrait<String> {
 };
 
 #ifdef __OBJC__
-
 WTF_EXPORT_PRIVATE RetainPtr<id> makeNSArrayElement(const String&);
 WTF_EXPORT_PRIVATE std::optional<String> makeVectorElement(const String*, id);
+#endif
 
+#if USE(CF)
+WTF_EXPORT_PRIVATE RetainPtr<CFStringRef> makeCFArrayElement(const String&);
+WTF_EXPORT_PRIVATE std::optional<String> makeVectorElement(const String*, CFStringRef);
 #endif
 
 // Definitions of string operations
@@ -464,11 +455,6 @@ inline String::String(ASCIILiteral characters)
 {
 }
 
-template<size_t inlineCapacity, typename OverflowHandler> String::String(const Vector<UChar, inlineCapacity, OverflowHandler>& vector)
-    : m_impl(vector.size() ? StringImpl::create(vector.data(), vector.size()) : Ref<StringImpl> { *StringImpl::empty() })
-{
-}
-
 template<> inline const LChar* String::characters<LChar>() const
 {
     return characters8();
@@ -502,24 +488,40 @@ ALWAYS_INLINE String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& s
 
 WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN makeStringByRemoving(const String&, unsigned position, unsigned lengthToRemove);
 
-template<size_t inlineCapacity> inline String String::make8BitFrom16BitSource(const Vector<UChar, inlineCapacity>& buffer)
-{
-    return make8BitFrom16BitSource(buffer.data(), buffer.size());
-}
+WTF_EXPORT_PRIVATE String makeStringByJoining(Span<const String> strings, const String& separator);
 
-inline UCharDirection String::defaultWritingDirection(bool* hasStrongDirectionality) const
+inline std::optional<UCharDirection> String::defaultWritingDirection() const
 {
     if (m_impl)
-        return m_impl->defaultWritingDirection(hasStrongDirectionality);
-    if (hasStrongDirectionality)
-        *hasStrongDirectionality = false;
-    return U_LEFT_TO_RIGHT;
+        return m_impl->defaultWritingDirection();
+    return std::nullopt;
 }
 
 inline void String::clearImplIfNotShared()
 {
     if (m_impl && m_impl->hasOneRef())
         m_impl = nullptr;
+}
+
+inline String String::substring(unsigned position, unsigned length) const
+{
+    if (!m_impl)
+        return { };
+
+    if (!position && length >= m_impl->length())
+        return *this;
+
+    return m_impl->substring(position, length);
+}
+
+template<typename Func>
+inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> String::tryGetUTF8(const Func& function, ConversionMode mode) const
+{
+    if (!m_impl) {
+        constexpr const char* emptyString = "";
+        return function(Span { emptyString, emptyString });
+    }
+    return m_impl->tryGetUTF8(function, mode);
 }
 
 #ifdef __OBJC__
@@ -613,6 +615,7 @@ using WTF::String;
 using WTF::charactersToDouble;
 using WTF::charactersToFloat;
 using WTF::emptyString;
+using WTF::makeStringByJoining;
 using WTF::makeStringByRemoving;
 using WTF::makeStringByReplacingAll;
 using WTF::nullString;

@@ -33,8 +33,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFilterPrimitiveStandardAttributes);
 
-SVGFilterPrimitiveStandardAttributes::SVGFilterPrimitiveStandardAttributes(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+SVGFilterPrimitiveStandardAttributes::SVGFilterPrimitiveStandardAttributes(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
+    : SVGElement(tagName, document, WTFMove(propertyRegistry))
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -92,6 +92,17 @@ RefPtr<FilterEffect> SVGFilterPrimitiveStandardAttributes::filterEffect(const Fi
 void SVGFilterPrimitiveStandardAttributes::primitiveAttributeChanged(const QualifiedName& attribute)
 {
     if (m_effect && !setFilterEffectAttribute(*m_effect, attribute))
+        return;
+
+    if (auto* renderer = this->renderer())
+        static_cast<RenderSVGResourceFilterPrimitive*>(renderer)->markFilterEffectForRepaint(m_effect.get());
+}
+
+void SVGFilterPrimitiveStandardAttributes::primitiveAttributeOnChildChanged(const Element& child, const QualifiedName& attribute)
+{
+    ASSERT(child.parentNode() == this);
+
+    if (m_effect && !setFilterEffectAttributeFromChild(*m_effect, child, attribute))
         return;
 
     if (auto* renderer = this->renderer())

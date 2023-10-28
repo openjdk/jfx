@@ -28,6 +28,7 @@
 
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyParser.h"
+#include "MutableStyleProperties.h"
 #include "SVGElementInlines.h"
 
 namespace WebCore {

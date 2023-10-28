@@ -24,12 +24,13 @@
 
 #pragma once
 
-#include "Color.h"
 #include "Length.h"
 #include "RenderStyleConstants.h"
+#include "StyleColor.h"
 #include "StyleCustomPropertyData.h"
+#include "StyleTextEdge.h"
 #include "TabSize.h"
-#include "TextDecorationThickness.h"
+#include "TextSpacing.h"
 #include "TextUnderlineOffset.h"
 #include "TouchAction.h"
 #include <wtf/DataRef.h>
@@ -77,18 +78,18 @@ public:
     RefPtr<StyleImage> listStyleImage;
     AtomString listStyleStringValue;
 
-    Color textStrokeColor;
-    Color textFillColor;
-    Color textEmphasisColor;
+    StyleColor textStrokeColor;
+    StyleColor textFillColor;
+    StyleColor textEmphasisColor;
 
-    Color visitedLinkTextStrokeColor;
-    Color visitedLinkTextFillColor;
-    Color visitedLinkTextEmphasisColor;
+    StyleColor visitedLinkTextStrokeColor;
+    StyleColor visitedLinkTextFillColor;
+    StyleColor visitedLinkTextEmphasisColor;
 
-    Color caretColor;
-    Color visitedLinkCaretColor;
+    StyleColor caretColor;
+    StyleColor visitedLinkCaretColor;
 
-    Color accentColor;
+    StyleColor accentColor;
 
     std::unique_ptr<ShadowData> textShadow;
 
@@ -97,7 +98,8 @@ public:
     float effectiveZoom;
 
     TextUnderlineOffset textUnderlineOffset;
-    TextDecorationThickness textDecorationThickness;
+
+    TextEdge textEdge;
 
     Length wordSpacing;
     float miterLimit;
@@ -144,6 +146,7 @@ public:
     unsigned textJustify : 2; // TextJustify
     unsigned textDecorationSkipInk : 2; // TextDecorationSkipInk
     unsigned textUnderlinePosition : 2; // TextUnderlinePosition
+    unsigned textWrap : 3; // TextWrap
     unsigned rubyPosition : 2; // RubyPosition
     unsigned textZoom: 1; // TextZoom
 
@@ -170,12 +173,14 @@ public:
 
     unsigned isInSubtreeWithBlendMode : 1;
 
+    unsigned effectiveSkipsContent : 1;
+
     OptionSet<TouchAction> effectiveTouchActions;
     OptionSet<EventListenerRegionType> eventListenerRegionTypes;
 
     Length strokeWidth;
-    Color strokeColor;
-    Color visitedLinkStrokeColor;
+    StyleColor strokeColor;
+    StyleColor visitedLinkStrokeColor;
 
     AtomString hyphenationString;
     short hyphenationLimitBefore { -1 };
@@ -202,8 +207,10 @@ public:
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-    Color tapHighlightColor;
+    StyleColor tapHighlightColor;
 #endif
+    TextSpacingTrim textSpacingTrim;
+    TextAutospace textAutospace;
 
 private:
     StyleRareInheritedData();

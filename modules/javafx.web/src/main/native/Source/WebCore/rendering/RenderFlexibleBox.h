@@ -54,6 +54,8 @@ public:
 
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
     std::optional<LayoutUnit> firstLineBaseline() const override;
+    std::optional<LayoutUnit> lastLineBaseline() const override;
+    RenderBox* getBaselineChild(ItemPosition alignment) const;
     std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode) const override;
 
     void styleDidChange(StyleDifference, const RenderStyle*) override;
@@ -92,12 +94,15 @@ public:
 
     bool shouldApplyMinBlockSizeAutoForChild(const RenderBox&) const;
 
+    bool isComputingFlexBaseSizes() const { return m_isComputingFlexBaseSizes; }
+
 protected:
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
 
     bool shouldResetChildLogicalHeightBeforeLayout(const RenderBox&) const override { return m_shouldResetChildLogicalHeightBeforeLayout; }
 
 private:
+    friend class FlexLayoutAlgorithm;
     enum FlexSign {
         PositiveFlexibility,
         NegativeFlexibility,
@@ -175,6 +180,19 @@ private:
     void layoutFlexItems(bool relayoutChildren);
     LayoutUnit autoMarginOffsetInMainAxis(const Vector<FlexItem>&, LayoutUnit& availableFreeSpace);
     void updateAutoMarginsInMainAxis(RenderBox& child, LayoutUnit autoMarginOffset);
+    void initializeMarginTrimState();
+    // Start margin parallel with the cross axis
+    bool shouldTrimMainAxisMarginStart() const;
+    // End margin parallel with the cross axis
+    bool shouldTrimMainAxisMarginEnd() const;
+    // Margins parallel with the main axis
+    bool shouldTrimCrossAxisMarginStart() const;
+    bool shouldTrimCrossAxisMarginEnd() const;
+    void trimMainAxisMarginStart(const FlexItem&);
+    void trimMainAxisMarginEnd(const FlexItem&);
+    void trimCrossAxisMarginStart(const FlexItem&);
+    void trimCrossAxisMarginEnd(const FlexItem&);
+    bool shouldTrimChildMargin(MarginTrimType, const RenderBox&) const final;
     bool hasAutoMarginsInCrossAxis(const RenderBox& child) const;
     bool updateAutoMarginsInCrossAxis(RenderBox& child, LayoutUnit availableAlignmentSpace);
     void repositionLogicalHeightDependentFlexItems(Vector<LineContext>&, LayoutUnit gapBetweenLines);
@@ -210,9 +228,7 @@ private:
 
     void resetHasDefiniteHeight() { m_hasDefiniteHeight = SizeDefiniteness::Unknown; }
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     void layoutUsingFlexFormattingContext();
-#endif
 
     // This is used to cache the preferred size for orthogonal flow children so we
     // don't have to relayout to get it
@@ -230,12 +246,21 @@ private:
     HashSet<const RenderBox*> m_relaidOutChildren;
 
     mutable OrderIterator m_orderIterator { *this };
-    int m_numberOfInFlowChildrenOnFirstLine { -1 };
+    std::optional<size_t> m_numberOfInFlowChildrenOnFirstLine { };
+    std::optional<size_t> m_numberOfInFlowChildrenOnLastLine { };
+
+    struct MarginTrimItems {
+        HashSet<const RenderBox*> m_itemsAtFlexLineStart;
+        HashSet<const RenderBox*> m_itemsAtFlexLineEnd;
+        HashSet<const RenderBox*> m_itemsOnFirstFlexLine;
+        HashSet<const RenderBox*> m_itemsOnLastFlexLine;
+    } m_marginTrimItems;
 
     // This is SizeIsUnknown outside of layoutBlock()
     SizeDefiniteness m_hasDefiniteHeight { SizeDefiniteness::Unknown };
     bool m_inLayout { false };
     bool m_shouldResetChildLogicalHeightBeforeLayout { false };
+    bool m_isComputingFlexBaseSizes { false };
 };
 
 } // namespace WebCore

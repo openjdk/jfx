@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2359,6 +2359,7 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CreateBitmap)
     case com_sun_javafx_font_directwrite_OS_GUID_WICPixelFormat32bppGrayFloat: pixelFormat = GUID_WICPixelFormat32bppGrayFloat; break;
     case com_sun_javafx_font_directwrite_OS_GUID_WICPixelFormat32bppRGBA: pixelFormat = GUID_WICPixelFormat32bppRGBA; break;
     case com_sun_javafx_font_directwrite_OS_GUID_WICPixelFormat32bppPRGBA: pixelFormat = GUID_WICPixelFormat32bppPRGBA; break;
+    default: return NULL;
     }
     HRESULT hr = ((IWICImagingFactory *)arg0)->CreateBitmap(arg1, arg2, (REFWICPixelFormatGUID)pixelFormat, (WICBitmapCreateCacheOption)arg4, &result);
     return SUCCEEDED(hr) ? (jlong)result : NULL;

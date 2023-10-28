@@ -25,6 +25,27 @@
             ]
         },
         {
+            "id": "UserPreference",
+            "type": "object",
+            "description": "A user preference that can be overriden by Web Inspector, like an accessibility preference.",
+            "properties": [
+                { "name": "name", "$ref": "UserPreferenceName", "description": "Preference name." },
+                { "name": "value", "$ref": "UserPreferenceValue", "description": "Preference value." }
+            ]
+        },
+        {
+            "id": "UserPreferenceName",
+            "type": "string",
+            "enum": ["PrefersReducedMotion", "PrefersContrast", "PrefersColorScheme"],
+            "description": "User preference name."
+        },
+        {
+            "id": "UserPreferenceValue",
+            "type": "string",
+            "enum": ["NoPreference", "Reduce", "More", "Light", "Dark"],
+            "description": "User preference value."
+        },
+        {
             "id": "ResourceType",
             "type": "string",
             "enum": ["Document", "StyleSheet", "Image", "Font", "Script", "XHR", "Fetch", "Ping", "Beacon", "WebSocket", "EventSource", "Other"],
@@ -41,13 +62,6 @@
             "type": "string",
             "enum": ["None", "Lax", "Strict"],
             "description": "Same-Site policy of a cookie."
-        },
-        {
-            "id": "Appearance",
-            "type": "string",
-            "condition": "(defined(ENABLE_DARK_MODE_CSS) && ENABLE_DARK_MODE_CSS) || (defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT)",
-            "enum": ["Light", "Dark"],
-            "description": "Page appearance name."
         },
         {
             "id": "Frame",
@@ -157,6 +171,15 @@
             ]
         },
         {
+            "name": "overrideUserPreference",
+            "description": "Allows the frontend to override the user's preferences on the inspected page.",
+            "targetTypes": ["page"],
+            "parameters": [
+                { "name": "name", "$ref": "UserPreferenceName" },
+                { "name": "value", "$ref": "UserPreferenceValue", "optional": true, "description": "Value to override the user preference with. If this value is not provided, the override is removed. Overrides are removed when Web Inspector closes/disconnects." }
+            ]
+        },
+        {
             "name": "getCookies",
             "description": "Returns all browser cookies. Depending on the backend support, will return detailed cookie information in the <code>cookies</code> field.",
             "targetTypes": ["page"],
@@ -259,15 +282,6 @@
             "targetTypes": ["page"],
             "parameters": [
                 { "name": "media", "type": "string", "description": "Media type to emulate. Empty string disables the override." }
-            ]
-        },
-        {
-            "name": "setForcedAppearance",
-            "description": "Forces the given appearance for the page.",
-            "condition": "(defined(ENABLE_DARK_MODE_CSS) && ENABLE_DARK_MODE_CSS) || (defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT)",
-            "targetTypes": ["page"],
-            "parameters": [
-                { "name": "appearance", "$ref": "Appearance", "optional": true }
             ]
         },
         {
@@ -378,12 +392,11 @@
             ]
         },
         {
-            "name": "defaultAppearanceDidChange",
-            "description": "Fired when page's default appearance changes, even if there is a forced appearance.",
-            "condition": "(defined(ENABLE_DARK_MODE_CSS) && ENABLE_DARK_MODE_CSS) || (defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT)",
+            "name": "defaultUserPreferencesDidChange",
+            "description": "Fired when the default value of a user preference changes at the system level.",
             "targetTypes": ["page"],
             "parameters": [
-                { "name": "appearance", "$ref": "Appearance", "description": "Name of the appearance that is active (not considering any forced appearance.)" }
+                { "name": "preferences", "type": "array", "items": { "$ref": "UserPreference" }, "description": "List of user preferences that can be overriden and their new system (default) values." }
             ]
         }
     ]

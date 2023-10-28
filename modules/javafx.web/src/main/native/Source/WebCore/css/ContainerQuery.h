@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "GenericMediaQueryTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 #include <wtf/text/AtomString.h>
@@ -35,45 +36,13 @@ class Element;
 
 namespace CQ {
 
-struct ContainerCondition;
-struct SizeCondition;
-struct SizeFeature;
-
-struct UnknownQuery {
-    String name;
-    String text;
-};
-
-using QueryInParens = std::variant<ContainerCondition, SizeFeature, UnknownQuery>;
-
-enum class LogicalOperator : uint8_t { And, Or, Not };
-enum class ComparisonOperator : uint8_t { LessThan, LessThanOrEqual, Equal, GreaterThan, GreaterThanOrEqual };
-enum class Syntax : uint8_t { Boolean, Colon, Range };
-
-struct ContainerCondition {
-    LogicalOperator logicalOperator { LogicalOperator::And };
-    Vector<QueryInParens> queries;
-};
-
-struct Comparison {
-    ComparisonOperator op { ComparisonOperator::Equal };
-    RefPtr<CSSValue> value;
-};
-
-struct SizeFeature {
-    AtomString name;
-    Syntax syntax;
-    std::optional<Comparison> leftComparison;
-    std::optional<Comparison> rightComparison;
-};
-
-namespace FeatureNames {
-const AtomString& width();
-const AtomString& height();
-const AtomString& inlineSize();
-const AtomString& blockSize();
-const AtomString& aspectRatio();
-const AtomString& orientation();
+namespace FeatureSchemas {
+const MQ::FeatureSchema& width();
+const MQ::FeatureSchema& height();
+const MQ::FeatureSchema& inlineSize();
+const MQ::FeatureSchema& blockSize();
+const MQ::FeatureSchema& aspectRatio();
+const MQ::FeatureSchema& orientation();
 };
 
 enum class Axis : uint8_t {
@@ -82,15 +51,14 @@ enum class Axis : uint8_t {
     Width   = 1 << 2,
     Height  = 1 << 3,
 };
-OptionSet<Axis> requiredAxesForFeature(const AtomString&);
+OptionSet<Axis> requiredAxesForFeature(const MQ::Feature&);
 
 struct ContainerQuery {
     AtomString name;
     OptionSet<CQ::Axis> axisFilter;
-    CQ::ContainerCondition condition;
+    MQ::Condition condition;
 };
 
-void serialize(StringBuilder&, const ContainerCondition&);
 void serialize(StringBuilder&, const ContainerQuery&);
 
 }

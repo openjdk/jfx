@@ -22,6 +22,7 @@
 #pragma once
 
 #include "CSSPropertyNames.h"
+#include "CSSValueKeywords.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -30,8 +31,7 @@ class StylePropertyShorthand {
 public:
     StylePropertyShorthand() = default;
 
-    template<unsigned numProperties>
-    StylePropertyShorthand(CSSPropertyID id, const CSSPropertyID (&properties)[numProperties])
+    template<unsigned numProperties> StylePropertyShorthand(CSSPropertyID id, const CSSPropertyID (&properties)[numProperties])
         : m_properties(properties)
         , m_length(numProperties)
         , m_shorthandID(id)
@@ -65,10 +65,5 @@ using StylePropertyShorthandVector = Vector<StylePropertyShorthand, 4>;
 StylePropertyShorthandVector matchingShorthandsForLonghand(CSSPropertyID);
 
 unsigned indexOfShorthandForLonghand(CSSPropertyID, const StylePropertyShorthandVector&);
-
-constexpr bool isShorthandCSSProperty(CSSPropertyID id)
-{
-    return id >= firstShorthandProperty && id <= lastShorthandProperty;
-}
 
 } // namespace WebCore

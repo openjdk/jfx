@@ -36,13 +36,14 @@ import java.security.PrivilegedAction;
 /**
  * The class {@code AnimationTimer} allows to create a timer, that is called in
  * each frame while it is active.
- *
+ * <p>
  * An extending class has to override the method {@link #handle(long)} which
  * will be called in every frame.
- *
+ * <p>
  * The methods {@link AnimationTimer#start()} and {@link #stop()} allow to start
  * and stop the timer.
- *
+ * <p>
+ * The animation timer runs on the JavaFX Application Thread.
  *
  * @since JavaFX 2.0
  */
@@ -106,11 +107,17 @@ public abstract class AnimationTimer {
      * Starts the {@code AnimationTimer}. Once it is started, the
      * {@link #handle(long)} method of this {@code AnimationTimer} will be
      * called in every frame.
-     *
+     * <p>
      * The {@code AnimationTimer} can be stopped by calling {@link #stop()}.
+     * <p>
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *                  other than the JavaFX Application Thread.
      */
     @SuppressWarnings("removal")
     public void start() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (!active) {
             // Capture the Access Control Context to be used during the animation pulse
             accessCtrlCtx = AccessController.getContext();
@@ -122,8 +129,14 @@ public abstract class AnimationTimer {
     /**
      * Stops the {@code AnimationTimer}. It can be activated again by calling
      * {@link #start()}.
+     * <p>
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *                  other than the JavaFX Application Thread.
      */
     public void stop() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (active) {
             timer.removeAnimationTimer(timerReceiver);
             active = false;

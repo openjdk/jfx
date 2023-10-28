@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -393,7 +393,7 @@ public class TextRun implements GlyphList {
         float runX = 0;
         for (int i = 0; i < glyphCount; i++) {
             float advance = getAdvance(i);
-            if (runX + advance > x) {
+            if (runX + advance >= x) {
                 if (trailing != null) {
                     //TODO handle clusters
                     if (x - runX > advance / 2) {

@@ -51,7 +51,7 @@ WasmInstructionStream::Offset FunctionCodeBlockGenerator::outOfLineJumpOffset(Wa
     return m_outOfLineJumpTargets.get(bytecodeOffset);
 }
 
-unsigned FunctionCodeBlockGenerator::addSignature(const FunctionSignature& signature)
+unsigned FunctionCodeBlockGenerator::addSignature(const TypeDefinition& signature)
 {
     unsigned index = m_signatures.size();
     m_signatures.append(&signature);
@@ -67,6 +67,12 @@ auto FunctionCodeBlockGenerator::addJumpTable(size_t numberOfEntries) -> JumpTab
 unsigned FunctionCodeBlockGenerator::numberOfJumpTables() const
 {
     return m_jumpTables.size();
+}
+
+void FunctionCodeBlockGenerator::setTailCall(uint32_t functionIndex, bool isImportedFunctionFromFunctionIndexSpace)
+{
+    m_tailCallSuccessors.set(functionIndex);
+    setTailCallClobbersInstance(isImportedFunctionFromFunctionIndexSpace);
 }
 
 } } // namespace JSC::Wasm

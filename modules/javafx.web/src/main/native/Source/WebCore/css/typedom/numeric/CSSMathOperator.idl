@@ -23,13 +23,12 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-[
-    Conditional=CSS_TYPED_OM
-] enum CSSMathOperator {
+enum CSSMathOperator {
     "sum",
     "product",
     "negate",
     "invert",
     "min",
-    "max"
+    "max",
+    "clamp"
 };

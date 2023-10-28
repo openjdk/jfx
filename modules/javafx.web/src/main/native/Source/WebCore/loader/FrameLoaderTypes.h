@@ -71,48 +71,11 @@ enum class FrameLoadType : uint8_t {
 
 enum class IsMetaRefresh : bool { No, Yes };
 enum class WillContinueLoading : bool { No, Yes };
+enum class WillInternallyHandleFailure : bool { No, Yes };
 
-class PolicyCheckIdentifier {
-public:
-    PolicyCheckIdentifier() = default;
-
-    static PolicyCheckIdentifier create();
-
-    bool isValidFor(PolicyCheckIdentifier);
-    bool operator==(const PolicyCheckIdentifier& other) const { return m_process == other.m_process && m_policyCheck == other.m_policyCheck; }
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<PolicyCheckIdentifier> decode(Decoder&);
-
-private:
-    PolicyCheckIdentifier(ProcessIdentifier process, uint64_t policyCheck)
-        : m_process(process)
-        , m_policyCheck(policyCheck)
-    { }
-
-    ProcessIdentifier m_process;
-    uint64_t m_policyCheck { 0 };
-};
-
-template<class Encoder>
-void PolicyCheckIdentifier::encode(Encoder& encoder) const
-{
-    encoder << m_process << m_policyCheck;
-}
-
-template<class Decoder>
-std::optional<PolicyCheckIdentifier> PolicyCheckIdentifier::decode(Decoder& decoder)
-{
-    auto process = ProcessIdentifier::decode(decoder);
-    if (!process)
-        return std::nullopt;
-
-    uint64_t policyCheck;
-    if (!decoder.decode(policyCheck))
-        return std::nullopt;
-
-    return PolicyCheckIdentifier { *process, policyCheck };
-}
+enum LocalPolicyCheckIdentifierType { };
+using LocalPolicyCheckIdentifier = ObjectIdentifier<LocalPolicyCheckIdentifierType>;
+using PolicyCheckIdentifier = ProcessQualified<LocalPolicyCheckIdentifier>;
 
 enum class ShouldContinuePolicyCheck : bool {
     Yes,
@@ -182,12 +145,6 @@ enum ShouldReplaceDocumentIfJavaScriptURL {
     DoNotReplaceDocumentIfJavaScriptURL
 };
 
-enum class WebGLLoadPolicy : uint8_t {
-    WebGLBlockCreation,
-    WebGLAllowCreation,
-    WebGLPendingCreation
-};
-
 enum class LockHistory : bool { No, Yes };
 enum class LockBackForwardList : bool { No, Yes };
 enum class AllowNavigationToInvalidURL : bool { No, Yes };
@@ -198,37 +155,7 @@ struct SystemPreviewInfo {
 
     IntRect previewRect;
     bool isPreview { false };
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<SystemPreviewInfo> decode(Decoder&);
 };
-
-template<class Encoder>
-void SystemPreviewInfo::encode(Encoder& encoder) const
-{
-    encoder << element << previewRect << isPreview;
-}
-
-template<class Decoder>
-std::optional<SystemPreviewInfo> SystemPreviewInfo::decode(Decoder& decoder)
-{
-    std::optional<ElementContext> element;
-    decoder >> element;
-    if (!element)
-        return std::nullopt;
-
-    std::optional<IntRect> previewRect;
-    decoder >> previewRect;
-    if (!previewRect)
-        return std::nullopt;
-
-    std::optional<bool> isPreview;
-    decoder >> isPreview;
-    if (!isPreview)
-        return std::nullopt;
-
-    return { { WTFMove(*element), WTFMove(*previewRect), WTFMove(*isPreview) } };
-}
 
 enum class LoadCompletionType : bool {
     Finish,
@@ -282,6 +209,15 @@ template<> struct EnumTraits<WebCore::PolicyAction> {
     >;
 };
 
+template<> struct EnumTraits<WebCore::ReloadOption> {
+    using values = EnumValues<
+        WebCore::ReloadOption,
+        WebCore::ReloadOption::ExpiredOnly,
+        WebCore::ReloadOption::FromOrigin,
+        WebCore::ReloadOption::DisableContentBlockers
+    >;
+};
+
 template<> struct EnumTraits<WebCore::BrowsingContextGroupSwitchDecision> {
     using values = EnumValues<
         WebCore::BrowsingContextGroupSwitchDecision,
@@ -297,15 +233,6 @@ template<> struct EnumTraits<WebCore::ShouldOpenExternalURLsPolicy> {
         WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemesButNotAppLinks,
         WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow
-    >;
-};
-
-template<> struct EnumTraits<WebCore::WebGLLoadPolicy> {
-    using values = EnumValues<
-        WebCore::WebGLLoadPolicy,
-        WebCore::WebGLLoadPolicy::WebGLBlockCreation,
-        WebCore::WebGLLoadPolicy::WebGLAllowCreation,
-        WebCore::WebGLLoadPolicy::WebGLPendingCreation
     >;
 };
 

@@ -25,31 +25,23 @@
 
 #pragma once
 
+#include "CSSCounterStyle.h"
 #include "CSSRule.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
-
-// The keywords that can be used as values for the counter-style `system` descriptor.
-// https://www.w3.org/TR/css-counter-styles-3/#counter-style-system
-enum class CounterStyleSystem : uint8_t {
-    Cyclic,
-    Numeric,
-    Alphabetic,
-    Symbolic,
-    Additive,
-    Fixed,
-    Extends
-};
-
 class StyleRuleCounterStyle final : public StyleRuleBase {
 public:
     static Ref<StyleRuleCounterStyle> create(const AtomString& name, Ref<StyleProperties>&&);
     ~StyleRuleCounterStyle();
 
+    Ref<StyleRuleCounterStyle> copy() const { RELEASE_ASSERT_NOT_REACHED(); }
+
     const StyleProperties& properties() const { return m_properties; }
+    const CSSCounterStyleDescriptors& descriptors() const { return m_descriptors; };
+    RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID id) const { return m_properties->getPropertyCSSValue(id); }
     MutableStyleProperties& mutableProperties();
 
     const AtomString& name() const { return m_name; }
@@ -63,16 +55,16 @@ public:
     String symbols() const { return m_properties->getPropertyValue(CSSPropertySymbols); }
     String additiveSymbols() const { return m_properties->getPropertyValue(CSSPropertyAdditiveSymbols); }
     String speakAs() const { return m_properties->getPropertyValue(CSSPropertySpeakAs); }
-
     bool newValueInvalidOrEqual(CSSPropertyID, const RefPtr<CSSValue> newValue) const;
 
     void setName(const AtomString& name) { m_name = name; }
 
 private:
-    explicit StyleRuleCounterStyle(const AtomString&, Ref<StyleProperties>&&);
+    explicit StyleRuleCounterStyle(const AtomString&, Ref<StyleProperties>&&, CSSCounterStyleDescriptors&&);
 
     AtomString m_name;
     Ref<StyleProperties> m_properties;
+    CSSCounterStyleDescriptors m_descriptors;
 };
 
 class CSSCounterStyleRule final : public CSSRule {
@@ -116,6 +108,8 @@ private:
     Ref<StyleRuleCounterStyle> m_counterStyleRule;
 };
 
+CSSCounterStyleDescriptors::System toCounterStyleSystemEnum(const CSSValue*);
+
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSCounterStyleRule, StyleRuleType::CounterStyle)
@@ -123,4 +117,3 @@ SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSCounterStyleRule, StyleRuleType::CounterStyle
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleCounterStyle)
 static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isCounterStyleRule(); }
 SPECIALIZE_TYPE_TRAITS_END()
-

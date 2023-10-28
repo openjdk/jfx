@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,15 +57,9 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGSMILElement);
 
-static SMILEventSender& smilBeginEventSender()
+static SMILEventSender& smilEventSender()
 {
-    static NeverDestroyed<SMILEventSender> sender(eventNames().beginEventEvent);
-    return sender;
-}
-
-static SMILEventSender& smilEndEventSender()
-{
-    static NeverDestroyed<SMILEventSender> sender(eventNames().endEventEvent);
+    static NeverDestroyed<SMILEventSender> sender;
     return sender;
 }
 
@@ -136,8 +131,8 @@ SVGSMILElement::Condition::Condition(Type type, BeginOrEnd beginOrEnd, const Str
 {
 }
 
-SVGSMILElement::SVGSMILElement(const QualifiedName& tagName, Document& doc)
-    : SVGElement(tagName, doc)
+SVGSMILElement::SVGSMILElement(const QualifiedName& tagName, Document& doc, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
+    : SVGElement(tagName, doc, WTFMove(propertyRegistry))
     , m_attributeName(anyQName())
     , m_conditionsConnected(false)
     , m_hasEndEventConditions(false)
@@ -162,8 +157,7 @@ SVGSMILElement::SVGSMILElement(const QualifiedName& tagName, Document& doc)
 SVGSMILElement::~SVGSMILElement()
 {
     clearResourceReferences();
-    smilBeginEventSender().cancelEvent(*this);
-    smilEndEventSender().cancelEvent(*this);
+    smilEventSender().cancelEvent(*this);
     disconnectConditions();
     if (m_timeContainer && m_targetElement && hasValidAttributeName())
         m_timeContainer->unschedule(this, m_targetElement.get(), m_attributeName);
@@ -1031,7 +1025,9 @@ float SVGSMILElement::calculateAnimationPercentAndRepeat(SMILTime elapsed, unsig
     SMILTime activeTime = elapsed - m_intervalBegin;
     SMILTime repeatingDuration = this->repeatingDuration();
     if (elapsed >= m_intervalEnd || activeTime > repeatingDuration) {
-        repeat = static_cast<unsigned>(repeatingDuration.value() / simpleDuration.value()) - 1;
+        repeat = static_cast<unsigned>(repeatingDuration.value() / simpleDuration.value());
+        if (!fmod(repeatingDuration.value(), simpleDuration.value()))
+            --repeat;
 
         double percent = (m_intervalEnd.value() - m_intervalBegin.value()) / simpleDuration.value();
         percent = percent - floor(percent);
@@ -1089,13 +1085,15 @@ bool SVGSMILElement::progress(SMILTime elapsed, SVGSMILElement& firstAnimation, 
 
     if (elapsed < m_intervalBegin) {
         ASSERT(m_activeState != Active);
-        if (m_activeState == Frozen) {
+        bool isFrozen = (m_activeState == Frozen);
+        if (isFrozen) {
             if (this == &firstAnimation)
                 startAnimation();
             updateAnimation(m_lastPercent, m_lastRepeat);
         }
         m_nextProgressTime = m_intervalBegin;
-        return false;
+        // If the animation is frozen, it's still contributing.
+        return isFrozen;
     }
 
     m_previousIntervalBegin = m_intervalBegin;
@@ -1137,17 +1135,17 @@ bool SVGSMILElement::progress(SMILTime elapsed, SVGSMILElement& firstAnimation, 
     }
 
     if (oldActiveState == Active && m_activeState != Active) {
-        smilEndEventSender().dispatchEventSoon(*this);
+        smilEventSender().dispatchEventSoon(*this, eventNames().endEventEvent);
         endedActiveInterval();
         if (m_activeState != Frozen)
             stopAnimation(m_targetElement.get());
     } else if (oldActiveState != Active && m_activeState == Active)
-        smilBeginEventSender().dispatchEventSoon(*this);
+        smilEventSender().dispatchEventSoon(*this, eventNames().beginEventEvent);
 
     // Triggering all the pending events if the animation timeline is changed.
     if (seekToTime) {
         if (m_activeState == Inactive || m_activeState == Frozen)
-            smilEndEventSender().dispatchEventSoon(*this);
+            smilEventSender().dispatchEventSoon(*this, eventNames().endEventEvent);
     }
 
     m_nextProgressTime = calculateNextProgressTime(elapsed);
@@ -1157,7 +1155,7 @@ bool SVGSMILElement::progress(SMILTime elapsed, SVGSMILElement& firstAnimation, 
 void SVGSMILElement::notifyDependentsIntervalChanged(NewOrExistingInterval newOrExisting)
 {
     ASSERT(m_intervalBegin.isFinite());
-    static NeverDestroyed<WeakHashSet<SVGSMILElement>> loopBreaker;
+    static NeverDestroyed<WeakHashSet<SVGSMILElement, WeakPtrImplWithEventTargetData>> loopBreaker;
     if (loopBreaker->contains(*this))
         return;
     loopBreaker->add(*this);
@@ -1224,10 +1222,9 @@ void SVGSMILElement::endedActiveInterval()
     clearTimesWithDynamicOrigins(m_endTimes);
 }
 
-void SVGSMILElement::dispatchPendingEvent(SMILEventSender* eventSender)
+void SVGSMILElement::dispatchPendingEvent(SMILEventSender* eventSender, const AtomString& eventType)
 {
-    ASSERT(eventSender == &smilBeginEventSender() || eventSender == &smilEndEventSender());
-    const AtomString& eventType = eventSender->eventType();
+    ASSERT_UNUSED(eventSender, eventSender == &smilEventSender());
     dispatchEvent(Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No));
 }
 

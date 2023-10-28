@@ -91,6 +91,8 @@ public:
 
     static constexpr size_t atomSize = 16; // This needs to be larger or equal to 16.
 
+    static constexpr bool isResizableOrGrowableSharedTypedArray = false;
+
     static JSCell* seenMultipleCalleeObjects() { return bitwise_cast<JSCell*>(static_cast<uintptr_t>(1)); }
 
     enum CreatingEarlyCellTag { CreatingEarlyCell };
@@ -121,12 +123,12 @@ public:
 
     // Each cell has a built-in lock. Currently it's simply available for use if you need it. It's
     // a full-blown WTF::Lock. Note that this lock is currently used in JSArray and that lock's
-    // ordering with the Structure lock is that the Structure lock must be acquired first.
+    // ordering with the Structure lock is that the cell lock must be acquired first.
 
     // We use this abstraction to make it easier to grep for places where we lock cells.
     // to lock a cell you can just do:
-    // Locker locker { cell->cellLocker() };
-    JSCellLock& cellLock() { return *reinterpret_cast<JSCellLock*>(this); }
+    // Locker locker { cell->cellLock() };
+    JSCellLock& cellLock() const { return *reinterpret_cast<JSCellLock*>(const_cast<JSCell*>(this)); }
 
     JSType type() const;
     IndexingType indexingTypeAndMisc() const;
@@ -185,8 +187,6 @@ public:
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
     static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
-
-    static JSValue toThis(JSCell*, JSGlobalObject*, ECMAMode);
 
     static bool canUseFastGetOwnProperty(const Structure&);
     JSValue fastGetOwnProperty(VM&, Structure&, PropertyName);

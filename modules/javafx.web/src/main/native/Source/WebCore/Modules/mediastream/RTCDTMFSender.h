@@ -39,7 +39,7 @@ class MediaStreamTrack;
 class RTCDTMFSenderBackend;
 class RTCRtpSender;
 
-class RTCDTMFSender final : public RefCounted<RTCDTMFSender>, public EventTargetWithInlineData, public ActiveDOMObject {
+class RTCDTMFSender final : public RefCounted<RTCDTMFSender>, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(RTCDTMFSender);
 public:
     static Ref<RTCDTMFSender> create(ScriptExecutionContext&, RTCRtpSender&, std::unique_ptr<RTCDTMFSenderBackend>&&);
@@ -61,6 +61,7 @@ private:
 
     EventTargetInterface eventTargetInterface() const final { return RTCDTMFSenderEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    bool virtualHasPendingActivity() const final { return m_isPendingPlayoutTask; }
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -392,12 +392,6 @@ public class TestListenerHelper {
         }
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testEventHandlerCheck() {
-        ListenerHelper h = new ListenerHelper();
-        h.addEventHandler(new Object(), MouseEvent.ANY, (ev) -> { throw new Error(); });
-    }
-
     // event filters
 
     @Test
@@ -420,12 +414,6 @@ public class TestListenerHelper {
             EventUtil.fireEvent(ev, item);
             assertEquals(1, ct.get());
         }
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testEventFilterCheck() {
-        ListenerHelper h = new ListenerHelper();
-        h.addEventFilter(new Object(), MouseEvent.ANY, (ev) -> { throw new Error(); });
     }
 
     //

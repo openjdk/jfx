@@ -31,6 +31,7 @@
 #include "CSSPropertyParser.h"
 #include "CSSRegisteredCustomProperty.h"
 #include "CSSTokenizer.h"
+#include "CustomPropertyRegistry.h"
 #include "DOMCSSNamespace.h"
 #include "Document.h"
 #include "StyleBuilder.h"
@@ -46,44 +47,42 @@ ExceptionOr<void> DOMCSSRegisterCustomProperty::registerProperty(Document& docum
     if (!isCustomPropertyName(descriptor.name))
         return Exception { SyntaxError, "The name of this property is not a custom property name."_s };
 
+    auto syntax = CSSCustomPropertySyntax::parse(descriptor.syntax);
+    if (!syntax)
+        return Exception { SyntaxError, "Invalid property syntax definition."_s };
+
+    if (!syntax->isUniversal() && descriptor.initialValue.isNull())
+        return Exception { SyntaxError, "An initial value is mandatory except for the '*' syntax."_s };
+
     RefPtr<CSSCustomPropertyValue> initialValue;
-    if (!descriptor.initialValue.isEmpty()) {
+    if (!descriptor.initialValue.isNull()) {
         CSSTokenizer tokenizer(descriptor.initialValue);
-        auto styleResolver = Style::Resolver::create(document);
 
-        // We need to initialize this so that we can successfully parse computationally dependent values (like em units).
-        // We don't actually need the values to be accurate, since they will be rejected later anyway
-        auto style = styleResolver->defaultStyleForElement(nullptr);
-
-        HashSet<CSSPropertyID> dependencies;
-        CSSPropertyParser::collectParsedCustomPropertyValueDependencies(descriptor.syntax, false, dependencies, tokenizer.tokenRange(), strictCSSParserContext());
+        auto dependencies = CSSPropertyParser::collectParsedCustomPropertyValueDependencies(*syntax, tokenizer.tokenRange(), strictCSSParserContext());
 
         if (!dependencies.isEmpty())
             return Exception { SyntaxError, "The given initial value must be computationally independent."_s };
 
+        // We don't need to provide a real context style since only computationally independent values are allowed (no 'em' etc).
+        auto placeholderStyle = RenderStyle::create();
+        Style::Builder builder { placeholderStyle, { document, RenderStyle::defaultStyle() }, { }, { } };
 
-        Style::MatchResult matchResult;
+        initialValue = CSSPropertyParser::parseTypedCustomPropertyInitialValue(descriptor.name, *syntax, tokenizer.tokenRange(), builder.state(), { document });
 
-        auto parentStyle = RenderStyle::clone(*style);
-        Style::Builder dummyBuilder(*style, { document, parentStyle }, matchResult, { });
-
-        initialValue = CSSPropertyParser::parseTypedCustomPropertyValue(descriptor.name, descriptor.syntax, tokenizer.tokenRange(), dummyBuilder.state(), strictCSSParserContext());
-
-        if (!initialValue || !initialValue->isResolved())
+        if (!initialValue)
             return Exception { SyntaxError, "The given initial value does not parse for the given syntax."_s };
-
-        initialValue->collectDirectComputationalDependencies(dependencies);
-        initialValue->collectDirectRootComputationalDependencies(dependencies);
-
-        if (!dependencies.isEmpty())
-            return Exception { SyntaxError, "The given initial value must be computationally independent."_s };
     }
 
-    CSSRegisteredCustomProperty property { descriptor.name, descriptor.syntax, descriptor.inherits, WTFMove(initialValue) };
-    if (!document.registerCSSProperty(WTFMove(property)))
-        return Exception { InvalidModificationError, "This property has already been registered."_s };
+    auto property = CSSRegisteredCustomProperty {
+        descriptor.name,
+        *syntax,
+        descriptor.inherits,
+        WTFMove(initialValue)
+    };
 
-    document.styleScope().didChangeStyleSheetEnvironment();
+    auto& registry = document.styleScope().customPropertyRegistry();
+    if (!registry.registerFromAPI(WTFMove(property)))
+        return Exception { InvalidModificationError, "This property has already been registered."_s };
 
     return { };
 }

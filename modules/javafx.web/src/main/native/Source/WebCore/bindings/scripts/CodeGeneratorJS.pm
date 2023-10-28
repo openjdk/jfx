@@ -12,6 +12,7 @@
 # Copyright (C) 2007, 2008, 2009, 2012 Google Inc.
 # Copyright (C) 2013 Samsung Electronics. All rights reserved.
 # Copyright (C) 2015, 2016 Canon Inc. All rights reserved.
+# Copyright (C) 2023 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Library General Public
@@ -164,6 +165,7 @@ sub GenerateInterface
     $codeGenerator->LinkOverloadedOperations($interface);
 
     AddIterableOperationIfNeeded($interface);
+    AddAsyncIterableOperationIfNeeded($interface);
     AddMapLikeAttributesAndOperationIfNeeded($interface);
     AddSetLikeAttributesAndOperationIfNeeded($interface);
     AddStringifierOperationIfNeeded($interface);
@@ -178,6 +180,15 @@ sub GenerateInterface
     }
 }
 
+sub AddAsyncIterableOperationIfNeeded
+{
+    my $interface = shift;
+
+    return unless $interface->asyncIterable;
+    $interface->asyncIterable->extendedAttributes->{FromIterable} = 1;
+    addGenericIterableOperations($interface, $interface->asyncIterable, "[Symbol.asyncIterator]");
+}
+
 sub AddIterableOperationIfNeeded
 {
     my $interface = shift;
@@ -185,30 +196,7 @@ sub AddIterableOperationIfNeeded
     return unless $interface->iterable;
 
     $interface->iterable->extendedAttributes->{FromIterable} = 1;
-
-    my $symbolIteratorOperation = IDLOperation->new();
-    $symbolIteratorOperation->name("[Symbol.Iterator]");
-    IDLParser::copyExtendedAttributes($symbolIteratorOperation->extendedAttributes, $interface->iterable->extendedAttributes);
-    push(@{$interface->iterable->operations}, $symbolIteratorOperation);
-    push(@{$interface->operations}, $symbolIteratorOperation) if IsKeyValueIterableInterface($interface);
-
-    my $entriesOperation = IDLOperation->new();
-    $entriesOperation->name("entries");
-    IDLParser::copyExtendedAttributes($entriesOperation->extendedAttributes, $interface->iterable->extendedAttributes);
-    push(@{$interface->iterable->operations}, $entriesOperation);
-    push(@{$interface->operations}, $entriesOperation) if IsKeyValueIterableInterface($interface);
-
-    my $keysOperation = IDLOperation->new();
-    $keysOperation->name("keys");
-    IDLParser::copyExtendedAttributes($keysOperation->extendedAttributes, $interface->iterable->extendedAttributes);
-    push(@{$interface->iterable->operations}, $keysOperation);
-    push(@{$interface->operations}, $keysOperation) if IsKeyValueIterableInterface($interface);
-
-    my $valuesOperation = IDLOperation->new();
-    $valuesOperation->name("values");
-    IDLParser::copyExtendedAttributes($valuesOperation->extendedAttributes, $interface->iterable->extendedAttributes);
-    push(@{$interface->iterable->operations}, $valuesOperation);
-    push(@{$interface->operations}, $valuesOperation) if IsKeyValueIterableInterface($interface);
+    addGenericIterableOperations($interface, $interface->iterable, "[Symbol.Iterator]");
 
     my $forEachOperation = IDLOperation->new();
     $forEachOperation->name("forEach");
@@ -219,6 +207,38 @@ sub AddIterableOperationIfNeeded
     IDLParser::copyExtendedAttributes($forEachOperation->extendedAttributes, $interface->iterable->extendedAttributes);
     push(@{$interface->iterable->operations}, $forEachOperation);
     push(@{$interface->operations}, $forEachOperation) if IsKeyValueIterableInterface($interface);
+}
+
+sub addGenericIterableOperations
+{
+    my $interface = shift;
+    my $iterable = shift;
+    my $iteratorName = shift;
+
+    my $symbolIteratorOperation = IDLOperation->new();
+    $symbolIteratorOperation->name($iteratorName);
+
+    IDLParser::copyExtendedAttributes($symbolIteratorOperation->extendedAttributes, $iterable->extendedAttributes);
+    push(@{$iterable->operations}, $symbolIteratorOperation);
+    push(@{$interface->operations}, $symbolIteratorOperation) if IsKeyValueIterableInterface($interface);
+
+    my $entriesOperation = IDLOperation->new();
+    $entriesOperation->name("entries");
+    IDLParser::copyExtendedAttributes($entriesOperation->extendedAttributes, $iterable->extendedAttributes);
+    push(@{$iterable->operations}, $entriesOperation);
+    push(@{$interface->operations}, $entriesOperation) if IsKeyValueIterableInterface($interface);
+
+    my $keysOperation = IDLOperation->new();
+    $keysOperation->name("keys");
+    IDLParser::copyExtendedAttributes($keysOperation->extendedAttributes, $iterable->extendedAttributes);
+    push(@{$iterable->operations}, $keysOperation);
+    push(@{$interface->operations}, $keysOperation) if IsKeyValueIterableInterface($interface);
+
+    my $valuesOperation = IDLOperation->new();
+    $valuesOperation->name("values");
+    IDLParser::copyExtendedAttributes($valuesOperation->extendedAttributes, $iterable->extendedAttributes);
+    push(@{$iterable->operations}, $valuesOperation);
+    push(@{$interface->operations}, $valuesOperation) if IsKeyValueIterableInterface($interface);
 }
 
 sub AddMapLikeAttributesAndOperationIfNeeded
@@ -235,7 +255,6 @@ sub AddMapLikeAttributesAndOperationIfNeeded
     $sizeAttribute->isReadOnly(1);
     $sizeAttribute->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($sizeAttribute->extendedAttributes, $interface->mapLike->extendedAttributes);
-    $sizeAttribute->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->attributes}, $sizeAttribute);
 
     # https://webidl.spec.whatwg.org/#es-map-get-has
@@ -247,7 +266,6 @@ sub AddMapLikeAttributesAndOperationIfNeeded
     push(@{$getOperation->arguments}, ($getArgument));
     $getOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($getOperation->extendedAttributes, $interface->mapLike->extendedAttributes);
-    $getOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $getOperation);
 
     my $hasOperation = IDLOperation->new();
@@ -258,7 +276,6 @@ sub AddMapLikeAttributesAndOperationIfNeeded
     push(@{$hasOperation->arguments}, ($hasArgument));
     $hasOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($hasOperation->extendedAttributes, $interface->mapLike->extendedAttributes);
-    $hasOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $hasOperation);
 
     # https://webidl.spec.whatwg.org/#es-map-entries
@@ -266,7 +283,6 @@ sub AddMapLikeAttributesAndOperationIfNeeded
     $entriesOperation->name("entries");
     $entriesOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($entriesOperation->extendedAttributes, $interface->mapLike->extendedAttributes);
-    $entriesOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $entriesOperation);
 
     # https://webidl.spec.whatwg.org/#es-map-keys-values
@@ -274,14 +290,12 @@ sub AddMapLikeAttributesAndOperationIfNeeded
     $keysOperation->name("keys");
     $keysOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($keysOperation->extendedAttributes, $interface->mapLike->extendedAttributes);
-    $keysOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $keysOperation);
 
     my $valuesOperation = IDLOperation->new();
     $valuesOperation->name("values");
     $valuesOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($valuesOperation->extendedAttributes, $interface->mapLike->extendedAttributes);
-    $valuesOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $valuesOperation);
 
     # https://webidl.spec.whatwg.org/#es-forEach
@@ -311,7 +325,6 @@ sub AddMapLikeAttributesAndOperationIfNeeded
         push(@{$setOperation->arguments}, ($setValueArgument));
         $setOperation->type(IDLParser::makeSimpleType("any"));
         IDLParser::copyExtendedAttributes($setOperation->extendedAttributes, $interface->mapLike->extendedAttributes);
-        $setOperation->extendedAttributes->{NotEnumerable} = 1;
         push(@{$interface->operations}, $setOperation);
     }
 
@@ -321,7 +334,6 @@ sub AddMapLikeAttributesAndOperationIfNeeded
         $clearOperation->name("clear");
         $clearOperation->type(IDLParser::makeSimpleType("any"));
         IDLParser::copyExtendedAttributes($clearOperation->extendedAttributes, $interface->mapLike->extendedAttributes);
-        $clearOperation->extendedAttributes->{NotEnumerable} = 1;
         push(@{$interface->operations}, $clearOperation);
     }
 
@@ -335,7 +347,6 @@ sub AddMapLikeAttributesAndOperationIfNeeded
         push(@{$deleteOperation->arguments}, ($deleteArgument));
         $deleteOperation->type(IDLParser::makeSimpleType("any"));
         IDLParser::copyExtendedAttributes($deleteOperation->extendedAttributes, $interface->mapLike->extendedAttributes);
-        $deleteOperation->extendedAttributes->{NotEnumerable} = 1;
         push(@{$interface->operations}, $deleteOperation);
     }
 }
@@ -354,7 +365,6 @@ sub AddSetLikeAttributesAndOperationIfNeeded
     $sizeAttribute->isReadOnly(1);
     $sizeAttribute->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($sizeAttribute->extendedAttributes, $interface->setLike->extendedAttributes);
-    $sizeAttribute->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->attributes}, $sizeAttribute);
 
     # https://webidl.spec.whatwg.org/#es-set-has
@@ -366,7 +376,6 @@ sub AddSetLikeAttributesAndOperationIfNeeded
     push(@{$hasOperation->arguments}, ($hasArgument));
     $hasOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($hasOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-    $hasOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $hasOperation);
 
     # https://webidl.spec.whatwg.org/#es-set-entries-keys
@@ -374,14 +383,12 @@ sub AddSetLikeAttributesAndOperationIfNeeded
     $entriesOperation->name("entries");
     $entriesOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($entriesOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-    $entriesOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $entriesOperation);
 
     my $keysOperation = IDLOperation->new();
     $keysOperation->name("keys");
     $keysOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($keysOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-    $keysOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $keysOperation);
 
     # https://webidl.spec.whatwg.org/#es-set-values
@@ -389,7 +396,6 @@ sub AddSetLikeAttributesAndOperationIfNeeded
     $valuesOperation->name("values");
     $valuesOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($valuesOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-    $valuesOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $valuesOperation);
 
     # https://webidl.spec.whatwg.org/#es-forEach
@@ -401,7 +407,6 @@ sub AddSetLikeAttributesAndOperationIfNeeded
     push(@{$forEachOperation->arguments}, ($forEachArgument));
     $forEachOperation->type(IDLParser::makeSimpleType("any"));
     IDLParser::copyExtendedAttributes($forEachOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-    $forEachOperation->extendedAttributes->{NotEnumerable} = 1;
     push(@{$interface->operations}, $forEachOperation);
 
     return if $interface->setLike->isReadOnly;
@@ -416,7 +421,6 @@ sub AddSetLikeAttributesAndOperationIfNeeded
         push(@{$addOperation->arguments}, ($addArgument));
         $addOperation->type(IDLParser::makeSimpleType("any"));
         IDLParser::copyExtendedAttributes($addOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-        $addOperation->extendedAttributes->{NotEnumerable} = 1;
         push(@{$interface->operations}, $addOperation);
     }
 
@@ -426,7 +430,6 @@ sub AddSetLikeAttributesAndOperationIfNeeded
         $clearOperation->name("clear");
         $clearOperation->type(IDLParser::makeSimpleType("any"));
         IDLParser::copyExtendedAttributes($clearOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-        $clearOperation->extendedAttributes->{NotEnumerable} = 1;
         push(@{$interface->operations}, $clearOperation);
     }
 
@@ -439,7 +442,6 @@ sub AddSetLikeAttributesAndOperationIfNeeded
         push(@{$deleteOperation->arguments}, ($deleteArgument));
         $deleteOperation->type(IDLParser::makeSimpleType("any"));
         IDLParser::copyExtendedAttributes($deleteOperation->extendedAttributes, $interface->setLike->extendedAttributes);
-        $deleteOperation->extendedAttributes->{NotEnumerable} = 1;
         push(@{$interface->operations}, $deleteOperation);
     }
 }
@@ -594,8 +596,9 @@ sub AddToIncludesForIDLType
         return;
     }
 
-    if ($codeGenerator->IsBufferSourceType($type)) {
+    if ($codeGenerator->IsBufferSourceType($type) || $type->extendedAttributes->{AllowShared}) {
         AddToIncludes("JSDOMConvertBufferSource.h", $includesRef, $conditional);
+        AddToIncludes("JSDOMConvertUnion.h", $includesRef, $conditional);
         return;
     }
 
@@ -737,7 +740,7 @@ sub AddToIncludes
 sub IsReadonly
 {
     my $attribute = shift;
-    return $attribute->isReadOnly && !$attribute->extendedAttributes->{Replaceable} && !$attribute->extendedAttributes->{PutForwards};
+    return $attribute->isReadOnly && !$attribute->extendedAttributes->{Replaceable} && !$attribute->extendedAttributes->{PutForwards} && !$attribute->extendedAttributes->{LegacyLenientSetter};
 }
 
 sub AddClassForwardIfNeeded
@@ -1864,6 +1867,7 @@ sub GetFunctionName
 
     my $functionName = $operation->name;
     $functionName = "SymbolIterator" if $functionName eq "[Symbol.Iterator]";
+    $functionName = "AsyncSymbolIterator" if $functionName eq "[Symbol.asyncIterator]";
 
     my $kind = $operation->isStatic ? "Constructor" : (OperationShouldBeOnInstance($interface, $operation) ? "Instance" : "Prototype");
     return $codeGenerator->WK_lcfirst($className) . $kind . "Function" . MangleAttributeOrFunctionName($functionName);
@@ -2010,8 +2014,7 @@ sub NeedsRuntimeReadWriteCheck
 {
     my ($interface, $context) = @_;
 
-    return $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting}
-        || $context->extendedAttributes->{EnabledConditionallyReadWriteBySetting}
+    return $context->extendedAttributes->{EnabledConditionallyReadWriteBySetting}
 }
 
 # https://webidl.spec.whatwg.org/#es-operations
@@ -2385,7 +2388,7 @@ sub GenerateEnumerationImplementationContent
         $result .= "    static_assert(static_cast<size_t>(${className}::$enumerationValueName) == $index, \"${className}::$enumerationValueName is not $index as expected\");\n";
         $index++;
     }
-    $result .= "    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));\n";
+    $result .= "    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));\n";
     $result .= "    return values[static_cast<size_t>(enumerationValue)];\n";
     $result .= "}\n\n";
 
@@ -2399,9 +2402,8 @@ sub GenerateEnumerationImplementationContent
     # FIXME: Change to take VM& instead of JSGlobalObject&.
     # FIXME: Consider using toStringOrNull to make exception checking faster.
     # FIXME: Consider finding a more efficient way to match against all the strings quickly.
-    $result .= "template<> std::optional<$className> parseEnumeration<$className>(JSGlobalObject& lexicalGlobalObject, JSValue value)\n";
+    $result .= "template<> std::optional<$className> parseEnumerationFromString<${className}>(const String& stringValue)\n";
     $result .= "{\n";
-    $result .= "    auto stringValue = value.toWTFString(&lexicalGlobalObject);\n";
     my @sortedEnumerationValues = sort @{$enumeration->values};
     if ($sortedEnumerationValues[0] eq "") {
         $result .= "    if (stringValue.isEmpty())\n";
@@ -2418,6 +2420,11 @@ sub GenerateEnumerationImplementationContent
     $result .= "    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); LIKELY(enumerationValue))\n";
     $result .= "        return *enumerationValue;\n";
     $result .= "    return std::nullopt;\n";
+    $result .= "}\n\n";
+
+    $result .= "template<> std::optional<$className> parseEnumeration<$className>(JSGlobalObject& lexicalGlobalObject, JSValue value)\n";
+    $result .= "{\n";
+    $result .= "    return parseEnumerationFromString<${className}>(value.toWTFString(&lexicalGlobalObject));\n";
     $result .= "}\n\n";
 
     $result .= "template<> const char* expectedEnumerationValues<$className>()\n";
@@ -2458,6 +2465,7 @@ sub GenerateEnumerationHeaderContent
 
     $result .= "${exportMacro}String convertEnumerationToString($className);\n";
     $result .= "template<> ${exportMacro}JSC::JSString* convertEnumerationToJS(JSC::JSGlobalObject&, $className);\n\n";
+    $result .= "template<> ${exportMacro}std::optional<$className> parseEnumerationFromString<${className}>(const String&);\n";
     $result .= "template<> ${exportMacro}std::optional<$className> parseEnumeration<$className>(JSC::JSGlobalObject&, JSC::JSValue);\n";
     $result .= "template<> ${exportMacro}const char* expectedEnumerationValues<$className>();\n\n";
     $result .= "#endif\n\n" if $conditionalString;
@@ -2855,7 +2863,6 @@ sub GenerateHeader
     my $interfaceName = $interface->type->name;
     my $className = "JS$interfaceName";
     my %structureFlags = ();
-
     my $hasParent = $interface->parentType || $interface->extendedAttributes->{JSLegacyParent};
     my $parentClassName = GetParentClassName($interface);
     my $needsVisitChildren = InstanceNeedsVisitChildren($interface);
@@ -2928,7 +2935,7 @@ sub GenerateHeader
         AddIncludesForImplementationTypeInHeader($implType);
         push(@headerContent, "    static $className* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<$implType>&& impl)\n");
         push(@headerContent, "    {\n");
-        push(@headerContent, "        globalObject->masqueradesAsUndefinedWatchpoint()->fireAll(globalObject->vm(), \"Allocated masquerading object\");\n");
+        push(@headerContent, "        globalObject->masqueradesAsUndefinedWatchpointSet().fireAll(globalObject->vm(), \"Allocated masquerading object\");\n");
         push(@headerContent, "        $className* ptr = new (NotNull, JSC::allocateCell<$className>(globalObject->vm())) $className(structure, *globalObject, WTFMove(impl));\n");
         push(@headerContent, "        ptr->finishCreation(globalObject->vm());\n");
         push(@headerContent, "        return ptr;\n");
@@ -3441,7 +3448,7 @@ sub GeneratePropertiesHashTable
         next if ($operation->isStatic);
         next if $operation->{overloadIndex} && $operation->{overloadIndex} > 1;
         next if OperationShouldBeOnInstance($interface, $operation) != $isInstance;
-        next if $operation->name eq "[Symbol.Iterator]";
+        next if $operation->name eq "[Symbol.Iterator]" or $operation->name eq "[Symbol.asyncIterator]";
 
         # Global objects add RuntimeEnabled operations after creation so do not add them to the static table.
         if ($isInstance && NeedsRuntimeCheck($interface, $operation)) {
@@ -4148,17 +4155,6 @@ sub GenerateRuntimeEnableConditionalString
         }
     }
 
-    if ($context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting}) {
-        assert("Must specify value for EnabledConditionallyReadWriteByDeprecatedGlobalSetting.") if $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting} eq "VALUE_IS_MISSING";
-
-        AddToImplIncludes("DeprecatedGlobalSettings.h");
-
-        my @flags = split(/&/, $context->extendedAttributes->{EnabledConditionallyReadWriteByDeprecatedGlobalSetting});
-        foreach my $flag (@flags) {
-            push(@conjuncts, "DeprecatedGlobalSettings::" . ToMethodName($flag) . "()");
-        }
-    }
-
     if ($context->extendedAttributes->{EnabledForContext}) {
         assert("Must not specify value for EnabledForContext.") unless $context->extendedAttributes->{EnabledForContext} eq "VALUE_IS_MISSING";
         assert("EnabledForContext must be an interface or constructor attribute.") unless $codeGenerator->IsConstructorType($context->type);
@@ -4189,7 +4185,7 @@ sub GetCastingHelperForThisObject
     return "jsDynamicCast<JS$interfaceName*>";
 }
 
-# http://heycam.github.io/webidl/#Unscopable
+# https://webidl.spec.whatwg.org/#Unscopable
 sub addUnscopableProperties
 {
     my $interface = shift;
@@ -4257,6 +4253,14 @@ sub InterfaceNeedsIterator
     return 0;
 }
 
+sub InterfaceNeedsAsyncIterator
+{
+    my ($interface) = @_;
+
+    return 1 if $interface->asyncIterable;
+    return 0;
+}
+
 sub GenerateImplementation
 {
     my ($object, $interface, $enumerations, $dictionaries) = @_;
@@ -4308,7 +4312,7 @@ sub GenerateImplementation
         foreach my $operation (@{$interface->operations}) {
             next if $operation->{overloadIndex} && $operation->{overloadIndex} > 1;
             next if IsJSBuiltin($interface, $operation);
-            next if $operation->name eq "[Symbol.Iterator]";
+            next if $operation->name eq "[Symbol.Iterator]" or $operation->name eq "[Symbol.asyncIterator]";
 
             if ($operation->extendedAttributes->{AppleCopyright}) {
                 if (!$inAppleCopyright) {
@@ -4664,7 +4668,15 @@ sub GenerateImplementation
                 push(@implContent, "    putDirect(vm, vm.propertyNames->iteratorSymbol, globalObject()->arrayPrototype()->getDirect(vm, vm.propertyNames->builtinNames().valuesPrivateName()), static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));\n");
             }
         }
-        push(@implContent, "    addValueIterableMethods(*globalObject(), *this);\n") if $interface->iterable and !IsKeyValueIterableInterface($interface);
+        if (InterfaceNeedsAsyncIterator($interface)) {
+            AddToImplIncludes("<JavaScriptCore/BuiltinNames.h>");
+            if (IsKeyValueIterableInterface($interface)) {
+                push(@implContent, "    putDirect(vm, vm.propertyNames->asyncIteratorSymbol, getDirect(vm, vm.propertyNames->builtinNames().entriesPublicName()), static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));\n");
+            } else {
+                push(@implContent, "    putDirect(vm, vm.propertyNames->asyncIteratorSymbol, getDirect(vm, vm.propertyNames->builtinNames().valuesPublicName()), static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));\n");
+            }
+        }
+        push(@implContent, "    addValueIterableMethods(*globalObject(), *this);\n") if ($interface->iterable or $interface->asyncIterable) and !IsKeyValueIterableInterface($interface);
 
         addUnscopableProperties($interface);
     }
@@ -4918,6 +4930,7 @@ sub GenerateImplementation
     }
     
     GenerateIterableDefinition($interface) if $interface->iterable;
+    GenerateAsyncIterableDefinition($interface) if $interface->asyncIterable;
 
     AddToImplIncludes("ExtendedDOMClientIsoSubspaces.h");
     AddToImplIncludes("ExtendedDOMIsoSubspaces.h");
@@ -4931,9 +4944,9 @@ sub GenerateImplementation
     my $isGlobal = IsDOMGlobalObject($interface);
     push(@implContent, "    return WebCore::subspaceForImpl<${className}, UseCustomHeapCellType::" . ($isGlobal ? "Yes" : "No") . ">(vm,\n");
     push(@implContent, "        [] (auto& spaces) { return spaces.m_clientSubspaceFor${interfaceName}.get(); },\n");
-    push(@implContent, "        [] (auto& spaces, auto&& space) { spaces.m_clientSubspaceFor${interfaceName} = WTFMove(space); },\n");
+    push(@implContent, "        [] (auto& spaces, auto&& space) { spaces.m_clientSubspaceFor${interfaceName} = std::forward<decltype(space)>(space); },\n");
     push(@implContent, "        [] (auto& spaces) { return spaces.m_subspaceFor${interfaceName}.get(); },\n");
-    push(@implContent, "        [] (auto& spaces, auto&& space) { spaces.m_subspaceFor${interfaceName} = WTFMove(space); }" . ($isGlobal ? "," : "") . "\n");
+    push(@implContent, "        [] (auto& spaces, auto&& space) { spaces.m_subspaceFor${interfaceName} = std::forward<decltype(space)>(space); }" . ($isGlobal ? "," : "") . "\n");
     push(@implContent, "        [] (auto& server) -> JSC::HeapCellType& { return server.m_heapCellTypeFor${className}; }\n") if $isGlobal;
     push(@implContent, "    );\n");
         push(@implContent, "}\n\n");
@@ -5005,7 +5018,7 @@ sub GenerateImplementation
         push(@implContent, "    auto* thisObject = jsCast<${className}*>(cell);\n");
         push(@implContent, "    analyzer.setWrappedObjectForCell(cell, &thisObject->wrapped());\n");
         push(@implContent, "    if (thisObject->scriptExecutionContext())\n");
-        push(@implContent, "        analyzer.setLabelForCell(cell, \"url \" + thisObject->scriptExecutionContext()->url().string());\n");
+        push(@implContent, "        analyzer.setLabelForCell(cell, \"url \"_s + thisObject->scriptExecutionContext()->url().string());\n");
         push(@implContent, "    Base::analyzeHeap(cell, analyzer);\n");
         push(@implContent, "}\n\n");
     }
@@ -5444,13 +5457,15 @@ sub GenerateAttributeSetterBodyDefinition
     my $hasCustomSetter = HasCustomSetter($attribute);
     my $isEventHandler = $attribute->type->name eq "EventHandler";
     my $isReplaceable = $attribute->extendedAttributes->{Replaceable};
+    my $isLegacyLenientSetter = $attribute->extendedAttributes->{LegacyLenientSetter};
 
-    my $needThrowScope = $needSecurityCheck || (!$hasCustomSetter && !$isEventHandler && !$isReplaceable);
+    my $needThrowScope = $needSecurityCheck || (!$hasCustomSetter && !$isEventHandler && !$isReplaceable && !$isLegacyLenientSetter);
     
     push(@$outputArray, "static inline bool ${attributeSetterBodyName}(" . join(", ", @signatureArguments) . ")\n");
     push(@$outputArray, "{\n");
 
     push(@$outputArray, "    auto& vm = JSC::getVM(&lexicalGlobalObject);\n");
+    push(@$outputArray, "    UNUSED_PARAM(vm);\n");
     push(@$outputArray, "    auto throwScope = DECLARE_THROW_SCOPE(vm);\n") if $needThrowScope;
 
     GenerateCustomElementReactionsStackIfNeeded($outputArray, $attribute, "lexicalGlobalObject");
@@ -5488,11 +5503,7 @@ sub GenerateAttributeSetterBodyDefinition
         push(@$outputArray, "    ensureStillAliveHere(value);\n\n");
         push(@$outputArray, "    return true;\n");
     } elsif ($isReplaceable) {
-        if ($needThrowScope) {
-            push(@$outputArray, "    throwScope.release();\n");
-        } else {
-            push(@$outputArray, "    UNUSED_PARAM(vm);\n");
-        }
+        push(@$outputArray, "    throwScope.release();\n") if $needThrowScope;
         push(@$outputArray, "    bool shouldThrow = true;\n");
         push(@$outputArray, "    thisObject.createDataProperty(&lexicalGlobalObject, propertyName, value, shouldThrow);\n");
         push(@$outputArray, "    return true;\n");
@@ -5520,6 +5531,16 @@ sub GenerateAttributeSetterBodyDefinition
         push(@$outputArray, "    asObject(valueToForwardTo)->methodTable()->put(asObject(valueToForwardTo), &lexicalGlobalObject, forwardId, value, slot);\n");
         push(@$outputArray, "    RETURN_IF_EXCEPTION(throwScope, false);\n");
         
+        push(@$outputArray, "    return true;\n");
+    } elsif ($isLegacyLenientSetter) {
+        # https://webidl.spec.whatwg.org/#LegacyLenientSetter
+        assert("[LegacyLenientSetter] must be set with readonly") if !$attribute->isReadOnly;
+        assert("[LegacyLenientSetter] must not be with [PutForwards]") if $attribute->extendedAttributes->{PutForwards};
+        assert("[LegacyLenientSetter] must not be with [Replaceable]") if $attribute->extendedAttributes->{Replaceable};
+
+        push(@$outputArray, "    UNUSED_PARAM(lexicalGlobalObject);\n");
+        push(@$outputArray, "    UNUSED_PARAM(thisObject);\n");
+        push(@$outputArray, "    UNUSED_PARAM(value);\n");
         push(@$outputArray, "    return true;\n");
     } else {
         push(@$outputArray, "    auto& impl = thisObject.wrapped();\n") if !$attribute->isStatic;
@@ -6664,7 +6685,8 @@ sub GenerateCallbackImplementationContent
                 push(@$contentRef, "        auto throwScope = DECLARE_THROW_SCOPE(vm);\n");
                 push(@$contentRef, "        throwException(&lexicalGlobalObject, throwScope, returnedException);\n");
             } else {
-                push(@$contentRef, "        reportException(&lexicalGlobalObject, returnedException);\n");
+                push(@$contentRef, "        UNUSED_PARAM(lexicalGlobalObject);\n");
+                push(@$contentRef, "        reportException(m_data->callback()->globalObject(), returnedException);\n");
             }
             push(@$contentRef, "        return CallbackResultType::ExceptionThrown;\n");
             push(@$contentRef, "     }\n\n");
@@ -6768,8 +6790,9 @@ sub GenerateImplementationCustomFunctionCall
 sub IsValueIterableInterface
 {
     my $interface = shift;
-    return 0 unless $interface->iterable;
-    return 0 if length $interface->iterable->keyType;
+    return 0 unless $interface->iterable or $interface->asyncIterable;
+    return 0 if $interface->iterable and length $interface->iterable->keyType;
+    return 0 if $interface->asyncIterable and length $interface->asyncIterable->keyType;
     # FIXME: See https://webkit.org/b/159140, we should die if the next check is false.
     return 0 unless GetIndexedGetterOperation($interface);
     return 1;
@@ -6778,20 +6801,46 @@ sub IsValueIterableInterface
 sub IsKeyValueIterableInterface
 {
     my $interface = shift;
-    return 0 unless $interface->iterable;
+    return 0 unless $interface->iterable or $interface->asyncIterable;
     return 0 if IsValueIterableInterface($interface);
     return 1;
+}
+
+sub GenerateAsyncIterableDefinition
+{
+    my $interface = shift;
+    GenerateGenericIterableDefinition($interface, $interface->asyncIterable);
 }
 
 sub GenerateIterableDefinition
 {
     my $interface = shift;
+    GenerateGenericIterableDefinition($interface, $interface->iterable);
+}
+
+sub GenerateGenericIterableDefinition
+{
+    my $interface = shift;
+    my $iterable = shift;
+
+    return if $interface->extendedAttributes->{JSBuiltin};
 
     my $interfaceName = $interface->type->name;
     my $className = "JS$interfaceName";
     my $visibleInterfaceName = $codeGenerator->GetVisibleInterfaceName($interface);
 
+    my $iteratorBase = "";
+    my $iteratorPrototypeBase = "";
+    if ($interface->iterable) {
+        $iteratorBase = "JSDOMIteratorBase";
+        $iteratorPrototypeBase = "JSDOMIteratorPrototype";
     AddToImplIncludes("JSDOMIterator.h");
+    } else {
+        $iteratorBase = "JSDOMAsyncIteratorBase";
+        $iteratorPrototypeBase = "JSDOMAsyncIteratorPrototype";
+        AddToImplIncludes("JSDOMAsyncIterator.h");
+    }
+
     AddToImplIncludes("<JavaScriptCore/SlotVisitorMacros.h>");
 
     return unless IsKeyValueIterableInterface($interface);
@@ -6800,12 +6849,12 @@ sub GenerateIterableDefinition
     my $iteratorPrototypeName = "${interfaceName}IteratorPrototype";
 
     my $iteratorTraitsName = "${interfaceName}IteratorTraits";
-    my $iteratorTraitsType = $interface->iterable->isKeyValue ? "JSDOMIteratorType::Map" : "JSDOMIteratorType::Set";
-    my $iteratorTraitsKeyType = $interface->iterable->isKeyValue ? GetIDLType($interface, $interface->iterable->keyType) : "void";
-    my $iteratorTraitsValueType = GetIDLType($interface, $interface->iterable->valueType);
+    my $iteratorTraitsType = $iterable->isKeyValue ? "JSDOMIteratorType::Map" : "JSDOMIteratorType::Set";
+    my $iteratorTraitsKeyType = $iterable->isKeyValue ? GetIDLType($interface, $iterable->keyType) : "void";
+    my $iteratorTraitsValueType = GetIDLType($interface, $iterable->valueType);
 
-    AddToImplIncludesForIDLType($interface->iterable->keyType) if $interface->iterable->isKeyValue;
-    AddToImplIncludesForIDLType($interface->iterable->valueType);
+    AddToImplIncludesForIDLType($iterable->keyType) if $iterable->isKeyValue;
+    AddToImplIncludesForIDLType($iterable->valueType);
 
     push(@implContent,  <<END);
 struct ${iteratorTraitsName} {
@@ -6814,7 +6863,7 @@ struct ${iteratorTraitsName} {
     using ValueType = ${iteratorTraitsValueType};
 };
 
-using ${iteratorName}Base = JSDOMIteratorBase<${className}, ${iteratorTraitsName}>;
+using ${iteratorName}Base = ${iteratorBase}<${className}, ${iteratorTraitsName}>;
 class ${iteratorName} final : public ${iteratorName}Base {
 public:
     using Base = ${iteratorName}Base;
@@ -6826,9 +6875,9 @@ public:
             return nullptr;
         return WebCore::subspaceForImpl<${iteratorName}, UseCustomHeapCellType::No>(vm,
             [] (auto& spaces) { return spaces.m_clientSubspaceFor${iteratorName}.get(); },
-            [] (auto& spaces, auto&& space) { spaces.m_clientSubspaceFor${iteratorName} = WTFMove(space); },
+            [] (auto& spaces, auto&& space) { spaces.m_clientSubspaceFor${iteratorName} = std::forward<decltype(space)>(space); },
             [] (auto& spaces) { return spaces.m_subspaceFor${iteratorName}.get(); },
-            [] (auto& spaces, auto&& space) { spaces.m_subspaceFor${iteratorName} = WTFMove(space); }
+            [] (auto& spaces, auto&& space) { spaces.m_subspaceFor${iteratorName} = std::forward<decltype(space)>(space); }
         );
     }
 
@@ -6843,7 +6892,18 @@ public:
         instance->finishCreation(vm);
         return instance;
     }
+END
 
+    if ($interface->asyncIterable) {
+        push(@implContent,  <<END);
+
+    JSC::JSBoundFunction* createOnSettledFunction(JSC::JSGlobalObject*);
+    JSC::JSBoundFunction* createOnFulfilledFunction(JSC::JSGlobalObject*);
+    JSC::JSBoundFunction* createOnRejectedFunction(JSC::JSGlobalObject*);
+END
+    }
+
+    push(@implContent,  <<END);
 private:
     ${iteratorName}(JSC::Structure* structure, ${className}& iteratedObject, IterationKind kind)
         : Base(structure, iteratedObject, kind)
@@ -6851,11 +6911,11 @@ private:
     }
 };
 
-using ${iteratorPrototypeName} = JSDOMIteratorPrototype<${className}, ${iteratorTraitsName}>;
+using ${iteratorPrototypeName} = ${iteratorPrototypeBase}<${className}, ${iteratorTraitsName}>;
 JSC_ANNOTATE_HOST_FUNCTION(${iteratorPrototypeName}Next, ${iteratorPrototypeName}::next);
 
 template<>
-const JSC::ClassInfo ${iteratorName}Base::s_info = { "${visibleInterfaceName} Iterator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(${iteratorName}Base) };
+const JSC::ClassInfo ${iteratorName}Base::s_info = { "${visibleInterfaceName}Base Iterator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(${iteratorName}Base) };
 const JSC::ClassInfo ${iteratorName}::s_info = { "${visibleInterfaceName} Iterator"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(${iteratorName}) };
 
 template<>
@@ -6863,11 +6923,11 @@ const JSC::ClassInfo ${iteratorPrototypeName}::s_info = { "${visibleInterfaceNam
 
 END
 
-    foreach my $operation (@{$interface->iterable->operations}) {
+    foreach my $operation (@{$iterable->operations}) {
         my $propertyName = $operation->name;
         my $functionName = GetFunctionName($interface, $className, $operation);
 
-        next if $propertyName eq "[Symbol.Iterator]";
+        next if $propertyName eq "[Symbol.Iterator]" or $propertyName eq "[Symbol.asyncIterator]";
 
         if ($propertyName eq "forEach") {
             push(@implContent,  <<END);
@@ -6881,7 +6941,7 @@ END
             my $iterationKind = "Entries";
             $iterationKind = "Keys" if $propertyName eq "keys";
             $iterationKind = "Values" if $propertyName eq "values";
-            $iterationKind = "Values" if $propertyName eq "entries" and not $interface->iterable->isKeyValue;
+            $iterationKind = "Values" if $propertyName eq "entries" and not $iterable->isKeyValue;
 
             push(@implContent,  <<END);
 static inline EncodedJSValue ${functionName}Caller(JSGlobalObject*, CallFrame*, JS$interfaceName* thisObject)
@@ -6898,6 +6958,13 @@ JSC_DEFINE_HOST_FUNCTION(${functionName}, (JSC::JSGlobalObject* lexicalGlobalObj
     return IDLOperation<${className}>::call<${functionName}Caller>(*lexicalGlobalObject, *callFrame, "${propertyName}");
 }
 
+END
+    }
+    if ($interface->asyncIterable) {
+        push(@implContent,  <<END);
+JSC_ANNOTATE_HOST_FUNCTION(${iteratorName}BaseOnPromiseSettled, ${iteratorName}Base::onPromiseSettled);
+JSC_ANNOTATE_HOST_FUNCTION(${iteratorName}BaseOnPromiseFulfilled, ${iteratorName}Base::onPromiseFulFilled);
+JSC_ANNOTATE_HOST_FUNCTION(${iteratorName}BaseOnPromiseRejected, ${iteratorName}Base::onPromiseRejected);
 END
     }
 }
@@ -7324,8 +7391,8 @@ sub GenerateHashTableValueArray
 
     my $i = 0;
     foreach my $key (@{$keys}) {
-        my $firstTargetType;
-        my $secondTargetType = "";
+        my $typeTag;
+        my $hasSecondValue = 1;
         my $conditional;
 
         if ($conditionals) {
@@ -7337,47 +7404,49 @@ sub GenerateHashTableValueArray
         }
 
         if ("@$specials[$i]" =~ m/DOMJITFunction/) {
-            $firstTargetType = "static_cast<RawNativeFunction>";
-            $secondTargetType = "static_cast<const JSC::DOMJIT::Signature*>";
+            $typeTag = "DOMJITFunction";
         } elsif ("@$specials[$i]" =~ m/Function/) {
-            $firstTargetType = "static_cast<RawNativeFunction>";
+            $typeTag = "NativeFunction";
         } elsif ("@$specials[$i]" =~ m/Builtin/) {
-            $firstTargetType = "static_cast<BuiltinGenerator>";
+            $typeTag = ("@$specials[$i]" =~ m/Accessor/) ? "BuiltinAccessor" : "BuiltinGenerator";
         } elsif ("@$specials[$i]" =~ m/ConstantInteger/) {
-            $firstTargetType = "";
+            $typeTag = "Constant";
+            $hasSecondValue = 0;
+            $hasSetter = "true";
         } elsif ("@$specials[$i]" =~ m/DOMJITAttribute/) {
-            $firstTargetType = "static_cast<const JSC::DOMJIT::GetterSetter*>";
+            $typeTag = "DOMJITAttribute";
+            $hasSetter = "true";
         } else {
-            $firstTargetType = "static_cast<PropertySlot::GetValueFunc>";
-            $secondTargetType = "static_cast<PutPropertySlot::PutValueFunc>";
+            $typeTag = "GetterSetter";
             $hasSetter = "true";
         }
         if ("@$specials[$i]" =~ m/ConstantInteger/) {
-            push(@implContent, "    { \"$key\"_s, @$specials[$i], NoIntrinsic, { (long long)" . $firstTargetType . "(@$value1[$i]) } },\n");
+            push(@implContent, "    { \"$key\"_s, @$specials[$i], NoIntrinsic, { HashTableValue::" . $typeTag . "Type, @$value1[$i] } },\n");
         } else {
             my $readWriteConditional = $readWriteConditionals ? $readWriteConditionals->{$key} : undef;
             if ($readWriteConditional) {
                 my $readWriteConditionalString = $codeGenerator->GenerateConditionalStringFromAttributeValue($readWriteConditional);
                 push(@implContent, "#if ${readWriteConditionalString}\n");
             }
-
-            push(@implContent, "    { \"$key\"_s, @$specials[$i], NoIntrinsic, { (intptr_t)" . $firstTargetType . "(@$value1[$i]), (intptr_t) " . $secondTargetType . "(@$value2[$i]) } },\n");
+            my $secondValue = $hasSecondValue ? ", @$value2[$i]" : "";
+            push(@implContent, "    { \"$key\"_s, @$specials[$i], NoIntrinsic, { HashTableValue::" . $typeTag . "Type, @$value1[$i]$secondValue } },\n");
 
             if ($readWriteConditional) {
                 push(@implContent, "#else\n") ;
-                push(@implContent, "    { \"$key\"_s, JSC::PropertyAttribute::ReadOnly | @$specials[$i], NoIntrinsic, { (intptr_t)" . $firstTargetType . "(@$value1[$i]), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) } },\n");
+                my $secondValue = $hasSecondValue ? ", 0" : "";
+                push(@implContent, "    { \"$key\"_s, JSC::PropertyAttribute::ReadOnly | @$specials[$i], NoIntrinsic, { HashTableValue::" . $typeTag . "Type, @$value1[$i]$secondValue } },\n");
                 push(@implContent, "#endif\n");
             }
         }
         if ($conditional) {
             push(@implContent, "#else\n");
-            push(@implContent, "    { { }, 0, NoIntrinsic, { 0, 0 } },\n");
+            push(@implContent, "    { { }, 0, NoIntrinsic, { HashTableValue::End } },\n");
             push(@implContent, "#endif\n");
         }
         ++$i;
     }
 
-    push(@implContent, "    { { }, 0, NoIntrinsic, { 0, 0 } }\n") if (!$packedSize);
+    push(@implContent, "    { { }, 0, NoIntrinsic, { HashTableValue::End } }\n") if (!$packedSize);
     push(@implContent, "};\n\n");
 
     return $hasSetter;
@@ -7834,7 +7903,7 @@ sub GetRuntimeEnabledStaticProperties
         next if ($operation->extendedAttributes->{PrivateIdentifier} and not $operation->extendedAttributes->{PublicIdentifier});
         next if $operation->{overloadIndex} && $operation->{overloadIndex} > 1;
         next if OperationShouldBeOnInstance($interface, $operation) != 0;
-        next if $operation->name eq "[Symbol.Iterator]";
+        next if $operation->name eq "[Symbol.Iterator]" or $operation->name eq "[Symbol.asyncIterator]";
         next if not $operation->isStatic;
 
         if (NeedsRuntimeCheck($interface, $operation)) {

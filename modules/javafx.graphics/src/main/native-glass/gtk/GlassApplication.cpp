@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -262,8 +262,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1submitForLater
     (void)obj;
 
     RunnableContext* context = (RunnableContext*)malloc(sizeof(RunnableContext));
-    context->runnable = env->NewGlobalRef(runnable);
-    gdk_threads_add_idle_full(G_PRIORITY_HIGH_IDLE + 30, call_runnable, context, NULL);
+    if (context != NULL) {
+        context->runnable = env->NewGlobalRef(runnable);
+        gdk_threads_add_idle_full(G_PRIORITY_HIGH_IDLE + 30, call_runnable, context, NULL);
+        // we release this context in call_runnable
+    } else {
+        fprintf(stderr, "malloc failed in GtkApplication__1submitForLaterInvocation\n");
+    }
 }
 
 /*

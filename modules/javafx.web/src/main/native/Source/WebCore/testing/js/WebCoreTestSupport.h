@@ -44,6 +44,7 @@ class Frame;
 
 namespace WebCoreTestSupport {
 
+TEST_SUPPORT_EXPORT void initializeNames();
 TEST_SUPPORT_EXPORT void injectInternalsObject(JSContextRef);
 TEST_SUPPORT_EXPORT void resetInternalsObject(JSContextRef);
 TEST_SUPPORT_EXPORT void monitorWheelEvents(WebCore::Frame&, bool clearLatchingState);
@@ -54,6 +55,7 @@ TEST_SUPPORT_EXPORT void setLogChannelToAccumulate(const String& name);
 TEST_SUPPORT_EXPORT void clearAllLogChannelsToAccumulate();
 TEST_SUPPORT_EXPORT void initializeLogChannelsIfNecessary();
 TEST_SUPPORT_EXPORT void setAllowsAnySSLCertificate(bool);
+TEST_SUPPORT_EXPORT bool allowsAnySSLCertificate();
 TEST_SUPPORT_EXPORT void setLinkedOnOrAfterEverythingForTesting();
 
 TEST_SUPPORT_EXPORT void installMockGamepadProvider();

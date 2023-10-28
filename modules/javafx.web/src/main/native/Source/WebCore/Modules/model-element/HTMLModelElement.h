@@ -54,8 +54,9 @@ template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 class HTMLModelElement final : public HTMLElement, private CachedRawResourceClient, public ModelPlayerClient, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLModelElement);
 public:
-    using WeakValueType = HTMLElement::WeakValueType;
     using HTMLElement::weakPtrFactory;
+    using HTMLElement::WeakValueType;
+    using HTMLElement::WeakPtrImplType;
 
     static Ref<HTMLModelElement> create(const QualifiedName&, Document&);
     virtual ~HTMLModelElement();
@@ -119,6 +120,7 @@ public:
 private:
     HTMLModelElement(const QualifiedName&, Document&);
 
+    URL selectModelSource() const;
     void setSourceURL(const URL&);
     void modelDidChange();
     void createModelPlayer();
@@ -131,7 +133,12 @@ private:
 
     // DOM overrides.
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
-    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
+    bool isURLAttribute(const Attribute&) const final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
+
+    // StyledElement
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
     // Rendering overrides.
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;

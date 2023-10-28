@@ -29,6 +29,8 @@
 
 namespace WebCore {
 
+struct BlendingContext;
+
 class OffsetRotation {
 public:
     OffsetRotation(bool hasAuto = false, float angle = 0);
@@ -36,12 +38,15 @@ public:
     bool hasAuto() const { return m_hasAuto; }
     float angle() const { return m_angle; }
 
+    bool canBlend(const OffsetRotation&) const;
+    OffsetRotation blend(const OffsetRotation&, const BlendingContext&) const;
+
     bool operator==(const OffsetRotation&) const;
     bool operator!=(const OffsetRotation& o) const { return !(*this == o); }
 
 private:
-    bool m_hasAuto;
-    float m_angle;
+    float m_angle { 0 };
+    bool m_hasAuto { false };
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const OffsetRotation&);

@@ -67,7 +67,7 @@ State::State(Graph& graph)
     graph.m_plan.setFinalizer(makeUnique<JITFinalizer>(graph.m_plan));
     finalizer = static_cast<JITFinalizer*>(graph.m_plan.finalizer());
 
-    proc = makeUnique<Procedure>();
+    proc = makeUnique<Procedure>(/* usesSIMD = */ false);
 
     if (graph.m_vm.shouldBuilderPCToCodeOriginMapping())
         proc->setNeedsPCToOriginMap();
@@ -169,7 +169,10 @@ StructureStubInfo* State::addStructureStubInfo()
     return stubInfo;
 }
 
-
+OptimizingCallLinkInfo* State::addCallLinkInfo(CodeOrigin codeOrigin)
+{
+    return jitCode->common.m_callLinkInfos.add(codeOrigin, CallLinkInfo::UseDataIC::No);
+}
 
 } } // namespace JSC::FTL
 

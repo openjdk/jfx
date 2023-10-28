@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.scene.web.HTMLEditor;
 
@@ -32,7 +33,7 @@ import javafx.scene.web.HTMLEditor;
  */
 public class HtmlEditorPage extends TestPaneBase {
     public HtmlEditorPage() {
-        setId("HtmlEditorPage");
+        FX.name(this, "HtmlEditorPage");
         HTMLEditor ed = new HTMLEditor();
         setContent(ed);
     }

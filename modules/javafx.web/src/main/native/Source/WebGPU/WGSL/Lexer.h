@@ -27,7 +27,6 @@
 
 #include "Token.h"
 #include <wtf/ASCIICType.h>
-#include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WGSL {
@@ -48,6 +47,7 @@ public:
         }
 
         m_current = (m_code != m_codeEnd) ? *m_code : 0;
+        m_currentPosition = { 1, 0, 0 };
     }
 
     Token lex();
@@ -66,14 +66,17 @@ private:
     {
         return { type, m_tokenStartingPosition, currentTokenLength(), literalValue };
     }
-    Token makeIdentifierToken(StringView view)
+    Token makeIdentifierToken(String&& identifier)
     {
-        return { WGSL::TokenType::Identifier, m_tokenStartingPosition, currentTokenLength(), view };
+        return { WGSL::TokenType::Identifier, m_tokenStartingPosition, currentTokenLength(), WTFMove(identifier) };
     }
 
-    void shift();
-    T peek(unsigned);
-    void skipWhitespace();
+    T shift(unsigned = 1);
+    T peek(unsigned = 0);
+    void newLine();
+    void skipBlockComments();
+    void skipLineComment();
+    void skipWhitespaceAndComments();
 
     // Reads [0-9]+
     std::optional<uint64_t> parseDecimalInteger();

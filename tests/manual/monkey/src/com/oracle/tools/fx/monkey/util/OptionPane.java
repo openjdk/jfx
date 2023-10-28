@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,7 @@ import javafx.scene.layout.GridPane;
 public class OptionPane extends GridPane {
     private int row;
     private int column;
-    private static final Insets MARGIN = new Insets(2, 4, 2, 4);
+    private static final Insets MARGIN = new Insets(1, 4, 0, 4);
 
     public OptionPane() {
     }

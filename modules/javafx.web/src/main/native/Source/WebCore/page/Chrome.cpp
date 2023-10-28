@@ -49,7 +49,9 @@
 #include "Settings.h"
 #include "ShareData.h"
 #include "StorageNamespace.h"
+#include "StorageNamespaceProvider.h"
 #include "WindowFeatures.h"
+#include "WorkerClient.h"
 #include <JavaScriptCore/VM.h>
 #include <wtf/SetForScope.h>
 #include <wtf/Vector.h>
@@ -193,10 +195,8 @@ Page* Chrome::createWindow(Frame& frame, const WindowFeatures& features, const N
     if (!newPage)
         return nullptr;
 
-    if (!features.noopener && !features.noreferrer) {
-        if (auto* oldSessionStorage = m_page.sessionStorage(false))
-            newPage->setSessionStorage(oldSessionStorage->copy(*newPage));
-    }
+    if (!features.noopener && !features.noreferrer)
+        m_page.storageNamespaceProvider().copySessionStorageNamespace(m_page, *newPage);
 
     return newPage;
 }
@@ -535,6 +535,16 @@ void Chrome::setCursorHiddenUntilMouseMoves(bool hiddenUntilMouseMoves)
 RefPtr<ImageBuffer> Chrome::createImageBuffer(const FloatSize& size, RenderingMode renderingMode, RenderingPurpose purpose, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, bool avoidBackendSizeCheck) const
 {
     return m_client.createImageBuffer(size, renderingMode, purpose, resolutionScale, colorSpace, pixelFormat, avoidBackendSizeCheck);
+}
+
+RefPtr<ImageBuffer> Chrome::sinkIntoImageBuffer(std::unique_ptr<SerializedImageBuffer> imageBuffer)
+{
+    return m_client.sinkIntoImageBuffer(WTFMove(imageBuffer));
+}
+
+std::unique_ptr<WorkerClient> Chrome::createWorkerClient(SerialFunctionDispatcher& dispatcher)
+{
+    return m_client.createWorkerClient(dispatcher);
 }
 
 #if ENABLE(WEBGL)

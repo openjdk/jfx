@@ -23,7 +23,7 @@
 namespace WebCore {
 namespace Atspi {
 
-enum Role {
+enum class Role {
     InvalidRole,
     AcceleratorLabel,
     Alert,
@@ -153,58 +153,56 @@ enum Role {
     ContentInsertion,
     Mark,
     Suggestion,
-    LastDefinedRole,
 };
 
-enum State {
-    InvalidState,
-    Active,
-    Armed,
-    Busy,
-    Checked,
-    Collapsed,
-    Defunct,
-    Editable,
-    Enabled,
-    Expandable,
-    Expanded,
-    Focusable,
-    Focused,
-    HasTooltip,
-    Horizontal,
-    Iconified,
-    Modal,
-    MultiLine,
-    Multiselectable,
-    Opaque,
-    Pressed,
-    Resizable,
-    Selectable,
-    Selected,
-    Sensitive,
-    Showing,
-    SingleLine,
-    Stale,
-    Transient,
-    Vertical,
-    Visible,
-    ManagesDescendants,
-    Indeterminate,
-    Required,
-    Truncated,
-    Animated,
-    InvalidEntry,
-    SupportsAutocompletion,
-    SelectableText,
-    IsDefault,
-    Visited,
-    Checkable,
-    HasPopup,
-    ReadOnly,
-    LastDefinedState,
+enum class State : uint64_t {
+    InvalidState            = 1LLU << 0,
+    Active                  = 1LLU << 1,
+    Armed                   = 1LLU << 2,
+    Busy                    = 1LLU << 3,
+    Checked                 = 1LLU << 4,
+    Collapsed               = 1LLU << 5,
+    Defunct                 = 1LLU << 6,
+    Editable                = 1LLU << 7,
+    Enabled                 = 1LLU << 8,
+    Expandable              = 1LLU << 9,
+    Expanded                = 1LLU << 10,
+    Focusable               = 1LLU << 11,
+    Focused                 = 1LLU << 12,
+    HasTooltip              = 1LLU << 13,
+    Horizontal              = 1LLU << 14,
+    Iconified               = 1LLU << 15,
+    Modal                   = 1LLU << 16,
+    MultiLine               = 1LLU << 17,
+    Multiselectable         = 1LLU << 18,
+    Opaque                  = 1LLU << 19,
+    Pressed                 = 1LLU << 20,
+    Resizable               = 1LLU << 21,
+    Selectable              = 1LLU << 22,
+    Selected                = 1LLU << 23,
+    Sensitive               = 1LLU << 24,
+    Showing                 = 1LLU << 25,
+    SingleLine              = 1LLU << 26,
+    Stale                   = 1LLU << 27,
+    Transient               = 1LLU << 28,
+    Vertical                = 1LLU << 29,
+    Visible                 = 1LLU << 30,
+    ManagesDescendants      = 1LLU << 31,
+    Indeterminate           = 1LLU << 32,
+    Required                = 1LLU << 33,
+    Truncated               = 1LLU << 34,
+    Animated                = 1LLU << 35,
+    InvalidEntry            = 1LLU << 36,
+    SupportsAutocompletion  = 1LLU << 37,
+    SelectableText          = 1LLU << 38,
+    IsDefault               = 1LLU << 39,
+    Visited                 = 1LLU << 40,
+    Checkable               = 1LLU << 41,
+    HasPopup                = 1LLU << 42,
+    ReadOnly                = 1LLU << 43,
 };
 
-enum Relation {
+enum class Relation {
     Null,
     LabelFor,
     LabelledBy,
@@ -228,16 +226,15 @@ enum Relation {
     DetailsFor,
     ErrorMessage,
     ErrorFor,
-    LastDefinedRelation,
 };
 
-enum CoordinateType {
+enum class CoordinateType {
     ScreenCoordinates,
     WindowCoordinates,
     ParentCoordinates,
 };
 
-enum ComponentLayer {
+enum class ComponentLayer {
     InvalidLayer,
     BackgroundLayer,
     CanvasLayer,
@@ -248,7 +245,7 @@ enum ComponentLayer {
     WindowLayer,
 };
 
-enum ScrollType {
+enum class ScrollType {
     TopLeft,
     BottomRight,
     TopEdge,
@@ -258,7 +255,7 @@ enum ScrollType {
     Anywhere
 };
 
-enum TextBoundaryType {
+enum class TextBoundaryType {
     CharBoundary,
     WordStartBoundary,
     WordEndBoundary,
@@ -268,7 +265,7 @@ enum TextBoundaryType {
     LineEndBoundary
 };
 
-enum TextGranularityType {
+enum class TextGranularityType {
     CharGranularity,
     WordGranularity,
     SentenceGranularity,
@@ -276,7 +273,7 @@ enum TextGranularityType {
     ParagraphGranularity
 };
 
-enum CollectionMatchType {
+enum class CollectionMatchType {
     MatchInvalid,
     MatchAll,
     MatchAny,
@@ -284,7 +281,7 @@ enum CollectionMatchType {
     MatchEmpty
 };
 
-enum CollectionSortOrder {
+enum class CollectionSortOrder {
     SortOrderInvalid,
     SortOrderCanonical,
     SortOrderFlow,

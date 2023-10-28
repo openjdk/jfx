@@ -32,10 +32,12 @@
 
 namespace WebCore {
 
+struct BlendingContext;
+
 class FilterOperations {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    bool operator==(const FilterOperations&) const;
+    WEBCORE_EXPORT bool operator==(const FilterOperations&) const;
     bool operator!=(const FilterOperations& other) const { return !(*this == other); }
 
     void clear() { m_operations.clear(); }
@@ -60,6 +62,8 @@ public:
 
     bool transformColor(Color&) const;
     bool inverseTransformColor(Color&) const;
+
+    WEBCORE_EXPORT FilterOperations blend(const FilterOperations&, const BlendingContext&) const;
 
 private:
     Vector<RefPtr<FilterOperation>> m_operations;

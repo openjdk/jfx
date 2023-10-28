@@ -29,6 +29,7 @@
 #include <cstring>
 #include <memory>
 #include <type_traits>
+#include <utility>
 #include <variant>
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
@@ -164,15 +165,18 @@ inline size_t bitCount(uint64_t bits)
     return bitCount(static_cast<unsigned>(bits)) + bitCount(static_cast<unsigned>(bits >> 32));
 }
 
-// Macro that returns a compile time constant with the length of an array, but gives an error if passed a non-array.
-template<typename T, size_t Size> char (&ArrayLengthHelperFunction(T (&)[Size]))[Size];
-// GCC needs some help to deduce a 0 length array.
-#if COMPILER(GCC_COMPATIBLE)
-template<typename T> char (&ArrayLengthHelperFunction(T (&)[0]))[0];
-#endif
-#define WTF_ARRAY_LENGTH(array) sizeof(::WTF::ArrayLengthHelperFunction(array))
-
 inline constexpr bool isPowerOfTwo(size_t size) { return !(size & (size - 1)); }
+
+template<typename T> constexpr T mask(T value, uintptr_t mask)
+{
+    static_assert(sizeof(T) == sizeof(uintptr_t), "sizeof(T) must be equal to sizeof(uintptr_t).");
+    return static_cast<T>(static_cast<uintptr_t>(value) & mask);
+}
+
+template<typename T> inline T* mask(T* value, uintptr_t mask)
+{
+    return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(value) & mask);
+}
 
 template<typename T, typename U>
 ALWAYS_INLINE constexpr T roundUpToMultipleOfImpl(U divisor, T x)
@@ -199,6 +203,26 @@ template<size_t divisor, typename T> inline constexpr T* roundUpToMultipleOf(T* 
 {
     static_assert(sizeof(T*) == sizeof(size_t));
     return reinterpret_cast<T*>(roundUpToMultipleOf<divisor>(reinterpret_cast<size_t>(x)));
+}
+
+template<typename T, typename U>
+inline constexpr T roundDownToMultipleOf(U divisor, T x)
+{
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(divisor && isPowerOfTwo(divisor));
+    static_assert(sizeof(T) == sizeof(uintptr_t), "sizeof(T) must be equal to sizeof(uintptr_t).");
+    return static_cast<T>(mask(static_cast<uintptr_t>(x), ~(divisor - 1ul)));
+}
+
+template<typename T> inline constexpr T* roundDownToMultipleOf(size_t divisor, T* x)
+{
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(isPowerOfTwo(divisor));
+    return reinterpret_cast<T*>(mask(reinterpret_cast<uintptr_t>(x), ~(divisor - 1ul)));
+}
+
+template<size_t divisor, typename T> constexpr T roundDownToMultipleOf(T x)
+{
+    static_assert(isPowerOfTwo(divisor), "'divisor' must be a power of two.");
+    return roundDownToMultipleOf(divisor, x);
 }
 
 enum BinarySearchMode {
@@ -396,29 +420,35 @@ auto switchOn(V&& v, F&&... f) -> decltype(std::visit(makeVisitor(std::forward<F
     return std::visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v));
 }
 
-namespace Detail {
+namespace detail {
 
-template<std::size_t, class, class> struct AlternativeIndexHelper;
+template<size_t, class, class> struct alternative_index_helper;
 
-template<std::size_t index, class T, class U>
-struct AlternativeIndexHelper<index, T, std::variant<U>> {
-    static constexpr std::size_t count = std::is_same_v<T, U>;
-    static constexpr std::size_t value = index;
+template<size_t index, class Type, class T>
+struct alternative_index_helper<index, Type, std::variant<T>> {
+    static constexpr size_t count = std::is_same_v<Type, T>;
+    static constexpr size_t value = index;
 };
 
-template<std::size_t index, class T, class U, class... Types> struct AlternativeIndexHelper<index, T, std::variant<U, Types...>> {
-    static constexpr std::size_t count = std::is_same_v<T, U> + AlternativeIndexHelper<index + 1, T, std::variant<Types...>>::count;
-    static constexpr std::size_t value = std::is_same_v<T, U> ? index : AlternativeIndexHelper<index + 1, T, std::variant<Types...>>::value;
+template<size_t index, class Type, class T, class... Types>
+struct alternative_index_helper<index, Type, std::variant<T, Types...>> {
+    static constexpr size_t count = std::is_same_v<Type, T> + alternative_index_helper<index + 1, Type, std::variant<Types...>>::count;
+    static constexpr size_t value = std::is_same_v<Type, T> ? index : alternative_index_helper<index + 1, Type, std::variant<Types...>>::value;
 };
 
-} // namespace Detail
+} // namespace detail
 
-template<class T, class U> struct alternativeIndex {
-    static_assert(Detail::AlternativeIndexHelper<0, T, U>::count == 1, "There needs to be exactly one of the given type in the variant");
-    static constexpr std::size_t value = Detail::AlternativeIndexHelper<0, T, U>::value;
+template<class T, class Variant> struct variant_alternative_index;
+
+template<class T, class Variant> struct variant_alternative_index<T, const Variant>
+    : variant_alternative_index<T, Variant> { };
+
+template<class T, class... Types> struct variant_alternative_index<T, std::variant<Types...>>
+    : std::integral_constant<size_t, detail::alternative_index_helper<0, T, std::variant<Types...>>::value> {
+    static_assert(detail::alternative_index_helper<0, T, std::remove_cv_t<std::variant<Types...>>>::count == 1);
 };
 
-template <class T, class U> inline constexpr std::size_t alternativeIndexV = alternativeIndex<T, U>::value;
+template<class T, class Variant> constexpr std::size_t alternativeIndexV = variant_alternative_index<T, Variant>::value;
 
 namespace Detail
 {
@@ -456,11 +486,6 @@ struct IsBaseOfTemplate : public std::integral_constant<bool, Detail::IsBaseOfTe
 // <https://devblogs.microsoft.com/oldnewthing/20190710-00/?p=102678>
 template<typename, typename = void> inline constexpr bool IsTypeComplete = false;
 template<typename T> inline constexpr bool IsTypeComplete<T, std::void_t<decltype(sizeof(T))>> = true;
-
-template <class T>
-struct RemoveCVAndReference  {
-    typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type type;
-};
 
 template<typename IteratorTypeLeft, typename IteratorTypeRight, typename IteratorTypeDst>
 IteratorTypeDst mergeDeduplicatedSorted(IteratorTypeLeft leftBegin, IteratorTypeLeft leftEnd, IteratorTypeRight rightBegin, IteratorTypeRight rightEnd, IteratorTypeDst dstBegin)
@@ -622,6 +647,17 @@ using remove_cvref_t = typename remove_cvref<T>::type;
 }
 #endif
 
+#if !(defined(__cpp_lib_forward_like) && __cpp_lib_forward_like >= 202207L)
+namespace std {
+namespace detail {
+template<typename T, typename U> using copy_const = conditional_t<is_const_v<T>, const U, U>;
+template<typename T, typename U> using override_ref = conditional_t<is_rvalue_reference_v<T>, remove_reference_t<U>&&, U&>;
+template<typename T, typename U> using forward_like_impl = override_ref<T&&, copy_const<remove_reference_t<T>, remove_reference_t<U>>>;
+} // namespace detail
+template<typename T, typename U> constexpr auto forward_like(U&& value) -> detail::forward_like_impl<T, U> { return static_cast<detail::forward_like_impl<T, U>>(value); }
+} // namespace std
+#endif
+
 using WTF::GB;
 using WTF::KB;
 using WTF::MB;
@@ -641,6 +677,7 @@ using WTF::makeUnique;
 using WTF::makeUniqueWithoutFastMallocCheck;
 using WTF::mergeDeduplicatedSorted;
 using WTF::roundUpToMultipleOf;
+using WTF::roundDownToMultipleOf;
 using WTF::safeCast;
 using WTF::tryBinarySearch;
 using WTF::valueOrCompute;

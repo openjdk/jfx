@@ -34,6 +34,7 @@ import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.concurrent.Worker.State;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -74,7 +75,7 @@ public class LeakTest extends TestBase {
                 }
             }
         }));
-        time.play();
+        Platform.runLater(time::play);
         latch.await();
     }
 

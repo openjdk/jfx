@@ -26,11 +26,11 @@
 #include "config.h"
 #include "CSSMathProduct.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSCalcOperationNode.h"
 #include "CSSMathInvert.h"
 #include "CSSNumericArray.h"
 #include "ExceptionOr.h"
+#include <wtf/FixedVector.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -115,6 +115,17 @@ auto CSSMathProduct::toSumValue() const -> std::optional<SumValue>
     return { WTFMove(values) };
 }
 
-} // namespace WebCore
+RefPtr<CSSCalcExpressionNode> CSSMathProduct::toCalcExpressionNode() const
+{
+    Vector<Ref<CSSCalcExpressionNode>> values;
+    values.reserveInitialCapacity(m_values->length());
+    for (auto& item : m_values->array()) {
+        auto value = item->toCalcExpressionNode();
+        if (!value)
+            return nullptr;
+        values.uncheckedAppend(value.releaseNonNull());
+    }
+    return CSSCalcOperationNode::createProduct(WTFMove(values));
+}
 
-#endif
+} // namespace WebCore

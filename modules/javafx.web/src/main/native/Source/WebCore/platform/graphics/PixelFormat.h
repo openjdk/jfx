@@ -32,25 +32,12 @@ namespace WebCore {
 
 enum class PixelFormat : uint8_t {
     RGBA8,
+    BGRX8,
     BGRA8,
     RGB10,
     RGB10A8,
 };
 
 WEBCORE_EXPORT TextStream& operator<<(TextStream&, PixelFormat);
-
-}
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PixelFormat> {
-    using values = EnumValues<
-        WebCore::PixelFormat,
-        WebCore::PixelFormat::RGBA8,
-        WebCore::PixelFormat::BGRA8,
-        WebCore::PixelFormat::RGB10,
-        WebCore::PixelFormat::RGB10A8
-    >;
-};
 
 }

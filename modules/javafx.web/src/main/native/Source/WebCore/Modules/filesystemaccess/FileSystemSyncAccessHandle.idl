@@ -29,12 +29,12 @@
     Exposed=DedicatedWorker,
     SecureContext
 ] interface FileSystemSyncAccessHandle {
-    Promise<undefined> truncate([EnforceRange] unsigned long long size);
-    Promise<unsigned long long> getSize();
-    Promise<undefined> flush();
-    Promise<undefined> close();
-    unsigned long long read([AllowShared] BufferSource buffer, FilesystemReadWriteOptions options);
-    unsigned long long write([AllowShared] BufferSource buffer, FilesystemReadWriteOptions options);
+    undefined truncate([EnforceRange] unsigned long long newSize);
+    unsigned long long getSize();
+    undefined flush();
+    undefined close();
+    unsigned long long read([AllowShared] (ArrayBufferView or ArrayBuffer) buffer, optional FilesystemReadWriteOptions options = {});
+    unsigned long long write([AllowShared] (ArrayBufferView or ArrayBuffer) buffer, optional FilesystemReadWriteOptions options = {});
 };
 
 dictionary FilesystemReadWriteOptions {

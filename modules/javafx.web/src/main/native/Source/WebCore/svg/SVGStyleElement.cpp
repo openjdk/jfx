@@ -36,7 +36,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGStyleElement);
 
 inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , m_styleSheetOwner(document, createdByParser)
     , m_loadEventTimer(*this, &SVGElement::loadEventTimerFired)
 {
@@ -77,9 +77,8 @@ void SVGStyleElement::setType(const AtomString& type)
 
 const AtomString& SVGStyleElement::media() const
 {
-    static MainThreadNeverDestroyed<const AtomString> defaultValue("all"_s);
-    const AtomString& n = attributeWithoutSynchronization(SVGNames::mediaAttr);
-    return n.isNull() ? defaultValue.get() : n;
+    auto& value = attributeWithoutSynchronization(SVGNames::mediaAttr);
+    return value.isNull() ? allAtom() : value;
 }
 
 void SVGStyleElement::setMedia(const AtomString& media)

@@ -294,6 +294,13 @@ String contextMenuItemTagLearnSpelling()
     return WEB_UI_STRING_WITH_MNEMONIC("Learn Spelling", "_Learn Spelling", "Learn Spelling context menu item");
 }
 
+#if !PLATFORM(COCOA)
+String contextMenuItemTagSearchWeb()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Search the Web", "_Search the Web", "Search the Web context menu item");
+}
+#endif
+
 String contextMenuItemTagLookUpInDictionary(const String& selectedString)
 {
 #if USE(CF)
@@ -305,16 +312,6 @@ String contextMenuItemTagLookUpInDictionary(const String& selectedString)
     return makeStringByReplacingAll(WEB_UI_STRING("Look Up “<selection>”", "Look Up context menu item with selected word"), "<selection>"_s, truncatedStringForMenuItem(selectedString));
 #endif
 }
-
-#if HAVE(TRANSLATION_UI_SERVICES)
-
-String contextMenuItemTagTranslate(const String& selectedString)
-{
-    auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
-    return WEB_UI_FORMAT_CFSTRING("Translate “%@”", "Translate context menu item with selected word", selectedCFString.get());
-}
-
-#endif
 
 String contextMenuItemTagOpenLink()
 {
@@ -482,12 +479,62 @@ String contextMenuItemTagMediaMute()
     return WEB_UI_STRING_WITH_MNEMONIC("Mute", "_Mute", "Media Mute context menu item");
 }
 
+#if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+String contextMenuItemTagPlayAllAnimations()
+{
+    return WEB_UI_STRING("Play All Animations", "Play All Animations context menu item");
+}
+
+String contextMenuItemTagPauseAllAnimations()
+{
+    return WEB_UI_STRING("Pause All Animations", "Pause All Animations context menu item");
+}
+
+String contextMenuItemTagPlayAnimation()
+{
+    return WEB_UI_STRING("Play Animation", "Play animation context menu item");
+}
+
+String contextMenuItemTagPauseAnimation()
+{
+    return WEB_UI_STRING("Pause Animation", "Pause animation context menu item");
+}
+#endif // ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
+
 String contextMenuItemTagInspectElement()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Inspect Element", "Inspect _Element", "Inspect Element context menu item");
 }
 
+#if HAVE(TRANSLATION_UI_SERVICES)
+String contextMenuItemTagTranslate(const String& selectedString)
+{
+    auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
+    return WEB_UI_FORMAT_CFSTRING("Translate “%@”", "Translate context menu item with selected word", selectedCFString.get());
+}
+#endif
+
 #if ENABLE(PDFJS)
+String contextMenuItemPDFAutoSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Automatically Resize", "_Automatically Resize", "Automatically Resize context menu item");
+}
+
+String contextMenuItemPDFZoomIn()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Zoom In", "_Zoom In", "Zoom In Continuous context menu item");
+}
+
+String contextMenuItemPDFZoomOut()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Zoom Out", "_Zoom Out", "Zoom Out context menu item");
+}
+
+String contextMenuItemPDFActualSize()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Actual Size", "_Actual Size", "Actual Size context menu item");
+}
+
 String contextMenuItemPDFSinglePage()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Single Page", "_Single Page", "Single Page context menu item");
@@ -507,16 +554,26 @@ String contextMenuItemPDFTwoPagesContinuous()
 {
     return WEB_UI_STRING_WITH_MNEMONIC("Two Pages Continuous", "_Two Pages Continuous", "Two Pages Continuous context menu item");
 }
-#endif
 
-#if !PLATFORM(COCOA)
-String contextMenuItemTagSearchWeb()
+String contextMenuItemPDFNextPage()
 {
-    return WEB_UI_STRING_WITH_MNEMONIC("Search the Web", "_Search the Web", "Search the Web context menu item");
+    return WEB_UI_STRING_WITH_MNEMONIC("Next Page", "_Next Page", "Next Page context menu item");
+}
+
+String contextMenuItemPDFPreviousPage()
+{
+    return WEB_UI_STRING_WITH_MNEMONIC("Previous Page", "_Previous Page", "Previous Page context menu item");
 }
 #endif
-
 #endif // ENABLE(CONTEXT_MENUS)
+
+#if !PLATFORM(COCOA)
+String pdfDocumentTypeDescription()
+{
+    // Also exposed to DOM.
+    return WEB_UI_STRING("Portable Document Format", "Description of the primary type supported by the PDF pseudo plug-in.");
+}
+#endif // !PLATFORM(COCOA)
 
 #if !PLATFORM(IOS_FAMILY)
 
@@ -1330,6 +1387,11 @@ String addAudioTrackKindCommentarySuffix(const String& text)
 }
 
 #endif // USE(CF)
+
+String contextMenuItemTagShowMediaStats()
+{
+    return WEB_UI_STRING("Show Media Stats", "Media stats context menu item");
+}
 
 #endif // ENABLE(VIDEO)
 

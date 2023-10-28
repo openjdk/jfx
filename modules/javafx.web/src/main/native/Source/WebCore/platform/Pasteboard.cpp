@@ -35,14 +35,6 @@
 
 namespace WebCore {
 
-// Making this non-inline so that WebKit 2's decoding doesn't have to include Image.h.
-PasteboardImage::PasteboardImage() = default;
-PasteboardImage::~PasteboardImage() = default;
-
-// Making this non-inline so that WebKit 2's decoding doesn't have to include SharedBuffer.h.
-PasteboardBuffer::PasteboardBuffer() = default;
-PasteboardBuffer::~PasteboardBuffer() = default;
-
 bool Pasteboard::isSafeTypeForDOMToReadAndWrite(const String& type)
 {
     return type == textPlainContentTypeAtom() || type == "text/html"_s || type == "text/uri-list"_s;
@@ -69,7 +61,7 @@ Vector<String> Pasteboard::readAllStrings(const String& type)
 
 std::optional<Vector<PasteboardItemInfo>> Pasteboard::allPasteboardItemInfo() const
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || PLATFORM(GTK)
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
         return strategy->allPasteboardItemInfo(name(), m_changeCount, context());
 #endif
@@ -78,7 +70,7 @@ std::optional<Vector<PasteboardItemInfo>> Pasteboard::allPasteboardItemInfo() co
 
 std::optional<PasteboardItemInfo> Pasteboard::pasteboardItemInfo(size_t index) const
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || PLATFORM(GTK)
     if (auto* strategy = platformStrategies()->pasteboardStrategy())
         return strategy->informationForItemAtIndex(index, name(), m_changeCount, context());
 #else

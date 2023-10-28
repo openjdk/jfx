@@ -68,7 +68,7 @@ static const Document* blobOwner(const SecurityOrigin& blobOrigin)
 
 URL BlobURL::getOriginURL(const URL& url)
 {
-    ASSERT(url.protocolIs(kBlobProtocol));
+    ASSERT_UNUSED(kBlobProtocol, url.protocolIs(kBlobProtocol));
 
     if (auto blobOrigin = ThreadableBlobRegistry::getCachedOrigin(url)) {
         if (auto* document = blobOwner(*blobOrigin))
@@ -79,7 +79,7 @@ URL BlobURL::getOriginURL(const URL& url)
 
 bool BlobURL::isSecureBlobURL(const URL& url)
 {
-    ASSERT(url.protocolIs(kBlobProtocol));
+    ASSERT_UNUSED(kBlobProtocol, url.protocolIs(kBlobProtocol));
 
     // As per https://github.com/w3c/webappsec-mixed-content/issues/41, Blob URL is secure if the document that created it is secure.
     if (auto origin = ThreadableBlobRegistry::getCachedOrigin(url)) {
@@ -94,70 +94,6 @@ URL BlobURL::createBlobURL(StringView originString)
     ASSERT(!originString.isEmpty());
     String urlString = makeString("blob:"_s, originString, '/', UUID::createVersion4());
     return URL({ }, urlString);
-}
-
-BlobURLHandle::BlobURLHandle(const BlobURLHandle& other)
-    : m_url(other.m_url.isolatedCopy())
-{
-    registerBlobURLHandleIfNecessary();
-}
-
-BlobURLHandle::BlobURLHandle(const URL& url)
-    : m_url(url.isolatedCopy())
-{
-    ASSERT(m_url.protocolIsBlob());
-    registerBlobURLHandleIfNecessary();
-}
-
-BlobURLHandle::~BlobURLHandle()
-{
-    unregisterBlobURLHandleIfNecessary();
-}
-
-void BlobURLHandle::registerBlobURLHandleIfNecessary()
-{
-    if (m_url.protocolIsBlob())
-        ThreadableBlobRegistry::registerBlobURLHandle(m_url);
-}
-
-void BlobURLHandle::unregisterBlobURLHandleIfNecessary()
-{
-    if (m_url.protocolIsBlob())
-        ThreadableBlobRegistry::unregisterBlobURLHandle(m_url);
-}
-
-BlobURLHandle& BlobURLHandle::operator=(const BlobURLHandle& other)
-{
-    if (this == &other)
-        return *this;
-
-    unregisterBlobURLHandleIfNecessary();
-    m_url = other.m_url.isolatedCopy();
-    registerBlobURLHandleIfNecessary();
-
-    return *this;
-}
-
-void BlobURLHandle::clear()
-{
-    unregisterBlobURLHandleIfNecessary();
-    m_url = { };
-}
-
-BlobURLHandle& BlobURLHandle::operator=(BlobURLHandle&& other)
-{
-    unregisterBlobURLHandleIfNecessary();
-    m_url = std::exchange(other.m_url, { });
-    return *this;
-}
-
-BlobURLHandle& BlobURLHandle::operator=(const URL& url)
-{
-    ASSERT(url.protocolIsBlob());
-    unregisterBlobURLHandleIfNecessary();
-    m_url = url.isolatedCopy();
-    registerBlobURLHandleIfNecessary();
-    return *this;
 }
 
 } // namespace WebCore

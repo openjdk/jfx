@@ -39,12 +39,13 @@
 
 namespace JSC {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(UnlinkedCodeBlock_RareData);
+
 const ClassInfo UnlinkedCodeBlock::s_info = { "UnlinkedCodeBlock"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(UnlinkedCodeBlock) };
 
 UnlinkedCodeBlock::UnlinkedCodeBlock(VM& vm, Structure* structure, CodeType codeType, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
     : Base(vm, structure)
     , m_numVars(0)
-    , m_usesCallEval(false)
     , m_numCalleeLocals(0)
     , m_isConstructor(info.isConstructor())
     , m_numParameters(0)

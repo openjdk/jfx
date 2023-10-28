@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "PlatformMouseEvent.h"
 #include "RenderObject.h"
 #include "ScrollTypes.h"
+#include "SimpleRange.h"
 #include "TextEventInputType.h"
 #include "TextGranularity.h"
 #include "Timer.h"
@@ -146,7 +147,7 @@ public:
     void startPanScrolling(RenderElement&);
 #endif
 
-    void stopAutoscrollTimer(bool rendererIsBeingDestroyed = false);
+    WEBCORE_EXPORT void stopAutoscrollTimer(bool rendererIsBeingDestroyed = false);
     RenderBox* autoscrollRenderer() const;
     void updateAutoscrollRenderer();
     bool autoscrollInProgress() const;
@@ -191,7 +192,7 @@ public:
     IntPoint targetPositionInWindowForSelectionAutoscroll() const;
     bool shouldUpdateAutoscroll();
 
-    static RefPtr<Frame> subframeForTargetNode(Node*);
+    WEBCORE_EXPORT static RefPtr<Frame> subframeForTargetNode(Node*);
     static RefPtr<Frame> subframeForHitTestResult(const MouseEventWithHitTestResults&);
 
     WEBCORE_EXPORT bool scrollOverflow(ScrollDirection, ScrollGranularity, Node* startingNode = nullptr);
@@ -204,7 +205,7 @@ public:
     WEBCORE_EXPORT bool mouseMoved(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool passMouseMovedEventToScrollbars(const PlatformMouseEvent&);
 
-    void lostMouseCapture();
+    WEBCORE_EXPORT void lostMouseCapture();
 
     WEBCORE_EXPORT bool handleMousePressEvent(const PlatformMouseEvent&);
     bool handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* = nullptr, bool onlyUpdateScrollbars = false);
@@ -365,7 +366,7 @@ public:
 
     WEBCORE_EXPORT void selectClosestContextualWordOrLinkFromHitTestResult(const HitTestResult&, AppendTrailingWhitespace);
 
-    bool keyboardScrollRecursively(std::optional<ScrollDirection>, std::optional<ScrollGranularity>, Node*);
+    bool keyboardScrollRecursively(std::optional<ScrollDirection>, std::optional<ScrollGranularity>, Node*, bool isKeyRepeat);
     WEBCORE_EXPORT bool shouldUseSmoothKeyboardScrollingForFocusedScrollableArea();
 
 private:
@@ -388,13 +389,13 @@ private:
     bool handleMousePressEventDoubleClick(const MouseEventWithHitTestResults&);
     bool handleMousePressEventTripleClick(const MouseEventWithHitTestResults&);
 
-    bool beginKeyboardScrollGesture(KeyboardScrollingAnimator*, ScrollDirection, ScrollGranularity);
+    bool keyboardScroll(std::optional<ScrollDirection>, std::optional<ScrollGranularity>, Node*, bool isKeyRepeat);
+    bool beginKeyboardScrollGesture(KeyboardScrollingAnimator*, ScrollDirection, ScrollGranularity, bool isKeyRepeat);
     void stopKeyboardScrolling();
-    bool startKeyboardScrollAnimationOnDocument(ScrollDirection, ScrollGranularity);
-    bool startKeyboardScrollAnimationOnRenderBoxLayer(ScrollDirection, ScrollGranularity, RenderBox*);
-    bool startKeyboardScrollAnimationOnRenderBoxAndItsAncestors(ScrollDirection, ScrollGranularity, RenderBox*);
-    bool startKeyboardScrollAnimationOnEnclosingScrollableContainer(ScrollDirection, ScrollGranularity, Node*);
-    bool focusedScrollableAreaUsesScrollSnap();
+    bool startKeyboardScrollAnimationOnDocument(ScrollDirection, ScrollGranularity, bool isKeyRepeat);
+    bool startKeyboardScrollAnimationOnRenderBoxLayer(ScrollDirection, ScrollGranularity, RenderBox*, bool isKeyRepeat);
+    bool startKeyboardScrollAnimationOnRenderBoxAndItsAncestors(ScrollDirection, ScrollGranularity, RenderBox*, bool isKeyRepeat);
+    bool startKeyboardScrollAnimationOnEnclosingScrollableContainer(ScrollDirection, ScrollGranularity, Node*, bool isKeyRepeat);
 
 #if ENABLE(DRAG_SUPPORT)
     bool handleMouseDraggedEvent(const MouseEventWithHitTestResults&, CheckDragHysteresis = ShouldCheckDragHysteresis);
@@ -430,8 +431,6 @@ private:
 #if ENABLE(TOUCH_EVENTS)
     bool dispatchSyntheticTouchEventIfEnabled(const PlatformMouseEvent&);
 #endif
-
-    Node* nodeUnderMouse() const;
 
     enum class FireMouseOverOut { No, Yes };
     void updateMouseEventTargetNode(const AtomString& eventType, Node*, const PlatformMouseEvent&, FireMouseOverOut);
@@ -494,6 +493,10 @@ private:
 
     bool platformCompletePlatformWidgetWheelEvent(const PlatformWheelEvent&, const Widget&, const WeakPtr<ScrollableArea>&);
 
+    bool defaultKeyboardScrollEventHandler(KeyboardEvent&, ScrollLogicalDirection, ScrollGranularity);
+
+    void defaultPageUpDownEventHandler(KeyboardEvent&);
+    void defaultHomeEndEventHandler(KeyboardEvent&);
     void defaultSpaceEventHandler(KeyboardEvent&);
     void defaultBackspaceEventHandler(KeyboardEvent&);
     void defaultTabEventHandler(KeyboardEvent&);
@@ -606,6 +609,7 @@ private:
 
 #if ENABLE(DRAG_SUPPORT)
     LayoutPoint m_dragStartPosition;
+    std::optional<SimpleRange> m_dragStartSelection;
     RefPtr<Element> m_dragTarget;
     bool m_mouseDownMayStartDrag { false };
     bool m_dragMayStartSelectionInstead { false };
