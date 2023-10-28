@@ -6348,6 +6348,8 @@ public class Scene implements EventTarget {
                 Window parent = null;
                 if (window instanceof Stage) {
                     parent = ((Stage)window).getOwner();
+                } else if (window instanceof com.sun.javafx.embed.EmbeddedSceneInterface) {
+                    return ((com.sun.javafx.embed.EmbeddedStageInterface)window).getNodeOrientation();
                 } else {
                     if (window instanceof PopupWindow) {
                         parent = ((PopupWindow)window).getOwnerWindow();

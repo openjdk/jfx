@@ -31,6 +31,9 @@ package com.sun.javafx.embed;
  * when the size of embedding container is changed.
  *
  */
+
+import javafx.geometry.NodeOrientation;
+
 public interface EmbeddedStageInterface {
 
     public void setLocation(int x, int y);
@@ -51,4 +54,7 @@ public interface EmbeddedStageInterface {
      * FOCUS_UNGRAB notification.
      */
     public void focusUngrab();
+
+    public NodeOrientation getNodeOrientation();
+    public void setNodeOrientation(NodeOrientation nor);
 }

@@ -36,6 +36,7 @@ import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
+import javafx.geometry.NodeOrientation;
 
 final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
@@ -278,6 +279,28 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
         } else {
             notifyStageListenerLater(r);
         }
+    }
+
+    NodeOrientation orientation;
+
+    public void setNodeOrientation(NodeOrientation nor) {
+	    boolean or = nor.equals(NodeOrientation.RIGHT_TO_LEFT);
+	    if (or) {
+	    System.out.println("EmbeddedStage.setNodOrientation RTL");
+	    } else {
+	    System.out.println("EmbeddedStage.setNodOrientation LTR");
+	    }
+        orientation = nor;
+    }
+
+    public NodeOrientation getNodeOrientation() {
+	    boolean or = orientation.equals(NodeOrientation.RIGHT_TO_LEFT);
+	    if (or) {
+	    System.out.println("EmbeddedStage.getNodOrientation RTL");
+	    } else {
+	    System.out.println("EmbeddedStage.getNodOrientation LTR");
+	    }
+        return orientation;
     }
 
     @Override
