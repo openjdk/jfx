@@ -207,55 +207,75 @@ public class DataURI {
     }
 
     private static byte[] decodePercentEncoding(String input) {
-        try (var output = new ByteArrayOutputStream(input.length())) {
+        try (var output = new ByteArrayOutputStream(size(input))) {
             decodePercentEncodingToStream(input, output);
             return output.toByteArray();
-        } catch (IOException ignored) {
+        } catch (IOException ex) {
             // can never happen for ByteArrayOutputStream
-            return null;
+            throw new AssertionError(ex);
         }
     }
 
     /**
-     * Decodes percent-encoded text as specified by RFC 3986, page 11.
+     * Computes the payload size of the percent-encoded string.
+     *
+     * @param input the input string
+     * @return the payload size in bytes
+     */
+    private static int size(String input) {
+        int count = 0;
+
+        for (int i = 0, max = input.length(); i < max; ++i) {
+            if (input.charAt(i) == '%') {
+                i += 2;
+            }
+
+            ++count;
+        }
+
+        return count;
+    }
+
+    /**
+     * Decodes percent-encoded text as specified by RFC 3986, section 2.1
      * This method does not make any assumptions about the allowed character set.
      */
     private static void decodePercentEncodingToStream(String input, OutputStream output) throws IOException {
-        enum ParseState {
+        enum ExpectedCharacter {
             DEFAULT,
             FIRST_HEX_DIGIT,
             SECOND_HEX_DIGIT
         }
 
-        ParseState parseState = ParseState.DEFAULT;
+        ExpectedCharacter expectedCharacter = ExpectedCharacter.DEFAULT;
         int firstDigit = 0;
 
         for (int i = 0; i < input.length(); ++i) {
             char c = input.charAt(i);
 
-            parseState = switch (parseState) {
+            expectedCharacter = switch (expectedCharacter) {
                 case DEFAULT -> {
                     if (c == '%') {
-                        yield ParseState.FIRST_HEX_DIGIT;
+                        yield ExpectedCharacter.FIRST_HEX_DIGIT;
                     } else {
                         output.write(c);
-                        yield ParseState.DEFAULT;
+                        yield ExpectedCharacter.DEFAULT;
                     }
                 }
 
                 case FIRST_HEX_DIGIT -> {
                     firstDigit = hexDigit(c);
-                    yield ParseState.SECOND_HEX_DIGIT;
+                    yield ExpectedCharacter.SECOND_HEX_DIGIT;
                 }
 
                 case SECOND_HEX_DIGIT -> {
                     output.write(firstDigit << 4 | hexDigit(c));
-                    yield ParseState.DEFAULT;
+                    yield ExpectedCharacter.DEFAULT;
                 }
             };
         }
 
-        if (parseState != ParseState.DEFAULT) {
+        if (expectedCharacter != ExpectedCharacter.DEFAULT) {
             throw new IllegalArgumentException("Incomplete character escape sequence");
         }
     }
