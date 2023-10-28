@@ -284,22 +284,22 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     NodeOrientation orientation;
 
     public void setNodeOrientation(NodeOrientation nor) {
-	    boolean or = nor.equals(NodeOrientation.RIGHT_TO_LEFT);
-	    if (or) {
-	    System.out.println("EmbeddedStage.setNodOrientation RTL");
-	    } else {
-	    System.out.println("EmbeddedStage.setNodOrientation LTR");
-	    }
+            boolean or = nor.equals(NodeOrientation.RIGHT_TO_LEFT);
+            if (or) {
+                System.out.println("EmbeddedStage.setNodOrientation RTL");
+            } else {
+                System.out.println("EmbeddedStage.setNodOrientation LTR");
+            }
         orientation = nor;
     }
 
     public NodeOrientation getNodeOrientation() {
-	    boolean or = orientation.equals(NodeOrientation.RIGHT_TO_LEFT);
-	    if (or) {
-	    System.out.println("EmbeddedStage.getNodOrientation RTL");
-	    } else {
-	    System.out.println("EmbeddedStage.getNodOrientation LTR");
-	    }
+            boolean or = orientation.equals(NodeOrientation.RIGHT_TO_LEFT);
+            if (or) {
+                System.out.println("EmbeddedStage.getNodOrientation RTL");
+            } else {
+                System.out.println("EmbeddedStage.getNodOrientation LTR");
+            }
         return orientation;
     }
 
