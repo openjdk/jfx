@@ -24,15 +24,17 @@
  */
 package com.oracle.tools.fx.monkey.util;
 
-import javafx.beans.binding.BooleanBinding;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.SplitPane;
+import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -53,15 +55,15 @@ public class TestPaneBase extends BorderPane {
 
     public void updateContent() {
         SplitPane hsplit = new SplitPane(contentPane, pane());
-        hsplit.setId("hsplit");
-        hsplit.setBorder(null);
-        hsplit.setDividerPositions(0.9);
+        FX.name(hsplit, "hsplit");
+        hsplit.setBorder(Border.EMPTY);
+        hsplit.setDividerPositions(1.0);
         hsplit.setOrientation(Orientation.HORIZONTAL);
 
         SplitPane vsplit = new SplitPane(hsplit, pane());
-        vsplit.setId("vsplit");
-        vsplit.setBorder(null);
-        vsplit.setDividerPositions(0.9);
+        FX.name(vsplit, "vsplit");
+        vsplit.setBorder(Border.EMPTY);
+        vsplit.setDividerPositions(1.0);
         vsplit.setOrientation(Orientation.VERTICAL);
 
         setCenter(vsplit);
@@ -108,7 +110,34 @@ public class TestPaneBase extends BorderPane {
     }
 
     public void setOptions(Node n) {
-        setRight(n);
+        if (n == null) {
+            setRight(null);
+        } else {
+            ScrollPane sp = new ScrollPane(n);
+            sp.setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
+            sp.setHbarPolicy(ScrollBarPolicy.NEVER);
+            setRight(sp);
+        }
+    }
+
+    protected void onChange(ComboBox<?> cb, boolean immediately, Runnable client) {
+        cb.getSelectionModel().selectedItemProperty().addListener((x) -> {
+            client.run();
+        });
+
+        if (immediately) {
+            client.run();
+        }
+    }
+
+    protected void onChange(CheckBox cb, boolean immediately, Runnable client) {
+        cb.selectedProperty().addListener((x) -> {
+            client.run();
+        });
+
+        if (immediately) {
+            client.run();
+        }
     }
 
     /** Local toolbar */

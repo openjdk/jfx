@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -199,7 +199,20 @@ public interface TextLayout {
      */
     public boolean setTabSize(int spaces);
 
-    public Hit getHitInfo(float x, float y);
+    /**
+     * Calculates character index and insertion index for the given coordinates
+     * and maps to {@link Hit} class.
+     *
+     * @param x x coordinate value.
+     * @param y y coordinate value.
+     * @param text text for which HitInfo needs to be calculated.
+     *             It is expected to be null in the case of {@link javafx.scene.text.TextFlow}
+     *             and non-null in the case of {@link javafx.scene.text.Text}
+     * @param textRunStart Text run start position.
+     * @param curRunStart starting position of text run where hit info is requested.
+     * @return returns a {@link Hit} object containing character index, insertion index and position of cursor on the character.
+     */
+    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart);
 
     public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y);

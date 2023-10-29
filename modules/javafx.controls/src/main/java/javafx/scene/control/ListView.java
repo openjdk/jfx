@@ -996,18 +996,18 @@ public class ListView<T> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
 
-    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+    public final void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
         onScrollToProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+    public final EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
         if( onScrollTo != null ) {
             return onScrollTo.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {

@@ -96,6 +96,12 @@ private:
     jstring jmessage;
 };
 
+#define SAFE_FREE(PTR)  \
+    if ((PTR) != NULL) {  \
+        free(PTR);     \
+        (PTR) = NULL;     \
+    }
+
 #define EXCEPTION_OCCURED(env) (check_and_clear_exception(env))
 
 #define CHECK_JNI_EXCEPTION(env) \

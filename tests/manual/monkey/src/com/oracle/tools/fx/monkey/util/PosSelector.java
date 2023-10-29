@@ -36,7 +36,7 @@ public class PosSelector {
     private final ComboBox<Pos> field = new ComboBox<>();
 
     public PosSelector(Consumer<Pos> client) {
-        field.setId("PosSelector");
+        FX.name(field, "PosSelector");
         field.getItems().setAll(Pos.values());
         field.getSelectionModel().selectedItemProperty().addListener((p) -> {
             Pos v = field.getSelectionModel().getSelectedItem();

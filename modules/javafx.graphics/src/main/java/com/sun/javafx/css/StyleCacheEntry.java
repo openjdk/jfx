@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,8 +68,7 @@ public final class StyleCacheEntry {
 
             this.pseudoClassStates = new Set[pseudoClassStates.length];
             for (int n=0; n<pseudoClassStates.length; n++) {
-                this.pseudoClassStates[n] = new PseudoClassState();
-                this.pseudoClassStates[n].addAll(pseudoClassStates[n]);
+                this.pseudoClassStates[n] = ImmutablePseudoClassSetsCache.of(pseudoClassStates[n]);
             }
             this.fontSize = font != null ? font.getSize() : Font.getDefault().getSize();
 
@@ -90,7 +89,7 @@ public final class StyleCacheEntry {
 
                 hash = hashCode(fontSize);
 
-                final int iMax = pseudoClassStates != null ? pseudoClassStates.length : 0;
+                final int iMax = pseudoClassStates.length;
 
                 for (int i=0; i<iMax; i++) {
 
@@ -127,16 +126,6 @@ public final class StyleCacheEntry {
             // Math.abs(diff, 0.000001) is too slow
             if (diff < -0.000001 || 0.000001 < diff) {
                 return false;
-            }
-
-            // either both must be null or both must be not-null
-            if ((pseudoClassStates == null) ^ (other.pseudoClassStates == null)) {
-                return false;
-            }
-
-            // if one is null, the other is too.
-            if (pseudoClassStates == null) {
-                return true;
             }
 
             if (pseudoClassStates.length != other.pseudoClassStates.length) {

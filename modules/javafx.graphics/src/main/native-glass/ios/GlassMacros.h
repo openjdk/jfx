@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,22 +73,34 @@ do {                                                                            
     GlassThreadData *_GlassThreadData = (GlassThreadData*)pthread_getspecific(GlassThreadDataKey); \
     if (_GlassThreadData == NULL) \
     { \
-        _GlassThreadData = malloc(sizeof(GlassThreadData)); \
-        memset(_GlassThreadData, 0x00, sizeof(GlassThreadData)); \
-        pthread_setspecific(GlassThreadDataKey, _GlassThreadData); \
+        _GlassThreadData = calloc(1, sizeof(GlassThreadData)); \
+        if (_GlassThreadData != NULL) \
+        { \
+            pthread_setspecific(GlassThreadDataKey, _GlassThreadData); \
+        } \
+        else \
+        { \
+            fprintf(stderr, "malloc failed in GLASS_POOL_ENTER\n"); \
+        } \
     } \
-    assert(_GlassThreadData->counter >= 0); \
-    if (_GlassThreadData->counter++ == 0) \
+    if (_GlassThreadData != NULL) \
     { \
-        _GlassThreadData->pool = [[NSAutoreleasePool alloc] init]; \
+        assert(_GlassThreadData->counter >= 0); \
+        if (_GlassThreadData->counter++ == 0) \
+        { \
+            _GlassThreadData->pool = [[NSAutoreleasePool alloc] init]; \
+        } \
     }
 #define GLASS_POOL_EXIT \
-    if (--_GlassThreadData->counter == 0) \
+    if (_GlassThreadData != NULL) \
     { \
-        [_GlassThreadData->pool drain]; \
-        _GlassThreadData->pool = nil; \
+        if (--_GlassThreadData->counter == 0) \
+        { \
+            [_GlassThreadData->pool drain]; \
+            _GlassThreadData->pool = nil; \
+        } \
+        assert(_GlassThreadData->counter >= 0); \
     } \
-    assert(_GlassThreadData->counter >= 0); \
 }
 
 // variations of GLASS_POOL_ENTER/GLASS_POOL_EXIT allowing them to be used accross different calls
