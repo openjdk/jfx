@@ -84,7 +84,7 @@ public abstract class Application {
         // currently used only on Mac OS X
         public void handleQuitAction(Application app, long time) {
         }
-        public void handlePreferencesChanged(Map<String, Object> properties) {
+        public void handlePreferencesChanged(Map<String, Object> preferences) {
         }
     }
 
