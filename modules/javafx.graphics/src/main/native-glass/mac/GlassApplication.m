@@ -238,6 +238,15 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+     if (@available(macOS 14.0, *) && !NSApp.isActive) {
+        // As of macOS 14, application gets to the foreground,
+        // but it doesn't get activated, so this is needed:
+        LOG("-> need to active application");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [NSApp activate];
+        });
+    }
 }
 
 - (void)applicationWillBecomeActive:(NSNotification *)aNotification
