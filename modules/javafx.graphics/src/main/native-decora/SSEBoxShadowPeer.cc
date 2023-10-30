@@ -39,6 +39,20 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterHorizontalBlack
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan,
      jfloat spread)
 {
+    if (srcPixels_arr == NULL ||
+        dstPixels_arr == NULL ||
+        srcw <= 0 ||
+        srch <= 0 ||
+        srcw > INT_MAX / srch ||
+        dstw <= 0 ||
+        dsth <= 0 ||
+        dstw > INT_MAX / dsth ||
+        (srcw * srch) > env->GetArrayLength(srcPixels_arr) ||
+        (dstw * dsth) > env->GetArrayLength(dstPixels_arr) ||
+        dsth > srch) { // We should not move out of source vertical bounds
+        return;
+    }
+
     jint *srcPixels = (jint *)env->GetPrimitiveArrayCritical(srcPixels_arr, 0);
     if (srcPixels == NULL) return;
     jint *dstPixels = (jint *)env->GetPrimitiveArrayCritical(dstPixels_arr, 0);
@@ -86,6 +100,20 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterVerticalBlack
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan,
      jfloat spread)
 {
+    if (srcPixels_arr == NULL ||
+        dstPixels_arr == NULL ||
+        srcw <= 0 ||
+        srch <= 0 ||
+        srcw > INT_MAX / srch ||
+        dstw <= 0 ||
+        dsth <= 0 ||
+        dstw > INT_MAX / dsth ||
+        (srcw * srch) > env->GetArrayLength(srcPixels_arr) ||
+        (dstw * dsth) > env->GetArrayLength(dstPixels_arr) ||
+        dstw > srcw) { // We should not move out of source horizontal bounds
+        return;
+    }
+
     jint *srcPixels = (jint *)env->GetPrimitiveArrayCritical(srcPixels_arr, 0);
     if (srcPixels == NULL) return;
     jint *dstPixels = (jint *)env->GetPrimitiveArrayCritical(dstPixels_arr, 0);
@@ -134,6 +162,20 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterVertical
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan,
      jfloat spread, jfloatArray shadowColor_arr)
 {
+    if (srcPixels_arr == NULL ||
+        dstPixels_arr == NULL ||
+        srcw <= 0 ||
+        srch <= 0 ||
+        srcw > INT_MAX / srch ||
+        dstw <= 0 ||
+        dsth <= 0 ||
+        dstw > INT_MAX / dsth ||
+        (srcw * srch) > env->GetArrayLength(srcPixels_arr) ||
+        (dstw * dsth) > env->GetArrayLength(dstPixels_arr) ||
+        dstw > srcw) { // We should not move out of source horizontal bounds
+        return;
+    }
+
     jfloat shadowColor[4];
     env->GetFloatArrayRegion(shadowColor_arr, 0, 4, shadowColor);
 

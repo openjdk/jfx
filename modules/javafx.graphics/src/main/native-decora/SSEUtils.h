@@ -38,6 +38,10 @@ extern "C" {
 #define FVAL_G   1
 #define FVAL_B   2
 
+#ifndef INT_MAX
+#define INT_MAX 2147483647
+#endif /* INT_MAX */
+
 void lsample(jint *img,
              jfloat floc_x, jfloat floc_y,
              jint w, jint h, jint scan,
