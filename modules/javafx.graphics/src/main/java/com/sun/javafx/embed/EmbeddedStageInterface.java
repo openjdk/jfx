@@ -32,8 +32,6 @@ package com.sun.javafx.embed;
  *
  */
 
-import javafx.geometry.NodeOrientation;
-
 public interface EmbeddedStageInterface {
 
     public void setLocation(int x, int y);
@@ -55,6 +53,4 @@ public interface EmbeddedStageInterface {
      */
     public void focusUngrab();
 
-    public NodeOrientation getNodeOrientation();
-    public void setNodeOrientation(NodeOrientation nor);
 }

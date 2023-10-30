@@ -815,8 +815,8 @@ public class JFXPanel extends JComponent {
             ComponentOrientation cor = this.getComponentOrientation();
             if (!cor.equals(ComponentOrientation.UNKNOWN)) {
                 boolean rtl = cor.equals(ComponentOrientation.RIGHT_TO_LEFT);
-                stagePeer.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT :
-                                             NodeOrientation.LEFT_TO_RIGHT);
+                stage.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT :
+                                               NodeOrientation.LEFT_TO_RIGHT);
             }
             gg = g.create();
             if ((opacity < 1.0f) && (gg instanceof Graphics2D)) {
