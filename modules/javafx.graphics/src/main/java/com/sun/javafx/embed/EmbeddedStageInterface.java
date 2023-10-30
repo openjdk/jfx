@@ -52,5 +52,4 @@ public interface EmbeddedStageInterface {
      * FOCUS_UNGRAB notification.
      */
     public void focusUngrab();
-
 }
