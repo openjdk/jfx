@@ -24,13 +24,12 @@
  */
 package test.javafx.scene.text;
 
-import org.junit.BeforeClass;
 import javafx.application.Platform;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.stage.Stage;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -41,21 +40,22 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.scene.layout.VBox;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class TextFlowCrashTest {
 
     private boolean exceptionWasThrown;
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         CountDownLatch startupLatch = new CountDownLatch(1);
         Platform.startup(() -> {
             Platform.setImplicitExit(false);
             startupLatch.countDown();
         });
-        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+        assertTrue(startupLatch.await(15, TimeUnit.SECONDS), "Timeout waiting for FX runtime to start");
     }
 
     @Test
@@ -63,7 +63,7 @@ public class TextFlowCrashTest {
         Util.runAndWait(() -> {
             Stage stage = new Stage();
             VBox root = new VBox();
-            onEveryNode(root);
+            addBoundsListener(root);
             Platform.runLater(() -> {
                 root.getChildren().add(getBuggyNode());
             });
@@ -96,16 +96,16 @@ public class TextFlowCrashTest {
             });
             flow.getChildren().add(text2);
             cell.setGraphic(flow);
-            onEveryNode(cell);
+            addBoundsListener(cell);
             return cell;
         });
         ScrollPane scrollPane = new ScrollPane(listView);
-        onEveryNode(listView);
-        onEveryNode(scrollPane);
+        addBoundsListener(listView);
+        addBoundsListener(scrollPane);
         return scrollPane;
     }
 
-    public void onEveryNode(Node node) {
+    public void addBoundsListener(Node node) {
         node.boundsInParentProperty().addListener((p,o,n) -> {
         });
     }
