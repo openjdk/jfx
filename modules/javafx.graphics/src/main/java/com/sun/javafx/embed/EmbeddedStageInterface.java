@@ -31,7 +31,6 @@ package com.sun.javafx.embed;
  * when the size of embedding container is changed.
  *
  */
-
 public interface EmbeddedStageInterface {
 
     public void setLocation(int x, int y);
