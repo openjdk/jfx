@@ -49,7 +49,7 @@ public class EmbeddedWindow extends Window {
      }
 
     private HostInterface host;
-    private NodeOrientation orientation;
+    private NodeOrientation orientation = NodeOrientation.LEFT_TO_RIGHT;
 
     public EmbeddedWindow(HostInterface host) {
         this.host = host;
@@ -89,9 +89,10 @@ public class EmbeddedWindow extends Window {
     }
 
     public void setNodeOrientation(NodeOrientation nor) {
-        orientation = nor;
-        final Scene sceneValue = getScene();
-        SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
+        if (nor != orientation) {
+            orientation = nor;
+            SceneHelper.parentEffectiveOrientationInvalidated(getScene());
+	}
     }
 
     public NodeOrientation getNodeOrientation() {
