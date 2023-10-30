@@ -236,16 +236,17 @@ static jfieldID  jPixelsScaleYField = 0;
     }
     if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_FUNCTION) != 0)
     {
-        modifier = modifier | NSFunctionKeyMask;
-    }
-    if (jshortcut >= com_sun_glass_events_KeyEvent_VK_F1 &&
-        jshortcut <= com_sun_glass_events_KeyEvent_VK_F12) {
-        int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F1;
-        shortcut = [NSString stringWithFormat:@"%C", (unsigned short)(NSF1FunctionKey + delta)];
-    } else if (jshortcut >= com_sun_glass_events_KeyEvent_VK_F13 &&
-                jshortcut <= com_sun_glass_events_KeyEvent_VK_F24) {
-        int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F13;
-        shortcut = [NSString stringWithFormat:@"%C", (unsigned short)(NSF13FunctionKey + delta)];
+        if (jshortcut >= com_sun_glass_events_KeyEvent_VK_F1 &&
+            jshortcut <= com_sun_glass_events_KeyEvent_VK_F12) {
+            int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F1;
+            shortcut = [NSString stringWithFormat:@"%C", (unsigned short)(NSF1FunctionKey + delta)];
+        } else if (jshortcut >= com_sun_glass_events_KeyEvent_VK_F13 &&
+                   jshortcut <= com_sun_glass_events_KeyEvent_VK_F24) {
+            int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F13;
+            shortcut = [NSString stringWithFormat:@"%C", (unsigned short)(NSF13FunctionKey + delta)];
+        } else {
+            modifier = modifier | NSFunctionKeyMask;
+        }
     }
     [self->item setKeyEquivalent:shortcut];
     [self->item setKeyEquivalentModifierMask:modifier];
