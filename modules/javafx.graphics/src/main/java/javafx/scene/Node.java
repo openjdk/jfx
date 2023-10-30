@@ -1950,14 +1950,17 @@ public abstract class Node implements EventTarget, Styleable {
      * into the branch until it finds a match. If more than one sub-node matches the
      * specified selector, this function returns the first of them.
      * <p>
+     *     If the lookup selector does not specify a pseudo class, the lookup will ignore pseudo class states;
+     *     it will return the first matching node whether or not it contains pseudo classes.
+     * </p>
+     * <p>
      *     For example, if a Node is given the id of "myId", then the lookup method can
      *     be used to find this node as follows: {@code scene.lookup("#myId");}.
      * </p>
      * <p>
-     *     If two nodes, lets say NodeA and NodeB have same style class "myStyle" and NodeA has
+     *     For example, if two nodes, NodeA and NodeB, have the same style class "myStyle" and NodeA has
      *     a pseudo state "myPseudo", then to find NodeA, the lookup method can be used as follows:
-     *     {@code scene.lookup(".myStyle:myPseudo");} or {@code scene.lookup(":myPseudo");}. If no pseudo class is specified
-     *     by the lookup selector, irrespective of the nodes pseudo states the result will contain the first node matching the selector.
+     *     {@code scene.lookup(".myStyle:myPseudo");} or {@code scene.lookup(":myPseudo");}.
      * </p>
      *
      * @param selector The css selector of the node to find
@@ -1979,7 +1982,7 @@ public abstract class Node implements EventTarget, Styleable {
      *     be used to find all these nodes as follows: {@code scene.lookupAll(".myStyle");}.
      * </p>
      * <p>
-     *     If multiple nodes have same style class "myStyle" and few nodes have
+     *     For example, if multiple nodes have same style class "myStyle" and few nodes have
      *     a pseudo state "myPseudo", then to find all nodes with "myPseudo" state, the lookupAll method can be used as follows:
      *     {@code scene.lookupAll(".myStyle:myPseudo");} or {@code scene.lookupAll(":myPseudo");}. If no pseudo class is specified
      *     by the lookupAll selector, irrespective of the nodes pseudo states the result will contain all nodes matching the selector.
@@ -2002,9 +2005,9 @@ public abstract class Node implements EventTarget, Styleable {
      * Used by Node and Parent for traversing the tree and adding all nodes which
      * match the given selector.
      *
-     * @param selector The css selector of the nodes to find
-     * @param results The results
-     * @return List of matching nodes. The returned value can be null.
+     * @param selector the css selector of the nodes to find
+     * @param results the results
+     * @return list of matching nodes
      */
     List<Node> lookupAll(Selector selector, List<Node> results) {
         if (selectorMatches(selector)) {
