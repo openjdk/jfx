@@ -92,7 +92,7 @@ public class EmbeddedWindow extends Window {
         if (nor != orientation) {
             orientation = nor;
             SceneHelper.parentEffectiveOrientationInvalidated(getScene());
-	}
+        }
     }
 
     public NodeOrientation getNodeOrientation() {
