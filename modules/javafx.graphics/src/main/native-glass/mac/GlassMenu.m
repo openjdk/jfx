@@ -244,8 +244,6 @@ static jfieldID  jPixelsScaleYField = 0;
                    jshortcut <= com_sun_glass_events_KeyEvent_VK_F24) {
             int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F13;
             shortcut = [NSString stringWithFormat:@"%C", (unsigned short)(NSF13FunctionKey + delta)];
-        } else {
-            modifier = modifier | NSFunctionKeyMask;
         }
     }
     [self->item setKeyEquivalent:shortcut];
