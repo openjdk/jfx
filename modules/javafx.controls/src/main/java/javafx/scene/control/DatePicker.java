@@ -29,6 +29,7 @@ package javafx.scene.control;
 
 import java.time.LocalDate;
 import java.time.DateTimeException;
+import java.time.format.DateTimeParseException;
 import java.time.chrono.Chronology;
 import java.time.chrono.IsoChronology;
 import java.time.format.FormatStyle;
@@ -147,11 +148,23 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
 
         focusedProperty().addListener(o -> {
             if (!isFocused()) {
-                commitValue();
+                commitValueOnFocusLost();
             }
         });
     }
+    
+    /**
+     * This is to address https://bugs.openjdk.org/browse/JDK-8303478
+     */
+    protected void commitValueOnFocusLost(){
+        try {
+            commitValue();
+        } catch (DateTimeParseException dtpe) {
+            this.requestFocus();
+        }
+    }
 
+    
     private boolean validateDate(Chronology chrono, LocalDate date) {
         try {
             if (date != null) {
