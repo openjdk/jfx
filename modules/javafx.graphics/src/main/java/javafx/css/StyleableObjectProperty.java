@@ -76,14 +76,19 @@ public abstract class StyleableObjectProperty<T>
 
         if (v == null) {
             set(null);
-        } else if ((oldValue = get()) == null) {
+        } else if (!(v instanceof Interpolatable<?>)
+                   || ((oldValue = get()) == null)
+                   || !(v.getClass().isInstance(oldValue))) {
+            // Consider a case where T := Paint. Now 'oldValue' could be a Color instance, while 'v' could
+            // be a LinearGradient instance. Both types implement Interpolatable, but with different type
+            // arguments. We detect this case by checking whether 'v' is an instance of 'oldValue' (so that
+            // oldValue.interpolate(v, t) succeeds), and skipping the transition when the test fails.
             set(v);
         } else {
             // If this.origin == null, we're setting the value for the first time.
             // No transition should be started in this case.
-            TransitionDefinition transition = this.origin != null
-                && v instanceof Interpolatable<?>
-                && getBean() instanceof Node node ? NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+            TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
+                    NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
             if (transition != null) {
                 // At this point we know that T implements Interpolatable, so the unchecked cast will succeed.
