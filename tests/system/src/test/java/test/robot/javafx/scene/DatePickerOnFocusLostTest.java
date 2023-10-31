@@ -86,8 +86,8 @@ public class DatePickerOnFocusLostTest {
     }
 
     // This test is for verifying a specific behavior.
-    // 1. Click on datePicker 
-    // 2. Modify with keystrokes the day of month value, optionally with typo 
+    // 1. Click on datePicker
+    // 2. Modify with keystrokes the day of month value, optionally with typo
     // 3. Click on button to grab the focus and hence attempt to datePicker.commitValue()
     // 4. Verify that in case of typo, the datePicker kept the focus, onChangeListener was not called
     //    and the property value remained unchanged.
@@ -174,7 +174,7 @@ public class DatePickerOnFocusLostTest {
                         }
                     });
 
-            // Note that change listener was already beeing called as expected before the patch 
+            // Note that change listener was already beeing called as expected before the patch
             ChangeListener chListener = (observable, oldValue, newValue) -> {
                 onChangeListenerCalled++;
             };

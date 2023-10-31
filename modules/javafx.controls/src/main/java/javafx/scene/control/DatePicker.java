@@ -152,7 +152,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             }
         });
     }
-    
+
     /**
      * This is to address https://bugs.openjdk.org/browse/JDK-8303478
      */
@@ -164,7 +164,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         }
     }
 
-    
+
     private boolean validateDate(Chronology chrono, LocalDate date) {
         try {
             if (date != null) {
