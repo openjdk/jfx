@@ -1950,18 +1950,15 @@ public abstract class Node implements EventTarget, Styleable {
      * into the branch until it finds a match. If more than one sub-node matches the
      * specified selector, this function returns the first of them.
      * <p>
-     *     If the lookup selector does not specify a pseudo class, the lookup will ignore pseudo class states;
-     *     it will return the first matching node whether or not it contains pseudo classes.
-     * </p>
+     * If the lookup selector does not specify a pseudo class, the lookup will ignore pseudo class states;
+     * it will return the first matching node whether or not it contains pseudo classes.
      * <p>
-     *     For example, if a Node is given the id of "myId", then the lookup method can
-     *     be used to find this node as follows: {@code scene.lookup("#myId");}.
-     * </p>
+     * For example, if a Node is given the id of "myId", then the lookup method can
+     * be used to find this node as follows: {@code scene.lookup("#myId");}.
      * <p>
-     *     For example, if two nodes, NodeA and NodeB, have the same style class "myStyle" and NodeA has
-     *     a pseudo state "myPseudo", then to find NodeA, the lookup method can be used as follows:
-     *     {@code scene.lookup(".myStyle:myPseudo");} or {@code scene.lookup(":myPseudo");}.
-     * </p>
+     * For example, if two nodes, NodeA and NodeB, have the same style class "myStyle" and NodeA has
+     * a pseudo state "myPseudo", then to find NodeA, the lookup method can be used as follows:
+     * {@code scene.lookup(".myStyle:myPseudo");} or {@code scene.lookup(":myPseudo");}.
      *
      * @param selector The css selector of the node to find
      * @return The first node, starting from this {@code Node}, which matches
@@ -1978,15 +1975,15 @@ public abstract class Node implements EventTarget, Styleable {
      * the given CSS selector. If no matches are found, an empty unmodifiable set is
      * returned. The set is explicitly unordered.
      * <p>
-     *     For example, if there are multiple nodes with same style class "myStyle", then the lookupAll method can
-     *     be used to find all these nodes as follows: {@code scene.lookupAll(".myStyle");}.
-     * </p>
+     * If the lookupAll selector does not specify a pseudo class, the lookupAll will ignore pseudo class states;
+     * it will return all matching nodes whether or not the nodes contain pseudo classes.
      * <p>
-     *     For example, if multiple nodes have same style class "myStyle" and few nodes have
-     *     a pseudo state "myPseudo", then to find all nodes with "myPseudo" state, the lookupAll method can be used as follows:
-     *     {@code scene.lookupAll(".myStyle:myPseudo");} or {@code scene.lookupAll(":myPseudo");}. If no pseudo class is specified
-     *     by the lookupAll selector, irrespective of the nodes pseudo states the result will contain all nodes matching the selector.
-     * </p>
+     * For example, if there are multiple nodes with same style class "myStyle", then the lookupAll method can
+     * be used to find all these nodes as follows: {@code scene.lookupAll(".myStyle");}.
+     * <p>
+     * For example, if multiple nodes have same style class "myStyle" and few nodes have
+     * a pseudo state "myPseudo", then to find all nodes with "myPseudo" state, the lookupAll method can be used as follows:
+     * {@code scene.lookupAll(".myStyle:myPseudo");} or {@code scene.lookupAll(":myPseudo");}.
      *
      * @param selector The css selector of the nodes to find
      * @return All nodes, starting from and including this {@code Node}, which match
