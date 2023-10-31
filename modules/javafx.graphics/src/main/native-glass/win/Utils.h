@@ -414,6 +414,10 @@ class JBufferArray {
             if (!arr) {
                 data = (T*)env->GetDirectBufferAddress(buf);
             } else {
+                if (offs < 0 || offs > env->GetArrayLength(arr)) {
+                    fprintf(stderr, "Failed to attach bytes array\n");
+                    return;
+                }
                 array.Attach(env, arr);
                 offset = offs;
             }

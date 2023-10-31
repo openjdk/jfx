@@ -672,7 +672,13 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CFStringCreateWithCharacters__J_3CJJ)
 {
     jchar *lparg1=NULL;
     jlong rc = 0;
-    if (arg1) if ((lparg1 = (*env)->GetPrimitiveArrayCritical(env, arg1, NULL)) == NULL) goto fail;
+    if (!arg1) goto fail;
+    if ((lparg1 = (*env)->GetPrimitiveArrayCritical(env, arg1, NULL)) == NULL) goto fail;
+    if (arg2 < 0) goto fail;
+    if (arg3 < 0) goto fail;
+    if (arg2 > LONG_MAX - arg3) goto fail;
+    if (arg2 + arg3 > (*env)->GetArrayLength(env, arg1)) goto fail;
+
     UniChar* str = lparg1 + arg2;
     rc = (jlong)CFStringCreateWithCharacters((CFAllocatorRef)arg0, str, (CFIndex)arg3);
 fail:

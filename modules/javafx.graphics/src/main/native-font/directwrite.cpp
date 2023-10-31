@@ -1517,6 +1517,8 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphIndices)
     if (!arg1) return 0;
     jint* data = env->GetIntArrayElements(arg1, NULL);
     if (!data) return 0;
+    if (start < 0) return 0;
+    if (slot < 0) return 0;
 
     JFXTextRenderer* renderer = (JFXTextRenderer*)arg0;
     // Type cast unsigned int to int. It is safe to assume that GetGlyphCount will never exceed max of jint
@@ -1538,6 +1540,7 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphAdvances)
     if (!arg1) return 0;
     jfloat* data = env->GetFloatArrayElements(arg1, NULL);
     if (!data) return 0;
+    if (start < 0) return 0;
 
     JFXTextRenderer* renderer = (JFXTextRenderer*)arg0;
     // Type cast unsigned int to int. It is safe to assume that GetGlyphCount will never exceed max of jint
@@ -1559,12 +1562,14 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetGlyphOffsets)
     if (!arg1) return 0;
     jfloat* data = env->GetFloatArrayElements(arg1, NULL);
     if (!data) return 0;
+    if (start < 0) return 0;
 
     JFXTextRenderer* renderer = (JFXTextRenderer*)arg0;
     // Type cast unsigned int to int. It is safe to assume the result will never exceed max of jint
     jint offsetCount = (jint) renderer->GetGlyphCount() * 2;
     jint length = env->GetArrayLength(arg1);
     jint copiedCount = length - start > offsetCount ? offsetCount : length - start;
+    if (copiedCount % 2 != 0) return 0;
 
     const DWRITE_GLYPH_OFFSET* offsets = renderer->GetGlyphOffsets();
     UINT32 i = 0, j = 0;
@@ -1582,6 +1587,8 @@ JNIEXPORT jint JNICALL OS_NATIVE(JFXTextRendererGetClusterMap)
     if (!arg1) return 0;
     jshort* data = env->GetShortArrayElements(arg1, NULL);
     if (!data) return 0;
+    if (start < 0) return 0;
+    if (glyphStart < 0) return 0;
 
     JFXTextRenderer* renderer = (JFXTextRenderer*)arg0;
     // Type cast unsigned int to int. It is safe to assume that GetLength will never exceed max of jint
@@ -1890,6 +1897,8 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CreateTextLayout)
     IDWriteTextLayout* result = NULL;
     jchar *lparg1 = NULL;
     if (arg1) if ((lparg1 = env->GetCharArrayElements(arg1, NULL)) == NULL) goto fail;
+    if (start < 0 || count < 0) goto fail;
+    if (count > INT_MAX - start) goto fail;
     if (start + count > env->GetArrayLength(arg1)) goto fail;
 
     const WCHAR * text = (const WCHAR *)(lparg1 + start);
