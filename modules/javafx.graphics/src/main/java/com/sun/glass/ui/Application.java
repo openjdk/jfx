@@ -758,7 +758,6 @@ public abstract class Application {
      * Returns the current set of platform properties as a map of platform-specific keys to
      * arbitrary values. Callers should assume that the returned map is immutable.
      *
-     *
      * @implSpec Implementations should either return an immutable map, or give up ownership
      *           of the returned map.
      * @return the current set of platform preferences
