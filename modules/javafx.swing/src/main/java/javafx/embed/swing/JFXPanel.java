@@ -813,13 +813,10 @@ public class JFXPanel extends JComponent {
         Graphics gg = null;
         try {
             ComponentOrientation cor = this.getComponentOrientation();
-            if (!cor.equals(ComponentOrientation.UNKNOWN)) {
-                boolean rtl = cor.equals(ComponentOrientation.RIGHT_TO_LEFT);
-                stage.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT :
-                                               NodeOrientation.LEFT_TO_RIGHT);
-            } else {
-                stage.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
-            }
+            boolean rtl = ComponentOrientation.RIGHT_TO_LEFT.equals(cor);
+            stage.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT :
+                                           NodeOrientation.LEFT_TO_RIGHT);
+
             gg = g.create();
             if ((opacity < 1.0f) && (gg instanceof Graphics2D)) {
                 Graphics2D g2d = (Graphics2D)gg;
