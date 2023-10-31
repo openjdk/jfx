@@ -562,7 +562,7 @@ public class VFlow extends Pane implements StyleResolver {
         }
 
         Insets m = contentPadding();
-        double dx = -m.getLeft();
+        double dx = (m == null) ? 0.0 : -m.getLeft();
         double dy = 0.0;
 
         PathElement[] pe;
@@ -599,11 +599,11 @@ public class VFlow extends Pane implements StyleResolver {
     public int getParagraphCount() {
         return control.getParagraphCount();
     }
-    
-//    public double lineSpacing() {
-//        return lineSpacing;
-//    }
 
+    /**
+     * Returns control's content padding.
+     * @return the content padding, can be null
+     */
     public Insets contentPadding() {
         return control.getContentPadding();
     }

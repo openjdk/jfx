@@ -194,7 +194,8 @@ public class CellArrangement {
             if (cell != null) {
                 int charIndex = p.charIndex();
                 boolean leading = p.isLeading();
-                PathElement[] path = cell.getCaretShape(target, charIndex, leading, -contentPadding.getLeft(), 0.0);
+                double dx = (contentPadding == null) ? 0.0 : -contentPadding.getLeft();
+                PathElement[] path = cell.getCaretShape(target, charIndex, leading, dx, 0.0);
                 if (path == null) {
                     return null;
                 }
