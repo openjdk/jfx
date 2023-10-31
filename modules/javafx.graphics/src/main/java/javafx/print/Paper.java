@@ -77,12 +77,11 @@ public final class Paper {
      * Translate the internally stored dimension into points.
      */
     private double getSizeInPoints(double dim) {
-        switch (units) {
-            case POINT : return dim;
-            case INCH  : return dim * 72;
-            case MM    : return (dim * 72) / 25.4;
-        }
-        return dim;
+        return switch (units) {
+            case POINT -> dim;
+            case INCH -> dim * 72;
+            case MM -> (dim * 72) / 25.4;
+        };
     }
 
     /**
