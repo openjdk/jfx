@@ -160,7 +160,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         try {
             commitValue();
         } catch (DateTimeParseException dtpe) {
-            this.requestFocus();
+            cancelEdit();
         }
     }
 

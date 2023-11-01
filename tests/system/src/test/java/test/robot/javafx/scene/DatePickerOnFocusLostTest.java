@@ -66,6 +66,11 @@ public class DatePickerOnFocusLostTest {
 
     int onChangeListenerCalled; // counter for onChangeListener callbacks
 
+    String INITIAL_DATE_TEXT = "2015-03-25";
+    // set up a specific time format, coz it is not known what will be used when running the test
+    DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    LocalDate now = LocalDate.parse(INITIAL_DATE_TEXT); // LocalDate.parse() uses the same format
+
     private void mouseClick(double x, double y) {
         Util.runAndWait(() -> {
             robot.mouseMove((int) (scene.getWindow().getX() + scene.getX() + x),
@@ -76,22 +81,21 @@ public class DatePickerOnFocusLostTest {
     }
 
     @Test
-    public void testdatePickerCommitNoTypo() throws Exception {
-        testdatePickerCommit(false);
+    public void testDatePickerCommitNoTypo() throws Exception {
+        testDatePickerCommit(false);
     }
 
     @Test
-    public void testdatePickerCannotCommitTypo() throws Exception {
-        testdatePickerCommit(true);
+    public void testDatePickerCannotCommitTypo() throws Exception {
+        testDatePickerCommit(true);
     }
 
     // This test is for verifying a specific behavior.
     // 1. Click on datePicker
     // 2. Modify with keystrokes the day of month value, optionally with typo
     // 3. Click on button to grab the focus and hence attempt to datePicker.commitValue()
-    // 4. Verify that in case of typo, the datePicker kept the focus, onChangeListener was not called
-    //    and the property value remained unchanged.
-    public void testdatePickerCommit(boolean typo) throws Exception {
+    // 4. Verify that in case of typo, the value was reverted, as well as the editor's text
+    public void testDatePickerCommit(boolean typo) throws Exception {
 
         Thread.sleep(1000); // Wait for stage to layout
         onChangeListenerCalled = 0;
@@ -126,9 +130,8 @@ public class DatePickerOnFocusLostTest {
         mouseClick(button.getLayoutX() + button.getWidth() / 2, button.getLayoutY() + button.getHeight() / 2);
         Thread.sleep(100);
 
-        // 4 check that the focus ends up on button only if there is no typo (fixed by patch for JDK-8303478)
-        Assert.assertEquals(typo, datePicker.isFocused());
-        Assert.assertEquals(!typo, button.isFocused());
+        // 4 check that in case of typo the text value is reverted (fixed by patch for JDK-8303478)
+        Assert.assertEquals(typo,INITIAL_DATE_TEXT.equals(datePicker.getEditor().getText()));
 
         // 5 check that in case of typo, the value has not changed (already working as expected before the patch)
         Assert.assertEquals(typo, datePicker.valueProperty().get().equals(now));
@@ -148,18 +151,14 @@ public class DatePickerOnFocusLostTest {
         });
     }
 
-    LocalDate now = LocalDate.now();
-
     @Before
     public void setupUI() {
         Util.runAndWait(() -> {
 
             datePicker = new DatePicker(now);
 
-            // set up a specific time format, coz it is not known what will be used when running the test
             datePicker.setConverter(
                     new StringConverter<>() {
-                        final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
                         @Override
                         public String toString(LocalDate date) {
