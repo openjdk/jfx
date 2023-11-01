@@ -25,6 +25,7 @@
 package javafx.scene.control.behavior;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -333,6 +334,7 @@ public final class InputMap<C extends Control> {
 
         if (behavior == null) {
             // user mapping
+            en.value = tag;
         } else {
             // behavior mapping
             en.behavior = behavior;
@@ -527,6 +529,49 @@ public final class InputMap<C extends Control> {
             filter((k) -> (k instanceof KeyBinding)).
             map((x) -> (KeyBinding)x).
             collect(Collectors.toSet());
+    }
+
+    /**
+     * Returns the set of key bindings mapped to the specified function tag.
+     * @param tag the function tag
+     * @return the set of KeyBindings
+     */
+    public Set<KeyBinding> getKeyBindingFor(FunctionTag tag) {
+        /*
+        return map.entrySet().stream().
+            filter((me) -> (me.getKey() instanceof KeyBinding) && (me.getValue().getValue() == tag)).
+            map((me) -> (KeyBinding)me.getKey()).
+            collect(Collectors.toSet());
+        */
+        HashSet<KeyBinding> set = new HashSet<>();
+        for (Map.Entry<Object, Entry> k : map.entrySet()) {
+            if (k.getKey() instanceof KeyBinding kb) {
+                Entry en = k.getValue();
+                Object v = en.getValue();
+                if (tag == v) {
+                    set.add(kb);
+                }
+            }
+        }
+        return set;
+    }
+
+    /**
+     * Removes all the key bindings mapped to the specified function tag, either by the application or by the skin.
+     * @param tag the function tag
+     */
+    public void unbind(FunctionTag tag) {
+        Iterator<Object> it = map.keySet().iterator();
+        while (it.hasNext()) {
+            Object k = it.next();
+            if (k instanceof KeyBinding kb) {
+                Entry en = map.get(k);
+                Object v = en.getValue();
+                if (tag == v) {
+                    it.remove();
+                }
+            }
+        }
     }
 
     /**

@@ -130,8 +130,8 @@ public abstract class BehaviorBase<C extends Control> {
      * @param func the function
      */
     protected void register(FunctionTag tag, KeyBinding k, Runnable func) {
-        getInputMap().registerFunction(tag, func);
-        getInputMap().registerKey(k, tag);
+        getInputMap().registerFunction(this, tag, func);
+        getInputMap().registerKey(this, k, tag);
     }
 
     /**
