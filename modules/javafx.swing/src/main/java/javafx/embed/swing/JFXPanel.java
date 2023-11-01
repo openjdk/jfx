@@ -27,6 +27,7 @@ package javafx.embed.swing;
 
 import java.awt.AlphaComposite;
 import java.awt.Component;
+import java.awt.ComponentOrientation;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -63,6 +64,7 @@ import javax.swing.SwingUtilities;
 
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import com.sun.glass.ui.Screen;
 
@@ -810,6 +812,11 @@ public class JFXPanel extends JComponent {
 
         Graphics gg = null;
         try {
+            ComponentOrientation cor = this.getComponentOrientation();
+            boolean rtl = ComponentOrientation.RIGHT_TO_LEFT.equals(cor);
+            stage.setNodeOrientation(rtl ? NodeOrientation.RIGHT_TO_LEFT :
+                                           NodeOrientation.LEFT_TO_RIGHT);
+
             gg = g.create();
             if ((opacity < 1.0f) && (gg instanceof Graphics2D)) {
                 Graphics2D g2d = (Graphics2D)gg;
