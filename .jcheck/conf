@@ -40,7 +40,7 @@ domain=openjdk.org
 files=.*\.java$|.*\.c$|.*\.h$|.*\.cpp$|.*\.hpp$|.*\.cc$|.*\.jsl$|.*\.fxml$|.*\.css$|.*\.m$|.*\.mm$|.*\.frag$|.*\.vert$|.*\.hlsl$|.*\.metal$|.*\.gradle$|.*\.groovy$|.*\.g4$|.*\.stg$
 
 [checks "reviewers"]
-minimum=1
+reviewers=1
 
 [checks "merge"]
 message=Merge
