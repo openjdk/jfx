@@ -25,6 +25,7 @@
 package javafx.scene.control.behavior;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -246,7 +247,7 @@ public final class InputMap<C extends Control> {
     public void registerFunction(FunctionTag tag, Runnable function) {
         Objects.requireNonNull(tag, "function tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
-        addFunction(tag, function, null);
+        addFunction(null, tag, function);
     }
 
     /**
@@ -261,7 +262,7 @@ public final class InputMap<C extends Control> {
         Objects.requireNonNull(behavior, "behavior must not be null");
         Objects.requireNonNull(tag, "tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
-        addFunction(tag, function, behavior);
+        addFunction(behavior, tag, function);
     }
 
     /**
@@ -274,7 +275,7 @@ public final class InputMap<C extends Control> {
     public void registerKey(KeyBinding k, FunctionTag tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
-        addBinding(k, tag, null);
+        addBinding(null, k, tag);
     }
 
     /**
@@ -292,7 +293,7 @@ public final class InputMap<C extends Control> {
         }
         Objects.requireNonNull(behavior, "behavior must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
-        addBinding(k, tag, behavior);
+        addBinding(behavior, k, tag);
     }
 
     /**
@@ -307,7 +308,7 @@ public final class InputMap<C extends Control> {
         registerKey(behavior, KeyBinding.of(code), tag);
     }
 
-    private void addFunction(FunctionTag tag, Runnable function, BehaviorBase behavior) {
+    private void addFunction(BehaviorBase behavior, FunctionTag tag, Runnable function) {
         Entry en = map.get(tag);
         if (en == null) {
             en = new Entry();
@@ -324,7 +325,7 @@ public final class InputMap<C extends Control> {
         }
     }
 
-    private void addBinding(KeyBinding k, FunctionTag tag, BehaviorBase behavior) {
+    private void addBinding(BehaviorBase behavior, KeyBinding k, FunctionTag tag) {
         Entry en = map.get(k);
         if (en == null) {
             en = new Entry();
@@ -333,6 +334,7 @@ public final class InputMap<C extends Control> {
 
         if (behavior == null) {
             // user mapping
+            en.value = tag;
         } else {
             // behavior mapping
             en.behavior = behavior;
@@ -527,6 +529,49 @@ public final class InputMap<C extends Control> {
             filter((k) -> (k instanceof KeyBinding)).
             map((x) -> (KeyBinding)x).
             collect(Collectors.toSet());
+    }
+
+    /**
+     * Returns the set of key bindings mapped to the specified function tag.
+     * @param tag the function tag
+     * @return the set of KeyBindings
+     */
+    public Set<KeyBinding> getKeyBindingFor(FunctionTag tag) {
+        /*
+        return map.entrySet().stream().
+            filter((me) -> (me.getKey() instanceof KeyBinding) && (me.getValue().getValue() == tag)).
+            map((me) -> (KeyBinding)me.getKey()).
+            collect(Collectors.toSet());
+        */
+        HashSet<KeyBinding> set = new HashSet<>();
+        for (Map.Entry<Object, Entry> k : map.entrySet()) {
+            if (k.getKey() instanceof KeyBinding kb) {
+                Entry en = k.getValue();
+                Object v = en.getValue();
+                if (tag == v) {
+                    set.add(kb);
+                }
+            }
+        }
+        return set;
+    }
+
+    /**
+     * Removes all the key bindings mapped to the specified function tag, either by the application or by the skin.
+     * @param tag the function tag
+     */
+    public void unbind(FunctionTag tag) {
+        Iterator<Object> it = map.keySet().iterator();
+        while (it.hasNext()) {
+            Object k = it.next();
+            if (k instanceof KeyBinding kb) {
+                Entry en = map.get(k);
+                Object v = en.getValue();
+                if (tag == v) {
+                    it.remove();
+                }
+            }
+        }
     }
 
     /**
