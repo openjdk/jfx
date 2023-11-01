@@ -457,6 +457,11 @@ public final class Platform {
      * Contains UI preferences of the current platform.
      * <p>
      * {@code Preferences} extends {@link ObservableMap} to expose platform preferences as key-value pairs.
+     * The map is unmodifiable, which means that keys and values cannot be added, removed, or updated.
+     * Calling any mutator method on the map will always cause {@code UnsupportedOperationException} to be thrown.
+     * However, the mappings will be updated by JavaFX when the operating system reports that a platform
+     * preference has changed.
+     * <p>
      * For convenience, {@link #getInteger}, {@link #getDouble}, {@link #getBoolean}, {@link #getString},
      * {@link #getColor}, {@link #getPaint}, and {@link #getValue} are provided as typed alternatives to
      * the untyped {@link #get} method.
@@ -564,6 +569,7 @@ public final class Platform {
      * @since 22
      */
     public interface Preferences extends ObservableMap<String, Object> {
+
         /**
          * The platform appearance, which specifies whether applications should use a light
          * or dark color scheme. The value of this property is derived from the perceptual
@@ -572,6 +578,7 @@ public final class Platform {
          * if the platform does not report color preferences.
          *
          * @return the {@code appearance} property
+         * @defaultValue {@link Appearance#LIGHT}
          */
         ReadOnlyObjectProperty<Appearance> appearanceProperty();
 
@@ -604,7 +611,8 @@ public final class Platform {
         /**
          * The accent color.
          * <p>
-         * If the platform does not report an accent color, this property defaults to {@code #157EFB}.
+         * If the platform does not report an accent color, this property defaults to vivid blue
+         * (corresponding to the hex color value {@code #157EFB}).
          *
          * @return the {@code accentColor} property
          * @defaultValue {@code #157EFB}
@@ -614,81 +622,74 @@ public final class Platform {
         Color getAccentColor();
 
         /**
-         * Returns the {@code Integer} instance to which the specified key is mapped.
+         * Returns an optional {@code Integer} to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the key is not mapped to a {@code Integer} instance
-         * @return the {@code Integer} instance to which the key is mapped, or {@code Optional.empty()}
-         *         if no mapping exists for the specified key
+         * @throws IllegalArgumentException if a mapping exists, but the key is not mapped to an {@code Integer}
+         * @return the optional {@code Integer} to which the key is mapped
          */
         Optional<Integer> getInteger(String key);
 
         /**
-         * Returns the {@code Double} instance to which the specified key is mapped.
+         * Returns an optional {@code Double} to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the key is not mapped to a {@code Double} instance
-         * @return the {@code Double} instance to which the key is mapped, or {@code Optional.empty()}
-         *         if no mapping exists for the specified key
+         * @throws IllegalArgumentException if a mapping exists, but the key is not mapped to a {@code Double}
+         * @return the optional {@code Double} to which the key is mapped
          */
         Optional<Double> getDouble(String key);
 
         /**
-         * Returns the {@code Boolean} instance to which the specified key is mapped.
+         * Returns an optional {@code Boolean} to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the key is not mapped to a {@code Boolean} instance
-         * @return the {@code Boolean} instance to which the key is mapped, or {@code Optional.empty()}
-         *         if no mapping exists for the specified key
+         * @throws IllegalArgumentException if a mapping exists, but the key is not mapped to a {@code Boolean}
+         * @return the optional {@code Boolean} to which the key is mapped
          */
         Optional<Boolean> getBoolean(String key);
 
         /**
-         * Returns the {@code String} instance to which the specified key is mapped.
+         * Returns an optional {@code String} to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the key is not mapped to a {@code String} instance
-         * @return the {@code String} instance to which the key is mapped, or {@code Optional.empty()}
-         *         if no mapping exists for the specified key
+         * @throws IllegalArgumentException if the mapping exists, but the key is not mapped to a {@code String}
+         * @return the optional {@code String} to which the key is mapped
          */
         Optional<String> getString(String key);
 
         /**
-         * Returns the {@code Color} instance to which the specified key is mapped.
+         * Returns an optional {@code Color} to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the key is not mapped to a {@code Color} instance
-         * @return the {@code Color} instance to which the key is mapped, or {@code Optional.empty()}
-         *         if no mapping exists for the specified key
+         * @throws IllegalArgumentException if the mapping exists, but the key is not mapped to a {@code Color}
+         * @return the optional {@code Color} instance to which the key is mapped
          */
         Optional<Color> getColor(String key);
 
         /**
-         * Returns the {@code Paint} instance to which the specified key is mapped.
+         * Returns an optional {@code Paint} to which the specified key is mapped.
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the key is not mapped to a {@code Paint} instance
-         * @return the {@code Paint} instance to which the key is mapped, or {@code Optional.empty()}
-         *         if no mapping exists for the specified key
+         * @throws IllegalArgumentException if the mapping exists, but the key is not mapped to a {@code Paint}
+         * @return the optional {@code Paint} to which the key is mapped
          */
         Optional<Paint> getPaint(String key);
 
         /**
-         * Returns the value to which the specified key is mapped.
+         * Returns an optional value to which the specified key is mapped.
          *
          * @param <T> the type of the value
          * @param key the key
          * @param type the type of the value
-         * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the key is not mapped to a {@code type} instance
-         * @return the value to which the key is mapped, or {@code Optional.empty()}
-         *         if no mapping exists for the specified key
+         * @throws NullPointerException if {@code key} or {@code type} is null
+         * @throws IllegalArgumentException if the mapping exists, but the key is not mapped to a value of type {@code T}
+         * @return the optional value to which the key is mapped
          */
         <T> Optional<T> getValue(String key, Class<T> type);
     }

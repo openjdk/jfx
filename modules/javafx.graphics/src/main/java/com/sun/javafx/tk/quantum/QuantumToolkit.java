@@ -361,7 +361,7 @@ public final class QuantumToolkit extends Toolkit {
 
             // Initialize the platform preferences
             PlatformImpl.initPreferences(
-                Application.GetApplication().getWellKnownPlatformPreferenceKeys(),
+                Application.GetApplication().getPlatformKeyMappings(),
                 Application.GetApplication().getPlatformPreferences());
 
             Application.GetApplication().setEventHandler(new Application.EventHandler() {

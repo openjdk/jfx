@@ -372,7 +372,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     public native Map<String, Object> getPlatformPreferences();
 
     @Override
-    public Map<String, String> getWellKnownPlatformPreferenceKeys() {
+    public Map<String, String> getPlatformKeyMappings() {
         return Map.of(
             "Windows.UIColor.ForegroundColor", "foregroundColor",
             "Windows.UIColor.BackgroundColor", "backgroundColor",

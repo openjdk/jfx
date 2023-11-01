@@ -1059,11 +1059,11 @@ public class PlatformImpl {
     /**
      * Called by Glass when the toolkit is initialized.
      *
-     * @param wellKnownKeys a map of platform-specific keys to well-known keys
+     * @param platformKeyMappings a map of platform-specific keys to well-known keys
      * @param preferences the initial set of platform preferences
      */
-    public static void initPreferences(Map<String, String> wellKnownKeys, Map<String, Object> preferences) {
-        platformPreferences = new PlatformPreferences(wellKnownKeys);
+    public static void initPreferences(Map<String, String> platformKeyMappings, Map<String, Object> preferences) {
+        platformPreferences = new PlatformPreferences(platformKeyMappings);
         platformPreferences.update(preferences);
     }
 

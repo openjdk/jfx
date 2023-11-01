@@ -783,7 +783,7 @@ public abstract class Application {
      *
      * @return a map of platform-specific keys to well-known keys
      */
-    public Map<String, String> getWellKnownPlatformPreferenceKeys() {
+    public Map<String, String> getPlatformKeyMappings() {
         return Map.of();
     }
 }

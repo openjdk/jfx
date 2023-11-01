@@ -32,6 +32,9 @@ import java.util.Objects;
 
 /**
  * Contains information about a changed value.
+ *
+ * @param oldValue the old mappings
+ * @param newValue the new mappings
  */
 public record ChangedValue(Object oldValue, Object newValue) {
 
@@ -50,15 +53,8 @@ public record ChangedValue(Object oldValue, Object newValue) {
         for (Map.Entry<String, Object> entry : current.entrySet()) {
             Object newValue = entry.getValue();
             Object oldValue = old.get(entry.getKey());
-            boolean equals;
 
-            if (oldValue instanceof Object[] oldArray && newValue instanceof Object[] newArray) {
-                equals = Arrays.equals(oldArray, newArray);
-            } else {
-                equals = Objects.equals(oldValue, newValue);
-            }
-
-            if (!equals) {
+            if (!Objects.deepEquals(oldValue, newValue)) {
                 if (changed == null) {
                     changed = new HashMap<>();
                 }

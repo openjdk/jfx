@@ -28,10 +28,10 @@ package javafx.application;
 /**
  * Defines the appearance of the user interface.
  *
+ * @see javafx.application.Platform.Preferences#appearanceProperty()
  * @since 22
  */
 public enum Appearance {
-
     /**
      * A light appearance uses bright backgrounds and dark text.
      */
@@ -41,5 +41,4 @@ public enum Appearance {
      * A dark appearance uses dark backgrounds and bright text.
      */
     DARK
-
 }

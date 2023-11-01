@@ -471,7 +471,7 @@ final class GtkApplication extends Application implements
     public native Map<String, Object> getPlatformPreferences();
 
     @Override
-    public Map<String, String> getWellKnownPlatformPreferenceKeys() {
+    public Map<String, String> getPlatformKeyMappings() {
         return Map.of(
             "GTK.theme_fg_color", "foregroundColor",
             "GTK.theme_bg_color", "backgroundColor"

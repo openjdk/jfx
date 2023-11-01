@@ -55,7 +55,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
      * Contains mappings from platform-specific keys to well-known keys, which are used
      * in the implementation of the property-based API in {@link PreferenceProperties}.
      */
-    final Map<String, String> wellKnownKeys;
+    final Map<String, String> platformKeyMappings;
     final Map<String, Object> effectivePreferences = new HashMap<>();
     final Map<String, Object> unmodifiableEffectivePreferences = Collections.unmodifiableMap(effectivePreferences);
     final PreferenceProperties properties = new PreferenceProperties(this);
@@ -63,8 +63,8 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     private final List<InvalidationListener> invalidationListeners = new CopyOnWriteArrayList<>();
     private final List<MapChangeListener<? super String, Object>> mapChangeListeners = new CopyOnWriteArrayList<>();
 
-    public PlatformPreferences(Map<String, String> wellKnownKeys) {
-        this.wellKnownKeys = wellKnownKeys;
+    public PlatformPreferences(Map<String, String> platformKeyMappings) {
+        this.platformKeyMappings = platformKeyMappings;
     }
 
     @Override
@@ -98,10 +98,9 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T> Optional<T> getValue(String key, Class<T> type) {
         Objects.requireNonNull(key, "key cannot be null");
-        Objects.requireNonNull(key, "type cannot be null");
+        Objects.requireNonNull(type, "type cannot be null");
         Object value = effectivePreferences.get(key);
 
         if (value == null) {
@@ -109,7 +108,9 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
         }
 
         if (type.isInstance(value)) {
-            return Optional.of((T)value);
+            @SuppressWarnings("unchecked")
+            T v = (T)value;
+            return Optional.of(v);
         }
 
         throw new IllegalArgumentException(
@@ -192,6 +193,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
      * The specified preferences may include all available preferences, or only the changed preferences.
      *
      * @param preferences the new preference mappings
+     * @throws NullPointerException if {@code preferences} is {@code null}
      */
     public void update(Map<String, Object> preferences) {
         Map<String, Object> currentPreferences = Map.copyOf(effectivePreferences);
@@ -205,16 +207,13 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
         effectivePreferences.entrySet().removeIf(entry -> entry.getValue() == null);
 
         if (!effectivelyChangedPreferences.isEmpty()) {
-            properties.update(effectivelyChangedPreferences, wellKnownKeys);
+            properties.update(effectivelyChangedPreferences, platformKeyMappings);
             fireValueChangedEvent(effectivelyChangedPreferences);
         }
     }
 
-    void fireValueChangedEvent(Map<String, ChangedValue> changedEntries) {
-        for (var listener : invalidationListeners) {
-            listener.invalidated(this);
-        }
-
+    private void fireValueChangedEvent(Map<String, ChangedValue> changedEntries) {
+        invalidationListeners.forEach(listener -> listener.invalidated(this));
         var change = new MapExpressionHelper.SimpleChange<>(this);
 
         for (Map.Entry<String, ChangedValue> entry : changedEntries.entrySet()) {

@@ -394,7 +394,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     public native Map<String, Object> getPlatformPreferences();
 
     @Override
-    public Map<String, String> getWellKnownPlatformPreferenceKeys() {
+    public Map<String, String> getPlatformKeyMappings() {
         return Map.of(
             "macOS.NSColor.textColor", "foregroundColor",
             "macOS.NSColor.textBackgroundColor", "backgroundColor",

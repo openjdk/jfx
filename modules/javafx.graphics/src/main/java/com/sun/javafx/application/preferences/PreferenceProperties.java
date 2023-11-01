@@ -102,9 +102,9 @@ final class PreferenceProperties {
         accentColor.setValueOverride(color);
     }
 
-    public void update(Map<String, ChangedValue> changedPreferences, Map<String, String> wellKnownKeys) {
+    public void update(Map<String, ChangedValue> changedPreferences, Map<String, String> platformKeyMappings) {
         for (Map.Entry<String, ChangedValue> entry : changedPreferences.entrySet()) {
-            String key = wellKnownKeys.get(entry.getKey());
+            String key = platformKeyMappings.get(entry.getKey());
             if (key != null) {
                 for (ColorProperty colorProperty : allColors) {
                     if (colorProperty.getName().equals(key)) {
