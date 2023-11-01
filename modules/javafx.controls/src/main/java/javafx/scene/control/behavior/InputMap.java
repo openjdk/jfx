@@ -246,7 +246,7 @@ public final class InputMap<C extends Control> {
     public void registerFunction(FunctionTag tag, Runnable function) {
         Objects.requireNonNull(tag, "function tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
-        addFunction(tag, function, null);
+        addFunction(null, tag, function);
     }
 
     /**
@@ -261,7 +261,7 @@ public final class InputMap<C extends Control> {
         Objects.requireNonNull(behavior, "behavior must not be null");
         Objects.requireNonNull(tag, "tag must not be null");
         Objects.requireNonNull(function, "function must not be null");
-        addFunction(tag, function, behavior);
+        addFunction(behavior, tag, function);
     }
 
     /**
@@ -274,7 +274,7 @@ public final class InputMap<C extends Control> {
     public void registerKey(KeyBinding k, FunctionTag tag) {
         Objects.requireNonNull(k, "KeyBinding must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
-        addBinding(k, tag, null);
+        addBinding(null, k, tag);
     }
 
     /**
@@ -292,7 +292,7 @@ public final class InputMap<C extends Control> {
         }
         Objects.requireNonNull(behavior, "behavior must not be null");
         Objects.requireNonNull(tag, "function tag must not be null");
-        addBinding(k, tag, behavior);
+        addBinding(behavior, k, tag);
     }
 
     /**
@@ -307,7 +307,7 @@ public final class InputMap<C extends Control> {
         registerKey(behavior, KeyBinding.of(code), tag);
     }
 
-    private void addFunction(FunctionTag tag, Runnable function, BehaviorBase behavior) {
+    private void addFunction(BehaviorBase behavior, FunctionTag tag, Runnable function) {
         Entry en = map.get(tag);
         if (en == null) {
             en = new Entry();
@@ -324,7 +324,7 @@ public final class InputMap<C extends Control> {
         }
     }
 
-    private void addBinding(KeyBinding k, FunctionTag tag, BehaviorBase behavior) {
+    private void addBinding(BehaviorBase behavior, KeyBinding k, FunctionTag tag) {
         Entry en = map.get(k);
         if (en == null) {
             en = new Entry();
