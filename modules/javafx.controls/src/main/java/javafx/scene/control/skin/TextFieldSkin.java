@@ -813,6 +813,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                 // Update if there is space on the right
                 if (newX + textNodeWidth <= textRight.get() - caretWidth / 2) {
                     textTranslateX.set(newX);
+                } else if ((textRight.get() - textNodeWidth - caretWidth / 2) > oldX) {
+                    textTranslateX.set(textRight.get() - textNodeWidth - caretWidth / 2);
                 } else if (newX < 0 && oldX > caretWidth / 2) {
                     textTranslateX.set(caretWidth / 2);
                 }
@@ -845,6 +847,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             // Update if there is space on either side.
             if (newX < oldX || newX + textNodeWidth <= textRight.get()) {
                 textTranslateX.set(newX);
+            } else if ((textRight.get() - textNodeWidth - caretWidth / 2) > oldX) {
+                textTranslateX.set(textRight.get() - textNodeWidth - caretWidth / 2);
             }
             if (usePromptText.get()) {
                 promptNode.layoutXProperty().set(newX);

@@ -330,6 +330,10 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             return;
         }
 
+        // windows: ctrl-down goes to the start of the next paragraph
+        // linux: ctrl-down goes to the end of the current paragraph
+        int d = PlatformUtil.isWindows() ? 1 : 0;
+
         // paragraph
         execute(
             exe(() -> control.setWrapText(true)),
@@ -339,16 +343,16 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
                 "cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc cccccccccc\n"
             ),
             // move
-            ctrl(DOWN), checkSelection(88),
-            ctrl(DOWN), checkSelection(176),
-            ctrl(DOWN), checkSelection(264),
+            ctrl(DOWN), checkSelection(87 + d),
+            ctrl(DOWN), checkSelection(175 + d),
+            ctrl(DOWN), checkSelection(263 + d),
             ctrl(UP), checkSelection(176),
             ctrl(UP), checkSelection(88),
             // select
             shortcut(UP), checkSelection(0),
-            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 88),
-            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 176),
-            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 264),
+            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 87 + d),
+            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 175 + d),
+            key(DOWN, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 263 + d),
             key(UP, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 176),
             key(UP, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(0, 88)
         );

@@ -25,10 +25,12 @@
 
 package com.sun.javafx.stage;
 
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.stage.Window;
 
 import com.sun.javafx.embed.HostInterface;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -47,6 +49,7 @@ public class EmbeddedWindow extends Window {
      }
 
     private HostInterface host;
+    private NodeOrientation orientation = NodeOrientation.LEFT_TO_RIGHT;
 
     public EmbeddedWindow(HostInterface host) {
         this.host = host;
@@ -85,4 +88,14 @@ public class EmbeddedWindow extends Window {
         }
     }
 
+    public void setNodeOrientation(NodeOrientation nor) {
+        if (nor != orientation) {
+            orientation = nor;
+            SceneHelper.parentEffectiveOrientationInvalidated(getScene());
+        }
+    }
+
+    public NodeOrientation getNodeOrientation() {
+        return orientation;
+    }
 }
