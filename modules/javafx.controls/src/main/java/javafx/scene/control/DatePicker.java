@@ -156,7 +156,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     /**
      * This is to address https://bugs.openjdk.org/browse/JDK-8303478
      */
-    protected void commitValueOnFocusLost(){
+    private void commitValueOnFocusLost(){
         try {
             commitValue();
         } catch (DateTimeParseException dtpe) {
