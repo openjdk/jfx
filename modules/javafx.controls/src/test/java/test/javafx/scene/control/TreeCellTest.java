@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -927,7 +927,6 @@ public class TreeCellTest {
         assertEquals("edited value must not be committed", oldValue, editingItem.getValue());
     }
 
-    @Ignore("JDK-8187314")
     @Test
     public void testDoNothingCommitHandlerDoesNotUpdateCell() {
         TreeCell<String> cell = TextFieldTreeCell.forTreeView().call(tree);
@@ -1035,6 +1034,30 @@ public class TreeCellTest {
         assertEquals("max height must be fixedCellSize",
                 treeView.getFixedCellSize(),
                 cell.maxHeight(-1), 1);
+    }
+
+    /**
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8187314">JDK-8187314</a>.
+     */
+    @Test
+    public void testEditCommitValueChangeIsReflectedInCell() {
+        tree.setEditable(true);
+
+        cell.updateTreeView(tree);
+        tree.setOnEditCommit(event -> {
+            assertEquals("ABCDEF", event.getNewValue());
+            // Change the underlying item.
+            root.setValue("ABCDEF [Changed]");
+        });
+
+        cell.updateIndex(0);
+
+        assertEquals("Root", cell.getItem());
+
+        cell.startEdit();
+        cell.commitEdit("ABCDEF");
+
+        assertEquals("ABCDEF [Changed]", cell.getItem());
     }
 
 }

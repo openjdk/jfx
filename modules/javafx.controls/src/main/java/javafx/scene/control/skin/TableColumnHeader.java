@@ -1192,7 +1192,7 @@ public class TableColumnHeader extends Region {
         final double x = getParentHeader().sceneToLocal(sceneX, sceneY).getX();
 
         // calculate where the ghost column header should be
-        double dragX = getTableSkin().getSkinnable().sceneToLocal(sceneX, sceneY).getX() - dragOffset;
+        double dragX = x - dragOffset;
         getTableHeaderRow().setDragHeaderX(dragX);
 
         double startX = 0;

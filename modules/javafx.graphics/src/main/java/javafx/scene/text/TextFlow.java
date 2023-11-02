@@ -199,7 +199,7 @@ public class TextFlow extends Pane {
             TextLayout layout = getTextLayout();
             double x = point.getX();
             double y = point.getY();
-            TextLayout.Hit h = layout.getHitInfo((float)x, (float)y);
+            TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, null, 0, 0);
             return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
         } else {
             return null;

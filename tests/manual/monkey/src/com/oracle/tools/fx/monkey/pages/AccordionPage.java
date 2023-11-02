@@ -27,6 +27,7 @@ package com.oracle.tools.fx.monkey.pages;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.TitledPane;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
@@ -38,7 +39,7 @@ public class AccordionPage extends TestPaneBase {
     private final Accordion accordion;
 
     public AccordionPage() {
-        setId("AccordionPage");
+        FX.name(this, "AccordionPage");
 
         accordion = new Accordion();
         addPane();
@@ -57,7 +58,7 @@ public class AccordionPage extends TestPaneBase {
         setOptions(op);
     }
 
-    protected void addPane() {
+    private void addPane() {
         String name = SequenceNumber.next();
         System.nanoTime();
         Button b = new Button(name);
@@ -68,7 +69,7 @@ public class AccordionPage extends TestPaneBase {
         accordion.getPanes().add(p);
     }
 
-    protected void removePane() {
+    private void removePane() {
         int sz = accordion.getPanes().size();
         if (sz > 0) {
             accordion.getPanes().remove(0);

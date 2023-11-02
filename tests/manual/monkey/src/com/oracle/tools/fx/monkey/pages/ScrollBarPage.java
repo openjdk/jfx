@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.scene.control.ComboBox;
@@ -42,12 +43,12 @@ public class ScrollBarPage extends TestPaneBase {
     };
 
     public ScrollBarPage() {
-        setId("ScrollBarPage");
+        FX.name(this, "ScrollBarPage");
 
         scroll = new ScrollBar();
 
         ComboBox<Long> min = new ComboBox<>();
-        min.setId("min");
+        FX.name(min, "min");
         min.getItems().setAll(VALUES);
         min.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             int v = parse(min);
@@ -55,7 +56,7 @@ public class ScrollBarPage extends TestPaneBase {
         });
 
         ComboBox<Long> val = new ComboBox<>();
-        val.setId("val");
+        FX.name(val, "val");
         val.getItems().setAll(VALUES);
         val.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             int v = parse(val);
@@ -63,7 +64,7 @@ public class ScrollBarPage extends TestPaneBase {
         });
 
         ComboBox<Long> visible = new ComboBox<>();
-        visible.setId("visible");
+        FX.name(visible, "visible");
         visible.getItems().setAll(VALUES);
         visible.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             int v = parse(visible);
@@ -71,7 +72,7 @@ public class ScrollBarPage extends TestPaneBase {
         });
 
         ComboBox<Long> max = new ComboBox<>();
-        max.setId("max");
+        FX.name(max, "max");
         max.getItems().setAll(VALUES);
         max.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
             int v = parse(max);
