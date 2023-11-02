@@ -55,16 +55,30 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
      * Contains mappings from platform-specific keys to well-known keys, which are used
      * in the implementation of the property-based API in {@link PreferenceProperties}.
      */
-    final Map<String, String> platformKeyMappings;
-    final Map<String, Object> effectivePreferences = new HashMap<>();
-    final Map<String, Object> unmodifiableEffectivePreferences = Collections.unmodifiableMap(effectivePreferences);
-    final PreferenceProperties properties = new PreferenceProperties(this);
+    private final Map<String, String> platformKeyMappings;
+
+    /**
+     * Contains the current set of effective preferences, i.e. the set of preferences that
+     * we know to be the current state of the world, and are exposed to users of this map.
+     */
+    private final Map<String, Object> effectivePreferences = new HashMap<>();
+    private final Map<String, Object> unmodifiableEffectivePreferences = Collections.unmodifiableMap(effectivePreferences);
+
+    /** Contains the implementation of the property-based API. */
+    private final PreferenceProperties properties = new PreferenceProperties(this);
 
     private final List<InvalidationListener> invalidationListeners = new CopyOnWriteArrayList<>();
     private final List<MapChangeListener<? super String, Object>> mapChangeListeners = new CopyOnWriteArrayList<>();
 
+    /**
+     * Initializes a new {@code PlatformPreferences} instance with the given platform-specific key mappings.
+     *
+     * @param platformKeyMappings the platform-specific key mappings
+     * @throws NullPointerException if {@code platformKeyMappings} is {@code null} or contains
+     *                              {@code null} keys or values
+     */
     public PlatformPreferences(Map<String, String> platformKeyMappings) {
-        this.platformKeyMappings = platformKeyMappings;
+        this.platformKeyMappings = Map.copyOf(platformKeyMappings);
     }
 
     @Override
@@ -191,6 +205,9 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     /**
      * Updates this map of preferences with a new set of platform preferences.
      * The specified preferences may include all available preferences, or only the changed preferences.
+     * The absence of a mapping in the specified preferences does not indicate that it should be removed;
+     * instead, a key must be explicitly mapped to {@code null} to remove the mapping. Consequently, this
+     * map will never contain {@code null} values.
      *
      * @param preferences the new preference mappings
      * @throws NullPointerException if {@code preferences} is {@code null}
