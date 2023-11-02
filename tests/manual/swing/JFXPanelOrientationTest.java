@@ -50,7 +50,7 @@ import javafx.scene.layout.VBox;
 public class JFXPanelOrientationTest extends Application {
     private static JFXPanel jfxPanel;
     private static TextArea textArea;
-    private static JFrame frame;    
+    private static JFrame frame;
 
     public static void main(String[] args) {
         Application.launch(args);
@@ -80,7 +80,7 @@ public class JFXPanelOrientationTest extends Application {
     }
 
     private void quit() {
-        frame.dispose();	    
+        frame.dispose();
         Platform.exit();
     }
 
@@ -88,7 +88,7 @@ public class JFXPanelOrientationTest extends Application {
         frame = new JFrame();
 
         jfxPanel = new JFXPanel();
-        
+
         Platform.runLater(JFXPanelOrientationTest::initFX);
 
         JCheckBox rtl = new JCheckBox("RTL (JFrame.componentOrientation)");
@@ -98,7 +98,7 @@ public class JFXPanelOrientationTest extends Application {
             frame.validate();
             frame.repaint();
         });
-        
+
         JToolBar tb = new JToolBar();
         tb.add(rtl);
 
