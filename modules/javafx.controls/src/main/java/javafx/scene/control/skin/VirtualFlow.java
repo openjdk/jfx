@@ -1671,9 +1671,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             // Add any necessary leading cells
             if (firstCell != null) {
-                int firstIndex = getCellIndex(firstCell);
-                double prevIndexSize = getCellLength(firstIndex - 1);
-                addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
+                // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
+                int previousIndex = getCellIndex(firstCell) - 1;
+                double prevIndexSize = getCellLength(previousIndex);
+                addLeadingCells(previousIndex, getCellPosition(firstCell) - prevIndexSize);
             } else {
                 int currentIndex = computeCurrentIndex();
 

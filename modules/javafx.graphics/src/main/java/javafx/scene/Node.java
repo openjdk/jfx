@@ -956,7 +956,6 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     if (oldParent != null) {
-                        clearParentsFocusWithin(oldParent);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) oldParent).localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -965,6 +964,10 @@ public abstract class Node implements EventTarget, Styleable {
                     updateDisabled();
                     computeDerivedDepthTest();
                     final Parent newParent = get();
+
+                    // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
+                    updateParentsFocusWithin(oldParent, newParent);
+
                     if (newParent != null) {
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) newParent).localToSceneTransformProperty().addListener(
@@ -1947,9 +1950,15 @@ public abstract class Node implements EventTarget, Styleable {
      * into the branch until it finds a match. If more than one sub-node matches the
      * specified selector, this function returns the first of them.
      * <p>
-     *     For example, if a Node is given the id of "myId", then the lookup method can
-     *     be used to find this node as follows: <code>scene.lookup("#myId");</code>.
-     * </p>
+     * If the lookup selector does not specify a pseudo class, the lookup will ignore pseudo class states;
+     * it will return the first matching node whether or not it contains pseudo classes.
+     * <p>
+     * For example, if a Node is given the id of "myId", then the lookup method can
+     * be used to find this node as follows: {@code scene.lookup("#myId");}.
+     * <p>
+     * For example, if two nodes, NodeA and NodeB, have the same style class "myStyle" and NodeA has
+     * a pseudo state "myPseudo", then to find NodeA, the lookup method can be used as follows:
+     * {@code scene.lookup(".myStyle:myPseudo");} or {@code scene.lookup(":myPseudo");}.
      *
      * @param selector The css selector of the node to find
      * @return The first node, starting from this {@code Node}, which matches
@@ -1958,13 +1967,23 @@ public abstract class Node implements EventTarget, Styleable {
     public Node lookup(String selector) {
         if (selector == null) return null;
         Selector s = Selector.createSelector(selector);
-        return s != null && s.applies(this) ? this : null;
+        return selectorMatches(s) ? this : null;
     }
 
     /**
      * Finds all {@code Node}s, including this one and any children, which match
      * the given CSS selector. If no matches are found, an empty unmodifiable set is
      * returned. The set is explicitly unordered.
+     * <p>
+     * If the lookupAll selector does not specify a pseudo class, the lookupAll will ignore pseudo class states;
+     * it will return all matching nodes whether or not the nodes contain pseudo classes.
+     * <p>
+     * For example, if there are multiple nodes with same style class "myStyle", then the lookupAll method can
+     * be used to find all these nodes as follows: {@code scene.lookupAll(".myStyle");}.
+     * <p>
+     * For example, if multiple nodes have same style class "myStyle" and few nodes have
+     * a pseudo state "myPseudo", then to find all nodes with "myPseudo" state, the lookupAll method can be used as follows:
+     * {@code scene.lookupAll(".myStyle:myPseudo");} or {@code scene.lookupAll(":myPseudo");}.
      *
      * @param selector The css selector of the nodes to find
      * @return All nodes, starting from and including this {@code Node}, which match
@@ -1983,11 +2002,12 @@ public abstract class Node implements EventTarget, Styleable {
      * Used by Node and Parent for traversing the tree and adding all nodes which
      * match the given selector.
      *
-     * @param selector The Selector. This will never be null.
-     * @param results The results. This will never be null.
+     * @param selector the css selector of the nodes to find
+     * @param results the results
+     * @return list of matching nodes
      */
     List<Node> lookupAll(Selector selector, List<Node> results) {
-        if (selector.applies(this)) {
+        if (selectorMatches(selector)) {
             // Lazily create the set to reduce some trash.
             if (results == null) {
                 results = new LinkedList<>();
@@ -2019,6 +2039,19 @@ public abstract class Node implements EventTarget, Styleable {
         if (getParent() != null) {
             getParent().toFront(this);
         }
+    }
+
+    /**
+     * Checks whether the provided selector matches the node with both styles and pseudo states.
+     * @param s selector to match
+     * @return {@code true} if the selector matches
+     */
+    private boolean selectorMatches(Selector s) {
+        boolean matches = s != null && s.applies(this);
+        if (matches && !s.createMatch().getPseudoClasses().isEmpty()) {
+            matches = s.stateMatches(this, this.getPseudoClassStates());
+        }
+        return matches;
     }
 
     // TODO: need to verify whether this is OK to do starting from a node in
@@ -6493,7 +6526,7 @@ public abstract class Node implements EventTarget, Styleable {
      * top right corner causing the node to layout children and draw from
      * right to left using a mirroring transformation.  Some nodes may wish
      * to draw from right to left without using a transformation.  These
-     * nodes will will answer {@code false} and implement right-to-left
+     * nodes will answer {@code false} and implement right-to-left
      * orientation without using the automatic transformation.
      * </p>
      * @return true if this {@code Node} should be mirrored
@@ -8171,21 +8204,37 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Called when the current node was removed from the scene graph.
-     * If the current node has the focusWithin bit, we also need to clear the focusWithin bits of this
-     * node's parents. Note that a scene graph can have more than a single focused node, for example when
-     * a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
+     * Called when the current node was removed from or added to the scene graph.
+     * If the current node has the focusWithin bit, we also need to clear and set the focusWithin bits of this
+     * node's old and new parents. Note that a scene graph can have more than a single focused node, for example
+     * when a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
      * focus, we need to adjust the focus-within count on all parents of the node.
      */
-    private void clearParentsFocusWithin(Node oldParent) {
-        if (oldParent != null && focusWithin.get()) {
-            Node node = oldParent;
-            while (node != null) {
-                node.focusWithin.adjust(-focusWithin.count);
-                node = node.getParent();
-            }
+    private void updateParentsFocusWithin(Node oldParent, Node newParent) {
+        if (!focusWithin.get()) {
+            return;
+        }
 
+        Node node = oldParent;
+        while (node != null) {
+            node.focusWithin.adjust(-focusWithin.count);
+            node = node.getParent();
+        }
+
+        node = newParent;
+        while (node != null) {
+            node.focusWithin.adjust(focusWithin.count);
+            node = node.getParent();
+        };
+
+        // Since focus changes are atomic, we only fire change notifications after
+        // all changes are committed on all old and new parents.
+        if (oldParent != null) {
             oldParent.notifyFocusListeners();
+        }
+
+        if (newParent != null) {
+            newParent.notifyFocusListeners();
         }
     }
 
@@ -8303,12 +8352,7 @@ public abstract class Node implements EventTarget, Styleable {
          */
         void adjust(int change) {
             count += change;
-
-            if (count == 1) {
-                set(true);
-            } else if (count == 0) {
-                set(false);
-            }
+            set(count > 0);
         }
     };
 

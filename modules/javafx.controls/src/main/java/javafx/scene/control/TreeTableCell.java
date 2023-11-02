@@ -98,8 +98,6 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    // package for testing
-    boolean lockItemOnEdit = false;
 
 
 
@@ -336,12 +334,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             return;
         }
 
-        // We check the boolean lockItemOnEdit field here, as whilst we want to
-        // updateItem normally, when it comes to unit tests we can't have the
-        // item change in all circumstances.
-        if (! lockItemOnEdit) {
-            updateItem(-1);
-        }
+        updateItem(-1);
 
         // it makes sense to get the cell into its editing state before firing
         // the event to listeners below, so that's what we're doing here

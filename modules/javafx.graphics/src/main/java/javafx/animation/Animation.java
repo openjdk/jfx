@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,7 +83,8 @@ import java.security.PrivilegedAction;
  * the {@code Animation} from the specified position.
  * <p>
  * Inverting the value of {@link #rateProperty() rate} toggles the play direction.
- *
+ * <p>
+ * The animation runs on the JavaFX Application Thread.
  * @see Timeline
  * @see Transition
  *
@@ -978,12 +979,15 @@ public abstract class Animation {
      * Note: <ul>
      * <li>{@code play()} is an asynchronous call, the {@code Animation} may not
      * start immediately. </ul>
+     * <p>
+     * This method must be called on the JavaFX Application thread.
      *
-     * @throws IllegalStateException
-     *             if embedded in another animation,
+     * @throws IllegalStateException if this method is called on a thread
+     *                other than the JavaFX Application Thread, or if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void play() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (parent != null) {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
@@ -1035,11 +1039,15 @@ public abstract class Animation {
      * Note: <ul>
      * <li>{@code stop()} is an asynchronous call, the {@code Animation} may not stop
      * immediately. </ul>
-     * @throws IllegalStateException
-     *             if embedded in another animation,
+     * <p>
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *                other than the JavaFX Application Thread, or if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void stop() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (parent != null) {
             throw new IllegalStateException("Cannot stop when embedded in another animation");
         }
@@ -1066,11 +1074,15 @@ public abstract class Animation {
      * Note: <ul>
      * <li>{@code pause()} is an asynchronous call, the {@code Animation} may not pause
      * immediately. </ul>
-     * @throws IllegalStateException
-     *             if embedded in another animation,
+     * <p>
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *                other than the JavaFX Application Thread, or if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void pause() {
+        Toolkit.getToolkit().checkFxUserThread();
         if (parent != null) {
             throw new IllegalStateException("Cannot pause when embedded in another animation");
         }

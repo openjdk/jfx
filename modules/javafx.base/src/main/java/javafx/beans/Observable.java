@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,10 +97,12 @@ public interface Observable {
     void removeListener(InvalidationListener listener);
 
     /**
-     * Creates a {@link Subscription} on this {@code Observable} which calls
-     * {@code invalidationSubscriber} whenever it becomes invalid. If the same
-     * subscriber is subscribed more than once, then it will be notified more
-     * than once. That is, no check is made to ensure uniqueness.
+     * Creates a {@code Subscription} on this {@code Observable} which calls
+     * {@code invalidationSubscriber} whenever it becomes invalid. The provided
+     * subscriber is akin to an {@code InvalidationListener} without the
+     * {@code Observable} parameter. If the same subscriber is subscribed more
+     * than once, then it will be notified more than once. That is, no check is
+     * made to ensure uniqueness.
      * <p>
      * Note that the same subscriber instance may be safely subscribed for
      * different {@code Observables}.

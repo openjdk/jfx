@@ -57,7 +57,7 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 import static org.junit.Assert.*;
 
 public class TreeTableCellTest {
-    private TreeTableCell<String, String> cell;
+    private TreeTableCellShim<String, String> cell;
     private TreeTableView<String> tree;
     private TreeTableRow<String> row;
 
@@ -83,7 +83,7 @@ public class TreeTableCellTest {
             }
         });
 
-        cell = new TreeTableCell<>();
+        cell = new TreeTableCellShim<>();
 
         root = new TreeItem<>(ROOT);
         apples = new TreeItem<>(APPLES);
@@ -1163,7 +1163,7 @@ public class TreeTableCellTest {
          }
          if (editingColumn != null ) cell.updateTableColumn(editingColumn);
          // force into editable state (not empty)
-         TreeTableCellShim.set_lockItemOnEdit(cell, true);
+         cell.setLockItemOnStartEdit(true);
          CellShim.updateItem(cell, "something", false);
      }
 

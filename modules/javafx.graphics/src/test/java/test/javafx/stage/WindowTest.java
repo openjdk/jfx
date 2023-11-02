@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,12 @@ import static junit.framework.Assert.assertNotNull;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-
 import javafx.collections.ObservableList;
+import javafx.scene.Scene;
+import javafx.scene.layout.Region;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
 import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.TKStage;
@@ -172,5 +172,59 @@ public final class WindowTest {
 
         windows.remove(anotherTestWindow);
         assertEquals(initialWindowCount + 1, windows.size());
+    }
+
+    @Test
+    public void testSetWidthAfterSizeToScene() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.sizeToScene();
+        testWindow.setWidth(800);
+        testWindow.show();
+        assertEquals(800.0, testWindow.getWidth());
+        assertEquals(500.0, testWindow.getHeight());
+    }
+
+    @Test
+    public void testSetHeightAfterSizeToScene() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.sizeToScene();
+        testWindow.setHeight(600);
+        testWindow.show();
+        assertEquals(400.0, testWindow.getWidth());
+        assertEquals(600.0, testWindow.getHeight());
+    }
+
+    @Test
+    public void testSetSizeAfterSizeToScene() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.sizeToScene();
+        testWindow.setWidth(800);
+        testWindow.setHeight(600);
+        testWindow.show();
+        assertEquals(800.0, testWindow.getWidth());
+        assertEquals(600.0, testWindow.getHeight());
+    }
+
+    @Test
+    public void testSizeToSceneBeforeShowing() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.sizeToScene();
+        testWindow.show();
+        assertEquals(400.0, testWindow.getWidth());
+        assertEquals(500.0, testWindow.getHeight());
+    }
+
+    @Test
+    public void testSizeToSceneAfterShowing() {
+        final var scene = new Scene(new Region(), 400, 500);
+        testWindow.setScene(scene);
+        testWindow.show();
+        testWindow.sizeToScene();
+        assertEquals(400.0, testWindow.getWidth());
+        assertEquals(500.0, testWindow.getHeight());
     }
 }

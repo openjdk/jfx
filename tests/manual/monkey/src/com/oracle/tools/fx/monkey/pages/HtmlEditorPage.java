@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.scene.web.HTMLEditor;
 
@@ -32,7 +33,7 @@ import javafx.scene.web.HTMLEditor;
  */
 public class HtmlEditorPage extends TestPaneBase {
     public HtmlEditorPage() {
-        setId("HtmlEditorPage");
+        FX.name(this, "HtmlEditorPage");
         HTMLEditor ed = new HTMLEditor();
         setContent(ed);
     }

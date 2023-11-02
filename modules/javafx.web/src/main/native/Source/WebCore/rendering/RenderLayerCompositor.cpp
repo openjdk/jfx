@@ -1196,6 +1196,11 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
 #endif
     }
 
+// in case of video data format like m3u8 error case ,check if layer needs compositing
+#if PLATFORM(JAVA)
+    if (willBeComposited != needsToBeComposited(layer, queryData))
+        return;
+#endif
     ASSERT(willBeComposited == needsToBeComposited(layer, queryData));
 
     // Create or destroy backing here. However, we can't update geometry because layers above us may become composited
