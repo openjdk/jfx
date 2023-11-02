@@ -90,6 +90,7 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     @Override public boolean remove(MenuItemDelegate item, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)item;
         _remove(ptr, macMenu == null ? 0L : macMenu.ptr, pos);
+        macMenu.ptr = 0L;
         return true;
     }
 
