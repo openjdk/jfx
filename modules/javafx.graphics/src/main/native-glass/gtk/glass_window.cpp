@@ -1210,6 +1210,15 @@ void WindowContextTop::set_alpha(double alpha) {
 void WindowContextTop::set_enabled(bool enabled) {
     is_disabled = !enabled;
     update_window_constraints();
+
+    // If the window is disabled, not interaction is allowed
+    if (enabled) {
+        gdk_window_set_functions(gdk_window, gdk_windowManagerFunctions);
+    } else {
+        //Don't allow window manager functions
+        GdkWMFunction wmf = (GdkWMFunction)(0);
+        gdk_window_set_functions(gdk_window, wmf);
+    }
 }
 
 void WindowContextTop::set_minimum_size(int w, int h) {
