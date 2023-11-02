@@ -254,6 +254,11 @@ public abstract class StyledSegment {
             public StyledSegment subSegment(int start, int end) {
                 return this;
             }
+
+            @Override
+            public String toString() {
+                return "StyledSegment{par.attrs=" + attrs + "}";
+            }
         };
     }
 

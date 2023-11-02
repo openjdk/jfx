@@ -61,6 +61,7 @@ public class TestRichTextFormatHandler {
         StyledSegment seg;
         while ((seg = in.nextSegment()) != null) {
             segments.add(seg);
+            System.out.println(seg);
         }
 
         StringWriter wr = new StringWriter();

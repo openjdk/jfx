@@ -61,7 +61,7 @@ import javafx.scene.paint.Color;
  * Character attribute tokens:
  * <ol>
  *   <li>`B - bold typeface
- *   <li>`Crrggbb - text color with hex RGB values
+ *   <li>`CRRGGBB - text color with hex RGB values
  *   <li>`Fstring - font family
  *   <li>`I - italic typeface
  *   <li>`T - strike-through
@@ -69,6 +69,7 @@ import javafx.scene.paint.Color;
  *   <li>`Zdouble - font size
  * </ol>
  * Paragraph attribute tokens:
+ *   <li>`bRRGGBBAA - paragraph background color
  *   <li>`R - right-to-left
  * <ol>
  * TODO
@@ -81,6 +82,7 @@ import javafx.scene.paint.Color;
  * </pre>
  */
 public class RichTextFormatHandler extends DataFormatHandler {
+    private static final char TOKEN_BACKGROUND = 'b';
     private static final char TOKEN_BOLD = 'B';
     private static final char TOKEN_FONT_FAMILY = 'F';
     private static final char TOKEN_FONT_SIZE = 'Z';
@@ -160,9 +162,11 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     // TODO this may return an object, for paragraph Node `P or Inline Node `N segments, or StyleAttrs.
                     StyleAttrs a = decodeStyleAttrs();
                     String text = decodeText();
-                    if(text.length() == 0) {
+                    if (text.length() == 0) {
                         StyleAttrs pa = a.getParagraphAttrs();
-                        return StyledSegment.ofParagraphAttributes(pa);
+                        if (pa != null) {
+                            return StyledSegment.ofParagraphAttributes(pa);
+                        }
                     }
                     return StyledSegment.of(text, a);
                 }
@@ -249,18 +253,25 @@ public class RichTextFormatHandler extends DataFormatHandler {
         }
 
         private StyleAttrs decodeStyleAttrs() throws IOException {
-            // TODO read to style terminator, then parse styles
             StyleAttrs.Builder b = StyleAttrs.builder();
             for(;;) {
                 int c = charAt(0);
                 index++;
                 switch(c) {
+                case TOKEN_BACKGROUND:
+                    {
+                        Color col = decodeColor(true);
+                        b.setBackground(col);
+                    }
+                    break;
                 case TOKEN_BOLD:
                     b.setBold(true);
                     break;
                 case TOKEN_TEXT_COLOR:
-                    Color col = decodeColor();
-                    b.setTextColor(col);
+                    {
+                        Color col = decodeColor(false);
+                        b.setTextColor(col);
+                    }
                     break;
                 case TOKEN_FONT_FAMILY:
                     String fam = decodeText();
@@ -325,14 +336,21 @@ public class RichTextFormatHandler extends DataFormatHandler {
             throw new IOException("expecting style terminator, index=" + index);
         }
 
-        private Color decodeColor() throws IOException {
+        private Color decodeColor(boolean withAlpha) throws IOException {
             int r = decodeHexByte();
             index++;
             int g = decodeHexByte();
             index++;
             int b = decodeHexByte();
             index++;
-            return Color.rgb(r, g, b);
+            double a;
+            if (withAlpha) {
+                a = decodeHexByte() / 255.0;
+                index++;
+            } else {
+                a = 1.0;
+            }
+            return Color.rgb(r, g, b, a);
         }
 
         private int decodeInt() throws IOException {
@@ -408,27 +426,25 @@ public class RichTextFormatHandler extends DataFormatHandler {
                         if (num == null) {
                             int sz = styles.size();
                             styles.put(a, Integer.valueOf(sz));
-                            
-                            // BACKGROUND LINE_SPACING RTL SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT TEXT_ALIGNMENT 
-    
-                            // write style info
+
+                            // TODO
+                            // LINE_SPACING SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT TEXT_ALIGNMENT 
+
+                            Color c = a.getBackground();
+                            if (c != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_BACKGROUND);
+                                wr.write(toHex8(c.getRed()));
+                                wr.write(toHex8(c.getGreen()));
+                                wr.write(toHex8(c.getBlue()));
+                                wr.write(toHex8(c.getOpacity()));
+                            }
+
                             if (a.isRTL()) {
                                 wr.write('`');
                                 wr.write(TOKEN_RTL);
                             }
-    
-//                            if (a.isItalic()) {
-//                                wr.write("`I");
-//                            }
-//    
-//                            if (a.isStrikeThrough()) {
-//                                wr.write("`T");
-//                            }
-//    
-//                            if (a.isUnderline()) {
-//                                wr.write("`U");
-//                            }
-//    
+ 
 //                            String s = a.getFontFamily();
 //                            if (s != null) {
 //                                wr.write("`F");
@@ -439,14 +455,6 @@ public class RichTextFormatHandler extends DataFormatHandler {
 //                            if (n != null) {
 //                                wr.write("`Z");
 //                                wr.write(RichUtils.formatDouble(n));
-//                            }
-//    
-//                            Color c = a.getTextColor();
-//                            if (c != null) {
-//                                wr.write("`C");
-//                                wr.write(toHex8(c.getRed()));
-//                                wr.write(toHex8(c.getGreen()));
-//                                wr.write(toHex8(c.getBlue()));
 //                            }
                         } else {
                             // write cached style id number

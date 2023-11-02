@@ -242,6 +242,14 @@ public class StyleAttrs {
     }
 
     /**
+     * This convenience method returns the value of {@link #BACKGROUND} attribute, or null.
+     * @return the background color attribute value
+     */
+    public final Color getBackground() {
+        return (Color)get(BACKGROUND);
+    }
+
+    /**
      * This convenience method returns the value of {@link #CSS} attribute, or null.
      * @return the css style attribute value
      */

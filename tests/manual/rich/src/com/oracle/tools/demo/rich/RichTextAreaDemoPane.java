@@ -507,6 +507,12 @@ public class RichTextAreaDemoPane extends BorderPane {
             items.add(cm = new CheckMenuItem("RTL Orientation"));
             cm.setSelected(a.getBoolean(StyleAttrs.RTL));
             cm.setOnAction((ev) -> applyStyle(StyleAttrs.RTL, !a.getBoolean(StyleAttrs.RTL)));
+
+            items.add(m2 = new Menu("Background Color"));
+            backgroundMenu(m2, "Gray", Color.GRAY, 1.0);
+            backgroundMenu(m2, "Gray 10%", Color.GRAY, 0.1);
+            backgroundMenu(m2, "Gray 20%", Color.GRAY, 0.2);
+            backgroundMenu(m2, "Yellow", Color.YELLOW, 1.0);
         }
 
         items.add(new SeparatorMenuItem());
@@ -535,6 +541,15 @@ public class RichTextAreaDemoPane extends BorderPane {
             applyStyle(StyleAttrs.SPACE_BELOW, bottom);
             applyStyle(StyleAttrs.SPACE_LEFT, left);
             applyStyle(StyleAttrs.SPACE_RIGHT, right);
+        });
+    }
+
+    private void backgroundMenu(Menu menu, String name, Color color, double alpha) {
+        Color c = FX.alpha(color, alpha);
+        MenuItem m = new MenuItem(name);
+        menu.getItems().add(m);
+        m.setOnAction((ev) -> {
+            applyStyle(StyleAttrs.BACKGROUND, c);
         });
     }
 
