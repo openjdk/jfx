@@ -58,10 +58,8 @@ void fsample(jfloat *img,
              jfloat *fvals);
 
 bool checkRange(JNIEnv *env,
-                jintArray dstPixels_arr,
-                jint dstw, jint dsth,
-                jintArray srcPixels_arr,
-                jint srcw, jint srch);
+                jintArray dstPixels_arr, jint dstw, jint dsth,
+                jintArray srcPixels_arr, jint srcw, jint srch);
 
 #ifdef __cplusplus
 };

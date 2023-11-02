@@ -39,10 +39,8 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxBlurPeer_filterHorizontal
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan)
 {
     if ((checkRange(env,
-                    dstPixels_arr,
-                    dstw, dsth,
-                    srcPixels_arr,
-                    srcw, srch)) ||
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
         dsth > srch) { // We should not move out of source vertical bounds
         return;
     }
@@ -99,10 +97,8 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxBlurPeer_filterVertical
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan)
 {
     if ((checkRange(env,
-                    dstPixels_arr,
-                    dstw, dsth,
-                    srcPixels_arr,
-                    srcw, srch)) ||
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
         dstw > srcw) { // We should not move out of source horizontal bounds
         return;
     }
@@ -168,10 +164,8 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxBlurPeer_filterTranspose
      jint ksize)
 {
     if ((checkRange(env,
-                    dstPixels_arr,
-                    dstw, dsth,
-                    srcPixels_arr,
-                    srcw, srch)) ||
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
         dstw > srcw) { // We should not move out of source horizontal bounds
         return;
     }

@@ -119,10 +119,8 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSELinearConvolveShadowPeer_filterHV
      jfloatArray kvals_arr, jfloatArray shadowColor_arr)
 {
     if ((checkRange(env,
-                    dstPixels_arr,
-                    dstcols, dstrows,
-                    srcPixels_arr,
-                    srccols, srcrows)) ||
+                    dstPixels_arr, dstcols, dstrows,
+                    srcPixels_arr, srccols, srcrows)) ||
         dstrows > srcrows) { // We should not move out of source vertical bounds
         return;
     }

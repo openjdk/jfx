@@ -40,10 +40,8 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterHorizontalBlack
      jfloat spread)
 {
     if ((checkRange(env,
-                    dstPixels_arr,
-                    dstw, dsth,
-                    srcPixels_arr,
-                    srcw, srch)) ||
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
         dsth > srch) { // We should not move out of source vertical bounds
         return;
     }
@@ -96,10 +94,8 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterVerticalBlack
      jfloat spread)
 {
     if ((checkRange(env,
-                    dstPixels_arr,
-                    dstw, dsth,
-                    srcPixels_arr,
-                    srcw, srch)) ||
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
         dstw > srcw) { // We should not move out of source horizontal bounds
         return;
     }
@@ -153,10 +149,8 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterVertical
      jfloat spread, jfloatArray shadowColor_arr)
 {
     if ((checkRange(env,
-                    dstPixels_arr,
-                    dstw, dsth,
-                    srcPixels_arr,
-                    srcw, srch)) ||
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
         dstw > srcw) { // We should not move out of source horizontal bounds
         return;
     }

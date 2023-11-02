@@ -190,10 +190,8 @@ void fsample(jfloat *map,
  * if dimensions are within required bounds.
  */
 bool checkRange(JNIEnv *env,
-                jintArray dstPixels_arr,
-                jint dstw, jint dsth,
-                jintArray srcPixels_arr,
-                jint srcw, jint srch)
+                jintArray dstPixels_arr, jint dstw, jint dsth,
+                jintArray srcPixels_arr, jint srcw, jint srch)
 {
     return (srcPixels_arr == NULL ||
             dstPixels_arr == NULL ||
