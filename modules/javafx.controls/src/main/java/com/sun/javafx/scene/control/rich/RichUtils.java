@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import java.io.IOException;
 import java.text.DecimalFormat;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -298,5 +299,34 @@ public class RichUtils {
 
     public static String formatDouble(Double value) {
         return format.format(value);
+    }
+
+    public static char encodeAlignment(TextAlignment a) {
+        switch (a) {
+        case CENTER:
+            return 'C';
+        case JUSTIFY:
+            return 'J';
+        case RIGHT:
+            return 'R';
+        case LEFT:
+        default:
+            return 'L';
+        }
+    }
+
+    public static TextAlignment decodeAlignment(int c) throws IOException {
+        switch (c) {
+        case 'C':
+            return TextAlignment.CENTER;
+        case 'J':
+            return TextAlignment.JUSTIFY;
+        case 'L':
+            return TextAlignment.LEFT;
+        case 'R':
+            return TextAlignment.RIGHT;
+        default:
+            throw new IOException("failed parsing alignment (" + (char)c + ")");
+        }
     }
 }

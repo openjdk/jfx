@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.rich;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -45,6 +44,7 @@ import javafx.scene.control.rich.model.StyledOutput;
 import javafx.scene.control.rich.model.StyledSegment;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
 
 /**
  * DataFormatHandler for use with attribute-based rich text models.
@@ -89,6 +89,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final char TOKEN_ITALIC = 'I';
     private static final char TOKEN_RTL = 'R';
     private static final char TOKEN_STRIKE_THROUGH = 'T';
+    private static final char TOKEN_TEXT_ALIGNMENT = 'A';
     private static final char TOKEN_TEXT_COLOR = 'C';
     private static final char TOKEN_UNDERLINE = 'U';
 
@@ -202,7 +203,14 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 index++;
             }
         }
-        
+
+        private TextAlignment decodeAlignment() throws IOException {
+            int c = charAt(0);
+            TextAlignment a = RichUtils.decodeAlignment(c);
+            index++;
+            return a;
+        }
+
         private String decodeText(int start, int ix) throws IOException {
             if(sb == null) {
                 sb = new StringBuilder();
@@ -267,12 +275,6 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 case TOKEN_BOLD:
                     b.setBold(true);
                     break;
-                case TOKEN_TEXT_COLOR:
-                    {
-                        Color col = decodeColor(false);
-                        b.setTextColor(col);
-                    }
-                    break;
                 case TOKEN_FONT_FAMILY:
                     String fam = decodeText();
                     b.setFontFamily(fam);
@@ -285,6 +287,18 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     break;
                 case TOKEN_STRIKE_THROUGH:
                     b.setStrikeThrough(true);
+                    break;
+                case TOKEN_TEXT_ALIGNMENT:
+                    {
+                        TextAlignment a = decodeAlignment();
+                        b.setTextAlignment(a);
+                    }
+                break;
+                case TOKEN_TEXT_COLOR:
+                    {
+                        Color col = decodeColor(false);
+                        b.setTextColor(col);
+                    }
                     break;
                 case TOKEN_UNDERLINE:
                     b.setUnderline(true);
@@ -438,6 +452,13 @@ public class RichTextFormatHandler extends DataFormatHandler {
                                 wr.write(toHex8(c.getGreen()));
                                 wr.write(toHex8(c.getBlue()));
                                 wr.write(toHex8(c.getOpacity()));
+                            }
+
+                            TextAlignment al = a.getTextAlignment();
+                            if (al != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_TEXT_ALIGNMENT);
+                                wr.write(RichUtils.encodeAlignment(al));
                             }
 
                             if (a.isRTL()) {

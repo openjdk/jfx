@@ -258,6 +258,14 @@ public class StyleAttrs {
     }
 
     /**
+     * This convenience method returns the value of {@link #TEXT_ALIGNMENT} attribute, or null.
+     * @return the paragraph alignment attribute value
+     */
+    public final TextAlignment getTextAlignment() {
+        return (TextAlignment)get(TEXT_ALIGNMENT);
+    }
+
+    /**
      * This convenience method returns the value of {@link #TEXT_COLOR} attribute, or null.
      * @return the text color attribute value
      */

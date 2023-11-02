@@ -39,6 +39,8 @@ import com.sun.javafx.scene.control.rich.RichTextFormatHandler;
  * Tests RichTextFormatHandler.
  */
 public class TestRichTextFormatHandler {
+    private static final boolean DEBUG = false;
+
     @Test
     public void testRoundTrip() throws IOException {
         String[] ss = {
@@ -61,7 +63,9 @@ public class TestRichTextFormatHandler {
         StyledSegment seg;
         while ((seg = in.nextSegment()) != null) {
             segments.add(seg);
-            System.out.println(seg);
+            if (DEBUG) {
+                System.out.println(seg);
+            }
         }
 
         StringWriter wr = new StringWriter();
