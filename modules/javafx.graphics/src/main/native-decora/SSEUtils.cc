@@ -184,6 +184,11 @@ void fsample(jfloat *map,
     }
 }
 
+/*
+ * checkRange function returns true if source or destination
+ * dimensions are not in the required bounds and returns false
+ * if dimensions are within required bounds.
+ */
 bool checkRange(JNIEnv *env,
                 jintArray dstPixels_arr,
                 jint dstw, jint dsth,
