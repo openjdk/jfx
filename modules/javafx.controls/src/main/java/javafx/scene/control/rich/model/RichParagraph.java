@@ -79,7 +79,10 @@ public class RichParagraph {
             }
 
             @Override
-            public void export(int start, int end, StyledOutput out) throws IOException {
+            public void export(int start, int end, boolean withParAttrs, StyledOutput out) throws IOException {
+                if (withParAttrs) {
+                    emitParagraphAttrs(out);
+                }
                 StyledSegment seg = StyledSegment.ofRegion(paragraphGenerator);
                 out.append(seg);
             }
@@ -196,19 +199,17 @@ public class RichParagraph {
         return segments == null ? 0 : segments.size();
     }
     
-    public void export(int start, int end, StyledOutput out) throws IOException {
+    public void export(int start, int end, boolean withParAttrs, StyledOutput out) throws IOException {
+        if (withParAttrs) {
+            emitParagraphAttrs(out);
+        }
+
         if (segments == null) {
             out.append(StyledSegment.of(""));
         } else {
             int off = 0;
-            int ct = size();
-            for (int i = 0; i < ct; i++) {
-                // will check at the end in order to emit the empty segment
-                // for its attributes
-//                if (off >= end) {
-//                    return;
-//                }
-
+            int sz = size();
+            for (int i = 0; i < sz; i++) {
                 StyledSegment seg = segments.get(i);
                 String text = seg.getText();
                 int len = (text == null ? 0 : text.length());
@@ -232,5 +233,11 @@ public class RichParagraph {
      */
     public void setParagraphAttributes(StyleAttrs a) {
         paragraphAttributes = a;
+    }
+
+    protected void emitParagraphAttrs(StyledOutput out) throws IOException {
+        if ((paragraphAttributes != null) && !paragraphAttributes.isEmpty()) {
+            out.append(StyledSegment.ofParagraphAttributes(paragraphAttributes));
+        }
     }
 }

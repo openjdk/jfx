@@ -304,7 +304,6 @@ public abstract class StyledTextModel {
      */
     protected void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
         markers.update(start, end, charsTop, linesAdded, charsBottom);
-
         for (ChangeListener li : listeners) {
             li.eventTextUpdated(start, end, charsTop, linesAdded, charsBottom);
         }
@@ -332,6 +331,16 @@ public abstract class StyledTextModel {
     }
 
     /**
+     * Returns the length of text in a paragraph at the specified index.
+     * @param ix the paragraph index in the model
+     * @return the length
+     */
+    public int getTextLength(int ix) {
+        String s = getPlainText(ix);
+        return (s == null) ? 0 : s.length();
+    }
+
+    /**
      * Sends the styled text in the given range to the specified output.
      * @param start start of the range
      * @param end end of the range
@@ -350,12 +359,16 @@ public abstract class StyledTextModel {
         int ix0 = start.index();
         int ix1 = end.index();
         if (ix0 == ix1) {
-            // part of one line
-            exportParagraph(start.index(), start.offset(), end.offset(), out);
+            // single line
+            int soff = start.offset();
+            int eoff = end.offset();
+            int len = getTextLength(ix0);
+            boolean withParAttrs = ((soff == 0) && ((eoff >= len) || (eoff < 0)));
+            exportParagraph(ix0, soff, eoff, withParAttrs, out);
         } else {
             // multi-line
             boolean lineBreak = false;
-            for (int ix = start.index(); ix <= end.index(); ix++) {
+            for (int ix = ix0; ix <= ix1; ix++) {
                 if (lineBreak) {
                     out.append(StyledSegment.LINE_BREAK);
                 } else {
@@ -375,7 +388,7 @@ public abstract class StyledTextModel {
                     off1 = Integer.MAX_VALUE;
                 }
 
-                exportParagraph(ix, off0, off1, out);
+                exportParagraph(ix, off0, off1, true, out);
             }
         }
 
@@ -386,17 +399,19 @@ public abstract class StyledTextModel {
      * Exports part of the paragraph as a sequence of styled segments.
      * The caller guarantees that the start position precedes the end.
      * The subclass may override this method to provide a more performant implementation.
-     * 
-     * @param index paragraph's model index
-     * @param start start offset
-     * @param end end offset (may exceed the paragraph text length)
-     * @param out receiving StyledOutput
+     * The paragraph end argument may exceed the acutal length of the paragraph, in which case it
+     * should be treated as equal to the paragraph text length.
+     *
+     * @param index the paragraph index in the model
+     * @param start the start offset
+     * @param end the end offset (may exceed the paragraph length)
+     * @param withParAttrs determines whether to emit paragraph attributes
+     * @param out the target StyledOutput
      * @throws IOException when an I/O error occurs
      */
-    protected void exportParagraph(int index, int start, int end, StyledOutput out) throws IOException {
-        // TODO it's unclear what to do with the highlights and the paragraph attributes
+    protected void exportParagraph(int index, int start, int end, boolean withParAttrs, StyledOutput out) throws IOException {
         RichParagraph par = getParagraph(index);
-        par.export(start, end, out);
+        par.export(start, end, withParAttrs, out);
     }
 
     /**
@@ -423,8 +438,7 @@ public abstract class StyledTextModel {
             return TextPos.ZERO;
         } else if (ix < ct) {
             // clamp to paragraph length
-            String s = getPlainText(ix);
-            int len = (s == null ? 0 : s.length());
+            int len = getTextLength(ix);
             if (p.offset() < len) {
                 return p;
             }
@@ -434,8 +448,7 @@ public abstract class StyledTextModel {
                 return TextPos.ZERO;
             } else {
                 ix = ct - 1;
-                String s = getPlainText(ix);
-                int len = s.length();
+                int len = getTextLength(ix);
                 return new TextPos(ct - 1, len);
             }
         }
@@ -460,8 +473,7 @@ public abstract class StyledTextModel {
      * @return the text position
      */
     public TextPos getEndOfParagraphTextPos(int index) {
-        String text = getPlainText(index);
-        int off = (text == null ? 0 : text.length());
+        int off = getTextLength(index);
         int cix = off - 1;
         if (cix < 0) {
             return new TextPos(index, off);

@@ -52,12 +52,12 @@ public class EditableRichTextModel extends StyledTextModel {
      * Creates an empty model.
      */
     public EditableRichTextModel() {
-        paragraphs.add(new RParagraph());
-
         registerDataFormatHandler(new RichTextFormatHandler(), Integer.MAX_VALUE);
         registerDataFormatHandler(new RtfFormatHandler(), 1000);
         registerDataFormatHandler(new HtmlExportFormatHandler(), true, 100);
         registerDataFormatHandler(new PlainTextFormatHandler(), 0);
+        // always has at least one paragraph
+        paragraphs.add(new RParagraph());
     }
 
     @Override
@@ -73,6 +73,11 @@ public class EditableRichTextModel extends StyledTextModel {
     @Override
     public String getPlainText(int index) {
         return paragraphs.get(index).getPlainText();
+    }
+
+    @Override
+    public int getTextLength(int index) {
+        return paragraphs.get(index).getTextLength();
     }
 
     @Override

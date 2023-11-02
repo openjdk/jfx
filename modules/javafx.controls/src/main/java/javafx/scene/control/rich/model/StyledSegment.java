@@ -231,7 +231,7 @@ public abstract class StyledSegment {
     }
 
     /**
-     * Creates a StyledSegment which contains paragraph attributes.
+     * Creates a StyledSegment which contains paragraph attributes only.
      * @param attrs the paragraph attributes
      * @return the StyledSegment instance
      */

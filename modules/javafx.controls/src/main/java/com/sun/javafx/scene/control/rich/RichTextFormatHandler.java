@@ -379,6 +379,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 break;
             case PARAGRAPH_ATTRIBUTES:
                 // TODO
+                System.out.println(seg.getStyleAttrs(resolver));
                 break;
             case REGION:
                 // TODO
