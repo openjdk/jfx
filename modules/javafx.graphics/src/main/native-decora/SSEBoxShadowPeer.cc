@@ -39,6 +39,13 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterHorizontalBlack
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan,
      jfloat spread)
 {
+    if ((checkRange(env,
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
+        dsth > srch) { // We should not move out of source vertical bounds
+        return;
+    }
+
     jint *srcPixels = (jint *)env->GetPrimitiveArrayCritical(srcPixels_arr, 0);
     if (srcPixels == NULL) return;
     jint *dstPixels = (jint *)env->GetPrimitiveArrayCritical(dstPixels_arr, 0);
@@ -86,6 +93,13 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterVerticalBlack
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan,
      jfloat spread)
 {
+    if ((checkRange(env,
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
+        dstw > srcw) { // We should not move out of source horizontal bounds
+        return;
+    }
+
     jint *srcPixels = (jint *)env->GetPrimitiveArrayCritical(srcPixels_arr, 0);
     if (srcPixels == NULL) return;
     jint *dstPixels = (jint *)env->GetPrimitiveArrayCritical(dstPixels_arr, 0);
@@ -134,6 +148,13 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSEBoxShadowPeer_filterVertical
      jintArray srcPixels_arr, jint srcw, jint srch, jint srcscan,
      jfloat spread, jfloatArray shadowColor_arr)
 {
+    if ((checkRange(env,
+                    dstPixels_arr, dstw, dsth,
+                    srcPixels_arr, srcw, srch)) ||
+        dstw > srcw) { // We should not move out of source horizontal bounds
+        return;
+    }
+
     jfloat shadowColor[4];
     env->GetFloatArrayRegion(shadowColor_arr, 0, 4, shadowColor);
 
