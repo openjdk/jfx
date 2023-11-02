@@ -276,12 +276,12 @@ public class StyleAttrs {
     }
 
     /**
-     * This convenience method returns true if the value of {@link #UNDERLINE} attribute is {@code Boolean.TRUE},
+     * This convenience method returns true if the value of {@link #RTL} paragraph attribute is {@code Boolean.TRUE},
      * false otherwise.
-     * @return the underline attribute value
+     * @return the right-to-left paragraph attribute value
      */
-    public final boolean isUnderline() {
-        return getBoolean(UNDERLINE);
+    public final boolean isRTL() {
+        return getBoolean(RTL);
     }
 
     /**
@@ -291,6 +291,15 @@ public class StyleAttrs {
      */
     public final boolean isStrikeThrough() {
         return getBoolean(STRIKE_THROUGH);
+    }
+
+    /**
+     * This convenience method returns true if the value of {@link #UNDERLINE} attribute is {@code Boolean.TRUE},
+     * false otherwise.
+     * @return the underline attribute value
+     */
+    public final boolean isUnderline() {
+        return getBoolean(UNDERLINE);
     }
 
     /**
@@ -535,6 +544,16 @@ public class StyleAttrs {
          */
         public Builder setItalic(boolean on) {
             set(ITALIC, Boolean.valueOf(on));
+            return this;
+        }
+
+        /**
+         * Sets the right-to-left paragraph attribute.
+         * @param on true for RTL
+         * @return this Builder instance
+         */
+        public Builder setRTL(boolean on) {
+            set(RTL, Boolean.valueOf(on));
             return this;
         }
 

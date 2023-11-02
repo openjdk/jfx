@@ -58,7 +58,7 @@ import javafx.scene.paint.Color;
  * Certain symbols such as backtick and percent character (%) are escaped using %XX sequences where 
  * XX is a two-character hexadecimal character value.
  * <p>
- * Style tokens are:
+ * Character attribute tokens:
  * <ol>
  *   <li>`B - bold typeface
  *   <li>`Crrggbb - text color with hex RGB values
@@ -68,12 +68,28 @@ import javafx.scene.paint.Color;
  *   <li>`U - underline
  *   <li>`Zdouble - font size
  * </ol>
+ * Paragraph attribute tokens:
+ *   <li>`R - right-to-left
+ * <ol>
+ * TODO
+ * BACKGROUND LINE_SPACING RTL SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT TEXT_ALIGNMENT
+ *   <li>`B - bold typeface
+ * </ol>
  * In addition, any subsequent occurence of a style is simplified by providing its number using {@code 'num} sequence:
  * <pre>
  *   `0 ... `2147483647
  * </pre>
  */
 public class RichTextFormatHandler extends DataFormatHandler {
+    private static final char TOKEN_BOLD = 'B';
+    private static final char TOKEN_FONT_FAMILY = 'F';
+    private static final char TOKEN_FONT_SIZE = 'Z';
+    private static final char TOKEN_ITALIC = 'I';
+    private static final char TOKEN_RTL = 'R';
+    private static final char TOKEN_STRIKE_THROUGH = 'T';
+    private static final char TOKEN_TEXT_COLOR = 'C';
+    private static final char TOKEN_UNDERLINE = 'U';
+
     public RichTextFormatHandler() {
         super(EditableRichTextModel.DATA_FORMAT);
     }
@@ -144,6 +160,10 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     // TODO this may return an object, for paragraph Node `P or Inline Node `N segments, or StyleAttrs.
                     StyleAttrs a = decodeStyleAttrs();
                     String text = decodeText();
+                    if(text.length() == 0) {
+                        StyleAttrs pa = a.getParagraphAttrs();
+                        return StyledSegment.ofParagraphAttributes(pa);
+                    }
                     return StyledSegment.of(text, a);
                 }
                 String text = decodeText();
@@ -235,27 +255,30 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 int c = charAt(0);
                 index++;
                 switch(c) {
-                case 'B':
+                case TOKEN_BOLD:
                     b.setBold(true);
                     break;
-                case 'C':
+                case TOKEN_TEXT_COLOR:
                     Color col = decodeColor();
                     b.setTextColor(col);
                     break;
-                case 'F':
+                case TOKEN_FONT_FAMILY:
                     String fam = decodeText();
                     b.setFontFamily(fam);
                     break;
-                case 'I':
+                case TOKEN_ITALIC:
                     b.setItalic(true);
                     break;
-                case 'T':
+                case TOKEN_RTL:
+                    b.setRTL(true);
+                    break;
+                case TOKEN_STRIKE_THROUGH:
                     b.setStrikeThrough(true);
                     break;
-                case 'U':
+                case TOKEN_UNDERLINE:
                     b.setUnderline(true);
                     break;
-                case 'Z':
+                case TOKEN_FONT_SIZE:
                     double size = decodeDouble();
                     b.setFontSize(size);
                     break;
@@ -378,69 +401,131 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 wr.write("\n");
                 break;
             case PARAGRAPH_ATTRIBUTES:
-                // TODO
-                System.out.println(seg.getStyleAttrs(resolver));
+                {
+                    StyleAttrs a = seg.getStyleAttrs(resolver);
+                    if ((a != null) && (!a.isEmpty())) {
+                        Integer num = styles.get(a);
+                        if (num == null) {
+                            int sz = styles.size();
+                            styles.put(a, Integer.valueOf(sz));
+                            
+                            // BACKGROUND LINE_SPACING RTL SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT TEXT_ALIGNMENT 
+    
+                            // write style info
+                            if (a.isRTL()) {
+                                wr.write('`');
+                                wr.write(TOKEN_RTL);
+                            }
+    
+//                            if (a.isItalic()) {
+//                                wr.write("`I");
+//                            }
+//    
+//                            if (a.isStrikeThrough()) {
+//                                wr.write("`T");
+//                            }
+//    
+//                            if (a.isUnderline()) {
+//                                wr.write("`U");
+//                            }
+//    
+//                            String s = a.getFontFamily();
+//                            if (s != null) {
+//                                wr.write("`F");
+//                                wr.write(encode(s));
+//                            }
+//    
+//                            Double n = a.getFontSize();
+//                            if (n != null) {
+//                                wr.write("`Z");
+//                                wr.write(RichUtils.formatDouble(n));
+//                            }
+//    
+//                            Color c = a.getTextColor();
+//                            if (c != null) {
+//                                wr.write("`C");
+//                                wr.write(toHex8(c.getRed()));
+//                                wr.write(toHex8(c.getGreen()));
+//                                wr.write(toHex8(c.getBlue()));
+//                            }
+                        } else {
+                            // write cached style id number
+                            wr.write("`");
+                            wr.write(String.valueOf(num));
+                        }
+                        wr.write("``");
+                    }
+                }
                 break;
             case REGION:
                 // TODO
                 break;
             case TEXT:
-                // TODO use caching resolver with #
-                // the model manages actual attributes
-                StyleAttrs a = seg.getStyleAttrs(resolver);
-                if ((a != null) && (!a.isEmpty())) {
-                    Integer num = styles.get(a);
-                    if (num == null) {
-                        int sz = styles.size();
-                        styles.put(a, Integer.valueOf(sz));
-
-                        // write style info
-                        if (a.isBold()) {
-                            wr.write("`B");
+                {
+                    // TODO use caching resolver with #
+                    // the model manages actual attributes
+                    StyleAttrs a = seg.getStyleAttrs(resolver);
+                    if ((a != null) && (!a.isEmpty())) {
+                        Integer num = styles.get(a);
+                        if (num == null) {
+                            int sz = styles.size();
+                            styles.put(a, Integer.valueOf(sz));
+    
+                            // write style info
+                            if (a.isBold()) {
+                                wr.write('`');
+                                wr.write(TOKEN_BOLD);
+                            }
+    
+                            if (a.isItalic()) {
+                                wr.write('`');
+                                wr.write(TOKEN_ITALIC);
+                            }
+    
+                            if (a.isStrikeThrough()) {
+                                wr.write('`');
+                                wr.write(TOKEN_STRIKE_THROUGH);
+                            }
+    
+                            if (a.isUnderline()) {
+                                wr.write('`');
+                                wr.write(TOKEN_UNDERLINE);
+                            }
+    
+                            String s = a.getFontFamily();
+                            if (s != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_FONT_FAMILY);
+                                wr.write(encode(s));
+                            }
+    
+                            Double n = a.getFontSize();
+                            if (n != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_FONT_SIZE);
+                                wr.write(RichUtils.formatDouble(n));
+                            }
+    
+                            Color c = a.getTextColor();
+                            if (c != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_TEXT_COLOR);
+                                wr.write(toHex8(c.getRed()));
+                                wr.write(toHex8(c.getGreen()));
+                                wr.write(toHex8(c.getBlue()));
+                            }
+                        } else {
+                            // write cached style id number
+                            wr.write('`');
+                            wr.write(String.valueOf(num));
                         }
-
-                        if (a.isItalic()) {
-                            wr.write("`I");
-                        }
-
-                        if (a.isStrikeThrough()) {
-                            wr.write("`T");
-                        }
-
-                        if (a.isUnderline()) {
-                            wr.write("`U");
-                        }
-
-                        String s = a.getFontFamily();
-                        if (s != null) {
-                            wr.write("`F");
-                            wr.write(encode(s));
-                        }
-
-                        Double n = a.getFontSize();
-                        if (n != null) {
-                            wr.write("`Z");
-                            wr.write(RichUtils.formatDouble(n));
-                        }
-
-                        Color c = a.getTextColor();
-                        if (c != null) {
-                            wr.write("`C");
-                            wr.write(toHex8(c.getRed()));
-                            wr.write(toHex8(c.getGreen()));
-                            wr.write(toHex8(c.getBlue()));
-                        }
-                    } else {
-                        // write cached style id number
-                        wr.write("`");
-                        wr.write(String.valueOf(num));
+                        wr.write("``");
                     }
-                    wr.write("``");
+    
+                    String text = seg.getText();
+                    text = encode(text);
+                    wr.write(text);
                 }
-
-                String text = seg.getText();
-                text = encode(text);
-                wr.write(text);
                 break;
             }
         }

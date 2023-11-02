@@ -1345,6 +1345,9 @@ public class VFlow extends Pane implements StyleResolver {
 
     @Override
     public StyleAttrs resolveStyles(StyleAttrs attrs) {
+        if (attrs == null) {
+            return attrs;
+        }
         CssStyles css = attrs.getCssStyles();
         if (css == null) {
             // no conversion is needed

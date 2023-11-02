@@ -399,7 +399,7 @@ public abstract class StyledTextModel {
      * Exports part of the paragraph as a sequence of styled segments.
      * The caller guarantees that the start position precedes the end.
      * The subclass may override this method to provide a more performant implementation.
-     * The paragraph end argument may exceed the acutal length of the paragraph, in which case it
+     * The paragraph end argument may exceed the actual length of the paragraph, in which case it
      * should be treated as equal to the paragraph text length.
      *
      * @param index the paragraph index in the model
@@ -411,7 +411,14 @@ public abstract class StyledTextModel {
      */
     protected void exportParagraph(int index, int start, int end, boolean withParAttrs, StyledOutput out) throws IOException {
         RichParagraph par = getParagraph(index);
-        par.export(start, end, withParAttrs, out);
+        par.export(start, end, out);
+        if (withParAttrs) {
+            // or get and add conditionally
+            StyleAttrs pa = par.getParagraphAttributes();
+            if ((pa != null) && !pa.isEmpty()) {
+                out.append(StyledSegment.ofParagraphAttributes(pa));
+            }
+        }
     }
 
     /**
@@ -549,7 +556,10 @@ public abstract class StyledTextModel {
                     btm = 0;
                     break;
                 case PARAGRAPH_ATTRIBUTES:
-                    // TODO
+                    StyleAttrs pa = seg.getStyleAttrs(resolver);
+                    if (pa != null) {
+                        applyStyle(index, pa);
+                    }
                     break;
                 case REGION:
                     offset = 0;
