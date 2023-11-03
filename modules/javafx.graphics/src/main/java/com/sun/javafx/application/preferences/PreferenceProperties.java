@@ -235,5 +235,4 @@ final class PreferenceProperties {
             }
         }
     }
-
 }

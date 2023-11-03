@@ -65,5 +65,4 @@ public record ChangedValue(Object oldValue, Object newValue) {
 
         return changed != null ? changed : Map.of();
     }
-
 }

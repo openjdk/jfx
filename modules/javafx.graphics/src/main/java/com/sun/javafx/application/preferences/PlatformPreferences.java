@@ -250,5 +250,4 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
             }
         }
     }
-
 }
