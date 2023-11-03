@@ -1216,7 +1216,8 @@ void WindowContextTop::set_enabled(bool enabled) {
         gdk_window_set_functions(gdk_window, gdk_windowManagerFunctions);
     } else {
         //Don't allow window manager functions
-        GdkWMFunction wmf = (GdkWMFunction)(0);
+        GdkWMFunction wmf = (GdkWMFunction)(gdk_windowManagerFunctions &
+                            ~ (GDK_FUNC_MOVE | GDK_FUNC_MINIMIZE | GDK_FUNC_MAXIMIZE));
         gdk_window_set_functions(gdk_window, wmf);
     }
 }
