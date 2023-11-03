@@ -84,6 +84,7 @@ import javafx.scene.text.TextAlignment;
 public class RichTextFormatHandler extends DataFormatHandler {
     private static final char TOKEN_BACKGROUND = 'b';
     private static final char TOKEN_BOLD = 'B';
+    private static final char TOKEN_BULLET = 'e';
     private static final char TOKEN_FONT_FAMILY = 'F';
     private static final char TOKEN_FONT_SIZE = 'Z';
     private static final char TOKEN_ITALIC = 'I';
@@ -276,6 +277,10 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 case TOKEN_BOLD:
                     b.setBold(true);
                     break;
+                case TOKEN_BULLET:
+                    String bullet = decodeText();
+                    b.setBullet(bullet);
+                    break;
                 case TOKEN_FONT_FAMILY:
                     String fam = decodeText();
                     b.setFontFamily(fam);
@@ -448,7 +453,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             styles.put(a, Integer.valueOf(sz));
 
                             // TODO
-                            // BULLET SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT 
+                            // SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT 
 
                             Color c = a.getBackground();
                             if (c != null) {
@@ -458,6 +463,13 @@ public class RichTextFormatHandler extends DataFormatHandler {
                                 wr.write(toHex8(c.getGreen()));
                                 wr.write(toHex8(c.getBlue()));
                                 wr.write(toHex8(c.getOpacity()));
+                            }
+
+                            String bullet = a.getBullet();
+                            if (bullet != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_BULLET);
+                                wr.write(encode(bullet));
                             }
 
                             Double lineSpacing = a.getLineSpacing();
@@ -478,13 +490,6 @@ public class RichTextFormatHandler extends DataFormatHandler {
                                 wr.write('`');
                                 wr.write(TOKEN_RTL);
                             }
- 
-//                            String s = a.getFontFamily();
-//                            if (s != null) {
-//                                wr.write("`F");
-//                                wr.write(encode(s));
-//                            }
-
                         } else {
                             // write cached style id number
                             wr.write("`");

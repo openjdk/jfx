@@ -250,6 +250,14 @@ public class StyleAttrs {
     }
 
     /**
+     * This convenience method returns the value of {@link #BULLET} attribute, or null.
+     * @return the bullet paragraph attribute value
+     */
+    public final String getBullet() {
+        return (String)get(BULLET);
+    }
+
+    /**
      * This convenience method returns the value of {@link #CSS} attribute, or null.
      * @return the css style attribute value
      */

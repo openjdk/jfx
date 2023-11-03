@@ -27,6 +27,7 @@ package com.oracle.tools.demo.rich;
 
 import java.nio.charset.Charset;
 import java.util.Base64;
+import java.util.Objects;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -513,6 +514,12 @@ public class RichTextAreaDemoPane extends BorderPane {
             backgroundMenu(m2, "Gray 10%", Color.GRAY, 0.1);
             backgroundMenu(m2, "Gray 20%", Color.GRAY, 0.2);
             backgroundMenu(m2, "Yellow", Color.YELLOW, 1.0);
+
+            items.add(m2 = new Menu("Bullet"));
+            bulletMenu(m2, a, "None", null);
+            bulletMenu(m2, a, "●", "●");
+            bulletMenu(m2, a, "○", "○");
+            bulletMenu(m2, a, "♣", "♣");
         }
 
         items.add(new SeparatorMenuItem());
@@ -521,16 +528,29 @@ public class RichTextAreaDemoPane extends BorderPane {
         m.setOnAction((ev) -> control.selectAll());
     }
 
+    private void bulletMenu(Menu menu, StyleAttrs a, String name, String bullet) {
+        CheckMenuItem m = new CheckMenuItem(name);
+        menu.getItems().add(m);
+        m.setSelected(Objects.equals(bullet, a.getBullet()));
+        m.setOnAction((ev) -> {
+            applyStyle(StyleAttrs.BULLET, bullet);
+        });
+    }
+
     private void alignmentMenu(Menu menu, String name, TextAlignment a) {
         MenuItem m = new MenuItem(name);
         menu.getItems().add(m);
-        m.setOnAction((ev) -> applyStyle(StyleAttrs.TEXT_ALIGNMENT, a));
+        m.setOnAction((ev) -> {
+            applyStyle(StyleAttrs.TEXT_ALIGNMENT, a);
+        });
     }
 
     private void lineSpacingMenu(Menu menu, double value) {
         MenuItem m = new MenuItem(String.valueOf(value));
         menu.getItems().add(m);
-        m.setOnAction((ev) -> applyStyle(StyleAttrs.LINE_SPACING, value));
+        m.setOnAction((ev) -> {
+            applyStyle(StyleAttrs.LINE_SPACING, value);
+        });
     }
 
     private void spaceMenu(Menu menu, String name, double top, double right, double bottom, double left) {
