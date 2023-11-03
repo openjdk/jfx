@@ -29,6 +29,9 @@ import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 
+/**
+ * This simple, read-only StyledModel demonstrates various paragraph attributes.
+ */
 public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
     private final static StyleAttrs TITLE = StyleAttrs.builder().
         setFontSize(24).

@@ -144,7 +144,9 @@ public class StyleUtil {
         Generator<T> g = (Generator<T>)generators.get(a);
         if (g != null) {
             T v = attrs.get(a);
-            return g.createCssStyle(v);
+            if (v != null) {
+                return g.createCssStyle(v);
+            }
         }
         return null;
     }

@@ -59,7 +59,7 @@ import javafx.scene.text.TextAlignment;
  * XX is a two-character hexadecimal character value.
  * <p>
  * Character attribute tokens:
- * <ol>
+ * <ul>
  *   <li>`B - bold typeface
  *   <li>`CRRGGBB - text color with hex RGB values
  *   <li>`Fstring - font family
@@ -67,15 +67,19 @@ import javafx.scene.text.TextAlignment;
  *   <li>`T - strike-through
  *   <li>`U - underline
  *   <li>`Zdouble - font size
- * </ol>
+ * </ul>
  * Paragraph attribute tokens:
+ * <ul>
  *   <li>`bRRGGBBAA - paragraph background color
+ *   <li>`estring - bullet
+ *   <li>`Ldouble - line spacing
  *   <li>`R - right-to-left
- * <ol>
- * TODO
- * BACKGROUND LINE_SPACING RTL SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT TEXT_ALIGNMENT
- *   <li>`B - bold typeface
- * </ol>
+ *   <li>`adouble - space above
+ *   <li>`wdouble - space below
+ *   <li>`fdouble - space left
+ *   <li>`rdouble - space right
+ *   <li>`Acode - text alignment (code: C - center, J - justify, L - left, R - right)
+ * </ul>
  * In addition, any subsequent occurence of a style is simplified by providing its number using {@code 'num} sequence:
  * <pre>
  *   `0 ... `2147483647
@@ -90,6 +94,10 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final char TOKEN_ITALIC = 'I';
     private static final char TOKEN_LINE_SPACING = 'L';
     private static final char TOKEN_RTL = 'R';
+    private static final char TOKEN_SPACE_ABOVE = 'a';
+    private static final char TOKEN_SPACE_BELOW = 'w';
+    private static final char TOKEN_SPACE_LEFT = 'f';
+    private static final char TOKEN_SPACE_RIGHT = 'r';
     private static final char TOKEN_STRIKE_THROUGH = 'T';
     private static final char TOKEN_TEXT_ALIGNMENT = 'A';
     private static final char TOKEN_TEXT_COLOR = 'C';
@@ -295,6 +303,22 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 case TOKEN_RTL:
                     b.setRTL(true);
                     break;
+                case TOKEN_SPACE_ABOVE:
+                    double spaceAbove = decodeDouble();
+                    b.setSpaceAbove(spaceAbove);
+                    break;
+                case TOKEN_SPACE_BELOW:
+                    double spaceBelow = decodeDouble();
+                    b.setSpaceBelow(spaceBelow);
+                    break;
+                case TOKEN_SPACE_LEFT:
+                    double spaceLeft = decodeDouble();
+                    b.setSpaceLeft(spaceLeft);
+                    break;
+                case TOKEN_SPACE_RIGHT:
+                    double spaceRight = decodeDouble();
+                    b.setSpaceRight(spaceRight);
+                    break;
                 case TOKEN_STRIKE_THROUGH:
                     b.setStrikeThrough(true);
                     break;
@@ -452,9 +476,6 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             int sz = styles.size();
                             styles.put(a, Integer.valueOf(sz));
 
-                            // TODO
-                            // SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT 
-
                             Color c = a.getBackground();
                             if (c != null) {
                                 wr.write('`');
@@ -489,6 +510,34 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             if (a.isRTL()) {
                                 wr.write('`');
                                 wr.write(TOKEN_RTL);
+                            }
+
+                            Double spaceAbove = a.getSpaceAbove();
+                            if (spaceAbove != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_SPACE_ABOVE);
+                                wr.write(RichUtils.formatDouble(spaceAbove));
+                            }
+
+                            Double spaceBelow = a.getSpaceBelow();
+                            if (spaceBelow != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_SPACE_BELOW);
+                                wr.write(RichUtils.formatDouble(spaceBelow));
+                            }
+
+                            Double spaceLeft = a.getSpaceLeft();
+                            if (spaceLeft != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_SPACE_LEFT);
+                                wr.write(RichUtils.formatDouble(spaceLeft));
+                            }
+
+                            Double spaceRight = a.getSpaceRight();
+                            if (spaceRight != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_SPACE_RIGHT);
+                                wr.write(RichUtils.formatDouble(spaceRight));
                             }
                         } else {
                             // write cached style id number

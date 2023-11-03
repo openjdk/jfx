@@ -42,6 +42,7 @@ import com.sun.javafx.scene.control.rich.RichUtils;
  * An immutable object containing style attributes.
  */
 public class StyleAttrs {
+
     /** an instance with no attributes set */
     public static final StyleAttrs EMPTY = new StyleAttrs(Collections.emptyMap());
 
@@ -266,6 +267,63 @@ public class StyleAttrs {
     }
 
     /**
+     * This convenience method returns the value of the {@link #FONT_SIZE} attribute.
+     * @return the font size
+     */
+    public final Double getFontSize() {
+        return (Double)get(FONT_SIZE);
+    }
+
+    /**
+     * This convenience method returns true if the value of the {@link #FONT_FAMILY} attribute is {@code Boolean.TRUE},
+     * false otherwise.
+     * @return the font family name
+     */
+    public final String getFontFamily() {
+        return (String)get(FONT_FAMILY);
+    }
+
+    /**
+     * This convenience method returns the value of the {@link #LINE_SPACING} attribute, or null.
+     * @return the line spacing value
+     */
+    public Double getLineSpacing() {
+        return (Double)get(LINE_SPACING);
+    }
+    
+    /**
+     * This convenience method returns the value of the {@link #SPACE_ABOVE} attribute, or null.
+     * @return the space above paragraph attribute value
+     */
+    public Double getSpaceAbove() {
+        return (Double)get(SPACE_ABOVE);
+    }
+
+    /**
+     * This convenience method returns the value of the {@link #SPACE_BELOW} attribute, or null.
+     * @return the space below paragraph attribute value
+     */
+    public Double getSpaceBelow() {
+        return (Double)get(SPACE_BELOW);
+    }
+
+    /**
+     * This convenience method returns the value of the {@link #SPACE_LEFT} attribute, or null.
+     * @return the space left paragraph attribute value
+     */
+    public Double getSpaceLeft() {
+        return (Double)get(SPACE_LEFT);
+    }
+
+    /**
+     * This convenience method returns the value of the {@link #SPACE_RIGHT} attribute, or null.
+     * @return the space right paragraph attribute value
+     */
+    public Double getSpaceRight() {
+        return (Double)get(SPACE_RIGHT);
+    }
+
+    /**
      * This convenience method returns the value of {@link #TEXT_ALIGNMENT} attribute, or null.
      * @return the paragraph alignment attribute value
      */
@@ -324,31 +382,6 @@ public class StyleAttrs {
      */
     public final boolean isUnderline() {
         return getBoolean(UNDERLINE);
-    }
-
-    /**
-     * This convenience method returns the value of the {@link #FONT_SIZE} attribute.
-     * @return the font size
-     */
-    public final Double getFontSize() {
-        return (Double)get(FONT_SIZE);
-    }
-
-    /**
-     * This convenience method returns true if the value of the {@link #FONT_FAMILY} attribute is {@code Boolean.TRUE},
-     * false otherwise.
-     * @return the font family name
-     */
-    public final String getFontFamily() {
-        return (String)get(FONT_FAMILY);
-    }
-
-    /**
-     * This convenience method returns the value of the {@link #LINE_SPACING} attribute, or null.
-     * @return the line spacing value
-     */
-    public Double getLineSpacing() {
-        return (Double)get(LINE_SPACING);
     }
 
     /**
