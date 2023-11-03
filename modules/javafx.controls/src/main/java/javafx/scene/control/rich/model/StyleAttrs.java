@@ -49,7 +49,7 @@ public class StyleAttrs {
     public static final StyleAttribute<Color> BACKGROUND = new StyleAttribute<>("BACKGROUND", Color.class, true);
 
     /** Bullet point paragraph attribute */
-    public static final StyleAttribute<String> BULLET = new StyleAttribute<>("BULLET", String.class, false);
+    public static final StyleAttribute<String> BULLET = new StyleAttribute<>("BULLET", String.class, true);
 
     /** Bold typeface attribute */
     public static final StyleAttribute<Boolean> BOLD = new StyleAttribute<>("BOLD", Boolean.class, false);

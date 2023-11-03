@@ -87,6 +87,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
     private static final char TOKEN_FONT_FAMILY = 'F';
     private static final char TOKEN_FONT_SIZE = 'Z';
     private static final char TOKEN_ITALIC = 'I';
+    private static final char TOKEN_LINE_SPACING = 'L';
     private static final char TOKEN_RTL = 'R';
     private static final char TOKEN_STRIKE_THROUGH = 'T';
     private static final char TOKEN_TEXT_ALIGNMENT = 'A';
@@ -282,6 +283,10 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 case TOKEN_ITALIC:
                     b.setItalic(true);
                     break;
+                case TOKEN_LINE_SPACING:
+                    double lineSpacing = decodeDouble();
+                    b.setLineSpacing(lineSpacing);
+                    break;
                 case TOKEN_RTL:
                     b.setRTL(true);
                     break;
@@ -293,7 +298,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                         TextAlignment a = decodeAlignment();
                         b.setTextAlignment(a);
                     }
-                break;
+                    break;
                 case TOKEN_TEXT_COLOR:
                     {
                         Color col = decodeColor(false);
@@ -308,6 +313,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                     b.setFontSize(size);
                     break;
                 case '`':
+                    // reached the end token
                     StyleAttrs a = b.build();
                     attrs.add(a);
                     return a;
@@ -442,7 +448,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
                             styles.put(a, Integer.valueOf(sz));
 
                             // TODO
-                            // LINE_SPACING SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT TEXT_ALIGNMENT 
+                            // BULLET SPACE_ABOVE SPACE_BELOW SPACE_LEFT SPACE_RIGHT 
 
                             Color c = a.getBackground();
                             if (c != null) {
@@ -452,6 +458,13 @@ public class RichTextFormatHandler extends DataFormatHandler {
                                 wr.write(toHex8(c.getGreen()));
                                 wr.write(toHex8(c.getBlue()));
                                 wr.write(toHex8(c.getOpacity()));
+                            }
+
+                            Double lineSpacing = a.getLineSpacing();
+                            if (lineSpacing != null) {
+                                wr.write('`');
+                                wr.write(TOKEN_LINE_SPACING);
+                                wr.write(RichUtils.formatDouble(lineSpacing));
                             }
 
                             TextAlignment al = a.getTextAlignment();
@@ -471,12 +484,7 @@ public class RichTextFormatHandler extends DataFormatHandler {
 //                                wr.write("`F");
 //                                wr.write(encode(s));
 //                            }
-//    
-//                            Double n = a.getFontSize();
-//                            if (n != null) {
-//                                wr.write("`Z");
-//                                wr.write(RichUtils.formatDouble(n));
-//                            }
+
                         } else {
                             // write cached style id number
                             wr.write("`");
