@@ -71,7 +71,7 @@ public class StyleAttrs {
     public static final StyleAttribute<Double> LINE_SPACING = new StyleAttribute<>("LINE_SPACING", Double.class, true);
 
     /** Paragraph right-to-left orientation attribute */
-    public static final StyleAttribute<Boolean> RTL = new StyleAttribute<>("RTL", Boolean.class, true);
+    public static final StyleAttribute<Boolean> RIGHT_TO_LEFT = new StyleAttribute<>("RIGHT_TO_LEFT", Boolean.class, true);
 
     /** Space above the paragraph (top padding) attribute */
     public static final StyleAttribute<Double> SPACE_ABOVE = new StyleAttribute<>("SPACE_ABOVE", Double.class, true);
@@ -358,12 +358,12 @@ public class StyleAttrs {
     }
 
     /**
-     * This convenience method returns true if the value of {@link #RTL} paragraph attribute is {@code Boolean.TRUE},
+     * This convenience method returns true if the value of {@link #RIGHT_TO_LEFT} paragraph attribute is {@code Boolean.TRUE},
      * false otherwise.
      * @return the right-to-left paragraph attribute value
      */
     public final boolean isRTL() {
-        return getBoolean(RTL);
+        return getBoolean(RIGHT_TO_LEFT);
     }
 
     /**
@@ -610,7 +610,7 @@ public class StyleAttrs {
          * @return this Builder instance
          */
         public Builder setRTL(boolean on) {
-            set(RTL, Boolean.valueOf(on));
+            set(RIGHT_TO_LEFT, Boolean.valueOf(on));
             return this;
         }
 

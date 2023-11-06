@@ -506,8 +506,8 @@ public class RichTextAreaDemoPane extends BorderPane {
             spaceMenu(m2, "None", 0, 0, 0, 0);
             
             items.add(cm = new CheckMenuItem("RTL Orientation"));
-            cm.setSelected(a.getBoolean(StyleAttrs.RTL));
-            cm.setOnAction((ev) -> applyStyle(StyleAttrs.RTL, !a.getBoolean(StyleAttrs.RTL)));
+            cm.setSelected(a.getBoolean(StyleAttrs.RIGHT_TO_LEFT));
+            cm.setOnAction((ev) -> applyStyle(StyleAttrs.RIGHT_TO_LEFT, !a.getBoolean(StyleAttrs.RIGHT_TO_LEFT)));
 
             items.add(m2 = new Menu("Background Color"));
             backgroundMenu(m2, "Gray", Color.GRAY, 1.0);
