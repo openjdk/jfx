@@ -74,7 +74,7 @@ public class JFXPanelOrientationTest extends Application {
                 new Label(""),
                 new HBox(10, passButton, failButton), pane);
 
-        stage.setScene(new Scene(rootNode, 600, 250));
+        stage.setScene(new Scene(rootNode, 500, 150));
         stage.show();
         EventQueue.invokeLater(JFXPanelOrientationTest::initSwing);
     }
@@ -107,7 +107,7 @@ public class JFXPanelOrientationTest extends Application {
         p.add(tb, BorderLayout.NORTH);
 
         frame.setContentPane(p);
-        frame.setSize(800, 500);
+        frame.setSize(400, 200);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setTitle("FX TextArea embedded in JFXPanel");
         frame.setVisible(true);
