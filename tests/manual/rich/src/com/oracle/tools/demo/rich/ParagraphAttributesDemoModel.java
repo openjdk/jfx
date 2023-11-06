@@ -25,6 +25,7 @@
 
 package com.oracle.tools.demo.rich;
 
+import javafx.scene.control.rich.model.RtfFormatHandler;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
@@ -43,6 +44,7 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
         build();
 
     public ParagraphAttributesDemoModel() {
+        registerDataFormatHandler(new RtfFormatHandler(), true, 1000);
         insert(this);
     }
     
