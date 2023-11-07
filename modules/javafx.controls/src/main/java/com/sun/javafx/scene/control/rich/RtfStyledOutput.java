@@ -105,6 +105,10 @@ public class RtfStyledOutput implements StyledOutput {
             @Override
             public void flush() throws IOException {
             }
+
+            @Override
+            public void close() throws IOException {
+            }
         };
     }
 
@@ -506,6 +510,11 @@ public class RtfStyledOutput implements StyledOutput {
     @Override
     public void flush() throws IOException {
         writer.flush();
+    }
+    
+    @Override
+    public void close() throws IOException {
+        writer.close();
     }
 
     /** RTF is unable to specify colors inline it seems, needs a color lookup table */

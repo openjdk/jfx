@@ -65,4 +65,8 @@ public class TStyledOutput implements StyledOutput {
     @Override
     public void flush() throws IOException {
     }
+
+    @Override
+    public void close() throws IOException {
+    }
 }

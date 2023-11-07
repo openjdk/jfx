@@ -27,6 +27,7 @@
 
 package com.sun.javafx.scene.control.rich;
 
+import java.io.IOException;
 import java.text.Bidi;
 import java.text.BreakIterator;
 import javafx.animation.KeyFrame;
@@ -43,7 +44,6 @@ import javafx.scene.control.rich.CaretInfo;
 import javafx.scene.control.rich.RichTextArea;
 import javafx.scene.control.rich.TextPos;
 import javafx.scene.control.rich.model.DataFormatHandler;
-import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.util.Util;
@@ -594,7 +594,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
             return new TextPos(start.index(), ix);
         } catch(Exception e) {
             // TODO need to use a logger!
-            System.err.println("offset=" + off + " text=[" + text + "]");
+            System.err.println("offset=" + off + " text=[" + text + "]"); // FIX
             e.printStackTrace();
             return null;
         }
@@ -900,10 +900,13 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 StyledTextModel m = control.getModel();
                 DataFormatHandler h = m.getDataFormatHandler(f, false);
                 Object src = Clipboard.getSystemClipboard().getContent(f);
-                StyledInput in = h.createStyledInput(src);
-                if (in != null) {
-                    TextPos p = m.replace(vflow, start, end, in, true);
-                    control.moveCaret(p, false);
+                try (StyledInput in = h.createStyledInput(src)) {
+                    if (in != null) {
+                        TextPos p = m.replace(vflow, start, end, in, true);
+                        control.moveCaret(p, false);
+                    }
+                } catch (IOException e) {
+                    Util.provideErrorFeedback(control, e);
                 }
             }
         }
@@ -917,17 +920,20 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 if (sel == null) {
                     return;
                 }
-                
+
                 TextPos start = sel.getMin();
                 TextPos end = sel.getMax();
 
                 StyledTextModel m = control.getModel();
                 DataFormatHandler h = m.getDataFormatHandler(f, false);
                 Object src = c.getContent(f);
-                StyledInput in = h.createStyledInput(src);
-                if (in != null) {
-                    TextPos p = m.replace(vflow, start, end, in, true);
-                    control.moveCaret(p, false);
+                try (StyledInput in = h.createStyledInput(src)) {
+                    if (in != null) {
+                        TextPos p = m.replace(vflow, start, end, in, true);
+                        control.moveCaret(p, false);
+                    }
+                } catch (IOException e) {
+                    Util.provideErrorFeedback(control, e);
                 }
             }
         }
@@ -983,9 +989,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                         deleteSelection();
                     }
                 } catch(Exception | OutOfMemoryError e) {
-                    // TODO log exception
-                    e.printStackTrace();
-                    Util.provideErrorFeedback(control);
+                    Util.provideErrorFeedback(control, e);
                 }
             }
         }
@@ -1012,9 +1016,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
                 }
             }
         } catch(Exception | OutOfMemoryError e) {
-            // TODO log exception?
-            e.printStackTrace();
-            Util.provideErrorFeedback(control);
+            Util.provideErrorFeedback(control, e);
         }
     }
 

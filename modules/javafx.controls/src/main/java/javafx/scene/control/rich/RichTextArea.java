@@ -1330,7 +1330,7 @@ public class RichTextArea extends Control {
 
     /**
      * Specifies the padding for the RichTextArea content.
-     * The value an be null.
+     * The value can be null.
      * @return the content padding property
      */
     public final ObjectProperty<Insets> contentPaddingProperty() {
@@ -1355,7 +1355,8 @@ public class RichTextArea extends Control {
     }
 
     /**
-     * Determines the default paragraph attributes.
+     * Specifies the default paragraph attributes.
+     * The value can be null.
      * @return the default paragraph attributes property
      */
     public final ObjectProperty<StyleAttrs> defaultParagraphAttributesProperty() {

@@ -147,10 +147,15 @@ public class Util {
      *
      * @param originator the <code>Node</code> the error occurred in, may be <code>null</code>
      *                   indicating the error condition is not directly associated with a <code>Node</code>
+     * @param error the exception thrown (can be null)
      */
     // TODO this probably should be in Platform
-    public static void provideErrorFeedback(Node originator) {
+    public static void provideErrorFeedback(Node originator, Throwable error) {
         beep();
+        if (error != null) {
+            // TODO should be using logging
+            error.printStackTrace();
+        }
     }
 
     /** Emits a short audible alert, if supported by the platform. */

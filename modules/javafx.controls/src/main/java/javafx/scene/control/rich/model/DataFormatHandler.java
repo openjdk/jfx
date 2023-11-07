@@ -41,9 +41,9 @@ public abstract class DataFormatHandler {
      *
      * @param src input object obtained from the Clipboard
      * @return StyledInput generated according to this data format, or null
+     * @throws IOException when operation is not supported or an I/O error occurs
      */
-    // TODO throw UnsupportedMethodException if import operation is not supported?
-    public abstract StyledInput createStyledInput(Object src);
+    public abstract StyledInput createStyledInput(Object src) throws IOException;
 
     /**
      * Creates an object to be put into the Clipboard for the given text range.

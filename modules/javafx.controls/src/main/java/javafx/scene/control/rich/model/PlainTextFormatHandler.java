@@ -79,6 +79,11 @@ public class PlainTextFormatHandler extends DataFormatHandler {
             public void flush() throws IOException {
                 out.flush();
             }
+            
+            @Override
+            public void close() throws IOException {
+                out.close();
+            }
         };
         m.exportText(start, end, so);
         out.flush();

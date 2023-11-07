@@ -445,6 +445,10 @@ public class RichTextFormatHandler extends DataFormatHandler {
                 i++;
             }
         }
+
+        @Override
+        public void close() throws IOException {
+        }
     }
 
     /** exporter */
@@ -681,6 +685,11 @@ public class RichTextFormatHandler extends DataFormatHandler {
         @Override
         public void flush() throws IOException {
             wr.flush();
+        }
+
+        @Override
+        public void close() throws IOException {
+            wr.close();
         }
     }
 }

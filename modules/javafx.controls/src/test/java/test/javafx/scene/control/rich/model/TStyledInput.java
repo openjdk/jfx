@@ -24,6 +24,7 @@
  */
 package test.javafx.scene.control.rich.model;
 
+import java.io.IOException;
 import javafx.scene.control.rich.model.StyleAttrs;
 import javafx.scene.control.rich.model.StyledInput;
 import javafx.scene.control.rich.model.StyledSegment;
@@ -51,5 +52,9 @@ public class TStyledInput implements StyledInput {
             return StyledSegment.of(text, a);
         }
         return null;
+    }
+    
+    @Override
+    public void close() throws IOException {
     }
 }

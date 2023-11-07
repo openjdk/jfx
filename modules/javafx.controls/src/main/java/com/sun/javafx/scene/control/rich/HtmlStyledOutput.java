@@ -253,6 +253,11 @@ public class HtmlStyledOutput implements StyledOutput {
         wr.flush();
     }
     
+    @Override
+    public void close() throws IOException {
+        wr.close();
+    }
+    
     private static class Val {
         public final String name;
         public final String css;
@@ -297,6 +302,10 @@ public class HtmlStyledOutput implements StyledOutput {
 
             @Override
             public void flush() throws IOException {
+            }
+            
+            @Override
+            public void close() throws IOException {
             }
         };
     }

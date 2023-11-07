@@ -48,6 +48,10 @@ public class SegmentStyledOutput implements StyledOutput {
     @Override
     public void flush() throws IOException {
     }
+
+    @Override
+    public void close() throws IOException {
+    }
     
     public StyledSegment[] getSegments() {
         return segments.toArray(new StyledSegment[segments.size()]);

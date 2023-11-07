@@ -25,13 +25,14 @@
 
 package javafx.scene.control.rich.model;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 /**
  * Class represents a consumer of styled text segments for the purposes of
  * exporting, copying, or saving to a file.
  */
-public interface StyledOutput {
+public interface StyledOutput extends Closeable {
     /**
      * Appends the next styled segment to the output.
      * 

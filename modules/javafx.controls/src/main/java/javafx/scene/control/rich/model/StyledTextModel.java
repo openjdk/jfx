@@ -757,6 +757,10 @@ public abstract class StyledTextModel {
                 @Override
                 public void flush() throws IOException {
                 }
+
+                @Override
+                public void close() throws IOException {
+                }
             });
         } catch (Exception e) {
             e.printStackTrace();

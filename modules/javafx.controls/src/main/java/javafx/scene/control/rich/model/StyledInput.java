@@ -25,13 +25,15 @@
 
 package javafx.scene.control.rich.model;
 
+import java.io.Closeable;
+import java.io.IOException;
 import com.sun.javafx.scene.control.rich.StringStyledInput;
 
 /**
  * This interface represents a source of styled text segments for the purposes of
  * pasting, importing, or loading from a file.
  */
-public interface StyledInput {
+public interface StyledInput extends Closeable {
     /**
      * Returns the next segment, or null if no more segments.
      * @return the next segment, or null if no more segments
@@ -43,6 +45,10 @@ public interface StyledInput {
         @Override
         public StyledSegment nextSegment() {
             return null;
+        }
+
+        @Override
+        public void close() throws IOException {
         }
     };
     
