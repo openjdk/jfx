@@ -33,7 +33,7 @@ import javafx.scene.control.rich.model.StyledSegment;
 import com.sun.javafx.util.Utils;
 
 /**
- * Provides access to some internal methods in RichParagraph.
+ * Provides access to internal methods in RichParagraph.
  */
 public class RichParagraphHelper {
     public interface Accessor {

@@ -65,7 +65,20 @@ public class RichParagraph {
 
     public RichParagraph() {
     }
-    
+
+    /**
+     * Creates a paragraph consisting of a single Rectangle.
+     * The paragraph will typically assume its Rectangle preferred size, or,
+     * when the text wrap mode is on, might get resized to fit the available width.
+     * <p>
+     * The supplied generator must not cache or keep reference to the created Node,
+     * but the created Node can keep a reference to the model or some property therein.
+     * <p>
+     * For example, a bidirectional binding between an inline control and some property in the model
+     * would synchronize the model with all the views that use it.
+     * @param paragraphGenerator the content generator
+     * @return the RichParagraph instance
+     */
     public static RichParagraph of(Supplier<Region> paragraphGenerator) {
         return new RichParagraph() {
             @Override
@@ -170,6 +183,12 @@ public class RichParagraph {
 
     /**
      * Adds an inline node.
+     * <p>
+     * The supplied generator must not cache or keep reference to the created Node,
+     * but the created Node can keep a reference to the model or some property therein.
+     * <p>
+     * For example, a bidirectional binding between an inline control and some property in the model
+     * would synchronize the model with all the views that use it. 
      * @param generator the generator that provides the actual {@code Node}
      */
     public void addInlineNode(Supplier<Node> generator) {
@@ -195,8 +214,9 @@ public class RichParagraph {
     private int size() {
         return segments == null ? 0 : segments.size();
     }
-    
-    public void export(int start, int end, StyledOutput out) throws IOException {
+
+    // for use by StyledTextModel
+    void export(int start, int end, StyledOutput out) throws IOException {
         if (segments == null) {
             out.append(StyledSegment.of(""));
         } else {
@@ -232,7 +252,8 @@ public class RichParagraph {
      * Returns the paragraph attributes.
      * @return the paragraph attributes, can be null
      */
-    public StyleAttrs getParagraphAttributes() {
+    // used by StyledTextModel only
+    StyleAttrs getParagraphAttributes() {
         return paragraphAttributes;
     }
 }
