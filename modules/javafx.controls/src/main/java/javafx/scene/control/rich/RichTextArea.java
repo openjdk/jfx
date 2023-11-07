@@ -606,7 +606,7 @@ public class RichTextArea extends Control {
      * Moves the caret to the specified position, clearing the selection.
      * @param pos the text position
      */
-    public void select(TextPos pos) {
+    public void setCaret(TextPos pos) {
         StyledTextModel model = getModel();
         if (model != null) {
             Marker m = model.getMarker(pos);

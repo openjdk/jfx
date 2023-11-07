@@ -485,7 +485,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      * Moves the caret to before the first character of the text, also clearing the selection.
      */
     public void moveDocumentStart() {
-        control.select(TextPos.ZERO);
+        control.setCaret(TextPos.ZERO);
     }
 
     /**
@@ -493,7 +493,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
      */
     public void moveDocumentEnd() {
         TextPos pos = control.getEndTextPos();
-        control.select(pos);
+        control.setCaret(pos);
     }
 
     protected void moveLine(double deltaPixels, boolean extendSelection) {
