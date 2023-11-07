@@ -117,7 +117,7 @@ public class VFlow extends Pane implements StyleResolver {
 
         cellCache = new FastCache(Params.CELL_CACHE_SIZE);
 
-        getStyleClass().add("flow");
+        getStyleClass().add("vflow");
 
         // TODO consider creating on demand
         leftGutter = new ClippedPane("left-side");
