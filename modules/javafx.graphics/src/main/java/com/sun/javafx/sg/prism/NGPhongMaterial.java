@@ -41,7 +41,7 @@ import com.sun.prism.paint.Color;
 public class NGPhongMaterial {
 
     private static final Image WHITE_1X1 = Image.fromIntArgbPreData(new int[]{0xffffffff}, 1, 1);
-    
+
     /**
      * A default TextureData to be used instead of null. It allows access to the default values of TextureData.
      */

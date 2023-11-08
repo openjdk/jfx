@@ -80,17 +80,17 @@ public class TextureData {
             this.minFilterType = minFilterType;
             return this;
         }
-        
+
         public Builder magFilterType(MinMagFilterType magFilterType) {
             this.magFilterType = magFilterType;
             return this;
         }
-        
+
         public Builder mipmapFilterType(MipmapFilterType mipmapFilterType) {
             this.mipmapFilterType = mipmapFilterType;
             return this;
         }
-        
+
         public TextureData build() {
             return new TextureData(minFilterType, magFilterType, mipmapFilterType);
         }
