@@ -660,19 +660,8 @@ void WindowContextBase::set_cursor(GdkCursor* cursor) {
 }
 
 void WindowContextBase::set_background(float r, float g, float b) {
-#ifdef GLASS_GTK3
-    GdkRGBA rgba = {0, 0, 0, 1.};
-    rgba.red = r;
-    rgba.green = g;
-    rgba.blue = b;
-    gdk_window_set_background_rgba(gdk_window, &rgba);
-#else
-    GdkColor color;
-    color.red   = (guint16) (r * 65535);
-    color.green = (guint16) (g * 65535);
-    color.blue  = (guint16) (b * 65535);
-    gtk_widget_modify_bg(gtk_widget, GTK_STATE_NORMAL, &color);
-#endif
+    GdkRGBA rgba = {r, g, b, 1.};
+    gtk_widget_override_background_color(gtk_widget, GTK_STATE_FLAG_NORMAL, &rgba);
 }
 
 WindowContextBase::~WindowContextBase() {
@@ -696,6 +685,12 @@ WindowContextBase::~WindowContextBase() {
 // The first window will have a duplicated resize event, subsequent windows will use the cached value.
 WindowFrameExtents WindowContextTop::normal_extents = {0, 0, 0, 0};
 WindowFrameExtents WindowContextTop::utility_extents = {0, 0, 0, 0};
+
+
+static void event_realize(GtkWidget* self, gpointer user_data) {
+    WindowContextTop *ctx = ((WindowContextTop *) user_data);
+    ctx->process_realize();
+}
 
 static int geometry_get_window_width(const WindowGeometry *windowGeometry) {
      return (windowGeometry->final_width.type == BOUNDSTYPE_WINDOW)
@@ -746,8 +741,10 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             on_top(false),
             is_fullscreen(false) {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
+    gdk_windowManagerFunctions = wmf;
 
     gtk_widget = gtk_window_new(type == POPUP ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL);
+    g_signal_connect(G_OBJECT(gtk_widget), "realize", G_CALLBACK(event_realize), this);
 
     if (gchar* app_name = get_application_name()) {
         gtk_window_set_wmclass(GTK_WINDOW(gtk_widget), app_name, app_name);
@@ -779,25 +776,13 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
 
     gtk_widget_set_events(gtk_widget, GDK_FILTERED_EVENTS_MASK);
     gtk_widget_set_app_paintable(gtk_widget, TRUE);
-    glass_gtk_configure_transparency_and_realize(gtk_widget, frame_type == TRANSPARENT);
 
+    glass_configure_window_transparency(gtk_widget, frame_type == TRANSPARENT);
     gtk_window_set_title(GTK_WINDOW(gtk_widget), "");
-    gdk_window = gtk_widget_get_window(gtk_widget);
-    gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
-
-    g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
-
-    gdk_window_register_dnd(gdk_window);
-
-    gdk_windowManagerFunctions = wmf;
-    if (wmf) {
-        gdk_window_set_functions(gdk_window, wmf);
-    }
 
     if (frame_type != TITLED) {
         gtk_window_set_decorated(GTK_WINDOW(gtk_widget), FALSE);
     } else {
-        request_frame_extents();
         geometry.extents = get_cached_extents();
     }
 }
@@ -982,6 +967,18 @@ void WindowContextTop::process_state(GdkEventWindowState* event) {
     WindowContextBase::process_state(event);
 }
 
+void WindowContextTop::process_realize() {
+    gdk_window = gtk_widget_get_window(gtk_widget);
+    request_frame_extents();
+    gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
+    g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
+    gdk_window_register_dnd(gdk_window);
+
+    if (gdk_windowManagerFunctions) {
+        gdk_window_set_functions(gdk_window, gdk_windowManagerFunctions);
+    }
+}
+
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
     int ww = event->width + geometry.extents.left + geometry.extents.right;
     int wh = event->height + geometry.extents.top + geometry.extents.bottom;
@@ -1011,7 +1008,7 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
 
     int x, y;
     gdk_window_get_origin(gdk_window, &x, &y);
-    if (frame_type == TITLED) {
+    if (frame_type == TITLED && !is_fullscreen) {
         x -= geometry.extents.left;
         y -= geometry.extents.top;
     }
@@ -1118,7 +1115,12 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
     if (newW > 0 || newH > 0) {
         // call update_window_constraints() to let gtk_window_resize succeed, because it's bound to geometry constraints
         update_window_constraints();
-        gtk_window_resize(GTK_WINDOW(gtk_widget), newW, newH);
+
+        if (gtk_widget_get_realized(gtk_widget)) {
+            gtk_window_resize(GTK_WINDOW(gtk_widget), newW, newH);
+        } else {
+            gtk_window_set_default_size(GTK_WINDOW(gtk_widget), newW, newH);
+        }
         geometry.size_assigned = true;
         notify_window_resize();
     }

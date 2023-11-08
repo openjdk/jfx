@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1104,6 +1104,30 @@ public class ListCellTest {
             assertFalse("cell must not be editing", cell.isEditing());
             assertEquals("list editing must be cancelled by cell", notEditingIndex, list.getEditingIndex());
         }
+    }
+
+    /**
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8187314">JDK-8187314</a>.
+     */
+    @Test
+    public void testEditCommitValueChangeIsReflectedInCell() {
+        list.setEditable(true);
+
+        cell.updateListView(list);
+        list.setOnEditCommit(event -> {
+            assertEquals("ABCDEF", event.getNewValue());
+            // Change the underlying item.
+            model.set(0, "ABCDEF [Changed]");
+        });
+
+        cell.updateIndex(0);
+
+        assertEquals("Apples", cell.getItem());
+
+        cell.startEdit();
+        cell.commitEdit("ABCDEF");
+
+        assertEquals("ABCDEF [Changed]", cell.getItem());
     }
 
     public static class MisbehavingOnCancelListCell<T> extends ListCell<T> {
