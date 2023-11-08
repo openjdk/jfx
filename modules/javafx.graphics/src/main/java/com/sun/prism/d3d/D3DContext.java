@@ -31,6 +31,7 @@ import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.scene.paint.TextureData;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
@@ -462,7 +463,7 @@ class D3DContext extends BaseShaderContext {
     private static native void nSetSpecularColor(long pContext, long nativePhongMaterial,
             boolean set, float r, float g, float b, float a);
     private static native void nSetMap(long pContext, long nativePhongMaterial,
-            int mapType, long texID);
+            int mapType, int minFilter, int magFilter, int mipFilter, long nativeTexture);
     private static native long nCreateD3DMeshView(long pContext, long nativeMesh);
     private static native void nReleaseD3DMeshView(long pContext, long nativeHandle);
     private static native void nSetCullingMode(long pContext, long nativeMeshView,
@@ -572,8 +573,12 @@ class D3DContext extends BaseShaderContext {
         nSetSpecularColor(pContext, nativePhongMaterial, set, r, g, b, a);
     }
 
-    void setMap(long nativePhongMaterial, int mapType, long nativeTexture) {
-        nSetMap(pContext, nativePhongMaterial, mapType, nativeTexture);
+    void setMap(long nativePhongMaterial, int mapType, TextureData textureData, long nativeTexture) {
+        if (mapType == 0) {
+            System.out.println("Context java setMap filter " + textureData.minFilterType().ordinal());
+        }
+        nSetMap(pContext, nativePhongMaterial, mapType, textureData.minFilterType().ordinal(),
+                textureData.magFilterType().ordinal(), textureData.mipmapFilterType().ordinal(), nativeTexture);
     }
 
     long createD3DMeshView(long nativeMesh) {

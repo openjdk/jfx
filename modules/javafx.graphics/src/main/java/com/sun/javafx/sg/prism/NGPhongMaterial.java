@@ -25,6 +25,9 @@
 
 package com.sun.javafx.sg.prism;
 
+import java.util.Objects;
+
+import com.sun.javafx.scene.paint.TextureData;
 import com.sun.prism.Image;
 import com.sun.prism.Material;
 import com.sun.prism.PhongMaterial;
@@ -38,6 +41,12 @@ import com.sun.prism.paint.Color;
 public class NGPhongMaterial {
 
     private static final Image WHITE_1X1 = Image.fromIntArgbPreData(new int[]{0xffffffff}, 1, 1);
+    
+    /**
+     * A default TextureData to be used instead of null. It allows access to the default values of TextureData.
+     */
+    private static final TextureData DEFAULT = new TextureData.Builder().build();
+
     private PhongMaterial material;
 
     private Color diffuseColor;
@@ -55,7 +64,6 @@ public class NGPhongMaterial {
     private TextureMap selfIllumMap = new TextureMap(PhongMaterial.MapType.SELF_ILLUM);
 
     Material createMaterial(ResourceFactory f) {
-
         // Check whether the material is valid; dispose and recreate if needed
         if (material != null && !material.isValid()) {
             disposeMaterial();
@@ -64,7 +72,7 @@ public class NGPhongMaterial {
         if (material == null) {
             material = f.createPhongMaterial();
         }
-        validate(f);
+        validate();
         return material;
     }
 
@@ -81,8 +89,7 @@ public class NGPhongMaterial {
         material = null;
     }
 
-    private void validate(ResourceFactory f) {
-
+    private void validate() {
         if (diffuseColorDirty) {
             if (diffuseColor != null) {
                 material.setDiffuseColor(
@@ -95,19 +102,21 @@ public class NGPhongMaterial {
         }
 
         if (diffuseMap.isDirty()) {
-            if (diffuseMap.getImage() == null) {
-                diffuseMap.setImage(WHITE_1X1);
-            }
+            diffuseMap.setImage(Objects.requireNonNullElse(diffuseMap.getImage(), WHITE_1X1));
+            diffuseMap.setTextureData(Objects.requireNonNullElse(diffuseMap.getTextureData(), DEFAULT));
             material.setTextureMap(diffuseMap);
         }
         if (bumpMap.isDirty()) {
             material.setTextureMap(bumpMap);
+            bumpMap.setTextureData(Objects.requireNonNullElse(bumpMap.getTextureData(), DEFAULT));
         }
         if (selfIllumMap.isDirty()) {
             material.setTextureMap(selfIllumMap);
+            selfIllumMap.setTextureData(Objects.requireNonNullElse(selfIllumMap.getTextureData(), DEFAULT));
         }
         if (specularMap.isDirty()) {
             material.setTextureMap(specularMap);
+            specularMap.setTextureData(Objects.requireNonNullElse(specularMap.getTextureData(), DEFAULT));
         }
         if (specularColorDirty || specularPowerDirty) {
             if (specularColor != null) {
@@ -147,8 +156,18 @@ public class NGPhongMaterial {
         this.diffuseMap.setDirty(true);
     }
 
+    public void setDiffuseTextureData(TextureData textureData) {
+        this.diffuseMap.setTextureData(textureData);
+        this.diffuseMap.setDirty(true);
+    }
+
     public void setSpecularMap(Object specularMap) {
         this.specularMap.setImage((Image)specularMap);
+        this.specularMap.setDirty(true);
+    }
+
+    public void setSpecularTextureData(TextureData textureData) {
+        this.specularMap.setTextureData(textureData);
         this.specularMap.setDirty(true);
     }
 
@@ -157,8 +176,18 @@ public class NGPhongMaterial {
         this.bumpMap.setDirty(true);
     }
 
+    public void setBumpTextureData(TextureData textureData) {
+        this.bumpMap.setTextureData(textureData);
+        this.bumpMap.setDirty(true);
+    }
+
     public void setSelfIllumMap(Object selfIllumMap) {
         this.selfIllumMap.setImage((Image)selfIllumMap);
+        this.selfIllumMap.setDirty(true);
+    }
+
+    public void setSelfIllumTextureData(TextureData textureData) {
+        this.selfIllumMap.setTextureData(textureData);
         this.selfIllumMap.setDirty(true);
     }
 

@@ -32,6 +32,7 @@ import com.sun.prism.TextureMap;
 import com.sun.prism.impl.BasePhongMaterial;
 import com.sun.prism.impl.Disposer;
 import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.scene.paint.TextureData;
 
 /**
  * TODO: 3D - Need documentation
@@ -77,11 +78,12 @@ class D3DPhongMaterial extends BasePhongMaterial {
     }
 
     private Texture setupTexture(TextureMap map, boolean useMipmap) {
+        TextureData textureData = map.getTextureData();
         Image image = map.getImage();
         Texture texture = (image == null) ? null
                 : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.REPEAT, useMipmap);
         long hTexture = (texture != null) ? ((D3DTexture) texture).getNativeTextureObject() : 0;
-        context.setMap(nativeHandle, map.getType().ordinal(), hTexture);
+        context.setMap(nativeHandle, map.getType().ordinal(), textureData, hTexture);
         return texture;
     }
 
@@ -95,7 +97,8 @@ class D3DPhongMaterial extends BasePhongMaterial {
                     continue;
                 }
             }
-            // Enable mipmap if map is diffuse or self illum.
+            // Enable mipmap if map is diffuse or self illum. In D3DResourceManager::CreateTexture the mipmap level
+            // is set to 1, so the useMipmap flag has no effect until that is changed
             boolean useMipmap = (i == PhongMaterial.DIFFUSE) || (i == PhongMaterial.SELF_ILLUM);
             texture = setupTexture(maps[i], useMipmap);
             maps[i].setTexture(texture);

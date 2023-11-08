@@ -25,6 +25,8 @@
 
 package com.sun.prism;
 
+import com.sun.javafx.scene.paint.TextureData;
+
 /**
  * A wrapper class to hold map related information for the PhongMaterial
  */
@@ -32,6 +34,12 @@ public class TextureMap {
 
     private final PhongMaterial.MapType type;
     private Image image;
+    private TextureData textureData;
+    /**
+     * The texture resource is requested from the resource manager with the image (and maybe later textureData) as
+     * arguments. It's not taken from the material like image, textureData, and type are. We could consider some
+     * refactoring in the texture area (texture could be removed from this class, or the whole class might be removed).
+     */
     private Texture texture;
     private boolean dirty;
 
@@ -57,6 +65,14 @@ public class TextureMap {
 
     public void setTexture(Texture texture) {
         this.texture = texture;
+    }
+
+    public TextureData getTextureData() {
+        return textureData;
+    }
+
+    public void setTextureData(TextureData textureData) {
+        this.textureData = textureData;
     }
 
     public boolean isDirty() {
