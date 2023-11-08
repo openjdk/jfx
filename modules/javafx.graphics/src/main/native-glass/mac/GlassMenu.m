@@ -236,7 +236,6 @@ static jfieldID  jPixelsScaleYField = 0;
     }
     if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_FUNCTION) != 0)
     {
-        modifier = modifier | NSFunctionKeyMask;
         if (jshortcut >= com_sun_glass_events_KeyEvent_VK_F1 &&
             jshortcut <= com_sun_glass_events_KeyEvent_VK_F12) {
             int delta = jshortcut - com_sun_glass_events_KeyEvent_VK_F1;
