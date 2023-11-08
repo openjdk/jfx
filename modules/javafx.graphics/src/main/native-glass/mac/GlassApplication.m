@@ -160,7 +160,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationWillFinishLaunching");
+    LOG("GlassApplication:applicationWillFinishLaunching");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -237,7 +237,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationDidFinishLaunching");
+    LOG("GlassApplication:applicationDidFinishLaunching");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -259,7 +259,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationWillBecomeActive:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationWillBecomeActive");
+    LOG("GlassApplication:applicationWillBecomeActive");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -272,7 +272,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationDidBecomeActive:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationDidBecomeActive");
+    LOG("GlassApplication:applicationDidBecomeActive");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -292,7 +292,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationWillResignActive:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationWillResignActive");
+    LOG("GlassApplication:applicationWillResignActive");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -305,7 +305,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationDidResignActive:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationDidResignActive");
+    LOG("GlassApplication:applicationDidResignActive");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -324,7 +324,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationWillHide:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationWillHide");
+    LOG("GlassApplication:applicationWillHide");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -337,7 +337,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationDidHide:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationDidHide");
+    LOG("GlassApplication:applicationDidHide");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -350,7 +350,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationWillUnhide:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationWillUnhide");
+    LOG("GlassApplication:applicationWillUnhide");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -363,7 +363,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)applicationDidUnhide:(NSNotification *)aNotification
 {
-    NSLog(@"GlassApplication:applicationDidUnhide");
+    LOG("GlassApplication:applicationDidUnhide");
 
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -542,9 +542,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         NSApplication *app = [NSApplicationFX sharedApplication];
         isEmbedded = isEmbedded = ![app isKindOfClass:[NSApplicationFX class]];
 
-        NSLog(@">>>> NSApplication : 0x%p", app);
-        NSLog(@">>>> isEmbedded App ??? %d", isEmbedded);
-
         if (!isEmbedded)
         {
             // Not embedded in another toolkit, so disable automatic tabbing for all windows
@@ -619,10 +616,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 [app setWindowsMenu:myMenu];
                 [myMenu release];
 
-                NSLog(@">>>> FX setting NSApp delegate");
-                NSLog(@">>>> old delegate = 0x%p", [app delegate]);
                 [app setDelegate:self];
-                NSLog(@">>>> new delegate = 0x%p", [app delegate]);
 
                 // [app activateIgnoringOtherApps:YES] won't activate the menu bar on OS X 10.9, so instead we do this:
                 [[NSRunningApplication currentApplication] activateWithOptions:(NSApplicationActivateIgnoringOtherApps | NSApplicationActivateAllWindows)];
@@ -646,7 +640,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                         TransformProcessType(&psn, 4); // kProcessTransformToUIElementApplication
                     }
                 }
-                NSLog(@">>>> FX setDelegate called (background app)");
                 [app setDelegate:self];
             }
 
