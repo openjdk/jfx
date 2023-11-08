@@ -87,7 +87,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     @Override
     public void install() {
         vflow = RichTextAreaSkinHelper.getVFlow(control);
-        
+
+        // avoid blinking the caret when handling keys
         setOnKeyEventEnter(() -> vflow.setSuppressBlink(true));
         setOnKeyEventExit(() -> vflow.setSuppressBlink(false));
 
@@ -148,19 +149,9 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerKey(KeyCode.DOWN, RichTextArea.MOVE_DOWN);
         registerKey(KeyCode.HOME, RichTextArea.MOVE_PARAGRAPH_START);
         registerKey(KeyCode.END, RichTextArea.MOVE_PARAGRAPH_END);
-        registerKey(KeyBinding.with(KeyCode.HOME).control().notForMac().build(), RichTextArea.MOVE_DOCUMENT_START);
-        registerKey(KeyBinding.with(KeyCode.UP).shortcut().forMac().build(), RichTextArea.MOVE_DOCUMENT_START);
-        registerKey(KeyBinding.with(KeyCode.END).control().notForMac().build(), RichTextArea.MOVE_DOCUMENT_END);
-        registerKey(KeyBinding.with(KeyCode.DOWN).shortcut().forMac().build(), RichTextArea.MOVE_DOCUMENT_END);
-        registerKey(KeyBinding.with(KeyCode.LEFT).control().notForMac().build(), RichTextArea.MOVE_WORD_LEFT);
-        registerKey(KeyBinding.with(KeyCode.LEFT).option().forMac().build(), RichTextArea.MOVE_WORD_LEFT);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).control().notForMac().build(), RichTextArea.MOVE_WORD_RIGHT);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).option().forMac().build(), RichTextArea.MOVE_WORD_RIGHT);
         registerKey(KeyCode.PAGE_DOWN, RichTextArea.PAGE_DOWN);
         registerKey(KeyCode.PAGE_UP, RichTextArea.PAGE_UP);
         registerKey(KeyBinding.shortcut(KeyCode.V), RichTextArea.PASTE);
-        registerKey(KeyBinding.with(KeyCode.Z).shift().command().forMac().build(), RichTextArea.REDO);
-        registerKey(KeyBinding.with(KeyCode.Y).control().notForMac().build(), RichTextArea.REDO);
         registerKey(KeyBinding.shortcut(KeyCode.A), RichTextArea.SELECT_ALL);
         registerKey(KeyBinding.shift(KeyCode.LEFT), RichTextArea.SELECT_LEFT);
         registerKey(KeyBinding.shift(KeyCode.RIGHT), RichTextArea.SELECT_RIGHT);
@@ -168,15 +159,29 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         registerKey(KeyBinding.shift(KeyCode.DOWN), RichTextArea.SELECT_DOWN);
         registerKey(KeyBinding.shift(KeyCode.PAGE_UP), RichTextArea.SELECT_PAGE_UP);
         registerKey(KeyBinding.shift(KeyCode.PAGE_DOWN), RichTextArea.SELECT_PAGE_DOWN);
-        registerKey(KeyBinding.with(KeyCode.LEFT).shift().control().notForMac().build(), RichTextArea.SELECT_WORD_LEFT);
-        registerKey(KeyBinding.with(KeyCode.LEFT).shift().option().forMac().build(), RichTextArea.SELECT_WORD_LEFT);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).shift().control().notForMac().build(), RichTextArea.SELECT_WORD_RIGHT);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).shift().option().forMac().build(), RichTextArea.SELECT_WORD_RIGHT);
-        registerKey(KeyBinding.with(KeyCode.HOME).control().shift().notForMac().build(), RichTextArea.SELECT_DOCUMENT_START);
-        registerKey(KeyBinding.with(KeyCode.UP).shift().shortcut().forMac().build(), RichTextArea.SELECT_DOCUMENT_START);
-        registerKey(KeyBinding.with(KeyCode.END).control().shift().notForMac().build(), RichTextArea.SELECT_DOCUMENT_END);
-        registerKey(KeyBinding.with(KeyCode.DOWN).shift().shortcut().forMac().build(), RichTextArea.SELECT_DOCUMENT_END);
         registerKey(KeyBinding.shortcut(KeyCode.Z), RichTextArea.UNDO);
+
+        if (isMac()) {
+            registerKey(KeyBinding.with(KeyCode.UP).shortcut().build(), RichTextArea.MOVE_DOCUMENT_START);
+            registerKey(KeyBinding.with(KeyCode.DOWN).shortcut().build(), RichTextArea.MOVE_DOCUMENT_END);
+            registerKey(KeyBinding.with(KeyCode.LEFT).option().build(), RichTextArea.MOVE_WORD_LEFT);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).option().build(), RichTextArea.MOVE_WORD_RIGHT);
+            registerKey(KeyBinding.with(KeyCode.Z).shift().command().build(), RichTextArea.REDO);
+            registerKey(KeyBinding.with(KeyCode.LEFT).shift().option().build(), RichTextArea.SELECT_WORD_LEFT);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).shift().option().build(), RichTextArea.SELECT_WORD_RIGHT);
+            registerKey(KeyBinding.with(KeyCode.UP).shift().shortcut().build(), RichTextArea.SELECT_DOCUMENT_START);
+            registerKey(KeyBinding.with(KeyCode.DOWN).shift().shortcut().build(), RichTextArea.SELECT_DOCUMENT_END);
+        } else {
+            registerKey(KeyBinding.with(KeyCode.HOME).control().build(), RichTextArea.MOVE_DOCUMENT_START);
+            registerKey(KeyBinding.with(KeyCode.END).control().build(), RichTextArea.MOVE_DOCUMENT_END);
+            registerKey(KeyBinding.with(KeyCode.LEFT).control().build(), RichTextArea.MOVE_WORD_LEFT);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).control().build(), RichTextArea.MOVE_WORD_RIGHT);
+            registerKey(KeyBinding.with(KeyCode.Y).control().build(), RichTextArea.REDO);
+            registerKey(KeyBinding.with(KeyCode.LEFT).shift().control().build(), RichTextArea.SELECT_WORD_LEFT);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).shift().control().build(), RichTextArea.SELECT_WORD_RIGHT);
+            registerKey(KeyBinding.with(KeyCode.HOME).control().shift().build(), RichTextArea.SELECT_DOCUMENT_START);
+            registerKey(KeyBinding.with(KeyCode.END).control().shift().build(), RichTextArea.SELECT_DOCUMENT_END);
+        }
 
         Pane cp = vflow.getContentPane();
         cp.addEventFilter(MouseEvent.MOUSE_CLICKED, this::handleMouseClicked);
