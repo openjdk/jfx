@@ -672,44 +672,17 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
          * @return a new key binding instance.
          */
         public KeyBinding build() {
-            // mac-windows for now.  we might rethink the logic later if necessary.
             boolean mac = PlatformUtil.isMac();
             boolean win = PlatformUtil.isWindows();
             boolean linux = PlatformUtil.isLinux();
 
             if (mac) {
-//                if (m.contains(KCondition.NOT_FOR_MAC)) {
-//                    return null;
-//                } else if (m.contains(KCondition.FOR_WIN)) {
-//                    return null;
-//                } else if (m.contains(KCondition.FOR_LINUX)) {
-//                    return null;
-//                } else if (m.contains(KCondition.WINDOWS)) {
-//                    return null;
-//                }
-
                 replace(KCondition.ALT, KCondition.OPTION);
                 replace(KCondition.META, KCondition.COMMAND);
                 replace(KCondition.SHORTCUT, KCondition.COMMAND);
             } else if (win) {
-//                if (m.contains(KCondition.NOT_FOR_WIN)) {
-//                    return null;
-//                } else if (m.contains(KCondition.FOR_MAC)) {
-//                    return null;
-//                } else if (m.contains(KCondition.FOR_LINUX)) {
-//                    return null;
-//                }
-
                 replace(KCondition.SHORTCUT, KCondition.CTRL);
             } else if (linux) {
-//                if (m.contains(KCondition.NOT_FOR_LINUX)) {
-//                    return null;
-//                } else if (m.contains(KCondition.FOR_MAC)) {
-//                    return null;
-//                } else if (m.contains(KCondition.FOR_WIN)) {
-//                    return null;
-//                }
-
                 replace(KCondition.SHORTCUT, KCondition.CTRL);
             }
 
@@ -722,14 +695,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
 
                 replace(KCondition.WINDOWS, KCondition.META);
             }
-
-            // remove platform entries
-//            m.remove(KCondition.FOR_LINUX);
-//            m.remove(KCondition.NOT_FOR_LINUX);
-//            m.remove(KCondition.FOR_MAC);
-//            m.remove(KCondition.NOT_FOR_MAC);
-//            m.remove(KCondition.FOR_WIN);
-//            m.remove(KCondition.NOT_FOR_WIN);
 
             boolean pressed = m.contains(KCondition.KEY_PRESS);
             boolean released = m.contains(KCondition.KEY_RELEASE);
