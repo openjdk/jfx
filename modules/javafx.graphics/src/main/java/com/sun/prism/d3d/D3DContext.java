@@ -574,9 +574,6 @@ class D3DContext extends BaseShaderContext {
     }
 
     void setMap(long nativePhongMaterial, int mapType, TextureData textureData, long nativeTexture) {
-        if (mapType == 0) {
-            System.out.println("Context java setMap filter " + textureData.minFilterType().ordinal());
-        }
         nSetMap(pContext, nativePhongMaterial, mapType, textureData.minFilterType().ordinal(),
                 textureData.magFilterType().ordinal(), textureData.mipmapFilterType().ordinal(), nativeTexture);
     }
