@@ -162,6 +162,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         registerKey(KeyBinding.ctrl(KeyCode.TAB), TextInputControl.TRAVERSE_NEXT);
         registerKey(KeyBinding.shift(KeyCode.TAB), TextInputControl.TRAVERSE_PREVIOUS);
         registerKey(KeyBinding.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
+        registerKey(KeyBinding.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
         registerKey(KeyBinding.shortcut(KeyCode.Z), TextInputControl.UNDO);
 
         if (isMac()) {
@@ -175,7 +176,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             registerKey(KeyBinding.with(KeyCode.LEFT).alt().build(), TextInputControl.LEFT_WORD);
             registerKey(KeyBinding.with(KeyCode.Z).shortcut().shift().build(), TextInputControl.REDO);
             registerKey(KeyBinding.with(KeyCode.RIGHT).alt().build(), TextInputControl.RIGHT_WORD);
-            registerKey(KeyBinding.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
             registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().build(), TextInputControl.SELECT_HOME_EXTEND);
             registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().build(), TextInputControl.SELECT_END_EXTEND);
             registerKey(KeyBinding.with(KeyCode.END).shift().build(), TextInputControl.SELECT_END_EXTEND);
