@@ -85,20 +85,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         KEY_RELEASE,
         /** a key typed event */
         KEY_TYPED,
-
-        // platform specificity
-        /** specifies Linux platform */
-        FOR_LINUX,
-        /** specifies non-Linux platform */
-        NOT_FOR_LINUX,
-        /** specifies Mac platform */
-        FOR_MAC,
-        /** specifies non-Mac platform */
-        NOT_FOR_MAC,
-        /** specifies Windows platform */
-        FOR_WIN,
-        /** specifies non-Windows platform */
-        NOT_FOR_WIN,
     }
 
     private final Object key; // KeyCode or String
@@ -666,60 +652,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
             return this;
         }
 
-        /**
-         * Sets this key binding applicable to the macOS platform.
-         * @return this Builder
-         */
-        public Builder forMac() {
-            m.add(KCondition.FOR_MAC);
-            return this;
-        }
-
-        /**
-         * Sets this key binding applicable to any but the macOS platform.
-         * @return this Builder
-         */
-        public Builder notForMac() {
-            m.add(KCondition.NOT_FOR_MAC);
-            return this;
-        }
-
-        /**
-         * Sets this key binding applicable to the Windows platform.
-         * @return this Builder
-         */
-        public Builder forWindows() {
-            m.add(KCondition.FOR_WIN);
-            return this;
-        }
-
-        /**
-         * Sets this key binding applicable to any but the Windows platform.
-         * @return this Builder
-         */
-        public Builder notForWindows() {
-            m.add(KCondition.NOT_FOR_WIN);
-            return this;
-        }
-
-        /**
-         * Sets this key binding applicable to the Linux platform.
-         * @return this Builder
-         */
-        public Builder forLinux() {
-            m.add(KCondition.FOR_LINUX);
-            return this;
-        }
-
-        /**
-         * Sets this key binding applicable to any but the Linux platform.
-         * @return this Builder
-         */
-        public Builder notForLinux() {
-            m.add(KCondition.NOT_FOR_LINUX);
-            return this;
-        }
-
         private Builder init(Object key, KCondition... mods) {
             this.key = key;
             for (KCondition c : mods) {
@@ -736,51 +668,21 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
         }
 
         /**
-         * Creates a new {@link KeyBinding} instance, or null if the key binding is not applicable to this platform.
-         * TODO variant: KeyBinding.NA
-         * TODO alternatively, remove forMac and use Platform.isXXX
-         *
+         * Creates a new {@link KeyBinding} instance.
          * @return a new key binding instance.
          */
         public KeyBinding build() {
-            // mac-windows for now.  we might rethink the logic later if necessary.
             boolean mac = PlatformUtil.isMac();
             boolean win = PlatformUtil.isWindows();
             boolean linux = PlatformUtil.isLinux();
 
             if (mac) {
-                if (m.contains(KCondition.NOT_FOR_MAC)) {
-                    return null;
-                } else if (m.contains(KCondition.FOR_WIN)) {
-                    return null;
-                } else if (m.contains(KCondition.FOR_LINUX)) {
-                    return null;
-                } else if (m.contains(KCondition.WINDOWS)) {
-                    return null;
-                }
-
                 replace(KCondition.ALT, KCondition.OPTION);
                 replace(KCondition.META, KCondition.COMMAND);
                 replace(KCondition.SHORTCUT, KCondition.COMMAND);
             } else if (win) {
-                if (m.contains(KCondition.NOT_FOR_WIN)) {
-                    return null;
-                } else if (m.contains(KCondition.FOR_MAC)) {
-                    return null;
-                } else if (m.contains(KCondition.FOR_LINUX)) {
-                    return null;
-                }
-
                 replace(KCondition.SHORTCUT, KCondition.CTRL);
             } else if (linux) {
-                if (m.contains(KCondition.NOT_FOR_LINUX)) {
-                    return null;
-                } else if (m.contains(KCondition.FOR_MAC)) {
-                    return null;
-                } else if (m.contains(KCondition.FOR_WIN)) {
-                    return null;
-                }
-
                 replace(KCondition.SHORTCUT, KCondition.CTRL);
             }
 
@@ -793,14 +695,6 @@ public class KeyBinding implements EventCriteria<KeyEvent> {
 
                 replace(KCondition.WINDOWS, KCondition.META);
             }
-
-            // remove platform entries
-            m.remove(KCondition.FOR_LINUX);
-            m.remove(KCondition.NOT_FOR_LINUX);
-            m.remove(KCondition.FOR_MAC);
-            m.remove(KCondition.NOT_FOR_MAC);
-            m.remove(KCondition.FOR_WIN);
-            m.remove(KCondition.NOT_FOR_WIN);
 
             boolean pressed = m.contains(KCondition.KEY_PRESS);
             boolean released = m.contains(KCondition.KEY_RELEASE);

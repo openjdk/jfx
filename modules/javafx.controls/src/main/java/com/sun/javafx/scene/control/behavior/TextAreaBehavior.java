@@ -52,7 +52,6 @@ import com.sun.javafx.scene.control.skin.Utils;
 public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     private final TextAreaSkin skin;
     private TwoLevelFocusBehavior tlFocus;
-
     private ChangeListener<Boolean> focusListener;
 
     /**************************************************************************
@@ -105,6 +104,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         registerFunction(TextArea.UP, () -> skin.moveCaret(TextUnit.LINE, Direction.UP, false));
         registerFunction(TextArea.INSERT_NEW_LINE, this::insertNewLine);
         registerFunction(TextArea.INSERT_TAB, this::insertTab);
+        // TODO create functions instead of the inline lambdas above
 
         // common keys
         registerKey(KeyCode.DOWN, TextArea.DOWN);
@@ -122,25 +122,27 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         registerKey(KeyCode.UP, TextArea.UP);
         registerKey(KeyBinding.shift(KeyCode.UP), TextArea.SELECT_UP);
 
-        // macOS specific mappings
-        registerKey(KeyBinding.with(KeyCode.DOWN).alt().forMac().build(), TextArea.PARAGRAPH_DOWN);
-        registerKey(KeyBinding.with(KeyCode.DOWN).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
-        registerKey(KeyBinding.with(KeyCode.DOWN).shortcut().forMac().build(), TextArea.DOCUMENT_END);
-        registerKey(KeyBinding.with(KeyCode.DOWN).shortcut().shift().forMac().build(), TextArea.SELECT_END_EXTEND);
-        registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().forMac().build(), TextArea.LINE_START);
-        registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_START);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().forMac().build(), TextArea.LINE_END);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextArea.SELECT_LINE_END);
-        registerKey(KeyBinding.with(KeyCode.UP).alt().forMac().build(), TextArea.PARAGRAPH_UP);
-        registerKey(KeyBinding.with(KeyCode.UP).alt().shift().forMac().build(), TextArea.SELECT_PARAGRAPH_UP);
-        registerKey(KeyBinding.with(KeyCode.UP).shortcut().forMac().build(), TextArea.DOCUMENT_START);
-        registerKey(KeyBinding.with(KeyCode.UP).shortcut().shift().forMac().build(), TextArea.SELECT_HOME_EXTEND);
-
-        // non-macOS specific mappings
-        registerKey(KeyBinding.with(KeyCode.DOWN).control().notForMac().build(), TextArea.PARAGRAPH_DOWN);
-        registerKey(KeyBinding.with(KeyCode.DOWN).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_DOWN);
-        registerKey(KeyBinding.with(KeyCode.UP).control().notForMac().build(), TextArea.PARAGRAPH_UP);
-        registerKey(KeyBinding.with(KeyCode.UP).control().shift().notForMac().build(), TextArea.SELECT_PARAGRAPH_UP);
+        if (isMac()) {
+            // macOS specific mappings
+            registerKey(KeyBinding.with(KeyCode.DOWN).alt().build(), TextArea.PARAGRAPH_DOWN);
+            registerKey(KeyBinding.with(KeyCode.DOWN).alt().shift().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+            registerKey(KeyBinding.with(KeyCode.DOWN).shortcut().build(), TextArea.DOCUMENT_END);
+            registerKey(KeyBinding.with(KeyCode.DOWN).shortcut().shift().build(), TextArea.SELECT_END_EXTEND);
+            registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().build(), TextArea.LINE_START);
+            registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().build(), TextArea.SELECT_LINE_START);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().build(), TextArea.LINE_END);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().build(), TextArea.SELECT_LINE_END);
+            registerKey(KeyBinding.with(KeyCode.UP).alt().build(), TextArea.PARAGRAPH_UP);
+            registerKey(KeyBinding.with(KeyCode.UP).alt().shift().build(), TextArea.SELECT_PARAGRAPH_UP);
+            registerKey(KeyBinding.with(KeyCode.UP).shortcut().build(), TextArea.DOCUMENT_START);
+            registerKey(KeyBinding.with(KeyCode.UP).shortcut().shift().build(), TextArea.SELECT_HOME_EXTEND);
+        } else {
+            // non-macOS specific mappings
+            registerKey(KeyBinding.with(KeyCode.DOWN).control().build(), TextArea.PARAGRAPH_DOWN);
+            registerKey(KeyBinding.with(KeyCode.DOWN).control().shift().build(), TextArea.SELECT_PARAGRAPH_DOWN);
+            registerKey(KeyBinding.with(KeyCode.UP).control().build(), TextArea.PARAGRAPH_UP);
+            registerKey(KeyBinding.with(KeyCode.UP).control().shift().build(), TextArea.SELECT_PARAGRAPH_UP);
+        }
 
         addKeyPadMappings();
     }
