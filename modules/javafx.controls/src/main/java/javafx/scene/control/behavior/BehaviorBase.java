@@ -29,11 +29,12 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
+import com.sun.javafx.PlatformUtil;
 
 /**
  * Class provides a foundation for behaviors.
  * <p>
- * A concrete behavior implementation should do three things:
+ * A concrete behavior implementation should do the following:
  * 1. provide default behavior methods (a.k.a. functions)
  * 2. in install() method, called from Skin.install(), map control's function tags to
  *    behavior methods, map key bindings to function tags, and add additional event handlers,
@@ -256,5 +257,29 @@ public abstract class BehaviorBase<C extends Control> {
      */
     protected void setOnKeyEventExit(Runnable action) {
         getInputMap().setOnKeyEventExit(this, action);
+    }
+
+    /**
+     * Returns true if this method is invoked on a Linux platform.
+     * @return true on a Linux platform
+     */
+    protected boolean isLinux() {
+        return PlatformUtil.isLinux();
+    }
+
+    /**
+     * Returns true if this method is invoked on a Mac OS platform.
+     * @return true on a Mac OS platform
+     */
+    protected boolean isMac() {
+        return PlatformUtil.isMac();
+    }
+
+    /**
+     * Returns true if this method is invoked on a Windows platform.
+     * @return true on a Windows platform
+     */
+    protected boolean isWindows() {
+        return PlatformUtil.isWindows();
     }
 }

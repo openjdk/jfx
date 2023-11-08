@@ -24,10 +24,6 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import static com.sun.javafx.PlatformUtil.isLinux;
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
-import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 import java.text.Bidi;
 import java.util.Set;
 import javafx.application.ConditionalFeature;
@@ -58,6 +54,7 @@ import javafx.scene.input.MouseEvent;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.skin.FXVK;
+import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
 /**
  * All of the "button" types (CheckBox, RadioButton, ToggleButton, and Button)
@@ -167,40 +164,46 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         registerKey(KeyBinding.with(KeyCode.TAB).control().shift().build(), TextInputControl.TRAVERSE_PREVIOUS);
         registerKey(KeyBinding.shortcut(KeyCode.Z), TextInputControl.UNDO);
 
-        // macOS key bindings
-        registerKey(KeyBinding.with(KeyCode.BACK_SPACE).shortcut().forMac().build(), TextInputControl.DELETE_FROM_LINE_START);
-        registerKey(KeyBinding.with(KeyCode.DELETE).alt().forMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        registerKey(KeyBinding.with(KeyCode.BACK_SPACE).alt().forMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        registerKey(KeyBinding.with(KeyCode.HOME).shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
-        registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().forMac().build(), TextInputControl.DOCUMENT_START);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().forMac().build(), TextInputControl.DOCUMENT_END);
-        registerKey(KeyBinding.with(KeyCode.LEFT).alt().forMac().build(), TextInputControl.LEFT_WORD);
-        registerKey(KeyBinding.with(KeyCode.Z).shortcut().shift().forMac().build(), TextInputControl.REDO);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).alt().forMac().build(), TextInputControl.RIGHT_WORD);
-        registerKey(KeyBinding.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
-        registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().forMac().build(), TextInputControl.SELECT_HOME_EXTEND);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
-        registerKey(KeyBinding.with(KeyCode.END).shift().forMac().build(), TextInputControl.SELECT_END_EXTEND);
-        registerKey(KeyBinding.with(KeyCode.LEFT).shift().alt().forMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).shift().alt().forMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        if (isMac()) {
+            // macOS key bindings
+            registerKey(KeyBinding.with(KeyCode.BACK_SPACE).shortcut().build(), TextInputControl.DELETE_FROM_LINE_START);
+            registerKey(KeyBinding.with(KeyCode.DELETE).alt().build(), TextInputControl.DELETE_NEXT_WORD);
+            registerKey(KeyBinding.with(KeyCode.BACK_SPACE).alt().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+            registerKey(KeyBinding.with(KeyCode.HOME).shift().build(), TextInputControl.SELECT_HOME_EXTEND);
+            registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().build(), TextInputControl.DOCUMENT_START);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().build(), TextInputControl.DOCUMENT_END);
+            registerKey(KeyBinding.with(KeyCode.LEFT).alt().build(), TextInputControl.LEFT_WORD);
+            registerKey(KeyBinding.with(KeyCode.Z).shortcut().shift().build(), TextInputControl.REDO);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).alt().build(), TextInputControl.RIGHT_WORD);
+            registerKey(KeyBinding.shortcut(KeyCode.A), TextInputControl.SELECT_ALL);
+            registerKey(KeyBinding.with(KeyCode.LEFT).shortcut().shift().build(), TextInputControl.SELECT_HOME_EXTEND);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).shortcut().shift().build(), TextInputControl.SELECT_END_EXTEND);
+            registerKey(KeyBinding.with(KeyCode.END).shift().build(), TextInputControl.SELECT_END_EXTEND);
+            registerKey(KeyBinding.with(KeyCode.LEFT).shift().alt().build(), TextInputControl.SELECT_LEFT_WORD);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).shift().alt().build(), TextInputControl.SELECT_RIGHT_WORD);
+        } else {
+            // not-mac key bindings
+            registerKey(KeyBinding.with(KeyCode.DELETE).control().build(), TextInputControl.DELETE_NEXT_WORD);
+            registerKey(KeyBinding.with(KeyCode.H).control().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
+            registerKey(KeyBinding.with(KeyCode.BACK_SPACE).control().build(), TextInputControl.DELETE_PREVIOUS_WORD);
+            registerKey(KeyBinding.with(KeyCode.BACK_SLASH).control().build(), TextInputControl.DESELECT);
+            registerKey(KeyBinding.with(KeyCode.LEFT).control().build(), TextInputControl.LEFT_WORD);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).control().build(), TextInputControl.RIGHT_WORD);
+            registerKey(KeyBinding.with(KeyCode.HOME).shift().build(), TextInputControl.SELECT_HOME);
+            registerKey(KeyBinding.with(KeyCode.END).shift().build(), TextInputControl.SELECT_END);
+            registerKey(KeyBinding.with(KeyCode.LEFT).control().shift().build(), TextInputControl.SELECT_LEFT_WORD);
+            registerKey(KeyBinding.with(KeyCode.RIGHT).control().shift().build(), TextInputControl.SELECT_RIGHT_WORD);
+        }
 
         // windows key bindings
-        registerKey(KeyBinding.with(KeyCode.Y).control().forWindows().build(), TextInputControl.REDO);
+        if (isWindows()) {
+            registerKey(KeyBinding.with(KeyCode.Y).control().build(), TextInputControl.REDO);
+        }
 
         // linux key bindings
-        registerKey(KeyBinding.with(KeyCode.Z).control().shift().forLinux().build(), TextInputControl.REDO);
-
-        // not-mac key bindings
-        registerKey(KeyBinding.with(KeyCode.DELETE).control().notForMac().build(), TextInputControl.DELETE_NEXT_WORD);
-        registerKey(KeyBinding.with(KeyCode.H).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_CHAR);
-        registerKey(KeyBinding.with(KeyCode.BACK_SPACE).control().notForMac().build(), TextInputControl.DELETE_PREVIOUS_WORD);
-        registerKey(KeyBinding.with(KeyCode.BACK_SLASH).control().notForMac().build(), TextInputControl.DESELECT);
-        registerKey(KeyBinding.with(KeyCode.LEFT).control().notForMac().build(), TextInputControl.LEFT_WORD);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).control().notForMac().build(), TextInputControl.RIGHT_WORD);
-        registerKey(KeyBinding.with(KeyCode.HOME).shift().notForMac().build(), TextInputControl.SELECT_HOME);
-        registerKey(KeyBinding.with(KeyCode.END).shift().notForMac().build(), TextInputControl.SELECT_END);
-        registerKey(KeyBinding.with(KeyCode.LEFT).control().shift().notForMac().build(), TextInputControl.SELECT_LEFT_WORD);
-        registerKey(KeyBinding.with(KeyCode.RIGHT).control().shift().notForMac().build(), TextInputControl.SELECT_RIGHT_WORD);
+        if (isLinux()) {
+            registerKey(KeyBinding.with(KeyCode.Z).control().shift().build(), TextInputControl.REDO);
+        }
 
         // key pad mappings
         addKeyPadMappings();
@@ -667,7 +670,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private static class ContextMenuItem extends MenuItem {
         ContextMenuItem(final String action, EventHandler<ActionEvent> onAction) {
-            super(getString("TextInputControl.menu." + action));
+            super(ControlResources.getString("TextInputControl.menu." + action));
             setOnAction(onAction);
         }
     }
@@ -681,5 +684,4 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private final MenuItem selectWordMI = new ContextMenuItem("SelectWord", e -> selectWord());
     private final MenuItem selectAllMI = new ContextMenuItem("SelectAll", e -> selectAll());
     private final MenuItem separatorMI = new SeparatorMenuItem();
-
 }
