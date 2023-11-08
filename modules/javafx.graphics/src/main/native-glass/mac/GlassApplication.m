@@ -540,7 +540,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
         // Determine if we're running embedded (in AWT, SWT, elsewhere)
         NSApplication *app = [NSApplicationFX sharedApplication];
-        isEmbedded = isEmbedded = ![app isKindOfClass:[NSApplicationFX class]];
+        isEmbedded = ![app isKindOfClass:[NSApplicationFX class]];
 
         if (!isEmbedded)
         {
