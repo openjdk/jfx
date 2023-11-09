@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -32,6 +34,10 @@
 #include <glibconfig.h>
 #include <glib/gmacros.h>
 #include <glib/gversionmacros.h>
+
+/* Must be included after the 3 headers above */
+#include <glib/glib-visibility.h>
+
 #include <time.h>
 
 G_BEGIN_DECLS
@@ -110,6 +116,27 @@ typedef gint            (*GCompareDataFunc)     (gconstpointer  a,
              gpointer       user_data);
 typedef gboolean        (*GEqualFunc)           (gconstpointer  a,
                                                  gconstpointer  b);
+
+/**
+ * GEqualFuncFull:
+ * @a: a value
+ * @b: a value to compare with
+ * @user_data: user data provided by the caller
+ *
+ * Specifies the type of a function used to test two values for
+ * equality. The function should return %TRUE if both values are equal
+ * and %FALSE otherwise.
+ *
+ * This is a version of #GEqualFunc which provides a @user_data closure from
+ * the caller.
+ *
+ * Returns: %TRUE if @a = @b; %FALSE otherwise
+ * Since: 2.74
+ */
+typedef gboolean        (*GEqualFuncFull)       (gconstpointer  a,
+                                                 gconstpointer  b,
+                                                 gpointer       user_data);
+
 typedef void            (*GDestroyNotify)       (gpointer       data);
 typedef void            (*GFunc)                (gpointer       data,
                                                  gpointer       user_data);
@@ -138,7 +165,7 @@ typedef gpointer  (*GCopyFunc)            (gconstpointer  src,
  *
  * Declares a type of function which takes an arbitrary
  * data pointer argument and has no return value. It is
- * not currently used in GLib or GTK+.
+ * not currently used in GLib or GTK.
  */
 typedef void            (*GFreeFunc)            (gpointer       data);
 
@@ -560,28 +587,5 @@ typedef gint grefcount;
 typedef gint gatomicrefcount;  /* should be accessed only using atomics */
 
 G_END_DECLS
-
-/* We prefix variable declarations so they can
- * properly get exported in Windows DLLs.
- */
-#ifndef GLIB_VAR
-#  ifdef G_PLATFORM_WIN32
-#    ifdef GLIB_STATIC_COMPILATION
-#      define GLIB_VAR extern
-#    else /* !GLIB_STATIC_COMPILATION */
-#      ifdef GLIB_COMPILATION
-#        ifdef DLL_EXPORT
-#          define GLIB_VAR extern __declspec(dllexport)
-#        else /* !DLL_EXPORT */
-#          define GLIB_VAR extern
-#        endif /* !DLL_EXPORT */
-#      else /* !GLIB_COMPILATION */
-#        define GLIB_VAR extern __declspec(dllimport)
-#      endif /* !GLIB_COMPILATION */
-#    endif /* !GLIB_STATIC_COMPILATION */
-#  else /* !G_PLATFORM_WIN32 */
-#    define GLIB_VAR _GLIB_EXTERN
-#  endif /* !G_PLATFORM_WIN32 */
-#endif /* GLIB_VAR */
 
 #endif /* __G_TYPES_H__ */

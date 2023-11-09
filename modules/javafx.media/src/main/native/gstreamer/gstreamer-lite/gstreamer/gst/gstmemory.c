@@ -363,7 +363,7 @@ gst_memory_unmap (GstMemory * mem, GstMapInfo * info)
  * guaranteed to be writable. @size can be set to -1 to return a copy
  * from @offset to the end of the memory region.
  *
- * Returns: a new #GstMemory.
+ * Returns: (transfer full) (nullable): a new copy of @mem if the copy succeeded, %NULL otherwise.
  */
 GstMemory *
 gst_memory_copy (GstMemory * mem, gssize offset, gssize size)

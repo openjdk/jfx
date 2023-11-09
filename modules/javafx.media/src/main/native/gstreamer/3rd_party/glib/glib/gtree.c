@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -67,6 +69,8 @@
  **/
 
 #define MAX_GTREE_HEIGHT 40
+/* G_MAXUINT nodes will be covered by tree height of log2(G_MAXUINT) + 2. */
+G_STATIC_ASSERT ((G_GUINT64_CONSTANT (1) << (MAX_GTREE_HEIGHT - 2)) >= G_MAXUINT);
 
 /**
  * GTree:
@@ -103,7 +107,8 @@ static GTreeNode* g_tree_node_new                   (gpointer       key,
 static GTreeNode *g_tree_insert_internal (GTree *tree,
                                           gpointer key,
                                           gpointer value,
-                                          gboolean replace);
+                                          gboolean replace,
+                                          gboolean null_ret_ok);
 static gboolean   g_tree_remove_internal            (GTree         *tree,
                                                      gconstpointer  key,
                                                      gboolean       steal);
@@ -462,6 +467,26 @@ g_tree_destroy (GTree *tree)
   g_tree_unref (tree);
 }
 
+static GTreeNode *
+g_tree_insert_replace_node_internal (GTree *tree,
+                                     gpointer key,
+                                     gpointer value,
+                                     gboolean replace,
+                                     gboolean null_ret_ok)
+{
+  GTreeNode *node;
+
+  g_return_val_if_fail (tree != NULL, NULL);
+
+  node = g_tree_insert_internal (tree, key, value, replace, null_ret_ok);
+
+#ifdef G_TREE_DEBUG
+  g_tree_node_check (tree->root);
+#endif
+
+  return node;
+}
+
 /**
  * g_tree_insert_node:
  * @tree: a #GTree
@@ -482,7 +507,8 @@ g_tree_destroy (GTree *tree)
  * result in a O(n log(n)) operation where most of the other operations
  * are O(log(n)).
  *
- * Returns: (transfer none): the inserted (or set) node.
+ * Returns: (transfer none) (nullable): the inserted (or set) node or %NULL
+ * if insertion would overflow the tree node counter.
  *
  * Since: 2.68
  */
@@ -491,17 +517,7 @@ g_tree_insert_node (GTree    *tree,
                     gpointer  key,
                     gpointer  value)
 {
-  GTreeNode *node;
-
-  g_return_val_if_fail (tree != NULL, NULL);
-
-  node = g_tree_insert_internal (tree, key, value, FALSE);
-
-#ifdef G_TREE_DEBUG
-  g_tree_node_check (tree->root);
-#endif
-
-  return node;
+  return g_tree_insert_replace_node_internal (tree, key, value, FALSE, TRUE);
 }
 
 /**
@@ -520,7 +536,7 @@ g_tree_insert (GTree    *tree,
                gpointer  key,
                gpointer  value)
 {
-  g_tree_insert_node (tree, key, value);
+  g_tree_insert_replace_node_internal (tree, key, value, FALSE, FALSE);
 }
 
 /**
@@ -539,7 +555,8 @@ g_tree_insert (GTree    *tree,
  * The tree is automatically 'balanced' as new key/value pairs are added,
  * so that the distance from the root to every leaf is as small as possible.
  *
- * Returns: (transfer none): the inserted (or set) node.
+ * Returns: (transfer none) (nullable): the inserted (or set) node or %NULL
+ * if insertion would overflow the tree node counter.
  *
  * Since: 2.68
  */
@@ -548,17 +565,7 @@ g_tree_replace_node (GTree    *tree,
                      gpointer  key,
                      gpointer  value)
 {
-  GTreeNode *node;
-
-  g_return_val_if_fail (tree != NULL, NULL);
-
-  node = g_tree_insert_internal (tree, key, value, TRUE);
-
-#ifdef G_TREE_DEBUG
-  g_tree_node_check (tree->root);
-#endif
-
-  return node;
+  return g_tree_insert_replace_node_internal (tree, key, value, TRUE, TRUE);
 }
 
 /**
@@ -575,7 +582,26 @@ g_tree_replace (GTree    *tree,
                 gpointer  key,
                 gpointer  value)
 {
-  g_tree_replace_node (tree, key, value);
+  g_tree_insert_replace_node_internal (tree, key, value, TRUE, FALSE);
+}
+
+/* internal checked nnodes increment routine */
+static gboolean
+g_tree_nnodes_inc_checked (GTree *tree, gboolean overflow_fatal)
+{
+  if (G_UNLIKELY (tree->nnodes == G_MAXUINT))
+    {
+      if (overflow_fatal)
+        {
+          g_error ("Incrementing GTree nnodes counter would overflow");
+        }
+
+      return FALSE;
+    }
+
+  tree->nnodes++;
+
+  return TRUE;
 }
 
 /* internal insert routine */
@@ -583,7 +609,8 @@ static GTreeNode *
 g_tree_insert_internal (GTree    *tree,
                         gpointer  key,
                         gpointer  value,
-                        gboolean  replace)
+                        gboolean  replace,
+                        gboolean  null_ret_ok)
 {
   GTreeNode *node, *retnode;
   GTreeNode *path[MAX_GTREE_HEIGHT];
@@ -594,7 +621,12 @@ g_tree_insert_internal (GTree    *tree,
   if (!tree->root)
     {
       tree->root = g_tree_node_new (key, value);
+
+#ifdef G_TREE_DEBUG
+      g_assert (tree->nnodes == 0);
+#endif
       tree->nnodes++;
+
       return tree->root;
     }
 
@@ -638,7 +670,14 @@ g_tree_insert_internal (GTree    *tree,
             }
           else
             {
-              GTreeNode *child = g_tree_node_new (key, value);
+              GTreeNode *child;
+
+              if (!g_tree_nnodes_inc_checked (tree, !null_ret_ok))
+                {
+                  return NULL;
+                }
+
+              child = g_tree_node_new (key, value);
 #ifdef GSTREAMER_LITE
               if (child == NULL) {
                 return NULL;
@@ -650,8 +689,6 @@ g_tree_insert_internal (GTree    *tree,
               node->left = child;
               node->left_child = TRUE;
               node->balance -= 1;
-
-              tree->nnodes++;
 
               retnode = child;
               break;
@@ -666,7 +703,14 @@ g_tree_insert_internal (GTree    *tree,
             }
           else
             {
-              GTreeNode *child = g_tree_node_new (key, value);
+              GTreeNode *child;
+
+              if (!g_tree_nnodes_inc_checked (tree, !null_ret_ok))
+                {
+                  return NULL;
+                }
+
+              child = g_tree_node_new (key, value);
 #ifdef GSTREAMER_LITE
               if (child == NULL) {
                 return NULL;
@@ -678,8 +722,6 @@ g_tree_insert_internal (GTree    *tree,
               node->right = child;
               node->right_child = TRUE;
               node->balance += 1;
-
-              tree->nnodes++;
 
               retnode = child;
               break;
@@ -1472,6 +1514,11 @@ g_tree_height (GTree *tree)
  * Gets the number of nodes in a #GTree.
  *
  * Returns: the number of nodes in @tree
+ *
+ * The node counter value type is really a #guint,
+ * but it is returned as a #gint due to backward
+ * compatibility issues (can be cast back to #guint to
+ * support its full range of values).
  */
 gint
 g_tree_nnodes (GTree *tree)

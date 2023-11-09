@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 1998-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -215,39 +217,39 @@ struct _GFlagsValue
 
 
 /* --- prototypes --- */
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GEnumValue* g_enum_get_value    (GEnumClass *enum_class,
              gint    value);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GEnumValue* g_enum_get_value_by_name  (GEnumClass *enum_class,
              const gchar  *name);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GEnumValue* g_enum_get_value_by_nick  (GEnumClass *enum_class,
              const gchar  *nick);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GFlagsValue*  g_flags_get_first_value   (GFlagsClass  *flags_class,
              guint     value);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GFlagsValue*  g_flags_get_value_by_name (GFlagsClass  *flags_class,
              const gchar  *name);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GFlagsValue*  g_flags_get_value_by_nick (GFlagsClass  *flags_class,
              const gchar  *nick);
-GLIB_AVAILABLE_IN_2_54
+GOBJECT_AVAILABLE_IN_2_54
 gchar          *g_enum_to_string                (GType           g_enum_type,
                                                  gint            value);
-GLIB_AVAILABLE_IN_2_54
+GOBJECT_AVAILABLE_IN_2_54
 gchar          *g_flags_to_string               (GType           flags_type,
                                                  guint           value);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 void            g_value_set_enum          (GValue         *value,
              gint            v_enum);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 gint            g_value_get_enum          (const GValue   *value);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 void            g_value_set_flags         (GValue         *value,
              guint           v_flags);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 guint           g_value_get_flags         (const GValue   *value);
 
 
@@ -256,23 +258,123 @@ guint           g_value_get_flags         (const GValue   *value);
 /* const_static_values is a NULL terminated array of enum/flags
  * values that is taken over!
  */
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GType g_enum_register_static     (const gchar       *name,
             const GEnumValue  *const_static_values);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GType g_flags_register_static    (const gchar       *name,
             const GFlagsValue *const_static_values);
 /* functions to complete the type information
  * for enums/flags implemented by plugins
  */
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 void  g_enum_complete_type_info  (GType        g_enum_type,
             GTypeInfo       *info,
             const GEnumValue  *const_values);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 void  g_flags_complete_type_info (GType        g_flags_type,
             GTypeInfo       *info,
             const GFlagsValue *const_values);
+
+/* {{{ Macros */
+
+/**
+ * G_DEFINE_ENUM_VALUE:
+ * @EnumValue: an enumeration value
+ * @EnumNick: a short string representing the enumeration value
+ *
+ * Defines an enumeration value, and maps it to a "nickname".
+ *
+ * This macro can only be used with G_DEFINE_ENUM_TYPE() and
+ * G_DEFINE_FLAGS_TYPE().
+ *
+ * Since: 2.74
+ */
+#define G_DEFINE_ENUM_VALUE(EnumValue, EnumNick) \
+  { EnumValue, #EnumValue, EnumNick } \
+  GOBJECT_AVAILABLE_MACRO_IN_2_74
+
+/**
+ * G_DEFINE_ENUM_TYPE:
+ * @TypeName: the enumeration type, in 'CamelCase'
+ * @type_name: the enumeration type prefixed, in 'snake_case'
+ * @...: a list of enumeration values, defined using G_DEFINE_ENUM_VALUE()
+ *
+ * A convenience macro for defining enumeration types.
+ *
+ * This macro will generate a '*_get_type()' function for the
+ * given @TypeName, using @type_name as the function prefix.
+ *
+ * |[<!-- language="C" -->
+ * G_DEFINE_ENUM_TYPE (GtkOrientation, gtk_orientation,
+ *   G_DEFINE_ENUM_VALUE (GTK_ORIENTATION_HORIZONTAL, "horizontal"),
+ *   G_DEFINE_ENUM_VALUE (GTK_ORIENTATION_VERTICAL, "vertical"))
+ * ]|
+ *
+ * For projects that have multiple enumeration types, or enumeration
+ * types with many values, you should consider using glib-mkenums to
+ * generate the type function.
+ *
+ * Since: 2.74
+ */
+#define G_DEFINE_ENUM_TYPE(TypeName, type_name, ...) \
+GType \
+type_name ## _get_type (void) { \
+  static gsize g_define_type__static = 0; \
+  if (g_once_init_enter (&g_define_type__static)) { \
+    static const GEnumValue enum_values[] = { \
+      __VA_ARGS__ , \
+      { 0, NULL, NULL }, \
+    }; \
+    GType g_define_type = g_enum_register_static (g_intern_static_string (#TypeName), enum_values); \
+    g_once_init_leave (&g_define_type__static, g_define_type); \
+  } \
+  return g_define_type__static; \
+} \
+  GOBJECT_AVAILABLE_MACRO_IN_2_74
+
+/**
+ * G_DEFINE_FLAGS_TYPE:
+ * @TypeName: the enumeration type, in 'CamelCase'
+ * @type_name: the enumeration type prefixed, in 'snake_case'
+ * @...: a list of enumeration values, defined using G_DEFINE_ENUM_VALUE()
+ *
+ * A convenience macro for defining flag types.
+ *
+ * This macro will generate a '*_get_type()' function for the
+ * given @TypeName, using @type_name as the function prefix.
+ *
+ * |[<!-- language="C" -->
+ * G_DEFINE_FLAGS_TYPE (GSettingsBindFlags, g_settings_bind_flags,
+ *   G_DEFINE_ENUM_VALUE (G_SETTINGS_BIND_DEFAULT, "default"),
+ *   G_DEFINE_ENUM_VALUE (G_SETTINGS_BIND_GET, "get"),
+ *   G_DEFINE_ENUM_VALUE (G_SETTINGS_BIND_SET, "set"),
+ *   G_DEFINE_ENUM_VALUE (G_SETTINGS_BIND_NO_SENSITIVITY, "no-sensitivity"),
+ *   G_DEFINE_ENUM_VALUE (G_SETTINGS_BIND_GET_NO_CHANGES, "get-no-changes"),
+ *   G_DEFINE_ENUM_VALUE (G_SETTINGS_BIND_INVERT_BOOLEAN, "invert-boolean"))
+ * ]|
+ *
+ * For projects that have multiple enumeration types, or enumeration
+ * types with many values, you should consider using glib-mkenums to
+ * generate the type function.
+ *
+ * Since: 2.74
+ */
+#define G_DEFINE_FLAGS_TYPE(TypeName, type_name, ...) \
+GType \
+type_name ## _get_type (void) { \
+  static gsize g_define_type__static = 0; \
+  if (g_once_init_enter (&g_define_type__static)) { \
+    static const GFlagsValue flags_values[] = { \
+      __VA_ARGS__ , \
+      { 0, NULL, NULL }, \
+    }; \
+    GType g_define_type = g_flags_register_static (g_intern_static_string (#TypeName), flags_values); \
+    g_once_init_leave (&g_define_type__static, g_define_type); \
+  } \
+  return g_define_type__static; \
+} \
+  GOBJECT_AVAILABLE_MACRO_IN_2_74
 
 G_END_DECLS
 

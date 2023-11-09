@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -267,6 +269,9 @@ g_timer_is_active (GTimer *timer)
 void
 g_usleep (gulong microseconds)
 {
+  if G_UNLIKELY (microseconds == 0)
+    return;
+
 #ifdef G_OS_WIN32
   /* Round up to the next millisecond */
   Sleep (microseconds ? (1 + (microseconds - 1) / 1000) : 0);

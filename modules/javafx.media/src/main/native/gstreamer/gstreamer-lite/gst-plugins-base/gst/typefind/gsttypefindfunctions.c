@@ -534,73 +534,118 @@ hls_type_find (GstTypeFind * tf, gpointer unused)
 
 /*** application/xml **********************************************************/
 
-#define XML_BUFFER_SIZE 16
-#define XML_INC_BUFFER {                                                \
-  pos++;                                                                \
-  if (pos == XML_BUFFER_SIZE) {                                         \
-    pos = 0;                                                            \
-    offset += XML_BUFFER_SIZE;                                          \
-    data = gst_type_find_peek (tf, offset, XML_BUFFER_SIZE);            \
-    if (data == NULL) return FALSE;                                     \
-  } else {                                                              \
-    data++;                                                             \
-  }                                                                     \
-}
-
-#define XML_INC_BUFFER_DATA {                                           \
-  pos++;                                                                \
-  if (pos >= length) {                                                  \
-    return FALSE;                                                       \
-  } else {                                                              \
-    data++;                                                             \
-  }                                                                     \
-}
-
 static gboolean
 xml_check_first_element_from_data (const guint8 * data, guint length,
     const gchar * element, guint elen, gboolean strict)
 {
   gboolean got_xmldec;
-  guint pos = 0;
+  const guint8 *ptr;
 
   g_return_val_if_fail (data != NULL, FALSE);
 
-  if (length <= 5)
+  /* search for an opening tag */
+  ptr = memchr (data, '<', length);
+  if (!ptr)
+    return FALSE;
+
+  length -= (ptr - data);
+  data = ptr;
+
+  if (length < 5)
     return FALSE;
 
   /* look for the XMLDec
    * see XML spec 2.8, Prolog and Document Type Declaration
    * http://www.w3.org/TR/2004/REC-xml-20040204/#sec-prolog-dtd */
   got_xmldec = (memcmp (data, "<?xml", 5) == 0);
+  if (got_xmldec) {
+    /* look for ending ?> */
+    data += 5;
+    length -= 5;
 
+    ptr = memchr (data, '?', length);
+    if (!ptr)
+      return FALSE;
+
+    length -= (ptr - data);
+    data = ptr;
+
+    if (length < 2)
+      return FALSE;
+
+    got_xmldec = (memcmp (data, "?>", 2) == 0);
+    if (!got_xmldec)
+      return FALSE;
+
+    data += 2;
+    length -= 2;
+  }
   if (strict && !got_xmldec)
     return FALSE;
 
-  /* skip XMLDec in any case if we've got one */
   if (got_xmldec) {
-    pos += 5;
-    data += 5;
+    /* search for the next opening tag */
+    ptr = memchr (data, '<', length);
+    if (!ptr)
+      return FALSE;
+
+    length -= (ptr - data);
+    data = ptr;
   }
 
-  /* look for the first element, it has to be the requested element. Bail
-   * out if it is not within the first 4kB. */
-  while (pos < MIN (4096, length)) {
-    while (*data != '<' && pos < MIN (4096, length)) {
-      XML_INC_BUFFER_DATA;
-    }
+  /* skip XML comments */
+  while (length >= 4 && memcmp (data, "<!--", 4) == 0) {
+    data += 4;
+    length -= 4;
 
-    XML_INC_BUFFER_DATA;
-    if (!g_ascii_isalpha (*data)) {
-      /* if not alphabetic, it's a PI or an element / attribute declaration
-       * like <?xxx or <!xxx */
-      XML_INC_BUFFER_DATA;
-      continue;
-    }
-
-    /* the first normal element, check if it's the one asked for */
-    if (pos + elen + 1 >= length)
+    ptr = (const guint8 *) g_strstr_len ((const gchar *) data, length, "-->");
+    if (!ptr)
       return FALSE;
-    return (element && strncmp ((const char *) data, element, elen) == 0);
+    ptr += 3;
+
+    length -= (ptr - data);
+    data = ptr;
+
+    /* search for the next opening tag */
+    ptr = memchr (data, '<', length);
+    if (!ptr)
+      return FALSE;
+
+    length -= (ptr - data);
+    data = ptr;
+  }
+
+  if (elen == 0)
+    return TRUE;
+
+  /* look for the first element, it has to be the requested element. Bail
+   * out otherwise. */
+  if (length < elen + 1)
+    return FALSE;
+
+  data += 1;
+  length -= 1;
+  if (memcmp (data, element, elen) != 0)
+    return FALSE;
+
+  data += elen;
+  length -= elen;
+
+  /* check if there's a closing `>` following */
+  ptr = memchr (data, '>', length);
+  if (!ptr)
+    return FALSE;
+
+  /* between `<elem` and `>`, there should only be spaces, alphanum or `:`
+   * until the first `=` for an attribute value */
+  while (data < ptr) {
+    if (*data == '>' || *data == '=')
+      return TRUE;
+
+    if (!g_ascii_isprint (*data) && *data != '\n' && *data != '\r')
+      return FALSE;
+
+    data++;
   }
 
   return FALSE;
@@ -610,50 +655,27 @@ static gboolean
 xml_check_first_element (GstTypeFind * tf, const gchar * element, guint elen,
     gboolean strict)
 {
-  gboolean got_xmldec;
   const guint8 *data;
-  guint offset = 0;
-  guint pos = 0;
+  guint length;
 
-  data = gst_type_find_peek (tf, 0, XML_BUFFER_SIZE);
+  length = gst_type_find_get_length (tf);
+
+  if (length == 0) {
+    length = 4096;
+    while (!(data = gst_type_find_peek (tf, 0, length)) && length >= 512)
+      length /= 2;
+  } else if (length < 32) {
+    return FALSE;
+  } else {                      /* the first few bytes should be enough */
+    length = MIN (4096, length);
+    data = gst_type_find_peek (tf, 0, length);
+  }
+
   if (!data)
     return FALSE;
 
-  /* look for the XMLDec
-   * see XML spec 2.8, Prolog and Document Type Declaration
-   * http://www.w3.org/TR/2004/REC-xml-20040204/#sec-prolog-dtd */
-  got_xmldec = (memcmp (data, "<?xml", 5) == 0);
-
-  if (strict && !got_xmldec)
-    return FALSE;
-
-  /* skip XMLDec in any case if we've got one */
-  if (got_xmldec) {
-    pos += 5;
-    data += 5;
-  }
-
-  /* look for the first element, it has to be the requested element. Bail
-   * out if it is not within the first 4kB. */
-  while (data && (offset + pos) < 4096) {
-    while (*data != '<' && (offset + pos) < 4096) {
-      XML_INC_BUFFER;
-    }
-
-    XML_INC_BUFFER;
-    if (!g_ascii_isalpha (*data)) {
-      /* if not alphabetic, it's a PI or an element / attribute declaration
-       * like <?xxx or <!xxx */
-      XML_INC_BUFFER;
-      continue;
-    }
-
-    /* the first normal element, check if it's the one asked for */
-    data = gst_type_find_peek (tf, offset + pos, elen + 1);
-    return (data && element && strncmp ((char *) data, element, elen) == 0);
-  }
-
-  return FALSE;
+  return xml_check_first_element_from_data (data, length, element, elen,
+      strict);
 }
 
 static GstStaticCaps generic_xml_caps = GST_STATIC_CAPS ("application/xml");
@@ -2145,21 +2167,29 @@ svg_type_find (GstTypeFind * tf, gpointer unused)
 {
   static const gchar svg_doctype[] = "!DOCTYPE svg";
   static const gchar svg_tag[] = "<svg";
+  static const gchar svg_namespace[] = "http://www.w3.org/2000/svg";
   DataScanCtx c = { 0, NULL, 0 };
+  guint probability = GST_TYPE_FIND_NONE;
 
   while (c.offset <= 1024) {
-    if (G_UNLIKELY (!data_scan_ctx_ensure_data (tf, &c, 12)))
+    if (G_UNLIKELY (!data_scan_ctx_ensure_data (tf, &c,
+                strlen (svg_namespace))))
       break;
 
-    if (memcmp (svg_doctype, c.data, 12) == 0) {
+    if (memcmp (svg_doctype, c.data, 12) == 0
+        || memcmp (svg_namespace, c.data, strlen (svg_namespace)) == 0) {
       gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, SVG_CAPS);
       return;
     } else if (memcmp (svg_tag, c.data, 4) == 0) {
-      gst_type_find_suggest (tf, GST_TYPE_FIND_LIKELY, SVG_CAPS);
-      return;
+      // Check if we also find the SVG namespace later as that would be a
+      // clearer indication
+      probability = GST_TYPE_FIND_LIKELY;
     }
     data_scan_ctx_advance (tf, &c, 1);
   }
+
+  if (probability > GST_TYPE_FIND_NONE)
+    gst_type_find_suggest (tf, probability, SVG_CAPS);
 }
 
 /*** multipart/x-mixed-replace mimestream ***/

@@ -490,7 +490,7 @@ gst_audio_format_info_fill_silence (const GstAudioFormatInfo * info,
 {
   guint8 *dptr = dest;
 
-  g_return_if_fail (info != NULL);
+  g_return_if_fail (GST_AUDIO_FORMAT_INFO_IS_VALID_RAW (info));
   g_return_if_fail (dest != NULL);
 
   if (info->flags & GST_AUDIO_FORMAT_FLAG_FLOAT ||

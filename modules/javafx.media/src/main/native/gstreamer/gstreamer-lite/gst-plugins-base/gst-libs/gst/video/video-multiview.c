@@ -65,10 +65,10 @@ static const struct mview_map_t
  * gst_video_multiview_mode_to_caps_string:
  * @mview_mode: A #GstVideoMultiviewMode value
  *
- * Returns: The caps string representation of the mode, or NULL if invalid.
- *
  * Given a #GstVideoMultiviewMode returns the multiview-mode caps string
  * for insertion into a caps structure
+ *
+ * Returns: (nullable): The caps string representation of the mode, or NULL if invalid.
  *
  * Since: 1.6
  */

@@ -103,6 +103,8 @@ static char *_gst_plugin_fault_handler_filename = NULL;
  * MIT/X11: https://opensource.org/licenses/MIT
  * 3-clause BSD: https://opensource.org/licenses/BSD-3-Clause
  * Zero-Clause BSD: https://opensource.org/licenses/0BSD
+ * Apache License 2.0: http://www.apache.org/licenses/LICENSE-2.0 (Since: 1.22)
+
  * FIXME: update to use SPDX identifiers, or just remove entirely
  */
 static const gchar known_licenses[] = "LGPL\000"        /* GNU Lesser General Public License */
@@ -114,6 +116,7 @@ static const gchar known_licenses[] = "LGPL\000"        /* GNU Lesser General Pu
     "BSD\000"                   /* 3-clause BSD license */
     "MIT/X11\000"               /* MIT/X11 license */
     "0BSD\000"                  /* Zero-Clause BSD */
+    "Apache 2.0\000"            /* Apache License 2.0 */
     "Proprietary\000"           /* Proprietary license */
     GST_LICENSE_UNKNOWN;        /* some other license */
 
@@ -829,7 +832,7 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
       /* already loaded */
       g_mutex_unlock (&gst_plugin_loading_mutex);
       return plugin;
-    } else {
+    } else if (g_strcmp0 (plugin->filename, filename) == 0) {
       /* load plugin and update fields */
       new_plugin = FALSE;
     }
@@ -1190,8 +1193,16 @@ gboolean
 gst_plugin_is_loaded (GstPlugin * plugin)
 {
   g_return_val_if_fail (plugin != NULL, FALSE);
+  gboolean ret;
 
-  return (plugin->module != NULL || plugin->filename == NULL);
+  if (plugin->filename == NULL)
+    return TRUE;                /* Static plugin */
+
+  g_mutex_lock (&gst_plugin_loading_mutex);
+  ret = (plugin->module != NULL);
+  g_mutex_unlock (&gst_plugin_loading_mutex);
+
+  return ret;
 }
 
 /**
@@ -1413,22 +1424,27 @@ gst_plugin_load_by_name (const gchar * name)
 
   GST_DEBUG ("looking up plugin %s in default registry", name);
   plugin = gst_registry_find_plugin (gst_registry_get (), name);
-  if (plugin) {
-    GST_DEBUG ("loading plugin %s from file %s", name, plugin->filename);
-    newplugin = gst_plugin_load_file (plugin->filename, &error);
-    gst_object_unref (plugin);
-
-    if (!newplugin) {
-      GST_WARNING ("load_plugin error: %s", error->message);
-      g_error_free (error);
-      return NULL;
-    }
-    /* newplugin was reffed by load_file */
-    return newplugin;
+  if (plugin == NULL) {
+    GST_DEBUG ("Could not find plugin %s in registry", name);
+    return NULL;
   }
 
-  GST_DEBUG ("Could not find plugin %s in registry", name);
-  return NULL;
+  if (gst_plugin_is_loaded (plugin)) {
+    GST_DEBUG ("plugin %s already loaded", name);
+    return plugin;
+  }
+
+  GST_DEBUG ("loading plugin %s from file %s", name, plugin->filename);
+  newplugin = gst_plugin_load_file (plugin->filename, &error);
+  gst_object_unref (plugin);
+
+  if (!newplugin) {
+    GST_WARNING ("load_plugin error: %s", error->message);
+    g_error_free (error);
+    return NULL;
+  }
+  /* newplugin was reffed by load_file */
+  return newplugin;
 }
 
 /**
