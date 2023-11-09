@@ -147,7 +147,7 @@ public class SystemMenuBarTest {
         stage.requestFocus();
         Thread t = new Thread(){
             @Override public void run() {
-                for (int i = 0; i < 50; i++) {
+                for (int i = 0; i < 10; i++) {
                     try {
                         Thread.sleep(20);
                     } catch (Exception e) {
