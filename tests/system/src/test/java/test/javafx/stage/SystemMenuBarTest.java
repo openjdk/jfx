@@ -47,6 +47,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import test.util.memory.JMemoryBuddy;
+
 public class SystemMenuBarTest {
     @BeforeClass
     public static void initFX() throws Exception {
@@ -120,6 +122,7 @@ public class SystemMenuBarTest {
             Thread.currentThread().setUncaughtExceptionHandler((t,e) -> {
                 e.printStackTrace();
                 failed.set(true);
+                memoryLatch.countDown();
             });
             createMenuBarWithItemsStage();
         });
@@ -159,9 +162,11 @@ public class SystemMenuBarTest {
                     });
                 }
                 Platform.runLater( () -> {
-                    System.gc();
-                    uncollectedMenuItems.removeIf(ref -> ref.get() == null);
-                    assertEquals(1, uncollectedMenuItems.size(), "Only the last menuItem should be alive");
+                    int strongCount = 0;
+                    for (WeakReference wr: uncollectedMenuItems) {
+                        if (!JMemoryBuddy.checkCollectable(wr)) strongCount++;
+                    }
+                    assertEquals(1, strongCount, "Only the last menuItem should be alive");
                     memoryLatch.countDown();
                 });
             }
