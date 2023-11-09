@@ -75,8 +75,8 @@ public class SimpleSwingNodeBlurryTextTest extends Application {
         });
 
         BorderPane pane = new BorderPane();
-	HBox hbox = new HBox(10, passButton, failButton);
-	hbox.setAlignment(Pos.CENTER);
+        HBox hbox = new HBox(10, passButton, failButton);
+        hbox.setAlignment(Pos.CENTER);
 
         rootNode = new VBox(5,
                 new Label("1. This is a test for text rendering being not blurry on SwingNode."),
@@ -84,9 +84,9 @@ public class SimpleSwingNodeBlurryTextTest extends Application {
                 new Label("3. If Swing JLabel/JButton text is blurry compared to JavaFX Label/Button,"),
                 new Label("              click on Fail or else click on Pass"),
                 new Label("4. You may need to move the window a bit "),
-                new Label("               or maximize/restore the window to render the Swing contents"),
+                new Label("       or maximize/restore the window to render the Swing contents"),
                 new Label(""),
-		hbox, pane);
+                hbox, pane);
 
         stage.setTitle("JavaFX SwingNode: "
                 + "USE_JPANEL:" + USE_JPANEL
@@ -97,7 +97,7 @@ public class SimpleSwingNodeBlurryTextTest extends Application {
         Scene scene = new Scene(rootNode, 500, 300);
         stage.setScene(scene);
         stage.show();
-        EventQueue.invokeLater(SimpleSwingNodeBlurryTextTest::initSwing);	
+        EventQueue.invokeLater(SimpleSwingNodeBlurryTextTest::initSwing);
     }
 
     private void quit() {
@@ -145,7 +145,7 @@ public class SimpleSwingNodeBlurryTextTest extends Application {
         Platform.runLater(() -> {
             if (USE_JPANEL) {
                 VBox vbox = new VBox(new Label(""));
-                HBox hbox = new HBox(10, label, button);		    
+                HBox hbox = new HBox(10, label, button);
                 rootNode.getChildren().addAll(vbox, hbox, swingPanel);
             } else {
                 rootNode.getChildren().addAll(label, button, swingLabel, swingButton);
