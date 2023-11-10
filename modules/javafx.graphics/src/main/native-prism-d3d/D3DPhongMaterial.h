@@ -26,18 +26,20 @@
 #ifndef D3DPHONGMATERIAL_H
 #define D3DPHONGMATERIAL_H
 
+#include <array>
+
 #include "D3DContext.h"
 
 // See MaterialPhong.h, MaterialPhongShaders.h
 
 // Map type numbered sequence used for sampling registers (we have 4 sampling registers for vs 3.0).
 // Order is defined by com.sun.prism.PhongMaterial's MapType enum
-enum map_type : unsigned int {
-    diffuse,
-    specular,
-    bump,
-    self_illumination,
-    num_map_types
+enum MapType : unsigned int {
+    DIFFUSE,
+    SPECULAR,
+    BUMP,
+    SELF_ILLUMINATION,
+    NUM_MAP_TYPES
 };
 
 class D3DPhongMaterial {
@@ -48,26 +50,26 @@ public:
     float *getDiffuseColor();
     void setSpecularColor(bool set, float r, float g, float b, float a);
     float *getSpecularColor();
-    void setMap(map_type mapID, IDirect3DBaseTexture9 *texMap, D3DTEXTUREFILTERTYPE min,
+    void setMap(MapType mapID, IDirect3DBaseTexture9 *texMap, D3DTEXTUREFILTERTYPE min,
             D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip);
     bool isBumpMap();
     bool isSpecularMap();
     bool isSpecularColor();
     bool isSelfIllumMap();
-    IDirect3DBaseTexture9 * getMap(map_type type);
-    D3DTEXTUREFILTERTYPE getMinFilterType(map_type type);
-    D3DTEXTUREFILTERTYPE getMagFilterType(map_type type);
-    D3DTEXTUREFILTERTYPE getMipFilterType(map_type type);
+    IDirect3DBaseTexture9 *getMap(MapType type);
+    D3DTEXTUREFILTERTYPE getMinFilterType(MapType type);
+    D3DTEXTUREFILTERTYPE getMagFilterType(MapType type);
+    D3DTEXTUREFILTERTYPE getMipFilterType(MapType type);
 
 private:
     D3DContext *context = NULL;
     float diffuseColor[4] = {0};
     float specularColor[4] = {1, 1, 1, 32};
     bool specularColorSet = false;
-    IDirect3DBaseTexture9 *map[map_type::num_map_types] = {NULL};
-    D3DTEXTUREFILTERTYPE minFilter[map_type::num_map_types] = {NULL};
-    D3DTEXTUREFILTERTYPE magFilter[map_type::num_map_types] = {NULL};
-    D3DTEXTUREFILTERTYPE mipFilter[map_type::num_map_types] = {NULL};
+    std::array<IDirect3DBaseTexture9*, MapType::NUM_MAP_TYPES> map;
+    D3DTEXTUREFILTERTYPE minFilter[MapType::NUM_MAP_TYPES] = {NULL};
+    D3DTEXTUREFILTERTYPE magFilter[MapType::NUM_MAP_TYPES] = {NULL};
+    D3DTEXTUREFILTERTYPE mipFilter[MapType::NUM_MAP_TYPES] = {NULL};
 };
 
 #endif  /* D3DPHONGMATERIAL_H */

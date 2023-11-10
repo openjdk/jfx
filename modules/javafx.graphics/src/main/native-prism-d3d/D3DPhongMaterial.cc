@@ -34,9 +34,7 @@ using std::endl;
 D3DPhongMaterial::~D3DPhongMaterial() {
     context = NULL;
     // The freeing of texture native resources is handled by its Java layer.
-    for (int i = 0; i < map_type::num_map_types; i++) {
-        map[i] = NULL;
-    }
+    map.fill(NULL);
 }
 
 D3DPhongMaterial::D3DPhongMaterial(D3DContext *ctx) :
@@ -67,38 +65,38 @@ float * D3DPhongMaterial::getSpecularColor() {
 }
 
 bool D3DPhongMaterial::isBumpMap() {
-    return map[map_type::bump] ? true : false;
+    return map[MapType::BUMP] != NULL;
 }
 
 bool D3DPhongMaterial::isSpecularMap() {
-    return map[map_type::specular] ? true : false;
+    return map[MapType::SPECULAR] != NULL;
 }
 
 bool D3DPhongMaterial::isSelfIllumMap() {
-    return map[map_type::self_illumination] ? true : false;
+    return map[MapType::SELF_ILLUMINATION] != NULL;
 }
 
 bool D3DPhongMaterial::isSpecularColor() {
     return specularColorSet;
 }
 
-IDirect3DBaseTexture9 * D3DPhongMaterial::getMap(map_type type) {
+IDirect3DBaseTexture9 * D3DPhongMaterial::getMap(MapType type) {
     return map[type];
 }
 
-D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMinFilterType(map_type type) {
+D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMinFilterType(MapType type) {
     return minFilter[type];
 }
 
-D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMagFilterType(map_type type) {
+D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMagFilterType(MapType type) {
     return magFilter[type];
 }
 
-D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMipFilterType(map_type type) {
+D3DTEXTUREFILTERTYPE D3DPhongMaterial::getMipFilterType(MapType type) {
     return mipFilter[type];
 }
 
-void D3DPhongMaterial::setMap(map_type type, IDirect3DBaseTexture9 *texMap, D3DTEXTUREFILTERTYPE min,
+void D3DPhongMaterial::setMap(MapType type, IDirect3DBaseTexture9 *texMap, D3DTEXTUREFILTERTYPE min,
         D3DTEXTUREFILTERTYPE mag, D3DTEXTUREFILTERTYPE mip) {
     map[type] = texMap;
     minFilter[type] = min;

@@ -290,8 +290,8 @@ void D3DMeshView::render() {
     }
 
     // Set the textures and their filters in their corresponding samplers
-    for (int i = 0; i < map_type::num_map_types; i++) {
-        map_type type = static_cast<map_type>(i);
+    for (int i = 0; i < MapType::NUM_MAP_TYPES; i++) {
+        MapType type = static_cast<MapType>(i);
         SUCCEEDED(device->SetTexture(type, material->getMap(type)));
         SUCCEEDED(device->SetSamplerState(type, D3DSAMP_MINFILTER, material->getMinFilterType(type)));
         SUCCEEDED(device->SetSamplerState(type, D3DSAMP_MAGFILTER, material->getMagFilterType(type)));
