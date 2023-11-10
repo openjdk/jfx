@@ -26,19 +26,20 @@
 package javafx.application;
 
 /**
- * Defines the appearance of the user interface.
+ * Defines the color scheme of the user interface, which specifies whether applications
+ * should prefer light text on dark backgrounds, or dark text on light backgrounds.
  *
- * @see javafx.application.Platform.Preferences#appearanceProperty()
+ * @see javafx.application.Platform.Preferences#colorSchemeProperty()
  * @since 22
  */
-public enum Appearance {
+public enum ColorScheme {
     /**
-     * A light appearance uses bright backgrounds and dark text.
+     * A light color scheme uses bright backgrounds and dark text.
      */
     LIGHT,
 
     /**
-     * A dark appearance uses dark backgrounds and bright text.
+     * A dark color scheme uses dark backgrounds and bright text.
      */
     DARK
 }

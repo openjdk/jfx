@@ -26,7 +26,7 @@
 package com.sun.javafx.application.preferences;
 
 import com.sun.javafx.binding.MapExpressionHelper;
-import javafx.application.Appearance;
+import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -163,13 +163,13 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     }
 
     @Override
-    public ReadOnlyObjectProperty<Appearance> appearanceProperty() {
-        return properties.appearanceProperty();
+    public ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty() {
+        return properties.colorSchemeProperty();
     }
 
     @Override
-    public Appearance getAppearance() {
-        return properties.getAppearance();
+    public ColorScheme getColorScheme() {
+        return properties.getColorScheme();
     }
 
     @Override

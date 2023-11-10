@@ -571,18 +571,18 @@ public final class Platform {
     public interface Preferences extends ObservableMap<String, Object> {
 
         /**
-         * The platform appearance, which specifies whether applications should use a light
-         * or dark color scheme. The value of this property is derived from the perceptual
-         * brightness of {@link #backgroundColorProperty() backgroundColor} in relation to
-         * {@link #foregroundColorProperty() foregroundColor} and defaults to {@link Appearance#LIGHT}
+         * The platform color scheme, which specifies whether applications should prefer light text on
+         * dark backgrounds, or dark text on light backgrounds. The value of this property is derived
+         * from the perceptual brightness of {@link #backgroundColorProperty() backgroundColor} in relation
+         * to {@link #foregroundColorProperty() foregroundColor} and defaults to {@link ColorScheme#LIGHT}
          * if the platform does not report color preferences.
          *
-         * @return the {@code appearance} property
-         * @defaultValue {@link Appearance#LIGHT}
+         * @return the {@code colorScheme} property
+         * @defaultValue {@link ColorScheme#LIGHT}
          */
-        ReadOnlyObjectProperty<Appearance> appearanceProperty();
+        ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty();
 
-        Appearance getAppearance();
+        ColorScheme getColorScheme();
 
         /**
          * The color used for background regions.

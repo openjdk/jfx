@@ -27,7 +27,7 @@ package com.sun.javafx.application.preferences;
 
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
-import javafx.application.Appearance;
+import javafx.application.ColorScheme;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -47,23 +47,23 @@ final class PreferenceProperties {
     private final ColorProperty foregroundColor = new ColorProperty("foregroundColor", Color.BLACK);
     private final ColorProperty accentColor = new ColorProperty("accentColor", Color.rgb(21, 126, 251));
     private final List<ColorProperty> allColors = List.of(backgroundColor, foregroundColor, accentColor);
-    private final AppearanceProperty appearance = new AppearanceProperty();
+    private final ColorSchemeProperty colorScheme = new ColorSchemeProperty();
     private final Object bean;
 
     PreferenceProperties(Object bean) {
         this.bean = bean;
     }
 
-    public ReadOnlyObjectProperty<Appearance> appearanceProperty() {
-        return appearance.getReadOnlyProperty();
+    public ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty() {
+        return colorScheme.getReadOnlyProperty();
     }
 
-    public Appearance getAppearance() {
-        return appearance.get();
+    public ColorScheme getColorScheme() {
+        return colorScheme.get();
     }
 
-    public void setAppearance(Appearance value) {
-        appearance.setValueOverride(value);
+    public void setColorScheme(ColorScheme value) {
+        colorScheme.setValueOverride(value);
     }
 
     public ReadOnlyObjectProperty<Color> backgroundColorProperty() {
@@ -208,30 +208,30 @@ final class PreferenceProperties {
         }
     }
 
-    private class AppearanceProperty extends ReadOnlyObjectWrapper<Appearance> {
-        private Appearance appearanceOverride;
+    private class ColorSchemeProperty extends ReadOnlyObjectWrapper<ColorScheme> {
+        private ColorScheme colorSchemeOverride;
 
-        AppearanceProperty() {
-            super(bean, "appearance");
+        ColorSchemeProperty() {
+            super(bean, "colorScheme");
             InvalidationListener listener = observable -> update();
             backgroundColor.addListener(listener);
             foregroundColor.addListener(listener);
             update();
         }
 
-        public void setValueOverride(Appearance appearance) {
-            appearanceOverride = appearance;
+        public void setValueOverride(ColorScheme colorScheme) {
+            colorSchemeOverride = colorScheme;
             update();
         }
 
         private void update() {
-            if (appearanceOverride != null) {
-                set(appearanceOverride);
+            if (colorSchemeOverride != null) {
+                set(colorSchemeOverride);
             } else {
                 Color background = backgroundColor.get();
                 Color foreground = foregroundColor.get();
                 boolean isDark = Utils.calculateBrightness(background) < Utils.calculateBrightness(foreground);
-                set(isDark ? Appearance.DARK : Appearance.LIGHT);
+                set(isDark ? ColorScheme.DARK : ColorScheme.LIGHT);
             }
         }
     }

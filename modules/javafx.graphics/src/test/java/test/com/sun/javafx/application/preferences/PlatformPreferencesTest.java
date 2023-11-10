@@ -218,10 +218,10 @@ public class PlatformPreferencesTest {
     }
 
     @Test
-    void testColorPropertyChangesAreAtomicWhenAppearancePropertyIsObserved() {
+    void testColorPropertyChangesAreAtomicWhenColorSchemePropertyIsObserved() {
         var trace = new ArrayList<Color[]>();
 
-        prefs.appearanceProperty().addListener((observable, oldValue, newValue) -> trace.add(
+        prefs.colorSchemeProperty().addListener((observable, oldValue, newValue) -> trace.add(
             new Color[] { prefs.getForegroundColor(), prefs.getBackgroundColor(), prefs.getAccentColor() }));
 
         testColorPropertyChangesAreAtomic(trace, 1);
