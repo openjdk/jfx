@@ -40,6 +40,8 @@ import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.Pixels;
 import com.sun.javafx.tk.Toolkit;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 import javafx.collections.ListChangeListener;
@@ -57,6 +59,8 @@ class GlassSystemMenu implements TKSystemMenu {
 
     private List<MenuBase>      systemMenus = null;
     private MenuBar             glassSystemMenuBar = null;
+    private final Map <Menu, ListChangeListener> menuListeners = new HashMap<>();
+    private final Map <ListChangeListener, ObservableList> listenerItems  = new HashMap<>();
 
     private InvalidationListener visibilityListener = valueModel -> {
         if (systemMenus != null) {
@@ -111,11 +115,19 @@ class GlassSystemMenu implements TKSystemMenu {
 
     // Clear the menu to prevent a memory leak, as outlined in RT-34779
     private void clearMenu(Menu menu) {
+        ListChangeListener lcl = menuListeners.get(menu);
+        if (lcl != null) {
+            ObservableList target = listenerItems.get(lcl);
+            target.removeListener(lcl);
+            menuListeners.remove(menu);
+            listenerItems.remove(lcl);
+        }
+
         for (int i = menu.getItems().size() - 1; i >= 0; i--) {
             Object o = menu.getItems().get(i);
-
             if (o instanceof MenuItem) {
                 ((MenuItem)o).setCallback(null);
+                menu.remove(i);
             } else if (o instanceof Menu) {
                 clearMenu((Menu) o);
             }
@@ -148,7 +160,33 @@ class GlassSystemMenu implements TKSystemMenu {
 
         final FilteredList<MenuItemBase> filteredItems = items.filtered(x -> x.isVisible());
 
-        filteredItems.addListener((ListChangeListener.Change<? extends MenuItemBase> change) -> {
+        ListChangeListener menuItemListener = createListener(glassMenu);
+        filteredItems.addListener(menuItemListener);
+        menuListeners.put(glassMenu, menuItemListener);
+        listenerItems.put(menuItemListener, filteredItems);
+
+        for (MenuItemBase item : items) {
+            if (item instanceof MenuBase) {
+                // submenu
+                addMenu(glassMenu, (MenuBase)item);
+            } else {
+                // menu item
+                addMenuItem(glassMenu, item);
+            }
+        }
+        glassMenu.setPixels(getPixels(mb));
+
+        setMenuBindings(glassMenu, mb);
+
+        if (parent != null) {
+            parent.insert(glassMenu, pos);
+        } else {
+            glassSystemMenuBar.insert(glassMenu, pos);
+        }
+    }
+
+    private ListChangeListener createListener(final Menu glassMenu) {
+        ListChangeListener<MenuItemBase> answer = ((ListChangeListener.Change<? extends MenuItemBase> change) -> {
             while (change.next()) {
                 int from = change.getFrom();
                 int to = change.getTo();
@@ -170,26 +208,9 @@ class GlassSystemMenu implements TKSystemMenu {
                 }
             }
         });
-
-        for (MenuItemBase item : items) {
-            if (item instanceof MenuBase) {
-                // submenu
-                addMenu(glassMenu, (MenuBase)item);
-            } else {
-                // menu item
-                addMenuItem(glassMenu, item);
-            }
-        }
-        glassMenu.setPixels(getPixels(mb));
-
-        setMenuBindings(glassMenu, mb);
-
-        if (parent != null) {
-            parent.insert(glassMenu, pos);
-        } else {
-            glassSystemMenuBar.insert(glassMenu, pos);
-        }
+        return answer;
     }
+
 
     private void setMenuBindings(final Menu glassMenu, final MenuBase mb) {
         mb.textProperty().addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
