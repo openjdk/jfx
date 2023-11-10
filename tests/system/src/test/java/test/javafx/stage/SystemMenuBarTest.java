@@ -29,9 +29,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -46,8 +46,6 @@ import javafx.stage.Stage;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import test.util.memory.JMemoryBuddy;
 
 public class SystemMenuBarTest {
     @BeforeClass
@@ -130,7 +128,7 @@ public class SystemMenuBarTest {
         assertFalse(failed.get());
     }
 
-    public void createMenuBarWithItemsStage() {
+    private void createMenuBarWithItemsStage() {
         final ArrayList<WeakReference<MenuItem>> uncollectedMenuItems = new ArrayList<>();
 
         Stage stage = new Stage();
@@ -145,7 +143,7 @@ public class SystemMenuBarTest {
         stage.setScene(scene);
         stage.show();
         stage.requestFocus();
-        Thread t = new Thread(){
+        Thread t = new Thread() {
             @Override public void run() {
                 for (int i = 0; i < 10; i++) {
                     try {
@@ -156,14 +154,14 @@ public class SystemMenuBarTest {
                     Platform.runLater(() -> {
                         menu.getItems().clear();
                         MenuItem menuItem = new MenuItem("MyItem");
-                        WeakReference wr = new WeakReference<>(menuItem);
+                        WeakReference<MenuItem> wr = new WeakReference<>(menuItem);
                         uncollectedMenuItems.add(wr);
                         menu.getItems().add(menuItem);
                     });
                 }
                 Platform.runLater( () -> {
                     int strongCount = 0;
-                    for (WeakReference wr: uncollectedMenuItems) {
+                    for (WeakReference<MenuItem> wr: uncollectedMenuItems) {
                         if (!JMemoryBuddy.checkCollectable(wr)) strongCount++;
                     }
                     assertEquals(1, strongCount, "Only the last menuItem should be alive");
@@ -172,7 +170,6 @@ public class SystemMenuBarTest {
             }
         };
         t.start();
-
     }
 
 }
