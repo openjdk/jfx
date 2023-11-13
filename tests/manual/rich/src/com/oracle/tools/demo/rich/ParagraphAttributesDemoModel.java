@@ -42,15 +42,19 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
         setSpaceLeft(20).
         setBullet("•").
         build();
+    private final static StyleAttrs FIRST_LINE_INDENT = StyleAttrs.builder().
+        setFirstLineIndent(100).
+        build();
 
     public ParagraphAttributesDemoModel() {
         registerDataFormatHandler(new RtfFormatHandler(), true, 1000);
         insert(this);
     }
-    
+
     public static void insert(SimpleReadOnlyStyledModel m) {
         m.addSegment("Bullet List", TITLE);
         m.nl(2);
+        m.setParagraphAttributes(BULLET);
         m.addSegment("This little piggy went to market,");
         m.setParagraphAttributes(BULLET);
         m.nl();
@@ -68,6 +72,12 @@ public class ParagraphAttributesDemoModel extends SimpleReadOnlyStyledModel {
         m.nl();
         m.addSegment("Wee, wee, wee, all the way home!");
         m.setParagraphAttributes(BULLET);
+        m.nl(2);
+
+        m.addSegment("First Line Indent", TITLE);
+        m.nl(2);
+        m.addSegment(words(60));
+        m.setParagraphAttributes(FIRST_LINE_INDENT);
         m.nl(2);
 
         m.addSegment("Paragraph Attributes", TITLE);

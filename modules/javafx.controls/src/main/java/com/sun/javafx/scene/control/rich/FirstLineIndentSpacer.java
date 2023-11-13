@@ -25,40 +25,18 @@
 
 package com.sun.javafx.scene.control.rich;
 
-import java.util.List;
-import java.util.function.Consumer;
-import javafx.scene.control.rich.model.RichParagraph;
-import javafx.scene.control.rich.model.StyledSegment;
-import com.sun.javafx.util.Utils;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 
 /**
- * Provides access to internal methods in RichParagraph.
+ * A spacer node used to emulate the first line indent.
+ *
+ * FIX problems:
+ * - selection: TextFlow thinks there is a separate node (click on left side, move to right side of this node)
  */
-public class RichParagraphHelper {
-    public interface Accessor {
-        public List<Consumer<TextCell>> getHighlights(RichParagraph p);
-
-        public List<StyledSegment> getSegments(RichParagraph p);
-    }
-
-    static {
-        Utils.forceInit(RichParagraph.class);
-    }
-
-    private static Accessor accessor;
-
-    public static void setAccessor(Accessor a) {
-        if (accessor != null) {
-            throw new IllegalStateException();
-        }
-        accessor = a;
-    }
-
-    public static List<Consumer<TextCell>> getHighlights(RichParagraph p) {
-        return accessor.getHighlights(p);
-    }
-
-    public static List<StyledSegment> getSegments(RichParagraph p) {
-        return accessor.getSegments(p);
+public class FirstLineIndentSpacer extends Rectangle {
+    public FirstLineIndentSpacer(double width) {
+        super(width, 1);
+        setFill(Color.rgb(0, 0, 0, 0.0));
     }
 }

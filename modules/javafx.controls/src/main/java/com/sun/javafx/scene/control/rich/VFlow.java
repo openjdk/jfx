@@ -736,8 +736,18 @@ public class VFlow extends Pane implements StyleResolver {
     }
 
     private TextCell createTextCell(int index, RichParagraph par) {
-        TextCell cell;
+        // merge paragraph attributes
+        StyleAttrs defaultAttrs = control.getDefaultParagraphAttributes();
+        StyleAttrs pa = par.getParagraphAttributes();
+        if ((defaultAttrs != null) && (!defaultAttrs.isEmpty())) {
+            if (pa == null) {
+                pa = defaultAttrs;
+            } else {
+                pa = defaultAttrs.builder().merge(pa).build();
+            }
+        }
 
+        TextCell cell;
         Supplier<Region> gen = par.getParagraphRegion();
         if (gen != null) {
             // it's a paragraph node
@@ -746,6 +756,14 @@ public class VFlow extends Pane implements StyleResolver {
         } else {
             // it's a regular text cell
             cell = new TextCell(index);
+
+            // first line indent
+            if (pa != null) {
+                Double firstLineIndent = pa.getFirstLineIndent();
+                if (firstLineIndent != null) {
+                    cell.add(new FirstLineIndentSpacer(firstLineIndent));
+                }
+            }
 
             // highlights
             List<Consumer<TextCell>> highlights = RichParagraphHelper.getHighlights(par);
@@ -777,34 +795,24 @@ public class VFlow extends Pane implements StyleResolver {
             }
         }
 
-        // merge with the default paragraph attributes
-        StyleAttrs defaultAttrs = control.getDefaultParagraphAttributes();
-        StyleAttrs a = RichParagraphHelper.getParagraphAttributes(par);
-        if ((defaultAttrs != null) && (!defaultAttrs.isEmpty())) {
-            if (a == null) {
-                a = defaultAttrs;
-            } else {
-                a = defaultAttrs.builder().merge(a).build();
-            }
-        }
-        if (a != null) {
+        if (pa != null) {
             // - need to resolve paragraph attributes only
             // - Resolver needs to separate character/paragraph attributes
             // - StyleAttrs.createStyleString() might need a boolean
-            applyStyles(cell.getContent(), a, true);
+            applyStyles(cell.getContent(), pa, true);
         }
 
         // finally adding paragraph attributes that affect TextCell
-        if (a != null) {
-            String bullet = a.get(StyleAttrs.BULLET);
+        if (pa != null) {
+            String bullet = pa.get(StyleAttrs.BULLET);
             if (bullet != null) {
                 cell.setBullet(bullet);
             }
         }
 
         // apply attributes to the TextCell (outer container)
-        if (a != null) {
-            String style = StyleUtil.generateTextCellStyle(a);
+        if (pa != null) {
+            String style = StyleUtil.generateTextCellStyle(pa);
             cell.setStyle(style);
         }
         return cell;

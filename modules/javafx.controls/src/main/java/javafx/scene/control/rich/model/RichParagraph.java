@@ -55,11 +55,6 @@ public class RichParagraph {
             public List<Consumer<TextCell>> getHighlights(RichParagraph p) {
                 return p.getHighlights();
             }
-
-            @Override
-            public StyleAttrs getParagraphAttributes(RichParagraph p) {
-                return p.paragraphAttributes;
-            }
         });
     }
 
@@ -252,8 +247,7 @@ public class RichParagraph {
      * Returns the paragraph attributes.
      * @return the paragraph attributes, can be null
      */
-    // used by StyledTextModel only
-    StyleAttrs getParagraphAttributes() {
+    public StyleAttrs getParagraphAttributes() {
         return paragraphAttributes;
     }
 }

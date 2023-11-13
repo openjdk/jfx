@@ -58,6 +58,9 @@ public class StyleAttrs {
     /** This special attribute contains CSS direct style and style names */
     public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, false);
 
+    /** First line indent paragraph attribute, in points. */
+    public static final StyleAttribute<Double> FIRST_LINE_INDENT = new StyleAttribute<>("FIRST_LINE_INDENT", Double.class, false);
+
     /** Font family attribute */
     public static final StyleAttribute<String> FONT_FAMILY = new StyleAttribute<>("FONT_FAMILY", String.class, false);
 
@@ -264,6 +267,14 @@ public class StyleAttrs {
      */
     public final CssStyles getCssStyles() {
         return (CssStyles)get(CSS);
+    }
+
+    /**
+     * This convenience method returns the value of the {@link #FIRST_LINE_INDENT} attribute.
+     * @return the first line indent value in points
+     */
+    public final Double getFirstLineIndent() {
+        return (Double)get(FIRST_LINE_INDENT);
     }
 
     /**
@@ -561,6 +572,16 @@ public class StyleAttrs {
          */
         public Builder setBullet(String bullet) {
             set(BULLET, bullet);
+            return this;
+        }
+
+        /**
+         * Sets the FIRST_LINE_INDENT attribute.
+         * @param size the first line indent value
+         * @return this Builder instance
+         */
+        public Builder setFirstLineIndent(double size) {
+            set(FIRST_LINE_INDENT, size);
             return this;
         }
 
