@@ -245,7 +245,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         caretPath.layoutXProperty().bind(textTranslateX);
         textNode.caretShapeProperty().addListener(observable -> {
             caretPath.getElements().setAll(textNode.caretShapeProperty().get());
-            if (caretPath.getElements().size() == 0) {
+            if (caretPath.getElements().size() == 0 || caretPath.getElements().size() != 4) {
                 // The caret pos is invalid.
                 updateTextNodeCaretPos(control.getCaretPosition());
             } else if (caretPath.getElements().size() == 4) {
