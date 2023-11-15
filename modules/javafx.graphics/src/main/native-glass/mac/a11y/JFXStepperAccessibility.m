@@ -45,15 +45,23 @@
     return [super accessibilityValue];
 }
 
+- (id)accessibilityMinValue
+{
+    return [super accessibilityMinValue];
+}
+
+- (id)accessibilityMaxValue
+{
+    return [super accessibilityMaxValue];
+}
+
 - (BOOL)accessibilityPerformIncrement
 {
-//    NSLog(@"Stepper increment action invoked");
     return [self performAccessibleAction:INCREMENT];
 }
 
 - (BOOL)accessibilityPerformDecrement
 {
-//    NSLog(@"Stepper decrement action invoked");
     return [self performAccessibleAction:DECREMENT];
 }
 

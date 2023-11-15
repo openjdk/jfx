@@ -104,6 +104,28 @@ static NSMutableDictionary * rolesMap;
     return variantToID(env, jresult);
 }
 
+- (id)accessibilityMinValue
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
+                                              jAccessibilityAttributeValue, (jlong)@"AXMinValue");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
+- (id)accessibilityMaxValue
+{
+    jobject jresult = NULL;
+    GET_MAIN_JENV;
+    if (env == NULL) return NULL;
+    jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible,
+                                              jAccessibilityAttributeValue, (jlong)@"AXMaxValue");
+    GLASS_CHECK_EXCEPTION(env);
+    return variantToID(env, jresult);
+}
+
 - (NSString *)accessibilityLabel
 {
     jobject jresult = NULL;
