@@ -124,20 +124,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setView
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     return (ctx->set_view(view)) ? JNI_TRUE : JNI_FALSE;
 }
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _showOrHideChildren
- * Signature: (JZ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1showOrHideChildren
-  (JNIEnv *env, jobject obj, jlong ptr, jboolean show)
-{
-    (void)env;
-    (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    ctx->show_or_hide_children(show);
-}
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow
