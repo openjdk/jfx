@@ -115,6 +115,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 @end
 
+@implementation NSApplicationFX
+@end
+
 #pragma mark --- GlassApplication
 
 @implementation GlassApplication
@@ -226,6 +229,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+}
+
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
+    return YES;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
@@ -532,8 +539,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
 
         // Determine if we're running embedded (in AWT, SWT, elsewhere)
-        NSApplication *app = [NSApplication sharedApplication];
-        isEmbedded = [app isRunning];
+        NSApplication *app = [NSApplicationFX sharedApplication];
+        isEmbedded = ![app isKindOfClass:[NSApplicationFX class]];
 
         if (!isEmbedded)
         {
