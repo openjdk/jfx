@@ -743,17 +743,14 @@ public class DatePickerTest {
      */
     @Test
     public void testFocusLostWithTypo() {
-        //datePicker.setEditable(true); // other test cases have it .is this necessary?
-
         Button button = new Button();
         StageLoader stageLoader = new StageLoader(new HBox(datePicker, button));
 
         // initial value
         datePicker.setValue(LocalDate.of(2015, 03, 25));
-        assertEquals("3/25/2015",datePicker.getEditor().getText());
+        assertEquals("3/25/2015", datePicker.getEditor().getText());
 
         // set misformatted text
-        //stageLoader.getStage().requestFocus(); // other test cases have it . is this necessary?
         datePicker.requestFocus();
         datePicker.getEditor().setText("11/24/20xx");
 
@@ -761,8 +758,8 @@ public class DatePickerTest {
         button.requestFocus();
 
         // check that value remains unchanged, and text is reverted
-        assertEquals(LocalDate.of(2015, 03, 25),datePicker.getValue());
-        assertEquals("3/25/2015",datePicker.getEditor().getText());
+        assertEquals(LocalDate.of(2015, 03, 25), datePicker.getValue());
+        assertEquals("3/25/2015", datePicker.getEditor().getText());
 
         stageLoader.dispose();
     }
