@@ -148,19 +148,14 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
 
         focusedProperty().addListener(o -> {
             if (!isFocused()) {
-                commitValueOnFocusLost();
+                try {
+                    commitValue();
+                } catch (DateTimeParseException dtpe) {
+                    cancelEdit();
+                }
             }
         });
     }
-
-    private void commitValueOnFocusLost() {
-        try {
-            commitValue();
-        } catch (DateTimeParseException dtpe) {
-            cancelEdit();
-        }
-    }
-
 
     private boolean validateDate(Chronology chrono, LocalDate date) {
         try {
