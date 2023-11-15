@@ -150,7 +150,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             if (!isFocused()) {
                 try {
                     commitValue();
-                } catch (DateTimeParseException dtpe) {
+                } catch (Exception e) {
                     cancelEdit();
                 }
             }
