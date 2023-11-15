@@ -140,14 +140,7 @@ class GtkWindow extends Window {
         return maximize;
     }
 
-    private native void _showOrHideChildren(long ptr, boolean show);
-
     protected void notifyStateChanged(final int state) {
-        if (state == WindowEvent.MINIMIZE) {
-            _showOrHideChildren(getNativeHandle(), false);
-        } else if (state == WindowEvent.RESTORE) {
-            _showOrHideChildren(getNativeHandle(), true);
-        }
         switch (state) {
             case WindowEvent.MINIMIZE:
             case WindowEvent.MAXIMIZE:

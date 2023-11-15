@@ -53,6 +53,7 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
+static BOOL requiresActivation = NO;
 static BOOL triggerReactivation = NO;
 static BOOL disableSyncRendering = NO;
 static BOOL firstActivation = YES;
@@ -112,6 +113,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
 }
 
+@end
+
+@implementation NSApplicationFX
 @end
 
 #pragma mark --- GlassApplication
@@ -227,6 +231,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     GLASS_CHECK_EXCEPTION(env);
 }
 
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
+    return YES;
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
     LOG("GlassApplication:applicationDidFinishLaunching");
@@ -238,6 +246,15 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+     if (!NSApp.isActive && requiresActivation) {
+        // As of macOS 14, application gets to the foreground,
+        // but it doesn't get activated, so this is needed:
+        LOG("-> need to active application");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [NSApp activate];
+        });
+    }
 }
 
 - (void)applicationWillBecomeActive:(NSNotification *)aNotification
@@ -522,8 +539,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
 
         // Determine if we're running embedded (in AWT, SWT, elsewhere)
-        NSApplication *app = [NSApplication sharedApplication];
-        isEmbedded = [app isRunning];
+        NSApplication *app = [NSApplicationFX sharedApplication];
+        isEmbedded = ![app isKindOfClass:[NSApplicationFX class]];
 
         if (!isEmbedded)
         {
@@ -544,6 +561,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 // anyway) as of macOS 14
                 if (@available(macOS 14.0, *)) {
                     triggerReactivation = NO;
+                    requiresActivation = YES;
                 }
 
                 // move process from background only to full on app with visible Dock icon

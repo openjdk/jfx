@@ -49,10 +49,12 @@ class MacMenuBarDelegate implements MenuBarDelegate {
     @Override public boolean remove(MenuDelegate menu, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)menu;
         _remove(ptr, macMenu.ptr, pos);
+        macMenu.ptr = 0;
         return true;
     }
 
     @Override public long getNativeMenu() {
         return ptr;
     }
+
 }
