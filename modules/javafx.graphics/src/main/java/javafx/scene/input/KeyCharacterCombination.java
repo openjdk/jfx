@@ -113,7 +113,7 @@ public final class KeyCharacterCombination extends KeyCombination {
             return false;
         }
         return (event.getCode().getCode()
-                       == Toolkit.getToolkit().getKeyCodeForChar(getCharacter()))
+                       == Toolkit.getToolkit().getKeyCodeForChar(getCharacter(), event.getCode().getCode()))
                    && super.match(event);
     }
 

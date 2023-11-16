@@ -345,10 +345,10 @@ BOOL IsExtendedKey(UINT vkey) {
 /*
  * Class:     Java_com_sun_glass_ui_win_WinApplication
  * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * Signature: (CI)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForChar
-  (JNIEnv * env, jobject jApplication, jchar c)
+  (JNIEnv * env, jobject jApplication, jchar c, jint hint)
 {
     // The Delete key doesn't generate a character so ViewContainer::HandleViewKeyEvent
     // synthesizes one. Here we reverse that process.

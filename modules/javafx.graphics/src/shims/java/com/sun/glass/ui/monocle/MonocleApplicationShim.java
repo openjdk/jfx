@@ -27,8 +27,8 @@ package com.sun.glass.ui.monocle;
 
 public class MonocleApplicationShim {
 
-    public static int _getKeyCodeForChar(char c) {
-        return MonocleApplication.getKeyCodeForChar(c);
+    public static int _getKeyCodeForChar(char c, int hint) {
+        return MonocleApplication.getKeyCodeForChar(c, hint);
     }
 
 }
