@@ -28,14 +28,14 @@ package com.oracle.tools.demo.rich;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.rich.RichTextArea;
-import javafx.scene.control.rich.StyleResolver;
-import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.model.BasePlainTextModel;
-import javafx.scene.control.rich.model.RichParagraph;
-import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyledSegment;
-import javafx.scene.control.rich.model.StyledTextModel;
+import javafx.incubator.scene.control.rich.RichTextArea;
+import javafx.incubator.scene.control.rich.StyleResolver;
+import javafx.incubator.scene.control.rich.TextPos;
+import javafx.incubator.scene.control.rich.model.BasePlainTextModel;
+import javafx.incubator.scene.control.rich.model.RichParagraph;
+import javafx.incubator.scene.control.rich.model.StyleAttrs;
+import javafx.incubator.scene.control.rich.model.StyledSegment;
+import javafx.incubator.scene.control.rich.model.StyledTextModel;
 import javafx.scene.layout.Region;
 
 public class NotebookModelStacked extends StyledTextModel {

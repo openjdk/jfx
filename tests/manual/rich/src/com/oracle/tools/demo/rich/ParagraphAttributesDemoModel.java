@@ -25,8 +25,8 @@
 
 package com.oracle.tools.demo.rich;
 
-import javafx.scene.control.rich.model.RtfFormatHandler;
-import javafx.scene.control.rich.model.StyleAttrs;
+import javafx.incubator.scene.control.rich.model.RtfFormatHandler;
+import javafx.incubator.scene.control.rich.model.StyleAttrs;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 

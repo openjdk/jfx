@@ -24,13 +24,13 @@
  */
 package com.oracle.tools.demo.rich;
 
-import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.model.BasePlainTextModel;
-import javafx.scene.control.rich.model.EditableRichTextModel;
-import javafx.scene.control.rich.model.RichParagraph;
-import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyledInput;
-import javafx.scene.control.rich.model.StyledTextModel;
+import javafx.incubator.scene.control.rich.TextPos;
+import javafx.incubator.scene.control.rich.model.BasePlainTextModel;
+import javafx.incubator.scene.control.rich.model.EditableRichTextModel;
+import javafx.incubator.scene.control.rich.model.RichParagraph;
+import javafx.incubator.scene.control.rich.model.StyleAttrs;
+import javafx.incubator.scene.control.rich.model.StyledInput;
+import javafx.incubator.scene.control.rich.model.StyledTextModel;
 import javafx.scene.paint.Color;
 
 public enum ModelChoice {

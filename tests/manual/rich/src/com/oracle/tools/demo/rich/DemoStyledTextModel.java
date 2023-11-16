@@ -26,10 +26,10 @@ package com.oracle.tools.demo.rich;
 
 import java.text.DecimalFormat;
 import javafx.scene.Node;
-import javafx.scene.control.rich.TextPos;
-import javafx.scene.control.rich.model.RichParagraph;
-import javafx.scene.control.rich.model.StyleAttrs;
-import javafx.scene.control.rich.model.StyledTextModelReadOnlyBase;
+import javafx.incubator.scene.control.rich.TextPos;
+import javafx.incubator.scene.control.rich.model.RichParagraph;
+import javafx.incubator.scene.control.rich.model.StyleAttrs;
+import javafx.incubator.scene.control.rich.model.StyledTextModelReadOnlyBase;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 

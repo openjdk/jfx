@@ -26,6 +26,11 @@
 package javafx.scene.control.skin;
 
 import java.util.List;
+
+import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
+
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
@@ -55,8 +60,6 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
-import com.sun.javafx.scene.control.behavior.PasswordFieldBehavior;
-import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 
 /**
  * Default skin implementation for the {@link TextField} control.
@@ -72,7 +75,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      *
      **************************************************************************/
 
-    private TextFieldBehavior behavior;
+    private final TextFieldBehavior behavior;
 
     /**
      * This group contains the text, caret, and selection rectangle.
@@ -141,6 +144,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      */
     public TextFieldSkin(final TextField control) {
         super(control);
+
+        // install default input map for the text field control
+        this.behavior = (control instanceof PasswordField)
+                ? new PasswordFieldBehavior((PasswordField)control)
+                : new TextFieldBehavior(control);
+        this.behavior.setTextFieldSkin(this);
+//        control.setInputMap(behavior.getInputMap());
 
         registerChangeListener(control.caretPositionProperty(), e -> {
             if (control.getWidth() > 0) {
@@ -374,27 +384,14 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      *                                                                         *
      **************************************************************************/
 
-    @Override
-    public void install() {
-        super.install();
+    /** {@inheritDoc} */
+    @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        getChildren().removeAll(textGroup, handleGroup);
+        super.dispose();
 
-        var c = getSkinnable();
-        behavior = (c instanceof PasswordField f) ?
-            new PasswordFieldBehavior(f, this) :
-            new TextFieldBehavior(c, this);
-        behavior.install();
-    }
-
-    @Override
-    public void dispose() {
-        if (getSkinnable() != null) {
-            getChildren().removeAll(textGroup, handleGroup);
-            super.dispose();
-
-            if (behavior != null) {
-                behavior.dispose();
-                behavior = null;
-            }
+        if (behavior != null) {
+            behavior.dispose();
         }
     }
 
@@ -706,6 +703,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      * Private implementation
      *
      **************************************************************************/
+
+    @Override
+    TextInputControlBehavior getBehavior() {
+        return behavior;
+    }
 
     private void updateTextNodeCaretPos(int pos) {
         if (pos == 0 || isForwardBias()) {

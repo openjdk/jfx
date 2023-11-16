@@ -25,30 +25,25 @@
 
 package javafx.scene.control;
 
-import java.lang.ref.WeakReference;
+import com.sun.javafx.scene.control.FakeFocusTextField;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.WeakListChangeListener;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.WeakListChangeListener;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.behavior.FunctionTag;
-import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
-import com.sun.javafx.scene.control.FakeFocusTextField;
+
+import java.lang.ref.WeakReference;
 
 /**
  * An implementation of the {@link ComboBoxBase} abstract class for the most common
@@ -195,10 +190,6 @@ import com.sun.javafx.scene.control.FakeFocusTextField;
  * @since JavaFX 2.1
  */
 public class ComboBox<T> extends ComboBoxBase<T> {
-    /** Denotes the function that selects the next item. */
-    public static final FunctionTag SELECT_NEXT = new FunctionTag();
-    /** Denotes the function that selects the previous item. */
-    public static final FunctionTag SELECT_PREV = new FunctionTag();
 
     /* *************************************************************************
      *                                                                         *

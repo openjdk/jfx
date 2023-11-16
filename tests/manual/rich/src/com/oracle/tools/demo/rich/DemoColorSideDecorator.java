@@ -25,7 +25,7 @@
 package com.oracle.tools.demo.rich;
 
 import javafx.scene.Node;
-import javafx.scene.control.rich.SideDecorator;
+import javafx.incubator.scene.control.rich.SideDecorator;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Region;

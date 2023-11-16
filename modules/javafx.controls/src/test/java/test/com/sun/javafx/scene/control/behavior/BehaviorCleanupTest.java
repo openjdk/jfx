@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,36 +25,37 @@
 
 package test.com.sun.javafx.scene.control.behavior;
 
-import static javafx.collections.FXCollections.observableArrayList;
-import static javafx.scene.control.skin.TextInputSkinShim.isCaretBlinking;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createBehavior;
 import java.lang.ref.WeakReference;
-import java.util.Set;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+
+import static com.sun.javafx.scene.control.behavior.TextBehaviorShim.*;
+import static javafx.collections.FXCollections.*;
+import static javafx.scene.control.skin.TextInputSkinShim.*;
+import static org.junit.Assert.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
+
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
-import javafx.scene.control.ControlShim;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.scene.control.behavior.KeyBinding;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 
 /**
  * Test for misbehavior of individual implementations that turned
@@ -174,33 +175,31 @@ public class BehaviorCleanupTest {
 
 //---------- TextInputControl
 
-//    @Test
-//    public void testChildMapsCleared() {
-//        TextField control = new TextField("some text");
-//        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
-//        InputMap<?> inputMap = behavior.getInputMap();
-//        // child maps are not used anymore
-//        //assertFalse("sanity: inputMap has child maps", inputMap.getChildInputMaps().isEmpty());
-//        behavior.dispose();
-//        assertEquals("default child maps must be cleared", 0, inputMap.getChildInputMaps().size());
-//    }
+    @Test
+    public void testChildMapsCleared() {
+        TextField control = new TextField("some text");
+        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        InputMap<?> inputMap = behavior.getInputMap();
+        assertFalse("sanity: inputMap has child maps", inputMap.getChildInputMaps().isEmpty());
+        behavior.dispose();
+        assertEquals("default child maps must be cleared", 0, inputMap.getChildInputMaps().size());
+    }
 
-//    @Test
-//    public void testDefaultMappingsCleared() {
-//        TextField control = new TextField("some text");
-//        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
-//        InputMap<?> inputMap = behavior.getInputMap();
-//        assertFalse("sanity: inputMap has mappings", inputMap.getMappings().isEmpty());
-//        behavior.dispose();
-//        assertEquals("default mappings must be cleared", 0, inputMap.getMappings().size());
-//    }
+    @Test
+    public void testDefaultMappingsCleared() {
+        TextField control = new TextField("some text");
+        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        InputMap<?> inputMap = behavior.getInputMap();
+        assertFalse("sanity: inputMap has mappings", inputMap.getMappings().isEmpty());
+        behavior.dispose();
+        assertEquals("default mappings must be cleared", 0, inputMap.getMappings().size());
+    }
 
     /**
      * Sanity test: mappings to key pad keys.
      */
     @Test
     public void testKeyPadMapping() {
-        /*
         TextField control = new TextField("some text");
         TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
         InputMap<?> inputMap = behavior.getInputMap();
@@ -210,28 +209,11 @@ public class BehaviorCleanupTest {
         KeyCode expectedCode = KeyCode.KP_LEFT;
         KeyMapping expectedMapping = new KeyMapping(expectedCode, null);
         assertTrue(inputMap.getMappings().contains(expectedMapping));
-        */
-        TextField control = new TextField("some text");
-        ControlShim.installDefaultSkin(control);
-        KeyCode[] codes = {
-            KeyCode.KP_DOWN,
-            KeyCode.KP_LEFT,
-            KeyCode.KP_RIGHT,
-            KeyCode.KP_UP,
-        };
-
-        Set<KeyBinding> keys = control.getInputMap().getKeyBindings();
-        for (KeyCode c: codes) {
-            KeyBinding k = KeyBinding.of(c);
-            assertTrue(keys.contains(k));
-        }
     }
 
     /**
      * Sanity test: child mappings to key pad keys.
      */
-    /*
-    // this test relies on too many assumptions on internals
     @Test
     public void testKeyPadMappingChildInputMap() {
         TextField control = new TextField("some text");
@@ -250,51 +232,22 @@ public class BehaviorCleanupTest {
         KeyMapping expectedNotMac = new KeyMapping(new KeyBinding(expectedCode).ctrl(), null);
         assertTrue(childInputMapNotMac.getMappings().contains(expectedNotMac));
     }
-    */
-
-    /**
-     * Ensures that ctrl- key pad keys are also mapped.
-     * This test executes different code path between Mac and non-Mac platforms.
-     */
-    @Test
-    public void testKeyPadMappingOnPlatform() {
-        TextField control = new TextField("some text");
-        ControlShim.installDefaultSkin(control);
-        KeyCode[] codes = {
-            KeyCode.KP_LEFT,
-            KeyCode.KP_RIGHT,
-        };
-
-        Set<KeyBinding> keys = control.getInputMap().getKeyBindings();
-        System.out.println(keys);
-        for (KeyCode c: codes) {
-            if (PlatformUtil.isMac()) {
-                KeyBinding expectedMac = KeyBinding.command(c);
-                System.out.println(expectedMac);
-                assertTrue("code=" + c, keys.contains(expectedMac));
-            } else {
-                KeyBinding expectedNotMac = KeyBinding.ctrl(c);
-                assertTrue("code=" + c, keys.contains(expectedNotMac));
-            }
-        }
-    }
 
     /**
      * Sanity test: listener to textProperty still effective after fix
      * (accidentally added twice)
      */
-    // behavior must be added in Skin.install() now
-//    @Test
-//    public void testTextPropertyListener() {
-//        TextField control = new TextField("some text");
-//        TextFieldBehavior behavior = new TextFieldBehavior();
-//        assertNull("sanity: initial bidi", getRawBidi(behavior));
-//        // validate bidi field
-//        isRTLText(behavior);
-//        assertNotNull(getRawBidi(behavior));
-//        control.setText("dummy");
-//        assertNull("listener working (bidi is reset)", getRawBidi(behavior));
-//    }
+    @Test
+    public void testTextPropertyListener() {
+        TextField control = new TextField("some text");
+        TextFieldBehavior behavior = (TextFieldBehavior) createBehavior(control);
+        assertNull("sanity: initial bidi", getRawBidi(behavior));
+        // validate bidi field
+        isRTLText(behavior);
+        assertNotNull(getRawBidi(behavior));
+        control.setText("dummy");
+        assertNull("listener working (bidi is reset)", getRawBidi(behavior));
+    }
 
 //----------- TreeView
 

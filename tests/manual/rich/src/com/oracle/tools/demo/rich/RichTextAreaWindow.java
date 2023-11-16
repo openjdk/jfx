@@ -31,8 +31,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
-import javafx.scene.control.rich.RichTextArea;
-import javafx.scene.control.rich.TextPos;
+import javafx.incubator.scene.control.rich.RichTextArea;
+import javafx.incubator.scene.control.rich.TextPos;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 

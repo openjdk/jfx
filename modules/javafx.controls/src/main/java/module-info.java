@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,11 +37,6 @@ module javafx.controls {
     exports javafx.scene.chart;
     exports javafx.scene.control;
     exports javafx.scene.control.cell;
-    exports javafx.scene.control.rich;
-    exports javafx.scene.control.rich.model;
-    exports javafx.scene.control.rich.skin;
-    exports javafx.scene.control.util;
-    exports javafx.scene.control.behavior;
     exports javafx.scene.control.skin;
 
     exports com.sun.javafx.scene.control to
