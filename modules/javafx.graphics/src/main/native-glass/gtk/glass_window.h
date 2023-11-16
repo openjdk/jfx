@@ -104,7 +104,6 @@ public:
 
     virtual void enter_fullscreen() = 0;
     virtual void exit_fullscreen() = 0;
-    virtual void show_or_hide_children(bool) = 0;
     virtual void set_visible(bool) = 0;
     virtual bool is_visible() = 0;
     virtual void set_bounds(int, int, bool, bool, int, int, int, int, float, float) = 0;
@@ -219,7 +218,6 @@ public:
 
     void add_child(WindowContextTop*);
     void remove_child(WindowContextTop*);
-    void show_or_hide_children(bool);
     void set_visible(bool);
     bool is_visible();
     bool set_view(jobject);
