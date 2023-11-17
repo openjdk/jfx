@@ -350,11 +350,27 @@ BOOL IsExtendedKey(UINT vkey) {
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForChar
   (JNIEnv * env, jobject jApplication, jchar c)
 {
-    BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)c,
-            ::GetKeyboardLayout(GlassApplication::GetMainThreadId()));
+    // The Delete key doesn't generate a character so ViewContainer::HandleViewKeyEvent
+    // synthesizes one. Here we reverse that process.
+    if ((TCHAR)c == 0x7F) {
+        return com_sun_glass_events_KeyEvent_VK_DELETE;
+    }
+
+    HKL layout = ::GetKeyboardLayout(GlassApplication::GetMainThreadId());
+    BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)c, layout);
 
     if (!vkey || vkey == 0xFF) {
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    }
+
+    // Duplicate the encoding used in ViewContainer::HandleViewKeyEvent
+    if (isOEMKey(vkey)) {
+        UINT mapped = ::MapVirtualKeyEx(vkey, MAPVK_VK_TO_CHAR, layout);
+        if (mapped == 0) {
+            return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+        }
+        bool deadKey = (mapped & 0x80000000);
+        return OEMCharToJavaKey(LOWORD(mapped), deadKey);
     }
 
     return WindowsKeyToJavaKey(vkey);

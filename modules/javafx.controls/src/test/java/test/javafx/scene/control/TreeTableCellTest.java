@@ -1214,6 +1214,29 @@ public class TreeTableCellTest {
         }
     }
 
+    /**
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8187314">JDK-8187314</a>.
+     */
+    @Test
+    public void testEditCommitValueChangeIsReflectedInCell() {
+        setupForEditing();
+        editingColumn.setCellValueFactory(cc -> new SimpleObjectProperty<>(cc.getValue().getValue()));
+        editingColumn.setOnEditCommit(event -> {
+            assertEquals("ABCDEF", event.getNewValue());
+            // Change the underlying item.
+            root.setValue("ABCDEF [Changed]");
+        });
+
+        cell.updateIndex(0);
+
+        assertEquals("Root", cell.getItem());
+
+        cell.startEdit();
+        cell.commitEdit("ABCDEF");
+
+        assertEquals("ABCDEF [Changed]", cell.getItem());
+    }
+
     public static class MisbehavingOnCancelTreeTableCell<S, T> extends TreeTableCell<S, T> {
 
         @Override

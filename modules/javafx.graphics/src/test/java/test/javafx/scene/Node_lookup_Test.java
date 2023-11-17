@@ -30,6 +30,8 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Set;
+
+import javafx.css.PseudoClass;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
@@ -39,11 +41,11 @@ import org.junit.Test;
 
 public class Node_lookup_Test {
     //                  Group & #root
-    //                /      \
-    //              #a      .b.c
-    //             /   \        \
-    //           .d    #e        .d
-    private Group root, a, bc, d, e, d2;
+    //                /      \        \
+    //              #a      .b.c       .f:testPseudo
+    //             /   \        \         /           \
+    //           .d    #e        .d   .g:testPseudo1   .h.g:testPseudo1:testPseudo2
+    private Group root, a, bc, d, e, d2, f, g, hg;
 
     @Before public void setup() {
         root = new Group();
@@ -58,12 +60,23 @@ public class Node_lookup_Test {
         bc.getStyleClass().addAll("b", "c");
         d2 = new Group();
         d2.getStyleClass().add("d");
-        ParentShim.getChildren(root).addAll(a, bc);
+        f = new Group();
+        f.getStyleClass().add("f");
+        f.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo"), true);
+        g = new Group();
+        g.getStyleClass().add("g");
+        g.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"), true);
+        hg = new Group();
+        hg.getStyleClass().addAll("h", "g");
+        hg.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo1"), true);
+        hg.pseudoClassStateChanged(PseudoClass.getPseudoClass("testPseudo2"), true);
+        ParentShim.getChildren(root).addAll(a, bc, f);
         ParentShim.getChildren(a).addAll(d, e);
         ParentShim.getChildren(bc).addAll(d2);
+        ParentShim.getChildren(f).addAll(g, hg);
     }
 
-    @Test public void quickTest() {
+    @Test public void test_lookup_on_nodes_without_pseudo_classes() {
         Node found = root.lookup("Group");
         assertSame(root, found);
 
@@ -86,7 +99,7 @@ public class Node_lookup_Test {
         assertSame(bc, found);
     }
 
-    @Test public void lookupAllTest() {
+    @Test public void test_lookupAll_on_nodes_without_pseudo_classes() {
         Set<Node> nodes = root.lookupAll("#a");
         assertEquals(1, nodes.size());
         assertTrue(nodes.contains(a));
@@ -95,5 +108,132 @@ public class Node_lookup_Test {
         assertEquals(2, nodes.size());
         assertTrue(nodes.contains(d));
         assertTrue(nodes.contains(d2));
+    }
+
+    @Test
+    public void test_lookup_and_lookupAll_on_nodes_with_pseudo_classes() {
+        Set<Node> nodes = root.lookupAll(".h:testPseudo2");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        Node found = root.lookup(".h:testPseudo2");
+        assertSame(hg, found);
+
+        found = root.lookup(":testPseudo2");
+        assertSame(hg, found);
+
+        found = root.lookup(".h:testPseudo1:testPseudo2");
+        assertSame(hg, found);
+
+        nodes = root.lookupAll(".g:testPseudo1");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(":testPseudo1");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f > .h:testPseudo1");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f:testPseudo > .h:testPseudo1");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f:randomPseudo");
+        assertEquals(0, nodes.size());
+    }
+
+    /**
+     * Verifies that the lookup ignores pseudo classes when selector contains no explicit pseudo class, but all the nodes have pseudo classes set to them.
+     */
+    @Test
+    public void test_lookupAll_on_nodes_with_pseudo_classes_ignoring_pseudo_classes_in_selector() {
+        // Except root node all the other nodes (f, g, hg) have pseudo classes set to them
+        Set<Node> nodes = root.lookupAll(".g");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll("#root .g");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f .g");
+        assertEquals(2, nodes.size());
+        assertTrue(nodes.contains(g));
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f .h");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".f > .h");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll(".h");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(hg));
+
+        nodes = root.lookupAll("#root > .f");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(f));
+
+        nodes = root.lookupAll("#root .f");
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(f));
+
+        nodes = root.lookupAll(".random");
+        assertEquals(0, nodes.size());
+
+        nodes = root.lookupAll(".random .h");
+        assertEquals(0, nodes.size());
+    }
+
+    /**
+     * Verifies that the lookup ignores pseudo classes when selector contains no explicit pseudo class.
+     */
+    @Test
+    public void test_lookupAll_on_nodes_with_same_style_and_different_pseudo_classes() {
+        Group root = new Group();
+        root.setId("root");
+
+        Group xy = new Group();
+        xy.getStyleClass().addAll("x", "y");
+
+        Group x = new Group();
+        x.getStyleClass().addAll("x");
+
+        Group x1 = new Group();
+        x1.getStyleClass().addAll("x");
+        x1.pseudoClassStateChanged(PseudoClass.getPseudoClass("pseudo"), true);
+
+        ParentShim.getChildren(root).addAll(x, x1, xy);
+
+        Set<Node> nodes = root.lookupAll(".x");
+        assertEquals(3, nodes.size());
+        assertTrue(nodes.contains(x));
+        assertTrue(nodes.contains(x1));
+        assertTrue(nodes.contains(xy));
+
+        nodes = root.lookupAll(".x:pseudo");
+        assertTrue(nodes.contains(x1));
+
+        nodes = root.lookupAll("#root .x");
+        assertEquals(3, nodes.size());
+        assertTrue(nodes.contains(x));
+        assertTrue(nodes.contains(x1));
+        assertTrue(nodes.contains(xy));
+
+        nodes = root.lookupAll("#root .x:pseudo");
+        assertTrue(nodes.contains(x1));
+
+        nodes = root.lookupAll(".x:random");
+        assertEquals(0, nodes.size());
     }
 }

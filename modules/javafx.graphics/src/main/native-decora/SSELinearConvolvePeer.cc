@@ -110,6 +110,13 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSELinearConvolvePeer_filterHV
      jintArray srcPixels_arr, jint srccols, jint srcrows, jint scolinc, jint srowinc,
      jfloatArray kvals_arr)
 {
+    if ((checkRange(env,
+                    dstPixels_arr, dstcols, dstrows,
+                    srcPixels_arr, srccols, srcrows)) ||
+        dstrows > srcrows) { // We should not move out of source vertical bounds
+        return;
+    }
+
     jint kernelSize = env->GetArrayLength(kvals_arr) / 2;
     if (kernelSize > 128) return;
     jfloat kvals[256];
