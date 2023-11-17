@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -404,8 +404,8 @@ public class ListCell<T> extends IndexedCell<T> {
                     list.getEditingIndex()));
         }
 
-        // update the item within this cell, so that it represents the new value
-        updateItem(newValue, false);
+        // Update the item within this cell, so that it represents the new value
+        updateItem(-1);
 
         if (list != null) {
             // reset the editing index on the ListView. This must come after the

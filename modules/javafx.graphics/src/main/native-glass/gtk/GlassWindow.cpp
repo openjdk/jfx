@@ -124,20 +124,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setView
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     return (ctx->set_view(view)) ? JNI_TRUE : JNI_FALSE;
 }
-/*
- * Class:     com_sun_glass_ui_gtk_GtkWindow
- * Method:    _showOrHideChildren
- * Signature: (JZ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1showOrHideChildren
-  (JNIEnv *env, jobject obj, jlong ptr, jboolean show)
-{
-    (void)env;
-    (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    ctx->show_or_hide_children(show);
-}
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow
@@ -560,7 +546,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getNativeWindowImp
     (void)obj;
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    return GDK_WINDOW_XID(ctx->get_gdk_window());
+    GdkWindow *win = ctx->get_gdk_window();
+
+    if (win == NULL) {
+        return 0;
+    }
+
+    return GDK_WINDOW_XID(win);
 }
 
 } // extern "C"

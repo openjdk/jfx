@@ -147,7 +147,11 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
 
         focusedProperty().addListener(o -> {
             if (!isFocused()) {
-                commitValue();
+                try {
+                    commitValue();
+                } catch (Exception e) {
+                    cancelEdit();
+                }
             }
         });
     }

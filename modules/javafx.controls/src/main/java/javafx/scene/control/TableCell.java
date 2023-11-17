@@ -367,8 +367,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
             Event.fireEvent(getTableColumn(), editEvent);
         }
 
-        // update the item within this cell, so that it represents the new value
-        updateItem(newValue, false);
+        // Update the item within this cell, so that it represents the new value
+        updateItem(-1);
 
         if (table != null) {
             // reset the editing cell on the TableView

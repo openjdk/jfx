@@ -38,6 +38,7 @@
 
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
+#import <Carbon/Carbon.h>
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -113,6 +114,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
 }
 
+@end
+
+@implementation NSApplicationFX
 @end
 
 #pragma mark --- GlassApplication
@@ -226,6 +230,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+}
+
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
+    return YES;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
@@ -532,8 +540,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
 
         // Determine if we're running embedded (in AWT, SWT, elsewhere)
-        NSApplication *app = [NSApplication sharedApplication];
-        isEmbedded = [app isRunning];
+        NSApplication *app = [NSApplicationFX sharedApplication];
+        isEmbedded = ![app isKindOfClass:[NSApplicationFX class]];
 
         if (!isEmbedded)
         {
@@ -767,13 +775,38 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             javaIDs.Application.leaveNestedEventLoop, (jobject)NULL);
 }
 
+static void inputDidChangeCallback(CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo)
+{
+    if (keyCodeForCharMap != nil) {
+        [keyCodeForCharMap removeAllObjects];
+    }
+}
+
 + (void)registerKeyEvent:(NSEvent*)event
 {
     if (!keyCodeForCharMap) {
         keyCodeForCharMap = [[NSMutableDictionary alloc] initWithCapacity:100];
         // Note: it's never released, just like, say, the jApplication reference...
+        // To avoid stale entries when the user switches layout
+        CFNotificationCenterRef center = CFNotificationCenterGetDistributedCenter();
+        CFNotificationCenterAddObserver(center, NULL, inputDidChangeCallback,
+                                        kTISNotifySelectedKeyboardInputSourceChanged,
+                                        NULL, CFNotificationSuspensionBehaviorCoalesce);
     }
-    [keyCodeForCharMap setObject:[NSNumber numberWithUnsignedShort:[event keyCode]] forKey:[event characters]];
+
+    // Add the character the user typed to the map.
+    NSNumber* mapObject = [NSNumber numberWithUnsignedShort:[event keyCode]];
+    [keyCodeForCharMap setObject:mapObject forKey:[event characters]];
+    // getKeyCodeForChar should not just match against a character the user types
+    // directly but any other character printed on the same key.
+    [keyCodeForCharMap setObject:mapObject forKey:[event charactersByApplyingModifiers: 0]];
+    [keyCodeForCharMap setObject:mapObject forKey:[event charactersByApplyingModifiers: NSEventModifierFlagShift]];
+    // On some European keyboards there are useful symbols which are only
+    // accessible via the Option key. We don't query for the Option key
+    // character because on most layouts just about every key has some
+    // random symbol assigned to that modifier which the user probably
+    // isn't even aware of. The user can get that character into the map
+    // by typing it directly.
 }
 
 + (jint)getKeyCodeForChar:(jchar)c;
