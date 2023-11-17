@@ -26,7 +26,7 @@
 #undef G_LOG_DOMAIN
 #include "glib.h"
 #define GSPAWN_HELPER
-#include "gspawn-win32.c"	/* For shared definitions */
+#include "gspawn-win32.c"  /* For shared definitions */
 #include "glib/glib-private.h"
 
 

@@ -1450,10 +1450,10 @@ struct _GTypeValueTable
 G_GNUC_END_IGNORE_DEPRECATIONS
 
 GOBJECT_AVAILABLE_IN_ALL
-GType g_type_register_static		(GType			     parent_type,
-                                         const gchar		    *type_name,
-                                         const GTypeInfo	    *info,
-                                         GTypeFlags		     flags);
+GType g_type_register_static    (GType             parent_type,
+                                 const gchar      *type_name,
+                                 const GTypeInfo  *info,
+                                 GTypeFlags        flags);
 GOBJECT_AVAILABLE_IN_ALL
 GType g_type_register_static_simple     (GType                       parent_type,
                                          const gchar                *type_name,

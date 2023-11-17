@@ -4104,8 +4104,8 @@ g_main_context_query_unlocked (GMainContext *context,
 gboolean
 g_main_context_check (GMainContext *context,
                       gint          max_priority,
-		                  GPollFD      *fds,
-		                  gint          n_fds)
+                      GPollFD      *fds,
+                      gint          n_fds)
 {
   gboolean ready;
 
@@ -4588,7 +4588,7 @@ g_main_loop_run (GMainLoop *loop)
       if (!g_atomic_int_get (&loop->is_running))
         {
           if (got_ownership)
-	          g_main_context_release_unlocked (loop->context);
+            g_main_context_release_unlocked (loop->context);
 
             UNLOCK_CONTEXT (loop->context);
             g_main_loop_unref (loop);

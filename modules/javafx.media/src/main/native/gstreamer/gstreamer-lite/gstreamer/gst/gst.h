@@ -103,10 +103,10 @@
 
 #ifndef GSTREAMER_LITE
 #ifdef __APPLE__
-#	include <TargetConditionals.h>
-#	if TARGET_OS_MAC && !TARGET_OS_IPHONE
-#	 include <gst/gstmacos.h>
-#	endif
+#  include <TargetConditionals.h>
+#  if TARGET_OS_MAC && !TARGET_OS_IPHONE
+#   include <gst/gstmacos.h>
+#  endif
 #endif
 #endif // GSTREAMER_LITE
 

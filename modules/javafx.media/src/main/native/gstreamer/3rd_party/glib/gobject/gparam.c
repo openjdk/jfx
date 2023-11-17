@@ -976,7 +976,7 @@ param_spec_pool_equals (gconstpointer key_spec_1,
 
   return (key1->owner_type == key2->owner_type &&
           (key1->name == key2->name ||
-	        strcmp (key1->name, key2->name) == 0));
+          strcmp (key1->name, key2->name) == 0));
 }
 
 /**

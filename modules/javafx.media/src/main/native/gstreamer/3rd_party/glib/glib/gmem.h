@@ -71,7 +71,7 @@ typedef struct _GMemVTable GMemVTable;
  */
 
 GLIB_AVAILABLE_IN_ALL
-void     (g_free)         (gpointer	     mem);
+void     (g_free)         (gpointer       mem);
 GLIB_AVAILABLE_IN_2_76
 void     g_free_sized     (gpointer      mem,
                            size_t        size);

@@ -159,15 +159,15 @@
             G_TYPE_FLAG_INSTANTIATABLE | \
             G_TYPE_FLAG_DERIVABLE | \
             G_TYPE_FLAG_DEEP_DERIVABLE)
-#define	TYPE_FLAG_MASK		   (G_TYPE_FLAG_ABSTRACT | G_TYPE_FLAG_VALUE_ABSTRACT | G_TYPE_FLAG_FINAL | G_TYPE_FLAG_DEPRECATED)
+#define TYPE_FLAG_MASK       (G_TYPE_FLAG_ABSTRACT | G_TYPE_FLAG_VALUE_ABSTRACT | G_TYPE_FLAG_FINAL | G_TYPE_FLAG_DEPRECATED)
 
 /* List the flags that are directly accessible via the TypeNode struct flags */
-#define	NODE_FLAG_MASK ( \
+#define NODE_FLAG_MASK ( \
   G_TYPE_FLAG_CLASSED | \
   G_TYPE_FLAG_INSTANTIATABLE | \
   G_TYPE_FLAG_FINAL)
 
-#define	SIZEOF_FUNDAMENTAL_INFO	   ((gssize) MAX (MAX (sizeof (GTypeFundamentalInfo), \
+#define SIZEOF_FUNDAMENTAL_INFO    ((gssize) MAX (MAX (sizeof (GTypeFundamentalInfo), \
                    sizeof (gpointer)), \
                                                   sizeof (glong)))
 
@@ -255,7 +255,7 @@ struct _TypeNode
   guint        is_classed : 1;
   guint        is_instantiatable : 1;
   guint        is_final : 1;
-  guint        mutatable_check_cache : 1;	/* combines some common path checks */
+  guint        mutatable_check_cache : 1; /* combines some common path checks */
 
   GType       *children; /* writable with lock */
   TypeData    *data;

@@ -383,12 +383,12 @@ void            gst_debug_log_literal    (GstDebugCategory * category,
                                           const gchar      * message_string) G_GNUC_NO_INSTRUMENT;
 
 GST_API
-void		gst_debug_log_id          (GstDebugCategory * category,
+void    gst_debug_log_id          (GstDebugCategory * category,
                                           GstDebugLevel      level,
                                           const gchar      * file,
                                           const gchar      * function,
                                           gint               line,
-					  const gchar      * id,
+            const gchar      * id,
                                           const gchar      * format,
                                           ...) G_GNUC_PRINTF (7, 8) G_GNUC_NO_INSTRUMENT;
 GST_API
@@ -396,7 +396,7 @@ void            gst_debug_log_id_valist  (GstDebugCategory * category,
                                           GstDebugLevel      level,
                                           const gchar      * file,
                                           const gchar      * function,
-                                          gint	             line,
+                                          gint               line,
                                           const gchar      * id,
                                           const gchar      * format,
                                           va_list            args) G_GNUC_NO_INSTRUMENT;
@@ -406,7 +406,7 @@ void            gst_debug_log_id_literal (GstDebugCategory * category,
                                           GstDebugLevel      level,
                                           const gchar      * file,
                                           const gchar      * function,
-                                          gint	             line,
+                                          gint               line,
                                           const gchar      * id,
                                           const gchar      * message_string) G_GNUC_NO_INSTRUMENT;
 
@@ -790,19 +790,19 @@ GST_CAT_LEVEL_LOG (GstDebugCategory * cat, GstDebugLevel level,
  * Since: 1.22
  */
 #ifdef G_HAVE_ISO_VARARGS
-#define GST_CAT_LEVEL_LOG_ID(cat,level,id,...) G_STMT_START{		\
-  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {						\
-    gst_debug_log_id ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,	\
-		      (id), __VA_ARGS__);				\
-  }									\
+#define GST_CAT_LEVEL_LOG_ID(cat,level,id,...) G_STMT_START{    \
+  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {            \
+    gst_debug_log_id ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,  \
+          (id), __VA_ARGS__);        \
+  }                  \
 }G_STMT_END
 #else /* G_HAVE_GNUC_VARARGS */
 #ifdef G_HAVE_GNUC_VARARGS
-#define GST_CAT_LEVEL_LOG_ID(cat,level,id,args...) G_STMT_START{	\
-  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {						\
-    gst_debug_log_id ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,	\
-		      (id), ##args );					\
-  }									\
+#define GST_CAT_LEVEL_LOG_ID(cat,level,id,args...) G_STMT_START{  \
+  if (G_UNLIKELY ((level) <= GST_LEVEL_MAX && (level) <= _gst_debug_min)) {            \
+    gst_debug_log_id ((cat), (level), __FILE__, GST_FUNCTION, __LINE__,  \
+          (id), ##args );          \
+  }                  \
 }G_STMT_END
 #else /* no variadic macros, use inline */
 static inline void
@@ -850,17 +850,17 @@ GST_CAT_LEVEL_LOG_ID (GstDebugCategory * cat, GstDebugLevel level,
  *
  * Since: 1.22
  */
-#define __GST_CAT_MEMDUMP_LOG_ID(cat,id,msg,data,length) G_STMT_START{	\
-    if (G_UNLIKELY (GST_LEVEL_MEMDUMP <= GST_LEVEL_MAX &&		\
-		    GST_LEVEL_MEMDUMP <= _gst_debug_min)) {		\
-      _gst_debug_dump_mem_id ((cat), __FILE__, GST_FUNCTION, __LINE__,	\
-			      (id), (msg), (data), (length));		\
-    }									\
+#define __GST_CAT_MEMDUMP_LOG_ID(cat,id,msg,data,length) G_STMT_START{  \
+    if (G_UNLIKELY (GST_LEVEL_MEMDUMP <= GST_LEVEL_MAX &&    \
+        GST_LEVEL_MEMDUMP <= _gst_debug_min)) {    \
+      _gst_debug_dump_mem_id ((cat), __FILE__, GST_FUNCTION, __LINE__,  \
+            (id), (msg), (data), (length));    \
+    }                  \
 }G_STMT_END
 
 #define GST_CAT_MEMDUMP_OBJECT(cat,obj,msg,data,length)  \
     __GST_CAT_MEMDUMP_LOG(cat,obj,msg,data,length)
-#define GST_CAT_MEMDUMP_ID(cat,id,msg,data,length)	\
+#define GST_CAT_MEMDUMP_ID(cat,id,msg,data,length)  \
     __GST_CAT_MEMDUMP_LOG_ID(cat,id,msg,data,length)
 #define GST_CAT_MEMDUMP(cat,msg,data,length)             \
     __GST_CAT_MEMDUMP_LOG(cat,NULL,msg,data,length)

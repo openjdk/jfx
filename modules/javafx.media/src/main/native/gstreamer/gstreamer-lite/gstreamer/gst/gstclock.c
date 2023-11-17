@@ -165,7 +165,7 @@ struct _GstClockPrivate
   gint post_count;
 
   gboolean synced;
-  
+
   // g_atomic_rc_box_* -> g_weak_ref_init(), g_weak_ref_clear() due to GLib 2.60 requirements
 #if !defined(GSTREAMER_LITE) || !defined(LINUX)
   GWeakRef *clock_weakref;

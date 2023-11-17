@@ -123,7 +123,7 @@ param_uchar_set_default (GParamSpec *pspec,
 
 static gboolean
 param_uchar_is_valid (GParamSpec   *pspec,
-		      const GValue *value)
+          const GValue *value)
 {
   GParamSpecUChar *uspec = G_PARAM_SPEC_UCHAR (pspec);
   guint oval = value->data[0].v_uint;
@@ -239,7 +239,7 @@ param_uint_set_default (GParamSpec *pspec,
 
 static gboolean
 param_uint_is_valid (GParamSpec   *pspec,
-		     const GValue *value)
+         const GValue *value)
 {
   GParamSpecUInt *uspec = G_PARAM_SPEC_UINT (pspec);
   guint oval = value->data[0].v_uint;
@@ -294,7 +294,7 @@ param_long_set_default (GParamSpec *pspec,
 
 static gboolean
 param_long_is_valid (GParamSpec   *pspec,
-		     const GValue *value)
+         const GValue *value)
 {
   GParamSpecLong *lspec = G_PARAM_SPEC_LONG (pspec);
   glong oval = value->data[0].v_long;
@@ -1208,7 +1208,7 @@ param_override_set_default (GParamSpec *pspec,
 
 static gboolean
 param_override_is_valid (GParamSpec   *pspec,
-			 const GValue *value)
+       const GValue *value)
 {
   GParamSpecOverride *ospec = G_PARAM_SPEC_OVERRIDE (pspec);
 

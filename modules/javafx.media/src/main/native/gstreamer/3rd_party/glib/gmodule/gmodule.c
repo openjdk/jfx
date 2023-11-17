@@ -42,7 +42,7 @@
 #include <unistd.h>
 #endif
 #ifdef G_OS_WIN32
-#include <io.h>		/* For open() and close() prototypes. */
+#include <io.h>    /* For open() and close() prototypes. */
 #endif
 
 #ifndef O_CLOEXEC
@@ -901,7 +901,7 @@ g_module_symbol (GModule     *module,
 
   g_rec_mutex_lock (&g_module_global_lock);
 
-#ifdef	G_MODULE_NEED_USCORE
+#ifdef  G_MODULE_NEED_USCORE
   {
     gchar *name;
 
@@ -909,9 +909,9 @@ g_module_symbol (GModule     *module,
     *symbol = _g_module_symbol (module->handle, name);
     g_free (name);
   }
-#else	/* !G_MODULE_NEED_USCORE */
+#else  /* !G_MODULE_NEED_USCORE */
   *symbol = _g_module_symbol (module->handle, symbol_name);
-#endif	/* !G_MODULE_NEED_USCORE */
+#endif  /* !G_MODULE_NEED_USCORE */
 
   module_error = g_module_error ();
   if (module_error)

@@ -3882,8 +3882,8 @@ GHook *static_emission_hooks[3];
           n_emission_hooks += 1;
       }
 
-	  hook = g_hook_next_valid (node->emission_hooks, hook, may_recurse);
-	}
+    hook = g_hook_next_valid (node->emission_hooks, hook, may_recurse);
+  }
 
       /* Re-iterate back through the matching hooks and copy them into
        * an array which won’t change when we unlock to call the
