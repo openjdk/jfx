@@ -466,10 +466,11 @@ public final class Platform {
      * {@link #getColor}, {@link #getPaint}, and {@link #getValue} are provided as typed alternatives to
      * the untyped {@link #get} method.
      * <p>
-     * The preferences that are reported by the platform may be dependent on the operating system version,
-     * so applications should not assume that a particular preference is always available.
+     * The preferences that are reported by the platform may be dependent on the operating system version
+     * and its current configuration, so applications should not assume that a particular preference is
+     * always available.
      * <p>
-     * The following list contains all preferences that are potentially available on the specified platforms:
+     * The following preferences are potentially available on the specified platforms:
      * <table id="preferences-table">
      *     <caption>List of platform preferences</caption>
      *     <tbody>
@@ -572,10 +573,8 @@ public final class Platform {
 
         /**
          * The platform color scheme, which specifies whether applications should prefer light text on
-         * dark backgrounds, or dark text on light backgrounds. The value of this property is derived
-         * from the perceptual brightness of {@link #backgroundColorProperty() backgroundColor} in relation
-         * to {@link #foregroundColorProperty() foregroundColor} and defaults to {@link ColorScheme#LIGHT}
-         * if the platform does not report color preferences.
+         * dark backgrounds, or dark text on light backgrounds. The value of this property defaults to
+         * {@link ColorScheme#LIGHT} if the platform does not report color preferences.
          *
          * @return the {@code colorScheme} property
          * @defaultValue {@link ColorScheme#LIGHT}
