@@ -349,6 +349,7 @@ BOOL IsNumericKeypadCode(int javaCode) {
         case com_sun_glass_events_KeyEvent_VK_SUBTRACT:
         case com_sun_glass_events_KeyEvent_VK_ADD:
         case com_sun_glass_events_KeyEvent_VK_DECIMAL:
+        case com_sun_glass_events_KeyEvent_VK_SEPARATOR:
         case com_sun_glass_events_KeyEvent_VK_NUMPAD0:
         case com_sun_glass_events_KeyEvent_VK_NUMPAD1:
         case com_sun_glass_events_KeyEvent_VK_NUMPAD2:
