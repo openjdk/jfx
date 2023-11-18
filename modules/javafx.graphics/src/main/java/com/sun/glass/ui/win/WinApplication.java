@@ -36,7 +36,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.HashMap;
 import java.util.Map;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
@@ -385,26 +384,26 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for Windows.
     @Override
     public Map<String, Class<?>> getPlatformKeys() {
-        return new HashMap<>() {{
-            put("Windows.SPI.HighContrast", Boolean.class);
-            put("Windows.SPI.HighContrastColorScheme", String.class);
-            put("Windows.SysColor.COLOR_3DFACE", Color.class);
-            put("Windows.SysColor.COLOR_BTNTEXT", Color.class);
-            put("Windows.SysColor.COLOR_GRAYTEXT", Color.class);
-            put("Windows.SysColor.COLOR_HIGHLIGHT", Color.class);
-            put("Windows.SysColor.COLOR_HIGHLIGHTTEXT", Color.class);
-            put("Windows.SysColor.COLOR_HOTLIGHT", Color.class);
-            put("Windows.SysColor.COLOR_WINDOW", Color.class);
-            put("Windows.SysColor.COLOR_WINDOWTEXT", Color.class);
-            put("Windows.UIColor.Background", Color.class);
-            put("Windows.UIColor.Foreground", Color.class);
-            put("Windows.UIColor.AccentDark3", Color.class);
-            put("Windows.UIColor.AccentDark2", Color.class);
-            put("Windows.UIColor.AccentDark1", Color.class);
-            put("Windows.UIColor.Accent", Color.class);
-            put("Windows.UIColor.AccentLight1", Color.class);
-            put("Windows.UIColor.AccentLight2", Color.class);
-            put("Windows.UIColor.AccentLight3", Color.class);
-        }};
+        return Map.ofEntries(
+            Map.entry("Windows.SPI.HighContrast", Boolean.class),
+            Map.entry("Windows.SPI.HighContrastColorScheme", String.class),
+            Map.entry("Windows.SysColor.COLOR_3DFACE", Color.class),
+            Map.entry("Windows.SysColor.COLOR_BTNTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_GRAYTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HIGHLIGHT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HIGHLIGHTTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HOTLIGHT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_WINDOW", Color.class),
+            Map.entry("Windows.SysColor.COLOR_WINDOWTEXT", Color.class),
+            Map.entry("Windows.UIColor.Background", Color.class),
+            Map.entry("Windows.UIColor.Foreground", Color.class),
+            Map.entry("Windows.UIColor.AccentDark3", Color.class),
+            Map.entry("Windows.UIColor.AccentDark2", Color.class),
+            Map.entry("Windows.UIColor.AccentDark1", Color.class),
+            Map.entry("Windows.UIColor.Accent", Color.class),
+            Map.entry("Windows.UIColor.AccentLight1", Color.class),
+            Map.entry("Windows.UIColor.AccentLight2", Color.class),
+            Map.entry("Windows.UIColor.AccentLight3", Color.class)
+        );
     }
 }

@@ -37,7 +37,6 @@ import java.nio.IntBuffer;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -407,53 +406,53 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     // This list needs to be kept in sync with PlatformSupport.m in the Glass toolkit for macOS.
     @Override
     public Map<String, Class<?>> getPlatformKeys() {
-        return new HashMap<>() {{
-            put("macOS.NSColor.labelColor", Color.class);
-            put("macOS.NSColor.secondaryLabelColor", Color.class);
-            put("macOS.NSColor.tertiaryLabelColor", Color.class);
-            put("macOS.NSColor.quaternaryLabelColor", Color.class);
-            put("macOS.NSColor.textColor", Color.class);
-            put("macOS.NSColor.placeholderTextColor", Color.class);
-            put("macOS.NSColor.selectedTextColor", Color.class);
-            put("macOS.NSColor.textBackgroundColor", Color.class);
-            put("macOS.NSColor.selectedTextBackgroundColor", Color.class);
-            put("macOS.NSColor.keyboardFocusIndicatorColor", Color.class);
-            put("macOS.NSColor.unemphasizedSelectedTextColor", Color.class);
-            put("macOS.NSColor.unemphasizedSelectedTextBackgroundColor", Color.class);
-            put("macOS.NSColor.linkColor", Color.class);
-            put("macOS.NSColor.separatorColor", Color.class);
-            put("macOS.NSColor.selectedContentBackgroundColor", Color.class);
-            put("macOS.NSColor.unemphasizedSelectedContentBackgroundColor", Color.class);
-            put("macOS.NSColor.selectedMenuItemTextColor", Color.class);
-            put("macOS.NSColor.gridColor", Color.class);
-            put("macOS.NSColor.headerTextColor", Color.class);
-            put("macOS.NSColor.alternatingContentBackgroundColors", Color[].class);
-            put("macOS.NSColor.controlAccentColor", Color.class);
-            put("macOS.NSColor.controlColor", Color.class);
-            put("macOS.NSColor.controlBackgroundColor", Color.class);
-            put("macOS.NSColor.controlTextColor", Color.class);
-            put("macOS.NSColor.disabledControlTextColor", Color.class);
-            put("macOS.NSColor.selectedControlColor", Color.class);
-            put("macOS.NSColor.selectedControlTextColor", Color.class);
-            put("macOS.NSColor.alternateSelectedControlTextColor", Color.class);
-            put("macOS.NSColor.currentControlTint", String.class);
-            put("macOS.NSColor.windowBackgroundColor", Color.class);
-            put("macOS.NSColor.windowFrameTextColor", Color.class);
-            put("macOS.NSColor.underPageBackgroundColor", Color.class);
-            put("macOS.NSColor.findHighlightColor", Color.class);
-            put("macOS.NSColor.highlightColor", Color.class);
-            put("macOS.NSColor.shadowColor", Color.class);
-            put("macOS.NSColor.systemBlueColor", Color.class);
-            put("macOS.NSColor.systemBrownColor", Color.class);
-            put("macOS.NSColor.systemGrayColor", Color.class);
-            put("macOS.NSColor.systemGreenColor", Color.class);
-            put("macOS.NSColor.systemIndigoColor", Color.class);
-            put("macOS.NSColor.systemOrangeColor", Color.class);
-            put("macOS.NSColor.systemPinkColor", Color.class);
-            put("macOS.NSColor.systemPurpleColor", Color.class);
-            put("macOS.NSColor.systemRedColor", Color.class);
-            put("macOS.NSColor.systemTealColor", Color.class);
-            put("macOS.NSColor.systemYellowColor", Color.class);
-        }};
+        return Map.ofEntries(
+            Map.entry("macOS.NSColor.labelColor", Color.class),
+            Map.entry("macOS.NSColor.secondaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.tertiaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.quaternaryLabelColor", Color.class),
+            Map.entry("macOS.NSColor.textColor", Color.class),
+            Map.entry("macOS.NSColor.placeholderTextColor", Color.class),
+            Map.entry("macOS.NSColor.selectedTextColor", Color.class),
+            Map.entry("macOS.NSColor.textBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.selectedTextBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.keyboardFocusIndicatorColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedTextColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedTextBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.linkColor", Color.class),
+            Map.entry("macOS.NSColor.separatorColor", Color.class),
+            Map.entry("macOS.NSColor.selectedContentBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.unemphasizedSelectedContentBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.selectedMenuItemTextColor", Color.class),
+            Map.entry("macOS.NSColor.gridColor", Color.class),
+            Map.entry("macOS.NSColor.headerTextColor", Color.class),
+            Map.entry("macOS.NSColor.alternatingContentBackgroundColors", Color[].class),
+            Map.entry("macOS.NSColor.controlAccentColor", Color.class),
+            Map.entry("macOS.NSColor.controlColor", Color.class),
+            Map.entry("macOS.NSColor.controlBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.controlTextColor", Color.class),
+            Map.entry("macOS.NSColor.disabledControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.selectedControlColor", Color.class),
+            Map.entry("macOS.NSColor.selectedControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.alternateSelectedControlTextColor", Color.class),
+            Map.entry("macOS.NSColor.currentControlTint", String.class),
+            Map.entry("macOS.NSColor.windowBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.windowFrameTextColor", Color.class),
+            Map.entry("macOS.NSColor.underPageBackgroundColor", Color.class),
+            Map.entry("macOS.NSColor.findHighlightColor", Color.class),
+            Map.entry("macOS.NSColor.highlightColor", Color.class),
+            Map.entry("macOS.NSColor.shadowColor", Color.class),
+            Map.entry("macOS.NSColor.systemBlueColor", Color.class),
+            Map.entry("macOS.NSColor.systemBrownColor", Color.class),
+            Map.entry("macOS.NSColor.systemGrayColor", Color.class),
+            Map.entry("macOS.NSColor.systemGreenColor", Color.class),
+            Map.entry("macOS.NSColor.systemIndigoColor", Color.class),
+            Map.entry("macOS.NSColor.systemOrangeColor", Color.class),
+            Map.entry("macOS.NSColor.systemPinkColor", Color.class),
+            Map.entry("macOS.NSColor.systemPurpleColor", Color.class),
+            Map.entry("macOS.NSColor.systemRedColor", Color.class),
+            Map.entry("macOS.NSColor.systemTealColor", Color.class),
+            Map.entry("macOS.NSColor.systemYellowColor", Color.class)
+        );
     }
 }
