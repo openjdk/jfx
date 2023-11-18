@@ -188,11 +188,6 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     }
 
     @Override
-    public Optional<Paint> getPaint(String key) {
-        return getValue(key, Paint.class);
-    }
-
-    @Override
     public ReadOnlyObjectProperty<ColorScheme> colorSchemeProperty() {
         return properties.colorSchemeProperty();
     }

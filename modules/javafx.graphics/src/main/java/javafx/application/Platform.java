@@ -463,8 +463,8 @@ public final class Platform {
      * preference has changed.
      * <p>
      * For convenience, {@link #getInteger}, {@link #getDouble}, {@link #getBoolean}, {@link #getString},
-     * {@link #getColor}, {@link #getPaint}, and {@link #getValue} are provided as typed alternatives to
-     * the untyped {@link #get} method.
+     * {@link #getColor}, and {@link #getValue} are provided as typed alternatives to the untyped
+     * {@link #get} method.
      * <p>
      * The preferences that are reported by the platform may be dependent on the operating system version
      * and its current configuration, so applications should not assume that a particular preference is
@@ -669,16 +669,6 @@ public final class Platform {
          * @return the optional {@code Color} instance to which the key is mapped
          */
         Optional<Color> getColor(String key);
-
-        /**
-         * Returns an optional {@code Paint} to which the specified key is mapped.
-         *
-         * @param key the key
-         * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the key is not mappable to a {@code Paint}
-         * @return the optional {@code Paint} to which the key is mapped
-         */
-        Optional<Paint> getPaint(String key);
 
         /**
          * Returns an optional value to which the specified key is mapped.

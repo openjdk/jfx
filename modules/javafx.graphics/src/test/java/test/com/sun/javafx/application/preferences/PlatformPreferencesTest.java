@@ -83,8 +83,8 @@ public class PlatformPreferencesTest {
         assertEquals(Optional.empty(), prefs.getBoolean("test.aBoolean"));
         assertEquals(Optional.empty(), prefs.getString("test.aString"));
         assertEquals(Optional.empty(), prefs.getColor("test.aColor"));
-        assertEquals(Optional.empty(), prefs.getPaint("test.aColor"));
-        assertEquals(Optional.empty(), prefs.getPaint("test.aPaint"));
+        assertEquals(Optional.empty(), prefs.getValue("test.aColor", Color.class));
+        assertEquals(Optional.empty(), prefs.getValue("test.aPaint", Paint.class));
     }
 
     @Test
