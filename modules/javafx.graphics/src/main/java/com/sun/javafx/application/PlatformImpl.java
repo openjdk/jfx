@@ -1062,8 +1062,10 @@ public class PlatformImpl {
      * @param platformKeyMappings a map of platform-specific keys to well-known keys
      * @param preferences the initial set of platform preferences
      */
-    public static void initPreferences(Map<String, String> platformKeyMappings, Map<String, Object> preferences) {
-        platformPreferences = new PlatformPreferences(platformKeyMappings);
+    public static void initPreferences(Map<String, Class<?>> platformKeys,
+                                       Map<String, String> platformKeyMappings,
+                                       Map<String, Object> preferences) {
+        platformPreferences = new PlatformPreferences(platformKeys, platformKeyMappings);
         platformPreferences.update(preferences);
     }
 

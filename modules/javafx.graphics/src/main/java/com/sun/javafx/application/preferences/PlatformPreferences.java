@@ -52,6 +52,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
 
     /**
+     * Contains mappings from platform-specific keys to their types. This information is
+     * used to catch misuse of typed getters even if the preferences map doesn't contain
+     * the preference mapping at runtime.
+     */
+    private final Map<String, Class<?>> platformKeys;
+
+    /**
      * Contains mappings from platform-specific keys to well-known keys, which are used
      * in the implementation of the property-based API in {@link PreferenceProperties}.
      */
@@ -71,13 +78,15 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     private final List<MapChangeListener<? super String, Object>> mapChangeListeners = new CopyOnWriteArrayList<>();
 
     /**
-     * Initializes a new {@code PlatformPreferences} instance with the given platform-specific key mappings.
+     * Initializes a new {@code PlatformPreferences} instance with the given platform-specific keys and key mappings.
      *
+     * @param platformKeys the platform-specific keys and the types of their values
      * @param platformKeyMappings the platform-specific key mappings
-     * @throws NullPointerException if {@code platformKeyMappings} is {@code null} or contains
-     *                              {@code null} keys or values
+     * @throws NullPointerException if {@code platformKeys} or {@code platformKeyMappings} is {@code null} or
+     *                              contains {@code null} keys or values
      */
-    public PlatformPreferences(Map<String, String> platformKeyMappings) {
+    public PlatformPreferences(Map<String, Class<?>> platformKeys, Map<String, String> platformKeyMappings) {
+        this.platformKeys = Map.copyOf(platformKeys);
         this.platformKeyMappings = Map.copyOf(platformKeyMappings);
     }
 
@@ -115,21 +124,42 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     public <T> Optional<T> getValue(String key, Class<T> type) {
         Objects.requireNonNull(key, "key cannot be null");
         Objects.requireNonNull(type, "type cannot be null");
+        Class<?> platformType = platformKeys.get(key);
         Object value = effectivePreferences.get(key);
+
+        if (platformType == null) {
+            // Well-behaved toolkits shouldn't report values for keys that are not listed in the
+            // platform key-type map. However, if they do, we need to respect the invariant that
+            // Map.getValue(key, type) should only return an empty value if Map.get(key) would
+            // return null. In all other cases we need to return the value if the cast succeeds.
+            if (value != null) {
+                if (type.isInstance(value)) {
+                    @SuppressWarnings("unchecked")
+                    T v = (T)value;
+                    return Optional.of(v);
+                }
+
+                throw new IllegalArgumentException(
+                    "Incompatible types: requested = " + type.getName() +
+                    ", actual = " + value.getClass().getName());
+            }
+
+            return Optional.empty();
+        }
+
+        if (!type.isAssignableFrom(platformType)) {
+            throw new IllegalArgumentException(
+                "Incompatible types: requested = " + type.getName() +
+                ", actual = " + platformType.getName());
+        }
 
         if (value == null) {
             return Optional.empty();
         }
 
-        if (type.isInstance(value)) {
-            @SuppressWarnings("unchecked")
-            T v = (T)value;
-            return Optional.of(v);
-        }
-
-        throw new IllegalArgumentException(
-            "Incompatible types: requested = " + type.getName() +
-            ", actual = " + value.getClass().getName());
+        @SuppressWarnings("unchecked")
+        T v = (T)value;
+        return Optional.of(v);
     }
 
     @Override

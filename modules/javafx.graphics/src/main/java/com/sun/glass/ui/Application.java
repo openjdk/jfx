@@ -786,4 +786,18 @@ public abstract class Application {
     public Map<String, String> getPlatformKeyMappings() {
         return Map.of();
     }
+
+    /**
+     * Returns a mapping of platform-specific keys to the types of their values.
+     * <p>
+     * Implementors must keep this map in sync with the mappings reported by the native Glass toolkit.
+     * If a native toolkit reports mappings for keys that are not contained in this map, the typed getters
+     * in {@link javafx.application.Platform.Preferences} might not throw IllegalArgumentException as
+     * specified.
+     *
+     * @return a map of platform-specific keys to types
+     */
+    public Map<String, Class<?>> getPlatformKeys() {
+        return Map.of();
+    }
 }

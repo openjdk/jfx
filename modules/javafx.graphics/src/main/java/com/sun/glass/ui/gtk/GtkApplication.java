@@ -40,12 +40,14 @@ import com.sun.javafx.util.Logging;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.logging.PlatformLogger;
+import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.lang.annotation.Native;
@@ -476,5 +478,31 @@ final class GtkApplication extends Application implements
             "GTK.theme_fg_color", "foregroundColor",
             "GTK.theme_bg_color", "backgroundColor"
         );
+    }
+
+    // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for GTK.
+    @Override
+    public Map<String, Class<?>> getPlatformKeys() {
+        return new HashMap<>() {{
+            put("GTK.theme_name", String.class);
+            put("GTK.theme_fg_color", Color.class);
+            put("GTK.theme_bg_color", Color.class);
+            put("GTK.theme_base_color", Color.class);
+            put("GTK.theme_selected_bg_color", Color.class);
+            put("GTK.theme_selected_fg_color", Color.class);
+            put("GTK.theme_unfocused_fg_color", Color.class);
+            put("GTK.theme_unfocused_bg_color", Color.class);
+            put("GTK.theme_unfocused_base_color", Color.class);
+            put("GTK.theme_unfocused_selected_bg_color", Color.class);
+            put("GTK.theme_unfocused_selected_fg_color", Color.class);
+            put("GTK.insensitive_bg_color", Color.class);
+            put("GTK.insensitive_fg_color", Color.class);
+            put("GTK.insensitive_base_color", Color.class);
+            put("GTK.borders", Color.class);
+            put("GTK.unfocused_borders", Color.class);
+            put("GTK.warning_color", Color.class);
+            put("GTK.error_color", Color.class);
+            put("GTK.success_color", Color.class);
+        }};
     }
 }

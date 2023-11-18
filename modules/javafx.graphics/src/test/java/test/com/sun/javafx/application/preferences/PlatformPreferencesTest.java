@@ -26,6 +26,7 @@
 package test.com.sun.javafx.application.preferences;
 
 import com.sun.javafx.application.preferences.PlatformPreferences;
+import javafx.scene.paint.Paint;
 import test.javafx.collections.MockMapObserver;
 import javafx.beans.InvalidationListener;
 import javafx.collections.MapChangeListener;
@@ -47,11 +48,43 @@ public class PlatformPreferencesTest {
 
     @BeforeEach
     void setup() {
-        prefs = new PlatformPreferences(Map.of(
-            "test.foregroundColor", "foregroundColor",
-            "test.backgroundColor", "backgroundColor",
-            "test.accentColor", "accentColor"
-        ));
+        prefs = new PlatformPreferences(
+            // Well-known platform keys and their associated type
+            Map.of(
+                "test.anInt", Integer.class,
+                "test.aDouble", Double.class,
+                "test.aBoolean", Boolean.class,
+                "test.aString", String.class,
+                "test.aColor", Color.class,
+                "test.aPaint", Paint.class
+            ),
+            // Platform-specific key mappings
+            Map.of(
+                "test.foregroundColor", "foregroundColor",
+                "test.backgroundColor", "backgroundColor",
+                "test.accentColor", "accentColor"
+            ));
+    }
+
+    @Test
+    void testWellKnownKeyThrowsExceptionWithWrongGetter() {
+        assertThrows(IllegalArgumentException.class, () -> prefs.getDouble("test.anInt"));
+        assertThrows(IllegalArgumentException.class, () -> prefs.getInteger("test.aDouble"));
+        assertThrows(IllegalArgumentException.class, () -> prefs.getString("test.aBoolean"));
+        assertThrows(IllegalArgumentException.class, () -> prefs.getColor("test.aString"));
+        assertThrows(IllegalArgumentException.class, () -> prefs.getInteger("test.aColor"));
+        assertThrows(IllegalArgumentException.class, () -> prefs.getString("test.aPaint"));
+    }
+
+    @Test
+    void testWellKnownKeyReturnsEmptyValueWhenMappingNotPresent() {
+        assertEquals(Optional.empty(), prefs.getInteger("test.anInt"));
+        assertEquals(Optional.empty(), prefs.getDouble("test.aDouble"));
+        assertEquals(Optional.empty(), prefs.getBoolean("test.aBoolean"));
+        assertEquals(Optional.empty(), prefs.getString("test.aString"));
+        assertEquals(Optional.empty(), prefs.getColor("test.aColor"));
+        assertEquals(Optional.empty(), prefs.getPaint("test.aColor"));
+        assertEquals(Optional.empty(), prefs.getPaint("test.aPaint"));
     }
 
     @Test

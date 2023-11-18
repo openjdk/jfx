@@ -29,6 +29,7 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.util.Logging;
+import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -36,6 +37,7 @@ import java.nio.IntBuffer;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -400,5 +402,58 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             "macOS.NSColor.textBackgroundColor", "backgroundColor",
             "macOS.NSColor.controlAccentColor", "accentColor"
         );
+    }
+
+    // This list needs to be kept in sync with PlatformSupport.m in the Glass toolkit for macOS.
+    @Override
+    public Map<String, Class<?>> getPlatformKeys() {
+        return new HashMap<>() {{
+            put("macOS.NSColor.labelColor", Color.class);
+            put("macOS.NSColor.secondaryLabelColor", Color.class);
+            put("macOS.NSColor.tertiaryLabelColor", Color.class);
+            put("macOS.NSColor.quaternaryLabelColor", Color.class);
+            put("macOS.NSColor.textColor", Color.class);
+            put("macOS.NSColor.placeholderTextColor", Color.class);
+            put("macOS.NSColor.selectedTextColor", Color.class);
+            put("macOS.NSColor.textBackgroundColor", Color.class);
+            put("macOS.NSColor.selectedTextBackgroundColor", Color.class);
+            put("macOS.NSColor.keyboardFocusIndicatorColor", Color.class);
+            put("macOS.NSColor.unemphasizedSelectedTextColor", Color.class);
+            put("macOS.NSColor.unemphasizedSelectedTextBackgroundColor", Color.class);
+            put("macOS.NSColor.linkColor", Color.class);
+            put("macOS.NSColor.separatorColor", Color.class);
+            put("macOS.NSColor.selectedContentBackgroundColor", Color.class);
+            put("macOS.NSColor.unemphasizedSelectedContentBackgroundColor", Color.class);
+            put("macOS.NSColor.selectedMenuItemTextColor", Color.class);
+            put("macOS.NSColor.gridColor", Color.class);
+            put("macOS.NSColor.headerTextColor", Color.class);
+            put("macOS.NSColor.alternatingContentBackgroundColors", Color[].class);
+            put("macOS.NSColor.controlAccentColor", Color.class);
+            put("macOS.NSColor.controlColor", Color.class);
+            put("macOS.NSColor.controlBackgroundColor", Color.class);
+            put("macOS.NSColor.controlTextColor", Color.class);
+            put("macOS.NSColor.disabledControlTextColor", Color.class);
+            put("macOS.NSColor.selectedControlColor", Color.class);
+            put("macOS.NSColor.selectedControlTextColor", Color.class);
+            put("macOS.NSColor.alternateSelectedControlTextColor", Color.class);
+            put("macOS.NSColor.currentControlTint", String.class);
+            put("macOS.NSColor.windowBackgroundColor", Color.class);
+            put("macOS.NSColor.windowFrameTextColor", Color.class);
+            put("macOS.NSColor.underPageBackgroundColor", Color.class);
+            put("macOS.NSColor.findHighlightColor", Color.class);
+            put("macOS.NSColor.highlightColor", Color.class);
+            put("macOS.NSColor.shadowColor", Color.class);
+            put("macOS.NSColor.systemBlueColor", Color.class);
+            put("macOS.NSColor.systemBrownColor", Color.class);
+            put("macOS.NSColor.systemGrayColor", Color.class);
+            put("macOS.NSColor.systemGreenColor", Color.class);
+            put("macOS.NSColor.systemIndigoColor", Color.class);
+            put("macOS.NSColor.systemOrangeColor", Color.class);
+            put("macOS.NSColor.systemPinkColor", Color.class);
+            put("macOS.NSColor.systemPurpleColor", Color.class);
+            put("macOS.NSColor.systemRedColor", Color.class);
+            put("macOS.NSColor.systemTealColor", Color.class);
+            put("macOS.NSColor.systemYellowColor", Color.class);
+        }};
     }
 }

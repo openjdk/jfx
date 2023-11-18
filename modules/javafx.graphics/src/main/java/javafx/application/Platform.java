@@ -625,7 +625,7 @@ public final class Platform {
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if a mapping exists, but the key is not mapped to an {@code Integer}
+         * @throws IllegalArgumentException if the key is not mappable to an {@code Integer}
          * @return the optional {@code Integer} to which the key is mapped
          */
         Optional<Integer> getInteger(String key);
@@ -635,7 +635,7 @@ public final class Platform {
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if a mapping exists, but the key is not mapped to a {@code Double}
+         * @throws IllegalArgumentException if the key is not mappable to a {@code Double}
          * @return the optional {@code Double} to which the key is mapped
          */
         Optional<Double> getDouble(String key);
@@ -645,7 +645,7 @@ public final class Platform {
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if a mapping exists, but the key is not mapped to a {@code Boolean}
+         * @throws IllegalArgumentException if the key is not mappable to a {@code Boolean}
          * @return the optional {@code Boolean} to which the key is mapped
          */
         Optional<Boolean> getBoolean(String key);
@@ -655,7 +655,7 @@ public final class Platform {
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the mapping exists, but the key is not mapped to a {@code String}
+         * @throws IllegalArgumentException if the key is not mappable to a {@code String}
          * @return the optional {@code String} to which the key is mapped
          */
         Optional<String> getString(String key);
@@ -665,7 +665,7 @@ public final class Platform {
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the mapping exists, but the key is not mapped to a {@code Color}
+         * @throws IllegalArgumentException if the key is not mappable to a {@code Color}
          * @return the optional {@code Color} instance to which the key is mapped
          */
         Optional<Color> getColor(String key);
@@ -675,7 +675,7 @@ public final class Platform {
          *
          * @param key the key
          * @throws NullPointerException if {@code key} is null
-         * @throws IllegalArgumentException if the mapping exists, but the key is not mapped to a {@code Paint}
+         * @throws IllegalArgumentException if the key is not mappable to a {@code Paint}
          * @return the optional {@code Paint} to which the key is mapped
          */
         Optional<Paint> getPaint(String key);
@@ -687,7 +687,7 @@ public final class Platform {
          * @param key the key
          * @param type the type of the value
          * @throws NullPointerException if {@code key} or {@code type} is null
-         * @throws IllegalArgumentException if the mapping exists, but the key is not mapped to a value of type {@code T}
+         * @throws IllegalArgumentException if the key is not mappable to a value of type {@code T}
          * @return the optional value to which the key is mapped
          */
         <T> Optional<T> getValue(String key, Class<T> type);
