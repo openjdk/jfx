@@ -59,8 +59,8 @@ class GlassSystemMenu implements TKSystemMenu {
 
     private List<MenuBase>      systemMenus = null;
     private MenuBar             glassSystemMenuBar = null;
-    private final Map <Menu, ListChangeListener> menuListeners = new HashMap<>();
-    private final Map <ListChangeListener, ObservableList> listenerItems  = new HashMap<>();
+    private final Map<Menu, ListChangeListener> menuListeners = new HashMap<>();
+    private final Map<ListChangeListener, ObservableList> listenerItems = new HashMap<>();
 
     private InvalidationListener visibilityListener = valueModel -> {
         if (systemMenus != null) {
@@ -185,8 +185,8 @@ class GlassSystemMenu implements TKSystemMenu {
         }
     }
 
-    private ListChangeListener createListener(final Menu glassMenu) {
-        ListChangeListener<MenuItemBase> answer = ((ListChangeListener.Change<? extends MenuItemBase> change) -> {
+    private ListChangeListener<MenuItemBase> createListener(final Menu glassMenu) {
+        return (ListChangeListener.Change<? extends MenuItemBase> change) -> {
             while (change.next()) {
                 int from = change.getFrom();
                 int to = change.getTo();
@@ -207,8 +207,7 @@ class GlassSystemMenu implements TKSystemMenu {
                     }
                 }
             }
-        });
-        return answer;
+        };
     }
 
 
