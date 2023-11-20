@@ -31,6 +31,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TableHeaderRow;
@@ -166,6 +167,43 @@ class TreeTableViewSkinTest {
         TableColumnHeaderShim.columnReordering(tableColumnHeader, bounds.getMinX() + 20, bounds.getMinY());
 
         assertEquals(20, columnDragHeader.getTranslateX());
+    }
+
+    @Test
+    void testHeaderReorderWithinNestedColumns() {
+        TreeTableView<String> treeTableView = new TreeTableView<>();
+        for (int i = 0; i < 2; i++) {
+            TreeTableColumn<String, String> column = new TreeTableColumn<>("Col " + i);
+            column.setMinWidth(100);
+            column.setMaxWidth(100);
+            treeTableView.getColumns().add(column);
+        }
+
+        TreeTableColumn<String, String> column = new TreeTableColumn<>("Column with nested");
+        for (int i = 0; i < 2; i++) {
+            TreeTableColumn<String, String> nestedCol = new TreeTableColumn<>("NestedCol " + i);
+            nestedCol.setMinWidth(100);
+            nestedCol.setMaxWidth(100);
+            column.getColumns().add(nestedCol);
+        }
+        treeTableView.getColumns().add(column);
+
+        stageLoader = new StageLoader(treeTableView);
+
+        TableHeaderRow header = (TableHeaderRow) treeTableView.lookup("TableHeaderRow");
+        Node columnDragHeader = header.lookup(".column-drag-header");
+
+        assertEquals(0, columnDragHeader.getTranslateX());
+
+        NestedTableColumnHeader nestedTableColumnHeader =
+                (NestedTableColumnHeader) header.getRootHeader().getColumnHeaders().get(2);
+        TableColumnHeader tableColumnHeader = nestedTableColumnHeader.getColumnHeaders().get(0);
+
+        Bounds bounds = tableColumnHeader.localToScene(tableColumnHeader.getLayoutBounds());
+        TableColumnHeaderShim.columnReordering(tableColumnHeader, bounds.getMinX() + 20, bounds.getMinY());
+
+        // 200, since we have 2 columns to the left with a size of 100.
+        assertEquals(220, columnDragHeader.getTranslateX());
     }
 
     private static class CustomTreeTableViewSkin<S> extends TreeTableViewSkin<S> {

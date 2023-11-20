@@ -32,6 +32,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.control.skin.TableHeaderRow;
@@ -186,6 +187,43 @@ class TableViewSkinTest {
         TableColumnHeaderShim.columnReordering(tableColumnHeader, bounds.getMinX() + 20, bounds.getMinY());
 
         assertEquals(20, columnDragHeader.getTranslateX());
+    }
+
+    @Test
+    void testHeaderReorderWithinNestedColumns() {
+        TableView<String> tableView = new TableView<>();
+        for (int i = 0; i < 2; i++) {
+            TableColumn<String, String> column = new TableColumn<>("Col " + i);
+            column.setMinWidth(100);
+            column.setMaxWidth(100);
+            tableView.getColumns().add(column);
+        }
+
+        TableColumn<String, String> column = new TableColumn<>("Column with nested");
+        for (int i = 0; i < 2; i++) {
+            TableColumn<String, String> nestedCol = new TableColumn<>("NestedCol " + i);
+            nestedCol.setMinWidth(100);
+            nestedCol.setMaxWidth(100);
+            column.getColumns().add(nestedCol);
+        }
+        tableView.getColumns().add(column);
+
+        stageLoader = new StageLoader(tableView);
+
+        TableHeaderRow header = (TableHeaderRow) tableView.lookup("TableHeaderRow");
+        Node columnDragHeader = header.lookup(".column-drag-header");
+
+        assertEquals(0, columnDragHeader.getTranslateX());
+
+        NestedTableColumnHeader nestedTableColumnHeader =
+                (NestedTableColumnHeader) header.getRootHeader().getColumnHeaders().get(2);
+        TableColumnHeader tableColumnHeader = nestedTableColumnHeader.getColumnHeaders().get(0);
+
+        Bounds bounds = tableColumnHeader.localToScene(tableColumnHeader.getLayoutBounds());
+        TableColumnHeaderShim.columnReordering(tableColumnHeader, bounds.getMinX() + 20, bounds.getMinY());
+
+        // 200, since we have 2 columns to the left with a size of 100.
+        assertEquals(220, columnDragHeader.getTranslateX());
     }
 
     private static class CustomTableViewSkin<S> extends TableViewSkin<S> {
