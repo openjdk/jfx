@@ -789,6 +789,8 @@ public abstract class Application {
 
     /**
      * Returns a mapping of platform-specific keys to the types of their values.
+     * Polymorphic types are supported by specifying the common base type; for example, a key can
+     * be mapped to {@code Paint.class} to support any type of paint.
      * <p>
      * Implementors must keep this map in sync with the mappings reported by the native Glass toolkit.
      * If a native toolkit reports mappings for keys that are not contained in this map, the typed getters

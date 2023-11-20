@@ -147,7 +147,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
             return Optional.empty();
         }
 
-        if (!type.isAssignableFrom(platformType)) {
+        if (!platformType.isAssignableFrom(type)) {
             throw new IllegalArgumentException(
                 "Incompatible types: requested = " + type.getName() +
                 ", actual = " + platformType.getName());
@@ -157,9 +157,15 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
             return Optional.empty();
         }
 
-        @SuppressWarnings("unchecked")
-        T v = (T)value;
-        return Optional.of(v);
+        if (type.isInstance(value)) {
+            @SuppressWarnings("unchecked")
+            T v = (T)value;
+            return Optional.of(v);
+        }
+
+        throw new IllegalArgumentException(
+            "Incompatible types: requested = " + type.getName() +
+            ", actual = " + value.getClass().getName());
     }
 
     @Override

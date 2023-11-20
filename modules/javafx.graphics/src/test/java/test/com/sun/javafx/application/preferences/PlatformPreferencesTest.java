@@ -26,6 +26,8 @@
 package test.com.sun.javafx.application.preferences;
 
 import com.sun.javafx.application.preferences.PlatformPreferences;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import test.javafx.collections.MockMapObserver;
 import javafx.beans.InvalidationListener;
@@ -85,6 +87,21 @@ public class PlatformPreferencesTest {
         assertEquals(Optional.empty(), prefs.getColor("test.aColor"));
         assertEquals(Optional.empty(), prefs.getValue("test.aColor", Color.class));
         assertEquals(Optional.empty(), prefs.getValue("test.aPaint", Paint.class));
+        assertEquals(Optional.empty(), prefs.getValue("test.aPaint", Color.class));
+    }
+
+    @Test
+    void testPolymorphicValues() {
+        prefs.update(Map.of("test.aPaint", Color.RED));
+        assertEquals(Color.RED, prefs.getColor("test.aPaint").orElseThrow());
+        assertEquals(Color.RED, prefs.getValue("test.aPaint", Paint.class).orElseThrow());
+        assertThrows(IllegalArgumentException.class, () -> prefs.getValue("test.aPaint", LinearGradient.class));
+
+        var gradient = new LinearGradient(0, 0, 1, 1, true, CycleMethod.NO_CYCLE);
+        prefs.update(Map.of("test.aPaint", gradient));
+        assertEquals(gradient, prefs.getValue("test.aPaint", Paint.class).orElseThrow());
+        assertEquals(gradient, prefs.getValue("test.aPaint", LinearGradient.class).orElseThrow());
+        assertThrows(IllegalArgumentException.class, () -> prefs.getColor("test.aPaint").orElseThrow());
     }
 
     @Test
