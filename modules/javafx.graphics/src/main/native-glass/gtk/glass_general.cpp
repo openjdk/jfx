@@ -354,7 +354,15 @@ glass_throw_oom(JNIEnv * env, const char * message) {
 
 
 guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height) {
+  if (stride <= 0 || height <= 0 || (height > INT_MAX / stride)) {
+    return NULL;
+  }
+
   guint8* new_pixels = (guint8*) g_malloc(height * stride);
+  if (!new_pixels) {
+    return NULL;
+  }
+
   int i = 0;
 
   for (i = 0; i < height * stride; i += 4) {

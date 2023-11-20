@@ -344,7 +344,8 @@ class MemHolder
 public:
     MemHolder(size_t count)
     {
-        m_pMem = reinterpret_cast<T *>(0==count
+        const bool invalid = (count == 0 || count > SIZE_MAX / sizeof(T));
+        m_pMem = reinterpret_cast<T *>(invalid
             ? NULL
             : malloc(count*sizeof(T)));
     }
