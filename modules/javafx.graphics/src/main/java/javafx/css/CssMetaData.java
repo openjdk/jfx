@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.scene.Node;
@@ -327,5 +328,28 @@ public abstract class CssMetaData<S extends Styleable, V> {
             .append("}").toString();
     }
 
-
+    /**
+     * Utility method which combines CssMetaData items in one unmodifiable list with the size equal to the number
+     * of items it holds (i.e. with no unnecessary overhead).
+     *
+     * @param list the css metadata items, usually from the parent, or null
+     * @param items the additional items
+     * @return the unmodifiable list containing all of the items
+     *
+     * @since 22
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> initStyleables(
+        List<CssMetaData<? extends Styleable, ?>> list,
+        CssMetaData<? extends Styleable, ?>... items)
+    {
+        int sz = (list == null ? 0 : list.size()) + items.length;
+        ArrayList<CssMetaData<? extends Styleable, ?>> rv = new ArrayList<>(sz);
+        if (list != null) {
+            rv.addAll(list);
+        }
+        for (CssMetaData<? extends Styleable, ?> p: items) {
+            rv.add(p);
+        }
+        return Collections.unmodifiableList(rv);
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,29 @@
 
 package javafx.scene.image;
 
+import java.util.List;
+import javafx.beans.DefaultProperty;
+import javafx.beans.Observable;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.StringProperty;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.css.converter.URLConverter;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.AccessibleRole;
+import javafx.scene.Node;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.css.StyleManager;
-import javafx.css.converter.URLConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
@@ -36,20 +56,6 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGImageView;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.DefaultProperty;
-import javafx.beans.Observable;
-import javafx.beans.property.*;
-import javafx.css.CssMetaData;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
-import javafx.css.StyleableStringProperty;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.AccessibleRole;
-import javafx.scene.Node;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * The {@code ImageView} is a {@code Node} used for painting images loaded with
@@ -804,16 +810,38 @@ public class ImageView extends Node {
 
     private static final String DEFAULT_STYLE_CLASS = "image-view";
 
-    /*
-     * Super-lazy instantiation pattern from Bill Pugh.
-     */
-     private static class StyleableProperties {
-        // TODO
-        // "preserve-ratio","smooth","viewport","fit-width","fit-height"
-         private static final CssMetaData<ImageView, String> IMAGE =
-            new CssMetaData<>("-fx-image",
-                URLConverter.getInstance()) {
+    private static class StyleableProperties {
+        private static final CssMetaData<ImageView, Number> FIT_HEIGHT =
+            new CssMetaData<>("-fx-fit-height", SizeConverter.getInstance(), 0.0)
+        {
+            @Override
+            public boolean isSettable(ImageView n) {
+                return n.fitHeight == null || !n.fitHeight.isBound();
+            }
 
+            @Override
+            public StyleableProperty<Number> getStyleableProperty(ImageView n) {
+                return (StyleableProperty<Number>)n.fitHeightProperty();
+            }
+        };
+
+        private static final CssMetaData<ImageView, Number> FIT_WIDTH =
+            new CssMetaData<>("-fx-fit-width", SizeConverter.getInstance(), 0.0)
+        {
+            @Override
+            public boolean isSettable(ImageView n) {
+                return n.fitWidth == null || !n.fitWidth.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Number> getStyleableProperty(ImageView n) {
+                return (StyleableProperty<Number>)n.fitWidthProperty();
+            }
+        };
+
+        private static final CssMetaData<ImageView, String> IMAGE = 
+            new CssMetaData<>("-fx-image", URLConverter.getInstance())
+        {
             @Override
             public boolean isSettable(ImageView n) {
                 // Note that we care about the image, not imageUrl
@@ -826,13 +854,43 @@ public class ImageView extends Node {
             }
         };
 
-         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-         static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<>(Node.getClassCssMetaData());
-            styleables.add(IMAGE);
-            STYLEABLES = Collections.unmodifiableList(styleables);
-         }
+        private static final CssMetaData<ImageView, Boolean> PRESERVE_RATIO =
+            new CssMetaData<>("-fx-preserve-ratio", BooleanConverter.getInstance(), Boolean.FALSE)
+        {
+            @Override
+            public boolean isSettable(ImageView n) {
+                return n.preserveRatio == null || !n.preserveRatio.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(ImageView n) {
+                return (StyleableProperty<Boolean>)n.preserveRatioProperty();
+            }
+        };
+
+        private static final CssMetaData<ImageView, Boolean> SMOOTH =
+            new CssMetaData<>("-fx-smooth", BooleanConverter.getInstance(), SMOOTH_DEFAULT)
+        {
+            @Override
+            public boolean isSettable(ImageView n) {
+                return n.smooth == null || !n.smooth.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(ImageView n) {
+                return (StyleableProperty<Boolean>)n.smoothProperty();
+            }
+        };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES = CssMetaData.initStyleables(
+            null,
+            FIT_HEIGHT,
+            FIT_WIDTH,
+            IMAGE,
+            PRESERVE_RATIO,
+            SMOOTH
+            // TODO VIEWPORT (Rectangle2D how?)
+        );
     }
 
     /**
