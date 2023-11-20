@@ -45,6 +45,7 @@ import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.css.PseudoClass;
 import javafx.scene.control.Slider;
+import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.layout.Region;
 import org.junit.After;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
@@ -6063,5 +6064,28 @@ public class TableViewTest {
 
         table.getSelectionModel().selectIndices(1, new int[]{1, 2});
         assertEquals(2, table.getSelectionModel().getSelectedIndex());
+    }
+
+    @Test
+    public void testScrollingXIsSnapped() {
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList(new Person("VeryLongStringVeryLongString")));
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+
+        Toolkit.getToolkit().firePulse();
+
+        NestedTableColumnHeader rootHeader = VirtualFlowTestUtils.getTableHeaderRow(table).getRootHeader();
+        VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+
+        double newValue = 25.125476811;
+        double snappedNewValue = table.snapPositionX(newValue);
+        scrollBar.setValue(newValue);
+
+        assertEquals(-snappedNewValue, rootHeader.getLayoutX(), 0);
     }
 }

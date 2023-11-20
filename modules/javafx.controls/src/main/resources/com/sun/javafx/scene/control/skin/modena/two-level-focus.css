@@ -98,9 +98,9 @@
  * ListView, TableView                                                         *
  *                                                                             *
  ******************************************************************************/
-.list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
-.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
-.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:selected {
+.list-view:focused:external-focus > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected,
+.table-view:focused:external-focus > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:selected,
+.table-view:focused:external-focus > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell > .table-cell:selected {
     -fx-background: -fx-selection-bar-non-focused;
     -fx-table-cell-border-color: derive(-fx-selection-bar-non-focused, 20%);
     -fx-cell-focus-inner-border: derive(-fx-selection-bar-non-focused, 20%);
@@ -134,7 +134,7 @@
     -fx-background-insets: 1 1 1 0, 1, 2;
     -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
 }
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
+.combo-box-popup > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar !important;
 }

@@ -1505,32 +1505,32 @@
     -fx-background-color: derive(-fx-control-inner-background,-5%);
 }
 
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused {
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:focused {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
 }
 
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused:odd {
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:focused:odd {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, derive(-fx-control-inner-background,-5%);
     -fx-background-insets: 0, 1, 2;
 }
 
 /* When the list-cell is selected and focused */
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:selected {
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected,
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:selected:hover {
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:focused:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
@@ -1540,7 +1540,7 @@
 /* When the ListView is _not_ focused, we show alternate selection colors */
 .list-cell:filled:selected:focused,
 .list-cell:filled:selected,
-.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
+.list-view:horizontal > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
 }
@@ -1555,14 +1555,14 @@
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:hover {
+.list-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:focused:hover {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
-.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
+.list-view:horizontal > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected,
+.list-view:horizontal > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background-color: linear-gradient(to right, derive(-fx-accent,-7%), derive(-fx-accent,-25%));
 }
 
@@ -1621,26 +1621,26 @@
     -fx-padding: 0.0em 0.0em 0.0em 0.25em; /* 0 0 0 3 */
 }
 
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:focused {
+.tree-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-cell:focused {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
 }
 
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:selected {
+.tree-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-cell:filled:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected,
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected:hover {
+.tree-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-cell:filled:selected,
+.tree-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:selected:hover {
+.tree-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-cell:filled:focused:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
@@ -1698,8 +1698,8 @@
     -fx-background-color: -fx-mark-color;
 }
 
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:hover,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover {
+.tree-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-cell:filled:focused:hover,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-text-inner-color;
@@ -2150,28 +2150,28 @@
 }
 
 /* When the table-row-cell is selected and focused */
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected {
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:focused:selected,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .table-cell,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .tree-table-cell {
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:selected > .table-cell,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .tree-table-cell {
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected {
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:selected,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:row-selection:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:selected:hover,
-.tree-table-view:row-selection:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected:hover{
+.table-view:row-selection:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:focused:selected:hover,
+.tree-table-view:row-selection:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected:hover{
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
@@ -2192,21 +2192,21 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 
-.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:hover {
+.table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:hover {
     -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0;
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:hover {
+.tree-table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:hover {
     /* No 1-pixel bottom border for the TreeTableView (unlike the TableView above) */
     -fx-background-color: -fx-cell-hover-color;
     -fx-background-insets: 0;
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:hover,
-.tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover {
+.table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled:focused:hover,
+.tree-table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover {
     -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
     -fx-text-fill: -fx-text-inner-color;
@@ -2225,8 +2225,8 @@
 /* When in constrained resize mode, the right-most visible cell should not have
    a right-border, as it is not possible to get this cleanly out of view without
    introducing horizontal scrollbars (see RT-14886). */
-.table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:last-visible,
-.tree-table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:last-visible {
+.table-view:constrained-resize > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell > .table-cell:last-visible,
+.tree-table-view:constrained-resize > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:last-visible {
     -fx-border-color: transparent;
 }
 .table-view:constrained-resize > .column-header:last-visible,
@@ -2245,32 +2245,32 @@
     -fx-border-insets: 0 1 1 1, 0 0 0 0;
 }
 
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
 }
 
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled .table-cell:focused:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled .tree-table-cell:focused:selected {
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled .table-cell:focused:selected,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled .tree-table-cell:focused:selected {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:selected,
-.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:selected,
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover:selected {
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:selected,
+.table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover:selected,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:selected,
+.tree-table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover:selected {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
     -fx-background-insets: 0 0 1 0;
 }
 
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:focused:selected:hover,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:selected:hover{
+.table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:focused:selected:hover,
+.tree-table-view:focused > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:selected:hover{
     -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
@@ -2296,15 +2296,15 @@
     -fx-background-insets: 0, 1.4;
 }*/
 
-.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover,
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover {
+.table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover,
+.tree-table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover {
     -fx-background-color: -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
     -fx-background-insets: 0 0 1 0;
 }
 
-.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:focused:hover,
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:hover {
+.table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:focused:hover,
+.tree-table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:hover {
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-text-fill: -fx-text-inner-color;
@@ -3210,21 +3210,21 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
 }
 
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
+.combo-box-popup > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell {
     -fx-padding: 4 0 4 5;
 
     /* No alternate highlighting */
     -fx-background-color: -fx-control-inner-background;
 }
 
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
-.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
+.combo-box-popup > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected,
+.combo-box-popup  > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
-.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover {
+.combo-box-popup  > .list-view > .virtual-flow > .viewport > .clipped-container > .sheet > .list-cell:filled:hover {
     -fx-background-color: -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
 }
@@ -3864,25 +3864,25 @@ Only the properties with values that are different from the TextBox are specifie
  *                                                                             *
  ******************************************************************************/
 
-.cell-span-tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell {
+.cell-span-tree-table-view > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell {
     -fx-background-color: transparent;
 }
 
 /* All table-row-cells - we don't care if they are even or odd */
-.cell-span-tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell {
+.cell-span-tree-table-view > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell {
     -fx-background-color: -fx-table-cell-border-color, -fx-control-inner-background;
     -fx-background-insets: 0, 0 1 0 0;
     -fx-alignment: center;
 }
 
 /** Selection styles */
-/*.cell-span-table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused:selected, */
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .tree-table-cell,
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected > .tree-table-cell,
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected:hover > .tree-table-cell,
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:selected,
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:focused:selected,
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:focused:selected:hover{
+/*.cell-span-table-view > .virtual-flow > .viewport > .clipped-container > .sheet > .table-row-cell > .table-cell:focused:selected, */
+.cell-span-tree-table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .tree-table-cell,
+.cell-span-tree-table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected > .tree-table-cell,
+.cell-span-tree-table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected:hover > .tree-table-cell,
+.cell-span-tree-table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:selected,
+.cell-span-tree-table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:focused:selected,
+.cell-span-tree-table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:filled:focused:selected:hover{
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-background: -fx-accent;
@@ -3891,26 +3891,26 @@ Only the properties with values that are different from the TextBox are specifie
 
 /** Hover styles */
 /** --- Row selection mode hover */
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:hover > .tree-table-cell {
+.cell-span-tree-table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:hover > .tree-table-cell {
     -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0;
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover > .tree-table-cell {
+.cell-span-tree-table-view:row-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover > .tree-table-cell {
     -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
     -fx-text-fill: -fx-text-inner-color;
 }
 
 /** --- Cell selection mode hover */
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover{
+.cell-span-tree-table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover{
     -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
     -fx-background-insets: 0, 0 0 1 0;
 }
 
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:hover{
+.cell-span-tree-table-view:cell-selection > .virtual-flow > .viewport > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:hover{
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
     -fx-text-fill: -fx-text-inner-color;
