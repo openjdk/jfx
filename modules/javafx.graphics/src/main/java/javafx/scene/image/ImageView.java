@@ -839,7 +839,7 @@ public class ImageView extends Node {
             }
         };
 
-        private static final CssMetaData<ImageView, String> IMAGE = 
+        private static final CssMetaData<ImageView, String> IMAGE =
             new CssMetaData<>("-fx-image", URLConverter.getInstance())
         {
             @Override
