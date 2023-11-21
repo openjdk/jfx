@@ -883,7 +883,7 @@ public class ImageView extends Node {
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES = CssMetaData.initStyleables(
-            null,
+            Node.getClassCssMetaData(),
             FIT_HEIGHT,
             FIT_WIDTH,
             IMAGE,

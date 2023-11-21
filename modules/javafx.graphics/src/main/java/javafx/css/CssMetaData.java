@@ -332,7 +332,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
      * Utility method which combines CssMetaData items in one unmodifiable list with the size equal to the number
      * of items it holds (i.e. with no unnecessary overhead).
      *
-     * @param list the css metadata items, usually from the parent, or null
+     * @param list the css metadata items, usually from the parent, not nullable
      * @param items the additional items
      * @return the unmodifiable list containing all of the items
      *
@@ -342,11 +342,9 @@ public abstract class CssMetaData<S extends Styleable, V> {
         List<CssMetaData<? extends Styleable, ?>> list,
         CssMetaData<? extends Styleable, ?>... items)
     {
-        int sz = (list == null ? 0 : list.size()) + items.length;
+        int sz = list.size() + items.length;
         ArrayList<CssMetaData<? extends Styleable, ?>> rv = new ArrayList<>(sz);
-        if (list != null) {
-            rv.addAll(list);
-        }
+        rv.addAll(list);
         for (CssMetaData<? extends Styleable, ?> p: items) {
             rv.add(p);
         }
