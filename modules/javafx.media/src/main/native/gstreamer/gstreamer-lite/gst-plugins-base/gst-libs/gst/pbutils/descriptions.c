@@ -37,7 +37,7 @@
 # include "config.h"
 #endif
 
-#include "gst/gst-i18n-plugin.h"
+#include <glib/gi18n-lib.h>
 
 #include <gst/audio/audio.h>
 #include <gst/video/video.h>
@@ -56,7 +56,8 @@ typedef enum
   FLAG_IMAGE = (1 << 4),        /* format is an image format, or image container/tag  */
   FLAG_SUB = (1 << 5),          /* format is a subtitle format, or subtitle container */
   FLAG_TAG = (1 << 6),          /* format is a tag/container                          */
-  FLAG_GENERIC = (1 << 7)       /* format is a generic container (e.g. multipart)     */
+  FLAG_GENERIC = (1 << 7),      /* format is a generic container (e.g. multipart)     */
+  FLAG_METADATA = (1 << 8),     /* format is a metadata format, or metadata container/tag */
 } FormatFlags;
 
 typedef struct
@@ -331,7 +332,10 @@ static const FormatInfo formats[] = {
   {"video/x-svq", NULL, FLAG_VIDEO, ""},
   {"video/x-wmv", NULL, FLAG_VIDEO, ""},
   {"video/x-xan", NULL, FLAG_VIDEO, ""},
-  {"video/x-tscc", NULL, FLAG_VIDEO, ""}
+  {"video/x-tscc", NULL, FLAG_VIDEO, ""},
+  /* metadata */
+  {"application/x-onvif-metadata", "ONVIF Timed Metadata", FLAG_METADATA, ""},
+  {"meta/x-klv", "KLV Metadata", FLAG_METADATA, ""},
 };
 #else // GSTREAMER_LITE
 static const FormatInfo formats[] = {
@@ -676,7 +680,7 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
       case 1:
       case 2:
       case 3:
-        if (str && strncmp (str, "MSS", 3)) {
+        if (str && !strncmp (str, "MSS", 3)) {
           return g_strdup_printf ("Windows Media Video %d Screen", ver + 6);
         } else {
           return g_strdup_printf ("Windows Media Video %d", ver + 6);
@@ -948,13 +952,13 @@ caps_are_rtp_caps (const GstCaps * caps, const gchar * media, gchar ** format)
  *
  * Returns a localised string describing a source element handling the protocol
  * specified in @protocol, for use in error dialogs or other messages to be
- * seen by the user. Should never return NULL unless @protocol is invalid.
+ * seen by the user.
  *
  * This function is mainly for internal use, applications would typically
  * use gst_missing_plugin_message_get_description() to get a description of
  * a missing feature from a missing-plugin message.
  *
- * Returns: a newly-allocated description string, or NULL on error. Free
+ * Returns: a newly-allocated description string. Free
  *          string with g_free() when not needed any longer.
  */
 gchar *
@@ -998,13 +1002,13 @@ gst_pb_utils_get_source_description (const gchar * protocol)
  *
  * Returns a localised string describing a sink element handling the protocol
  * specified in @protocol, for use in error dialogs or other messages to be
- * seen by the user. Should never return NULL unless @protocol is invalid.
+ * seen by the user.
  *
  * This function is mainly for internal use, applications would typically
  * use gst_missing_plugin_message_get_description() to get a description of
  * a missing feature from a missing-plugin message.
  *
- * Returns: a newly-allocated description string, or NULL on error. Free
+ * Returns: a newly-allocated description string. Free
  *          string with g_free() when not needed any longer.
  */
 gchar *
@@ -1033,13 +1037,12 @@ gst_pb_utils_get_sink_description (const gchar * protocol)
  *
  * Returns a localised string describing an decoder for the format specified
  * in @caps, for use in error dialogs or other messages to be seen by the user.
- * Should never return NULL unless @factory_name or @caps are invalid.
  *
  * This function is mainly for internal use, applications would typically
  * use gst_missing_plugin_message_get_description() to get a description of
  * a missing feature from a missing-plugin message.
  *
- * Returns: a newly-allocated description string, or NULL on error. Free
+ * Returns: a newly-allocated description string. Free
  *          string with g_free() when not needed any longer.
  */
 gchar *
@@ -1088,13 +1091,12 @@ gst_pb_utils_get_decoder_description (const GstCaps * caps)
  *
  * Returns a localised string describing an encoder for the format specified
  * in @caps, for use in error dialogs or other messages to be seen by the user.
- * Should never return NULL unless @factory_name or @caps are invalid.
  *
  * This function is mainly for internal use, applications would typically
  * use gst_missing_plugin_message_get_description() to get a description of
  * a missing feature from a missing-plugin message.
  *
- * Returns: a newly-allocated description string, or NULL on error. Free
+ * Returns: a newly-allocated description string. Free
  *          string with g_free() when not needed any longer.
  */
 gchar *
@@ -1139,14 +1141,13 @@ gst_pb_utils_get_encoder_description (const GstCaps * caps)
  * @factory_name: the name of the element, e.g. "giosrc"
  *
  * Returns a localised string describing the given element, for use in
- * error dialogs or other messages to be seen by the user. Should never
- * return NULL unless @factory_name is invalid.
+ * error dialogs or other messages to be seen by the user.
  *
  * This function is mainly for internal use, applications would typically
  * use gst_missing_plugin_message_get_description() to get a description of
  * a missing feature from a missing-plugin message.
  *
- * Returns: a newly-allocated description string, or NULL on error. Free
+ * Returns: a newly-allocated description string. Free
  *          string with g_free() when not needed any longer.
  */
 gchar *
@@ -1168,7 +1169,7 @@ gst_pb_utils_get_element_description (const gchar * factory_name)
 /**
  * gst_pb_utils_add_codec_description_to_tag_list:
  * @taglist: a #GstTagList
- * @codec_tag: (allow-none): a GStreamer codec tag such as #GST_TAG_AUDIO_CODEC,
+ * @codec_tag: (nullable): a GStreamer codec tag such as #GST_TAG_AUDIO_CODEC,
  *             #GST_TAG_VIDEO_CODEC or #GST_TAG_CODEC. If none is specified,
  *             the function will attempt to detect the appropriate category.
  * @caps: the (fixed) #GstCaps for which a codec tag should be added.
@@ -1227,7 +1228,7 @@ gst_pb_utils_add_codec_description_to_tag_list (GstTagList * taglist,
  * Also see the convenience function
  * gst_pb_utils_add_codec_description_to_tag_list().
  *
- * Returns: a newly-allocated description string, or NULL on error. Free
+ * Returns: (nullable): a newly-allocated description string, or NULL on error. Free
  *          string with g_free() when not needed any longer.
  */
 gchar *
@@ -1328,7 +1329,8 @@ pb_utils_get_file_extension_from_caps (const GstCaps * caps)
 gchar *
 gst_pb_utils_get_file_extension_from_caps (const GstCaps * caps)
 {
-  return g_strdup (pb_utils_get_file_extension_from_caps (caps));
+  const gchar *extension = pb_utils_get_file_extension_from_caps (caps);
+  return extension ? g_strdup (extension) : NULL;
 }
 
 /**
@@ -1359,20 +1361,22 @@ gst_pb_utils_get_caps_description_flags (const GstCaps * caps)
   /* A separate flags type is used because internally more flags are needed
    * for filtering purposes, e.g. the SYSTEMSTREAM flag */
   if (info) {
-    if ((info->flags | FLAG_CONTAINER))
+    if ((info->flags & FLAG_CONTAINER))
       flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_CONTAINER;
-    if ((info->flags | FLAG_AUDIO))
+    if ((info->flags & FLAG_AUDIO))
       flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_AUDIO;
-    if ((info->flags | FLAG_VIDEO))
+    if ((info->flags & FLAG_VIDEO))
       flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_VIDEO;
-    if ((info->flags | FLAG_IMAGE))
+    if ((info->flags & FLAG_IMAGE))
       flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_IMAGE;
-    if ((info->flags | FLAG_SUB))
+    if ((info->flags & FLAG_SUB))
       flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_SUBTITLE;
-    if ((info->flags | FLAG_TAG))
+    if ((info->flags & FLAG_TAG))
       flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_TAG;
-    if ((info->flags | FLAG_GENERIC))
+    if ((info->flags & FLAG_GENERIC))
       flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_GENERIC;
+    if ((info->flags & FLAG_METADATA))
+      flags |= GST_PBUTILS_CAPS_DESCRIPTION_FLAG_METADATA;
   }
 
   gst_caps_unref (tmp);

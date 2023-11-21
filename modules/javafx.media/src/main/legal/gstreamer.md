@@ -1,11 +1,11 @@
-## GStreamer v1.20.1
+## GStreamer v1.22.6
 
 ### GStreamer Notice
 ```
 
-You are receiving a copy of GStreamer, Version: 1.20.1 in either source or
+You are receiving a copy of GStreamer, Version: 1.22.6 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GStreamer, Version: 1.20.1; it is
+Oracle license do NOT apply to the GStreamer, Version: 1.22.6; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:
@@ -35,65 +35,87 @@ licenses.
 
 #### LGPL 2.1 License
 ```
-Copyright (C) 2010-2012 Alexander Saprykin <xelfium@gmail.com>
-Copyright (C) 2001-2002, 2004-2005 Andy Wingo <apwingo@eos.ncsu.edu>
-Copyright (C) 2010 Arun Raghavan <arun.raghavan@collabora.co.uk>
-Copyright (C) 2009 Axis Communications <dev-gstreamer at axis dot com>
-Copyright (C) 2003-2004 Benjamin Otte <in7y118@public.uni-hamburg.de>
-Copyright (C) 2010 Brandon Lewis <brandon.lewis@collabora.co.uk>
-Copyright (C) 2016 British Broadcasting Corporation
-Copyright (C) 2014-2015 Centricular Ltd
+Copyright (C) <2007-2008> Pioneers of the Inevitable <songbird@songbirdnest.com>
+Copyright (C) <2020> The GStreamer Contributors.
+Copyright (C) <1999-2001> Erik Walthinsen <omega@cse.ogi.edu>
+Copyright (C) 2005-2014 Tim-Philipp Müller <tim centricular net>
 Copyright (C) 2001 CodeFactory AB
-Copyright (C) 2011-2013, 2018, 2021 Collabora Ltd.
-Copyright (C) 2010 Collabora Multimedia
-Copyright (C) 2003, 2005, 2007-2008, 2010-2011 David A. Schleef <ds@schleef.org>
-Copyright (C) 2014 David Waring, British Broadcasting Corporation
-Copyright (C) 2006, 2009-2010 Edward Hervey <bilboed@bilboed.com>
-Copyright (C) 1999-2001 Erik Walthinsen <omega@cse.ogi.edu>
-Copyright (C) 2010, 2012-2013 Fluendo S.A. <support@fluendo.com>
-Copyright (C) 1995-1998, 2000-2002 Free Software Foundation, Inc.
-Copyright (C) 2012, 2018 GStreamer developers
-Copyright (C) 2011 Hewlett-Packard Development Company, L.P.
-Copyright (C) 2020 Huawei Technologies Co., Ltd.
-Copyright (C) 2009 Igalia S.L.
-Copyright (C) 2011, 2013 Intel Corporation
-Copyright (C) 2005-2009, 2015, 2021 Jan Schmidt <jan.schmidt@sun.com>
-Copyright (C) 2006 Josep Torra <josep@fluendo.com>
-Copyright (C) 2003, 2007 Julien Moutte <julien@fluendo.com>
-Copyright (C) 2015 Luis de Bethencourt <luis@debethencourt.com>
-Copyright (C) 2008, 2010, 2011 Mark Nauwelaerts <mark.nauwelaerts@collabora.co.uk>.
-Copyright (C) 2006 Mathieu Garcia  <matthieu@fluendo.com>
-Copyright (C) 2006-2008 Tim-Philipp Müller <tim centricular net>
-Copyright (C) 2006, 2008, 2010-2011 Nokia <stefan.kost@nokia.com
-Copyright (C) 2008 Ole André Vadla Ravnås <ole.andre.ravnas@tandberg.com>
-Copyright (C) 2007 Peter Kjellerstedt <pkj@axis.com>
-Copyright (C) 1995-1997 Peter Mattis, Spencer Kimball and Josh MacDonald
-Copyright (C) 2007-2008 Pioneers of the Inevitable <songbird@songbirdnest.com>
-Copyright (C) 2001 RidgeRun (http://www.ridgerun.com/)
-Copyright (C) 2003-2004 Ronald Bultje <rbultje@ronald.bitfreak.net>
-Copyright (C) 2005 Ross Burton <ross@burtonini.com>
-Copyright (C) 2009 STEricsson <benjamin.gaignard@stericsson.com>
-Copyright (C) 2014-2015 Samsung Electronics. All rights reserved.
-Copyright (C) 2005 David Schleef <ds@schleef.org>
-Copyright (C) 2005 Jan Schmidt <thaytan@mad.scientist.com>
-Copyright (C) 2007-2011, 2013 Sebastian Dröge <sebastian.droege@collabora.co.uk>
-Copyright (C) 2005 Sebastien Moutte <sebastien@moutte.net>
-Copyright (C) 2018-2019 Seungha Yang <seungha.yang@navercorp.com>
-Copyright (C) 2013 Sreerenj Balachandran <sreerenj.balachandran@intel.com>
-Copyright (C) 2005-2007, 2011 Stefan Kost <ensonic@sonicpulse.de>
-Copyright (C) 2011, 2013, 2016 Stefan Sauer <ensonic@users.sf.net>
-Copyright (C) 2020 The GStreamer Contributors.
-Copyright (C) 2008, 2010 Thiago Santos <thiago.sousa.santos@collabora.co.uk>
-Copyright (C) 2011 Thibault Saunier <thibault.saunier@collabora.com>
-Copyright (C) 2008 Thijs Vermeir <thijsvermeir@gmail.com>
 Copyright (C) 2001 Thomas Nyberg <thomas@codefactory.se>
-Copyright (C) 2004-2005 Thomas Vander Stichele <thomas at apestaart dot org>
-Copyright (C) 2005-2009, 2011, 2014-2015 Tim-Philipp Müller  <tim centricular net>
+Copyright (C) 2001-2002 Andy Wingo <apwingo@eos.ncsu.edu>
+Copyright (C) 2003 Benjamin Otte <in7y118@public.uni-hamburg.de>
+Copyright (C) 2020 Huawei Technologies Co., Ltd.
+Copyright (C) 2000-2006 Wim Taymans <wim@fluendo.com>
+Copyright (C) 2012-2018 GStreamer developers
+Copyright (C) 2003-2011 David Schleef <ds@schleef.org>
+Copyright (C) <2011-2021> Collabora Ltd.
+Copyright (C) 2003-2004 Ronald Bultje <rbultje@ronald.bitfreak.net>
+Copyright (C) 2006-2013 Sebastian Dröge <slomo@circular-chaos.org>
+Copyright (C) 2005 Wim Taymans <wim at fluendo dot com>
+Copyright (C) <2004-2015> Wim Taymans <wim.taymans@gmail.com>
+Copyright (C) 2009 Igalia S.L.
+Copyright (C) 2011 Mark Nauwelaerts <mark.nauwelaerts@collabora.co.uk>.
+Copyright (C) 2008-2011 Nokia Corporation. All rights reserved.
+Copyright (C) 2007-2011 Sebastian Dröge <sebastian.droege@collabora.co.uk>
+Copyright (C) 2010 Arun Raghavan <arun.raghavan@collabora.co.uk>
+Copyright (C) <2005-2011> Stefan Kost <ensonic@users.sf.net>
+Copyright (C) <2015> Luis de Bethencourt <luis@debethencourt.com>
+Copyright (C) 2010 Collabora Multimedia
+Copyright (C) 2009-2010 Edward Hervey <edward.hervey@collabora.co.uk>
+Copyright (C) 2005-2007 Jan Schmidt <thaytan@mad.scientist.com>
+Copyright (C) 2010 Thiago Santos <thiago.sousa.santos@collabora.co.uk>
+Copyright 2005 Jan Schmidt <thaytan@mad.scientist.com>
+Copyright 2002-2003 Scott Wheeler <wheeler@kde.org> (portions from taglib)
+Copyright 2006-2008 Tim-Philipp Müller <tim centricular net>
+Copyright (C) 2005 Ross Burton <ross@burtonini.com>
+Copyright (C) 2010 Brandon Lewis <brandon.lewis@collabora.co.uk>
+Copyright (C) <2003> Julien Moutte <julien@moutte.net>
 Copyright (C) <2016> Vivia Nikolaidou <vivia@toolsonair.com>
-Copyright (C) 2002-2003 Scott Wheeler <wheeler@kde.org> (portions from taglib)
-Copyright (C) 2000-2007, 2009-2011, 2013-2015 Wim Taymans <wim at fluendo dot com>
-Copyright (C) 2013, 2015 YouView TV Ltd.
+Copyright (C) 2006-2009 Jan Schmidt <thaytan@noraisin.net>
+Copyright (C) 2003-2007 David A. Schleef <ds@schleef.org>
+Copyright (C) <2011-2013> Intel Corporation
+Copyright (C) <2011> Thibault Saunier <thibault.saunier@collabora.com>
+Copyright (C) <2018-2019> Seungha Yang <seungha.yang@navercorp.com>
+Copyright (C) <2015-2021> Jan Schmidt <jan@centricular.com>
+Copyright (C) 2006 Nokia <stefan.kost@nokia.com>
+Copyright (C) 2011 Tim-Philipp Müller <tim@centricular.net>
+Copyright (C) 2004-2005 Thomas Vander Stichele <thomas at apestaart dot org>
+Copyright (C) 2011 Wim Taymans <wim.taymans at gmail dot com>
+Copyright (C) 2004 Andy Wingo <wingo at pobox.com>
+Copyright (C) 2005 Andy Wingo <wingo@pobox.com>
+Copyright (C) 2010 Mark Nauwelaerts <mnauw users sf net>
+Copyright (C) <2004> Benjamin Otte <otte@gnome.org>
+Copyright (C) 2008 Thiago Sousa Santos <thiagoss@embedded.ufcg.edu.br>
+Copyright (C) 2014-2015 Samsung Electronics. All rights reserved.
+Copyright (C) <2009> STEricsson <benjamin.gaignard@stericsson.com>
+Copyright (C) 2008 Thijs Vermeir <thijsvermeir@gmail.com>
+Copyright (C) <2007> Julien Moutte <julien@fluendo.com>
+Copyright (C) <2013> Sreerenj Balachandran <sreerenj.balachandran@intel.com>
+Copyright (C) <2014-2015> Centricular Ltd
+Copyright (C) <2013-2015> YouView TV Ltd.
+Copyright (C) <2016> British Broadcasting Corporation
+Copyright (C) <2006> Nokia Corporation, Stefan Kost <stefan.kost@nokia.com>.
+Copyright (C) 2005 Sebastien Moutte <sebastien@moutte.net>
+Copyright (C) 2010-2013 Fluendo S.A. <support@fluendo.com>
 Copyright (C) 2005-2006 Zaheer Abbas Merali <zaheerabbas at merali dot org>
+Copyright 2005 David Schleef <ds@schleef.org>
+Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
+Copyright (C) 2009-2011 Wim Taymans <wim.taymans@gmail.be>
+Copyright (C) 2009-2010 Edward Hervey <bilboed@bilboed.com>
+Copyright (C) 2009 Axis Communications <dev-gstreamer at axis dot com>
+Copyright (C) 2014 Tim-Philipp Müller <tim at centricular dot com>
+Copyright (C) 2011-2016 Stefan Sauer <ensonic@users.sf.net>
+Copyright (C) 2008 Jan Schmidt <jan.schmidt@sun.com>
+Copyright (C) 2007 Peter Kjellerstedt <pkj@axis.com>
+Copyright (C) 2008 Ole André Vadla Ravnås <ole.andre.ravnas@tandberg.com>
+Copyright (C) 2006 Josep Torra <josep@fluendo.com>
+Copyright (C) 2006 Mathieu Garcia  <matthieu@fluendo.com>
+Copyright (C) 2006 Stefan Kost <ensonic@sonicpulse.de>
+Copyright (C) 2010-2012 Alexander Saprykin <xelfium@gmail.com>
+Copyright (C) 2011, Hewlett-Packard Development Company, L.P.
+Copyright (C) 2008 Mark Nauwelaerts <mnauw@users.sourceforge.net>
+Copyright (C) 2006 Edward Hervey <edward@fluendo.com>
+Copyright (C) 2001 RidgeRun (http://www.ridgerun.com/)
+Copyright (C) 2015 Tim-Philipp Müller <tim@centricular.com>
 
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
@@ -698,5 +720,40 @@ You may use, copy, modify this code for any purpose and
 without fee.
 
 Package home:  http://www.kurims.kyoto-u.ac.jp/~ooura/bessel.html
+
+---------------------------------
+The below license applies to the following files:
+gstreamer-lite/gstreamer/gst/gsturi.c
+
+Copyright (C) 1990-1993
+
+ The Regents of the University of California.  All rights reserved.
+
+This code is derived from software contributed to Berkeley by
+Chris Torek.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. Neither the name of the University nor the names of its contributors
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
 
 ```

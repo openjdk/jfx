@@ -13,28 +13,28 @@ SRCBASE_DIR = $(BASE_DIR)/gstreamer-lite
 OBJBASE_DIR = $(BUILD_DIR)/obj/gstreamer-lite
 
 DIRLIST = gstreamer/gst                     \
-	  gstreamer/libs/gst/base \
+          gstreamer/libs/gst/base \
           gstreamer/libs/gst/controller \
           gst-plugins-base/gst-libs/gst/audio \
-	  gst-plugins-base/gst-libs/gst/interfaces \
-	  gst-plugins-base/gst-libs/gst/video \
-	  gst-plugins-base/gst-libs/gst/pbutils \
+          gst-plugins-base/gst-libs/gst/interfaces \
+          gst-plugins-base/gst-libs/gst/video \
+          gst-plugins-base/gst-libs/gst/pbutils \
           gst-plugins-base/gst-libs/gst/tag \
-	  gst-plugins-base/gst-libs/gst/riff \
-	  gst-plugins-base/gst-libs/gst/fft \
-	  gst-plugins-base/gst-libs/gst/app \
-	  projects/plugins                  \
-	  gstreamer/plugins/elements \
+          gst-plugins-base/gst-libs/gst/riff \
+          gst-plugins-base/gst-libs/gst/fft \
+          gst-plugins-base/gst-libs/gst/app \
+          projects/plugins                  \
+          gstreamer/plugins/elements \
           gst-plugins-base/gst/typefind \
-	  gst-plugins-base/gst/audioconvert \
+          gst-plugins-base/gst/audioconvert \
           gst-plugins-good/gst/audioparsers \
-	  gst-plugins-good/gst/isomp4 \
-	  gst-plugins-good/gst/audiofx \
-	  gst-plugins-good/gst/equalizer \
-	  gst-plugins-good/gst/spectrum \
-	  gst-plugins-good/gst/wavparse \
-	  gst-plugins-bad/gst/aiff \
-	  gst-plugins-base/gst/app \
+          gst-plugins-good/gst/isomp4 \
+          gst-plugins-good/gst/audiofx \
+          gst-plugins-good/gst/equalizer \
+          gst-plugins-good/gst/spectrum \
+          gst-plugins-good/gst/wavparse \
+          gst-plugins-bad/gst/aiff \
+          gst-plugins-base/gst/app \
           gst-plugins-good/sys/osxaudio
 
 TARGET_NAME = lib$(BASE_NAME).dylib
@@ -170,7 +170,7 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/audio/audio.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channels.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channel-mixer.c \
-	    gst-plugins-base/gst-libs/gst/audio/audio-buffer.c \
+            gst-plugins-base/gst-libs/gst/audio/audio-buffer.c \
             gst-plugins-base/gst-libs/gst/audio/audio-converter.c \
             gst-plugins-base/gst-libs/gst/audio/audio-resampler.c \
             gst-plugins-base/gst-libs/gst/audio/audio-enumtypes.c \
