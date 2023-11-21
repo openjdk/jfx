@@ -82,7 +82,7 @@ public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
             config(TEST_IMAGE_VIEW, "translateX", 0.0, "-fx-translate-x", 10.0),
             config(TEST_IMAGE_VIEW, "fitHeight", 0.0, "-fx-fit-height", 10.0),
             config(TEST_IMAGE_VIEW, "fitWidth", 0.0, "-fx-fit-width", 10.0),
-            config(TEST_IMAGE_VIEW, "preserveRatio", false, "-fx-preserveRatio", true),
+            config(TEST_IMAGE_VIEW, "preserveRatio", false, "-fx-preserve-ratio", true),
             config(TEST_IMAGE_VIEW, "smooth", smooth, "-fx-smooth", !smooth),
         });
     }
