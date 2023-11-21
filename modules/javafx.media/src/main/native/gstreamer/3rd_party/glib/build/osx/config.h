@@ -705,7 +705,7 @@
 #define PACKAGE_NAME "glib"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "glib 2.78.0"
+#define PACKAGE_STRING "glib 2.78.1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "glib"
@@ -714,7 +714,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.78.0"
+#define PACKAGE_VERSION "2.78.1"
 
 /* define if posix_memalign() can allocate any size */
 #define POSIX_MEMALIGN_WITH_COMPLIANT_ALLOCS 1
