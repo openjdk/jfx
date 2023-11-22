@@ -29,7 +29,6 @@ import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -37,6 +36,8 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.StringProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.css.converter.BooleanConverter;
@@ -427,8 +428,7 @@ public class ImageView extends Node {
 
     public final DoubleProperty fitWidthProperty() {
         if (fitWidth == null) {
-            fitWidth = new DoublePropertyBase() {
-
+            fitWidth = new StyleableDoubleProperty() {
                 @Override
                 protected void invalidated() {
                     invalidateWidthHeight();
@@ -444,6 +444,11 @@ public class ImageView extends Node {
                 @Override
                 public String getName() {
                     return "fitWidth";
+                }
+
+                @Override
+                public CssMetaData<? extends Styleable, Number> getCssMetaData() {
+                    return StyleableProperties.FIT_WIDTH;
                 }
             };
         }
@@ -475,8 +480,7 @@ public class ImageView extends Node {
 
     public final DoubleProperty fitHeightProperty() {
         if (fitHeight == null) {
-            fitHeight = new DoublePropertyBase() {
-
+            fitHeight = new StyleableDoubleProperty() {
                 @Override
                 protected void invalidated() {
                     invalidateWidthHeight();
@@ -492,6 +496,11 @@ public class ImageView extends Node {
                 @Override
                 public String getName() {
                     return "fitHeight";
+                }
+
+                @Override
+                public CssMetaData<? extends Styleable, Number> getCssMetaData() {
+                    return StyleableProperties.FIT_HEIGHT;
                 }
             };
         }
@@ -540,8 +549,7 @@ public class ImageView extends Node {
 
     public final BooleanProperty preserveRatioProperty() {
         if (preserveRatio == null) {
-            preserveRatio = new BooleanPropertyBase() {
-
+            preserveRatio = new StyleableBooleanProperty() {
                 @Override
                 protected void invalidated() {
                     invalidateWidthHeight();
@@ -557,6 +565,11 @@ public class ImageView extends Node {
                 @Override
                 public String getName() {
                     return "preserveRatio";
+                }
+
+                @Override
+                public CssMetaData<? extends Styleable, Boolean> getCssMetaData() {
+                    return StyleableProperties.PRESERVE_RATIO;
                 }
             };
         }
@@ -592,8 +605,7 @@ public class ImageView extends Node {
 
     public final BooleanProperty smoothProperty() {
         if (smooth == null) {
-            smooth = new BooleanPropertyBase(SMOOTH_DEFAULT) {
-
+            smooth = new StyleableBooleanProperty(SMOOTH_DEFAULT) {
                 @Override
                 protected void invalidated() {
                     NodeHelper.markDirty(ImageView.this, DirtyBits.NODE_SMOOTH);
@@ -607,6 +619,11 @@ public class ImageView extends Node {
                 @Override
                 public String getName() {
                     return "smooth";
+                }
+
+                @Override
+                public CssMetaData<? extends Styleable, Boolean> getCssMetaData() {
+                    return StyleableProperties.SMOOTH;
                 }
             };
         }
