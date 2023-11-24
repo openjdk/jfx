@@ -311,56 +311,56 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     }
 
     // Assuming S is a class type:
-    private boolean isClassConvertible(Class<?> S, Class<?> T) {
+    private boolean isClassConvertible(Class<?> source, Class<?> target) {
         // If T is an interface type:
         //   1. If S is final, then S must implement T.
         //   2. If S is not final, the cast is always legal (because even if S does not
         //      implement T, a subclass of S might).
-        if (T.isInterface()) {
-            return !Modifier.isFinal(S.getModifiers()) || T.isAssignableFrom(S);
+        if (target.isInterface()) {
+            return !Modifier.isFinal(source.getModifiers()) || target.isAssignableFrom(source);
         }
 
         // If T is an array type, then S must be the class Object.
-        if (T.isArray()) {
-            return S == Object.class;
+        if (target.isArray()) {
+            return source == Object.class;
         }
 
         // If T is a class type, then either S<:T, or T<:S.
-        return T.isAssignableFrom(S) || S.isAssignableFrom(T);
+        return target.isAssignableFrom(source) || source.isAssignableFrom(target);
     }
 
     // Assuming S is an interface type:
-    private boolean isInterfaceConvertible(Class<?> S, Class<?> T) {
+    private boolean isInterfaceConvertible(Class<?> source, Class<?> target) {
         // If T is an array type, then S must be the type Serializable or Cloneable.
-        if (T.isArray()) {
-            return S == Serializable.class || S == Cloneable.class;
+        if (target.isArray()) {
+            return source == Serializable.class || source == Cloneable.class;
         }
 
         // If T is not final, the cast is always legal (because even if S does not
         // implement T, a subclass of S might).
-        if (!Modifier.isFinal(T.getModifiers())) {
+        if (!Modifier.isFinal(target.getModifiers())) {
             return true;
         }
 
         // If T is a class type that is final, then T must implement S.
-        return S.isAssignableFrom(T);
+        return source.isAssignableFrom(target);
     }
 
     // Assuming S is an array type SC[], that is, an array of components of type SC:
-    private boolean isArrayConvertible(Class<?> S, Class<?> T) {
+    private boolean isArrayConvertible(Class<?> source, Class<?> target) {
         // If T is an interface type, then it must be the type Serializable or Cloneable,
         // which are the only interfaces implemented by arrays.
-        if (T.isInterface()) {
-            return T == Serializable.class || T == Cloneable.class;
+        if (target.isInterface()) {
+            return target == Serializable.class || target == Cloneable.class;
         }
 
         // If T is an array type TC[], that is, an array of components of type TC,
         // then one of the following must be true:
         //   1. TC and SC are the same primitive type
         //   2. TC and SC are reference types and type SC can undergo casting conversion to TC
-        if (T.isArray()) {
-            Class<?> SC = S.getComponentType();
-            Class<?> TC = T.getComponentType();
+        if (target.isArray()) {
+            Class<?> SC = source.getComponentType();
+            Class<?> TC = target.getComponentType();
 
             if (SC.isPrimitive() && TC.isPrimitive()) {
                 return SC == TC;
@@ -375,6 +375,6 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
 
         // If T is a class type, then if T must be Object because Object is the only
         // class type to which arrays can be assigned.
-        return T == Object.class;
+        return target == Object.class;
     }
 }

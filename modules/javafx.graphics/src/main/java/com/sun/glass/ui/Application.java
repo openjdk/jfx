@@ -756,10 +756,9 @@ public abstract class Application {
 
     /**
      * Returns the current set of platform properties as a map of platform-specific keys to
-     * arbitrary values. Callers should assume that the returned map is immutable.
+     * arbitrary values. This is a snapshot, and won't be updated. There are no guarantees on
+     * the implementation type, modifiability or serializability of the returned {@code Map}.
      *
-     * @implSpec Implementations should either return an immutable map, or give up ownership
-     *           of the returned map.
      * @return the current set of platform preferences
      */
     public Map<String, Object> getPlatformPreferences() {
@@ -767,13 +766,12 @@ public abstract class Application {
     }
 
     /**
-     * Returns a map of platform-specific preference keys to well-known keys.
+     * Returns a map of platform-specific keys to platform-independent keys defined by JavaFX.
      * <p>
-     * For example, the platform-specific key "Windows.UIColor.Foreground" is mapped to the
-     * well-known key "foregroundColor", which makes it easier to write shared code without
-     * depending on platform-specific details.
+     * For example, the platform-specific key "Windows.UIColor.Foreground" is mapped to the key "foregroundColor",
+     * which makes it easier to write shared code without depending on platform-specific details.
      * <p>
-     * The following well-known keys are currently supported, which correspond to the names of color
+     * The following platform-independent keys are currently supported, which correspond to the names of color
      * properties on the {@link com.sun.javafx.application.preferences.PreferenceProperties} class:
      * <ul>
      *     <li>foregroundColor
@@ -794,8 +792,8 @@ public abstract class Application {
      * <p>
      * Implementors must keep this map in sync with the mappings reported by the native Glass toolkit.
      * If a native toolkit reports mappings for keys that are not contained in this map, the typed getters
-     * in {@link javafx.application.Platform.Preferences} might not throw IllegalArgumentException as
-     * specified.
+     * in {@link javafx.application.Platform.Preferences} might not throw {@code IllegalArgumentException}
+     * as specified.
      *
      * @return a map of platform-specific keys to types
      */
