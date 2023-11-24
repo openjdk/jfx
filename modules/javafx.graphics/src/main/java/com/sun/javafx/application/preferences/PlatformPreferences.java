@@ -359,15 +359,15 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
         //   1. TC and SC are the same primitive type
         //   2. TC and SC are reference types and type SC can undergo casting conversion to TC
         if (target.isArray()) {
-            Class<?> SC = source.getComponentType();
-            Class<?> TC = target.getComponentType();
+            Class<?> sourceComponentType = source.getComponentType();
+            Class<?> targetComponentType = target.getComponentType();
 
-            if (SC.isPrimitive() && TC.isPrimitive()) {
-                return SC == TC;
+            if (sourceComponentType.isPrimitive() && targetComponentType.isPrimitive()) {
+                return sourceComponentType == targetComponentType;
             }
 
-            if (!SC.isPrimitive() && !TC.isPrimitive()) {
-                return isConvertible(SC, TC);
+            if (!sourceComponentType.isPrimitive() && !targetComponentType.isPrimitive()) {
+                return isConvertible(sourceComponentType, targetComponentType);
             }
 
             return false;
