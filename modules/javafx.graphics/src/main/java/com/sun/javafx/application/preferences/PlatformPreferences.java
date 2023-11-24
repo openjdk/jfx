@@ -317,7 +317,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
         //   2. If S is not final, the cast is always legal (because even if S does not
         //      implement T, a subclass of S might).
         if (T.isInterface()) {
-            return !Modifier.isFinal(S.getModifiers()) || S.isAssignableFrom(T);
+            return !Modifier.isFinal(S.getModifiers()) || T.isAssignableFrom(S);
         }
 
         // If T is an array type, then S must be the class Object.
@@ -326,7 +326,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
         }
 
         // If T is a class type, then either S<:T, or T<:S.
-        return S.isAssignableFrom(T) || T.isAssignableFrom(S);
+        return T.isAssignableFrom(S) || S.isAssignableFrom(T);
     }
 
     // Assuming S is an interface type:
