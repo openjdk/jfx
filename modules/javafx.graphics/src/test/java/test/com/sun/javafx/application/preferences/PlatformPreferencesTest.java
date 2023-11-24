@@ -26,6 +26,7 @@
 package test.com.sun.javafx.application.preferences;
 
 import com.sun.javafx.application.preferences.PlatformPreferences;
+import javafx.animation.Interpolatable;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
@@ -33,6 +34,7 @@ import test.javafx.collections.MockMapObserver;
 import javafx.beans.InvalidationListener;
 import javafx.collections.MapChangeListener;
 import javafx.scene.paint.Color;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +60,8 @@ public class PlatformPreferencesTest {
                 "test.aBoolean", Boolean.class,
                 "test.aString", String.class,
                 "test.aColor", Color.class,
-                "test.aPaint", Paint.class
+                "test.aPaint", Paint.class,
+                "test.aPaintArray", Paint[].class
             ),
             // Platform-specific key mappings
             Map.of(
@@ -95,13 +98,31 @@ public class PlatformPreferencesTest {
         prefs.update(Map.of("test.aPaint", Color.RED));
         assertEquals(Color.RED, prefs.getColor("test.aPaint").orElseThrow());
         assertEquals(Color.RED, prefs.getValue("test.aPaint", Paint.class).orElseThrow());
+        assertEquals(Color.RED, prefs.getValue("test.aPaint", Object.class).orElseThrow());
+        assertEquals(Color.RED, prefs.getValue("test.aPaint", Interpolatable.class).orElseThrow());
         assertThrows(IllegalArgumentException.class, () -> prefs.getValue("test.aPaint", LinearGradient.class));
 
         var gradient = new LinearGradient(0, 0, 1, 1, true, CycleMethod.NO_CYCLE);
         prefs.update(Map.of("test.aPaint", gradient));
         assertEquals(gradient, prefs.getValue("test.aPaint", Paint.class).orElseThrow());
         assertEquals(gradient, prefs.getValue("test.aPaint", LinearGradient.class).orElseThrow());
+        assertEquals(gradient, prefs.getValue("test.aPaint", Object.class).orElseThrow());
         assertThrows(IllegalArgumentException.class, () -> prefs.getColor("test.aPaint").orElseThrow());
+    }
+
+    @Test
+    void testPolymorphicArrayValues() {
+        var colors = new Color[] {Color.RED, Color.GREEN, Color.BLUE};
+        prefs.update(Map.of("test.aPaintArray", colors));
+        assertSame(colors, prefs.getValue("test.aPaintArray", Object[].class).orElseThrow());
+        assertSame(colors, prefs.getValue("test.aPaintArray", Color[].class).orElseThrow());
+        assertSame(colors, prefs.getValue("test.aPaintArray", Paint[].class).orElseThrow());
+        assertSame(colors, prefs.getValue("test.aPaintArray", Interpolatable[].class).orElseThrow());
+        assertSame(colors, prefs.getValue("test.aPaintArray", Object.class).orElseThrow());
+        assertSame(colors, prefs.getValue("test.aPaintArray", Cloneable.class).orElseThrow());
+        assertSame(colors, prefs.getValue("test.aPaintArray", Serializable.class).orElseThrow());
+        assertThrows(IllegalArgumentException.class, () -> prefs.getValue("test.aPaintArray", Paint.class));
+        assertThrows(IllegalArgumentException.class, () -> prefs.getValue("test.aPaintArray", LinearGradient[].class));
     }
 
     @Test

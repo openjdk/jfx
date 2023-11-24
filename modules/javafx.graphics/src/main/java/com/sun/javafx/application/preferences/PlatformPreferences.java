@@ -32,7 +32,8 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.MapChangeListener;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
+import java.io.Serializable;
+import java.lang.reflect.Modifier;
 import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
@@ -147,7 +148,11 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
             return Optional.empty();
         }
 
-        if (!platformType.isAssignableFrom(type)) {
+        // Check whether the declared platform type is convertible to the requested type.
+        // This check validates that a casting conversion exists at all, even if we don't have a
+        // value that we would need in order to use Class.isInstance to check if the conversion
+        // succeeds at runtime.
+        if (!isConvertible(platformType, type)) {
             throw new IllegalArgumentException(
                 "Incompatible types: requested = " + type.getName() +
                 ", actual = " + platformType.getName());
@@ -157,16 +162,19 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
             return Optional.empty();
         }
 
-        if (type.isInstance(value)) {
-            @SuppressWarnings("unchecked")
-            T v = (T)value;
-            return Optional.of(v);
+        // The runtime type of the value might be a subtype of the platform type, which necessitates
+        // checking whether the actual type is convertible to the requested type.
+        if (!type.isInstance(value)) {
+            throw new IllegalArgumentException(
+                "Incompatible types: requested = " + type.getName() +
+                ", actual = " + value.getClass().getName());
         }
 
-        throw new IllegalArgumentException(
-            "Incompatible types: requested = " + type.getName() +
-            ", actual = " + value.getClass().getName());
+        @SuppressWarnings("unchecked")
+        T v = (T)value;
+        return Optional.of(v);
     }
+
 
     @Override
     public Optional<Integer> getInteger(String key) {
@@ -280,5 +288,93 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
                 listener.onChanged(change);
             }
         }
+    }
+
+    /**
+     * Determines whether a compile-time casting conversion exists from {@code source} to {@code target}.
+     * This is an implementation of JLS 5.5.1 (Reference Type Casting).
+     *
+     * @param source the source type
+     * @param target the target type
+     * @return {@code true} if a casting conversion exists, {@code false} otherwise
+     */
+    private boolean isConvertible(Class<?> source, Class<?> target) {
+        if (source.isArray()) {
+            return isArrayConvertible(source, target);
+        }
+
+        if (source.isInterface()) {
+            return isInterfaceConvertible(source, target);
+        }
+
+        return isClassConvertible(source, target);
+    }
+
+    // Assuming S is a class type:
+    private boolean isClassConvertible(Class<?> S, Class<?> T) {
+        // If T is an interface type:
+        //   1. If S is final, then S must implement T.
+        //   2. If S is not final, the cast is always legal (because even if S does not
+        //      implement T, a subclass of S might).
+        if (T.isInterface()) {
+            return !Modifier.isFinal(S.getModifiers()) || S.isAssignableFrom(T);
+        }
+
+        // If T is an array type, then S must be the class Object.
+        if (T.isArray()) {
+            return S == Object.class;
+        }
+
+        // If T is a class type, then either S<:T, or T<:S.
+        return S.isAssignableFrom(T) || T.isAssignableFrom(S);
+    }
+
+    // Assuming S is an interface type:
+    private boolean isInterfaceConvertible(Class<?> S, Class<?> T) {
+        // If T is an array type, then S must be the type Serializable or Cloneable.
+        if (T.isArray()) {
+            return S == Serializable.class || S == Cloneable.class;
+        }
+
+        // If T is not final, the cast is always legal (because even if S does not
+        // implement T, a subclass of S might).
+        if (!Modifier.isFinal(T.getModifiers())) {
+            return true;
+        }
+
+        // If T is a class type that is final, then T must implement S.
+        return S.isAssignableFrom(T);
+    }
+
+    // Assuming S is an array type SC[], that is, an array of components of type SC:
+    private boolean isArrayConvertible(Class<?> S, Class<?> T) {
+        // If T is an interface type, then it must be the type Serializable or Cloneable,
+        // which are the only interfaces implemented by arrays.
+        if (T.isInterface()) {
+            return T == Serializable.class || T == Cloneable.class;
+        }
+
+        // If T is an array type TC[], that is, an array of components of type TC,
+        // then one of the following must be true:
+        //   1. TC and SC are the same primitive type
+        //   2. TC and SC are reference types and type SC can undergo casting conversion to TC
+        if (T.isArray()) {
+            Class<?> SC = S.getComponentType();
+            Class<?> TC = T.getComponentType();
+
+            if (SC.isPrimitive() && TC.isPrimitive()) {
+                return SC == TC;
+            }
+
+            if (!SC.isPrimitive() && !TC.isPrimitive()) {
+                return isConvertible(SC, TC);
+            }
+
+            return false;
+        }
+
+        // If T is a class type, then if T must be Object because Object is the only
+        // class type to which arrays can be assigned.
+        return T == Object.class;
     }
 }
