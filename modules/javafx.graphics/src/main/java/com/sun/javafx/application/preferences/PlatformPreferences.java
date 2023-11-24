@@ -373,7 +373,7 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
             return false;
         }
 
-        // If T is a class type, then if T must be Object because Object is the only
+        // If T is a class type, then T must be Object because Object is the only
         // class type to which arrays can be assigned.
         return target == Object.class;
     }
