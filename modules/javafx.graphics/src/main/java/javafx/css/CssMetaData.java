@@ -25,10 +25,10 @@
 
 package javafx.css;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.scene.Node;
+import com.sun.javafx.UnmodifiableArrayList;
 
 /**
  * A CssMetaData instance provides information about the CSS style and
@@ -342,12 +342,9 @@ public abstract class CssMetaData<S extends Styleable, V> {
         List<CssMetaData<? extends Styleable, ?>> list,
         CssMetaData<? extends Styleable, ?>... items)
     {
-        int sz = list.size() + items.length;
-        ArrayList<CssMetaData<? extends Styleable, ?>> rv = new ArrayList<>(sz);
-        rv.addAll(list);
-        for (CssMetaData<? extends Styleable, ?> p: items) {
-            rv.add(p);
-        }
-        return Collections.unmodifiableList(rv);
+        CssMetaData[] combined = new CssMetaData[list.size() + items.length];
+        list.toArray(combined);
+        System.arraycopy(items, 0, combined, list.size(), items.length);
+        return new UnmodifiableArrayList<>(combined, combined.length);
     }
 }
