@@ -1345,7 +1345,7 @@ public class CssMetaDataTest {
         assertSame(css2, rv.get(2));
         assertSame(css3, rv.get(3));
 
-        rv = CssMetaData.initStyleables(null, css0, css1);
+        rv = CssMetaData.initStyleables(List.of(), css0, css1);
         assertEquals(2, rv.size());
         assertSame(css0, rv.get(0));
         assertSame(css1, rv.get(1));
