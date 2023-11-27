@@ -2,6 +2,8 @@
  * Copyright (C) 2007, 2008 Ryan Lortie
  * Copyright (C) 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -35,5 +37,8 @@ gboolean                g_variant_is_trusted                            (GVarian
 GVariantTypeInfo *      g_variant_get_type_info                         (GVariant            *value);
 
 gsize                   g_variant_get_depth                             (GVariant            *value);
+
+GVariant *              g_variant_maybe_get_child_value                 (GVariant            *value,
+                                                                         gsize                index_);
 
 #endif /* __G_VARIANT_CORE_H__ */

@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 1997-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -423,8 +425,8 @@ g_param_spec_is_valid_name (const gchar *name)
  * g_param_spec_internal: (skip)
  * @param_type: the #GType for the property; must be derived from %G_TYPE_PARAM
  * @name: the canonical name of the property
- * @nick: the nickname of the property
- * @blurb: a short description of the property
+ * @nick: (nullable): the nickname of the property
+ * @blurb: (nullable): a short description of the property
  * @flags: a combination of #GParamFlags
  *
  * Creates a new #GParamSpec instance.
@@ -433,11 +435,12 @@ g_param_spec_is_valid_name (const gchar *name)
  * the rules for @name. Names which violate these rules lead to undefined
  * behaviour.
  *
- * Beyond the name, #GParamSpecs have two more descriptive
- * strings associated with them, the @nick, which should be suitable
- * for use as a label for the property in a property editor, and the
- * @blurb, which should be a somewhat longer description, suitable for
- * e.g. a tooltip. The @nick and @blurb should ideally be localized.
+ * Beyond the name, #GParamSpecs have two more descriptive strings, the
+ * @nick and @blurb, which may be used as a localized label and description.
+ * For GTK and related libraries these are considered deprecated and may be
+ * omitted, while for other libraries such as GStreamer and its plugins they
+ * are essential. When in doubt, follow the conventions used in the
+ * surrounding code and supporting libraries.
  *
  * Returns: (type GObject.ParamSpec): (transfer floating): a newly allocated
  *     #GParamSpec instance, which is initially floating
@@ -710,6 +713,51 @@ g_param_value_validate (GParamSpec *pspec,
 }
 
 /**
+ * g_param_value_is_valid:
+ * @pspec: a valid #GParamSpec
+ * @value: a #GValue of correct type for @pspec
+ *
+ * Return whether the contents of @value comply with the specifications
+ * set out by @pspec.
+ *
+ * Returns: whether the contents of @value comply with the specifications
+ *   set out by @pspec.
+ *
+ * Since: 2.74
+ */
+gboolean
+g_param_value_is_valid (GParamSpec *pspec,
+                        const GValue *value)
+{
+  GParamSpecClass *class;
+
+  g_return_val_if_fail (G_IS_PARAM_SPEC (pspec), TRUE);
+  g_return_val_if_fail (G_IS_VALUE (value), TRUE);
+  g_return_val_if_fail (PSPEC_APPLIES_TO_VALUE (pspec, value), TRUE);
+
+  class = G_PARAM_SPEC_GET_CLASS (pspec);
+
+  if (class->value_is_valid)
+    return class->value_is_valid (pspec, value);
+  else if (class->value_validate)
+    {
+      GValue val = G_VALUE_INIT;
+      gboolean changed;
+
+      g_value_init (&val, G_VALUE_TYPE (value));
+      g_value_copy (value, &val);
+
+      changed = class->value_validate (pspec, &val);
+
+      g_value_unset (&val);
+
+      return !changed;
+    }
+
+  return TRUE;
+}
+
+/**
  * g_param_value_convert:
  * @pspec: a valid #GParamSpec
  * @src_value: source #GValue
@@ -911,7 +959,7 @@ param_spec_pool_hash (gconstpointer key_spec)
 {
   const GParamSpec *key = key_spec;
   const gchar *p;
-  guint h = key->owner_type;
+  guint h = (guint) key->owner_type;
 
   for (p = key->name; *p; p++)
     h = (h << 5) - h + *p;
@@ -927,7 +975,8 @@ param_spec_pool_equals (gconstpointer key_spec_1,
   const GParamSpec *key2 = key_spec_2;
 
   return (key1->owner_type == key2->owner_type &&
-          strcmp (key1->name, key2->name) == 0);
+          (key1->name == key2->name ||
+          strcmp (key1->name, key2->name) == 0));
 }
 
 /**
@@ -977,7 +1026,7 @@ g_param_spec_pool_insert (GParamSpecPool *pool,
         {
           if (!strchr (G_CSET_A_2_Z G_CSET_a_2_z G_CSET_DIGITS "-_", *p))
             {
-              g_warning (G_STRLOC ": pspec name \"%s\" contains invalid characters", pspec->name);
+              g_critical (G_STRLOC ": pspec name \"%s\" contains invalid characters", pspec->name);
               return;
             }
         }
@@ -1013,7 +1062,7 @@ g_param_spec_pool_remove (GParamSpecPool *pool,
       if (g_hash_table_remove (pool->hash_table, pspec))
         g_param_spec_unref (pspec);
       else
-        g_warning (G_STRLOC ": attempt to remove unknown pspec '%s' from pool", pspec->name);
+        g_critical (G_STRLOC ": attempt to remove unknown pspec '%s' from pool", pspec->name);
       g_mutex_unlock (&pool->mutex);
     }
   else
@@ -1097,53 +1146,57 @@ g_param_spec_pool_lookup (GParamSpecPool *pool,
                           gboolean        walk_ancestors)
 {
   GParamSpec *pspec;
-  gchar *delim;
 
   g_return_val_if_fail (pool != NULL, NULL);
   g_return_val_if_fail (param_name != NULL, NULL);
 
   g_mutex_lock (&pool->mutex);
 
-  delim = pool->type_prefixing ? strchr (param_name, ':') : NULL;
-
   /* try quick and away, i.e. without prefix */
-  if (!delim)
+  pspec = param_spec_ht_lookup (pool->hash_table, param_name, owner_type, walk_ancestors);
+  if (pspec)
     {
-      pspec = param_spec_ht_lookup (pool->hash_table, param_name, owner_type, walk_ancestors);
       g_mutex_unlock (&pool->mutex);
-
       return pspec;
     }
 
-  /* strip type prefix */
-  if (pool->type_prefixing && delim[1] == ':')
+if (pool->type_prefixing)
     {
-      guint l = delim - param_name;
-      gchar stack_buffer[32], *buffer = l < 32 ? stack_buffer : g_new (gchar, l + 1);
-      GType type;
+      char *delim;
 
-      strncpy (buffer, param_name, delim - param_name);
-      buffer[l] = 0;
-      type = g_type_from_name (buffer);
-      if (l >= 32)
-        g_free (buffer);
-      if (type)         /* type==0 isn't a valid type pefix */
+      delim = strchr (param_name, ':');
+
+      /* strip type prefix */
+      if (delim && delim[1] == ':')
         {
-          /* sanity check, these cases don't make a whole lot of sense */
-          if ((!walk_ancestors && type != owner_type) || !g_type_is_a (owner_type, type))
+          guint l = delim - param_name;
+          gchar stack_buffer[32], *buffer = l < 32 ? stack_buffer : g_new (gchar, l + 1);
+          GType type;
+
+          strncpy (buffer, param_name, delim - param_name);
+          buffer[l] = 0;
+          type = g_type_from_name (buffer);
+          if (l >= 32)
+            g_free (buffer);
+          if (type)         /* type==0 isn't a valid type pefix */
             {
+              /* sanity check, these cases don't make a whole lot of sense */
+              if ((!walk_ancestors && type != owner_type) || !g_type_is_a (owner_type, type))
+                {
+                  g_mutex_unlock (&pool->mutex);
+
+                  return NULL;
+                }
+              owner_type = type;
+              param_name += l + 2;
+              pspec = param_spec_ht_lookup (pool->hash_table, param_name, owner_type, walk_ancestors);
               g_mutex_unlock (&pool->mutex);
 
-              return NULL;
+              return pspec;
             }
-          owner_type = type;
-          param_name += l + 2;
-          pspec = param_spec_ht_lookup (pool->hash_table, param_name, owner_type, walk_ancestors);
-          g_mutex_unlock (&pool->mutex);
-
-          return pspec;
         }
     }
+
   /* malformed param_name */
 
   g_mutex_unlock (&pool->mutex);

@@ -193,6 +193,45 @@ gst_video_guess_framerate (GstClockTime duration, gint * dest_n, gint * dest_d)
 
 #ifndef GSTREAMER_LITE
 /**
+ * gst_video_is_common_aspect_ratio:
+ * @width: Width of the video frame
+ * @height: Height of the video frame
+ * @par_n: Pixel aspect ratio numerator
+ * @par_d: Pixel aspect ratio denominator
+ *
+ * Given a frame's dimensions and pixel aspect ratio, this function will
+ * calculate the frame's aspect ratio and compare it against a set of
+ * common well-known "standard" aspect ratios.
+ *
+ * Returns: %TRUE if a known "standard" aspect ratio was
+ * recognised, and %FALSE otherwise.
+ *
+ * Since: 1.22
+ */
+gboolean
+gst_video_is_common_aspect_ratio (gint width, gint height, gint par_n,
+    gint par_d)
+{
+  gint dar_n, dar_d;
+
+  gst_util_fraction_multiply (width, height, par_n, par_d, &dar_n, &dar_d);
+
+  if (dar_n == 16 && dar_d == 9)
+    return TRUE;
+  if (dar_n == 4 && dar_d == 3)
+    return TRUE;
+  if (dar_n == 14 && dar_d == 9)
+    return TRUE;
+  if (dar_n == 8 && dar_d == 5)
+    return TRUE;
+  if (dar_n == 21 && dar_d == 11)
+    return TRUE;
+
+  return FALSE;
+}
+
+
+/**
  * gst_video_alignment_reset:
  * @align: a #GstVideoAlignment
  *

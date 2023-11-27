@@ -10,11 +10,11 @@ LIBFFI_DIR = ../../../3rd_party/libffi
 OBJBASE_DIR = $(BUILD_DIR)/obj/glib-lite
 
 DIRLIST = glib \
-	  glib/libcharset/ \
-	  glib/gnulib/ \
-	  gobject/ \
-	  gthread/ \
-	  gmodule/
+	      glib/libcharset/ \
+	      glib/gnulib/ \
+	      gobject/ \
+	      gthread/ \
+	      gmodule/
 
 TARGET_NAME = lib$(BASE_NAME).dylib
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
@@ -44,17 +44,17 @@ else
 endif
 
 INCLUDES = -I$(SRCBASE_DIR) \
-	   -I$(SRCBASE_DIR)/glib \
-	   -I$(SRCBASE_DIR)/build/osx \
-	   -I$(LIBFFI_DIR)/src \
-	   -I$(LIBFFI_DIR)/include
+	       -I$(SRCBASE_DIR)/glib \
+	       -I$(SRCBASE_DIR)/build/osx \
+	       -I$(LIBFFI_DIR)/src \
+	       -I$(LIBFFI_DIR)/include
 
 ifeq ($(ARCH), arm64)
 INCLUDES += -I$(LIBFFI_DIR)/src/aarch64 \
-	    -I$(LIBFFI_DIR)/include/mac/aarch64
+	        -I$(LIBFFI_DIR)/include/mac/aarch64
 else
 INCLUDES += -I$(LIBFFI_DIR)/src/x86 \
-	    -I$(LIBFFI_DIR)/include/mac/x64
+	        -I$(LIBFFI_DIR)/include/mac/x64
 endif
 
 LDFLAGS += -Wl,-install_name,@rpath/$(TARGET_NAME) \
@@ -70,7 +70,6 @@ C_SOURCES = glib/garcbox.c \
             glib/gbacktrace.c \
             glib/gbase64.c \
             glib/gbytes.c \
-            glib/gbookmarkfile.c \
             glib/gbitlock.c \
             glib/gcharset.c \
             glib/gchecksum.c \
@@ -126,7 +125,7 @@ C_SOURCES = glib/garcbox.c \
             glib/gtimer.c \
             glib/gtimezone.c \
             glib/gtrashstack.c \
-	    glib/gtranslit.c \
+            glib/gtranslit.c \
             glib/gtree.c \
             glib/gunibreak.c \
             glib/gunidecomp.c \
@@ -167,6 +166,7 @@ C_SOURCES = glib/garcbox.c \
             gobject/gvaluetypes.c \
             gobject/gmarshal.c \
             gthread/gthread-impl.c \
+            gmodule/gmodule-deprecated.c \
             gmodule/gmodule.c
 
 OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
