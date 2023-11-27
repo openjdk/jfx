@@ -799,8 +799,14 @@ static void inputDidChangeCallback(CFNotificationCenterRef center, void *observe
     [keyCodeForCharMap setObject:mapObject forKey:[event characters]];
     // getKeyCodeForChar should not just match against a character the user types
     // directly but any other character printed on the same key.
-    [keyCodeForCharMap setObject:mapObject forKey:[event charactersByApplyingModifiers: 0]];
-    [keyCodeForCharMap setObject:mapObject forKey:[event charactersByApplyingModifiers: NSEventModifierFlagShift]];
+    NSString* unshifted = GetStringForMacKey(event.keyCode, false);
+    if (unshifted != nil) {
+        [keyCodeForCharMap setObject:mapObject forKey:unshifted];
+    }
+    NSString* shifted = GetStringForMacKey(event.keyCode, true);
+    if (shifted != nil) {
+        [keyCodeForCharMap setObject:mapObject forKey:shifted];
+    }
     // On some European keyboards there are useful symbols which are only
     // accessible via the Option key. We don't query for the Option key
     // character because on most layouts just about every key has some
