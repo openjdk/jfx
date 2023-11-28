@@ -329,12 +329,24 @@ public abstract class CssMetaData<S extends Styleable, V> {
     }
 
     /**
-     * Utility method which combines {@code CssMetaData} items in one unmodifiable list with size equal
-     * to the number of items it holds.
+     * Utility method which combines {@code CssMetaData} items in one immutable list.
+     * <p>
+     * The intended usage is to combine the parent and the child CSS meta data for
+     * the purposes of {@code getClassCssMetaData()} method, see for example {@link Node#getClassCssMetaData()}.
+     * <p>
+     * Example:
+     * <pre>
+     * private static final List&lt;CssMetaData&lt;? extends Styleable, ?>> STYLEABLES = CssMetaData.combine(
+     *      &lt;Parent>.getClassCssMetaData(),
+     *      STYLEABLE1,
+     *      STYLEABLE2
+     *  );
+     * </pre>
+     * This method returns an instance of {@link java.util.RandomAccess} interface.
      *
      * @param list the css metadata items, usually from the parent, must not be null
      * @param items the additional items
-     * @return the unmodifiable list containing all of the items
+     * @return the immutable list containing all of the items
      *
      * @since 22
      */
