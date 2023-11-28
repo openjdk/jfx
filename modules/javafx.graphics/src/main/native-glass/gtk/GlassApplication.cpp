@@ -447,7 +447,7 @@ static void process_events(GdkEvent* event, gpointer data)
         return;
     }
 
-    if (event->type == GDK_KEY_PRESS && ctx != NULL && ctx->filterIME(event)) {
+    if ((event->type == GDK_KEY_PRESS || event->type == GDK_KEY_RELEASE) && ctx != NULL && ctx->filterIME(event)) {
         return;
     }
 

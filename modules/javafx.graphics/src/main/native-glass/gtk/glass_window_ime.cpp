@@ -149,6 +149,10 @@ void WindowContextBase::updateCaretPos() {
 }
 
 void WindowContextBase::enableOrResetIME() {
+    if (im_ctx.on_preedit) {
+        gtk_im_context_focus_out(im_ctx.ctx);
+    }
+
     if (!im_ctx.enabled) {
         im_ctx.ctx = gtk_im_multicontext_new();
         gtk_im_context_set_client_window(GTK_IM_CONTEXT(im_ctx.ctx), gdk_window);

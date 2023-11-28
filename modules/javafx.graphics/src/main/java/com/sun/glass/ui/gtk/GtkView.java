@@ -33,11 +33,15 @@ import java.util.Map;
 import java.util.TreeSet;
 
 final class GtkView extends View {
+    private boolean imEnabled = false;
+
     private native void enableInputMethodEventsImpl(long ptr, boolean enable);
 
     @Override
     protected void _enableInputMethodEvents(long ptr, boolean enable) {
         enableInputMethodEventsImpl(ptr, enable);
+
+        imEnabled = enable;
     }
 
     @Override
@@ -102,7 +106,9 @@ final class GtkView extends View {
 
     @Override
     protected void _finishInputMethodComposition(long ptr) {
-        //nothing
+        if (imEnabled) {
+            enableInputMethodEventsImpl(ptr, true);
+        }
     }
 
     protected void notifyInputMethodLinux(String str, int commitLength, int cursor, byte attr) {
