@@ -331,32 +331,33 @@ public abstract class CssMetaData<S extends Styleable, V> {
     /**
      * Utility method which combines {@code CssMetaData} items in one immutable list.
      * <p>
-     * The intended usage is to combine the parent and the child CSS meta data for
+     * The intended usage is to combine the parent and the child {@code CssMetaData} for
      * the purposes of {@code getClassCssMetaData()} method, see for example {@link Node#getClassCssMetaData()}.
      * <p>
      * Example:
-     * <pre>
-     * private static final List&lt;CssMetaData&lt;? extends Styleable, ?>> STYLEABLES = CssMetaData.combine(
-     *      &lt;Parent>.getClassCssMetaData(),
+     * <pre>{@code
+     * private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES = CssMetaData.combine(
+     *      <Parent>.getClassCssMetaData(),
      *      STYLEABLE1,
      *      STYLEABLE2
      *  );
-     * </pre>
-     * This method returns an instance of {@link java.util.RandomAccess} interface.
+     * }</pre>
+     * This method returns an instance of a {@code List} that implements
+     * {@link java.util.RandomAccess} interface.
      *
-     * @param list the css metadata items, usually from the parent, must not be null
+     * @param inheritedFromParent the {@code CssMetaData} items inherited from parent, must not be null
      * @param items the additional items
      * @return the immutable list containing all of the items
      *
      * @since 22
      */
     public static List<CssMetaData<? extends Styleable, ?>> combine(
-        List<CssMetaData<? extends Styleable, ?>> list,
+        List<CssMetaData<? extends Styleable, ?>> inheritedFromParent,
         CssMetaData<? extends Styleable, ?>... items)
     {
-        CssMetaData[] combined = new CssMetaData[list.size() + items.length];
-        list.toArray(combined);
-        System.arraycopy(items, 0, combined, list.size(), items.length);
+        CssMetaData[] combined = new CssMetaData[inheritedFromParent.size() + items.length];
+        inheritedFromParent.toArray(combined);
+        System.arraycopy(items, 0, combined, inheritedFromParent.size(), items.length);
         return new UnmodifiableArrayList<>(combined, combined.length);
     }
 }
