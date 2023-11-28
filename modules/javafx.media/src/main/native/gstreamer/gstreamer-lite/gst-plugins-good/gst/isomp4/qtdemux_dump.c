@@ -348,6 +348,32 @@ qtdemux_dump_stsd_av01 (GstQTDemux * qtdemux, GstByteReader * data, guint size,
   return TRUE;
 }
 
+static gboolean
+qtdemux_dump_stsd_metx (GstQTDemux * qtdemux, GstByteReader * data, int depth)
+{
+  const gchar *content_encoding;
+  const gchar *namespaces;
+  const gchar *schema_locations;
+
+  if (gst_byte_reader_get_remaining (data) < 6 + 2)
+    return FALSE;
+
+  gst_byte_reader_skip_unchecked (data, 6);
+  GST_LOG_OBJECT (qtdemux, "%*s    data reference:%d", depth, "",
+      GET_UINT16 (data));
+
+  if (!gst_byte_reader_get_string (data, &content_encoding) ||
+      !gst_byte_reader_get_string (data, &namespaces) ||
+      !gst_byte_reader_get_string (data, &schema_locations))
+    return FALSE;
+
+  GST_LOG ("%*s  content_encoding:          %s", depth, "", content_encoding);
+  GST_LOG ("%*s  namespaces:                %s", depth, "", namespaces);
+  GST_LOG ("%*s  schema_locations:          %s", depth, "", schema_locations);
+
+  return TRUE;
+}
+
 gboolean
 qtdemux_dump_stsd (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 {
@@ -400,6 +426,10 @@ qtdemux_dump_stsd (GstQTDemux * qtdemux, GstByteReader * data, int depth)
         break;
       case FOURCC_av01:
         if (!qtdemux_dump_stsd_av01 (qtdemux, &sub, size, depth + 1))
+          return FALSE;
+        break;
+      case FOURCC_metx:
+        if (!qtdemux_dump_stsd_metx (qtdemux, &sub, depth + 1))
           return FALSE;
         break;
       default:
@@ -1019,6 +1049,88 @@ qtdemux_dump_fLaC (GstQTDemux * qtdemux, GstByteReader * data, int depth)
   GST_LOG ("%*s  channel count:  %d", depth, "", n_channels);
   GST_LOG ("%*s  sample size:    %d", depth, "", sample_size);
   GST_LOG ("%*s  sample rate:    %d", depth, "", (sample_rate >> 16));
+
+  return TRUE;
+}
+
+gboolean
+qtdemux_dump_opus (GstQTDemux * qtdemux, GstByteReader * data, int depth)
+{
+  guint16 version, data_ref_id, n_channels, sample_size;
+  guint32 sample_rate;
+
+  if (!gst_byte_reader_skip (data, 6) ||
+      !gst_byte_reader_get_uint16_be (data, &data_ref_id) ||
+      !gst_byte_reader_get_uint16_be (data, &version) ||
+      !gst_byte_reader_skip (data, 6) ||
+      !gst_byte_reader_get_uint16_be (data, &n_channels) ||
+      !gst_byte_reader_get_uint16_be (data, &sample_size) ||
+      !gst_byte_reader_skip (data, 4) ||
+      !gst_byte_reader_get_uint32_be (data, &sample_rate))
+    return FALSE;
+
+  GST_LOG ("%*s  data reference: %d", depth, "", data_ref_id);
+  GST_LOG ("%*s  version:        %d", depth, "", version);
+  GST_LOG ("%*s  channel count:  %d", depth, "", n_channels);
+  GST_LOG ("%*s  sample size:    %d", depth, "", sample_size);
+  GST_LOG ("%*s  sample rate:    %d", depth, "", sample_rate >> 16);
+
+  return TRUE;
+}
+
+gboolean
+qtdemux_dump_dops (GstQTDemux * qtdemux, GstByteReader * data, int depth)
+{
+  guint8 version, n_channels, channel_mapping_family;
+  guint8 stream_count = 1, coupled_count = 0, i = 0;
+  guint8 *channel_mapping = NULL;
+  guint16 pre_skip, output_gain;
+  guint32 sample_rate;
+
+  if (!gst_byte_reader_get_uint8 (data, &version) ||
+      !gst_byte_reader_get_uint8 (data, &n_channels) ||
+      !gst_byte_reader_get_uint16_be (data, &pre_skip) ||
+      !gst_byte_reader_get_uint32_be (data, &sample_rate) ||
+      !gst_byte_reader_get_uint16_be (data, &output_gain) ||
+      !gst_byte_reader_get_uint8 (data, &channel_mapping_family))
+    return FALSE;
+
+  if (channel_mapping_family != 0) {
+    if (!gst_byte_reader_get_uint8 (data, &stream_count) ||
+        !gst_byte_reader_get_uint8 (data, &coupled_count))
+      return FALSE;
+
+    if (n_channels > 0) {
+      channel_mapping = g_malloc (n_channels * sizeof (guint8));
+
+      for (i = 0; i < n_channels; i++)
+        if (!gst_byte_reader_get_uint8 (data, &channel_mapping[i])) {
+          g_free (channel_mapping);
+          return FALSE;
+        }
+    }
+  }
+
+  GST_LOG ("%*s  version:                %d", depth, "", version);
+  GST_LOG ("%*s  channel count:          %d", depth, "", n_channels);
+  GST_LOG ("%*s  pre skip:               %d", depth, "", pre_skip);
+  GST_LOG ("%*s  sample rate:            %d", depth, "", sample_rate);
+  GST_LOG ("%*s  output gain:            %d", depth, "", output_gain);
+  GST_LOG ("%*s  channel mapping family: %d", depth, "",
+      channel_mapping_family);
+
+  if (channel_mapping_family != 0) {
+    GST_LOG ("%*s  stream count:           %d", depth, "", stream_count);
+    GST_LOG ("%*s  coupled count:          %d", depth, "", coupled_count);
+
+    if (n_channels > 0) {
+      for (i = 0; i < n_channels; i++)
+        GST_LOG ("%*s  channel mapping: %d -> %d", depth, "", i,
+            channel_mapping[i]);
+
+      g_free (channel_mapping);
+    }
+  }
 
   return TRUE;
 }

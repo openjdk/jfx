@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -33,19 +35,6 @@
 #include <stdarg.h>
 
 G_BEGIN_DECLS
-
-/* Define G_VA_COPY() to do the right thing for copying va_list variables.
- * glibconfig.h may have already defined G_VA_COPY as va_copy or __va_copy.
- */
-#if !defined (G_VA_COPY)
-#  if defined (__GNUC__) && defined (__PPC__) && (defined (_CALL_SYSV) || defined (_WIN32))
-#    define G_VA_COPY(ap1, ap2)   (*(ap1) = *(ap2))
-#  elif defined (G_VA_COPY_AS_ARRAY)
-#    define G_VA_COPY(ap1, ap2)   memmove ((ap1), (ap2), sizeof (va_list))
-#  else /* va_list is a pointer */
-#    define G_VA_COPY(ap1, ap2)   ((ap1) = (ap2))
-#  endif /* va_list is a pointer */
-#endif /* !G_VA_COPY */
 
 GLIB_AVAILABLE_IN_ALL
 const gchar *         g_get_user_name        (void);
@@ -307,7 +296,9 @@ typedef enum
   G_FORMAT_SIZE_DEFAULT     = 0,
   G_FORMAT_SIZE_LONG_FORMAT = 1 << 0,
   G_FORMAT_SIZE_IEC_UNITS   = 1 << 1,
-  G_FORMAT_SIZE_BITS        = 1 << 2
+  G_FORMAT_SIZE_BITS        = 1 << 2,
+  G_FORMAT_SIZE_ONLY_VALUE GLIB_AVAILABLE_ENUMERATOR_IN_2_74 = 1 << 3,
+  G_FORMAT_SIZE_ONLY_UNIT GLIB_AVAILABLE_ENUMERATOR_IN_2_74 = 1 << 4
 } GFormatSizeFlags;
 
 GLIB_AVAILABLE_IN_2_30
@@ -435,8 +426,7 @@ g_bit_storage_impl (gulong number)
 #  include <stdlib.h>
 #  define g_abort() abort ()
 #else
-GLIB_AVAILABLE_IN_2_50
-G_NORETURN void g_abort (void) G_ANALYZER_NORETURN;
+G_NORETURN GLIB_AVAILABLE_IN_2_50 void g_abort (void) G_ANALYZER_NORETURN;
 #endif
 #endif
 

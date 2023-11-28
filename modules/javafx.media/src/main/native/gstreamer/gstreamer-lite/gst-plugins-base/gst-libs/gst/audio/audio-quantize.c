@@ -54,6 +54,7 @@ struct _GstAudioQuantize
 
   /* last random number generated per channel for hifreq TPDF dither */
   gpointer last_random;
+  guint32 random_state;
   /* contains the past quantization errors, error[channels][count] */
   guint error_size;
   gpointer error_buf;
@@ -92,27 +93,28 @@ gst_audio_quantize_quantize_int_none_none (GstAudioQuantize * quant,
       samples * quant->stride);
 }
 
-/* This is the base function, implementing a linear congruential generator
- * and returning a pseudo random number between 0 and 2^32 - 1.
- */
+/* 32 bit xorshift PRNG, see https://en.wikipedia.org/wiki/Xorshift */
 static inline guint32
-gst_fast_random_uint32 (void)
+gst_fast_random_uint32 (guint32 * state)
 {
-  static guint32 state = 0xdeadbeef;
-  return (state = state * 1103515245 + 12345);
+  guint64 x = *state;
+  x ^= x << 13;
+  x ^= x >> 17;
+  x ^= x << 5;
+  return (*state = x);
 }
 
 static inline gint32
-gst_fast_random_int32 (void)
+gst_fast_random_int32 (guint32 * state)
 {
-  return (gint32) gst_fast_random_uint32 ();
+  return (gint32) gst_fast_random_uint32 (state);
 }
 
 /* Assuming dither == 2^n,
  * returns one of 2^(n+1) possible random values:
  * -dither <= retval < dither */
-#define RANDOM_INT_DITHER(dither)                                       \
-  (- dither + (gst_fast_random_int32 () & ((dither << 1) - 1)))
+#define RANDOM_INT_DITHER(state, dither)                                       \
+  (- dither + (gst_fast_random_int32 (state) & ((dither << 1) - 1)))
 
 static void
 setup_dither_buf (GstAudioQuantize * quant, gint samples)
@@ -144,13 +146,15 @@ setup_dither_buf (GstAudioQuantize * quant, gint samples)
     case GST_AUDIO_DITHER_RPDF:
       dither = 1 << (shift);
       for (i = 0; i < len; i++)
-        d[i] = bias + RANDOM_INT_DITHER (dither);
+        d[i] = bias + RANDOM_INT_DITHER (&quant->random_state, dither);
       break;
 
     case GST_AUDIO_DITHER_TPDF:
       dither = 1 << (shift - 1);
       for (i = 0; i < len; i++)
-        d[i] = bias + RANDOM_INT_DITHER (dither) + RANDOM_INT_DITHER (dither);
+        d[i] =
+            bias + RANDOM_INT_DITHER (&quant->random_state,
+            dither) + RANDOM_INT_DITHER (&quant->random_state, dither);
       break;
 
     case GST_AUDIO_DITHER_TPDF_HF:
@@ -159,7 +163,7 @@ setup_dither_buf (GstAudioQuantize * quant, gint samples)
 
       dither = 1 << (shift - 1);
       for (i = 0; i < len; i++) {
-        tmp = RANDOM_INT_DITHER (dither);
+        tmp = RANDOM_INT_DITHER (&quant->random_state, dither);
         d[i] = bias + tmp - last_random[i % stride];
         last_random[i % stride] = tmp;
       }
@@ -369,6 +373,9 @@ gst_audio_quantize_setup_noise_shaping (GstAudioQuantize * quant)
 static void
 gst_audio_quantize_setup_dither (GstAudioQuantize * quant)
 {
+  /* Some non-zero number */
+  quant->random_state = 0xc2d6038f;
+
   switch (quant->dither) {
     case GST_AUDIO_DITHER_TPDF_HF:
       quant->last_random = g_new0 (gint32, quant->stride);

@@ -5,6 +5,8 @@
  * Copyright 1998 Sebastian Wilhelmi; University of Karlsruhe
  *                Owen Taylor
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -739,11 +741,13 @@ void
                      gsize          result)
 {
   gsize *value_location = (gsize *) location;
+  gsize old_value;
 
-  g_return_if_fail (g_atomic_pointer_get (value_location) == 0);
   g_return_if_fail (result != 0);
 
-  g_atomic_pointer_set (value_location, result);
+  old_value = (gsize) g_atomic_pointer_exchange (value_location, result);
+  g_return_if_fail (old_value == 0);
+
   g_mutex_lock (&g_once_mutex);
   g_return_if_fail (g_once_init_list != NULL);
   g_once_init_list = g_slist_remove (g_once_init_list, (void*) value_location);
@@ -881,7 +885,7 @@ g_thread_new (const gchar *name,
   GError *error = NULL;
   GThread *thread;
 
-  thread = g_thread_new_internal (name, g_thread_proxy, func, data, 0, NULL, &error);
+  thread = g_thread_new_internal (name, g_thread_proxy, func, data, 0, &error);
 
   if G_UNLIKELY (thread == NULL)
     g_error ("creating thread '%s': %s", name ? name : "", error->message);
@@ -912,7 +916,7 @@ g_thread_try_new (const gchar  *name,
                   gpointer      data,
                   GError      **error)
 {
-  return g_thread_new_internal (name, g_thread_proxy, func, data, 0, NULL, error);
+  return g_thread_new_internal (name, g_thread_proxy, func, data, 0, error);
 }
 
 GThread *
@@ -921,7 +925,6 @@ g_thread_new_internal (const gchar *name,
                        GThreadFunc func,
                        gpointer data,
                        gsize stack_size,
-                       const GThreadSchedulerSettings *scheduler_settings,
                        GError **error)
 {
   g_return_val_if_fail (func != NULL, NULL);
@@ -929,16 +932,7 @@ g_thread_new_internal (const gchar *name,
   g_atomic_int_inc (&g_thread_n_created_counter);
 
   g_trace_mark (G_TRACE_CURRENT_TIME, 0, "GLib", "GThread created", "%s", name ? name : "(unnamed)");
-  return (GThread *) g_system_thread_new (proxy, stack_size, scheduler_settings,
-                                          name, func, data, error);
-}
-
-gboolean
-g_thread_get_scheduler_settings (GThreadSchedulerSettings *scheduler_settings)
-{
-  g_return_val_if_fail (scheduler_settings != NULL, FALSE);
-
-  return g_system_thread_get_scheduler_settings (scheduler_settings);
+  return (GThread *) g_system_thread_new (proxy, stack_size, name, func, data, error);
 }
 
 /**

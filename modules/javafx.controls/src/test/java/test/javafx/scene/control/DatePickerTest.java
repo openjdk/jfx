@@ -737,6 +737,33 @@ public class DatePickerTest {
         stageLoader.dispose();
     }
 
+    /**
+     * When DatePicker looses focus with misformatted text in the editor,
+     * checks that the value is not changed, and the text is reverted to the value
+     */
+    @Test
+    public void testFocusLostWithTypo() {
+        Button button = new Button();
+        StageLoader stageLoader = new StageLoader(new HBox(datePicker, button));
+
+        // initial value
+        datePicker.setValue(LocalDate.of(2015, 03, 25));
+        assertEquals("3/25/2015", datePicker.getEditor().getText());
+
+        // set misformatted text
+        datePicker.requestFocus();
+        datePicker.getEditor().setText("11/24/20xx");
+
+        // loosing focus triggers cancelEdit() because the text cannot be parsed
+        button.requestFocus();
+
+        // check that value remains unchanged, and text is reverted
+        assertEquals(LocalDate.of(2015, 03, 25), datePicker.getValue());
+        assertEquals("3/25/2015", datePicker.getEditor().getText());
+
+        stageLoader.dispose();
+    }
+
     private class InvalidChronology extends AbstractChronology {
         @Override
         public String getId() {

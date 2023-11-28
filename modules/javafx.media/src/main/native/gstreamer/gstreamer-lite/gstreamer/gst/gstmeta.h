@@ -87,10 +87,20 @@ typedef enum {
  * GST_META_TAG_MEMORY_STR:
  *
  * This metadata stays relevant as long as memory layout is unchanged.
+ * In hindsight, this tag should have been called "memory-layout".
  *
  * Since: 1.2
  */
 #define GST_META_TAG_MEMORY_STR "memory"
+
+/**
+ * GST_META_TAG_MEMORY_REFERENCE_STR:
+ *
+ * This metadata stays relevant until a deep copy is made.
+ *
+ * Since: 1.20.4
+ */
+#define GST_META_TAG_MEMORY_REFERENCE_STR "memory-reference"
 
 /**
  * GstMeta:
@@ -203,8 +213,8 @@ typedef gboolean (*GstMetaTransformFunction) (GstBuffer *transbuf,
  * @user_data: user data passed when registering the meta
  *
  * Function called for each @meta in @buffer as a result of performing a
- * transformation on @transbuf. Additional @type specific transform data
- * is passed to the function as @data.
+ * transformation that yields @transbuf. Additional @type specific transform
+ * data is passed to the function as @data.
  *
  * Implementations should check the @type of the transform and parse
  * additional type specific fields in @data that should be used to update
@@ -287,8 +297,10 @@ gint                 gst_meta_compare_seqnum    (const GstMeta * meta1,
 
 #ifndef GSTREAMER_LITE
 GST_API GQuark _gst_meta_tag_memory;
+GST_API GQuark _gst_meta_tag_memory_reference;
 #else // GSTREAMER_LITE
 GST_EXPORT GQuark _gst_meta_tag_memory;
+GST_EXPORT GQuark _gst_meta_tag_memory_reference;
 #endif // GSTREAMER_LITE
 
 /**

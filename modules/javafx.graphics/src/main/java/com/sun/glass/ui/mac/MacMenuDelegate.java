@@ -69,6 +69,7 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
 
     private native void _insert(long menuPtr, long submenuPtr, int pos);
     @Override public boolean insert(MenuDelegate menu, int pos) {
+        if (ptr == 0) return false;
         MacMenuDelegate macMenu = (MacMenuDelegate)menu;
         _insert(ptr, macMenu.ptr, pos);
         return true;
@@ -76,6 +77,7 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
 
     @Override public boolean insert(MenuItemDelegate item, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)item;
+        if (ptr == 0) return false;
         _insert(ptr, macMenu != null ? macMenu.ptr : 0, pos);
         return true;
     }
@@ -83,36 +85,46 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     private native void _remove(long menuPtr, long submenuPtr, int pos);
     @Override public boolean remove(MenuDelegate menu, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)menu;
+        if (ptr == 0) return false;
         _remove(ptr, macMenu.ptr, pos);
+        macMenu.ptr = 0;
         return true;
     }
 
     @Override public boolean remove(MenuItemDelegate item, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)item;
+        if (ptr == 0) return false;
         _remove(ptr, macMenu == null ? 0L : macMenu.ptr, pos);
+        if (macMenu != null) {
+            macMenu.ptr = 0L;
+        }
         return true;
     }
 
     private native void _setTitle(long menuPtr, String title);
     @Override public boolean setTitle(String title) {
+        if (ptr == 0) return false;
         _setTitle(ptr, title);
         return true;
     }
 
     private native void _setShortcut(long menuPtr, char shortcut, int modifiers);
     @Override public boolean setShortcut(int shortcutKey, int shortcutModifiers) {
+        if (ptr == 0) return false;
         _setShortcut(ptr, (char)shortcutKey, shortcutModifiers);
         return true;
     }
 
     private native void _setPixels(long menuPtr, Pixels pixels);
     @Override public boolean setPixels(Pixels pixels) {
+        if (ptr == 0) return false;
         _setPixels(ptr, pixels);
         return true;
     }
 
     private native void _setEnabled(long menuPtr, boolean enabled);
     @Override public boolean setEnabled(boolean enabled) {
+        if (ptr == 0) return false;
         _setEnabled(ptr, enabled);
         return true;
     }

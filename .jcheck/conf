@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+; Copyright (c) 2019, 2023, Oracle and/or its affiliates. All rights reserved.
 ; DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 ;
 ; This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ domain=openjdk.org
 files=.*\.java$|.*\.c$|.*\.h$|.*\.cpp$|.*\.hpp$|.*\.cc$|.*\.jsl$|.*\.fxml$|.*\.css$|.*\.m$|.*\.mm$|.*\.frag$|.*\.vert$|.*\.hlsl$|.*\.metal$|.*\.gradle$|.*\.groovy$|.*\.g4$|.*\.stg$
 
 [checks "reviewers"]
-minimum=1
+reviewers=1
 
 [checks "merge"]
 message=Merge

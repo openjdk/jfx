@@ -100,6 +100,7 @@ typedef enum {
  * @GST_QUERY_CONTEXT: query the pipeline-local context from
  *     downstream or upstream (since 1.2)
  * @GST_QUERY_BITRATE: the bitrate query (since 1.16)
+ * @GST_QUERY_SELECTABLE: Query stream selection capability (Since: 1.22)
  *
  * Standard predefined Query types
  */
@@ -126,6 +127,15 @@ typedef enum {
   GST_QUERY_DRAIN        = GST_QUERY_MAKE_TYPE (180, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED)),
   GST_QUERY_CONTEXT      = GST_QUERY_MAKE_TYPE (190, _FLAG(BOTH)),
   GST_QUERY_BITRATE      = GST_QUERY_MAKE_TYPE (200, _FLAG(DOWNSTREAM)),
+
+  /**
+   * GST_QUERY_SELECTABLE:
+   *
+   * Query stream selection capability.
+   *
+   * Since: 1.22
+   */
+  GST_QUERY_SELECTABLE   = GST_QUERY_MAKE_TYPE (210, _FLAG(BOTH)),
 } GstQueryType;
 #undef _FLAG
 
@@ -656,6 +666,17 @@ void            gst_query_set_bitrate              (GstQuery * query, guint nomi
 
 GST_API
 void            gst_query_parse_bitrate            (GstQuery * query, guint * nominal_bitrate);
+
+/* selectable query */
+
+GST_API
+GstQuery *      gst_query_new_selectable           (void) G_GNUC_MALLOC;
+
+GST_API
+void            gst_query_set_selectable           (GstQuery *query, gboolean selectable);
+
+GST_API
+void            gst_query_parse_selectable         (GstQuery *query, gboolean * selectable);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstQuery, gst_query_unref)
 

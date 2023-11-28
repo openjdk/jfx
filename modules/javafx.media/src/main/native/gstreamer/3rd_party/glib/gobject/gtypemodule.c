@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -99,7 +101,7 @@ g_type_module_dispose (GObject *object)
 
   if (module->type_infos || module->interface_infos)
     {
-      g_warning (G_STRLOC ": unsolicitated invocation of g_object_run_dispose() on GTypeModule");
+      g_critical (G_STRLOC ": unsolicitated invocation of g_object_run_dispose() on GTypeModule");
 
       g_object_ref (object);
     }
@@ -257,9 +259,9 @@ g_type_module_use (GTypeModule *module)
     ModuleTypeInfo *type_info = tmp_list->data;
     if (!type_info->loaded)
       {
-        g_warning ("plugin '%s' failed to register type '%s'",
-       module->name ? module->name : "(unknown)",
-       g_type_name (type_info->type));
+        g_critical ("plugin '%s' failed to register type '%s'",
+        module->name ? module->name : "(unknown)",
+        g_type_name (type_info->type));
         module->use_count--;
         return FALSE;
       }
@@ -313,9 +315,8 @@ g_type_module_use_plugin (GTypePlugin *plugin)
 
   if (!g_type_module_use (module))
     {
-      g_warning ("Fatal error - Could not reload previously loaded plugin '%s'",
-     module->name ? module->name : "(unknown)");
-      exit (1);
+      g_error ("Fatal error - Could not reload previously loaded plugin '%s'",
+      module->name ? module->name : "(unknown)");
     }
 }
 
@@ -411,7 +412,7 @@ g_type_module_register_type (GTypeModule     *module,
 
       if (old_plugin != G_TYPE_PLUGIN (module))
   {
-    g_warning ("Two different plugins tried to register '%s'.", type_name);
+    g_critical ("Two different plugins tried to register '%s'.", type_name);
     return 0;
   }
     }
@@ -431,7 +432,7 @@ g_type_module_register_type (GTypeModule     *module,
   {
     const gchar *parent_type_name = g_type_name (parent_type);
 
-    g_warning ("Type '%s' recreated with different parent type."
+    g_critical ("Type '%s' recreated with different parent type."
          "(was '%s', now '%s')", type_name,
          g_type_name (module_type_info->parent_type),
          parent_type_name ? parent_type_name : "(unknown)");
@@ -500,13 +501,13 @@ g_type_module_add_interface (GTypeModule          *module,
 
       if (!old_plugin)
   {
-    g_warning ("Interface '%s' for '%s' was previously registered statically or for a parent type.",
+    g_critical ("Interface '%s' for '%s' was previously registered statically or for a parent type.",
          g_type_name (interface_type), g_type_name (instance_type));
     return;
   }
       else if (old_plugin != G_TYPE_PLUGIN (module))
   {
-    g_warning ("Two different plugins tried to register interface '%s' for '%s'.",
+    g_critical ("Two different plugins tried to register interface '%s' for '%s'.",
          g_type_name (interface_type), g_type_name (instance_type));
     return;
   }

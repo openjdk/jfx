@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2000-2001 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -166,6 +168,9 @@ G_DEFINE_BOXED_TYPE (GDateTime, g_date_time, g_date_time_ref, g_date_time_unref)
 G_DEFINE_BOXED_TYPE (GTimeZone, g_time_zone, g_time_zone_ref, g_time_zone_unref)
 G_DEFINE_BOXED_TYPE (GKeyFile, g_key_file, g_key_file_ref, g_key_file_unref)
 G_DEFINE_BOXED_TYPE (GMappedFile, g_mapped_file, g_mapped_file_ref, g_mapped_file_unref)
+#ifndef GSTREAMER_LITE
+G_DEFINE_BOXED_TYPE (GBookmarkFile, g_bookmark_file, g_bookmark_file_copy, g_bookmark_file_free)
+#endif // GSTREAMER_LITE
 
 G_DEFINE_BOXED_TYPE (GMainLoop, g_main_loop, g_main_loop_ref, g_main_loop_unref)
 G_DEFINE_BOXED_TYPE (GMainContext, g_main_context, g_main_context_ref, g_main_context_unref)
@@ -438,7 +443,7 @@ g_boxed_free (GType    boxed_type,
  *
  * Get the contents of a %G_TYPE_BOXED derived #GValue.
  *
- * Returns: (transfer none): boxed contents of @value
+ * Returns: (transfer none) (nullable): boxed contents of @value
  */
 gpointer
 g_value_get_boxed (const GValue *value)
@@ -458,7 +463,7 @@ g_value_get_boxed (const GValue *value)
  * g_boxed_free(), e.g. like: g_boxed_free (G_VALUE_TYPE (@value),
  * return_value);
  *
- * Returns: boxed contents of @value
+ * Returns: (transfer full) (nullable): boxed contents of @value
  */
 gpointer
 g_value_dup_boxed (const GValue *value)

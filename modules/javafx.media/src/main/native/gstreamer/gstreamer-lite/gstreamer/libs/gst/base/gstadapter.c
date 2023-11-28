@@ -919,7 +919,8 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
   const GstMetaInfo *info = (*meta)->info;
   gboolean do_copy = FALSE;
 
-  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)) {
+  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)
+      || gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory_reference)) {
     /* never call the transform_meta with memory specific metadata */
     GST_DEBUG ("not copying memory specific metadata %s",
         g_type_name (info->api));

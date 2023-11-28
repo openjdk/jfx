@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@
 
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
+#import <Carbon/Carbon.h>
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -53,7 +54,8 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
-static BOOL isNormalTaskbarApp = NO;
+static BOOL requiresActivation = NO;
+static BOOL triggerReactivation = NO;
 static BOOL disableSyncRendering = NO;
 static BOOL firstActivation = YES;
 static BOOL shouldReactivate = NO;
@@ -112,6 +114,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
 }
 
+@end
+
+@implementation NSApplicationFX
 @end
 
 #pragma mark --- GlassApplication
@@ -227,6 +232,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     GLASS_CHECK_EXCEPTION(env);
 }
 
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
+    return YES;
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
     LOG("GlassApplication:applicationDidFinishLaunching");
@@ -238,6 +247,15 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+     if (!NSApp.isActive && requiresActivation) {
+        // As of macOS 14, application gets to the foreground,
+        // but it doesn't get activated, so this is needed:
+        LOG("-> need to active application");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [NSApp activate];
+        });
+    }
 }
 
 - (void)applicationWillBecomeActive:(NSNotification *)aNotification
@@ -265,7 +283,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (isNormalTaskbarApp && firstActivation) {
+    if (triggerReactivation && firstActivation) {
         LOG("-> deactivate (hide)  app");
         firstActivation = NO;
         shouldReactivate = YES;
@@ -298,7 +316,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (isNormalTaskbarApp && shouldReactivate) {
+    if (triggerReactivation && shouldReactivate) {
         LOG("-> reactivate  app");
         shouldReactivate = NO;
         [NSApp activateIgnoringOtherApps:YES];
@@ -522,8 +540,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
 
         // Determine if we're running embedded (in AWT, SWT, elsewhere)
-        NSApplication *app = [NSApplication sharedApplication];
-        isEmbedded = [app isRunning];
+        NSApplication *app = [NSApplicationFX sharedApplication];
+        isEmbedded = ![app isKindOfClass:[NSApplicationFX class]];
 
         if (!isEmbedded)
         {
@@ -536,7 +554,17 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             }
             if (self->jTaskBarApp == JNI_TRUE)
             {
-                isNormalTaskbarApp = YES;
+                triggerReactivation = YES;
+
+                // The workaround of deactivating and reactivating
+                // the application so that the system menu bar works
+                // correctly is no longer needed (and no longer works
+                // anyway) as of macOS 14
+                if (@available(macOS 14.0, *)) {
+                    triggerReactivation = NO;
+                    requiresActivation = YES;
+                }
+
                 // move process from background only to full on app with visible Dock icon
                 ProcessSerialNumber psn;
                 if (GetCurrentProcess(&psn) == noErr)
@@ -747,13 +775,38 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             javaIDs.Application.leaveNestedEventLoop, (jobject)NULL);
 }
 
+static void inputDidChangeCallback(CFNotificationCenterRef center, void *observer, CFNotificationName name, const void *object, CFDictionaryRef userInfo)
+{
+    if (keyCodeForCharMap != nil) {
+        [keyCodeForCharMap removeAllObjects];
+    }
+}
+
 + (void)registerKeyEvent:(NSEvent*)event
 {
     if (!keyCodeForCharMap) {
         keyCodeForCharMap = [[NSMutableDictionary alloc] initWithCapacity:100];
         // Note: it's never released, just like, say, the jApplication reference...
+        // To avoid stale entries when the user switches layout
+        CFNotificationCenterRef center = CFNotificationCenterGetDistributedCenter();
+        CFNotificationCenterAddObserver(center, NULL, inputDidChangeCallback,
+                                        kTISNotifySelectedKeyboardInputSourceChanged,
+                                        NULL, CFNotificationSuspensionBehaviorCoalesce);
     }
-    [keyCodeForCharMap setObject:[NSNumber numberWithUnsignedShort:[event keyCode]] forKey:[event characters]];
+
+    // Add the character the user typed to the map.
+    NSNumber* mapObject = [NSNumber numberWithUnsignedShort:[event keyCode]];
+    [keyCodeForCharMap setObject:mapObject forKey:[event characters]];
+    // getKeyCodeForChar should not just match against a character the user types
+    // directly but any other character printed on the same key.
+    [keyCodeForCharMap setObject:mapObject forKey:[event charactersByApplyingModifiers: 0]];
+    [keyCodeForCharMap setObject:mapObject forKey:[event charactersByApplyingModifiers: NSEventModifierFlagShift]];
+    // On some European keyboards there are useful symbols which are only
+    // accessible via the Option key. We don't query for the Option key
+    // character because on most layouts just about every key has some
+    // random symbol assigned to that modifier which the user probably
+    // isn't even aware of. The user can get that character into the map
+    // by typing it directly.
 }
 
 + (jint)getKeyCodeForChar:(jchar)c;
@@ -1066,14 +1119,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSy
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _isNormalTaskbarApp
+ * Method:    _isTriggerReactivation
  * Signature: ()Z;
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isTriggerReactivation
 (JNIEnv *env, jobject japplication)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp");
-    return isNormalTaskbarApp;
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1isTriggerReactivation");
+    return triggerReactivation;
 }
 
 /*

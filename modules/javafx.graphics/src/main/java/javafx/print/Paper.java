@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -171,7 +171,7 @@ public final class Paper {
     /**
      * Specifies the North American legal size, 8.5 inches by 14 inches.
      */
-    public static final Paper LEGAL = new Paper("Legal", 8.4, 14, INCH);
+    public static final Paper LEGAL = new Paper("Legal", 8.5, 14, INCH);
 
     /**
      * Specifies the tabloid size, 11 inches by 17 inches.
@@ -190,10 +190,11 @@ public final class Paper {
     public static final Paper NA_8X10 = new Paper("8x10", 8, 10, INCH);
 
     /**
-     * Specifies the Monarch envelope size, 3.87 inch by 7.5 inch.
+     * Specifies the Monarch envelope size, 3.875 inches by 7.5 inches.
      */
     public static final Paper
-        MONARCH_ENVELOPE = new Paper("Monarch Envelope", 3.87, 7.5, INCH);
+        MONARCH_ENVELOPE = new Paper("Monarch Envelope", 3.875, 7.5, INCH);
+
     /**
      * Specifies the North American Number 10 business envelope size,
      * 4.125 inches by 9.5 inches.

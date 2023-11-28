@@ -106,6 +106,7 @@ static GstQueryQuarks query_quarks[] = {
   {GST_QUERY_DRAIN, "drain", 0},
   {GST_QUERY_CONTEXT, "context", 0},
   {GST_QUERY_BITRATE, "bitrate", 0},
+  {GST_QUERY_SELECTABLE, "selectable", 0},
 
   {0, NULL, 0}
 };
@@ -272,9 +273,9 @@ gst_query_set_position (GstQuery * query, GstFormat format, gint64 cur)
 /**
  * gst_query_parse_position:
  * @query: a #GstQuery
- * @format: (out) (allow-none): the storage for the #GstFormat of the
+ * @format: (out) (optional): the storage for the #GstFormat of the
  *     position values (may be %NULL)
- * @cur: (out) (allow-none): the storage for the current position (may be %NULL)
+ * @cur: (out) (optional): the storage for the current position (may be %NULL)
  *
  * Parse a position query, writing the format into @format, and the position
  * into @cur, if the respective parameters are non-%NULL.
@@ -349,9 +350,9 @@ gst_query_set_duration (GstQuery * query, GstFormat format, gint64 duration)
 /**
  * gst_query_parse_duration:
  * @query: a #GstQuery
- * @format: (out) (allow-none): the storage for the #GstFormat of the duration
+ * @format: (out) (optional): the storage for the #GstFormat of the duration
  *     value, or %NULL.
- * @duration: (out) (allow-none): the storage for the total duration, or %NULL.
+ * @duration: (out) (optional): the storage for the total duration, or %NULL.
  *
  * Parse a duration query answer. Write the format of the duration into @format,
  * and the value into @duration, if the respective variables are non-%NULL.
@@ -430,9 +431,9 @@ gst_query_set_latency (GstQuery * query, gboolean live,
 /**
  * gst_query_parse_latency:
  * @query: a #GstQuery
- * @live: (out) (allow-none): storage for live or %NULL
- * @min_latency: (out) (allow-none): the storage for the min latency or %NULL
- * @max_latency: (out) (allow-none): the storage for the max latency or %NULL
+ * @live: (out) (optional): storage for live or %NULL
+ * @min_latency: (out) (optional): the storage for the min latency or %NULL
+ * @max_latency: (out) (optional): the storage for the max latency or %NULL
  *
  * Parse a latency query answer.
  */
@@ -518,12 +519,12 @@ gst_query_set_convert (GstQuery * query, GstFormat src_format, gint64 src_value,
 /**
  * gst_query_parse_convert:
  * @query: a #GstQuery
- * @src_format: (out) (allow-none): the storage for the #GstFormat of the
+ * @src_format: (out) (optional): the storage for the #GstFormat of the
  *     source value, or %NULL
- * @src_value: (out) (allow-none): the storage for the source value, or %NULL
- * @dest_format: (out) (allow-none): the storage for the #GstFormat of the
+ * @src_value: (out) (optional): the storage for the source value, or %NULL
+ * @dest_format: (out) (optional): the storage for the #GstFormat of the
  *     destination value, or %NULL
- * @dest_value: (out) (allow-none): the storage for the destination value,
+ * @dest_value: (out) (optional): the storage for the destination value,
  *     or %NULL
  *
  * Parse a convert query answer. Any of @src_format, @src_value, @dest_format,
@@ -622,11 +623,11 @@ gst_query_set_segment (GstQuery * query, gdouble rate, GstFormat format,
 /**
  * gst_query_parse_segment:
  * @query: a #GstQuery
- * @rate: (out) (allow-none): the storage for the rate of the segment, or %NULL
- * @format: (out) (allow-none): the storage for the #GstFormat of the values,
+ * @rate: (out) (optional): the storage for the rate of the segment, or %NULL
+ * @format: (out) (optional): the storage for the #GstFormat of the values,
  *     or %NULL
- * @start_value: (out) (allow-none): the storage for the start value, or %NULL
- * @stop_value: (out) (allow-none): the storage for the stop value, or %NULL
+ * @start_value: (out) (optional): the storage for the start value, or %NULL
+ * @stop_value: (out) (optional): the storage for the stop value, or %NULL
  *
  * Parse a segment query answer. Any of @rate, @format, @start_value, and
  * @stop_value may be %NULL, which will cause this value to be omitted.
@@ -660,14 +661,14 @@ gst_query_parse_segment (GstQuery * query, gdouble * rate, GstFormat * format,
 /**
  * gst_query_new_custom:
  * @type: the query type
- * @structure: (allow-none) (transfer full): a structure for the query
+ * @structure: (nullable) (transfer full): a structure for the query
  *
  * Constructs a new custom query object. Use gst_query_unref()
  * when done with it.
  *
  * Free-function: gst_query_unref()
  *
- * Returns: (transfer full) (nullable): a new #GstQuery
+ * Returns: (transfer full): a new #GstQuery
  */
 GstQuery *
 gst_query_new_custom (GstQueryType type, GstStructure * structure)
@@ -810,11 +811,11 @@ gst_query_set_seeking (GstQuery * query, GstFormat format,
 /**
  * gst_query_parse_seeking:
  * @query: a GST_QUERY_SEEKING type query #GstQuery
- * @format: (out) (allow-none): the format to set for the @segment_start
+ * @format: (out) (optional): the format to set for the @segment_start
  *     and @segment_end values, or %NULL
- * @seekable: (out) (allow-none): the seekable flag to set, or %NULL
- * @segment_start: (out) (allow-none): the segment_start to set, or %NULL
- * @segment_end: (out) (allow-none): the segment_end to set, or %NULL
+ * @seekable: (out) (optional): the seekable flag to set, or %NULL
+ * @segment_start: (out) (optional): the segment_start to set, or %NULL
+ * @segment_end: (out) (optional): the segment_end to set, or %NULL
  *
  * Parse a seeking query, writing the format into @format, and
  * other results into the passed parameters, if the respective parameters
@@ -971,7 +972,7 @@ gst_query_set_formatsv (GstQuery * query, gint n_formats,
 /**
  * gst_query_parse_n_formats:
  * @query: a #GstQuery
- * @n_formats: (out) (allow-none): the number of formats in this query.
+ * @n_formats: (out) (optional): the number of formats in this query.
  *
  * Parse the number of formats in the formats @query.
  */
@@ -998,7 +999,7 @@ gst_query_parse_n_formats (GstQuery * query, guint * n_formats)
  * gst_query_parse_nth_format:
  * @query: a #GstQuery
  * @nth: the nth format to retrieve.
- * @format: (out) (allow-none): a pointer to store the nth format
+ * @format: (out) (optional): a pointer to store the nth format
  *
  * Parse the format query and retrieve the @nth format from it into
  * @format. If the list contains less elements than @nth, @format will be
@@ -1091,8 +1092,8 @@ gst_query_set_buffering_percent (GstQuery * query, gboolean busy, gint percent)
 /**
  * gst_query_parse_buffering_percent:
  * @query: A valid #GstQuery of type GST_QUERY_BUFFERING.
- * @busy: (out) (allow-none): if buffering is busy, or %NULL
- * @percent: (out) (allow-none): a buffering percent, or %NULL
+ * @busy: (out) (optional): if buffering is busy, or %NULL
+ * @percent: (out) (optional): a buffering percent, or %NULL
  *
  * Get the percentage of buffered data. This is a value between 0 and 100.
  * The @busy indicator is %TRUE when the buffering is in progress.
@@ -1144,10 +1145,10 @@ gst_query_set_buffering_stats (GstQuery * query, GstBufferingMode mode,
 /**
  * gst_query_parse_buffering_stats:
  * @query: A valid #GstQuery of type GST_QUERY_BUFFERING.
- * @mode: (out) (allow-none): a buffering mode, or %NULL
- * @avg_in: (out) (allow-none): the average input rate, or %NULL
- * @avg_out: (out) (allow-none): the average output rat, or %NULL
- * @buffering_left: (out) (allow-none): amount of buffering time left in
+ * @mode: (out) (optional): a buffering mode, or %NULL
+ * @avg_in: (out) (optional): the average input rate, or %NULL
+ * @avg_out: (out) (optional): the average output rat, or %NULL
+ * @buffering_left: (out) (optional): amount of buffering time left in
  *     milliseconds, or %NULL
  *
  * Extracts the buffering stats values from @query.
@@ -1209,11 +1210,11 @@ gst_query_set_buffering_range (GstQuery * query, GstFormat format,
 /**
  * gst_query_parse_buffering_range:
  * @query: a GST_QUERY_BUFFERING type query #GstQuery
- * @format: (out) (allow-none): the format to set for the @segment_start
+ * @format: (out) (optional): the format to set for the @segment_start
  *     and @segment_end values, or %NULL
- * @start: (out) (allow-none): the start to set, or %NULL
- * @stop: (out) (allow-none): the stop to set, or %NULL
- * @estimated_total: (out) (allow-none): estimated total amount of download
+ * @start: (out) (optional): the start to set, or %NULL
+ * @stop: (out) (optional): the stop to set, or %NULL
+ * @estimated_total: (out) (optional): estimated total amount of download
  *     time remaining in milliseconds, or %NULL
  *
  * Parse an available query, writing the format into @format, and
@@ -1325,8 +1326,8 @@ gst_query_get_n_buffering_ranges (GstQuery * query)
  * gst_query_parse_nth_buffering_range:
  * @query: a GST_QUERY_BUFFERING type query #GstQuery
  * @index: position in the buffered-ranges array to read
- * @start: (out) (allow-none): the start position to set, or %NULL
- * @stop: (out) (allow-none): the stop position to set, or %NULL
+ * @start: (out) (optional): the start position to set, or %NULL
+ * @stop: (out) (optional): the stop position to set, or %NULL
  *
  * Parse an available query and get the start and stop values stored
  * at the @index of the buffered ranges array.
@@ -1388,7 +1389,7 @@ gst_query_new_uri (void)
 /**
  * gst_query_set_uri:
  * @query: a #GstQuery with query type GST_QUERY_URI
- * @uri: the URI to set
+ * @uri: (nullable): the URI to set
  *
  * Answer a URI query by setting the requested URI.
  */
@@ -1399,7 +1400,6 @@ gst_query_set_uri (GstQuery * query, const gchar * uri)
 
   g_return_if_fail (GST_QUERY_TYPE (query) == GST_QUERY_URI);
   g_return_if_fail (gst_query_is_writable (query));
-  g_return_if_fail (gst_uri_is_valid (uri));
 
   structure = GST_QUERY_STRUCTURE (query);
   gst_structure_id_set (structure, GST_QUARK (URI), G_TYPE_STRING, uri, NULL);
@@ -1408,7 +1408,7 @@ gst_query_set_uri (GstQuery * query, const gchar * uri)
 /**
  * gst_query_parse_uri:
  * @query: a #GstQuery
- * @uri: (out) (transfer full) (allow-none): the storage for the current URI
+ * @uri: (out) (transfer full) (optional) (nullable): the storage for the current URI
  *     (may be %NULL)
  *
  * Parse an URI query, writing the URI into @uri as a newly
@@ -1431,7 +1431,7 @@ gst_query_parse_uri (GstQuery * query, gchar ** uri)
 /**
  * gst_query_set_uri_redirection:
  * @query: a #GstQuery with query type GST_QUERY_URI
- * @uri: the URI to set
+ * @uri: (nullable): the URI to set
  *
  * Answer a URI query by setting the requested URI redirection.
  *
@@ -1444,7 +1444,6 @@ gst_query_set_uri_redirection (GstQuery * query, const gchar * uri)
 
   g_return_if_fail (GST_QUERY_TYPE (query) == GST_QUERY_URI);
   g_return_if_fail (gst_query_is_writable (query));
-  g_return_if_fail (gst_uri_is_valid (uri));
 
   structure = GST_QUERY_STRUCTURE (query);
   gst_structure_id_set (structure, GST_QUARK (URI_REDIRECTION),
@@ -1454,7 +1453,7 @@ gst_query_set_uri_redirection (GstQuery * query, const gchar * uri)
 /**
  * gst_query_parse_uri_redirection:
  * @query: a #GstQuery
- * @uri: (out) (transfer full) (allow-none): the storage for the redirect URI
+ * @uri: (out) (transfer full) (optional) (nullable): the storage for the redirect URI
  *     (may be %NULL)
  *
  * Parse an URI query, writing the URI into @uri as a newly
@@ -1504,7 +1503,7 @@ gst_query_set_uri_redirection_permanent (GstQuery * query, gboolean permanent)
 /**
  * gst_query_parse_uri_redirection_permanent:
  * @query: a #GstQuery
- * @permanent: (out) (allow-none): if the URI redirection is permanent
+ * @permanent: (out) (optional): if the URI redirection is permanent
  *     (may be %NULL)
  *
  * Parse an URI query, and set @permanent to %TRUE if there is a redirection
@@ -1532,7 +1531,7 @@ gst_query_parse_uri_redirection_permanent (GstQuery * query,
 
 /**
  * gst_query_new_allocation:
- * @caps: the negotiated caps
+ * @caps: (nullable): the negotiated caps
  * @need_pool: return a pool
  *
  * Constructs a new query object for querying the allocation properties.
@@ -1559,8 +1558,8 @@ gst_query_new_allocation (GstCaps * caps, gboolean need_pool)
 /**
  * gst_query_parse_allocation:
  * @query: a #GstQuery
- * @caps: (out) (transfer none) (allow-none): The #GstCaps
- * @need_pool: (out) (allow-none): Whether a #GstBufferPool is needed
+ * @caps: (out) (transfer none) (optional) (nullable): The #GstCaps
+ * @need_pool: (out) (optional): Whether a #GstBufferPool is needed
  *
  * Parse an allocation query, writing the requested caps in @caps and
  * whether a pool is needed in @need_pool, if the respective parameters
@@ -1604,7 +1603,7 @@ allocation_pool_free (AllocationPool * ap)
 /**
  * gst_query_add_allocation_pool:
  * @query: A valid #GstQuery of type GST_QUERY_ALLOCATION.
- * @pool: (transfer none) (allow-none): the #GstBufferPool
+ * @pool: (transfer none) (nullable): the #GstBufferPool
  * @size: the buffer size
  * @min_buffers: the min buffers
  * @max_buffers: the max buffers
@@ -1663,10 +1662,10 @@ gst_query_get_n_allocation_pools (GstQuery * query)
  * gst_query_parse_nth_allocation_pool:
  * @query: A valid #GstQuery of type GST_QUERY_ALLOCATION.
  * @index: index to parse
- * @pool: (out) (allow-none) (transfer full): the #GstBufferPool
- * @size: (out) (allow-none): the buffer size
- * @min_buffers: (out) (allow-none): the min buffers
- * @max_buffers: (out) (allow-none): the max buffers
+ * @pool: (out) (optional) (transfer full) (nullable): the #GstBufferPool
+ * @size: (out) (optional): the buffer size
+ * @min_buffers: (out) (optional): the min buffers
+ * @max_buffers: (out) (optional): the max buffers
  *
  * Get the pool parameters in @query.
  *
@@ -1705,7 +1704,7 @@ gst_query_parse_nth_allocation_pool (GstQuery * query, guint index,
  * gst_query_set_nth_allocation_pool:
  * @index: index to modify
  * @query: A valid #GstQuery of type GST_QUERY_ALLOCATION.
- * @pool: (transfer none) (allow-none): the #GstBufferPool
+ * @pool: (transfer none) (nullable): the #GstBufferPool
  * @size: the buffer size
  * @min_buffers: the min buffers
  * @max_buffers: the max buffers
@@ -1782,7 +1781,7 @@ allocation_meta_free (AllocationMeta * am)
  * gst_query_add_allocation_meta:
  * @query: a GST_QUERY_ALLOCATION type query #GstQuery
  * @api: the metadata API
- * @params: (transfer none) (allow-none): API specific parameters
+ * @params: (transfer none) (nullable): API specific parameters
  *
  * Add @api with @params as one of the supported metadata API to @query.
  */
@@ -1838,7 +1837,7 @@ gst_query_get_n_allocation_metas (GstQuery * query)
  * gst_query_parse_nth_allocation_meta:
  * @query: a GST_QUERY_ALLOCATION type query #GstQuery
  * @index: position in the metadata API array to read
- * @params: (out) (transfer none) (allow-none): API specific parameters
+ * @params: (out) (transfer none) (optional): API specific parameters
  *
  * Parse an available query and get the metadata API
  * at @index of the metadata API array.
@@ -1899,7 +1898,7 @@ gst_query_remove_nth_allocation_meta (GstQuery * query, guint index)
  * gst_query_find_allocation_meta:
  * @query: a GST_QUERY_ALLOCATION type query #GstQuery
  * @api: the metadata API
- * @index: (out) (transfer none) (allow-none): the index
+ * @index: (out) (transfer none) (optional): the index
  *
  * Check if @query has metadata @api set. When this function returns %TRUE,
  * @index will contain the index where the requested API and the parameters
@@ -1950,8 +1949,8 @@ allocation_param_free (AllocationParam * ap)
 /**
  * gst_query_add_allocation_param:
  * @query: a GST_QUERY_ALLOCATION type query #GstQuery
- * @allocator: (transfer none) (allow-none): the memory allocator
- * @params: (transfer none) (allow-none): a #GstAllocationParams
+ * @allocator: (transfer none) (nullable): the memory allocator
+ * @params: (transfer none) (nullable): a #GstAllocationParams
  *
  * Add @allocator and its @params as a supported memory allocator.
  */
@@ -2014,8 +2013,8 @@ gst_query_get_n_allocation_params (GstQuery * query)
  * gst_query_parse_nth_allocation_param:
  * @query: a GST_QUERY_ALLOCATION type query #GstQuery
  * @index: position in the allocator array to read
- * @allocator: (out) (transfer full) (allow-none): variable to hold the result
- * @params: (out) (allow-none): parameters for the allocator
+ * @allocator: (out) (transfer full) (optional) (nullable): variable to hold the result
+ * @params: (out) (optional): parameters for the allocator
  *
  * Parse an available query and get the allocator and its params
  * at @index of the allocator array.
@@ -2048,8 +2047,8 @@ gst_query_parse_nth_allocation_param (GstQuery * query, guint index,
  * gst_query_set_nth_allocation_param:
  * @query: a GST_QUERY_ALLOCATION type query #GstQuery
  * @index: position in the allocator array to set
- * @allocator: (transfer none) (allow-none): new allocator to set
- * @params: (transfer none) (allow-none): parameters for the allocator
+ * @allocator: (transfer none) (nullable): new allocator to set
+ * @params: (transfer none) (nullable): parameters for the allocator
  *
  * Parse an available query and get the allocator and its params
  * at @index of the allocator array.
@@ -2164,10 +2163,10 @@ gst_query_set_scheduling (GstQuery * query, GstSchedulingFlags flags,
 /**
  * gst_query_parse_scheduling:
  * @query: A valid #GstQuery of type GST_QUERY_SCHEDULING.
- * @flags: (out) (allow-none): #GstSchedulingFlags
- * @minsize: (out) (allow-none): the suggested minimum size of pull requests
- * @maxsize: (out) (allow-none): the suggested maximum size of pull requests:
- * @align: (out) (allow-none): the suggested alignment of pull requests
+ * @flags: (out) (optional): #GstSchedulingFlags
+ * @minsize: (out) (optional): the suggested minimum size of pull requests
+ * @maxsize: (out) (optional): the suggested maximum size of pull requests:
+ * @align: (out) (optional): the suggested alignment of pull requests
  *
  * Set the scheduling properties.
  */
@@ -2393,7 +2392,7 @@ gst_query_set_accept_caps_result (GstQuery * query, gboolean result)
 /**
  * gst_query_parse_accept_caps_result:
  * @query: a GST_QUERY_ACCEPT_CAPS type query #GstQuery
- * @result: (out) (allow-none): location for the result
+ * @result: (out) (nullable): location for the result
  *
  * Parse the result from @query and store in @result.
  */
@@ -2474,7 +2473,7 @@ gst_query_parse_caps (GstQuery * query, GstCaps ** filter)
 /**
  * gst_query_set_caps_result:
  * @query: The query to use
- * @caps: (in): A pointer to the caps
+ * @caps: (nullable): A pointer to the caps
  *
  * Set the @caps result in @query.
  */
@@ -2493,7 +2492,7 @@ gst_query_set_caps_result (GstQuery * query, GstCaps * caps)
 /**
  * gst_query_parse_caps_result:
  * @query: The query to parse
- * @caps: (out) (transfer none): A pointer to the caps
+ * @caps: (out) (transfer none) (nullable): A pointer to the caps
  *
  * Get the caps result from @query. The caps remains valid as long as
  * @query remains valid.
@@ -2576,7 +2575,7 @@ gst_query_new_context (const gchar * context_type)
 /**
  * gst_query_set_context:
  * @query: a #GstQuery with query type GST_QUERY_CONTEXT
- * @context: the requested #GstContext
+ * @context: (nullable): the requested #GstContext
  *
  * Answer a context query by setting the requested context.
  *
@@ -2603,7 +2602,7 @@ gst_query_set_context (GstQuery * query, GstContext * context)
 /**
  * gst_query_parse_context:
  * @query: The query to parse
- * @context: (out) (transfer none): A pointer to store the #GstContext
+ * @context: (out) (transfer none) (nullable): A pointer to store the #GstContext
  *
  * Get the context from the context @query. The context remains valid as long as
  * @query remains valid.
@@ -2630,7 +2629,7 @@ gst_query_parse_context (GstQuery * query, GstContext ** context)
 /**
  * gst_query_parse_context_type:
  * @query: a GST_QUERY_CONTEXT type query
- * @context_type: (out) (transfer none) (allow-none): the context type, or %NULL
+ * @context_type: (out) (transfer none) (optional): the context type, or %NULL
  *
  * Parse a context type from an existing GST_QUERY_CONTEXT query.
  *
@@ -2706,7 +2705,7 @@ gst_query_set_bitrate (GstQuery * query, guint nominal_bitrate)
 /**
  * gst_query_parse_bitrate:
  * @query: a GST_QUERY_BITRATE type #GstQuery
- * @nominal_bitrate: (out) (allow-none): The resulting bitrate in bits per second
+ * @nominal_bitrate: (out) (optional): The resulting bitrate in bits per second
  *
  * Get the results of a bitrate query. See also gst_query_set_bitrate().
  *
@@ -2725,6 +2724,80 @@ gst_query_parse_bitrate (GstQuery * query, guint * nominal_bitrate)
   if (nominal_bitrate) {
     value = gst_structure_id_get_value (structure, GST_QUARK (NOMINAL_BITRATE));
     *nominal_bitrate = g_value_get_uint (value);
+  }
+}
+
+/**
+ * gst_query_new_selectable:
+ *
+ * Constructs a new query object for querying the stream selection capability.
+ *
+ * Free-function: gst_query_unref()
+ *
+ * Returns: (transfer full): a new #GstQuery
+ *
+ * Since: 1.22
+ */
+GstQuery *
+gst_query_new_selectable (void)
+{
+  GstQuery *query;
+  GstStructure *structure;
+
+  structure = gst_structure_new_id_empty (GST_QUARK (QUERY_SELECTABLE));
+  query = gst_query_new_custom (GST_QUERY_SELECTABLE, structure);
+
+  return query;
+}
+
+/**
+ * gst_query_set_selectable:
+ * @query: a GST_QUERY_SELECTABLE type #GstQuery
+ * @selectable: Whether the element can handle stream selection.
+ *
+ * Set the results of a selectable query. If the element answering the query can
+ * handle stream selection, @selectable should be set to %TRUE.
+ *
+ * Since: 1.22
+ */
+void
+gst_query_set_selectable (GstQuery * query, gboolean selectable)
+{
+  GstStructure *s;
+
+  g_return_if_fail (GST_QUERY_TYPE (query) == GST_QUERY_SELECTABLE);
+
+  s = GST_QUERY_STRUCTURE (query);
+
+  gst_structure_id_set (s,
+      GST_QUARK (SELECTABLE), G_TYPE_BOOLEAN, selectable, NULL);
+}
+
+/**
+ * gst_query_parse_selectable:
+ * @query: a GST_QUERY_SELECTABLE type #GstQuery
+ * @selectable: (out) (optional): The resulting stream selection capability
+ *
+ * Get the results of a selectable query. See also gst_query_set_selectable().
+ *
+ * Since: 1.22
+ */
+void
+gst_query_parse_selectable (GstQuery * query, gboolean * selectable)
+{
+  GstStructure *structure;
+
+  g_return_if_fail (GST_QUERY_TYPE (query) == GST_QUERY_SELECTABLE);
+
+  structure = GST_QUERY_STRUCTURE (query);
+
+  if (selectable) {
+    const GValue *value =
+        gst_structure_id_get_value (structure, GST_QUARK (SELECTABLE));
+    if (value)
+      *selectable = g_value_get_boolean (value);
+    else
+      *selectable = FALSE;
   }
 }
 
@@ -2794,7 +2867,7 @@ gst_query_copy (const GstQuery * q)
  * gst_query_replace: (skip)
  * @old_query: (inout) (transfer full) (nullable): pointer to a pointer to a
  *     #GstQuery to be replaced.
- * @new_query: (allow-none) (transfer none): pointer to a #GstQuery that will
+ * @new_query: (nullable) (transfer none): pointer to a #GstQuery that will
  *     replace the query pointed to by @old_query.
  *
  * Modifies a pointer to a #GstQuery to point to a different #GstQuery. The
@@ -2817,7 +2890,7 @@ gst_query_replace (GstQuery ** old_query, GstQuery * new_query)
  * gst_query_take:
  * @old_query: (inout) (transfer full) (nullable): pointer to a
  *     pointer to a #GstQuery to be stolen.
- * @new_query: (allow-none) (transfer full): pointer to a #GstQuery that will
+ * @new_query: (nullable) (transfer full): pointer to a #GstQuery that will
  *     replace the query pointed to by @old_query.
  *
  * Modifies a pointer to a #GstQuery to point to a different #GstQuery. This

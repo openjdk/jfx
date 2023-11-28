@@ -52,7 +52,7 @@
 #include "gstalsasink.h"
 
 #include <gst/audio/gstaudioiec61937.h>
-#include <gst/gst-i18n-plugin.h>
+#include <glib/gi18n-lib.h>
 
 #ifndef ESTRPIPE
 #define ESTRPIPE EPIPE
@@ -1181,6 +1181,7 @@ pause_error:
     GST_ERROR_OBJECT (alsa, "alsa-pause: pcm pause error: %s",
         snd_strerror (err));
     GST_ALSA_SINK_UNLOCK (asink);
+    gst_alsasink_stop (asink);
     return;
   }
 }
