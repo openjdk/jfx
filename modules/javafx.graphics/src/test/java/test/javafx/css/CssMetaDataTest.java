@@ -1330,7 +1330,7 @@ public class CssMetaDataTest {
     }
 
     @Test
-    public void testInitStyleables() {
+    public void testCombine() {
         CssMetaData<? extends Styleable, ?> css0 = get(Node.getClassCssMetaData(), "-fx-opacity");
         CssMetaData<? extends Styleable, ?> css1 = get(Node.getClassCssMetaData(), "-fx-rotate");
         CssMetaData<? extends Styleable, ?> css2 = get(Node.getClassCssMetaData(), "-fx-focus-traversable");
@@ -1338,14 +1338,14 @@ public class CssMetaDataTest {
 
         List<CssMetaData<? extends Styleable, ?>> list = List.of(css0, css1);
 
-        List<CssMetaData<? extends Styleable, ?>> rv = CssMetaData.initStyleables(list, css2, css3);
+        List<CssMetaData<? extends Styleable, ?>> rv = CssMetaData.combine(list, css2, css3);
         assertEquals(4, rv.size());
         assertSame(css0, rv.get(0));
         assertSame(css1, rv.get(1));
         assertSame(css2, rv.get(2));
         assertSame(css3, rv.get(3));
 
-        rv = CssMetaData.initStyleables(List.of(), css0, css1);
+        rv = CssMetaData.combine(List.of(), css0, css1);
         assertEquals(2, rv.size());
         assertSame(css0, rv.get(0));
         assertSame(css1, rv.get(1));

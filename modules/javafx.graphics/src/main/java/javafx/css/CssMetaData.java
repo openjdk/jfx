@@ -338,7 +338,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
      *
      * @since 22
      */
-    public static List<CssMetaData<? extends Styleable, ?>> initStyleables(
+    public static List<CssMetaData<? extends Styleable, ?>> combine(
         List<CssMetaData<? extends Styleable, ?>> list,
         CssMetaData<? extends Styleable, ?>... items)
     {
