@@ -115,7 +115,7 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
 
     bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
-    if (filtered && im_ctx.send_keypress) {
+    if (!filtered || (filtered && im_ctx.send_keypress)) {
         process_key(&event->key);
         im_ctx.send_keypress = false;
     }
