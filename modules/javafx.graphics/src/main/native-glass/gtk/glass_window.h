@@ -31,7 +31,6 @@
 #include <jni.h>
 #include <set>
 #include <vector>
-#include <queue>
 
 #include "glass_view.h"
 
