@@ -945,8 +945,10 @@ GdkPixbuf* DragView::get_drag_image(GtkWidget *widget, gboolean* is_raw_image, g
                             g_free(origdata);
                         }
 
-                        pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8,
-                                                          w, h, w * 4, pixbufDestroyNotifyFunc, NULL);
+                        if (data) {
+                            pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8,
+                                                              w, h, w * 4, pixbufDestroyNotifyFunc, NULL);
+                        }
                     }
                 }
             }
