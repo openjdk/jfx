@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,13 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.Utils;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
-import com.sun.javafx.scene.control.behavior.ButtonBehavior;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -54,9 +53,6 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
 
     private KeyCodeCombination defaultAcceleratorKeyCodeCombination;
     private KeyCodeCombination cancelAcceleratorKeyCodeCombination;
-    private final BehaviorBase<Button> behavior;
-
-
 
     /* *************************************************************************
      *                                                                         *
@@ -116,10 +112,6 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
      */
     public ButtonSkin(Button control) {
         super(control);
-
-        // install default input map for the Button control
-        behavior = new ButtonBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
 
         // Register listeners
         registerChangeListener(control.defaultButtonProperty(), o -> setDefaultButton(getSkinnable().isDefaultButton()));
@@ -184,10 +176,6 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
         }
         getSkinnable().sceneProperty().removeListener(weakSceneChangeListener);
         super.dispose();
-
-        if (behavior != null) {
-            behavior.dispose();
-        }
     }
 
 

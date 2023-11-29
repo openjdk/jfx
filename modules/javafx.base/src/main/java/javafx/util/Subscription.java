@@ -99,6 +99,10 @@ public interface Subscription {
     default Subscription and(Subscription other) {
         Objects.requireNonNull(other, "other cannot be null");
 
+        if (this == EMPTY) {
+            return other;
+        }
+
         return () -> {
             unsubscribe();
             other.unsubscribe();

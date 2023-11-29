@@ -30,20 +30,20 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Before;
 import org.junit.Test;
 
-import javafx.animation.Animation.Status;
+import com.sun.javafx.tk.Toolkit;
+
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Spinner;
-import javafx.scene.control.SpinnerShim;
 import javafx.scene.control.skin.SpinnerSkin;
-import javafx.scene.control.skin.SpinnerSkinShim;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
-
-import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
-import com.sun.javafx.scene.control.behavior.SpinnerBehaviorShim;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  * Tests for SpinnerSkin
@@ -170,13 +170,51 @@ public class SpinnerSkinTest {
         stage.setScene(scene);
         stage.show();
 
-        SpinnerBehavior behavior = SpinnerSkinShim.getSpinnerBehavior((SpinnerSkin)spinner.getSkin());
-        behavior.startSpinning(true);
+        Node button = spinner.lookup(".increment-arrow-button");
 
-        assertEquals(Status.RUNNING, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
+        assertEquals(0, spinner.getValue());
+
+        button.fireEvent(new MouseEvent(
+            MouseEvent.MOUSE_PRESSED,
+            scene.getWindow().getX() + scene.getX() + button.getLayoutX() + button.getLayoutBounds().getWidth() / 2,
+            scene.getWindow().getY() + scene.getY() + button.getLayoutY() + button.getLayoutBounds().getHeight() / 2,
+            0,
+            0,
+            MouseButton.PRIMARY, 1, true, true, true, true, true, true, true, true, true, true, null
+        ));
+
+        /*
+         * Check if spinner started spinning:
+         */
+
+        assertEquals(1, spinner.getValue());
+
+        ((StubToolkit)Toolkit.getToolkit()).setAnimationTime(350);
+
+        assertEquals(2, spinner.getValue());
+
+        ((StubToolkit)Toolkit.getToolkit()).setAnimationTime(400);
+
+        assertEquals(3, spinner.getValue());
+
+        /*
+         * Check if spinner stops spinning when removed from scene:
+         */
+
         root.getChildren().clear();
-        assertEquals(Status.STOPPED, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
+
+        ((StubToolkit)Toolkit.getToolkit()).setAnimationTime(1000);
+
+        assertEquals(3, spinner.getValue());
+
+        /*
+         * Check if spinner stays stopped when re-added:
+         */
+
         root.getChildren().setAll(spinner);
-        assertEquals(Status.STOPPED, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
+
+        ((StubToolkit)Toolkit.getToolkit()).setAnimationTime(2000);
+
+        assertEquals(3, spinner.getValue());
     }
 }

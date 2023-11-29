@@ -26,6 +26,8 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import javafx.beans.property.StringProperty;
+import javafx.scene.control.behavior.Behavior;
+import javafx.scene.control.behavior.SpinnerBehavior;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
@@ -44,6 +46,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
+import javafx.util.Subscription;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -169,6 +172,9 @@ public class Spinner<T> extends Control {
                 commitValue();
             }
         });
+
+        // Installs the default behavior.
+        setBehavior(SpinnerBehavior.getInstance());
     }
 
     /**
@@ -367,7 +373,24 @@ public class Spinner<T> extends Control {
         setValueFactory(valueFactory);
     }
 
+    /**
+     * Tracks the things a behavior installed so it can be fully cleaned up.
+     */
+    private Subscription behaviorSubscription = Subscription.EMPTY;
 
+    /**
+     * Install a new {@link Behavior} which replaces the current behavior.
+     *
+     * @param behavior a {@link Behavior}, cannot be {@code null}
+     */
+    public void setBehavior(Behavior<Spinner<?>> behavior) {
+        behaviorSubscription.unsubscribe();
+
+        StandardBehaviorContext<Spinner<?>> context = new StandardBehaviorContext<>(this);
+
+        behavior.install(context);
+        behaviorSubscription = context.getSubscription();
+    }
 
     /* *************************************************************************
      *                                                                         *

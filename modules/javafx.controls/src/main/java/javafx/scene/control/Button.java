@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,14 @@ package javafx.scene.control;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-
-import javafx.css.PseudoClass;
+import javafx.scene.control.behavior.Behavior;
+import javafx.scene.control.behavior.ButtonBehavior;
 import javafx.scene.control.skin.ButtonSkin;
+import javafx.util.Subscription;
 
 /**
  * <p>A simple button control.  The button control can contain
@@ -115,6 +117,28 @@ public class Button extends ButtonBase {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
+
+        // Installs the default behavior.
+        setBehavior(ButtonBehavior.getInstance());
+    }
+
+    /**
+     * Tracks the things a behavior installed so it can be fully cleaned up.
+     */
+    private Subscription behaviorSubscription = Subscription.EMPTY;
+
+    /**
+     * Install a new {@link Behavior} which replaces the current behavior.
+     *
+     * @param behavior a {@link Behavior}, cannot be {@code null}
+     */
+    public void setBehavior(Behavior<Button> behavior) {
+        behaviorSubscription.unsubscribe();
+
+        StandardBehaviorContext<Button> context = new StandardBehaviorContext<>(this);
+
+        behavior.install(context);
+        behaviorSubscription = context.getSubscription();
     }
 
     /* *************************************************************************

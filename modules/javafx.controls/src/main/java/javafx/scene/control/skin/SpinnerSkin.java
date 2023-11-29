@@ -44,7 +44,6 @@ import javafx.scene.layout.StackPane;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.control.ListenerHelper;
-import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
@@ -81,9 +80,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     private static final int SPLIT_ARROWS_HORIZONTAL    = 5;
 
     private int layoutMode = 0;
-    /* Package-private for testing purposes */
-    final SpinnerBehavior behavior;
-
 
     /* *************************************************************************
      *                                                                         *
@@ -100,9 +96,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
      */
     public SpinnerSkin(Spinner<T> control) {
         super(control);
-
-        // install default input map for the Button control
-        behavior = new SpinnerBehavior<>(control);
 
         textField = control.getEditor();
 
@@ -125,7 +118,9 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             @Override
             public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
                 switch (action) {
-                    case FIRE: getSkinnable().increment(); break;
+                    case FIRE:
+                        fireEvent(AccessibleActionEvent.triggered(action));
+                        break;
                     default: super.executeAccessibleAction(action, parameters);
                 }
             }
@@ -134,11 +129,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         incrementArrowButton.setFocusTraversable(false);
         incrementArrowButton.getStyleClass().setAll("increment-arrow-button");
         incrementArrowButton.getChildren().add(incrementArrow);
-        incrementArrowButton.setOnMousePressed(e -> {
-            getSkinnable().requestFocus();
-            behavior.startSpinning(true);
-        });
-        incrementArrowButton.setOnMouseReleased(e -> behavior.stopSpinning());
 
         decrementArrow = new Region();
         decrementArrow.setFocusTraversable(false);
@@ -151,7 +141,9 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             @Override
             public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
                 switch (action) {
-                    case FIRE: getSkinnable().decrement(); break;
+                    case FIRE:
+                        fireEvent(AccessibleActionEvent.triggered(action));
+                        break;
                     default: super.executeAccessibleAction(action, parameters);
                 }
             }
@@ -160,11 +152,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         decrementArrowButton.setFocusTraversable(false);
         decrementArrowButton.getStyleClass().setAll("decrement-arrow-button");
         decrementArrowButton.getChildren().add(decrementArrow);
-        decrementArrowButton.setOnMousePressed(e -> {
-            getSkinnable().requestFocus();
-            behavior.startSpinning(false);
-        });
-        decrementArrowButton.setOnMouseReleased(e -> behavior.stopSpinning());
 
         getChildren().addAll(incrementArrowButton, decrementArrowButton);
 
@@ -250,16 +237,19 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
                 return null;
             }
         }));
-
-        lh.addChangeListener(control.sceneProperty(), (op) -> {
-            // Stop spinning when sceneProperty is modified
-            behavior.stopSpinning();
-        });
     }
 
     private boolean isIncDecKeyEvent(KeyEvent ke) {
         final KeyCode kc = ke.getCode();
-        return (kc == KeyCode.UP || kc == KeyCode.DOWN) && behavior.arrowsAreVertical();
+        return (kc == KeyCode.UP || kc == KeyCode.DOWN) && arrowsAreVertical(getSkinnable());
+    }
+
+    private static boolean arrowsAreVertical(Spinner<?> control) {
+        List<String> styleClasses = control.getStyleClass();
+
+        return !(styleClasses.contains(Spinner.STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL)
+                || styleClasses.contains(Spinner.STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL)
+                || styleClasses.contains(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL));
     }
 
     /* *************************************************************************
@@ -283,10 +273,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         }
 
         getChildren().removeAll(textField, incrementArrowButton, decrementArrowButton);
-
-        if (behavior != null) {
-            behavior.dispose();
-        }
 
         super.dispose();
     }

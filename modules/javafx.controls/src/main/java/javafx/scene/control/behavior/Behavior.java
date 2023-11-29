@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,16 +23,17 @@
  * questions.
  */
 
-package javafx.scene.control.skin;
+package javafx.scene.control.behavior;
 
-import javafx.scene.control.skin.SpinnerSkin;
+import javafx.scene.control.Control;
 
-import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
+public interface Behavior<C extends Control> {
 
-public class SpinnerSkinShim {
-
-    public static SpinnerBehavior getSpinnerBehavior(SpinnerSkin spinnerSkin) {
-        return spinnerSkin.behavior;
-    }
+    /**
+     * Installs this behavior. A behavior can be installed on multiple controls.
+     *
+     * @param context a control provided context, never {@code null}
+     */
+    void install(BehaviorContext<C> context);
 
 }
