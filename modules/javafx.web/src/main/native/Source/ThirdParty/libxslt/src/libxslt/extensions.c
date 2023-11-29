@@ -47,9 +47,9 @@
 #endif
 
 /************************************************************************
- *									*
- *			Private Types and Globals			*
- *									*
+ *                                                                      *
+ *                      Private Types and Globals                       *
+ *                                                                      *
  ************************************************************************/
 
 typedef struct _xsltExtDef xsltExtDef;
@@ -92,9 +92,9 @@ static xmlHashTablePtr xsltModuleHash = NULL;
 static xmlMutexPtr xsltExtMutex = NULL;
 
 /************************************************************************
- *									*
- *			Type functions					*
- *									*
+ *                                                                      *
+ *                      Type functions                                  *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -396,13 +396,13 @@ xsltExtModuleRegisterDynamic(const xmlChar * URI)
 
     if (NULL == ext_directory) {
         ext_directory = BAD_CAST LIBXSLT_DEFAULT_PLUGINS_PATH();
-	if (NULL == ext_directory)
-	  return (-1);
+        if (NULL == ext_directory)
+          return (-1);
     }
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
     else
       xsltGenericDebug(xsltGenericDebugContext,
-		       "LIBXSLT_PLUGINS_PATH is %s\n", ext_directory);
+                       "LIBXSLT_PLUGINS_PATH is %s\n", ext_directory);
 #endif
 
     /* build the module filename, and confirm the module exists */
@@ -418,7 +418,7 @@ xsltExtModuleRegisterDynamic(const xmlChar * URI)
     if (1 != xmlCheckFilename(module_filename)) {
 
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
-	xsltGenericDebug(xsltGenericDebugContext,
+        xsltGenericDebug(xsltGenericDebugContext,
                      "xmlCheckFilename failed for plugin: %s\n", module_filename);
 #endif
 
@@ -431,7 +431,7 @@ xsltExtModuleRegisterDynamic(const xmlChar * URI)
     if (NULL == m) {
 
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
-	xsltGenericDebug(xsltGenericDebugContext,
+        xsltGenericDebug(xsltGenericDebugContext,
                      "xmlModuleOpen failed for plugin: %s\n", module_filename);
 #endif
 
@@ -448,10 +448,10 @@ xsltExtModuleRegisterDynamic(const xmlChar * URI)
     regfunc = vregfunc;
     if (0 == rc) {
         /*
-	 * Call the module's init function.  Note that this function
-	 * calls xsltRegisterExtModuleFull which will add the module
-	 * to xsltExtensionsHash (together with it's entry points).
-	 */
+         * Call the module's init function.  Note that this function
+         * calls xsltRegisterExtModuleFull which will add the module
+         * to xsltExtensionsHash (together with it's entry points).
+         */
         (*regfunc) ();
 
         /* register this module in our hash */
@@ -461,7 +461,7 @@ xsltExtModuleRegisterDynamic(const xmlChar * URI)
     } else {
 
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
-	xsltGenericDebug(xsltGenericDebugContext,
+        xsltGenericDebug(xsltGenericDebugContext,
                      "xmlModuleSymbol failed for plugin: %s, regfunc: %s\n",
                      module_filename, regfunc_name);
 #endif
@@ -483,9 +483,9 @@ xsltExtModuleRegisterDynamic(const xmlChar * URI ATTRIBUTE_UNUSED)
 #endif
 
 /************************************************************************
- *									*
- *		The stylesheet extension prefixes handling		*
- *									*
+ *                                                                      *
+ *              The stylesheet extension prefixes handling              *
+ *                                                                      *
  ************************************************************************/
 
 
@@ -530,7 +530,7 @@ xsltRegisterExtPrefix(xsltStylesheetPtr style,
 
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
     xsltGenericDebug(xsltGenericDebugContext,
-	"Registering extension namespace '%s'.\n", URI);
+        "Registering extension namespace '%s'.\n", URI);
 #endif
     def = (xsltExtDefPtr) style->nsDefs;
 #ifdef XSLT_REFACTORED
@@ -587,9 +587,9 @@ xsltRegisterExtPrefix(xsltStylesheetPtr style,
 }
 
 /************************************************************************
- *									*
- *		The extensions modules interfaces			*
- *									*
+ *                                                                      *
+ *              The extensions modules interfaces                       *
+ *                                                                      *
  ************************************************************************/
 
 /**
@@ -681,21 +681,21 @@ xsltFreeCtxtExts(xsltTransformContextPtr ctxt)
  */
 static xsltExtDataPtr
 xsltStyleInitializeStylesheetModule(xsltStylesheetPtr style,
-				     const xmlChar * URI)
+                                     const xmlChar * URI)
 {
     xsltExtDataPtr dataContainer;
     void *userData = NULL;
     xsltExtModulePtr module;
 
     if ((style == NULL) || (URI == NULL))
-	return(NULL);
+        return(NULL);
 
     if (xsltExtensionsHash == NULL) {
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
-	xsltGenericDebug(xsltGenericDebugContext,
-	    "Not registered extension module: %s\n", URI);
+        xsltGenericDebug(xsltGenericDebugContext,
+            "Not registered extension module: %s\n", URI);
 #endif
-	return(NULL);
+        return(NULL);
     }
 
     xmlMutexLock(xsltExtMutex);
@@ -706,57 +706,57 @@ xsltStyleInitializeStylesheetModule(xsltStylesheetPtr style,
 
     if (module == NULL) {
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
-	xsltGenericDebug(xsltGenericDebugContext,
-	    "Not registered extension module: %s\n", URI);
+        xsltGenericDebug(xsltGenericDebugContext,
+            "Not registered extension module: %s\n", URI);
 #endif
-	return (NULL);
+        return (NULL);
     }
     /*
     * The specified module was registered so initialize it.
     */
     if (style->extInfos == NULL) {
-	style->extInfos = xmlHashCreate(10);
-	if (style->extInfos == NULL)
-	    return (NULL);
+        style->extInfos = xmlHashCreate(10);
+        if (style->extInfos == NULL)
+            return (NULL);
     }
     /*
     * Fire the initialization callback if available.
     */
     if (module->styleInitFunc == NULL) {
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
-	xsltGenericDebug(xsltGenericDebugContext,
-	    "Initializing module with *no* callback: %s\n", URI);
+        xsltGenericDebug(xsltGenericDebugContext,
+            "Initializing module with *no* callback: %s\n", URI);
 #endif
     } else {
 #ifdef WITH_XSLT_DEBUG_EXTENSIONS
-	xsltGenericDebug(xsltGenericDebugContext,
-	    "Initializing module with callback: %s\n", URI);
+        xsltGenericDebug(xsltGenericDebugContext,
+            "Initializing module with callback: %s\n", URI);
 #endif
-	/*
-	* Fire the initialization callback.
-	*/
-	userData = module->styleInitFunc(style, URI);
+        /*
+        * Fire the initialization callback.
+        */
+        userData = module->styleInitFunc(style, URI);
     }
     /*
     * Store the user-data in the context of the given stylesheet.
     */
     dataContainer = xsltNewExtData(module, userData);
     if (dataContainer == NULL) {
-	if (module->styleShutdownFunc)
-	    module->styleShutdownFunc(style, URI, userData);
-	return (NULL);
+        if (module->styleShutdownFunc)
+            module->styleShutdownFunc(style, URI, userData);
+        return (NULL);
     }
 
     if (xmlHashAddEntry(style->extInfos, URI,
-	(void *) dataContainer) < 0)
+        (void *) dataContainer) < 0)
     {
-	xsltTransformError(NULL, style, NULL,
-	    "Failed to register module '%s'.\n", URI);
-	style->errors++;
-	if (module->styleShutdownFunc)
-	    module->styleShutdownFunc(style, URI, userData);
-	xsltFreeExtData(dataContainer);
-	return (NULL);
+        xsltTransformError(NULL, style, NULL,
+            "Failed to register module '%s'.\n", URI);
+        style->errors++;
+        if (module->styleShutdownFunc)
+            module->styleShutdownFunc(style, URI, userData);
+        xsltFreeExtData(dataContainer);
+        return (NULL);
     }
 
     return(dataContainer);
@@ -782,8 +782,8 @@ xsltStyleGetExtData(xsltStylesheetPtr style, const xmlChar * URI)
     xsltStylesheetPtr tmpStyle;
 
     if ((style == NULL) || (URI == NULL) ||
-	(xsltExtensionsHash == NULL))
-	return (NULL);
+        (xsltExtensionsHash == NULL))
+        return (NULL);
 
 
 #ifdef XSLT_REFACTORED
@@ -793,18 +793,18 @@ xsltStyleGetExtData(xsltStylesheetPtr style, const xmlChar * URI)
     */
     tmpStyle = style;
     while (tmpStyle->parent != NULL)
-	tmpStyle = tmpStyle->parent;
+        tmpStyle = tmpStyle->parent;
     if (tmpStyle->extInfos != NULL) {
-	dataContainer =
-	    (xsltExtDataPtr) xmlHashLookup(tmpStyle->extInfos, URI);
-	if (dataContainer != NULL) {
-	    /*
-	    * The module was already initialized in the context
-	    * of this stylesheet; just return the user-data that
-	    * comes with it.
-	    */
-	    return(dataContainer->extData);
-	}
+        dataContainer =
+            (xsltExtDataPtr) xmlHashLookup(tmpStyle->extInfos, URI);
+        if (dataContainer != NULL) {
+            /*
+            * The module was already initialized in the context
+            * of this stylesheet; just return the user-data that
+            * comes with it.
+            */
+            return(dataContainer->extData);
+        }
     }
 #else
     /*
@@ -823,7 +823,7 @@ xsltStyleGetExtData(xsltStylesheetPtr style, const xmlChar * URI)
     dataContainer =
         xsltStyleInitializeStylesheetModule(tmpStyle, URI);
     if (dataContainer != NULL)
-	return (dataContainer->extData);
+        return (dataContainer->extData);
     return(NULL);
 }
 
@@ -840,29 +840,29 @@ xsltStyleGetExtData(xsltStylesheetPtr style, const xmlChar * URI)
  */
 void *
 xsltStyleStylesheetLevelGetExtData(xsltStylesheetPtr style,
-				   const xmlChar * URI)
+                                   const xmlChar * URI)
 {
     xsltExtDataPtr dataContainer = NULL;
 
     if ((style == NULL) || (URI == NULL) ||
-	(xsltExtensionsHash == NULL))
-	return (NULL);
+        (xsltExtensionsHash == NULL))
+        return (NULL);
 
     if (style->extInfos != NULL) {
-	dataContainer = (xsltExtDataPtr) xmlHashLookup(style->extInfos, URI);
-	/*
-	* The module was already initialized in the context
-	* of this stylesheet; just return the user-data that
-	* comes with it.
-	*/
-	if (dataContainer)
-	    return(dataContainer->extData);
+        dataContainer = (xsltExtDataPtr) xmlHashLookup(style->extInfos, URI);
+        /*
+        * The module was already initialized in the context
+        * of this stylesheet; just return the user-data that
+        * comes with it.
+        */
+        if (dataContainer)
+            return(dataContainer->extData);
     }
 
     dataContainer =
         xsltStyleInitializeStylesheetModule(style, URI);
     if (dataContainer != NULL)
-	return (dataContainer->extData);
+        return (dataContainer->extData);
     return(NULL);
 }
 #endif
@@ -1182,24 +1182,24 @@ xsltCheckExtPrefix(xsltStylesheetPtr style, const xmlChar * URI)
 {
 #ifdef XSLT_REFACTORED
     if ((style == NULL) || (style->compCtxt == NULL) ||
-	(XSLT_CCTXT(style)->inode == NULL) ||
-	(XSLT_CCTXT(style)->inode->extElemNs == NULL))
+        (XSLT_CCTXT(style)->inode == NULL) ||
+        (XSLT_CCTXT(style)->inode->extElemNs == NULL))
         return (0);
     /*
     * Lookup the extension namespaces registered
     * at the current node in the stylesheet's tree.
     */
     if (XSLT_CCTXT(style)->inode->extElemNs != NULL) {
-	int i;
-	xsltPointerListPtr list = XSLT_CCTXT(style)->inode->extElemNs;
+        int i;
+        xsltPointerListPtr list = XSLT_CCTXT(style)->inode->extElemNs;
 
-	for (i = 0; i < list->number; i++) {
-	    if (xmlStrEqual((const xmlChar *) list->items[i],
-		URI))
-	    {
-		return(1);
-	    }
-	}
+        for (i = 0; i < list->number; i++) {
+            if (xmlStrEqual((const xmlChar *) list->items[i],
+                URI))
+            {
+                return(1);
+            }
+        }
     }
 #else
     xsltExtDefPtr cur;
@@ -1210,12 +1210,12 @@ xsltCheckExtPrefix(xsltStylesheetPtr style, const xmlChar * URI)
         URI = BAD_CAST "#default";
     cur = (xsltExtDefPtr) style->nsDefs;
     while (cur != NULL) {
-	/*
-	* NOTE: This was change to work on namespace names rather
-	* than namespace prefixes. This fixes bug #339583.
-	* TODO: Consider renaming the field "prefix" of xsltExtDef
-	*  to "href".
-	*/
+        /*
+        * NOTE: This was change to work on namespace names rather
+        * than namespace prefixes. This fixes bug #339583.
+        * TODO: Consider renaming the field "prefix" of xsltExtDef
+        *  to "href".
+        */
         if (xmlStrEqual(URI, cur->prefix))
             return (1);
         cur = cur->next;
@@ -1601,30 +1601,30 @@ xsltPreComputeExtModuleElement(xsltStylesheetPtr style, xmlNodePtr inst)
         return (NULL);
 
     if (ext->precomp != NULL) {
-	/*
-	* REVISIT TODO: Check if the text below is correct.
-	* This will return a xsltElemPreComp structure or NULL.
-	* 1) If the the author of the extension needs a
-	*  custom structure to hold the specific values of
-	*  this extension, he will derive a structure based on
-	*  xsltElemPreComp; thus we obviously *cannot* refactor
-	*  the xsltElemPreComp structure, since all already derived
-	*  user-defined strucures will break.
-	*  Example: For the extension xsl:document,
-	*   in xsltDocumentComp() (preproc.c), the structure
-	*   xsltStyleItemDocument is allocated, filled with
-	*   specific values and returned.
-	* 2) If the author needs no values to be stored in
-	*  this structure, then he'll return NULL;
-	*/
+        /*
+        * REVISIT TODO: Check if the text below is correct.
+        * This will return a xsltElemPreComp structure or NULL.
+        * 1) If the the author of the extension needs a
+        *  custom structure to hold the specific values of
+        *  this extension, he will derive a structure based on
+        *  xsltElemPreComp; thus we obviously *cannot* refactor
+        *  the xsltElemPreComp structure, since all already derived
+        *  user-defined strucures will break.
+        *  Example: For the extension xsl:document,
+        *   in xsltDocumentComp() (preproc.c), the structure
+        *   xsltStyleItemDocument is allocated, filled with
+        *   specific values and returned.
+        * 2) If the author needs no values to be stored in
+        *  this structure, then he'll return NULL;
+        */
         comp = ext->precomp(style, inst, ext->transform);
     }
     if (comp == NULL) {
-	/*
-	* Default creation of a xsltElemPreComp structure, if
-	* the author of this extension did not create a custom
-	* structure.
-	*/
+        /*
+        * Default creation of a xsltElemPreComp structure, if
+        * the author of this extension did not create a custom
+        * structure.
+        */
         comp = xsltNewElemPreComp(style, inst, ext->transform);
     }
 
@@ -1740,7 +1740,7 @@ xsltExtModuleElementLookup(const xmlChar * name, const xmlChar * URI)
             xmlMutexLock(xsltExtMutex);
 
             ext = (xsltExtElementPtr)
-	          xmlHashLookup2(xsltElementsHash, name, URI);
+                  xmlHashLookup2(xsltElementsHash, name, URI);
 
             xmlMutexUnlock(xsltExtMutex);
         }
@@ -1780,7 +1780,7 @@ xsltExtModuleElementPreComputeLookup(const xmlChar * name,
             xmlMutexLock(xsltExtMutex);
 
             ext = (xsltExtElementPtr)
-	          xmlHashLookup2(xsltElementsHash, name, URI);
+                  xmlHashLookup2(xsltElementsHash, name, URI);
 
             xmlMutexUnlock(xsltExtMutex);
         }
@@ -1975,9 +1975,9 @@ xsltGetExtInfo(xsltStylesheetPtr style, const xmlChar * URI)
 }
 
 /************************************************************************
- *									*
- *		Test of the extension module API			*
- *									*
+ *                                                                      *
+ *              Test of the extension module API                        *
+ *                                                                      *
  ************************************************************************/
 
 static xmlChar *testData = NULL;
