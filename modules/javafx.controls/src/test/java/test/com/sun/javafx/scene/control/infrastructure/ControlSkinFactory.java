@@ -248,8 +248,10 @@ public class ControlSkinFactory {
             ProgressBar.class,
             ProgressIndicator.class,
             Separator.class,
-            SplitPane.class
-            );
+            SplitPane.class,
+            Button.class,  // has public behavior not created by Skin
+            Spinner.class   // has public behavior not created by Skin
+    );
 
 ///---------------- misc
 

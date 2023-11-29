@@ -43,6 +43,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
@@ -162,6 +163,8 @@ public class SpinnerSkinTest {
     @Test
     public void testSpinnerIncrementOnRemovingFromScene() {
         spinner = new Spinner<>(0, 1000, 0);
+        spinner.setInitialDelay(Duration.millis(300));
+        spinner.setRepeatDelay(Duration.millis(60));
         spinner.setSkin(new SpinnerSkin<>(spinner));
 
         HBox root = new HBox(spinner);
@@ -171,6 +174,8 @@ public class SpinnerSkinTest {
         stage.show();
 
         Node button = spinner.lookup(".increment-arrow-button");
+
+        ((StubToolkit)Toolkit.getToolkit()).setAnimationTime(0);
 
         assertEquals(0, spinner.getValue());
 
