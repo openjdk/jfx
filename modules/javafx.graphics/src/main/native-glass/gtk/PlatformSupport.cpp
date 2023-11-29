@@ -53,7 +53,7 @@ namespace
 }
 
 PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
-    : env(env), application(env->NewGlobalRef(application)) {}
+    : env(env), application(env->NewGlobalRef(application)), preferences(NULL) {}
 
 PlatformSupport::~PlatformSupport() {
     env->DeleteGlobalRef(application);
