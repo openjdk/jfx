@@ -907,7 +907,6 @@ public class ImageView extends Node {
             IMAGE,
             PRESERVE_RATIO,
             SMOOTH
-            // TODO VIEWPORT (Rectangle2D how?)
         );
     }
 
