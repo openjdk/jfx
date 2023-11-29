@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1329,25 +1329,4 @@ public class CssMetaDataTest {
                 };
     }
 
-    @Test
-    public void testInitStyleables() {
-        CssMetaData<? extends Styleable, ?> css0 = get(Node.getClassCssMetaData(), "-fx-opacity");
-        CssMetaData<? extends Styleable, ?> css1 = get(Node.getClassCssMetaData(), "-fx-rotate");
-        CssMetaData<? extends Styleable, ?> css2 = get(Node.getClassCssMetaData(), "-fx-focus-traversable");
-        CssMetaData<? extends Styleable, ?> css3 = get(Node.getClassCssMetaData(), "-fx-effect");
-
-        List<CssMetaData<? extends Styleable, ?>> list = List.of(css0, css1);
-
-        List<CssMetaData<? extends Styleable, ?>> rv = CssMetaData.initStyleables(list, css2, css3);
-        assertEquals(4, rv.size());
-        assertSame(css0, rv.get(0));
-        assertSame(css1, rv.get(1));
-        assertSame(css2, rv.get(2));
-        assertSame(css3, rv.get(3));
-
-        rv = CssMetaData.initStyleables(List.of(), css0, css1);
-        assertEquals(2, rv.size());
-        assertSame(css0, rv.get(0));
-        assertSame(css1, rv.get(1));
-    }
 }

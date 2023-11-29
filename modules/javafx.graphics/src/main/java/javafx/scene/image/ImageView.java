@@ -48,6 +48,7 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
+import com.sun.javafx.css.CssUtil;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -899,7 +900,7 @@ public class ImageView extends Node {
             }
         };
 
-        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES = CssMetaData.initStyleables(
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES = CssUtil.combine(
             Node.getClassCssMetaData(),
             FIT_HEIGHT,
             FIT_WIDTH,
