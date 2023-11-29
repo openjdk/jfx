@@ -600,6 +600,27 @@ NSString* GetStringForJavaKey(jchar jKeyCode) {
 
 }
 
+NSString* GetStringForMacKey(unsigned short keyCode, bool shifted)
+{
+    // Restrict to printable characters. UCKeyTranslate can produce
+    // odd results with keys like Home, Up Arrow, etc.
+    if (!macKeyCodeIsLayoutSensitive(keyCode)) return nil;
+
+    TISInputSourceRef keyboard = TISCopyCurrentKeyboardLayoutInputSource();
+    if (keyboard == NULL) return nil;
+
+    UInt32 modifiers = (shifted ? shiftKey : 0);
+    UniChar unicode[8];
+    UniCharCount length = queryKeyboard(keyboard, keyCode, modifiers, unicode, 8);
+    CFRelease(keyboard);
+
+    if (length == 1) {
+        return [NSString stringWithCharacters: &unicode[0] length: 1];
+    }
+
+    return nil;
+}
+
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _getKeyCodeForChar
