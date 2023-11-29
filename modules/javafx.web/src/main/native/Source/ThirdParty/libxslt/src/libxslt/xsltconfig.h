@@ -20,28 +20,28 @@ extern "C" {
  *
  * the version string like "1.2.3"
  */
-#define LIBXSLT_DOTTED_VERSION "1.1.35"
+#define LIBXSLT_DOTTED_VERSION "1.1.39"
 
 /**
  * LIBXSLT_VERSION:
  *
  * the version number: 1.2.3 value is 10203
  */
-#define LIBXSLT_VERSION 10135
+#define LIBXSLT_VERSION 10139
 
 /**
  * LIBXSLT_VERSION_STRING:
  *
  * the version number string, 1.2.3 value is "10203"
  */
-#define LIBXSLT_VERSION_STRING "10135"
+#define LIBXSLT_VERSION_STRING "10139"
 
 /**
  * LIBXSLT_VERSION_EXTRA:
  *
- * extra version information, used to show a CVS compilation
+ * extra version information, used to show a Git commit description
  */
-#define LIBXSLT_VERSION_EXTRA ""
+#define	LIBXSLT_VERSION_EXTRA ""
 
 /**
  * WITH_XSLT_DEBUG:
@@ -86,15 +86,14 @@ extern "C" {
 #define XSLT_NEED_TRIO
 #endif
 #ifdef __VMS
-#define HAVE_MATH_H 1
 #define HAVE_SYS_STAT_H 1
 #ifndef XSLT_NEED_TRIO
 #define XSLT_NEED_TRIO
 #endif
 #endif
 
-#ifdef  XSLT_NEED_TRIO
-#define TRIO_REPLACE_STDIO
+#ifdef	XSLT_NEED_TRIO
+#define	TRIO_REPLACE_STDIO
 #endif
 
 /**

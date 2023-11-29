@@ -27,11 +27,11 @@ extern "C" {
  * Registering macro, not general purpose at all but used in different modules.
  */
 
-#define XSLT_REGISTER_VARIABLE_LOOKUP(ctxt)                     \
-    xmlXPathRegisterVariableLookup((ctxt)->xpathCtxt,           \
-               xsltXPathVariableLookup, (void *)(ctxt));        \
-    xsltRegisterAllFunctions((ctxt)->xpathCtxt);                \
-    xsltRegisterAllElement(ctxt);                               \
+#define XSLT_REGISTER_VARIABLE_LOOKUP(ctxt)			\
+    xmlXPathRegisterVariableLookup((ctxt)->xpathCtxt,		\
+	       xsltXPathVariableLookup,	(void *)(ctxt));	\
+    xsltRegisterAllFunctions((ctxt)->xpathCtxt);		\
+    xsltRegisterAllElement(ctxt);				\
     (ctxt)->xpathCtxt->extra = ctxt
 
 /*
@@ -43,7 +43,7 @@ extern "C" {
  *
  * RVT is destroyed after the current instructions ends.
  */
-#define XSLT_RVT_LOCAL       ((void *)1)
+#define XSLT_RVT_LOCAL       1
 
 /**
  * XSLT_RVT_FUNC_RESULT:
@@ -52,64 +52,64 @@ extern "C" {
  * destroyed after exiting a template and will be reset to XSLT_RVT_LOCAL or
  * XSLT_RVT_VARIABLE in the template that receives the return value.
  */
-#define XSLT_RVT_FUNC_RESULT ((void *)2)
+#define XSLT_RVT_FUNC_RESULT 2
 
 /**
  * XSLT_RVT_GLOBAL:
  *
  * RVT is part of a global variable.
  */
-#define XSLT_RVT_GLOBAL      ((void *)3)
+#define XSLT_RVT_GLOBAL      3
 
 /*
  * Interfaces for the variable module.
  */
 
 XSLTPUBFUN int XSLTCALL
-                xsltEvalGlobalVariables         (xsltTransformContextPtr ctxt);
+		xsltEvalGlobalVariables		(xsltTransformContextPtr ctxt);
 XSLTPUBFUN int XSLTCALL
-                xsltEvalUserParams              (xsltTransformContextPtr ctxt,
-                                                 const char **params);
+		xsltEvalUserParams		(xsltTransformContextPtr ctxt,
+						 const char **params);
 XSLTPUBFUN int XSLTCALL
-                xsltQuoteUserParams             (xsltTransformContextPtr ctxt,
-                                                 const char **params);
+		xsltQuoteUserParams		(xsltTransformContextPtr ctxt,
+						 const char **params);
 XSLTPUBFUN int XSLTCALL
-                xsltEvalOneUserParam            (xsltTransformContextPtr ctxt,
-                                                 const xmlChar * name,
-                                                 const xmlChar * value);
+		xsltEvalOneUserParam		(xsltTransformContextPtr ctxt,
+						 const xmlChar * name,
+						 const xmlChar * value);
 XSLTPUBFUN int XSLTCALL
-                xsltQuoteOneUserParam           (xsltTransformContextPtr ctxt,
-                                                 const xmlChar * name,
-                                                 const xmlChar * value);
+		xsltQuoteOneUserParam		(xsltTransformContextPtr ctxt,
+						 const xmlChar * name,
+						 const xmlChar * value);
 
 XSLTPUBFUN void XSLTCALL
-                xsltParseGlobalVariable         (xsltStylesheetPtr style,
-                                                 xmlNodePtr cur);
+		xsltParseGlobalVariable		(xsltStylesheetPtr style,
+						 xmlNodePtr cur);
 XSLTPUBFUN void XSLTCALL
-                xsltParseGlobalParam            (xsltStylesheetPtr style,
-                                                 xmlNodePtr cur);
+		xsltParseGlobalParam		(xsltStylesheetPtr style,
+						 xmlNodePtr cur);
 XSLTPUBFUN void XSLTCALL
-                xsltParseStylesheetVariable     (xsltTransformContextPtr ctxt,
-                                                 xmlNodePtr cur);
+		xsltParseStylesheetVariable	(xsltTransformContextPtr ctxt,
+						 xmlNodePtr cur);
 XSLTPUBFUN void XSLTCALL
-                xsltParseStylesheetParam        (xsltTransformContextPtr ctxt,
-                                                 xmlNodePtr cur);
+		xsltParseStylesheetParam	(xsltTransformContextPtr ctxt,
+						 xmlNodePtr cur);
 XSLTPUBFUN xsltStackElemPtr XSLTCALL
-                xsltParseStylesheetCallerParam  (xsltTransformContextPtr ctxt,
-                                                 xmlNodePtr cur);
+		xsltParseStylesheetCallerParam	(xsltTransformContextPtr ctxt,
+						 xmlNodePtr cur);
 XSLTPUBFUN int XSLTCALL
-                xsltAddStackElemList            (xsltTransformContextPtr ctxt,
-                                                 xsltStackElemPtr elems);
+		xsltAddStackElemList		(xsltTransformContextPtr ctxt,
+						 xsltStackElemPtr elems);
 XSLTPUBFUN void XSLTCALL
-                xsltFreeGlobalVariables         (xsltTransformContextPtr ctxt);
+		xsltFreeGlobalVariables		(xsltTransformContextPtr ctxt);
 XSLTPUBFUN xmlXPathObjectPtr XSLTCALL
-                xsltVariableLookup              (xsltTransformContextPtr ctxt,
-                                                 const xmlChar *name,
-                                                 const xmlChar *ns_uri);
+		xsltVariableLookup		(xsltTransformContextPtr ctxt,
+						 const xmlChar *name,
+						 const xmlChar *ns_uri);
 XSLTPUBFUN xmlXPathObjectPtr XSLTCALL
-                xsltXPathVariableLookup         (void *ctxt,
-                                                 const xmlChar *name,
-                                                 const xmlChar *ns_uri);
+		xsltXPathVariableLookup		(void *ctxt,
+						 const xmlChar *name,
+						 const xmlChar *ns_uri);
 #ifdef __cplusplus
 }
 #endif
