@@ -33,7 +33,11 @@ import com.sun.javafx.UnmodifiableArrayList;
 /**
  * Utility methods for dealing with CSS.
  */
-public class CssUtil {
+public final class CssUtil {
+
+    private CssUtil() {
+    }
+
     /**
      * Utility method which combines {@code CssMetaData} items in one immutable list.
      * <p>
