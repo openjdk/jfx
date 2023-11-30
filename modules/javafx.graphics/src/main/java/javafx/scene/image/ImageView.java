@@ -416,8 +416,7 @@ public class ImageView extends Node {
      *
      * @defaultValue 0
      */
-    private DoubleProperty fitWidth;
-
+    private StyleableDoubleProperty fitWidth;
 
     public final void setFitWidth(double value) {
         fitWidthProperty().set(value);
@@ -468,8 +467,7 @@ public class ImageView extends Node {
      *
      * @defaultValue 0
      */
-    private DoubleProperty fitHeight;
-
+    private StyleableDoubleProperty fitHeight;
 
     public final void setFitHeight(double value) {
         fitHeightProperty().set(value);
@@ -537,8 +535,7 @@ public class ImageView extends Node {
      *
      * @defaultValue false
      */
-    private BooleanProperty preserveRatio;
-
+    private StyleableBooleanProperty preserveRatio;
 
     public final void setPreserveRatio(boolean value) {
         preserveRatioProperty().set(value);
@@ -593,8 +590,7 @@ public class ImageView extends Node {
      *
      * @defaultValue platform-dependent
      */
-    private BooleanProperty smooth;
-
+    private StyleableBooleanProperty smooth;
 
     public final void setSmooth(boolean value) {
         smoothProperty().set(value);

@@ -74,7 +74,7 @@ public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
 
     @Parameters
     public static Collection data() {
-        boolean smooth = Toolkit.getToolkit().getDefaultImageSmooth();
+        boolean smooth = ImageView.SMOOTH_DEFAULT;
 
         return Arrays.asList(new Object[] {
             config(TEST_IMAGE_VIEW, "image", null, "-fx-image", TEST_IMAGE_URL1, IMAGE_COMPARATOR),
