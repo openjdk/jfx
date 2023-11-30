@@ -32,7 +32,7 @@ using namespace Microsoft::WRL;
 using namespace ABI::Windows::UI;
 using namespace ABI::Windows::UI::ViewManagement;
 
-PlatformSupport::PlatformSupport(JNIEnv* env) : env(env), initialized(false)
+PlatformSupport::PlatformSupport(JNIEnv* env) : env(env), initialized(false), preferences(NULL)
 {
     javaClasses.Object = (jclass)env->FindClass("java/lang/Object");
     if (CheckAndClearException(env)) return;
