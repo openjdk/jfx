@@ -57,11 +57,11 @@ be used in advertising or otherwise to promote the sale, use or other deal-
 ings in this Software without prior written authorization from him.
 ----------------------------------------------------------------------
 
-=== copyright notices for the trio files ===
-the trio files:
- * Copyright (C) 2001 Bjorn Reese <breese@users.sourceforge.net>
+=== copyright notices for trio.h ===
  * Copyright (C) 1998 Bjorn Reese and Daniel Stenberg.
-=== license text for the trio files ===
+=== copyright notices for triodef.h ===
+ * Copyright (C) 2001 Bjorn Reese <breese@users.sourceforge.net>
+=== license text for trio.h and triodef.h ===
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
