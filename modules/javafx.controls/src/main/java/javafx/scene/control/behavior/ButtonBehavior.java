@@ -20,56 +20,62 @@ public class ButtonBehavior implements Behavior<Button> {
     }
 
     @Override
-    public void install(BehaviorContext<Button> context) {
-        State state = new State();
+    public StateFactory<Button> configure(BehaviorInstaller<Button> installer) {
+        installer.registerPropertyListener(Button::focusedProperty, State::focusChanged);
 
-        context.registerPropertyListener(Button::focusedProperty, state::focusChanged);
+        installer.registerEventHandler(KeyEvent.KEY_PRESSED, State::keyPressed);
+        installer.registerEventHandler(KeyEvent.KEY_RELEASED, State::keyReleased);
+        installer.registerEventHandler(MouseEvent.MOUSE_PRESSED, State::mousePressed);
+        installer.registerEventHandler(MouseEvent.MOUSE_RELEASED, State::mouseReleased);
+        installer.registerEventHandler(MouseEvent.MOUSE_ENTERED, State::mouseEntered);
+        installer.registerEventHandler(MouseEvent.MOUSE_EXITED, State::mouseExited);
 
-        context.registerEventHandler(KeyEvent.KEY_PRESSED, state::keyPressed);
-        context.registerEventHandler(KeyEvent.KEY_RELEASED, state::keyReleased);
-        context.registerEventHandler(MouseEvent.MOUSE_PRESSED, state::mousePressed);
-        context.registerEventHandler(MouseEvent.MOUSE_RELEASED, state::mouseReleased);
-        context.registerEventHandler(MouseEvent.MOUSE_ENTERED, state::mouseEntered);
-        context.registerEventHandler(MouseEvent.MOUSE_EXITED, state::mouseExited);
+        return State::new;
     }
 
     private static class State {
+        private final Button control;
+
         private boolean keyDown;
 
-        protected void keyPressed(KeyEvent event, Button button) {
+        public State(Button control) {
+            this.control = control;
+        }
+
+        void keyPressed(KeyEvent event) {
             if (!event.isConsumed() && event.getCode() == KeyCode.SPACE) {
-                if (!button.isPressed() && !button.isArmed()) {
+                if (!control.isPressed() && !control.isArmed()) {
                     keyDown = true;
-                    button.arm();
+                    control.arm();
                     event.consume();
                 }
             }
         }
 
-        protected void keyReleased(KeyEvent event, Button button) {
+        void keyReleased(KeyEvent event) {
             if (!event.isConsumed() && event.getCode() == KeyCode.SPACE) {
                 if (keyDown) {
                     keyDown = false;
 
-                    if (button.isArmed()) {
-                        button.disarm();
-                        button.fire();
+                    if (control.isArmed()) {
+                        control.disarm();
+                        control.fire();
                         event.consume();
                     }
                 }
             }
         }
 
-        protected void focusChanged(boolean focused, Button button) {
-            if (keyDown && !button.isFocused()) {
+        void focusChanged(boolean focused) {
+            if (keyDown && !control.isFocused()) {
                 keyDown = false;
-                button.disarm();
+                control.disarm();
             }
         }
 
-        protected void mousePressed(MouseEvent event, Button button) {
-            if (!event.isConsumed() && button.isFocusTraversable()) {
-                button.requestFocus();
+        void mousePressed(MouseEvent event) {
+            if (!event.isConsumed() && control.isFocusTraversable()) {
+                control.requestFocus();
             }
 
             // arm the button if it is a valid mouse event
@@ -81,8 +87,8 @@ public class ButtonBehavior implements Behavior<Button> {
                     !(event.isMiddleButtonDown() || event.isSecondaryButtonDown() ||
                             event.isShiftDown() || event.isControlDown() || event.isAltDown() || event.isMetaDown()));
 
-            if (!button.isArmed() && valid) {
-                button.arm();
+            if (!control.isArmed() && valid) {
+                control.arm();
                 event.consume();
             }
         }
@@ -92,11 +98,11 @@ public class ButtonBehavior implements Behavior<Button> {
          * was done in a manner that would fire the button's action. This happens
          * only if the button was armed by a corresponding mouse press.
          */
-        protected void mouseReleased(MouseEvent event, Button button) {
+        void mouseReleased(MouseEvent event) {
             // if armed by a mouse press instead of key press, then fire!
-            if (!event.isConsumed() && !keyDown && button.isArmed()) {
-                button.disarm();
-                button.fire();
+            if (!event.isConsumed() && !keyDown && control.isArmed()) {
+                control.disarm();
+                control.fire();
                 event.consume();
             }
         }
@@ -106,10 +112,10 @@ public class ButtonBehavior implements Behavior<Button> {
          * by a mouse press and the mouse is still pressed, then this will cause
          * the button to be rearmed.
          */
-        protected void mouseEntered(MouseEvent event, Button button) {
+        void mouseEntered(MouseEvent event) {
             // rearm if necessary
-            if (!event.isConsumed() && !keyDown && button.isPressed()) {
-                button.arm();
+            if (!event.isConsumed() && !keyDown && control.isPressed()) {
+                control.arm();
                 // event purposely not consumed
             }
         }
@@ -119,10 +125,10 @@ public class ButtonBehavior implements Behavior<Button> {
          * a mouse press, then this function will disarm the button upon the mouse
          * exiting it.
          */
-        protected void mouseExited(MouseEvent event, Button button) {
+        void mouseExited(MouseEvent event) {
             // Disarm if necessary
-            if (!event.isConsumed() && !keyDown && button.isArmed()) {
-                button.disarm();
+            if (!event.isConsumed() && !keyDown && control.isArmed()) {
+                control.disarm();
                 // event purposely not consumed
             }
         }

@@ -239,6 +239,14 @@ public abstract class KeyCombination {
                         event.isMetaDown());
     }
 
+    boolean matchModifiers(boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown) {
+        final KeyCode shortcutKey = Toolkit.getToolkit().getPlatformShortcutKey();
+        return test(KeyCode.SHIFT, shift, shortcutKey, shortcut, shiftDown)
+                && test(KeyCode.CONTROL, control, shortcutKey, shortcut, controlDown)
+                && test(KeyCode.ALT, alt, shortcutKey, shortcut, altDown)
+                && test(KeyCode.META, meta, shortcutKey, shortcut, metaDown);
+    }
+
     /**
      * Returns a string representation of this {@code KeyCombination}.
      * <p>

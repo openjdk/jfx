@@ -27,13 +27,26 @@ package javafx.scene.control.behavior;
 
 import javafx.scene.control.Control;
 
+/**
+ * Defines the behavior for a {@link Control}. Behaviors listen to events that
+ * bubble up to the control level, interprete them and perform state changes on
+ * the control. Behaviors can handle events that have the control as target,
+ * as well as events that have its children as target.
+ *
+ * @param <C> the control type suited for this behavior
+ */
 public interface Behavior<C extends Control> {
 
     /**
-     * Installs this behavior. A behavior can be installed on multiple controls.
+     * Configures the given installer with the defined behavior for a specific
+     * control. Many controls can be configured with the same behavior without
+     * having to create a new behavior instance. The behavior should return a
+     * {@link StateFactory} which takes the {@link Control} as argument. This
+     * per control state is then provided to any callbacks the behavior configured.
      *
-     * @param context a control provided context, never {@code null}
+     * @param installer a control provided installer, never {@code null}
+     * @return a {@code StateFactory}, never {@code null}
      */
-    void install(BehaviorContext<C> context);
+    StateFactory<C> configure(BehaviorInstaller<C> installer);
 
 }

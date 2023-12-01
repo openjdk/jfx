@@ -108,6 +108,10 @@ public final class KeyCodeCombination extends KeyCombination {
         return (event.getCode() == getCode()) && super.match(event);
     }
 
+    public boolean match(KeyCode keyCode, boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown) {
+        return keyCode == getCode() && matchModifiers(shiftDown, controlDown, altDown, metaDown);
+    }
+
     /**
      * Returns a string representation of this {@code KeyCodeCombination}.
      * <p>

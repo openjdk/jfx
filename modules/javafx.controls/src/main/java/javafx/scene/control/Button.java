@@ -135,10 +135,9 @@ public class Button extends ButtonBase {
     public void setBehavior(Behavior<Button> behavior) {
         behaviorSubscription.unsubscribe();
 
-        StandardBehaviorContext<Button> context = new StandardBehaviorContext<>(this);
+        StandardBehaviorInstaller<Button> installer = new StandardBehaviorInstaller<>(this);
 
-        behavior.install(context);
-        behaviorSubscription = context.getSubscription();
+        behaviorSubscription = installer.install(behavior.configure(installer).createState(this));
     }
 
     /* *************************************************************************

@@ -386,10 +386,9 @@ public class Spinner<T> extends Control {
     public void setBehavior(Behavior<Spinner<?>> behavior) {
         behaviorSubscription.unsubscribe();
 
-        StandardBehaviorContext<Spinner<?>> context = new StandardBehaviorContext<>(this);
+        StandardBehaviorInstaller<Spinner<?>> installer = new StandardBehaviorInstaller<>(this);
 
-        behavior.install(context);
-        behaviorSubscription = context.getSubscription();
+        behaviorSubscription = installer.install(behavior.configure(installer).createState(this));
     }
 
     /* *************************************************************************
