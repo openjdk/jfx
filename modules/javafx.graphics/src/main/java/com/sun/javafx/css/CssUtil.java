@@ -24,9 +24,7 @@
  */
 package com.sun.javafx.css;
 
-import java.util.AbstractList;
 import java.util.List;
-import java.util.RandomAccess;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.scene.Node;
@@ -68,25 +66,6 @@ public final class CssUtil {
         CssMetaData[] combined = new CssMetaData[inheritedFromParent.size() + items.length];
         inheritedFromParent.toArray(combined);
         System.arraycopy(items, 0, combined, inheritedFromParent.size(), items.length);
-        return new ImmutableArrayList<>(combined);
-    }
-
-    /** immutable list with random access backed by an array */
-    private static class ImmutableArrayList<T> extends AbstractList<T> implements RandomAccess {
-        private final T[] items;
-
-        public ImmutableArrayList(T[] items) {
-            this.items = items;
-        }
-
-        @Override
-        public T get(int index) {
-            return items[index];
-        }
-
-        @Override
-        public int size() {
-            return items.length;
-        }
+        return List.of(combined);
     }
 }
