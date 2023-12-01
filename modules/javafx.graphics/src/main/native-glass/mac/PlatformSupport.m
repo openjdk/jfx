@@ -26,9 +26,6 @@
 #import "PlatformSupport.h"
 #import "GlassMacros.h"
 
-#define MACOS_10_13 @available(macOS 10.13, *)
-#define MACOS_10_14 @available(macOS 10.14, *)
-
 #define INIT_CLASS(CLS, NAME)\
     if (CLS == nil) {\
         jclass cls = (*env)->FindClass(env, NAME);\
@@ -126,18 +123,14 @@ static jobject currentPreferences = nil;
     [PlatformSupport putColor:preferences key:"macOS.NSColor.textBackgroundColor" value:[NSColor textBackgroundColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedTextBackgroundColor" value:[NSColor selectedTextBackgroundColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.keyboardFocusIndicatorColor" value:[NSColor keyboardFocusIndicatorColor]];
-    if (MACOS_10_14) {
-        [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedTextColor" value:[NSColor unemphasizedSelectedTextColor]];
-        [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedTextBackgroundColor" value:[NSColor unemphasizedSelectedTextBackgroundColor]];
-    }
+    [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedTextColor" value:[NSColor unemphasizedSelectedTextColor]];
+    [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedTextBackgroundColor" value:[NSColor unemphasizedSelectedTextBackgroundColor]];
 
     // Content colors
     [PlatformSupport putColor:preferences key:"macOS.NSColor.linkColor" value:[NSColor linkColor]];
-    if (MACOS_10_14) {
-        [PlatformSupport putColor:preferences key:"macOS.NSColor.separatorColor" value:[NSColor separatorColor]];
-        [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedContentBackgroundColor" value:[NSColor selectedContentBackgroundColor]];
-        [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedContentBackgroundColor" value:[NSColor unemphasizedSelectedContentBackgroundColor]];
-    }
+    [PlatformSupport putColor:preferences key:"macOS.NSColor.separatorColor" value:[NSColor separatorColor]];
+    [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedContentBackgroundColor" value:[NSColor selectedContentBackgroundColor]];
+    [PlatformSupport putColor:preferences key:"macOS.NSColor.unemphasizedSelectedContentBackgroundColor" value:[NSColor unemphasizedSelectedContentBackgroundColor]];
 
     // Menu colors
     [PlatformSupport putColor:preferences key:"macOS.NSColor.selectedMenuItemTextColor" value:[NSColor selectedMenuItemTextColor]];
@@ -145,14 +138,10 @@ static jobject currentPreferences = nil;
     // Table colors
     [PlatformSupport putColor:preferences key:"macOS.NSColor.gridColor" value:[NSColor gridColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.headerTextColor" value:[NSColor headerTextColor]];
-    if (MACOS_10_14) {
-        [PlatformSupport putColors:preferences key:"macOS.NSColor.alternatingContentBackgroundColors" value:[NSColor alternatingContentBackgroundColors]];
-    }
+    [PlatformSupport putColors:preferences key:"macOS.NSColor.alternatingContentBackgroundColors" value:[NSColor alternatingContentBackgroundColors]];
 
     // Control colors
-    if (MACOS_10_14) {
-        [PlatformSupport putColor:preferences key:"macOS.NSColor.controlAccentColor" value:[NSColor controlAccentColor]];
-    }
+    [PlatformSupport putColor:preferences key:"macOS.NSColor.controlAccentColor" value:[NSColor controlAccentColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.controlColor" value:[NSColor controlColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.controlBackgroundColor" value:[NSColor controlBackgroundColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.controlTextColor" value:[NSColor controlTextColor]];
@@ -178,9 +167,7 @@ static jobject currentPreferences = nil;
     [PlatformSupport putColor:preferences key:"macOS.NSColor.underPageBackgroundColor" value:[NSColor underPageBackgroundColor]];
 
     // Highlights and shadows
-    if (MACOS_10_13) {
-        [PlatformSupport putColor:preferences key:"macOS.NSColor.findHighlightColor" value:[NSColor findHighlightColor]];
-    }
+    [PlatformSupport putColor:preferences key:"macOS.NSColor.findHighlightColor" value:[NSColor findHighlightColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.highlightColor" value:[NSColor highlightColor]];
     [PlatformSupport putColor:preferences key:"macOS.NSColor.shadowColor" value:[NSColor shadowColor]];
 
@@ -226,10 +213,10 @@ static jobject currentPreferences = nil;
                 env, application,
                 javaIDs.MacApplication.notifyPreferencesChanged,
                 unmodifiablePreferences);
+            GLASS_CHECK_EXCEPTION(env);
 
             (*env)->DeleteLocalRef(env, unmodifiablePreferences);
         }
-
     }
 
     (*env)->DeleteLocalRef(env, newPreferences);
@@ -238,30 +225,47 @@ static jobject currentPreferences = nil;
 + (void)putString:(jobject)preferences key:(const char*)key value:(const char*)value {
     GET_MAIN_JENV;
 
-    (*env)->CallObjectMethod(env, preferences, jMapPutMethod,
-        (*env)->NewStringUTF(env, key),
-        value != nil ? (*env)->NewStringUTF(env, value) : nil);
+    jobject prefKey = (*env)->NewStringUTF(env, key);
+    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+
+    jobject prefValue = nil;
+    if (value != nil) {
+        prefValue = (*env)->NewStringUTF(env, value);
+        GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+    }
+
+    (*env)->CallObjectMethod(env, preferences, jMapPutMethod, prefKey, prefValue);
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 + (void)putColor:(jobject)preferences key:(const char*)colorName value:(NSColor*)color {
     GET_MAIN_JENV;
 
+    jobject prefKey = (*env)->NewStringUTF(env, colorName);
+    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+
     NSColor* c = [color colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
-    (*env)->CallObjectMethod(env, preferences, jMapPutMethod,
-        (*env)->NewStringUTF(env, colorName),
-        (*env)->CallStaticObjectMethod(
-            env, jColorClass, jColorRgbMethod,
-            (int)([c redComponent] * 255.0f),
-            (int)([c greenComponent] * 255.0f),
-            (int)([c blueComponent] * 255.0f),
-            (double)[c alphaComponent]));
+    jobject prefValue = (*env)->CallStaticObjectMethod(
+        env, jColorClass, jColorRgbMethod,
+        (int)([c redComponent] * 255.0f),
+        (int)([c greenComponent] * 255.0f),
+        (int)([c blueComponent] * 255.0f),
+        (double)[c alphaComponent]);
+    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+
+    (*env)->CallObjectMethod(env, preferences, jMapPutMethod, prefKey, prefValue);
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 + (void)putColors:(jobject)preferences key:(const char*)colorName value:(NSArray*)colors {
     GET_MAIN_JENV;
 
+    jobject prefKey = (*env)->NewStringUTF(env, colorName);
+    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+
     int count = [colors count];
-    jobjectArray res = (*env)->NewObjectArray(env, count, jColorClass, nil);
+    jobjectArray prefValue = (*env)->NewObjectArray(env, count, jColorClass, nil);
+    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
 
     for (int i = 0; i < count; ++i) {
         NSColor* c = [colors[i] colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
@@ -271,11 +275,14 @@ static jobject currentPreferences = nil;
             (int)([c greenComponent] * 255.0f),
             (int)([c blueComponent] * 255.0f),
             (double)[c alphaComponent]);
+        GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
 
-        (*env)->SetObjectArrayElement(env, res, i, fxcolor);
+        (*env)->SetObjectArrayElement(env, prefValue, i, fxcolor);
+        GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
     }
 
-    (*env)->CallObjectMethod(env, preferences, jMapPutMethod, (*env)->NewStringUTF(env, colorName), res);
+    (*env)->CallObjectMethod(env, preferences, jMapPutMethod, prefKey, prefValue);
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 @end
