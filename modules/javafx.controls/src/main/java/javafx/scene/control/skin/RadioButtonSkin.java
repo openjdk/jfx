@@ -25,8 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.control.Control;
 import javafx.scene.control.RadioButton;
@@ -48,7 +46,6 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
     /** The radio contains the "dot", which is usually a circle */
     private StackPane radio;
-    private final BehaviorBase<RadioButton> behavior;
 
 
 
@@ -68,10 +65,6 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
     public RadioButtonSkin(RadioButton control) {
         super(control);
 
-        // install default input map for the RadioButton control
-        behavior = new ToggleButtonBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
-
         radio = createRadio();
         updateChildren();
     }
@@ -83,15 +76,6 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
-
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
-
-        if (behavior != null) {
-            behavior.dispose();
-        }
-    }
 
     /** {@inheritDoc} */
     @Override protected void updateChildren() {

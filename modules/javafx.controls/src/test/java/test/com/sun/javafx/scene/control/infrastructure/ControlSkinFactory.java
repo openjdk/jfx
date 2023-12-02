@@ -35,7 +35,6 @@ import java.util.function.Function;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ButtonBehavior;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
-import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 
 import static java.util.stream.Collectors.*;
 import static org.junit.Assert.*;
@@ -236,8 +235,6 @@ public class ControlSkinFactory {
         specialBehaviorMap.put(CheckBox.class, (Function<Control, BehaviorBase>) c -> new ButtonBehavior((ButtonBase) c));
         specialBehaviorMap.put(ComboBox.class, (Function<Control, BehaviorBase>) c -> new ComboBoxListViewBehavior((ComboBox) c));
         specialBehaviorMap.put(Hyperlink.class, (Function<Control, BehaviorBase>) c -> new ButtonBehavior((ButtonBase) c));
-        specialBehaviorMap.put(RadioButton.class, (Function<Control, BehaviorBase>) c -> new ToggleButtonBehavior((ToggleButton) c));
-        specialBehaviorMap.put(ToggleButton.class, (Function<Control, BehaviorBase>) c -> new ToggleButtonBehavior((ToggleButton) c));
     }
 
     // list of control classes that have no behavior
@@ -250,7 +247,9 @@ public class ControlSkinFactory {
             Separator.class,
             SplitPane.class,
             Button.class,  // has public behavior not created by Skin
-            Spinner.class   // has public behavior not created by Skin
+            Spinner.class,  // has public behavior not created by Skin
+            ToggleButton.class,  // has public behavior not created by Skin
+            RadioButton.class  // has public behavior not created by Skin
     );
 
 ///---------------- misc
