@@ -31,24 +31,34 @@ namespace
 {
     void putColor(JNIEnv* env, jobject prefs, GtkStyle* style, const char* lookupColorName, const char* prefColorName) {
         GdkColor color;
-        if (gtk_style_lookup_color(style, lookupColorName, &color)) {
-            env->CallObjectMethod(prefs, jMapPut,
-                env->NewStringUTF(prefColorName),
-                env->CallStaticObjectMethod(
-                    jColorCls, jColorRgb,
-                    (int)(CLAMP((double)color.red / 65535.0, 0.0, 1.0) * 255.0),
-                    (int)(CLAMP((double)color.green / 65535.0, 0.0, 1.0) * 255.0),
-                    (int)(CLAMP((double)color.blue / 65535.0, 0.0, 1.0) * 255.0),
-                    1.0));
+        if (!gtk_style_lookup_color(style, lookupColorName, &color)) {
+            return;
         }
 
+        jobject prefKey = env->NewStringUTF(prefColorName);
+        CHECK_JNI_EXCEPTION(env);
+
+        jobject prefValue = env->CallStaticObjectMethod(
+            jColorCls, jColorRgb,
+            (int)(CLAMP((double)color.red / 65535.0, 0.0, 1.0) * 255.0),
+            (int)(CLAMP((double)color.green / 65535.0, 0.0, 1.0) * 255.0),
+            (int)(CLAMP((double)color.blue / 65535.0, 0.0, 1.0) * 255.0),
+            1.0);
+        CHECK_JNI_EXCEPTION(env);
+
+        env->CallObjectMethod(prefs, jMapPut, prefKey, prefValue);
         CHECK_JNI_EXCEPTION(env);
     }
 
     void putString(JNIEnv* env, jobject preferences, const char* name, const char* value) {
-        env->CallObjectMethod(preferences, jMapPut,
-            env->NewStringUTF(name),
-            env->NewStringUTF(value));
+        jobject prefKey = env->NewStringUTF(name);
+        CHECK_JNI_EXCEPTION(env);
+
+        jobject prefValue = env->NewStringUTF(value);
+        CHECK_JNI_EXCEPTION(env);
+
+        env->CallObjectMethod(preferences, jMapPut, prefKey, prefValue);
+        CHECK_JNI_EXCEPTION(env);
     }
 }
 
@@ -117,6 +127,8 @@ void PlatformSupport::updatePreferences() const {
 
         if (!EXCEPTION_OCCURED(env)) {
             env->CallVoidMethod(application, jApplicationNotifyPreferencesChanged, unmodifiablePreferences);
+            EXCEPTION_OCCURED(env);
+
             env->DeleteLocalRef(unmodifiablePreferences);
         }
     }
