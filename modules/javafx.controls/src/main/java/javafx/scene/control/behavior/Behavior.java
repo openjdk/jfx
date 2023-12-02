@@ -47,6 +47,6 @@ public interface Behavior<C extends Control> {
      * @param installer a control provided installer, never {@code null}
      * @return a {@code StateFactory}, never {@code null}
      */
-    StateFactory<C> configure(BehaviorInstaller<C> installer);
+    StateFactory<? super C> configure(BehaviorInstaller<? extends C> installer);
 
 }

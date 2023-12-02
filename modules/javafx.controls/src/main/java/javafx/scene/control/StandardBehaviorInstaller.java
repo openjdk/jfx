@@ -2,6 +2,7 @@ package javafx.scene.control;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -19,8 +20,7 @@ class StandardBehaviorInstaller<C extends Control> implements BehaviorInstaller<
     private final C control;
     private final List<EventHandlerDefinition<?, ?>> eventHandlerDefinitions = new ArrayList<>();
     private final List<PropertyListenerDefinition<?, ?, ?>> propertyListenerDefinitions = new ArrayList<>();
-
-    private KeyHandler<C> keyHandler;
+    private final List<KeyHandler<? super C>> keyHandlers = new ArrayList<>();
 
     public StandardBehaviorInstaller(C control) {
         this.control = control;
@@ -56,15 +56,17 @@ class StandardBehaviorInstaller<C extends Control> implements BehaviorInstaller<
         }
 
         /*
-         * Install key handler on the control:
+         * Install key handlers (as a single event handler) on the control:
          */
 
-        if (keyHandler != null) {
+        if (!keyHandlers.isEmpty()) {
             EventHandler<? super KeyEvent> eventHandler = e -> {
                 KeyState keyState = new KeyState(e.getCode(), e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown());
 
-                if (keyHandler.trigger(keyState, control)) {
-                    e.consume();
+                for (KeyHandler<? super C> keyHandler : keyHandlers) {
+                    if (keyHandler.trigger(keyState, control)) {
+                        e.consume();
+                    }
                 }
             };
 
@@ -78,17 +80,23 @@ class StandardBehaviorInstaller<C extends Control> implements BehaviorInstaller<
 
     @Override
     public <S, T extends Event> void registerEventHandler(EventType<T> eventType, BiConsumer<S, ? super T> eventHandler) {
-        eventHandlerDefinitions.add(new EventHandlerDefinition<>(eventType, eventHandler));
+        eventHandlerDefinitions.add(new EventHandlerDefinition<>(
+            Objects.requireNonNull(eventType, "eventType"),
+            Objects.requireNonNull(eventHandler, "eventHandler")
+        ));
     }
 
     @Override
     public <S, T> void registerPropertyListener(Function<C, ObservableValue<T>> supplier, BiConsumer<S, T> listener) {
-        propertyListenerDefinitions.add(new PropertyListenerDefinition<>(supplier, listener));
+        propertyListenerDefinitions.add(new PropertyListenerDefinition<>(
+            Objects.requireNonNull(supplier, "supplier"),
+            Objects.requireNonNull(listener, "listener")
+        ));
     }
 
     @Override
-    public void setKeyHandler(KeyHandler<C> binder) {
-        this.keyHandler = binder;
+    public void registerKeyHandler(KeyHandler<? super C> keyHandler) {
+        this.keyHandlers.add(Objects.requireNonNull(keyHandler, "keyHandler"));
     }
 
     record EventHandlerDefinition<S, T extends Event>(EventType<T> eventType, BiConsumer<S, ? super T> eventHandler) {}

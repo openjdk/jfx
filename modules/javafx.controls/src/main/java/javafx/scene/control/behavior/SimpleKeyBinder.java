@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -21,11 +22,13 @@ class SimpleKeyBinder<C extends Control> implements KeyHandler<C> {
     public boolean trigger(KeyState keyState, C control) {
         List<Mapping<C>> mappings = mappingsByKeyCode.get(keyState.code());
 
-        for (Mapping<C> mapping : mappings) {
-            if (mapping.keyCodeCombination.match(keyState.code(), keyState.shift(), keyState.control(), keyState.alt(), keyState.meta()) && mapping.condition.test(control)) {
-                mapping.handler.accept(control);
+        if (mappings != null) {
+            for (Mapping<C> mapping : mappings) {
+                if (mapping.keyCodeCombination.match(keyState.code(), keyState.shift(), keyState.control(), keyState.alt(), keyState.meta()) && mapping.condition.test(control)) {
+                    mapping.handler.accept(control);
 
-                return true;
+                    return true;
+                }
             }
         }
 
@@ -33,15 +36,16 @@ class SimpleKeyBinder<C extends Control> implements KeyHandler<C> {
     }
 
     /**
-     * Registers a {@link Consumer} which is called when the given {@link KeyCodeCombination}
-     * is pressed. If the consumer is called, the event associated with the key press is consumed. Consumption
-     * should be avoided by using an appropriate condition so events that are unused bubble up correctly.
+     * Registers a {@link Predicate} which is called when the given {@link KeyCodeCombination}
+     * is pressed. If the predicate is called, it can indicate whether or not the key press
+     * should be consumed. Consumption should be avoided if a key press is not used so events
+     * bubble up correctly.
      *
      * @param keyCodeCombination a {@link KeyCodeCombination}, cannot be {@code null}
      * @param consumer a consumer to handle the key press, cannot be {@code null}
      */
-    public void addBinding(KeyCodeCombination keyCodeCombination, Consumer<C> consumer) {
-        addBinding(keyCodeCombination, c -> true, consumer);
+    public void addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> consumer) {
+        addBinding(keyCodeCombination, consumer, c -> {});
     }
 
     /**
@@ -55,7 +59,11 @@ class SimpleKeyBinder<C extends Control> implements KeyHandler<C> {
      */
     public void addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> condition, Consumer<C> consumer) {
         mappingsByKeyCode.computeIfAbsent(keyCodeCombination.getCode(), k -> new ArrayList<>())
-            .add(new Mapping<>(keyCodeCombination, condition, consumer));
+            .add(new Mapping<>(
+                Objects.requireNonNull(keyCodeCombination, "keyCodeCombination"),
+                Objects.requireNonNull(condition, "condition"),
+                Objects.requireNonNull(consumer, "consumer")
+            ));
     }
 
     private record Mapping<C>(KeyCodeCombination keyCodeCombination, Predicate<C> condition, Consumer<C> handler) {}

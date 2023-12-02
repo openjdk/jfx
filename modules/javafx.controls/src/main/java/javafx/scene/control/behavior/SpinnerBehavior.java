@@ -44,9 +44,8 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
     }
 
     @Override
-    public StateFactory<Spinner<?>> configure(BehaviorInstaller<Spinner<?>> installer) {
-        installer.setKeyHandler(KEY_HANDLER);
-
+    public StateFactory<? super Spinner<?>> configure(BehaviorInstaller<? extends Spinner<?>> installer) {
+        installer.registerKeyHandler(KEY_HANDLER);
         installer.registerEventHandler(MouseEvent.MOUSE_PRESSED, State::mousePressed);
         installer.registerEventHandler(MouseEvent.MOUSE_RELEASED, State::mouseReleased);
         installer.registerEventHandler(AccessibleActionEvent.TRIGGERED, State::accessibleActionTriggered);

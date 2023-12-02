@@ -19,28 +19,31 @@ import javafx.scene.control.Control;
 public interface BehaviorInstaller<C extends Control> {
 
     /**
-     * Registers an event handler for a given event type.
+     * Registers an event handler for a given event type. Earlier registrations take precedence over later ones.
      *
-     * @param <T> the type of event
+     * @param <E> the type of event
+     * @param <S> the type of the configured state
      * @param eventType an {@code EventType}, cannot be {@code null}
-     * @param eventHandler a consumer taking the event and control as arguments, cannot be {@code null}
+     * @param eventHandler a consumer taking the configured state and an event as arguments, cannot be {@code null}
      */
-    <S, T extends Event> void registerEventHandler(EventType<T> eventType, BiConsumer<S, ? super T> eventHandler);
+    <S, E extends Event> void registerEventHandler(EventType<E> eventType, BiConsumer<S, ? super E> eventHandler);
 
     /**
-     * Registers a property listener for a given property.
+     * Registers a property listener for a given property. Earlier registrations take precedence over later ones.
      *
      * @param <T> the type of property
+     * @param <S> the type of the configured state
      * @param supplier a function which supplies a property given a control of type {@code C}, cannot be {@code null}
      * @param listener a listener which is called when the property changes, cannot be {@code null}
      */
     <S, T> void registerPropertyListener(Function<C, ObservableValue<T>> supplier, BiConsumer<S, T> listener);
 
     /**
-     * Associates a key handler with this installer. Setting this to {@code null} (or not
-     * setting it) will result in no key handler being installed.
+     * Registers a key handler with this installer. Earlier registrations take precedence over later ones.
      *
-     * @param keyHandler a {@code KeyHandler}, can be {@code null}
+     * <p>Note: event handlers always take precedence over key handlers, regardless of registration order
+     *
+     * @param keyHandler a {@code KeyHandler}, cannot be {@code null}
      */
-    void setKeyHandler(KeyHandler<C> keyHandler);
+    void registerKeyHandler(KeyHandler<? super C> keyHandler);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 import javafx.scene.control.Control;
 import javafx.scene.control.ToggleButton;
 
@@ -38,22 +36,6 @@ import javafx.scene.control.ToggleButton;
  */
 public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton> {
 
-    /* *************************************************************************
-     *                                                                         *
-     * Private Fields                                                          *
-     *                                                                         *
-     **************************************************************************/
-
-    private final BehaviorBase<ToggleButton> behavior;
-
-
-
-    /* *************************************************************************
-     *                                                                         *
-     * Constructors                                                            *
-     *                                                                         *
-     **************************************************************************/
-
     /**
      * Creates a new ToggleButtonSkin instance, installing the necessary child
      * nodes into the Control {@link Control#getChildren() children} list, as
@@ -63,26 +45,5 @@ public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton> {
      */
     public ToggleButtonSkin(ToggleButton control) {
         super(control);
-
-        // install default input map for the ToggleButton control
-        behavior = new ToggleButtonBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
-    }
-
-
-
-    /* *************************************************************************
-     *                                                                         *
-     * Public API                                                              *
-     *                                                                         *
-     **************************************************************************/
-
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
-
-        if (behavior != null) {
-            behavior.dispose();
-        }
     }
 }
