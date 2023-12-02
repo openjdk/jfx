@@ -114,11 +114,13 @@ bool PlatformSupport::updatePreferences(jobject application) const
             env->CallVoidMethod(application, javaIDs.Application.notifyPreferencesChangedMID, unmodifiablePreferences);
             env->DeleteLocalRef(unmodifiablePreferences);
             env->DeleteLocalRef(newPreferences);
+            CheckAndClearException(env);
             return true;
         }
     }
 
     env->DeleteLocalRef(newPreferences);
+    CheckAndClearException(env);
     return false;
 }
 
@@ -195,40 +197,72 @@ void PlatformSupport::queryUIColors(jobject properties) const
 
 void PlatformSupport::putString(jobject properties, const char* key, const char* value) const
 {
-    env->CallObjectMethod(properties, javaIDs.Map.put,
-        env->NewStringUTF(key),
-        value != NULL ? env->NewStringUTF(value) : NULL);
+    jobject prefKey = env->NewStringUTF(key);
+    if (CheckAndClearException(env)) return;
+
+    jobject prefValue = NULL;
+    if (value != NULL) {
+        prefValue = env->NewStringUTF(value);
+        if (CheckAndClearException(env)) return;
+    }
+
+    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
+    CheckAndClearException(env);
 }
 
 void PlatformSupport::putString(jobject properties, const char* key, const wchar_t* value) const
 {
-    env->CallObjectMethod(properties, javaIDs.Map.put,
-        env->NewStringUTF(key),
-        value != NULL ? env->NewString((jchar*)value, wcslen(value)) : NULL);
+    jobject prefKey = env->NewStringUTF(key);
+    if (CheckAndClearException(env)) return;
+
+    jobject prefValue = NULL;
+    if (value != NULL) {
+        prefValue = env->NewString((jchar*)value, wcslen(value));
+        if (CheckAndClearException(env)) return;
+    }
+
+    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
+    CheckAndClearException(env);
 }
 
 void PlatformSupport::putBoolean(jobject properties, const char* key, const bool value) const
 {
-    env->CallObjectMethod(properties, javaIDs.Map.put,
-        env->NewStringUTF(key),
-        value ? env->GetStaticObjectField(javaClasses.Boolean, javaIDs.Boolean.trueID) :
-                env->GetStaticObjectField(javaClasses.Boolean, javaIDs.Boolean.falseID));
+    jobject prefKey = env->NewStringUTF(key);
+    if (CheckAndClearException(env)) return;
+
+    jobject prefValue = value ?
+        env->GetStaticObjectField(javaClasses.Boolean, javaIDs.Boolean.trueID) :
+        env->GetStaticObjectField(javaClasses.Boolean, javaIDs.Boolean.falseID);
+    if (CheckAndClearException(env)) return;
+
+    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
+    CheckAndClearException(env);
 }
 
 void PlatformSupport::putColor(jobject properties, const char* colorName, int colorValue) const
 {
-    env->CallObjectMethod(properties, javaIDs.Map.put,
-        env->NewStringUTF(colorName),
-        env->CallStaticObjectMethod(
-            javaClasses.Color, javaIDs.Color.rgb,
-            GetRValue(colorValue), GetGValue(colorValue), GetBValue(colorValue), 1.0));
+    jobject prefKey = env->NewStringUTF(colorName);
+    if (CheckAndClearException(env)) return;
+
+    jobject prefValue = env->CallStaticObjectMethod(
+        javaClasses.Color, javaIDs.Color.rgb,
+        GetRValue(colorValue), GetGValue(colorValue), GetBValue(colorValue), 1.0);
+    if (CheckAndClearException(env)) return;
+
+    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
+    CheckAndClearException(env);
 }
 
 void PlatformSupport::putColor(jobject properties, const char* colorName, Color colorValue) const
 {
-    env->CallObjectMethod(properties, javaIDs.Map.put,
-        env->NewStringUTF(colorName),
-        env->CallStaticObjectMethod(
-            javaClasses.Color, javaIDs.Color.rgb,
-            colorValue.R, colorValue.G, colorValue.B, (double)colorValue.A / 255.0));
+    jobject prefKey = env->NewStringUTF(colorName);
+    if (CheckAndClearException(env)) return;
+
+    jobject prefValue = env->CallStaticObjectMethod(
+        javaClasses.Color, javaIDs.Color.rgb,
+        colorValue.R, colorValue.G, colorValue.B, (double)colorValue.A / 255.0);
+    if (CheckAndClearException(env)) return;
+
+    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
+    CheckAndClearException(env);
 }
