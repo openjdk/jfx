@@ -226,12 +226,12 @@ static jobject currentPreferences = nil;
     GET_MAIN_JENV;
 
     jobject prefKey = (*env)->NewStringUTF(env, key);
-    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+    GLASS_CHECK_NONNULL_EXCEPTIONALLY_RETURN(env, prefKey);
 
     jobject prefValue = nil;
     if (value != nil) {
         prefValue = (*env)->NewStringUTF(env, value);
-        GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+        GLASS_CHECK_NONNULL_EXCEPTIONALLY_RETURN(env, prefValue);
     }
 
     (*env)->CallObjectMethod(env, preferences, jMapPutMethod, prefKey, prefValue);
@@ -242,7 +242,7 @@ static jobject currentPreferences = nil;
     GET_MAIN_JENV;
 
     jobject prefKey = (*env)->NewStringUTF(env, colorName);
-    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+    GLASS_CHECK_NONNULL_EXCEPTIONALLY_RETURN(env, prefKey);
 
     NSColor* c = [color colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
     jobject prefValue = (*env)->CallStaticObjectMethod(
@@ -261,11 +261,11 @@ static jobject currentPreferences = nil;
     GET_MAIN_JENV;
 
     jobject prefKey = (*env)->NewStringUTF(env, colorName);
-    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+    GLASS_CHECK_NONNULL_EXCEPTIONALLY_RETURN(env, prefKey);
 
     int count = [colors count];
     jobjectArray prefValue = (*env)->NewObjectArray(env, count, jColorClass, nil);
-    GLASS_CHECK_EXCEPTIONALLY_RETURN(env);
+    GLASS_CHECK_NONNULL_EXCEPTIONALLY_RETURN(env, prefValue);
 
     for (int i = 0; i < count; ++i) {
         NSColor* c = [colors[i] colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
