@@ -28,10 +28,11 @@ package javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.sun.javafx.css.CssMetaDataCache;
 import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
@@ -336,7 +337,7 @@ public abstract class Control extends Region implements Skinnable {
         // we'll suppress the warnings
         @Override @SuppressWarnings({"unchecked", "rawtypes"})
         public CssMetaData getCssMetaData() {
-            return StyleableProperties.SKIN;
+            return SKIN_METADATA;
         }
 
         @Override
@@ -706,7 +707,7 @@ public abstract class Control extends Region implements Skinnable {
 
                 @Override
                 public CssMetaData<Control,String> getCssMetaData() {
-                    return StyleableProperties.SKIN;
+                    return SKIN_METADATA;
                 }
 
             };
@@ -794,11 +795,8 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-    private static class StyleableProperties {
-        private static final CssMetaData<Control,String> SKIN =
-            new CssMetaData<>("-fx-skin",
-                StringConverter.getInstance()) {
-
+    private static final CssMetaData<Control,String> SKIN_METADATA =
+        new CssMetaData<>("-fx-skin", StringConverter.getInstance()) {
             @Override
             public boolean isSettable(Control n) {
                 return (n.skin == null || !n.skin.isBound());
@@ -810,14 +808,13 @@ public abstract class Control extends Region implements Skinnable {
             }
         };
 
-        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-        static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<>(Region.getClassCssMetaData());
-            styleables.add(SKIN);
-            STYLEABLES = Collections.unmodifiableList(styleables);
-        }
-    }
+    private record CssMetaDataKey(Class<? extends Control> controlClass, Class<? extends Skin> skinClass) {}
+
+    private static final Map<CssMetaDataKey, List<CssMetaData<? extends Styleable, ?>>> cssMetaDataCache =
+            new HashMap<>();
+
+    private static final List<CssMetaData<? extends Styleable, ?>> classCssMetaData =
+            CssMetaDataCache.getCssMetaData(new Control() {});
 
     /**
      * Gets the {@code CssMetaData} associated with this class, which may include the
@@ -826,7 +823,7 @@ public abstract class Control extends Region implements Skinnable {
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
-        return StyleableProperties.STYLEABLES;
+        return classCssMetaData;
     }
 
     /**
@@ -844,6 +841,12 @@ public abstract class Control extends Region implements Skinnable {
     @Override
     public final List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         if (styleableProperties == null) {
+            Skin<?> skin = getSkin();
+            CssMetaDataKey key = new CssMetaDataKey(getClass(), skin != null ? skin.getClass() : null);
+            styleableProperties = cssMetaDataCache.get(key);
+            if (styleableProperties != null) {
+                return styleableProperties;
+            }
 
             // RT-29162: make sure properties only show up once in the list
             java.util.Map<String, CssMetaData<? extends Styleable, ?>> map =
@@ -875,8 +878,8 @@ public abstract class Control extends Region implements Skinnable {
                 map.put(metaData.getProperty(), metaData);
             }
 
-            styleableProperties = new ArrayList<>();
-            styleableProperties.addAll(map.values());
+            styleableProperties = List.copyOf(map.values());
+            cssMetaDataCache.put(key, styleableProperties);
         }
         return styleableProperties;
     }
