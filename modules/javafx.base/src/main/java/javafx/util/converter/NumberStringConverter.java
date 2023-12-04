@@ -141,7 +141,9 @@ public class NumberStringConverter extends StringConverter<Number> {
      *
      * @return a {@code NumberFormat} instance for formatting and parsing in this
      * {@code StringConverter}
+     * @deprecated This method was exposed erroneously and will be removed in a future version.
      */
+    @Deprecated(forRemoval = true, since = "22")
     protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;
 
