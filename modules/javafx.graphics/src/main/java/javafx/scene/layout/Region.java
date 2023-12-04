@@ -25,7 +25,6 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.css.CssMetaDataCache;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -3599,7 +3598,6 @@ public class Region extends Parent {
         return classCssMetaData;
     }
 
-    private static final List<CssMetaData<? extends Styleable, ?>> classCssMetaData =
-            CssMetaDataCache.getCssMetaData(new Region());
+    private static final List<CssMetaData<? extends Styleable, ?>> classCssMetaData = CssMetaData.of(new Region());
 
 }

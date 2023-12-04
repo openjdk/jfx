@@ -26,7 +26,6 @@
 package javafx.scene;
 
 
-import com.sun.javafx.css.CssMetaDataCache;
 import com.sun.javafx.geometry.BoundsUtils;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.application.Platform;
@@ -9230,8 +9229,7 @@ public abstract class Node implements EventTarget, Styleable {
         return classCssMetaData;
     }
 
-    private static final List<CssMetaData<? extends Styleable, ?>> classCssMetaData =
-            CssMetaDataCache.getCssMetaData(new Node() {});
+    private static final List<CssMetaData<? extends Styleable, ?>> classCssMetaData = CssMetaData.of(new Node() {});
 
     /**
      * This method should delegate to {@link Node#getClassCssMetaData()} so that
@@ -9245,7 +9243,7 @@ public abstract class Node implements EventTarget, Styleable {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         if (cssMetaData == null) {
-            cssMetaData = CssMetaDataCache.getCssMetaData(this);
+            cssMetaData = CssMetaData.of(this);
         }
 
         return cssMetaData;

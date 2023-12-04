@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.sun.javafx.css.CssMetaDataCache;
 import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
@@ -814,7 +813,7 @@ public abstract class Control extends Region implements Skinnable {
             new HashMap<>();
 
     private static final List<CssMetaData<? extends Styleable, ?>> classCssMetaData =
-            CssMetaDataCache.getCssMetaData(new Control() {});
+            CssMetaData.of(new Control() {});
 
     /**
      * Gets the {@code CssMetaData} associated with this class, which may include the

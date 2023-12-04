@@ -4,7 +4,6 @@ import javafx.beans.property.Property;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -19,7 +18,7 @@ public final class CssMetaDataCache {
 
     private CssMetaDataCache() {}
 
-    public synchronized static <T extends Node> List<CssMetaData<? extends Styleable, ?>> getCssMetaData(T node) {
+    public synchronized static List<CssMetaData<? extends Styleable, ?>> getCssMetaData(Styleable node) {
         List<CssMetaData<? extends Styleable, ?>> list = cache.get(node.getClass());
         if (list == null) {
             cache.put(node.getClass(), list = CssMetaDataCache.reflectCssMetaData(node));
@@ -28,7 +27,7 @@ public final class CssMetaDataCache {
         return list;
     }
 
-    private static <T extends Node> List<CssMetaData<? extends Styleable, ?>> reflectCssMetaData(T node) {
+    private static List<CssMetaData<? extends Styleable, ?>> reflectCssMetaData(Styleable node) {
         List<CssMetaData<? extends Styleable, ?>> metadata = new ArrayList<>();
 
         for (Method method : node.getClass().getMethods()) {
