@@ -36,7 +36,7 @@ namespace
         }
 
         jobject prefKey = env->NewStringUTF(prefColorName);
-        CHECK_JNI_EXCEPTION(env);
+        if (EXCEPTION_OCCURED(env) || prefKey == NULL) return;
 
         jobject prefValue = env->CallStaticObjectMethod(
             jColorCls, jColorRgb,
@@ -52,10 +52,10 @@ namespace
 
     void putString(JNIEnv* env, jobject preferences, const char* name, const char* value) {
         jobject prefKey = env->NewStringUTF(name);
-        CHECK_JNI_EXCEPTION(env);
+        if (EXCEPTION_OCCURED(env) || prefKey == NULL) return;
 
         jobject prefValue = env->NewStringUTF(value);
-        CHECK_JNI_EXCEPTION(env);
+        if (EXCEPTION_OCCURED(env) || prefValue == NULL) return;
 
         env->CallObjectMethod(preferences, jMapPut, prefKey, prefValue);
         CHECK_JNI_EXCEPTION(env);
@@ -75,9 +75,11 @@ PlatformSupport::~PlatformSupport() {
 
 jobject PlatformSupport::collectPreferences() const {
     jobject prefs = env->NewObject(jHashMapCls, jHashMapInit);
-    if (EXCEPTION_OCCURED(env)) return NULL;
+    if (EXCEPTION_OCCURED(env) || prefs == NULL) return NULL;
 
     GtkStyle* style = gtk_style_new();
+    if (style == NULL) return NULL;
+
     putColor(env, prefs, style, "theme_fg_color", "GTK.theme_fg_color");
     putColor(env, prefs, style, "theme_bg_color", "GTK.theme_bg_color");
     putColor(env, prefs, style, "theme_base_color", "GTK.theme_base_color");
