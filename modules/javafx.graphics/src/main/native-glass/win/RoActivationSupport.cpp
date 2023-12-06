@@ -228,7 +228,7 @@ RoException::~RoException()
 
 RoException& RoException::operator=(RoException source)
 {
-    std::swap(*this, source);
+    std::swap(message_, source.message_);
     return *this;
 }
 
