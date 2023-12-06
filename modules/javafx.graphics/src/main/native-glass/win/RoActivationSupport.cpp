@@ -150,19 +150,27 @@ HRESULT WINAPI WindowsDeleteString(HSTRING string)
     return pWindowsDeleteString(string);
 }
 
-hstring::hstring(const char* str)
+hstring::hstring(const char* str) : hstr_(NULL)
 {
     int wstr_len = MultiByteToWideChar(CP_UTF8, 0, str, -1, nullptr, 0);
+    if (wstr_len == 0) return;
+
     WCHAR* wstr = new WCHAR[wstr_len];
+    if (wstr == NULL) return;
+
     memset(wstr, 0, wstr_len * sizeof(WCHAR));
-    MultiByteToWideChar(CP_UTF8, 0, str, -1, wstr, wstr_len);
-    WindowsCreateString(wstr, wstr_len - 1, &hstr_);
+    if (MultiByteToWideChar(CP_UTF8, 0, str, -1, wstr, wstr_len) > 0) {
+        WindowsCreateString(wstr, wstr_len - 1, &hstr_);
+    }
+
     delete[] wstr;
 }
 
 hstring::~hstring()
 {
-    WindowsDeleteString(hstr_);
+    if (hstr_ != NULL) {
+        WindowsDeleteString(hstr_);
+    }
 }
 
 hstring::operator HSTRING()
@@ -170,31 +178,39 @@ hstring::operator HSTRING()
     return hstr_;
 }
 
-RoException::RoException(const char* message)
+RoException::RoException(const char* message) : message_(NULL)
 {
     if (message == nullptr) {
         message = "";
     }
 
-    // Copy the "message" string.
     size_t len = strlen(message);
+    if (len == 0) return;
+
     char* msg = new char[len + 1];
+    if (msg == NULL) return;
+
     strcpy_s(msg, len + 1, message);
     message_ = msg;
 }
 
-RoException::RoException(const char* message, HRESULT res)
+RoException::RoException(const char* message, HRESULT res) : message_(NULL)
 {
-    if (message == nullptr) {
+    if (message == NULL) {
         message = "";
     }
 
     const wchar_t* error = _com_error(res).ErrorMessage();
+    if (error == NULL) return;
 
-    // Concatenate the "message" and "error" strings.
     int message_length = int(strlen(message));
     int error_length = WideCharToMultiByte(CP_ACP, 0, error, -1, NULL, 0, NULL, FALSE);
+    if (message_length + error_length == 0) return;
+
     char* result = new char[message_length + error_length];
+    if (result == NULL) return;
+
+    // Concatenate the "message" and "error" strings.
     WideCharToMultiByte(CP_ACP, 0, error, -1, result + message_length, error_length, NULL, FALSE);
     memcpy_s(result, message_length, message, message_length);
     message_ = result;
@@ -205,7 +221,9 @@ RoException::RoException(const RoException& source) :
 
 RoException::~RoException()
 {
-    delete[] message_;
+    if (message_ != NULL) {
+        delete[] message_;
+    }
 }
 
 RoException& RoException::operator=(RoException source)
@@ -216,5 +234,5 @@ RoException& RoException::operator=(RoException source)
 
 const char* RoException::message() const
 {
-    return message_;
+    return message_ != NULL ? message_ : "";
 }
