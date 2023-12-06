@@ -203,10 +203,10 @@ RoException::RoException(const char* message, HRESULT res) : message_(NULL)
     const wchar_t* error = _com_error(res).ErrorMessage();
     if (error == NULL) return;
 
-    int message_length = int(strlen(message));
     int error_length = WideCharToMultiByte(CP_ACP, 0, error, -1, NULL, 0, NULL, FALSE);
-    if (message_length + error_length == 0) return;
+    if (error_length == 0) return;
 
+    int message_length = int(strlen(message));
     char* result = new char[message_length + error_length];
     if (result == NULL) return;
 
