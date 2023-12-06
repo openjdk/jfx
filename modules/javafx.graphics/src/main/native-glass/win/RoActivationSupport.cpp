@@ -50,7 +50,7 @@ namespace
     bool loadFunction(HMODULE lib, T*& fnptr, const char* name)
     {
         fnptr = reinterpret_cast<T*>(GetProcAddress(lib, name));
-        if (fnptr == nullptr) {
+        if (fnptr == NULL) {
             fprintf(stderr, "GetProcAddress: %s not loaded\n", name);
             initialized = false;
             return false;
@@ -152,7 +152,7 @@ HRESULT WINAPI WindowsDeleteString(HSTRING string)
 
 hstring::hstring(const char* str) : hstr_(NULL)
 {
-    int wstr_len = MultiByteToWideChar(CP_UTF8, 0, str, -1, nullptr, 0);
+    int wstr_len = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
     if (wstr_len == 0) return;
 
     WCHAR* wstr = new WCHAR[wstr_len];
@@ -180,7 +180,7 @@ hstring::operator HSTRING()
 
 RoException::RoException(const char* message) : message_(NULL)
 {
-    if (message == nullptr) {
+    if (message == NULL) {
         message = "";
     }
 
