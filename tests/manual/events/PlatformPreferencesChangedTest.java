@@ -26,6 +26,7 @@
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.collections.MapChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -44,8 +45,6 @@ import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
 public class PlatformPreferencesChangedTest extends Application {
-
-    private Map<String, Object> cachedPreferences;
 
     @Override
     public void start(Stage stage) {
@@ -81,24 +80,24 @@ public class PlatformPreferencesChangedTest extends Application {
         root.setCenter(textArea);
         BorderPane.setMargin(textArea, new Insets(20, 0, 0, 0));
 
-        cachedPreferences = new HashMap<>(Platform.getPreferences());
-        textArea.setText("preferences = " + formatPrefs(cachedPreferences.entrySet()));
+        appendText(textArea, "preferences: " + formatPrefs(Platform.getPreferences().entrySet()));
 
-        Platform.getPreferences().addListener(
-            (InvalidationListener)observable -> {
-                Set<Map.Entry<String, Object>> changed = Platform.getPreferences().entrySet().stream()
-                        .filter(entry -> !Objects.equals(entry.getValue(), cachedPreferences.get(entry.getKey())))
-                        .collect(Collectors.toSet());
+        Platform.getPreferences().addListener((InvalidationListener)observable -> {
+            appendText(textArea, "\r\nchanged:");
+        });
 
-                double scrollTop = textArea.getScrollTop();
-                textArea.setText(textArea.getText() + "changed = " + formatPrefs(changed));
-                textArea.setScrollTop(scrollTop);
-
-                cachedPreferences = new HashMap<>(Platform.getPreferences());
-            });
+        Platform.getPreferences().addListener((MapChangeListener<String, Object>)change -> {
+            appendText(textArea, "\t" + change.getKey() + " = " + change.getValueAdded());
+        });
 
         stage.setScene(new Scene(root));
         stage.show();
+    }
+
+    private void appendText(TextArea textArea, String text) {
+        double scrollTop = textArea.getScrollTop();
+        textArea.setText(textArea.getText() + text + "\r\n");
+        textArea.setScrollTop(scrollTop);
     }
 
     public static void main(String[] args) {
@@ -116,6 +115,6 @@ public class PlatformPreferencesChangedTest extends Application {
                 })
                 .collect(Collectors.joining("\r\n\t"));
 
-        return "{\r\n\t" + entries + "\r\n}\r\n";
+        return "\r\n\t" + entries;
     }
 }
