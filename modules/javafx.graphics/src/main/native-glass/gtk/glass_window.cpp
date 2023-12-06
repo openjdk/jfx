@@ -1211,11 +1211,11 @@ void WindowContextTop::set_enabled(bool enabled) {
     is_disabled = !enabled;
     update_window_constraints();
 
-    // If the window is disabled, not interaction is allowed
+    // If the window is disabled, no interaction is allowed
     if (enabled) {
         gdk_window_set_functions(gdk_window, gdk_windowManagerFunctions);
     } else {
-        //Don't allow window manager functions
+        // Don't allow window manager functions
         GdkWMFunction wmf = (GdkWMFunction)(gdk_windowManagerFunctions &
                             ~ (GDK_FUNC_MOVE | GDK_FUNC_MINIMIZE | GDK_FUNC_MAXIMIZE));
         gdk_window_set_functions(gdk_window, wmf);
