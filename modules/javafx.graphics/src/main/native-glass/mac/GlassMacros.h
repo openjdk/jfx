@@ -162,7 +162,7 @@ do {                                                                            
 } while (0)
 
 // assert there is no outstanding java exception pending, return otherwise
-#define GLASS_CHECK_EXCEPTIONALLY_RETURN(ENV)                                      \
+#define GLASS_CHECK_EXCEPTION_RETURN(ENV)                                          \
 do {                                                                               \
     jthrowable t = (*ENV)->ExceptionOccurred(ENV);                                 \
     if (t) {                                                                       \
@@ -174,8 +174,8 @@ do {                                                                            
     };                                                                             \
 } while (0)
 
-#define GLASS_CHECK_NONNULL_EXCEPTIONALLY_RETURN(ENV, EXPR)                        \
-    GLASS_CHECK_EXCEPTION(ENV);                                                    \
+#define GLASS_CHECK_NONNULL_EXCEPTION_RETURN(ENV, EXPR)                            \
+    GLASS_CHECK_EXCEPTION_RETURN(ENV);                                             \
     if ((EXPR) == nil) return;
 
 // assert main Java thread is still attached
