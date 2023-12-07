@@ -25,6 +25,7 @@
 
 package com.sun.javafx.application;
 
+import com.sun.javafx.PlatformUtil;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -41,24 +42,27 @@ import java.util.ResourceBundle;
  */
 enum WindowsHighContrastScheme {
 
+    NONE(null),
     HIGH_CONTRAST_BLACK("high.contrast.black.theme"),
     HIGH_CONTRAST_WHITE("high.contrast.white.theme"),
     HIGH_CONTRAST_1("high.contrast.1.theme"),
     HIGH_CONTRAST_2("high.contrast.2.theme");
 
-    private static final List<ResourceBundle> resourceBundles = Arrays.stream(Locale.getAvailableLocales())
-        .map(locale -> ResourceBundle.getBundle("com/sun/glass/ui/win/themes", locale))
-        .distinct()
-        .toList();
+    private static List<ResourceBundle> resourceBundles;
+
+    static {
+        if (PlatformUtil.isWindows()) {
+            resourceBundles = Arrays.stream(Locale.getAvailableLocales())
+                .map(locale -> ResourceBundle.getBundle("com/sun/glass/ui/win/themes", locale))
+                .distinct()
+                .toList();
+        }
+    }
 
     private final String themeKey;
 
     WindowsHighContrastScheme(String themeKey) {
         this.themeKey = themeKey;
-    }
-
-    public String getThemeKey() {
-        return themeKey;
     }
 
     /**
@@ -68,9 +72,9 @@ enum WindowsHighContrastScheme {
      * @param themeName a string with the localized theme name (for the locale of the OS, not the JVM)
      * @return the enum constant or null if not found
      */
-    public static WindowsHighContrastScheme fromThemeName(String themeName) {
-        if (themeName == null) {
-            return null;
+    static WindowsHighContrastScheme fromThemeName(String themeName) {
+        if (themeName == null || resourceBundles == null) {
+            return NONE;
         }
 
         // Iterate over all resource bundles and try to find a value that matches the theme name
@@ -78,12 +82,12 @@ enum WindowsHighContrastScheme {
         // since we might be running on a JVM with a locale that is different from the OS.
         for (WindowsHighContrastScheme item : values()) {
             for (ResourceBundle resourceBundle : resourceBundles) {
-                if (themeName.equalsIgnoreCase(resourceBundle.getString(item.getThemeKey()))) {
+                if (item != NONE && themeName.equalsIgnoreCase(resourceBundle.getString(item.themeKey))) {
                     return item;
                 }
             }
         }
 
-        return null;
+        return NONE;
     }
 }

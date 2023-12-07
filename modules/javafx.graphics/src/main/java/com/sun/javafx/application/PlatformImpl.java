@@ -773,12 +773,7 @@ public class PlatformImpl {
             } else {
                 if (platformTheme != null) {
                     // The following names are Platform specific (Windows 7 and 8)
-                    var highContrastScheme = WindowsHighContrastScheme.fromThemeName(platformTheme);
-                    if (highContrastScheme == null) {
-                        return;
-                    }
-
-                    switch (highContrastScheme) {
+                    switch (WindowsHighContrastScheme.fromThemeName(platformTheme)) {
                         case HIGH_CONTRAST_WHITE:
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css";
                             break;
@@ -789,6 +784,7 @@ public class PlatformImpl {
                         case HIGH_CONTRAST_2: //TODO #2 should be green on black
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css";
                             break;
+                        default:
                     }
                 }
             }
