@@ -69,7 +69,9 @@ public class PlatformPreferencesChangedTest extends Application {
             new VBox(
                 new Label("1. On a supported platform, change any of the platform preferences."),
                 new Label("    See javafx.application.Platform.Preferences for a list of supported platforms.")),
-            new Label("2. Observe whether the changed preferences are reported in the log below."),
+            new VBox(
+                new Label("2. Observe whether the changed preferences are reported in the log below."),
+                new Label("    Added or removed preferences are marked with a plus or minus sign.")),
             new Label("3. Click \"Pass\" if the changes were correctly reported, otherwise click \"Fail\"."),
             new HBox(5, passButton, failButton, clearButton)
         ));
@@ -87,7 +89,13 @@ public class PlatformPreferencesChangedTest extends Application {
         });
 
         Platform.getPreferences().addListener((MapChangeListener<String, Object>)change -> {
-            appendText(textArea, "\t" + change.getKey() + " = " + change.getValueAdded());
+            if (change.wasRemoved() && change.wasAdded()) {
+                appendText(textArea, "\t" + formatEntry(change.getKey(), change.getValueAdded()));
+            } else if (change.wasRemoved()) {
+                appendText(textArea, "\t-" + change.getKey());
+            } else {
+                appendText(textArea, "\t+" + formatEntry(change.getKey(), change.getValueAdded()));
+            }
         });
 
         stage.setScene(new Scene(root));
@@ -105,16 +113,17 @@ public class PlatformPreferencesChangedTest extends Application {
     }
 
     private static String formatPrefs(Set<Map.Entry<String, Object>> prefs) {
-        String entries = prefs.stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> {
-                    if (entry.getValue() instanceof Object[] array) {
-                        return entry.getKey() + "=" + Arrays.toString(array);
-                    }
-                    return entry.getKey() + "=" + entry.getValue();
-                })
-                .collect(Collectors.joining("\r\n\t"));
+        return "\r\n\t" + prefs.stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(entry -> formatEntry(entry.getKey(), entry.getValue()))
+            .collect(Collectors.joining("\r\n\t"));
+    }
 
-        return "\r\n\t" + entries;
+    private static String formatEntry(String key, Object value) {
+        if (value instanceof Object[] array) {
+            return key + "=" + Arrays.toString(array);
+        }
+
+        return key + "=" + value;
     }
 }
