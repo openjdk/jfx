@@ -34,7 +34,6 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.ObservableMap;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 
 /**
  * Application platform support class.
