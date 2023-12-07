@@ -70,7 +70,7 @@ enum WindowsHighContrastScheme {
      * for which the result of a function, applying its theme key, matches the theme name.
      *
      * @param themeName a string with the localized theme name (for the locale of the OS, not the JVM)
-     * @return the enum constant or null if not found
+     * @return the enum constant or {@code NONE} if not found
      */
     static WindowsHighContrastScheme fromThemeName(String themeName) {
         if (themeName == null || resourceBundles == null) {
