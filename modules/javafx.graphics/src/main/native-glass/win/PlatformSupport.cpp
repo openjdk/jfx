@@ -130,10 +130,10 @@ void PlatformSupport::queryHighContrastScheme(jobject properties) const
     contrastInfo.cbSize = sizeof(HIGHCONTRAST);
     ::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0);
     if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
-        putBoolean(properties, "Windows.SPI.HighContrastOn", true);
+        putBoolean(properties, "Windows.SPI.HighContrast", true);
         putString(properties, "Windows.SPI.HighContrastColorScheme", contrastInfo.lpszDefaultScheme);
     } else {
-        putBoolean(properties, "Windows.SPI.HighContrastOn", false);
+        putBoolean(properties, "Windows.SPI.HighContrast", false);
         putString(properties, "Windows.SPI.HighContrastColorScheme", (const char*)NULL);
     }
 }

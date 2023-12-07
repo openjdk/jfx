@@ -1047,7 +1047,7 @@ public class PlatformImpl {
 
     // This method will be removed when StyleThemes are added.
     private static void checkHighContrastThemeChanged(Map<String, Object> preferences) {
-        if (Boolean.TRUE.equals(preferences.get("Windows.SPI.HighContrastOn"))) {
+        if (Boolean.TRUE.equals(preferences.get("Windows.SPI.HighContrast"))) {
             setAccessibilityTheme(preferences.get("Windows.SPI.HighContrastColorScheme") instanceof String s ? s : null);
         } else {
             setAccessibilityTheme(null);
