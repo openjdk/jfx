@@ -201,9 +201,14 @@ private:
 
     extern jmethodID jSizeInit; // com.sun.class.ui.Size#<init> ()V
 
+    extern jclass jMapCls; // java.util.Map
     extern jmethodID jMapGet; // java.util.Map#get(Ljava/lang/Object;)Ljava/lang/Object;
+    extern jmethodID jMapPut; // java.util.Map#put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
     extern jmethodID jMapKeySet; // java.util.Map#keySet()Ljava/util/Set;
     extern jmethodID jMapContainsKey; // java.util.Map#containsKey(Ljava/lang/Object;)Z
+
+    extern jclass jHashMapCls; // java.util.HashMap
+    extern jmethodID jHashMapInit; // java.util.HashMap#<init> ()V
 
     extern jclass jHashSetCls; // java.util.HashSet
     extern jmethodID jHashSetInit; // java.util.HashSet#<init> ()V
@@ -223,6 +228,20 @@ private:
     extern jmethodID jApplicationReportException; // reportException(Ljava/lang/Throwable;)V
     extern jmethodID jApplicationGetApplication; // GetApplication()()Lcom/sun/glass/ui/Application;
     extern jmethodID jApplicationGetName; // getName()Ljava/lang/String;
+    extern jmethodID jApplicationNotifyPreferencesChanged; // notifyPreferencesChanged(Ljava/util/Map;)V
+
+    extern jclass jObjectCls; // java.lang.Object
+    extern jmethodID jObjectEquals; // java.lang.Object#equals(Ljava/lang/Object;)Z
+
+    extern jclass jBooleanCls; // java.lang.Boolean
+    extern jfieldID jBooleanTRUE; // java.lang.Boolean#TRUE
+    extern jfieldID jBooleanFALSE; // java.lang.Boolean#FALSE
+
+    extern jclass jCollectionsCls; // java.util.Collections;
+    extern jmethodID jCollectionsUnmodifiableMap; // java.util.Collections#unmodifiableMap(Ljava/util/Map;)Ljava/util/Map;
+
+    extern jclass jColorCls; // javafx.scene.paint.Color
+    extern jmethodID jColorRgb; // javafx.scene.paint.Color#rgb(IIID)Ljavafx/scene/paint/Color;
 
 #ifdef VERBOSE
 #define LOG0(msg) {printf(msg);fflush(stdout);}
