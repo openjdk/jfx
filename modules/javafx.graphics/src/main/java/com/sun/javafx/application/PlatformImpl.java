@@ -51,7 +51,6 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javafx.application.Application;
@@ -726,55 +725,6 @@ public class PlatformImpl {
         }
     }
 
-    /**
-     * Enumeration of possible high contrast scheme values.
-     *
-     * For each scheme, a theme key is defined. These keys can be
-     * used, for instance, in a resource bundle that defines the theme name values
-     * for supported locales.
-     *
-     * The high contrast feature may not be available on all platforms.
-     */
-    public enum HighContrastScheme {
-        HIGH_CONTRAST_BLACK("high.contrast.black.theme"),
-        HIGH_CONTRAST_WHITE("high.contrast.white.theme"),
-        HIGH_CONTRAST_1("high.contrast.1.theme"),
-        HIGH_CONTRAST_2("high.contrast.2.theme");
-
-        private final String themeKey;
-        HighContrastScheme(String themeKey) {
-            this.themeKey = themeKey;
-        }
-
-        public String getThemeKey() {
-            return themeKey;
-        }
-
-        /**
-         * Given a theme name string, this method finds the possible enum constant
-         * for which the result of a function, applying its theme key, matches the theme name.
-         *
-         * An example of such function can be {@code ResourceBundle::getString},
-         * as {@link java.util.ResourceBundle#getString(String)} returns a string for
-         * the given key.
-         *
-         * @param keyFunction a {@link Function} that returns a string for a given theme key string.
-         * @param themeName a string with the theme name
-         * @return the name of the enum constant or null if not found
-         */
-        public static String fromThemeName(Function<String, String> keyFunction, String themeName) {
-            if (keyFunction == null || themeName == null) {
-                return null;
-            }
-            for (HighContrastScheme item : values()) {
-                if (themeName.equalsIgnoreCase(keyFunction.apply(item.getThemeKey()))) {
-                    return item.toString();
-                }
-            }
-            return null;
-        }
-    }
-
     private static String accessibilityTheme;
     public static boolean setAccessibilityTheme(String platformTheme) {
 
@@ -823,7 +773,12 @@ public class PlatformImpl {
             } else {
                 if (platformTheme != null) {
                     // The following names are Platform specific (Windows 7 and 8)
-                    switch (HighContrastScheme.valueOf(platformTheme)) {
+                    var highContrastScheme = WindowsHighContrastScheme.fromThemeName(platformTheme);
+                    if (highContrastScheme == null) {
+                        return;
+                    }
+
+                    switch (highContrastScheme) {
                         case HIGH_CONTRAST_WHITE:
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css";
                             break;
@@ -834,7 +789,6 @@ public class PlatformImpl {
                         case HIGH_CONTRAST_2: //TODO #2 should be green on black
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css";
                             break;
-                        default:
                     }
                 }
             }
