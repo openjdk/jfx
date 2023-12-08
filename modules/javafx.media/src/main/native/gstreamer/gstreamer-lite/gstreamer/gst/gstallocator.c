@@ -239,13 +239,14 @@ gst_allocator_register (const gchar * name, GstAllocator * allocator)
   g_rw_lock_writer_lock (&lock);
   /* The ref will never be released */
   GST_OBJECT_FLAG_SET (allocator, GST_OBJECT_FLAG_MAY_BE_LEAKED);
-  g_hash_table_insert (allocators, (gpointer) name, (gpointer) allocator);
+  g_hash_table_insert (allocators, (gpointer) g_strdup (name),
+      (gpointer) allocator);
   g_rw_lock_writer_unlock (&lock);
 }
 
 /**
  * gst_allocator_find:
- * @name: (allow-none): the name of the allocator
+ * @name: (nullable): the name of the allocator
  *
  * Find a previously registered allocator with @name. When @name is %NULL, the
  * default allocator will be returned.
@@ -295,9 +296,9 @@ gst_allocator_set_default (GstAllocator * allocator)
 
 /**
  * gst_allocator_alloc:
- * @allocator: (transfer none) (allow-none): a #GstAllocator to use
+ * @allocator: (transfer none) (nullable): a #GstAllocator to use
  * @size: size of the visible memory area
- * @params: (transfer none) (allow-none): optional parameters
+ * @params: (transfer none) (nullable): optional parameters
  *
  * Use @allocator to allocate a new memory block with memory that is at least
  * @size big.
@@ -609,7 +610,7 @@ void
 _priv_gst_allocator_initialize (void)
 {
   g_rw_lock_init (&lock);
-  allocators = g_hash_table_new_full (g_str_hash, g_str_equal, NULL,
+  allocators = g_hash_table_new_full (g_str_hash, g_str_equal, g_free,
       gst_object_unref);
 
 #ifdef HAVE_GETPAGESIZE
@@ -652,8 +653,8 @@ _priv_gst_allocator_cleanup (void)
  * @maxsize: allocated size of @data
  * @offset: offset in @data
  * @size: size of valid data
- * @user_data: (allow-none): user_data
- * @notify: (allow-none) (scope async) (closure user_data): called with @user_data when the memory is freed
+ * @user_data: (nullable): user_data
+ * @notify: (nullable) (scope async) (closure user_data): called with @user_data when the memory is freed
  *
  * Allocate a new memory block that wraps the given @data.
  *

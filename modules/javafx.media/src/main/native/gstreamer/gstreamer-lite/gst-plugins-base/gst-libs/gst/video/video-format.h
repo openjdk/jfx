@@ -142,6 +142,9 @@ G_BEGIN_DECLS
  * @GST_VIDEO_FORMAT_BGRA64_BE: reverse RGB with alpha channel last, 16 bits per channel
  * @GST_VIDEO_FORMAT_ABGR64_LE: reverse RGB with alpha channel first, 16 bits per channel
  * @GST_VIDEO_FORMAT_ABGR64_BE: reverse RGB with alpha channel first, 16 bits per channel
+ * @GST_VIDEO_FORMAT_NV12_16L32S: NV12 with 16x32 Y tiles and 16x16 UV tiles. (Since: 1.22)
+ * @GST_VIDEO_FORMAT_NV12_8L128 : NV12 with 8x128 tiles in linear order (Since: 1.22)
+ * @GST_VIDEO_FORMAT_NV12_10BE_8L128 : NV12 10bit big endian with 8x128 tiles in linear order (Since: 1.22)
  *
  * Enum value describing the most common video formats.
  *
@@ -370,6 +373,33 @@ typedef enum {
    * Since: 1.20
    */
   GST_VIDEO_FORMAT_ABGR64_BE,
+
+  /**
+   * GST_VIDEO_FORMAT_NV12_16L32S:
+   *
+   * NV12 with 16x32 Y tiles and 16x16 UV tiles.
+   *
+   * Since: 1.22
+   */
+  GST_VIDEO_FORMAT_NV12_16L32S,
+
+  /**
+   * GST_VIDEO_FORMAT_NV12_8L128:
+   *
+   * NV12 with 8x128 tiles in linear order.
+   *
+   * Since: 1.22
+   */
+  GST_VIDEO_FORMAT_NV12_8L128,
+
+  /**
+   * GST_VIDEO_FORMAT_NV12_10BE_8L128:
+   *
+   * NV12 10bit big endian with 8x128 tiles in linear order.
+   *
+   * Since: 1.22
+   */
+  GST_VIDEO_FORMAT_NV12_10BE_8L128,
 } GstVideoFormat;
 
 #define GST_VIDEO_MAX_PLANES 4
@@ -397,6 +427,8 @@ typedef struct _GstVideoFormatInfo GstVideoFormatInfo;
  *   #GstVideoFormatUnpack and #GstVideoFormatPack function.
  * @GST_VIDEO_FORMAT_FLAG_TILED: The format is tiled, there is tiling information
  *   in the last plane.
+ * @GST_VIDEO_FORMAT_FLAG_SUBTILES: The tile size varies per plane
+ *   according to the subsampling. (Since: 1.22)
  *
  * The different video flags that a format info can have.
  */
@@ -410,7 +442,15 @@ typedef enum
   GST_VIDEO_FORMAT_FLAG_PALETTE  = (1 << 5),
   GST_VIDEO_FORMAT_FLAG_COMPLEX  = (1 << 6),
   GST_VIDEO_FORMAT_FLAG_UNPACK   = (1 << 7),
-  GST_VIDEO_FORMAT_FLAG_TILED    = (1 << 8)
+  GST_VIDEO_FORMAT_FLAG_TILED    = (1 << 8),
+  /**
+   * GST_VIDEO_FORMAT_FLAG_SUBTILES:
+   *
+   * The tile size varies per plane according to the subsampling.
+   *
+   * Since: 1.22
+   */
+  GST_VIDEO_FORMAT_FLAG_SUBTILES = (1 << 9)
 } GstVideoFormatFlags;
 
 /* YUV components */
@@ -556,8 +596,11 @@ typedef void (*GstVideoFormatPack)           (const GstVideoFormatInfo *info,
  * @pack_lines: the amount of lines that will be packed
  * @pack_func: an pack function for this format
  * @tile_mode: The tiling mode
- * @tile_ws: The width of a tile, in bytes, represented as a shift
- * @tile_hs: The height of a tile, in bytes, represented as a shift
+ * @tile_ws: The width of a tile, in bytes, represented as a shift. DEPRECATED,
+ * use tile_info[] array instead.
+ * @tile_hs: The height of a tile, in bytes, represented as a shift. DEPREACTED,
+ * use tile_info[] array instead.
+ * @tile_info: Per-plane tile information
  *
  * Information for a video format.
  */
@@ -583,12 +626,29 @@ struct _GstVideoFormatInfo {
   GstVideoFormatPack pack_func;
 
   GstVideoTileMode tile_mode;
-  guint tile_ws;
-  guint tile_hs;
+  G_DEPRECATED_FOR(tile_info) guint tile_ws;
+  G_DEPRECATED_FOR(tile_info) guint tile_hs;
 
-  /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
+  /**
+   * GstVideoFormatInfo.tile_info:
+   *
+   * Information about the tiles for each of the planes.
+   *
+   * Since: 1.22
+   */
+  GstVideoTileInfo tile_info[GST_VIDEO_MAX_PLANES];
 };
+
+/**
+ * GST_VIDEO_FORMAT_INFO_IS_VALID_RAW:
+ *
+ * Tests that the given #GstVideoFormatInfo represents a valid un-encoded
+ * format.
+ *
+ * Since: 1.22
+ */
+#define GST_VIDEO_FORMAT_INFO_IS_VALID_RAW(info)              \
+  (info != NULL && (info)->format > GST_VIDEO_FORMAT_ENCODED)
 
 #define GST_VIDEO_FORMAT_INFO_FORMAT(info)       ((info)->format)
 #define GST_VIDEO_FORMAT_INFO_NAME(info)         ((info)->name)
@@ -602,6 +662,19 @@ struct _GstVideoFormatInfo {
 #define GST_VIDEO_FORMAT_INFO_HAS_PALETTE(info)  (((info)->flags & GST_VIDEO_FORMAT_FLAG_PALETTE) != 0)
 #define GST_VIDEO_FORMAT_INFO_IS_COMPLEX(info)   (((info)->flags & GST_VIDEO_FORMAT_FLAG_COMPLEX) != 0)
 #define GST_VIDEO_FORMAT_INFO_IS_TILED(info)     (((info)->flags & GST_VIDEO_FORMAT_FLAG_TILED) != 0)
+/**
+ * GST_VIDEO_FORMAT_INFO_HAS_SUBTILES:
+ * @info: a #GstVideoFormatInfo
+ *
+ * This macro checks if %GST_VIDEO_FORMAT_FLAG_SUBTILES is set. When this
+ * flag is set, it means that the tile sizes must be scaled as per the
+ * subsampling.
+ *
+ * Returns: %TRUE if the format uses subsampled tile sizes.
+ *
+ * Since: 1.22
+ */
+#define GST_VIDEO_FORMAT_INFO_HAS_SUBTILES(info) (((info)->flags & GST_VIDEO_FORMAT_FLAG_SUBTILES) != 0)
 
 #define GST_VIDEO_FORMAT_INFO_BITS(info)         ((info)->bits)
 #define GST_VIDEO_FORMAT_INFO_N_COMPONENTS(info) ((info)->n_components)
@@ -675,8 +748,66 @@ struct _GstVideoFormatInfo {
 #define GST_VIDEO_FORMAT_INFO_TILE_WS(info) ((info)->tile_ws)
 #define GST_VIDEO_FORMAT_INFO_TILE_HS(info) ((info)->tile_hs)
 
+/**
+ * GST_VIDEO_FORMAT_INFO_TILE_SIZE:
+ * @info: a #GstVideoFormatInfo
+ * @plane: the plane index
+ *
+ * Provides the size in bytes of a tile in the specified @plane. This replaces
+ * the width and height shift, which was limited to power of two dimensions.
+ *
+ * Since: 1.22
+ */
+#define GST_VIDEO_FORMAT_INFO_TILE_SIZE(info,plane) ((info)->tile_info[plane].size)
+
+/**
+ * GST_VIDEO_FORMAT_INFO_TILE_WIDTH:
+ * @info: a #GstVideoFormatInfo
+ * @plane: the plane index
+ *
+ * See #GstVideoTileInfo.width.
+ *
+ * Return the width of one tile in pixels, zero if its not an integer.
+ *
+ * Since: 1.22
+ */
+#define GST_VIDEO_FORMAT_INFO_TILE_WIDTH(info,plane) ((info)->tile_info[plane].width)
+
+/**
+ * GST_VIDEO_FORMAT_INFO_TILE_HEIGHT:
+ * @info: a #GstVideoFormatInfo
+ * @plane: the plane index
+ *
+ * See #GstVideoTileInfo.height.
+ *
+ * Returns the tile height.
+ *
+ * Since: 1.22
+ */
+#define GST_VIDEO_FORMAT_INFO_TILE_HEIGHT(info,plane) ((info)->tile_info[plane].height)
+
+/**
+ * GST_VIDEO_FORMAT_INFO_TILE_STRIDE:
+ * @info: a #GstVideoFormatInfo
+ * @plane: the plane index
+ *
+ * See #GstVideoTileInfo.stride.
+ *
+ * Returns the stride of one tile, regardless of the internal details of the
+ * tile (could be a complex system with subtile) the tiles size should alway
+ * match the tile width multiplied by the tile stride.
+ *
+ * Since: 1.22
+ */
+#define GST_VIDEO_FORMAT_INFO_TILE_STRIDE(info,plane) ((info)->tile_info[plane].stride)
+
+
 GST_VIDEO_API
 void gst_video_format_info_component                  (const GstVideoFormatInfo *info, guint plane, gint components[GST_VIDEO_MAX_COMPONENTS]);
+
+GST_VIDEO_API
+gint gst_video_format_info_extrapolate_stride        (const GstVideoFormatInfo * finfo,
+                                                      gint plane, gint stride);
 
 /* format properties */
 
@@ -743,9 +874,9 @@ gconstpointer  gst_video_format_get_palette          (GstVideoFormat format, gsi
     "GBR_12BE, Y444_12LE, GBR_12LE, I422_12BE, I422_12LE, Y212_BE, Y212_LE, I420_12BE, " \
     "I420_12LE, P012_BE, P012_LE, Y444_10BE, GBR_10BE, Y444_10LE, GBR_10LE, r210, " \
     "I422_10BE, I422_10LE, NV16_10LE32, Y210, v210, UYVP, I420_10BE, I420_10LE, " \
-    "P010_10BE, P010_10LE, NV12_10LE32, NV12_10LE40, Y444, RGBP, GBR, BGRP, NV24, xBGR, BGRx, " \
+    "P010_10BE, P010_10LE, NV12_10LE32, NV12_10LE40, NV12_10BE_8L128, Y444, RGBP, GBR, BGRP, NV24, xBGR, BGRx, " \
     "xRGB, RGBx, BGR, IYU2, v308, RGB, Y42B, NV61, NV16, VYUY, UYVY, YVYU, YUY2, I420, " \
-    "YV12, NV21, NV12, NV12_64Z32, NV12_4L4, NV12_32L32, Y41B, IYU1, YVU9, YUV9, RGB16, " \
+    "YV12, NV21, NV12, NV12_8L128, NV12_64Z32, NV12_4L4, NV12_32L32, NV12_16L32S, Y41B, IYU1, YVU9, YUV9, RGB16, " \
     "BGR16, RGB15, BGR15, RGB8P, GRAY16_BE, GRAY16_LE, GRAY10_LE32, GRAY8 }"
 #elif G_BYTE_ORDER == G_LITTLE_ENDIAN
 #define GST_VIDEO_FORMATS_ALL "{ ABGR64_LE, BGRA64_LE, AYUV64, ARGB64_LE, ARGB64, " \
@@ -756,9 +887,9 @@ gconstpointer  gst_video_format_get_palette          (GstVideoFormat format, gsi
     "GBR_12LE, Y444_12BE, GBR_12BE, I422_12LE, I422_12BE, Y212_LE, Y212_BE, I420_12LE, " \
     "I420_12BE, P012_LE, P012_BE, Y444_10LE, GBR_10LE, Y444_10BE, GBR_10BE, r210, " \
     "I422_10LE, I422_10BE, NV16_10LE32, Y210, v210, UYVP, I420_10LE, I420_10BE, " \
-    "P010_10LE, NV12_10LE32, NV12_10LE40, P010_10BE, Y444, RGBP, GBR, BGRP, NV24, xBGR, BGRx, " \
+    "P010_10LE, NV12_10LE32, NV12_10LE40, P010_10BE, NV12_10BE_8L128, Y444, RGBP, GBR, BGRP, NV24, xBGR, BGRx, " \
     "xRGB, RGBx, BGR, IYU2, v308, RGB, Y42B, NV61, NV16, VYUY, UYVY, YVYU, YUY2, I420, " \
-    "YV12, NV21, NV12, NV12_64Z32, NV12_4L4, NV12_32L32, Y41B, IYU1, YVU9, YUV9, RGB16, " \
+    "YV12, NV21, NV12, NV12_8L128, NV12_64Z32, NV12_4L4, NV12_32L32, NV12_16L32S, Y41B, IYU1, YVU9, YUV9, RGB16, " \
     "BGR16, RGB15, BGR15, RGB8P, GRAY16_LE, GRAY16_BE, GRAY10_LE32, GRAY8 }"
 #endif
 
@@ -803,6 +934,7 @@ GstCaps * gst_video_make_raw_caps (const GstVideoFormat formats[], guint len);
 GST_VIDEO_API
 GstCaps * gst_video_make_raw_caps_with_features (const GstVideoFormat formats[], guint len,
                                                  GstCapsFeatures * features);
+
 
 G_END_DECLS
 

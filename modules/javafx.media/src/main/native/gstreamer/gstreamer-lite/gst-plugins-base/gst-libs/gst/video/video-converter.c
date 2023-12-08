@@ -1749,8 +1749,8 @@ chain_convert (GstVideoConverter * convert, GstLineCache * prev, gint idx)
     same_primaries = TRUE;
   } else {
     same_primaries =
-        convert->in_info.colorimetry.primaries ==
-        convert->out_info.colorimetry.primaries;
+        gst_video_color_primaries_is_equivalent (convert->in_info.
+        colorimetry.primaries, convert->out_info.colorimetry.primaries);
   }
 
   GST_DEBUG ("matrix %d -> %d (%d)", convert->in_info.colorimetry.matrix,
@@ -2319,7 +2319,7 @@ convert_get_alpha_mode (GstVideoConverter * convert)
  * The optional @pool can be used to spawn threads, this is useful when
  * creating new converters rapidly, for example when updating cropping.
  *
- * Returns: a #GstVideoConverter or %NULL if conversion is not possible.
+ * Returns (nullable): a #GstVideoConverter or %NULL if conversion is not possible.
  *
  * Since: 1.20
  */
@@ -2562,7 +2562,7 @@ no_pack_func:
  * Create a new converter object to convert between @in_info and @out_info
  * with @config.
  *
- * Returns: a #GstVideoConverter or %NULL if conversion is not possible.
+ * Returns (nullable): a #GstVideoConverter or %NULL if conversion is not possible.
  *
  * Since: 1.6
  */
@@ -7341,6 +7341,7 @@ get_scale_format (GstVideoFormat format, gint plane)
     case GST_VIDEO_FORMAT_NV12_64Z32:
     case GST_VIDEO_FORMAT_NV12_4L4:
     case GST_VIDEO_FORMAT_NV12_32L32:
+    case GST_VIDEO_FORMAT_NV12_16L32S:
     case GST_VIDEO_FORMAT_A420_10BE:
     case GST_VIDEO_FORMAT_A420_10LE:
     case GST_VIDEO_FORMAT_A422_10BE:
@@ -7365,6 +7366,8 @@ get_scale_format (GstVideoFormat format, gint plane)
     case GST_VIDEO_FORMAT_Y212_LE:
     case GST_VIDEO_FORMAT_Y412_BE:
     case GST_VIDEO_FORMAT_Y412_LE:
+    case GST_VIDEO_FORMAT_NV12_8L128:
+    case GST_VIDEO_FORMAT_NV12_10BE_8L128:
       res = format;
       g_assert_not_reached ();
       break;
@@ -8221,7 +8224,8 @@ video_converter_lookup_fastpath (GstVideoConverter * convert)
 
     in_primaries = convert->in_info.colorimetry.primaries;
     out_primaries = convert->out_info.colorimetry.primaries;
-    same_primaries = in_primaries == out_primaries;
+    same_primaries = gst_video_color_primaries_is_equivalent (in_primaries,
+        out_primaries);
   }
 
   interlaced = GST_VIDEO_INFO_IS_INTERLACED (&convert->in_info);
@@ -8269,5 +8273,37 @@ video_converter_lookup_fastpath (GstVideoConverter * convert)
   }
   GST_DEBUG ("no fastpath found");
   return FALSE;
+}
+
+/**
+ * gst_video_converter_get_in_info:
+ * @convert: a #GstVideoConverter
+ *
+ * Retrieve the input format of @convert.
+ *
+ * Returns: (transfer none): a #GstVideoInfo
+ *
+ * Since: 1.22
+ */
+const GstVideoInfo *
+gst_video_converter_get_in_info (GstVideoConverter * convert)
+{
+  return &convert->in_info;
+}
+
+/**
+ * gst_video_converter_get_out_info:
+ * @convert: a #GstVideoConverter
+ *
+ * Retrieve the output format of @convert.
+ *
+ * Returns: (transfer none): a #GstVideoInfo
+ *
+ * Since: 1.22
+ */
+const GstVideoInfo *
+gst_video_converter_get_out_info (GstVideoConverter * convert)
+{
+  return &convert->out_info;
 }
 #endif // GSTREAMER_LITE

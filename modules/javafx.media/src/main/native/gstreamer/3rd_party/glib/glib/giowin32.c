@@ -6,6 +6,8 @@
  * Copyright 1999-2000 Tor Lillqvist and Craig Setera
  * Copyright 2001-2003 Andrew Lanoix
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -706,8 +708,6 @@ g_io_win32_prepare (GSource *source,
   GIOCondition buffer_condition = g_io_channel_get_buffer_condition (watch->channel);
   GIOWin32Channel *channel = (GIOWin32Channel *)watch->channel;
   int event_mask;
-
-  *timeout = -1;
 
   if (channel->debug)
     g_print ("g_io_win32_prepare: source=%p channel=%p", source, channel);

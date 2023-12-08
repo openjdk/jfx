@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.javafx.application;
 
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.preferences.PlatformPreferences;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
@@ -50,7 +51,6 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javafx.application.Application;
@@ -725,55 +725,6 @@ public class PlatformImpl {
         }
     }
 
-    /**
-     * Enumeration of possible high contrast scheme values.
-     *
-     * For each scheme, a theme key is defined. These keys can be
-     * used, for instance, in a resource bundle that defines the theme name values
-     * for supported locales.
-     *
-     * The high contrast feature may not be available on all platforms.
-     */
-    public enum HighContrastScheme {
-        HIGH_CONTRAST_BLACK("high.contrast.black.theme"),
-        HIGH_CONTRAST_WHITE("high.contrast.white.theme"),
-        HIGH_CONTRAST_1("high.contrast.1.theme"),
-        HIGH_CONTRAST_2("high.contrast.2.theme");
-
-        private final String themeKey;
-        HighContrastScheme(String themeKey) {
-            this.themeKey = themeKey;
-        }
-
-        public String getThemeKey() {
-            return themeKey;
-        }
-
-        /**
-         * Given a theme name string, this method finds the possible enum constant
-         * for which the result of a function, applying its theme key, matches the theme name.
-         *
-         * An example of such function can be {@code ResourceBundle::getString},
-         * as {@link java.util.ResourceBundle#getString(String)} returns a string for
-         * the given key.
-         *
-         * @param keyFunction a {@link Function} that returns a string for a given theme key string.
-         * @param themeName a string with the theme name
-         * @return the name of the enum constant or null if not found
-         */
-        public static String fromThemeName(Function<String, String> keyFunction, String themeName) {
-            if (keyFunction == null || themeName == null) {
-                return null;
-            }
-            for (HighContrastScheme item : values()) {
-                if (themeName.equalsIgnoreCase(keyFunction.apply(item.getThemeKey()))) {
-                    return item.toString();
-                }
-            }
-            return null;
-        }
-    }
-
     private static String accessibilityTheme;
     public static boolean setAccessibilityTheme(String platformTheme) {
 
@@ -822,7 +773,7 @@ public class PlatformImpl {
             } else {
                 if (platformTheme != null) {
                     // The following names are Platform specific (Windows 7 and 8)
-                    switch (HighContrastScheme.valueOf(platformTheme)) {
+                    switch (WindowsHighContrastScheme.fromThemeName(platformTheme)) {
                         case HIGH_CONTRAST_WHITE:
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css";
                             break;
@@ -1044,4 +995,59 @@ public class PlatformImpl {
                 return Toolkit.getToolkit().isSupported(feature);
         }
     }
+
+    private static PlatformPreferences platformPreferences;
+
+    public static PlatformPreferences getPlatformPreferences() {
+        if (platformPreferences == null) {
+            throw new IllegalStateException("Toolkit not initialized");
+        }
+
+        return platformPreferences;
+    }
+
+    /**
+     * Called by Glass when the toolkit is initialized.
+     *
+     * @param platformKeyMappings a map of platform-specific keys to well-known keys
+     * @param preferences the initial set of platform preferences
+     */
+    public static void initPreferences(Map<String, Class<?>> platformKeys,
+                                       Map<String, String> platformKeyMappings,
+                                       Map<String, Object> preferences) {
+        platformPreferences = new PlatformPreferences(platformKeys, platformKeyMappings);
+        platformPreferences.update(preferences);
+    }
+
+    /**
+     * Called by Glass when one or several platform preferences have changed.
+     * <p>
+     * This method can be called on any thread. The supplied {@code preferences} map may
+     * include all platform preferences, or only the changed preferences. If a preference
+     * was removed, the corresponding key is mapped to {@code null}.
+     *
+     * @param preferences a map that includes the changed preferences
+     */
+    public static void updatePreferences(Map<String, Object> preferences) {
+        if (isFxApplicationThread()) {
+            checkHighContrastThemeChanged(preferences);
+            platformPreferences.update(preferences);
+        } else {
+            // Make a defensive copy in case the caller of this method decides to re-use or
+            // modify its preferences map after the method returns. Don't use Map.copyOf
+            // because the preferences map may contain null values.
+            Map<String, Object> preferencesCopy = new HashMap<>(preferences);
+            runLater(() -> updatePreferences(preferencesCopy));
+        }
+    }
+
+    // This method will be removed when StyleThemes are added.
+    private static void checkHighContrastThemeChanged(Map<String, Object> preferences) {
+        if (Boolean.TRUE.equals(preferences.get("Windows.SPI.HighContrast"))) {
+            setAccessibilityTheme(preferences.get("Windows.SPI.HighContrastColorScheme") instanceof String s ? s : null);
+        } else {
+            setAccessibilityTheme(null);
+        }
+    }
+
 }

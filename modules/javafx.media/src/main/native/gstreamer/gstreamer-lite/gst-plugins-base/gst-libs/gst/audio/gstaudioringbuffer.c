@@ -81,7 +81,7 @@ gst_audio_ring_buffer_init (GstAudioRingBuffer * ringbuffer)
 {
   ringbuffer->open = FALSE;
   ringbuffer->acquired = FALSE;
-  ringbuffer->state = GST_AUDIO_RING_BUFFER_STATE_STOPPED;
+  g_atomic_int_set (&ringbuffer->state, GST_AUDIO_RING_BUFFER_STATE_STOPPED);
   g_cond_init (&ringbuffer->cond);
   ringbuffer->waiting = 0;
   ringbuffer->empty_seg = NULL;
@@ -1005,7 +1005,7 @@ gst_audio_ring_buffer_start (GstAudioRingBuffer * buf)
   }
 
   if (G_UNLIKELY (!res)) {
-    buf->state = GST_AUDIO_RING_BUFFER_STATE_PAUSED;
+    g_atomic_int_set (&buf->state, GST_AUDIO_RING_BUFFER_STATE_PAUSED);
     GST_DEBUG_OBJECT (buf, "failed to start");
   } else {
     GST_DEBUG_OBJECT (buf, "started");
@@ -1036,6 +1036,40 @@ may_not_start:
   }
 }
 
+G_GNUC_INTERNAL
+    void __gst_audio_ring_buffer_set_errored (GstAudioRingBuffer * buf);
+
+/* __gst_audio_ring_buffer_set_errored:
+ * @buf: the #GstAudioRingBuffer that has encountered an error
+ *
+ * Mark the ringbuffer as errored after it has started.
+ *
+ * MT safe.
+
+ * Since: 1.24 (internal in 1.22)
+ */
+void
+__gst_audio_ring_buffer_set_errored (GstAudioRingBuffer * buf)
+{
+  gboolean res;
+
+  /* If started set to errored */
+  res = g_atomic_int_compare_and_exchange (&buf->state,
+      GST_AUDIO_RING_BUFFER_STATE_STARTED, GST_AUDIO_RING_BUFFER_STATE_ERROR);
+  if (!res) {
+    GST_DEBUG_OBJECT (buf, "ringbuffer was not started, checking paused");
+    res = g_atomic_int_compare_and_exchange (&buf->state,
+        GST_AUDIO_RING_BUFFER_STATE_PAUSED, GST_AUDIO_RING_BUFFER_STATE_ERROR);
+  }
+  if (res) {
+    GST_DEBUG_OBJECT (buf, "ringbuffer is errored");
+  } else {
+    GST_DEBUG_OBJECT (buf,
+        "Could not mark ringbuffer as errored. It must have been stopped or already errored (was state %d)",
+        g_atomic_int_get (&buf->state));
+  }
+}
+
 static gboolean
 gst_audio_ring_buffer_pause_unlocked (GstAudioRingBuffer * buf)
 {
@@ -1060,7 +1094,8 @@ gst_audio_ring_buffer_pause_unlocked (GstAudioRingBuffer * buf)
     res = rclass->pause (buf);
 
   if (G_UNLIKELY (!res)) {
-    buf->state = GST_AUDIO_RING_BUFFER_STATE_STARTED;
+    /* Restore started state */
+    g_atomic_int_set (&buf->state, GST_AUDIO_RING_BUFFER_STATE_STARTED);
     GST_DEBUG_OBJECT (buf, "failed to pause");
   } else {
     GST_DEBUG_OBJECT (buf, "paused");
@@ -1071,7 +1106,7 @@ gst_audio_ring_buffer_pause_unlocked (GstAudioRingBuffer * buf)
 not_started:
   {
     /* was not started */
-    GST_DEBUG_OBJECT (buf, "was not started");
+    GST_DEBUG_OBJECT (buf, "was not started (state %d)", buf->state);
     return TRUE;
   }
 }
@@ -1153,9 +1188,16 @@ gst_audio_ring_buffer_stop (GstAudioRingBuffer * buf)
         GST_AUDIO_RING_BUFFER_STATE_PAUSED,
         GST_AUDIO_RING_BUFFER_STATE_STOPPED);
     if (!res) {
-      /* was not paused either, must have been stopped then */
+      GST_DEBUG_OBJECT (buf, "was not paused, try errored");
+      res = g_atomic_int_compare_and_exchange (&buf->state,
+          GST_AUDIO_RING_BUFFER_STATE_ERROR,
+          GST_AUDIO_RING_BUFFER_STATE_STOPPED);
+    }
+    if (!res) {
+      /* was not paused or stopped either, must have been stopped then */
       res = TRUE;
-      GST_DEBUG_OBJECT (buf, "was not paused, must have been stopped");
+      GST_DEBUG_OBJECT (buf,
+          "was not paused or errored, must have been stopped");
       goto done;
     }
   }
@@ -1169,7 +1211,7 @@ gst_audio_ring_buffer_stop (GstAudioRingBuffer * buf)
     res = rclass->stop (buf);
 
   if (G_UNLIKELY (!res)) {
-    buf->state = GST_AUDIO_RING_BUFFER_STATE_STARTED;
+    g_atomic_int_set (&buf->state, GST_AUDIO_RING_BUFFER_STATE_STARTED);
     GST_DEBUG_OBJECT (buf, "failed to stop");
   } else {
     GST_DEBUG_OBJECT (buf, "stopped");
@@ -1675,7 +1717,7 @@ not_started:
 /**
  * gst_audio_ring_buffer_commit:
  * @buf: the #GstAudioRingBuffer to commit
- * @sample: the sample position of the data
+ * @sample: (inout): the sample position of the data
  * @data: (array length=in_samples): the data to commit
  * @in_samples: the number of samples in the data to commit
  * @out_samples: the number of samples to write to the ringbuffer
