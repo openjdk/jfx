@@ -74,6 +74,8 @@ gst_discoverer_stream_info_finalize (GObject * object)
 
   if (info->misc)
     gst_structure_free (info->misc);
+
+  G_OBJECT_CLASS (gst_discoverer_stream_info_parent_class)->finalize (object);
 }
 
 static void
@@ -180,7 +182,8 @@ gst_discoverer_container_info_finalize (GObject * object)
   if (info->tags)
     gst_tag_list_unref (info->tags);
 
-  gst_discoverer_stream_info_finalize ((GObject *) info);
+  G_OBJECT_CLASS (gst_discoverer_container_info_parent_class)->finalize
+      (object);
 }
 
 static void
@@ -388,6 +391,8 @@ gst_discoverer_info_finalize (GObject * object)
   g_free (info->cachefile);
 
   g_ptr_array_unref (info->missing_elements_details);
+
+  G_OBJECT_CLASS (gst_discoverer_info_parent_class)->finalize (object);
 }
 
 static GstDiscovererInfo *
@@ -505,7 +510,7 @@ gst_discoverer_info_get_streams (GstDiscovererInfo * info, GType streamtype)
  *
  * Finds all the #GstDiscovererAudioInfo contained in @info
  *
- * Returns: (transfer full) (element-type GstPbutils.DiscovererStreamInfo): A #GList of
+ * Returns: (transfer full) (element-type GstPbutils.DiscovererAudioInfo): A #GList of
  * matching #GstDiscovererStreamInfo. The caller should free it with
  * gst_discoverer_stream_info_list_free().
  */
@@ -521,7 +526,7 @@ gst_discoverer_info_get_audio_streams (GstDiscovererInfo * info)
  *
  * Finds all the #GstDiscovererVideoInfo contained in @info
  *
- * Returns: (transfer full) (element-type GstPbutils.DiscovererStreamInfo): A #GList of
+ * Returns: (transfer full) (element-type GstPbutils.DiscovererVideoInfo): A #GList of
  * matching #GstDiscovererStreamInfo. The caller should free it with
  * gst_discoverer_stream_info_list_free().
  */
@@ -537,7 +542,7 @@ gst_discoverer_info_get_video_streams (GstDiscovererInfo * info)
  *
  * Finds all the #GstDiscovererSubtitleInfo contained in @info
  *
- * Returns: (transfer full) (element-type GstPbutils.DiscovererStreamInfo): A #GList of
+ * Returns: (transfer full) (element-type GstPbutils.DiscovererSubtitleInfo): A #GList of
  * matching #GstDiscovererStreamInfo. The caller should free it with
  * gst_discoverer_stream_info_list_free().
  */
@@ -554,7 +559,7 @@ gst_discoverer_info_get_subtitle_streams (GstDiscovererInfo * info)
  *
  * Finds all the #GstDiscovererContainerInfo contained in @info
  *
- * Returns: (transfer full) (element-type GstPbutils.DiscovererStreamInfo): A #GList of
+ * Returns: (transfer full) (element-type GstPbutils.DiscovererContainerInfo): A #GList of
  * matching #GstDiscovererStreamInfo. The caller should free it with
  * gst_discoverer_stream_info_list_free().
  */
@@ -604,7 +609,7 @@ gst_discoverer_stream_info_get_stream_type_nick (GstDiscovererStreamInfo * info)
  * gst_discoverer_stream_info_get_previous:
  * @info: a #GstDiscovererStreamInfo
  *
- * Returns: (transfer full): the previous #GstDiscovererStreamInfo in a chain.
+ * Returns: (transfer full) (nullable): the previous #GstDiscovererStreamInfo in a chain.
  * %NULL for starting points. Unref with #gst_discoverer_stream_info_unref
  * after usage.
  */
@@ -622,7 +627,7 @@ gst_discoverer_stream_info_get_previous (GstDiscovererStreamInfo * info)
  * gst_discoverer_stream_info_get_next:
  * @info: a #GstDiscovererStreamInfo
  *
- * Returns: (transfer full): the next #GstDiscovererStreamInfo in a chain. %NULL
+ * Returns: (transfer full) (nullable): the next #GstDiscovererStreamInfo in a chain. %NULL
  * for final streams.
  * Unref with #gst_discoverer_stream_info_unref after usage.
  */
@@ -641,7 +646,7 @@ gst_discoverer_stream_info_get_next (GstDiscovererStreamInfo * info)
  * gst_discoverer_stream_info_get_caps:
  * @info: a #GstDiscovererStreamInfo
  *
- * Returns: (transfer full): the #GstCaps of the stream. Unref with
+ * Returns: (transfer full) (nullable): the #GstCaps of the stream. Unref with
  * #gst_caps_unref after usage.
  */
 GstCaps *
@@ -658,7 +663,7 @@ gst_discoverer_stream_info_get_caps (GstDiscovererStreamInfo * info)
  * gst_discoverer_stream_info_get_tags:
  * @info: a #GstDiscovererStreamInfo
  *
- * Returns: (transfer none): the tags contained in this stream. If you wish to
+ * Returns: (transfer none) (nullable): the tags contained in this stream. If you wish to
  * use the tags after the life-time of @info you will need to copy them.
  */
 const GstTagList *
@@ -673,7 +678,7 @@ gst_discoverer_stream_info_get_tags (GstDiscovererStreamInfo * info)
  * gst_discoverer_stream_info_get_toc:
  * @info: a #GstDiscovererStreamInfo
  *
- * Returns: (transfer none): the TOC contained in this stream. If you wish to
+ * Returns: (transfer none) (nullable): the TOC contained in this stream. If you wish to
  * use the TOC after the life-time of @info you will need to copy it.
  */
 const GstToc *
@@ -707,7 +712,7 @@ gst_discoverer_stream_info_get_stream_id (GstDiscovererStreamInfo * info)
  * Deprecated: This functions is deprecated since version 1.4, use
  * #gst_discoverer_info_get_missing_elements_installer_details
  *
- * Returns: (transfer none): additional information regarding the stream (for
+ * Returns: (transfer none) (nullable): additional information regarding the stream (for
  * example codec version, profile, etc..). If you wish to use the #GstStructure
  * after the life-time of @info you will need to copy it.
  */
@@ -767,7 +772,7 @@ gst_discoverer_container_info_get_streams (GstDiscovererContainerInfo * info)
  * gst_discoverer_container_info_get_tags:
  * @info: a #GstDiscovererStreamInfo
  *
- * Returns: (transfer none): tags specific to the given container. If you wish to use
+ * Returns: (transfer none) (nullable): tags specific to the given container. If you wish to use
  * the tags after the life-time of @info, you will need to copy them.
  *
  * Since: 1.20
@@ -849,7 +854,7 @@ AUDIO_INFO_ACCESSOR_CODE (max_bitrate, guint, 0);
  * gst_discoverer_audio_info_get_language:
  * @info: a #GstDiscovererAudioInfo
  *
- * Returns: the language of the stream, or NULL if unknown.
+ * Returns: (nullable): the language of the stream, or NULL if unknown.
  */
 
 AUDIO_INFO_ACCESSOR_CODE (language, const gchar *, NULL);
@@ -982,7 +987,7 @@ gst_discoverer_video_info_is_image (const GstDiscovererVideoInfo * info)
  * gst_discoverer_subtitle_info_get_language:
  * @info: a #GstDiscovererSubtitleInfo
  *
- * Returns: the language of the stream, or NULL if unknown.
+ * Returns: (nullable): the language of the stream, or NULL if unknown.
  */
 
 SUBTITLE_INFO_ACCESSOR_CODE (language, const gchar *, NULL);
@@ -1017,7 +1022,7 @@ DISCOVERER_INFO_ACCESSOR_CODE (result, GstDiscovererResult, GST_DISCOVERER_OK);
  * gst_discoverer_info_get_stream_info:
  * @info: a #GstDiscovererInfo
  *
- * Returns: (transfer full): the structure (or topology) of the URI as a
+ * Returns: (transfer full) (nullable): the structure (or topology) of the URI as a
  * #GstDiscovererStreamInfo.
  * This structure can be traversed to see the original hierarchy. Unref with
  * gst_discoverer_stream_info_unref() after usage.
@@ -1093,7 +1098,7 @@ DISCOVERER_INFO_ACCESSOR_CODE (live, gboolean, FALSE);
  * Deprecated: This functions is deprecated since version 1.4, use
  * #gst_discoverer_info_get_missing_elements_installer_details
  *
- * Returns: (transfer none): Miscellaneous information stored as a #GstStructure
+ * Returns: (transfer none) (nullable): Miscellaneous information stored as a #GstStructure
  * (for example: information about missing plugins). If you wish to use the
  * #GstStructure after the life-time of @info, you will need to copy it.
  */
@@ -1104,7 +1109,7 @@ DISCOVERER_INFO_ACCESSOR_CODE (misc, const GstStructure *, NULL);
  * gst_discoverer_info_get_tags:
  * @info: a #GstDiscovererInfo
  *
- * Returns: (transfer none): all tags contained in the URI. If you wish to use
+ * Returns: (transfer none) (nullable): all tags contained in the URI. If you wish to use
  * the tags after the life-time of @info, you will need to copy them.
  *
  * Deprecated: 1.20: Use gst_discoverer_{container,stream}_info_get_tags() instead.
@@ -1117,7 +1122,7 @@ DISCOVERER_INFO_ACCESSOR_CODE (tags, const GstTagList *, NULL);
  * gst_discoverer_info_get_toc:
  * @info: a #GstDiscovererInfo
  *
- * Returns: (transfer none): TOC contained in the URI. If you wish to use
+ * Returns: (transfer none) (nullable): TOC contained in the URI. If you wish to use
  * the TOC after the life-time of @info, you will need to copy it.
  */
 

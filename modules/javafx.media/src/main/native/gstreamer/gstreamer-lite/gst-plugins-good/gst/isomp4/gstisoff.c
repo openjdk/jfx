@@ -113,7 +113,7 @@ gst_isoff_qt_sidx_parser_add_data (GstSidxParser * parser,
       if (parser->sidx.version == 0) {
         parser->sidx.earliest_pts =
             gst_byte_reader_get_uint32_be_unchecked (&reader);
-        parser->sidx.first_offset = parser->sidx.earliest_pts =
+        parser->sidx.first_offset =
             gst_byte_reader_get_uint32_be_unchecked (&reader);
       } else {
         parser->sidx.earliest_pts =

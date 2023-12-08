@@ -98,7 +98,12 @@ struct _GstAudioSinkClass {
   gboolean (*unprepare) (GstAudioSink *sink);
   /* close the device */
   gboolean (*close)     (GstAudioSink *sink);
-  /* write samples to the device */
+  /**
+   * GstAudioSinkClass::write:
+   * @data: (type guint8) (array length=length): the sample data
+   *
+   * Write samples to the device.
+   */
   gint     (*write)     (GstAudioSink *sink, gpointer data, guint length);
   /* get number of frames queued in the device */
   guint    (*delay)     (GstAudioSink *sink);

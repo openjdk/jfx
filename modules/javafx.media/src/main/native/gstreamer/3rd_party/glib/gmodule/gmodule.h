@@ -1,5 +1,7 @@
 /* GMODULE - GLIB wrapper code for dynamic module loading
  * Copyright (C) 1998 Tim Janik
+*
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,20 +28,23 @@
 #define __GMODULE_H__
 
 #include <glib.h>
+#include <gmodule/gmodule-visibility.h>
 
 G_BEGIN_DECLS
 
 /* exporting and importing functions, this is special cased
  * to feature Windows dll stubs.
  */
-#define G_MODULE_IMPORT     extern
-#ifdef G_PLATFORM_WIN32
-#  define   G_MODULE_EXPORT     __declspec(dllexport)
+#if defined(_WIN32) || defined(__CYGWIN__)
+#  define G_MODULE_EXPORT __declspec(dllexport)
+#  define G_MODULE_IMPORT __declspec(dllimport) extern
 #elif __GNUC__ >= 4
-#  define   G_MODULE_EXPORT     __attribute__((visibility("default")))
-#else /* !G_PLATFORM_WIN32 && __GNUC__ < 4 */
-#  define   G_MODULE_EXPORT
-#endif /* !G_PLATFORM_WIN32 */
+#  define G_MODULE_EXPORT __attribute__((visibility("default")))
+#  define G_MODULE_IMPORT extern
+#else /* !defined(_WIN32) && !defined(__CYGWIN__) && __GNUC__ < 4 */
+#  define G_MODULE_EXPORT
+#  define G_MODULE_IMPORT extern
+#endif
 
 /**
  * GModuleFlags:
@@ -66,8 +71,8 @@ typedef struct _GModule          GModule;
 typedef const gchar* (*GModuleCheckInit) (GModule   *module);
 typedef void         (*GModuleUnload)    (GModule   *module);
 
-#define G_MODULE_ERROR g_module_error_quark () GLIB_AVAILABLE_MACRO_IN_2_70
-GLIB_AVAILABLE_IN_2_70
+#define G_MODULE_ERROR g_module_error_quark () GMODULE_AVAILABLE_MACRO_IN_2_70
+GMODULE_AVAILABLE_IN_2_70
 GQuark g_module_error_quark (void);
 
 /**
@@ -84,42 +89,42 @@ typedef enum
   G_MODULE_ERROR_FAILED,
   G_MODULE_ERROR_CHECK_FAILED,
 } GModuleError
-GLIB_AVAILABLE_ENUMERATOR_IN_2_70;
+GMODULE_AVAILABLE_ENUMERATOR_IN_2_70;
 
 /* return TRUE if dynamic module loading is supported */
-GLIB_AVAILABLE_IN_ALL
+GMODULE_AVAILABLE_IN_ALL
 gboolean    g_module_supported     (void) G_GNUC_CONST;
 
 /* open a module 'file_name' and return handle, which is NULL on error */
-GLIB_AVAILABLE_IN_ALL
+GMODULE_AVAILABLE_IN_ALL
 GModule*              g_module_open          (const gchar  *file_name,
                 GModuleFlags  flags);
 
-GLIB_AVAILABLE_IN_2_70
+GMODULE_AVAILABLE_IN_2_70
 GModule              *g_module_open_full     (const gchar   *file_name,
                                               GModuleFlags   flags,
                                               GError       **error);
 
 /* close a previously opened module, returns TRUE on success */
-GLIB_AVAILABLE_IN_ALL
+GMODULE_AVAILABLE_IN_ALL
 gboolean              g_module_close         (GModule      *module);
 
 /* make a module resident so g_module_close on it will be ignored */
-GLIB_AVAILABLE_IN_ALL
+GMODULE_AVAILABLE_IN_ALL
 void                  g_module_make_resident (GModule      *module);
 
 /* query the last module error as a string */
-GLIB_AVAILABLE_IN_ALL
+GMODULE_AVAILABLE_IN_ALL
 const gchar *         g_module_error         (void);
 
 /* retrieve a symbol pointer from 'module', returns TRUE on success */
-GLIB_AVAILABLE_IN_ALL
+GMODULE_AVAILABLE_IN_ALL
 gboolean              g_module_symbol        (GModule      *module,
                 const gchar  *symbol_name,
                 gpointer     *symbol);
 
 /* retrieve the file name from an existing module */
-GLIB_AVAILABLE_IN_ALL
+GMODULE_AVAILABLE_IN_ALL
 const gchar *         g_module_name          (GModule      *module);
 
 /* Build the actual file name containing a module. 'directory' is the
@@ -133,7 +138,7 @@ const gchar *         g_module_name          (GModule      *module);
  *
  * No checks are made that the file exists, or is of correct type.
  */
-GLIB_AVAILABLE_IN_ALL
+GMODULE_DEPRECATED_IN_2_76
 gchar*                g_module_build_path    (const gchar  *directory,
                 const gchar  *module_name);
 

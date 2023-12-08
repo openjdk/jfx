@@ -157,6 +157,8 @@ gboolean  gst_codec_utils_opus_parse_header (GstBuffer * header,
 GST_PBUTILS_API
 gchar * gst_codec_utils_caps_get_mime_codec (GstCaps * caps);
 
+GST_PBUTILS_API
+GstCaps * gst_codec_utils_caps_from_mime_codec (const gchar *codecs_field);
 
 G_END_DECLS
 
