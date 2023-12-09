@@ -445,7 +445,9 @@ public final class Platform {
      * by JavaFX when the operating system reports that a platform preference has changed.
      *
      * @return the {@code Preferences} instance
-     * @see <a href="Platform.Preferences.html#preferences-table">List of platform preferences</a>
+     * @see <a href="Platform.Preferences.html#preferences-table-windows">Windows preferences</a>
+     * @see <a href="Platform.Preferences.html#preferences-table-macos">macOS preferences</a>
+     * @see <a href="Platform.Preferences.html#preferences-table-linux">Linux preferences</a>
      * @since 22
      */
     public static Preferences getPreferences() {
@@ -470,7 +472,7 @@ public final class Platform {
      * always available.
      * <p>
      * The following preferences are potentially available on the specified platforms:
-     * <table id="preferences-table" class="striped">
+     * <table id="preferences-table-windows" class="striped">
      *     <caption>Windows</caption>
      *     <tbody>
      *         <tr><td>{@code Windows.SPI.HighContrast}</td><td>{@link Boolean}</td></tr>
@@ -495,7 +497,7 @@ public final class Platform {
      *         <tr></tr>
      *     </tbody>
      * </table>
-     * <table class="striped">
+     * <table id="preferences-table-macos" class="striped">
      *     <caption>macOS</caption>
      *     <tbody>
      *         <tr><td>{@code macOS.NSColor.labelColor}</td><td>{@link Color}</td></tr>
@@ -547,7 +549,7 @@ public final class Platform {
      *         <tr></tr>
      *     </tbody>
      * </table>
-     * <table class="striped">
+     * <table id="preferences-table-linux" class="striped">
      *     <caption>Linux</caption>
      *     <tbody>
      *         <tr><td>{@code GTK.theme_name}</td><td>{@link String}</td></tr>
@@ -581,7 +583,7 @@ public final class Platform {
          * The platform color scheme, which specifies whether applications should prefer light text on
          * dark backgrounds, or dark text on light backgrounds.
          * <p>
-         * If the platform does not report color preferences, this property defaults to {@link ColorScheme#LIGHT}.
+         * If the platform does not report color preferences, this property defaults to {@code LIGHT}.
          *
          * @return the {@code colorScheme} property
          * @defaultValue {@link ColorScheme#LIGHT}
@@ -593,7 +595,7 @@ public final class Platform {
         /**
          * The color used for background regions.
          * <p>
-         * If the platform does not report a background color, this property defaults to {@link Color#WHITE}.
+         * If the platform does not report a background color, this property defaults to {@code WHITE}.
          *
          * @return the {@code backgroundColor} property
          * @defaultValue {@link Color#WHITE}
@@ -605,7 +607,7 @@ public final class Platform {
         /**
          * The color used for foreground elements like text.
          * <p>
-         * If the platform does not report a foreground color, this property defaults to {@link Color#BLACK}.
+         * If the platform does not report a foreground color, this property defaults to {@code BLACK}.
          *
          * @return the {@code foregroundColor} property
          * @defaultValue {@link Color#BLACK}
