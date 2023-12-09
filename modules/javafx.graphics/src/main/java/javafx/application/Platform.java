@@ -607,7 +607,9 @@ public final class Platform {
         Color getForegroundColor();
 
         /**
-         * The accent color.
+         * The accent color, which is usually a vivid color that contrasts with the foreground
+         * and background colors. It can be used to highlight the active or important part of a
+         * control and make it stand out from the rest of the user interface.
          * <p>
          * If the platform does not report an accent color, this property defaults to vivid blue
          * (corresponding to the hex color value {@code #157EFB}).
