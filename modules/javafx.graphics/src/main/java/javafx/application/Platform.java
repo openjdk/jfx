@@ -445,7 +445,9 @@ public final class Platform {
      * by JavaFX when the operating system reports that a platform preference has changed.
      *
      * @return the {@code Preferences} instance
-     * @see <a href="Platform.Preferences.html#preferences-table">List of platform preferences</a>
+     * @see <a href="Platform.Preferences.html#preferences-table-windows">Windows preferences</a>
+     * @see <a href="Platform.Preferences.html#preferences-table-macos">macOS preferences</a>
+     * @see <a href="Platform.Preferences.html#preferences-table-linux">Linux preferences</a>
      * @since 22
      */
     public static Preferences getPreferences() {
@@ -470,10 +472,9 @@ public final class Platform {
      * always available.
      * <p>
      * The following preferences are potentially available on the specified platforms:
-     * <table id="preferences-table">
-     *     <caption>List of platform preferences</caption>
+     * <table id="preferences-table-windows" class="striped">
+     *     <caption>Windows</caption>
      *     <tbody>
-     *         <tr><th colspan="2" scope="colgroup">Windows</th></tr>
      *         <tr><td>{@code Windows.SPI.HighContrast}</td><td>{@link Boolean}</td></tr>
      *         <tr><td>{@code Windows.SPI.HighContrastColorScheme}</td><td>{@link String}</td></tr>
      *         <tr><td>{@code Windows.SysColor.COLOR_3DFACE}</td><td>{@link Color}</td></tr>
@@ -494,7 +495,11 @@ public final class Platform {
      *         <tr><td>{@code Windows.UIColor.AccentLight2}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code Windows.UIColor.AccentLight3}</td><td>{@link Color}</td></tr>
      *         <tr></tr>
-     *         <tr><th colspan="2" scope="colgroup">macOS</th></tr>
+     *     </tbody>
+     * </table>
+     * <table id="preferences-table-macos" class="striped">
+     *     <caption>macOS</caption>
+     *     <tbody>
      *         <tr><td>{@code macOS.NSColor.labelColor}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code macOS.NSColor.secondaryLabelColor}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code macOS.NSColor.tertiaryLabelColor}</td><td>{@link Color}</td></tr>
@@ -542,7 +547,11 @@ public final class Platform {
      *         <tr><td>{@code macOS.NSColor.systemTealColor}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code macOS.NSColor.systemYellowColor}</td><td>{@link Color}</td></tr>
      *         <tr></tr>
-     *         <tr><th colspan="2" scope="colgroup">Linux</th></tr>
+     *     </tbody>
+     * </table>
+     * <table id="preferences-table-linux" class="striped">
+     *     <caption>Linux</caption>
+     *     <tbody>
      *         <tr><td>{@code GTK.theme_name}</td><td>{@link String}</td></tr>
      *         <tr><td>{@code GTK.theme_fg_color}</td><td>{@link Color}</td></tr>
      *         <tr><td>{@code GTK.theme_bg_color}</td><td>{@link Color}</td></tr>
@@ -572,8 +581,9 @@ public final class Platform {
 
         /**
          * The platform color scheme, which specifies whether applications should prefer light text on
-         * dark backgrounds, or dark text on light backgrounds. The value of this property defaults to
-         * {@link ColorScheme#LIGHT} if the platform does not report color preferences.
+         * dark backgrounds, or dark text on light backgrounds.
+         * <p>
+         * If the platform does not report color preferences, this property defaults to {@code LIGHT}.
          *
          * @return the {@code colorScheme} property
          * @defaultValue {@link ColorScheme#LIGHT}
@@ -585,7 +595,7 @@ public final class Platform {
         /**
          * The color used for background regions.
          * <p>
-         * If the platform does not report a background color, this property defaults to {@code Color.WHITE}.
+         * If the platform does not report a background color, this property defaults to {@code WHITE}.
          *
          * @return the {@code backgroundColor} property
          * @defaultValue {@link Color#WHITE}
@@ -597,17 +607,19 @@ public final class Platform {
         /**
          * The color used for foreground elements like text.
          * <p>
-         * If the platform does not report a foreground color, this property defaults to {@code Color.BLACK}.
+         * If the platform does not report a foreground color, this property defaults to {@code BLACK}.
          *
          * @return the {@code foregroundColor} property
-         * @defaultValue {@code Color.BLACK}
+         * @defaultValue {@link Color#BLACK}
          */
         ReadOnlyObjectProperty<Color> foregroundColorProperty();
 
         Color getForegroundColor();
 
         /**
-         * The accent color.
+         * The accent color, which can be used to highlight the active or important part of a
+         * control and make it stand out from the rest of the user interface. It is usually a
+         * vivid color that contrasts with the foreground and background colors.
          * <p>
          * If the platform does not report an accent color, this property defaults to vivid blue
          * (corresponding to the hex color value {@code #157EFB}).
