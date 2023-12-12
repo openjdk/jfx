@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -148,3 +148,73 @@ void wrapped_gdk_x11_display_set_window_scale (GdkDisplay *display,
     }
 }
 
+static GdkSeat * (*_gdk_display_get_default_seat) (GdkDisplay *display);
+
+// Note added in libgdk 3.20 which is > our OEL 7.0 version of 3.8
+GdkSeat * wrapped_gdk_display_get_default_seat (GdkDisplay *display)
+{
+#if GTK_CHECK_VERSION(3, 20, 0)
+    if (_gdk_display_get_default_seat == NULL) {
+        _gdk_display_get_default_seat = dlsym(RTLD_DEFAULT, "gdk_display_get_default_seat");
+        if (gtk_verbose && _gdk_display_get_default_seat) {
+            fprintf(stderr, "loaded gdk_display_get_default_seat\n"); fflush(stderr);
+        }
+    }
+#endif
+
+    if (_gdk_display_get_default_seat != NULL) {
+        return (*_gdk_display_get_default_seat)(display);
+    }
+
+    return NULL;
+}
+
+static GdkGrabStatus (*_gdk_seat_grab) (GdkSeat* seat, GdkWindow* window,
+                            int capabilities /* GdkSeatCapabilities capabilities */,
+                            gboolean owner_events, GdkCursor* cursor, const GdkEvent* event,
+                            void * prepare_func /* GdkSeatGrabPrepareFunc prepare_func */,
+                            gpointer prepare_func_data);
+
+// Note added in libgdk 3.20 which is > our OEL 7.0 version of 3.8
+GdkGrabStatus wrapped_gdk_seat_grab(GdkWindow* window,
+                            int capabilities /* GdkSeatCapabilities capabilities */,
+                            gboolean owner_events, GdkCursor* cursor, const GdkEvent* event,
+                            void * prepare_func /* GdkSeatGrabPrepareFunc prepare_func */,
+                            gpointer prepare_func_data)
+{
+#if GTK_CHECK_VERSION(3, 20, 0)
+    if(_gdk_seat_grab == NULL) {
+        _gdk_seat_grab = dlsym(RTLD_DEFAULT, "gdk_seat_grab");
+        if (gtk_verbose && _gdk_seat_grab) {
+            fprintf(stderr, "loaded gdk_seat_grab\n"); fflush(stderr);
+        }
+    }
+#endif
+
+    GdkSeat* seat = wrapped_gdk_display_get_default_seat(gdk_window_get_display(window));
+    if (seat != NULL && _gdk_seat_grab != NULL) {
+        return (*_gdk_seat_grab)(seat, window, capabilities,
+                                 owner_events, cursor, event, prepare_func, prepare_func_data);
+    }
+    return GDK_GRAB_FAILED;
+}
+
+static void (*_gdk_seat_ungrab) (GdkSeat* seat);
+
+// Note added in libgdk 3.20 which is > our OEL 7.0 version of 3.8
+void wrapped_gdk_seat_ungrab(GdkWindow* window)
+{
+#if GTK_CHECK_VERSION(3, 20, 0)
+    if(_gdk_seat_ungrab == NULL) {
+        _gdk_seat_ungrab = dlsym(RTLD_DEFAULT, "gdk_seat_ungrab");
+        if (gtk_verbose && _gdk_seat_ungrab) {
+            fprintf(stderr, "loaded gdk_seat_ungrab\n"); fflush(stderr);
+        }
+    }
+#endif
+
+    GdkSeat* seat = wrapped_gdk_display_get_default_seat(gdk_window_get_display(window));
+    if (seat != NULL && _gdk_seat_ungrab != NULL) {
+        (*_gdk_seat_ungrab)(seat);
+    }
+}

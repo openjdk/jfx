@@ -610,7 +610,7 @@ bool WindowContextBase::grab_mouse_drag_focus() {
 
 void WindowContextBase::ungrab_mouse_drag_focus() {
     WindowContextBase::sm_mouse_drag_window = NULL;
-    glass_gdk_mouse_devices_ungrab();
+    glass_gdk_mouse_devices_ungrab(gdk_window);
     if (WindowContextBase::sm_grab_window) {
         WindowContextBase::sm_grab_window->grab_focus();
     }
@@ -628,7 +628,7 @@ bool WindowContextBase::grab_focus() {
 
 void WindowContextBase::ungrab_focus() {
     if (!WindowContextBase::sm_mouse_drag_window) {
-        glass_gdk_mouse_devices_ungrab();
+        glass_gdk_mouse_devices_ungrab(gdk_window);
     }
     WindowContextBase::sm_grab_window = NULL;
 
