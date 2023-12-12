@@ -65,8 +65,12 @@ public class PercentageStringConverter extends NumberStringConverter {
         super(null, null, numberFormat);
     }
 
-    /** {@inheritDoc} */
-    @Override public NumberFormat getNumberFormat() {
+    /**
+     * @deprecated This method was exposed erroneously and will be removed in a future version.
+     */
+    @Deprecated(forRemoval = true, since = "22")
+    @Override
+    public NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;
 
         if (numberFormat != null) {

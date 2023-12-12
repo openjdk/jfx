@@ -172,7 +172,9 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_RIFF_dmb1:
     case GST_MAKE_FOURCC ('A', 'C', 'D', 'V'):
     case GST_MAKE_FOURCC ('Q', 'I', 'V', 'G'):
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("Motion JPEG");
       break;
@@ -180,7 +182,9 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_RIFF_JPEG:        /* generic (mostly RGB) MJPEG */
     case GST_RIFF_jpeg:
     case GST_MAKE_FOURCC ('j', 'p', 'e', 'g'): /* generic (mostly RGB) MJPEG */
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("JPEG Still Image");
       break;
@@ -188,25 +192,33 @@ gst_riff_create_video_caps (guint32 codec_fcc,
     case GST_MAKE_FOURCC ('P', 'I', 'X', 'L'): /* Miro/Pinnacle fourccs */
     case GST_RIFF_VIXL:        /* Miro/Pinnacle fourccs */
     case GST_RIFF_vixl:
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("Miro/Pinnacle Motion JPEG");
       break;
 
     case GST_MAKE_FOURCC ('C', 'J', 'P', 'G'):
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("Creative Webcam JPEG");
       break;
 
     case GST_MAKE_FOURCC ('S', 'L', 'M', 'J'):
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("SL Motion JPEG");
       break;
 
     case GST_MAKE_FOURCC ('J', 'P', 'G', 'L'):
-      caps = gst_caps_new_empty_simple ("image/jpeg");
+      caps =
+          gst_caps_new_simple ("image/jpeg", "parsed", G_TYPE_BOOLEAN, TRUE,
+          NULL);
       if (codec_name)
         *codec_name = g_strdup ("Pegasus Lossless JPEG");
       break;
@@ -1755,8 +1767,10 @@ gst_riff_create_audio_caps (guint16 codec_id,
             GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE audio");
           if (caps) {
             if (codec_name) {
+              gchar *tmp = *codec_name;
               GST_DEBUG ("WAVE_FORMAT_EXTENSIBLE %s", *codec_name);
-              *codec_name = g_strjoin ("wavext ", *codec_name, NULL);
+              *codec_name = g_strjoin ("wavext ", tmp, NULL);
+              g_free (tmp);
             }
             return caps;
           }

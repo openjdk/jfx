@@ -152,7 +152,7 @@ struct _GstBaseSinkClass {
   GstElementClass parent_class;
 
   /**
-   * GstBaseSink::get_caps:
+   * GstBaseSinkClass::get_caps:
    * @filter: (in) (nullable):
    *
    * Called to get sink pad caps from the subclass.
@@ -167,7 +167,7 @@ struct _GstBaseSinkClass {
   gboolean      (*activate_pull)(GstBaseSink *sink, gboolean active);
 
   /**
-   * GstBaseSink::get_times:
+   * GstBaseSinkClass::get_times:
    * @start: (out): the start #GstClockTime
    * @end: (out): the end #GstClockTime
    *

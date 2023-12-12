@@ -171,6 +171,10 @@ typedef struct _GstAudioEncoderContext
   /* MT-protected (with LOCK) */
   GstClockTime min_latency;
   GstClockTime max_latency;
+  /* Tracks whether the latency message was posted at least once */
+  gboolean posted_latency_msg;
+
+  gboolean negotiated;
 
   GList *headers;
   gboolean new_headers;
@@ -239,6 +243,11 @@ struct _GstAudioEncoderPrivate
 
   /* pending serialized sink events, will be sent from finish_frame() */
   GList *pending_events;
+
+  /* these are initial events or events that came in while there was nothing
+   * in the adapter. these events shall be sent after negotiation but before
+   * we push the following buffer. */
+  GList *early_pending_events;
 };
 
 
@@ -491,6 +500,7 @@ gst_audio_encoder_reset (GstAudioEncoder * enc, gboolean full)
 
     memset (&enc->priv->ctx, 0, sizeof (enc->priv->ctx));
     gst_audio_info_init (&enc->priv->ctx.info);
+    enc->priv->ctx.posted_latency_msg = FALSE;
     GST_OBJECT_UNLOCK (enc);
 
     if (enc->priv->upstream_tags) {
@@ -503,8 +513,11 @@ gst_audio_encoder_reset (GstAudioEncoder * enc, gboolean full)
     enc->priv->tags_merge_mode = GST_TAG_MERGE_APPEND;
     enc->priv->tags_changed = FALSE;
 
-    g_list_foreach (enc->priv->pending_events, (GFunc) gst_event_unref, NULL);
-    g_list_free (enc->priv->pending_events);
+    g_list_free_full (enc->priv->early_pending_events,
+        (GDestroyNotify) gst_event_unref);
+    enc->priv->early_pending_events = NULL;
+    g_list_free_full (enc->priv->pending_events,
+        (GDestroyNotify) gst_event_unref);
     enc->priv->pending_events = NULL;
   }
 
@@ -602,9 +615,29 @@ gst_audio_encoder_push_event (GstAudioEncoder * enc, GstEvent * event)
 }
 
 static inline void
+gst_audio_encoder_push_early_pending_events (GstAudioEncoder * enc)
+{
+  GstAudioEncoderPrivate *priv = enc->priv;
+
+  if (priv->early_pending_events) {
+    GList *pending_events, *l;
+
+    pending_events = priv->early_pending_events;
+    priv->early_pending_events = NULL;
+
+    GST_DEBUG_OBJECT (enc, "Pushing early pending events");
+    for (l = pending_events; l; l = l->next)
+      gst_audio_encoder_push_event (enc, l->data);
+    g_list_free (pending_events);
+  }
+}
+
+static inline void
 gst_audio_encoder_push_pending_events (GstAudioEncoder * enc)
 {
   GstAudioEncoderPrivate *priv = enc->priv;
+
+  gst_audio_encoder_push_early_pending_events (enc);
 
   if (priv->pending_events) {
     GList *pending_events, *l;
@@ -710,7 +743,8 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
   const GstMetaInfo *info = (*meta)->info;
   gboolean do_copy = FALSE;
 
-  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)) {
+  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)
+      || gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory_reference)) {
     /* never call the transform_meta with memory specific metadata */
     GST_DEBUG_OBJECT (encoder, "not copying memory specific metadata %s",
         g_type_name (info->api));
@@ -736,7 +770,7 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
 /**
  * gst_audio_encoder_finish_frame:
  * @enc: a #GstAudioEncoder
- * @buffer: (transfer full) (allow-none): encoded data
+ * @buffer: (transfer full) (nullable): encoded data
  * @samples: number of samples (per channel) represented by encoded data
  *
  * Collects encoded data and pushes encoded data downstream.
@@ -799,9 +833,9 @@ gst_audio_encoder_finish_frame (GstAudioEncoder * enc, GstBuffer * buf,
   if (G_LIKELY (buf))
     priv->got_data = TRUE;
 
-  gst_audio_encoder_push_pending_events (enc);
+  gst_audio_encoder_push_early_pending_events (enc);
 
-  /* send after pending events, which likely includes segment event */
+  /* send after early pending events, which likely includes segment event */
   gst_audio_encoder_check_and_push_pending_tags (enc);
 
   /* remove corresponding samples from input */
@@ -1017,6 +1051,10 @@ gst_audio_encoder_finish_frame (GstAudioEncoder * enc, GstBuffer * buf,
 
     ret = gst_pad_push (enc->srcpad, buf);
     GST_LOG_OBJECT (enc, "buffer pushed: %s", gst_flow_get_name (ret));
+
+    /* Now push the events that followed after the buffer got into the
+     * adapter. */
+    gst_audio_encoder_push_pending_events (enc);
   } else {
     /* merely advance samples, most work for that already done above */
     priv->samples += samples;
@@ -1501,8 +1539,8 @@ refuse_caps:
 /**
  * gst_audio_encoder_proxy_getcaps:
  * @enc: a #GstAudioEncoder
- * @caps: (allow-none): initial caps
- * @filter: (allow-none): filter caps
+ * @caps: (nullable): initial caps
+ * @filter: (nullable): filter caps
  *
  * Returns caps that express @caps (or sink template caps if @caps == NULL)
  * restricted to channel/rate combinations supported by downstream elements
@@ -1582,8 +1620,8 @@ gst_audio_encoder_sink_event_default (GstAudioEncoder * enc, GstEvent * event)
       /* and follow along with segment */
       enc->input_segment = seg;
 
-      enc->priv->pending_events =
-          g_list_append (enc->priv->pending_events, event);
+      enc->priv->early_pending_events =
+          g_list_append (enc->priv->early_pending_events, event);
       GST_AUDIO_ENCODER_STREAM_UNLOCK (enc);
 
       res = TRUE;
@@ -1700,8 +1738,13 @@ gst_audio_encoder_sink_event_default (GstAudioEncoder * enc, GstEvent * event)
             gst_pad_event_default (enc->sinkpad, GST_OBJECT_CAST (enc), event);
       } else {
         GST_AUDIO_ENCODER_STREAM_LOCK (enc);
-        enc->priv->pending_events =
-            g_list_append (enc->priv->pending_events, event);
+        if (gst_adapter_available (enc->priv->adapter) == 0) {
+          enc->priv->early_pending_events =
+              g_list_append (enc->priv->early_pending_events, event);
+        } else {
+          enc->priv->pending_events =
+              g_list_append (enc->priv->pending_events, event);
+        }
         GST_AUDIO_ENCODER_STREAM_UNLOCK (enc);
         res = TRUE;
       }
@@ -2311,34 +2354,50 @@ gst_audio_encoder_get_lookahead (GstAudioEncoder * enc)
  * @min: minimum latency
  * @max: maximum latency
  *
- * Sets encoder latency.
+ * Sets encoder latency. If the provided values changed from
+ * previously provided ones, this will also post a LATENCY message on the bus
+ * so the pipeline can reconfigure its global latency.
  */
 void
 gst_audio_encoder_set_latency (GstAudioEncoder * enc,
     GstClockTime min, GstClockTime max)
 {
+  gboolean post_message = FALSE;
+
   g_return_if_fail (GST_IS_AUDIO_ENCODER (enc));
   g_return_if_fail (GST_CLOCK_TIME_IS_VALID (min));
   g_return_if_fail (min <= max);
 
-  GST_OBJECT_LOCK (enc);
-  enc->priv->ctx.min_latency = min;
-  enc->priv->ctx.max_latency = max;
-  GST_OBJECT_UNLOCK (enc);
-
-  GST_LOG_OBJECT (enc, "set to %" GST_TIME_FORMAT "-%" GST_TIME_FORMAT,
+  GST_DEBUG_OBJECT (enc,
+      "min_latency:%" GST_TIME_FORMAT " max_latency:%" GST_TIME_FORMAT,
       GST_TIME_ARGS (min), GST_TIME_ARGS (max));
 
+  GST_OBJECT_LOCK (enc);
+  if (enc->priv->ctx.min_latency != min) {
+    enc->priv->ctx.min_latency = min;
+    post_message = TRUE;
+  }
+  if (enc->priv->ctx.max_latency != max) {
+    enc->priv->ctx.max_latency = max;
+    post_message = TRUE;
+  }
+  if (!enc->priv->ctx.posted_latency_msg) {
+    enc->priv->ctx.posted_latency_msg = TRUE;
+    post_message = TRUE;
+  }
+  GST_OBJECT_UNLOCK (enc);
+
   /* post latency message on the bus */
-  gst_element_post_message (GST_ELEMENT (enc),
-      gst_message_new_latency (GST_OBJECT (enc)));
+  if (post_message)
+    gst_element_post_message (GST_ELEMENT (enc),
+        gst_message_new_latency (GST_OBJECT (enc)));
 }
 
 /**
  * gst_audio_encoder_get_latency:
  * @enc: a #GstAudioEncoder
- * @min: (out) (allow-none): a pointer to storage to hold minimum latency
- * @max: (out) (allow-none): a pointer to storage to hold maximum latency
+ * @min: (out) (optional): a pointer to storage to hold minimum latency
+ * @max: (out) (optional): a pointer to storage to hold maximum latency
  *
  * Sets the variables pointed to by @min and @max to the currently configured
  * latency.
@@ -2381,7 +2440,7 @@ gst_audio_encoder_set_headers (GstAudioEncoder * enc, GList * headers)
 /**
  * gst_audio_encoder_set_allocation_caps:
  * @enc: a #GstAudioEncoder
- * @allocation_caps: (allow-none): a #GstCaps or %NULL
+ * @allocation_caps: (nullable): a #GstCaps or %NULL
  *
  * Sets a caps in allocation query which are different from the set
  * pad's caps. Use this function before calling
@@ -2676,7 +2735,7 @@ gst_audio_encoder_get_drainable (GstAudioEncoder * enc)
 /**
  * gst_audio_encoder_merge_tags:
  * @enc: a #GstAudioEncoder
- * @tags: (allow-none): a #GstTagList to merge, or NULL to unset
+ * @tags: (nullable): a #GstTagList to merge, or NULL to unset
  *     previously-set tags
  * @mode: the #GstTagMergeMode to use, usually #GST_TAG_MERGE_REPLACE
  *
@@ -2736,10 +2795,10 @@ gst_audio_encoder_negotiate_default (GstAudioEncoder * enc)
 
   GST_DEBUG_OBJECT (enc, "Setting srcpad caps %" GST_PTR_FORMAT, caps);
 
-  if (enc->priv->pending_events) {
+  if (enc->priv->early_pending_events) {
     GList **pending_events, *l;
 
-    pending_events = &enc->priv->pending_events;
+    pending_events = &enc->priv->early_pending_events;
 
     GST_DEBUG_OBJECT (enc, "Pushing pending events");
     for (l = *pending_events; l;) {
@@ -2817,6 +2876,8 @@ gst_audio_encoder_negotiate_unlocked (GstAudioEncoder * enc)
 
   if (G_LIKELY (klass->negotiate))
     ret = klass->negotiate (enc);
+
+  enc->priv->ctx.negotiated = TRUE;
 
   return ret;
 }
@@ -2953,9 +3014,9 @@ fallback:
 /**
  * gst_audio_encoder_get_allocator:
  * @enc: a #GstAudioEncoder
- * @allocator: (out) (allow-none) (transfer full): the #GstAllocator
+ * @allocator: (out) (optional) (nullable) (transfer full): the #GstAllocator
  * used
- * @params: (out) (allow-none) (transfer full): the
+ * @params: (out) (optional) (transfer full): the
  * #GstAllocationParams of @allocator
  *
  * Lets #GstAudioEncoder sub-classes to know the memory @allocator

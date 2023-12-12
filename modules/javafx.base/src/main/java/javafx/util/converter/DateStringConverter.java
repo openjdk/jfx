@@ -126,8 +126,12 @@ public class DateStringConverter extends DateTimeStringConverter {
 
     // --------------------------------------------------------- Private Methods
 
-    /** {@inheritDoc} */
-    @Override protected DateFormat getDateFormat() {
+    /**
+     * @deprecated This method was exposed erroneously and will be removed in a future version.
+     */
+    @Deprecated(forRemoval = true, since = "22")
+    @Override
+    protected DateFormat getDateFormat() {
         DateFormat df = null;
 
         if (dateFormat != null) {

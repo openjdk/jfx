@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -757,6 +757,9 @@ D3DContext::TestCooperativeLevel()
         break;
     case D3DERR_DEVICEREMOVED:
         TraceLn1(NWT_TRACE_INFO, "  device %d has been removed", adapterOrdinal);
+        break;
+    case D3DERR_DEVICEHUNG:
+        TraceLn1(NWT_TRACE_INFO, "  device %d is hung", adapterOrdinal);
         break;
     case S_PRESENT_OCCLUDED:
         break;

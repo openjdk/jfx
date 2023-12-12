@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -350,12 +352,12 @@ get_C_locale (void)
  * Returns: a newly-allocated copy of @str
  */
 gchar*
-g_strdup (const gchar *str)
+(g_strdup) (const gchar *str)
 {
   gchar *new_str;
   gsize length;
 
-  if (str)
+  if G_LIKELY (str)
     {
       length = strlen (str) + 1;
       new_str = g_new (char, length);
@@ -493,12 +495,12 @@ g_strnfill (gsize length,
  * @dest: destination buffer.
  * @src: source string.
  *
- * Copies a nul-terminated string into the dest buffer, include the
- * trailing nul, and return a pointer to the trailing nul byte.
- * This is useful for concatenating multiple strings together
- * without having to repeatedly scan for the end.
+ * Copies a nul-terminated string into the destination buffer, including
+ * the trailing nul byte, and returns a pointer to the trailing nul byte
+ * in `dest`.  The return value is useful for concatenating multiple
+ * strings without having to repeatedly scan for the end.
  *
- * Returns: a pointer to trailing nul byte.
+ * Returns: a pointer to the trailing nul byte in `dest`.
  **/
 gchar *
 g_stpcpy (gchar       *dest,
@@ -1333,7 +1335,7 @@ g_ascii_strtoll (const gchar *nptr,
  * ]|
  *
  * Returns: a UTF-8 string describing the error code. If the error code
- *     is unknown, it returns a string like "unknown error (<code>)".
+ *     is unknown, it returns a string like "Unknown error: <code>".
  */
 const gchar *
 g_strerror (gint errnum)
@@ -1356,6 +1358,9 @@ g_strerror (gint errnum)
     {
       gchar buf[1024];
       GError *error = NULL;
+#if defined(HAVE_STRERROR_R) && !defined(STRERROR_R_CHAR_P)
+      int ret;
+#endif
 
 #if defined(G_OS_WIN32)
       strerror_s (buf, sizeof (buf), errnum);
@@ -1365,18 +1370,31 @@ g_strerror (gint errnum)
 #  if defined(STRERROR_R_CHAR_P)
       msg = strerror_r (errnum, buf, sizeof (buf));
 #  else
-      (void) strerror_r (errnum, buf, sizeof (buf));
-      msg = buf;
+      ret = strerror_r (errnum, buf, sizeof (buf));
+      if (ret == 0 || ret == EINVAL)
+        msg = buf;
 #  endif /* HAVE_STRERROR_R */
 #else
       g_strlcpy (buf, strerror (errnum), sizeof (buf));
       msg = buf;
 #endif
+
+      if (!msg)
+        {
+          G_UNLOCK (errors);
+
+          errno = saved_errno;
+          return NULL;
+        }
+
       if (!g_get_console_charset (NULL))
         {
           msg = g_locale_to_utf8 (msg, -1, NULL, NULL, &error);
           if (error)
-            g_print ("%s\n", error->message);
+            {
+              g_print ("%s\n", error->message);
+              g_error_free (error);
+            }
         }
       else if (msg == (const gchar *)buf)
         msg = g_strdup (buf);
@@ -2415,8 +2433,8 @@ g_strchomp (gchar *string)
  * to represent empty elements, you'll need to check for the empty string
  * before calling g_strsplit().
  *
- * Returns: a newly-allocated %NULL-terminated array of strings. Use
- *    g_strfreev() to free it.
+ * Returns: (transfer full): a newly-allocated %NULL-terminated array of
+ *    strings. Use g_strfreev() to free it.
  */
 gchar**
 g_strsplit (const gchar *string,
@@ -2432,9 +2450,15 @@ g_strsplit (const gchar *string,
   g_return_val_if_fail (delimiter[0] != '\0', NULL);
 
   if (max_tokens < 1)
-    max_tokens = G_MAXINT;
+    {
+      max_tokens = G_MAXINT;
+      string_list = g_ptr_array_new ();
+    }
+  else
+    {
+      string_list = g_ptr_array_new_full (max_tokens + 1, NULL);
+    }
 
-  string_list = g_ptr_array_new ();
   remainder = string;
   s = strstr (remainder, delimiter);
   if (s)
@@ -2490,8 +2514,8 @@ g_strsplit (const gchar *string,
  * Note that this function works on bytes not characters, so it can't be used
  * to delimit UTF-8 strings for anything but ASCII characters.
  *
- * Returns: a newly-allocated %NULL-terminated array of strings. Use
- *    g_strfreev() to free it.
+ * Returns: (transfer full): a newly-allocated %NULL-terminated array of
+ *    strings. Use g_strfreev() to free it.
  *
  * Since: 2.4
  **/
@@ -2766,7 +2790,7 @@ g_strjoin (const gchar *separator,
  *
  * Searches the string @haystack for the first occurrence
  * of the string @needle, limiting the length of the search
- * to @haystack_len.
+ * to @haystack_len or a nul terminator byte (whichever is reached first).
  *
  * Returns: a pointer to the found occurrence, or
  *    %NULL if not found.
@@ -2929,9 +2953,8 @@ g_strrstr_len (const gchar *haystack,
  *
  * Since: 2.2
  */
-gboolean
-g_str_has_suffix (const gchar *str,
-                  const gchar *suffix)
+gboolean (g_str_has_suffix) (const gchar *str,
+                             const gchar *suffix)
 {
   gsize str_len;
   gsize suffix_len;
@@ -2959,9 +2982,8 @@ g_str_has_suffix (const gchar *str,
  *
  * Since: 2.2
  */
-gboolean
-g_str_has_prefix (const gchar *str,
-                  const gchar *prefix)
+gboolean (g_str_has_prefix) (const gchar *str,
+                             const gchar *prefix)
 {
   g_return_val_if_fail (str != NULL, FALSE);
   g_return_val_if_fail (prefix != NULL, FALSE);

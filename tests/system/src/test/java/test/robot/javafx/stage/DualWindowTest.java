@@ -27,6 +27,8 @@ package test.robot.javafx.stage;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +42,8 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
+import com.sun.javafx.PlatformUtil;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -151,6 +155,10 @@ public class DualWindowTest {
 
     @Test
     public void testTwoStages() throws Exception {
+        if (PlatformUtil.isLinux()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8321624
+        }
+
         Util.sleep(1000);
         Util.runAndWait(() -> {
             assertEquals(STAGE1_X, stage1.getX(), 1.0);
