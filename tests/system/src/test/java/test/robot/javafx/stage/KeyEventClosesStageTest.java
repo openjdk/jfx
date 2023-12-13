@@ -32,6 +32,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.robot.Robot;
@@ -56,6 +57,10 @@ import test.util.Util;
 public class KeyEventClosesStageTest {
     private static Robot robot;
     private static Stage stage;
+    private static Scene scene;
+    private static BorderPane borderPane;
+    private static TextArea textArea;
+
     private static boolean typedEventArrived = false;
     private static CountDownLatch startupLatch = new CountDownLatch(1);
     private static CountDownLatch pressedEventLatch = new CountDownLatch(1);
@@ -63,6 +68,20 @@ public class KeyEventClosesStageTest {
     @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
+
+        // When run from the command line Windows does not want to
+        // activate the window.
+        Util.runAndWait(() -> {
+            int mouseX = (int) (scene.getWindow().getX() + scene.getX() +
+                    textArea.getLayoutX() + textArea.getLayoutBounds().getWidth() / 2);
+            int mouseY = (int) (scene.getWindow().getY() + scene.getY() +
+                    textArea.getLayoutY() + textArea.getLayoutBounds().getHeight() / 2);
+            robot.mouseMove(mouseX, mouseY);
+            robot.mouseClick(MouseButton.PRIMARY);
+        });
+        Util.runAndWait(() -> {
+            borderPane.requestFocus();
+        });
     }
 
     @Test
@@ -88,23 +107,24 @@ public class KeyEventClosesStageTest {
             robot = new Robot();
             stage = primaryStage;
 
-            BorderPane root = new BorderPane(new TextArea());
-            root.setOnKeyPressed(e -> {
+            textArea = new TextArea();
+            borderPane = new BorderPane(textArea);
+            borderPane.setOnKeyPressed(e -> {
                 if (e.getCode() == KeyCode.ESCAPE) {
                     stage.close();
                     Platform.runLater(pressedEventLatch::countDown);
                 }
             });
-
-            root.setOnKeyTyped(e -> {
+            borderPane.setOnKeyTyped(e -> {
                 typedEventArrived = true;
             });
 
-            stage.setScene(new Scene(root, 200, 200));
+            scene = new Scene(borderPane, 200, 200);
+            stage.setScene(scene);
             stage.setOnShown(event -> {
-                Platform.runLater(root::requestFocus);
                 Platform.runLater(startupLatch::countDown);
             });
+            stage.setAlwaysOnTop(true);
             stage.show();
         }
     }
