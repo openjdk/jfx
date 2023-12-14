@@ -43,13 +43,14 @@ void wrapped_g_settings_schema_unref (GSettingsSchema *schema);
 
 void wrapped_gdk_x11_display_set_window_scale (GdkDisplay *display, gint scale);
 
-GdkGrabStatus wrapped_gdk_seat_grab(GdkWindow* window,
+gboolean wrapped_gdk_seat_grab(GdkWindow* window,
                             int capabilities /* GdkSeatCapabilities capabilities */,
                             gboolean owner_events, GdkCursor* cursor, const GdkEvent* event,
                             void * prepare_func /* GdkSeatGrabPrepareFunc prepare_func */,
-                            gpointer prepare_func_data);
+                            gpointer prepare_func_data,
+                            GdkGrabStatus* status);
 
-void wrapped_gdk_seat_ungrab(GdkWindow* window);
+gboolean wrapped_gdk_seat_ungrab(GdkWindow* window);
 
 #ifdef __cplusplus
 }
