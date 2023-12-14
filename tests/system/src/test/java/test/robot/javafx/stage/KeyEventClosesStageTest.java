@@ -38,9 +38,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestMethodOrder;
