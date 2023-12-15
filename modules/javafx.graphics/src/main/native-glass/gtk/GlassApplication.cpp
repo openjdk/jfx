@@ -489,7 +489,6 @@ static void process_events(GdkEvent* event, gpointer data)
     glass_evloop_call_hooks(event);
 
     if (ctx != NULL) {
-
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:

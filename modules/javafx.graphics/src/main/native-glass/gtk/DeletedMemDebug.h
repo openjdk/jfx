@@ -28,9 +28,12 @@
 
 #include <cstring>
 
+//#define DEBUGDELETEDMEM
+
 template <int FILL>
 struct DeletedMemDebug
 {
+#ifdef DEBUGDELETEDMEM
 public:
     static void operator delete(void* ptr, std::size_t sz)
     {
@@ -43,6 +46,7 @@ public:
         ::memset(ptr, 0xcc, sz);
         ::operator delete[](ptr);
     }
+#endif
 };
 
 #endif // DELETEDMEMDEBUG_H
