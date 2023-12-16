@@ -32,7 +32,6 @@ import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
-import java.util.Objects;
 
 public abstract class View {
 
@@ -117,10 +116,6 @@ public abstract class View {
         }
 
         public double[] getInputMethodCandidatePos(int offset) {
-            return null;
-        }
-
-        public double[] getInputMethodCandidateRelativePos(int offset) {
             return null;
         }
 
@@ -670,13 +665,6 @@ public abstract class View {
         return null;
     }
 
-    private double[] getInputMethodCandidateRelativePos(int offset) {
-        if (this.eventHandler != null) {
-            return this.eventHandler.getInputMethodCandidateRelativePos(offset);
-        }
-        return null;
-    }
-
     private void handleDragStart(int button, int x, int y, int xAbs, int yAbs,
             ClipboardAssistance dropSourceAssistant) {
         if (this.eventHandler != null) {
@@ -993,10 +981,6 @@ public abstract class View {
             ret[1] = 0.0;
         }
         return ret;
-    }
-
-    protected double[] notifyInputMethodCandidateRelativePosRequest(int offset) {
-        return Objects.requireNonNullElseGet(getInputMethodCandidateRelativePos(offset), () -> new double[] { 0.0, 0.0});
     }
 
     private ClipboardAssistance dropSourceAssistant;

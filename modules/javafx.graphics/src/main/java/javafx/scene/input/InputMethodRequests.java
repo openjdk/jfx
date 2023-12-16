@@ -52,21 +52,6 @@ public interface InputMethodRequests {
     Point2D getTextLocation(int offset);
 
     /**
-     * Gets the location of a specified offset in the current composed text,
-     * or of the selection in committed text. This information is, for example,
-     * used to position the candidate window near the composed text, or a
-     * composition window near the location where committed text will be
-     * inserted.
-     *
-     * @param offset the offset within the composed text, if there is
-     *         composed text; 0 otherwise
-     * @return a point representing the Scene location of the offset
-     */
-    default Point2D getTextLocationRelative(int offset) {
-        return new Point2D(0D, 0D);
-    }
-
-    /**
      * Gets the offset within the composed text for the specified absolute x
      * and y coordinates on the screen. This information is used, for example
      * to handle mouse clicks and the mouse cursor. The offset is relative to

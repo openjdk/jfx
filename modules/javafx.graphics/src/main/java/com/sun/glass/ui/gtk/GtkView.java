@@ -111,6 +111,18 @@ final class GtkView extends View {
         }
     }
 
+    protected double[] notifyInputMethodCandidateRelativePosRequest(int offset) {
+        return convertPosToRelative(super.notifyInputMethodCandidatePosRequest(offset));
+    }
+
+    private double[] convertPosToRelative(double[] pos) {
+        var w = getWindow();
+        pos[0] -= (pos[0] > 0) ? ((w.getX() + getX())) : 0;
+        pos[1] -= (pos[1] > 0) ? ((w.getY() + getY())) : 0;
+
+        return pos;
+    }
+
     protected void notifyInputMethodLinux(String str, int commitLength, int cursor, byte attr) {
         if (commitLength > 0) {
             notifyInputMethod(str, null, null, null, commitLength, cursor, 0);

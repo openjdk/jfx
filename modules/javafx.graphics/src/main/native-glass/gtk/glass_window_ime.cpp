@@ -64,7 +64,8 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
         }
     } while (pango_attr_iterator_next(iter));
 
-    pango_attr_iterator_destroy (iter);
+    pango_attr_list_unref(attrList);
+    pango_attr_iterator_destroy(iter);
     g_free(preedit_text);
 
     mainEnv->CallVoidMethod(ctx->get_jview(),

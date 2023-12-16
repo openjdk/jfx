@@ -227,9 +227,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyScroll = env->GetMethodID(clazz, "notifyScroll", "(IIIIDDIIIIIDD)V");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodCandidateRelativePosRequest
-        = env->GetMethodID(clazz, "notifyInputMethodCandidateRelativePosRequest", "(I)[D");
-    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyMenu = env->GetMethodID(clazz, "notifyMenu", "(IIIIZ)V");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewPtr = env->GetFieldID(clazz, "ptr", "J");
@@ -238,6 +235,9 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyInputMethodLinux = env->GetMethodID(clazz, "notifyInputMethodLinux", "(Ljava/lang/String;IIB)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jViewNotifyInputMethodCandidateRelativePosRequest
+        = env->GetMethodID(clazz, "notifyInputMethodCandidateRelativePosRequest", "(I)[D");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Window");
