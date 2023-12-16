@@ -116,7 +116,7 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
 
     bool filtered = gtk_im_context_filter_keypress(im_ctx.ctx, &event->key);
 
-    if (!filtered || (filtered && im_ctx.send_keypress)) {
+    if (filtered && im_ctx.send_keypress) {
         process_key(&event->key);
         im_ctx.send_keypress = false;
     }
@@ -174,6 +174,7 @@ void WindowContextBase::disableIME() {
     if (im_ctx.ctx != NULL) {
         g_signal_handlers_disconnect_matched(im_ctx.ctx, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, NULL);
         g_object_unref(im_ctx.ctx);
+        im_ctx.ctx = NULL;
     }
 
     im_ctx.enabled = false;
