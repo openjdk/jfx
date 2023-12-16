@@ -35,6 +35,7 @@
 #import "GlassScreen.h"
 #import "GlassWindow.h"
 #import "GlassTouches.h"
+#import "PlatformSupport.h"
 
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
@@ -159,6 +160,25 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
 }
 
+- (void)platformPreferencesDidChange {
+    // Some dynamic colors like NSColor.controlAccentColor don't seem to be reliably updated
+    // at the exact moment AppleColorPreferencesChangedNotification is received.
+    // As a workaround, we wait for a short period of time (one second seems sufficient) before
+    // we query the updated platform preferences.
+
+    [NSObject cancelPreviousPerformRequestsWithTarget:self
+              selector:@selector(updatePlatformPreferences)
+              object:nil];
+
+    [self performSelector:@selector(updatePlatformPreferences)
+          withObject:nil
+          afterDelay:1.0];
+}
+
+- (void)updatePlatformPreferences {
+    [PlatformSupport updatePreferences:self->jApplication];
+}
+
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
 {
     LOG("GlassApplication:applicationWillFinishLaunching");
@@ -197,6 +217,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                                                                  selector:@selector(GlassApplicationDidChangeScreenParameters)
                                                                      name:NSApplicationDidChangeScreenParametersNotification
                                                                    object:nil];
+
+                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+                                                                         selector:@selector(platformPreferencesDidChange)
+                                                                         name:@"AppleInterfaceThemeChangedNotification"
+                                                                         object:nil];
+
+                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+                                                                         selector:@selector(platformPreferencesDidChange)
+                                                                         name:@"AppleColorPreferencesChangedNotification"
+                                                                         object:nil];
 
                         // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
                         //                                                      handler:^(NSEvent *incomingEvent) {
@@ -799,8 +829,14 @@ static void inputDidChangeCallback(CFNotificationCenterRef center, void *observe
     [keyCodeForCharMap setObject:mapObject forKey:[event characters]];
     // getKeyCodeForChar should not just match against a character the user types
     // directly but any other character printed on the same key.
-    [keyCodeForCharMap setObject:mapObject forKey:[event charactersByApplyingModifiers: 0]];
-    [keyCodeForCharMap setObject:mapObject forKey:[event charactersByApplyingModifiers: NSEventModifierFlagShift]];
+    NSString* unshifted = GetStringForMacKey(event.keyCode, false);
+    if (unshifted != nil) {
+        [keyCodeForCharMap setObject:mapObject forKey:unshifted];
+    }
+    NSString* shifted = GetStringForMacKey(event.keyCode, true);
+    if (shifted != nil) {
+        [keyCodeForCharMap setObject:mapObject forKey:shifted];
+    }
     // On some European keyboards there are useful symbols which are only
     // accessible via the Option key. We don't query for the Option key
     // character because on most layouts just about every key has some
@@ -893,6 +929,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
             env, jClass, "notifyApplicationDidTerminate", "()V");
     if ((*env)->ExceptionCheck(env)) return;
 
+    javaIDs.MacApplication.notifyPreferencesChanged = (*env)->GetMethodID(
+            env, jClass, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
+    if ((*env)->ExceptionCheck(env)) return;
+
     if (jRunnableRun == NULL)
     {
         jclass jcls = (*env)->FindClass(env, "java/lang/Runnable");
@@ -900,6 +940,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
         jRunnableRun = (*env)->GetMethodID(env, jcls, "run", "()V");
         if ((*env)->ExceptionCheck(env)) return;
     }
+
+    [PlatformSupport initIDs:env];
 }
 
 /*
@@ -1197,4 +1239,15 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
     unsigned short macCode = 0;
     GetMacKey(code, &macCode);
     return (macCode & 0xFFFF);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    getPreferences
+ * Signature: ()Ljava/util/Map;
+ */
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication_getPlatformPreferences
+(JNIEnv *env, jobject self)
+{
+    return [PlatformSupport collectPreferences];
 }

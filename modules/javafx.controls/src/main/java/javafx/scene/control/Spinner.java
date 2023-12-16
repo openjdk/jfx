@@ -769,7 +769,7 @@ public class Spinner<T> extends Control {
             }
         }
 
-        notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.VALUE_STRING);
         if (text == null) {
             if (value == null) {
                 getEditor().clear();
@@ -834,7 +834,7 @@ public class Spinner<T> extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TEXT: {
+            case VALUE_STRING: {
                 T value = getValue();
                 SpinnerValueFactory<T> factory = getValueFactory();
                 if (factory != null) {
@@ -845,6 +845,15 @@ public class Spinner<T> extends Control {
                 }
                 return value != null ? value.toString() : "";
             }
+
+            case TEXT: {
+                String accText = getAccessibleText();
+                return (accText != null) ? accText : "";
+            }
+
+            case EDITABLE:
+                return isEditable();
+
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

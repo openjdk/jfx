@@ -25,6 +25,7 @@
 
 package test.javafx.print;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
@@ -65,11 +66,11 @@ public class PaperUnitsTest {
      double mmWid = 100.0;
      double mmHgt = 200.0;
      Paper p = PrintHelper.createPaper("TestMM", mmWid, mmHgt, Units.MM);
-     int ptsWid = (int)p.getWidth();
-     int ptsHgt = (int)p.getHeight();
-     int expectedPtsWid = (int)(((mmWid * 72) / 25.4) + 0.5);
-     int expectedPtsHgt = (int)(((mmHgt * 72) / 25.4) + 0.5);
-     assertTrue("MM width is not as expected", ptsWid == expectedPtsWid);
-     assertTrue("MM height is not as expected", ptsHgt == expectedPtsHgt);
+     double ptsWid = p.getWidth();
+     double ptsHgt = p.getHeight();
+     double expectedPtsWid = (mmWid * 72) / 25.4;
+     double expectedPtsHgt = (mmHgt * 72) / 25.4;
+     assertEquals("MM width is not as expected", ptsWid, expectedPtsWid, 0.001);
+     assertEquals("MM height is not as expected", ptsHgt, expectedPtsHgt, 0.001);
    }
 }

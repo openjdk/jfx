@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.javafx.scene.control.behavior;
+package test.robot.javafx.scene.control.behavior;
 
 import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
