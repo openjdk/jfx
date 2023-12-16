@@ -29,6 +29,8 @@
 #include <PiscesSysutils.h>
 #include <PiscesMath.h>
 
+#include <limits.h>
+
 #define NO_REPEAT_NO_INTERPOLATE        0
 #define REPEAT_NO_INTERPOLATE           1
 #define NO_REPEAT_INTERPOLATE_NO_ALPHA  2
