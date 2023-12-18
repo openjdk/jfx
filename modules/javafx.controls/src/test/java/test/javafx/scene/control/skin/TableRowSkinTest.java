@@ -26,10 +26,12 @@
 package test.javafx.scene.control.skin;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TableCell;
@@ -82,7 +84,7 @@ public class TableRowSkinTest {
 
         tableView.setItems(items);
 
-        stageLoader = new StageLoader(tableView);
+        stageLoader = new StageLoader(new Scene(tableView));
         firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(tableView, firstNameCol);
     }
 
@@ -314,6 +316,27 @@ public class TableRowSkinTest {
     @Test
     public void invisibleColumnsShouldRemoveCorrespondingCellsInRow() {
         invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl();
+    }
+
+    /**
+     * The {@link TableRowSkin} should add new cells after new columns are added.
+     * See: JDK-8321970
+     */
+    @Test
+    public void cellsShouldBeAddedInRowFixedCellSize() {
+        tableView.setFixedCellSize(24);
+
+        TableColumn<Person, String> otherColumn = new TableColumn<>("other");
+        otherColumn.setPrefWidth(100);
+        otherColumn.setCellValueFactory(value -> new SimpleStringProperty("other"));
+        tableView.getColumns().add(otherColumn);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(5, tableView.getColumns().size());
+
+        Toolkit.getToolkit().firePulse();
+        IndexedCell<?> row = VirtualFlowTestUtils.getCell(tableView, 1);
+        assertEquals(5, row.getChildrenUnmodifiable().stream().filter(TableCell.class::isInstance).count());
     }
 
     @After
