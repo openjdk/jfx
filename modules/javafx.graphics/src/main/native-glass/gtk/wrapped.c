@@ -148,6 +148,7 @@ void wrapped_gdk_x11_display_set_window_scale (GdkDisplay *display,
     }
 }
 
+#if GTK_CHECK_VERSION(3, 20, 0)
 static GdkSeat * (*_gdk_display_get_default_seat) (GdkDisplay *display);
 
 // Note added in libgdk 3.20 which is > our OEL 7.0 version of 3.8
@@ -172,6 +173,7 @@ static GdkGrabStatus (*_gdk_seat_grab) (GdkSeat* seat, GdkWindow* window,
                             gboolean owner_events, GdkCursor* cursor, const GdkEvent* event,
                             void * prepare_func /* GdkSeatGrabPrepareFunc prepare_func */,
                             gpointer prepare_func_data);
+#endif
 
 // Note added in libgdk 3.20 which is > our OEL 7.0 version of 3.8
 gboolean wrapped_gdk_seat_grab(GdkWindow* window,
@@ -181,6 +183,7 @@ gboolean wrapped_gdk_seat_grab(GdkWindow* window,
                             gpointer prepare_func_data,
                             GdkGrabStatus* status)
 {
+#if GTK_CHECK_VERSION(3, 20, 0)
     if (_gdk_seat_grab == NULL) {
         _gdk_seat_grab = dlsym(RTLD_DEFAULT, "gdk_seat_grab");
         if (gtk_verbose && _gdk_seat_grab) {
@@ -194,14 +197,18 @@ gboolean wrapped_gdk_seat_grab(GdkWindow* window,
                                  owner_events, cursor, event, prepare_func, prepare_func_data);
         return TRUE;
     }
+#endif
     return FALSE;
 }
 
+#if GTK_CHECK_VERSION(3, 20, 0)
 static void (*_gdk_seat_ungrab) (GdkSeat* seat);
+#endif
 
 // Note added in libgdk 3.20 which is > our OEL 7.0 version of 3.8
 gboolean wrapped_gdk_seat_ungrab(GdkWindow* window)
 {
+#if GTK_CHECK_VERSION(3, 20, 0)
     if (_gdk_seat_ungrab == NULL) {
         _gdk_seat_ungrab = dlsym(RTLD_DEFAULT, "gdk_seat_ungrab");
         if (gtk_verbose && _gdk_seat_ungrab) {
@@ -214,5 +221,6 @@ gboolean wrapped_gdk_seat_ungrab(GdkWindow* window)
         (*_gdk_seat_ungrab)(seat);
         return TRUE;
     }
+#endif
     return FALSE;
 }
