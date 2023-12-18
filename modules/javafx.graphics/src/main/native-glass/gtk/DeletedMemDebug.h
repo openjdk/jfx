@@ -43,7 +43,7 @@ public:
 
     static void operator delete[](void* ptr, std::size_t sz)
     {
-        ::memset(ptr, 0xcc, sz);
+        ::memset(ptr, FILL, sz);
         ::operator delete[](ptr);
     }
 #endif
