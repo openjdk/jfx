@@ -47,6 +47,7 @@ import java.util.List;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
 import javafx.collections.transformation.FilteredList;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -212,9 +213,9 @@ class GlassSystemMenu implements TKSystemMenu {
 
 
     private void setMenuBindings(final Menu glassMenu, final MenuBase mb) {
-        mb.textProperty().addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
-        mb.disableProperty().addListener(valueModel -> glassMenu.setEnabled(!mb.isDisable()));
-        mb.mnemonicParsingProperty().addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
+        mb.textProperty().addListener(new WeakInvalidationListener(valueModel -> glassMenu.setTitle(parseText(mb))));
+        mb.disableProperty().addListener(new WeakInvalidationListener(valueModel -> glassMenu.setEnabled(!mb.isDisable())));
+        mb.mnemonicParsingProperty().addListener(new WeakInvalidationListener(valueModel -> glassMenu.setTitle(parseText(mb))));
     }
 
     private void addMenuItem(Menu parent, final MenuItemBase menuitem) {
@@ -269,29 +270,29 @@ class GlassSystemMenu implements TKSystemMenu {
 
             final MenuItem glassSubMenuItem = app.createMenuItem(parseText(menuitem), callback);
 
-            menuitem.textProperty().addListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem)));
+            menuitem.textProperty().addListener(new WeakInvalidationListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem))));
 
             glassSubMenuItem.setPixels(getPixels(menuitem));
-            menuitem.graphicProperty().addListener(valueModel -> {
+            menuitem.graphicProperty().addListener(new WeakInvalidationListener(valueModel -> {
                 glassSubMenuItem.setPixels(getPixels(menuitem));
-            });
+            }));
 
             glassSubMenuItem.setEnabled(! menuitem.isDisable());
-            menuitem.disableProperty().addListener(valueModel -> glassSubMenuItem.setEnabled(!menuitem.isDisable()));
+            menuitem.disableProperty().addListener(new WeakInvalidationListener(valueModel -> glassSubMenuItem.setEnabled(!menuitem.isDisable())));
 
             setShortcut(glassSubMenuItem, menuitem);
-            menuitem.acceleratorProperty().addListener(valueModel -> setShortcut(glassSubMenuItem, menuitem));
+            menuitem.acceleratorProperty().addListener(new WeakInvalidationListener(valueModel -> setShortcut(glassSubMenuItem, menuitem)));
 
-            menuitem.mnemonicParsingProperty().addListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem)));
+            menuitem.mnemonicParsingProperty().addListener(new WeakInvalidationListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem))));
 
             if (menuitem instanceof CheckMenuItemBase) {
                 final CheckMenuItemBase checkItem = (CheckMenuItemBase)menuitem;
                 glassSubMenuItem.setChecked(checkItem.isSelected());
-                checkItem.selectedProperty().addListener(valueModel -> glassSubMenuItem.setChecked(checkItem.isSelected()));
+                checkItem.selectedProperty().addListener(new WeakInvalidationListener(valueModel -> glassSubMenuItem.setChecked(checkItem.isSelected())));
             } else if (menuitem instanceof RadioMenuItemBase) {
                 final RadioMenuItemBase radioItem = (RadioMenuItemBase)menuitem;
                 glassSubMenuItem.setChecked(radioItem.isSelected());
-                radioItem.selectedProperty().addListener(valueModel -> glassSubMenuItem.setChecked(radioItem.isSelected()));
+                radioItem.selectedProperty().addListener(new WeakInvalidationListener(valueModel -> glassSubMenuItem.setChecked(radioItem.isSelected())));
             }
 
             parent.insert(glassSubMenuItem, pos);
