@@ -191,7 +191,7 @@ public class DateTimeStringConverter extends StringConverter<Date> {
     // --------------------------------------------------------- Private Methods
 
     /**
-     * <p>Return a <code>DateFormat</code> instance to use for formatting
+     * <p>Returns a <code>DateFormat</code> instance to use for formatting
      * and parsing in this {@link StringConverter}.</p>
      *
      * @return a {@code DateFormat} instance for formatting and parsing in this

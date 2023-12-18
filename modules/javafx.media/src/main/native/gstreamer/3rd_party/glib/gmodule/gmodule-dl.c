@@ -1,5 +1,7 @@
 /* GMODULE - GLIB wrapper code for dynamic module loading
  * Copyright (C) 1998, 2000 Tim Janik
+*
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -165,7 +167,7 @@ _g_module_self (void)
    * NULL is given, dlsym returns an appropriate pointer.
    */
   lock_dlerror ();
-#if defined(__BIONIC__)
+#if defined(__BIONIC__) || defined(__NetBSD__)
   handle = RTLD_DEFAULT;
 #else
   handle = dlopen (NULL, RTLD_GLOBAL | RTLD_LAZY);
@@ -180,7 +182,7 @@ _g_module_self (void)
 static void
 _g_module_close (gpointer handle)
 {
-#if defined(__BIONIC__)
+#if defined(__BIONIC__) || defined(__NetBSD__)
   if (handle != RTLD_DEFAULT)
 #endif
     {
@@ -207,19 +209,4 @@ _g_module_symbol (gpointer     handle,
   unlock_dlerror ();
 
   return p;
-}
-
-static gchar*
-_g_module_build_path (const gchar *directory,
-          const gchar *module_name)
-{
-  if (directory && *directory) {
-    if (strncmp (module_name, "lib", 3) == 0)
-      return g_strconcat (directory, "/", module_name, NULL);
-    else
-      return g_strconcat (directory, "/lib", module_name, "." G_MODULE_SUFFIX, NULL);
-  } else if (strncmp (module_name, "lib", 3) == 0)
-    return g_strdup (module_name);
-  else
-    return g_strconcat ("lib", module_name, "." G_MODULE_SUFFIX, NULL);
 }

@@ -4,6 +4,8 @@
  * giounix.c: IO Channels using unix file descriptors
  * Copyright 1998 Owen Taylor
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -41,6 +43,10 @@
 #include <string.h>
 #include <fcntl.h>
 #include <glib/gstdio.h>
+
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
 
 #include "giochannel.h"
 
@@ -128,8 +134,6 @@ g_io_unix_prepare (GSource  *source,
 {
   GIOUnixWatch *watch = (GIOUnixWatch *)source;
   GIOCondition buffer_condition = g_io_channel_get_buffer_condition (watch->channel);
-
-  *timeout = -1;
 
   /* Only return TRUE here if _all_ bits in watch->condition will be set
    */
@@ -398,7 +402,7 @@ g_io_unix_set_flags (GIOChannel *channel,
 static GIOFlags
 g_io_unix_get_flags (GIOChannel *channel)
 {
-  GIOFlags flags = 0;
+  GIOFlags flags = G_IO_FLAG_NONE;
   glong fcntl_flags;
   GIOUnixChannel *unix_channel = (GIOUnixChannel *) channel;
 
@@ -525,7 +529,7 @@ g_io_channel_new_file (const gchar *filename,
 
   create_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
-  fid = g_open (filename, flags, create_mode);
+  fid = g_open (filename, flags | O_CLOEXEC, create_mode);
   if (fid == -1)
     {
       int err = errno;

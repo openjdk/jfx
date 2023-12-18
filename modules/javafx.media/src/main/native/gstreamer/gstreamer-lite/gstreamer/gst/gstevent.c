@@ -213,6 +213,33 @@ gst_event_type_get_flags (GstEventType type)
   return ret;
 }
 
+/**
+ * gst_event_type_to_sticky_ordering
+ * @type: a #GstEventType
+ *
+ * Converts the #GstEventType to an unsigned integer that
+ * represents the ordering of sticky events when re-sending them.
+ * A lower value represents a higher-priority event.
+ *
+ * Returns: an unsigned integer
+ * Since: 1.22
+ */
+/* FIXME 2.0: Remove the sticky event order overrides once
+ * the event type numbers are fixed */
+guint
+gst_event_type_to_sticky_ordering (GstEventType type)
+{
+  guint sticky_order = type;
+
+  /* Fix up the sticky event ordering for events where the
+   * type was chosen poorly */
+  if (type == GST_EVENT_INSTANT_RATE_CHANGE) {
+    sticky_order = GST_EVENT_SEGMENT + 1;
+  }
+
+  return sticky_order;
+}
+
 static void
 _gst_event_free (GstEvent * event)
 {
@@ -298,7 +325,7 @@ gst_event_init (GstEventImpl * event, GstEventType type)
  * New custom events can also be created by subclassing the event type if
  * needed.
  *
- * Returns: (transfer full) (nullable): the new custom event.
+ * Returns: (transfer full): the new custom event.
  */
 GstEvent *
 gst_event_new_custom (GstEventType type, GstStructure * structure)
@@ -354,15 +381,15 @@ gst_event_get_structure (GstEvent * event)
 
 /**
  * gst_event_writable_structure:
- * @event: The #GstEvent.
+ * @event: A writable #GstEvent.
  *
  * Get a writable version of the structure.
  *
  * Returns: (transfer none): The structure of the event. The structure
  * is still owned by the event, which means that you should not free
  * it and that the pointer becomes invalid when you free the event.
- * This function checks if @event is writable and will never return
- * %NULL.
+ * This function ensures that @event is writable, and if so, will
+ * never return %NULL.
  *
  * MT safe.
  */
@@ -591,7 +618,7 @@ gst_event_new_flush_stop (gboolean reset_time)
 /**
  * gst_event_parse_flush_stop:
  * @event: The event to parse
- * @reset_time: (out): if time should be reset
+ * @reset_time: (out) (optional): if time should be reset
  *
  * Parse the FLUSH_STOP event and retrieve the @reset_time member.
  */
@@ -626,8 +653,7 @@ gst_event_parse_flush_stop (GstEvent * event, gboolean * reset_time)
  *
  * Note: The list of @streams can not be empty.
  *
- * Returns: (transfer full): a new select-streams event or %NULL in case of
- * an error (like an empty streams list).
+ * Returns: (transfer full): a new select-streams event.
  *
  * Since: 1.10
  */
@@ -661,7 +687,7 @@ gst_event_new_select_streams (GList * streams)
 /**
  * gst_event_parse_select_streams:
  * @event: The event to parse
- * @streams: (out) (element-type utf8) (transfer full): the streams
+ * @streams: (out) (optional) (element-type utf8) (transfer full): the streams
  *
  * Parse the SELECT_STREAMS event and retrieve the contained streams.
  *
@@ -724,7 +750,7 @@ gst_event_new_stream_group_done (guint group_id)
 /**
  * gst_event_parse_stream_group_done:
  * @event: a stream-group-done event.
- * @group_id: (out): address of variable to store the group id into
+ * @group_id: (out) (optional): address of variable to store the group id into
  *
  * Parse a stream-group-done @event and store the result in the given
  * @group_id location.
@@ -804,9 +830,9 @@ gst_event_new_gap (GstClockTime timestamp, GstClockTime duration)
 /**
  * gst_event_parse_gap:
  * @event: a #GstEvent of type #GST_EVENT_GAP
- * @timestamp: (out) (allow-none): location where to store the
+ * @timestamp: (out) (optional): location where to store the
  *     start time (pts) of the gap, or %NULL
- * @duration: (out) (allow-none): location where to store the duration of
+ * @duration: (out) (optional): location where to store the duration of
  *     the gap, or %NULL
  *
  * Extract timestamp and duration from a new GAP event.
@@ -851,7 +877,7 @@ gst_event_set_gap_flags (GstEvent * event, GstGapFlags flags)
 /**
  * gst_event_parse_gap_flags:
  * @event: a #GstEvent of type #GST_EVENT_GAP
- * @flags: (out): a #GstGapFlags or %NULL
+ * @flags: (out) (optional): a #GstGapFlags or %NULL
  *
  * Retrieve the gap flags that may have been set on a gap event with
  * gst_event_set_gap_flags().
@@ -881,7 +907,7 @@ gst_event_parse_gap_flags (GstEvent * event, GstGapFlags * flags)
  * synchronized with the buffer flow and contains the format of the buffers
  * that will follow after the event.
  *
- * Returns: (transfer full) (nullable): the new CAPS event.
+ * Returns: (transfer full): the new CAPS event.
  */
 GstEvent *
 gst_event_new_caps (GstCaps * caps)
@@ -903,7 +929,7 @@ gst_event_new_caps (GstCaps * caps)
 /**
  * gst_event_parse_caps:
  * @event: The event to parse
- * @caps: (out) (transfer none): A pointer to the caps
+ * @caps: (out) (optional) (transfer none): A pointer to the caps
  *
  * Get the caps from @event. The caps remains valid as long as @event remains
  * valid.
@@ -959,7 +985,7 @@ gst_event_parse_caps (GstEvent * event, GstCaps ** caps)
  *
  *   time + (TIMESTAMP(buf) - start) * ABS (rate * applied_rate)
  *
- * Returns: (transfer full) (nullable): the new SEGMENT event.
+ * Returns: (transfer full): the new SEGMENT event.
  */
 GstEvent *
 gst_event_new_segment (const GstSegment * segment)
@@ -984,7 +1010,7 @@ gst_event_new_segment (const GstSegment * segment)
 /**
  * gst_event_parse_segment:
  * @event: The event to parse
- * @segment: (out) (transfer none): a pointer to a #GstSegment
+ * @segment: (out) (optional) (transfer none): a pointer to a #GstSegment
  *
  * Parses a segment @event and stores the result in the given @segment location.
  * @segment remains valid only until the @event is freed. Don't modify the segment
@@ -1061,7 +1087,7 @@ gst_event_new_tag (GstTagList * taglist)
 /**
  * gst_event_parse_tag:
  * @event: a tag event
- * @taglist: (out) (transfer none): pointer to metadata list
+ * @taglist: (out) (optional) (transfer none): pointer to metadata list
  *
  * Parses a tag @event and stores the results in the given @taglist location.
  * No reference to the taglist will be returned, it remains valid only until
@@ -1123,10 +1149,10 @@ gst_event_new_buffer_size (GstFormat format, gint64 minsize,
 /**
  * gst_event_parse_buffer_size:
  * @event: The event to query
- * @format: (out): A pointer to store the format in
- * @minsize: (out): A pointer to store the minsize in
- * @maxsize: (out): A pointer to store the maxsize in
- * @async: (out): A pointer to store the async-flag in
+ * @format: (out) (optional): A pointer to store the format in
+ * @minsize: (out) (optional): A pointer to store the minsize in
+ * @maxsize: (out) (optional): A pointer to store the maxsize in
+ * @async: (out) (optional): A pointer to store the async-flag in
  *
  * Get the format, minsize, maxsize and async-flag in the buffersize event.
  */
@@ -1208,7 +1234,7 @@ gst_event_parse_buffer_size (GstEvent * event, GstFormat * format,
  * The application can use general event probes to intercept the QoS
  * event and implement custom application specific QoS handling.
  *
- * Returns: (transfer full) (nullable): a new QOS event.
+ * Returns: (transfer full): a new QOS event.
  */
 GstEvent *
 gst_event_new_qos (GstQOSType type, gdouble proportion,
@@ -1238,10 +1264,10 @@ gst_event_new_qos (GstQOSType type, gdouble proportion,
 /**
  * gst_event_parse_qos:
  * @event: The event to query
- * @type: (out): A pointer to store the QoS type in
- * @proportion: (out): A pointer to store the proportion in
- * @diff: (out): A pointer to store the diff in
- * @timestamp: (out): A pointer to store the timestamp in
+ * @type: (out) (optional): A pointer to store the QoS type in
+ * @proportion: (out) (optional): A pointer to store the proportion in
+ * @diff: (out) (optional): A pointer to store the diff in
+ * @timestamp: (out) (optional): A pointer to store the timestamp in
  *
  * Get the type, proportion, diff and timestamp in the qos event. See
  * gst_event_new_qos() for more information about the different QoS values.
@@ -1334,7 +1360,7 @@ gst_event_parse_qos (GstEvent * event, GstQOSType * type,
  * #GST_QUERY_POSITION and update the playback segment current position with a
  * #GST_SEEK_TYPE_SET to the desired position.
  *
- * Returns: (transfer full) (nullable): a new seek event.
+ * Returns: (transfer full): a new seek event.
  */
 GstEvent *
 gst_event_new_seek (gdouble rate, GstFormat format, GstSeekFlags flags,
@@ -1395,13 +1421,13 @@ gst_event_new_seek (gdouble rate, GstFormat format, GstSeekFlags flags,
 /**
  * gst_event_parse_seek:
  * @event: a seek event
- * @rate: (out): result location for the rate
- * @format: (out): result location for the stream format
- * @flags:  (out): result location for the #GstSeekFlags
- * @start_type: (out): result location for the #GstSeekType of the start position
- * @start: (out): result location for the start position expressed in @format
- * @stop_type:  (out): result location for the #GstSeekType of the stop position
- * @stop: (out): result location for the stop position expressed in @format
+ * @rate: (out) (optional): result location for the rate
+ * @format: (out) (optional): result location for the stream format
+ * @flags:  (out) (optional): result location for the #GstSeekFlags
+ * @start_type: (out) (optional): result location for the #GstSeekType of the start position
+ * @start: (out) (optional): result location for the start position expressed in @format
+ * @stop_type:  (out) (optional): result location for the #GstSeekType of the stop position
+ * @stop: (out) (optional): result location for the stop position expressed in @format
  *
  * Parses a seek @event and stores the results in the given result locations.
  */
@@ -1469,7 +1495,7 @@ gst_event_set_seek_trickmode_interval (GstEvent * event, GstClockTime interval)
 
 /**
  * gst_event_parse_seek_trickmode_interval:
- * @interval: (out)
+ * @interval: (out) (optional): interval
  *
  * Retrieve the trickmode interval that may have been set on a
  * seek event with gst_event_set_seek_trickmode_interval().
@@ -1494,7 +1520,8 @@ gst_event_parse_seek_trickmode_interval (GstEvent * event,
 /**
  * gst_event_new_navigation:
  * @structure: (transfer full): description of the event. The event will take
- *     ownership of the structure.
+ *     ownership of the structure. See #GstNavigation for more specific
+ *     constructors.
  *
  * Create a new navigation event from the given description.
  *
@@ -1542,7 +1569,7 @@ gst_event_new_latency (GstClockTime latency)
 /**
  * gst_event_parse_latency:
  * @event: The event to query
- * @latency: (out): A pointer to store the latency in.
+ * @latency: (out) (optional): A pointer to store the latency in.
  *
  * Get the latency in the latency event.
  */
@@ -1580,7 +1607,7 @@ gst_event_parse_latency (GstEvent * event, GstClockTime * latency)
  * The @intermediate flag instructs the pipeline that this step operation is
  * part of a larger step operation.
  *
- * Returns: (transfer full) (nullable): a new #GstEvent
+ * Returns: (transfer full): a new #GstEvent
  */
 GstEvent *
 gst_event_new_step (GstFormat format, guint64 amount, gdouble rate,
@@ -1607,11 +1634,11 @@ gst_event_new_step (GstFormat format, guint64 amount, gdouble rate,
 /**
  * gst_event_parse_step:
  * @event: The event to query
- * @format: (out) (allow-none): a pointer to store the format in
- * @amount: (out) (allow-none): a pointer to store the amount in
- * @rate: (out) (allow-none): a pointer to store the rate in
- * @flush: (out) (allow-none): a pointer to store the flush boolean in
- * @intermediate: (out) (allow-none): a pointer to store the intermediate
+ * @format: (out) (optional): a pointer to store the format in
+ * @amount: (out) (optional): a pointer to store the amount in
+ * @rate: (out) (optional): a pointer to store the rate in
+ * @flush: (out) (optional): a pointer to store the flush boolean in
+ * @intermediate: (out) (optional): a pointer to store the intermediate
  *     boolean in
  *
  * Parse the step event.
@@ -1700,7 +1727,7 @@ gst_event_new_sink_message (const gchar * name, GstMessage * msg)
 /**
  * gst_event_parse_sink_message:
  * @event: The event to query
- * @msg: (out) (transfer full): a pointer to store the #GstMessage in.
+ * @msg: (out) (optional) (transfer full): a pointer to store the #GstMessage in.
  *
  * Parse the sink-message event. Unref @msg after usage.
  */
@@ -1764,7 +1791,7 @@ gst_event_new_stream_start (const gchar * stream_id)
 /**
  * gst_event_parse_stream_start:
  * @event: a stream-start event.
- * @stream_id: (out) (transfer none): pointer to store the stream-id
+ * @stream_id: (out) (optional) (transfer none): pointer to store the stream-id
  *
  * Parse a stream-id @event and store the result in the given @stream_id
  * location. The string stored in @stream_id must not be modified and will
@@ -1810,7 +1837,7 @@ gst_event_set_stream (GstEvent * event, GstStream * stream)
 /**
  * gst_event_parse_stream:
  * @event: a stream-start event
- * @stream: (out) (transfer full): address of variable to store the stream
+ * @stream: (out) (optional) (transfer full): address of variable to store the stream
  *
  * Parse a stream-start @event and extract the #GstStream from it.
  *
@@ -1850,7 +1877,7 @@ gst_event_set_stream_flags (GstEvent * event, GstStreamFlags flags)
 /**
  * gst_event_parse_stream_flags:
  * @event: a stream-start event
- * @flags: (out): address of variable where to store the stream flags
+ * @flags: (out) (optional): address of variable where to store the stream flags
  *
  * Since: 1.2
  */
@@ -1897,7 +1924,7 @@ gst_event_set_group_id (GstEvent * event, guint group_id)
 /**
  * gst_event_parse_group_id:
  * @event: a stream-start event
- * @group_id: (out): address of variable where to store the group id
+ * @group_id: (out) (optional): address of variable where to store the group id
  *
  * Returns: %TRUE if a group id was set on the event and could be parsed,
  *   %FALSE otherwise.
@@ -1922,7 +1949,7 @@ gst_event_parse_group_id (GstEvent * event, guint * group_id)
 
 /**
  * gst_event_new_stream_collection:
- * @collection: Active collection for this data flow
+ * @collection: (transfer none): Active collection for this data flow
  *
  * Create a new STREAM_COLLECTION event. The stream collection event can only
  * travel downstream synchronized with the buffer flow.
@@ -1954,7 +1981,7 @@ gst_event_new_stream_collection (GstStreamCollection * collection)
 /**
  * gst_event_parse_stream_collection:
  * @event: a stream-collection event
- * @collection: (out): pointer to store the collection
+ * @collection: (out) (optional) (transfer full): pointer to store the collection.
  *
  * Retrieve new #GstStreamCollection from STREAM_COLLECTION event @event.
  *
@@ -2014,8 +2041,8 @@ gst_event_new_toc (GstToc * toc, gboolean updated)
 /**
  * gst_event_parse_toc:
  * @event: a TOC event.
- * @toc: (out) (transfer full): pointer to #GstToc structure.
- * @updated: (out): pointer to store TOC updated flag.
+ * @toc: (out) (optional) (transfer full): pointer to #GstToc structure.
+ * @updated: (out) (optional): pointer to store TOC updated flag.
  *
  * Parse a TOC @event and store the results in the given @toc and @updated locations.
  */
@@ -2063,7 +2090,7 @@ gst_event_new_toc_select (const gchar * uid)
 /**
  * gst_event_parse_toc_select:
  * @event: a TOC select event.
- * @uid: (out) (transfer full) (allow-none): storage for the selection UID.
+ * @uid: (out) (transfer full) (optional): storage for the selection UID.
  *
  * Parse a TOC select @event and store the results in the given @uid location.
  */
@@ -2124,8 +2151,7 @@ gst_event_parse_toc_select (GstEvent * event, gchar ** uid)
  * event of a particular @origin and @system_id will
  * be stuck to the output pad of the sending element.
  *
- * Returns: a #GST_EVENT_PROTECTION event, if successful; %NULL
- * if unsuccessful.
+ * Returns: (transfer full): a #GST_EVENT_PROTECTION event.
  *
  * Since: 1.6
  */
@@ -2159,11 +2185,11 @@ gst_event_new_protection (const gchar * system_id,
 /**
  * gst_event_parse_protection:
  * @event: a #GST_EVENT_PROTECTION event.
- * @system_id: (out) (allow-none) (transfer none): pointer to store the UUID
+ * @system_id: (out) (optional) (transfer none): pointer to store the UUID
  * string uniquely identifying a content protection system.
- * @data: (out) (allow-none) (transfer none): pointer to store a #GstBuffer
+ * @data: (out) (optional) (transfer none): pointer to store a #GstBuffer
  * holding protection system specific information.
- * @origin: (out) (allow-none) (transfer none): pointer to store a value that
+ * @origin: (out) (optional) (transfer none): pointer to store a value that
  * indicates where the protection information carried by @event was extracted
  * from.
  *
@@ -2227,8 +2253,8 @@ gst_event_new_segment_done (GstFormat format, gint64 position)
 /**
  * gst_event_parse_segment_done:
  * @event: A valid #GstEvent of type GST_EVENT_SEGMENT_DONE.
- * @format: (out) (allow-none): Result location for the format, or %NULL
- * @position: (out) (allow-none): Result location for the position, or %NULL
+ * @format: (out) (optional): Result location for the format, or %NULL
+ * @position: (out) (optional): Result location for the position, or %NULL
  *
  * Extracts the position and format from the segment done message.
  *
@@ -2297,9 +2323,9 @@ gst_event_new_instant_rate_change (gdouble rate_multiplier,
 /**
  * gst_event_parse_instant_rate_change:
  * @event: a #GstEvent of type #GST_EVENT_INSTANT_RATE_CHANGE
- * @rate_multiplier: (out) (allow-none): location in which to store the rate
+ * @rate_multiplier: (out) (optional): location in which to store the rate
  *     multiplier of the instant-rate-change event, or %NULL
- * @new_flags: (out) (allow-none): location in which to store the new
+ * @new_flags: (out) (optional): location in which to store the new
  *     segment flags of the instant-rate-change event, or %NULL
  *
  * Extract rate and flags from an instant-rate-change event.
@@ -2373,11 +2399,11 @@ gst_event_new_instant_rate_sync_time (gdouble rate_multiplier,
 /**
  * gst_event_parse_instant_rate_sync_time:
  * @event: a #GstEvent of type #GST_EVENT_INSTANT_RATE_CHANGE
- * @rate_multiplier: (out) (allow-none): location where to store the rate of
+ * @rate_multiplier: (out) (optional): location where to store the rate of
  *     the instant-rate-sync-time event, or %NULL
- * @running_time: (out) (allow-none): location in which to store the running time
+ * @running_time: (out) (optional): location in which to store the running time
  *     of the instant-rate-sync-time event, or %NULL
- * @upstream_running_time: (out) (allow-none): location in which to store the
+ * @upstream_running_time: (out) (optional): location in which to store the
  *     upstream running time of the instant-rate-sync-time event, or %NULL
  *
  * Extract the rate multiplier and running times from an instant-rate-sync-time event.
@@ -2405,7 +2431,7 @@ gst_event_parse_instant_rate_sync_time (GstEvent * event,
  * gst_event_replace: (skip)
  * @old_event: (inout) (transfer full) (nullable): pointer to a
  *     pointer to a #GstEvent to be replaced.
- * @new_event: (allow-none) (transfer none): pointer to a #GstEvent that will
+ * @new_event: (nullable) (transfer none): pointer to a #GstEvent that will
  *     replace the event pointed to by @old_event.
  *
  * Modifies a pointer to a #GstEvent to point to a different #GstEvent. The
@@ -2444,7 +2470,7 @@ gst_event_steal (GstEvent ** old_event)
  * gst_event_take: (skip)
  * @old_event: (inout) (transfer full) (nullable): pointer to a
  *     pointer to a #GstEvent to be stolen.
- * @new_event: (allow-none) (transfer full): pointer to a #GstEvent that will
+ * @new_event: (nullable) (transfer full): pointer to a #GstEvent that will
  *     replace the event pointed to by @old_event.
  *
  * Modifies a pointer to a #GstEvent to point to a different #GstEvent. This

@@ -801,6 +801,11 @@ final class MacAccessible extends Accessible {
                     macNotification = MacNotification.NSAccessibilityValueChangedNotification;
                 }
                 break;
+            case VALUE_STRING:
+                if (getAttribute(ROLE) == AccessibleRole.SPINNER) {
+                    macNotification = MacNotification.NSAccessibilityValueChangedNotification;
+                }
+                break;
             case PARENT:
                 if (peer != 0L) {
                     _invalidateParent(peer);
@@ -1208,6 +1213,10 @@ final class MacAccessible extends Accessible {
                         case TEXT_AREA:
                         case COMBO_BOX:
                             jfxAttr = TEXT;
+                            map = MacVariant::createNSString;
+                            break;
+                        case SPINNER:
+                            jfxAttr = VALUE_STRING;
                             map = MacVariant::createNSString;
                             break;
                         case CHECK_BOX:

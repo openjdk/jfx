@@ -1258,11 +1258,13 @@ default_reset_buffer (GstBufferPool * pool, GstBuffer * buffer)
 /**
  * gst_buffer_pool_acquire_buffer:
  * @pool: a #GstBufferPool
- * @buffer: (out): a location for a #GstBuffer
- * @params: (transfer none) (allow-none): parameters.
+ * @buffer: (out) (transfer full) (nullable): a location for a #GstBuffer
+ * @params: (transfer none) (nullable): parameters.
  *
  * Acquires a buffer from @pool. @buffer should point to a memory location that
- * can hold a pointer to the new buffer.
+ * can hold a pointer to the new buffer. When the pool is empty, this function
+ * will by default block until a buffer is released into the pool again or when
+ * the pool is set to flushing or deactivated.
  *
  * @params can contain optional parameters to influence the allocation.
  *
@@ -1278,6 +1280,8 @@ gst_buffer_pool_acquire_buffer (GstBufferPool * pool, GstBuffer ** buffer,
 
   g_return_val_if_fail (GST_IS_BUFFER_POOL (pool), GST_FLOW_ERROR);
   g_return_val_if_fail (buffer != NULL, GST_FLOW_ERROR);
+
+  *buffer = NULL;
 
   pclass = GST_BUFFER_POOL_GET_CLASS (pool);
 

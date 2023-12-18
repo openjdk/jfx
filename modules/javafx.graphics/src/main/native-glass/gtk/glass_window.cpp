@@ -553,14 +553,6 @@ void WindowContextBase::remove_child(WindowContextTop* child) {
     gtk_window_set_transient_for(child->get_gtk_window(), NULL);
 }
 
-void WindowContextBase::show_or_hide_children(bool show) {
-    std::set<WindowContextTop*>::iterator it;
-    for (it = children.begin(); it != children.end(); ++it) {
-        (*it)->set_minimized(!show);
-        (*it)->show_or_hide_children(show);
-    }
-}
-
 void WindowContextBase::set_visible(bool visible) {
     if (visible) {
         gtk_widget_show(gtk_widget);

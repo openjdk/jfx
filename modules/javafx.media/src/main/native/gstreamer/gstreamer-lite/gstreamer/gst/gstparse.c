@@ -232,7 +232,7 @@ gst_parse_launchv (const gchar ** argv, GError ** error)
 /**
  * gst_parse_launchv_full:
  * @argv: (in) (array zero-terminated=1): null-terminated array of arguments
- * @context: (allow-none): a parse context allocated with
+ * @context: (nullable): a parse context allocated with
  *     gst_parse_context_new(), or %NULL
  * @flags: parsing options, or #GST_PARSE_FLAG_NONE
  * @error: pointer to a #GError (which must be initialised to %NULL)
@@ -313,7 +313,7 @@ gst_parse_launch (const gchar * pipeline_description, GError ** error)
 /**
  * gst_parse_launch_full:
  * @pipeline_description: the command line describing the pipeline
- * @context: (allow-none): a parse context allocated with
+ * @context: (nullable): a parse context allocated with
  *      gst_parse_context_new(), or %NULL
  * @flags: parsing options, or #GST_PARSE_FLAG_NONE
  * @error: the error message in case of an erroneous pipeline.

@@ -160,7 +160,7 @@ gst_video_meta_get_info (void)
  * Buffers can contain multiple #GstVideoMeta metadata items when dealing with
  * multiview buffers.
  *
- * Returns: (transfer none): the #GstVideoMeta with lowest id (usually 0) or %NULL when there
+ * Returns: (transfer none) (nullable): the #GstVideoMeta with lowest id (usually 0) or %NULL when there
  * is no such metadata on @buffer.
  */
 GstVideoMeta *
@@ -193,7 +193,7 @@ gst_buffer_get_video_meta (GstBuffer * buffer)
  * Buffers can contain multiple #GstVideoMeta metadata items when dealing with
  * multiview buffers.
  *
- * Returns: (transfer none): the #GstVideoMeta with @id or %NULL when there is no such metadata
+ * Returns: (transfer none) (nullable): the #GstVideoMeta with @id or %NULL when there is no such metadata
  * on @buffer.
  */
 GstVideoMeta *
@@ -395,11 +395,39 @@ gst_video_meta_unmap (GstVideoMeta * meta, guint plane, GstMapInfo * info)
 }
 
 static gboolean
+gst_video_meta_is_alignment_valid (GstVideoAlignment * align)
+{
+  gint i;
+
+  g_return_val_if_fail (align != NULL, FALSE);
+
+  if (align->padding_top != 0 || align->padding_bottom != 0 ||
+      align->padding_left != 0 || align->padding_right != 0)
+    return TRUE;
+
+  for (i = 0; i < GST_VIDEO_MAX_PLANES; i++) {
+    if (align->stride_align[i] != 0)
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
+static gboolean
 gst_video_meta_validate_alignment (GstVideoMeta * meta,
     gsize plane_size[GST_VIDEO_MAX_PLANES])
 {
   GstVideoInfo info;
   guint i;
+
+  if (!gst_video_meta_is_alignment_valid (&meta->alignment)) {
+    GST_LOG ("Set alignment on meta to all zero");
+
+    /* When alignment is invalid, no further check is needed,
+       unless user wants to calculate the pitch for each plane. */
+    if (!plane_size)
+      return TRUE;
+  }
 
   gst_video_info_init (&info);
   gst_video_info_set_format (&info, meta->format, meta->width, meta->height);
@@ -924,7 +952,7 @@ gst_video_region_of_interest_meta_get_info (void)
  * Buffers can contain multiple #GstVideoRegionOfInterestMeta metadata items if
  * multiple regions of interests are marked on a frame.
  *
- * Returns: (transfer none): the #GstVideoRegionOfInterestMeta with @id or %NULL when there is
+ * Returns: (transfer none) (nullable): the #GstVideoRegionOfInterestMeta with @id or %NULL when there is
  * no such metadata on @buffer.
  */
 GstVideoRegionOfInterestMeta *
@@ -1178,7 +1206,7 @@ gst_buffer_add_video_time_code_meta (GstBuffer * buffer,
  * Attaches #GstVideoTimeCodeMeta metadata to @buffer with the given
  * parameters.
  *
- * Returns: (transfer none): the #GstVideoTimeCodeMeta on @buffer, or
+ * Returns: (transfer none) (nullable): the #GstVideoTimeCodeMeta on @buffer, or
  * (since 1.16) %NULL if the timecode was invalid.
  *
  * Since: 1.10

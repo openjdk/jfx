@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -152,7 +154,7 @@ GThread *       g_thread_try_new                (const gchar    *name,
                                                  GError        **error);
 GLIB_AVAILABLE_IN_ALL
 GThread *       g_thread_self                   (void);
-GLIB_AVAILABLE_IN_ALL
+G_NORETURN GLIB_AVAILABLE_IN_ALL
 void            g_thread_exit                   (gpointer        retval);
 GLIB_AVAILABLE_IN_ALL
 gpointer        g_thread_join                   (GThread        *thread);

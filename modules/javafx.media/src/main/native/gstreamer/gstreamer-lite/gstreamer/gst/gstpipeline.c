@@ -80,7 +80,7 @@
 
 #include "gst_private.h"
 #include "gsterror.h"
-#include "gst-i18n-lib.h"
+#include <glib/gi18n-lib.h>
 
 #include "gstpipeline.h"
 #include "gstinfo.h"
@@ -334,7 +334,7 @@ reset_start_time (GstPipeline * pipeline, GstClockTime start_time)
 
 /**
  * gst_pipeline_new:
- * @name: (allow-none): name of new pipeline
+ * @name: (nullable): name of new pipeline
  *
  * Create a new pipeline with the given name.
  *
@@ -867,7 +867,7 @@ gst_pipeline_use_clock (GstPipeline * pipeline, GstClock * clock)
 /**
  * gst_pipeline_set_clock: (skip)
  * @pipeline: a #GstPipeline
- * @clock: (transfer none): the clock to set
+ * @clock: (transfer none) (nullable): the clock to set
  *
  * Set the clock for @pipeline. The clock will be distributed
  * to all the elements managed by the pipeline.
