@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control.behavior;
 
 import com.sun.javafx.scene.control.skin.Utils;
@@ -30,6 +31,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.KeyHandler;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -37,38 +39,93 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 
 /**
- * Standard behavior for {@link ToggleButton}, based on {@link ButtonBaseBehavior}.
+ * Standard behavior for {@link ToggleButton}. Inherits behavior from {@link ButtonBaseBehavior}.
  */
 public class ToggleButtonBehavior implements Behavior<ToggleButton> {
-    private enum Direction { UP, DOWN, RIGHT, LEFT }
+    public static final ToggleButtonBehavior INSTANCE = new ToggleButtonBehavior();
 
-    private static final KeyHandler<ToggleButton> KEY_HANDLER;
+    private static final KeyHandler KEY_HANDLER;
 
     static {
-        SimpleKeyBinder<ToggleButton> keyBinder = new SimpleKeyBinder<>();
+        SimpleKeyBinder keyBinder = new SimpleKeyBinder();
 
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.UP), c -> traverse(c, Direction.UP));
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.DOWN), c -> traverse(c, Direction.DOWN));
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.RIGHT), c -> traverse(c, Direction.RIGHT));
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.LEFT), c -> traverse(c, Direction.LEFT));
+        keyBinder.addBinding(new KeyCodeCombination(KeyCode.UP), Controller::traverseUp);
+        keyBinder.addBinding(new KeyCodeCombination(KeyCode.DOWN), Controller::traverseDown);
+        keyBinder.addBinding(new KeyCodeCombination(KeyCode.RIGHT), Controller::traverseRight);
+        keyBinder.addBinding(new KeyCodeCombination(KeyCode.LEFT), Controller::traverseLeft);
 
         KEY_HANDLER = keyBinder;
     }
 
-    private static final ToggleButtonBehavior INSTANCE = new ToggleButtonBehavior();
-
-    public static ToggleButtonBehavior getInstance() {
-        return INSTANCE;
-    }
-
-    private ToggleButtonBehavior() {
-    }
-
     @Override
-    public StateFactory<? super ToggleButton> configure(BehaviorInstaller<? extends ToggleButton> installer) {
-        installer.registerKeyHandler(KEY_HANDLER);
+    public void configure(ControllerRegistry<? extends ToggleButton> registry) {
+        ButtonBaseBehavior.INSTANCE.configure(registry);
 
-        return ButtonBaseBehavior.getInstance().configure(installer);
+        registry.register(Controller.class, Controller::new)
+            .registerKeyHandler(KEY_HANDLER);
+    }
+
+    private enum Direction { UP, DOWN, RIGHT, LEFT }
+
+    /**
+     * Controller class for {@link ToggleButtonBehavior}.
+     */
+    public static class Controller {
+        private final ToggleButton control;
+
+        /**
+         * Constructs a new instance.
+         *
+         * @param control a control, cannot be {@code null}
+         */
+        protected Controller(ToggleButton control) {
+            this.control = control;
+        }
+
+        private boolean traverseUp() {
+            return traverse(Direction.UP);
+        }
+
+        private boolean traverseDown() {
+            return traverse(Direction.DOWN);
+        }
+
+        private boolean traverseLeft() {
+            return traverse(Direction.LEFT);
+        }
+
+        private boolean traverseRight() {
+            return traverse(Direction.RIGHT);
+        }
+
+        private boolean traverse(Direction direction) {
+            ToggleGroup toggleGroup = control.getToggleGroup();
+
+            if (toggleGroup == null) {  // A ToggleButton does not have to be in a group.
+                return true;  // Always consume the keys
+            }
+
+            ObservableList<Toggle> toggles = toggleGroup.getToggles();
+            int currentToggleIdx = toggles.indexOf(control);
+            boolean traversingToNext = traversingToNext(direction, control.getEffectiveNodeOrientation());
+
+            if (Utils.isTwoLevelFocus()) {
+                return false;  // Don't consume when two-level focus is handling navigation
+            }
+
+            int newToggleIndex = traversingToNext ? nextToggleIndex(toggles, currentToggleIdx) : previousToggleIndex(toggles, currentToggleIdx);
+
+            if (newToggleIndex == currentToggleIdx) {
+                return false;  // Don't consume when toggle can't be switched
+            }
+
+            Toggle toggle = toggles.get(newToggleIndex);
+
+            toggleGroup.selectToggle(toggle);
+            ((Control)toggle).requestFocus();
+
+            return true;  // Toggle was switched, consume key
+        }
     }
 
     /*
@@ -93,35 +150,6 @@ public class ToggleButtonBehavior implements Behavior<ToggleButton> {
             i = Math.floorMod(i - 1, toggles.size());
         }
         return i;
-    }
-
-    private static boolean traverse(ToggleButton toggleButton, Direction direction) {
-        ToggleGroup toggleGroup = toggleButton.getToggleGroup();
-
-        if (toggleGroup == null) {  // A ToggleButton does not have to be in a group.
-            return true;  // Always consume the keys
-        }
-
-        ObservableList<Toggle> toggles = toggleGroup.getToggles();
-        int currentToggleIdx = toggles.indexOf(toggleButton);
-        boolean traversingToNext = traversingToNext(direction, toggleButton.getEffectiveNodeOrientation());
-
-        if (Utils.isTwoLevelFocus()) {
-            return false;  // Don't consume when two-level focus is handling navigation
-        }
-
-        int newToggleIndex = traversingToNext ? nextToggleIndex(toggles, currentToggleIdx) : previousToggleIndex(toggles, currentToggleIdx);
-
-        if (newToggleIndex == currentToggleIdx) {
-            return false;  // Don't consume when toggle can't be switched
-        }
-
-        Toggle toggle = toggles.get(newToggleIndex);
-
-        toggleGroup.selectToggle(toggle);
-        ((Control)toggle).requestFocus();
-
-        return true;  // Toggle was switched, consume key
     }
 
     private static boolean traversingToNext(Direction direction, NodeOrientation effectiveNodeOrientation) {

@@ -1,6 +1,7 @@
 package javafx.scene.control.behavior;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import javafx.animation.Animation;
@@ -10,6 +11,7 @@ import javafx.event.Event;
 import javafx.scene.AccessibleAction;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.KeyHandler;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.skin.AccessibleActionEvent;
 import javafx.scene.input.KeyCode;
@@ -21,49 +23,50 @@ import javafx.util.Duration;
  * Standard behavior for the {@link Spinner} control.
  */
 public class SpinnerBehavior implements Behavior<Spinner<?>> {
-    private static final SpinnerBehavior INSTANCE = new SpinnerBehavior();
-    private static final KeyHandler<Spinner<?>> KEY_HANDLER;
+    public static final SpinnerBehavior INSTANCE = new SpinnerBehavior();
+
+    private static final KeyHandler KEY_HANDLER;
 
     static {
-        SimpleKeyBinder<Spinner<?>> keyBinder = new SimpleKeyBinder<>();
+        SimpleKeyBinder keyBinder = new SimpleKeyBinder();
 
-        // TODO allow to be stateful?
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.UP), SpinnerBehavior::arrowsAreVertical, c -> c.increment(1));
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.DOWN), SpinnerBehavior::arrowsAreVertical, c -> c.decrement(1));
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.RIGHT), Predicate.not(SpinnerBehavior::arrowsAreVertical), c -> c.increment(1));
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.LEFT), Predicate.not(SpinnerBehavior::arrowsAreVertical), c -> c.decrement(1));
+        keyBinder.addBinding(new KeyCodeCombination(KeyCode.UP), Controller::arrowsAreVertical, Controller::increment);
+        keyBinder.addBinding(new KeyCodeCombination(KeyCode.DOWN), Controller::arrowsAreVertical, Controller::decrement);
+        keyBinder.addBinding(new KeyCodeCombination(KeyCode.RIGHT), Predicate.not(Controller::arrowsAreVertical), Controller::increment);
+        keyBinder.addBinding(new KeyCodeCombination(KeyCode.LEFT), Predicate.not(Controller::arrowsAreVertical), Controller::decrement);
 
         KEY_HANDLER = keyBinder;
     }
 
-    public static SpinnerBehavior getInstance() {
-        return INSTANCE;
-    }
-
-    private SpinnerBehavior() {
-    }
-
     @Override
-    public StateFactory<? super Spinner<?>> configure(BehaviorInstaller<? extends Spinner<?>> installer) {
-        installer.registerKeyHandler(KEY_HANDLER);
-        installer.registerEventHandler(MouseEvent.MOUSE_PRESSED, State::mousePressed);
-        installer.registerEventHandler(MouseEvent.MOUSE_RELEASED, State::mouseReleased);
-        installer.registerEventHandler(AccessibleActionEvent.TRIGGERED, State::accessibleActionTriggered);
-        installer.registerPropertyListener(Node::sceneProperty, State::sceneChanged);
-
-        return State::new;
+    public void configure(ControllerRegistry<? extends Spinner<?>> registry) {
+        registry.register(Controller.class, Controller::new)
+            .registerKeyHandler(KEY_HANDLER)
+            .registerEventHandler(MouseEvent.MOUSE_PRESSED, Controller::mousePressed)
+            .registerEventHandler(MouseEvent.MOUSE_RELEASED, Controller::mouseReleased)
+            .registerEventHandler(AccessibleActionEvent.TRIGGERED, Controller::accessibleActionTriggered)
+            .registerPropertyListener(Node::sceneProperty, Controller::sceneChanged);
     }
 
-    protected static class State {
-        private boolean isIncrementing;
-        private Timeline timeline;
-        private Spinner<?> control;
+    /**
+     * Controller class for {@link SpinnerBehavior}.
+     */
+    public static class Controller {
+        private final Spinner<?> control;
 
-        public State(Spinner<?> control) {
-            this.control = control;
+        private boolean isIncrementing;
+        private Timeline timeline;  // TODO timeline needs disposal
+
+        /**
+         * Creates a new instance.
+         *
+         * @param control a control, cannot be {@code null}
+         */
+        protected Controller(Spinner<?> control) {
+            this.control = Objects.requireNonNull(control);
         }
 
-        void mousePressed(MouseEvent event) {
+        private void mousePressed(MouseEvent event) {
             if (isIncrementArrow(event)) {
                 control.requestFocus();
                 startSpinning(true);
@@ -76,14 +79,14 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
             }
         }
 
-        void mouseReleased(MouseEvent event) {
+        private void mouseReleased(MouseEvent event) {
             if (isIncrementArrow(event) || isDecrementArrow(event)) {
                 stopSpinning();
                 event.consume();
             }
         }
 
-        void accessibleActionTriggered(AccessibleActionEvent event) {
+        private void accessibleActionTriggered(AccessibleActionEvent event) {
             if (event.getAction() == AccessibleAction.FIRE) {
                 if (isIncrementArrow(event)) {
                     control.increment(1);
@@ -96,13 +99,22 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
             }
         }
 
-        protected void startSpinning(boolean increment) {
-            isIncrementing = increment;
+        // TODO this is supposed to stop the Timeline from keeping a reference to this instance
+        // by stopping it whenever the scene changes. However, if an entire scene goes out of scope,
+        // the scene never changes, and the Timeline can keep running...
+        //
+        // This bug is present in the original behavior as well.
+        private void sceneChanged(@SuppressWarnings("unused") Scene scene) {
+            stopSpinning();
+        }
+
+        private void startSpinning(boolean increment) {
+            isIncrementing = increment;  // TODO this state really isn't needed, can just incorporate it in KeyFrame step call
 
             if (timeline != null) {
                 timeline.stop();
             }
-
+// TODO this timeline is not properly disposed when Behaviors are swapped
             KeyFrame start = new KeyFrame(Duration.ZERO, e -> step());
             KeyFrame repeat = new KeyFrame(control.getRepeatDelay());
 
@@ -115,18 +127,14 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
             step();
         }
 
-        void sceneChanged(Scene scene) {
-            stopSpinning();
-        }
-
-        protected void stopSpinning() {
+        private void stopSpinning() {
             if (timeline != null) {
                 timeline.stop();
                 timeline = null;
             }
         }
 
-        protected void step() {
+        private void step() {
             if (control.getValueFactory() == null) {
                 return;
             }
@@ -138,9 +146,27 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
                 control.decrement(1);
             }
         }
+
+        private void increment() {
+            control.increment(1);
+        }
+
+        private void decrement() {
+            control.decrement(1);
+        }
+
+        private boolean arrowsAreVertical() {
+            List<String> styleClasses = control.getStyleClass();
+
+            return !(
+                styleClasses.contains(Spinner.STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL)
+                    || styleClasses.contains(Spinner.STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL)
+                    || styleClasses.contains(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL)
+            );
+        }
     }
 
-    protected static boolean isIncrementArrow(Event event) {
+    private static boolean isIncrementArrow(Event event) {
         if (!(event.getTarget() instanceof Node n)) {
             return false;
         }
@@ -148,21 +174,11 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
         return n.getStyleClass().contains("increment-arrow-button");
     }
 
-    protected static boolean isDecrementArrow(Event event) {
+    private static boolean isDecrementArrow(Event event) {
         if (!(event.getTarget() instanceof Node n)) {
             return false;
         }
 
         return n.getStyleClass().contains("decrement-arrow-button");
-    }
-
-    protected static boolean arrowsAreVertical(Spinner<?> control) {
-        List<String> styleClasses = control.getStyleClass();
-
-        return !(
-            styleClasses.contains(Spinner.STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL)
-                || styleClasses.contains(Spinner.STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL)
-                || styleClasses.contains(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL)
-        );
     }
 }

@@ -174,7 +174,7 @@ public class Spinner<T> extends Control {
         });
 
         // Installs the default behavior.
-        setBehavior(SpinnerBehavior.getInstance());
+        setBehavior(SpinnerBehavior.INSTANCE);
     }
 
     /**
@@ -373,23 +373,6 @@ public class Spinner<T> extends Control {
         setValueFactory(valueFactory);
     }
 
-    /**
-     * Tracks the things a behavior installed so it can be fully cleaned up.
-     */
-    private Subscription behaviorSubscription = Subscription.EMPTY;
-
-    /**
-     * Install a new {@link Behavior} which replaces the current behavior.
-     *
-     * @param behavior a {@link Behavior}, cannot be {@code null}
-     */
-    public void setBehavior(Behavior<Spinner<?>> behavior) {
-        behaviorSubscription.unsubscribe();
-
-        StandardBehaviorInstaller<Spinner<?>> installer = new StandardBehaviorInstaller<>(this);
-
-        behaviorSubscription = installer.install(behavior.configure(installer).createState(this));
-    }
 
     /* *************************************************************************
      *                                                                         *

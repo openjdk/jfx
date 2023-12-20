@@ -8,24 +8,35 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import javafx.scene.control.Control;
+import javafx.scene.control.KeyHandler;
+import javafx.scene.control.KeyState;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 
-class SimpleKeyBinder<C extends Control> implements KeyHandler<C> {
-    private final Map<KeyCode, List<Mapping<C>>> mappingsByKeyCode = new HashMap<>();
+class SimpleKeyBinder implements KeyHandler {
+    private final Map<KeyCode, List<Mapping<?>>> mappingsByKeyCode = new HashMap<>();
 
     // - KeyEvent is not a good parameter to pass here because then the event can be consumed
     // - KeyCodeCombination is not a good parameter to pass here because it has ANY states for modifiers
     // -> new KeyState type created
     @Override
-    public boolean trigger(KeyState keyState, C control) {
-        List<Mapping<C>> mappings = mappingsByKeyCode.get(keyState.code());
+    public <C> boolean trigger(KeyState keyState, C controller) {
+        @SuppressWarnings("unchecked")
+        List<Mapping<C>> mappings = (List<Mapping<C>>)(List<?>) mappingsByKeyCode.get(keyState.code());
 
         if (mappings != null) {
+
+            /*
+             * There can be multiple mappings for a given KeyCode; a linear search is performed for
+             * the final part of the match. Matching modifiers is unsuitable to look up by key (because
+             * the ANY modifier state can match UP or DOWN)
+             */
+
             for (Mapping<C> mapping : mappings) {
-                if (mapping.keyCodeCombination.match(keyState.code(), keyState.shift(), keyState.control(), keyState.alt(), keyState.meta()) && mapping.condition.test(control)) {
-                    mapping.handler.accept(control);
+                boolean keyCodeCombinationMatch = mapping.keyCodeCombination.match(keyState.code(), keyState.shift(), keyState.control(), keyState.alt(), keyState.meta());
+
+                if (keyCodeCombinationMatch && mapping.condition.test(controller)) {
+                    mapping.handler.accept(controller);
 
                     return true;
                 }
@@ -44,8 +55,8 @@ class SimpleKeyBinder<C extends Control> implements KeyHandler<C> {
      * @param keyCodeCombination a {@link KeyCodeCombination}, cannot be {@code null}
      * @param consumer a consumer to handle the key press, cannot be {@code null}
      */
-    public void addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> consumer) {
-        addBinding(keyCodeCombination, consumer, c -> {});
+    public <C> void addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> consumer) {
+        addBinding(keyCodeCombination, consumer, s -> {});
     }
 
     /**
@@ -57,7 +68,7 @@ class SimpleKeyBinder<C extends Control> implements KeyHandler<C> {
      * @param condition a condition which must hold before the consumer is called (and the event is consumed), cannot be {@code null}
      * @param consumer a consumer to handle the key press, cannot be {@code null}
      */
-    public void addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> condition, Consumer<C> consumer) {
+    public <C> void addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> condition, Consumer<C> consumer) {
         mappingsByKeyCode.computeIfAbsent(keyCodeCombination.getCode(), k -> new ArrayList<>())
             .add(new Mapping<>(
                 Objects.requireNonNull(keyCodeCombination, "keyCodeCombination"),

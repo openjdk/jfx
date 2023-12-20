@@ -44,8 +44,11 @@ import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.control.behavior.Behavior;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
+import javafx.util.Subscription;
+
 import com.sun.javafx.application.PlatformImpl;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleManager;
@@ -465,6 +468,34 @@ public abstract class Control extends Region implements Skinnable {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * Tracks the things a behavior installed so it can be fully cleaned up.
+     */
+    private Subscription behaviorSubscription = Subscription.EMPTY;
+
+    public final void setBehavior(Behavior<? extends Control> behavior) {
+
+        /*
+         * As this method is inherited, it can't be restricted to only installing allowed
+         * behaviors (? super this) without making the Control class specify a generic
+         * parameter. Therefore all behaviors are allowed, but they're reverted if installation
+         * fails.
+         */
+
+        try {
+            @SuppressWarnings("unchecked")  // Handled by dealing with exceptions during installation
+            Behavior<Control> castBehavior = (Behavior<Control>) behavior;
+            Subscription subscription = DefaultControllerRegistry.install(castBehavior, this);
+
+            // At this point, two behaviors are installed, uninstall the old one:
+            this.behaviorSubscription.unsubscribe();
+            this.behaviorSubscription = subscription;
+        }
+        catch (Exception e) {
+            Logging.getControlsLogger().severe("Failed to install behavior: " + behavior + " for control: " + this, e);
+        }
+    }
 
     // Proposed dispose() API.
     // Note that there is impl code for a dispose method in TableRowSkinBase

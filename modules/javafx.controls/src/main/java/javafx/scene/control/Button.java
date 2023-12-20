@@ -31,10 +31,8 @@ import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.behavior.Behavior;
-import javafx.scene.control.behavior.ButtonBehavior;
+import javafx.scene.control.behavior.ButtonBaseBehavior;
 import javafx.scene.control.skin.ButtonSkin;
-import javafx.util.Subscription;
 
 /**
  * <p>A simple button control.  The button control can contain
@@ -119,26 +117,9 @@ public class Button extends ButtonBase {
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
 
         // Installs the default behavior.
-        setBehavior(ButtonBehavior.getInstance());
+        setBehavior(ButtonBaseBehavior.INSTANCE);
     }
 
-    /**
-     * Tracks the things a behavior installed so it can be fully cleaned up.
-     */
-    private Subscription behaviorSubscription = Subscription.EMPTY;
-
-    /**
-     * Install a new {@link Behavior} which replaces the current behavior.
-     *
-     * @param behavior a {@link Behavior}, cannot be {@code null}
-     */
-    public void setBehavior(Behavior<Button> behavior) {
-        behaviorSubscription.unsubscribe();
-
-        StandardBehaviorInstaller<Button> installer = new StandardBehaviorInstaller<>(this);
-
-        behaviorSubscription = installer.install(behavior.configure(installer).createState(this));
-    }
 
     /* *************************************************************************
      *                                                                         *

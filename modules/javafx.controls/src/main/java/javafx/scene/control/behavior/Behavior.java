@@ -28,25 +28,25 @@ package javafx.scene.control.behavior;
 import javafx.scene.control.Control;
 
 /**
- * Defines the behavior for a {@link Control}. Behaviors listen to events that
- * bubble up to the control level, interprete them and perform state changes on
- * the control. Behaviors can handle events that have the control as target,
- * as well as events that have its children as target.
+ * A behavior is an installer for a group of handlers and listeners that
+ * together define the behavior of a control. The provided handlers listen
+ * for events that bubble up to the control level (which can include events
+ * targeted at the control's children). These are interpreted and converted into
+ * state changes on the control.
  *
- * @param <C> the control type suited for this behavior
+ * @see Control#setBehavior(Behavior)
+ * @param <N> the control type suited for this behavior
  */
-public interface Behavior<C extends Control> {
+public interface Behavior<N extends Control> {
 
     /**
-     * Configures the given installer with the defined behavior for a specific
-     * control. Many controls can be configured with the same behavior without
-     * having to create a new behavior instance. The behavior should return a
-     * {@link StateFactory} which takes the {@link Control} as argument. This
-     * per control state is then provided to any callbacks the behavior configured.
+     * Configure a registry with controllers, handlers and listeners which the
+     * behavior needs to provide its behavior.<p>
      *
-     * @param installer a control provided installer, never {@code null}
-     * @return a {@code StateFactory}, never {@code null}
+     * Behaviors may inherit behavior from other behaviors by passing this registry
+     * to another behavior.
+     *
+     * @param registry a registry, never {@code null}
      */
-    StateFactory<? super C> configure(BehaviorInstaller<? extends C> installer);
-
+    void configure(ControllerRegistry<? extends N> registry);
 }

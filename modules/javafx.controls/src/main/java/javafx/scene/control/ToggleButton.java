@@ -40,10 +40,8 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.css.PseudoClass;
-import javafx.scene.control.behavior.Behavior;
 import javafx.scene.control.behavior.ToggleButtonBehavior;
 import javafx.scene.control.skin.ToggleButtonSkin;
-import javafx.util.Subscription;
 import javafx.css.StyleableProperty;
 
 /**
@@ -138,26 +136,9 @@ import javafx.css.StyleableProperty;
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
 
         // Installs the default behavior.
-        setBehavior(ToggleButtonBehavior.getInstance());
+        setBehavior(ToggleButtonBehavior.INSTANCE);
     }
 
-    /**
-     * Tracks the things a behavior installed so it can be fully cleaned up.
-     */
-    private Subscription behaviorSubscription = Subscription.EMPTY;
-
-    /**
-     * Install a new {@link Behavior} which replaces the current behavior.
-     *
-     * @param behavior a {@link Behavior}, cannot be {@code null}
-     */
-    public void setBehavior(Behavior<ToggleButton> behavior) {
-        behaviorSubscription.unsubscribe();
-
-        StandardBehaviorInstaller<ToggleButton> installer = new StandardBehaviorInstaller<>(this);
-
-        behaviorSubscription = installer.install(behavior.configure(installer).createState(this));
-    }
 
     /* *************************************************************************
      *                                                                         *

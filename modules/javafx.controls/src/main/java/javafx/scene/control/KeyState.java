@@ -1,4 +1,4 @@
-package javafx.scene.control.behavior;
+package javafx.scene.control;
 
 import javafx.scene.input.KeyCode;
 

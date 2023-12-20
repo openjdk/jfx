@@ -1,5 +1,7 @@
 package javafx.scene.control.behavior;
 
+import java.util.Objects;
+
 import javafx.scene.control.ButtonBase;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -10,39 +12,38 @@ import javafx.scene.input.MouseEvent;
  * Standard behavior for {@link ButtonBase}.
  */
 public class ButtonBaseBehavior implements Behavior<ButtonBase> {
-    private static final ButtonBaseBehavior INSTANCE = new ButtonBaseBehavior();
-
-    public static ButtonBaseBehavior getInstance() {
-        return INSTANCE;
-    }
-
-    private ButtonBaseBehavior() {
-    }
+    public static final ButtonBaseBehavior INSTANCE = new ButtonBaseBehavior();
 
     @Override
-    public StateFactory<ButtonBase> configure(BehaviorInstaller<? extends ButtonBase> installer) {
-        installer.registerPropertyListener(ButtonBase::focusedProperty, State::focusChanged);
-
-        installer.registerEventHandler(KeyEvent.KEY_PRESSED, State::keyPressed);
-        installer.registerEventHandler(KeyEvent.KEY_RELEASED, State::keyReleased);
-        installer.registerEventHandler(MouseEvent.MOUSE_PRESSED, State::mousePressed);
-        installer.registerEventHandler(MouseEvent.MOUSE_RELEASED, State::mouseReleased);
-        installer.registerEventHandler(MouseEvent.MOUSE_ENTERED, State::mouseEntered);
-        installer.registerEventHandler(MouseEvent.MOUSE_EXITED, State::mouseExited);
-
-        return State::new;
+    public void configure(ControllerRegistry<? extends ButtonBase> registry) {
+        registry.register(Controller.class, Controller::new)
+            .registerPropertyListener(ButtonBase::focusedProperty, Controller::focusChanged)
+            .registerEventHandler(KeyEvent.KEY_PRESSED, Controller::keyPressed)
+            .registerEventHandler(KeyEvent.KEY_RELEASED, Controller::keyReleased)
+            .registerEventHandler(MouseEvent.MOUSE_PRESSED, Controller::mousePressed)
+            .registerEventHandler(MouseEvent.MOUSE_RELEASED, Controller::mouseReleased)
+            .registerEventHandler(MouseEvent.MOUSE_ENTERED, Controller::mouseEntered)
+            .registerEventHandler(MouseEvent.MOUSE_EXITED, Controller::mouseExited);
     }
 
-    private static class State {
+    /**
+     * Controller class for {@link ButtonBaseBehavior}.
+     */
+    public static class Controller {
         private final ButtonBase control;
 
         private boolean keyDown;
 
-        public State(ButtonBase control) {
-            this.control = control;
+        /**
+         * Constructs a new controller.
+         *
+         * @param control a control, cannot be {@code null}
+         */
+        protected Controller(ButtonBase control) {
+            this.control = Objects.requireNonNull(control);
         }
 
-        void keyPressed(KeyEvent event) {
+        private void keyPressed(KeyEvent event) {
             if (!event.isConsumed() && event.getCode() == KeyCode.SPACE) {
                 if (!control.isPressed() && !control.isArmed()) {
                     keyDown = true;
@@ -52,7 +53,7 @@ public class ButtonBaseBehavior implements Behavior<ButtonBase> {
             }
         }
 
-        void keyReleased(KeyEvent event) {
+        private void keyReleased(KeyEvent event) {
             if (!event.isConsumed() && event.getCode() == KeyCode.SPACE) {
                 if (keyDown) {
                     keyDown = false;
@@ -66,14 +67,14 @@ public class ButtonBaseBehavior implements Behavior<ButtonBase> {
             }
         }
 
-        void focusChanged(boolean focused) {
-            if (keyDown && !control.isFocused()) {
+        private void focusChanged(boolean focused) {
+            if (keyDown && !focused) {
                 keyDown = false;
                 control.disarm();
             }
         }
 
-        void mousePressed(MouseEvent event) {
+        private void mousePressed(MouseEvent event) {
             if (!event.isConsumed() && control.isFocusTraversable()) {
                 control.requestFocus();
             }
@@ -93,12 +94,12 @@ public class ButtonBaseBehavior implements Behavior<ButtonBase> {
             }
         }
 
-        /**
+        /*
          * Invoked when a mouse release has occurred. We determine whether this
          * was done in a manner that would fire the button's action. This happens
          * only if the button was armed by a corresponding mouse press.
          */
-        void mouseReleased(MouseEvent event) {
+        private void mouseReleased(MouseEvent event) {
             // if armed by a mouse press instead of key press, then fire!
             if (!event.isConsumed() && !keyDown && control.isArmed()) {
                 control.disarm();
@@ -107,12 +108,12 @@ public class ButtonBaseBehavior implements Behavior<ButtonBase> {
             }
         }
 
-        /**
+        /*
          * Invoked when the mouse enters the Button. If the Button had been armed
          * by a mouse press and the mouse is still pressed, then this will cause
          * the button to be rearmed.
          */
-        void mouseEntered(MouseEvent event) {
+        private void mouseEntered(MouseEvent event) {
             // rearm if necessary
             if (!event.isConsumed() && !keyDown && control.isPressed()) {
                 control.arm();
@@ -120,12 +121,12 @@ public class ButtonBaseBehavior implements Behavior<ButtonBase> {
             }
         }
 
-        /**
+        /*
          * Invoked when the mouse exits the Button. If the Button is armed due to
          * a mouse press, then this function will disarm the button upon the mouse
          * exiting it.
          */
-        void mouseExited(MouseEvent event) {
+        private void mouseExited(MouseEvent event) {
             // Disarm if necessary
             if (!event.isConsumed() && !keyDown && control.isArmed()) {
                 control.disarm();
