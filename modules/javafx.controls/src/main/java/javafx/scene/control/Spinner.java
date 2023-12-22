@@ -26,7 +26,6 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import javafx.beans.property.StringProperty;
-import javafx.scene.control.behavior.Behavior;
 import javafx.scene.control.behavior.SpinnerBehavior;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.beans.NamedArg;
@@ -46,7 +45,6 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
-import javafx.util.Subscription;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -113,6 +111,7 @@ import java.util.List;
  * @since JavaFX 8u40
  */
 public class Spinner<T> extends Control {
+    private static final SpinnerBehavior DEFAULT_BEHAVIOR = new SpinnerBehavior();
 
     // default style class, puts arrows on right, stacked vertically
     private static final String DEFAULT_STYLE_CLASS = "spinner";
@@ -173,8 +172,7 @@ public class Spinner<T> extends Control {
             }
         });
 
-        // Installs the default behavior.
-        setBehavior(SpinnerBehavior.INSTANCE);
+        setBehavior(DEFAULT_BEHAVIOR);
     }
 
     /**

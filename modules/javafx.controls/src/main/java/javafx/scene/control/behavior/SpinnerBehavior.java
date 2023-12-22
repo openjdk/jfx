@@ -11,7 +11,8 @@ import javafx.event.Event;
 import javafx.scene.AccessibleAction;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.KeyHandler;
+import javafx.scene.control.BehaviorAspect;
+import javafx.scene.control.BehaviorConfiguration;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.skin.AccessibleActionEvent;
 import javafx.scene.input.KeyCode;
@@ -23,29 +24,41 @@ import javafx.util.Duration;
  * Standard behavior for the {@link Spinner} control.
  */
 public class SpinnerBehavior implements Behavior<Spinner<?>> {
-    public static final SpinnerBehavior INSTANCE = new SpinnerBehavior();
+    private static final BehaviorAspect<Spinner<?>, Controller> KEYBOARD_CONTROL_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
+        .registerKeyHandler(new SimpleKeyBinder()
+            .addBinding(new KeyCodeCombination(KeyCode.UP), Controller::arrowsAreVertical, Controller::increment)
+            .addBinding(new KeyCodeCombination(KeyCode.DOWN), Controller::arrowsAreVertical, Controller::decrement)
+            .addBinding(new KeyCodeCombination(KeyCode.RIGHT), Predicate.not(Controller::arrowsAreVertical), Controller::increment)
+            .addBinding(new KeyCodeCombination(KeyCode.LEFT), Predicate.not(Controller::arrowsAreVertical), Controller::decrement)
+        )
+        .build();
 
-    private static final KeyHandler KEY_HANDLER;
+    private static final BehaviorAspect<Spinner<?>, Controller> MOUSE_CONTROL_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
+        .registerEventHandler(MouseEvent.MOUSE_PRESSED, Controller::mousePressed)
+        .registerEventHandler(MouseEvent.MOUSE_RELEASED, Controller::mouseReleased)
+        .build();
 
-    static {
-        SimpleKeyBinder keyBinder = new SimpleKeyBinder();
+    private static final BehaviorAspect<Spinner<?>, Controller> ACCESSIBILITY_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
+        .registerEventHandler(AccessibleActionEvent.TRIGGERED, Controller::accessibleActionTriggered)
+        .build();
 
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.UP), Controller::arrowsAreVertical, Controller::increment);
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.DOWN), Controller::arrowsAreVertical, Controller::decrement);
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.RIGHT), Predicate.not(Controller::arrowsAreVertical), Controller::increment);
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.LEFT), Predicate.not(Controller::arrowsAreVertical), Controller::decrement);
+    private static final BehaviorAspect<Spinner<?>, Controller> TIMELINE_DISPOSAL_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
+        .registerPropertyListener(Node::sceneProperty, Controller::sceneChanged)
+        .build();
 
-        KEY_HANDLER = keyBinder;
-    }
+    /**
+     * A {@link BehaviorConfiguration} for {@link Spinner}s.
+     */
+    public static final BehaviorConfiguration<Spinner<?>> CONFIGURATION = BehaviorConfiguration.<Spinner<?>>builder()
+        .add(KEYBOARD_CONTROL_ASPECT)
+        .add(MOUSE_CONTROL_ASPECT)
+        .add(ACCESSIBILITY_ASPECT)
+        .add(TIMELINE_DISPOSAL_ASPECT)
+        .build();
 
     @Override
-    public void configure(ControllerRegistry<? extends Spinner<?>> registry) {
-        registry.register(Controller.class, Controller::new)
-            .registerKeyHandler(KEY_HANDLER)
-            .registerEventHandler(MouseEvent.MOUSE_PRESSED, Controller::mousePressed)
-            .registerEventHandler(MouseEvent.MOUSE_RELEASED, Controller::mouseReleased)
-            .registerEventHandler(AccessibleActionEvent.TRIGGERED, Controller::accessibleActionTriggered)
-            .registerPropertyListener(Node::sceneProperty, Controller::sceneChanged);
+    public BehaviorConfiguration<Spinner<?>> getConfiguration() {
+        return CONFIGURATION;
     }
 
     /**

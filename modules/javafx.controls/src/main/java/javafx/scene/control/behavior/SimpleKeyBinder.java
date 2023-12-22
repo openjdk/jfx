@@ -52,11 +52,15 @@ class SimpleKeyBinder implements KeyHandler {
      * should be consumed. Consumption should be avoided if a key press is not used so events
      * bubble up correctly.
      *
+     * @param <C> the type of controller
      * @param keyCodeCombination a {@link KeyCodeCombination}, cannot be {@code null}
      * @param consumer a consumer to handle the key press, cannot be {@code null}
+     * @return this instance, never {@code null}
      */
-    public <C> void addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> consumer) {
+    public <C> SimpleKeyBinder addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> consumer) {
         addBinding(keyCodeCombination, consumer, s -> {});
+
+        return this;
     }
 
     /**
@@ -64,17 +68,21 @@ class SimpleKeyBinder implements KeyHandler {
      * is pressed. If the consumer is called, the event associated with the key press is consumed. Consumption
      * should be avoided by using an appropriate condition so events that are unused bubble up correctly.
      *
+     * @param <C> the type of controller
      * @param keyCodeCombination a {@link KeyCodeCombination}, cannot be {@code null}
      * @param condition a condition which must hold before the consumer is called (and the event is consumed), cannot be {@code null}
      * @param consumer a consumer to handle the key press, cannot be {@code null}
+     * @return this instance, never {@code null}
      */
-    public <C> void addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> condition, Consumer<C> consumer) {
+    public <C> SimpleKeyBinder addBinding(KeyCodeCombination keyCodeCombination, Predicate<C> condition, Consumer<C> consumer) {
         mappingsByKeyCode.computeIfAbsent(keyCodeCombination.getCode(), k -> new ArrayList<>())
             .add(new Mapping<>(
                 Objects.requireNonNull(keyCodeCombination, "keyCodeCombination"),
                 Objects.requireNonNull(condition, "condition"),
                 Objects.requireNonNull(consumer, "consumer")
             ));
+
+        return this;
     }
 
     private record Mapping<C>(KeyCodeCombination keyCodeCombination, Predicate<C> condition, Consumer<C> handler) {}

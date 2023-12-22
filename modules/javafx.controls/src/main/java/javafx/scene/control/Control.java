@@ -486,7 +486,7 @@ public abstract class Control extends Region implements Skinnable {
         try {
             @SuppressWarnings("unchecked")  // Handled by dealing with exceptions during installation
             Behavior<Control> castBehavior = (Behavior<Control>) behavior;
-            Subscription subscription = DefaultControllerRegistry.install(castBehavior, this);
+            Subscription subscription = castBehavior.getConfiguration().install(this);
 
             // At this point, two behaviors are installed, uninstall the old one:
             this.behaviorSubscription.unsubscribe();

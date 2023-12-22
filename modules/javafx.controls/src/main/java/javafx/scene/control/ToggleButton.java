@@ -89,6 +89,7 @@ import javafx.css.StyleableProperty;
 // toggle group is affected or not in such a case.
 
  public class ToggleButton extends ButtonBase implements Toggle {
+     private static final ToggleButtonBehavior DEFAULT_BEHAVIOR = new ToggleButtonBehavior();
 
     /* *************************************************************************
      *                                                                         *
@@ -134,9 +135,7 @@ import javafx.css.StyleableProperty;
         // CssMetaData ensures that css will be able to override the value.
         ((StyleableProperty<Pos>)(WritableValue<Pos>)alignmentProperty()).applyStyle(null, Pos.CENTER);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
-
-        // Installs the default behavior.
-        setBehavior(ToggleButtonBehavior.INSTANCE);
+        setBehavior(DEFAULT_BEHAVIOR);
     }
 
 

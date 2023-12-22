@@ -2,6 +2,8 @@ package javafx.scene.control.behavior;
 
 import java.util.Objects;
 
+import javafx.scene.control.BehaviorAspect;
+import javafx.scene.control.BehaviorConfiguration;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -12,18 +14,27 @@ import javafx.scene.input.MouseEvent;
  * Standard behavior for {@link ButtonBase}.
  */
 public class ButtonBaseBehavior implements Behavior<ButtonBase> {
-    public static final ButtonBaseBehavior INSTANCE = new ButtonBaseBehavior();
+    private static final BehaviorAspect<ButtonBase, Controller> KEYBOARD_CONTROL_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
+        .registerEventHandler(KeyEvent.KEY_PRESSED, Controller::keyPressed)
+        .registerEventHandler(KeyEvent.KEY_RELEASED, Controller::keyReleased)
+        .build();
+
+    private static final BehaviorAspect<ButtonBase, Controller> MOUSE_CONTROL_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
+        .registerEventHandler(MouseEvent.MOUSE_PRESSED, Controller::mousePressed)
+        .registerEventHandler(MouseEvent.MOUSE_RELEASED, Controller::mouseReleased)
+        .registerEventHandler(MouseEvent.MOUSE_ENTERED, Controller::mouseEntered)
+        .registerEventHandler(MouseEvent.MOUSE_EXITED, Controller::mouseExited)
+        .build();
+
+    private static final BehaviorAspect<ButtonBase, Controller> FOCUS_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
+        .registerPropertyListener(ButtonBase::focusedProperty, Controller::focusChanged)
+        .build();
+
+    public static final BehaviorConfiguration<ButtonBase> CONFIGURATION = new BehaviorConfiguration<>(KEYBOARD_CONTROL_ASPECT, MOUSE_CONTROL_ASPECT, FOCUS_ASPECT);
 
     @Override
-    public void configure(ControllerRegistry<? extends ButtonBase> registry) {
-        registry.register(Controller.class, Controller::new)
-            .registerPropertyListener(ButtonBase::focusedProperty, Controller::focusChanged)
-            .registerEventHandler(KeyEvent.KEY_PRESSED, Controller::keyPressed)
-            .registerEventHandler(KeyEvent.KEY_RELEASED, Controller::keyReleased)
-            .registerEventHandler(MouseEvent.MOUSE_PRESSED, Controller::mousePressed)
-            .registerEventHandler(MouseEvent.MOUSE_RELEASED, Controller::mouseReleased)
-            .registerEventHandler(MouseEvent.MOUSE_ENTERED, Controller::mouseEntered)
-            .registerEventHandler(MouseEvent.MOUSE_EXITED, Controller::mouseExited);
+    public BehaviorConfiguration<ButtonBase> getConfiguration() {
+        return CONFIGURATION;
     }
 
     /**

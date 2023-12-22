@@ -30,8 +30,9 @@ import com.sun.javafx.scene.control.skin.Utils;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
+import javafx.scene.control.BehaviorAspect;
+import javafx.scene.control.BehaviorConfiguration;
 import javafx.scene.control.Control;
-import javafx.scene.control.KeyHandler;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -42,27 +43,26 @@ import javafx.scene.input.KeyCodeCombination;
  * Standard behavior for {@link ToggleButton}. Inherits behavior from {@link ButtonBaseBehavior}.
  */
 public class ToggleButtonBehavior implements Behavior<ToggleButton> {
-    public static final ToggleButtonBehavior INSTANCE = new ToggleButtonBehavior();
+    private static final BehaviorAspect<ToggleButton, Controller> KEYBOARD_NAVIGATION_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
+        .registerKeyHandler(new SimpleKeyBinder()
+            .addBinding(new KeyCodeCombination(KeyCode.UP), Controller::traverseUp)
+            .addBinding(new KeyCodeCombination(KeyCode.DOWN), Controller::traverseDown)
+            .addBinding(new KeyCodeCombination(KeyCode.RIGHT), Controller::traverseRight)
+            .addBinding(new KeyCodeCombination(KeyCode.LEFT), Controller::traverseLeft)
+        )
+        .build();
 
-    private static final KeyHandler KEY_HANDLER;
-
-    static {
-        SimpleKeyBinder keyBinder = new SimpleKeyBinder();
-
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.UP), Controller::traverseUp);
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.DOWN), Controller::traverseDown);
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.RIGHT), Controller::traverseRight);
-        keyBinder.addBinding(new KeyCodeCombination(KeyCode.LEFT), Controller::traverseLeft);
-
-        KEY_HANDLER = keyBinder;
-    }
+    /**
+     * A {@link BehaviorConfiguration} for {@link ToggleButton}s.
+     */
+    public static final BehaviorConfiguration<ToggleButton> CONFIGURATION = BehaviorConfiguration.<ToggleButton>builder()
+        .add(KEYBOARD_NAVIGATION_ASPECT)
+        .include(ButtonBaseBehavior.CONFIGURATION)
+        .build();
 
     @Override
-    public void configure(ControllerRegistry<? extends ToggleButton> registry) {
-        ButtonBaseBehavior.INSTANCE.configure(registry);
-
-        registry.register(Controller.class, Controller::new)
-            .registerKeyHandler(KEY_HANDLER);
+    public BehaviorConfiguration<ToggleButton> getConfiguration() {
+        return CONFIGURATION;
     }
 
     private enum Direction { UP, DOWN, RIGHT, LEFT }

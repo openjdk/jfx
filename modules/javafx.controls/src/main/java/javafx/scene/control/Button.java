@@ -115,9 +115,7 @@ public class Button extends ButtonBase {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
-
-        // Installs the default behavior.
-        setBehavior(ButtonBaseBehavior.INSTANCE);
+        setBehavior(DEFAULT_BEHAVIOR);
     }
 
 
@@ -227,6 +225,8 @@ public class Button extends ButtonBase {
      * this control.
      */
     private static final String DEFAULT_STYLE_CLASS = "button";
+
+    private static final ButtonBaseBehavior DEFAULT_BEHAVIOR = new ButtonBaseBehavior();
 
     private static final PseudoClass PSEUDO_CLASS_DEFAULT
             = PseudoClass.getPseudoClass("default");

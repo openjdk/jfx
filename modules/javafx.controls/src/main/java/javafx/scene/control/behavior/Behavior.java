@@ -25,14 +25,33 @@
 
 package javafx.scene.control.behavior;
 
+import javafx.scene.control.BehaviorConfiguration;
 import javafx.scene.control.Control;
 
 /**
- * A behavior is an installer for a group of handlers and listeners that
- * together define the behavior of a control. The provided handlers listen
- * for events that bubble up to the control level (which can include events
- * targeted at the control's children). These are interpreted and converted into
- * state changes on the control.
+ * A behavior interprets events which target a control or its children and
+ * translates these into control state changes. The behavior needs to hook
+ * into many aspects of a control, and as such provides the collection of
+ * handlers, listeners and key bindings packaged as a {@link BehaviorConfiguration}.
+ * The configuration is immutable, and can be applied to as many controls as
+ * desired.
+ *
+ * <p>Behaviors must follow strict rules to ensure they are easy to reuse, and
+ * won't interfere with handlers and listeners set on a control by the user:
+ *
+ * <ul>
+ * <li>Never directly install an event handler or listener on a {@link Control}. All
+ * handlers must be specified in a {@link BehaviorConfiguration}. This declarative
+ * approach allows behaviors to be seamlessly installed and removed.</li>
+ * <li>Never rely on a specific {@link javafx.scene.control.Skin} being present on the
+ * control. If skin specific behavior is provided, such behavior should gracefully
+ * be disabled if an incompatible skin is present.</li>
+ * <li>Only consume events that are necessary for the behavior's function. Generally,
+ * events that would not result in a state change should be left to bubble up, unless
+ * there is a specific requirement to block such events.</li>
+ *
+ * <li>TODO a word about Timeline clean-up</li>
+ * </ul>
  *
  * @see Control#setBehavior(Behavior)
  * @param <N> the control type suited for this behavior
@@ -40,13 +59,9 @@ import javafx.scene.control.Control;
 public interface Behavior<N extends Control> {
 
     /**
-     * Configure a registry with controllers, handlers and listeners which the
-     * behavior needs to provide its behavior.<p>
+     * Gets the behavior configuration associated with this behavior.
      *
-     * Behaviors may inherit behavior from other behaviors by passing this registry
-     * to another behavior.
-     *
-     * @param registry a registry, never {@code null}
+     * @return a behavior configuration, never {@code null}
      */
-    void configure(ControllerRegistry<? extends N> registry);
+    BehaviorConfiguration<N> getConfiguration();
 }
