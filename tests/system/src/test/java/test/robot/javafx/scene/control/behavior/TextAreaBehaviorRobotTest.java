@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.javafx.scene.control.behavior;
+package test.robot.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.TextArea;

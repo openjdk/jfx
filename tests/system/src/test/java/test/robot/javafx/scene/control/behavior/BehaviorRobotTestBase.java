@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.javafx.scene.control.behavior;
+package test.robot.javafx.scene.control.behavior;
 
 import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
