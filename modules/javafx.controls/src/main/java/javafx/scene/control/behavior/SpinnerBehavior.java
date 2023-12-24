@@ -18,6 +18,7 @@ import javafx.scene.control.skin.AccessibleActionEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.MouseEvent;
+import javafx.stage.Window;
 import javafx.util.Duration;
 
 /**
@@ -36,14 +37,11 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
     private static final BehaviorAspect<Spinner<?>, Controller> MOUSE_CONTROL_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
         .registerEventHandler(MouseEvent.MOUSE_PRESSED, Controller::mousePressed)
         .registerEventHandler(MouseEvent.MOUSE_RELEASED, Controller::mouseReleased)
+        .registerPropertyListener(n -> n.sceneProperty().flatMap(Scene::windowProperty).flatMap(Window::showingProperty).orElse(false), Controller::showingChanged)
         .build();
 
     private static final BehaviorAspect<Spinner<?>, Controller> ACCESSIBILITY_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
         .registerEventHandler(AccessibleActionEvent.TRIGGERED, Controller::accessibleActionTriggered)
-        .build();
-
-    private static final BehaviorAspect<Spinner<?>, Controller> TIMELINE_DISPOSAL_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
-        .registerPropertyListener(Node::sceneProperty, Controller::sceneChanged)
         .build();
 
     /**
@@ -53,7 +51,6 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
         .add(KEYBOARD_CONTROL_ASPECT)
         .add(MOUSE_CONTROL_ASPECT)
         .add(ACCESSIBILITY_ASPECT)
-        .add(TIMELINE_DISPOSAL_ASPECT)
         .build();
 
     @Override
@@ -67,8 +64,7 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
     public static class Controller {
         private final Spinner<?> control;
 
-        private boolean isIncrementing;
-        private Timeline timeline;  // TODO timeline needs disposal
+        private Timeline timeline;  // stopped automatically when showing status changes
 
         /**
          * Creates a new instance.
@@ -112,23 +108,18 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
             }
         }
 
-        // TODO this is supposed to stop the Timeline from keeping a reference to this instance
-        // by stopping it whenever the scene changes. However, if an entire scene goes out of scope,
-        // the scene never changes, and the Timeline can keep running...
-        //
-        // This bug is present in the original behavior as well.
-        private void sceneChanged(@SuppressWarnings("unused") Scene scene) {
-            stopSpinning();
+        private void showingChanged(boolean showing) {
+            if (!showing) {
+                stopSpinning();
+            }
         }
 
         private void startSpinning(boolean increment) {
-            isIncrementing = increment;  // TODO this state really isn't needed, can just incorporate it in KeyFrame step call
-
             if (timeline != null) {
                 timeline.stop();
             }
-// TODO this timeline is not properly disposed when Behaviors are swapped
-            KeyFrame start = new KeyFrame(Duration.ZERO, e -> step());
+
+            KeyFrame start = new KeyFrame(Duration.ZERO, e -> step(increment));
             KeyFrame repeat = new KeyFrame(control.getRepeatDelay());
 
             timeline = new Timeline();
@@ -137,7 +128,7 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
             timeline.getKeyFrames().setAll(start, repeat);
             timeline.playFromStart();
 
-            step();
+            step(increment);
         }
 
         private void stopSpinning() {
@@ -147,7 +138,7 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
             }
         }
 
-        private void step() {
+        private void step(boolean isIncrementing) {
             if (control.getValueFactory() == null) {
                 return;
             }
@@ -180,18 +171,18 @@ public class SpinnerBehavior implements Behavior<Spinner<?>> {
     }
 
     private static boolean isIncrementArrow(Event event) {
-        if (!(event.getTarget() instanceof Node n)) {
-            return false;
+        if (event.getTarget() instanceof Node n) {
+            return n.getStyleClass().contains("increment-arrow-button");
         }
 
-        return n.getStyleClass().contains("increment-arrow-button");
+        return false;
     }
 
     private static boolean isDecrementArrow(Event event) {
-        if (!(event.getTarget() instanceof Node n)) {
-            return false;
+        if (event.getTarget() instanceof Node n) {
+            return n.getStyleClass().contains("decrement-arrow-button");
         }
 
-        return n.getStyleClass().contains("decrement-arrow-button");
+        return false;
     }
 }
