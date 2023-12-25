@@ -483,7 +483,8 @@ void WindowContextBase::process_key(GdkEventKey* event) {
             glassModifier);
     CHECK_JNI_EXCEPTION(mainEnv)
 
-    if (press && key > 0) { // TYPED events should only be sent for printable characters.
+    // jview is checked again because previous call might be an exit key
+    if (press && key > 0 && jview) { // TYPED events should only be sent for printable characters.
         mainEnv->CallVoidMethod(jview, jViewNotifyKey,
                 com_sun_glass_events_KeyEvent_TYPED,
                 com_sun_glass_events_KeyEvent_VK_UNDEFINED,
