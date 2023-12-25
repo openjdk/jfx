@@ -33,11 +33,9 @@
 #include "../PrismES2Defs.h"
 #include "com_sun_prism_es2_X11GLPixelFormat.h"
 
-extern void setGLXAttrs(jint *attrs, int *glxAttrs);
-extern void printAndReleaseResources(Display *display, GLXFBConfig *fbConfigList,
-        XVisualInfo *visualInfo, Window win, GLXContext ctx, Colormap cmap,
-        const char *message);
-
+extern void setEGLAttrs(jint *attrs, int *eglAttrs);
+extern void printAndReleaseResources(EGLDisplay eglDisplay, EGLSurface eglSurface, EGLContext eglContext,
+                                    const char *message);
 /*
  * Class:     com_sun_prism_es2_X11GLPixelFormat
  * Method:    nCreatePixelFormat
@@ -45,26 +43,22 @@ extern void printAndReleaseResources(Display *display, GLXFBConfig *fbConfigList
  */
 JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLPixelFormat_nCreatePixelFormat
 (JNIEnv *env, jclass class, jlong nativeScreen, jintArray attrArr) {
-    int glxAttrs[MAX_GLX_ATTRS_LENGTH]; /* value, attr pair plus a None */
+    int eglAttrs[MAX_EGL_ATTRS_LENGTH]; /* value, attr pair plus a None */
     jint *attrs;
     PixelFormatInfo *pfInfo = NULL;
 
-    GLXFBConfig *fbConfigList = NULL;
-    XVisualInfo *visualInfo = NULL;
-    int numFBConfigs;
+    EGLConfig eglConfig;
+    int num_configs;
     Display *display;
     int screen;
     Window root;
     Window win = None;
-    XSetWindowAttributes win_attrs;
-    Colormap cmap;
-    unsigned long win_mask;
 
     if (attrArr == NULL) {
         return 0;
     }
     attrs = (*env)->GetIntArrayElements(env, attrArr, NULL);
-    setGLXAttrs(attrs, glxAttrs);
+    setEGLAttrs(attrs, eglAttrs);
     (*env)->ReleaseIntArrayElements(env, attrArr, attrs, JNI_ABORT);
 
     // RT-27386
@@ -78,56 +72,41 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLPixelFormat_nCreatePixelForm
 
     screen = DefaultScreen(display);
 
-    fbConfigList = glXChooseFBConfig(display, screen, glxAttrs, &numFBConfigs);
+    EGLDisplay eglDisplay = eglGetDisplay(display);
 
-    if (fbConfigList == NULL) {
-        fprintf(stderr, "Failed in glXChooseFBConfig\n");
+    if (eglDisplay == EGL_NO_DISPLAY) {
+        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: no supported display found\n");
         return 0;
     }
 
-#if 0 // TESTING ONLY
-    visualInfo = glXGetVisualFromFBConfig(display, fbConfigList[0]);
-    if (visualInfo == NULL) {
-        printAndReleaseResources(display, fbConfigList, NULL,
-                None, NULL, None,
-                "Failed in  glXGetVisualFromFBConfig");
+    if (!eglInitialize(eglDisplay, NULL, NULL)) {
+        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: eglInitialize failed.\n");
         return 0;
     }
 
-    fprintf(stderr, "found a %d-bit visual (visual ID = 0x%x)\n",
-            visualInfo->depth, (unsigned int) visualInfo->visualid);
-#endif
-
-    visualInfo = glXGetVisualFromFBConfig(display, fbConfigList[0]);
-    if (visualInfo == NULL) {
-        printAndReleaseResources(display, fbConfigList, NULL,
-                None, NULL, None,
-                "Failed in glXGetVisualFromFBConfig");
+    if (!eglBindAPI(EGL_OPENGL_API)) {
+        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: cannot bind EGL_OPENGL_API.\n");
         return 0;
     }
 
-#if 0 // TESTING ONLY
-    fprintf(stderr, "found a %d-bit visual (visual ID = 0x%x)\n",
-            visualInfo->depth, (unsigned int) visualInfo->visualid);
-#endif
+    if ((eglGetConfigs(eglDisplay, NULL, 0, &num_configs) != EGL_TRUE) || (num_configs == 0)) {
+        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: no EGL configuration available\n");
+        return 0;
+    }
 
-    root = RootWindow(display, visualInfo->screen);
+    if (eglChooseConfig(eglDisplay, eglAttrs, &eglConfig, 1, &num_configs) != EGL_TRUE) {
+        fprintf(stderr, "Prism ES2 Error - nCreatePixelFormat: eglChooseConfig failed\n");
+        return 0;
+    }
 
-    /* Create a colormap */
-    cmap = XCreateColormap(display, root, visualInfo->visual, AllocNone);
+    root = RootWindow(display, screen);
 
-    /* Create a 1x1 window */
-    win_attrs.colormap = cmap;
-    win_attrs.border_pixel = 0;
-    win_attrs.event_mask = KeyPressMask | ExposureMask | StructureNotifyMask;
-    win_mask = CWColormap | CWBorderPixel | CWEventMask;
-    win = XCreateWindow(display, root, 0, 0, 1, 1, 0,
-            visualInfo->depth, InputOutput, visualInfo->visual, win_mask, &win_attrs);
+    win = XCreateSimpleWindow(display, root, 0, 0, 1, 1, 0,
+                              WhitePixel(display, screen),
+                              WhitePixel(display, screen));
 
     if (win == None) {
-        printAndReleaseResources(display, fbConfigList, visualInfo,
-                win, NULL, cmap,
-                "Failed in XCreateWindow");
+        printAndReleaseResources(eglDisplay, NULL, NULL, "Failed in XCreateWindow");
         return 0;
     }
 
@@ -141,12 +120,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLPixelFormat_nCreatePixelForm
     /* initialize the structure */
     initializePixelFormatInfo(pfInfo);
     pfInfo->display = display;
-    pfInfo->fbConfig = fbConfigList[0];
     pfInfo->dummyWin = win;
-    pfInfo->dummyCmap = cmap;
-
-    XFree(visualInfo);
-    XFree(fbConfigList);
+    pfInfo->eglConfig = eglConfig;
+    pfInfo->eglDisplay = eglDisplay;
 
     return ptr_to_jlong(pfInfo);
 }

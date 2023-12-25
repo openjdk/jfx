@@ -55,6 +55,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable
         return 0;
     }
 
+    EGLSurface eglSurface = eglCreateWindowSurface(pfInfo->eglDisplay, pfInfo->eglConfig,
+                                        (EGLNativeWindowType) jlong_to_ptr(nativeWindow), NULL);
+
     /* initialize the structure */
     initializeDrawableInfo(dInfo);
 
@@ -63,6 +66,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLDrawable_nCreateDrawable
     dInfo->display = pfInfo->display;
     dInfo->win = (Window) jlong_to_ptr(nativeWindow);
     dInfo->onScreen = JNI_TRUE;
+    dInfo->eglSurface = eglSurface;
 
     return ptr_to_jlong(dInfo);
 }
@@ -110,6 +114,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_X11GLDrawable_nSwapBuffers
     if (dInfo == NULL) {
         return JNI_FALSE;
     }
-    glXSwapBuffers(dInfo->display, dInfo->win);
+
+    eglSwapBuffers(eglGetCurrentDisplay(), dInfo->eglSurface);
     return JNI_TRUE;
 }
