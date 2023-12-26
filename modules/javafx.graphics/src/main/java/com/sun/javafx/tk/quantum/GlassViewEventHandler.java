@@ -672,7 +672,6 @@ class GlassViewEventHandler extends View.EventHandler {
         final WindowStage w = scene.getWindowStage();
         float pScaleX = (w == null) ? 1.0f : w.getPlatformScaleX();
         float pScaleY = (w == null) ? 1.0f : w.getPlatformScaleY();
-        System.out.println("Scale x " + pScaleX + " y " + pScaleY);
         double[] ret = new double[2];
         ret[0] = p2d.getX() * pScaleX;
         ret[1] = p2d.getY() * pScaleY;
