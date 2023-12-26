@@ -12,7 +12,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.scene.input.KeyEvent;
 import javafx.util.Subscription;
 
 /**
@@ -25,7 +24,6 @@ public class BehaviorAspect<N extends Control, C> {
     private final Class<C> controllerClass;
     private final Function<N, C> controllerFactory;
     private final List<Command<C, N>> commands;
-    private final List<KeyHandler> keyHandlers;
 
     /**
      * Constructs a new builder for a {@link BehaviorAspect}.
@@ -45,7 +43,6 @@ public class BehaviorAspect<N extends Control, C> {
         this.controllerClass = Objects.requireNonNull(controllerClass);
         this.controllerFactory = Objects.requireNonNull(controllerFactory);
         this.commands = List.copyOf(commands);
-        this.keyHandlers = List.copyOf(keyHandlers);
     }
 
     Class<C> getControllerClass() {
@@ -68,26 +65,6 @@ public class BehaviorAspect<N extends Control, C> {
             command.execute(control, controllerProvider);
         }
 
-        /*
-         * Install key handlers (as a single event handler) on the control:
-         */
-
-        if (!keyHandlers.isEmpty()) {
-            EventHandler<? super KeyEvent> eventHandler = e -> {
-                KeyState keyState = new KeyState(e.getCode(), e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown());
-
-                for (KeyHandler keyHandler : keyHandlers) {
-                    if (keyHandler.trigger(keyState, controllerProvider.apply(control))) {
-                        e.consume();
-                    }
-                }
-            };
-
-            control.addEventHandler(KeyEvent.KEY_PRESSED, eventHandler);
-
-            subscription = subscription.and(() -> control.removeEventHandler(KeyEvent.KEY_PRESSED, eventHandler));
-        }
-
         return subscription;
     }
 
@@ -103,7 +80,6 @@ public class BehaviorAspect<N extends Control, C> {
      */
     public static class Builder<N extends Control, C> {
         private final List<Command<C, N>> commands = new ArrayList<>();
-        private final List<KeyHandler> keyHandlers = new ArrayList<>();
         private final Class<C> controllerClass;
         private final Function<N, C> controllerFactory;
 
@@ -118,11 +94,11 @@ public class BehaviorAspect<N extends Control, C> {
          * @return a new aspect, never {@code null}
          */
         public BehaviorAspect<N, C> build() {
-            return new BehaviorAspect<>(controllerClass, controllerFactory, commands, keyHandlers);
+            return new BehaviorAspect<>(controllerClass, controllerFactory, commands);
         }
 
         /**
-         * Registers an event handler as part of this aspect.
+         * Registers an event handler as part of this aspect. Earlier registrations take precedence over later ones.
          *
          * @param <E> the type of event to be handled
          * @param eventType an event type, cannot be {@code null}
@@ -140,7 +116,7 @@ public class BehaviorAspect<N extends Control, C> {
         }
 
         /**
-         * Registers a property listener as part of this aspect.
+         * Registers a property listener as part of this aspect. Earlier registrations take precedence over later ones.
          *
          * @param <T> the type of the values of the property
          * @param supplier a property supplier, cannot be {@code null}
@@ -153,19 +129,6 @@ public class BehaviorAspect<N extends Control, C> {
                 Objects.requireNonNull(supplier, "supplier"),
                 Objects.requireNonNull(listener, "listener")
             ));
-
-            return this;
-        }
-
-        /**
-         * Registers a {@link KeyHandler}.
-         *
-         * @param keyHandler a key handler, cannot be {@code null}
-         * @return this builder, never {@code null}
-         * @throws NullPointerException when any argument is {@code null}
-         */
-        public Builder<N, C> registerKeyHandler(KeyHandler keyHandler) {
-            this.keyHandlers.add(Objects.requireNonNull(keyHandler, "keyHandler"));
 
             return this;
         }

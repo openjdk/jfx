@@ -38,17 +38,19 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyEvent;
 
 /**
  * Standard behavior for {@link ToggleButton}. Inherits behavior from {@link ButtonBaseBehavior}.
  */
 public class ToggleButtonBehavior implements Behavior<ToggleButton> {
     private static final BehaviorAspect<ToggleButton, Controller> KEYBOARD_NAVIGATION_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
-        .registerKeyHandler(new SimpleKeyBinder()
+        .registerEventHandler(KeyEvent.KEY_PRESSED, MultiplexingKeyEventHandler.builder()
             .addBinding(new KeyCodeCombination(KeyCode.UP), Controller::traverseUp)
             .addBinding(new KeyCodeCombination(KeyCode.DOWN), Controller::traverseDown)
             .addBinding(new KeyCodeCombination(KeyCode.RIGHT), Controller::traverseRight)
             .addBinding(new KeyCodeCombination(KeyCode.LEFT), Controller::traverseLeft)
+            .build()::handle
         )
         .build();
 

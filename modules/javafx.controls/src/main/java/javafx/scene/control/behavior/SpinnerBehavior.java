@@ -17,6 +17,7 @@ import javafx.scene.control.Spinner;
 import javafx.scene.control.skin.AccessibleActionEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Window;
 import javafx.util.Duration;
@@ -26,11 +27,12 @@ import javafx.util.Duration;
  */
 public class SpinnerBehavior implements Behavior<Spinner<?>> {
     private static final BehaviorAspect<Spinner<?>, Controller> KEYBOARD_CONTROL_ASPECT = BehaviorAspect.builder(Controller.class, Controller::new)
-        .registerKeyHandler(new SimpleKeyBinder()
+        .registerEventHandler(KeyEvent.KEY_PRESSED, MultiplexingKeyEventHandler.builder()
             .addBinding(new KeyCodeCombination(KeyCode.UP), Controller::arrowsAreVertical, Controller::increment)
             .addBinding(new KeyCodeCombination(KeyCode.DOWN), Controller::arrowsAreVertical, Controller::decrement)
             .addBinding(new KeyCodeCombination(KeyCode.RIGHT), Predicate.not(Controller::arrowsAreVertical), Controller::increment)
             .addBinding(new KeyCodeCombination(KeyCode.LEFT), Predicate.not(Controller::arrowsAreVertical), Controller::decrement)
+            .build()::handle
         )
         .build();
 
