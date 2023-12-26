@@ -669,9 +669,9 @@ class GlassViewEventHandler extends View.EventHandler {
     @Override
     public double[] getInputMethodCandidatePos(int offset) {
         Point2D p2d = scene.inputMethodRequests.getTextLocation(offset);
-        final WindowStage w = scene.getWindowStage();
-        float pScaleX = (w == null) ? 1.0f : w.getPlatformScaleX();
-        float pScaleY = (w == null) ? 1.0f : w.getPlatformScaleY();
+        final Screen s = Screen.getMainScreen();
+        float pScaleX = (s == null) ? 1.0f : s.getPlatformScaleX();
+        float pScaleY = (s == null) ? 1.0f : s.getPlatformScaleY();
         double[] ret = new double[2];
         ret[0] = p2d.getX() * pScaleX;
         ret[1] = p2d.getY() * pScaleY;
