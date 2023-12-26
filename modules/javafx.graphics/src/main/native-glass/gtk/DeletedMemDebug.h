@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,19 +22,31 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#ifndef GLASS_VIEW_H
-#define GLASS_VIEW_H
 
-#include "DeletedMemDebug.h"
+#ifndef DELETEDMEMDEBUG_H
+#define DELETEDMEMDEBUG_H
 
-class WindowContext;
+#include <cstring>
 
-struct GlassView : public DeletedMemDebug<0xCC> {
-    GlassView() : current_window(), embedded_window() {}
+//#define DEBUGDELETEDMEM
 
-    WindowContext* current_window;
-    WindowContext* embedded_window; // not null while in Full Screen
+template <int FILL>
+struct DeletedMemDebug
+{
+#ifdef DEBUGDELETEDMEM
+public:
+    static void operator delete(void* ptr, std::size_t sz)
+    {
+        ::memset(ptr, FILL, sz);
+        ::operator delete(ptr);
+    }
+
+    static void operator delete[](void* ptr, std::size_t sz)
+    {
+        ::memset(ptr, FILL, sz);
+        ::operator delete[](ptr);
+    }
+#endif
 };
 
-#endif        /* GLASS_VIEW_H */
-
+#endif // DELETEDMEMDEBUG_H

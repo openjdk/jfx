@@ -480,6 +480,8 @@ static void process_events(GdkEvent* event, gpointer data)
         return;
     }
 
+    EventsCounterHelper helper(ctx);
+
     if (ctx != NULL && ctx->hasIME() && ctx->filterIME(event)) {
         return;
     }
@@ -487,7 +489,6 @@ static void process_events(GdkEvent* event, gpointer data)
     glass_evloop_call_hooks(event);
 
     if (ctx != NULL) {
-        EventsCounterHelper helper(ctx);
         try {
             switch (event->type) {
                 case GDK_PROPERTY_NOTIFY:
