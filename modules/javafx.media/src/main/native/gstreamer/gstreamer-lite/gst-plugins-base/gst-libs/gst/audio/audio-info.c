@@ -326,7 +326,7 @@ invalid_channel_mask:
  *
  * Parse @caps to generate a #GstAudioInfo.
  *
- * Returns: A #GstAudioInfo, or %NULL if @caps couldn't be parsed
+ * Returns: (nullable): A #GstAudioInfo, or %NULL if @caps couldn't be parsed
  * Since: 1.20
  */
 GstAudioInfo *

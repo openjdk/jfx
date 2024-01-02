@@ -357,7 +357,7 @@ public class Text extends Shape {
     BaseBounds getSpanBounds() {
         if (spanBoundsInvalid) {
             GlyphList[] runs = getRuns();
-            if (runs.length != 0) {
+            if (runs != null && runs.length != 0) {
                 float left = Float.POSITIVE_INFINITY;
                 float top = Float.POSITIVE_INFINITY;
                 float right = 0;

@@ -152,7 +152,7 @@
 #include <gst/glib-compat-private.h>
 
 #include "gstbasesrc.h"
-#include <gst/gst-i18n-lib.h>
+#include <glib/gi18n-lib.h>
 
 GST_DEBUG_CATEGORY_STATIC (gst_base_src_debug);
 #define GST_CAT_DEFAULT gst_base_src_debug
@@ -1342,20 +1342,25 @@ gst_base_src_default_query (GstBaseSrc * src, GstQuery * query)
     case GST_QUERY_CAPS:
     {
       GstBaseSrcClass *bclass;
-      GstCaps *caps, *filter;
+      GstCaps *caps = NULL, *filter;
 
       bclass = GST_BASE_SRC_GET_CLASS (src);
-      if (bclass->get_caps) {
+      if (GST_PAD_IS_FIXED_CAPS (src->srcpad)) {
+        caps = gst_pad_get_current_caps (src->srcpad);
+      }
+
+      if (caps == NULL && bclass->get_caps) {
         gst_query_parse_caps (query, &filter);
-        if ((caps = bclass->get_caps (src, filter))) {
-          gst_query_set_caps_result (query, caps);
-          gst_caps_unref (caps);
-          res = TRUE;
-        } else {
-          res = FALSE;
-        }
-      } else
+        caps = bclass->get_caps (src, filter);
+      }
+
+      if (caps != NULL) {
+        res = TRUE;
+        gst_query_set_caps_result (query, caps);
+        gst_caps_unref (caps);
+      } else {
         res = FALSE;
+      }
       break;
     }
     case GST_QUERY_URI:{

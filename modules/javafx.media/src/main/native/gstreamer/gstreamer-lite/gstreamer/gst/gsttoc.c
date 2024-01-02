@@ -169,7 +169,7 @@ gst_toc_get_scope (const GstToc * toc)
 /**
  * gst_toc_set_tags:
  * @toc: A #GstToc instance
- * @tags: (allow-none) (transfer full): A #GstTagList or %NULL
+ * @tags: (nullable) (transfer full): A #GstTagList or %NULL
  *
  * Set a #GstTagList with tags for the complete @toc.
  */
@@ -187,7 +187,7 @@ gst_toc_set_tags (GstToc * toc, GstTagList * tags)
 /**
  * gst_toc_merge_tags:
  * @toc: A #GstToc instance
- * @tags: (allow-none): A #GstTagList or %NULL
+ * @tags: (nullable): A #GstTagList or %NULL
  * @mode: A #GstTagMergeMode
  *
  * Merge @tags into the existing tags of @toc using @mode.
@@ -213,7 +213,7 @@ gst_toc_merge_tags (GstToc * toc, GstTagList * tags, GstTagMergeMode mode)
  *
  * Gets the tags for @toc.
  *
- * Returns: (transfer none): A #GstTagList for @entry
+ * Returns: (transfer none) (nullable): A #GstTagList for @entry
  */
 GstTagList *
 gst_toc_get_tags (const GstToc * toc)
@@ -290,7 +290,7 @@ gst_toc_entry_new_internal (GstTocEntryType type, const gchar * uid)
  *
  * Create new #GstTocEntry structure.
  *
- * Returns: newly allocated #GstTocEntry structure, free it with gst_toc_entry_unref().
+ * Returns: (transfer full): newly allocated #GstTocEntry structure, free it with gst_toc_entry_unref().
  */
 GstTocEntry *
 gst_toc_entry_new (GstTocEntryType type, const gchar * uid)
@@ -415,8 +415,7 @@ gst_toc_deep_copy_toc_entries (GList * entry_list)
  *
  * Copy #GstTocEntry with all subentries (deep copy).
  *
- * Returns: (nullable): newly allocated #GstTocEntry in case of
- * success, %NULL otherwise; free it when done with
+ * Returns: (transfer full): newly allocated #GstTocEntry; free it when done with
  * gst_toc_entry_unref().
  */
 static GstTocEntry *
@@ -450,8 +449,7 @@ gst_toc_entry_copy (const GstTocEntry * entry)
  *
  * Copy #GstToc with all subentries (deep copy).
  *
- * Returns: (nullable): newly allocated #GstToc in case of success,
- * %NULL otherwise; free it when done with gst_toc_unref().
+ * Returns: (transfer full): newly allocated #GstToc; free it when done with gst_toc_unref().
  */
 static GstToc *
 gst_toc_copy (const GstToc * toc)
@@ -495,9 +493,9 @@ gst_toc_entry_set_start_stop_times (GstTocEntry * entry, gint64 start,
 /**
  * gst_toc_entry_get_start_stop_times:
  * @entry: #GstTocEntry to get values from.
- * @start: (out) (allow-none): the storage for the start value, leave
+ * @start: (out) (optional): the storage for the start value, leave
  *   %NULL if not need.
- * @stop: (out) (allow-none): the storage for the stop value, leave
+ * @stop: (out) (optional): the storage for the stop value, leave
  *   %NULL if not need.
  *
  * Get @start and @stop values from the @entry and write them into appropriate
@@ -543,9 +541,9 @@ gst_toc_entry_set_loop (GstTocEntry * entry, GstTocLoopType loop_type,
 /**
  * gst_toc_entry_get_loop:
  * @entry: #GstTocEntry to get values from.
- * @loop_type: (out) (allow-none): the storage for the loop_type
+ * @loop_type: (out) (optional): the storage for the loop_type
  *             value, leave %NULL if not need.
- * @repeat_count: (out) (allow-none): the storage for the repeat_count
+ * @repeat_count: (out) (optional): the storage for the repeat_count
  *                value, leave %NULL if not need.
  *
  * Get @loop_type and @repeat_count values from the @entry and write them into
@@ -708,7 +706,7 @@ gst_toc_entry_get_sub_entries (const GstTocEntry * entry)
 /**
  * gst_toc_entry_set_tags:
  * @entry: A #GstTocEntry instance
- * @tags: (allow-none) (transfer full): A #GstTagList or %NULL
+ * @tags: (nullable) (transfer full): A #GstTagList or %NULL
  *
  * Set a #GstTagList with tags for the complete @entry.
  */
@@ -726,7 +724,7 @@ gst_toc_entry_set_tags (GstTocEntry * entry, GstTagList * tags)
 /**
  * gst_toc_entry_merge_tags:
  * @entry: A #GstTocEntry instance
- * @tags: (allow-none): A #GstTagList or %NULL
+ * @tags: (nullable): A #GstTagList or %NULL
  * @mode: A #GstTagMergeMode
  *
  * Merge @tags into the existing tags of @entry using @mode.
@@ -753,7 +751,7 @@ gst_toc_entry_merge_tags (GstTocEntry * entry, GstTagList * tags,
  *
  * Gets the tags for @entry.
  *
- * Returns: (transfer none): A #GstTagList for @entry
+ * Returns: (nullable) (transfer none): A #GstTagList for @entry
  */
 GstTagList *
 gst_toc_entry_get_tags (const GstTocEntry * entry)
@@ -769,7 +767,7 @@ gst_toc_entry_get_tags (const GstTocEntry * entry)
  *
  * Gets the parent #GstToc of @entry.
  *
- * Returns: (transfer none): The parent #GstToc of @entry
+ * Returns: (transfer none) (nullable): The parent #GstToc of @entry
  */
 GstToc *
 gst_toc_entry_get_toc (GstTocEntry * entry)

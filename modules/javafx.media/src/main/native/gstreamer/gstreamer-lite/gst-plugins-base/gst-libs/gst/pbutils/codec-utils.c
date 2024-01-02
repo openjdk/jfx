@@ -1877,7 +1877,7 @@ gst_codec_utils_opus_parse_caps (GstCaps * caps,
  *
  * Creates Opus caps from the given parameters.
  *
- * Returns: The #GstCaps, or %NULL if the parameters would lead to
+ * Returns: (transfer full) (nullable): The #GstCaps, or %NULL if the parameters would lead to
  * invalid Opus caps.
  *
  * Since: 1.8
@@ -2043,7 +2043,7 @@ _gst_caps_set_buffer_array (GstCaps * caps, const gchar * field,
  * Creates Opus caps from the given OpusHead @header and comment header
  * @comments.
  *
- * Returns: The #GstCaps.
+ * Returns: (transfer full) (nullable): The #GstCaps.
  *
  * Since: 1.8
  */
@@ -2103,7 +2103,7 @@ gst_codec_utils_opus_create_caps_from_header (GstBuffer * header,
  *
  * Creates OpusHead header from the given parameters.
  *
- * Returns: The #GstBuffer containing the OpusHead.
+ * Returns: (transfer full) (nullable): The #GstBuffer containing the OpusHead.
  *
  * Since: 1.8
  */
@@ -2465,6 +2465,91 @@ done:
   return ret;
 }
 
+/* https://www.webmproject.org/vp9/mp4/#codecs-parameter-string */
+static char *
+vp9_caps_get_mime_codec (GstCaps * caps)
+{
+  GstStructure *caps_st;
+  const char *profile_str, *chroma_format_str, *colorimetry_str;
+  guint bitdepth_luma, bitdepth_chroma;
+  guint8 profile = -1, chroma_format = -1, level = -1;
+  gboolean video_full_range;
+  GstVideoColorimetry cinfo = { 0, };
+  GString *codec_string;
+
+  caps_st = gst_caps_get_structure (caps, 0);
+  codec_string = g_string_new ("vp09");
+
+  profile_str = gst_structure_get_string (caps_st, "profile");
+  if (g_strcmp0 (profile_str, "0") == 0) {
+    profile = 0;
+  } else if (g_strcmp0 (profile_str, "1") == 0) {
+    profile = 1;
+  } else if (g_strcmp0 (profile_str, "2") == 0) {
+    profile = 2;
+  } else if (g_strcmp0 (profile_str, "3") == 0) {
+    profile = 3;
+  } else {
+    goto done;
+  }
+
+  /* XXX: hardcoded level */
+  level = 10;
+
+  gst_structure_get (caps_st, "bit-depth-luma", G_TYPE_UINT,
+      &bitdepth_luma, "bit-depth-chroma", G_TYPE_UINT, &bitdepth_chroma, NULL);
+
+  if (bitdepth_luma == 0)
+    goto done;
+  if (bitdepth_luma != bitdepth_chroma)
+    goto done;
+
+  /* mandatory elements */
+  g_string_append_printf (codec_string, ".%02u.%02u.%02u", profile, level,
+      bitdepth_luma);
+
+  colorimetry_str = gst_structure_get_string (caps_st, "colorimetry");
+  if (!colorimetry_str)
+    goto done;
+  if (!gst_video_colorimetry_from_string (&cinfo, colorimetry_str))
+    goto done;
+  video_full_range = cinfo.range == GST_VIDEO_COLOR_RANGE_0_255;
+
+  chroma_format_str = gst_structure_get_string (caps_st, "chroma-format");
+  if (g_strcmp0 (chroma_format_str, "4:2:0") == 0) {
+    const char *chroma_site_str;
+    GstVideoChromaSite chroma_site;
+
+    chroma_site_str = gst_structure_get_string (caps_st, "chroma-site");
+    if (chroma_site_str)
+      chroma_site = gst_video_chroma_site_from_string (chroma_site_str);
+    else
+      chroma_site = GST_VIDEO_CHROMA_SITE_UNKNOWN;
+    if (chroma_site == GST_VIDEO_CHROMA_SITE_V_COSITED) {
+      chroma_format = 0;
+    } else if (chroma_site == GST_VIDEO_CHROMA_SITE_COSITED) {
+      chroma_format = 1;
+    } else {
+      chroma_format = 1;
+    }
+  } else if (g_strcmp0 (chroma_format_str, "4:2:2") == 0) {
+    chroma_format = 2;
+  } else if (g_strcmp0 (chroma_format_str, "4:4:4") == 0) {
+    chroma_format = 3;
+  } else {
+    goto done;
+  }
+
+  /* optional but all or nothing */
+  g_string_append_printf (codec_string, ".%02u.%02u.%02u.%02u.%02u",
+      chroma_format, gst_video_color_primaries_to_iso (cinfo.primaries),
+      gst_video_transfer_function_to_iso (cinfo.transfer),
+      gst_video_color_matrix_to_iso (cinfo.matrix), video_full_range);
+
+done:
+  return g_string_free (codec_string, FALSE);
+}
+
 /**
  * gst_codec_utils_caps_get_mime_codec:
  * @caps: A #GstCaps to convert to mime codec
@@ -2531,10 +2616,7 @@ gst_codec_utils_caps_get_mime_codec (GstCaps * caps)
      * available in the mime codec for vp8. */
     mime_codec = g_strdup ("vp08");
   } else if (g_strcmp0 (media_type, "video/x-vp9") == 0) {
-    /* TODO: most browsers won't play the video unless more codec information is
-     * available in the mime codec for vp9. This is documented in
-     * https://www.webmproject.org/vp9/mp4/ */
-    mime_codec = g_strdup ("vp09");
+    mime_codec = vp9_caps_get_mime_codec (caps);
   } else if (g_strcmp0 (media_type, "image/jpeg") == 0) {
     mime_codec = g_strdup ("mjpg");
   } else if (g_strcmp0 (media_type, "audio/mpeg") == 0) {
@@ -2556,5 +2638,245 @@ gst_codec_utils_caps_get_mime_codec (GstCaps * caps)
 
 done:
   return mime_codec;
+}
+
+static GstCaps *
+gst_codec_utils_caps_from_mime_codec_single (const gchar * codec)
+{
+  GstCaps *caps = NULL;
+  gchar **subcodec = NULL;
+  gchar *subcodec0;
+  guint32 codec_fourcc;
+
+  GST_DEBUG ("Analyzing codec '%s'", codec);
+
+  /* rfc 6381 3.3
+   *
+   * For the ISO Base Media File Format, and the QuickTime movie file
+   * format, the first element of a 'codecs' parameter value is a sample
+   * description entry four-character code as registered by the MP4
+   * Registration Authority [MP4RA].
+   *
+   * See Also : http://mp4ra.org/#/codecs
+   */
+  if (strlen (codec) < 4) {
+    GST_WARNING ("Invalid codec (smaller than 4 characters) : '%s'", codec);
+    goto beach;
+  }
+
+  subcodec = g_strsplit (codec, ".", 0);
+  subcodec0 = subcodec[0];
+
+  if (subcodec0 == NULL)
+    goto beach;
+
+  /* Skip any leading spaces */
+  while (*subcodec0 == ' ')
+    subcodec0++;
+
+  if (strlen (subcodec0) < 4) {
+    GST_WARNING ("Invalid codec (smaller than 4 characters) : '%s'", subcodec0);
+    goto beach;
+  }
+
+  GST_LOG ("subcodec[0] '%s'", subcodec0);
+
+  codec_fourcc = GST_READ_UINT32_LE (subcodec0);
+  switch (codec_fourcc) {
+    case GST_MAKE_FOURCC ('a', 'v', 'c', '1'):
+    case GST_MAKE_FOURCC ('a', 'v', 'c', '2'):
+    case GST_MAKE_FOURCC ('a', 'v', 'c', '3'):
+    case GST_MAKE_FOURCC ('a', 'v', 'c', '4'):
+    {
+      guint8 sps[3];
+      guint64 spsint64;
+
+      /* ISO 14496-15 Annex E : Sub-parameters for the MIME type “codecs”
+       * parameter */
+      caps = gst_caps_new_empty_simple ("video/x-h264");
+
+      if (subcodec[1]) {
+        /* The second element is the hexadecimal representation of the following
+         * three bytes in the (subset) sequence parameter set Network
+         * Abstraction Layer (NAL) unit specified in [AVC]:
+         * * profile_idc
+         * * constraint_set flags
+         * * level_idc
+         * */
+        spsint64 = g_ascii_strtoull (subcodec[1], NULL, 16);
+        sps[0] = spsint64 >> 16;
+        sps[1] = (spsint64 >> 8) & 0xff;
+        sps[2] = spsint64 & 0xff;
+        gst_codec_utils_h264_caps_set_level_and_profile (caps,
+            (const guint8 *) &sps, 3);
+      }
+    }
+      break;
+    case GST_MAKE_FOURCC ('m', 'p', '4', 'a'):
+    {
+      guint64 oti;
+
+      if (!subcodec[1])
+        break;
+      oti = g_ascii_strtoull (subcodec[1], NULL, 16);
+      /* For mp4a, mp4v and mp4s, the second element is the hexadecimal
+       * representation of the MP4 Registration Authority
+       * ObjectTypeIndication */
+      switch (oti) {
+        case 0x40:
+        {
+          guint64 audio_oti;
+          const gchar *profile = NULL;
+
+          /* MPEG-4 Audio (ISO/IEC 14496-3 */
+          caps =
+              gst_caps_new_simple ("audio/mpeg", "mpegversion", G_TYPE_INT, 4,
+              NULL);
+
+          if (!subcodec[2])
+            break;
+          /* If present, last element is the audio object type */
+          audio_oti = g_ascii_strtoull (subcodec[2], NULL, 16);
+
+          switch (audio_oti) {
+            case 1:
+              profile = "main";
+              break;
+            case 2:
+              profile = "lc";
+              break;
+            case 3:
+              profile = "ssr";
+              break;
+            case 4:
+              profile = "ltp";
+              break;
+            default:
+              GST_WARNING ("Unhandled MPEG-4 Audio Object Type: 0x%"
+                  G_GUINT64_FORMAT "x", audio_oti);
+              break;
+          }
+          if (profile)
+            gst_caps_set_simple (caps, "profile", G_TYPE_STRING, profile, NULL);
+          break;
+        }
+        default:
+          GST_WARNING ("Unknown ObjectTypeIndication 0x%" G_GUINT64_FORMAT "x",
+              oti);
+          break;
+      }
+    }
+      break;
+    case GST_MAKE_FOURCC ('h', 'e', 'v', '1'):
+    case GST_MAKE_FOURCC ('h', 'v', 'c', '1'):
+    {
+      /* ISO 14496-15 Annex E : Sub-parameters for the MIME type “codecs”
+       * parameter */
+      caps = gst_caps_new_empty_simple ("video/x-h265");
+
+      /* FIXME : Extract information from the following component */
+      break;
+    }
+      /* Following are not defined in rfc 6831 but are registered MP4RA codecs */
+    case GST_MAKE_FOURCC ('a', 'c', '-', '3'):
+      /* ETSI TS 102 366 v1.4.1 - Digital Audio Compression (AC-3, Enhanced AC-3) Standard, Annex F */
+      caps = gst_caps_new_empty_simple ("audio/x-ac3");
+      break;
+    case GST_MAKE_FOURCC ('e', 'c', '+', '3'):
+      GST_FIXME
+          ("Signalling of ATMOS ('ec+3') isn't defined yet. Falling back to EAC3 caps");
+      /* withdrawn, unused, do not use (was enhanced AC-3 audio with JOC) */
+    case GST_MAKE_FOURCC ('e', 'c', '-', '3'):
+      /* ETSI TS 102 366 v1.4.1 - Digital Audio Compression (AC-3, Enhanced AC-3) Standard, Annex F */
+      caps = gst_caps_new_empty_simple ("audio/x-eac3");
+      break;
+    case GST_MAKE_FOURCC ('s', 't', 'p', 'p'):
+      /* IMSC1-conformant TTM XML */
+      caps = gst_caps_new_empty_simple ("application/ttml+xml");
+      break;
+    case GST_MAKE_FOURCC ('w', 'v', 't', 't'):
+      /* WebVTT subtitles */
+      caps = gst_caps_new_empty_simple ("application/x-subtitle-vtt");
+      break;
+    case GST_MAKE_FOURCC ('v', 'p', '0', '8'):
+      /* VP8 */
+      caps = gst_caps_new_empty_simple ("video/x-vp8");
+      break;
+    case GST_MAKE_FOURCC ('v', 'p', '0', '9'):
+      /* VP9 */
+      caps = gst_caps_new_empty_simple ("video/x-vp9");
+      break;
+    case GST_MAKE_FOURCC ('a', 'v', '0', '1'):
+      /* AV1 */
+      caps = gst_caps_new_empty_simple ("video/x-av1");
+      break;
+    case GST_MAKE_FOURCC ('o', 'p', 'u', 's'):
+      /* Opus */
+      caps = gst_caps_new_empty_simple ("audio/x-opus");
+      break;
+    case GST_MAKE_FOURCC ('u', 'l', 'a', 'w'):
+      /* ulaw */
+      caps = gst_caps_new_empty_simple ("audio/x-mulaw");
+      break;
+    case GST_MAKE_FOURCC ('g', '7', '2', '6'):
+      /* ulaw */
+      caps =
+          gst_caps_new_simple ("audio/x-adpcm", "layout", G_TYPE_STRING, "g726",
+          NULL);
+      break;
+    default:
+      GST_WARNING ("Unknown codec '%s' please file a bug", codec);
+      break;
+  }
+
+beach:
+  if (subcodec != NULL)
+    g_strfreev (subcodec);
+  return caps;
+}
+
+/**
+ * gst_codec_utils_caps_from_mime_codec:
+ * @codecs_field: A mime codec string field
+ *
+ * Converts a RFC 6381 compatible codec string to #GstCaps. More than one codec
+ * string can be present (separated by `,`).
+ *
+ * Registered codecs can be found at http://mp4ra.org/#/codecs
+ *
+ * Returns: (transfer full) (nullable): The corresponding #GstCaps or %NULL
+ *
+ * Since: 1.22
+ */
+GstCaps *
+gst_codec_utils_caps_from_mime_codec (const gchar * codecs_field)
+{
+  gchar **codecs = NULL;
+  GstCaps *caps = NULL;
+  guint i;
+
+  g_return_val_if_fail (codecs_field != NULL, NULL);
+
+  GST_LOG ("codecs_field '%s'", codecs_field);
+
+  codecs = g_strsplit (codecs_field, ",", 0);
+  if (codecs == NULL) {
+    GST_WARNING ("Invalid 'codecs' field : '%s'", codecs_field);
+    goto beach;
+  }
+
+  for (i = 0; codecs[i]; i++) {
+    const gchar *codec = codecs[i];
+    if (caps == NULL)
+      caps = gst_codec_utils_caps_from_mime_codec_single (codec);
+    else
+      gst_caps_append (caps,
+          gst_codec_utils_caps_from_mime_codec_single (codec));
+  }
+
+beach:
+  g_strfreev (codecs);
+  GST_LOG ("caps %" GST_PTR_FORMAT, caps);
+  return caps;
 }
 #endif // GSTREAMER_LITE

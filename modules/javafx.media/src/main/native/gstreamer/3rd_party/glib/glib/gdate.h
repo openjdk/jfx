@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -168,7 +170,7 @@ guint        g_date_get_day_of_year       (const GDate *date);
  * that day, return 0. These are not ISO weeks of the year; that
  * routine needs to be added.
  * these functions return the number of weeks, starting on the
- * corrsponding day
+ * corresponding day
  */
 GLIB_AVAILABLE_IN_ALL
 guint        g_date_get_monday_week_of_year (const GDate *date);

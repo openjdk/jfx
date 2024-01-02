@@ -510,9 +510,9 @@
 - (void)keyDown:(NSEvent *)theEvent
 {
     KEYLOG("keyDown");
-    [GlassApplication registerKeyEvent:theEvent];
 
     if (![[self inputContext] handleEvent:theEvent] || shouldProcessKeyEvent) {
+        [GlassApplication registerKeyEvent:theEvent];
         [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     }
     shouldProcessKeyEvent = YES;

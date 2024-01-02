@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -112,18 +114,18 @@ struct _GTypePluginClass
 
 
 /* --- prototypes --- */
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 GType g_type_plugin_get_type      (void)  G_GNUC_CONST;
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 void  g_type_plugin_use     (GTypePlugin   *plugin);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 void  g_type_plugin_unuse     (GTypePlugin   *plugin);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 void  g_type_plugin_complete_type_info  (GTypePlugin     *plugin,
              GType            g_type,
              GTypeInfo       *info,
              GTypeValueTable *value_table);
-GLIB_AVAILABLE_IN_ALL
+GOBJECT_AVAILABLE_IN_ALL
 void  g_type_plugin_complete_interface_info (GTypePlugin     *plugin,
              GType            instance_type,
              GType            interface_type,

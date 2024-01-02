@@ -775,6 +775,19 @@ public enum AccessibleAttribute {
     VALUE(Double.class),
 
     /**
+     * Returns the value as string for the node.
+     * <ul>
+     * <li>Used by: Spinner </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link String} </li>
+     * <li>Parameters: </li>
+     * </ul>
+     *
+     * @since 22
+     */
+    VALUE_STRING(String.class),
+
+    /**
      * Returns the vertical scroll bar for the node.
      * <ul>
      * <li>Used by: ListView, ScrollPane, and others </li>

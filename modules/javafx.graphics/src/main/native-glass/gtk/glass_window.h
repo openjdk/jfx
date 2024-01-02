@@ -32,6 +32,8 @@
 #include <set>
 #include <vector>
 
+#include "DeletedMemDebug.h"
+
 #include "glass_view.h"
 
 enum WindowManager {
@@ -92,7 +94,7 @@ struct WindowGeometry {
 
 class WindowContextTop;
 
-class WindowContext {
+class WindowContext : public DeletedMemDebug<0xCC> {
 public:
     virtual bool isEnabled() = 0;
     virtual bool hasIME() = 0;
@@ -341,14 +343,18 @@ private:
 public:
     explicit EventsCounterHelper(WindowContext* context) {
         ctx = context;
-        ctx->increment_events_counter();
+        if (ctx != nullptr) {
+            ctx->increment_events_counter();
+        }
     }
     ~EventsCounterHelper() {
-        ctx->decrement_events_counter();
-        if (ctx->is_dead() && ctx->get_events_count() == 0) {
-            delete ctx;
+        if (ctx != nullptr) {
+            ctx->decrement_events_counter();
+            if (ctx->is_dead() && ctx->get_events_count() == 0) {
+                delete ctx;
+            }
+            ctx = NULL;
         }
-        ctx = NULL;
     }
 };
 

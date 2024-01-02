@@ -1,6 +1,9 @@
 /*
  * Copyright (C) 2007, 2008 Ryan Lortie
  * Copyright (C) 2010 Codethink Limited
+ * Copyright (C) 2020 William Manley
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -119,6 +122,8 @@
  *
  * @depth has no restrictions; the depth of a top-level serialized #GVariant is
  * zero, and it increases for each level of nested child.
+ *
+ * @checked_offsets_up_to is always ≥ @ordered_offsets_up_to
  */
 
 /* < private >
@@ -144,6 +149,9 @@ g_variant_serialised_check (GVariantSerialised serialised)
     return FALSE;
   else if (fixed_size == 0 &&
            !(serialised.size == 0 || serialised.data != NULL))
+    return FALSE;
+
+  if (serialised.ordered_offsets_up_to > serialised.checked_offsets_up_to)
     return FALSE;
 
   /* Depending on the native alignment requirements of the machine, the
@@ -264,6 +272,8 @@ gvs_fixed_sized_maybe_get_child (GVariantSerialised value,
   value.type_info = g_variant_type_info_element (value.type_info);
   g_variant_type_info_ref (value.type_info);
   value.depth++;
+  value.ordered_offsets_up_to = 0;
+  value.checked_offsets_up_to = 0;
 
   return value;
 }
@@ -295,7 +305,7 @@ gvs_fixed_sized_maybe_serialise (GVariantSerialised        value,
 {
   if (n_children)
     {
-      GVariantSerialised child = { NULL, value.data, value.size, value.depth + 1 };
+      GVariantSerialised child = { NULL, value.data, value.size, value.depth + 1, 0, 0 };
 
       gvs_filler (&child, children[0]);
     }
@@ -317,6 +327,8 @@ gvs_fixed_sized_maybe_is_normal (GVariantSerialised value)
       /* proper element size: "Just".  recurse to the child. */
       value.type_info = g_variant_type_info_element (value.type_info);
       value.depth++;
+      value.ordered_offsets_up_to = 0;
+      value.checked_offsets_up_to = 0;
 
       return g_variant_serialised_is_normal (value);
     }
@@ -358,6 +370,8 @@ gvs_variable_sized_maybe_get_child (GVariantSerialised value,
     value.data = NULL;
 
   value.depth++;
+  value.ordered_offsets_up_to = 0;
+  value.checked_offsets_up_to = 0;
 
   return value;
 }
@@ -388,7 +402,7 @@ gvs_variable_sized_maybe_serialise (GVariantSerialised        value,
 {
   if (n_children)
     {
-      GVariantSerialised child = { NULL, value.data, value.size - 1, value.depth + 1 };
+      GVariantSerialised child = { NULL, value.data, value.size - 1, value.depth + 1, 0, 0 };
 
       /* write the data for the child.  */
       gvs_filler (&child, children[0]);
@@ -408,6 +422,8 @@ gvs_variable_sized_maybe_is_normal (GVariantSerialised value)
   value.type_info = g_variant_type_info_element (value.type_info);
   value.size--;
   value.depth++;
+  value.ordered_offsets_up_to = 0;
+  value.checked_offsets_up_to = 0;
 
   return g_variant_serialised_is_normal (value);
 }
@@ -633,39 +649,105 @@ gvs_calculate_total_size (gsize body_size,
   return body_size + 8 * offsets;
 }
 
-static gsize
-gvs_variable_sized_array_n_children (GVariantSerialised value)
+struct Offsets
 {
+  gsize     data_size;
+
+  guchar   *array;
+  gsize     length;
+  guint     offset_size;
+
+  gboolean  is_normal;
+};
+
+static gsize
+gvs_offsets_get_offset_n (struct Offsets *offsets,
+                          gsize           n)
+{
+  return gvs_read_unaligned_le (
+      offsets->array + (offsets->offset_size * n), offsets->offset_size);
+}
+
+static struct Offsets
+gvs_variable_sized_array_get_frame_offsets (GVariantSerialised value)
+{
+  struct Offsets out = { 0, };
   gsize offsets_array_size;
-  gsize offset_size;
   gsize last_end;
 
   if (value.size == 0)
-    return 0;
+    {
+      out.is_normal = TRUE;
+      return out;
+    }
 
-  offset_size = gvs_get_offset_size (value.size);
-
-  last_end = gvs_read_unaligned_le (value.data + value.size -
-                                    offset_size, offset_size);
+  out.offset_size = gvs_get_offset_size (value.size);
+  last_end = gvs_read_unaligned_le (value.data + value.size - out.offset_size,
+                                    out.offset_size);
 
   if (last_end > value.size)
-    return 0;
+    return out;  /* offsets not normal */
 
   offsets_array_size = value.size - last_end;
 
-  if (offsets_array_size % offset_size)
-    return 0;
+  if (offsets_array_size % out.offset_size)
+    return out;  /* offsets not normal */
 
-  return offsets_array_size / offset_size;
+  out.data_size = last_end;
+  out.array = value.data + last_end;
+  out.length = offsets_array_size / out.offset_size;
+
+  if (out.length > 0 && gvs_calculate_total_size (last_end, out.length) != value.size)
+    return out;  /* offset size not minimal */
+
+  out.is_normal = TRUE;
+
+  return out;
 }
+
+static gsize
+gvs_variable_sized_array_n_children (GVariantSerialised value)
+{
+  return gvs_variable_sized_array_get_frame_offsets (value).length;
+}
+
+/* Find the index of the first out-of-order element in @data, assuming that
+ * @data is an array of elements of given @type, starting at index @start and
+ * containing a further @len-@start elements. */
+#define DEFINE_FIND_UNORDERED(type, le_to_native) \
+  static gsize \
+  find_unordered_##type (const guint8 *data, gsize start, gsize len) \
+  { \
+    gsize off; \
+    type current_le, previous_le, current, previous; \
+    \
+    memcpy (&previous_le, data + start * sizeof (current), sizeof (current)); \
+    previous = le_to_native (previous_le); \
+    for (off = (start + 1) * sizeof (current); off < len * sizeof (current); off += sizeof (current)) \
+      { \
+        memcpy (&current_le, data + off, sizeof (current)); \
+        current = le_to_native (current_le); \
+        if (current < previous) \
+          break; \
+        previous = current; \
+      } \
+    return off / sizeof (current) - 1; \
+  }
+
+#define NO_CONVERSION(x) (x)
+DEFINE_FIND_UNORDERED (guint8, NO_CONVERSION);
+DEFINE_FIND_UNORDERED (guint16, GUINT16_FROM_LE);
+DEFINE_FIND_UNORDERED (guint32, GUINT32_FROM_LE);
+DEFINE_FIND_UNORDERED (guint64, GUINT64_FROM_LE);
 
 static GVariantSerialised
 gvs_variable_sized_array_get_child (GVariantSerialised value,
                                     gsize              index_)
 {
   GVariantSerialised child = { 0, };
-  gsize offset_size;
-  gsize last_end;
+
+  struct Offsets offsets = gvs_variable_sized_array_get_frame_offsets (value);
+
   gsize start;
   gsize end;
 
@@ -673,18 +755,61 @@ gvs_variable_sized_array_get_child (GVariantSerialised value,
   g_variant_type_info_ref (child.type_info);
   child.depth = value.depth + 1;
 
-  offset_size = gvs_get_offset_size (value.size);
+  /* If the requested @index_ is beyond the set of indices whose framing offsets
+   * have been checked, check the remaining offsets to see whether they’re
+   * normal (in order, no overlapping array elements).
+   *
+   * Don’t bother checking if the highest known-good offset is lower than the
+   * highest checked offset, as that means there’s an invalid element at that
+   * index, so there’s no need to check further. */
+  if (index_ > value.checked_offsets_up_to &&
+      value.ordered_offsets_up_to == value.checked_offsets_up_to)
+    {
+      switch (offsets.offset_size)
+        {
+        case 1:
+          {
+            value.ordered_offsets_up_to = find_unordered_guint8 (
+                offsets.array, value.checked_offsets_up_to, index_ + 1);
+            break;
+          }
+        case 2:
+          {
+            value.ordered_offsets_up_to = find_unordered_guint16 (
+                offsets.array, value.checked_offsets_up_to, index_ + 1);
+            break;
+          }
+        case 4:
+          {
+            value.ordered_offsets_up_to = find_unordered_guint32 (
+                offsets.array, value.checked_offsets_up_to, index_ + 1);
+            break;
+          }
+        case 8:
+          {
+            value.ordered_offsets_up_to = find_unordered_guint64 (
+                offsets.array, value.checked_offsets_up_to, index_ + 1);
+            break;
+          }
+        default:
+          /* gvs_get_offset_size() only returns maximum 8 */
+          g_assert_not_reached ();
+        }
 
-  last_end = gvs_read_unaligned_le (value.data + value.size -
-                                    offset_size, offset_size);
+      value.checked_offsets_up_to = index_;
+    }
+
+  if (index_ > value.ordered_offsets_up_to)
+    {
+      /* Offsets are invalid somewhere, so return an empty child. */
+      return child;
+    }
 
   if (index_ > 0)
     {
       guint alignment;
 
-      start = gvs_read_unaligned_le (value.data + last_end +
-                                     (offset_size * (index_ - 1)),
-                                     offset_size);
+      start = gvs_offsets_get_offset_n (&offsets, index_ - 1);
 
       g_variant_type_info_query (child.type_info, &alignment, NULL);
       start += (-start) & alignment;
@@ -692,11 +817,9 @@ gvs_variable_sized_array_get_child (GVariantSerialised value,
   else
     start = 0;
 
-  end = gvs_read_unaligned_le (value.data + last_end +
-                               (offset_size * index_),
-                               offset_size);
+  end = gvs_offsets_get_offset_n (&offsets, index_);
 
-  if (start < end && end <= value.size && end <= last_end)
+  if (start < end && end <= value.size && end <= offsets.data_size)
     {
       child.data = value.data + start;
       child.size = end - start;
@@ -768,34 +891,16 @@ static gboolean
 gvs_variable_sized_array_is_normal (GVariantSerialised value)
 {
   GVariantSerialised child = { 0, };
-  gsize offsets_array_size;
-  guchar *offsets_array;
-  guint offset_size;
   guint alignment;
-  gsize last_end;
-  gsize length;
   gsize offset;
   gsize i;
 
-  if (value.size == 0)
-    return TRUE;
+  struct Offsets offsets = gvs_variable_sized_array_get_frame_offsets (value);
 
-  offset_size = gvs_get_offset_size (value.size);
-  last_end = gvs_read_unaligned_le (value.data + value.size -
-                                    offset_size, offset_size);
-
-  if (last_end > value.size)
+  if (!offsets.is_normal)
     return FALSE;
 
-  offsets_array_size = value.size - last_end;
-
-  if (offsets_array_size % offset_size)
-    return FALSE;
-
-  offsets_array = value.data + value.size - offsets_array_size;
-  length = offsets_array_size / offset_size;
-
-  if (length == 0)
+  if (value.size != 0 && offsets.length == 0)
     return FALSE;
 
   child.type_info = g_variant_type_info_element (value.type_info);
@@ -803,14 +908,14 @@ gvs_variable_sized_array_is_normal (GVariantSerialised value)
   child.depth = value.depth + 1;
   offset = 0;
 
-  for (i = 0; i < length; i++)
+  for (i = 0; i < offsets.length; i++)
     {
       gsize this_end;
 
-      this_end = gvs_read_unaligned_le (offsets_array + offset_size * i,
-                                        offset_size);
+      this_end = gvs_read_unaligned_le (offsets.array + offsets.offset_size * i,
+                                        offsets.offset_size);
 
-      if (this_end < offset || this_end > last_end)
+      if (this_end < offset || this_end > offsets.data_size)
         return FALSE;
 
       while (offset & alignment)
@@ -832,7 +937,11 @@ gvs_variable_sized_array_is_normal (GVariantSerialised value)
       offset = this_end;
     }
 
-  g_assert (offset == last_end);
+  g_assert (offset == offsets.data_size);
+
+  /* All offsets have now been checked. */
+  value.ordered_offsets_up_to = G_MAXSIZE;
+  value.checked_offsets_up_to = G_MAXSIZE;
 
   return TRUE;
 }
@@ -859,6 +968,61 @@ gvs_variable_sized_array_is_normal (GVariantSerialised value)
  * for the tuple.  See the notes in gvarianttypeinfo.h.
  */
 
+/* Note: This doesn’t guarantee that @out_member_end >= @out_member_start; that
+ * condition may not hold true for invalid serialised variants. The caller is
+ * responsible for checking the returned values and handling invalid ones
+ * appropriately. */
+static void
+gvs_tuple_get_member_bounds (GVariantSerialised  value,
+                             gsize               index_,
+                             gsize               offset_size,
+                             gsize              *out_member_start,
+                             gsize              *out_member_end)
+{
+  const GVariantMemberInfo *member_info;
+  gsize member_start, member_end;
+
+  member_info = g_variant_type_info_member_info (value.type_info, index_);
+
+  if (member_info->i + 1 &&
+      offset_size * (member_info->i + 1) <= value.size)
+    member_start = gvs_read_unaligned_le (value.data + value.size -
+                                          offset_size * (member_info->i + 1),
+                                          offset_size);
+  else
+    member_start = 0;
+
+  member_start += member_info->a;
+  member_start &= member_info->b;
+  member_start |= member_info->c;
+
+  if (member_info->ending_type == G_VARIANT_MEMBER_ENDING_LAST &&
+      offset_size * (member_info->i + 1) <= value.size)
+    member_end = value.size - offset_size * (member_info->i + 1);
+
+  else if (member_info->ending_type == G_VARIANT_MEMBER_ENDING_FIXED)
+    {
+      gsize fixed_size;
+
+      g_variant_type_info_query (member_info->type_info, NULL, &fixed_size);
+      member_end = member_start + fixed_size;
+    }
+
+  else if (member_info->ending_type == G_VARIANT_MEMBER_ENDING_OFFSET &&
+           offset_size * (member_info->i + 2) <= value.size)
+    member_end = gvs_read_unaligned_le (value.data + value.size -
+                                        offset_size * (member_info->i + 2),
+                                        offset_size);
+
+  else  /* invalid */
+    member_end = G_MAXSIZE;
+
+  if (out_member_start != NULL)
+    *out_member_start = member_start;
+  if (out_member_end != NULL)
+    *out_member_end = member_end;
+}
+
 static gsize
 gvs_tuple_n_children (GVariantSerialised value)
 {
@@ -879,20 +1043,62 @@ gvs_tuple_get_child (GVariantSerialised value,
   child.depth = value.depth + 1;
   offset_size = gvs_get_offset_size (value.size);
 
+  /* Ensure the size is set for fixed-sized children, or
+   * g_variant_serialised_check() will fail, even if we return
+   * (child.data == NULL) to indicate an error. */
+  if (member_info->ending_type == G_VARIANT_MEMBER_ENDING_FIXED)
+    g_variant_type_info_query (child.type_info, NULL, &child.size);
+
   /* tuples are the only (potentially) fixed-sized containers, so the
    * only ones that have to deal with the possibility of having %NULL
    * data with a non-zero %size if errors occurred elsewhere.
    */
   if G_UNLIKELY (value.data == NULL && value.size != 0)
     {
-      g_variant_type_info_query (child.type_info, NULL, &child.size);
-
       /* this can only happen in fixed-sized tuples,
        * so the child must also be fixed sized.
        */
       g_assert (child.size != 0);
       child.data = NULL;
 
+      return child;
+    }
+
+  /* If the requested @index_ is beyond the set of indices whose framing offsets
+   * have been checked, check the remaining offsets to see whether they’re
+   * normal (in order, no overlapping tuple elements).
+   *
+   * Unlike the checks in gvs_variable_sized_array_get_child(), we have to check
+   * all the tuple *elements* here, not just all the framing offsets, since
+   * tuples contain a mix of elements which use framing offsets and ones which
+   * don’t. None of them are allowed to overlap. */
+  if (index_ > value.checked_offsets_up_to &&
+      value.ordered_offsets_up_to == value.checked_offsets_up_to)
+    {
+      gsize i, prev_i_end = 0;
+
+      if (value.checked_offsets_up_to > 0)
+        gvs_tuple_get_member_bounds (value, value.checked_offsets_up_to - 1, offset_size, NULL, &prev_i_end);
+
+      for (i = value.checked_offsets_up_to; i <= index_; i++)
+        {
+          gsize i_start, i_end;
+
+          gvs_tuple_get_member_bounds (value, i, offset_size, &i_start, &i_end);
+
+          if (i_start > i_end || i_start < prev_i_end || i_end > value.size)
+            break;
+
+          prev_i_end = i_end;
+        }
+
+      value.ordered_offsets_up_to = i - 1;
+      value.checked_offsets_up_to = index_;
+    }
+
+  if (index_ > value.ordered_offsets_up_to)
+    {
+      /* Offsets are invalid somewhere, so return an empty child. */
       return child;
     }
 
@@ -904,55 +1110,12 @@ gvs_tuple_get_child (GVariantSerialised value,
   else
     {
       if (offset_size * (member_info->i + 1) > value.size)
-        {
-          /* if the child is fixed size, return its size.
-           * if child is not fixed-sized, return size = 0.
-           */
-          g_variant_type_info_query (child.type_info, NULL, &child.size);
-
-          return child;
-        }
+        return child;
     }
-
-  if (member_info->i + 1)
-    start = gvs_read_unaligned_le (value.data + value.size -
-                                   offset_size * (member_info->i + 1),
-                                   offset_size);
-  else
-    start = 0;
-
-  start += member_info->a;
-  start &= member_info->b;
-  start |= member_info->c;
-
-  if (member_info->ending_type == G_VARIANT_MEMBER_ENDING_LAST)
-    end = value.size - offset_size * (member_info->i + 1);
-
-  else if (member_info->ending_type == G_VARIANT_MEMBER_ENDING_FIXED)
-    {
-      gsize fixed_size;
-
-      g_variant_type_info_query (child.type_info, NULL, &fixed_size);
-      end = start + fixed_size;
-      child.size = fixed_size;
-    }
-
-  else /* G_VARIANT_MEMBER_ENDING_OFFSET */
-    end = gvs_read_unaligned_le (value.data + value.size -
-                                 offset_size * (member_info->i + 2),
-                                 offset_size);
 
   /* The child should not extend into the offset table. */
-  if (index_ != g_variant_type_info_n_members (value.type_info) - 1)
-    {
-      GVariantSerialised last_child;
-      last_child = gvs_tuple_get_child (value,
-                                        g_variant_type_info_n_members (value.type_info) - 1);
-      last_end = last_child.data + last_child.size - value.data;
-      g_variant_type_info_unref (last_child.type_info);
-    }
-  else
-    last_end = end;
+  gvs_tuple_get_member_bounds (value, index_, offset_size, &start, &end);
+  gvs_tuple_get_member_bounds (value, g_variant_type_info_n_members (value.type_info) - 1, offset_size, NULL, &last_end);
 
   if (start < end && end <= value.size && end <= last_end)
     {
@@ -980,6 +1143,10 @@ gvs_tuple_needed_size (GVariantTypeInfo         *type_info,
     return fixed_size;
 
   offset = 0;
+
+  /* We must go through at least one iteration below. If the tuple had no
+   * children, it would have a fixed size. */
+  g_assert (n_children > 0);
 
   for (i = 0; i < n_children; i++)
     {
@@ -1053,6 +1220,7 @@ gvs_tuple_is_normal (GVariantSerialised value)
   gsize length;
   gsize offset;
   gsize i;
+  gsize offset_table_size;
 
   /* as per the comment in gvs_tuple_get_child() */
   if G_UNLIKELY (value.data == NULL && value.size != 0)
@@ -1066,7 +1234,7 @@ gvs_tuple_is_normal (GVariantSerialised value)
   for (i = 0; i < length; i++)
     {
       const GVariantMemberInfo *member_info;
-      GVariantSerialised child;
+      GVariantSerialised child = { 0, };
       gsize fixed_size;
       guint alignment;
       gsize end;
@@ -1126,6 +1294,10 @@ gvs_tuple_is_normal (GVariantSerialised value)
       offset = end;
     }
 
+  /* All element bounds have been checked above. */
+  value.ordered_offsets_up_to = G_MAXSIZE;
+  value.checked_offsets_up_to = G_MAXSIZE;
+
   {
     gsize fixed_size;
     guint alignment;
@@ -1153,7 +1325,19 @@ gvs_tuple_is_normal (GVariantSerialised value)
       }
   }
 
-  return offset_ptr == offset;
+  /* @offset_ptr has been counting backwards from the end of the variant, to
+   * find the beginning of the offset table. @offset has been counting forwards
+   * from the beginning of the variant to find the end of the data. They should
+   * have met in the middle. */
+  if (offset_ptr != offset)
+    return FALSE;
+
+  offset_table_size = value.size - offset_ptr;
+  if (value.size > 0 &&
+      gvs_calculate_total_size (offset, offset_table_size / offset_size) != value.size)
+    return FALSE;  /* offset size not minimal */
+
+  return TRUE;
 }
 
 /* Variants {{{2
@@ -1464,7 +1648,7 @@ g_variant_serialiser_serialise (GVariantSerialised        serialised,
  *
  * Determines how much memory would be needed to serialize this value.
  *
- * This function is only resonsible for performing calculations for the
+ * This function is only responsible for performing calculations for the
  * top-level container.  @gvs_filler is called on each child of the
  * container in order to determine its size.
  */
@@ -1721,8 +1905,8 @@ g_variant_serialiser_is_object_path (gconstpointer data,
  *
  * Also, ensures that @data is a valid D-Bus type signature, as per the
  * D-Bus specification. Note that this means the empty string is valid, as the
- * D-Bus specification defines a signature as zero or more single complete
- * types.
+ * D-Bus specification defines a signature as "zero or more single complete
+ * types".
  */
 gboolean
 g_variant_serialiser_is_signature (gconstpointer data,

@@ -89,8 +89,12 @@ public class CurrencyStringConverter extends NumberStringConverter {
         super(null, null, numberFormat);
     }
 
-    /** {@inheritDoc} */
-    @Override protected NumberFormat getNumberFormat() {
+    /**
+    * @deprecated This method was exposed erroneously and will be removed in a future version.
+    */
+    @Deprecated(forRemoval = true, since = "22")
+    @Override
+    protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;
 
         if (numberFormat != null) {

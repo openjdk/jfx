@@ -1,6 +1,6 @@
 Summary: Library providing the GNOME XSLT engine
 Name: libxslt
-Version: 1.1.35
+Version: 1.1.39
 Release: 1%{?dist}%{?extra_release}
 License: MIT
 Group: Development/Libraries
@@ -59,7 +59,6 @@ with XPath functions written in Python.
 %build
 %configure
 make
-gzip -9 ChangeLog
 
 %install
 rm -fr %{buildroot}
@@ -70,7 +69,7 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
 rm -rf $RPM_BUILD_ROOT%{_datadir}/doc/%{name}{,-python}-%{version}
 
 %check
-make tests
+make check
 
 %clean
 rm -fr %{buildroot}
@@ -84,7 +83,7 @@ rm -fr %{buildroot}
 %files
 %defattr(-, root, root)
 
-%doc AUTHORS ChangeLog.gz NEWS README Copyright TODO FEATURES
+%doc AUTHORS NEWS README Copyright TODO FEATURES
 %doc doc/*.html doc/html doc/tutorial doc/tutorial2 doc/*.gif
 %doc doc/EXSLT
 %doc %{_mandir}/man1/xsltproc.1*
@@ -95,11 +94,9 @@ rm -fr %{buildroot}
 %files devel
 %defattr(-, root, root)
 
-%doc AUTHORS ChangeLog.gz NEWS README Copyright TODO FEATURES
+%doc AUTHORS NEWS README Copyright TODO FEATURES
 %doc doc/libxslt-api.xml
-%doc doc/libxslt-refs.xml
 %doc doc/EXSLT/libexslt-api.xml
-%doc doc/EXSLT/libexslt-refs.xml
 %doc %{_mandir}/man3/libxslt.3*
 %doc %{_mandir}/man3/libexslt.3*
 %doc doc/*.html doc/html doc/*.gif doc/*.png
@@ -119,7 +116,7 @@ rm -fr %{buildroot}
 %files python
 %defattr(-, root, root)
 
-%doc AUTHORS ChangeLog.gz NEWS README Copyright FEATURES
+%doc AUTHORS NEWS README Copyright FEATURES
 %{_libdir}/python*/site-packages/libxslt.py*
 %{_libdir}/python*/site-packages/libxsltmod*
 %doc python/libxsltclass.txt
@@ -128,5 +125,5 @@ rm -fr %{buildroot}
 %doc python/tests/*.xsl
 
 %changelog
-* Fri May 13 2022 Daniel Veillard <veillard@redhat.com>
-- upstream release 1.1.35
+* Wed Nov 29 2023 Daniel Veillard <veillard@redhat.com>
+- upstream release 1.1.39
