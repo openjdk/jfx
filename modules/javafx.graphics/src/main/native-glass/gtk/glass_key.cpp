@@ -34,8 +34,16 @@
 #include <map>
 
 static gboolean key_initialized = FALSE;
+// This maps from keyvalues to Java KeyCodes.
 static GHashTable *keymap;
-static std::map<guint32, jint> charToKeyCode;
+// There may be more than one mapping from a keyvalue
+// to a Java KeyCode in the keymap. That will confuse a
+// Robot so we build this small map for the dupes that
+// only maps to the desired keyval.
+static std::map<jint, guint32> robotJavaCodeToKeyvalMap;
+// As the user types we build a map from character to
+// Java KeyCode for getKeyCodeForChar.
+static std::map<guint32, jint> charToJavaKeyCode;
 
 static void glass_g_hash_table_insert_int(GHashTable *table, gint key, gint value)
 {
@@ -227,10 +235,15 @@ static void initialize_key()
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F10), com_sun_glass_events_KeyEvent_VK_F10);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F11), com_sun_glass_events_KeyEvent_VK_F11);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F12), com_sun_glass_events_KeyEvent_VK_F12);
+
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(ISO_Level3_Shift), com_sun_glass_events_KeyEvent_VK_ALT_GRAPH);
+
+    robotJavaCodeToKeyvalMap[com_sun_glass_events_KeyEvent_VK_ENTER] = GLASS_GDK_KEY_CONSTANT(Return);
+    robotJavaCodeToKeyvalMap[com_sun_glass_events_KeyEvent_VK_ALT_GRAPH] = GLASS_GDK_KEY_CONSTANT(ISO_Level3_Shift);
 }
 
 static void keys_changed_signal(GdkKeymap* k, gpointer data) {
-    charToKeyCode.clear();
+    charToJavaKeyCode.clear();
 }
 
 static void init_keymap() {
@@ -249,15 +262,24 @@ static void init_keymap() {
     }
 }
 
-static void record_character(GdkKeymap *keymap, GdkEventKey *e, guint state, jint key)
+jint gdk_keyval_to_glass(guint keyval)
+{
+    init_keymap();
+    return GPOINTER_TO_INT(g_hash_table_lookup(keymap, GINT_TO_POINTER(keyval)));
+}
+
+// For a given keypress event we update the char => KeyCode map multiple times,
+// one for each shift level passed in as the state.
+static void record_character(GdkKeymap *keymap, GdkEventKey *e, guint state, jint javaKeyCode)
 {
     guint keyValue;
+
     if (gdk_keymap_translate_keyboard_state(keymap, e->hardware_keycode,
                                             static_cast<GdkModifierType>(state), e->group,
                                             &keyValue, NULL, NULL, NULL)) {
         guint32 ucs = gdk_keyval_to_unicode(keyValue);
         if (ucs) {
-            charToKeyCode[ucs] = key;
+            charToJavaKeyCode[ucs] = javaKeyCode;
         }
     };
 }
@@ -307,11 +329,9 @@ jint get_glass_key(GdkEventKey* e) {
 gint find_gdk_keyval_for_glass_keycode(jint code) {
     gint result = -1;
 
-    // ENTER is assigned to both Enter on the keypad and
-    // Return on the main keyboard. Make sure we always
-    // target the main keyboard.
-    if (code == com_sun_glass_events_KeyEvent_VK_ENTER) {
-        return GDK_KEY_Return;
+    auto i = robotJavaCodeToKeyvalMap.find(code);
+    if (i != robotJavaCodeToKeyvalMap.end()) {
+        return i->second;
     }
 
     GHashTableIter iter;
@@ -396,7 +416,7 @@ gint find_gdk_keycode_for_keyval(gint keyval)
     // Retrieve all the keymap entries that can generate this keyval. This
     // included entries on all groups (layouts) and shift levels. We need to
     // find an entry that maps to the target keyval in the current group at an
-    // unshifted level to match get_glass_key.
+    // unshifted level to match the way get_glass_key works.
     if (!gdk_keymap_get_entries_for_keyval(keymap, keyval, &keys, &n_keys)) {
         return -1;
     }
@@ -404,12 +424,13 @@ gint find_gdk_keycode_for_keyval(gint keyval)
     gint result = search_keys(keymap, keys, n_keys, keyval, group, requires_num_lock);
 
     if (result < 0 && group != 0) {
-        // Accelerators involving the characters A-Z must work even on non-Latin
-        // layouts. If get_glass_key can't map to a Java key code on the current
-        // layout it switches to layout 0 seeking a Latin mapping. This is wrong
-        // in two ways: layout 0 might not be Latin and even if it is Latin it
-        // should only be used for finding KeyCodes A-Z. We continue the
-        // tradition of using group 0 but only for A-Z.
+        // Accelerators involving the characters A-Z must work even on
+        // non-Latin layouts. If get_glass_key can't map to a Java key code
+        // on the current layout it switches to layout 0 seeking a Latin
+        // mapping. This is wrong in two ways: layout 0 might not be Latin
+        // and even if it is Latin it should only be used for finding
+        // KeyCodes A-Z. We continue the tradition of using group 0 but only
+        // for A-Z.
         if (keyval >= GDK_KEY_a && keyval <= GDK_KEY_z) {
             result = search_keys(keymap, keys, n_keys, keyval, 0, requires_num_lock);
         }
@@ -469,13 +490,25 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     }
 
-    auto i = charToKeyCode.find(*ucs_char);
-    g_free(ucs_char);
-    if (i != charToKeyCode.end()) {
+    auto i = charToJavaKeyCode.find(*ucs_char);
+    if (i != charToJavaKeyCode.end()) {
+        g_free(ucs_char);
         return i->second;
     }
 
-    return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    // If we don't find the character in the map fall back to the old logic
+    // for compatibility. It is incorrect because it ignores the keyboard
+    // layout but it can handle characters like tab and space.
+    guint keyval = gdk_unicode_to_keyval(*ucs_char);
+
+    if (keyval == (*ucs_char | 0x01000000)) {
+        g_free(ucs_char);
+        return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    }
+
+    g_free(ucs_char);
+
+    return gdk_keyval_to_glass(keyval);
 }
 
 /*

@@ -75,8 +75,9 @@ static void keyButton(jint code, gboolean press)
         return;
     }
     int keycode = find_gdk_keycode_for_keyval(gdk_keyval);
-    if (keycode == -1)
+    if (keycode == -1) {
         return;
+    }
     XTestFakeKeyEvent(xdisplay,
                       keycode,
                       press ? True : False,

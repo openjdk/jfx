@@ -263,6 +263,7 @@ public class KeyboardTest extends Application {
                 add(KeyCode.DELETE,     "\u007F");
                 add(KeyCode.ESCAPE,     "\u001B");
                 add(KeyCode.INSERT);
+                add(KeyCode.ALT_GRAPH);
 
                 // Sent twice to toggle off and back on
                 add(KeyCode.NUM_LOCK);
