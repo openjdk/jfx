@@ -48,6 +48,7 @@ import javafx.collections.ObservableList;
 
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
@@ -669,12 +670,19 @@ class GlassViewEventHandler extends View.EventHandler {
     @Override
     public double[] getInputMethodCandidatePos(int offset) {
         Point2D p2d = scene.inputMethodRequests.getTextLocation(offset);
-        final Screen s = Screen.getMainScreen();
-        float pScaleX = (s == null) ? 1.0f : s.getPlatformScaleX();
-        float pScaleY = (s == null) ? 1.0f : s.getPlatformScaleY();
         double[] ret = new double[2];
-        ret[0] = p2d.getX() * pScaleX;
-        ret[1] = p2d.getY() * pScaleY;
+        ret[0] = p2d.getX();
+        ret[1] = p2d.getY();
+
+        for (Screen scr : Screen.getScreens()) {
+            Rectangle2D bounds = new Rectangle2D(scr.getX(), scr.getY(), scr.getWidth(), scr.getHeight());
+            if (bounds.contains(p2d)) {
+                ret[0] = scr.toPlatformX((float) p2d.getX());
+                ret[1] = scr.toPlatformY((float) p2d.getY());
+                break;
+            }
+        }
+
         return ret;
     }
 
