@@ -27,6 +27,7 @@ package javafx.css;
 /**
  * A class that contains {@code StyleClass} information.
  * @since 9
+ * @deprecated for removal
  */
 public final class StyleClass {
 

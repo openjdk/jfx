@@ -1768,22 +1768,19 @@ final public class StyleManager {
 
             key.className = cname;
             key.id = id;
+            key.styleClasses = FixedCapacitySet.of(styleClasses.size());
             for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
 
                 final String styleClass = styleClasses.get(n);
                 if (styleClass == null || styleClass.isEmpty()) continue;
 
-                key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
+                key.styleClasses.add(styleClass);
             }
 
             Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets,regionUserAgentStylesheet);
             Cache cache = cacheMap.get(key);
 
-            if (cache != null) {
-                // key will be reused, so clear the styleClasses for next use
-                key.styleClasses.clear();
-
-            } else {
+            if (cache == null) {
 
                 // If the cache is null, then we need to create a new Cache and
                 // add it to the cache map
@@ -2307,11 +2304,7 @@ final public class StyleManager {
         // necessary.
         String className;
         String id;
-        final StyleClassSet styleClasses;
-
-        private Key() {
-            styleClasses = new StyleClassSet();
-        }
+        Set<String> styleClasses;
 
         @Override
         public boolean equals(Object o) {

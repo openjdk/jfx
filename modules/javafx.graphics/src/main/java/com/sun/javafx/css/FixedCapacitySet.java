@@ -1,0 +1,562 @@
+package com.sun.javafx.css;
+
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+
+/**
+ * Provides set implementations which have a fixed capacity. These are highly optimized
+ * and only suitable for very specific use cases where the maximum size is known in advance
+ * and when items are expected to never be removed from the sets. Fixed capacity sets will
+ * throw {@link IllegalStateException} if adding an element would exceed the maximum capacity.
+ *
+ * <p>These sets do not allow {@code null} elements, and unless otherwise specified, passing
+ * {@code null} for any argument will result in a {@link NullPointerException}.
+ *
+ * <p>Specifically, these sets are optimized for holding sets of style class names, which
+ * have the following characteristics:
+ *
+ * <ul>
+ * <li>Never {@code null}</li>
+ * <li>Sets in almost all cases contain just 1 or 2 elements, only rarely containing 3 or more</li>
+ * <li>Sets are often compared using containsAll; to avoid creating an iterator when the input is not
+ *   a {@code FixedSizeSet}, the inverse function {@link #isSuperSetOf(Collection)} is provided</li>
+ * </ul>
+ *
+ * The provided implementations are optimized for memory use, fast containsAll and
+ * fast iteration. Generally, these sets will use half the memory of an equivalent
+ * {@code HashSet} (and comparable to the immutable sets provided by {@code Set.of()})
+ * as they do not require a wrapper to hold each element.
+ *
+ * <p>These sets can only be appended, reject {@code null}s, have a fixed maximum size (which will throw
+ * an exception if exceeded), and can be frozen (made read-only without using a wrapper).
+ *
+ * <p>The fall back set implementation for large sets uses open addressing. It is
+ * only lightly optimized as the expectation is that it will see little to no use.
+ * It is still preferred over {@code HashSet} due to its low memory foot print, and
+ * faster iteration.
+ *
+ * @param <T> the element type
+ */
+public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
+    private static final FixedCapacitySet<?> EMPTY;
+
+    static {
+        EMPTY = new Single<>();
+
+        EMPTY.freeze();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> FixedCapacitySet<T> empty() {
+        return (FixedCapacitySet<T>) EMPTY;
+    }
+
+    /**
+     * Checks if the given collection contains all elements
+     * of this collection. This is the same as {@link #containsAll(Collection)}
+     * with the source and target reversed, ie. {@code "a.containsAll(b)"} is equivalent
+     * to {@code "b.isSuperSetOf(a)"}.
+     *
+     * <p>If the given collection is small, or has good {@link #contains(Object)}
+     * performance, using this inverse function avoids creating an {@link Iterator}
+     * for this collection.
+     *
+     * @param c a collection to check, cannot be {@code null}
+     * @return {@code true} if the given collection contains all elements of this
+     *   collection, otherwise {@code false}
+     */
+    public abstract boolean isSuperSetOf(Collection<?> c);
+
+    /**
+     * Freezes this collection, turning it permanently read-only. After freezing,
+     * any method that would modify the collection will instead throw
+     * {@link UnsupportedOperationException}.
+     *
+     * <p>This can be used to avoid wrapping the collection with an unmodifiable
+     * collection or making a read-only copy.
+     */
+    public abstract void freeze();
+
+    /**
+     * Creates a new {@link FixedCapacitySet} with the given maximum capacity.
+     * If the capacity is exceeded, fixed capacity sets do not grow, but instead
+     * throw an {@link IllegalStateException}.
+     *
+     * @param <T> the element type
+     * @param maximumCapacity the maximum possible number of elements the set can hold, cannot be negative
+     * @return a new empty set, never {@code null}
+     */
+    public static <T> FixedCapacitySet<T> of(int maximumCapacity) {
+        return maximumCapacity == 0 ? empty()
+             : maximumCapacity == 1 ? new Single<>()
+             : maximumCapacity == 2 ? new Duo<>()
+             : maximumCapacity < 10 ? new Hashless<>(maximumCapacity)  // will reject negative values
+                                    : new OpenAddressed<>(maximumCapacity);
+    }
+
+    /**
+     * A set that can hold 0 or 1 elements.
+     *
+     * @param <T> the element type
+     */
+    private static final class Single<T> extends FixedCapacitySet<T> {
+        private T element;
+        private boolean frozen;
+
+        @Override
+        public void freeze() {
+            frozen = true;
+        }
+
+        @Override
+        public int size() {
+            return element == null ? 0 : 1;
+        }
+
+        @Override
+        public Iterator<T> iterator() {
+            return new Iterator<>() {
+                private boolean hasNext = element != null;
+
+                @Override
+                public boolean hasNext() {
+                    return hasNext;
+                }
+
+                @Override
+                public T next() {
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+
+                    hasNext = false;
+
+                    return element;
+                }
+            };
+        }
+
+        @Override
+        public boolean isSuperSetOf(Collection<?> c) {
+            return element == null || c.contains(element);
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return element != null && element.equals(o);
+        }
+
+        @Override
+        public boolean add(T e) {
+            if (frozen) {
+                throw new UnsupportedOperationException();
+            }
+
+            if (contains(Objects.requireNonNull(e, "e"))) {
+                return false;
+            }
+
+            if (element != null) {
+                throw new IllegalStateException("set is full");
+            }
+
+            element = e;
+
+            return true;
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends T> c) {
+            boolean modified = false;
+
+            for (T element : c) {
+                modified |= add(element);
+            }
+
+            return modified;
+        }
+
+        @Override
+        public int hashCode() {
+            return element == null ? 0 : element.hashCode();
+        }
+    }
+
+    /**
+     * A set that can hold 0, 1 or 2 elements.
+     *
+     * @param <T> the element type
+     */
+    private static final class Duo<T> extends FixedCapacitySet<T> {
+        private T element1;
+        private T element2;
+        private int size;
+        private boolean frozen;
+
+        @Override
+        public void freeze() {
+            frozen = true;
+        }
+
+        @Override
+        public int size() {
+            return size;
+        }
+
+        @Override
+        public Iterator<T> iterator() {
+            return new Iterator<>() {
+                private int index;
+
+                @Override
+                public boolean hasNext() {
+                    return index < size;
+                }
+
+                @Override
+                public T next() {
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+
+                    return index++ == 0 ? element1 : element2;
+                }
+            };
+        }
+
+        @Override
+        public boolean isSuperSetOf(Collection<?> c) {
+            return element1 == null || (c.contains(element1) && (element2 == null || c.contains(element2)));
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return (element1 != null && element1.equals(o)) || (element2 != null && element2.equals(o));
+        }
+
+        @Override
+        public boolean add(T e) {
+            if (frozen) {
+                throw new UnsupportedOperationException();
+            }
+
+            if (contains(Objects.requireNonNull(e, "e"))) {
+                return false;
+            }
+
+            if (size == 2) {
+                throw new IllegalStateException("set is full");
+            }
+
+            if (size == 0) {
+                element1 = e;
+            }
+            else {
+                element2 = e;
+            }
+
+            size++;
+
+            return true;
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends T> c) {
+            boolean modified = false;
+
+            for (T element : c) {
+                modified |= add(element);
+            }
+
+            return modified;
+        }
+
+        @Override
+        public int hashCode() {
+            return element1 == null ? 0 : element1.hashCode() + (element2 == null ? 0 : element2.hashCode());
+        }
+    }
+
+    /**
+     * A set which can hold a fixed maximum number of elements. This implementation
+     * does not use hashing, but does eliminate duplicates (as per the set contract).
+     * Performance is better than sets which use hashing when the number of elements
+     * is small enough (cut off point is somewhere around 10 elements, but it will
+     * depend on the cost of the hash function).
+     *
+     * @param <T> the element type
+     */
+    private static final class Hashless<T> extends FixedCapacitySet<T> {
+        private final T[] elements;
+
+        private int size;
+        private boolean frozen;
+
+        @SuppressWarnings("unchecked")
+        private Hashless(int capacity) {
+            this.elements = (T[]) new Object[capacity];
+        }
+
+        @Override
+        public void freeze() {
+            frozen = true;
+        }
+
+        @Override
+        public int size() {
+            return size;
+        }
+
+        @Override
+        public Iterator<T> iterator() {
+            return new Iterator<>() {
+                private int index;
+
+                @Override
+                public boolean hasNext() {
+                    return index < size;
+                }
+
+                @Override
+                public T next() {
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+
+                    return elements[index++];
+                }
+            };
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            for (int i = 0; i < size; i++) {
+                if (elements[i].equals(o)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        @Override
+        public boolean isSuperSetOf(Collection<?> c) {
+            for (int i = 0; i < size; i++) {
+                if (!c.contains(elements[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        @Override
+        public boolean add(T e) {
+            if (frozen) {
+                throw new UnsupportedOperationException();
+            }
+
+            if (contains(Objects.requireNonNull(e, "e"))) {
+                return false; // already present, set unchanged
+            }
+
+            if (size == elements.length) {
+                throw new IllegalStateException("set is full");
+            }
+
+            elements[size++] = e;
+
+            return true; // not present, set changed
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends T> c) {
+            boolean modified = false;
+
+            for (T element : c) {
+                modified |= add(element);
+            }
+
+            return modified;
+        }
+
+        @Override
+        public int hashCode() {
+            int h = 0;
+
+            for (int i = 0; i < size; i++) {
+                h += elements[i].hashCode();
+            }
+
+            return h;
+        }
+    }
+
+    /**
+     * A set which can hold a fixed maximum number of elements. This implementation
+     * uses open addressing to handle hash collisions using linear probing. It has a
+     * memory footprint which is much smaller than an equivalent {@code HashSet} but
+     * has worse worst case performance (for modification and contains) when there
+     * are many collisions. Iteration speed will be similar to other array based
+     * collections (which is to say, faster than {@code HashSet}).
+     *
+     * @param <T> the element type
+     */
+    private static final class OpenAddressed<T> extends FixedCapacitySet<T> {
+        private final T[] elements;
+
+        private int size;
+        private boolean frozen;
+
+        @SuppressWarnings("unchecked")
+        private OpenAddressed(int capacity) {
+            this.elements = (T[]) new Object[capacity];
+        }
+
+        @Override
+        public void freeze() {
+            frozen = true;
+        }
+
+        @Override
+        public int size() {
+            return size;
+        }
+
+        @Override
+        public Iterator<T> iterator() {
+            return new Iterator<>() {
+                private int index = findFilledBucket(0);
+
+                private int findFilledBucket(int start) {
+                    for (int i = start; i < elements.length; i++) {
+                        if (elements[i] != null) {
+                            return i;
+                        }
+                    }
+
+                    return -1;
+                }
+
+                @Override
+                public boolean hasNext() {
+                    return index >= 0;
+                }
+
+                @Override
+                public T next() {
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+
+                    T element = elements[index];
+
+                    index = findFilledBucket(index + 1);
+
+                    return element;
+                }
+            };
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            int bucket = determineBucketIndex(o);
+            int start = bucket;
+
+            while (elements[bucket] != null) {
+                if (elements[bucket].equals(o)) {
+                    return true;
+                }
+
+                bucket++;  // linear probing for simplicity
+
+                if (bucket >= elements.length) {
+                    bucket = 0;
+                }
+
+                if (bucket == start) {
+                    return false;  // all elements were checked, none matched
+                }
+            }
+
+            return false;  // empty bucket encountered, not contained
+        }
+
+        @Override
+        public boolean isSuperSetOf(Collection<?> c) {
+            for (int i = 0; i < elements.length; i++) {
+                T element = elements[i];
+
+                if (element != null && !c.contains(element)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        @Override
+        public boolean add(T e) {
+            if (frozen) {
+                throw new UnsupportedOperationException();
+            }
+
+            int bucket = determineBucketIndex(e);  // implicit null check here
+            boolean reset = false;
+
+            while (elements[bucket] != null) {
+                if (elements[bucket].equals(e)) {
+                    return false; // already present, set unchanged
+                }
+
+                bucket++;  // linear probing for simplicity
+
+                if (bucket >= elements.length) {
+                    bucket = 0;
+
+                    if (reset) {
+                        throw new IllegalStateException("set is full");
+                    }
+
+                    reset = true;
+                }
+            }
+
+            elements[bucket] = e;
+            size++;
+
+            return true; // not present, set changed
+        }
+
+        @Override
+        public boolean addAll(Collection<? extends T> c) {
+            boolean modified = false;
+
+            for (T element : c) {
+                modified |= add(element);
+            }
+
+            return modified;
+        }
+
+        @Override
+        public int hashCode() {
+            int h = 0;
+
+            for (int i = 0; i < elements.length; i++) {
+                T element = elements[i];
+
+                h += element == null ? 0 : element.hashCode();
+            }
+
+            return h;
+        }
+
+        private int determineBucketIndex(Object o) {
+            return (o.hashCode() & 0x7fffffff) % elements.length;  // implicit null check here
+        }
+    }
+}
