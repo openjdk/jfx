@@ -75,8 +75,9 @@ final public class SimpleSelector extends Selector {
     /**
      * Gets an immutable list of style-classes of the {@code Selector}.
      * @return an immutable list of style-classes of the {@code Selector}
-     * @deprecated for future removal, use {@link #getStyleClassNames()} instead
+     * @deprecated use {@link #getStyleClassNames()} instead
      */
+    @Deprecated(forRemoval = true)
     public List<String> getStyleClasses() {
         return List.copyOf(selectorStyleClassNames);
     }
@@ -84,8 +85,9 @@ final public class SimpleSelector extends Selector {
     /**
      * Gets the immutable {@code Set} of {@code StyleClass}es of the {@code Selector}.
      * @return the {@code Set} of {@code StyleClass}es
-     * @deprecated for future removal, {@code StyleClass} wrapper has become unnecessary, use {@link #getStyleClassNames()} instead
+     * @deprecated {@code StyleClass} wrapper has become unnecessary, use {@link #getStyleClassNames()} instead
      */
+    @Deprecated(forRemoval = true)
     public Set<StyleClass> getStyleClassSet() {
         if (cachedStyleClasses == null) {
             cachedStyleClasses = getStyleClassNames().stream().map(SimpleSelector::getStyleClass).collect(Collectors.toUnmodifiableSet());
