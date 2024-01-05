@@ -135,6 +135,7 @@ final public class SimpleSelector extends Selector {
      * Gets the immutable {@code Set} of style class names of this {@code Selector}.
      *
      * @return a set of style class names, never {@code null}, or contains {@code null}s but can be empty
+     * @since 23
      */
     public Set<String> getStyleClassNames() {
         return selectorStyleClassNames;
