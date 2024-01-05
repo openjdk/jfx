@@ -674,12 +674,15 @@ class GlassViewEventHandler extends View.EventHandler {
         ret[0] = p2d.getX();
         ret[1] = p2d.getY();
 
-        for (Screen scr : Screen.getScreens()) {
-            Rectangle2D bounds = new Rectangle2D(scr.getX(), scr.getY(), scr.getWidth(), scr.getHeight());
-            if (bounds.contains(p2d)) {
-                ret[0] = scr.toPlatformX((float) p2d.getX());
-                ret[1] = scr.toPlatformY((float) p2d.getY());
-                break;
+        View view = scene.getPlatformView();
+        if (view != null) {
+            Window window = view.getWindow();
+            if (window != null) {
+                Screen screen = window.getScreen();
+                if (screen != null) {
+                    ret[0] = screen.toPlatformX((float) p2d.getX());
+                    ret[1] = screen.toPlatformY((float) p2d.getY());
+                }
             }
         }
 
