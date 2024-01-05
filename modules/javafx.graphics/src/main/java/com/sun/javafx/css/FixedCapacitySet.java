@@ -80,6 +80,25 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
     }
 
     /**
+     * Creates a new {@link FixedCapacitySet} with the given maximum capacity.
+     * If the capacity is exceeded, fixed capacity sets do not grow, but instead
+     * throw an {@link IllegalStateException}.
+     *
+     * @param <T> the element type
+     * @param maximumCapacity the maximum possible number of elements the set can hold, cannot be negative
+     * @return a new empty set, never {@code null}
+     */
+    public static <T> FixedCapacitySet<T> of(int maximumCapacity) {
+        return maximumCapacity == 0 ? empty()
+             : maximumCapacity == 1 ? new Single<>()
+             : maximumCapacity == 2 ? new Duo<>()
+             : maximumCapacity < 10 ? new Hashless<>(maximumCapacity)  // will reject negative values
+                                    : new OpenAddressed<>(maximumCapacity);
+    }
+
+    private boolean frozen;
+
+    /**
      * Checks if the given collection contains all elements
      * of this collection. This is the same as {@link #containsAll(Collection)}
      * with the source and target reversed, ie. {@code "a.containsAll(b)"} is equivalent
@@ -103,23 +122,18 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
      * <p>This can be used to avoid wrapping the collection with an unmodifiable
      * collection or making a read-only copy.
      */
-    public abstract void freeze();
+    public final void freeze() {
+        this.frozen = true;
+    }
 
     /**
-     * Creates a new {@link FixedCapacitySet} with the given maximum capacity.
-     * If the capacity is exceeded, fixed capacity sets do not grow, but instead
-     * throw an {@link IllegalStateException}.
-     *
-     * @param <T> the element type
-     * @param maximumCapacity the maximum possible number of elements the set can hold, cannot be negative
-     * @return a new empty set, never {@code null}
+     * Checks if the set is allowed to be mutated, and throws an
+     * {@link UnsupportedEncodingException} otherwise.
      */
-    public static <T> FixedCapacitySet<T> of(int maximumCapacity) {
-        return maximumCapacity == 0 ? empty()
-             : maximumCapacity == 1 ? new Single<>()
-             : maximumCapacity == 2 ? new Duo<>()
-             : maximumCapacity < 10 ? new Hashless<>(maximumCapacity)  // will reject negative values
-                                    : new OpenAddressed<>(maximumCapacity);
+    protected final void ensureNotFrozen() {
+        if (frozen) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     /**
@@ -129,12 +143,6 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
      */
     private static final class Single<T> extends FixedCapacitySet<T> {
         private T element;
-        private boolean frozen;
-
-        @Override
-        public void freeze() {
-            frozen = true;
-        }
 
         @Override
         public int size() {
@@ -176,9 +184,7 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
 
         @Override
         public boolean add(T e) {
-            if (frozen) {
-                throw new UnsupportedOperationException();
-            }
+            ensureNotFrozen();
 
             if (contains(Objects.requireNonNull(e, "e"))) {
                 return false;
@@ -219,12 +225,6 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
         private T element1;
         private T element2;
         private int size;
-        private boolean frozen;
-
-        @Override
-        public void freeze() {
-            frozen = true;
-        }
 
         @Override
         public int size() {
@@ -264,9 +264,7 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
 
         @Override
         public boolean add(T e) {
-            if (frozen) {
-                throw new UnsupportedOperationException();
-            }
+            ensureNotFrozen();
 
             if (contains(Objects.requireNonNull(e, "e"))) {
                 return false;
@@ -318,16 +316,10 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
         private final T[] elements;
 
         private int size;
-        private boolean frozen;
 
         @SuppressWarnings("unchecked")
         private Hashless(int capacity) {
             this.elements = (T[]) new Object[capacity];
-        }
-
-        @Override
-        public void freeze() {
-            frozen = true;
         }
 
         @Override
@@ -380,9 +372,7 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
 
         @Override
         public boolean add(T e) {
-            if (frozen) {
-                throw new UnsupportedOperationException();
-            }
+            ensureNotFrozen();
 
             if (contains(Objects.requireNonNull(e, "e"))) {
                 return false; // already present, set unchanged
@@ -434,16 +424,10 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
         private final T[] elements;
 
         private int size;
-        private boolean frozen;
 
         @SuppressWarnings("unchecked")
         private OpenAddressed(int capacity) {
             this.elements = (T[]) new Object[capacity];
-        }
-
-        @Override
-        public void freeze() {
-            frozen = true;
         }
 
         @Override
@@ -525,9 +509,7 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
 
         @Override
         public boolean add(T e) {
-            if (frozen) {
-                throw new UnsupportedOperationException();
-            }
+            ensureNotFrozen();
 
             int bucket = determineBucketIndex(e);  // implicit null check here
             boolean reset = false;
