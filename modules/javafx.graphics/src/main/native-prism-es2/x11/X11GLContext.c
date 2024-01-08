@@ -276,7 +276,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLContext_nInitialize
 
         if (ctxInfo->glXSwapIntervalSGI == NULL) {
             ctxInfo->glXSwapIntervalSGI = (PFNGLXSWAPINTERVALSGIPROC)
-                glXGetProcAddress("glXSwapIntervalSGI");
+                glXGetProcAddress((const GLubyte *)"glXSwapIntervalSGI");
         }
 
     }
