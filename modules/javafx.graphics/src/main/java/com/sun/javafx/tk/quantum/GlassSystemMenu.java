@@ -218,7 +218,7 @@ class GlassSystemMenu implements TKSystemMenu {
     }
 
 
-    private void setMenuBindings(final Menu glassMenu, final MenuBase mb) {
+    protected void setMenuBindings(final Menu glassMenu, final MenuBase mb) {
         mb.textProperty().when(active).addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
         mb.disableProperty().when(active).addListener(valueModel -> glassMenu.setEnabled(!mb.isDisable()));
         mb.mnemonicParsingProperty().when(active).addListener(valueModel -> glassMenu.setTitle(parseText(mb)));
