@@ -422,11 +422,15 @@ public class PrismTextLayout implements TextLayout {
 
     @Override
     public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart) {
+        boolean leading = false;
+        boolean isMirrored = isMirrored(); // Node orientation is RTL
+        boolean isMultiRunText = false;
         int charIndex = -1;
         int insertionIndex = -1;
-        boolean leading = false;
         int relIndex = 0;
+        int LTRIndex = 0;
         int textWidthPrevLine = 0;
+        float xHitPos = x;
 
         ensureLayout();
         int lineIndex = getLineIndex(y, text, curRunStart);
@@ -434,25 +438,46 @@ public class PrismTextLayout implements TextLayout {
             charIndex = getCharCount();
             insertionIndex = charIndex + 1;
         } else {
-            if (isMirrored()) {
+            boolean isTextFlow = textRunStart == -1 && curRunStart == -1;
+            if (isMirrored && (isTextFlow || spans == null)) {
                 x = getMirroringWidth() - x;
             }
             TextLine line = lines[lineIndex];
             TextRun[] runs = line.getRuns();
             RectBounds bounds = line.getBounds();
             TextRun run = null;
-            x -= bounds.getMinX();
             //TODO binary search
             if (text == null || spans == null) {
-                for (int i = 0; i < runs.length; i++) {
-                    run = runs[i];
-                    if (x < run.getWidth()) break;
-                    if (i + 1 < runs.length) {
-                        if (runs[i + 1].isLinebreak()) break;
-                        x -= run.getWidth();
+                // To calculate Text and TextFlow hit info
+                if (isMirrored) {
+                    int runIndex = -1;
+                    for (int i = runs.length - 1; i >=0; i--) {
+                        run = runs[i];
+                        if (x < run.getWidth() && (isTextFlow || (run.getStart() == curRunStart))) {
+                            runIndex = i;
+                            break;
+                        }
+                        if (i - 1 >= 0) {
+                            if (runs[i - 1].isLinebreak()) break;
+                            x -= run.getWidth();
+                        }
+                    }
+                    for (int i = 0; i < runIndex; i++) {
+                        xHitPos -= runs[i].getWidth();
+                    }
+                    xHitPos -= bounds.getMinX();
+                } else {
+                    for (int i = 0; i < runs.length; i++) {
+                        run = runs[i];
+                        if (x < run.getWidth()) break;
+                        if (i + 1 < runs.length) {
+                            if (runs[i + 1].isLinebreak()) break;
+                            x -= run.getWidth();
+                        }
                     }
                 }
             } else {
+                // To calculate hit info of Text embedded in TextFlow
                 for (int i = 0; i < lineIndex; i++) {
                     for (TextRun r: lines[i].runs) {
                         if (r.getTextSpan() != null && r.getStart() >= textRunStart && r.getTextSpan().getText().equals(text)) {
@@ -460,27 +485,70 @@ public class PrismTextLayout implements TextLayout {
                         }
                     }
                 }
-                int prevNodeLength = 0;
-                boolean isPrevNodeExcluded = false;
-                for (TextRun r: runs) {
-                    if (!r.getTextSpan().getText().equals(text) || (r.getStart() < textRunStart && r.getTextSpan().getText().equals(text))) {
-                        prevNodeLength += r.getWidth();
-                        continue;
-                    }
-                    if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
-                        BaseBounds textBounds = new BoxBounds();
-                        getBounds(r.getTextSpan(), textBounds);
-                        if (textBounds.getMinX() == 0 && !isPrevNodeExcluded) {
-                            x -= prevNodeLength;
-                            isPrevNodeExcluded = true;
+
+                if (isMirrored) {
+                    for (TextRun r: runs) {
+                        if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text)) {
+                            isMultiRunText = true;
                         }
-                        if (x > r.getWidth()) {
-                            x -= r.getWidth();
-                            relIndex += r.getLength();
+                    }
+
+                    for (int i = 0; i < runs.length; i++) {
+                        run = runs[i];
+                        if (run.getStart() != curRunStart && run.getTextSpan().getText().equals(text) && x > run.getWidth()) {
+                            x -= run.getWidth();
                             continue;
                         }
-                        run = r;
-                        break;
+                        if (run.getTextSpan() != null && run.getTextSpan().getText().equals(text)) {
+                            if ((x > run.getWidth() && !isMultiRunText) || textWidthPrevLine > 0) {
+                                BaseBounds textBounds = new BoxBounds();
+                                getBounds(run.getTextSpan(), textBounds);
+                                x -= (run.getLocation().x - textBounds.getMinX());
+                                break;
+                            }
+                            if (x > run.getWidth()) {
+                                x -= run.getWidth();
+                                relIndex += run.getLength();
+                                continue;
+                            }
+                            for (int j = runs.length - 1; j >= 0; j--) {
+                                if (runs[j].getTextSpan().getText().equals(text) && runs[j].getStart() != curRunStart) {
+                                    LTRIndex += runs[j].getLength();
+                                }
+                                if (runs[j].getStart() == curRunStart) {
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        // For only English Text embedded in TextFlow in RTL orientation
+                        if (!run.getTextSpan().getText().equals(text) && x > run.getWidth() && run.getStart() < curRunStart) {
+                            x -= run.getWidth();
+                        }
+                    }
+                } else {
+                    boolean isPrevRunPresent = false;
+                    int prevRunLength = 0;
+                    for (TextRun r: runs) {
+                        if (!r.getTextSpan().getText().equals(text) || (r.getStart() < textRunStart && r.getTextSpan().getText().equals(text))) {
+                            prevRunLength += r.getWidth();
+                            continue;
+                        }
+                        if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
+                            BaseBounds textBounds = new BoxBounds();
+                            getBounds(r.getTextSpan(), textBounds);
+                            if (textBounds.getMinX() == 0 && !isPrevRunPresent) {
+                                x -= prevRunLength;
+                                isPrevRunPresent = true;
+                            }
+                            if (x > r.getWidth()) {
+                                x -= r.getWidth();
+                                relIndex += r.getLength();
+                                continue;
+                            }
+                            run = r;
+                            break;
+                        }
                     }
                 }
             }
@@ -491,8 +559,17 @@ public class PrismTextLayout implements TextLayout {
                     charIndex = run.getOffsetAtX(x, trailing);
                     charIndex += textWidthPrevLine;
                     charIndex += relIndex;
+                    if (run.getLevel() % 2 != 0) {
+                        charIndex += LTRIndex;
+                    }
                 } else {
-                    charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
+                    int indexOffset;
+                    if (isMirrored) {
+                        indexOffset = run.getOffsetAtX(xHitPos, trailing);
+                    } else {
+                        indexOffset = run.getOffsetAtX(x, trailing);
+                    }
+                    charIndex = run.getStart() + indexOffset;
                 }
                 leading = (trailing[0] == 0);
 

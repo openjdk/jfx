@@ -1024,16 +1024,8 @@ public class Text extends Shape {
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
         GlyphList[] runs = getRuns();
-        int runIndex = 0;
-        if (runs.length != 0) {
-            double ptY = localToParent(x, y).getY();
-            while (runIndex < runs.length - 1) {
-                if (ptY > runs[runIndex].getLocation().y && ptY < runs[runIndex + 1].getLocation().y) {
-                    break;
-                }
-                runIndex++;
-            }
-        }
+        int runIndex = findRunIndex(x, y, runs);
+
         int textRunStart = 0;
         int curRunStart = 0;
         if (runs.length != 0) {
@@ -1042,6 +1034,49 @@ public class Text extends Shape {
         }
         TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getText(), textRunStart, curRunStart);
         return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
+    }
+
+    private int findRunIndex(double x, double y, GlyphList[] runs) {
+        int runIndex = 0;
+        if (runs.length != 0) {
+            if (this.getScene().getNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                double yPos = y;
+                if (runs[runIndex].getTextSpan() == null) {
+                    while (runIndex < runs.length - 1) {
+                        if (x > runs[runIndex].getLocation().x && x < runs[runIndex + 1].getLocation().x
+                                && y > runs[runIndex].getLocation().y && y < runs[runIndex].getHeight()) {
+                            break;
+                        }
+                        runIndex++;
+                        if (y > runs[runIndex].getHeight() && (runs[runIndex].getLocation().y != runs[runIndex - 1].getLocation().y)) {
+                            y -= runs[runIndex].getHeight();
+                        }
+                    }
+                } else {
+                    double ptX = localToParent(x, y).getX();
+                    double ptY = localToParent(x, y).getY();
+                    while (runIndex < runs.length - 1) {
+                        if (ptX > runs[runIndex].getLocation().x && ptX < (runs[runIndex].getLocation().x + runs[runIndex].getWidth()) && ptY >= runs[runIndex].getLocation().y
+                                && y < runs[runIndex].getHeight()) {
+                            break;
+                        }
+                        runIndex++;
+                        if (y > runs[runIndex].getHeight() && (runs[runIndex].getLocation().y != runs[runIndex - 1].getLocation().y)) {
+                            y -= runs[runIndex].getHeight();
+                        }
+                    }
+                }
+            } else {
+                double ptY = localToParent(x, y).getY();
+                while (runIndex < runs.length - 1) {
+                    if (ptY > runs[runIndex].getLocation().y && ptY < runs[runIndex + 1].getLocation().y) {
+                        break;
+                    }
+                    runIndex++;
+                }
+            }
+        }
+        return runIndex;
     }
 
     private PathElement[] getRange(int start, int end, int type) {
