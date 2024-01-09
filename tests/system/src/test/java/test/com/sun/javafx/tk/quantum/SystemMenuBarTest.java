@@ -74,7 +74,7 @@ public class SystemMenuBarTest {
     CountDownLatch memoryFocusLatch = new CountDownLatch(1);
     AtomicBoolean failed = new AtomicBoolean(false);
 
- //   @Test
+    @Test
     public void testFailingMenuBar() throws InterruptedException {
         Util.runAndWait(() -> {
             Thread.currentThread().setUncaughtExceptionHandler((t,e) -> {
@@ -121,7 +121,7 @@ public class SystemMenuBarTest {
         return menuBar;
     }
 
-//    @Test
+    @Test
     public void testMemoryLeak() throws InterruptedException {
         Util.runAndWait(() -> {
             Thread.currentThread().setUncaughtExceptionHandler((t,e) -> {
@@ -208,42 +208,29 @@ public class SystemMenuBarTest {
         stage.show();
         final ArrayList<WeakReference<MenuBase>> uncollectedMenus = new ArrayList<>();
         GlassSystemMenuShim gsmh = new GlassSystemMenuShim();
-        System.err.println("Created gsmh: "+gsmh);
         Menu m1 = new Menu("Menu");
 
-        MenuBase gma1 = GlobalMenuAdapter.adapt(m1);
+        MenuBase menuBase = GlobalMenuAdapter.adapt(m1);
         ArrayList<MenuBase> menus = new ArrayList<>();
         gsmh.createMenuBar();
         for (int i = 0; i < 100; i++) {
             Platform.runLater(() -> {
-                gsmh.setMenus(List.of(gma1));
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(SystemMenuBarTest.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                gsmh.setMenus(List.of(menuBase));
             });
         }
         Platform.runLater(() -> {
-//            System.err.println("sleep 10 seconds");
-//            try {
-//                Thread.sleep(10000);
-//            } catch (InterruptedException ex) {
-//                Logger.getLogger(SystemMenuBarTest.class.getName()).log(Level.SEVERE, null, ex);
-//            }
-//            System.err.println("done sleeping");
             int strongCount = 0;
             final List<WeakReference<com.sun.glass.ui.Menu>> u2 = gsmh.getWeakMenuReferences();
             for (WeakReference<com.sun.glass.ui.Menu> wr : u2) {
                 if (!JMemoryBuddy.checkCollectable(wr)) {
                     strongCount++;
+                    assertTrue("Too much refs", strongCount < 2);
                 }
             }
-            assertEquals(0, strongCount, "menu references not gone");
+            assertEquals(1, strongCount, "Exactly one reference should be reachable");
             memoryFocusLatch.countDown();
         });
     }
-
 
     public MenuBar createSimpleMenuBar() {
         MenuBar menuBar = new MenuBar();
