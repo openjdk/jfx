@@ -91,8 +91,8 @@ public:
         return pInstance == NULL ? 0 : pInstance->m_mainThreadId;
     }
 
-    static jobject EnterNestedEventLoop(JNIEnv * env);
-    static void LeaveNestedEventLoop(JNIEnv * env, jobject retValue);
+    static void EnterNestedEventLoop(JNIEnv * env);
+    static void LeaveNestedEventLoop(JNIEnv * env);
     static void SetGlassClassLoader(JNIEnv *env, jobject classLoader);
     static jclass ClassForName(JNIEnv *env, char *className);
 

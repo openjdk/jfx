@@ -104,8 +104,7 @@ public final class EventLoop {
         state = State.ACTIVE;
         stack.push(this);
         try {
-            Object ret = Application.enterNestedEventLoop();
-            assert ret == this : "Internal inconsistency - wrong EventLoop";
+            Application.enterNestedEventLoop();
             assert stack.peek() == this : "Internal inconsistency - corrupted event loops stack";
             assert state.equals(State.LEAVING) : "The event loop isn't leaving";
 
@@ -120,7 +119,7 @@ public final class EventLoop {
                     EventLoop loop = stack.peek();
                     // we might have already entered another loop, so check again
                     if (loop != null && loop.state.equals(State.LEAVING)) {
-                        Application.leaveNestedEventLoop(loop);
+                        Application.leaveNestedEventLoop();
                     }
                 });
             }
@@ -163,8 +162,7 @@ public final class EventLoop {
         returnValue = ret;
 
         if (stack.peek() == this) {
-            Application.leaveNestedEventLoop(this);
+            Application.leaveNestedEventLoop();
         }
     }
 }
-

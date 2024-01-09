@@ -161,26 +161,24 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         setEventThread(Thread.currentThread());
     }
 
-    native private Object _enterNestedEventLoopImpl();
-    @Override protected Object _enterNestedEventLoop() {
+    native private void _enterNestedEventLoopImpl();
+    @Override protected void _enterNestedEventLoop() {
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyEnteringNestedEventLoop();
         }
-        try {
-            return _enterNestedEventLoopImpl();
-        } finally {
-            if (invokeLaterDispatcher != null) {
-                invokeLaterDispatcher.notifyLeftNestedEventLoop();
-            }
-        }
+        _enterNestedEventLoopImpl();
     }
 
-    native private void _leaveNestedEventLoopImpl(Object retValue);
-    @Override protected void _leaveNestedEventLoop(Object retValue) {
+    native private void _leaveNestedEventLoopImpl();
+    @Override protected void _leaveNestedEventLoop() {
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyLeavingNestedEventLoop();
         }
-        _leaveNestedEventLoopImpl(retValue);
+        _leaveNestedEventLoopImpl();
+
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyLeftNestedEventLoop();
+        }
     }
 
     native private void _hide();

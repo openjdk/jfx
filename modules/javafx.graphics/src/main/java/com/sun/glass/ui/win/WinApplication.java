@@ -200,27 +200,25 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return true;
     }
 
-    native private Object _enterNestedEventLoopImpl();
-    native private void _leaveNestedEventLoopImpl(Object retValue);
+    native private void _enterNestedEventLoopImpl();
+    native private void _leaveNestedEventLoopImpl();
 
-    @Override protected Object _enterNestedEventLoop() {
+    @Override protected void _enterNestedEventLoop() {
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyEnteringNestedEventLoop();
         }
-        try {
-            return _enterNestedEventLoopImpl();
-        } finally {
-            if (invokeLaterDispatcher != null) {
-                invokeLaterDispatcher.notifyLeftNestedEventLoop();
-            }
-        }
+        _enterNestedEventLoopImpl();
     }
 
-    @Override protected void _leaveNestedEventLoop(Object retValue) {
+    @Override protected void _leaveNestedEventLoop() {
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyLeavingNestedEventLoop();
         }
-        _leaveNestedEventLoopImpl(retValue);
+        _leaveNestedEventLoopImpl();
+
+        if (invokeLaterDispatcher != null) {
+            invokeLaterDispatcher.notifyLeftNestedEventLoop();
+        }
     }
 
     // FACTORY METHODS
