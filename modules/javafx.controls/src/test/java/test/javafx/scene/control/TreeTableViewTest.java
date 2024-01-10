@@ -46,8 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import javafx.scene.control.TableColumn;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -7255,15 +7253,13 @@ public class TreeTableViewTest {
     }
 
     @Test
-    public void testTableItemsNullShouldNotThrow() {
+    public void testRootNullShouldNotThrow() {
         TreeTableColumn<String, String> c = new TreeTableColumn<>("C");
         c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
         treeTableView.getColumns().add(c);
 
         treeTableView.setRoot(new TreeItem<String>("Root"));
-        if(treeTableView.getRoot() != null) {
-            treeTableView.getRoot().setExpanded(true);
-        }
+        treeTableView.getRoot().setExpanded(true);
         for (int i = 0; i < 4; i++) {
             TreeItem<String> parent = new TreeItem<String>("item - " + i);
             treeTableView.getRoot().getChildren().add(parent);
