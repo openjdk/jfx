@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
@@ -6063,5 +6064,20 @@ public class TableViewTest {
 
         table.getSelectionModel().selectIndices(1, new int[]{1, 2});
         assertEquals(2, table.getSelectionModel().getSelectedIndex());
+    }
+
+    @Test
+    public void testTableItemsNullShouldNotThrow() {
+        final TableColumn<String, String> c = new TableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+        table.getColumns().add(c);
+
+        table.getItems().addAll("1", "2", "3");
+
+        stageLoader = new StageLoader(table);
+        table.setItems(null);
+
+        assertDoesNotThrow(() -> Toolkit.getToolkit().firePulse());
+
     }
 }
