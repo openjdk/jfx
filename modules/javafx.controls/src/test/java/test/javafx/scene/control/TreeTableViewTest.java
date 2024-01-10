@@ -36,6 +36,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,6 +46,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import javafx.scene.control.TableColumn;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -7249,5 +7252,27 @@ public class TreeTableViewTest {
 
         treeTableView.getSelectionModel().selectIndices(1, new int[]{1, 2});
         assertEquals(2, treeTableView.getSelectionModel().getSelectedIndex());
+    }
+
+    @Test
+    public void testTableItemsNullShouldNotThrow() {
+        TreeTableColumn<String, String> c = new TreeTableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+        treeTableView.getColumns().add(c);
+
+        treeTableView.setRoot(new TreeItem<String>("Root"));
+        if(treeTableView.getRoot() != null) {
+            treeTableView.getRoot().setExpanded(true);
+        }
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        stageLoader = new StageLoader(treeTableView);
+        treeTableView.setRoot(null);
+
+        assertDoesNotThrow(() -> Toolkit.getToolkit().firePulse());
+
     }
 }
