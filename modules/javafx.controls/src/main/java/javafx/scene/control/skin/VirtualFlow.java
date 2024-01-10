@@ -1545,25 +1545,37 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     // will return true if scroll is successful
-    private boolean tryScrollOneCell(int targetIndex, boolean downOrRight) {
+private boolean tryScrollOneCell(int targetIndex, boolean downOrRight) {
         // if going down, cell diff is -1, because it will get the target cell index and check if previous
         // cell is visible to base the position
         int indexDiff = downOrRight ? -1 : 1;
 
         T targetCell = getVisibleCell(targetIndex + indexDiff);
         if (targetCell != null) {
-            T cell = getAvailableCell(targetIndex);
-            setCellIndex(cell, targetIndex);
-            resizeCell(cell);
-            setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
-            cell.setVisible(true);
-            if (downOrRight) {
-                cells.addLast(cell);
-                scrollPixels(getCellLength(cell));
+            if (targetIndex < 0) {
+                T cell = getCell(targetIndex);
+                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
+                if (downOrRight) {
+                    scrollPixels(getCellLength(cell));
+                } else {
+                    // up or left
+                    scrollPixels(-getCellLength(cell));
+                }
+                releaseCell(cell);
             } else {
-                // up or left
-                cells.addFirst(cell);
-                scrollPixels(-getCellLength(cell));
+                T cell = getAvailableCell(targetIndex);
+                setCellIndex(cell, targetIndex);
+                resizeCell(cell);
+                setMaxPrefBreadth(Math.max(getMaxPrefBreadth(), getCellBreadth(cell)));
+                cell.setVisible(true);
+                if (downOrRight) {
+                    cells.addLast(cell);
+                    scrollPixels(getCellLength(cell));
+                } else {
+                    // up or left
+                    cells.addFirst(cell);
+                    scrollPixels(-getCellLength(cell));
+                }
             }
             return true;
         }

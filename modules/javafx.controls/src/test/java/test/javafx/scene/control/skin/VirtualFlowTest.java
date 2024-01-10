@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.VirtualScrollBar;
 import java.util.AbstractList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1836,6 +1837,60 @@ assertEquals(0, firstCell.getIndex());
         pulse();
 
         assertEquals(3, flow.getFirstVisibleCell().getIndex());
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentMovementUp() {
+        testScrollBarValueAdjustment(1, 1.0, 0.2, -100);
+        testScrollBarValueAdjustment(3, 1.0, 0.2, -100);
+        testScrollBarValueAdjustment(1, 0.5, 0.2, -100);
+        testScrollBarValueAdjustment(3, 0.5, 0.2, -100);
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentMovementDown() {
+        testScrollBarValueAdjustment(1, 0.0, 0.8, 100);
+        testScrollBarValueAdjustment(3, 0.0, 0.8, 100);
+        testScrollBarValueAdjustment(1, 0.5, 0.8, 100);
+        testScrollBarValueAdjustment(3, 0.5, 0.8, 100);
+    }
+
+    public void testScrollBarValueAdjustment(int cellCount, double position, double adjust, double targetMovement) {
+        flow = new VirtualFlowShim<>();
+        class C extends CellStub {
+            public C(VirtualFlowShim flow) {
+                super(flow);
+            }
+            @Override
+            protected double computePrefHeight(double width) {
+                return getIndex() == 0 ? 1000 : 100;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+        }
+        flow.setCellFactory(fw -> new C(flow));
+        flow.setCellCount(cellCount);
+        flow.resize(256, 200);
+
+        flow.setPosition(position);
+        pulse();
+
+        IndexedCell<?> cell = flow.getFirstVisibleCell();
+        double position1 = flow.getCellPosition(cell);
+        flow.shim_getVbar().adjustValue(adjust);
+        pulse();
+
+        double position2 = flow.getCellPosition(cell);
+        double movement = position1 - position2;
+        assertEquals(targetMovement, movement, 0.1);
     }
 
     /**
