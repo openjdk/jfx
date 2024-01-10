@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2015 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,12 +57,6 @@ Structure* IntlCollator::createStructure(VM& vm, JSGlobalObject* globalObject, J
 IntlCollator::IntlCollator(VM& vm, Structure* structure)
     : Base(vm, structure)
 {
-}
-
-void IntlCollator::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>
@@ -228,14 +222,14 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
         if (collation.isNull())
             dataLocaleWithExtensions = resolved.dataLocale.utf8();
         else
-            dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-co-", m_collation).utf8();
+            dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-co-"_s, m_collation).utf8();
         break;
     case Usage::Search:
         // searchLocaleData filters out "co" unicode extension. However, we need to pass "co" to ICU when Usage::Search is specified.
         // So we need to pass "co" unicode extension through locale. Since the other relevant extensions are handled via ucol_setAttribute,
         // we can just use dataLocale
         // Since searchLocaleData filters out "co" unicode extension, "collation" option is just ignored.
-        dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-co-search").utf8();
+        dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-co-search"_s).utf8();
         break;
     }
     dataLogLnIf(IntlCollatorInternal::verbose, "locale:(", resolved.locale, "),dataLocaleWithExtensions:(", dataLocaleWithExtensions, ")");
@@ -310,7 +304,7 @@ UCollationResult IntlCollator::compareStrings(JSGlobalObject* globalObject, Stri
                 return compareASCIIWithUCADUCET(x.characters16(), x.length(), y.characters16(), y.length());
             }
 
-        if (x.is8Bit() && y.is8Bit() && x.isAllASCII() && y.isAllASCII())
+        if (x.is8Bit() && y.is8Bit() && x.containsOnlyASCII() && y.containsOnlyASCII())
                 return ucol_strcollUTF8(m_collator.get(), bitwise_cast<const char*>(x.characters8()), x.length(), bitwise_cast<const char*>(y.characters8()), y.length(), &status);
 
         return std::nullopt;
@@ -508,7 +502,7 @@ void IntlCollator::checkICULocaleInvariants(const LocaleSet& locales)
                         CRASH();
                     }
                 } else {
-                    if (StringView(buffer.data(), buffer.size()).isAllASCII()) {
+                    if (StringView(buffer.data(), buffer.size()).containsOnlyASCII()) {
                         dataLogLn("BAD ", locale, " ", String(buffer.data(), buffer.size()), " including ASCII tailored characters");
                         CRASH();
                     }

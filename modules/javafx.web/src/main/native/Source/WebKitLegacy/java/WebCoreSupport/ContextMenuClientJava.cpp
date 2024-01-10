@@ -35,27 +35,22 @@ ContextMenuClientJava::ContextMenuClientJava(const JLObject &webPage)
 {
 }
 
-void ContextMenuClientJava::contextMenuDestroyed()
-{
-    delete this;
-}
-
 void ContextMenuClientJava::downloadURL(const URL&)
 {
     notImplemented();
 }
 
-void ContextMenuClientJava::searchWithGoogle(const Frame*)
+void ContextMenuClientJava::searchWithGoogle(const LocalFrame*)
 {
     notImplemented();
 }
 
-void ContextMenuClientJava::lookUpInDictionary(Frame*)
+void ContextMenuClientJava::lookUpInDictionary(LocalFrame*)
 {
     notImplemented();
 }
 
-bool ContextMenuClientJava::isSpeaking()
+bool ContextMenuClientJava::isSpeaking() const
 {
     notImplemented();
     return false;

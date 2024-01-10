@@ -31,11 +31,13 @@
 #include "LLIntExceptions.h"
 #include "WasmCalleeRegistry.h"
 #include "WasmCallingConvention.h"
+#include "WasmModuleInformation.h"
 
 namespace JSC { namespace Wasm {
 
 Callee::Callee(Wasm::CompilationMode compilationMode)
     : m_compilationMode(compilationMode)
+    , m_implementationVisibility(ImplementationVisibility::Private)
 {
 }
 
@@ -49,6 +51,9 @@ template<typename Func>
 inline void Callee::runWithDowncast(const Func& func)
 {
     switch (m_compilationMode) {
+    case CompilationMode::IPIntMode:
+        func(static_cast<IPIntCallee*>(this));
+        break;
     case CompilationMode::LLIntMode:
         func(static_cast<LLIntCallee*>(this));
         break;
@@ -159,6 +164,53 @@ WasmToJSCallee::WasmToJSCallee()
     CalleeRegistry::singleton().registerCallee(this);
 }
 
+IPIntCallee::IPIntCallee(FunctionIPIntMetadataGenerator& generator, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
+    : Callee(Wasm::CompilationMode::IPIntMode, index, WTFMove(name))
+    , m_signatures(WTFMove(generator.m_signatures))
+    , m_bytecode(generator.m_bytecode + generator.m_bytecodeOffset)
+    , m_bytecodeLength(generator.m_bytecodeLength - generator.m_bytecodeOffset)
+    , m_metadataVector(WTFMove(generator.m_metadata))
+    , m_metadata(m_metadataVector.data())
+    , m_returnMetadata(generator.m_returnMetadata)
+    // size to allocate = 16 + number of stack arguments + number of non-argument locals
+    , m_localSizeToAlloc(roundUpToMultipleOf(16, 16 + generator.m_numArgumentsOnStack + generator.m_numLocals - generator.m_numArguments))
+    , m_numLocals(generator.m_numLocals)
+    , m_numArgumentsOnStack(generator.m_numArgumentsOnStack)
+{
+}
+
+void IPIntCallee::setEntrypoint(CodePtr<WasmEntryPtrTag> entrypoint)
+{
+    ASSERT(!m_entrypoint);
+    m_entrypoint = entrypoint;
+    CalleeRegistry::singleton().registerCallee(this);
+}
+
+RegisterAtOffsetList* IPIntCallee::calleeSaveRegistersImpl()
+{
+    static LazyNeverDestroyed<RegisterAtOffsetList> calleeSaveRegisters;
+    static std::once_flag initializeFlag;
+    std::call_once(initializeFlag, [] {
+        RegisterSet registers;
+        registers.add(GPRInfo::regCS0, IgnoreVectors); // Wasm::Instance
+#if CPU(X86_64)
+        registers.add(GPRInfo::regCS1, IgnoreVectors); // PM (pointer to metadata)
+        registers.add(GPRInfo::regCS2, IgnoreVectors); // PB
+#elif CPU(ARM64) || CPU(RISCV64)
+        registers.add(GPRInfo::regCS6, IgnoreVectors); // PM
+        registers.add(GPRInfo::regCS7, IgnoreVectors); // PB
+#elif CPU(ARM)
+        registers.add(GPRInfo::regCS0, IgnoreVectors); // PM
+        registers.add(GPRInfo::regCS1, IgnoreVectors); // PB
+#else
+#error Unsupported architecture.
+#endif
+        ASSERT(registers.numberOfSetRegisters() == numberOfIPIntCalleeSaveRegisters);
+        calleeSaveRegisters.construct(WTFMove(registers));
+    });
+    return &calleeSaveRegisters.get();
+}
+
 LLIntCallee::LLIntCallee(FunctionCodeBlockGenerator& generator, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
     : Callee(Wasm::CompilationMode::LLIntMode, index, WTFMove(name))
     , m_functionIndex(generator.m_functionIndex)
@@ -235,6 +287,43 @@ const WasmInstruction* LLIntCallee::outOfLineJumpTarget(const WasmInstruction* p
 }
 
 #if ENABLE(WEBASSEMBLY_B3JIT)
+void OptimizingJITCallee::addCodeOrigin(unsigned firstInlineCSI, unsigned lastInlineCSI, const Wasm::ModuleInformation& info, uint32_t functionIndex)
+{
+    if (!nameSections.size())
+        nameSections.append(info.nameSection);
+    // The inline frame list is stored in postorder. For example:
+    // A { B() C() D { E() } F() } -> B C E D F A
+#if ASSERT_ENABLED
+    ASSERT(firstInlineCSI <= lastInlineCSI);
+    for (unsigned i = 0; i + 1 < codeOrigins.size(); ++i)
+        ASSERT(codeOrigins[i].lastInlineCSI <= codeOrigins[i + 1].lastInlineCSI);
+    for (unsigned i = 0; i < codeOrigins.size(); ++i)
+        ASSERT(codeOrigins[i].lastInlineCSI <= lastInlineCSI);
+    ASSERT(nameSections.size() == 1);
+    ASSERT(nameSections[0].ptr() == info.nameSection.ptr());
+#endif
+    codeOrigins.append({ firstInlineCSI, lastInlineCSI, functionIndex, 0 });
+}
+
+IndexOrName OptimizingJITCallee::getOrigin(unsigned csi, unsigned depth, bool& isInlined) const
+{
+    isInlined = false;
+    auto iter = std::lower_bound(codeOrigins.begin(), codeOrigins.end(), WasmCodeOrigin { 0, csi, 0, 0}, [&] (const auto& a, const auto& b) {
+        return b.lastInlineCSI - a.lastInlineCSI;
+    });
+    if (!iter || iter == codeOrigins.end())
+        iter = codeOrigins.begin();
+    while (iter != codeOrigins.end()) {
+        if (iter->firstInlineCSI <= csi && iter->lastInlineCSI >= csi && !(depth--)) {
+            isInlined = true;
+            return IndexOrName(iter->functionIndex, nameSections[iter->moduleIndex]->get(iter->functionIndex));
+        }
+        ++iter;
+    }
+
+    return indexOrName();
+}
+
 void OptimizingJITCallee::linkExceptionHandlers(Vector<UnlinkedHandlerInfo> unlinkedExceptionHandlers, Vector<CodeLocationLabel<ExceptionHandlerPtrTag>> exceptionHandlerLocations)
 {
     size_t count = unlinkedExceptionHandlers.size();

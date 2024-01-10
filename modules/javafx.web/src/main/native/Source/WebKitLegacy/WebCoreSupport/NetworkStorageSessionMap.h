@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/text/WTFString.h>
+#include <WebCore/NetworkStorageSession.h>
 
 namespace PAL {
 class SessionID;

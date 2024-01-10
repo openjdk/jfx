@@ -72,7 +72,8 @@ WorkerParameters WorkerParameters::isolatedCopy() const
 #if ENABLE(SERVICE_WORKER)
         crossThreadCopy(serviceWorkerData),
 #endif
-        clientIdentifier
+        clientIdentifier,
+        noiseInjectionHashSalt
     };
 }
 

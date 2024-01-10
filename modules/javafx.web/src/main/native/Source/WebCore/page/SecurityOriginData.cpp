@@ -26,9 +26,10 @@
 #include "config.h"
 #include "SecurityOriginData.h"
 
+#include "BlobURL.h"
 #include "Document.h"
-#include "Frame.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalFrame.h"
 #include "SecurityOrigin.h"
 #include <wtf/FileSystem.h>
 #include <wtf/text/CString.h>
@@ -58,7 +59,7 @@ URL SecurityOriginData::toURL() const
     return URL { toString() };
 }
 
-SecurityOriginData SecurityOriginData::fromFrame(Frame* frame)
+SecurityOriginData SecurityOriginData::fromFrame(LocalFrame* frame)
 {
     if (!frame)
         return SecurityOriginData { };
@@ -176,18 +177,17 @@ bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& url)
     if (!url.isValid())
         return true;
 
-    // FIXME: Do we need to unwrap the URL further?
-    URL innerURL = SecurityOrigin::shouldUseInnerURL(url) ? SecurityOrigin::extractInnerURL(url) : url;
-    if (!innerURL.isValid())
+    auto originURL = url.protocolIsBlob() ? BlobURL::getOriginURL(url) : url;
+    if (!originURL.isValid())
         return true;
 
     // For edge case URLs that were probably misparsed, make sure that the origin is opaque.
     // This is an additional safety net against bugs in URL parsing, and for network back-ends that parse URLs differently,
     // and could misinterpret another component for hostname.
-    if (schemeRequiresHost(innerURL) && innerURL.host().isEmpty())
+    if (schemeRequiresHost(originURL) && originURL.host().isEmpty())
         return true;
 
-    if (LegacySchemeRegistry::shouldTreatURLSchemeAsNoAccess(innerURL.protocol()))
+    if (LegacySchemeRegistry::shouldTreatURLSchemeAsNoAccess(originURL.protocol()))
         return true;
 
     // https://url.spec.whatwg.org/#origin with some additions
@@ -205,9 +205,11 @@ bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& url)
 #if ENABLE(PDFJS)
         || url.protocolIs("webkit-pdfjs-viewer"_s)
 #endif
-        || url.protocolIs("blob"_s))
+        || url.protocolIsBlob())
         return false;
 
+    // FIXME: we ought to assert we're in WebKitLegacy or a web content process as per 263652@main,
+    // except that assert gets hit on certain tests.
     return !LegacySchemeRegistry::schemeIsHandledBySchemeHandler(url.protocol());
 }
 

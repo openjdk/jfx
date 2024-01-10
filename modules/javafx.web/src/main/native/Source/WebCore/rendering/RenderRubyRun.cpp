@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
+ * Copyright (C) 2023 Apple Inc. All right reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +33,9 @@
 
 #include "RenderRubyRun.h"
 
+#include "InlineIteratorLineBox.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderRuby.h"
 #include "RenderRubyBase.h"
 #include "RenderRubyText.h"
@@ -149,11 +153,12 @@ void RenderRubyRun::layoutBlock(bool relayoutChildren, LayoutUnit pageHeight)
     // Place the RenderRubyText such that its bottom is flush with the lineTop of the first line of the RenderRubyBase.
     LayoutUnit lastLineRubyTextBottom = rt->logicalHeight();
     LayoutUnit firstLineRubyTextTop;
-    LegacyRootInlineBox* rootBox = rt->lastRootBox();
-    if (rootBox) {
+
+    if (auto textFirstLine = InlineIterator::firstLineBoxFor(*rt)) {
+        auto textLastLine = InlineIterator::lastLineBoxFor(*rt);
         // In order to align, we have to ignore negative leading.
-        firstLineRubyTextTop = rt->firstRootBox()->logicalTopLayoutOverflow();
-        lastLineRubyTextBottom = rootBox->logicalBottomLayoutOverflow();
+        firstLineRubyTextTop = textFirstLine->scrollableOverflowTop();
+        lastLineRubyTextBottom = textLastLine->scrollableOverflowBottom();
     }
 
     if (isHorizontalWritingMode() && rt->style().rubyPosition() == RubyPosition::InterCharacter) {
@@ -165,12 +170,11 @@ void RenderRubyRun::layoutBlock(bool relayoutChildren, LayoutUnit pageHeight)
         if (RenderRubyBase* rb = rubyBase()) {
             LayoutUnit firstLineTop;
             LayoutUnit lastLineBottom = logicalHeight();
-            LegacyRootInlineBox* rootBox = rb->firstRootBox();
-            if (rootBox)
-                firstLineTop = rootBox->logicalTopLayoutOverflow();
+            if (auto baseFirstLine = InlineIterator::firstLineBoxFor(*rb)) {
+                firstLineTop = baseFirstLine->scrollableOverflowTop();
+                lastLineBottom = baseFirstLine->scrollableOverflowBottom();
+            }
             firstLineTop += rb->logicalTop();
-            if (rootBox)
-                lastLineBottom = rootBox->logicalBottomLayoutOverflow();
             lastLineBottom += rb->logicalTop();
             rt->setX(rb->x() + rb->width() - font.letterSpacing());
             LayoutUnit extent = lastLineBottom - firstLineTop;
@@ -179,9 +183,8 @@ void RenderRubyRun::layoutBlock(bool relayoutChildren, LayoutUnit pageHeight)
     } else if (style().isFlippedLinesWritingMode() == (style().rubyPosition() == RubyPosition::After)) {
         LayoutUnit firstLineTop;
         if (RenderRubyBase* rb = rubyBase()) {
-            LegacyRootInlineBox* rootBox = rb->firstRootBox();
-            if (rootBox)
-                firstLineTop = rootBox->logicalTopLayoutOverflow();
+            if (auto baseFirstLine = InlineIterator::firstLineBoxFor(*rb))
+                firstLineTop = baseFirstLine->scrollableOverflowTop();
             firstLineTop += rb->logicalTop();
         }
 
@@ -189,9 +192,8 @@ void RenderRubyRun::layoutBlock(bool relayoutChildren, LayoutUnit pageHeight)
     } else {
         LayoutUnit lastLineBottom = logicalHeight();
         if (RenderRubyBase* rb = rubyBase()) {
-            LegacyRootInlineBox* rootBox = rb->lastRootBox();
-            if (rootBox)
-                lastLineBottom = rootBox->logicalBottomLayoutOverflow();
+            if (auto baseLastLine = InlineIterator::lastLineBoxFor(*rb))
+                lastLineBottom = baseLastLine->scrollableOverflowBottom();
             lastLineBottom += rb->logicalTop();
         }
 
@@ -218,63 +220,91 @@ static bool shouldOverhang(bool firstLine, const RenderObject* renderer, const R
         return false;
     const RenderStyle& rubyBaseStyle = firstLine ? rubyBase.firstLineStyle() : rubyBase.style();
     const RenderStyle& style = firstLine ? renderer->firstLineStyle() : renderer->style();
-    return style.computedFontPixelSize() <= rubyBaseStyle.computedFontPixelSize();
+    return style.computedFontSize() <= rubyBaseStyle.computedFontSize();
 }
 
 void RenderRubyRun::getOverhang(bool firstLine, RenderObject* startRenderer, RenderObject* endRenderer, float& startOverhang, float& endOverhang) const
 {
     ASSERT(!needsLayout());
 
-    startOverhang = 0;
-    endOverhang = 0;
-
-    RenderRubyBase* rubyBase = this->rubyBase();
-    RenderRubyText* rubyText = this->rubyText();
-
-    if (!rubyBase || !rubyText)
+    std::tie(startOverhang, endOverhang) = startAndEndOverhang(firstLine);
+    if (!startOverhang && !endOverhang)
         return;
 
-    if (!rubyBase->firstRootBox())
-        return;
-
-    LayoutUnit logicalWidth = this->logicalWidth();
-    float logicalLeftOverhang = std::numeric_limits<float>::max();
-    float logicalRightOverhang = std::numeric_limits<float>::max();
-    for (auto* rootInlineBox = rubyBase->firstRootBox(); rootInlineBox; rootInlineBox = rootInlineBox->nextRootBox()) {
-        logicalLeftOverhang = std::min<float>(logicalLeftOverhang, rootInlineBox->logicalLeft());
-        logicalRightOverhang = std::min<float>(logicalRightOverhang, logicalWidth - rootInlineBox->logicalRight());
-    }
-
-    startOverhang = style().isLeftToRightDirection() ? logicalLeftOverhang : logicalRightOverhang;
-    endOverhang = style().isLeftToRightDirection() ? logicalRightOverhang : logicalLeftOverhang;
-
-    if (!shouldOverhang(firstLine, startRenderer, *rubyBase))
-        startOverhang = 0;
-    if (!shouldOverhang(firstLine, endRenderer, *rubyBase))
-        endOverhang = 0;
+    auto* rubyBase = this->rubyBase();
 
     // We overhang a ruby only if the neighboring render object is a text.
     // We can overhang the ruby by no more than half the width of the neighboring text
     // and no more than half the font size.
-    const RenderStyle& rubyTextStyle = firstLine ? rubyText->firstLineStyle() : rubyText->style();
-    float halfWidthOfFontSize = rubyTextStyle.computedFontPixelSize() / 2.;
+    if (!shouldOverhang(firstLine, startRenderer, *rubyBase))
+    startOverhang = 0;
+    if (!shouldOverhang(firstLine, endRenderer, *rubyBase))
+    endOverhang = 0;
+
     if (startOverhang)
-        startOverhang = std::min(startOverhang, std::min(downcast<RenderText>(*startRenderer).minLogicalWidth(), halfWidthOfFontSize));
+        startOverhang = std::min(startOverhang, downcast<RenderText>(*startRenderer).minLogicalWidth());
     if (endOverhang)
-        endOverhang = std::min(endOverhang, std::min(downcast<RenderText>(*endRenderer).minLogicalWidth(), halfWidthOfFontSize));
+        endOverhang = std::min(endOverhang, downcast<RenderText>(*endRenderer).minLogicalWidth());
 }
 
-void RenderRubyRun::updatePriorContextFromCachedBreakIterator(LazyLineBreakIterator& iterator) const
+std::pair<float, float> RenderRubyRun::startAndEndOverhang(bool forFirstLine) const
 {
-    iterator.setPriorContext(m_lastCharacter, m_secondToLastCharacter);
+    auto* rubyBase = this->rubyBase();
+    auto* rubyText = this->rubyText();
+
+    if (!rubyBase || !rubyText)
+        return { 0_lu, 0_lu };
+
+    auto firstLineBox = InlineIterator::firstLineBoxFor(*rubyBase);
+    if (!firstLineBox)
+        return { 0_lu, 0_lu };
+
+    LayoutUnit logicalWidth = this->logicalWidth();
+    float logicalLeftOverhang = std::numeric_limits<float>::max();
+    float logicalRightOverhang = std::numeric_limits<float>::max();
+    for (auto line = firstLineBox; line; line.traverseNext()) {
+        logicalLeftOverhang = std::min<float>(logicalLeftOverhang, line->contentLogicalLeft());
+        logicalRightOverhang = std::min<float>(logicalRightOverhang, logicalWidth - line->contentLogicalRight());
+    }
+
+    auto startOverhang = style().isLeftToRightDirection() ? logicalLeftOverhang : logicalRightOverhang;
+    auto endOverhang = style().isLeftToRightDirection() ? logicalRightOverhang : logicalLeftOverhang;
+
+    const RenderStyle& rubyTextStyle = forFirstLine ? rubyText->firstLineStyle() : rubyText->style();
+    float halfWidthOfFontSize = rubyTextStyle.computedFontSize() / 2.;
+
+    return { std::min(startOverhang, halfWidthOfFontSize), std::min(endOverhang, halfWidthOfFontSize) };
 }
 
-bool RenderRubyRun::canBreakBefore(const LazyLineBreakIterator& iterator) const
+void RenderRubyRun::updatePriorContextFromCachedBreakIterator(CachedLineBreakIteratorFactory& lineBreakIteratorFactory) const
+{
+    lineBreakIteratorFactory.priorContext().set({ m_secondToLastCharacter, m_lastCharacter });
+}
+
+bool RenderRubyRun::canBreakBefore(const CachedLineBreakIteratorFactory& lineBreakIteratorFactory) const
 {
     RenderRubyText* rubyText = this->rubyText();
     if (!rubyText)
         return true;
-    return rubyText->canBreakBefore(iterator);
+    return rubyText->canBreakBefore(lineBreakIteratorFactory);
 }
+
+std::pair<LayoutUnit, LayoutUnit> RenderRubyRun::annotationsAboveAndBelow() const
+{
+    auto* rubyText = this->rubyText();
+    if (!rubyText)
+        return { 0_lu, 0_lu };
+
+    auto firstLineBox = InlineIterator::firstLineBoxFor(*rubyText);
+    auto rubyTextTop = rubyText->logicalTop() + (firstLineBox ? LayoutUnit { firstLineBox->contentLogicalTop() } : 0_lu);
+    auto top = std::max(0_lu, -rubyTextTop);
+
+    auto lastLineBox = InlineIterator::lastLineBoxFor(*rubyText);
+    auto rubyTextBottom = rubyText->logicalTop() + (lastLineBox ? LayoutUnit { lastLineBox->contentLogicalBottom() } : rubyText->logicalHeight());
+    auto bottom = std::max(logicalHeight(), rubyTextBottom) - logicalHeight();
+
+    return { top, bottom };
+}
+
 
 } // namespace WebCore

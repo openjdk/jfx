@@ -31,6 +31,7 @@
 #include "JSDOMGuardedObject.h"
 #include "WorkerOrWorkletScriptController.h"
 #include "WorkletGlobalScope.h"
+#include <JavaScriptCore/GlobalObjectMethodTable.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/Language.h>
@@ -41,7 +42,9 @@ using namespace JSC;
 
 const ClassInfo JSWorkletGlobalScopeBase::s_info = { "WorkletGlobalScope"_s, &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWorkletGlobalScopeBase) };
 
-const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTable = {
+const GlobalObjectMethodTable* JSWorkletGlobalScopeBase::globalObjectMethodTable()
+{
+    static constexpr GlobalObjectMethodTable table = {
     &supportsRichSourceInfo,
     &shouldInterruptScript,
     &javaScriptRuntimeFlags,
@@ -66,15 +69,17 @@ const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTabl
     nullptr,
 #endif
     deriveShadowRealmGlobalObject,
+    };
+    return &table;
 };
 
 JSWorkletGlobalScopeBase::JSWorkletGlobalScopeBase(JSC::VM& vm, JSC::Structure* structure, RefPtr<WorkletGlobalScope>&& impl)
-    : JSDOMGlobalObject(vm, structure, normalWorld(vm), &s_globalObjectMethodTable)
+    : JSDOMGlobalObject(vm, structure, normalWorld(vm), globalObjectMethodTable())
     , m_wrapped(WTFMove(impl))
 {
 }
 
-void JSWorkletGlobalScopeBase::finishCreation(VM& vm, JSProxy* proxy)
+void JSWorkletGlobalScopeBase::finishCreation(VM& vm, JSGlobalProxy* proxy)
 {
     m_proxy.set(vm, this, proxy);
 

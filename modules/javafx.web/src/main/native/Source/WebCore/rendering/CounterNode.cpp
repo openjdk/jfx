@@ -22,8 +22,10 @@
 #include "config.h"
 #include "CounterNode.h"
 
+#include "LayoutIntegrationLineLayout.h"
 #include "RenderCounter.h"
 #include "RenderElement.h"
+#include "RenderView.h"
 #include <stdio.h>
 
 namespace WebCore {
@@ -176,14 +178,12 @@ void CounterNode::resetRenderers()
 {
     if (!m_rootRenderer)
         return;
-    bool skipLayoutAndPerfWidthsRecalc = m_rootRenderer->renderTreeBeingDestroyed();
     auto* current = m_rootRenderer;
     while (current) {
-        if (!skipLayoutAndPerfWidthsRecalc)
-            current->setNeedsLayoutAndPrefWidthsRecalc();
         auto* next = current->m_nextForSameCounter;
         current->m_nextForSameCounter = nullptr;
         current->m_counterNode = nullptr;
+        current->view().addCounterNeedingUpdate(*current);
         current = next;
     }
     m_rootRenderer = nullptr;

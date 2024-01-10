@@ -22,6 +22,7 @@
 
 #include "FloatQuad.h"
 #include "RenderBlock.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
 #include "RenderSVGInlineInlines.h"
 #include "RenderSVGShape.h"
@@ -51,7 +52,7 @@ SVGTextPathElement& RenderSVGTextPath::textPathElement() const
 
 SVGGeometryElement* RenderSVGTextPath::targetElement() const
 {
-    auto target = SVGURIReference::targetElementFromIRIString(textPathElement().href(), textPathElement().treeScope());
+    auto target = SVGURIReference::targetElementFromIRIString(textPathElement().href(), textPathElement().treeScopeForSVGReferences());
     return dynamicDowncast<SVGGeometryElement>(target.element.get());
 }
 
@@ -72,7 +73,7 @@ Path RenderSVGTextPath::layoutPath() const
     if (element->renderer() && document().settings().layerBasedSVGEngineEnabled()) {
         auto& renderer = downcast<RenderSVGShape>(*element->renderer());
         if (auto* layer = renderer.layer()) {
-            const auto& layerTransform = layer->currentTransform(RenderStyle::individualTransformOperations).toAffineTransform();
+            const auto& layerTransform = layer->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform();
             if (!layerTransform.isIdentity())
                 path.transform(layerTransform);
             return path;
@@ -87,16 +88,6 @@ Path RenderSVGTextPath::layoutPath() const
 const SVGLengthValue& RenderSVGTextPath::startOffset() const
 {
     return textPathElement().startOffset();
-}
-
-bool RenderSVGTextPath::exactAlignment() const
-{
-    return textPathElement().spacing() == SVGTextPathSpacingExact;
-}
-
-bool RenderSVGTextPath::stretchMethod() const
-{
-    return textPathElement().method() == SVGTextPathMethodStretch;
 }
 
 }

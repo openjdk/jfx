@@ -30,11 +30,7 @@
 
 namespace WebCore {
 
-NetworkLoadMetrics::NetworkLoadMetrics() : complete(false), cellular(false)
-                                         , expensive(false), constrained(false)
-                                         , multipath(false), isReusedConnection(false)
-                                         , failsTAOCheck(false), hasCrossOriginRedirect(false)
-    { }
+NetworkLoadMetrics::NetworkLoadMetrics() = default;
 
 
 void NetworkLoadMetrics::updateFromFinalMetrics(const NetworkLoadMetrics& other)

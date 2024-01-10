@@ -50,7 +50,7 @@ ExceptionOr<Ref<DOMURL>> DOMURL::create(const String& url, const URL& base)
     ASSERT(base.isValid() || base.isNull());
     URL completeURL { base, url };
     if (!completeURL.isValid())
-        return Exception { TypeError };
+        return Exception { TypeError, makeString("\"", url, "\" cannot be parsed as a URL.") };
     return adoptRef(*new DOMURL(WTFMove(completeURL), base));
 }
 
@@ -58,16 +58,20 @@ ExceptionOr<Ref<DOMURL>> DOMURL::create(const String& url, const String& base)
 {
     URL baseURL { base };
     if (!base.isNull() && !baseURL.isValid())
-        return Exception { TypeError };
+        return Exception { TypeError, makeString("\"", url, "\" cannot be parsed as a URL against \"", base, "\".") };
     return create(url, baseURL);
 }
 
-ExceptionOr<Ref<DOMURL>> DOMURL::create(const String& url, const DOMURL& base)
-{
-    return create(url, base.href());
-}
-
 DOMURL::~DOMURL() = default;
+
+bool DOMURL::canParse(const String& url, const String& base)
+{
+    URL baseURL { base };
+    if (!base.isNull() && !baseURL.isValid())
+        return false;
+    URL completeURL { baseURL, url };
+    return completeURL.isValid();
+}
 
 ExceptionOr<void> DOMURL::setHref(const String& url)
 {
@@ -78,11 +82,6 @@ ExceptionOr<void> DOMURL::setHref(const String& url)
     if (m_searchParams)
         m_searchParams->updateFromAssociatedURL();
     return { };
-}
-
-void DOMURL::setQuery(const String& query)
-{
-    m_url.setQuery(query);
 }
 
 String DOMURL::createObjectURL(ScriptExecutionContext& scriptExecutionContext, Blob& blob)

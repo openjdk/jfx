@@ -47,7 +47,9 @@ namespace JSC {
     typedef ThreadSpecific<AssemblerData, WTF::CanBeGCThread::True> ThreadSpecificAssemblerData;
 
     JS_EXPORT_PRIVATE ThreadSpecificAssemblerData& threadSpecificAssemblerData();
+#if CPU(ARM64E)
     JS_EXPORT_PRIVATE ThreadSpecificAssemblerData& threadSpecificAssemblerHashes();
+#endif
 
     class LinkBuffer;
 
@@ -204,10 +206,7 @@ namespace JSC {
     };
 
 #if CPU(ARM64E)
-    enum class ShouldSign {
-        Yes,
-        No
-    };
+    enum class ShouldSign : bool { No, Yes };
     template <ShouldSign shouldSign>
     class ARM64EHash {
         WTF_MAKE_NONCOPYABLE(ARM64EHash);

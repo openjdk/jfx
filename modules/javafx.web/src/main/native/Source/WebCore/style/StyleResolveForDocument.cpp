@@ -32,14 +32,14 @@
 #include "CSSFontSelector.h"
 #include "Document.h"
 #include "FontCascade.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "HTMLIFrameElement.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "LocaleToScriptMapping.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
 #include "RenderObject.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include "StyleAdjuster.h"
@@ -73,7 +73,7 @@ RenderStyle resolveForDocument(const Document& document)
     Adjuster::adjustEventListenerRegionTypesForRootStyle(documentStyle, document);
 
     const Pagination& pagination = renderView.frameView().pagination();
-    if (pagination.mode != Pagination::Unpaginated) {
+    if (pagination.mode != Unpaginated) {
         documentStyle.setColumnStylesFromPaginationMode(pagination.mode);
         documentStyle.setColumnGap(GapLength(Length((int) pagination.gap, LengthType::Fixed)));
         if (renderView.multiColumnFlow())
@@ -84,7 +84,6 @@ RenderStyle resolveForDocument(const Document& document)
 
     FontCascadeDescription fontDescription;
     fontDescription.setSpecifiedLocale(document.contentLanguage());
-    fontDescription.setRenderingMode(settings.fontRenderingMode());
     fontDescription.setOneFamily(standardFamily);
     fontDescription.setShouldAllowUserInstalledFonts(settings.shouldAllowUserInstalledFonts() ? AllowUserInstalledFonts::Yes : AllowUserInstalledFonts::No);
 

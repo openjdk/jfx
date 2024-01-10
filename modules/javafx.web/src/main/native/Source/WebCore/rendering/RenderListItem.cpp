@@ -31,7 +31,10 @@
 #include "HTMLOListElement.h"
 #include "HTMLUListElement.h"
 #include "PseudoElement.h"
-#include "RenderStyleConstants.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
+#include "RenderStyleSetters.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "StyleInheritedData.h"
@@ -78,8 +81,9 @@ RenderStyle RenderListItem::computeMarkerStyle() const
     markerStyle.setFontDescription(WTFMove(fontDescription));
     markerStyle.fontCascade().update(&document().fontSelector());
     markerStyle.setUnicodeBidi(UnicodeBidi::Isolate);
-    markerStyle.setWhiteSpace(WhiteSpace::Pre);
-    markerStyle.setTextTransform(TextTransform::None);
+    markerStyle.setWhiteSpaceCollapse(WhiteSpaceCollapse::Preserve);
+    markerStyle.setTextWrap(TextWrap::NoWrap);
+    markerStyle.setTextTransform({ });
     return markerStyle;
 }
 
@@ -110,7 +114,7 @@ static Element* enclosingList(const RenderListItem& listItem)
     auto& element = listItem.element();
     auto* parent = is<PseudoElement>(element) ? downcast<PseudoElement>(element).hostElement() : element.parentElement();
     for (auto* ancestor = parent; ancestor; ancestor = ancestor->parentElement()) {
-        if (isHTMLListElement(*ancestor))
+        if (isHTMLListElement(*ancestor) || (ancestor->renderer() && ancestor->renderer()->shouldApplyStyleContainment()))
             return ancestor;
     }
 

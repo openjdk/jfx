@@ -36,14 +36,14 @@
 #include "CachedPage.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameLoaderStateMachine.h"
 #include "FrameTree.h"
-#include "FrameView.h"
 #include "HTMLObjectElement.h"
 #include "HistoryItem.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "Page.h"
 #include "ScrollingCoordinator.h"
@@ -60,7 +60,7 @@ static inline void addVisitedLink(Page& page, const URL& url)
     page.visitedLinkStore().addVisitedLink(page, computeSharedStringHash(url.string()));
 }
 
-FrameLoader::HistoryController::HistoryController(Frame& frame)
+FrameLoader::HistoryController::HistoryController(LocalFrame& frame)
     : m_frame(frame)
     , m_frameLoadComplete(true)
     , m_defersLoading(false)
@@ -71,7 +71,7 @@ FrameLoader::HistoryController::~HistoryController() = default;
 
 void FrameLoader::HistoryController::saveScrollPositionAndViewStateToItem(HistoryItem* item)
 {
-    FrameView* frameView = m_frame.view();
+    auto* frameView = m_frame.view();
     if (!item || !frameView)
         return;
 
@@ -155,7 +155,7 @@ void FrameLoader::HistoryController::restoreScrollPositionAndViewState()
     m_frame.loader().client().restoreViewState();
 
 #if !PLATFORM(IOS_FAMILY)
-    // Don't restore scroll point on iOS as FrameLoaderClient::restoreViewState() does that.
+    // Don't restore scroll point on iOS as LocalFrameLoaderClient::restoreViewState() does that.
     if (view && !view->wasScrolledByUser()) {
         view->scrollToFocusedElementImmediatelyIfNeeded();
 
@@ -220,7 +220,7 @@ void FrameLoader::HistoryController::saveDocumentState()
 // history item.
 void FrameLoader::HistoryController::saveDocumentAndScrollState()
 {
-    for (AbstractFrame* frame = &m_frame; frame; frame = frame->tree().traverseNext(&m_frame)) {
+    for (Frame* frame = &m_frame; frame; frame = frame->tree().traverseNext(&m_frame)) {
         auto* localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
@@ -527,7 +527,7 @@ void FrameLoader::HistoryController::recursiveUpdateForCommit()
         saveDocumentState();
         saveScrollPositionAndViewStateToItem(m_currentItem.get());
 
-        if (FrameView* view = m_frame.view())
+        if (auto* view = m_frame.view())
             view->setWasScrolledByUser(false);
 
         // Now commit the provisional item
@@ -703,7 +703,7 @@ Ref<HistoryItem> FrameLoader::HistoryController::createItem()
     return item;
 }
 
-Ref<HistoryItem> FrameLoader::HistoryController::createItemTree(Frame& targetFrame, bool clipAtTarget)
+Ref<HistoryItem> FrameLoader::HistoryController::createItemTree(LocalFrame& targetFrame, bool clipAtTarget)
 {
     Ref<HistoryItem> bfItem = createItem();
     if (!m_frameLoadComplete)
@@ -763,7 +763,7 @@ void FrameLoader::HistoryController::recursiveSetProvisionalItem(HistoryItem& it
         if (!fromChildItem)
             continue;
 
-        if (auto* childFrame = dynamicDowncast<LocalFrame>(m_frame.tree().child(childFrameName)))
+        if (auto* childFrame = dynamicDowncast<LocalFrame>(m_frame.tree().childByUniqueName(childFrameName)))
             childFrame->loader().history().recursiveSetProvisionalItem(childItem, fromChildItem);
     }
 }
@@ -785,7 +785,7 @@ void FrameLoader::HistoryController::recursiveGoToItem(HistoryItem& item, Histor
         if (!fromChildItem)
             continue;
 
-        if (auto* childFrame = dynamicDowncast<LocalFrame>(m_frame.tree().child(childFrameName)))
+        if (auto* childFrame = dynamicDowncast<LocalFrame>(m_frame.tree().childByUniqueName(childFrameName)))
             childFrame->loader().history().recursiveGoToItem(childItem, fromChildItem, type, shouldTreatAsContinuingLoad);
     }
 }
@@ -816,7 +816,7 @@ bool FrameLoader::HistoryController::currentFramesMatchItem(HistoryItem& item) c
         return false;
 
     for (auto& item : childItems) {
-        if (!m_frame.tree().child(item->target()))
+        if (!m_frame.tree().childByUniqueName(item->target()))
             return false;
     }
 

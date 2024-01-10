@@ -30,7 +30,7 @@
 
 namespace WTF::Persistence {
 
-Decoder::Decoder(Span<const uint8_t> span)
+Decoder::Decoder(std::span<const uint8_t> span)
     : m_buffer(span)
     , m_bufferPosition(span.begin())
 {
@@ -42,7 +42,7 @@ Decoder::~Decoder()
 
 bool Decoder::bufferIsLargeEnoughToContain(size_t size) const
 {
-    return size <= static_cast<size_t>(m_buffer.end() - m_bufferPosition);
+    return size <= static_cast<size_t>(std::distance(m_bufferPosition, m_buffer.end()));
 }
 
 const uint8_t* Decoder::bufferPointerForDirectRead(size_t size)
@@ -50,14 +50,14 @@ const uint8_t* Decoder::bufferPointerForDirectRead(size_t size)
     if (!bufferIsLargeEnoughToContain(size))
         return nullptr;
 
-    auto data = m_bufferPosition;
+    auto data = m_buffer.data() + currentOffset();
     m_bufferPosition += size;
 
     Encoder::updateChecksumForData(m_sha1, { data, size });
     return data;
 }
 
-bool Decoder::decodeFixedLengthData(Span<uint8_t> span)
+bool Decoder::decodeFixedLengthData(std::span<uint8_t> span)
 {
     auto buffer = bufferPointerForDirectRead(span.size());
     if (!buffer)
@@ -68,7 +68,7 @@ bool Decoder::decodeFixedLengthData(Span<uint8_t> span)
 
 bool Decoder::rewind(size_t size)
 {
-    if (size <= static_cast<size_t>(m_bufferPosition - m_buffer.begin())) {
+    if (size <= currentOffset()) {
         m_bufferPosition -= size;
         return true;
     }
@@ -82,7 +82,7 @@ Decoder& Decoder::decodeNumber(std::optional<T>& optional)
         return *this;
 
     T value;
-    memcpy(&value, m_bufferPosition, sizeof(T));
+    memcpy(&value, m_buffer.data() + currentOffset(), sizeof(T));
     m_bufferPosition += sizeof(T);
 
     Encoder::updateChecksumForNumber(m_sha1, value);

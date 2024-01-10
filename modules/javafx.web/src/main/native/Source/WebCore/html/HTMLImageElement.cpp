@@ -30,11 +30,10 @@
 #include "ChromeClient.h"
 #include "CommonAtomStrings.h"
 #include "Editor.h"
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "FrameView.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLAttachmentElement.h"
 #include "HTMLDocument.h"
@@ -45,15 +44,21 @@
 #include "HTMLPictureElement.h"
 #include "HTMLSourceElement.h"
 #include "HTMLSrcsetParser.h"
+#include "JSRequestPriority.h"
 #include "LazyLoadImageObserver.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MediaQueryEvaluator.h"
 #include "MouseEvent.h"
+#include "NodeName.h"
 #include "NodeTraversal.h"
 #include "PlatformMouseEvent.h"
+#include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderView.h"
+#include "RequestPriority.h"
 #include "ScriptController.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -72,7 +77,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLImageElement);
 using namespace HTMLNames;
 
 HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
-    : HTMLElement(tagName, document)
+    : HTMLElement(tagName, document, CreateHTMLImageElement)
     , FormAssociatedElement(form)
     , ActiveDOMObject(document)
     , m_imageLoader(makeUnique<HTMLImageLoader>(*this))
@@ -80,7 +85,6 @@ HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document& docum
     , m_imageDevicePixelRatio(1.0f)
 {
     ASSERT(hasTagName(imgTag));
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<HTMLImageElement> HTMLImageElement::create(Document& document)
@@ -112,11 +116,11 @@ void HTMLImageElement::resetFormOwner()
     setForm(HTMLFormElement::findClosestFormAncestor(*this));
 }
 
-void HTMLImageElement::setFormInternal(HTMLFormElement* newForm)
+void HTMLImageElement::setFormInternal(RefPtr<HTMLFormElement>&& newForm)
 {
     if (auto* form = FormAssociatedElement::form())
         form->unregisterImgElement(*this);
-    FormAssociatedElement::setFormInternal(newForm);
+    FormAssociatedElement::setFormInternal(newForm.copyRef());
     if (newForm)
         newForm->registerImgElement(*this);
 }
@@ -141,33 +145,52 @@ Ref<HTMLImageElement> HTMLImageElement::createForLegacyFactoryFunction(Document&
 
 bool HTMLImageElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
-    if (name == widthAttr || name == heightAttr || name == borderAttr || name == vspaceAttr || name == hspaceAttr || name == valignAttr)
+    switch (name.nodeName()) {
+    case AttributeNames::widthAttr:
+    case AttributeNames::heightAttr:
+    case AttributeNames::borderAttr:
+    case AttributeNames::vspaceAttr:
+    case AttributeNames::hspaceAttr:
+    case AttributeNames::valignAttr:
         return true;
+    default:
+        break;
+    }
     return HTMLElement::hasPresentationalHintsForAttribute(name);
 }
 
 void HTMLImageElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
-    if (name == widthAttr) {
+    switch (name.nodeName()) {
+    case AttributeNames::widthAttr:
         addHTMLMultiLengthToStyle(style, CSSPropertyWidth, value);
         applyAspectRatioFromWidthAndHeightAttributesToStyle(value, attributeWithoutSynchronization(heightAttr), style);
-    } else if (name == heightAttr) {
+        break;
+    case AttributeNames::heightAttr:
         addHTMLMultiLengthToStyle(style, CSSPropertyHeight, value);
         applyAspectRatioFromWidthAndHeightAttributesToStyle(attributeWithoutSynchronization(widthAttr), value, style);
-    } else if (name == borderAttr)
+        break;
+    case AttributeNames::borderAttr:
         applyBorderAttributeToStyle(value, style);
-    else if (name == vspaceAttr) {
+        break;
+    case AttributeNames::vspaceAttr:
         addHTMLLengthToStyle(style, CSSPropertyMarginTop, value);
         addHTMLLengthToStyle(style, CSSPropertyMarginBottom, value);
-    } else if (name == hspaceAttr) {
+        break;
+    case AttributeNames::hspaceAttr:
         addHTMLLengthToStyle(style, CSSPropertyMarginLeft, value);
         addHTMLLengthToStyle(style, CSSPropertyMarginRight, value);
-    } else if (name == alignAttr)
+        break;
+    case AttributeNames::alignAttr:
         applyAlignmentAttributeToStyle(value, style);
-    else if (name == valignAttr)
+        break;
+    case AttributeNames::valignAttr:
         addPropertyToPresentationalHintStyle(style, CSSPropertyVerticalAlign, value);
-    else
+        break;
+    default:
         HTMLElement::collectPresentationalHintsForAttribute(name, value, style);
+        break;
+    }
 }
 
 void HTMLImageElement::collectExtraStyleForPresentationalHints(MutableStyleProperties& style)
@@ -206,7 +229,8 @@ const AtomString& HTMLImageElement::imageSourceURL() const
 void HTMLImageElement::setBestFitURLAndDPRFromImageCandidate(const ImageCandidate& candidate)
 {
     m_bestFitImageURL = candidate.string.toAtomString();
-    m_currentSrc = AtomString(document().completeURL(imageSourceURL()).string());
+    m_currentURL = document().completeURL(imageSourceURL());
+    m_currentSrc = AtomString(m_currentURL.string());
     if (candidate.density >= 0)
         m_imageDevicePixelRatio = 1 / candidate.density;
     if (is<RenderImage>(renderer()))
@@ -217,8 +241,8 @@ static String extractMIMETypeFromTypeAttributeForLookup(const String& typeAttrib
 {
     auto semicolonIndex = typeAttribute.find(';');
     if (semicolonIndex == notFound)
-        return stripLeadingAndTrailingHTMLSpaces(typeAttribute);
-    return StringView(typeAttribute).left(semicolonIndex).stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>).toStringWithoutCopying();
+        return typeAttribute.trim(isASCIIWhitespace);
+    return StringView(typeAttribute).left(semicolonIndex).trim(isASCIIWhitespace<UChar>).toStringWithoutCopying();
 }
 
 ImageCandidate HTMLImageElement::bestFitSourceFromPictureElement()
@@ -328,52 +352,53 @@ static CrossOriginState parseCrossoriginState(const AtomString& crossoriginValue
     return equalLettersIgnoringASCIICase(crossoriginValue, "use-credentials"_s) ? UseCredentials : Anonymous;
 }
 
-void HTMLImageElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
+void HTMLImageElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    HTMLElement::attributeChanged(name, oldValue, newValue, reason);
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
-    if (name == referrerpolicyAttr && document().settings().referrerPolicyAttributeEnabled()) {
-        auto oldReferrerPolicy = parseReferrerPolicy(oldValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
-        auto newReferrerPolicy = parseReferrerPolicy(newValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
-        if (oldReferrerPolicy != newReferrerPolicy)
-            m_imageLoader->updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
-    } else if (name == crossoriginAttr) {
-        if (parseCrossoriginState(oldValue) != parseCrossoriginState(newValue))
-            m_imageLoader->updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
-    }
-}
-
-void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomString& value)
-{
-    if (name == altAttr) {
-        if (is<RenderImage>(renderer()))
-            downcast<RenderImage>(*renderer()).updateAltText();
-    } else if (name == srcAttr || name == srcsetAttr || name == sizesAttr)
+    switch (name.nodeName()) {
+    case AttributeNames::altAttr:
+        if (auto* renderImage = dynamicDowncast<RenderImage>(renderer()))
+            renderImage->updateAltText();
+        break;
+    case AttributeNames::srcAttr:
+    case AttributeNames::srcsetAttr:
+    case AttributeNames::sizesAttr:
         selectImageSource(RelevantMutation::Yes);
-    else if (name == usemapAttr) {
+        break;
+    case AttributeNames::usemapAttr:
         if (isInTreeScope() && !m_parsedUsemap.isNull())
             treeScope().removeImageElementByUsemap(*m_parsedUsemap.impl(), *this);
-
-        m_parsedUsemap = parseHTMLHashNameReference(value);
-
+        m_parsedUsemap = parseHTMLHashNameReference(newValue);
         if (isInTreeScope() && !m_parsedUsemap.isNull())
             treeScope().addImageElementByUsemap(*m_parsedUsemap.impl(), *this);
-    } else if (name == compositeAttr) {
+        break;
+    case AttributeNames::compositeAttr: {
         // FIXME: images don't support blend modes in their compositing attribute.
         BlendMode blendOp = BlendMode::Normal;
-        if (!parseCompositeAndBlendOperator(value, m_compositeOperator, blendOp))
+        if (!parseCompositeAndBlendOperator(newValue, m_compositeOperator, blendOp))
             m_compositeOperator = CompositeOperator::SourceOver;
-#if ENABLE(SERVICE_CONTROLS)
-    } else if (isImageMenuEnabled()) {
-        ImageControlsMac::updateImageControls(*this);
-#endif
-    } else if (name == loadingAttr) {
+        break;
+    }
+    case AttributeNames::loadingAttr:
         // No action needed for eager to lazy transition.
-        if (!hasLazyLoadableAttributeValue(value))
+        if (!hasLazyLoadableAttributeValue(newValue))
             loadDeferredImage();
-    } else {
-        if (name == nameAttr) {
-            bool willHaveName = !value.isEmpty();
+        break;
+    case AttributeNames::referrerpolicyAttr:
+        if (document().settings().referrerPolicyAttributeEnabled()) {
+            auto oldReferrerPolicy = parseReferrerPolicy(oldValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
+            auto newReferrerPolicy = parseReferrerPolicy(newValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
+            if (oldReferrerPolicy != newReferrerPolicy)
+                m_imageLoader->updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
+        }
+        break;
+    case AttributeNames::crossoriginAttr:
+        if (parseCrossoriginState(oldValue) != parseCrossoriginState(newValue))
+            m_imageLoader->updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
+        break;
+    case AttributeNames::nameAttr: {
+        bool willHaveName = !newValue.isEmpty();
             if (m_hadNameBeforeAttributeChanged != willHaveName && isConnected() && !isInShadowTree() && is<HTMLDocument>(document())) {
                 HTMLDocument& document = downcast<HTMLDocument>(this->document());
                 const AtomString& id = getIdAttribute();
@@ -385,9 +410,16 @@ void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomStrin
                 }
             }
             m_hadNameBeforeAttributeChanged = willHaveName;
+        break;
         }
-        HTMLElement::parseAttribute(name, value);
+    default:
+        break;
     }
+
+#if ENABLE(SERVICE_CONTROLS)
+    if (isImageMenuEnabled())
+        ImageControlsMac::updateImageControls(*this);
+#endif
 }
 
 void HTMLImageElement::loadDeferredImage()
@@ -564,20 +596,20 @@ float HTMLImageElement::effectiveImageDevicePixelRatio() const
     return m_imageDevicePixelRatio;
 }
 
-int HTMLImageElement::naturalWidth() const
+unsigned HTMLImageElement::naturalWidth() const
 {
     if (!m_imageLoader->image())
         return 0;
 
-    return m_imageLoader->image()->unclampedImageSizeForRenderer(renderer(), effectiveImageDevicePixelRatio()).width();
+    return m_imageLoader->image()->unclampedImageSizeForRenderer(renderer(), effectiveImageDevicePixelRatio()).width().toUnsigned();
 }
 
-int HTMLImageElement::naturalHeight() const
+unsigned HTMLImageElement::naturalHeight() const
 {
     if (!m_imageLoader->image())
         return 0;
 
-    return m_imageLoader->image()->unclampedImageSizeForRenderer(renderer(), effectiveImageDevicePixelRatio()).height();
+    return m_imageLoader->image()->unclampedImageSizeForRenderer(renderer(), effectiveImageDevicePixelRatio()).height().toUnsigned();
 }
 
 bool HTMLImageElement::isURLAttribute(const Attribute& attribute) const
@@ -707,9 +739,6 @@ String HTMLImageElement::decoding() const
     switch (decodingMode()) {
     case DecodingMode::Auto:
         break;
-    case DecodingMode::SynchronousThumbnail:
-        ASSERT_NOT_REACHED();
-        break;
     case DecodingMode::Synchronous:
         return "sync"_s;
     case DecodingMode::Asynchronous:
@@ -764,7 +793,7 @@ bool HTMLImageElement::isServerMap() const
     if (usemap.string()[0] == '#')
         return false;
 
-    return document().completeURL(stripLeadingAndTrailingHTMLSpaces(usemap)).isEmpty();
+    return document().completeURL(usemap).isEmpty();
 }
 
 void HTMLImageElement::setCrossOrigin(const AtomString& value)
@@ -969,7 +998,7 @@ bool HTMLImageElement::isDeferred() const
 
 bool HTMLImageElement::isLazyLoadable() const
 {
-    if (!document().frame() || !document().frame()->script().canExecuteScripts(NotAboutToExecuteScript))
+    if (!document().frame() || !document().frame()->script().canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
         return false;
     return hasLazyLoadableAttributeValue(attributeWithoutSynchronization(HTMLNames::loadingAttr));
 }
@@ -1023,6 +1052,23 @@ Ref<Element> HTMLImageElement::cloneElementWithoutAttributesAndChildren(Document
     return clone;
 }
 
+void HTMLImageElement::setFetchPriorityForBindings(const AtomString& value)
+{
+    setAttributeWithoutSynchronization(fetchpriorityAttr, value);
+}
+
+String HTMLImageElement::fetchPriorityForBindings() const
+{
+    return convertEnumerationToString(fetchPriorityHint());
+}
+
+RequestPriority HTMLImageElement::fetchPriorityHint() const
+{
+    if (document().settings().fetchPriorityEnabled())
+        return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
+    return RequestPriority::Auto;
+}
+
 bool HTMLImageElement::originClean(const SecurityOrigin& origin) const
 {
     UNUSED_PARAM(origin);
@@ -1035,11 +1081,11 @@ bool HTMLImageElement::originClean(const SecurityOrigin& origin) const
     if (!image)
         return true;
 
-    if (image->sourceURL().protocolIsData())
-        return true;
-
     if (image->renderingTaintsOrigin())
         return false;
+
+    if (image->sourceURL().protocolIsData())
+        return true;
 
     if (cachedImage->isCORSCrossOrigin())
         return false;

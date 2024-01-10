@@ -279,6 +279,10 @@ void PlatformMediaSession::clientWillBeDOMSuspended()
 void PlatformMediaSession::pauseSession()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+
+    if (state() == Interrupted)
+        m_stateToRestore = Paused;
+
     m_client.suspendPlayback();
 }
 
@@ -324,6 +328,11 @@ bool PlatformMediaSession::isSuspended() const
 bool PlatformMediaSession::isPlaying() const
 {
     return m_client.isPlaying();
+}
+
+bool PlatformMediaSession::isAudible() const
+{
+    return m_client.isAudible();
 }
 
 bool PlatformMediaSession::shouldOverrideBackgroundLoadingRestriction() const

@@ -229,6 +229,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, SpeculationDump(node->prediction()));
     if (node->hasNumberOfArgumentsToSkip())
         out.print(comma, "numberOfArgumentsToSkip = ", node->numberOfArgumentsToSkip());
+    if (node->hasNumberOfBoundArguments())
+        out.print(comma, "numberOfBoundArguments = ", node->numberOfBoundArguments());
     if (node->hasArrayMode())
         out.print(comma, node->arrayMode());
     if (node->hasArithUnaryType())
@@ -287,6 +289,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     }
     if (node->hasQueriedType())
         out.print(comma, node->queriedType());
+    if (node->hasStructureFlags())
+        out.print(comma, node->structureFlags());
     if (node->hasStorageAccessData()) {
         StorageAccessData& storageAccessData = node->storageAccessData();
         out.print(comma, "id", storageAccessData.identifierNumber, "{", identifiers()[storageAccessData.identifierNumber], "}");
@@ -389,6 +393,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, *node->putByStatus());
     if (node->hasEnumeratorMetadata())
         out.print(comma, "enumeratorModes = ", node->enumeratorMetadata().toRaw());
+    if (node->hasExtractOffset())
+        out.print(comma, "<<", node->extractOffset());
     if (node->isJump())
         out.print(comma, "T:", *node->targetBlock());
     if (node->isBranch())
@@ -679,6 +685,11 @@ void Graph::packNodeIndices()
     m_nodes.packIndices();
 }
 
+void Graph::clearAbstractValues()
+{
+    m_abstractValuesCache->clear();
+}
+
 void Graph::dethread()
 {
     if (m_form == LoadStore || m_form == SSA)
@@ -763,6 +774,8 @@ public:
             for (unsigned phiIndex = block->phis.size(); phiIndex--;)
                 block->phis[phiIndex]->setRefCount(0);
         }
+        for (auto& tupleData : m_graph.m_tupleData)
+            tupleData.refCount = 0;
 
         // Now find the roots:
         // - Nodes that are must-generate.
@@ -818,8 +831,7 @@ private:
         // will just not have gotten around to it.
         if (edge.isProved() || edge.willNotHaveCheck())
             return;
-        if (!edge->postfixRef())
-            m_worklist.append(edge.node());
+        countNode(edge.node());
     }
 
     void countNode(Node* node)
@@ -829,11 +841,14 @@ private:
         m_worklist.append(node);
     }
 
-    void countEdge(Node*, Edge edge)
+    void countEdge(Node* node, Edge edge)
     {
         // Don't count edges that are already counted for their type checks.
         if (!(edge.isProved() || edge.willNotHaveCheck()))
             return;
+        // Tuples are special and have a reference count for each result.
+        if (node->op() == ExtractFromTuple)
+            m_graph.m_tupleData.at(node->tupleIndex()).refCount++;
         countNode(edge.node());
     }
 
@@ -1370,6 +1385,17 @@ AbstractValue Graph::inferredValueForProperty(
     return AbstractValue::heapTop();
 }
 
+AbstractValue Graph::inferredValueForProperty(const AbstractValue& base, const RegisteredStructureSet& structureSet, PropertyOffset offset, StructureClobberState clobberState)
+{
+    if (JSValue value = tryGetConstantProperty(base.m_value, structureSet, offset)) {
+        AbstractValue result;
+        result.set(*this, *freeze(value), clobberState);
+        return result;
+    }
+
+    return AbstractValue::heapTop();
+}
+
 JSValue Graph::tryGetConstantClosureVar(JSValue base, ScopeOffset offset)
 {
     // This has an awesome concurrency story. See comment for GetGlobalVar in ByteCodeParser.
@@ -1737,8 +1763,34 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
                     return MethodOfGettingAValueProfile::lazyOperandValueProfile(node->origin.semantic, node->operand());
             }
 
-            if (node->hasHeapPrediction())
+            if (node->hasHeapPrediction()) {
+                auto instruction = profiledBlock->instructions().at(node->origin.semantic.bytecodeIndex());
+                OpcodeID opcodeID = instruction->opcodeID();
+                switch (opcodeID) {
+                case op_tail_call:
+                case op_tail_call_varargs:
+                case op_tail_call_forward_arguments: {
+                    InlineCallFrame* inlineCallFrame = node->origin.semantic.inlineCallFrame();
+                    if (!inlineCallFrame)
+                        return { }; // TailCall in the outermost function.
+
+                    CodeOrigin* codeOrigin = inlineCallFrame->getCallerSkippingTailCalls();
+                    if (!codeOrigin)
+                        return { };
+
+                    CodeBlock* callerBlock = baselineCodeBlockFor(*codeOrigin);
+                    auto* valueProfile = callerBlock->tryGetValueProfileForBytecodeIndex(codeOrigin->bytecodeIndex());
+                    if (!valueProfile)
+                        return { };
+
+                    return MethodOfGettingAValueProfile::bytecodeValueProfile(*codeOrigin);
+                }
+                case op_call_ignore_result:
+                    return { };
+                default:
                 return MethodOfGettingAValueProfile::bytecodeValueProfile(node->origin.semantic);
+                }
+            }
 
             if (profiledBlock->hasBaselineJITProfiling()) {
                 if (profiledBlock->binaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
@@ -1928,6 +1980,18 @@ void Graph::freeDFGIRAfterLowering()
     m_backwardsCFG = nullptr;
     m_backwardsDominators = nullptr;
     m_controlEquivalenceAnalysis = nullptr;
+}
+
+const BoyerMooreHorspoolTable<uint8_t>* Graph::tryAddStringSearchTable8(const String& string)
+{
+    constexpr unsigned minPatternLength = 9;
+    if (string.length() > BoyerMooreHorspoolTable<uint8_t>::maxPatternLength)
+        return nullptr;
+    if (string.length() < minPatternLength)
+        return nullptr;
+    return m_stringSearchTable8.ensure(string, [&]() {
+        return makeUnique<BoyerMooreHorspoolTable<uint8_t>>(string);
+    }).iterator->value.get();
 }
 
 void Prefix::dump(PrintStream& out) const
