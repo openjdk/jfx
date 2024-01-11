@@ -1039,7 +1039,7 @@ public class Text extends Shape {
     private int findRunIndex(double x, double y, GlyphList[] runs) {
         int runIndex = 0;
         if (runs.length != 0) {
-            if (this.getScene().getNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
                 double yPos = y;
                 if (runs[runIndex].getTextSpan() == null) {
                     while (runIndex < runs.length - 1) {

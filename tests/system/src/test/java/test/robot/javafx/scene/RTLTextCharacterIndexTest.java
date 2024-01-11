@@ -45,12 +45,12 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -130,8 +130,8 @@ public class RTLTextCharacterIndexTest {
     private void mouseClick(double x, double y) {
         Util.runAndWait(() -> {
             Window w = scene.getWindow();
-            robot.mouseMove((int) (w.getX() + scene.getX() + x),
-                    (int) (w.getY() + scene.getY() + y));
+            robot.mouseMove(w.getX() + scene.getX() + x,
+                    w.getY() + scene.getY() + y);
             robot.mouseClick(MouseButton.PRIMARY);
         });
     }
@@ -145,8 +145,7 @@ public class RTLTextCharacterIndexTest {
         Util.runAndWait(() -> {
             textOne.setText("This is text");
             textOne.setFont(new Font(48));
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textOne);
+            vBox.getChildren().setAll(textOne);
         });
     }
 
@@ -154,8 +153,7 @@ public class RTLTextCharacterIndexTest {
         Util.runAndWait(() -> {
             textOne.setText("شسيبلاتنم");
             textOne.setFont(new Font(48));
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textOne);
+            vBox.getChildren().setAll(textOne);
         });
     }
 
@@ -163,8 +161,7 @@ public class RTLTextCharacterIndexTest {
         Util.runAndWait(() -> {
             textOne.setText("Arabic:شسيبلاتنم");
             textOne.setFont(new Font(48));
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textOne);
+            vBox.getChildren().setAll(textOne);
         });
     }
 
@@ -172,8 +169,7 @@ public class RTLTextCharacterIndexTest {
         Util.runAndWait(() -> {
             textOne.setText("This is text\nThis is text");
             textOne.setFont(new Font(48));
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textOne);
+            vBox.getChildren().setAll(textOne);
         });
     }
 
@@ -181,8 +177,7 @@ public class RTLTextCharacterIndexTest {
         Util.runAndWait(() -> {
             textOne.setText("Arabic:شسيبلاتنم\nArabic:شسيبلاتنم");
             textOne.setFont(new Font(48));
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textOne);
+            vBox.getChildren().setAll(textOne);
         });
     }
 
@@ -190,8 +185,7 @@ public class RTLTextCharacterIndexTest {
         Util.runAndWait(() -> {
             textOne.setText("شسيبلاتنم شسيبلاتنم\nشسيبلاتنم شسيبلاتنم");
             textOne.setFont(new Font(48));
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textOne);
+            vBox.getChildren().setAll(textOne);
         });
     }
 
@@ -206,11 +200,11 @@ public class RTLTextCharacterIndexTest {
         while (x > X_LEADING_OFFSET) {
             moveMouseOverText(x, 0);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assert.assertTrue(charIndex < textOneLength);
+            Assertions.assertTrue(charIndex < textOneLength);
             x -= step();
         }
     }
@@ -226,11 +220,11 @@ public class RTLTextCharacterIndexTest {
         while (x > X_LEADING_OFFSET) {
             moveMouseOverText(x, 0);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assert.assertTrue(charIndex < textOneLength);
+            Assertions.assertTrue(charIndex < textOneLength);
             x -= step();
         }
     }
@@ -246,11 +240,11 @@ public class RTLTextCharacterIndexTest {
         while (x > X_LEADING_OFFSET) {
             moveMouseOverText(x, 0);
             if (isLeading) {
-                Assert.assertEquals(charIndex, insertionIndex);
+                Assertions.assertEquals(charIndex, insertionIndex);
             } else {
-                Assert.assertEquals(charIndex, insertionIndex - 1);
+                Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assert.assertTrue(charIndex < textOneLength);
+            Assertions.assertTrue(charIndex < textOneLength);
             x -= step();
         }
     }
@@ -267,11 +261,11 @@ public class RTLTextCharacterIndexTest {
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverText(x, (Y_OFFSET * (y * 2)));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < textOneLength);
+                Assertions.assertTrue(charIndex < textOneLength);
                 x -= step();
             }
         }
@@ -289,11 +283,11 @@ public class RTLTextCharacterIndexTest {
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverText(x, (Y_OFFSET * (y * 2)));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < textOneLength);
+                Assertions.assertTrue(charIndex < textOneLength);
                 x -= step();
             }
         }
@@ -311,11 +305,11 @@ public class RTLTextCharacterIndexTest {
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverText(x, (Y_OFFSET * (y * 2)));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < textOneLength);
+                Assertions.assertTrue(charIndex < textOneLength);
                 x -= step();
             }
         }
@@ -340,21 +334,21 @@ public class RTLTextCharacterIndexTest {
         return 1.0 + random.nextDouble() * 8.0;
     }
 
-    @After
+    @AfterEach
     public void resetUI() {
         Platform.runLater(() -> {
             textOne.removeEventHandler(MouseEvent.MOUSE_PRESSED, this::handleTextMouseEvent);
         });
     }
 
-    @Before
+    @BeforeEach
     public void setupUI() {
         Platform.runLater(() -> {
             textOne.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleTextMouseEvent);
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         long seed = new Random().nextLong();
         System.out.println("seed=" + seed);
@@ -363,7 +357,7 @@ public class RTLTextCharacterIndexTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown(stage);
     }

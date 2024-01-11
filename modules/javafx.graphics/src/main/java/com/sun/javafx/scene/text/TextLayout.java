@@ -208,8 +208,10 @@ public interface TextLayout {
      * @param text text for which HitInfo needs to be calculated.
      *             It is expected to be null in the case of {@link javafx.scene.text.TextFlow}
      *             and non-null in the case of {@link javafx.scene.text.Text}
-     * @param textRunStart Text run start position.
+     * @param textRunStart Start position of first Text run where hit info is requested.
+     *                     For TextFlow this value will be -1 to distinguish it from Text node.
      * @param curRunStart starting position of text run where hit info is requested.
+     *                    For TextFlow this value will be -1  to distinguish it from Text node.
      * @return returns a {@link Hit} object containing character index, insertion index and position of cursor on the character.
      */
     public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart);

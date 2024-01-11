@@ -31,9 +31,12 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.layout.VBox;
 import javafx.scene.robot.Robot;
 import javafx.scene.text.Font;
@@ -43,19 +46,13 @@ import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
-
-import javafx.scene.layout.StackPane;
-
-import javafx.scene.input.PickResult;
-import javafx.scene.Node;
-import javafx.geometry.Point3D;
 
 /*
  * Test for verifying character index of Text nodes embedded in TextFlow in RTL orientation.
@@ -132,8 +129,8 @@ public class RTLTextFlowCharacterIndexTest {
     private void mouseClick(double x, double y) {
         Util.runAndWait(() -> {
             Window w = scene.getWindow();
-            robot.mouseMove((int) (w.getX() + scene.getX() + x),
-                    (int) (w.getY() + scene.getY() + y));
+            robot.mouseMove(w.getX() + scene.getX() + x,
+                    w.getY() + scene.getY() + y);
             robot.mouseClick(MouseButton.PRIMARY);
         });
     }
@@ -148,8 +145,7 @@ public class RTLTextFlowCharacterIndexTest {
             textOne.setText("شسيبلاتنم");
             textOne.setFont(new Font(48));
             textFlow.getChildren().setAll(textOne);
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textFlow);
+            vBox.getChildren().setAll(textFlow);
         });
     }
 
@@ -158,8 +154,7 @@ public class RTLTextFlowCharacterIndexTest {
             textOne.setText("This is text");
             textOne.setFont(new Font(48));
             textFlow.getChildren().setAll(textOne);
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textFlow);
+            vBox.getChildren().setAll(textFlow);
         });
     }
 
@@ -170,8 +165,7 @@ public class RTLTextFlowCharacterIndexTest {
             textTwo.setText("شسيبلاتنم");
             textTwo.setFont(new Font(48));
             textFlow.getChildren().setAll(textOne, textTwo);
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textFlow);
+            vBox.getChildren().setAll(textFlow);
         });
     }
 
@@ -184,8 +178,7 @@ public class RTLTextFlowCharacterIndexTest {
             textThree.setText("حخهعغقثصضشسيبل");
             textThree.setFont(new Font(48));
             textFlow.getChildren().setAll(textOne, textTwo, textThree);
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textFlow);
+            vBox.getChildren().setAll(textFlow);
         });
     }
 
@@ -198,8 +191,7 @@ public class RTLTextFlowCharacterIndexTest {
             textThree.setText("Third line of text");
             textThree.setFont(new Font(48));
             textFlow.getChildren().setAll(textOne, textTwo, textThree);
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textFlow);
+            vBox.getChildren().setAll(textFlow);
         });
     }
 
@@ -212,8 +204,7 @@ public class RTLTextFlowCharacterIndexTest {
             textThree.setText("ضصثقف");
             textThree.setFont(new Font(48));
             textFlow.getChildren().setAll(textOne, textTwo, textThree);
-            vBox.getChildren().clear();
-            vBox.getChildren().add(textFlow);
+            vBox.getChildren().setAll(textFlow);
         });
     }
 
@@ -228,17 +219,17 @@ public class RTLTextFlowCharacterIndexTest {
         while (x > X_LEADING_OFFSET) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
                 if (textFlowIsLeading) {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
                 } else {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
                 }
-            Assert.assertTrue(charIndex < textOneLength);
-            Assert.assertTrue(textFlowCharIndex < textOneLength);
+            Assertions.assertTrue(charIndex < textOneLength);
+            Assertions.assertTrue(textFlowCharIndex < textOneLength);
             x -= step();
         }
     }
@@ -254,17 +245,17 @@ public class RTLTextFlowCharacterIndexTest {
         while (x > X_LEADING_OFFSET) {
             moveMouseOverTextFlow(x, Y_OFFSET);
             if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
                 if (textFlowIsLeading) {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
                 } else {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
                 }
-            Assert.assertTrue(charIndex < textOneLength);
-            Assert.assertTrue(textFlowCharIndex < textOneLength);
+            Assertions.assertTrue(charIndex < textOneLength);
+            Assertions.assertTrue(textFlowCharIndex < textOneLength);
             x -= step();
         }
     }
@@ -281,17 +272,17 @@ public class RTLTextFlowCharacterIndexTest {
         while (x > X_LEADING_OFFSET) {
             moveMouseOverTextFlow(x, Y_OFFSET);
            if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
                 if (textFlowIsLeading) {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
                 } else {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
                 }
-            Assert.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
-            Assert.assertTrue(textFlowCharIndex < textOneLength + textTwoLength);
+            Assertions.assertTrue(charIndex < Math.max(textOneLength, textTwoLength));
+            Assertions.assertTrue(textFlowCharIndex < textOneLength + textTwoLength);
             x -= step();
         }
     }
@@ -310,17 +301,17 @@ public class RTLTextFlowCharacterIndexTest {
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
                 if (textFlowIsLeading) {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
                 } else {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
-                Assert.assertTrue(textFlowCharIndex < textOneLength + textTwoLength + textThreeLength);
+                Assertions.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
+                Assertions.assertTrue(textFlowCharIndex < textOneLength + textTwoLength + textThreeLength);
                 x -= step();
             }
         }
@@ -340,17 +331,17 @@ public class RTLTextFlowCharacterIndexTest {
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
                 if (textFlowIsLeading) {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
                 } else {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
-                Assert.assertTrue(textFlowCharIndex < textOneLength + textTwoLength + textThreeLength);
+                Assertions.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
+                Assertions.assertTrue(textFlowCharIndex < textOneLength + textTwoLength + textThreeLength);
                 x -= step();
             }
         }
@@ -370,17 +361,17 @@ public class RTLTextFlowCharacterIndexTest {
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
                 if (isLeading) {
-                    Assert.assertEquals(charIndex, insertionIndex);
+                    Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
-                    Assert.assertEquals(charIndex, insertionIndex - 1);
+                    Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
                 if (textFlowIsLeading) {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex);
                 } else {
-                    Assert.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
+                    Assertions.assertEquals(textFlowCharIndex, textFlowInsertionIndex - 1);
                 }
-                Assert.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
-                Assert.assertTrue(textFlowCharIndex < textOneLength + textTwoLength + textThreeLength);
+                Assertions.assertTrue(charIndex < Math.max(textThreeLength, Math.max(textOneLength, textTwoLength)));
+                Assertions.assertTrue(textFlowCharIndex < textOneLength + textTwoLength + textThreeLength);
                 x -= step();
             }
         }
@@ -411,7 +402,7 @@ public class RTLTextFlowCharacterIndexTest {
         return 1.0 + random.nextDouble() * 8.0;
     }
 
-    @After
+    @AfterEach
     public void resetUI() {
         Platform.runLater(() -> {
             textFlow.removeEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMouseEvent);
@@ -421,7 +412,7 @@ public class RTLTextFlowCharacterIndexTest {
         });
     }
 
-    @Before
+    @BeforeEach
     public void setupUI() {
         Platform.runLater(() -> {
             textFlow.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleMouseEvent);
@@ -431,7 +422,7 @@ public class RTLTextFlowCharacterIndexTest {
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         long seed = new Random().nextLong();
         System.out.println("seed=" + seed);
@@ -440,7 +431,7 @@ public class RTLTextFlowCharacterIndexTest {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Util.shutdown(stage);
     }
