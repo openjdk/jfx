@@ -7269,6 +7269,5 @@ public class TreeTableViewTest {
         treeTableView.setRoot(null);
 
         assertDoesNotThrow(() -> Toolkit.getToolkit().firePulse());
-
     }
 }
