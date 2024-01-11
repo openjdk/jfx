@@ -6082,9 +6082,6 @@ public class TableViewTest {
 
     @Test
     public void testTableItemsNullQueryAcceessibleAttributeRowCountShouldNotThrow() {
-        table.getItems().addAll("1", "2", "3");
-
-        stageLoader = new StageLoader(table);
         table.setItems(null);
 
         assertDoesNotThrow(() -> table.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT));

@@ -7270,4 +7270,11 @@ public class TreeTableViewTest {
 
         assertDoesNotThrow(() -> Toolkit.getToolkit().firePulse());
     }
+
+    @Test
+    public void testTreeTableRootNullQueryAcceessibleAttributeRowCountShouldNotThrow() {
+        treeTableView.setRoot(null);
+
+        assertDoesNotThrow(() -> treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT));
+    }
 }
