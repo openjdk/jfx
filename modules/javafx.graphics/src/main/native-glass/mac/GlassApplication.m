@@ -62,8 +62,8 @@ static BOOL firstActivation = YES;
 static BOOL shouldReactivate = NO;
 
 // Custom NSRunLoopMode constant that matches the one used by AWT in its
-// doAWTRunLoopImpl method. This is not formally documented, but there is
-// an open bug to do so. See https://bugs.openjdk.org/browse/JDK-8270211
+// doAWTRunLoopImpl method. This is not formally documented yet, but all
+// versions of the JDK use it. We might consider a request to document it.
 static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 
 // List of allowable runLoop modes that Java runnables can run in.
