@@ -202,6 +202,8 @@ class GlassSystemMenu implements TKSystemMenu {
                 for (int i = from + removed.size() - 1; i >= from ; i--) {
                     List<Object> menuItemList = glassMenu.getItems();
                     if (i >= 0 && menuItemList.size() > i) {
+                        Object item = menuItemList.get(i);
+                        if (item instanceof Menu menu) clearMenu(menu);
                         glassMenu.remove(i);
                     }
                 }
@@ -276,29 +278,29 @@ class GlassSystemMenu implements TKSystemMenu {
 
             final MenuItem glassSubMenuItem = app.createMenuItem(parseText(menuitem), callback);
 
-            menuitem.textProperty().when(active).addListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem)));
+            menuitem.textProperty().addListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem)));
 
             glassSubMenuItem.setPixels(getPixels(menuitem));
-            menuitem.graphicProperty().when(active).addListener(valueModel -> {
+            menuitem.graphicProperty().addListener(valueModel -> {
                 glassSubMenuItem.setPixels(getPixels(menuitem));
             });
 
-            glassSubMenuItem.setEnabled(! menuitem.isDisable());
-            menuitem.disableProperty().when(active).addListener(valueModel -> glassSubMenuItem.setEnabled(!menuitem.isDisable()));
+            glassSubMenuItem.setEnabled(!menuitem.isDisable());
+            menuitem.disableProperty().addListener(valueModel -> glassSubMenuItem.setEnabled(!menuitem.isDisable()));
 
             setShortcut(glassSubMenuItem, menuitem);
-            menuitem.acceleratorProperty().when(active).addListener(valueModel -> setShortcut(glassSubMenuItem, menuitem));
+            menuitem.acceleratorProperty().addListener(valueModel -> setShortcut(glassSubMenuItem, menuitem));
 
-            menuitem.mnemonicParsingProperty().when(active).addListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem)));
+            menuitem.mnemonicParsingProperty().addListener(valueModel -> glassSubMenuItem.setTitle(parseText(menuitem)));
 
             if (menuitem instanceof CheckMenuItemBase) {
-                final CheckMenuItemBase checkItem = (CheckMenuItemBase)menuitem;
+                final CheckMenuItemBase checkItem = (CheckMenuItemBase) menuitem;
                 glassSubMenuItem.setChecked(checkItem.isSelected());
-                checkItem.selectedProperty().when(active).addListener(valueModel -> glassSubMenuItem.setChecked(checkItem.isSelected()));
+                checkItem.selectedProperty().addListener(valueModel -> glassSubMenuItem.setChecked(checkItem.isSelected()));
             } else if (menuitem instanceof RadioMenuItemBase) {
-                final RadioMenuItemBase radioItem = (RadioMenuItemBase)menuitem;
+                final RadioMenuItemBase radioItem = (RadioMenuItemBase) menuitem;
                 glassSubMenuItem.setChecked(radioItem.isSelected());
-                radioItem.selectedProperty().when(active).addListener(valueModel -> glassSubMenuItem.setChecked(radioItem.isSelected()));
+                radioItem.selectedProperty().addListener(valueModel -> glassSubMenuItem.setChecked(radioItem.isSelected()));
             }
 
             parent.insert(glassSubMenuItem, pos);

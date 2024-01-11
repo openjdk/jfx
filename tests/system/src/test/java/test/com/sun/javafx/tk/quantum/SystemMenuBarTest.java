@@ -232,6 +232,50 @@ public class SystemMenuBarTest {
         });
     }
 
+    CountDownLatch removeMenuLatch = new CountDownLatch(1);
+
+    @Test
+    public void testRemoveMenu() throws InterruptedException {
+        failed.set(false);
+        Util.runAndWait(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler((t,e) -> {
+                e.printStackTrace();
+                failed.set(true);
+                removeMenuLatch.countDown();
+            });
+            createRemoveMenuStage();
+        });
+        removeMenuLatch.await();
+        assertFalse(failed.get());
+    }
+
+    public void createRemoveMenuStage() {
+        Stage stage = new Stage();
+        VBox root = new VBox();
+
+        final MenuBar menuBar = new MenuBar();
+
+        Menu mainMenu = new Menu("MainMenu");
+        Menu subMenu = new Menu("SubMenu");
+        subMenu.getItems().addAll(new MenuItem("submenuitem1"), new MenuItem("submenuitem2"));
+        mainMenu.getItems().add(subMenu);
+        menuBar.getMenus().add(mainMenu);
+
+        menuBar.setUseSystemMenuBar(true);
+        root.getChildren().add(menuBar);
+
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+        stage.show();
+
+        Platform.runLater(() -> {
+            mainMenu.getItems().clear();
+            mainMenu.getItems().add(subMenu);
+            subMenu.getItems().addAll(new MenuItem("new item 1"), new MenuItem("new item 2"));
+            removeMenuLatch.countDown();
+        });
+    }
+
     public MenuBar createSimpleMenuBar() {
         MenuBar menuBar = new MenuBar();
 
