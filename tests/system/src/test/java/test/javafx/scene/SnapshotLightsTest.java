@@ -1,8 +1,31 @@
-package test.robot.javafx.scene;
+/*
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
 
-import javafx.application.Platform;
+package test.javafx.scene;
+
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.PointLight;
 import javafx.scene.Scene;
@@ -13,22 +36,42 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
-import javafx.stage.Stage;
 
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
-import test.robot.testharness.VisualTestBase;
 import test.util.Util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static test.util.Util.TIMEOUT;
+import static org.junit.Assert.assertNotNull;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-public class SnapshotLightsTest extends VisualTestBase {
+public class SnapshotLightsTest extends SnapshotCommon {
 
     static final int BOX_DIM = 50;
+
+    @BeforeClass
+    public static void setupOnce() {
+        doSetupOnce();
+    }
+
+    @AfterClass
+    public static void teardownOnce() {
+        doTeardownOnce();
+    }
+
+    @Before
+    public void setupEach() {
+        assertNotNull(myApp);
+        assertNotNull(myApp.primaryStage);
+        assertTrue(myApp.primaryStage.isShowing());
+    }
+
+    @After
+    public void teardownEach() {
+    }
 
     private Scene buildScene(boolean inSubScene) {
         Box boxNode = new Box(BOX_DIM, BOX_DIM, BOX_DIM - 10);
@@ -58,32 +101,16 @@ public class SnapshotLightsTest extends VisualTestBase {
         PixelReader baseReader = base.getPixelReader();
         PixelReader nodeReader = node.getPixelReader();
 
-
         assertEquals(baseReader.getArgb(BOX_DIM / 2, BOX_DIM / 2), nodeReader.getArgb(BOX_DIM / 2, BOX_DIM / 2));
     }
 
     public SnapshotLightsTest() {
     }
 
-    private Scene scene;
-
     @Test
     public void testSceneNodeSnapshotLighting() throws Exception {
-        final CountDownLatch stageShownLatch = new CountDownLatch(1);
-
-        runAndWait(() -> {
-            Stage stage = getStage(false);
-
-            scene = buildScene(false);
-            stage.setScene(scene);
-            stage.setOnShown(e -> Platform.runLater(stageShownLatch::countDown));
-            stage.show();
-        });
-
-        assertTrue("Timeout waiting for stage to be shown",
-            stageShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
-
         Util.runAndWait(() -> {
+            Scene scene = buildScene(false);
             WritableImage baseSnapshot = scene.snapshot(null);
 
             Node boxNode = scene.getRoot().getChildrenUnmodifiable().get(0);
@@ -95,21 +122,8 @@ public class SnapshotLightsTest extends VisualTestBase {
 
     @Test
     public void testSubSceneNodeSnapshotLighting() throws Exception {
-        final CountDownLatch stageShownLatch = new CountDownLatch(1);
-
-        runAndWait(() -> {
-            Stage stage = getStage(false);
-
-            scene = buildScene(true);
-            stage.setScene(scene);
-            stage.setOnShown(e -> Platform.runLater(stageShownLatch::countDown));
-            stage.show();
-        });
-
-        assertTrue("Timeout waiting for stage to be shown",
-            stageShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
-
         Util.runAndWait(() -> {
+            Scene scene = buildScene(true);
             WritableImage baseSnapshot = scene.snapshot(null);
 
             SubScene ss = (SubScene)scene.getRoot().getChildrenUnmodifiable().get(0);
@@ -118,6 +132,5 @@ public class SnapshotLightsTest extends VisualTestBase {
 
             compareSnapshots(baseSnapshot, nodeSnapshot);
         });
-
     }
 }
