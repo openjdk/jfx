@@ -930,4 +930,7 @@ public class SubScene extends Node {
         return lightOwnerChanged;
     }
 
+    List<LightBase> getLights() {
+        return lights;
+    }
 }

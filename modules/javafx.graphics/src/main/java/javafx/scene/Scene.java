@@ -1298,9 +1298,22 @@ public class Scene implements EventTarget {
 
     }
 
+    /*
+     * Shared between Scene and SubScene
+     */
+    static NGLightBase[] accumulateLightsForSnapshot(List<LightBase> lights) {
+        if (lights == null || lights.isEmpty()) return null;
+
+        NGLightBase[] l = new NGLightBase[lights.size()];
+        for (int i = 0; i < lights.size(); i++) {
+            l[i] = lights.get(i).getPeer();
+        }
+        return l;
+    }
+
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
     // we might be doing a Node snapshot with a null scene
-    static WritableImage doSnapshot(Scene scene,
+    static WritableImage doSnapshot(Scene scene, SubScene subScene,
             double x, double y, double w, double h,
             Node root, BaseTransform transform, boolean depthBuffer,
             Paint fill, Camera camera, WritableImage wimg) {
@@ -1346,12 +1359,33 @@ public class Scene implements EventTarget {
             context.camera = null;
         }
 
-        // Grab the lights from the scene
+        // Grab the lights from the scene and/or subscene
         context.lights = null;
-        if (scene != null && !scene.lights.isEmpty()) {
-            context.lights = new NGLightBase[scene.lights.size()];
-            for (int i = 0; i < scene.lights.size(); i++) {
-                context.lights[i] = scene.lights.get(i).getPeer();
+        int totalLightCount = 0;
+
+        NGLightBase[] sceneLights = (scene != null) ? accumulateLightsForSnapshot(scene.lights) : null;
+        NGLightBase[] subSceneLights = (subScene != null) ? accumulateLightsForSnapshot(subScene.getLights()) : null;
+        if (sceneLights != null) {
+            totalLightCount += sceneLights.length;
+        }
+        if (subSceneLights != null) {
+            totalLightCount += subSceneLights.length;
+        }
+
+        if (totalLightCount > 0) {
+            context.lights = new NGLightBase[totalLightCount];
+
+            int totalLightsAdded = 0;
+            if (sceneLights != null) {
+                for (int i = 0; i < sceneLights.length; i++) {
+                    context.lights[i] = sceneLights[i];
+                }
+                totalLightsAdded += sceneLights.length;
+            }
+            if (subSceneLights != null) {
+                for (int i = 0; i < subSceneLights.length; i++) {
+                    context.lights[i + totalLightsAdded] = subSceneLights[i];
+                }
             }
         }
 
@@ -1394,7 +1428,7 @@ public class Scene implements EventTarget {
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
-        return doSnapshot(this, 0, 0, w, h,
+        return doSnapshot(this, null, 0, 0, w, h,
                 getRoot(), transform, isDepthBufferInternal(),
                 getFill(), getEffectiveCamera(), img);
     }
