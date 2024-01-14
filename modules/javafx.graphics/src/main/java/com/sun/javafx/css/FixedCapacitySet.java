@@ -128,7 +128,7 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
 
     /**
      * Checks if the set is allowed to be mutated, and throws an
-     * {@link UnsupportedEncodingException} otherwise.
+     * {@link UnsupportedOperationException} otherwise.
      */
     protected final void ensureNotFrozen() {
         if (frozen) {
