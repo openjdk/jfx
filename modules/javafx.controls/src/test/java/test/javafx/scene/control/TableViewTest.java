@@ -25,7 +25,6 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
@@ -6076,14 +6075,14 @@ public class TableViewTest {
 
         stageLoader = new StageLoader(table);
         table.setItems(null);
-
-        assertDoesNotThrow(() -> Toolkit.getToolkit().firePulse());
+        // Should not throw an NPE.
+        Toolkit.getToolkit().firePulse();
     }
 
     @Test
     public void testTableItemsNullQueryAcceessibleAttributeRowCountShouldNotThrow() {
         table.setItems(null);
-
-        assertDoesNotThrow(() -> table.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT));
+        // Should not throw an NPE.
+        table.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
     }
 }

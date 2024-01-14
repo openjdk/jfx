@@ -36,7 +36,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -7267,14 +7266,14 @@ public class TreeTableViewTest {
 
         stageLoader = new StageLoader(treeTableView);
         treeTableView.setRoot(null);
-
-        assertDoesNotThrow(() -> Toolkit.getToolkit().firePulse());
+        // Should not throw an NPE.
+        Toolkit.getToolkit().firePulse();
     }
 
     @Test
     public void testTreeTableRootNullQueryAcceessibleAttributeRowCountShouldNotThrow() {
         treeTableView.setRoot(null);
-
-        assertDoesNotThrow(() -> treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT));
+        // Should not throw an NPE.
+        treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
     }
 }
