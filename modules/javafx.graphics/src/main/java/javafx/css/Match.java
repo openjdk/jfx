@@ -28,6 +28,7 @@ package javafx.css;
 import static javafx.geometry.NodeOrientation.INHERIT;
 
 import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
+import com.sun.javafx.css.SimpleSelector;
 
 import java.util.Objects;
 import java.util.Set;

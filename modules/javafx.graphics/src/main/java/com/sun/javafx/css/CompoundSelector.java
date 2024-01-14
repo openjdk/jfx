@@ -23,10 +23,7 @@
  * questions.
  */
 
-package javafx.css;
-
-import com.sun.javafx.css.Combinator;
-import com.sun.javafx.css.PseudoClassState;
+package com.sun.javafx.css;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -35,6 +32,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+
+import javafx.css.PseudoClass;
+import javafx.css.Selector;
+import javafx.css.StyleConverter;
+import javafx.css.Styleable;
 
 
 /**
@@ -86,7 +88,7 @@ final public class CompoundSelector extends Selector {
      * list of <code>Combinator</code> relationships.  There must be exactly one
      * less <code>Combinator</code> than there are selectors.
      */
-    CompoundSelector(List<SimpleSelector> selectors, List<Combinator> relationships) {
+    public CompoundSelector(List<SimpleSelector> selectors, List<Combinator> relationships) {
         this.selectors =
             (selectors != null)
                 ? Collections.unmodifiableList(selectors)
@@ -95,22 +97,6 @@ final public class CompoundSelector extends Selector {
             (relationships != null)
                 ? Collections.unmodifiableList(relationships)
                 : Collections.EMPTY_LIST;
-    }
-
-    @Override public Match createMatch() {
-        final PseudoClassState allPseudoClasses = new PseudoClassState();
-        int idCount = 0;
-        int styleClassCount = 0;
-
-        for(int n=0, nMax=selectors.size(); n<nMax; n++) {
-            Selector sel = selectors.get(n);
-            Match match = sel.createMatch();
-            allPseudoClasses.addAll(match.getPseudoClasses());
-            idCount += match.idCount;
-            styleClassCount += match.styleClassCount;
-        }
-
-        return new Match(this, allPseudoClasses, idCount, styleClassCount);
     }
 
     @Override public boolean applies(final Styleable styleable) {
@@ -303,7 +289,7 @@ final public class CompoundSelector extends Selector {
         for (int n=0; n< relationships.size(); n++) os.writeByte(relationships.get(n).ordinal());
     }
 
-    static CompoundSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
+    public static CompoundSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
             throws IOException
     {
 

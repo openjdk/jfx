@@ -26,6 +26,9 @@
 package javafx.css;
 
 import com.sun.javafx.css.Combinator;
+import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.PseudoClassState;
+import com.sun.javafx.css.SimpleSelector;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -40,13 +43,7 @@ import java.util.Set;
  *
  * @since 9
  */
-abstract public class Selector {
-
-    /**
-     * Package scoped constructor.
-     */
-    Selector() {
-    }
+public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
 
     private static class UniversalSelector {
         private static final Selector INSTANCE =
@@ -96,7 +93,33 @@ abstract public class Selector {
      *
      * @return a match, never {@code null}
      */
-    public abstract Match createMatch();
+    public final Match createMatch() {
+        if (this instanceof SimpleSelector s) {
+            int idCount = s.getId().isEmpty() ? 0 : 1;
+            int styleClassCount = s.getStyleClassSet().size();
+
+            return new Match(this, s.getPseudoClassStates(), idCount, styleClassCount);
+        }
+
+        if (this instanceof CompoundSelector cs) {
+            PseudoClassState pseudoClasses = new PseudoClassState();
+            int idCount = 0;
+            int styleClassCount = 0;
+
+            for (int n = 0, max = cs.getSelectors().size(); n < max; n++) {
+                Selector selector = cs.getSelectors().get(n);
+                Match match = selector.createMatch();
+
+                pseudoClasses.addAll(match.getPseudoClasses());
+                idCount += match.idCount;
+                styleClassCount += match.styleClassCount;
+            }
+
+            return new Match(this, pseudoClasses, idCount, styleClassCount);
+        }
+
+        throw new AssertionError("unreachable, class is sealed");
+    }
 
     /**
      * Gets whether this {@code Selector} applies to the given {@code Styleable}.
@@ -150,9 +173,10 @@ abstract public class Selector {
      * @param bssVersion bss version identifier
      * @param is {@code DataInputStream} to read {@code Selector} data from
      * @param strings string array containing selector details
+     * @return a selector, never {@code null}
      * @throws IOException if reading from {@code DataInputStream} fails
      */
-    static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
+    protected static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException {
         final int type = is.readByte();
         if (type == TYPE_SIMPLE)
