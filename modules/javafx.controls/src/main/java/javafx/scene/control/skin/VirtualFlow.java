@@ -1545,7 +1545,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     // will return true if scroll is successful
-private boolean tryScrollOneCell(int targetIndex, boolean downOrRight) {
+    private boolean tryScrollOneCell(int targetIndex, boolean downOrRight) {
         // if going down, cell diff is -1, because it will get the target cell index and check if previous
         // cell is visible to base the position
         int indexDiff = downOrRight ? -1 : 1;
