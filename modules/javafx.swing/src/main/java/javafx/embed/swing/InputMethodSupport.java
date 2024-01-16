@@ -25,8 +25,10 @@
 
 package javafx.embed.swing;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
+import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.geometry.Point2D;
 import javafx.scene.input.InputMethodHighlight;
@@ -56,42 +58,64 @@ class InputMethodSupport {
             this.fxRequests = fxRequests;
         }
 
+        private Point2D pointValue;
+        private int     intValue;
+        private String  stringValue;
+
         @Override
         public Rectangle getTextLocation(TextHitInfo offset) {
-            Point2D result = fxRequests.getTextLocation(offset.getInsertionIndex());
-            return new Rectangle((int)result.getX(), (int)result.getY(), 0, 0);
+            pointValue = new Point2D(0.0, 0.0);
+            if (fxRequests != null) {
+                PlatformImpl.runAndWait(() -> {
+                    pointValue = fxRequests.getTextLocation(offset.getInsertionIndex());
+                });
+            }
+            return new Rectangle((int)pointValue.getX(), (int)pointValue.getY(), 0, 0);
         }
 
         @Override
         public TextHitInfo getLocationOffset(int x, int y) {
-            int result = fxRequests.getLocationOffset(x, y);
-            return TextHitInfo.afterOffset(result);
+            intValue = 0;
+            if (fxRequests != null) {
+                PlatformImpl.runAndWait(() -> {
+                    intValue = fxRequests.getLocationOffset(x, y);
+                });
+            }
+            return TextHitInfo.afterOffset(intValue);
         }
 
         @Override
         public int getInsertPositionOffset() {
+            intValue = 0;
             if (fxRequests instanceof ExtendedInputMethodRequests) {
-                return ((ExtendedInputMethodRequests)fxRequests).getInsertPositionOffset();
+                PlatformImpl.runAndWait(() -> {
+                    intValue = ((ExtendedInputMethodRequests)fxRequests).getInsertPositionOffset();
+                });
             }
-            return 0;
+            return intValue;
         }
 
         @Override
         public AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, AttributedCharacterIterator.Attribute[] attributes) {
-            String result = null;
+            stringValue = null;
             if (fxRequests instanceof ExtendedInputMethodRequests) {
-                result = ((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex);
+                PlatformImpl.runAndWait(() -> {
+                    stringValue = ((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex);
+                });
             }
-            if (result == null) result = "";
-            return new AttributedString(result).getIterator();
+            if (stringValue == null) stringValue = "";
+            return new AttributedString(stringValue).getIterator();
         }
 
         @Override
         public int getCommittedTextLength() {
+            intValue = 0;
             if (fxRequests instanceof ExtendedInputMethodRequests) {
-                return ((ExtendedInputMethodRequests)fxRequests).getCommittedTextLength();
+                PlatformImpl.runAndWait(() -> {
+                    intValue = ((ExtendedInputMethodRequests)fxRequests).getCommittedTextLength();
+                });
             }
-            return 0;
+            return intValue;
         }
 
         @Override
@@ -102,9 +126,14 @@ class InputMethodSupport {
 
         @Override
         public AttributedCharacterIterator getSelectedText(AttributedCharacterIterator.Attribute[] attributes) {
-            String text = fxRequests.getSelectedText();
-            if (text == null) text = "";
-            return new AttributedString(text).getIterator();
+            stringValue = null;
+            if (fxRequests != null) {
+                PlatformImpl.runAndWait(() -> {
+                    stringValue = fxRequests.getSelectedText();
+                });
+            }
+            if (stringValue == null) stringValue = "";
+            return new AttributedString(stringValue).getIterator();
         }
     }
 
