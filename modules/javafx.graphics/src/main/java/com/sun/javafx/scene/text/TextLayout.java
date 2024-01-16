@@ -209,12 +209,11 @@ public interface TextLayout {
      *             It is expected to be null in the case of {@link javafx.scene.text.TextFlow}
      *             and non-null in the case of {@link javafx.scene.text.Text}
      * @param textRunStart Start position of first Text run where hit info is requested.
-     *                     For TextFlow this value will be -1 to distinguish it from Text node.
-     * @param curRunStart starting position of text run where hit info is requested.
-     *                    For TextFlow this value will be -1  to distinguish it from Text node.
+     * @param curRunStart Start position of text run where hit info is requested.
+     * @param forTextFlow Indicates if the hit info is requested for TextFlow or Text node. True for TextFlow and False for Text node.
      * @return returns a {@link Hit} object containing character index, insertion index and position of cursor on the character.
      */
-    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart);
+    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart, boolean forTextFlow);
 
     public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y);

@@ -108,7 +108,7 @@ public class RTLTextCharacterIndexTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static Random random;
     static Robot robot;
-    static Text textOne;
+    static Text text;
     static VBox vBox;
 
     static volatile Stage stage;
@@ -137,55 +137,55 @@ public class RTLTextCharacterIndexTest {
     }
 
     private void moveMouseOverText(double x, double y) throws Exception {
-        mouseClick(textOne.getLayoutX() + x,
-                    textOne.getLayoutY() / 2 + y);
+        mouseClick(text.getLayoutX() + x,
+                    text.getLayoutY() / 2 + y);
     }
 
     private void addRTLEnglishText() {
         Util.runAndWait(() -> {
-            textOne.setText("This is text");
-            textOne.setFont(new Font(48));
-            vBox.getChildren().setAll(textOne);
+            text.setText("This is text");
+            text.setFont(new Font(48));
+            vBox.getChildren().setAll(text);
         });
     }
 
     private void addRTLArabicText() {
         Util.runAndWait(() -> {
-            textOne.setText("شسيبلاتنم");
-            textOne.setFont(new Font(48));
-            vBox.getChildren().setAll(textOne);
+            text.setText("شسيبلاتنم");
+            text.setFont(new Font(48));
+            vBox.getChildren().setAll(text);
         });
     }
 
     private void addRTLEnglishArabicText() {
         Util.runAndWait(() -> {
-            textOne.setText("Arabic:شسيبلاتنم");
-            textOne.setFont(new Font(48));
-            vBox.getChildren().setAll(textOne);
+            text.setText("Arabic:شسيبلاتنم");
+            text.setFont(new Font(48));
+            vBox.getChildren().setAll(text);
         });
     }
 
     private void addMultiLineRTLEnglishText() {
         Util.runAndWait(() -> {
-            textOne.setText("This is text\nThis is text");
-            textOne.setFont(new Font(48));
-            vBox.getChildren().setAll(textOne);
+            text.setText("This is text\nThis is text");
+            text.setFont(new Font(48));
+            vBox.getChildren().setAll(text);
         });
     }
 
     private void addMultiLineRTLEnglishArabicText() {
         Util.runAndWait(() -> {
-            textOne.setText("Arabic:شسيبلاتنم\nArabic:شسيبلاتنم");
-            textOne.setFont(new Font(48));
-            vBox.getChildren().setAll(textOne);
+            text.setText("Arabic:شسيبلاتنم\nArabic:شسيبلاتنم");
+            text.setFont(new Font(48));
+            vBox.getChildren().setAll(text);
         });
     }
 
     private void addMultiLineRTLArabicText() {
         Util.runAndWait(() -> {
-            textOne.setText("شسيبلاتنم شسيبلاتنم\nشسيبلاتنم شسيبلاتنم");
-            textOne.setFont(new Font(48));
-            vBox.getChildren().setAll(textOne);
+            text.setText("شسيبلاتنم شسيبلاتنم\nشسيبلاتنم شسيبلاتنم");
+            text.setFont(new Font(48));
+            vBox.getChildren().setAll(text);
         });
     }
 
@@ -194,7 +194,7 @@ public class RTLTextCharacterIndexTest {
         addRTLEnglishText();
         Util.waitForIdle(scene);
 
-        int textOneLength = textOne.getText().length();
+        int textLength = text.getText().length();
 
         double x = WIDTH - X_LEADING_OFFSET;
         while (x > X_LEADING_OFFSET) {
@@ -204,7 +204,7 @@ public class RTLTextCharacterIndexTest {
             } else {
                 Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assertions.assertTrue(charIndex < textOneLength);
+            Assertions.assertTrue(charIndex < textLength);
             x -= step();
         }
     }
@@ -214,7 +214,7 @@ public class RTLTextCharacterIndexTest {
         addRTLArabicText();
         Util.waitForIdle(scene);
 
-        int textOneLength = textOne.getText().length();
+        int textLength = text.getText().length();
 
         double x = WIDTH - X_LEADING_OFFSET;
         while (x > X_LEADING_OFFSET) {
@@ -224,7 +224,7 @@ public class RTLTextCharacterIndexTest {
             } else {
                 Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assertions.assertTrue(charIndex < textOneLength);
+            Assertions.assertTrue(charIndex < textLength);
             x -= step();
         }
     }
@@ -234,7 +234,7 @@ public class RTLTextCharacterIndexTest {
         addRTLEnglishArabicText();
         Util.waitForIdle(scene);
 
-        int textOneLength = textOne.getText().length();
+        int textLength = text.getText().length();
 
         double x = WIDTH - X_LEADING_OFFSET;
         while (x > X_LEADING_OFFSET) {
@@ -244,7 +244,7 @@ public class RTLTextCharacterIndexTest {
             } else {
                 Assertions.assertEquals(charIndex, insertionIndex - 1);
             }
-            Assertions.assertTrue(charIndex < textOneLength);
+            Assertions.assertTrue(charIndex < textLength);
             x -= step();
         }
     }
@@ -254,7 +254,7 @@ public class RTLTextCharacterIndexTest {
         addMultiLineRTLEnglishText();
         Util.waitForIdle(scene);
 
-        int textOneLength = textOne.getText().length();
+        int textLength = text.getText().length();
 
         for (int y = 0; y < 2; y++) {
             double x = WIDTH - X_LEADING_OFFSET;
@@ -265,7 +265,7 @@ public class RTLTextCharacterIndexTest {
                 } else {
                     Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assertions.assertTrue(charIndex < textOneLength);
+                Assertions.assertTrue(charIndex < textLength);
                 x -= step();
             }
         }
@@ -276,7 +276,7 @@ public class RTLTextCharacterIndexTest {
         addMultiLineRTLEnglishArabicText();
         Util.waitForIdle(scene);
 
-        int textOneLength = textOne.getText().length();
+        int textLength = text.getText().length();
 
         for (int y = 0; y < 2; y++) {
             double x = WIDTH - X_LEADING_OFFSET;
@@ -287,7 +287,7 @@ public class RTLTextCharacterIndexTest {
                 } else {
                     Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assertions.assertTrue(charIndex < textOneLength);
+                Assertions.assertTrue(charIndex < textLength);
                 x -= step();
             }
         }
@@ -298,7 +298,7 @@ public class RTLTextCharacterIndexTest {
         addMultiLineRTLArabicText();
         Util.waitForIdle(scene);
 
-        int textOneLength = textOne.getText().length();
+        int textLength = text.getText().length();
 
         for (int y = 0; y < 2; y++) {
             double x = WIDTH - X_LEADING_OFFSET;
@@ -309,7 +309,7 @@ public class RTLTextCharacterIndexTest {
                 } else {
                     Assertions.assertEquals(charIndex, insertionIndex - 1);
                 }
-                Assertions.assertTrue(charIndex < textOneLength);
+                Assertions.assertTrue(charIndex < textLength);
                 x -= step();
             }
         }
@@ -337,14 +337,14 @@ public class RTLTextCharacterIndexTest {
     @AfterEach
     public void resetUI() {
         Platform.runLater(() -> {
-            textOne.removeEventHandler(MouseEvent.MOUSE_PRESSED, this::handleTextMouseEvent);
+            text.removeEventHandler(MouseEvent.MOUSE_PRESSED, this::handleTextMouseEvent);
         });
     }
 
     @BeforeEach
     public void setupUI() {
         Platform.runLater(() -> {
-            textOne.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleTextMouseEvent);
+            text.addEventHandler(MouseEvent.MOUSE_PRESSED, this::handleTextMouseEvent);
         });
     }
 
@@ -368,7 +368,7 @@ public class RTLTextCharacterIndexTest {
             robot = new Robot();
             stage = primaryStage;
 
-            textOne = new Text();
+            text = new Text();
             vBox = new VBox();
 
             scene = new Scene(vBox, WIDTH, HEIGHT);

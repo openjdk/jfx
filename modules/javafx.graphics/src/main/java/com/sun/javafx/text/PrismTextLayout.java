@@ -421,10 +421,9 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart) {
+    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart, boolean forTextFlow) {
         boolean leading = false;
         boolean isMirrored = isMirrored(); // Node orientation is RTL
-        boolean isMultiRunText = false;
         int charIndex = -1;
         int insertionIndex = -1;
         int relIndex = 0;
@@ -438,8 +437,7 @@ public class PrismTextLayout implements TextLayout {
             charIndex = getCharCount();
             insertionIndex = charIndex + 1;
         } else {
-            boolean isTextFlow = textRunStart == -1 && curRunStart == -1;
-            if (isMirrored && (isTextFlow || spans == null)) {
+            if (isMirrored && (forTextFlow || spans == null)) {
                 x = getMirroringWidth() - x;
             }
             TextLine line = lines[lineIndex];
@@ -448,17 +446,20 @@ public class PrismTextLayout implements TextLayout {
             TextRun run = null;
             //TODO binary search
             if (text == null || spans == null) {
-                // To calculate Text and TextFlow hit info
+                /* This code branch is used to calculate hit info of Text node
+                   which are not embedded in TextFlow and hit info requested on TextFlow. */
                 if (isMirrored) {
                     int runIndex = -1;
                     for (int i = runs.length - 1; i >=0; i--) {
                         run = runs[i];
-                        if (x < run.getWidth() && (isTextFlow || (run.getStart() == curRunStart))) {
+                        if (x < run.getWidth() && (forTextFlow || (run.getStart() == curRunStart))) {
                             runIndex = i;
                             break;
                         }
                         if (i - 1 >= 0) {
-                            if (runs[i - 1].isLinebreak()) break;
+                            if (runs[i - 1].isLinebreak()) {
+                                break;
+                            }
                             x -= run.getWidth();
                         }
                     }
@@ -469,15 +470,19 @@ public class PrismTextLayout implements TextLayout {
                 } else {
                     for (int i = 0; i < runs.length; i++) {
                         run = runs[i];
-                        if (x < run.getWidth()) break;
+                        if (x < run.getWidth()) {
+                            break;
+                        }
                         if (i + 1 < runs.length) {
-                            if (runs[i + 1].isLinebreak()) break;
+                            if (runs[i + 1].isLinebreak()) {
+                                break;
+                            }
                             x -= run.getWidth();
                         }
                     }
                 }
             } else {
-                // To calculate hit info of Text embedded in TextFlow
+                // This code branch is used to calculate hit info of Text node embedded in TextFlow.
                 for (int i = 0; i < lineIndex; i++) {
                     for (TextRun r: lines[i].runs) {
                         if (r.getTextSpan() != null && r.getStart() >= textRunStart && r.getTextSpan().getText().equals(text)) {
@@ -487,6 +492,7 @@ public class PrismTextLayout implements TextLayout {
                 }
 
                 if (isMirrored) {
+                    boolean isMultiRunText = false;
                     for (TextRun r: runs) {
                         if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text)) {
                             isMultiRunText = true;
@@ -521,7 +527,7 @@ public class PrismTextLayout implements TextLayout {
                             }
                             break;
                         }
-                        // For only English Text embedded in TextFlow in RTL orientation
+                        // This condition handles LTR Text nodes embedded in TextFlow in RTL mode.
                         if (!run.getTextSpan().getText().equals(text) && x > run.getWidth() && run.getStart() < curRunStart) {
                             x -= run.getWidth();
                         }
@@ -559,7 +565,10 @@ public class PrismTextLayout implements TextLayout {
                     charIndex = run.getOffsetAtX(x, trailing);
                     charIndex += textWidthPrevLine;
                     charIndex += relIndex;
-                    if (run.getLevel() % 2 != 0) {
+                    if ((run.getLevel() & 0x01) != 0) {
+                        /* Odd level represents RTL text.
+                        *  If the RTL text has LTR text embedded,
+                        *  add the LTR index here to get effective character index */
                         charIndex += LTRIndex;
                     }
                 } else {
