@@ -99,9 +99,9 @@ final class MacView extends View {
                                 pixels.getWidth(), pixels.getHeight(), pixels.getScaleX(), pixels.getScaleY());
         }
     }
-    native void _uploadPixelsDirect(long viewPtr, Buffer pixels, int width, int height, float scaleX, float scaleY);
-    native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height, float scaleX, float scaleY);
-    native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height, float scaleX, float scaleY);
+    private native void _uploadPixelsDirect(long viewPtr, Buffer pixels, int width, int height, float scaleX, float scaleY);
+    private native void _uploadPixelsByteArray(long viewPtr, byte[] pixels, int offset, int width, int height, float scaleX, float scaleY);
+    private native void _uploadPixelsIntArray(long viewPtr, int[] pixels, int offset, int width, int height, float scaleX, float scaleY);
 
     @Override
     protected void notifyResize(int width, int height) {

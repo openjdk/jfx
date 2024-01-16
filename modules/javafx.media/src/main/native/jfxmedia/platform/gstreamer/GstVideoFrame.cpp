@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,12 @@ static GstBuffer *alloc_aligned_buffer(guint size)
 
     // allocate a buffer large enough to accommodate 16 byte alignment
     alignedSize = size;
-    size += 16;
+    if (size <= (G_MAXUINT - 16)) {
+        size += 16;
+    } else {
+        return NULL;
+    }
+
     newData = (guint8*)g_try_malloc(size);
     if (NULL == newData) {
         return NULL;
@@ -64,10 +69,10 @@ static GstBuffer *alloc_aligned_buffer(guint size)
 
     alignedData = (guint8*)(((intptr_t)newData + 15) & ~15);
 
-    return gst_buffer_new_wrapped_full((GstMemoryFlags)0, alignedData, alignedSize, 0, 0, newData, free_aligned_buffer);
+    return gst_buffer_new_wrapped_full((GstMemoryFlags)0, alignedData, alignedSize, 0, alignedSize, newData, free_aligned_buffer);
 }
 
-GstCaps *create_RGB_caps(CVideoFrame::FrameType type, gint width, gint height, gint encodedWidth, gint encodedHeight, gint stride)
+GstCaps *create_RGB_caps(CVideoFrame::FrameType type, guint width, guint height, guint encodedWidth, guint encodedHeight, guint stride)
 {
     gint red_mask, green_mask, blue_mask, alpha_mask;
     GstCaps *newCaps;
@@ -160,7 +165,8 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
     const GstStructure* str = gst_caps_get_structure(newCaps, 0);
     const gchar* sFormatFourCC = gst_structure_get_string(str, "format");
 
-    // default to success
+    // We should always start with success. See CalcSize(), AddSize() and
+    // CalcPlanePointer() on how this flag is being used.
     m_bIsValid = true;
 
     // FIXME: make format type strings conformant with constant types
@@ -209,83 +215,79 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
         m_bIsValid = false;
     }
 
-    if(!gst_structure_get_int(str, "width", &m_iWidth))
+    if (!gst_structure_get_int(str, "width", (int*)&m_uiWidth))
     {
 #if JFXMEDIA_DEBUG
         g_warning("width could not be retrieved from GstBuffer\n");
 #endif
-        m_iWidth = 0;
+        m_uiWidth = 0;
         m_bIsValid = false;
     }
-    if(!gst_structure_get_int(str, "height", &m_iHeight))
+    if (!gst_structure_get_int(str, "height", (int*)&m_uiHeight))
     {
 #if JFXMEDIA_DEBUG
         g_warning("height could not be retrieved from GstBuffer\n");
 #endif
-        m_iHeight = 0;
+        m_uiHeight = 0;
         m_bIsValid = false;
     }
 
-    if (!gst_structure_get_int(str, "encoded-width", &m_iEncodedWidth)) {
-        m_iEncodedWidth = m_iWidth;
+    if (!gst_structure_get_int(str, "encoded-width", (int*)&m_uiEncodedWidth)) {
+        m_uiEncodedWidth = m_uiWidth;
     }
-    if (!gst_structure_get_int(str, "encoded-height", &m_iEncodedHeight)) {
-        m_iEncodedHeight = m_iHeight;
+    if (!gst_structure_get_int(str, "encoded-height", (int*)&m_uiEncodedHeight)) {
+        m_uiEncodedHeight = m_uiHeight;
     }
 
-    m_pvPlaneData[0] = m_pvPlaneData[1] = m_pvPlaneData[2] = m_pvPlaneData[3] = NULL;
-    m_pulPlaneSize[0] = m_pulPlaneSize[1] = m_pulPlaneSize[2] = m_pulPlaneSize[3] = 0;
-    m_piPlaneStrides[0] = m_piPlaneStrides[1] = m_piPlaneStrides[2] = m_piPlaneStrides[3] = 0;
+    Reset();
 
-    unsigned long expectedSize = 0;
     switch (m_typeFrame) {
         case YCbCr_420p: {
-            int offset;
-            m_iPlaneCount = 3;
+            unsigned int offset = 0;
+            SetPlaneCount(3);
 
-            if (!gst_structure_get_int(str, "stride-y", &m_piPlaneStrides[0])) {
-                m_piPlaneStrides[0] = m_iEncodedWidth;
+            if (!gst_structure_get_int(str, "stride-y", (int*)&m_puiPlaneStrides[0])) {
+                m_puiPlaneStrides[0] = m_uiEncodedWidth;
             }
-            if (!gst_structure_get_int(str, "stride-v", &m_piPlaneStrides[1])) {
-                m_piPlaneStrides[1] = m_iEncodedWidth/2;
+            if (!gst_structure_get_int(str, "stride-v", (int*)&m_puiPlaneStrides[1])) {
+                m_puiPlaneStrides[1] = m_uiEncodedWidth/2;
             }
-            if (!gst_structure_get_int(str, "stride-u", &m_piPlaneStrides[2])) {
-                m_piPlaneStrides[2] = m_piPlaneStrides[1];
+            if (!gst_structure_get_int(str, "stride-u", (int*)&m_puiPlaneStrides[2])) {
+                m_puiPlaneStrides[2] = m_puiPlaneStrides[1];
             }
 
-            offset = 0;
-            gst_structure_get_int(str, "offset-y", &offset);
-            m_pulPlaneSize[0] = m_piPlaneStrides[0] * m_iEncodedHeight;
-            m_pvPlaneData[0] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
-            expectedSize += m_pulPlaneSize[0];
+            gst_structure_get_int(str, "offset-y", (int*)&offset);
+            m_pulPlaneSize[0] = CalcSize(m_puiPlaneStrides[0], m_uiEncodedHeight, &m_bIsValid);
+            m_pvPlaneData[0] = CalcPlanePointer((intptr_t)m_pvBufferBaseAddress, offset,
+                                                m_pulPlaneSize[0], m_ulBufferSize, &m_bIsValid);
 
             //
             // Chroma offsets assume YV12 ordering
             //
             offset += m_pulPlaneSize[0];
-            gst_structure_get_int(str, "offset-v", &offset);
-            m_pulPlaneSize[1] = m_piPlaneStrides[1] * (m_iEncodedHeight/2);
-            m_pvPlaneData[1] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
-            expectedSize += m_pulPlaneSize[1];
+            gst_structure_get_int(str, "offset-v", (int*)&offset);
+            m_pulPlaneSize[1] = CalcSize(m_puiPlaneStrides[1], (m_uiEncodedHeight/2), &m_bIsValid);
+            m_pvPlaneData[1] = CalcPlanePointer((intptr_t)m_pvBufferBaseAddress, offset,
+                                                m_pulPlaneSize[1], m_ulBufferSize, &m_bIsValid);
 
             offset += m_pulPlaneSize[1];
-            gst_structure_get_int(str, "offset-u", &offset);
-            m_pulPlaneSize[2] = m_piPlaneStrides[2] * (m_iEncodedHeight/2);
-            m_pvPlaneData[2] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
-            expectedSize += m_pulPlaneSize[2];
+            gst_structure_get_int(str, "offset-u", (int*)&offset);
+            m_pulPlaneSize[2] = CalcSize(m_puiPlaneStrides[2], (m_uiEncodedHeight/2), &m_bIsValid);
+            m_pvPlaneData[2] = CalcPlanePointer((intptr_t)m_pvBufferBaseAddress, offset,
+                                                m_pulPlaneSize[2], m_ulBufferSize, &m_bIsValid);
 
             // process alpha channel (before we potentially swap Cb/Cr)
             if (m_bHasAlpha) {
-                m_iPlaneCount++;
-                if (!gst_structure_get_int(str, "stride-a", &m_piPlaneStrides[3])) {
-                    m_piPlaneStrides[3] = m_piPlaneStrides[0];
+                SetPlaneCount(GetPlaneCount() + 1);
+                if (!gst_structure_get_int(str, "stride-a", (int*)&m_puiPlaneStrides[3])) {
+                    m_puiPlaneStrides[3] = m_puiPlaneStrides[0];
                 }
 
                 offset += m_pulPlaneSize[2];
-                gst_structure_get_int(str, "offset-a", &offset);
-                m_pulPlaneSize[3] = m_piPlaneStrides[3] * m_iEncodedHeight;
-                m_pvPlaneData[3] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
-                expectedSize += m_pulPlaneSize[3];
+                gst_structure_get_int(str, "offset-a", (int*)&offset);
+                m_pulPlaneSize[3] = CalcSize(m_puiPlaneStrides[3], m_uiEncodedHeight, &m_bIsValid);
+                m_pvPlaneData[3] = CalcPlanePointer((intptr_t)m_pvBufferBaseAddress, offset,
+                                                m_pulPlaneSize[3], m_ulBufferSize, &m_bIsValid);
             }
 
             //
@@ -299,21 +301,19 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
         }
 
         default:
-            m_iPlaneCount = 1;
-            if (!gst_structure_get_int(str, "line_stride", &m_piPlaneStrides[0])) {
+            SetPlaneCount(1);
+            if (!gst_structure_get_int(str, "line_stride", (int*)&m_puiPlaneStrides[0])) {
                 if (m_typeFrame == YCbCr_422) {
-                    m_piPlaneStrides[0] = m_iEncodedWidth * 2; // 16 bpp
+                    m_puiPlaneStrides[0] = m_uiEncodedWidth * 2; // 16 bpp
                 } else {
-                    m_piPlaneStrides[0] = m_iEncodedWidth * 4; // 32 bpp
+                    m_puiPlaneStrides[0] = m_uiEncodedWidth * 4; // 32 bpp
                 }
             }
-            m_pulPlaneSize[0] = m_piPlaneStrides[0] * m_iEncodedHeight;
-            m_pvPlaneData[0] = m_pvBufferBaseAddress;
-            expectedSize += m_pulPlaneSize[0];
+            m_pulPlaneSize[0] = CalcSize(m_puiPlaneStrides[0], m_uiEncodedHeight, &m_bIsValid);
+            m_pvPlaneData[0] = CalcPlanePointer((intptr_t)m_pvBufferBaseAddress, 0,
+                                                m_pulPlaneSize[0], m_ulBufferSize, &m_bIsValid);
             break;
     }
-
-    m_bIsValid = m_bIsValid && (expectedSize <= m_ulBufferSize);
 }
 
 bool CGstVideoFrame::IsValid()
@@ -381,9 +381,10 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
     GstBuffer *destBuffer = NULL;
     GstCaps *destCaps = NULL;
     GstMapInfo info;
-    gint stride = m_iEncodedWidth * 4;
-    int u_index, v_index;
-    int status;
+    guint stride = 0;
+    guint alloc_size = 0;
+    unsigned int u_index, v_index = 0;
+    int status = 0;
 
     if (m_bIsI420) {
         u_index = 1;
@@ -393,8 +394,26 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
         v_index = 1;
     }
 
-    stride = ((stride + 15) & ~15); // round up to multiple of 16 bytes
-    destBuffer = alloc_aligned_buffer(stride * m_iEncodedHeight);
+    // Make sure we do not have an integer overflow
+    if (m_uiEncodedWidth <= (G_MAXUINT / 4)) {
+        stride = m_uiEncodedWidth * 4;
+    } else {
+        return NULL;
+    }
+
+    if (stride <= (G_MAXUINT - 16)) {
+        stride = ((stride + 15) & ~15); // round up to multiple of 16 bytes
+    } else {
+        return NULL;
+    }
+
+    if (m_uiEncodedHeight > 0 && stride <= (G_MAXUINT / m_uiEncodedHeight)) {
+        alloc_size = stride * m_uiEncodedHeight;
+    } else {
+        return NULL;
+    }
+
+    destBuffer = alloc_aligned_buffer(alloc_size);
     if (!destBuffer) {
         return NULL;
     }
@@ -415,49 +434,49 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
         if (m_bHasAlpha) {
             status = ColorConvert_YCbCr420p_to_ARGB32(
                         info.data, stride,
-                        m_iEncodedWidth, m_iEncodedHeight,
+                        m_uiEncodedWidth, m_uiEncodedHeight,
                         (const uint8_t*)m_pvPlaneData[0],
                         (const uint8_t*)m_pvPlaneData[v_index],
                         (const uint8_t*)m_pvPlaneData[u_index],
                         (const uint8_t*)m_pvPlaneData[3],
-                        m_piPlaneStrides[0], m_piPlaneStrides[v_index],
-                        m_piPlaneStrides[u_index], m_piPlaneStrides[3]);
+                        m_puiPlaneStrides[0], m_puiPlaneStrides[v_index],
+                        m_puiPlaneStrides[u_index], m_puiPlaneStrides[3]);
         } else {
             status = ColorConvert_YCbCr420p_to_ARGB32_no_alpha(
                         info.data, stride,
-                        m_iEncodedWidth, m_iEncodedHeight,
+                        m_uiEncodedWidth, m_uiEncodedHeight,
                         (const uint8_t*)m_pvPlaneData[0],
                         (const uint8_t*)m_pvPlaneData[v_index],
                         (const uint8_t*)m_pvPlaneData[u_index],
-                        m_piPlaneStrides[0], m_piPlaneStrides[v_index],
-                        m_piPlaneStrides[u_index]);
+                        m_puiPlaneStrides[0], m_puiPlaneStrides[v_index],
+                        m_puiPlaneStrides[u_index]);
         }
     } else {
         if (m_bHasAlpha) {
             status = ColorConvert_YCbCr420p_to_BGRA32(
                         info.data, stride,
-                        m_iEncodedWidth, m_iEncodedHeight,
+                        m_uiEncodedWidth, m_uiEncodedHeight,
                         (const uint8_t*)m_pvPlaneData[0],
                         (const uint8_t*)m_pvPlaneData[v_index],
                         (const uint8_t*)m_pvPlaneData[u_index],
                         (const uint8_t*)m_pvPlaneData[3],
-                        m_piPlaneStrides[0], m_piPlaneStrides[v_index],
-                        m_piPlaneStrides[u_index], m_piPlaneStrides[3]);
+                        m_puiPlaneStrides[0], m_puiPlaneStrides[v_index],
+                        m_puiPlaneStrides[u_index], m_puiPlaneStrides[3]);
         } else {
             status = ColorConvert_YCbCr420p_to_BGRA32_no_alpha(
                         info.data, stride,
-                        m_iEncodedWidth, m_iEncodedHeight,
+                        m_uiEncodedWidth, m_uiEncodedHeight,
                         (const uint8_t*)m_pvPlaneData[0],
                         (const uint8_t*)m_pvPlaneData[v_index],
                         (const uint8_t*)m_pvPlaneData[u_index],
-                        m_piPlaneStrides[0], m_piPlaneStrides[v_index],
-                        m_piPlaneStrides[u_index]);
+                        m_puiPlaneStrides[0], m_puiPlaneStrides[v_index],
+                        m_puiPlaneStrides[u_index]);
         }
     }
 
     gst_buffer_unmap(destBuffer, &info);
 
-    destCaps = create_RGB_caps(destType, m_iWidth, m_iHeight, m_iEncodedWidth, m_iEncodedHeight, stride);
+    destCaps = create_RGB_caps(destType, m_uiWidth, m_uiHeight, m_uiEncodedWidth, m_uiEncodedHeight, stride);
     if (!destCaps) {
         // INLINE - gst_buffer_unref()
         gst_buffer_unref(destBuffer);
@@ -476,12 +495,16 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
 
     if (0 == status && destSample) {
         CGstVideoFrame *newFrame = new CGstVideoFrame();
-        bool result = newFrame->Init(destSample);
+        bool result = newFrame->Init(destSample) && newFrame->IsValid();
         // INLINE - gst_sample_unref()
         gst_buffer_unref(destBuffer); // else we'll have a massive memory leak!
         // INLINE - gst_sample_unref()
         gst_sample_unref(destSample); // else we'll have a massive memory leak!
-        return result ? newFrame : NULL;
+        if (result) {
+            return newFrame;
+        } else {
+            delete newFrame;
+        }
     }
 
     return NULL;
@@ -493,16 +516,35 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
     GstBuffer *destBuffer;
     GstCaps *destCaps;
     GstMapInfo info;
-    gint stride = m_iEncodedWidth * 4;
-    int status = 1;
+    guint stride = 0;
+    guint alloc_size = 0;
+    int status = 0;
 
     // Not handling alpha ...
     if (m_bHasAlpha) {
         return NULL;
     }
 
-    stride = ((stride + 15) & ~15); // round up to multiple of 16 bytes
-    destBuffer = alloc_aligned_buffer(stride * m_iEncodedHeight);
+    // Make sure we do not have an integer overflow
+    if (m_uiEncodedWidth <= (G_MAXUINT / 4)) {
+        stride = m_uiEncodedWidth * 4;
+    } else {
+        return NULL;
+    }
+
+    if (stride <= (G_MAXUINT - 16)) {
+        stride = ((stride + 15) & ~15); // round up to multiple of 16 bytes
+    } else {
+        return NULL;
+    }
+
+    if (m_uiEncodedHeight > 0 && stride <= (G_MAXUINT / m_uiEncodedHeight)) {
+        alloc_size = stride * m_uiEncodedHeight;
+    } else {
+        return NULL;
+    }
+
+    destBuffer = alloc_aligned_buffer(alloc_size);
     if (!destBuffer) {
         return NULL;
     }
@@ -521,23 +563,23 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
     // now do the conversion
     if (destType == ARGB) {
         status = ColorConvert_YCbCr422p_to_ARGB32_no_alpha(info.data, stride,
-                                                           m_iEncodedWidth, m_iEncodedHeight,
+                                                           m_uiEncodedWidth, m_uiEncodedHeight,
                                                            (uint8_t*)m_pvPlaneData[0] + 1,
                                                            (uint8_t*)m_pvPlaneData[0] + 2,
                                                            (uint8_t*)m_pvPlaneData[0],
-                                                           m_piPlaneStrides[0], m_piPlaneStrides[0]);
+                                                           m_puiPlaneStrides[0], m_puiPlaneStrides[0]);
     } else {
         status = ColorConvert_YCbCr422p_to_BGRA32_no_alpha(info.data, stride,
-                                                           m_iEncodedWidth, m_iEncodedHeight,
+                                                           m_uiEncodedWidth, m_uiEncodedHeight,
                                                            (uint8_t*)m_pvPlaneData[0] + 1,
                                                            (uint8_t*)m_pvPlaneData[0] + 2,
                                                            (uint8_t*)m_pvPlaneData[0],
-                                                           m_piPlaneStrides[0], m_piPlaneStrides[0]);
+                                                           m_puiPlaneStrides[0], m_puiPlaneStrides[0]);
     }
 
     gst_buffer_unmap(destBuffer, &info);
 
-    destCaps = create_RGB_caps(destType, m_iWidth, m_iHeight, m_iEncodedWidth, m_iEncodedHeight, stride);
+    destCaps = create_RGB_caps(destType, m_uiWidth, m_uiHeight, m_uiEncodedWidth, m_uiEncodedHeight, stride);
     if (!destCaps) {
         // INLINE - gst_buffer_unref()
         gst_buffer_unref(destBuffer);
@@ -556,12 +598,16 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
 
     if (0 == status && destBuffer) {
         CGstVideoFrame *newFrame = new CGstVideoFrame();
-        bool result = newFrame->Init(destSample);
+        bool result = newFrame->Init(destSample) && newFrame->IsValid();
         // INLINE - gst_buffer_unref()
         gst_buffer_unref(destBuffer); // else we'll have a massive memory leak!
         // INLINE - gst_sample_unref()
         gst_sample_unref(destSample); // else we'll have a massive memory leak!
-        return result ? newFrame : NULL;
+        if (result) {
+            return newFrame;
+        } else {
+            delete newFrame;
+        }
     }
 
     return NULL;
@@ -574,7 +620,7 @@ CGstVideoFrame *CGstVideoFrame::ConvertSwapRGB(FrameType destType)
     GstCaps *srcCaps, *dstCaps;
     GstMapInfo srcInfo, destInfo;
     GstStructure* str;
-    gint xx, yy, size;
+    guint xx, yy, size;
     guint32 *srcData, *dstData;
 
     size = gst_buffer_get_size(m_pBuffer);
@@ -610,7 +656,7 @@ CGstVideoFrame *CGstVideoFrame::ConvertSwapRGB(FrameType destType)
             break;
         default:
             // shouldn't have gotten this far...
-// INLINE - gst_buffer_unref()
+            // INLINE - gst_buffer_unref()
             gst_buffer_unref(destBuffer);
             gst_caps_unref(dstCaps);
             return NULL;
@@ -646,18 +692,18 @@ CGstVideoFrame *CGstVideoFrame::ConvertSwapRGB(FrameType destType)
     // Now copy data from src to dest, byteswapping as we copy
     srcData = (guint32*)srcInfo.data;
     dstData = (guint32*)destInfo.data;
-    if (!(m_piPlaneStrides[0] & 3)) {
+    if (!(m_puiPlaneStrides[0] & 3)) {
         // four byte alignment on the entire buffer, we can just loop once
         for (xx = 0; xx < size; xx += 4) {
             *dstData++ = swap_uint32(*srcData++); // NOTE: SSE could be used here instead
         }
     } else {
-        for (yy = 0; yy < m_iHeight; yy++) {
-            for (xx = 0; xx < m_iWidth; xx++) {
+        for (yy = 0; yy < m_uiHeight; yy++) {
+            for (xx = 0; xx < m_uiWidth; xx++) {
                 dstData[xx] = swap_uint32(srcData[xx]); // NOTE: SSE could be used here instead
             }
-            dstData += m_piPlaneStrides[0];
-            srcData += m_piPlaneStrides[0];
+            dstData += m_puiPlaneStrides[0];
+            srcData += m_puiPlaneStrides[0];
         }
     }
 
@@ -666,12 +712,16 @@ CGstVideoFrame *CGstVideoFrame::ConvertSwapRGB(FrameType destType)
 
     if (destBuffer) {
         CGstVideoFrame *newFrame = new CGstVideoFrame();
-        bool result = newFrame->Init(destSample);
+        bool result = newFrame->Init(destSample) && newFrame->IsValid();
         // INLINE - gst_buffer_unref()
         gst_buffer_unref(destBuffer); // else we'll have a massive memory leak!
         // INLINE - gst_sample_unref()
         gst_sample_unref(destSample); // else we'll have a massive memory leak!
-        return result ? newFrame : NULL;
+        if (result) {
+            return newFrame;
+        } else {
+            delete newFrame;
+        }
     }
     return NULL;
 }
