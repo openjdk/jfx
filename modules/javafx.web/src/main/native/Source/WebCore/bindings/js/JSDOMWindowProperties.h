@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "JSDOMWindow.h"
 #include "JSDOMWrapper.h"
+#include "JSLocalDOMWindow.h"
 
 namespace WebCore {
 
 class JSDOMWindowProperties final : public JSDOMObject {
 public:
     using Base = JSDOMObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::GetOwnPropertySlotIsImpureForPropertyAbsence | JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | JSC::IsImmutablePrototypeExoticObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::GetOwnPropertySlotIsImpureForPropertyAbsence | JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | JSC::OverridesIsExtensible | JSC::IsImmutablePrototypeExoticObject;
 
     static constexpr bool needsDestruction = false;
     template<typename CellType, JSC::SubspaceAccess>

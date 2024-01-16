@@ -33,7 +33,6 @@
 #include "CommonVM.h"
 #include "CrossOriginOpenerPolicy.h"
 #include "DOMTimer.h"
-#include "DOMWindow.h"
 #include "DatabaseContext.h"
 #include "Document.h"
 #include "ErrorEvent.h"
@@ -41,12 +40,14 @@
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMPromiseDeferred.h"
-#include "JSDOMWindow.h"
+#include "JSLocalDOMWindow.h"
 #include "JSWorkerGlobalScope.h"
 #include "JSWorkletGlobalScope.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalDOMWindow.h"
 #include "MessagePort.h"
 #include "Navigator.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "Performance.h"
 #include "PublicURLManager.h"
@@ -447,7 +448,7 @@ bool ScriptExecutionContext::canIncludeErrorDetails(CachedScript* script, const 
         ASSERT(securityOrigin()->toString() == script->origin()->toString());
         return script->isCORSSameOrigin();
     }
-    return securityOrigin()->canRequest(completeSourceURL);
+    return securityOrigin()->canRequest(completeSourceURL, OriginAccessPatternsForWebProcess::singleton());
 }
 
 void ScriptExecutionContext::reportException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, JSC::Exception* exception, RefPtr<ScriptCallStack>&& callStack, CachedScript* cachedScript, bool fromModule)
@@ -820,7 +821,7 @@ ScriptExecutionContext::HasResourceAccess ScriptExecutionContext::canAccessResou
 
 ScriptExecutionContext::NotificationCallbackIdentifier ScriptExecutionContext::addNotificationCallback(CompletionHandler<void()>&& callback)
 {
-    auto identifier = NotificationCallbackIdentifier::generateThreadSafe();
+    auto identifier = NotificationCallbackIdentifier::generate();
     m_notificationCallbacks.add(identifier, WTFMove(callback));
     return identifier;
 }

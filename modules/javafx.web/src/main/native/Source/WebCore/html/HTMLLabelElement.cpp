@@ -33,7 +33,7 @@
 #include "HTMLFormControlElement.h"
 #include "HTMLNames.h"
 #include "SelectionRestorationMode.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 

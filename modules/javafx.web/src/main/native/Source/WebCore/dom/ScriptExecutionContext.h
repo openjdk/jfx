@@ -38,6 +38,7 @@
 #include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/HandleTypes.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
@@ -79,7 +80,7 @@ class RTCDataChannelRemoteHandlerConnection;
 class ResourceRequest;
 class SocketProvider;
 class WebCoreOpaqueRoot;
-enum class LoadedFromOpaqueSource : uint8_t;
+enum class LoadedFromOpaqueSource : bool;
 enum class TaskSource : uint8_t;
 
 #if ENABLE(NOTIFICATIONS)
@@ -95,7 +96,7 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class ScriptExecutionContext : public SecurityContext, public CanMakeWeakPtr<ScriptExecutionContext> {
+class ScriptExecutionContext : public SecurityContext, public CanMakeWeakPtr<ScriptExecutionContext>, public CanMakeCheckedPtr {
 public:
     explicit ScriptExecutionContext(ScriptExecutionContextIdentifier = { });
     virtual ~ScriptExecutionContext();
@@ -111,7 +112,7 @@ public:
     virtual EventLoopTaskGroup& eventLoop() = 0;
 
     virtual const URL& url() const = 0;
-    enum class ForceUTF8 { No, Yes };
+    enum class ForceUTF8 : bool { No, Yes };
     virtual URL completeURL(const String& url, ForceUTF8 = ForceUTF8::No) const = 0;
 
     virtual String userAgent(const URL&) const = 0;
@@ -127,6 +128,8 @@ public:
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
 
     virtual SocketProvider* socketProvider() = 0;
+
+    virtual std::optional<uint64_t> noiseInjectionHashSalt() const = 0;
 
     virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection();
 
@@ -236,8 +239,8 @@ public:
     // Gets the next id in a circular sequence from 1 to 2^31-1.
     int circularSequentialID();
 
-    bool addTimeout(int timeoutId, DOMTimer& timer) { return m_timeouts.add(timeoutId, timer).isNewEntry; }
-    void removeTimeout(int timeoutId) { m_timeouts.remove(timeoutId); }
+    bool addTimeout(int timeoutId, DOMTimer& timer) { return m_timeouts.add(timeoutId, &timer).isNewEntry; }
+    RefPtr<DOMTimer> takeTimeout(int timeoutId) { return m_timeouts.take(timeoutId); }
     DOMTimer* findTimeout(int timeoutId) { return m_timeouts.get(timeoutId); }
 
     virtual JSC::VM& vm() = 0;
@@ -319,7 +322,7 @@ public:
     WEBCORE_EXPORT HasResourceAccess canAccessResource(ResourceType) const;
 
     enum NotificationCallbackIdentifierType { };
-    using NotificationCallbackIdentifier = ObjectIdentifier<NotificationCallbackIdentifierType>;
+    using NotificationCallbackIdentifier = AtomicObjectIdentifier<NotificationCallbackIdentifierType>;
 
     WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
     WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
@@ -366,7 +369,7 @@ private:
 
     void dispatchMessagePortEvents();
 
-    enum class ShouldContinue { No, Yes };
+    enum class ShouldContinue : bool { No, Yes };
     void forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>&) const;
 
     RejectedPromiseTracker* ensureRejectedPromiseTrackerSlow();
@@ -377,7 +380,7 @@ private:
     HashSet<ContextDestructionObserver*> m_destructionObservers;
     HashSet<ActiveDOMObject*> m_activeDOMObjects;
 
-    HashMap<int, Ref<DOMTimer>> m_timeouts;
+    HashMap<int, RefPtr<DOMTimer>> m_timeouts;
 
     struct PendingException;
     std::unique_ptr<Vector<std::unique_ptr<PendingException>>> m_pendingExceptions;

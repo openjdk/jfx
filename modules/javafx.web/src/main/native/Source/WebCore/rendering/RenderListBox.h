@@ -72,9 +72,9 @@ public:
     bool scrolledToLeft() const final;
     bool scrolledToRight() const final;
 
-    bool isVisibleToHitTesting() const final { return visibleToHitTesting(); };
-
 private:
+    bool isVisibleToHitTesting() const final;
+
     void willBeDestroyed() override;
 
     void element() const = delete;
@@ -172,12 +172,14 @@ private:
 
     LayoutUnit itemHeight() const;
 
-    enum class ConsiderPadding { Yes, No };
+    enum class ConsiderPadding : bool { No, Yes };
     int numVisibleItems(ConsiderPadding = ConsiderPadding::No) const;
     int numItems() const;
     LayoutUnit listHeight() const;
 
     std::optional<int> optionRowIndex(const HTMLOptionElement&) const;
+
+    float deviceScaleFactor() const final;
 
     void paintScrollbar(PaintInfo&, const LayoutPoint&);
     void paintItemForeground(PaintInfo&, const LayoutPoint&, int listIndex);

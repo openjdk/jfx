@@ -35,6 +35,7 @@
 
 namespace JSC {
 
+class JSGlobalObject;
 class JSObject;
 class JSValue;
 
@@ -43,7 +44,7 @@ class JSValue;
 namespace WebCore {
 
 class CustomElementRegistry;
-class DOMWindow;
+class LocalDOMWindow;
 class DeferredPromise;
 class Document;
 class Element;
@@ -53,7 +54,7 @@ class QualifiedName;
 
 class CustomElementRegistry : public RefCounted<CustomElementRegistry>, public ContextDestructionObserver {
 public:
-    static Ref<CustomElementRegistry> create(DOMWindow&, ScriptExecutionContext*);
+    static Ref<CustomElementRegistry> create(LocalDOMWindow&, ScriptExecutionContext*);
     ~CustomElementRegistry();
 
     Document* document() const;
@@ -69,6 +70,7 @@ public:
     bool containsConstructor(const JSC::JSObject*) const;
 
     JSC::JSValue get(const AtomString&);
+    String getName(JSC::JSValue);
     void upgrade(Node& root);
 
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>>& promiseMap() { return m_promiseMap; }
@@ -76,9 +78,9 @@ public:
 
     template<typename Visitor> void visitJSCustomElementInterfaces(Visitor&) const;
 private:
-    CustomElementRegistry(DOMWindow&, ScriptExecutionContext*);
+    CustomElementRegistry(LocalDOMWindow&, ScriptExecutionContext*);
 
-    DOMWindow& m_window;
+    LocalDOMWindow& m_window;
     HashMap<AtomString, Ref<JSCustomElementInterface>> m_nameMap;
     HashMap<const JSC::JSObject*, JSCustomElementInterface*> m_constructorMap WTF_GUARDED_BY_LOCK(m_constructorMapLock);
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>> m_promiseMap;

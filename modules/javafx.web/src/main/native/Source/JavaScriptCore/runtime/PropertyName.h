@@ -106,21 +106,6 @@ inline bool operator==(PropertyName a, const char* b)
     return equal(a.uid(), b);
 }
 
-inline bool operator!=(PropertyName a, const Identifier& b)
-{
-    return a.uid() != b.impl();
-}
-
-inline bool operator!=(const Identifier& a, PropertyName b)
-{
-    return a.impl() != b.uid();
-}
-
-inline bool operator!=(PropertyName a, PropertyName b)
-{
-    return a.uid() != b.uid();
-}
-
 ALWAYS_INLINE std::optional<uint32_t> parseIndex(PropertyName propertyName)
 {
     auto uid = propertyName.uid();
@@ -138,8 +123,27 @@ ALWAYS_INLINE bool isCanonicalNumericIndexString(UniquedStringImpl* propertyName
         return false;
     if (propertyName->isSymbol())
         return false;
-    if (equal(propertyName, "-0"_s))
+
+    StringView view(propertyName);
+    unsigned length = view.length();
+    if (!length)
+        return false;
+    UChar first = view[0];
+    if (length == 1)
+        return isASCIIDigit(first);
+    UChar second = view[1];
+    if (first == '-') {
+        // -Infinity case should go to the slow path. -NaN cannot exist since it becomes NaN.
+        if (!isASCIIDigit(second) && (length != strlen("-Infinity") || second != 'I'))
+            return false;
+        if (length == 2) // Including -0, and it should be accepted.
         return true;
+    } else if (!isASCIIDigit(first)) {
+        // Infinity and NaN should go to the slow path.
+        if (!(length == strlen("Infinity") && first == 'I') && !(length == strlen("NaN") && first == 'N'))
+            return false;
+    }
+
     double index = jsToNumber(propertyName);
     NumberToStringBuffer buffer;
     const char* indexString = WTF::numberToString(index, buffer);

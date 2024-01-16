@@ -24,6 +24,7 @@
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
 #include "FilterEffect.h"
+#include "NodeName.h"
 #include "RenderSVGResourceFilterPrimitive.h"
 #include "SVGElementInlines.h"
 #include <wtf/IsoMallocInlines.h>
@@ -46,24 +47,32 @@ SVGFilterPrimitiveStandardAttributes::SVGFilterPrimitiveStandardAttributes(const
     });
 }
 
-void SVGFilterPrimitiveStandardAttributes::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFilterPrimitiveStandardAttributes::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
-    if (name == SVGNames::xAttr)
-        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::yAttr)
-        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::widthAttr)
-        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::heightAttr)
-        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::resultAttr)
-        m_result->setBaseValInternal(value);
+    switch (name.nodeName()) {
+    case AttributeNames::xAttr:
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::yAttr:
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::widthAttr:
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::heightAttr:
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::resultAttr:
+        m_result->setBaseValInternal(newValue);
+        break;
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGElement::parseAttribute(name, value);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 OptionSet<FilterEffectGeometry::Flags> SVGFilterPrimitiveStandardAttributes::effectGeometryFlags() const

@@ -51,7 +51,8 @@ enum class MediaPlayerMovieLoadType : uint8_t {
         Unknown,
         Download,
         StoredStream,
-        LiveStream
+    LiveStream,
+    HttpLiveStream,
 };
 
 enum class MediaPlayerPreload : uint8_t {
@@ -125,6 +126,7 @@ public:
     typedef uint32_t VideoFullscreenMode;
 };
 
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, MediaPlayerEnums::VideoGravity);
 WEBCORE_EXPORT String convertEnumerationToString(MediaPlayerEnums::ReadyState);
 String convertEnumerationToString(MediaPlayerEnums::NetworkState);
 String convertEnumerationToString(MediaPlayerEnums::Preload);

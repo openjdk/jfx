@@ -35,6 +35,7 @@
         },
         "CEReactions": {
             "contextsAllowed": ["attribute", "operation"],
+            "values": ["Needed", "NotNeeded"],
             "standard": {
                 "url": "https://html.spec.whatwg.org/multipage/custom-elements.html#cereactions"
             }
@@ -418,6 +419,10 @@
             "standard": {
                 "url": "https://webidl.spec.whatwg.org/#PutForwards"
             }
+        },
+        "RaisesException": {
+            "contextsAllowed": ["operation"],
+            "notes": "Should only be used on indexed getters that have to throw an exception in some cases"
         },
         "Reflect": {
             "contextsAllowed": ["attribute"],

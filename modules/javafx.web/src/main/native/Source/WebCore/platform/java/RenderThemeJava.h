@@ -29,6 +29,8 @@
 #include "ModernMediaControlResource.h"
 #include "GraphicsContext.h"
 #include "StyleResolver.h"
+#include "RenderStyleSetters.h"
+#include "RenderStyleInlines.h"
 
 #include <jni.h>
 

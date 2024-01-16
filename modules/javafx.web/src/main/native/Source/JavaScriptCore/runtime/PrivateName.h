@@ -32,11 +32,6 @@ namespace JSC {
 
 class PrivateName {
 public:
-    PrivateName()
-        : m_uid(SymbolImpl::createNullSymbol())
-    {
-    }
-
     explicit PrivateName(SymbolImpl& uid)
         : m_uid(uid)
     {
@@ -64,7 +59,6 @@ public:
     SymbolImpl& uid() const { return m_uid; }
 
     bool operator==(const PrivateName& other) const { return &uid() == &other.uid(); }
-    bool operator!=(const PrivateName& other) const { return &uid() != &other.uid(); }
 
 private:
     Ref<SymbolImpl> m_uid;

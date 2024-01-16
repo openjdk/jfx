@@ -132,6 +132,11 @@ Ref<FontFace> FontFace::create(ScriptExecutionContext& context, const String& fa
         result->setErrorState();
         return result;
     }
+    auto setSizeAdjustResult = result->setSizeAdjust(context, descriptors.sizeAdjust.isEmpty() ? "100%"_s : descriptors.sizeAdjust);
+    if (setSizeAdjustResult.hasException()) {
+        result->setErrorState();
+        return result;
+    }
 
     if (!dataRequiresAsynchronousLoading) {
         result->backing().load();
@@ -172,13 +177,10 @@ FontFace::~FontFace()
 
 ExceptionOr<void> FontFace::setFamily(ScriptExecutionContext& context, const String& family)
 {
-    if (family.isEmpty())
+    if (family.isNull())
         return Exception { SyntaxError };
-
     // FIXME: Don't use a list here. https://bugs.webkit.org/show_bug.cgi?id=196381
-    auto list = CSSValueList::createCommaSeparated();
-    list->append(context.cssValuePool().createFontFamilyValue(AtomString { family }));
-    m_backing->setFamilies(list);
+    m_backing->setFamilies(CSSValueList::createCommaSeparated(context.cssValuePool().createFontFamilyValue(AtomString { family })));
     return { };
 }
 
@@ -236,6 +238,15 @@ ExceptionOr<void> FontFace::setDisplay(ScriptExecutionContext& context, const St
     return Exception { SyntaxError };
 }
 
+ExceptionOr<void> FontFace::setSizeAdjust(ScriptExecutionContext& context, const String& sizeAdjust)
+{
+    if (auto value = CSSPropertyParserWorkerSafe::parseFontFaceSizeAdjust(sizeAdjust, context)) {
+        m_backing->setSizeAdjust(*value);
+        return { };
+    }
+    return Exception { SyntaxError };
+}
+
 String FontFace::family() const
 {
     if (auto value = m_backing->family(); !value.isNull())
@@ -276,6 +287,13 @@ String FontFace::featureSettings() const
     if (auto value = m_backing->featureSettings(); !value.isNull())
         return value;
         return "normal"_s;
+}
+
+String FontFace::sizeAdjust() const
+{
+    if (auto value = m_backing->sizeAdjust(); !value.isNull())
+        return value;
+    return "100%"_s;
 }
 
 String FontFace::display() const

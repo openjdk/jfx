@@ -30,15 +30,16 @@
 namespace WTF {
 
 template<typename T> struct DefaultRefDerefTraits {
-    static ALWAYS_INLINE void refIfNotNull(T* ptr)
+    static ALWAYS_INLINE T* refIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr != nullptr))
+        if (LIKELY(ptr))
             ptr->ref();
+        return ptr;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T* ptr)
     {
-        if (LIKELY(ptr != nullptr))
+        if (LIKELY(ptr))
             ptr->deref();
     }
 };
@@ -59,9 +60,9 @@ public:
 
     ALWAYS_INLINE constexpr RefPtr() : m_ptr(nullptr) { }
     ALWAYS_INLINE constexpr RefPtr(std::nullptr_t) : m_ptr(nullptr) { }
-    ALWAYS_INLINE RefPtr(T* ptr) : m_ptr(ptr) { RefDerefTraits::refIfNotNull(ptr); }
-    ALWAYS_INLINE RefPtr(const RefPtr& o) : m_ptr(o.m_ptr) { RefDerefTraits::refIfNotNull(PtrTraits::unwrap(m_ptr)); }
-    template<typename X, typename Y, typename Z> RefPtr(const RefPtr<X, Y, Z>& o) : m_ptr(o.get()) { RefDerefTraits::refIfNotNull(PtrTraits::unwrap(m_ptr)); }
+    ALWAYS_INLINE RefPtr(T* ptr) : m_ptr(RefDerefTraits::refIfNotNull(ptr)) { }
+    ALWAYS_INLINE RefPtr(const RefPtr& o) : m_ptr(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.m_ptr))) { }
+    template<typename X, typename Y, typename Z> RefPtr(const RefPtr<X, Y, Z>& o) : m_ptr(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.get()))) { }
 
     ALWAYS_INLINE RefPtr(RefPtr&& o) : m_ptr(o.leakRef()) { }
     template<typename X, typename Y, typename Z> RefPtr(RefPtr<X, Y, Z>&& o) : m_ptr(o.leakRef()) { }
@@ -228,24 +229,6 @@ inline bool operator==(T* a, const RefPtr<X, Y, Z>& b)
     return a == b.m_ptr;
 }
 
-template<typename T, typename U, typename V, typename X, typename Y, typename Z>
-inline bool operator!=(const RefPtr<T, U, V>& a, const RefPtr<X, Y, Z>& b)
-{
-    return !(a == b);
-}
-
-template<typename T, typename U, typename V, typename X>
-inline bool operator!=(const RefPtr<T, U, V>& a, X* b)
-{
-    return !(a == b);
-}
-
-template<typename T, typename X, typename Y, typename Z>
-inline bool operator!=(T* a, const RefPtr<X, Y, Z>& b)
-{
-    return !(a == b);
-}
-
 template<typename T, typename U, typename V>
 inline RefPtr<T, U, V> adoptRef(T* p)
 {
@@ -280,6 +263,18 @@ template<typename ExpectedType, typename ArgType, typename PtrTraits, typename R
 inline bool is(const RefPtr<ArgType, PtrTraits, RefDerefTraits>& source)
 {
     return is<ExpectedType>(source.get());
+}
+
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline Target* downcast(RefPtr<Source, PtrTraits, RefDerefTraits>& source)
+{
+    return downcast<Target>(source.get());
+}
+
+template<typename Target, typename Source, typename PtrTraits, typename RefDerefTraits>
+inline Target* downcast(const RefPtr<Source, PtrTraits, RefDerefTraits>& source)
+{
+    return downcast<Target>(source.get());
 }
 
 template<typename Target, typename Source, typename TargetPtrTraits = RawPtrTraits<Target>, typename TargetRefDerefTraits = DefaultRefDerefTraits<Target>,

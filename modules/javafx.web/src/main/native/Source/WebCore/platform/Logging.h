@@ -54,6 +54,7 @@ namespace WebCore {
     M(DatabaseTracker) \
     M(DisplayLink) \
     M(DisplayLists) \
+    M(DragAndDrop) \
     M(DOMTimers) \
     M(Editing) \
     M(EME) \
@@ -71,7 +72,6 @@ namespace WebCore {
     M(History) \
     M(IOSurface) \
     M(IconDatabase) \
-    M(LiveConnect) \
     M(Images) \
     M(IndexedDB) \
     M(IndexedDBOperations) \
@@ -98,6 +98,7 @@ namespace WebCore {
     M(PlatformLeaks) \
     M(Plugins) \
     M(PopupBlocking) \
+    M(Printing) \
     M(PrivateClickMeasurement) \
     M(Process) \
     M(Progress) \

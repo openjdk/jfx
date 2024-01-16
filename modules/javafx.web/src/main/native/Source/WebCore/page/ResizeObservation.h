@@ -29,6 +29,7 @@
 #include "LayoutSize.h"
 #include "ResizeObserverBoxOptions.h"
 
+#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
@@ -42,7 +43,7 @@ class Element;
 class WeakPtrImplWithEventTargetData;
 
 class ResizeObservation : public RefCounted<ResizeObservation> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(ResizeObservation);
 public:
     static Ref<ResizeObservation> create(Element& target, ResizeObserverBoxOptions);
 
@@ -56,6 +57,7 @@ public:
 
     std::optional<BoxSizes> elementSizeChanged() const;
     void updateObservationSize(const BoxSizes&);
+    void resetObservationSize();
 
     FloatRect computeContentRect() const;
     FloatSize borderBoxSize() const;

@@ -42,28 +42,9 @@ enum class PlatformVideoColorPrimaries : uint8_t {
     SmpteEg432,
     JedecP22Phosphors,
     Unspecified,
+
+    // Aliases for WebIDL bindings
+    Smpte432 = SmpteEg432,
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PlatformVideoColorPrimaries> {
-    using values = EnumValues<
-        WebCore::PlatformVideoColorPrimaries,
-        WebCore::PlatformVideoColorPrimaries::Bt709,
-        WebCore::PlatformVideoColorPrimaries::Bt470bg,
-        WebCore::PlatformVideoColorPrimaries::Smpte170m,
-        WebCore::PlatformVideoColorPrimaries::Bt470m,
-        WebCore::PlatformVideoColorPrimaries::Smpte240m,
-        WebCore::PlatformVideoColorPrimaries::Film,
-        WebCore::PlatformVideoColorPrimaries::Bt2020,
-        WebCore::PlatformVideoColorPrimaries::SmpteSt4281,
-        WebCore::PlatformVideoColorPrimaries::SmpteRp431,
-        WebCore::PlatformVideoColorPrimaries::SmpteEg432,
-        WebCore::PlatformVideoColorPrimaries::JedecP22Phosphors,
-        WebCore::PlatformVideoColorPrimaries::Unspecified
-    >;
-};
-
-}

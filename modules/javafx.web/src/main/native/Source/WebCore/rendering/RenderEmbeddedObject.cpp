@@ -32,8 +32,6 @@
 #include "EventNames.h"
 #include "FontCascade.h"
 #include "FontSelector.h"
-#include "Frame.h"
-#include "FrameLoaderClient.h"
 #include "GraphicsContext.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLNames.h"
@@ -41,6 +39,8 @@
 #include "HTMLParamElement.h"
 #include "HTMLPlugInElement.h"
 #include "HitTestResult.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
 #include "Page.h"
@@ -48,6 +48,7 @@
 #include "Path.h"
 #include "PlatformMouseEvent.h"
 #include "PluginViewBase.h"
+#include "RenderBoxInlines.h"
 #include "RenderLayoutState.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -308,7 +309,6 @@ void RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
     FontCascadeDescription fontDescription;
     fontDescription.setOneFamily(SystemFontDatabase::singleton().systemFontShorthandFamily(SystemFontDatabase::FontShorthand::WebkitSmallControl));
     fontDescription.setWeight(boldWeightValue());
-    fontDescription.setRenderingMode(settings().fontRenderingMode());
     fontDescription.setComputedSize(12);
     font = FontCascade(WTFMove(fontDescription), 0, 0);
     font.update(nullptr);

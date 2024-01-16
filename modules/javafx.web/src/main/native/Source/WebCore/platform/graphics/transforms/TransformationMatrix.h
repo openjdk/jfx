@@ -55,10 +55,6 @@ const int MCOUNT = 6;
 typedef double* PlatformTransformationMatrix;
 #endif
 
-#if PLATFORM(WIN)
-struct D2D_MATRIX_3X2_F;
-typedef D2D_MATRIX_3X2_F D2D1_MATRIX_3X2_F;
-#endif
 
 namespace WTF {
 class TextStream;
@@ -106,6 +102,16 @@ public:
             { c, d, 0, 0 },
             { 0, 0, 1, 0 },
             { e, f, 0, 1 },
+        }
+    {
+    }
+
+    constexpr TransformationMatrix(double tx, double ty)
+        : m_matrix {
+            { 1, 0, 0, 0 },
+            { 0, 1, 0, 0 },
+            { 0, 0, 1, 0 },
+            { tx, ty, 0, 1 },
         }
     {
     }
@@ -380,8 +386,6 @@ public:
                 m_matrix[3][2] == m2.m_matrix[3][2] &&
                 m_matrix[3][3] == m2.m_matrix[3][3]);
     }
-
-    bool operator!=(const TransformationMatrix& other) const { return !(*this == other); }
 
     // *this = *this * t
     TransformationMatrix& operator*=(const TransformationMatrix& t)

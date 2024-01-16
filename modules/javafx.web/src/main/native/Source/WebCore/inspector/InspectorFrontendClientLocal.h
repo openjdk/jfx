@@ -35,16 +35,17 @@
 #include "InspectorFrontendClient.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class Color;
 class FloatRect;
-class Frame;
 class InspectorController;
 class InspectorBackendDispatchTask;
 class InspectorFrontendHost;
+class LocalFrame;
 class Page;
 
 class InspectorFrontendClientLocal : public InspectorFrontendClient {
@@ -103,7 +104,7 @@ public:
     String backendCommandsURL() const final { return String(); };
 
     InspectorFrontendAPIDispatcher& frontendAPIDispatcher() final { return m_frontendAPIDispatcher; }
-    Page* frontendPage() final { return m_frontendPage; }
+    WEBCORE_EXPORT Page* frontendPage() final;
 
     WEBCORE_EXPORT bool canAttachWindow();
     WEBCORE_EXPORT void setDockingUnavailable(bool);
@@ -124,14 +125,13 @@ public:
 
     WEBCORE_EXPORT void showConsole();
 
-    WEBCORE_EXPORT void showMainResourceForFrame(Frame*);
+    WEBCORE_EXPORT void showMainResourceForFrame(LocalFrame*);
 
     WEBCORE_EXPORT void showResources();
 
     WEBCORE_EXPORT void setAttachedWindow(DockSide);
 
     WEBCORE_EXPORT Page* inspectedPage() const;
-    Page* frontendPage() const { return m_frontendPage; }
 
 protected:
     virtual void setAttachedWindowHeight(unsigned) = 0;
@@ -145,7 +145,7 @@ private:
     std::optional<bool> evaluationResultToBoolean(InspectorFrontendAPIDispatcher::EvaluationResult);
 
     InspectorController* m_inspectedPageController { nullptr };
-    Page* m_frontendPage { nullptr };
+    WeakPtr<Page> m_frontendPage;
     // TODO(yurys): this ref shouldn't be needed.
     RefPtr<InspectorFrontendHost> m_frontendHost;
     std::unique_ptr<InspectorFrontendClientLocal::Settings> m_settings;

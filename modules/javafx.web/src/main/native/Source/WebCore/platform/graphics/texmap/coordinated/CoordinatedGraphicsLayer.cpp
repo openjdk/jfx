@@ -184,9 +184,9 @@ Nicosia::PlatformLayer::LayerID CoordinatedGraphicsLayer::id() const
     return m_id;
 }
 
-auto CoordinatedGraphicsLayer::primaryLayerID() const -> PlatformLayerID
+auto CoordinatedGraphicsLayer::primaryLayerID() const -> PlatformLayerIdentifier
 {
-    return { makeObjectIdentifier<PlatformLayerIDType>(id()), Process::identifier() };
+    return { ObjectIdentifier<PlatformLayerIdentifierType>(id()), Process::identifier() };
 }
 
 bool CoordinatedGraphicsLayer::setChildren(Vector<Ref<GraphicsLayer>>&& children)
@@ -1522,6 +1522,11 @@ void CoordinatedGraphicsLayer::dumpAdditionalProperties(TextStream& textStream, 
 {
     if (options & LayerTreeAsTextOptions::IncludeContentLayers)
         dumpInnerLayer(textStream, "backdrop layer"_s, m_backdropLayer.get(), options);
+}
+
+double CoordinatedGraphicsLayer::backingStoreMemoryEstimate() const
+{
+    return 0.0;
 }
 
 } // namespace WebCore
