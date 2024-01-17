@@ -133,9 +133,9 @@ public final class InputMethodClientImpl
         try {
             result = f.get();
         } catch (ExecutionException ex) {
-            log.fine("InputMethodClientImpl " + ex);
+            log.severe("InputMethodClientImpl " + ex);
         } catch (InterruptedException ex) {
-            log.fine("InputMethodClientImpl InterruptedException" + ex);
+            log.severe("InputMethodClientImpl InterruptedException" + ex);
         }
         return result;
     }
