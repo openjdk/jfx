@@ -37,7 +37,6 @@
 #include "IntRect.h"
 #include "MediaPlayer.h"
 #include "MediaPlayerPrivate.h"
-#include "NullGraphicsContext.h"
 #include "RoundedRect.h"
 #include "SystemImage.h"
 #include "TextBoxIterator.h"
@@ -110,15 +109,6 @@ void GraphicsContext::drawRaisedEllipse(const FloatRect& rect, const Color& elli
     drawEllipse(rect);
 
     restore();
-}
-
-bool GraphicsContext::getShadow(FloatSize& offset, float& blur, Color& color) const
-{
-    offset = dropShadow().offset;
-    blur = dropShadow().blurRadius;
-    color = dropShadow().color;
-
-    return hasShadow();
 }
 
 void GraphicsContext::beginTransparencyLayer(float)
@@ -404,11 +394,6 @@ void GraphicsContext::clipOutRoundedRect(const FloatRoundedRect& rect)
     clipOut(path);
 }
 
-void GraphicsContext::clipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destinationRect)
-{
-    imageBuffer.clipToMask(*this, destinationRect);
-}
-
 IntRect GraphicsContext::clipBounds() const
 {
     ASSERT_NOT_REACHED();
@@ -428,7 +413,6 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color, Compos
     setCompositeOperation(previousOperator);
 }
 
-#if !PLATFORM(JAVA) // FIXME-java: recheck
 void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode blendMode)
 {
     if (rect.isRounded()) {
@@ -438,7 +422,6 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
     } else
         fillRect(rect.rect(), color, compositeOperation(), blendMode);
 }
-#endif
 
 void GraphicsContext::fillRectWithRoundedHole(const FloatRect& rect, const FloatRoundedRect& roundedHoleRect, const Color& color)
 {
@@ -513,14 +496,14 @@ void GraphicsContext::drawPath(const Path& path)
 void GraphicsContext::fillEllipseAsPath(const FloatRect& ellipse)
 {
     Path path;
-    path.addEllipse(ellipse);
+    path.addEllipseInRect(ellipse);
     fillPath(path);
 }
 
 void GraphicsContext::strokeEllipseAsPath(const FloatRect& ellipse)
 {
     Path path;
-    path.addEllipse(ellipse);
+    path.addEllipseInRect(ellipse);
     strokePath(path);
 }
 
@@ -613,6 +596,42 @@ Vector<FloatPoint> GraphicsContext::centerLineAndCutOffCorners(bool isVerticalLi
     return { point1, point2 };
 }
 
+void GraphicsContext::clearShadow()
+{
+    if (!m_state.style())
+        return;
+
+    if (!std::holds_alternative<GraphicsDropShadow>(*m_state.style()))
+        return;
+
+    m_state.setStyle(std::nullopt);
+    didUpdateState(m_state);
+}
+
+bool GraphicsContext::hasVisibleShadow() const
+{
+    if (const auto shadow = dropShadow())
+        return shadow->isVisible();
+
+    return false;
+}
+
+bool GraphicsContext::hasBlurredShadow() const
+{
+    if (const auto shadow = dropShadow())
+        return shadow->isBlurred();
+
+    return false;
+}
+
+bool GraphicsContext::hasShadow() const
+{
+    if (const auto shadow = dropShadow())
+        return shadow->hasOutsets();
+
+    return false;
+}
+
 #if ENABLE(VIDEO)
 void GraphicsContext::paintFrameForMedia(MediaPlayer& player, const FloatRect& destination)
 {
@@ -625,8 +644,4 @@ void GraphicsContext::paintVideoFrame(VideoFrame& frame, const FloatRect& destin
 }
 #endif
 
-void NullGraphicsContext::drawConsumingImageBuffer(RefPtr<ImageBuffer>, const FloatRect&, const FloatRect&, const ImagePaintingOptions&)
-{
-}
-
-}
+} // namespace WebCore

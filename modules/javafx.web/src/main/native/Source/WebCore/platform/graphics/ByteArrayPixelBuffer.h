@@ -59,7 +59,7 @@ template<class Encoder> void ByteArrayPixelBuffer::encode(Encoder& encoder) cons
 
     encoder << m_format;
     encoder << m_size;
-    encoder << Span { m_data->data(), m_data->byteLength() };
+    encoder << std::span(m_data->data(), m_data->byteLength());
 }
 
 template<class Decoder> std::optional<Ref<ByteArrayPixelBuffer>> ByteArrayPixelBuffer::decode(Decoder& decoder)
@@ -82,7 +82,7 @@ template<class Decoder> std::optional<Ref<ByteArrayPixelBuffer>> ByteArrayPixelB
     if (computedBufferSize.hasOverflowed())
         return std::nullopt;
 
-    std::optional<Span<const uint8_t>> data;
+    std::optional<std::span<const uint8_t>> data;
     decoder >> data;
     if (!data || data->size_bytes() != computedBufferSize.value())
         return std::nullopt;

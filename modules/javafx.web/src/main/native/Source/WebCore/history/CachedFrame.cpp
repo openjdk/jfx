@@ -29,13 +29,13 @@
 #include "BackForwardCache.h"
 #include "CachedFramePlatformData.h"
 #include "CachedPage.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
-#include "FrameView.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "NavigationDisabler.h"
 #include "Page.h"
@@ -57,7 +57,7 @@ namespace WebCore {
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, cachedFrameCounter, ("CachedFrame"));
 
-CachedFrameBase::CachedFrameBase(Frame& frame)
+CachedFrameBase::CachedFrameBase(LocalFrame& frame)
     : m_document(frame.document())
     , m_documentLoader(frame.loader().documentLoader())
     , m_view(frame.view())
@@ -128,9 +128,8 @@ void CachedFrameBase::restore()
     if (m_isMainFrame) {
         frame->loader().client().didRestoreFrameHierarchyForCachedFrame();
 
-        if (DOMWindow* domWindow = m_document->domWindow()) {
-            // FIXME: Add SCROLL_LISTENER to the list of event types on Document, and use m_document->hasListenerType(). See <rdar://problem/9615482>.
-            // FIXME: Can use Document::hasListenerType() now.
+        if (auto* domWindow = m_document->domWindow()) {
+            // FIXME: Use Document::hasListenerType(). See <rdar://problem/9615482>.
             if (domWindow->scrollEventListenerCount() && frame->page())
                 frame->page()->chrome().client().setNeedsScrollNotifications(*frame, true);
         }
@@ -140,7 +139,7 @@ void CachedFrameBase::restore()
     frame->view()->didRestoreFromBackForwardCache();
 }
 
-CachedFrame::CachedFrame(Frame& frame)
+CachedFrame::CachedFrame(LocalFrame& frame)
     : CachedFrameBase(frame)
 {
 #ifndef NDEBUG
@@ -153,7 +152,7 @@ CachedFrame::CachedFrame(Frame& frame)
 
     // Create the CachedFrames for all Frames in the FrameTree.
     for (auto* child = frame.tree().firstChild(); child; child = child->tree().nextSibling()) {
-        auto* localChild = downcast<LocalFrame>(child);
+        auto* localChild = dynamicDowncast<LocalFrame>(child);
         if (!localChild)
             continue;
         m_childFrames.append(makeUniqueRef<CachedFrame>(*localChild));
@@ -186,8 +185,11 @@ CachedFrame::CachedFrame(Frame& frame)
     // We do this for two reasons:
     // 1 - We reuse the main frame, so when it navigates to a new page load it needs to start with a blank FrameTree.
     // 2 - It's much easier to destroy a CachedFrame while it resides in the BackForwardCache if it is disconnected from its parent.
-    for (unsigned i = 0; i < m_childFrames.size(); ++i)
-        frame.tree().removeChild(m_childFrames[i]->view()->frame());
+    Vector<Ref<Frame>> children;
+    for (auto* child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
+        children.append(*child);
+    for (auto& child : children)
+        frame.tree().removeChild(child);
 
 #ifndef NDEBUG
     if (m_isMainFrame)
@@ -198,7 +200,7 @@ CachedFrame::CachedFrame(Frame& frame)
 
 #if PLATFORM(IOS_FAMILY)
     if (m_isMainFrame) {
-        if (DOMWindow* domWindow = m_document->domWindow()) {
+        if (auto* domWindow = m_document->domWindow()) {
             if (domWindow->scrollEventListenerCount() && frame.page())
                 frame.page()->chrome().client().setNeedsScrollNotifications(frame, false);
         }
@@ -267,10 +269,10 @@ void CachedFrame::destroy()
     if (m_cachedFramePlatformData)
         m_cachedFramePlatformData->clear();
 
-    Frame::clearTimers(m_view.get(), m_document.get());
+    LocalFrame::clearTimers(m_view.get(), m_document.get());
 
     // FIXME: Why do we need to call removeAllEventListeners here? When the document is in back/forward cache, this method won't work
-    // fully anyway, because the document won't be able to access its DOMWindow object (due to being frameless).
+    // fully anyway, because the document won't be able to access its LocalDOMWindow object (due to being frameless).
     m_document->removeAllEventListeners();
 
     m_document->setBackForwardCacheState(Document::NotInBackForwardCache);

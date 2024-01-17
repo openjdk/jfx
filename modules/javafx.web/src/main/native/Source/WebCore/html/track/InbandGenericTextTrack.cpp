@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "InbandTextTrackPrivate.h"
 #include "Logging.h"
+#include "TextTrackCueList.h"
 #include "TextTrackList.h"
 #include "VTTRegionList.h"
 #include <math.h>
@@ -107,11 +108,11 @@ void InbandGenericTextTrack::updateCueFromCueData(TextTrackCueGeneric& cue, Inba
         cue.setHighlightColor(inbandCue.highlightColor());
 
     if (inbandCue.align() == GenericCueData::Alignment::Start)
-        cue.setAlign("start"_s);
+        cue.setAlign(VTTCue::AlignSetting::Start);
     else if (inbandCue.align() == GenericCueData::Alignment::Middle)
-        cue.setAlign("middle"_s);
+        cue.setAlign(VTTCue::AlignSetting::Center);
     else if (inbandCue.align() == GenericCueData::Alignment::End)
-        cue.setAlign("end"_s);
+        cue.setAlign(VTTCue::AlignSetting::End);
     cue.setSnapToLines(false);
 
     cue.didChange();
@@ -185,11 +186,42 @@ void InbandGenericTextTrack::parseWebVTTFileHeader(String&& header)
     parser().parseFileHeader(WTFMove(header));
 }
 
+RefPtr<TextTrackCue> InbandGenericTextTrack::cueToExtend(TextTrackCue& newCue)
+{
+    if (newCue.startMediaTime() < MediaTime::zeroTime() || newCue.endMediaTime() < MediaTime::zeroTime())
+        return nullptr;
+
+    if (!m_cues || m_cues->length() < 2)
+        return nullptr;
+
+    return [this, &newCue]() -> RefPtr<TextTrackCue> {
+        for (size_t i = 0; i < m_cues->length(); ++i) {
+            auto existingCue = m_cues->item(i);
+            ASSERT(existingCue->track() == this);
+
+            if (abs(newCue.startMediaTime() - existingCue->startMediaTime()) > startTimeVariance())
+                continue;
+
+            if (abs(newCue.startMediaTime() - existingCue->endMediaTime()) > startTimeVariance())
+                return nullptr;
+
+            if (existingCue->cueContentsMatch(newCue))
+                return existingCue;
+        }
+
+        return nullptr;
+    }();
+}
+
 void InbandGenericTextTrack::newCuesParsed()
 {
     for (auto& cueData : parser().takeCues()) {
         auto cue = VTTCue::create(document(), cueData);
-        auto existingCue = matchCue(cue, TextTrackCue::IgnoreDuration);
+
+        auto existingCue = cueToExtend(cue);
+        if (!existingCue)
+            existingCue = matchCue(cue, TextTrackCue::IgnoreDuration);
+
         if (!existingCue) {
             INFO_LOG(LOGIDENTIFIER, cue.get());
             addCue(WTFMove(cue));

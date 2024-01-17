@@ -22,6 +22,7 @@
 
 #include "ElementInlines.h"
 #include "RenderSVGResourceContainer.h"
+#include "SVGRenderStyle.h"
 #include "SVGResources.h"
 #include "SVGResourcesCycleSolver.h"
 
@@ -44,8 +45,7 @@ void SVGResourcesCache::addResourcesFromRenderer(RenderElement& renderer, const 
     SVGResources& resources = *m_cache.add(&renderer, WTFMove(newResources)).iterator->value;
 
     // Run cycle-detection _afterwards_, so self-references can be caught as well.
-    SVGResourcesCycleSolver solver(renderer, resources);
-    solver.resolveCycles();
+    SVGResourcesCycleSolver::resolveCycles(renderer, resources);
 
     // Walk resources and register the render object at each resources.
     WeakHashSet<RenderSVGResourceContainer> resourceSet;
@@ -216,7 +216,7 @@ void SVGResourcesCache::resourceDestroyed(RenderSVGResourceContainer& resource)
             // Mark users of destroyed resources as pending resolution based on the id of the old resource.
             auto& clientElement = *it.key->element();
             RELEASE_ASSERT(is<SVGElement>(clientElement));
-            clientElement.document().accessSVGExtensions().addPendingResource(resource.element().getIdAttribute(), downcast<SVGElement>(clientElement));
+            clientElement.treeScopeForSVGReferences().addPendingSVGResource(resource.element().getIdAttribute(), downcast<SVGElement>(clientElement));
         }
     }
 }

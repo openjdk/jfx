@@ -204,15 +204,4 @@ class TableSkinUtils {
     public static boolean isConstrainedResizePolicy(Callback<? extends ResizeFeaturesBase, Boolean> x) {
         return (x instanceof ConstrainedColumnResizeBase);
     }
-
-    /** returns the number of visible rows in Tree/TableView */
-    public static int getItemCount(TableViewSkinBase<?,?,?,?,?> skin) {
-        Object control = skin.getSkinnable();
-        if (control instanceof TableView table) {
-            return table.getItems().size();
-        } else if (control instanceof TreeTableView tree) {
-            return tree.getExpandedItemCount();
-        }
-        return 0;
-    }
 }

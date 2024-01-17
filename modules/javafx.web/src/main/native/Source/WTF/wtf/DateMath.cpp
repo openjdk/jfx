@@ -118,6 +118,10 @@ const int firstDayOfMonth[2][12] = {
     {0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335}
 };
 
+const int8_t daysInMonths[12] = {
+    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+};
+
 #if !OS(WINDOWS) || HAVE(TM_GMTOFF)
 static inline void getLocalTime(const time_t* localTime, struct tm* localTM)
 {
@@ -423,7 +427,7 @@ inline static void skipSpacesAndComments(const char*& s)
     int nesting = 0;
     char ch;
     while ((ch = *s)) {
-        if (!isASCIISpace(ch)) {
+        if (!isUnicodeCompatibleASCIIWhitespace(ch)) {
             if (ch == '(')
                 nesting++;
             else if (ch == ')' && nesting > 0)
@@ -720,7 +724,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
     const char *wordStart = dateString;
     // Check contents of first words if not number
     while (*dateString && !isASCIIDigit(*dateString)) {
-        if (isASCIISpace(*dateString) || *dateString == '(') {
+        if (isUnicodeCompatibleASCIIWhitespace(*dateString) || *dateString == '(') {
             if (dateString - wordStart >= 3)
                 month = findMonth(wordStart);
             skipSpacesAndComments(dateString);
@@ -795,14 +799,14 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
             if (month == -1)
                 return std::numeric_limits<double>::quiet_NaN();
 
-            while (*dateString && *dateString != '-' && *dateString != ',' && !isASCIISpace(*dateString))
+            while (*dateString && *dateString != '-' && *dateString != ',' && !isUnicodeCompatibleASCIIWhitespace(*dateString))
                 dateString++;
 
             if (!*dateString)
                 return std::numeric_limits<double>::quiet_NaN();
 
             // '-99 23:12:40 GMT'
-            if (*dateString != '-' && *dateString != '/' && *dateString != ',' && !isASCIISpace(*dateString))
+            if (*dateString != '-' && *dateString != '/' && *dateString != ',' && !isUnicodeCompatibleASCIIWhitespace(*dateString))
                 return std::numeric_limits<double>::quiet_NaN();
             dateString++;
         }
@@ -827,7 +831,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
         dateString = newPosStr;
     else {
         // ' 23:12:40 GMT'
-        if (!(isASCIISpace(*newPosStr) || *newPosStr == ',')) {
+        if (!(isUnicodeCompatibleASCIIWhitespace(*newPosStr) || *newPosStr == ',')) {
             if (*newPosStr != ':')
                 return std::numeric_limits<double>::quiet_NaN();
             // There was no year; the number was the hour.
@@ -835,7 +839,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
         } else {
             // in the normal case (we parsed the year), advance to the next number
             // ' at 23:12:40 GMT'
-            if (isASCIISpace(newPosStr[0]) && isASCIIAlphaCaselessEqual(newPosStr[1], 'a') && isASCIIAlphaCaselessEqual(newPosStr[2], 't'))
+            if (isUnicodeCompatibleASCIIWhitespace(newPosStr[0]) && isASCIIAlphaCaselessEqual(newPosStr[1], 'a') && isASCIIAlphaCaselessEqual(newPosStr[2], 't'))
                 newPosStr += 3;
             else
                 ++newPosStr; // space or comma
@@ -870,7 +874,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
                 return std::numeric_limits<double>::quiet_NaN();
 
             // ':40 GMT'
-            if (*dateString && *dateString != ':' && !isASCIISpace(*dateString))
+            if (*dateString && *dateString != ':' && !isUnicodeCompatibleASCIIWhitespace(*dateString))
                 return std::numeric_limits<double>::quiet_NaN();
 
             // seconds are optional in rfc822 + rfc2822
@@ -933,7 +937,7 @@ double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLoc
                 return std::numeric_limits<double>::quiet_NaN();
 
             int sgn = (o < 0) ? -1 : 1;
-            o = abs(o);
+            o = std::abs(o);
             if (*dateString != ':') {
                 if (o >= 24)
                     offset = ((o / 100) * 60 + (o % 100)) * sgn;
@@ -1028,7 +1032,7 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
     stringBuilder.append(' ');
 
     stringBuilder.append(utcOffset > 0 ? '+' : '-');
-    int absoluteUTCOffset = abs(utcOffset);
+    int absoluteUTCOffset = std::abs(utcOffset);
     appendTwoDigitNumber(stringBuilder, absoluteUTCOffset / 60);
     appendTwoDigitNumber(stringBuilder, absoluteUTCOffset % 60);
 

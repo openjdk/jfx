@@ -72,6 +72,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case Depend:
     case SExt8:
     case SExt16:
+    case SExt8To64:
+    case SExt16To64:
     case SExt32:
     case ZExt32:
     case Clz:
@@ -135,6 +137,7 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case VectorFloor:
     case VectorTrunc:
     case VectorTruncSat:
+    case VectorRelaxedTruncSat:
     case VectorConvert:
     case VectorConvertLow:
     case VectorNearest:
@@ -181,10 +184,14 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case VectorShr:
     case VectorMulSat:
     case VectorAvgRound:
+    case VectorShiftByVector:
+    case VectorRelaxedSwizzle:
         return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), child(proc, 0), child(proc, 1));
     case VectorReplaceLane:
     case VectorMulByElement:
         return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), static_cast<uint8_t>(u.indices[2]), child(proc, 0), child(proc, 1));
+    case VectorRelaxedMAdd:
+    case VectorRelaxedNMAdd:
     case VectorBitwiseSelect:
         return proc.add<SIMDValue>(origin, kind(), type(), simdInfo(), child(proc, 0), child(proc, 1), child(proc, 2));
     case VectorSwizzle:

@@ -189,6 +189,7 @@ public:
 
     // Return false if x + width or y + height overflows.
     WEBCORE_EXPORT bool isValid() const;
+    WEBCORE_EXPORT IntRect WARN_UNUSED_RETURN toRectWithExtentsClippedToNumericLimits() const;
 
 #if PLATFORM(WIN)
     WEBCORE_EXPORT IntRect(const RECT&);
@@ -230,11 +231,6 @@ inline IntRect unionRect(const IntRect& a, const IntRect& b)
 inline bool operator==(const IntRect& a, const IntRect& b)
 {
     return a.location() == b.location() && a.size() == b.size();
-}
-
-inline bool operator!=(const IntRect& a, const IntRect& b)
-{
-    return a.location() != b.location() || a.size() != b.size();
 }
 
 inline IntRect& operator-=(IntRect& r, const IntPoint& offset)

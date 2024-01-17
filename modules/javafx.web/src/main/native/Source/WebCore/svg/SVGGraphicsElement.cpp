@@ -24,6 +24,7 @@
 
 #include "LegacyRenderSVGPath.h"
 #include "RenderAncestorIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderSVGHiddenContainer.h"
 #include "RenderSVGPath.h"
@@ -129,15 +130,13 @@ AffineTransform* SVGGraphicsElement::ensureSupplementalTransform()
     return m_supplementalTransform.get();
 }
 
-void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGGraphicsElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::transformAttr) {
-        m_transform->baseVal()->parse(value);
-        return;
-    }
+    if (name == SVGNames::transformAttr)
+        m_transform->baseVal()->parse(newValue);
 
-    SVGElement::parseAttribute(name, value);
-    SVGTests::parseAttribute(name, value);
+    SVGTests::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)

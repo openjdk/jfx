@@ -34,6 +34,7 @@
 #include "HTMLNames.h"
 #include "HTMLProgressElement.h"
 #include "RenderProgress.h"
+#include "RenderStyleInlines.h"
 #include "ShadowPseudoIds.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -85,9 +86,9 @@ ProgressValueElement::ProgressValueElement(Document& document)
 {
 }
 
-void ProgressValueElement::setWidthPercentage(double width)
+void ProgressValueElement::setInlineSizePercentage(double size)
 {
-    setInlineStyleProperty(CSSPropertyWidth, width, CSSUnitType::CSS_PERCENTAGE);
+    setInlineStyleProperty(CSSPropertyInlineSize, size, CSSUnitType::CSS_PERCENTAGE);
 }
 
 Ref<ProgressInnerElement> ProgressInnerElement::create(Document& document)

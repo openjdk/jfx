@@ -29,6 +29,8 @@
 #include "EventNames.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "JSRequestPriority.h"
+#include "RequestPriority.h"
 #include "Settings.h"
 #include "Text.h"
 #include <wtf/IsoMallocInlines.h>
@@ -63,14 +65,14 @@ void HTMLScriptElement::childrenChanged(const ChildChange& change)
     ScriptElement::childrenChanged(change);
 }
 
-void HTMLScriptElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLScriptElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == srcAttr)
-        handleSourceAttribute(value);
+        handleSourceAttribute(newValue);
     else if (name == asyncAttr)
         handleAsyncAttribute();
     else
-        HTMLElement::parseAttribute(name, value);
+        HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 Node::InsertedIntoAncestorResult HTMLScriptElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -143,16 +145,6 @@ String HTMLScriptElement::languageAttributeValue() const
     return attributeWithoutSynchronization(languageAttr).string();
 }
 
-String HTMLScriptElement::forAttributeValue() const
-{
-    return attributeWithoutSynchronization(forAttr).string();
-}
-
-String HTMLScriptElement::eventAttributeValue() const
-{
-    return attributeWithoutSynchronization(eventAttr).string();
-}
-
 bool HTMLScriptElement::hasAsyncAttribute() const
 {
     return hasAttributeWithoutSynchronization(asyncAttr);
@@ -181,6 +173,21 @@ void HTMLScriptElement::dispatchLoadEvent()
     dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
+bool HTMLScriptElement::isScriptPreventedByAttributes() const
+{
+    auto& eventAttribute = attributeWithoutSynchronization(eventAttr);
+    auto& forAttribute = attributeWithoutSynchronization(forAttr);
+    if (!eventAttribute.isNull() && !forAttribute.isNull()) {
+        if (!equalLettersIgnoringASCIICase(StringView(forAttribute).trim(isASCIIWhitespace<UChar>), "window"_s))
+            return true;
+
+        auto eventAttributeView = StringView(eventAttribute).trim(isASCIIWhitespace<UChar>);
+        if (!equalLettersIgnoringASCIICase(eventAttributeView, "onload"_s) && !equalLettersIgnoringASCIICase(eventAttributeView, "onload()"_s))
+            return true;
+    }
+    return false;
+}
+
 Ref<Element> HTMLScriptElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
 {
     return adoptRef(*new HTMLScriptElement(tagQName(), targetDocument, false, alreadyStarted()));
@@ -201,6 +208,23 @@ ReferrerPolicy HTMLScriptElement::referrerPolicy() const
     if (document().settings().referrerPolicyAttributeEnabled())
         return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
     return ReferrerPolicy::EmptyString;
+}
+
+void HTMLScriptElement::setFetchPriorityForBindings(const AtomString& value)
+{
+    setAttributeWithoutSynchronization(fetchpriorityAttr, value);
+}
+
+String HTMLScriptElement::fetchPriorityForBindings() const
+{
+    return convertEnumerationToString(fetchPriorityHint());
+}
+
+RequestPriority HTMLScriptElement::fetchPriorityHint() const
+{
+    if (document().settings().fetchPriorityEnabled())
+        return parseEnumerationFromString<RequestPriority>(attributeWithoutSynchronization(fetchpriorityAttr)).value_or(RequestPriority::Auto);
+    return RequestPriority::Auto;
 }
 
 }

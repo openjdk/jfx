@@ -23,14 +23,13 @@
 #include "config.h"
 #include "Event.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "EventNames.h"
 #include "EventPath.h"
 #include "EventTarget.h"
 #include "InspectorInstrumentation.h"
+#include "LocalDOMWindow.h"
 #include "Performance.h"
-#include "TouchList.h"
 #include "UserGestureIndicator.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/HexNumber.h>
@@ -85,6 +84,7 @@ Event::Event(const AtomString& eventType, const EventInit& initializer, IsTruste
         initializer.composed ? IsComposed::Yes : IsComposed::No }
 {
     ASSERT(!eventType.isNull());
+    m_isConstructedFromInitializer = true;
 }
 
 Event::~Event() = default;

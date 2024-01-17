@@ -29,13 +29,23 @@
 
 namespace WebCore {
 
+class FrameLoadRequest;
 class IntSize;
+class SecurityOriginData;
+
+enum class RenderAsTextFlag : uint16_t;
+
+struct MessageWithMessagePorts;
 
 class RemoteFrameClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual void frameDetached() = 0;
     virtual void sizeDidChange(IntSize) = 0;
+    virtual void postMessageToRemote(FrameIdentifier, std::optional<SecurityOriginData>, const MessageWithMessagePorts&) = 0;
+    virtual void changeLocation(FrameLoadRequest&&) = 0;
+    virtual String renderTreeAsText(size_t baseIndent, OptionSet<RenderAsTextFlag>) = 0;
+    virtual void broadcastFrameRemovalToOtherProcesses() = 0;
     virtual ~RemoteFrameClient() { }
 };
 

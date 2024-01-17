@@ -26,6 +26,7 @@
 #pragma once
 
 #include "DisplayBoxFactory.h"
+#include "InlineDisplayContent.h"
 #include <wtf/IsoMalloc.h>
 
 #if ENABLE(TREE_DEBUGGING)
@@ -69,7 +70,7 @@ private:
     void recursiveBuildDisplayTree(const Layout::LayoutState&, const Layout::Box&, InsertionPosition&);
     void buildInlineDisplayTree(const Layout::LayoutState&, const Layout::ElementBox&, InsertionPosition&);
 
-    enum class WillTraverseDescendants { Yes, No };
+    enum class WillTraverseDescendants : bool { No, Yes };
     StackingItem* insertIntoTree(std::unique_ptr<Box>&&, InsertionPosition&, WillTraverseDescendants);
     void insert(std::unique_ptr<Box>&&, InsertionPosition&) const;
 
@@ -79,6 +80,9 @@ private:
     void popState(const BoxModelBox& currentBox);
 
     void didAppendNonContainerStackingItem(StackingItem&);
+
+    const InlineDisplay::Lines& lines(const Layout::ElementBox&) const { return m_displayLines; }
+    const InlineDisplay::Boxes& boxes(const Layout::ElementBox&) const { return m_displayBoxes; }
 
     Tree& tree() const { return *m_tree; }
 
@@ -90,6 +94,9 @@ private:
 
     std::unique_ptr<Tree> m_tree;
     std::unique_ptr<Vector<BuildingState>> m_stateStack;
+
+    InlineDisplay::Lines m_displayLines;
+    InlineDisplay::Boxes m_displayBoxes;
 };
 
 #if ENABLE(TREE_DEBUGGING)

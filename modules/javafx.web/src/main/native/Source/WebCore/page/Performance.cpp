@@ -38,7 +38,7 @@
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "PerformanceEntry.h"
 #include "PerformanceMarkOptions.h"
 #include "PerformanceMeasureOptions.h"
@@ -108,6 +108,11 @@ DOMHighResTimeStamp Performance::relativeTimeFromTimeOriginInReducedResolution(M
 {
     Seconds seconds = timestamp - m_timeOrigin;
     return reduceTimeResolution(seconds).milliseconds();
+}
+
+MonotonicTime Performance::monotonicTimeFromRelativeTime(DOMHighResTimeStamp relativeTime) const
+{
+    return m_timeOrigin + Seconds::fromMilliseconds(relativeTime);
 }
 
 PerformanceNavigation* Performance::navigation()
