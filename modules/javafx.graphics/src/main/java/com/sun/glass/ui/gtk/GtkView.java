@@ -117,8 +117,11 @@ final class GtkView extends View {
 
     private double[] convertPosToRelative(double[] pos) {
         var w = getWindow();
-        pos[0] -= (pos[0] > 0) ? ((w.getX() + getX())) : 0;
-        pos[1] -= (pos[1] > 0) ? ((w.getY() + getY())) : 0;
+
+        if (w != null) {
+            pos[0] -= (pos[0] > 0) ? ((w.getX() + getX())) : 0;
+            pos[1] -= (pos[1] > 0) ? ((w.getY() + getY())) : 0;
+        }
 
         return pos;
     }

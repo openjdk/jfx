@@ -87,6 +87,15 @@ static void on_commit(GtkIMContext *im_context, gchar* str, gpointer user_data) 
     ctx->commitIME(str);
 }
 
+// Note: JavaFX did not have surround support at this time
+static gboolean on_delete_surrounding(GtkIMContext* self, gint offset, gint n_chars, gpointer user_data) {
+    return TRUE;
+}
+
+static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) {
+    return TRUE;
+}
+
 void WindowContextBase::commitIME(gchar *str) {
     if (im_ctx.on_preedit) {
         jstring jstr = mainEnv->NewStringUTF(str);
@@ -161,6 +170,8 @@ void WindowContextBase::enableOrResetIME() {
         g_signal_connect(im_ctx.ctx, "preedit-changed", G_CALLBACK(on_preedit_changed), this);
         g_signal_connect(im_ctx.ctx, "preedit-end", G_CALLBACK(on_preedit_end), this);
         g_signal_connect(im_ctx.ctx, "commit", G_CALLBACK(on_commit), this);
+        g_signal_connect(im_ctx.ctx, "retrieve-surrounding", G_CALLBACK(on_retrieve_surrounding), this);
+        g_signal_connect(im_ctx.ctx, "delete-surrounding", G_CALLBACK(on_delete_surrounding), this);
     }
 
     gtk_im_context_reset(im_ctx.ctx);
