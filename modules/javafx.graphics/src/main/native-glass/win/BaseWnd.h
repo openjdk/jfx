@@ -85,8 +85,8 @@ private:
     bool m_isCommonDialogOwner;
     HCURSOR m_hCursor;
 
-    LONG m_message_count;
-    bool m_dead;
+    LONG m_messageCount;
+    bool m_isDead;
 
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam) = 0;

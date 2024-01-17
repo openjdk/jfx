@@ -40,8 +40,8 @@ BaseWnd::BaseWnd(HWND ancestor) :
     m_wndClassAtom(0),
     m_isCommonDialogOwner(false),
     m_hCursor(NULL),
-    m_message_count(0),
-    m_dead(false)
+    m_messageCount(0),
+    m_isDead(false)
 {
 
 }
@@ -176,17 +176,17 @@ LRESULT CALLBACK BaseWnd::StaticWindowProc(HWND hWnd, UINT msg, WPARAM wParam, L
 void BaseWnd::BeginMessageProcessing(UINT msg)
 {
     if (msg == WM_NCDESTROY) {
-        m_dead = true;
+        m_isDead = true;
     }
-    m_message_count += 1;
+    m_messageCount += 1;
 }
 
 bool BaseWnd::EndMessageProcessing()
 {
-    if (m_message_count > 0) {
-        m_message_count -= 1;
+    if (m_messageCount > 0) {
+        m_messageCount -= 1;
     }
-    return m_dead && (m_message_count == 0);
+    return m_isDead && (m_messageCount == 0);
 }
 
 /*virtual*/
