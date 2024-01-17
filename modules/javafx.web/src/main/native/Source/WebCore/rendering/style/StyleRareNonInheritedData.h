@@ -35,6 +35,8 @@
 #include "PathOperation.h"
 #include "RotateTransformOperation.h"
 #include "ScaleTransformOperation.h"
+#include "ScrollTypes.h"
+#include "ScrollbarGutter.h"
 #include "ShapeValue.h"
 #include "StyleColor.h"
 #include "StyleContentAlignmentData.h"
@@ -60,18 +62,18 @@ class StyleFilterData;
 class StyleFlexibleBoxData;
 class StyleGridData;
 class StyleGridItemData;
-class StyleMarqueeData;
 class StyleMultiColData;
 class StyleReflection;
 class StyleResolver;
 class StyleTransformData;
 
 struct LengthSize;
+struct StyleMarqueeData;
 
 // Page size type.
 // StyleRareNonInheritedData::pageSize is meaningful only when
 // StyleRareNonInheritedData::pageSizeType is PAGE_SIZE_RESOLVED.
-enum PageSizeType {
+enum PageSizeType : uint8_t {
     PAGE_SIZE_AUTO, // size: auto
     PAGE_SIZE_AUTO_LANDSCAPE, // size: landscape
     PAGE_SIZE_AUTO_PORTRAIT, // size: portrait
@@ -90,7 +92,6 @@ public:
     ~StyleRareNonInheritedData();
 
     bool operator==(const StyleRareNonInheritedData&) const;
-    bool operator!=(const StyleRareNonInheritedData& other) const { return !(*this == other); }
 
     LengthPoint perspectiveOrigin() const { return { perspectiveOriginX, perspectiveOriginY }; }
 
@@ -123,7 +124,7 @@ public:
     LengthBox scrollMargin { 0, 0, 0, 0 };
     LengthBox scrollPadding { Length(LengthType::Auto), Length(LengthType::Auto), Length(LengthType::Auto), Length(LengthType::Auto) };
 
-    std::unique_ptr<CounterDirectiveMap> counterDirectives;
+    CounterDirectiveMap counterDirectives;
 
     RefPtr<WillChangeData> willChange; // Null indicates 'auto'.
 
@@ -171,7 +172,13 @@ public:
     ScrollSnapAlign scrollSnapAlign;
     ScrollSnapStop scrollSnapStop { ScrollSnapStop::Normal };
 
+    ScrollbarGutter scrollbarGutter;
+    ScrollbarWidth scrollbarWidth { ScrollbarWidth::Auto };
+
     float zoom;
+
+    std::optional<Length> blockStepSize;
+    unsigned blockStepInsert : 1; // BlockStepInsert
 
     unsigned overscrollBehaviorX : 2; // OverscrollBehavior
     unsigned overscrollBehaviorY : 2; // OverscrollBehavior
@@ -210,7 +217,7 @@ public:
 
     unsigned containerType : 2; // ContainerType
 
-    unsigned leadingTrim : 2; // LeadingTrim
+    unsigned textBoxTrim : 2; // TextBoxTrim
 
     unsigned overflowAnchor : 1; // Scroll Anchoring- OverflowAnchor
 

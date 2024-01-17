@@ -27,12 +27,10 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMTokenList.h"
-#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "EventHandler.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameLoaderTypes.h"
 #include "FrameSelection.h"
 #include "HTMLCanvasElement.h"
@@ -41,7 +39,10 @@
 #include "HTMLPictureElement.h"
 #include "KeyboardEvent.h"
 #include "LoaderStrategy.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "MouseEvent.h"
+#include "OriginAccessPatterns.h"
 #include "PingLoader.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformStrategies.h"
@@ -55,6 +56,7 @@
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
+#include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/WeakHashMap.h>
@@ -86,10 +88,7 @@ Ref<HTMLAnchorElement> HTMLAnchorElement::create(const QualifiedName& tagName, D
     return adoptRef(*new HTMLAnchorElement(tagName, document));
 }
 
-HTMLAnchorElement::~HTMLAnchorElement()
-{
-    clearRootEditableElementForSelectionOnMouseDown();
-}
+HTMLAnchorElement::~HTMLAnchorElement() = default;
 
 bool HTMLAnchorElement::supportsFocus() const
 {
@@ -128,8 +127,8 @@ static bool hasNonEmptyBox(RenderBoxModelObject* renderer)
 
     // FIXME: Since all we are checking is whether the rects are empty, could we just
     // pass in 0,0 for the layout point instead of calling localToAbsolute?
-    Vector<IntRect> rects;
-    renderer->absoluteRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
+    Vector<LayoutRect> rects;
+    renderer->boundingRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
     for (auto& rect : rects) {
         if (!rect.isEmpty())
             return true;
@@ -237,28 +236,28 @@ void HTMLAnchorElement::setActive(bool down, Style::InvalidationScope invalidati
     HTMLElement::setActive(down, invalidationScope);
 }
 
-void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLAnchorElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+
     if (name == hrefAttr) {
         bool wasLink = isLink();
-        setIsLink(!value.isNull() && !shouldProhibitLinks(this));
+        setIsLink(!newValue.isNull() && !shouldProhibitLinks(this));
         if (wasLink != isLink())
             invalidateStyleForSubtree();
         if (isLink()) {
-            String parsedURL = stripLeadingAndTrailingHTMLSpaces(value);
+            auto parsedURL = newValue.string().trim(isASCIIWhitespace);
             if (document().isDNSPrefetchEnabled() && document().frame()) {
                 if (protocolIsInHTTPFamily(parsedURL) || parsedURL.startsWith("//"_s))
                     document().frame()->loader().client().prefetchDNS(document().completeURL(parsedURL).host().toString());
             }
         }
-    } else if (name == nameAttr || name == titleAttr) {
-        // Do nothing.
     } else if (name == relAttr) {
         // Update HTMLAnchorElement::relList() if more rel attributes values are supported.
         static MainThreadNeverDestroyed<const AtomString> noReferrer("noreferrer"_s);
         static MainThreadNeverDestroyed<const AtomString> noOpener("noopener"_s);
         static MainThreadNeverDestroyed<const AtomString> opener("opener"_s);
-        SpaceSplitString relValue(value, SpaceSplitString::ShouldFoldCase::Yes);
+        SpaceSplitString relValue(newValue, SpaceSplitString::ShouldFoldCase::Yes);
         if (relValue.contains(noReferrer))
             m_linkRelations.add(Relation::NoReferrer);
         if (relValue.contains(noOpener))
@@ -266,10 +265,8 @@ void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomStri
         if (relValue.contains(opener))
             m_linkRelations.add(Relation::Opener);
         if (m_relList)
-            m_relList->associatedAttributeValueChanged(value);
+            m_relList->associatedAttributeValueChanged(newValue);
     }
-    else
-        HTMLElement::parseAttribute(name, value);
 }
 
 bool HTMLAnchorElement::isURLAttribute(const Attribute& attribute) const
@@ -312,7 +309,7 @@ bool HTMLAnchorElement::hasRel(Relation relation) const
 DOMTokenList& HTMLAnchorElement::relList()
 {
     if (!m_relList) {
-        m_relList = makeUnique<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
+        m_relList = makeUniqueWithoutRefCountedCheck<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
 #if USE(SYSTEM_PREVIEW)
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return document.settings().systemPreviewEnabled();
@@ -365,10 +362,14 @@ void HTMLAnchorElement::sendPings(const URL& destinationURL)
     if (!document().frame())
         return;
 
-    if (!hasAttributeWithoutSynchronization(pingAttr) || !document().settings().hyperlinkAuditingEnabled())
+    if (!document().settings().hyperlinkAuditingEnabled())
         return;
 
-    SpaceSplitString pingURLs(attributeWithoutSynchronization(pingAttr), SpaceSplitString::ShouldFoldCase::No);
+    const auto& pingValue = attributeWithoutSynchronization(pingAttr);
+    if (pingValue.isNull())
+        return;
+
+    SpaceSplitString pingURLs(pingValue, SpaceSplitString::ShouldFoldCase::No);
     for (unsigned i = 0; i < pingURLs.size(); i++)
         PingLoader::sendPing(*document().frame(), document().completeURL(pingURLs[i]), destinationURL);
 }
@@ -489,11 +490,9 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
     using SourceSite = PCM::SourceSite;
     using AttributionDestinationSite = PCM::AttributionDestinationSite;
 
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame { document().frame() };
     auto* page = document().page();
-    if (!frame || !page || page->sessionID().isEphemeral()
-        || !document().settings().privateClickMeasurementEnabled()
-        || !UserGestureIndicator::processingUserGesture())
+    if (!frame || !page || !document().settings().privateClickMeasurementEnabled() || !UserGestureIndicator::processingUserGesture())
         return std::nullopt;
 
     if (auto pcm = parsePrivateClickMeasurementForSKAdNetwork(hrefURL))
@@ -551,7 +550,15 @@ std::optional<PrivateClickMeasurement> HTMLAnchorElement::parsePrivateClickMeasu
 #else
     String bundleID;
 #endif
-    auto privateClickMeasurement = PrivateClickMeasurement { SourceID(attributionSourceID.value()), SourceSite(WTFMove(mainDocumentRegistrableDomain)), AttributionDestinationSite(destinationURL), bundleID, WallTime::now(), PCM::AttributionEphemeral::No };
+
+    PrivateClickMeasurement privateClickMeasurement {
+        SourceID(attributionSourceID.value()),
+        SourceSite(WTFMove(mainDocumentRegistrableDomain)),
+        AttributionDestinationSite(destinationURL),
+        bundleID,
+        WallTime::now(),
+        page->sessionID().isEphemeral() ? PCM::AttributionEphemeral::Yes : PCM::AttributionEphemeral::No
+    };
 
     if (auto ephemeralNonce = attributionSourceNonceForPCM())
         privateClickMeasurement.setEphemeralSourceNonce(WTFMove(*ephemeralNonce));
@@ -563,7 +570,7 @@ void HTMLAnchorElement::handleClick(Event& event)
 {
     event.setDefaultHandled();
 
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame { document().frame() };
     if (!frame)
         return;
 
@@ -571,7 +578,7 @@ void HTMLAnchorElement::handleClick(Event& event)
         return;
 
     StringBuilder url;
-    url.append(stripLeadingAndTrailingHTMLSpaces(attributeWithoutSynchronization(hrefAttr)));
+    url.append(attributeWithoutSynchronization(hrefAttr).string().trim(isASCIIWhitespace));
     appendServerMapMousePosition(url, event);
     URL completedURL = document().completeURL(url.toString());
 
@@ -588,7 +595,7 @@ void HTMLAnchorElement::handleClick(Event& event)
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
     if (document().settings().downloadAttributeEnabled()) {
         // Ignore the download attribute completely if the href URL is cross origin.
-        bool isSameOrigin = completedURL.protocolIsData() || document().securityOrigin().canRequest(completedURL);
+        bool isSameOrigin = completedURL.protocolIsData() || document().securityOrigin().canRequest(completedURL, OriginAccessPatternsForWebProcess::singleton());
         if (isSameOrigin)
             downloadAttribute = AtomString { ResourceResponse::sanitizeSuggestedFilename(attributeWithoutSynchronization(downloadAttr)) };
         else if (hasAttributeWithoutSynchronization(downloadAttr))
@@ -603,9 +610,13 @@ void HTMLAnchorElement::handleClick(Event& event)
     if (systemPreviewInfo.isPreview) {
         systemPreviewInfo.element.elementIdentifier = identifier();
         systemPreviewInfo.element.documentIdentifier = document().identifier();
-        systemPreviewInfo.element.webPageIdentifier = valueOrDefault(document().frame()->loader().pageID());
+        systemPreviewInfo.element.webPageIdentifier = valueOrDefault(document().pageID());
         if (auto* child = firstElementChild())
             systemPreviewInfo.previewRect = child->boundsInRootViewSpace();
+
+        if (auto* page = document().page())
+            page->beginSystemPreview(completedURL, WTFMove(systemPreviewInfo), [keepBlobAlive = URLKeepingBlobAlive(completedURL, document().topOrigin().data())] { });
+        return;
     }
 #endif
 
@@ -621,7 +632,7 @@ void HTMLAnchorElement::handleClick(Event& event)
     // Thus, URLs should be empty for now.
     ASSERT(!privateClickMeasurement || (privateClickMeasurement->attributionReportClickSourceURL().isNull() && privateClickMeasurement->attributionReportClickDestinationURL().isNull()));
 
-    frame->loader().changeLocation(completedURL, effectiveTarget, &event, referrerPolicy, document().shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, systemPreviewInfo, WTFMove(privateClickMeasurement));
+    frame->loader().changeLocation(completedURL, effectiveTarget, &event, referrerPolicy, document().shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, WTFMove(privateClickMeasurement));
 
     sendPings(completedURL);
 

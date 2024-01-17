@@ -60,7 +60,7 @@ RetainPtr<CFURLRef> URL::createCFURL() const
         return emptyCFURL();
 
     RetainPtr<CFURLRef> result;
-    if (LIKELY(m_string.is8Bit() && m_string.isAllASCII()))
+    if (LIKELY(m_string.is8Bit() && m_string.containsOnlyASCII()))
         result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, m_string.characters8(), m_string.length(), kCFStringEncodingUTF8, nullptr, true));
     else {
         CString utf8 = m_string.utf8();
@@ -73,18 +73,15 @@ RetainPtr<CFURLRef> URL::createCFURL() const
     return result;
 }
 
+#if !PLATFORM(WIN)
 String URL::fileSystemPath() const
 {
     auto cfURL = createCFURL();
     if (!cfURL)
         return String();
 
-#if PLATFORM(WIN)
-    CFURLPathStyle pathStyle = kCFURLWindowsPathStyle;
-#else
-    CFURLPathStyle pathStyle = kCFURLPOSIXPathStyle;
-#endif
-    return adoptCF(CFURLCopyFileSystemPath(cfURL.get(), pathStyle)).get();
+    return adoptCF(CFURLCopyFileSystemPath(cfURL.get(), kCFURLPOSIXPathStyle)).get();
 }
+#endif
 
 }

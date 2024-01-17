@@ -94,6 +94,7 @@ class JSGlobalObject;
     v(regExpProtoSourceGetter, nullptr) \
     v(regExpProtoStickyGetter, nullptr) \
     v(regExpProtoUnicodeGetter, nullptr) \
+    v(regExpProtoUnicodeSetsGetter, nullptr) \
     v(regExpBuiltinExec, nullptr) \
     v(regExpCreate, nullptr) \
     v(isRegExp, nullptr) \
@@ -107,8 +108,8 @@ class JSGlobalObject;
     v(stringIndexOfInternal, nullptr) \
     v(stringSplitFast, nullptr) \
     v(stringSubstring, nullptr) \
-    v(makeBoundFunction, nullptr) \
-    v(hasOwnLengthProperty, nullptr) \
+    v(handleNegativeProxyHasTrapResult, nullptr) \
+    v(handlePositiveProxySetTrapResult, nullptr) \
     v(handleProxyGetTrapResult, nullptr) \
     v(dateTimeFormat, nullptr) \
     v(webAssemblyCompileStreamingInternal, nullptr) \

@@ -69,11 +69,13 @@ public:
 
     float inkOverflowTop() const;
     float inkOverflowBottom() const;
+    float scrollableOverflowTop() const;
+    float scrollableOverflowBottom() const;
 
     const RenderStyle& style() const { return isFirst() ? formattingContextRoot().firstLineStyle() : formattingContextRoot().style(); }
 
     bool hasEllipsis() const;
-    enum AdjustedForSelection : uint8_t { No, Yes };
+    enum AdjustedForSelection : bool { No, Yes };
     FloatRect ellipsisVisualRect(AdjustedForSelection = AdjustedForSelection::No) const;
     TextRun ellipsisText() const;
     RenderObject::HighlightState ellipsisSelectionState() const;
@@ -115,10 +117,7 @@ public:
     WEBCORE_EXPORT explicit operator bool() const;
 
     bool operator==(const LineBoxIterator&) const;
-    bool operator!=(const LineBoxIterator& other) const { return !(*this == other); }
-
     bool operator==(EndLineBoxIterator) const { return atEnd(); }
-    bool operator!=(EndLineBoxIterator) const { return !atEnd(); }
 
     const LineBox& operator*() const { return m_lineBox; }
     const LineBox* operator->() const { return &m_lineBox; }
@@ -131,20 +130,14 @@ private:
 
 WEBCORE_EXPORT LineBoxIterator firstLineBoxFor(const RenderBlockFlow&);
 LineBoxIterator lastLineBoxFor(const RenderBlockFlow&);
+LineBoxIterator lineBoxFor(const LayoutIntegration::InlineContent&, size_t lineIndex);
+
 LeafBoxIterator closestBoxForHorizontalPosition(const LineBox&, float horizontalPosition, bool editableOnly = false);
 
-// -----------------------------------------------
-inline float previousLineBoxContentBottomOrBorderAndPadding(const LineBox& lineBox)
-{
-    return lineBox.isFirst() ? lineBox.formattingContextRoot().borderAndPaddingBefore().toFloat() : lineBox.contentLogicalTopAdjustedForPrecedingLineBox();
-}
+inline float previousLineBoxContentBottomOrBorderAndPadding(const LineBox&);
+inline float contentStartInBlockDirection(const LineBox&);
 
-inline float contentStartInBlockDirection(const LineBox& lineBox)
-{
-    if (!lineBox.formattingContextRoot().style().isFlippedBlocksWritingMode())
-        return std::max(lineBox.contentLogicalTop(), previousLineBoxContentBottomOrBorderAndPadding(lineBox));
-    return std::min(lineBox.contentLogicalBottom(), lineBox.contentLogicalBottomAdjustedForFollowingLineBox());
-}
+// -----------------------------------------------
 
 inline LineBox::LineBox(PathVariant&& path)
     : m_pathVariant(WTFMove(path))
@@ -211,6 +204,20 @@ inline float LineBox::inkOverflowBottom() const
 {
     return WTF::switchOn(m_pathVariant, [](const auto& path) {
         return path.inkOverflowBottom();
+    });
+}
+
+inline float LineBox::scrollableOverflowTop() const
+{
+    return WTF::switchOn(m_pathVariant, [](const auto& path) {
+        return path.scrollableOverflowTop();
+    });
+}
+
+inline float LineBox::scrollableOverflowBottom() const
+{
+    return WTF::switchOn(m_pathVariant, [](const auto& path) {
+        return path.scrollableOverflowBottom();
     });
 }
 

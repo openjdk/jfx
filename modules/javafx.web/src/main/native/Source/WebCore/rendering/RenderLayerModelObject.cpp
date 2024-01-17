@@ -32,9 +32,11 @@
 #include "RenderLayerCompositor.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderMultiColumnSet.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGBlock.h"
 #include "RenderSVGModelObject.h"
 #include "RenderSVGText.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
 #include "SVGTextElement.h"
@@ -203,7 +205,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
     const RenderStyle& newStyle = style();
     if (oldStyle && oldStyle->scrollPadding() != newStyle.scrollPadding()) {
         if (isDocumentElementRenderer()) {
-            FrameView& frameView = view().frameView();
+            LocalFrameView& frameView = view().frameView();
             frameView.updateScrollbarSteps();
         } else if (RenderLayer* renderLayer = layer())
             renderLayer->updateScrollbarSteps();

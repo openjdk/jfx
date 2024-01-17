@@ -36,9 +36,9 @@ namespace WGSL::AST {
 
 struct Indent {
     Indent(StringDumper& dumper)
-        : m_scope(dumper.m_indent, dumper.m_indent + "    ")
+        : scope(dumper.m_indent, dumper.m_indent + "    ")
     { }
-    SetForScope<String> m_scope;
+    SetForScope<String> scope;
 };
 
 static Indent bumpIndent(StringDumper& dumper)
@@ -96,7 +96,9 @@ void StringDumper::visit(Directive& directive)
 // Attribute
 void StringDumper::visit(BindingAttribute& binding)
 {
-    m_out.print("@binding(", binding.binding(), ")");
+    m_out.print("@binding(");
+    visit(binding.binding());
+    m_out.print(")");
 }
 
 void StringDumper::visit(BuiltinAttribute& builtin)
@@ -106,12 +108,16 @@ void StringDumper::visit(BuiltinAttribute& builtin)
 
 void StringDumper::visit(GroupAttribute& group)
 {
-    m_out.print("@group(", group.group(), ")");
+    m_out.print("@group(");
+    visit(group.group());
+    m_out.print(")");
 }
 
 void StringDumper::visit(LocationAttribute& location)
 {
-    m_out.print("@location(", location.location(), ")");
+    m_out.print("@location(");
+    visit(location.location());
+    m_out.print(")");
 }
 
 void StringDumper::visit(StageAttribute& stage)
@@ -131,7 +137,17 @@ void StringDumper::visit(StageAttribute& stage)
 
 void StringDumper::visit(WorkgroupSizeAttribute& workgroupSize)
 {
-    m_out.print("@workgroup_size(", workgroupSize.size(), ")");
+    m_out.print("@workgroup_size(");
+    visit(workgroupSize.x());
+    if (auto* y = workgroupSize.maybeY()) {
+        m_out.print(", ");
+        visit(*y);
+        if (auto* z = workgroupSize.maybeZ()) {
+            m_out.print(", ");
+            visit(*z);
+        }
+    }
+    m_out.print(")");
 }
 
 // Declaration
@@ -293,6 +309,15 @@ void StringDumper::visit(AssignmentStatement& statement)
     m_out.print(";");
 }
 
+void StringDumper::visit(CompoundAssignmentStatement& statement)
+{
+    m_out.print(m_indent);
+    visit(statement.leftExpression());
+    m_out.print(" ", statement.operation(), "= ");
+    visit(statement.rightExpression());
+    m_out.print(";");
+}
+
 void StringDumper::visit(CompoundStatement& block)
 {
     m_out.print(m_indent, "{");
@@ -305,6 +330,38 @@ void StringDumper::visit(CompoundStatement& block)
         m_out.print("\n", m_indent);
     }
     m_out.print("}\n");
+}
+
+void StringDumper::visit(DecrementIncrementStatement& statement)
+{
+    m_out.print(m_indent);
+    visit(statement.expression());
+    m_out.print(statement.operation(), ";");
+}
+
+
+void StringDumper::visit(IfStatement& statement)
+{
+    m_out.print(m_indent, "if ");
+    visit(statement.test());
+    m_out.print("\n");
+    visit(statement.trueBody());
+    if (statement.maybeFalseBody()) {
+        m_out.print(m_indent, "else");
+        if (is<IfStatement>(*statement.maybeFalseBody()))
+            m_out.print(" ");
+        else
+            m_out.print("\n");
+        visit(*statement.maybeFalseBody());
+    }
+}
+
+void StringDumper::visit(PhonyAssignmentStatement& statement)
+{
+    m_out.print(m_indent);
+    m_out.print("_ = ");
+    visit(statement.rhs());
+    m_out.print(";");
 }
 
 void StringDumper::visit(ReturnStatement& statement)
@@ -321,6 +378,21 @@ void StringDumper::visit(VariableStatement& statement)
 {
     m_out.print(m_indent);
     visit(statement.variable());
+}
+
+void StringDumper::visit(ForStatement& statement)
+{
+    m_out.print("for (");
+    if (auto* initializer = statement.maybeInitializer())
+        visit(*initializer);
+    m_out.print(";");
+    if (auto* test = statement.maybeTest())
+        visit(*test);
+    m_out.print(";");
+    if (auto* update = statement.maybeUpdate())
+        visit(*update);
+    m_out.print(")");
+    visit(statement.body());
 }
 
 // Types
@@ -345,22 +417,7 @@ void StringDumper::visit(NamedTypeName& type)
 
 void StringDumper::visit(ParameterizedTypeName& type)
 {
-    constexpr ASCIILiteral base[] = {
-        "Vec2"_s,
-        "Vec3"_s,
-        "Vec4"_s,
-        "Mat2x2"_s,
-        "Mat2x3"_s,
-        "Mat2x4"_s,
-        "Mat3x2"_s,
-        "Mat3x3"_s,
-        "Mat3x4"_s,
-        "Mat4x2"_s,
-        "Mat4x3"_s,
-        "Mat4x4"_s
-    };
-    auto b = WTF::enumToUnderlyingType(type.base());
-    m_out.print(base[b], "<");
+    m_out.print(ParameterizedTypeName::baseToString(type.base()), "<");
     visit(type.elementType());
     m_out.print(">");
 }
@@ -369,11 +426,6 @@ void StringDumper::visit(ReferenceTypeName& type)
 {
     visit(type.type());
     m_out.print("&");
-}
-
-void StringDumper::visit(StructTypeName& type)
-{
-    m_out.print(type.structure().name());
 }
 
 void StringDumper::visit(Parameter& parameter)

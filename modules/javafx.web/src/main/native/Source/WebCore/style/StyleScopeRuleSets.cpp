@@ -32,10 +32,10 @@
 #include "CSSStyleSheet.h"
 #include "CascadeLevel.h"
 #include "ExtensionStyleSheets.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLNames.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "MediaQueryEvaluator.h"
 #include "Page.h"
 #include "RuleSetBuilder.h"
@@ -47,9 +47,9 @@ namespace WebCore {
 namespace Style {
 
 ScopeRuleSets::ScopeRuleSets(Resolver& styleResolver)
-    : m_styleResolver(styleResolver)
+    : m_authorStyle(RuleSet::create())
+    , m_styleResolver(styleResolver)
 {
-    m_authorStyle = RuleSet::create();
 }
 
 ScopeRuleSets::~ScopeRuleSets()
@@ -120,12 +120,13 @@ void ScopeRuleSets::initializeUserStyle()
 
 #if ENABLE(APP_BOUND_DOMAINS)
     auto* page = m_styleResolver.document().page();
-    if (!extensionStyleSheets.injectedUserStyleSheets().isEmpty() && page && page->mainFrame().loader().client().shouldEnableInAppBrowserPrivacyProtections())
+    auto* localMainFrame = page ? dynamicDowncast<LocalFrame>(page->mainFrame()) : nullptr;
+    if (!extensionStyleSheets.injectedUserStyleSheets().isEmpty() && page && localMainFrame && localMainFrame->loader().client().shouldEnableInAppBrowserPrivacyProtections())
         m_styleResolver.document().addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user style sheet for non-app bound domain."_s);
     else {
         collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
-        if (page && !extensionStyleSheets.injectedUserStyleSheets().isEmpty())
-            page->mainFrame().loader().client().notifyPageOfAppBoundBehavior();
+        if (page && localMainFrame && !extensionStyleSheets.injectedUserStyleSheets().isEmpty())
+            localMainFrame->loader().client().notifyPageOfAppBoundBehavior();
     }
 #else
     collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), userStyle, mediaQueryEvaluator);
@@ -217,7 +218,7 @@ std::optional<DynamicMediaQueryEvaluationChanges> ScopeRuleSets::evaluateDynamic
 
 void ScopeRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& styleSheets, MQ::MediaQueryEvaluator* mediaQueryEvaluator, InspectorCSSOMWrappers& inspectorCSSOMWrappers)
 {
-    RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver);
+    RuleSetBuilder builder(*m_authorStyle, *mediaQueryEvaluator, &m_styleResolver, RuleSetBuilder::ShrinkToFit::Enable, RuleSetBuilder::ShouldResolveNesting::Yes);
 
     for (auto& cssSheet : styleSheets) {
         ASSERT(!cssSheet->disabled());

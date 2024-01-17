@@ -28,12 +28,11 @@
 #include "ElementInlines.h"
 #include "EventLoop.h"
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameView.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
 #include "JSDOMBindingSecurity.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "RenderWidget.h"
 #include "ScriptController.h"
@@ -49,9 +48,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameElementBase);
 using namespace HTMLNames;
 
 HTMLFrameElementBase::HTMLFrameElementBase(const QualifiedName& tagName, Document& document)
-    : HTMLFrameOwnerElement(tagName, document)
+    : HTMLFrameOwnerElement(tagName, document, CreateHTMLFrameElementBase)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 bool HTMLFrameElementBase::canLoadScriptURL(const URL& scriptURL) const
@@ -91,7 +89,7 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
     if (m_frameURL.isEmpty())
         m_frameURL = AtomString { aboutBlankURL().string() };
 
-    RefPtr<Frame> parentFrame = document().frame();
+    RefPtr parentFrame { document().frame() };
     if (!parentFrame)
         return;
 
@@ -108,17 +106,18 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
     parentFrame->loader().subframeLoader().requestFrame(*this, m_frameURL, frameName, lockHistory, lockBackForwardList);
 }
 
-void HTMLFrameElementBase::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLFrameElementBase::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
+    // FIXME: trimming whitespace is probably redundant with the URL parser
     if (name == srcdocAttr) {
-        if (value.isNull())
-            setLocation(stripLeadingAndTrailingHTMLSpaces(attributeWithoutSynchronization(srcAttr)));
+        if (newValue.isNull())
+            setLocation(attributeWithoutSynchronization(srcAttr).string().trim(isASCIIWhitespace));
         else
             setLocation("about:srcdoc"_s);
     } else if (name == srcAttr && !hasAttributeWithoutSynchronization(srcdocAttr))
-        setLocation(stripLeadingAndTrailingHTMLSpaces(value));
+        setLocation(newValue.string().trim(isASCIIWhitespace));
     else
-        HTMLFrameOwnerElement::parseAttribute(name, value);
+        HTMLFrameOwnerElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 Node::InsertedIntoAncestorResult HTMLFrameElementBase::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -180,7 +179,7 @@ void HTMLFrameElementBase::setLocation(const String& str)
 
 void HTMLFrameElementBase::setLocation(JSC::JSGlobalObject& state, const String& newLocation)
 {
-    if (WTF::protocolIsJavaScript(stripLeadingAndTrailingHTMLSpaces(newLocation))) {
+    if (WTF::protocolIsJavaScript(newLocation)) {
         if (!BindingSecurity::shouldAllowAccessToNode(state, contentDocument()))
             return;
     }

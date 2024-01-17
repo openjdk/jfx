@@ -38,6 +38,7 @@
 #include "PlatformLocale.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
+#include "ResolvedStyle.h"
 #include "StyleResolver.h"
 #include "Text.h"
 #include <wtf/IsoMallocInlines.h>
@@ -52,10 +53,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(DateTimeFieldElement);
 DateTimeFieldElement::FieldOwner::~FieldOwner() = default;
 
 DateTimeFieldElement::DateTimeFieldElement(Document& document, FieldOwner& fieldOwner)
-    : HTMLDivElement(divTag, document)
+    : HTMLDivElement(divTag, document, CreateDateTimeFieldElement)
     , m_fieldOwner(fieldOwner)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 void DateTimeFieldElement::initialize(const AtomString& pseudo)

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,12 +82,6 @@ Structure* IntlDateTimeFormat::createStructure(VM& vm, JSGlobalObject* globalObj
 IntlDateTimeFormat::IntlDateTimeFormat(VM& vm, Structure* structure)
     : Base(vm, structure)
 {
-}
-
-void IntlDateTimeFormat::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
 }
 
 template<typename Visitor>
@@ -659,7 +653,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     hourCycle = parseHourCycle(resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Hc)]);
     m_numberingSystem = resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Nu)];
     m_dataLocale = resolved.dataLocale;
-    CString dataLocaleWithExtensions = makeString(m_dataLocale, "-u-ca-", m_calendar, "-nu-", m_numberingSystem).utf8();
+    CString dataLocaleWithExtensions = makeString(m_dataLocale, "-u-ca-"_s, m_calendar, "-nu-"_s, m_numberingSystem).utf8();
 
     JSValue tzValue = options->get(globalObject, vm.propertyNames->timeZone);
     RETURN_IF_EXCEPTION(scope, void());
@@ -669,7 +663,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
         RETURN_IF_EXCEPTION(scope, void());
         tz = canonicalizeTimeZoneName(originalTz);
         if (tz.isNull()) {
-            throwRangeError(globalObject, scope, "invalid time zone: " + originalTz);
+            throwRangeError(globalObject, scope, "invalid time zone: "_s + originalTz);
             return;
         }
     } else

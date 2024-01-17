@@ -41,14 +41,14 @@ protected:
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     bool needsHasSVGTransformFlags() const override;
 #endif
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
 private:
     void element() const = delete;
     bool isRenderSVGBlock() const final { return true; }
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     LayoutPoint currentSVGLayoutLocation() const final { return location(); }

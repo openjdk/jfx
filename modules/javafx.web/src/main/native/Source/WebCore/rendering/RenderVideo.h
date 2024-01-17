@@ -62,6 +62,7 @@ private:
     void mediaElement() const = delete;
 
     void intrinsicSizeChanged() final;
+    LayoutSize calculateIntrinsicSizeInternal();
     LayoutSize calculateIntrinsicSize();
     bool updateIntrinsicSize();
 
@@ -75,6 +76,7 @@ private:
     void paintReplaced(PaintInfo&, const LayoutPoint&) final;
 
     void layout() final;
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 
     void visibleInViewportStateChanged() final;
 
@@ -84,6 +86,7 @@ private:
     void updatePlayer();
 
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const final;
+    bool inElementOrVideoFullscreen() const;
 
     LayoutSize m_cachedImageSize;
 };

@@ -46,6 +46,15 @@ ErrorInstance::ErrorInstance(VM& vm, Structure* structure, ErrorType errorType)
 {
 }
 
+ErrorInstance* ErrorInstance::create(JSGlobalObject* globalObject, String&& message, ErrorType errorType, unsigned line, unsigned column, String&& sourceURL, String&& stackString)
+{
+    VM& vm = globalObject->vm();
+    Structure* structure = globalObject->errorStructure(errorType);
+    ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(vm)) ErrorInstance(vm, structure, errorType);
+    instance->finishCreation(vm, WTFMove(message), line, column, WTFMove(sourceURL), WTFMove(stackString));
+    return instance;
+}
+
 ErrorInstance* ErrorInstance::create(JSGlobalObject* globalObject, Structure* structure, JSValue message, JSValue options, SourceAppender appender, RuntimeType type, ErrorType errorType, bool useCurrentFrame)
 {
     VM& vm = globalObject->vm();
@@ -138,6 +147,19 @@ void ErrorInstance::finishCreation(VM& vm, JSGlobalObject* globalObject, const S
         putDirect(vm, vm.propertyNames->cause, cause, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
+void ErrorInstance::finishCreation(VM& vm, String&& message, unsigned line, unsigned column, String&& sourceURL, String&& stackString)
+{
+    Base::finishCreation(vm);
+    ASSERT(inherits(info()));
+
+    m_line = line;
+    m_column = column;
+    m_sourceURL = WTFMove(sourceURL);
+    m_stackString = WTFMove(stackString);
+    if (!message.isNull())
+        putDirect(vm, vm.propertyNames->message, jsString(vm, WTFMove(message)), static_cast<unsigned>(PropertyAttribute::DontEnum));
+}
+
 // Based on ErrorPrototype's errorProtoFuncToString(), but is modified to
 // have no observable side effects to the user (i.e. does not call proxies,
 // and getters).
@@ -203,10 +225,10 @@ String ErrorInstance::sanitizedToString(JSGlobalObject* globalObject)
     String messageString = sanitizedMessageString(globalObject);
     RETURN_IF_EXCEPTION(scope, String());
 
-    return makeString(nameString, nameString.isEmpty() || messageString.isEmpty() ? "" : ": ", messageString);
+    return makeString(nameString, nameString.isEmpty() || messageString.isEmpty() ? ""_s : ": "_s, messageString);
 }
 
-void ErrorInstance::finalizeUnconditionally(VM& vm)
+void ErrorInstance::finalizeUnconditionally(VM& vm, CollectionScope)
 {
     if (!m_stackTrace)
         return;

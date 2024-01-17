@@ -96,7 +96,6 @@ public:
             return *this;
         }
 
-        bool operator!=(const HTTPHeaderMapConstIterator& other) const { return !(*this == other); }
         bool operator==(const HTTPHeaderMapConstIterator& other) const
         {
             return m_commonHeadersIt == other.m_commonHeadersIt && m_uncommonHeadersIt == other.m_uncommonHeadersIt;
@@ -107,7 +106,7 @@ public:
         {
             if (it == m_table.commonHeaders().end())
                 return false;
-            m_keyValue.key = httpHeaderNameString(it->key).toStringWithoutCopying();
+            m_keyValue.key = httpHeaderNameString(it->key);
             m_keyValue.keyAsHTTPHeaderName = it->key;
             m_keyValue.value = it->value;
             return true;
@@ -201,11 +200,6 @@ public:
                 return false;
         }
         return true;
-    }
-
-    friend bool operator!=(const HTTPHeaderMap& a, const HTTPHeaderMap& b)
-    {
-        return !(a == b);
     }
 
 private:

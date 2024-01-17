@@ -230,7 +230,7 @@ static void double2Ints(double val, CLoopRegister& lo, CLoopRegister& hi)
 }
 #endif // USE(JSVALUE32_64)
 
-static void decodeResult(SlowPathReturnType result, CLoopRegister& t0, CLoopRegister& t1)
+static void decodeResult(UGPRPair result, CLoopRegister& t0, CLoopRegister& t1)
 {
     const void* t0Result;
     const void* t1Result;
@@ -281,6 +281,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
         FOR_EACH_BYTECODE_ID(OPCODE_ENTRY)
         FOR_EACH_CLOOP_BYTECODE_HELPER_ID(LLINT_OPCODE_ENTRY)
         FOR_EACH_LLINT_NATIVE_HELPER(LLINT_OPCODE_ENTRY)
+        FOR_EACH_CLOOP_RETURN_HELPER_ID(LLINT_OPCODE_ENTRY)
         #undef OPCODE_ENTRY
         #undef LLINT_OPCODE_ENTRY
 
@@ -512,7 +513,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 
 #if OFFLINE_ASM_USE_ALT_ENTRY
 #define OFFLINE_ASM_BEGIN   asm ( \
-    OFFLINE_ASM_GLOBAL_LABEL_IMPL(jsc_llint_begin, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(jsc_llint_begin, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B) \
     OFFLINE_ASM_BEGIN_SPACER
 #else
 #define OFFLINE_ASM_BEGIN   asm (
@@ -545,9 +546,9 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
 #endif
 
 #if CPU(ARM_THUMB2)
-#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY) \
+#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
     ".text\n"                                    \
-    ".balign 4\n"                                \
+    ALIGNMENT                                    \
     ALT_ENTRY(label)                             \
     ".globl " SYMBOL_STRING(label) "\n"          \
     HIDE_SYMBOL(label) "\n"                      \
@@ -555,15 +556,15 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     ".thumb_func " THUMB_FUNC_PARAM(label) "\n"  \
     SYMBOL_STRING(label) ":\n"
 #elif CPU(ARM64)
-#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY) \
+#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
     ".text\n"                                   \
-    ".balign 4\n"                               \
+    ALIGNMENT                                   \
     ALT_ENTRY(label)                            \
     ".globl " SYMBOL_STRING(label) "\n"         \
     HIDE_SYMBOL(label) "\n"                     \
     SYMBOL_STRING(label) ":\n"
 #else
-#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY) \
+#define OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, ALT_ENTRY, ALIGNMENT) \
     ".text\n"                                   \
     ALT_ENTRY(label)                            \
     ".globl " SYMBOL_STRING(label) "\n"         \
@@ -571,12 +572,19 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
     SYMBOL_STRING(label) ":\n"
 #endif
 
+#define OFFLINE_ASM_ALIGN4B ".balign 4\n"
+#define OFFLINE_ASM_NOALIGN ""
+
 #if OFFLINE_ASM_USE_ALT_ENTRY
 #define OFFLINE_ASM_GLOBAL_LABEL(label) \
-    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE)
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B)
+#define OFFLINE_ASM_UNALIGNED_GLOBAL_LABEL(label) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN)
 #else
 #define OFFLINE_ASM_GLOBAL_LABEL(label) \
-    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE)
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B)
+#define OFFLINE_ASM_UNALIGNED_GLOBAL_LABEL(label) \
+    OFFLINE_ASM_GLOBAL_LABEL_IMPL(label, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_NOALIGN)
 #endif // USE_ALT_ENTRY
 
 #if COMPILER(CLANG) && OFFLINE_ASM_USE_ALT_ENTRY

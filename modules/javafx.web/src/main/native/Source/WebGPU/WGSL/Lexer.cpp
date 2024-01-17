@@ -35,7 +35,8 @@ namespace WGSL {
 template <typename T>
 Token Lexer<T>::lex()
 {
-    skipWhitespaceAndComments();
+    if (!skipWhitespaceAndComments())
+        return makeToken(TokenType::Invalid);
 
     m_tokenStartingPosition = m_currentPosition;
 
@@ -52,13 +53,22 @@ Token Lexer<T>::lex()
         return makeToken(TokenType::Bang);
     case '%':
         shift();
+        switch (m_current) {
+        case '=':
+            shift();
+            return makeToken(TokenType::ModuloEq);
+        default:
         return makeToken(TokenType::Modulo);
+        }
     case '&':
         shift();
         switch (m_current) {
         case '&':
             shift();
             return makeToken(TokenType::AndAnd);
+        case '=':
+            shift();
+            return makeToken(TokenType::AndEq);
         default:
             return makeToken(TokenType::And);
         }
@@ -104,7 +114,13 @@ Token Lexer<T>::lex()
             return makeToken(TokenType::GtEq);
         case '>':
             shift();
+            switch (m_current) {
+            case '=':
+                shift();
+                return makeToken(TokenType::GtGtEq);
+            default:
             return makeToken(TokenType::GtGt);
+            }
         default:
             return makeToken(TokenType::Gt);
         }
@@ -116,7 +132,13 @@ Token Lexer<T>::lex()
             return makeToken(TokenType::LtEq);
     case '<':
         shift();
+            switch (m_current) {
+            case '=':
+                shift();
+                return makeToken(TokenType::LtLtEq);
+            default:
             return makeToken(TokenType::LtLt);
+            }
         default:
             return makeToken(TokenType::Lt);
         }
@@ -125,11 +147,23 @@ Token Lexer<T>::lex()
         return makeToken(TokenType::Attribute);
     case '*':
         shift();
+        switch (m_current) {
+        case '=':
+            shift();
+            return makeToken(TokenType::StarEq);
+        default:
         // FIXME: Report unbalanced block comments, such as "this is an unbalanced comment. */"
         return makeToken(TokenType::Star);
+        }
     case '/':
         shift();
+        switch (m_current) {
+        case '=':
+            shift();
+            return makeToken(TokenType::SlashEq);
+        default:
         return makeToken(TokenType::Slash);
+        }
     case '.': {
         shift();
         unsigned offset = currentOffset();
@@ -144,35 +178,57 @@ Token Lexer<T>::lex()
         std::optional<int64_t> exponent = parseDecimalFloatExponent();
         if (exponent)
             literalValue *= pow(10, exponent.value());
-        return makeLiteralToken(TokenType::DecimalFloatLiteral, literalValue);
+        if (m_current == 'f') {
+            shift();
+            return makeLiteralToken(TokenType::FloatLiteral, literalValue);
+        }
+        return makeLiteralToken(TokenType::AbstractFloatLiteral, literalValue);
     }
     case '-':
         shift();
-        if (m_current == '>') {
+        switch (m_current) {
+        case '>':
             shift();
             return makeToken(TokenType::Arrow);
-        }
-        if (m_current == '-') {
+        case '-':
             shift();
             return makeToken(TokenType::MinusMinus);
-        }
+        case '=':
+            shift();
+            return makeToken(TokenType::MinusEq);
+        default:
         return makeToken(TokenType::Minus);
+        }
     case '+':
         shift();
-        if (m_current == '+') {
+        switch (m_current) {
+        case '+':
             shift();
             return makeToken(TokenType::PlusPlus);
-        }
+        case '=':
+            shift();
+            return makeToken(TokenType::PlusEq);
+        default:
         return makeToken(TokenType::Plus);
+        }
     case '^':
         shift();
+        switch (m_current) {
+        case '=':
+            shift();
+            return makeToken(TokenType::XorEq);
+        default:
         return makeToken(TokenType::Xor);
+        }
     case '|':
         shift();
         switch (m_current) {
         case '|':
             shift();
             return makeToken(TokenType::OrOr);
+        case '=':
+            shift();
+            return makeToken(TokenType::OrEq);
         default:
             return makeToken(TokenType::Or);
         }
@@ -212,12 +268,12 @@ Token Lexer<T>::lex()
                 }
                 if (m_current == 'f') {
                     shift();
-                    return makeLiteralToken(TokenType::DecimalFloatLiteral, literalValue);
+                    return makeLiteralToken(TokenType::FloatLiteral, literalValue);
                 }
             }
             if (std::optional<int64_t> exponent = parseDecimalFloatExponent()) {
+                isFloatingPoint = true;
                 literalValue *= pow(10, exponent.value());
-                return makeLiteralToken(TokenType::DecimalFloatLiteral, literalValue);
             }
             // Decimal integers are not allowed to start with 0.
             if (!isFloatingPoint)
@@ -225,10 +281,10 @@ Token Lexer<T>::lex()
         }
         if (m_current == 'f') {
             shift();
-            return makeLiteralToken(TokenType::DecimalFloatLiteral, literalValue);
+            return makeLiteralToken(TokenType::FloatLiteral, literalValue);
         }
         if (isFloatingPoint)
-            return makeLiteralToken(TokenType::DecimalFloatLiteral, literalValue);
+            return makeLiteralToken(TokenType::AbstractFloatLiteral, literalValue);
         return parseIntegerLiteralSuffix(literalValue);
     }
     case '~':
@@ -253,44 +309,50 @@ Token Lexer<T>::lex()
                 }
             }
             if (std::optional<int64_t> exponent = parseDecimalFloatExponent()) {
+                isFloatingPoint = true;
                 literalValue *= pow(10, exponent.value());
-                return makeLiteralToken(TokenType::DecimalFloatLiteral, literalValue);
             }
             if (m_current == 'f') {
                 shift();
-                return makeLiteralToken(TokenType::DecimalFloatLiteral, literalValue);
+                return makeLiteralToken(TokenType::FloatLiteral, literalValue);
             }
             if (!isFloatingPoint)
                 return parseIntegerLiteralSuffix(literalValue);
-            return makeLiteralToken(TokenType::DecimalFloatLiteral, literalValue);
+            return makeLiteralToken(TokenType::AbstractFloatLiteral, literalValue);
         } else if (isIdentifierStart(m_current)) {
             const T* startOfToken = m_code;
             shift();
-            while (isValidIdentifierCharacter(m_current))
+            while (isIdentifierContinue(m_current))
                 shift();
             // FIXME: a trie would be more efficient here, look at JavaScriptCore/KeywordLookupGenerator.py for an example of code autogeneration that produces such a trie.
             String view(StringImpl::createWithoutCopying(startOfToken, currentTokenLength()));
             // FIXME: I don't think that true/false/f32/u32/i32/bool need to be their own tokens, they could just be regular identifiers.
 
             static constexpr std::pair<ComparableASCIILiteral, TokenType> wordMappings[] {
+                { "_", TokenType::Underbar },
                 { "array", TokenType::KeywordArray },
                 { "asm", TokenType::ReservedWord },
                 { "bf16", TokenType::ReservedWord },
                 { "bool", TokenType::KeywordBool },
+                { "break", TokenType::KeywordBreak },
                 { "const", TokenType::KeywordConst },
+                { "continue", TokenType::KeywordContinue },
                 { "do", TokenType::ReservedWord },
+                { "else", TokenType::KeywordElse },
                 { "enum", TokenType::ReservedWord },
                 { "f16", TokenType::ReservedWord },
                 { "f32", TokenType::KeywordF32 },
                 { "f64", TokenType::ReservedWord },
                 { "false", TokenType::LiteralFalse },
                 { "fn", TokenType::KeywordFn },
+                { "for", TokenType::KeywordFor },
                 { "function", TokenType::KeywordFunction },
                 { "handle", TokenType::ReservedWord },
                 { "i16", TokenType::ReservedWord },
                 { "i32", TokenType::KeywordI32 },
                 { "i64", TokenType::ReservedWord },
                 { "i8", TokenType::ReservedWord },
+                { "if", TokenType::KeywordIf },
                 { "let", TokenType::KeywordLet },
                 { "mat", TokenType::ReservedWord },
                 { "override", TokenType::KeywordOverride },
@@ -333,12 +395,14 @@ Token Lexer<T>::lex()
 template <typename T>
 T Lexer<T>::shift(unsigned i)
 {
+    ASSERT(m_code + i <= m_codeEnd);
+
     T last = m_current;
     // At one point timing showed that setting m_current to 0 unconditionally was faster than an if-else sequence.
     m_current = 0;
     m_code += i;
-    m_currentPosition.m_offset += i;
-    m_currentPosition.m_lineOffset += i;
+    m_currentPosition.offset += i;
+    m_currentPosition.lineOffset += i;
     if (LIKELY(m_code < m_codeEnd))
         m_current = *m_code;
     return last;
@@ -355,12 +419,12 @@ T Lexer<T>::peek(unsigned i)
 template <typename T>
 void Lexer<T>::newLine()
 {
-    m_currentPosition.m_line += 1;
-            m_currentPosition.m_lineOffset = 0;
+    m_currentPosition.line += 1;
+    m_currentPosition.lineOffset = 0;
 }
 
 template <typename T>
-void Lexer<T>::skipBlockComments()
+bool Lexer<T>::skipBlockComments()
 {
     ASSERT(peek(0) == '/' && peek(1) == '*');
     shift(2);
@@ -368,7 +432,7 @@ void Lexer<T>::skipBlockComments()
     T ch = 0;
     unsigned depth = 1u;
 
-    while ((ch = shift())) {
+    while (!isAtEndOfFile() && (ch = shift())) {
         if (ch == '/' && peek() == '*') {
             shift();
             depth += 1;
@@ -379,13 +443,14 @@ void Lexer<T>::skipBlockComments()
                 // This block comment is closed, so for a construction like "/* */ */"
                 // there will be a successfully parsed block comment "/* */"
                 // and " */" will be processed separately.
-                return;
+                return true;
             }
         } else if (ch == '\n')
             newLine();
     }
 
     // FIXME: Report unbalanced block comments, such as "/* this is an unbalanced comment."
+    return false;
 }
 
 template <typename T>
@@ -399,22 +464,24 @@ void Lexer<T>::skipLineComment()
 }
 
 template <typename T>
-void Lexer<T>::skipWhitespaceAndComments()
+bool Lexer<T>::skipWhitespaceAndComments()
 {
     while (!isAtEndOfFile()) {
-        if (isASCIISpace(m_current)) {
+        if (isUnicodeCompatibleASCIIWhitespace(m_current)) {
             if (shift() == '\n')
                 newLine();
         } else if (peek(0) == '/') {
             if (peek(1) == '/')
                 skipLineComment();
-            else if (peek(1) == '*')
-                skipBlockComments();
-            else
+            else if (peek(1) == '*') {
+                if (!skipBlockComments())
+                    return false;
+            } else
                 break;
         } else
             break;
     }
+    return true;
 }
 
 template <typename T>

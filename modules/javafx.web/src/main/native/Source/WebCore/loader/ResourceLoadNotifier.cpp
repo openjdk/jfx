@@ -32,10 +32,10 @@
 #include "ResourceLoadNotifier.h"
 
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Page.h"
 #include "ProgressTracker.h"
 #include "ResourceLoader.h"
@@ -47,7 +47,7 @@
 
 namespace WebCore {
 
-ResourceLoadNotifier::ResourceLoadNotifier(Frame& frame)
+ResourceLoadNotifier::ResourceLoadNotifier(LocalFrame& frame)
     : m_frame(frame)
 {
 }
@@ -100,8 +100,8 @@ void ResourceLoadNotifier::didFailToLoad(ResourceLoader* loader, const ResourceE
     if (Page* page = m_frame.page())
         page->progress().completeProgress(loader->identifier());
 
-    // Notifying the FrameLoaderClient may cause the frame to be destroyed.
-    Ref<Frame> protect(m_frame);
+    // Notifying the LocalFrameLoaderClient may cause the frame to be destroyed.
+    Ref protectedFrame { m_frame };
     if (!error.isNull())
         m_frame.loader().client().dispatchDidFailLoading(loader->documentLoader(), loader->identifier(), error);
 
@@ -134,8 +134,8 @@ void ResourceLoadNotifier::dispatchWillSendRequest(DocumentLoader* loader, Resou
     if (m_frame.loader().documentLoader())
         m_frame.loader().documentLoader()->didTellClientAboutLoad(request.url().string());
 
-    // Notifying the FrameLoaderClient may cause the frame to be destroyed.
-    Ref<Frame> protectedFrame(m_frame);
+    // Notifying the LocalFrameLoaderClient may cause the frame to be destroyed.
+    Ref protectedFrame { m_frame };
     m_frame.loader().client().dispatchWillSendRequest(loader, identifier, request, redirectResponse);
 
     // If the URL changed, then we want to put that new URL in the "did tell client" set too.
@@ -147,8 +147,8 @@ void ResourceLoadNotifier::dispatchWillSendRequest(DocumentLoader* loader, Resou
 
 void ResourceLoadNotifier::dispatchDidReceiveResponse(DocumentLoader* loader, ResourceLoaderIdentifier identifier, const ResourceResponse& r, ResourceLoader* resourceLoader)
 {
-    // Notifying the FrameLoaderClient may cause the frame to be destroyed.
-    Ref<Frame> protect(m_frame);
+    // Notifying the LocalFrameLoaderClient may cause the frame to be destroyed.
+    Ref protectedFrame { m_frame };
     m_frame.loader().client().dispatchDidReceiveResponse(loader, identifier, r);
 
     InspectorInstrumentation::didReceiveResourceResponse(m_frame, identifier, loader, r, resourceLoader);
@@ -156,8 +156,8 @@ void ResourceLoadNotifier::dispatchDidReceiveResponse(DocumentLoader* loader, Re
 
 void ResourceLoadNotifier::dispatchDidReceiveData(DocumentLoader* loader, ResourceLoaderIdentifier identifier, const SharedBuffer* buffer, int expectedDataLength, int encodedDataLength)
 {
-    // Notifying the FrameLoaderClient may cause the frame to be destroyed.
-    Ref<Frame> protect(m_frame);
+    // Notifying the LocalFrameLoaderClient may cause the frame to be destroyed.
+    Ref protectedFrame { m_frame };
     m_frame.loader().client().dispatchDidReceiveContentLength(loader, identifier, expectedDataLength);
 
     InspectorInstrumentation::didReceiveData(&m_frame, identifier, buffer, encodedDataLength);
@@ -165,8 +165,8 @@ void ResourceLoadNotifier::dispatchDidReceiveData(DocumentLoader* loader, Resour
 
 void ResourceLoadNotifier::dispatchDidFinishLoading(DocumentLoader* loader, ResourceLoaderIdentifier identifier, const NetworkLoadMetrics& networkLoadMetrics, ResourceLoader* resourceLoader)
 {
-    // Notifying the FrameLoaderClient may cause the frame to be destroyed.
-    Ref<Frame> protect(m_frame);
+    // Notifying the LocalFrameLoaderClient may cause the frame to be destroyed.
+    Ref protectedFrame { m_frame };
     m_frame.loader().client().dispatchDidFinishLoading(loader, identifier);
 
     InspectorInstrumentation::didFinishLoading(&m_frame, loader, identifier, networkLoadMetrics, resourceLoader);
@@ -174,8 +174,8 @@ void ResourceLoadNotifier::dispatchDidFinishLoading(DocumentLoader* loader, Reso
 
 void ResourceLoadNotifier::dispatchDidFailLoading(DocumentLoader* loader, ResourceLoaderIdentifier identifier, const ResourceError& error)
 {
-    // Notifying the FrameLoaderClient may cause the frame to be destroyed.
-    Ref<Frame> protect(m_frame);
+    // Notifying the LocalFrameLoaderClient may cause the frame to be destroyed.
+    Ref protectedFrame { m_frame };
     m_frame.loader().client().dispatchDidFailLoading(loader, identifier, error);
 
     InspectorInstrumentation::didFailLoading(&m_frame, loader, identifier, error);

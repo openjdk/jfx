@@ -27,26 +27,28 @@
 #include "CustomElementRegistry.h"
 
 #include "CustomElementReactionQueue.h"
-#include "DOMWindow.h"
 #include "Document.h"
 #include "ElementRareData.h"
+#include "ElementTraversal.h"
 #include "JSCustomElementInterface.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalDOMWindow.h"
 #include "MathMLNames.h"
 #include "QualifiedName.h"
+#include "Quirks.h"
 #include "ShadowRoot.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-Ref<CustomElementRegistry> CustomElementRegistry::create(DOMWindow& window, ScriptExecutionContext* scriptExecutionContext)
+Ref<CustomElementRegistry> CustomElementRegistry::create(LocalDOMWindow& window, ScriptExecutionContext* scriptExecutionContext)
 {
     return adoptRef(*new CustomElementRegistry(window, scriptExecutionContext));
 }
 
-CustomElementRegistry::CustomElementRegistry(DOMWindow& window, ScriptExecutionContext* scriptExecutionContext)
+CustomElementRegistry::CustomElementRegistry(LocalDOMWindow& window, ScriptExecutionContext* scriptExecutionContext)
     : ContextDestructionObserver(scriptExecutionContext)
     , m_window(window)
 {
@@ -74,6 +76,8 @@ static void enqueueUpgradeInShadowIncludingTreeOrder(ContainerNode& node, JSCust
 
 RefPtr<DeferredPromise> CustomElementRegistry::addElementDefinition(Ref<JSCustomElementInterface>&& elementInterface)
 {
+    static MainThreadNeverDestroyed<const AtomString> extendsLi("extends-li"_s);
+
     AtomString localName = elementInterface->name().localName();
     ASSERT(!m_nameMap.contains(localName));
     m_nameMap.add(localName, elementInterface.copyRef());
@@ -85,8 +89,12 @@ RefPtr<DeferredPromise> CustomElementRegistry::addElementDefinition(Ref<JSCustom
     if (elementInterface->isShadowDisabled())
         m_disabledShadowSet.add(localName);
 
-    if (auto* document = m_window.document())
+    if (auto* document = m_window.document()) {
+        // ungap/@custom-elements detection for quirk (rdar://problem/111008826).
+        if (localName == extendsLi.get())
+            document->quirks().setNeedsConfigurableIndexedPropertiesQuirk();
         enqueueUpgradeInShadowIncludingTreeOrder(*document, elementInterface.get());
+    }
 
     return m_promiseMap.take(localName);
 }
@@ -125,6 +133,17 @@ JSC::JSValue CustomElementRegistry::get(const AtomString& name)
     if (auto* elementInterface = m_nameMap.get(name))
         return elementInterface->constructor();
     return JSC::jsUndefined();
+}
+
+String CustomElementRegistry::getName(JSC::JSValue constructorValue)
+{
+    auto* constructor = constructorValue.getObject();
+    if (!constructor)
+        return String { };
+    auto* elementInterface = findInterface(constructor);
+    if (!elementInterface)
+        return String { };
+    return elementInterface->name().localName();
 }
 
 static void upgradeElementsInShadowIncludingDescendants(ContainerNode& root)

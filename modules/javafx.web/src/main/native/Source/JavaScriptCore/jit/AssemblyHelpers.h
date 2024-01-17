@@ -252,6 +252,9 @@ public:
     void loadProperty(GPRReg object, GPRReg offset, JSValueRegs result);
     void storeProperty(JSValueRegs value, GPRReg object, GPRReg offset, GPRReg scratch);
 
+    JumpList loadMegamorphicProperty(VM&, GPRReg baseGPR, GPRReg uidGPR, UniquedStringImpl*, GPRReg resultGPR, GPRReg scratch1GPR, GPRReg scratch2GPR, GPRReg scratch3GPR, GPRReg scratch4GPR);
+    JumpList storeMegamorphicProperty(VM&, GPRReg baseGPR, GPRReg uidGPR, UniquedStringImpl*, GPRReg valueGPR, GPRReg scratch1GPR, GPRReg scratch2GPR, GPRReg scratch3GPR, GPRReg scratch4GPR);
+
     void moveValueRegs(JSValueRegs srcRegs, JSValueRegs destRegs)
     {
 #if USE(JSVALUE32_64)
@@ -1376,9 +1379,6 @@ public:
         constructRegisterSet(set, args...);
     }
 
-    // Add a debug call. This call has no effect on JIT code execution state.
-    void debugCall(VM&, V_DebugOperation_EPP function, void* argument);
-
     // These methods JIT generate dynamic, debug-only checks - akin to ASSERTs.
 #if ASSERT_ENABLED
     void jitAssertIsInt32(GPRReg);
@@ -1479,6 +1479,30 @@ public:
         or64(GPRInfo::numberTagRegister, target);
 
         done.link(this);
+    }
+
+    void branchConvertDoubleToInt52(FPRegisterID srcFPR, RegisterID destGPR, JumpList& failureCases, RegisterID scratch1GPR, FPRegisterID scratch2FPR)
+    {
+        JumpList doneCases;
+
+        truncateDoubleToInt64(srcFPR, destGPR);
+        convertInt64ToDouble(destGPR, scratch2FPR);
+        failureCases.append(branchDouble(DoubleNotEqualOrUnordered, srcFPR, scratch2FPR));
+        auto isZero = branchTest64(Zero, destGPR);
+        // This moves the checking range (fail if N >= (1 << (52 - 1)) or N < -(1 << (52 - 1))) by subtracting a value.
+        // So, valid value region starts with -1 and lower. In unsigned form, which means,
+        // 0xffffffffffffffff to 0xfff0000000000000. So, by shifting 52, we can extract 0xfff part, and we can check whether it is below than that (<= 4094).
+        move(TrustedImm64(0xfff8000000000000ULL), scratch1GPR);
+        add64(destGPR, scratch1GPR);
+        urshift64(TrustedImm32(52), scratch1GPR);
+        failureCases.append(branch64(BelowOrEqual, scratch1GPR, TrustedImm32(4094)));
+        doneCases.append(jump());
+
+        isZero.link(this);
+        moveDoubleTo64(srcFPR, scratch1GPR);
+        failureCases.append(branchTest64(NonZero, scratch1GPR, TrustedImm64(1ULL << 63)));
+
+        doneCases.link(this);
     }
 #endif // USE(JSVALUE64)
 
@@ -1874,56 +1898,60 @@ public:
     // that allocator is non-null; allocator can be null as a signal that we don't know what the
     // value of allocatorGPR is. Additionally, if the allocator is not null, then there is no need
     // to populate allocatorGPR - this code will ignore the contents of allocatorGPR.
-    void emitAllocateWithNonNullAllocator(GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, GPRReg scratchGPR, JumpList& slowPath);
+    enum class SlowAllocationResult : uint8_t {
+        ClearToNull,
+        UndefinedBehavior,
+    };
+    void emitAllocateWithNonNullAllocator(GPRReg resultGPR, const JITAllocator&, GPRReg allocatorGPR, GPRReg scratchGPR, JumpList& slowPath, SlowAllocationResult = SlowAllocationResult::ClearToNull);
 
-    void emitAllocate(GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, GPRReg scratchGPR, JumpList& slowPath);
+    void emitAllocate(GPRReg resultGPR, const JITAllocator&, GPRReg allocatorGPR, GPRReg scratchGPR, JumpList& slowPath, SlowAllocationResult = SlowAllocationResult::ClearToNull);
 
     template<typename StructureType>
-    void emitAllocateJSCell(GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, StructureType structure, GPRReg scratchGPR, JumpList& slowPath)
+    void emitAllocateJSCell(GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, StructureType structure, GPRReg scratchGPR, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
-        emitAllocate(resultGPR, allocator, allocatorGPR, scratchGPR, slowPath);
+        emitAllocate(resultGPR, allocator, allocatorGPR, scratchGPR, slowPath, slowAllocationResult);
         emitStoreStructureWithTypeInfo(structure, resultGPR, scratchGPR);
     }
 
     template<typename StructureType, typename StorageType>
-    void emitAllocateJSObject(GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, StructureType structure, StorageType storage, GPRReg scratchGPR, JumpList& slowPath)
+    void emitAllocateJSObject(GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, StructureType structure, StorageType storage, GPRReg scratchGPR, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
-        emitAllocateJSCell(resultGPR, allocator, allocatorGPR, structure, scratchGPR, slowPath);
+        emitAllocateJSCell(resultGPR, allocator, allocatorGPR, structure, scratchGPR, slowPath, slowAllocationResult);
         storePtr(storage, Address(resultGPR, JSObject::butterflyOffset()));
     }
 
     template<typename ClassType, typename StructureType, typename StorageType>
     void emitAllocateJSObjectWithKnownSize(
         VM& vm, GPRReg resultGPR, StructureType structure, StorageType storage, GPRReg scratchGPR1,
-        GPRReg scratchGPR2, JumpList& slowPath, size_t size)
+        GPRReg scratchGPR2, JumpList& slowPath, size_t size, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
         Allocator allocator = allocatorForConcurrently<ClassType>(vm, size, AllocatorForMode::AllocatorIfExists);
-        emitAllocateJSObject(resultGPR, JITAllocator::constant(allocator), scratchGPR1, structure, storage, scratchGPR2, slowPath);
+        emitAllocateJSObject(resultGPR, JITAllocator::constant(allocator), scratchGPR1, structure, storage, scratchGPR2, slowPath, slowAllocationResult);
     }
 
     template<typename ClassType, typename StructureType, typename StorageType>
-    void emitAllocateJSObject(VM& vm, GPRReg resultGPR, StructureType structure, StorageType storage, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath)
+    void emitAllocateJSObject(VM& vm, GPRReg resultGPR, StructureType structure, StorageType storage, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
-        emitAllocateJSObjectWithKnownSize<ClassType>(vm, resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath, ClassType::allocationSize(0));
+        emitAllocateJSObjectWithKnownSize<ClassType>(vm, resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath, ClassType::allocationSize(0), slowAllocationResult);
     }
 
     // allocationSize can be aliased with any of the other input GPRs. If it's not aliased then it
     // won't be clobbered.
-    void emitAllocateVariableSized(GPRReg resultGPR, CompleteSubspace& subspace, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath);
+    void emitAllocateVariableSized(GPRReg resultGPR, CompleteSubspace&, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult = SlowAllocationResult::ClearToNull);
 
     template<typename ClassType, typename StructureType>
-    void emitAllocateVariableSizedCell(VM& vm, GPRReg resultGPR, StructureType structure, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath)
+    void emitAllocateVariableSizedCell(VM& vm, GPRReg resultGPR, StructureType structure, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
         CompleteSubspace* subspace = subspaceForConcurrently<ClassType>(vm);
         RELEASE_ASSERT_WITH_MESSAGE(subspace, "CompleteSubspace is always allocated");
-        emitAllocateVariableSized(resultGPR, *subspace, allocationSize, scratchGPR1, scratchGPR2, slowPath);
+        emitAllocateVariableSized(resultGPR, *subspace, allocationSize, scratchGPR1, scratchGPR2, slowPath, slowAllocationResult);
         emitStoreStructureWithTypeInfo(structure, resultGPR, scratchGPR2);
     }
 
     template<typename ClassType, typename StructureType>
-    void emitAllocateVariableSizedJSObject(VM& vm, GPRReg resultGPR, StructureType structure, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath)
+    void emitAllocateVariableSizedJSObject(VM& vm, GPRReg resultGPR, StructureType structure, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
-        emitAllocateVariableSizedCell<ClassType>(vm, resultGPR, structure, allocationSize, scratchGPR1, scratchGPR2, slowPath);
+        emitAllocateVariableSizedCell<ClassType>(vm, resultGPR, structure, allocationSize, scratchGPR1, scratchGPR2, slowPath, slowAllocationResult);
         storePtr(TrustedImmPtr(nullptr), Address(resultGPR, JSObject::butterflyOffset()));
     }
 
@@ -1993,6 +2021,8 @@ public:
 
     void emitFillStorageWithJSEmpty(GPRReg baseGPR, ptrdiff_t initialOffset, unsigned count, GPRReg scratchGPR)
     {
+        if (!count)
+            return;
 #if USE(JSVALUE64)
         unsigned pairCount = count >> 1;
         unsigned pairIndex = 0;
@@ -2031,6 +2061,12 @@ public:
             storeTrustedValue(JSValue(JSValue::EncodeAsDouble, PNaN), Address(baseGPR, initialOffset + i * sizeof(double)));
 #endif
     }
+
+#if ENABLE(WEBASSEMBLY)
+#if CPU(ARM64) || CPU(X86_64) || CPU(RISCV64)
+    JumpList checkWasmStackOverflow(GPRReg instanceGPR, TrustedImm32, GPRReg framePointerGPR);
+#endif
+#endif
 
 protected:
     void copyCalleeSavesToEntryFrameCalleeSavesBufferImpl(GPRReg calleeSavesBuffer);
