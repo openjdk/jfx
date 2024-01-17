@@ -1048,8 +1048,10 @@ public class Text extends Shape {
             if (runs[ix].getTextSpan() == null) {
                 while (ix < lastIndex) {
                     GlyphList r = runs[ix];
-                    if (x > r.getLocation().x && x < runs[ix + 1].getLocation().x
-                            && y > r.getLocation().y && y < r.getHeight()) {
+                    GlyphList nr = runs[ix + 1];
+                    if ((x > r.getLocation().x &&
+                            (x < nr.getLocation().x || r.getLocation().y < nr.getLocation().y))
+                                && y < r.getHeight()) {
                         break;
                     }
                     ix++;
