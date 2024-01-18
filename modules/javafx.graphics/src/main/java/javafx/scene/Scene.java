@@ -92,6 +92,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 import com.sun.javafx.logging.PulseLogger;
 
@@ -1298,19 +1299,6 @@ public class Scene implements EventTarget {
 
     }
 
-    /*
-     * Shared between Scene and SubScene
-     */
-    static NGLightBase[] accumulateLightsForSnapshot(List<LightBase> lights) {
-        if (lights == null || lights.isEmpty()) return null;
-
-        NGLightBase[] l = new NGLightBase[lights.size()];
-        for (int i = 0; i < lights.size(); i++) {
-            l[i] = lights.get(i).getPeer();
-        }
-        return l;
-    }
-
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
     // we might be doing a Node snapshot with a null scene
     static WritableImage doSnapshot(Scene scene, SubScene subScene,
@@ -1360,34 +1348,12 @@ public class Scene implements EventTarget {
         }
 
         // Grab the lights from the scene and/or subscene
-        context.lights = null;
-        int totalLightCount = 0;
+        Stream<NGLightBase> lights = Stream.concat(
+            Optional.ofNullable(scene).stream().flatMap(s -> s.lights.stream()).map(LightBase::getPeer),
+            Optional.ofNullable(subScene).stream().flatMap(s -> s.getLights().stream()).map(LightBase::getPeer)
+        );
 
-        NGLightBase[] sceneLights = (scene != null) ? accumulateLightsForSnapshot(scene.lights) : null;
-        NGLightBase[] subSceneLights = (subScene != null) ? accumulateLightsForSnapshot(subScene.getLights()) : null;
-        if (sceneLights != null) {
-            totalLightCount += sceneLights.length;
-        }
-        if (subSceneLights != null) {
-            totalLightCount += subSceneLights.length;
-        }
-
-        if (totalLightCount > 0) {
-            context.lights = new NGLightBase[totalLightCount];
-
-            int totalLightsAdded = 0;
-            if (sceneLights != null) {
-                for (int i = 0; i < sceneLights.length; i++) {
-                    context.lights[i] = sceneLights[i];
-                }
-                totalLightsAdded += sceneLights.length;
-            }
-            if (subSceneLights != null) {
-                for (int i = 0; i < subSceneLights.length; i++) {
-                    context.lights[i + totalLightsAdded] = subSceneLights[i];
-                }
-            }
-        }
+        context.lights = lights.toArray(NGLightBase[]::new);
 
         Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
         context.platformImage = accessor.getTkImageLoader(wimg);
