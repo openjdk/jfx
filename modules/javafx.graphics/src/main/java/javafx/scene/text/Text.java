@@ -1058,8 +1058,9 @@ public class Text extends Shape {
                     y = updateY(y, ix, runs);
                 }
             } else {
-                double ptX = localToParent(x, y).getX();
-                double ptY = localToParent(x, y).getY();
+                Point2D ptInParent = localToParent(x, y);
+                double ptX = ptInParent.getX();
+                double ptY = ptInParent.getY();
                 while (ix < lastIndex) {
                     GlyphList r = runs[ix];
                     if (ptX > r.getLocation().x && ptX < (r.getLocation().x + r.getWidth()) && ptY >= r.getLocation().y

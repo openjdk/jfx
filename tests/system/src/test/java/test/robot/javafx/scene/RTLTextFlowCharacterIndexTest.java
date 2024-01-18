@@ -271,7 +271,7 @@ public class RTLTextFlowCharacterIndexTest {
         double x = WIDTH - X_LEADING_OFFSET;
         while (x > X_LEADING_OFFSET) {
             moveMouseOverTextFlow(x, Y_OFFSET);
-           if (isLeading) {
+            if (isLeading) {
                     Assertions.assertEquals(charIndex, insertionIndex);
                 } else {
                     Assertions.assertEquals(charIndex, insertionIndex - 1);

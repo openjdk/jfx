@@ -427,7 +427,7 @@ public class PrismTextLayout implements TextLayout {
         int charIndex = -1;
         int insertionIndex = -1;
         int relIndex = 0;
-        int LTRIndex = 0;
+        int ltrIndex = 0;
         int textWidthPrevLine = 0;
         float xHitPos = x;
 
@@ -450,7 +450,7 @@ public class PrismTextLayout implements TextLayout {
                    which are not embedded in TextFlow and hit info requested on TextFlow. */
                 if (isMirrored) {
                     int runIndex = -1;
-                    for (int i = runs.length - 1; i >=0; i--) {
+                    for (int i = runs.length - 1; i >= 0; i--) {
                         run = runs[i];
                         if (x < run.getWidth() && (forTextFlow || (run.getStart() == curRunStart))) {
                             runIndex = i;
@@ -491,6 +491,7 @@ public class PrismTextLayout implements TextLayout {
                     }
                 }
 
+                BaseBounds textBounds = new BoxBounds();
                 if (isMirrored) {
                     boolean isMultiRunText = false;
                     for (TextRun r: runs) {
@@ -507,7 +508,6 @@ public class PrismTextLayout implements TextLayout {
                         }
                         if (run.getTextSpan() != null && run.getTextSpan().getText().equals(text)) {
                             if ((x > run.getWidth() && !isMultiRunText) || textWidthPrevLine > 0) {
-                                BaseBounds textBounds = new BoxBounds();
                                 getBounds(run.getTextSpan(), textBounds);
                                 x -= (run.getLocation().x - textBounds.getMinX());
                                 break;
@@ -518,8 +518,8 @@ public class PrismTextLayout implements TextLayout {
                                 continue;
                             }
                             for (int j = runs.length - 1; j >= 0; j--) {
-                                if (runs[j].getTextSpan().getText().equals(text) && runs[j].getStart() != curRunStart) {
-                                    LTRIndex += runs[j].getLength();
+                                if (runs[j].getStart() != curRunStart && runs[j].getTextSpan().getText().equals(text)) {
+                                    ltrIndex += runs[j].getLength();
                                 }
                                 if (runs[j].getStart() == curRunStart) {
                                     break;
@@ -541,7 +541,6 @@ public class PrismTextLayout implements TextLayout {
                             continue;
                         }
                         if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
-                            BaseBounds textBounds = new BoxBounds();
                             getBounds(r.getTextSpan(), textBounds);
                             if (textBounds.getMinX() == 0 && !isPrevRunPresent) {
                                 x -= prevRunLength;
@@ -569,7 +568,7 @@ public class PrismTextLayout implements TextLayout {
                         /* Odd level represents RTL text.
                         *  If the RTL text has LTR text embedded,
                         *  add the LTR index here to get effective character index */
-                        charIndex += LTRIndex;
+                        charIndex += ltrIndex;
                     }
                 } else {
                     int indexOffset;
