@@ -883,14 +883,16 @@ public abstract class Animation {
      *
      * Note that unlike {@link #playFromStart()} calling this method will not
      * change the playing direction of this {@code Animation}.
+     * <p>
+     * This method must be called on the JavaFX Application thread.
      *
      * @param cuePoint
      *            name of the cue point
      * @throws NullPointerException
      *             if {@code cuePoint} is {@code null}
-     * @throws IllegalStateException
-     *             if embedded in another animation,
-     *                such as {@link SequentialTransition} or {@link ParallelTransition}
+     * @throws IllegalStateException if this method is called on a thread
+     *             other than the JavaFX Application Thread, or if embedded in another animation,
+     *             such as {@link SequentialTransition} or {@link ParallelTransition}
      * @see #getCuePoints()
      */
     public void playFrom(String cuePoint) {
@@ -911,6 +913,8 @@ public abstract class Animation {
      *
      * Note that unlike {@link #playFromStart()} calling this method will not
      * change the playing direction of this {@code Animation}.
+     * <p>
+     * This method must be called on the JavaFX Application thread.
      *
      * @param time
      *            position where to play from
@@ -918,9 +922,9 @@ public abstract class Animation {
      *             if {@code time} is {@code null}
      * @throws IllegalArgumentException
      *             if {@code time} is {@link Duration#UNKNOWN}
-     * @throws IllegalStateException
-     *             if embedded in another animation,
-     *                such as {@link SequentialTransition} or {@link ParallelTransition}
+     * @throws IllegalStateException if this method is called on a thread
+     *             other than the JavaFX Application Thread, or if embedded in another animation,
+     *             such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void playFrom(Duration time) {
         jumpTo(time);
@@ -937,15 +941,12 @@ public abstract class Animation {
      *      animation.setRate = setRate(Math.abs(animation.getRate())); <br>
      *      animation.jumpTo(Duration.ZERO);<br>
      *      animation.play();<br>
-     *  </code>
-     *
+     * </code>
      * <p>
-     * Note: <ul>
-     * <li>{@code playFromStart()} is an asynchronous call, {@code Animation} may
-     * not start immediately. </ul>
+     * This method must be called on the JavaFX Application thread.
      *
-     * @throws IllegalStateException
-     *             if embedded in another animation,
+     * @throws IllegalStateException if this method is called on a thread
+     *                other than the JavaFX Application Thread, or if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void playFromStart() {
@@ -975,10 +976,6 @@ public abstract class Animation {
      *  animation.jumpTo(overall duration of animation);<br>
      *  animation.play();<br>
      * </code>
-     * <p>
-     * Note: <ul>
-     * <li>{@code play()} is an asynchronous call, the {@code Animation} may not
-     * start immediately. </ul>
      * <p>
      * This method must be called on the JavaFX Application thread.
      *
@@ -1036,10 +1033,6 @@ public abstract class Animation {
      * Stops the animation and resets the play head to its initial position. If
      * the animation is already stopped, this method has no effect.
      * <p>
-     * Note: <ul>
-     * <li>{@code stop()} is an asynchronous call, the {@code Animation} may not stop
-     * immediately. </ul>
-     * <p>
      * This method must be called on the JavaFX Application thread.
      *
      * @throws IllegalStateException if this method is called on a thread
@@ -1070,10 +1063,6 @@ public abstract class Animation {
     /**
      * Pauses the animation. If the animation is not currently running, this
      * method has no effect.
-     * <p>
-     * Note: <ul>
-     * <li>{@code pause()} is an asynchronous call, the {@code Animation} may not pause
-     * immediately. </ul>
      * <p>
      * This method must be called on the JavaFX Application thread.
      *
