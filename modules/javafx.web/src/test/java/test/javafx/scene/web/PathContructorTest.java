@@ -25,15 +25,6 @@
 
 package test.javafx.scene.web;
 
-import com.sun.webkit.WebPage;
-import com.sun.webkit.WebPageShim;
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.util.Base64;
-import javafx.scene.web.WebEngineShim;
-
-
-import org.junit.After;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
