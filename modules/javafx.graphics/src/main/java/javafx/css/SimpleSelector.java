@@ -51,7 +51,7 @@ import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
  * @since 9
  * @deprecated This class was exposed erroneously and will be removed in a future version
  */
-@Deprecated(forRemoval = true)
+@Deprecated(since = "22", forRemoval = true)
 final public class SimpleSelector extends Selector {
 
     /**
