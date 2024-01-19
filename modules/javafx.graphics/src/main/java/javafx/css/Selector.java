@@ -45,6 +45,14 @@ import java.util.Set;
  */
 public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
 
+    /**
+     * Explicit constructor for subtype use.
+     *
+     * @since 23
+     */
+    protected Selector() {
+    }
+
     private static class UniversalSelector {
         private static final Selector INSTANCE =
             new SimpleSelector("*", null, null, null);
@@ -175,6 +183,7 @@ public abstract sealed class Selector permits SimpleSelector, CompoundSelector {
      * @param strings string array containing selector details
      * @return a selector, never {@code null}
      * @throws IOException if reading from {@code DataInputStream} fails
+     * @since 23
      */
     protected static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException {
