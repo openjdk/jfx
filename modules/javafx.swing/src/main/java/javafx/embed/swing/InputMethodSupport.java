@@ -58,64 +58,60 @@ class InputMethodSupport {
             this.fxRequests = fxRequests;
         }
 
-        private Point2D pointValue;
-        private int     intValue;
-        private String  stringValue;
-
         @Override
         public Rectangle getTextLocation(TextHitInfo offset) {
-            pointValue = new Point2D(0.0, 0.0);
+            Point2D[] location = { new Point2D(0.0, 0.0) };
             if (fxRequests != null) {
                 PlatformImpl.runAndWait(() -> {
-                    pointValue = fxRequests.getTextLocation(offset.getInsertionIndex());
+                    location[0] = fxRequests.getTextLocation(offset.getInsertionIndex());
                 });
             }
-            return new Rectangle((int)pointValue.getX(), (int)pointValue.getY(), 0, 0);
+            return new Rectangle((int)location[0].getX(), (int)location[0].getY(), 0, 0);
         }
 
         @Override
         public TextHitInfo getLocationOffset(int x, int y) {
-            intValue = 0;
+            int[] offset = { 0 };
             if (fxRequests != null) {
                 PlatformImpl.runAndWait(() -> {
-                    intValue = fxRequests.getLocationOffset(x, y);
+                    offset[0] = fxRequests.getLocationOffset(x, y);
                 });
             }
-            return TextHitInfo.afterOffset(intValue);
+            return TextHitInfo.afterOffset(offset[0]);
         }
 
         @Override
         public int getInsertPositionOffset() {
-            intValue = 0;
+            int[] offset = { 0 };
             if (fxRequests instanceof ExtendedInputMethodRequests) {
                 PlatformImpl.runAndWait(() -> {
-                    intValue = ((ExtendedInputMethodRequests)fxRequests).getInsertPositionOffset();
+                    offset[0] = ((ExtendedInputMethodRequests)fxRequests).getInsertPositionOffset();
                 });
             }
-            return intValue;
+            return offset[0];
         }
 
         @Override
         public AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, AttributedCharacterIterator.Attribute[] attributes) {
-            stringValue = null;
+            String[] comitted = { null };
             if (fxRequests instanceof ExtendedInputMethodRequests) {
                 PlatformImpl.runAndWait(() -> {
-                    stringValue = ((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex);
+                    comitted[0] = ((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex);
                 });
             }
-            if (stringValue == null) stringValue = "";
-            return new AttributedString(stringValue).getIterator();
+            if (comitted[0] == null) comitted[0] = "";
+            return new AttributedString(comitted[0]).getIterator();
         }
 
         @Override
         public int getCommittedTextLength() {
-            intValue = 0;
+            int[] length = { 0 };
             if (fxRequests instanceof ExtendedInputMethodRequests) {
                 PlatformImpl.runAndWait(() -> {
-                    intValue = ((ExtendedInputMethodRequests)fxRequests).getCommittedTextLength();
+                    length[0] = ((ExtendedInputMethodRequests)fxRequests).getCommittedTextLength();
                 });
             }
-            return intValue;
+            return length[0];
         }
 
         @Override
@@ -126,14 +122,14 @@ class InputMethodSupport {
 
         @Override
         public AttributedCharacterIterator getSelectedText(AttributedCharacterIterator.Attribute[] attributes) {
-            stringValue = null;
+            String[] selected = { null };
             if (fxRequests != null) {
                 PlatformImpl.runAndWait(() -> {
-                    stringValue = fxRequests.getSelectedText();
+                    selected[0] = fxRequests.getSelectedText();
                 });
             }
-            if (stringValue == null) stringValue = "";
-            return new AttributedString(stringValue).getIterator();
+            if (selected[0] == null) selected[0] = "";
+            return new AttributedString(selected[0]).getIterator();
         }
     }
 
