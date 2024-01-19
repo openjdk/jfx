@@ -60,7 +60,9 @@ import java.util.Set;
  * <code>Combinator.DESCENDANT</code>.
  *
  * @since 9
+ * @deprecated This class was exposed erroneously and will be removed in a future version
  */
+@Deprecated(forRemoval = true)
 final public class CompoundSelector extends Selector {
 
     private final List<SimpleSelector> selectors;
