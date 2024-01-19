@@ -7250,4 +7250,30 @@ public class TreeTableViewTest {
         treeTableView.getSelectionModel().selectIndices(1, new int[]{1, 2});
         assertEquals(2, treeTableView.getSelectionModel().getSelectedIndex());
     }
+
+    @Test
+    public void testRootNullShouldNotThrow() {
+        TreeTableColumn<String, String> c = new TreeTableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+        treeTableView.getColumns().add(c);
+
+        treeTableView.setRoot(new TreeItem<String>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        stageLoader = new StageLoader(treeTableView);
+        treeTableView.setRoot(null);
+        // Should not throw an NPE.
+        Toolkit.getToolkit().firePulse();
+    }
+
+    @Test
+    public void testTreeTableRootNullQueryAcceessibleAttributeRowCountShouldNotThrow() {
+        treeTableView.setRoot(null);
+        // Should not throw an NPE.
+        treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
+    }
 }
