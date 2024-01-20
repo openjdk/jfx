@@ -41,10 +41,14 @@ import java.util.logging.Logger;
 import com.sun.javafx.tk.quantum.GlassSystemMenuShim;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -52,6 +56,7 @@ import javafx.stage.Stage;
 import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SystemMenuBarTest {
     @BeforeClass
@@ -276,24 +281,70 @@ public class SystemMenuBarTest {
         });
     }
 
-    public MenuBar createSimpleMenuBar() {
+    @Test
+    public void testJDK8309935() {
         MenuBar menuBar = new MenuBar();
-
-        menuBar.setUseSystemMenuBar(true);
-
-        Menu systemMenu = new Menu("systemMenu");
-        menuBar.getMenus().add(systemMenu);
-
-        var newItem = new MenuItem();
-        newItem.setVisible(false);
-        systemMenu.getItems().add(newItem);
-
-        Platform.runLater(() -> {
-            javafx.scene.control.Menu systemMenuContributions = new Menu("123");
-            systemMenu.getItems().add(systemMenuContributions);
+        AtomicReference<Throwable> throwableRef = new AtomicReference();
+        Util.runAndWait(() -> {
+            Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+                e.printStackTrace();
+                throwableRef.set(e);
+            });
+            menuBar.setUseSystemMenuBar(true);
+            Menu menu1 = new Menu("menu 1");
+            menu1.getItems().add(new MenuItem("item 1"));
+            menu1.getItems().add(new MenuItem("item 2"));
+            menuBar.getMenus().add(menu1);
+            Menu menu2 = new Menu(" menu 2");
+            menu2.getItems().add(new MenuItem("item 1"));
+            menu2.getItems().add(new MenuItem("item 2"));
+            menu2.getItems().add(new SeparatorMenuItem());
+            menuBar.getMenus().add(menu2);
+            Menu test1 = new Menu("test 1");
+            test1.getItems().add(new MenuItem("item 1"));
+            test1.getItems().add(new MenuItem("item 2"));
+            Menu test2 = new Menu("test 2");
+            test2.getItems().add(new MenuItem("item 1"));
+            test2.getItems().add(new MenuItem("item 2"));
+            menu2.addEventFilter(Menu.ON_SHOWING, e -> {
+                menu2.getItems().removeIf(o -> Objects.equals(o.getText(), test1.getText()));
+                menu2.getItems().add(test1);
+                menu2.getItems().removeIf(o -> Objects.equals(o.getText(), test2.getText()));
+                menu2.getItems().add(test2);
+            });
+            BorderPane root = new BorderPane();
+            root.setTop(menuBar);
+            Stage stage = new Stage();
+            stage.setScene(new Scene(root));
+            stage.show();
         });
-
-        return menuBar;
+        Util.runAndWait(() -> {
+            menuBar.getMenus().forEach(menu -> {
+                menu.setVisible(false);
+            });
+        });
+        Util.runAndWait(() -> {
+            menuBar.getMenus().forEach(menu -> {
+                menu.setVisible(true);
+            });
+        });
+        Util.runAndWait(() -> {
+            Menu test3 = new Menu("test 3");
+            test3.getItems().add(new MenuItem("item 1"));
+            test3.getItems().add(new MenuItem("item 2"));
+            Menu test4 = new Menu("test 4");
+            test4.getItems().add(new MenuItem("item 1"));
+            test4.getItems().add(new MenuItem("item 2"));
+            menuBar.getMenus().get(1).getItems().addAll(test3, test4);
+        });
+        // Some waiting is necessary. runAndWait twice makes it reliable.
+        Util.runAndWait(() -> {
+        });
+        Util.runAndWait(() -> {
+        });
+        if (throwableRef.get() != null) {
+            fail(throwableRef.get());
+        }
     }
 
 }
