@@ -41,12 +41,12 @@
 #include "DocumentLoader.h"
 #include "EventNames.h"
 #include "FormData.h"
-#include "Frame.h"
-#include "HTMLParserIdioms.h"
 #include "InspectorInstrumentation.h"
 #include "JSExecState.h"
 #include "JSWindowProxy.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalFrame.h"
+#include "OriginAccessPatterns.h"
 #include "ParsingUtilities.h"
 #include "PingLoader.h"
 #include "Report.h"
@@ -253,7 +253,7 @@ void ContentSecurityPolicy::didReceiveHeader(const String& header, ContentSecuri
     // be combined with a comma. Walk the header string, and parse each comma
     // separated chunk as a separate header.
     readCharactersForParsing(header, [&](auto buffer) {
-        skipWhile<isASCIISpace>(buffer);
+        skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
         auto begin = buffer.position();
 
         while (buffer.hasCharactersRemaining()) {
@@ -437,22 +437,22 @@ bool ContentSecurityPolicy::allowScriptWithNonce(const String& nonce, bool overr
 {
     if (overrideContentSecurityPolicy)
         return true;
-    String strippedNonce = stripLeadingAndTrailingHTMLSpaces(nonce);
-    if (strippedNonce.isEmpty())
+    auto trimmedNonce = nonce.trim(isASCIIWhitespace);
+    if (trimmedNonce.isEmpty())
         return false;
     // FIXME: We need to report violations in report-only policies. See <https://bugs.webkit.org/show_bug.cgi?id=159830>.
-    return allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::Enforce, &ContentSecurityPolicyDirectiveList::violatedDirectiveForScriptNonce, strippedNonce);
+    return allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::Enforce, &ContentSecurityPolicyDirectiveList::violatedDirectiveForScriptNonce, trimmedNonce);
 }
 
 bool ContentSecurityPolicy::allowStyleWithNonce(const String& nonce, bool overrideContentSecurityPolicy) const
 {
     if (overrideContentSecurityPolicy)
         return true;
-    String strippedNonce = stripLeadingAndTrailingHTMLSpaces(nonce);
-    if (strippedNonce.isEmpty())
+    auto trimmedNonce = nonce.trim(isASCIIWhitespace);
+    if (trimmedNonce.isEmpty())
         return false;
     // FIXME: We need to report violations in report-only policies. See <https://bugs.webkit.org/show_bug.cgi?id=159830>.
-    return allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::Enforce, &ContentSecurityPolicyDirectiveList::violatedDirectiveForStyleNonce, strippedNonce);
+    return allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::Enforce, &ContentSecurityPolicyDirectiveList::violatedDirectiveForStyleNonce, trimmedNonce);
 }
 
 bool ContentSecurityPolicy::shouldPerformEarlyCSPCheck() const
@@ -479,8 +479,8 @@ bool ContentSecurityPolicy::allowNonParserInsertedScripts(const URL& sourceURL, 
     };
 
     auto contentHashes = generateHashesForContent(scriptContent, m_hashAlgorithmsForInlineScripts);
-    String strippedNonce = stripLeadingAndTrailingHTMLSpaces(nonce);
-    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForNonParserInsertedScripts, strippedNonce, contentHashes, sourceURL, parserInserted);
+    auto trimmedNonce = nonce.trim(isASCIIWhitespace);
+    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForNonParserInsertedScripts, trimmedNonce, contentHashes, sourceURL, parserInserted);
 }
 
 bool ContentSecurityPolicy::allowInlineScript(const String& contextURL, const OrdinalNumber& contextLine, StringView scriptContent, Element& element, const String& nonce, bool overrideContentSecurityPolicy) const
@@ -498,8 +498,8 @@ bool ContentSecurityPolicy::allowInlineScript(const String& contextURL, const Or
     };
 
     auto contentHashes = generateHashesForContent(scriptContent, m_hashAlgorithmsForInlineScripts);
-    String strippedNonce = stripLeadingAndTrailingHTMLSpaces(nonce);
-    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForUnsafeInlineScriptElement, strippedNonce, contentHashes);
+    auto trimmedNonce = nonce.trim(isASCIIWhitespace);
+    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForUnsafeInlineScriptElement, trimmedNonce, contentHashes);
 }
 
 bool ContentSecurityPolicy::allowInlineStyle(const String& contextURL, const OrdinalNumber& contextLine, StringView styleContent, CheckUnsafeHashes shouldCheckUnsafeHashes, Element& element, const String& nonce, bool overrideContentSecurityPolicy) const
@@ -514,12 +514,12 @@ bool ContentSecurityPolicy::allowInlineStyle(const String& contextURL, const Ord
     };
 
     auto contentHashes = generateHashesForContent(styleContent, m_hashAlgorithmsForInlineStylesheets);
-    String strippedNonce = stripLeadingAndTrailingHTMLSpaces(nonce);
+    auto trimmedNonce = nonce.trim(isASCIIWhitespace);
 
     if (shouldCheckUnsafeHashes == CheckUnsafeHashes::Yes)
-        return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForUnsafeInlineStyleAttribute, strippedNonce, contentHashes);
+        return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForUnsafeInlineStyleAttribute, trimmedNonce, contentHashes);
 
-    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForUnsafeInlineStyleElement, strippedNonce, contentHashes);
+    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForUnsafeInlineStyleElement, trimmedNonce, contentHashes);
 }
 
 bool ContentSecurityPolicy::allowEval(JSC::JSGlobalObject* state, LogToConsole shouldLogToConsole, StringView codeContent, bool overrideContentSecurityPolicy) const
@@ -538,7 +538,7 @@ bool ContentSecurityPolicy::allowEval(JSC::JSGlobalObject* state, LogToConsole s
     return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForUnsafeEval);
 }
 
-bool ContentSecurityPolicy::allowFrameAncestors(const Frame& frame, const URL& url, bool overrideContentSecurityPolicy) const
+bool ContentSecurityPolicy::allowFrameAncestors(const LocalFrame& frame, const URL& url, bool overrideContentSecurityPolicy) const
 {
     if (overrideContentSecurityPolicy)
         return true;
@@ -671,8 +671,8 @@ bool ContentSecurityPolicy::allowScriptFromSource(const URL& url, RedirectRespon
     };
 
     auto subResourceIntegrityDigests = parseSubResourceIntegrityIntoDigests(subResourceIntegrity);
-    String strippedNonce = stripLeadingAndTrailingHTMLSpaces(nonce);
-    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForScript, url, redirectResponseReceived == RedirectResponseReceived::Yes, subResourceIntegrityDigests, strippedNonce);
+    auto trimmedNonce = nonce.trim(isASCIIWhitespace);
+    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForScript, url, redirectResponseReceived == RedirectResponseReceived::Yes, subResourceIntegrityDigests, trimmedNonce);
 }
 
 bool ContentSecurityPolicy::allowImageFromSource(const URL& url, RedirectResponseReceived redirectResponseReceived, const URL& preRedirectURL) const
@@ -697,8 +697,8 @@ bool ContentSecurityPolicy::allowStyleFromSource(const URL& url, RedirectRespons
         reportViolation(violatedDirective, blockedURL.string(), consoleMessage, sourceURL, StringView(), sourcePosition);
     };
 
-    String strippedNonce = stripLeadingAndTrailingHTMLSpaces(nonce);
-    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForStyle, url, redirectResponseReceived == RedirectResponseReceived::Yes, strippedNonce);
+    auto trimmedNonce = nonce.trim(isASCIIWhitespace);
+    return allPoliciesAllow(WTFMove(handleViolatedDirective), &ContentSecurityPolicyDirectiveList::violatedDirectiveForStyle, url, redirectResponseReceived == RedirectResponseReceived::Yes, trimmedNonce);
 }
 
 bool ContentSecurityPolicy::allowFontFromSource(const URL& url, RedirectResponseReceived redirectResponseReceived, const URL& preRedirectURL) const
@@ -753,7 +753,9 @@ bool ContentSecurityPolicy::allowBaseURI(const URL& url, bool overrideContentSec
 
 static bool shouldReportProtocolOnly(const URL& url)
 {
-    return !url.isHierarchical() || url.protocolIs("file"_s);
+    // FIXME: https://w3c.github.io/webappsec-csp/#strip-url-for-use-in-reports suggests this should
+    // be url.protocolIsInHTTPFamily().
+    return url.hasOpaquePath() || url.protocolIsFile();
 }
 
 String ContentSecurityPolicy::createURLForReporting(const URL& url, const String& violatedDirective, bool usesReportingAPI) const
@@ -775,7 +777,7 @@ String ContentSecurityPolicy::createURLForReporting(const URL& url, const String
     // WPT indicates that modern Reporting API expects explicit port in reported URLs
     //     content-security-policy/reporting-api/report-to-directive-allowed-in-meta.https.sub.html
     //     content-security-policy/reporting-api/reporting-api-sends-reports-on-violation.https.sub.html
-    if (securityOrigin->canRequest(url) || directiveIsSafe)
+    if (securityOrigin->canRequest(url, originAccessPatternsForWebProcessOrEmpty()) || directiveIsSafe)
         return usesReportingAPI ? url.strippedForUseAsReferrerWithExplicitPort() : url.strippedForUseAsReferrer();
 
     return SecurityOrigin::create(url)->toString();
@@ -1041,8 +1043,8 @@ void ContentSecurityPolicy::upgradeInsecureRequestIfNeeded(URL& url, InsecureReq
         url.setProtocol("wss"_s);
     }
 
-    if (url.port() && url.port().value() == 80)
-        url.setPort(443);
+    if (url.port() == 80)
+        url.setPort(std::nullopt);
 }
 
 void ContentSecurityPolicy::setUpgradeInsecureRequests(bool upgradeInsecureRequests)

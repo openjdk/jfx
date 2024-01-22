@@ -34,17 +34,18 @@ namespace Layout {
 
 class FloatingContext;
 class InlineFormattingContext;
+class InlineLevelBox;
 
 class InlineFormattingGeometry : public FormattingGeometry {
 public:
     InlineFormattingGeometry(const InlineFormattingContext&);
 
-    InlineLayoutUnit logicalTopForNextLine(const LineBuilder::LineContent&, const InlineRect& lineLogicalRect, const FloatingContext&) const;
+    InlineLayoutUnit logicalTopForNextLine(const LineBuilder::LayoutResult&, const InlineRect& lineLogicalRect, const FloatingContext&) const;
 
     ContentHeightAndMargin inlineBlockContentHeightAndMargin(const Box&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
     ContentWidthAndMargin inlineBlockContentWidthAndMargin(const Box&, const HorizontalConstraints&, const OverriddenHorizontalValues&) const;
 
-    enum class IsIntrinsicWidthMode : uint8_t { Yes, No };
+    enum class IsIntrinsicWidthMode : bool { No, Yes };
     InlineLayoutUnit computedTextIndent(IsIntrinsicWidthMode, std::optional<bool> previousLineEndsWithLineBreak, InlineLayoutUnit availableWidth) const;
 
     bool inlineLevelBoxAffectsLineBox(const InlineLevelBox&) const;
@@ -55,12 +56,17 @@ public:
 
     static InlineRect flipVisualRectToLogicalForWritingMode(const InlineRect& visualRect, WritingMode);
 
-    LayoutPoint staticPositionForOutOfFlowInlineLevelBox(const Box&, LayoutPoint contentBoxTopLeft) const;
-    LayoutPoint staticPositionForOutOfFlowBlockLevelBox(const Box&, LayoutPoint contentBoxTopLeft) const;
+    LayoutPoint staticPositionForOutOfFlowInlineLevelBox(const Box&, const ConstraintsForInFlowContent&, const InlineDisplay::Content&, const FloatingContext&) const;
+    LayoutPoint staticPositionForOutOfFlowBlockLevelBox(const Box&, const ConstraintsForInFlowContent&, const InlineDisplay::Content&) const;
 
     void adjustMarginStartForListMarker(const ElementBox&, LayoutUnit nestedListMarkerMarginStart, InlineLayoutUnit rootInlineBoxOffset) const;
 
+    enum class IsLastLineOrAfterLineBreak : bool { No, Yes };
+    InlineLayoutUnit horizontalAlignmentOffset(InlineLayoutUnit horizontalAvailableSpace, IsLastLineOrAfterLineBreak, std::optional<TextDirection> inlineBaseDirectionOverride = std::nullopt) const;
+
 private:
+    InlineLayoutUnit contentLeftAfterLastLine(const ConstraintsForInFlowContent&, std::optional<InlineLayoutUnit> lastLineLogicalBottom, const FloatingContext&) const;
+
     const InlineFormattingContext& formattingContext() const { return downcast<InlineFormattingContext>(FormattingGeometry::formattingContext()); }
 
 };

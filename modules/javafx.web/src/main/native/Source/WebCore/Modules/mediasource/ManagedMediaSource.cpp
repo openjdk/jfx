@@ -28,6 +28,12 @@
 
 #if ENABLE(MANAGED_MEDIA_SOURCE)
 
+#include "Event.h"
+#include "EventNames.h"
+#include "MediaSourcePrivate.h"
+#include "SourceBufferList.h"
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ManagedMediaSource);
@@ -41,14 +47,13 @@ Ref<ManagedMediaSource> ManagedMediaSource::create(ScriptExecutionContext& conte
 
 ManagedMediaSource::ManagedMediaSource(ScriptExecutionContext& context)
     : MediaSource(context)
+    , m_streamingTimer(*this, &ManagedMediaSource::streamingTimerFired)
 {
 }
 
-ManagedMediaSource::~ManagedMediaSource() = default;
-
-ExceptionOr<ManagedMediaSource::BufferingPolicy> ManagedMediaSource::buffering() const
+ManagedMediaSource::~ManagedMediaSource()
 {
-    return BufferingPolicy::Medium;
+    m_streamingTimer.stop();
 }
 
 ExceptionOr<ManagedMediaSource::PreferredQuality> ManagedMediaSource::quality() const
@@ -59,6 +64,120 @@ ExceptionOr<ManagedMediaSource::PreferredQuality> ManagedMediaSource::quality() 
 bool ManagedMediaSource::isTypeSupported(ScriptExecutionContext& context, const String& type)
 {
     return MediaSource::isTypeSupported(context, type);
+}
+
+void ManagedMediaSource::setStreaming(bool streaming)
+{
+    if (m_streaming == streaming)
+        return;
+    m_streaming = streaming;
+    if (streaming) {
+        scheduleEvent(eventNames().startstreamingEvent);
+        if (m_streamingAllowed) {
+            ensurePrefsRead();
+            Seconds delay { *m_highThreshold };
+            m_streamingTimer.startOneShot(delay);
+        }
+    } else {
+        if (m_streamingTimer.isActive())
+            m_streamingTimer.stop();
+        scheduleEvent(eventNames().endstreamingEvent);
+    }
+    notifyElementUpdateMediaState();
+}
+
+bool ManagedMediaSource::isBuffered(const PlatformTimeRanges& ranges) const
+{
+    if (ranges.length() < 1 || isClosed())
+        return true;
+
+    ASSERT(ranges.length() == 1);
+
+    auto bufferedRanges = buffered();
+    if (!bufferedRanges.length())
+        return false;
+    bufferedRanges.intersectWith(ranges);
+
+    if (!bufferedRanges.length())
+        return false;
+
+    auto hasBufferedTime = [&] (const MediaTime& time) {
+        return abs(bufferedRanges.nearest(time) - time) <= m_private->timeFudgeFactor();
+    };
+
+    if (!hasBufferedTime(ranges.minimumBufferedTime()) || !hasBufferedTime(ranges.maximumBufferedTime()))
+        return false;
+
+    if (bufferedRanges.length() == 1)
+        return true;
+
+    // Ensure that if we have a gap in the buffered range, it is smaller than the fudge factor;
+    for (unsigned i = 1; i < bufferedRanges.length(); i++) {
+        if (bufferedRanges.end(i) - bufferedRanges.start(i-1) > m_private->timeFudgeFactor())
+            return false;
+    }
+
+    return true;
+}
+
+void ManagedMediaSource::ensurePrefsRead()
+{
+    if (m_lowThreshold && m_highThreshold)
+        return;
+    ASSERT(mediaElement());
+    m_lowThreshold = mediaElement()->document().settings().managedMediaSourceLowThreshold();
+    m_highThreshold = mediaElement()->document().settings().managedMediaSourceHighThreshold();
+}
+
+void ManagedMediaSource::monitorSourceBuffers()
+{
+    if (isClosed()) {
+        setStreaming(false);
+        return;
+    }
+
+    MediaSource::monitorSourceBuffers();
+
+    if (!activeSourceBuffers() || !activeSourceBuffers()->length()) {
+        setStreaming(true);
+        return;
+    }
+    auto currentTime = this->currentTime();
+
+    ensurePrefsRead();
+
+    auto limitAhead = [&] (double upper) {
+        MediaTime aheadTime = currentTime + MediaTime::createWithDouble(upper);
+        return isEnded() ? std::min(duration(), aheadTime) : aheadTime;
+    };
+    if (!m_streaming) {
+        PlatformTimeRanges neededBufferedRange { currentTime, std::max(currentTime, limitAhead(*m_lowThreshold)) };
+        if (!isBuffered(neededBufferedRange))
+            setStreaming(true);
+        return;
+    }
+
+    PlatformTimeRanges neededBufferedRange { currentTime, limitAhead(*m_highThreshold) };
+    if (isBuffered(neededBufferedRange))
+        setStreaming(false);
+}
+
+void ManagedMediaSource::streamingTimerFired()
+{
+    m_streamingAllowed = false;
+    notifyElementUpdateMediaState();
+}
+
+bool ManagedMediaSource::isOpen() const
+{
+#if !ENABLE(WIRELESS_PLAYBACK_TARGET)
+    return MediaSource::isOpen();
+#else
+    return MediaSource::isOpen()
+        && (mediaElement() && (!mediaElement()->document().settings().managedMediaSourceNeedsAirPlay()
+            || mediaElement()->isWirelessPlaybackTargetDisabled()
+            || mediaElement()->hasWirelessPlaybackTargetAlternative()));
+#endif
 }
 
 }

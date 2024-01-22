@@ -36,6 +36,7 @@
 #include "JSMap.h"
 #include "JSSet.h"
 #include "JSWeakMap.h"
+#include "NumericStrings.h"
 #include "Symbol.h"
 
 namespace JSC { namespace FTL {
@@ -52,6 +53,7 @@ namespace JSC { namespace FTL {
     macro(Butterfly_vectorLength, Butterfly::offsetOfVectorLength()) \
     macro(CallFrame_callerFrame, CallFrame::callerFrameOffset()) \
     macro(ClassInfo_parentClass, ClassInfo::offsetOfParentClass()) \
+    macro(ClonedArguments_callee, ClonedArguments::offsetOfCallee()) \
     macro(DateInstance_internalNumber, DateInstance::offsetOfInternalNumber()) \
     macro(DateInstance_data, DateInstance::offsetOfData()) \
     macro(DateInstanceData_gregorianDateTimeCachedForMS, DateInstanceData::offsetOfGregorianDateTimeCachedForMS()) \
@@ -92,6 +94,15 @@ namespace JSC { namespace FTL {
     macro(JSArrayBufferView_mode, JSArrayBufferView::offsetOfMode()) \
     macro(JSArrayBufferView_vector, JSArrayBufferView::offsetOfVector()) \
     macro(JSBigInt_length, JSBigInt::offsetOfLength()) \
+    macro(JSBoundFunction_targetFunction, JSBoundFunction::offsetOfTargetFunction()) \
+    macro(JSBoundFunction_boundThis, JSBoundFunction::offsetOfBoundThis()) \
+    macro(JSBoundFunction_boundArg0, JSBoundFunction::offsetOfBoundArgs() + sizeof(WriteBarrier<Unknown>) * 0) \
+    macro(JSBoundFunction_boundArg1, JSBoundFunction::offsetOfBoundArgs() + sizeof(WriteBarrier<Unknown>) * 1) \
+    macro(JSBoundFunction_boundArg2, JSBoundFunction::offsetOfBoundArgs() + sizeof(WriteBarrier<Unknown>) * 2) \
+    macro(JSBoundFunction_nameMayBeNull, JSBoundFunction::offsetOfNameMayBeNull()) \
+    macro(JSBoundFunction_length, JSBoundFunction::offsetOfLength()) \
+    macro(JSBoundFunction_boundArgsLength, JSBoundFunction::offsetOfBoundArgsLength()) \
+    macro(JSBoundFunction_canConstruct, JSBoundFunction::offsetOfCanConstruct()) \
     macro(JSCell_cellState, JSCell::cellStateOffset()) \
     macro(JSCell_header, 0) \
     macro(JSCell_indexingTypeAndMisc, JSCell::indexingTypeAndMiscOffset()) \
@@ -142,15 +153,19 @@ namespace JSC { namespace FTL {
     macro(StringImpl_data, StringImpl::dataOffset()) \
     macro(StringImpl_hashAndFlags, StringImpl::flagsOffset()) \
     macro(StringImpl_length, StringImpl::lengthMemoryOffset()) \
+    macro(Structure_bitField, Structure::bitFieldOffset()) \
     macro(Structure_classInfo, Structure::classInfoOffset()) \
     macro(Structure_globalObject, Structure::globalObjectOffset()) \
     macro(Structure_indexingModeIncludingHistory, Structure::indexingModeIncludingHistoryOffset()) \
     macro(Structure_inlineCapacity, Structure::inlineCapacityOffset()) \
     macro(Structure_outOfLineTypeFlags, Structure::outOfLineTypeFlagsOffset()) \
     macro(Structure_previousOrRareData, Structure::previousOrRareDataOffset()) \
+    macro(Structure_propertyHash, Structure::propertyHashOffset()) \
     macro(Structure_prototype, Structure::prototypeOffset()) \
-    macro(StructureRareData_cachedKeys, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::Keys)) \
-    macro(StructureRareData_cachedGetOwnPropertyNames, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::GetOwnPropertyNames)) \
+    macro(StructureRareData_cachedEnumerableStrings, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::EnumerableStrings)) \
+    macro(StructureRareData_cachedStrings, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::Strings)) \
+    macro(StructureRareData_cachedSymbols, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::Symbols)) \
+    macro(StructureRareData_cachedStringsAndSymbols, StructureRareData::offsetOfCachedPropertyNames(CachedPropertyNamesKind::StringsAndSymbols)) \
     macro(StructureRareData_cachedPropertyNameEnumeratorAndFlag, StructureRareData::offsetOfCachedPropertyNameEnumeratorAndFlag()) \
     macro(StructureRareData_specialPropertyCache, StructureRareData::offsetOfSpecialPropertyCache()) \
     macro(SpecialPropertyCache_cachedToStringTagValue, SpecialPropertyCache::offsetOfCache(CachedSpecialPropertyKey::ToStringTag) + SpecialPropertyCacheEntry::offsetOfValue()) \
@@ -189,6 +204,7 @@ namespace JSC { namespace FTL {
     macro(structureTable, 0, sizeof(Structure*)) \
     macro(variables, 0, sizeof(Register)) \
     macro(HasOwnPropertyCache, 0, sizeof(HasOwnPropertyCache::Entry)) \
+    macro(SmallIntCache, 0, sizeof(NumericStrings::StringWithJSString)) \
 
 #define FOR_EACH_NUMBERED_ABSTRACT_HEAP(macro) \
     macro(properties)

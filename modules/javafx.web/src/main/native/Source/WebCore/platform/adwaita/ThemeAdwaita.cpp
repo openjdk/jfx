@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015, 2020 Igalia S.L.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +36,11 @@
 #include "GraphicsContext.h"
 #include "LengthSize.h"
 #include <wtf/NeverDestroyed.h>
+
+#if PLATFORM(GTK)
+#include <gtk/gtk.h>
+#include <wtf/glib/GUniquePtr.h>
+#endif
 
 namespace WebCore {
 
@@ -81,6 +87,49 @@ Theme& Theme::singleton()
     static NeverDestroyed<ThemeAdwaita> theme;
     return theme;
 }
+
+ThemeAdwaita::ThemeAdwaita()
+{
+#if PLATFORM(GTK)
+    if (auto* settings = gtk_settings_get_default()) {
+        refreshGtkSettings();
+
+        // Note that Theme is NeverDestroy'd so the destructor will never be called to disconnect this.
+        g_signal_connect_swapped(G_OBJECT(settings), "notify::gtk-enable-animations", G_CALLBACK(+[](ThemeAdwaita* theme, GParamSpec*, GObject*) {
+            theme->refreshGtkSettings();
+        }), this);
+#if !USE(GTK4)
+        g_signal_connect_swapped(G_OBJECT(settings), "notify::gtk-theme-name", G_CALLBACK(+[](ThemeAdwaita* theme, GParamSpec*, GObject*) {
+            theme->refreshGtkSettings();
+        }), this);
+#endif // !USE(GTK4)
+    }
+
+#endif // PLATFORM(GTK)
+}
+
+#if PLATFORM(GTK)
+
+void ThemeAdwaita::refreshGtkSettings()
+{
+    if (auto* settings = gtk_settings_get_default()) {
+        gboolean enableAnimations;
+        g_object_get(settings, "gtk-enable-animations", &enableAnimations, nullptr);
+        m_prefersReducedMotion = !enableAnimations;
+
+        // For high contrast in GTK3 we can rely on the theme name and be accurate most of the time.
+        // However whether or not high-contrast is enabled is also stored in GSettings/xdg-desktop-portal.
+        // We could rely on libadwaita, dynamically, to re-use its logic but, no matter how we do it, the setting
+        // has to be proxied over from the UI process different than how GtkSettings is.
+#if !USE(GTK4)
+        GUniqueOutPtr<char> gtkThemeName;
+        g_object_get(settings, "gtk-theme-name", &gtkThemeName.outPtr(), nullptr);
+        m_prefersContrast = !g_strcmp0(gtkThemeName.get(), "HighContrast") || !g_strcmp0(gtkThemeName.get(), "HighContrastInverse");
+#endif // !USE(GTK4)
+    }
+}
+
+#endif // PLATFORM(GTK)
 
 Color ThemeAdwaita::focusColor(const Color& accentColor)
 {
@@ -189,8 +238,8 @@ LengthSize ThemeAdwaita::controlSize(StyleAppearance appearance, const FontCasca
         LengthSize spinButtonSize = zoomedSize;
         if (spinButtonSize.width.isIntrinsicOrAuto())
             spinButtonSize.width = Length(static_cast<int>(arrowSize * zoomFactor), LengthType::Fixed);
-        if (spinButtonSize.height.isIntrinsicOrAuto() || fontCascade.pixelSize() > static_cast<int>(arrowSize))
-            spinButtonSize.height = Length(fontCascade.pixelSize(), LengthType::Fixed);
+        if (spinButtonSize.height.isIntrinsicOrAuto() || fontCascade.size() > arrowSize)
+            spinButtonSize.height = Length(fontCascade.size(), LengthType::Fixed);
         return spinButtonSize;
     }
     default:
@@ -370,7 +419,7 @@ void ThemeAdwaita::paintRadio(ControlStates& states, GraphicsContext& graphicsCo
     Path path;
 
     if (states.states().containsAny({ ControlStates::States::Checked, ControlStates::States::Indeterminate })) {
-        path.addEllipse(fieldRect);
+        path.addEllipseInRect(fieldRect);
         graphicsContext.setFillRule(WindRule::NonZero);
         if (states.states().contains(ControlStates::States::Hovered) && states.states().contains(ControlStates::States::Enabled))
             graphicsContext.setFillColor(accentHoverColor);
@@ -380,11 +429,11 @@ void ThemeAdwaita::paintRadio(ControlStates& states, GraphicsContext& graphicsCo
         path.clear();
 
         fieldRect.inflate(-(fieldRect.width() - fieldRect.width() * 0.70));
-        path.addEllipse(fieldRect);
+        path.addEllipseInRect(fieldRect);
         graphicsContext.setFillColor(foregroundColor);
         graphicsContext.fillPath(path);
     } else {
-        path.addEllipse(fieldRect);
+        path.addEllipseInRect(fieldRect);
         if (states.states().contains(ControlStates::States::Hovered) && states.states().contains(ControlStates::States::Enabled))
             graphicsContext.setFillColor(toggleBorderHoverColor);
         else
@@ -393,7 +442,7 @@ void ThemeAdwaita::paintRadio(ControlStates& states, GraphicsContext& graphicsCo
         path.clear();
 
         fieldRect.inflate(-toggleBorderSize);
-        path.addEllipse(fieldRect);
+        path.addEllipseInRect(fieldRect);
         graphicsContext.setFillColor(foregroundColor);
         graphicsContext.fillPath(path);
     }
@@ -545,6 +594,20 @@ void ThemeAdwaita::setAccentColor(const Color& color)
 Color ThemeAdwaita::accentColor()
 {
     return m_accentColor;
+}
+
+bool ThemeAdwaita::userPrefersReducedMotion() const
+{
+    return m_prefersReducedMotion;
+}
+
+bool ThemeAdwaita::userPrefersContrast() const
+{
+#if !USE(GTK4)
+    return m_prefersContrast;
+#else
+    return false;
+#endif
 }
 
 } // namespace WebCore

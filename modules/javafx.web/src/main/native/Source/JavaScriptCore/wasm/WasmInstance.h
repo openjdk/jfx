@@ -32,6 +32,7 @@
 #include "WasmMemory.h"
 #include "WasmModule.h"
 #include "WasmTable.h"
+#include "WebAssemblyFunction.h"
 #include "WriteBarrier.h"
 #include <wtf/BitVector.h>
 #include <wtf/RefPtr.h>
@@ -65,7 +66,10 @@ public:
     JSWebAssemblyInstance* owner() const { return m_owner; }
     static ptrdiff_t offsetOfOwner() { return OBJECT_OFFSETOF(Instance, m_owner); }
     static ptrdiff_t offsetOfVM() { return OBJECT_OFFSETOF(Instance, m_vm); }
+    static ptrdiff_t offsetOfSoftStackLimit() { return OBJECT_OFFSETOF(Instance, m_softStackLimit); }
     static ptrdiff_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(Instance, m_globalObject); }
+
+    void updateSoftStackLimit(void* softStackLimit) { m_softStackLimit = softStackLimit; }
 
     size_t extraMemoryAllocated() const;
 
@@ -79,6 +83,8 @@ public:
     const Element* elementAt(unsigned) const;
 
     void initElementSegment(uint32_t tableIndex, const Element& segment, uint32_t dstOffset, uint32_t srcOffset, uint32_t length);
+    template<typename T> bool copyDataSegment(uint32_t segmentIndex, uint32_t offset, uint32_t lengthInBytes, FixedVector<T>& values);
+    void copyElementSegment(const Element& segment, uint32_t srcOffset, uint32_t length, FixedVector<uint64_t>& values);
 
     bool isImportFunction(uint32_t functionIndex) const
     {
@@ -243,6 +249,7 @@ private:
         return roundUpToMultipleOf<sizeof(Global::Value)>(offsetOfTail() + sizeof(ImportFunctionInfo) * numImportFunctions + sizeof(Table*) * numTables) + sizeof(Global::Value) * numGlobals;
     }
     VM* m_vm;
+    void* m_softStackLimit { nullptr };
     JSWebAssemblyInstance* m_owner { nullptr };
     JSGlobalObject* m_globalObject; // This is kept by JSWebAssemblyInstance*.
     CagedPtr<Gigacage::Primitive, void, tagCagedPtr> m_cachedMemory;

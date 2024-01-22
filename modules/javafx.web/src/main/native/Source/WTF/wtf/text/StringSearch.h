@@ -41,14 +41,14 @@ public:
     explicit BoyerMooreHorspoolTable(StringView pattern)
     {
         if (pattern.is8Bit())
-            initializeTable(Span { pattern.characters8(), pattern.characters8() + pattern.length() });
+            initializeTable(std::span(pattern.characters8(), pattern.characters8() + pattern.length()));
         else
-            initializeTable(Span { pattern.characters16(), pattern.characters16() + pattern.length() });
+            initializeTable(std::span(pattern.characters16(), pattern.characters16() + pattern.length()));
     }
 
     explicit constexpr BoyerMooreHorspoolTable(ASCIILiteral pattern)
     {
-        initializeTable(Span { pattern.characters(), pattern.characters() + pattern.length() });
+        initializeTable(std::span(pattern.characters(), pattern.characters() + pattern.length()));
     }
 
     ALWAYS_INLINE size_t find(StringView string, StringView matchString) const
@@ -74,7 +74,7 @@ public:
 
 private:
     template<typename CharacterType>
-    constexpr void initializeTable(Span<CharacterType> pattern)
+    constexpr void initializeTable(std::span<CharacterType> pattern)
     {
         size_t length = pattern.size();
         ASSERT_UNDER_CONSTEXPR_CONTEXT(length <= maxPatternLength);

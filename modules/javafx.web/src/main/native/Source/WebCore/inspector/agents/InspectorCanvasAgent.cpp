@@ -37,7 +37,6 @@
 #include "Document.h"
 #include "Element.h"
 #include "EventLoop.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
@@ -50,8 +49,9 @@
 #include "InspectorShaderProgram.h"
 #include "InstrumentingAgents.h"
 #include "JSExecState.h"
-#include "OffscreenCanvas.h"
+#include "LocalFrame.h"
 #include "Path2D.h"
+#include "PlaceholderRenderingContext.h"
 #include "StringAdaptors.h"
 #include "WebGL2RenderingContext.h"
 #include "WebGLBuffer.h"
@@ -84,6 +84,11 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
+
+#if ENABLE(OFFSCREEN_CANVAS)
+#include "OffscreenCanvas.h"
+#include "OffscreenCanvasRenderingContext2D.h"
+#endif
 namespace WebCore {
 
 using namespace Inspector;
@@ -136,7 +141,10 @@ Protocol::ErrorStringOr<void> InspectorCanvasAgent::enable()
     {
         Locker locker { CanvasRenderingContext::instancesLock() };
         for (auto* context : CanvasRenderingContext::instances()) {
-
+#if ENABLE(OFFSCREEN_CANVAS)
+            if (is<PlaceholderRenderingContext>(context))
+                continue;
+#endif
             if (existsInCurrentPage(context->canvasBase().scriptExecutionContext()))
                 bindCanvas(*context, false);
         }
@@ -189,16 +197,10 @@ Protocol::ErrorStringOr<Protocol::DOM::NodeId> InspectorCanvasAgent::requestNode
 Protocol::ErrorStringOr<String> InspectorCanvasAgent::requestContent(const Protocol::Canvas::CanvasId& canvasId)
 {
     Protocol::ErrorString errorString;
-
     auto inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
         return makeUnexpected(errorString);
-
-    auto result = inspectorCanvas->getCanvasContentAsDataURL(errorString);
-    if (!result)
-        return makeUnexpected(errorString);
-
-    return result;
+    return inspectorCanvas->getContentAsDataURL();
 }
 
 Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::DOM::NodeId>>> InspectorCanvasAgent::requestClientNodes(const Protocol::Canvas::CanvasId& canvasId)
@@ -361,7 +363,7 @@ Protocol::ErrorStringOr<void> InspectorCanvasAgent::setShaderProgramHighlighted(
 
 #endif // ENABLE(WEBGL)
 
-void InspectorCanvasAgent::frameNavigated(Frame& frame)
+void InspectorCanvasAgent::frameNavigated(LocalFrame& frame)
 {
     if (frame.isMainFrame()) {
         reset();
@@ -422,8 +424,6 @@ void InspectorCanvasAgent::didChangeCanvasMemory(CanvasRenderingContext& context
     ASSERT(inspectorCanvas);
     if (!inspectorCanvas)
         return;
-
-    // FIXME: <https://webkit.org/b/180833> Web Inspector: support OffscreenCanvas for Canvas related operations
 
     if (auto* node = inspectorCanvas->canvasElement())
         m_frontendDispatcher->canvasMemoryChanged(inspectorCanvas->identifier(), node->memoryCost());
@@ -630,11 +630,13 @@ void InspectorCanvasAgent::recordAction(CanvasRenderingContext& canvasRenderingC
 void InspectorCanvasAgent::startRecording(InspectorCanvas& inspectorCanvas, Protocol::Recording::Initiator initiator, RecordingOptions&& recordingOptions)
 {
     auto& context = inspectorCanvas.canvasContext();
-
     // FIXME: <https://webkit.org/b/201651> Web Inspector: Canvas: support canvas recordings for WebGPUDevice
 
     if (!is<CanvasRenderingContext2D>(context)
         && !is<ImageBitmapRenderingContext>(context)
+#if ENABLE(OFFSCREEN_CANVAS)
+        && !is<OffscreenCanvasRenderingContext2D>(context)
+#endif
 #if ENABLE(WEBGL)
         && !is<WebGLRenderingContext>(context)
         && !is<WebGL2RenderingContext>(context)

@@ -42,7 +42,6 @@
 #include "EditorInsertAction.h"
 #include "ElementTraversal.h"
 #include "Event.h"
-#include "Frame.h"
 #include "HTMLBRElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLLIElement.h"
@@ -55,11 +54,13 @@
 #include "InsertNodeBeforeCommand.h"
 #include "InsertParagraphSeparatorCommand.h"
 #include "InsertTextCommand.h"
+#include "LocalFrame.h"
 #include "MergeIdenticalElementsCommand.h"
 #include "NodeTraversal.h"
 #include "RemoveNodeCommand.h"
 #include "RemoveNodePreservingChildrenCommand.h"
 #include "RenderBlockFlow.h"
+#include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "RenderedDocumentMarker.h"
 #include "ReplaceNodeWithSpanCommand.h"
@@ -225,7 +226,7 @@ bool EditCommandComposition::areRootEditabledElementsConnected()
 void EditCommandComposition::unapply()
 {
     ASSERT(m_document);
-    RefPtr<Frame> frame = m_document->frame();
+    RefPtr frame { m_document->frame() };
     if (!frame)
         return;
 
@@ -266,7 +267,7 @@ void EditCommandComposition::unapply()
 void EditCommandComposition::reapply()
 {
     ASSERT(m_document);
-    RefPtr<Frame> frame = m_document->frame();
+    RefPtr frame { m_document->frame() };
     if (!frame)
         return;
 

@@ -33,7 +33,8 @@
 #include "CSSStyleSheet.h"
 #include "CustomPropertyRegistry.h"
 #include "Element.h"
-#include "ElementChildIterator.h"
+#include "ElementAncestorIteratorInlines.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "ExtensionStyleSheets.h"
 #include "HTMLHeadElement.h"
@@ -44,6 +45,7 @@
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "ProcessingInstruction.h"
+#include "RenderBoxInlines.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGStyleElement.h"
@@ -85,6 +87,7 @@ Scope::Scope(ShadowRoot& shadowRoot)
 Scope::~Scope()
 {
     ASSERT(!hasPendingSheets());
+    weakPtrFactory().revokeAll();
 }
 
 Resolver& Scope::resolver()
@@ -164,6 +167,7 @@ void Scope::clearResolver()
 {
     m_resolver = nullptr;
     customPropertyRegistry().clearRegisteredFromStylesheets();
+    counterStyleRegistry().clearAuthorCounterStyles();
 }
 
 void Scope::releaseMemory()
@@ -576,7 +580,7 @@ void Scope::invalidateStyleAfterStyleSheetChange(const StyleSheetChange& styleSh
         return;
 
     // If we are already parsing the body and so may have significant amount of elements, put some effort into trying to avoid style recalcs.
-    bool invalidateAll = !m_document.bodyOrFrameset() || m_document.hasNodesWithNonFinalStyle() || m_document.hasNodesWithMissingStyle();
+    bool invalidateAll = !m_document.bodyOrFrameset() || m_document.hasNodesWithMissingStyle();
 
     if (styleSheetChange.resolverUpdateType == ResolverUpdateType::Reconstruct || invalidateAll) {
         Invalidator::invalidateAllStyle(*this);
@@ -601,6 +605,7 @@ void Scope::updateResolver(Vector<RefPtr<CSSStyleSheet>>& activeStyleSheets, Res
 
     if (updateType == ResolverUpdateType::Reset) {
         customPropertyRegistry().clearRegisteredFromStylesheets();
+        counterStyleRegistry().clearAuthorCounterStyles();
         m_resolver->ruleSets().resetAuthorStyle();
         m_resolver->appendAuthorStyleSheets(activeStyleSheets);
         return;

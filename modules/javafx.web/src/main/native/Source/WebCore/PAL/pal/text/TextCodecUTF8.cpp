@@ -326,7 +326,7 @@ String TextCodecUTF8::decode(const char* bytes, size_t length, bool flush, bool 
                 if (WTF::isAlignedToMachineWord(source)) {
                     while (source < alignedEnd) {
                         auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source);
-                        if (!WTF::isAllASCII<LChar>(chunk))
+                        if (!WTF::containsOnlyASCII<LChar>(chunk))
                             break;
                         copyASCIIMachineWord(destination, source);
                         source += sizeof(WTF::MachineWord);
@@ -406,7 +406,7 @@ upConvertTo16Bit:
                 if (WTF::isAlignedToMachineWord(source)) {
                     while (source < alignedEnd) {
                         auto chunk = *reinterpret_cast_ptr<const WTF::MachineWord*>(source);
-                        if (!WTF::isAllASCII<LChar>(chunk))
+                        if (!WTF::containsOnlyASCII<LChar>(chunk))
                             break;
                         copyASCIIMachineWord(destination16, source);
                         source += sizeof(WTF::MachineWord);
@@ -458,7 +458,7 @@ upConvertTo16Bit:
     return String::adopt(WTFMove(buffer16));
 }
 
-Vector<uint8_t> TextCodecUTF8::encodeUTF8(StringView string, UnencodableHandling)
+Vector<uint8_t> TextCodecUTF8::encodeUTF8(StringView string)
 {
     // The maximum number of UTF-8 bytes needed per UTF-16 code unit is 3.
     // BMP characters take only one UTF-16 code unit and can take up to 3 bytes (3x).
@@ -471,9 +471,9 @@ Vector<uint8_t> TextCodecUTF8::encodeUTF8(StringView string, UnencodableHandling
     return bytes;
 }
 
-Vector<uint8_t> TextCodecUTF8::encode(StringView string, UnencodableHandling unencodableHandling) const
+Vector<uint8_t> TextCodecUTF8::encode(StringView string, UnencodableHandling) const
 {
-    return encodeUTF8(string, unencodableHandling);
+    return encodeUTF8(string);
 }
 
 } // namespace PAL

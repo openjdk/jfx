@@ -38,8 +38,6 @@ namespace WebCore {
 
 WEBCORE_EXPORT Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t length);
 
-WEBCORE_EXPORT Vector<uint8_t> convertArrayBufferToVector(ArrayBuffer*);
-
 // Produce a SHA-256 hash of the given RP ID.
 WEBCORE_EXPORT Vector<uint8_t> produceRpIdHash(const String& rpId);
 
@@ -58,7 +56,7 @@ WEBCORE_EXPORT cbor::CBORValue::MapValue buildCredentialDescriptor(const Vector<
 // https://www.w3.org/TR/webauthn/#attestation-object
 WEBCORE_EXPORT Vector<uint8_t> buildAttestationObject(Vector<uint8_t>&& authData, String&& format, cbor::CBORValue::MapValue&& statementMap, const AttestationConveyancePreference&);
 
-WEBCORE_EXPORT Ref<ArrayBuffer> buildClientDataJson(ClientDataType /*type*/, const BufferSource& challenge, const SecurityOrigin& /*origin*/, WebAuthn::Scope);
+WEBCORE_EXPORT Ref<ArrayBuffer> buildClientDataJson(ClientDataType /*type*/, const BufferSource& challenge, const SecurityOrigin& /*origin*/, WebAuthn::Scope, const String& topOrigin = { });
 
 WEBCORE_EXPORT Vector<uint8_t> buildClientDataJsonHash(const ArrayBuffer& clientDataJson);
 

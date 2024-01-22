@@ -58,11 +58,12 @@ struct NotificationData {
     WebCore::NotificationDirection direction;
     String originString;
     URL serviceWorkerRegistrationURL;
-    UUID notificationID;
+    WTF::UUID notificationID;
     ScriptExecutionContextIdentifier contextIdentifier;
     PAL::SessionID sourceSession;
     MonotonicTime creationTime;
     Vector<uint8_t> data;
+    std::optional<bool> silent;
 };
 
 } // namespace WebCore

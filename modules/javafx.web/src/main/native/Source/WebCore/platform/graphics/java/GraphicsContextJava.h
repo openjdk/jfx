@@ -77,7 +77,7 @@ public:
     virtual ~GraphicsContextJava();
 
     bool hasPlatformContext() const override { return true; }
-    PlatformGraphicsContext* platformContext() const override;
+    PlatformGraphicsContext* platformContext() override;
 
     void savePlatformState();
     void restorePlatformState();
@@ -107,8 +107,10 @@ public:
     void strokeRect(const FloatRect& rect, float lineWidth) override;
     void strokePath(const Path& path) override;
 
+    void resetClip() override;
     void clip(const FloatRect& rect) override;
     IntRect clipBounds() const override;
+    void clipToImageBuffer(ImageBuffer&, const FloatRect&) override;
     void clipPath(const Path &path, WindRule) override;
     void clipOut(const Path& path) override;
     void clipOut(const FloatRect& rect) override;

@@ -63,18 +63,20 @@ class Element;
 class Event;
 class Exception;
 class FloatQuad;
-class Frame;
 class InspectorHistory;
 #if ENABLE(VIDEO)
 class HTMLMediaElement;
 #endif
 class HitTestResult;
+class LocalFrame;
 class Node;
 class Page;
 class PseudoElement;
 class RenderObject;
 class RevalidateStyleAttributeTask;
 class ShadowRoot;
+
+enum class PlatformEventModifier : uint8_t;
 
 struct Styleable;
 
@@ -185,7 +187,7 @@ public:
     void didChangeCustomElementState(Element&);
     bool handleTouchEvent(Node&);
     void didCommitLoad(Document*);
-    void frameDocumentUpdated(Frame&);
+    void frameDocumentUpdated(LocalFrame&);
     void pseudoElementCreated(PseudoElement&);
     void pseudoElementDestroyed(PseudoElement&);
     void didAddEventListener(EventTarget&);
@@ -211,7 +213,7 @@ public:
 
     RefPtr<Inspector::Protocol::Runtime::RemoteObject> resolveNode(Node*, const String& objectGroup);
     bool handleMousePress();
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags);
+    void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>);
     void inspect(Node*);
     void focusNode();
 

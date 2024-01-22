@@ -20,12 +20,13 @@
 #include "config.h"
 #include "RenderSVGResourceSolidColor.h"
 
-#include "Frame.h"
-#include "FrameView.h"
 #include "GraphicsContext.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
+#include "SVGRenderStyle.h"
 #include "SVGRenderSupport.h"
 
 namespace WebCore {

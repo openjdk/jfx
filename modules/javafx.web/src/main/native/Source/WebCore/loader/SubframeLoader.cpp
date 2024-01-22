@@ -37,18 +37,20 @@
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
-#include "FrameLoaderClient.h"
 #include "HTMLFrameElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "MIMETypeRegistry.h"
 #include "MixedContentChecker.h"
 #include "NavigationScheduler.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "PluginData.h"
 #include "PluginDocument.h"
+#include "RenderBoxInlines.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderView.h"
 #include "ScriptController.h"
@@ -71,7 +73,7 @@ static bool canLoadJavaScriptURL(HTMLFrameOwnerElement& ownerElement, const URL&
     return true;
 }
 
-FrameLoader::SubframeLoader::SubframeLoader(Frame& frame)
+FrameLoader::SubframeLoader::SubframeLoader(LocalFrame& frame)
     : m_frame(frame)
 {
 }
@@ -125,7 +127,7 @@ bool FrameLoader::SubframeLoader::pluginIsLoadable(const URL& url)
         if (document->isSandboxed(SandboxPlugins))
             return false;
 
-        if (!document->securityOrigin().canDisplay(url)) {
+        if (!document->securityOrigin().canDisplay(url, OriginAccessPatternsForWebProcess::singleton())) {
             FrameLoader::reportLocalLoadFailed(&m_frame, url.string());
             return false;
         }
@@ -232,14 +234,14 @@ bool FrameLoader::SubframeLoader::requestObject(HTMLPlugInImageElement& ownerEle
     return loadOrRedirectSubframe(ownerElement, completedURL, frameName, LockHistory::Yes, LockBackForwardList::Yes);
 }
 
-Frame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement& ownerElement, const URL& requestURL, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+LocalFrame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement& ownerElement, const URL& requestURL, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
 {
     auto& initiatingDocument = ownerElement.document();
 
     URL upgradedRequestURL = requestURL;
     initiatingDocument.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(upgradedRequestURL, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    RefPtr frame = dynamicDowncast<LocalFrame>(ownerElement.contentFrame());
+    RefPtr frame = ownerElement.contentFrame();
     if (frame) {
         CompletionHandler<void()> stopDelayingLoadEvent = [] { };
         if (upgradedRequestURL.protocolIsJavaScript()) {
@@ -259,12 +261,12 @@ Frame* FrameLoader::SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement
     return dynamicDowncast<LocalFrame>(ownerElement.contentFrame());
 }
 
-RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const AtomString& name, const String& referrer)
+RefPtr<LocalFrame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const AtomString& name, const String& referrer)
 {
     Ref protectedFrame { m_frame };
     Ref document = ownerElement.document();
 
-    if (!document->securityOrigin().canDisplay(url)) {
+    if (!document->securityOrigin().canDisplay(url, OriginAccessPatternsForWebProcess::singleton())) {
         FrameLoader::reportLocalLoadFailed(&m_frame, url.string());
         return nullptr;
     }
@@ -295,7 +297,7 @@ RefPtr<Frame> FrameLoader::SubframeLoader::loadSubframe(HTMLFrameOwnerElement& o
     ReferrerPolicy policy = ownerElement.referrerPolicy();
     if (policy == ReferrerPolicy::EmptyString)
         policy = document->referrerPolicy();
-    String referrerToUse = SecurityPolicy::generateReferrerHeader(policy, url, referrer);
+    String referrerToUse = SecurityPolicy::generateReferrerHeader(policy, url, referrer, OriginAccessPatternsForWebProcess::singleton());
 
     m_frame.loader().loadURLIntoChildFrame(url, referrerToUse, frame.get());
 

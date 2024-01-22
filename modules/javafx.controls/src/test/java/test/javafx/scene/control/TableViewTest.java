@@ -6064,4 +6064,25 @@ public class TableViewTest {
         table.getSelectionModel().selectIndices(1, new int[]{1, 2});
         assertEquals(2, table.getSelectionModel().getSelectedIndex());
     }
+
+    @Test
+    public void testTableItemsNullShouldNotThrow() {
+        final TableColumn<String, String> c = new TableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+        table.getColumns().add(c);
+
+        table.getItems().addAll("1", "2", "3");
+
+        stageLoader = new StageLoader(table);
+        table.setItems(null);
+        // Should not throw an NPE.
+        Toolkit.getToolkit().firePulse();
+    }
+
+    @Test
+    public void testTableItemsNullQueryAcceessibleAttributeRowCountShouldNotThrow() {
+        table.setItems(null);
+        // Should not throw an NPE.
+        table.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
+    }
 }

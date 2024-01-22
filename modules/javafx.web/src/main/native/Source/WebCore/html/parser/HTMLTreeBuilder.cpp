@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2016 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,9 +73,9 @@ CustomElementConstructionData::~CustomElementConstructionData() = default;
 
 namespace {
 
-inline bool isHTMLSpaceOrReplacementCharacter(UChar character)
+inline bool isASCIIWhitespaceOrReplacementCharacter(UChar character)
 {
-    return isHTMLSpace(character) || character == replacementCharacter;
+    return isASCIIWhitespace(character) || character == replacementCharacter;
 }
 
 }
@@ -83,16 +83,6 @@ inline bool isHTMLSpaceOrReplacementCharacter(UChar character)
 static inline TextPosition uninitializedPositionValue1()
 {
     return TextPosition(OrdinalNumber::fromOneBasedInt(-1), OrdinalNumber());
-}
-
-static inline bool isAllWhitespace(const String& string)
-{
-    return string.isAllSpecialCharacters<isHTMLSpace>();
-}
-
-static inline bool isAllWhitespaceOrReplacementCharacters(const String& string)
-{
-    return string.isAllSpecialCharacters<isHTMLSpaceOrReplacementCharacter>();
 }
 
 #if ASSERT_ENABLED
@@ -172,17 +162,17 @@ public:
 
     void skipLeadingWhitespace()
     {
-        skipLeading<isHTMLSpace>();
+        skipLeading<isASCIIWhitespace>();
     }
 
     String takeLeadingWhitespace()
     {
-        return takeLeading<isHTMLSpace>();
+        return takeLeading<isASCIIWhitespace>();
     }
 
     void skipLeadingNonWhitespace()
     {
-        skipLeading<isNotHTMLSpace>();
+        skipLeading<isNotASCIIWhitespace>();
     }
 
     String takeRemaining()
@@ -204,7 +194,7 @@ public:
         Vector<LChar, 8> whitespace;
         do {
             UChar character = m_text[0];
-            if (isHTMLSpace(character))
+            if (isASCIIWhitespace(character))
                 whitespace.append(character);
             m_text = m_text.substring(1);
         } while (!m_text.isEmpty());
@@ -425,7 +415,7 @@ void HTMLTreeBuilder::processFakeEndTag(TagName tagName)
 
 void HTMLTreeBuilder::processFakeEndTag(const HTMLStackItem& item)
 {
-    AtomHTMLToken fakeToken(HTMLToken::Type::EndTag, tagNameForElement(item.elementName()), item.localName());
+    AtomHTMLToken fakeToken(HTMLToken::Type::EndTag, tagNameForElementName(item.elementName()), item.localName());
     processEndTag(WTFMove(fakeToken));
 }
 
@@ -475,19 +465,6 @@ template <bool shouldClose(const HTMLStackItem&)> void HTMLTreeBuilder::processC
     m_tree.insertHTMLElement(WTFMove(token));
 }
 
-template <typename TableQualifiedName> static MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName> createCaseMap(const TableQualifiedName* const names[], unsigned length)
-{
-    MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName> map;
-    for (unsigned i = 0; i < length; ++i) {
-        const QualifiedName& name = *names[i];
-        const AtomString& localName = name.localName();
-        AtomString loweredLocalName = localName.convertToASCIILowercase();
-        if (loweredLocalName != localName)
-            map.add(loweredLocalName, name);
-    }
-    return map;
-}
-
 static void adjustSVGTagNameCase(AtomHTMLToken& token)
 {
     if (auto currentTagName = token.tagName(); currentTagName != TagName::Unknown)
@@ -503,37 +480,129 @@ static inline void adjustAttributes(const MemoryCompactLookupOnlyRobinHoodHashMa
     }
 }
 
-template<const QualifiedName* const* attributesTable(), unsigned attributesTableLength> static void adjustAttributes(AtomHTMLToken& token)
+// https://html.spec.whatwg.org/multipage/parsing.html#adjust-svg-attributes
+static MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName> createSVGAttributesMap()
 {
-    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName>> map = createCaseMap(attributesTable(), attributesTableLength);
-    adjustAttributes(map, token);
+    MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName> map;
+
+    const QualifiedName svgAttrs[] = {
+        SVGNames::attributeNameAttr,
+        SVGNames::attributeTypeAttr,
+        SVGNames::baseFrequencyAttr,
+        SVGNames::baseProfileAttr,
+        SVGNames::calcModeAttr,
+        SVGNames::clipPathUnitsAttr,
+        SVGNames::diffuseConstantAttr,
+        SVGNames::edgeModeAttr,
+        SVGNames::filterUnitsAttr,
+        SVGNames::glyphRefAttr,
+        SVGNames::gradientTransformAttr,
+        SVGNames::gradientUnitsAttr,
+        SVGNames::kernelMatrixAttr,
+        SVGNames::kernelUnitLengthAttr,
+        SVGNames::keyPointsAttr,
+        SVGNames::keySplinesAttr,
+        SVGNames::keyTimesAttr,
+        SVGNames::lengthAdjustAttr,
+        SVGNames::limitingConeAngleAttr,
+        SVGNames::markerHeightAttr,
+        SVGNames::markerUnitsAttr,
+        SVGNames::markerWidthAttr,
+        SVGNames::maskContentUnitsAttr,
+        SVGNames::maskUnitsAttr,
+        SVGNames::numOctavesAttr,
+        SVGNames::pathLengthAttr,
+        SVGNames::patternContentUnitsAttr,
+        SVGNames::patternTransformAttr,
+        SVGNames::patternUnitsAttr,
+        SVGNames::pointsAtXAttr,
+        SVGNames::pointsAtYAttr,
+        SVGNames::pointsAtZAttr,
+        SVGNames::preserveAlphaAttr,
+        SVGNames::preserveAspectRatioAttr,
+        SVGNames::primitiveUnitsAttr,
+        SVGNames::refXAttr,
+        SVGNames::refYAttr,
+        SVGNames::repeatCountAttr,
+        SVGNames::repeatDurAttr,
+        SVGNames::requiredExtensionsAttr,
+        SVGNames::requiredFeaturesAttr,
+        SVGNames::specularConstantAttr,
+        SVGNames::specularExponentAttr,
+        SVGNames::spreadMethodAttr,
+        SVGNames::startOffsetAttr,
+        SVGNames::stdDeviationAttr,
+        SVGNames::stitchTilesAttr,
+        SVGNames::surfaceScaleAttr,
+        SVGNames::systemLanguageAttr,
+        SVGNames::tableValuesAttr,
+        SVGNames::targetXAttr,
+        SVGNames::targetYAttr,
+        SVGNames::textLengthAttr,
+        SVGNames::viewBoxAttr,
+        SVGNames::viewTargetAttr,
+        SVGNames::xChannelSelectorAttr,
+        SVGNames::yChannelSelectorAttr,
+        SVGNames::zoomAndPanAttr,
+    };
+
+    for (auto name : svgAttrs)
+        map.add(name.localNameLowercase(), name);
+
+    return map;
 }
 
 static inline void adjustSVGAttributes(AtomHTMLToken& token)
 {
-    adjustAttributes<SVGNames::getSVGAttrs, SVGNames::SVGAttrsCount>(token);
+    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName>> map = createSVGAttributesMap();
+    adjustAttributes(map, token);
+}
+
+// https://html.spec.whatwg.org/multipage/parsing.html#adjust-mathml-attributes
+static MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName> createMathMLAttributesMap()
+{
+    MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName> map;
+
+    map.add("definitionurl"_s, MathMLNames::definitionURLAttr);
+
+    return map;
 }
 
 static inline void adjustMathMLAttributes(AtomHTMLToken& token)
 {
-    adjustAttributes<MathMLNames::getMathMLAttrs, MathMLNames::MathMLAttrsCount>(token);
+    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName>> map = createMathMLAttributesMap();
+    adjustAttributes(map, token);
 }
 
+// https://html.spec.whatwg.org/multipage/parsing.html#adjust-foreign-attributes
 static MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName> createForeignAttributesMap()
 {
-    auto addNamesWithPrefix = [](MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName>& map, const AtomString& prefix, const QualifiedName* const names[], unsigned length) {
-        for (unsigned i = 0; i < length; ++i) {
-            const QualifiedName& name = *names[i];
-            const AtomString& localName = name.localName();
-            map.add(makeAtomString(prefix, ':', localName), QualifiedName(prefix, localName, name.namespaceURI()));
-        }
-    };
-
     MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName> map;
 
+    auto addNameWithPrefix = [](MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, QualifiedName>& map, const QualifiedName name, const AtomString& prefix) {
+            const AtomString& localName = name.localName();
+            map.add(makeAtomString(prefix, ':', localName), QualifiedName(prefix, localName, name.namespaceURI()));
+    };
+
     AtomString xlinkName("xlink"_s);
-    addNamesWithPrefix(map, xlinkName, XLinkNames::getXLinkAttrs(), XLinkNames::XLinkAttrsCount);
-    addNamesWithPrefix(map, xmlAtom(), XMLNames::getXMLAttrs(), XMLNames::XMLAttrsCount);
+    const QualifiedName xLinkAttrs[] = {
+        XLinkNames::actuateAttr,
+        XLinkNames::arcroleAttr,
+        XLinkNames::hrefAttr,
+        XLinkNames::roleAttr,
+        XLinkNames::showAttr,
+        XLinkNames::titleAttr,
+        XLinkNames::typeAttr,
+    };
+    for (auto name : xLinkAttrs)
+        addNameWithPrefix(map, name, xlinkName);
+
+    const QualifiedName xmlAttrs[] = {
+        XMLNames::langAttr,
+        XMLNames::spaceAttr,
+    };
+    for (auto name : xmlAttrs)
+        addNameWithPrefix(map, name, xmlAtom());
 
     map.add(xmlnsAtom(), XMLNSNames::xmlnsAttr);
     map.add("xmlns:xlink"_s, QualifiedName(xmlnsAtom(), xlinkName, XMLNSNames::xmlnsNamespaceURI));
@@ -557,7 +626,6 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomHTMLToken&& token)
     case TagName::base:
     case TagName::basefont:
     case TagName::bgsound:
-    case TagName::command:
     case TagName::link:
     case TagName::meta:
     case TagName::noframes:
@@ -618,6 +686,7 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomHTMLToken&& token)
     case TagName::nav:
     case TagName::ol:
     case TagName::p:
+    case TagName::search:
     case TagName::section:
     case TagName::summary:
     case TagName::ul:
@@ -886,6 +955,7 @@ void HTMLTreeBuilder::processTemplateStartTag(AtomHTMLToken&& token)
 {
     m_tree.activeFormattingElements().appendMarker();
     m_tree.insertHTMLTemplateElement(WTFMove(token));
+    m_framesetOk = false;
     m_templateInsertionModes.append(InsertionMode::TemplateContents);
     m_insertionMode = InsertionMode::TemplateContents;
 }
@@ -1015,7 +1085,7 @@ void HTMLTreeBuilder::processStartTagForInTable(AtomHTMLToken&& token)
         parseError(token);
         if (m_tree.form() && !isParsingTemplateContents())
             return;
-        m_tree.insertHTMLFormElement(WTFMove(token), true);
+        m_tree.insertHTMLFormElement(WTFMove(token));
         m_tree.openElements().pop();
         return;
     case TagName::template_:
@@ -1345,6 +1415,13 @@ void HTMLTreeBuilder::processStartTag(AtomHTMLToken&& token)
             if (m_tree.currentStackItem().elementName() == HTML::optgroup)
                 processFakeEndTag(TagName::optgroup);
             m_tree.insertHTMLElement(WTFMove(token));
+            return;
+        case TagName::hr:
+            if (m_tree.currentStackItem().elementName() == HTML::option)
+                processFakeEndTag(TagName::option);
+            if (m_tree.currentStackItem().elementName() == HTML::optgroup)
+                processFakeEndTag(TagName::optgroup);
+            m_tree.insertSelfClosingHTMLElement(WTFMove(token));
             return;
         case TagName::select: {
             parseError(token);
@@ -1845,6 +1922,7 @@ void HTMLTreeBuilder::processEndTagForInBody(AtomHTMLToken&& token)
     case TagName::nav:
     case TagName::ol:
     case TagName::pre:
+    case TagName::search:
     case TagName::section:
     case TagName::summary:
     case TagName::ul:
@@ -2446,6 +2524,16 @@ static inline bool shouldParseTelephoneNumbersInNode(const ContainerNode& node)
 
 #endif // ENABLE(TELEPHONE_NUMBER_DETECTION) && PLATFORM(IOS_FAMILY)
 
+inline bool HTMLTreeBuilder::consumeAndInsertWhitespace(ExternalCharacterTokenBuffer& buffer)
+{
+    auto leadingWhitespace = buffer.takeLeadingWhitespace();
+    if (!leadingWhitespace.isEmpty())
+        m_tree.insertTextNode(leadingWhitespace);
+    if (buffer.isEmpty())
+        return true;
+    return false;
+}
+
 void HTMLTreeBuilder::processCharacterBuffer(ExternalCharacterTokenBuffer& buffer)
 {
 ReprocessBuffer:
@@ -2490,20 +2578,14 @@ ReprocessBuffer:
         ASSERT(m_insertionMode == InsertionMode::InHead);
         FALLTHROUGH;
     case InsertionMode::InHead: {
-        String leadingWhitespace = buffer.takeLeadingWhitespace();
-        if (!leadingWhitespace.isEmpty())
-            m_tree.insertTextNode(leadingWhitespace);
-        if (buffer.isEmpty())
+        if (consumeAndInsertWhitespace(buffer))
             return;
         defaultForInHead();
         ASSERT(m_insertionMode == InsertionMode::AfterHead);
         FALLTHROUGH;
     }
     case InsertionMode::AfterHead: {
-        String leadingWhitespace = buffer.takeLeadingWhitespace();
-        if (!leadingWhitespace.isEmpty())
-            m_tree.insertTextNode(leadingWhitespace);
-        if (buffer.isEmpty())
+        if (consumeAndInsertWhitespace(buffer))
             return;
         defaultForAfterHead();
         ASSERT(m_insertionMode == InsertionMode::InBody);
@@ -2538,10 +2620,7 @@ ReprocessBuffer:
         buffer.giveRemainingTo(m_pendingTableCharacters);
         break;
     case InsertionMode::InColumnGroup: {
-        String leadingWhitespace = buffer.takeLeadingWhitespace();
-        if (!leadingWhitespace.isEmpty())
-            m_tree.insertTextNode(leadingWhitespace);
-        if (buffer.isEmpty())
+        if (consumeAndInsertWhitespace(buffer))
             return;
         if (!processColgroupEndTagForInColumnGroup()) {
             ASSERT(isParsingFragmentOrTemplateContents());
@@ -2553,25 +2632,25 @@ ReprocessBuffer:
         goto ReprocessBuffer;
     }
     case InsertionMode::AfterBody:
-    case InsertionMode::AfterAfterBody:
+    case InsertionMode::AfterAfterBody: {
+        if (consumeAndInsertWhitespace(buffer))
+            return;
         // FIXME: parse error
         m_insertionMode = InsertionMode::InBody;
         goto ReprocessBuffer;
+    }
     case InsertionMode::Text:
         m_tree.insertTextNode(buffer.takeRemaining());
         break;
     case InsertionMode::InHeadNoscript: {
-        String leadingWhitespace = buffer.takeLeadingWhitespace();
-        if (!leadingWhitespace.isEmpty())
-            m_tree.insertTextNode(leadingWhitespace);
-        if (buffer.isEmpty())
+        if (consumeAndInsertWhitespace(buffer))
             return;
         defaultForInHeadNoscript();
         goto ReprocessBuffer;
     }
     case InsertionMode::InFrameset:
     case InsertionMode::AfterFrameset: {
-        String leadingWhitespace = buffer.takeRemainingWhitespace();
+        auto leadingWhitespace = buffer.takeRemainingWhitespace();
         if (!leadingWhitespace.isEmpty())
             m_tree.insertTextNode(leadingWhitespace);
         // FIXME: We should generate a parse error if we skipped over any
@@ -2583,7 +2662,7 @@ ReprocessBuffer:
         m_tree.insertTextNode(buffer.takeRemaining());
         break;
     case InsertionMode::AfterAfterFrameset: {
-        String leadingWhitespace = buffer.takeRemainingWhitespace();
+        auto leadingWhitespace = buffer.takeRemainingWhitespace();
         if (!leadingWhitespace.isEmpty()) {
             m_tree.reconstructTheActiveFormattingElements();
             m_tree.insertTextNode(leadingWhitespace);
@@ -2607,7 +2686,7 @@ void HTMLTreeBuilder::processCharacterBufferForInBody(ExternalCharacterTokenBuff
 #else
     m_tree.insertTextNode(characters);
 #endif
-    if (m_framesetOk && !isAllWhitespaceOrReplacementCharacters(characters))
+    if (m_framesetOk && !characters.containsOnly<isASCIIWhitespaceOrReplacementCharacter>())
         m_framesetOk = false;
 }
 
@@ -2741,7 +2820,7 @@ void HTMLTreeBuilder::defaultForInTableText()
 {
     String characters = m_pendingTableCharacters.toString();
     m_pendingTableCharacters.clear();
-    if (!isAllWhitespace(characters)) {
+    if (!characters.containsOnly<isASCIIWhitespace>()) {
         // FIXME: parse error
         HTMLConstructionSite::RedirectToFosterParentGuard redirecter(m_tree);
         m_tree.reconstructTheActiveFormattingElements();
@@ -2764,7 +2843,6 @@ bool HTMLTreeBuilder::processStartTagForInHead(AtomHTMLToken&& token)
     case TagName::base:
     case TagName::basefont:
     case TagName::bgsound:
-    case TagName::command:
     case TagName::link:
     case TagName::meta:
         m_tree.insertSelfClosingHTMLElement(WTFMove(token));
@@ -3004,7 +3082,7 @@ void HTMLTreeBuilder::processTokenInForeignContent(AtomHTMLToken&& token)
     case HTMLToken::Type::Character: {
         String characters = token.characters();
         m_tree.insertTextNode(characters);
-        if (m_framesetOk && !isAllWhitespaceOrReplacementCharacters(characters))
+        if (m_framesetOk && !characters.containsOnly<isASCIIWhitespaceOrReplacementCharacter>())
             m_framesetOk = false;
         break;
     }

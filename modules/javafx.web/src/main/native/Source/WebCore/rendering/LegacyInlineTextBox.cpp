@@ -32,21 +32,25 @@
 #include "ElementRuleCollector.h"
 #include "EventRegion.h"
 #include "FloatRoundedRect.h"
-#include "Frame.h"
 #include "GraphicsContext.h"
 #include "HighlightData.h"
 #include "HitTestResult.h"
 #include "ImageBuffer.h"
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorTextBox.h"
+#include "InlineIteratorTextBoxInlines.h"
 #include "InlineTextBoxStyle.h"
 #include "LegacyEllipsisBox.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderBlock.h"
 #include "RenderCombineText.h"
+#include "RenderElementInlines.h"
 #include "RenderLineBreak.h"
 #include "RenderRubyRun.h"
 #include "RenderRubyText.h"
+#include "RenderStyleInlines.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
@@ -267,7 +271,8 @@ float LegacyInlineTextBox::placeEllipsisBox(bool flowIsLTR, float visibleLeftEdg
             ellipsisX = ltr ? left() + visibleBoxWidth : right() - visibleBoxWidth;
         }
 
-        int offset = InlineIterator::textBoxFor(this)->offsetForPosition(ellipsisX, false);
+        auto textBox = InlineIterator::textBoxFor(this);
+        auto offset = lineFont().offsetForPosition(textBox->textRun(InlineIterator::TextRunMode::Editing), ellipsisX - textBox->logicalLeftIgnoringInlineDirection(), false);
         if (!offset) {
             // No characters should be rendered. Set ourselves to full truncation and place the ellipsis at the min of our start
             // and the ellipsis edge.

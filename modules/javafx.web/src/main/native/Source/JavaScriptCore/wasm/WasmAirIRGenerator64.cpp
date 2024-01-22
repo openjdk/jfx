@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "WasmAirIRGeneratorBase.h"
+#include "WasmThunks.h"
 #include <cstddef>
 
 #if USE(JSVALUE64) && ENABLE(WEBASSEMBLY_B3JIT)
@@ -57,10 +58,6 @@ public:
     bool operator==(const TypedTmp& other) const
     {
         return m_tmp == other.m_tmp && m_type == other.m_type;
-    }
-    bool operator!=(const TypedTmp& other) const
-    {
-        return !(*this == other);
     }
 
     explicit operator bool() const { return !!tmp(); }
@@ -98,6 +95,8 @@ public:
     static constexpr bool generatesB3OriginData = true;
     static constexpr bool supportsPinnedStateRegisters = true;
 
+    void finalizeEntrypoints();
+
     void emitMaterializeConstant(Type, uint64_t value, TypedTmp& dest);
     void emitMaterializeConstant(BasicBlock*, Type, uint64_t value, TypedTmp& dest);
 
@@ -129,7 +128,7 @@ public:
     PartialResult WARN_UNUSED_RETURN addI31GetU(ExpressionType ref, ExpressionType& result);
 
     // SIMD
-    void notifyFunctionUsesSIMD() { ASSERT(m_info.isSIMDFunction(m_functionIndex)); }
+    void notifyFunctionUsesSIMD() { ASSERT(m_info.usesSIMD(m_functionIndex)); }
     PartialResult WARN_UNUSED_RETURN addSIMDLoad(ExpressionType pointer, uint32_t offset, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addSIMDStore(ExpressionType value, ExpressionType pointer, uint32_t offset);
     PartialResult WARN_UNUSED_RETURN addSIMDSplat(SIMDLane, ExpressionType scalar, ExpressionType& result);
@@ -272,6 +271,8 @@ public:
         AIR_OP_CASE(TruncSat)
         AIR_OP_CASE(Not)
         AIR_OP_CASE(Neg)
+
+        else if (op == SIMDLaneOperation::RelaxedTruncSat) airOp = B3::Air::VectorTruncSat;
 
         result = tmpForType(Types::V128);
 
@@ -521,6 +522,11 @@ public:
         AIR_OP_CASE(SubSat)
         AIR_OP_CASE(Max)
         AIR_OP_CASE(Min)
+
+        // Relaxed SIMD redirecting to non-relaxed:
+
+        else if (op == SIMDLaneOperation::RelaxedSwizzle) airOp = B3::Air::VectorSwizzle;
+
         result = tmpForType(Types::V128);
 
         if (isX86() && airOp == B3::Air::VectorMulSat) {
@@ -553,6 +559,23 @@ public:
         return { };
     }
 
+    auto addSIMDRelaxedFMA(SIMDLaneOperation op, SIMDInfo info, ExpressionType m1, ExpressionType m2, ExpressionType add, ExpressionType& result) -> PartialResult
+    {
+        B3::Air::Opcode airOp = B3::Air::Oops;
+        if (op == SIMDLaneOperation::RelaxedMAdd)
+            airOp = B3::Air::VectorFusedMulAdd;
+        else if (op == SIMDLaneOperation::RelaxedNMAdd)
+            airOp = B3::Air::VectorFusedNegMulAdd;
+        else {
+            RELEASE_ASSERT_NOT_REACHED();
+            return { };
+        }
+        result = tmpForType(Types::V128);
+        auto scratch = tmpForType(Types::V128);
+        append(airOp, Arg::simdInfo(info), m1, m2, add, result, scratch);
+        return { };
+    }
+
     // Control flow
     PartialResult WARN_UNUSED_RETURN addReturn(const ControlData&, const Stack& returnValues);
     PartialResult WARN_UNUSED_RETURN addThrow(unsigned exceptionIndex, Vector<ExpressionType>& args, Stack&);
@@ -577,6 +600,11 @@ public:
     PartialResult WARN_UNUSED_RETURN addI64And(ExpressionType arg0, ExpressionType arg1, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addI64Eqz(ExpressionType arg0, ExpressionType& result);
     PartialResult WARN_UNUSED_RETURN addI64Or(ExpressionType arg0, ExpressionType arg1, ExpressionType& result);
+
+    PartialResult WARN_UNUSED_RETURN addI64ExtendSI32(ExpressionType, ExpressionType&);
+    PartialResult WARN_UNUSED_RETURN addI64Extend8S(ExpressionType, ExpressionType&);
+    PartialResult WARN_UNUSED_RETURN addI64Extend16S(ExpressionType, ExpressionType&);
+    PartialResult WARN_UNUSED_RETURN addI64Extend32S(ExpressionType, ExpressionType&);
 
     Tmp emitCatchImpl(CatchKind, ControlType&, unsigned exceptionIndex = 0);
     template <size_t inlineCapacity>
@@ -612,6 +640,9 @@ private:
     void emitCheckI64Zero(ExpressionType, Taken&&);
     template<typename Then>
     void emitCheckForNullReference(const ExpressionType& ref, Then&&);
+    void emitBranchForNullReference(const ExpressionType&);
+    Inst makeBranchNotInt32(const ExpressionType&);
+    Inst makeBranchNotCell(const ExpressionType&);
 
     B3::Type toB3ResultType(BlockSignature);
 
@@ -782,6 +813,27 @@ void AirIRGenerator64::emitCheckForNullReference(const TypedTmp& ref, Taken&& ta
     emitCheck([&] {
         return Inst(Branch64, nullptr, Arg::relCond(MacroAssembler::Equal), ref, tmpForNull);
     }, std::forward<Taken>(taken));
+}
+
+void AirIRGenerator64::emitBranchForNullReference(const TypedTmp& ref)
+{
+    auto tmpForNull = g64();
+    append(Move, Arg::bigImm(JSValue::encode(jsNull())), tmpForNull);
+    append(Branch64, Arg::relCond(MacroAssembler::Equal), ref, tmpForNull);
+}
+
+Inst AirIRGenerator64::makeBranchNotInt32(const TypedTmp& value)
+{
+    auto tmpForTag = g64();
+    append(Move, Arg::bigImm(JSValue::NumberTag), tmpForTag);
+    return Inst(Branch64, nullptr, Arg::relCond(MacroAssembler::Below), value, tmpForTag);
+}
+
+Inst AirIRGenerator64::makeBranchNotCell(const ExpressionType& maybeCell)
+{
+    auto tmpForCellMask = g64();
+    append(Move, Arg::bigImm(JSValue::NotCellMask), tmpForCellMask);
+    return Inst(BranchTest64, nullptr, Arg::resCond(MacroAssembler::NonZero), maybeCell, tmpForCellMask);
 }
 
 B3::Type AirIRGenerator64::toB3ResultType(BlockSignature returnType)
@@ -1046,7 +1098,7 @@ inline TypedTmp AirIRGenerator64::emitLoadOp(LoadOpType op, ExpressionType point
     case LoadOpType::I64Load8S: {
         result = g64();
         appendEffectful(Load8SignedExtendTo32, addrArg, result);
-        append(SignExtend32ToPtr, result, result);
+        append(SignExtend32To64, result, result);
         break;
     }
 
@@ -1071,7 +1123,7 @@ inline TypedTmp AirIRGenerator64::emitLoadOp(LoadOpType op, ExpressionType point
     case LoadOpType::I64Load16S: {
         result = g64();
         appendEffectful(Load16SignedExtendTo32, addrArg, result);
-        append(SignExtend32ToPtr, result, result);
+        append(SignExtend32To64, result, result);
         break;
     }
 
@@ -1101,7 +1153,7 @@ inline TypedTmp AirIRGenerator64::emitLoadOp(LoadOpType op, ExpressionType point
     case LoadOpType::I64Load32S: {
         result = g64();
         appendEffectful(Move32, addrArg, result);
-        append(SignExtend32ToPtr, result, result);
+        append(SignExtend32To64, result, result);
         break;
     }
 
@@ -1894,6 +1946,53 @@ auto AirIRGenerator64::addSIMDLoadPad(SIMDLaneOperation op, ExpressionType point
     return { };
 }
 
+void AirIRGenerator64::finalizeEntrypoints()
+{
+    unsigned numEntrypoints = Checked<unsigned>(1) + m_catchEntrypoints.size() + m_loopEntryVariableData.size();
+    m_proc.setNumEntrypoints(numEntrypoints);
+    m_code.setPrologueForEntrypoint(0, Ref<B3::Air::PrologueGenerator>(*m_prologueGenerator));
+    for (unsigned i = 1 + m_catchEntrypoints.size(); i < numEntrypoints; ++i)
+        m_code.setPrologueForEntrypoint(i, Ref<B3::Air::PrologueGenerator>(*m_prologueGenerator));
+
+    if (m_catchEntrypoints.size()) {
+        Ref<B3::Air::PrologueGenerator> catchPrologueGenerator = createSharedTask<B3::Air::PrologueGeneratorFunction>([](CCallHelpers& jit, B3::Air::Code& code) {
+            AllowMacroScratchRegisterUsage allowScratch(jit);
+            jit.addPtr(CCallHelpers::TrustedImm32(-code.frameSize()), GPRInfo::callFrameRegister, CCallHelpers::stackPointerRegister);
+            jit.probe(tagCFunction<JITProbePtrTag>(code.usesSIMD() ? buildEntryBufferForCatchSIMD : buildEntryBufferForCatchNoSIMD), nullptr, code.usesSIMD() ? SavedFPWidth::SaveVectors : SavedFPWidth::DontSaveVectors);
+        });
+
+        for (unsigned i = 0; i < m_catchEntrypoints.size(); ++i)
+            m_code.setPrologueForEntrypoint(1 + i, catchPrologueGenerator.copyRef());
+    }
+
+    BasicBlock::SuccessorList successors;
+    successors.append(m_mainEntrypointStart);
+    successors.appendVector(m_catchEntrypoints);
+
+    ASSERT(!m_loopEntryVariableData.size() || !m_proc.usesSIMD());
+    for (auto& pair : m_loopEntryVariableData) {
+        BasicBlock* loopBody = pair.first;
+        BasicBlock* entry = m_code.addBlock();
+        successors.append(entry);
+        m_currentBlock = entry;
+
+        auto& temps = pair.second;
+        m_osrEntryScratchBufferSize = std::max(m_osrEntryScratchBufferSize, static_cast<unsigned>(temps.size()));
+        Tmp basePtr = Tmp(GPRInfo::argumentGPR0);
+
+        for (size_t i = 0; i < temps.size(); ++i) {
+            size_t offset = static_cast<size_t>(i) * sizeof(uint64_t);
+            self().emitLoad(basePtr, offset, temps[i]);
+        }
+
+        append(Jump);
+        entry->setSuccessors(loopBody);
+    }
+
+    RELEASE_ASSERT(numEntrypoints == successors.size());
+    m_rootBlock->successors() = successors;
+}
+
 Tmp AirIRGenerator64::emitCatchImpl(CatchKind kind, ControlType& data, unsigned exceptionIndex)
 {
     m_currentBlock = m_code.addBlock();
@@ -1925,6 +2024,7 @@ Tmp AirIRGenerator64::emitCatchImpl(CatchKind kind, ControlType& data, unsigned 
         Tmp bufferPtr = Tmp(GPRInfo::argumentGPR0);
         emitLoad(bufferPtr, offset, result);
     };
+    append(Move, Tmp(GPRInfo::argumentGPR1), data.exception());
     forEachLiveValue([&] (TypedTmp tmp) {
         // We set our current ControlEntry's exception below after the patchpoint, it's
         // not in the incoming buffer of live values.
@@ -1933,31 +2033,7 @@ Tmp AirIRGenerator64::emitCatchImpl(CatchKind kind, ControlType& data, unsigned 
             loadFromScratchBuffer(tmp);
     });
 
-    B3::PatchpointValue* patch = addPatchpoint(m_proc.addTuple({ B3::pointerType(), B3::pointerType() }));
-    patch->effects.exitsSideways = true;
-    patch->clobber(RegisterSetBuilder::macroClobberedGPRs());
-    auto clobberLate = RegisterSetBuilder::registersToSaveForJSCall(m_proc.usesSIMD() ? RegisterSetBuilder::allRegisters() : RegisterSetBuilder::allScalarRegisters());
-    clobberLate.add(GPRInfo::argumentGPR0, IgnoreVectors);
-    patch->clobberLate(clobberLate);
-    patch->resultConstraints.append(B3::ValueRep::reg(GPRInfo::returnValueGPR));
-    patch->resultConstraints.append(B3::ValueRep::reg(GPRInfo::returnValueGPR2));
-    patch->setGenerator([=](CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
-        JIT_COMMENT(jit, "Catch entrypoint patchpoint after loading from scratch buffer");
-        AllowMacroScratchRegisterUsage allowScratch(jit);
-        jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
-        jit.move(params[2].gpr(), GPRInfo::argumentGPR0);
-        CCallHelpers::Call call = jit.call(OperationPtrTag);
-        jit.addLinkTask([call] (LinkBuffer& linkBuffer) {
-            linkBuffer.link<OperationPtrTag>(call, operationWasmRetrieveAndClearExceptionIfCatchable);
-        });
-    });
-
-    Tmp exception = Tmp(GPRInfo::returnValueGPR);
-    Tmp buffer = Tmp(GPRInfo::returnValueGPR2);
-    emitPatchpoint(m_currentBlock, patch, Vector<Tmp, 8>::from(exception, buffer), Vector<ConstrainedTmp, 1>::from(instanceValue()));
-    append(Move, exception, data.exception());
-
-    return buffer;
+    return Tmp(GPRInfo::argumentGPR2);
 }
 
 auto AirIRGenerator64::addReturn(const ControlData& data, const Stack& returnValues) -> PartialResult
@@ -2578,8 +2654,37 @@ auto AirIRGenerator64::addI64Or(ExpressionType arg0, ExpressionType arg1, Expres
     return { };
 }
 
+auto AirIRGenerator64::addI64ExtendSI32(ExpressionType arg0, ExpressionType& result) -> PartialResult
+{
+    result = g64();
+    append(SignExtend32To64, arg0, result);
+    return { };
+}
+
+auto AirIRGenerator64::addI64Extend8S(ExpressionType arg0, ExpressionType& result) -> PartialResult
+{
+    result = g64();
+    append(SignExtend8To64, arg0, result);
+    return { };
+}
+
+auto AirIRGenerator64::addI64Extend16S(ExpressionType arg0, ExpressionType& result) -> PartialResult
+{
+    result = g64();
+    append(SignExtend16To64, arg0, result);
+    return { };
+}
+
+auto AirIRGenerator64::addI64Extend32S(ExpressionType arg0, ExpressionType& result) -> PartialResult
+{
+    result = g64();
+    append(SignExtend32To64, arg0, result);
+    return { };
+}
+
 Expected<std::unique_ptr<InternalFunction>, String> parseAndCompileAir(CompilationContext& compilationContext, Callee& callee, const FunctionData& function, const TypeDefinition& signature, Vector<UnlinkedWasmToWasmCall>& unlinkedWasmToWasmCalls, const ModuleInformation& info, MemoryMode mode, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, TierUpCount* tierUp)
 {
+    Wasm::Thunks::singleton().stub(Wasm::catchInWasmThunkGenerator);
     return parseAndCompileAirImpl<AirIRGenerator64>(compilationContext, callee, function, signature, unlinkedWasmToWasmCalls, info, mode, functionIndex, hasExceptionHandlers, tierUp);
 }
 

@@ -69,7 +69,6 @@ InspectorClientJava::InspectorClientJava(const JLObject &webPage)
 
 void InspectorClientJava::inspectedPageDestroyed()
 {
-    delete this;
 }
 
 Inspector::FrontendChannel* InspectorClientJava::openLocalFrontend(InspectorController*)

@@ -62,8 +62,9 @@ public:
     Color platformTextSearchHighlightColor(OptionSet<StyleColorOptions>) const final;
     Color platformAnnotationHighlightColor(OptionSet<StyleColorOptions>) const final;
     Color platformDefaultButtonTextColor(OptionSet<StyleColorOptions>) const final;
+    Color platformAutocorrectionReplacementMarkerColor(OptionSet<StyleColorOptions>) const final;
 
-    ScrollbarControlSize scrollbarControlSizeForPart(StyleAppearance) final { return ScrollbarControlSize::Small; }
+    ScrollbarWidth scrollbarWidthStyleForPart(StyleAppearance) final { return ScrollbarWidth::Thin; }
 
     int minimumMenuListSize(const RenderStyle&) const final;
 

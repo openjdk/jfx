@@ -30,6 +30,7 @@ JSApplePayCouponCodeDetails.cpp
 JSApplePayCouponCodeUpdate.cpp
 JSApplePayDateComponents.cpp
 JSApplePayDateComponentsRange.cpp
+JSApplePayDeferredPaymentRequest.cpp
 JSApplePayDetailsUpdateBase.cpp
 JSApplePayError.cpp
 JSApplePayErrorCode.cpp
@@ -39,6 +40,7 @@ JSApplePayInstallmentConfiguration.cpp
 JSApplePayInstallmentItem.cpp
 JSApplePayInstallmentItemType.cpp
 JSApplePayInstallmentRetailChannel.cpp
+JSApplePayLaterAvailability.cpp
 JSApplePayLineItem.cpp
 JSApplePayMerchantCapability.cpp
 JSApplePayModifier.cpp
@@ -78,6 +80,10 @@ JSSpeechSynthesisErrorCode.cpp
 JSSpeechSynthesisErrorEvent.cpp
 JSSpeechSynthesisErrorEventInit.cpp
 JSSpeechSynthesisEventInit.cpp
+Modules/ShapeDetection/Implementation/Cocoa/BarcodeDetectorImplementation.mm
+Modules/ShapeDetection/Implementation/Cocoa/FaceDetectorImplementation.mm
+Modules/ShapeDetection/Implementation/Cocoa/TextDetectorImplementation.mm
+Modules/ShapeDetection/Implementation/Cocoa/VisionUtilities.mm
 Modules/airplay/WebMediaSessionManager.cpp
 Modules/applepay/ApplePayCouponCodeChangedEvent.cpp
 Modules/applepay/ApplePayCancelEvent.cpp
@@ -126,12 +132,12 @@ Modules/speech/cocoa/WebSpeechRecognizerTaskMock.mm
 Modules/system-preview/ARKitBadgeSystemImage.mm
 Modules/webdatabase/cocoa/DatabaseManagerCocoa.mm
 accessibility/cocoa/AXTextMarkerCocoa.mm
+accessibility/cocoa/AccessibilityObjectCocoa.mm
 accessibility/ios/AXObjectCacheIOS.mm
 accessibility/ios/AccessibilityObjectIOS.mm
 accessibility/ios/WebAccessibilityObjectWrapperIOS.mm
 accessibility/isolatedtree/mac/AXIsolatedObjectMac.mm
 accessibility/mac/AXObjectCacheMac.mm
-accessibility/mac/AccessibilityObjectBase.mm
 accessibility/mac/AccessibilityObjectMac.mm
 accessibility/mac/WebAccessibilityObjectWrapperBase.mm @no-unify
 accessibility/mac/WebAccessibilityObjectWrapperMac.mm @no-unify
@@ -175,6 +181,7 @@ editing/SelectionGeometryGatherer.cpp
 editing/SmartReplaceCF.cpp
 editing/cocoa/AlternativeTextContextController.mm
 editing/cocoa/AlternativeTextUIController.mm
+editing/cocoa/AttributedString.mm
 editing/cocoa/AutofillElements.cpp
 editing/cocoa/DataDetection.mm
 editing/cocoa/DictionaryLookup.mm
@@ -195,8 +202,9 @@ editing/mac/TextAlternativeWithRange.mm @no-unify
 editing/mac/TextUndoInsertionMarkupMac.mm
 fileapi/FileCocoa.mm
 history/mac/HistoryItemMac.mm
-html/canvas/GPUCanvasContextCocoa.cpp
+html/canvas/GPUCanvasContextCocoa.mm
 html/shadow/YouTubeEmbedShadowElement.cpp
+inspector/LegacyWebSocketInspectorInstrumentation.cpp
 inspector/mac/PageDebuggerMac.mm
 loader/archive/cf/LegacyWebArchive.cpp
 loader/archive/cf/LegacyWebArchiveMac.mm
@@ -244,6 +252,7 @@ page/scrolling/mac/ScrollingTreeMac.mm
 page/scrolling/mac/ScrollingTreeOverflowScrollingNodeMac.mm
 page/scrolling/mac/ScrollingTreeScrollingNodeDelegateMac.mm
 platform/VideoFrame.mm
+platform/animation/AcceleratedEffectStack.mm @no-unify
 platform/audio/AudioSession.cpp
 platform/audio/cocoa/AudioDestinationCocoa.cpp
 platform/audio/cocoa/AudioFileReaderCocoa.cpp
@@ -270,7 +279,7 @@ platform/cf/KeyedDecoderCF.cpp
 platform/cf/KeyedEncoderCF.cpp
 platform/cf/MainThreadSharedTimerCF.cpp
 platform/cf/MediaAccessibilitySoftLink.cpp
-platform/cf/RunLoopObserver.cpp
+platform/cf/RunLoopObserverCF.cpp
 platform/cf/SharedBufferCF.cpp
 platform/cocoa/ContentFilterUnblockHandlerCocoa.mm @no-unify
 platform/cocoa/CoreLocationGeolocationProvider.mm
@@ -336,7 +345,6 @@ platform/graphics/avfoundation/objc/AudioTrackPrivateAVFObjC.mm
 platform/graphics/avfoundation/objc/AudioTrackPrivateMediaSourceAVFObjC.cpp
 platform/graphics/avfoundation/objc/CDMSessionAVContentKeySession.mm
 platform/graphics/avfoundation/objc/CDMSessionAVFoundationObjC.mm
-platform/graphics/avfoundation/objc/CDMSessionAVStreamSession.mm
 platform/graphics/avfoundation/objc/CDMSessionMediaSourceAVFObjC.mm
 platform/graphics/avfoundation/objc/ImageDecoderAVFObjC.mm
 platform/graphics/avfoundation/objc/InbandTextTrackPrivateAVFObjC.mm @no-unify
@@ -357,7 +365,7 @@ platform/graphics/avfoundation/objc/WebCoreAVFResourceLoader.mm
 platform/graphics/ca/GraphicsLayerCA.cpp
 platform/graphics/ca/LayerPool.cpp
 platform/graphics/ca/PlatformCAAnimation.cpp
-platform/graphics/ca/PlatformCALayer.cpp
+platform/graphics/ca/PlatformCALayer.mm
 platform/graphics/ca/TileController.cpp
 platform/graphics/ca/TileCoverageMap.cpp
 platform/graphics/ca/TileGrid.cpp
@@ -411,7 +419,6 @@ platform/graphics/cocoa/FontFamilySpecificationCoreText.cpp
 platform/graphics/cocoa/FontFamilySpecificationCoreTextCache.cpp
 platform/graphics/cocoa/FontPlatformDataCocoa.mm
 platform/graphics/cocoa/GraphicsContextCocoa.mm
-platform/graphics/cocoa/GraphicsContextGLIOSurfaceSwapChain.cpp
 platform/graphics/cocoa/HEVCUtilitiesCocoa.mm
 platform/graphics/cocoa/IOSurface.mm
 platform/graphics/cocoa/IOSurfacePoolCocoa.mm
@@ -437,6 +444,7 @@ platform/graphics/cocoa/controls/ControlFactoryCocoa.mm
 platform/graphics/coretext/DrawGlyphsRecorderCoreText.cpp
 platform/graphics/coretext/FontCascadeCoreText.cpp
 platform/graphics/coretext/FontCoreText.cpp
+platform/graphics/coretext/FontCustomPlatformDataCoreText.cpp
 platform/graphics/coretext/FontPlatformDataCoreText.cpp
 platform/graphics/coretext/GlyphPageCoreText.cpp
 platform/graphics/cv/CVUtilities.mm
@@ -457,7 +465,6 @@ platform/graphics/mac/ComplexTextControllerCoreText.mm
 platform/graphics/mac/DisplayConfigurationMonitor.cpp
 platform/graphics/mac/FloatPointMac.mm
 platform/graphics/mac/FloatSizeMac.mm
-platform/graphics/mac/FontCustomPlatformDataMac.cpp
 platform/graphics/mac/GraphicsChecksMac.cpp
 platform/graphics/mac/IconMac.mm
 platform/graphics/mac/ImageMac.mm
@@ -494,10 +501,10 @@ platform/graphics/mac/controls/WebControlView.mm
 platform/graphics/opentype/OpenTypeCG.cpp
 platform/image-decoders/avif/AVIFImageDecoder.cpp
 platform/image-decoders/avif/AVIFImageReader.cpp
+platform/image-decoders/jpegxl/JPEGXLImageDecoder.cpp
 platform/image-decoders/ScalableImageDecoder.cpp
 platform/image-decoders/ScalableImageDecoderFrame.cpp
 platform/ios/ColorIOS.mm
-platform/ios/Device.cpp
 platform/ios/DeviceMotionClientIOS.mm
 platform/ios/DeviceOrientationClientIOS.mm
 platform/ios/DragImageIOS.mm
@@ -517,7 +524,6 @@ platform/ios/PlatformScreenIOS.mm
 platform/ios/PlaybackSessionInterfaceAVKit.mm @no-unify
 platform/ios/PreviewConverterIOS.mm
 platform/ios/QuickLook.mm
-platform/ios/ScreenOrientationProviderIOS.mm
 platform/ios/ScrollAnimatorIOS.mm
 platform/ios/ScrollViewIOS.mm
 platform/ios/ScrollbarThemeIOS.mm
@@ -525,6 +531,7 @@ platform/ios/SelectionGeometry.cpp
 platform/ios/SystemMemoryIOS.cpp
 platform/ios/ThemeIOS.mm
 platform/ios/TileControllerMemoryHandlerIOS.cpp
+platform/ios/UIFoundationSoftLink.mm
 platform/ios/UserAgentIOS.mm
 platform/ios/ValidationBubbleIOS.mm
 platform/ios/VideoFullscreenInterfaceAVKit.mm @no-unify
@@ -545,7 +552,6 @@ platform/ios/wak/WKView.mm
 platform/ios/wak/WebCoreThread.mm
 platform/ios/wak/WebCoreThreadRun.cpp
 platform/ios/wak/WebCoreThreadSystemInterface.cpp
-platform/mac/BlocklistUpdater.mm
 platform/mac/CursorMac.mm @no-unify
 platform/mac/DataDetectorHighlight.mm
 platform/mac/HIDDevice.cpp
@@ -562,7 +568,6 @@ platform/mac/PlatformEventFactoryMac.mm
 platform/mac/PlatformPasteboardMac.mm
 platform/mac/PlatformScreenMac.mm
 platform/mac/PlaybackSessionInterfaceMac.mm @no-unify
-platform/mac/PluginBlocklist.mm
 platform/mac/PowerObserverMac.cpp
 platform/mac/PublicSuffixMac.mm
 platform/mac/RevealUtilities.mm
@@ -588,7 +593,6 @@ platform/mac/WebCoreFullScreenWindow.mm
 platform/mac/WebCoreNSFontManagerExtras.mm
 platform/mac/WebCoreNSURLExtras.mm
 platform/mac/WebCoreObjCExtras.mm
-platform/mac/WebGLBlocklist.mm
 platform/mac/WebNSAttributedStringExtras.mm
 platform/mac/WebPlaybackControlsManager.mm
 platform/mac/WidgetMac.mm
@@ -636,7 +640,6 @@ platform/network/cf/DNSResolveQueueCFNet.cpp
 platform/network/cf/FormDataStreamCFNet.cpp
 platform/network/cf/NetworkStorageSessionCFNet.cpp
 platform/network/cf/ResourceRequestCFNet.cpp
-platform/network/cf/SocketStreamHandleImplCFNet.cpp
 platform/network/cocoa/CertificateInfoCocoa.mm
 platform/network/cocoa/CookieCocoa.mm
 platform/network/cocoa/CookieStorageObserver.mm
@@ -667,6 +670,8 @@ platform/text/cocoa/LocalizedDateCache.mm
 platform/text/mac/TextBoundaries.mm
 platform/text/mac/TextCheckingMac.mm
 platform/xr/cocoa/PlatformXRCocoa.mm
+platform/text/mac/CoreTextChineseCompositionEngine.cpp
+platform/text/mac/CoreTextCompositionEngine.cpp
 rendering/AttachmentLayout.mm
 rendering/RenderThemeCocoa.mm
 rendering/RenderThemeIOS.mm

@@ -185,11 +185,6 @@ inline bool operator==(const FloatPoint3D& a, const FloatPoint3D& b)
     return a.x() == b.x() && a.y() == b.y() && a.z() == b.z();
 }
 
-inline bool operator!=(const FloatPoint3D& a, const FloatPoint3D& b)
-{
-    return a.x() != b.x() || a.y() != b.y() || a.z() != b.z();
-}
-
 inline float operator*(const FloatPoint3D& a, const FloatPoint3D& b)
 {
     // dot product

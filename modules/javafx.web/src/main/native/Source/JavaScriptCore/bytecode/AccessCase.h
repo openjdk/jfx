@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
 #include "CacheableIdentifier.h"
@@ -44,7 +46,7 @@ class IntrinsicGetterAccessCase;
 class ModuleNamespaceAccessCase;
 class ProxyableAccessCase;
 
-struct AccessGenerationState;
+class InlineCacheCompiler;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
 
@@ -91,7 +93,9 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
 
 #define JSC_FOR_EACH_ACCESS_TYPE(macro) \
     macro(Load) \
+    macro(LoadMegamorphic) \
     macro(Transition) \
+    macro(StoreMegamorphic) \
     macro(Delete) \
     macro(DeleteNonConfigurable) \
     macro(DeleteMiss) \
@@ -112,12 +116,16 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
     macro(DirectArgumentsLength) \
     macro(ScopedArgumentsLength) \
     macro(ModuleNamespaceLoad) \
+    macro(ProxyObjectHas) \
     macro(ProxyObjectLoad) \
+    macro(ProxyObjectStore) \
     macro(InstanceOfHit) \
     macro(InstanceOfMiss) \
     macro(InstanceOfGeneric) \
     macro(CheckPrivateBrand) \
     macro(SetPrivateBrand) \
+    macro(IndexedProxyObjectLoad) \
+    macro(IndexedMegamorphicLoad) \
     macro(IndexedInt32Load) \
     macro(IndexedDoubleLoad) \
     macro(IndexedContiguousLoad) \
@@ -144,6 +152,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
     macro(IndexedResizableTypedArrayFloat64Load) \
     macro(IndexedStringLoad) \
     macro(IndexedNoIndexingMiss) \
+    macro(IndexedMegamorphicStore) \
     macro(IndexedInt32Store) \
     macro(IndexedDoubleStore) \
     macro(IndexedContiguousStore) \
@@ -171,6 +180,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
 class AccessCase : public ThreadSafeRefCounted<AccessCase> {
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessCase);
 public:
+    friend class InlineCacheCompiler;
     enum AccessType : uint8_t {
 #define JSC_DEFINE_ACCESS_TYPE(name) name,
         JSC_FOR_EACH_ACCESS_TYPE(JSC_DEFINE_ACCESS_TYPE)
@@ -202,7 +212,7 @@ public:
 
     static Ref<AccessCase> createSetPrivateBrand(VM&, JSCell* owner, CacheableIdentifier, Structure* oldStructure, Structure* newStructure);
 
-    static Ref<AccessCase> createReplace(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure, bool viaProxy);
+    static Ref<AccessCase> createReplace(VM&, JSCell* owner, CacheableIdentifier, PropertyOffset, Structure* oldStructure, bool viaGlobalProxy);
 
     static RefPtr<AccessCase> fromStructureStubInfo(VM&, JSCell* owner, CacheableIdentifier, StructureStubInfo&);
 
@@ -230,7 +240,7 @@ public:
     JSObject* alternateBase() const;
 
     WatchpointSet* additionalSet() const;
-    bool viaProxy() const { return m_viaProxy; }
+    bool viaGlobalProxy() const { return m_viaGlobalProxy; }
 
     // If you supply the optional vector, this will append the set of cells that this will need to keep alive
     // past the call.
@@ -285,9 +295,6 @@ public:
     bool requiresInt32PropertyCheck() const;
     bool needsScratchFPR() const;
 
-    static TypedArrayType toTypedArrayType(AccessType);
-    static bool forResizableTypedArray(AccessType);
-
     UniquedStringImpl* uid() const { return m_identifier.uid(); }
     CacheableIdentifier identifier() const { return m_identifier; }
 
@@ -299,7 +306,7 @@ public:
 
     unsigned hash() const
     {
-        return computeHash(m_conditionSet.hash(), static_cast<unsigned>(m_type), m_viaProxy, m_structureID.unvalidatedGet(), m_offset);
+        return computeHash(m_conditionSet.hash(), static_cast<unsigned>(m_type), m_viaGlobalProxy, m_structureID.unvalidatedGet(), m_offset);
     }
 
     static bool canBeShared(const AccessCase&, const AccessCase&);
@@ -314,7 +321,7 @@ protected:
     AccessCase(AccessCase&& other)
         : m_type(WTFMove(other.m_type))
         , m_state(WTFMove(other.m_state))
-        , m_viaProxy(WTFMove(other.m_viaProxy))
+        , m_viaGlobalProxy(WTFMove(other.m_viaGlobalProxy))
         , m_offset(WTFMove(other.m_offset))
         , m_structureID(WTFMove(other.m_structureID))
         , m_conditionSet(WTFMove(other.m_conditionSet))
@@ -325,7 +332,7 @@ protected:
     AccessCase(const AccessCase& other)
         : m_type(other.m_type)
         , m_state(other.m_state)
-        , m_viaProxy(other.m_viaProxy)
+        , m_viaGlobalProxy(other.m_viaGlobalProxy)
         , m_offset(other.m_offset)
         , m_structureID(other.m_structureID)
         , m_conditionSet(other.m_conditionSet)
@@ -367,25 +374,15 @@ private:
     // was created. Returns a set of watchpoint sets that will need to be watched.
     Vector<WatchpointSet*, 2> commit(VM&);
 
-    // Fall through on success. Two kinds of failures are supported: fall-through, which means that we
-    // should try a different case; and failure, which means that this was the right case but it needs
-    // help from the slow path.
-    void generateWithGuard(AccessGenerationState&, MacroAssembler::JumpList& fallThrough);
-
-    // Fall through on success, add a jump to the failure list on failure.
-    void generate(AccessGenerationState&);
-
-    void generateImpl(AccessGenerationState&);
-
     bool guardedByStructureCheckSkippingConstantIdentifierCheck() const;
 
     AccessType m_type;
     State m_state { Primordial };
 protected:
-    // m_viaProxy is true only if the instance inherits (or it is) ProxyableAccessCase.
+    // m_viaGlobalProxy is true only if the instance inherits (or it is) ProxyableAccessCase.
     // We put this value here instead of ProxyableAccessCase to reduce the size of ProxyableAccessCase and its
     // derived classes, which are super frequently allocated.
-    bool m_viaProxy { false };
+    bool m_viaGlobalProxy { false };
 private:
     PropertyOffset m_offset;
 
