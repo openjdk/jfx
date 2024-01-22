@@ -67,6 +67,12 @@ public:
 
     void SetCursor(HCURSOR cursor);
 
+    // Begin processing a message.
+    void BeginMessageProcessing(UINT msg);
+    // End processing a message. Returns 'true' if the BaseWnd should be
+    // deleted.
+    bool EndMessageProcessing();
+
 private:
     HWND m_hWnd;
     static LRESULT CALLBACK StaticWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -78,6 +84,10 @@ private:
     ATOM m_wndClassAtom;
     bool m_isCommonDialogOwner;
     HCURSOR m_hCursor;
+
+    LONG m_messageCount;
+    bool m_isDead;
+
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam) = 0;
     virtual MessageResult CommonWindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
