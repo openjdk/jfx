@@ -82,7 +82,7 @@ public class JFXPanelHiDPITest {
         launchLatch = new CountDownLatch(1);
 
         // Start the Application
-        SwingUtilities.invokeLater(() -> myApp = new MyApp());
+        SwingUtilities.invokeAndWait(() -> myApp = new MyApp());
 
         assertTrue("Timeout waiting for Application to launch",
                 launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS));
