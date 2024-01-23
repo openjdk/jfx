@@ -27,7 +27,7 @@
 #include "SVGToOTFFontConversion.h"
 
 #include "CSSStyleDeclaration.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "Glyph.h"
 #include "HTMLParserIdioms.h"
 #include "SVGElementTypeHelpers.h"
@@ -37,7 +37,7 @@
 #include "SVGHKernElement.h"
 #include "SVGMissingGlyphElement.h"
 #include "SVGPathParser.h"
-#include "SVGPathStringSource.h"
+#include "SVGPathStringViewSource.h"
 #include "SVGVKernElement.h"
 #include <wtf/Vector.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -1257,7 +1257,7 @@ Vector<char> SVGToOTFFontConverter::transcodeGlyphPaths(float width, const SVGEl
         horizontalOriginY = scaleUnitsPerEm(m_fontFaceElement->horizontalOriginY());
 
     CFFBuilder builder(result, width, FloatPoint(horizontalOriginX, horizontalOriginY), static_cast<float>(s_outputUnitsPerEm) / m_inputUnitsPerEm);
-    SVGPathStringSource source(dAttribute);
+    SVGPathStringViewSource source(dAttribute);
 
     ok = SVGPathParser::parse(source, builder);
     if (!ok)

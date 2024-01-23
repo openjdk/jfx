@@ -33,7 +33,9 @@
 #include "GridPositionsResolver.h"
 #include "GridTrackSizingAlgorithm.h"
 #include "LayoutRepainter.h"
+#include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayoutState.h"
 #include "RenderTreeBuilder.h"
@@ -130,14 +132,14 @@ bool RenderGrid::explicitGridDidResize(const RenderStyle& oldStyle) const
 
 bool RenderGrid::namedGridLinesDefinitionDidChange(const RenderStyle& oldStyle) const
 {
-    return oldStyle.namedGridRowLines() != style().namedGridRowLines()
-        || oldStyle.namedGridColumnLines() != style().namedGridColumnLines();
+    return oldStyle.namedGridRowLines().map != style().namedGridRowLines().map
+        || oldStyle.namedGridColumnLines().map != style().namedGridColumnLines().map;
 }
 
 bool RenderGrid::implicitGridLinesDefinitionDidChange(const RenderStyle& oldStyle) const
 {
-    return oldStyle.implicitNamedGridRowLines() != style().implicitNamedGridRowLines()
-        || oldStyle.implicitNamedGridColumnLines() != style().implicitNamedGridColumnLines();
+    return oldStyle.implicitNamedGridRowLines().map != style().implicitNamedGridRowLines().map
+        || oldStyle.implicitNamedGridColumnLines().map != style().implicitNamedGridColumnLines().map;
 }
 
 // This method optimizes the gutters computation by skiping the available size
@@ -306,7 +308,7 @@ void RenderGrid::layoutGrid(bool relayoutChildren)
         placeItemsOnGrid(availableSpaceForColumns);
 
         m_trackSizingAlgorithm.setAvailableSpace(ForColumns, availableSpaceForColumns);
-        performGridItemsPreLayout(m_trackSizingAlgorithm);
+        performGridItemsPreLayout(m_trackSizingAlgorithm, ShouldUpdateGridAreaLogicalSize::Yes);
 
         // 1- First, the track sizing algorithm is used to resolve the sizes of the grid columns. At this point the
         // logical width is always definite as the above call to updateLogicalWidth() properly resolves intrinsic
@@ -425,12 +427,9 @@ void RenderGrid::layoutMasonry(bool relayoutChildren)
 
         LayoutUnit availableSpaceForColumns = availableLogicalWidth();
         placeItemsOnGrid(availableSpaceForColumns);
-        // Size in the masonry axis is the masonry content size
-        if (areMasonryColumns() && style().logicalWidth().isAuto())
-            setLogicalWidth(m_masonryLayout.gridContentSize() + borderAndPaddingLogicalWidth());
 
         m_trackSizingAlgorithm.setAvailableSpace(ForColumns, availableSpaceForColumns);
-        performGridItemsPreLayout(m_trackSizingAlgorithm);
+        performGridItemsPreLayout(m_trackSizingAlgorithm, ShouldUpdateGridAreaLogicalSize::Yes);
 
         // 1- First, the track sizing algorithm is used to resolve the sizes of the grid columns. At this point the
         // logical width is always definite as the above call to updateLogicalWidth() properly resolves intrinsic
@@ -468,7 +467,7 @@ void RenderGrid::layoutMasonry(bool relayoutChildren)
             trackBasedLogicalHeight += size.value();
         else {
             if (areMasonryRows())
-                trackBasedLogicalHeight += m_masonryLayout.gridContentSize() + m_masonryLayout.gridGap();
+                trackBasedLogicalHeight += m_masonryLayout.gridContentSize();
             else
                 trackBasedLogicalHeight += m_trackSizingAlgorithm.computeTrackBasedSize();
         }
@@ -638,7 +637,7 @@ void RenderGrid::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Layo
     // so here since we've overriden m_currentGrid with a stack based temporary.
     const_cast<RenderGrid&>(*this).placeItemsOnGrid(std::nullopt);
 
-        performGridItemsPreLayout(algorithm);
+    performGridItemsPreLayout(algorithm, ShouldUpdateGridAreaLogicalSize::No);
 
         if (m_baselineItemsCached)
             algorithm.copyBaselineItemsCache(m_trackSizingAlgorithm, GridRowAxis);
@@ -677,9 +676,14 @@ void RenderGrid::computeTrackSizesForIndefiniteSize(GridTrackSizingAlgorithm& al
     ASSERT(algorithm.tracksAreWiderThanMinTrackBreadth());
 }
 
+bool RenderGrid::shouldCheckExplicitIntrinsicInnerLogicalSize(GridTrackSizingDirection direction) const
+{
+    return direction == ForColumns ? shouldApplySizeOrInlineSizeContainment() : shouldApplySizeContainment();
+}
+
 std::optional<LayoutUnit> RenderGrid::explicitIntrinsicInnerLogicalSize(GridTrackSizingDirection direction) const
 {
-    if (!shouldApplySizeContainment())
+    if (!shouldCheckExplicitIntrinsicInnerLogicalSize(direction))
         return std::nullopt;
     if (direction == ForColumns)
         return explicitIntrinsicInnerLogicalWidth();
@@ -798,7 +802,7 @@ std::unique_ptr<OrderedTrackIndexSet> RenderGrid::computeEmptyTracksForAutoRepea
     unsigned firstAutoRepeatTrack = insertionPoint + currentGrid().explicitGridStart(direction);
     unsigned lastAutoRepeatTrack = firstAutoRepeatTrack + currentGrid().autoRepeatTracks(direction);
 
-    if (!currentGrid().hasGridItems() || shouldApplyInlineSizeContainment() || (shouldApplySizeContainment() && !explicitIntrinsicInnerLogicalSize(direction))) {
+    if (!currentGrid().hasGridItems() || (shouldCheckExplicitIntrinsicInnerLogicalSize(direction) && !explicitIntrinsicInnerLogicalSize(direction))) {
         emptyTrackIndexes = makeUnique<OrderedTrackIndexSet>();
         for (unsigned trackIndex = firstAutoRepeatTrack; trackIndex < lastAutoRepeatTrack; ++trackIndex)
             emptyTrackIndexes->add(trackIndex);
@@ -1009,7 +1013,7 @@ LayoutUnit RenderGrid::masonryContentSize() const
     return m_masonryLayout.gridContentSize();
 }
 
-void RenderGrid::performGridItemsPreLayout(const GridTrackSizingAlgorithm& algorithm) const
+void RenderGrid::performGridItemsPreLayout(const GridTrackSizingAlgorithm& algorithm, const ShouldUpdateGridAreaLogicalSize shouldUpdateGridAreaLogicalSize) const
 {
     ASSERT(!algorithm.grid().needsItemsPlacement());
     // FIXME: We need a way when we are calling this during intrinsic size compuation before performing
@@ -1030,6 +1034,8 @@ void RenderGrid::performGridItemsPreLayout(const GridTrackSizingAlgorithm& algor
         // FIXME: We also want to layout baseline aligned items within subgrids, but
         // we don't currently have a way to do that here.
         if (isBaselineAlignmentForChild(*child)) {
+            // FIXME: Hack to fix nested grid text size overflow during re-layouts.
+            if (shouldUpdateGridAreaLogicalSize == ShouldUpdateGridAreaLogicalSize::Yes)
             updateGridAreaLogicalSize(*child, algorithm.estimatedGridAreaBreadthForChild(*child, ForColumns), algorithm.estimatedGridAreaBreadthForChild(*child, ForRows));
             child->layoutIfNeeded();
         }
@@ -1564,6 +1570,16 @@ bool RenderGrid::aspectRatioPrefersInline(const RenderBox& child, bool blockFlow
     return !hasExplicitBlockStretch;
 }
 
+inline bool RenderGrid::allowedToStretchChildAlongColumnAxis(const RenderBox& child) const
+{
+    return alignSelfForChild(child).position() == ItemPosition::Stretch && hasAutoSizeInColumnAxis(child) && !hasAutoMarginsInColumnAxis(child);
+}
+
+inline bool RenderGrid::allowedToStretchChildAlongRowAxis(const RenderBox& child) const
+{
+    return justifySelfForChild(child).position() == ItemPosition::Stretch && hasAutoSizeInRowAxis(child) && !hasAutoMarginsInRowAxis(child);
+}
+
 // FIXME: This logic is shared by RenderFlexibleBox, so it should be moved to RenderBox.
 void RenderGrid::applyStretchAlignmentToChildIfNeeded(RenderBox& child)
 {
@@ -1697,10 +1713,10 @@ void RenderGrid::updateAutoMarginsInColumnAxisIfNeeded(RenderBox& child)
     }
 }
 
-bool RenderGrid::shouldTrimChildMargin(MarginTrimType marginTrimType, const RenderBox& child) const
+bool RenderGrid::isChildEligibleForMarginTrim(MarginTrimType marginTrimType, const RenderBox& child) const
 {
-    if (!style().marginTrim().contains(marginTrimType))
-        return false;
+    ASSERT(style().marginTrim().contains(marginTrimType));
+
     auto isTrimmingBlockDirection = marginTrimType == MarginTrimType::BlockStart || marginTrimType == MarginTrimType::BlockEnd;
     auto itemGridSpan = isTrimmingBlockDirection ? currentGrid().gridItemSpanIgnoringCollapsedTracks(child, ForRows) : currentGrid().gridItemSpanIgnoringCollapsedTracks(child, ForColumns);
     switch (marginTrimType) {
@@ -1727,7 +1743,7 @@ bool RenderGrid::isBaselineAlignmentForChild(const RenderBox& child, GridAxis ba
         return false;
     ItemPosition align = selfAlignmentForChild(baselineAxis, child).position();
     bool hasAutoMargins = baselineAxis == GridColumnAxis ? hasAutoMarginsInColumnAxis(child) : hasAutoMarginsInRowAxis(child);
-    bool isBaseline = allowed == FirstLine ? isFirstBaselinePosition(align) : isBaselinePosition(align);
+    bool isBaseline = allowed == AllowedBaseLine::FirstLine ? isFirstBaselinePosition(align) : isBaselinePosition(align);
     return isBaseline && !hasAutoMargins;
 }
 
@@ -1744,7 +1760,7 @@ LayoutUnit RenderGrid::baselinePosition(FontBaseline, bool, LineDirectionMode di
 
 std::optional<LayoutUnit> RenderGrid::firstLineBaseline() const
 {
-    if (isWritingModeRoot() || !currentGrid().hasGridItems() || shouldApplyLayoutContainment())
+    if ((isWritingModeRoot() && !isFlexItem()) || !currentGrid().hasGridItems() || shouldApplyLayoutContainment())
         return std::nullopt;
 
     // Finding the first grid item in grid order.
@@ -1798,7 +1814,7 @@ WeakPtr<RenderBox> RenderGrid::getBaselineChild(ItemPosition alignment) const
         for (auto& child : cell) {
             ASSERT(child.get());
             // If an item participates in baseline alignment, we select such item.
-            if (isBaselineAlignmentForChild(*child, GridColumnAxis, FirstLine)) {
+            if (isBaselineAlignmentForChild(*child, GridColumnAxis, AllowedBaseLine::FirstLine)) {
                 // FIXME: self-baseline and content-baseline alignment not implemented yet.
                 baselineChild = child.get();
                 break;

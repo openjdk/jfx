@@ -32,7 +32,6 @@
 #include "DocumentInlines.h"
 #include "Editor.h"
 #include "ElementInlines.h"
-#include "Frame.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDListElement.h"
 #include "HTMLDivElement.h"
@@ -47,11 +46,13 @@
 #include "HTMLTableElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "HTMLUListElement.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RenderElement.h"
+#include "RenderStyleInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTextControlSingleLine.h"
 #include "ShadowRoot.h"
@@ -123,7 +124,7 @@ static bool isEditableToAccessibility(const Node& node)
 
 static bool computeEditability(const Node& node, EditableType editableType, Node::ShouldUpdateStyle shouldUpdateStyle)
 {
-    if (node.computeEditability(Node::UserSelectAllIsAlwaysNonEditable, shouldUpdateStyle) != Node::Editability::ReadOnly)
+    if (node.computeEditability(Node::UserSelectAllTreatment::NotEditable, shouldUpdateStyle) != Node::Editability::ReadOnly)
         return true;
 
     switch (editableType) {
@@ -203,7 +204,7 @@ Position nextCandidate(const Position& position)
     return { };
 }
 
-Position nextVisuallyDistinctCandidate(const Position& position)
+Position nextVisuallyDistinctCandidate(const Position& position, SkipDisplayContents skipDisplayContents)
 {
     // FIXME: Use PositionIterator instead.
     Position nextPosition = position;
@@ -213,9 +214,14 @@ Position nextVisuallyDistinctCandidate(const Position& position)
         if (nextPosition.isCandidate() && nextPosition.downstream() != downstreamStart)
             return nextPosition;
         if (auto* node = nextPosition.containerNode()) {
-            if (!node->renderer())
+            if (!node->renderer()) {
+                if (skipDisplayContents == SkipDisplayContents::No) {
+                    if (auto* element = dynamicDowncast<Element>(node); element && element->hasDisplayContents())
+                        continue;
+                }
                 nextPosition = lastPositionInOrAfterNode(node);
         }
+    }
     }
     return { };
 }
@@ -613,29 +619,6 @@ Node* enclosingListChild(Node *node)
     return nullptr;
 }
 
-static HTMLElement* embeddedSublist(Node* listItem)
-{
-    // Check the DOM so that we'll find collapsed sublists without renderers.
-    for (Node* n = listItem->firstChild(); n; n = n->nextSibling()) {
-        if (isListHTMLElement(n))
-            return downcast<HTMLElement>(n);
-    }
-    return nullptr;
-}
-
-static Node* appendedSublist(Node* listItem)
-{
-    // Check the DOM so that we'll find collapsed sublists without renderers.
-    for (Node* n = listItem->nextSibling(); n; n = n->nextSibling()) {
-        if (isListHTMLElement(n))
-            return downcast<HTMLElement>(n);
-        if (isListItem(listItem))
-            return nullptr;
-    }
-
-    return nullptr;
-}
-
 // FIXME: This function should not need to call isStartOfParagraph/isEndOfParagraph.
 Node* enclosingEmptyListItem(const VisiblePosition& position)
 {
@@ -648,9 +631,6 @@ Node* enclosingEmptyListItem(const VisiblePosition& position)
     VisiblePosition lastInListChild(lastPositionInOrAfterNode(listChildNode));
 
     if (firstInListChild != position || lastInListChild != position)
-        return nullptr;
-
-    if (embeddedSublist(listChildNode) || appendedSublist(listChildNode))
         return nullptr;
 
     return listChildNode;
@@ -783,9 +763,9 @@ bool isEmptyTableCell(const Node* node)
 Ref<HTMLElement> createDefaultParagraphElement(Document& document)
 {
     switch (document.editor().defaultParagraphSeparator()) {
-    case EditorParagraphSeparatorIsDiv:
+    case EditorParagraphSeparator::div:
         return HTMLDivElement::create(document);
-    case EditorParagraphSeparatorIsP:
+    case EditorParagraphSeparator::p:
         break;
     }
     return HTMLParagraphElement::create(document);

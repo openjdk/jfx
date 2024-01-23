@@ -90,11 +90,11 @@ MediaTime MockMediaSourcePrivate::duration()
     return MediaTime::invalidTime();
 }
 
-std::unique_ptr<PlatformTimeRanges> MockMediaSourcePrivate::buffered()
+const PlatformTimeRanges& MockMediaSourcePrivate::buffered()
 {
     if (m_client)
         return m_client->buffered();
-    return nullptr;
+    return PlatformTimeRanges::emptyRanges();
 }
 
 void MockMediaSourcePrivate::durationChanged(const MediaTime& duration)

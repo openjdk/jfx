@@ -25,22 +25,25 @@
 
 #pragma once
 
-#include "AbstractFrameView.h"
+#include "FrameView.h"
 
 namespace WebCore {
 
 class RemoteFrame;
 
-class RemoteFrameView final : public AbstractFrameView {
+class RemoteFrameView final : public FrameView {
 public:
     static Ref<RemoteFrameView> create(RemoteFrame& frame) { return adoptRef(*new RemoteFrameView(frame)); }
 
-    FrameViewType viewType() const final { return FrameViewType::Remote; }
+    Type viewType() const final { return Type::Remote; }
+    void writeRenderTreeAsText(TextStream&, OptionSet<RenderAsTextFlag>) override;
+    const RemoteFrame& frame() const { return m_frame.get(); }
+    RemoteFrame& frame() { return m_frame.get(); }
+
 private:
     WEBCORE_EXPORT RemoteFrameView(RemoteFrame&);
 
     bool isRemoteFrameView() const final { return true; }
-
     void invalidateRect(const IntRect&) final;
     bool isActive() const final;
     bool forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const final;
@@ -52,7 +55,7 @@ private:
     void invalidateScrollbarRect(Scrollbar&, const IntRect&) final;
     HostWindow* hostWindow() const final;
     IntRect windowClipRect() const final;
-    void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy, EventRegionContext*) final;
+    void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy, RegionContext*) final;
     void addedOrRemovedScrollbar() final;
     void delegatedScrollingModeDidChange() final;
     void updateScrollCorner() final;
@@ -74,6 +77,6 @@ private:
 }
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RemoteFrameView)
-static bool isType(const WebCore::AbstractFrameView& view) { return view.viewType() == WebCore::AbstractFrameView::FrameViewType::Remote; }
+static bool isType(const WebCore::FrameView& view) { return view.viewType() == WebCore::FrameView::Type::Remote; }
 static bool isType(const WebCore::Widget& widget) { return widget.isRemoteFrameView(); }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -2,26 +2,26 @@
 #
 # Copyright (C) 2005 Apple Inc.
 # Copyright (C) 2006 Anders Carlsson <andersca@mac.com>
-# 
+#
 # This file is part of WebKit
-# 
+#
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Library General Public
 # License as published by the Free Software Foundation; either
 # version 2 of the License, or (at your option) any later version.
-# 
+#
 # This library is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Library General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Library General Public License
 # along with this library; see the file COPYING.LIB.  If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA 02110-1301, USA.
-# 
+#
 
-# This script is a temporary hack. 
+# This script is a temporary hack.
 # Files are generated in the source directory, when they really should go
 # to the DerivedSources directory.
 # This should also eventually be a build rule driven off of .idl files
@@ -56,9 +56,8 @@ my $writeDependencies;
 my $verbose;
 my $supplementalDependencyFile;
 my $idlAttributesFile;
-my $includeDirsList;
 
-GetOptions('includeDirsList=s' => \$includeDirsList,
+GetOptions('include=s@' => \@idlDirectories,
            'outputDir=s' => \$outputDirectory,
            'outputHeadersDir=s' => \$outputHeadersDirectory,
            'generator=s' => \$generator,
@@ -71,9 +70,6 @@ GetOptions('includeDirsList=s' => \$includeDirsList,
            'supplementalDependencyFile=s' => \$supplementalDependencyFile,
            'idlAttributesFile=s' => \$idlAttributesFile);
 
-open(my $dh, '<', $includeDirsList) or die "Cannot open $includeDirsList";
-@idlDirectories = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$dh>;
-close($dh) or die;
 
 die('Must specify input file.') unless @ARGV;
 die('Must specify generator') unless defined($generator);
@@ -137,9 +133,3 @@ sub generateBindings
     $codeGen->ProcessDocument($targetDocument, $defines);
 }
 
-sub CygwinPathIfNeeded
-{
-    my $path = shift;
-    return Cygwin::win_to_posix_path($path) if ($^O eq 'cygwin');
-    return $path;
-}

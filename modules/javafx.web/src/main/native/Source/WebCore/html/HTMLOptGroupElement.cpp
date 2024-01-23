@@ -26,7 +26,7 @@
 #include "HTMLOptGroupElement.h"
 
 #include "Document.h"
-#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "ElementIterator.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
@@ -35,6 +35,7 @@
 #include "RenderMenuList.h"
 #include "NodeRenderStyle.h"
 #include "StyleResolver.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 
@@ -62,11 +63,10 @@ bool HTMLOptGroupElement::isDisabledFormControl() const
 
 bool HTMLOptGroupElement::isFocusable() const
 {
-    if (!supportsFocus())
+    RefPtr select = ownerSelectElement();
+    if (select && select->usesMenuList())
         return false;
-    // Optgroup elements do not have a renderer.
-    auto* style = const_cast<HTMLOptGroupElement&>(*this).computedStyle();
-    return style && style->display() != DisplayType::None;
+    return HTMLElement::isFocusable();
 }
 
 const AtomString& HTMLOptGroupElement::formControlType() const
@@ -90,19 +90,19 @@ void HTMLOptGroupElement::childrenChanged(const ChildChange& change)
     HTMLElement::childrenChanged(change);
 }
 
-void HTMLOptGroupElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLOptGroupElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    HTMLElement::parseAttribute(name, value);
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
     recalcSelectOptions();
 
     if (name == disabledAttr) {
-        bool newDisabled = !value.isNull();
+        bool newDisabled = !newValue.isNull();
         if (m_isDisabled != newDisabled) {
-            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClassDisabled, newDisabled }, { CSSSelector::PseudoClassEnabled, !newDisabled } });
+            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClassType::Disabled, newDisabled }, { CSSSelector::PseudoClassType::Enabled, !newDisabled } });
 
             Vector<Style::PseudoClassChangeInvalidation> optionInvalidation;
             for (auto& descendant : descendantsOfType<HTMLOptionElement>(*this))
-                optionInvalidation.append({ descendant, { { CSSSelector::PseudoClassDisabled, newDisabled }, { CSSSelector::PseudoClassEnabled, !newDisabled } } });
+                optionInvalidation.append({ descendant, { { CSSSelector::PseudoClassType::Disabled, newDisabled }, { CSSSelector::PseudoClassType::Enabled, !newDisabled } } });
 
             m_isDisabled = newDisabled;
         }
@@ -122,9 +122,9 @@ String HTMLOptGroupElement::groupLabelText() const
     String itemText = document().displayStringModifiedByEncoding(attributeWithoutSynchronization(labelAttr));
 
     // In WinIE, leading and trailing whitespace is ignored in options and optgroups. We match this behavior.
-    itemText = itemText.stripWhiteSpace();
+    itemText = itemText.trim(deprecatedIsSpaceOrNewline);
     // We want to collapse our whitespace too.  This will match other browsers.
-    itemText = itemText.simplifyWhiteSpace();
+    itemText = itemText.simplifyWhiteSpace(deprecatedIsSpaceOrNewline);
 
     return itemText;
 }

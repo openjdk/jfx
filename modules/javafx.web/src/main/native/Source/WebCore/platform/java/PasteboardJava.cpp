@@ -32,6 +32,7 @@
 #include "Editor.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "LocalFrame.h"
 #include "markup.h"
 #include "Pasteboard.h"
 #include "RenderImage.h"
@@ -260,7 +261,7 @@ void Pasteboard::setDragImage(DragImage, const IntPoint&)
 void Pasteboard::writeSelection(
     const SimpleRange& selectedRange,
     bool canSmartCopyOrDelete,
-    Frame& frame,
+    LocalFrame& frame,
     ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
     String markup = serializePreservingVisualAppearance(selectedRange, nullptr, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingURLsForPrivacy);
@@ -330,7 +331,7 @@ void Pasteboard::writeImage(Element& element, const URL& url, const String& titl
 
     AtomString imageURL = element.getAttribute(HTMLNames::srcAttr);
     if (!imageURL.isEmpty()) {
-        String fullURL = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageURL)).string();
+        String fullURL = element.document().completeURL(imageURL).string();  //REVISIT
         if (!fullURL.isEmpty()) {
             m_dataObject->setHTML(
                 imageToMarkup(fullURL, element),
@@ -474,7 +475,7 @@ bool Pasteboard::canSmartReplace()
 }
 
 RefPtr<DocumentFragment> Pasteboard::documentFragment(
-    Frame& frame, const SimpleRange& range, bool allowPlainText, bool &chosePlainText)
+    LocalFrame& frame, const SimpleRange& range, bool allowPlainText, bool &chosePlainText)
 {
     chosePlainText = false;
 

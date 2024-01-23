@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "FilterEffect.h"
 #include "FilterImageVector.h"
 #include "ImageBufferAllocator.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 
@@ -37,6 +38,7 @@ class FilterEffect;
 class FilterImage;
 
 class FilterResults {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT FilterResults(std::unique_ptr<ImageBufferAllocator>&& = nullptr);
 
@@ -47,6 +49,9 @@ public:
     void clearEffectResult(FilterEffect&);
 
 private:
+    size_t memoryCost() const;
+    bool canCacheResult(const FilterImage&) const;
+
     HashMap<Ref<FilterEffect>, Ref<FilterImage>> m_results;
 
     // The value is a list of FilterEffects, whose FilterImages depend on the key FilterImage.
@@ -55,5 +60,7 @@ private:
 
     std::unique_ptr<ImageBufferAllocator> m_allocator;
 };
+
+using FilterResultsCreator = Function<std::unique_ptr<FilterResults>()>;
 
 } // namespace WebCore

@@ -25,24 +25,21 @@
 #pragma once
 
 #include "StyleImage.h"
+#include "StyleInvalidImage.h"
 
 namespace WebCore {
 
 class Document;
 
 struct ImageWithScale {
-    RefPtr<StyleImage> image;
+    RefPtr<StyleImage> image { StyleInvalidImage::create() };
     float scaleFactor { 1 };
+    String mimeType { String() };
 };
 
 inline bool operator==(const ImageWithScale& a, const ImageWithScale& b)
 {
     return a.image == b.image && a.scaleFactor == b.scaleFactor;
-}
-
-inline bool operator!=(const ImageWithScale& a, const ImageWithScale& b)
-{
-    return !(a == b);
 }
 
 class StyleMultiImage : public StyleImage {

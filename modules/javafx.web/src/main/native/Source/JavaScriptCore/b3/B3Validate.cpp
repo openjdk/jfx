@@ -277,6 +277,8 @@ public:
                 VALIDATE(value->child(0)->type() == Int32, ("At ", *value));
                 VALIDATE(value->type() == Int32, ("At ", *value));
                 break;
+            case SExt8To64:
+            case SExt16To64:
             case SExt32:
             case ZExt32:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
@@ -513,12 +515,22 @@ public:
                 break;
 
             case VectorMulByElement:
+                VALIDATE(isARM64(), ("At ", *value));
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
                 VALIDATE(value->numChildren() == 2, ("At ", *value));
                 VALIDATE(value->child(0)->type() == V128, ("At ", *value));
                 VALIDATE(value->type() == V128, ("At ", *value));
                 VALIDATE(value->asSIMDValue()->simdLane() == SIMDLane::f64x2 || value->asSIMDValue()->simdLane() == SIMDLane::f32x4, ("At ", *value));
                 VALIDATE(value->asSIMDValue()->immediate() < (16 / elementByteSize(value->asSIMDValue()->simdLane())), ("At ", *value));
+                break;
+
+            case VectorShiftByVector:
+                VALIDATE(isARM64(), ("At ", *value));
+                VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
+                VALIDATE(value->numChildren() == 2, ("At ", *value));
+                VALIDATE(value->type() == V128, ("At ", *value));
+                VALIDATE(value->child(0)->type() == V128, ("At ", *value));
+                VALIDATE(value->child(1)->type() == V128, ("At ", *value));
                 break;
 
             case VectorBitmask:
@@ -538,6 +550,7 @@ public:
             case VectorFloor:
             case VectorTrunc:
             case VectorTruncSat:
+            case VectorRelaxedTruncSat:
             case VectorNearest:
             case VectorSqrt:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
@@ -658,10 +671,41 @@ public:
                 VALIDATE(value->asSIMDValue()->simdLane() == SIMDLane::v128, ("At ", *value));
                 VALIDATE(value->asSIMDValue()->signMode() == SIMDSignMode::None, ("At ", *value));
                 break;
+
+            // Relaxed SIMD
+            case VectorRelaxedSwizzle:
+                VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
+                VALIDATE(value->numChildren() == 2, ("At ", *value));
+                VALIDATE(value->type() == V128, ("At ", *value));
+                VALIDATE(value->child(0)->type() == V128, ("At ", *value));
+                VALIDATE(value->child(1)->type() == V128, ("At ", *value));
+                VALIDATE(value->asSIMDValue()->simdLane() == SIMDLane::i8x16, ("At ", *value));
+                break;
+
+            case VectorRelaxedMAdd:
+            case VectorRelaxedNMAdd:
+                VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
+                VALIDATE(value->numChildren() == 3, ("At ", *value));
+                VALIDATE(value->type() == V128, ("At ", *value));
+                VALIDATE(value->child(0)->type() == V128, ("At ", *value));
+                VALIDATE(value->child(1)->type() == V128, ("At ", *value));
+                VALIDATE(value->child(2)->type() == V128, ("At ", *value));
+                VALIDATE((value->asSIMDValue()->simdLane() == SIMDLane::f32x4) || (value->asSIMDValue()->simdLane() == SIMDLane::f64x2), ("At ", *value));
+                VALIDATE(value->asSIMDValue()->signMode() == SIMDSignMode::None, ("At ", *value));
+                break;
+
             case CCall:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
                 VALIDATE(value->numChildren() >= 1, ("At ", *value));
                 VALIDATE(value->child(0)->type() == pointerType(), ("At ", *value));
+                if (value->type().isTuple()) {
+                    // FIXME: Right now we only support a pair of register sized values since on every calling
+                    // convention we support that's returned in returnValueGPR/returnValueGPR2, respectively.
+                    VALIDATE(m_procedure.resultCount(value->type()) == 2, ("At ", *value));
+                    VALIDATE(m_procedure.typeAtOffset(value->type(), 0) == registerType(), ("At ", *value));
+                    VALIDATE(m_procedure.typeAtOffset(value->type(), 1) == registerType(), ("At ", *value));
+                }
+
                 break;
             case Patchpoint:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));

@@ -38,8 +38,8 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "ExtensionStyleSheets.h"
-#include "Frame.h"
-#include "FrameLoaderClient.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Page.h"
 #include "ResourceLoadInfo.h"
 #include "ScriptController.h"
@@ -66,11 +66,6 @@ static void makeSecureIfNecessary(ContentRuleListResults& results, const URL& ur
         || url.host() == "webkit.org"_s
         || url.host() == "download"_s)
         results.summary.madeHTTPS = true;
-}
-
-std::optional<String> customLoadBlockingMessageForConsole(const ContentRuleListResults&, const URL&, const URL&)
-{
-    return std::nullopt;
 }
 #endif
 
@@ -166,7 +161,7 @@ auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& re
         return { };
 
     const String& urlString = resourceLoadInfo.resourceURL.string();
-    ASSERT_WITH_MESSAGE(urlString.isAllASCII(), "A decoded URL should only contain ASCII characters. The matching algorithm assumes the input is ASCII.");
+    ASSERT_WITH_MESSAGE(urlString.containsOnlyASCII(), "A decoded URL should only contain ASCII characters. The matching algorithm assumes the input is ASCII.");
 
     Vector<ActionsFromContentRuleList> actionsVector;
     actionsVector.reserveInitialCapacity(m_contentExtensions.size());
@@ -194,6 +189,35 @@ StyleSheetContents* ContentExtensionsBackend::globalDisplayNoneStyleSheet(const 
 {
     const auto& contentExtension = m_contentExtensions.get(identifier);
     return contentExtension ? contentExtension->globalDisplayNoneStyleSheet() : nullptr;
+}
+
+std::optional<String> customTrackerBlockingMessageForConsole(const ContentRuleListResults& results, const URL& requestURL, const URL& documentURL)
+{
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    bool blockedKnownTracker = results.results.containsIf([](auto& identifierAndResult) {
+        auto& [identifier, result] = identifierAndResult;
+        if (!result.blockedLoad)
+            return false;
+        return identifier.startsWith("com.apple."_s) && identifier.endsWith(".TrackingResourceRequestContentBlocker"_s);
+    });
+
+    if (!blockedKnownTracker)
+        return std::nullopt;
+
+    auto trackerBlockingMessage = "Blocked connection to known tracker"_s;
+    if (!requestURL.isEmpty() && !documentURL.isEmpty())
+        return makeString(trackerBlockingMessage, ' ', requestURL.string(), " in frame displaying "_s, documentURL.string());
+
+    if (!requestURL.isEmpty())
+        return makeString(trackerBlockingMessage, ' ', requestURL.string());
+
+    return trackerBlockingMessage;
+#else
+    UNUSED_PARAM(results);
+    UNUSED_PARAM(requestURL);
+    UNUSED_PARAM(documentURL);
+    return std::nullopt;
+#endif
 }
 
 ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter& ruleListFilter)
@@ -287,7 +311,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
         }
         if (results.summary.blockedLoad) {
             String consoleMessage;
-            if (auto message = customLoadBlockingMessageForConsole(results, url, mainDocumentURL))
+            if (auto message = customTrackerBlockingMessageForConsole(results, url, mainDocumentURL))
                 consoleMessage = WTFMove(*message);
             else
                 consoleMessage = makeString("Content blocker prevented frame displaying ", mainDocumentURL.string(), " from loading a resource from ", url.string());
@@ -351,15 +375,8 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
         request.setAllowCookies(false);
 
     if (results.summary.madeHTTPS) {
-        const URL& originalURL = request.url();
-        ASSERT(originalURL.protocolIs("http"_s));
-        ASSERT(!originalURL.port() || WTF::isDefaultPortForProtocol(originalURL.port().value(), originalURL.protocol()));
-
-        URL newURL = originalURL;
-        newURL.setProtocol("https"_s);
-        if (originalURL.port())
-            newURL.setPort(WTF::defaultPortForProtocol("https"_s).value());
-        request.setURL(newURL);
+        ASSERT(!request.url().port() || WTF::isDefaultPortForProtocol(request.url().port().value(), request.url().protocol()));
+        request.upgradeToHTTPS();
     }
 
     std::sort(results.summary.modifyHeadersActions.begin(), results.summary.modifyHeadersActions.end(),

@@ -35,7 +35,7 @@ namespace WGSL {
 
 namespace Metal {
 
-static constexpr bool dumpMetalCode = false;
+static constexpr bool dumpMetalCode = true;
 
 static StringView metalCodePrologue()
 {
@@ -56,12 +56,12 @@ static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
     }
 }
 
-String generateMetalCode(ShaderModule& module)
+String generateMetalCode(CallGraph& callGraph)
 {
     StringBuilder stringBuilder;
     stringBuilder.append(metalCodePrologue());
 
-    auto metalFunctionEntryPoints = Metal::emitMetalFunctions(stringBuilder, module);
+    Metal::emitMetalFunctions(stringBuilder, callGraph);
 
     dumpMetalCodeIfNeeded(stringBuilder);
 

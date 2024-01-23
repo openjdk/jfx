@@ -32,15 +32,17 @@
 #include "CommonAtomStrings.h"
 #include "Document.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "LocalFrame.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
 #include "PlatformMouseEvent.h"
 #include "RenderSearchField.h"
+#include "RenderStyleSetters.h"
 #include "RenderTextControl.h"
 #include "RenderView.h"
+#include "ResolvedStyle.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
@@ -64,9 +66,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SearchFieldCancelButtonElement);
 using namespace HTMLNames;
 
 TextControlInnerContainer::TextControlInnerContainer(Document& document)
-    : HTMLDivElement(divTag, document)
+    : HTMLDivElement(divTag, document, CreateTextControlInnerContainer)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<TextControlInnerContainer> TextControlInnerContainer::create(Document& document)
@@ -96,9 +97,8 @@ std::optional<Style::ResolvedStyle> TextControlInnerContainer::resolveCustomStyl
 }
 
 TextControlInnerElement::TextControlInnerElement(Document& document)
-    : HTMLDivElement(divTag, document)
+    : HTMLDivElement(divTag, document, CreateTextControlInnerElement)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<TextControlInnerElement> TextControlInnerElement::create(Document& document)
@@ -143,9 +143,8 @@ std::optional<Style::ResolvedStyle> TextControlInnerElement::resolveCustomStyle(
 // MARK: TextControlInnerTextElement
 
 inline TextControlInnerTextElement::TextControlInnerTextElement(Document& document)
-    : HTMLDivElement(divTag, document)
+    : HTMLDivElement(divTag, document, CreateTextControlInnerTextElement)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<TextControlInnerTextElement> TextControlInnerTextElement::create(Document& document, bool isEditable)
@@ -162,7 +161,7 @@ void TextControlInnerTextElement::updateInnerTextElementEditabilityImpl(bool isE
     const auto& value = isEditable ? plaintextOnlyAtom() : falseAtom();
     if (initialization) {
         Attribute attribute(contenteditableAttr, value);
-        parserSetAttributes(Span { &attribute, 1 });
+        parserSetAttributes(std::span(&attribute, 1));
     } else
         setAttributeWithoutSynchronization(contenteditableAttr, value);
 }
@@ -204,9 +203,8 @@ std::optional<Style::ResolvedStyle> TextControlInnerTextElement::resolveCustomSt
 // MARK: TextControlPlaceholderElement
 
 inline TextControlPlaceholderElement::TextControlPlaceholderElement(Document& document)
-    : HTMLDivElement(divTag, document)
+    : HTMLDivElement(divTag, document, CreateTextControlPlaceholderElement)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<TextControlPlaceholderElement> TextControlPlaceholderElement::create(Document& document)
@@ -236,12 +234,10 @@ std::optional<Style::ResolvedStyle> TextControlPlaceholderElement::resolveCustom
 // MARK: SearchFieldResultsButtonElement
 
 inline SearchFieldResultsButtonElement::SearchFieldResultsButtonElement(Document& document)
-    : HTMLDivElement(divTag, document)
+    : HTMLDivElement(divTag, document, CreateSearchFieldResultsButtonElement)
 {
     if (document.quirks().shouldHideSearchFieldResultsButton())
         setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone);
-
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<SearchFieldResultsButtonElement> SearchFieldResultsButtonElement::create(Document& document)
@@ -307,9 +303,8 @@ bool SearchFieldResultsButtonElement::willRespondToMouseClickEventsWithEditabili
 // MARK: SearchFieldCancelButtonElement
 
 inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& document)
-    : HTMLDivElement(divTag, document)
+    : HTMLDivElement(divTag, document, CreateSearchFieldCancelButtonElement)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 Ref<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Document& document)
@@ -354,6 +349,7 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
 
     if (event.type() == eventNames().clickEvent) {
         input->setValue(emptyString(), DispatchChangeEvent);
+        if (input->document().settings().searchInputIncrementalAttributeAndSearchEventEnabled())
         input->onSearch();
         event.setDefaultHandled();
     }

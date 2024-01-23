@@ -30,7 +30,7 @@
 
 #pragma once
 
-#include "DOMWindowProperty.h"
+#include "LocalDOMWindowProperty.h"
 #include "ScriptWrappable.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Ref.h>
@@ -39,16 +39,15 @@ namespace WebCore {
 
 class ScreenOrientation;
 
-class Screen final : public ScriptWrappable, public RefCounted<Screen>, public DOMWindowProperty {
+class Screen final : public ScriptWrappable, public RefCounted<Screen>, public LocalDOMWindowProperty {
     WTF_MAKE_ISO_ALLOCATED(Screen);
 public:
-    static Ref<Screen> create(DOMWindow& window) { return adoptRef(*new Screen(window)); }
+    static Ref<Screen> create(LocalDOMWindow& window) { return adoptRef(*new Screen(window)); }
     ~Screen();
 
     int height() const;
     int width() const;
     unsigned colorDepth() const;
-    unsigned pixelDepth() const;
     int availLeft() const;
     int availTop() const;
     int availHeight() const;
@@ -57,7 +56,7 @@ public:
     ScreenOrientation& orientation();
 
 private:
-    explicit Screen(DOMWindow&);
+    explicit Screen(LocalDOMWindow&);
 
     RefPtr<ScreenOrientation> m_screenOrientation;
 };
