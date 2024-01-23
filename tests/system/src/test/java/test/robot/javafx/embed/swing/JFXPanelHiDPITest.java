@@ -32,7 +32,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.application.PlatformImpl;
 
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
@@ -58,6 +57,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
+import test.util.Util;
 import static test.util.Util.TIMEOUT;
 
 public class JFXPanelHiDPITest {
@@ -151,7 +151,7 @@ public class JFXPanelHiDPITest {
         }
 
         private void createScene(final JFXPanel fxPanel) {
-            PlatformImpl.runAndWait(() -> {
+            Util.runAndWait(() -> {
                 StackPane root = new StackPane();
 
                 Rectangle rect = new Rectangle(PANEL_WIDTH - 100, (double) PANEL_HEIGHT / 8);
