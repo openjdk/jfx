@@ -43,6 +43,8 @@ import java.text.AttributedString;
 import java.text.CharacterIterator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A utility class containing the functions to support Input Methods
@@ -60,58 +62,59 @@ class InputMethodSupport {
 
         @Override
         public Rectangle getTextLocation(TextHitInfo offset) {
-            Point2D[] location = { new Point2D(0.0, 0.0) };
+            AtomicReference<Point2D> location = new AtomicReference<>(new Point2D(0.0, 0.0));
             if (fxRequests != null) {
                 PlatformImpl.runAndWait(() -> {
-                    location[0] = fxRequests.getTextLocation(offset.getInsertionIndex());
+                    location.set(fxRequests.getTextLocation(offset.getInsertionIndex()));
                 });
             }
-            return new Rectangle((int)location[0].getX(), (int)location[0].getY(), 0, 0);
+            return new Rectangle((int)location.get().getX(), (int)location.get().getY(), 0, 0);
         }
 
         @Override
         public TextHitInfo getLocationOffset(int x, int y) {
-            int[] offset = { 0 };
+            AtomicInteger offset = new AtomicInteger(0);
             if (fxRequests != null) {
                 PlatformImpl.runAndWait(() -> {
-                    offset[0] = fxRequests.getLocationOffset(x, y);
+                    offset.set(fxRequests.getLocationOffset(x, y));
                 });
             }
-            return TextHitInfo.afterOffset(offset[0]);
+            return TextHitInfo.afterOffset(offset.get());
         }
 
         @Override
         public int getInsertPositionOffset() {
-            int[] offset = { 0 };
+            AtomicInteger offset = new AtomicInteger(0);
             if (fxRequests instanceof ExtendedInputMethodRequests) {
                 PlatformImpl.runAndWait(() -> {
-                    offset[0] = ((ExtendedInputMethodRequests)fxRequests).getInsertPositionOffset();
+                    offset.set(((ExtendedInputMethodRequests)fxRequests).getInsertPositionOffset());
                 });
             }
-            return offset[0];
+            return offset.get();
         }
 
         @Override
         public AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, AttributedCharacterIterator.Attribute[] attributes) {
-            String[] comitted = { null };
+            AtomicReference<String> committed = new AtomicReference<>(null);
             if (fxRequests instanceof ExtendedInputMethodRequests) {
                 PlatformImpl.runAndWait(() -> {
-                    comitted[0] = ((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex);
+                    committed.set(((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex));
                 });
             }
-            if (comitted[0] == null) comitted[0] = "";
-            return new AttributedString(comitted[0]).getIterator();
+            String text = committed.get();
+            if (text == null) text = "";
+            return new AttributedString(text).getIterator();
         }
 
         @Override
         public int getCommittedTextLength() {
-            int[] length = { 0 };
+            AtomicInteger length = new AtomicInteger(0);
             if (fxRequests instanceof ExtendedInputMethodRequests) {
                 PlatformImpl.runAndWait(() -> {
-                    length[0] = ((ExtendedInputMethodRequests)fxRequests).getCommittedTextLength();
+                    length.set(((ExtendedInputMethodRequests)fxRequests).getCommittedTextLength());
                 });
             }
-            return length[0];
+            return length.get();
         }
 
         @Override
@@ -122,14 +125,15 @@ class InputMethodSupport {
 
         @Override
         public AttributedCharacterIterator getSelectedText(AttributedCharacterIterator.Attribute[] attributes) {
-            String[] selected = { null };
+            AtomicReference<String> selected = new AtomicReference<>(null);
             if (fxRequests != null) {
                 PlatformImpl.runAndWait(() -> {
-                    selected[0] = fxRequests.getSelectedText();
+                    selected.set(fxRequests.getSelectedText());
                 });
             }
-            if (selected[0] == null) selected[0] = "";
-            return new AttributedString(selected[0]).getIterator();
+            String text = selected.get();
+            if (text == null) text = "";
+            return new AttributedString(text).getIterator();
         }
     }
 
