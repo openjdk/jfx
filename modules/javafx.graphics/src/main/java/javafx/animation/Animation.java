@@ -150,14 +150,8 @@ public abstract class Animation {
     private AccessControlContext accessCtrlCtx = null;
 
     /**
-     * Implements a thread-safe pulse receiver.
-     * The following methods can be called on any thread:
-     * <li>
-     *     <ul>{@link #start(long, boolean)}
-     *     <ul>{@link #stop()}
-     *     <ul>{@link #pause()}
-     *     <ul>{@link #resume()}
-     * </li>
+     * Implements a pulse receiver that interacts with {@link AbstractPrimaryTimer} in a
+     * thread-safe manner, allowing it to be used on any thread.
      */
     class AnimationPulseReceiver implements PulseReceiver {
         private long startTime;
@@ -165,6 +159,10 @@ public abstract class Animation {
         private boolean paused;
         private boolean pulseReceiverAdded;
 
+        /**
+         * Starts this pulse receiver.
+         * This method may be called on any thread.
+         */
         public synchronized void start(long delay, boolean paused) {
             this.paused = paused;
 
@@ -178,6 +176,10 @@ public abstract class Animation {
             requestUpdatePulseReceiver();
         }
 
+        /**
+         * Stops this pulse receiver if it is currently running.
+         * This method may be called on any thread.
+         */
         public synchronized void stop() {
             if (!paused) {
                 paused = true;
@@ -185,6 +187,10 @@ public abstract class Animation {
             }
         }
 
+        /**
+         * Pauses this pulse receiver if it is currently running.
+         * This method may be called on any thread.
+         */
         public synchronized void pause() {
             if (!paused) {
                 pauseTime = now();
@@ -193,6 +199,10 @@ public abstract class Animation {
             }
         }
 
+        /**
+         * Resumes this pulse receiver if it is currently paused.
+         * This method may be called on any thread.
+         */
         public synchronized void resume() {
             if (paused) {
                 final long deltaTime = now() - pauseTime;
@@ -202,13 +212,9 @@ public abstract class Animation {
             }
         }
 
-        private long now() {
-            return TickCalculation.fromNano(timer.nanos());
-        }
-
         /**
-         * Adds or removes this pulse receiver from the primary timer as required, ensuring
-         * that this operation is executed on the JavaFX application thread.
+         * Requests this pulse receiver to be added to or removed from the primary timer,
+         * ensuring that this operation is executed on the JavaFX application thread.
          * <p>
          * This method effectively deduplicates redundant play/stop/pause/resume requests
          * and only updates the pulse receiver registration when needed.
@@ -225,6 +231,10 @@ public abstract class Animation {
                 timer.addPulseReceiver(this);
                 pulseReceiverAdded = true;
             }
+        }
+
+        private long now() {
+            return TickCalculation.fromNano(timer.nanos());
         }
 
         @SuppressWarnings("removal")
