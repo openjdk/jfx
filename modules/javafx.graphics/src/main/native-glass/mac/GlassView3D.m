@@ -731,9 +731,9 @@
 - (void)doCommandBySelector:(SEL)aSelector
 {
     IMLOG("doCommandBySelector called ");
-    // According to Apple an NSResponder will send this up the
-    // responder chain but a text input client should not. So
-    // we just ignore this which avoids beeps.
+    // According to Apple an NSResponder will send this up the responder chain
+    // but a text input client should not. So we ignore this which avoids an
+    // annoying beep.
 }
 
 - (void) insertText:(id)aString replacementRange:(NSRange)replacementRange
@@ -744,13 +744,13 @@
         [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
     }
 
-    // If the user tries to enter an invalid character using a dead key
-    // combination like, say, a q with a grave accent insertText will be
-    // called twice in the same keystroke, first with the accent and then
-    // with the q. We want both inserts to be handled as committed text so we
-    // defer exiting composition mode until the keystroke is finished. We
-    // only want to defer on keystrokes because sometimes insertText is
-    // called when a mouse event dismisses the IM window.
+    // If a user tries to enter an invalid character using a dead key
+    // combination (like, say, a q with a grave accent) insertText will be
+    // called twice on the last keystroke, first with the accent and then
+    // with the letter. We want both inserts to be handled as committed text
+    // so we defer exiting composition mode until the keystroke is processed.
+    // We only defer on keystrokes because sometimes insertText is called
+    // when a mouse event dismisses the IM window.
     if (!self->handlingKeyEvent) {
         self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
     }
