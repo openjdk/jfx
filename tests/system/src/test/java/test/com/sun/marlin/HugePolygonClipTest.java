@@ -87,10 +87,7 @@ public class HugePolygonClipTest {
 
     static {
         Locale.setDefault(Locale.US);
-        /*
-            System.out.println("BLUE_PIXEL: " + BLUE_PIXEL);
-            System.out.println("RED_PIXEL:  " + RED_PIXEL);
-         */
+
         // enable Marlin logging:
         System.setProperty("prism.marlin.log", "true");
 

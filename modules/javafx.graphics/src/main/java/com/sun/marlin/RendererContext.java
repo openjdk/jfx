@@ -172,7 +172,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         clipInvScale = 0.0d;
         firstFlags = 0;
 
-        // if context is maked as DIRTY:
+        // if context is marked as DIRTY:
         if (dirty) {
             // may happen if an exception if thrown in the pipeline processing:
             // force cleanup of all possible pipelined blocks (except Renderer):
