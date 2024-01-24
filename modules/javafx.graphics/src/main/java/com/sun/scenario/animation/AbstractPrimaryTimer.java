@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,9 +84,9 @@ public abstract class AbstractPrimaryTimer {
     private long startPauseTime;
 
     // These methods only exist for the sake of testing.
-    boolean isPaused() { return paused; }
-    long getTotalPausedTime() { return totalPausedTime; }
-    long getStartPauseTime() { return startPauseTime; }
+    synchronized boolean isPaused() { return paused; }
+    synchronized long getTotalPausedTime() { return totalPausedTime; }
+    synchronized long getStartPauseTime() { return startPauseTime; }
 
     private PulseReceiver receivers[] = new PulseReceiver[2];
     private int receiversLength;
@@ -121,21 +121,33 @@ public abstract class AbstractPrimaryTimer {
         return PULSE_DURATION_TICKS;
     }
 
-    public void pause() {
+    /**
+     * Pauses this timer.
+     * This method may be called on any thread.
+     */
+    public synchronized void pause() {
         if (!paused) {
             startPauseTime = nanos();
             paused = true;
         }
     }
 
-    public void resume() {
+    /**
+     * Resumes this timer.
+     * This method may be called on any thread.
+     */
+    public synchronized void resume() {
         if (paused) {
             paused = false;
             totalPausedTime += nanos() - startPauseTime;
         }
     }
 
-    public long nanos() {
+    /**
+     * Gets the current value of the timer in nanoseconds.
+     * This method may be called on any thread.
+     */
+    public synchronized long nanos() {
         if (fixedPulseLength > 0) {
             return debugNanos;
         }
@@ -258,14 +270,17 @@ public abstract class AbstractPrimaryTimer {
 
         @Override
         public void run() {
-            if (paused) {
-                return;
+            synchronized (AbstractPrimaryTimer.this) {
+                if (paused) {
+                    return;
+                }
+                final long now = nanos();
+                recordStart((nextPulseTime - now) / 1000000);
+                timePulseImpl(now);
+                recordEnd();
+                updateNextPulseTime(now);
             }
-            final long now = nanos();
-            recordStart((nextPulseTime - now) / 1000000);
-            timePulseImpl(now);
-            recordEnd();
-            updateNextPulseTime(now);
+
             // reschedule animation runnable if needed
             updateAnimationRunnable();
         }

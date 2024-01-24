@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.animation;
 
 import java.util.Objects;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
 
@@ -141,15 +142,6 @@ public abstract class Animation {
         return isNearZero(rate2 - rate1);
     }
 
-    /*
-        These four fields and associated methods were moved here from AnimationPulseReceiver
-        when that class was removed. They could probably be integrated much cleaner into Animation,
-        but to make sure the change was made without introducing regressions, this code was
-        moved pretty much verbatim.
-     */
-    private long startTime;
-    private long pauseTime;
-    private boolean paused = false;
     private final AbstractPrimaryTimer timer;
 
     // Access control context, captured whenever we add this pulse receiver to
@@ -157,45 +149,87 @@ public abstract class Animation {
     @SuppressWarnings("removal")
     private AccessControlContext accessCtrlCtx = null;
 
-    private long now() {
-        return TickCalculation.fromNano(timer.nanos());
-    }
+    /**
+     * Implements a thread-safe pulse receiver.
+     * The following methods can be called on any thread:
+     * <li>
+     *     <ul>{@link #start(long, boolean)}
+     *     <ul>{@link #stop()}
+     *     <ul>{@link #pause()}
+     *     <ul>{@link #resume()}
+     * </li>
+     */
+    class AnimationPulseReceiver implements PulseReceiver {
+        private long startTime;
+        private long pauseTime;
+        private boolean paused;
+        private boolean pulseReceiverAdded;
 
-    @SuppressWarnings("removal")
-    private void addPulseReceiver() {
-        // Capture the Access Control Context to be used during the animation pulse
-        accessCtrlCtx = AccessController.getContext();
+        public synchronized void start(long delay, boolean paused) {
+            this.paused = paused;
 
-        timer.addPulseReceiver(pulseReceiver);
-    }
+            if (paused) {
+                pauseTime = now();
+                startTime = pauseTime + delay;
+            } else {
+                startTime = now() + delay;
+            }
 
-    void startReceiver(long delay) {
-        paused = false;
-        startTime = now() + delay;
-        addPulseReceiver();
-    }
-
-    void pauseReceiver() {
-        if (!paused) {
-            pauseTime = now();
-            paused = true;
-            timer.removePulseReceiver(pulseReceiver);
+            requestUpdatePulseReceiver();
         }
-    }
 
-    void resumeReceiver() {
-        if (paused) {
-            final long deltaTime = now() - pauseTime;
-            startTime += deltaTime;
-            paused = false;
-            addPulseReceiver();
+        public synchronized void stop() {
+            if (!paused) {
+                paused = true;
+                requestUpdatePulseReceiver();
+            }
         }
-    }
 
-    // package private only for the sake of testing
-    final PulseReceiver pulseReceiver = new PulseReceiver() {
+        public synchronized void pause() {
+            if (!paused) {
+                pauseTime = now();
+                paused = true;
+                requestUpdatePulseReceiver();
+            }
+        }
+
+        public synchronized void resume() {
+            if (paused) {
+                final long deltaTime = now() - pauseTime;
+                startTime += deltaTime;
+                paused = false;
+                requestUpdatePulseReceiver();
+            }
+        }
+
+        private long now() {
+            return TickCalculation.fromNano(timer.nanos());
+        }
+
+        /**
+         * Adds or removes this pulse receiver from the primary timer as required, ensuring
+         * that this operation is executed on the JavaFX application thread.
+         * <p>
+         * This method effectively deduplicates redundant play/stop/pause/resume requests
+         * and only updates the pulse receiver registration when needed.
+         */
+        private synchronized void requestUpdatePulseReceiver() {
+            if (!PlatformImpl.isFxApplicationThread()) {
+                PlatformImpl.runLater(this::requestUpdatePulseReceiver);
+            } else if (paused && pulseReceiverAdded) {
+                timer.removePulseReceiver(this);
+                pulseReceiverAdded = false;
+            } else if (!paused && !pulseReceiverAdded) {
+                // Capture the Access Control Context to be used during the animation pulse
+                accessCtrlCtx = AccessController.getContext();
+                timer.addPulseReceiver(this);
+                pulseReceiverAdded = true;
+            }
+        }
+
         @SuppressWarnings("removal")
-        @Override public void timePulse(long now) {
+        @Override
+        public synchronized void timePulse(long now) {
             final long elapsedTime = now - startTime;
             if (elapsedTime < 0) {
                 return;
@@ -209,7 +243,10 @@ public abstract class Animation {
                 return null;
             }, accessCtrlCtx);
         }
-    };
+    }
+
+    // package private only for the sake of testing
+    final AnimationPulseReceiver pulseReceiver = new AnimationPulseReceiver();
 
     private class CurrentRateProperty extends ReadOnlyDoublePropertyBase {
         private double value;
@@ -338,13 +375,13 @@ public abstract class Animation {
                             lastPlayedForward = areNearEqual(getCurrentRate(), oldRate);
                         }
                         doSetCurrentRate(0.0);
-                        pauseReceiver();
+                        pulseReceiver.pause();
                     } else {
                         if (isRunning()) {
                             final double currentRate = getCurrentRate();
                             if (isNearZero(currentRate)) {
                                 doSetCurrentRate(lastPlayedForward ? newRate : -newRate);
-                                resumeReceiver();
+                                pulseReceiver.resume();
                             } else {
                                 final boolean playingForward = areNearEqual(currentRate, oldRate);
                                 doSetCurrentRate(playingForward ? newRate : -newRate);
@@ -999,12 +1036,7 @@ public abstract class Animation {
                         jumpTo(rate < 0 ? getTotalDuration() : Duration.ZERO);
                     }
                     doStart(true);
-                    startReceiver(TickCalculation.fromDuration(getDelay()));
-                    if (isNearZero(rate)) {
-                        pauseReceiver();
-                    } else {
-
-                    }
+                    pulseReceiver.start(TickCalculation.fromDuration(getDelay()), isNearZero(rate));
                 } else {
                     runHandler(getOnFinished());
                 }
@@ -1012,7 +1044,7 @@ public abstract class Animation {
             case PAUSED:
                 doResume();
                 if (!isNearZero(getRate())) {
-                    resumeReceiver();
+                    pulseReceiver.resume();
                 }
                 break;
             case RUNNING: // no-op
@@ -1060,9 +1092,7 @@ public abstract class Animation {
     }
 
     void doStop() {
-        if (!paused) {
-            timer.removePulseReceiver(pulseReceiver);
-        }
+        pulseReceiver.stop();
         setStatus(Status.STOPPED);
         doSetCurrentRate(0.0);
     }
@@ -1088,7 +1118,7 @@ public abstract class Animation {
         }
         if (isRunning()) {
             clipEnvelope.abortCurrentPulse();
-            pauseReceiver();
+            pulseReceiver.pause();
             doPause();
         }
     }

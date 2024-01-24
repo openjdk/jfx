@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,23 +92,20 @@ public abstract class AnimationShim extends Animation {
         super.doTimePulse(elapsedTime);
     }
 
-    @Override
     public void pauseReceiver() {
-        super.pauseReceiver();
+        pulseReceiver.pause();
     }
 
-    @Override
     public void resumeReceiver() {
-        super.resumeReceiver();
+        pulseReceiver.resume();
     }
 
     public void shim_setCycleDuration(Duration value) {
         setCycleDuration(value);
     }
 
-    @Override
     public void startReceiver(long delay) {
-        super.startReceiver(delay);
+        pulseReceiver.start(delay, false);
     }
 
     public PulseReceiver shim_pulseReceiver() {
