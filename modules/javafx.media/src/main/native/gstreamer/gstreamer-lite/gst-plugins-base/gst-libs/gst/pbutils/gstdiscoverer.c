@@ -127,8 +127,6 @@ struct _GstDiscovererPrivate
   GstElement *uridecodebin;
   GstBus *bus;
 
-  GType decodebin_type;
-
   /* Custom main context variables */
   GMainContext *ctx;
   GSource *bus_source;
@@ -142,7 +140,6 @@ struct _GstDiscovererPrivate
   gulong pad_remove_id;
   gulong no_more_pads_id;
   gulong source_chg_id;
-  gulong element_added_id;
   gulong bus_cb_id;
 
   gboolean use_cache;
@@ -329,21 +326,8 @@ gst_discoverer_class_init (GstDiscovererClass * klass)
 }
 
 static void
-uridecodebin_element_added_cb (GstElement * uridecodebin,
-    GstElement * child, GstDiscoverer * dc)
-{
-  GST_DEBUG ("New element added to uridecodebin : %s",
-      GST_ELEMENT_NAME (child));
-
-  if (G_OBJECT_TYPE (child) == dc->priv->decodebin_type) {
-    g_object_set (child, "post-stream-topology", TRUE, NULL);
-  }
-}
-
-static void
 gst_discoverer_init (GstDiscoverer * dc)
 {
-  GstElement *tmp;
   GstFormat format = GST_FORMAT_TIME;
 
   dc->priv = gst_discoverer_get_instance_private (dc);
@@ -372,6 +356,9 @@ gst_discoverer_init (GstDiscoverer * dc)
     GST_ERROR ("Can't create uridecodebin");
     return;
   }
+
+  g_object_set (dc->priv->uridecodebin, "post-stream-topology", TRUE, NULL);
+
   GST_LOG_OBJECT (dc, "Adding uridecodebin to pipeline");
   gst_bin_add (dc->priv->pipeline, dc->priv->uridecodebin);
 
@@ -396,16 +383,6 @@ gst_discoverer_init (GstDiscoverer * dc)
       G_CALLBACK (discoverer_bus_cb), dc, 0);
 
   GST_DEBUG_OBJECT (dc, "Done initializing Discoverer");
-
-  /* This is ugly. We get the GType of decodebin so we can quickly detect
-   * when a decodebin is added to uridecodebin so we can set the
-   * post-stream-topology setting to TRUE */
-  dc->priv->element_added_id =
-      g_signal_connect_object (dc->priv->uridecodebin, "element-added",
-      G_CALLBACK (uridecodebin_element_added_cb), dc, 0);
-  tmp = gst_element_factory_make ("decodebin", NULL);
-  dc->priv->decodebin_type = G_OBJECT_TYPE (tmp);
-  gst_object_unref (tmp);
 
   /* create queries */
   dc->priv->seeking_query = gst_query_new_seeking (format);
@@ -447,7 +424,6 @@ gst_discoverer_dispose (GObject * obj)
     DISCONNECT_SIGNAL (dc->priv->uridecodebin, dc->priv->pad_remove_id);
     DISCONNECT_SIGNAL (dc->priv->uridecodebin, dc->priv->no_more_pads_id);
     DISCONNECT_SIGNAL (dc->priv->uridecodebin, dc->priv->source_chg_id);
-    DISCONNECT_SIGNAL (dc->priv->uridecodebin, dc->priv->element_added_id);
     DISCONNECT_SIGNAL (dc->priv->bus, dc->priv->bus_cb_id);
 
     /* pipeline was set to NULL in _reset */
@@ -2569,7 +2545,7 @@ gst_discoverer_discover_uri_async (GstDiscoverer * discoverer,
  * gst_discoverer_discover_uri:
  * @discoverer: A #GstDiscoverer
  * @uri: The URI to run on.
- * @err: (out) (allow-none): If an error occurred, this field will be filled in.
+ * @err: If an error occurred, this field will be filled in.
  *
  * Synchronously discovers the given @uri.
  *

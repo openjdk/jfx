@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@ namespace WebCore {
 struct FontDescriptionKeyRareData : public RefCounted<FontDescriptionKeyRareData> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<FontDescriptionKeyRareData> create(FontFeatureSettings&& featureSettings, FontVariationSettings&& variationSettings, FontVariantAlternates&& variantAlternates, FontPalette&& fontPalette, std::optional<float>&& fontSizeAdjust)
+    static Ref<FontDescriptionKeyRareData> create(FontFeatureSettings&& featureSettings, FontVariationSettings&& variationSettings, FontVariantAlternates&& variantAlternates, FontPalette&& fontPalette, FontSizeAdjust&& fontSizeAdjust)
     {
         return adoptRef(*new FontDescriptionKeyRareData(WTFMove(featureSettings), WTFMove(variationSettings), WTFMove(variantAlternates), WTFMove(fontPalette), WTFMove(fontSizeAdjust)));
     }
@@ -68,7 +68,7 @@ public:
         return m_variantAlternates;
     }
 
-    const std::optional<float>& fontSizeAdjust() const
+    const FontSizeAdjust& fontSizeAdjust() const
     {
         return m_fontSizeAdjust;
     }
@@ -83,7 +83,7 @@ public:
     }
 
 private:
-    FontDescriptionKeyRareData(FontFeatureSettings&& featureSettings, FontVariationSettings&& variationSettings, FontVariantAlternates&& variantAlternates, FontPalette&& fontPalette, std::optional<float>&& fontSizeAdjust)
+    FontDescriptionKeyRareData(FontFeatureSettings&& featureSettings, FontVariationSettings&& variationSettings, FontVariantAlternates&& variantAlternates, FontPalette&& fontPalette, FontSizeAdjust&& fontSizeAdjust)
         : m_featureSettings(WTFMove(featureSettings))
         , m_variationSettings(WTFMove(variationSettings))
         , m_variantAlternates(WTFMove(variantAlternates))
@@ -96,7 +96,7 @@ private:
     FontVariationSettings m_variationSettings;
     FontVariantAlternates m_variantAlternates;
     FontPalette m_fontPalette;
-    std::optional<float> m_fontSizeAdjust;
+    FontSizeAdjust m_fontSizeAdjust;
 };
 
 inline void add(Hasher& hasher, const FontDescriptionKeyRareData& key)
@@ -110,7 +110,7 @@ struct FontDescriptionKey {
     FontDescriptionKey() = default;
 
     FontDescriptionKey(const FontDescription& description)
-        : m_size(description.computedPixelSize())
+        : m_size(description.computedSize())
         , m_fontSelectionRequest(description.fontSelectionRequest())
         , m_flags(makeFlagsKey(description))
         , m_locale(description.specifiedLocale())
@@ -120,7 +120,7 @@ struct FontDescriptionKey {
         auto variantAlternates = description.variantAlternates();
         auto fontPalette = description.fontPalette();
         auto fontSizeAdjust = description.fontSizeAdjust();
-        if (!featureSettings.isEmpty() || !variationSettings.isEmpty() || !variantAlternates.isNormal() || fontPalette.type != FontPalette::Type::Normal || fontSizeAdjust.has_value())
+        if (!featureSettings.isEmpty() || !variationSettings.isEmpty() || !variantAlternates.isNormal() || fontPalette.type != FontPalette::Type::Normal || fontSizeAdjust.value)
             m_rareData = FontDescriptionKeyRareData::create(WTFMove(featureSettings), WTFMove(variationSettings), WTFMove(variantAlternates), WTFMove(fontPalette), WTFMove(fontSizeAdjust));
     }
 
@@ -136,11 +136,6 @@ struct FontDescriptionKey {
             && m_flags == other.m_flags
             && m_locale == other.m_locale
             && arePointingToEqualData(m_rareData, other.m_rareData);
-    }
-
-    bool operator!=(const FontDescriptionKey& other) const
-    {
-        return !(*this == other);
     }
 
     bool isHashTableDeletedValue() const { return m_isDeletedValue; }
@@ -161,8 +156,7 @@ private:
             | static_cast<unsigned>(description.fontSynthesisWeight()) << 6
             | static_cast<unsigned>(description.widthVariant()) << 4
             | static_cast<unsigned>(description.nonCJKGlyphOrientation()) << 3
-            | static_cast<unsigned>(description.orientation()) << 2
-            | static_cast<unsigned>(description.renderingMode());
+            | static_cast<unsigned>(description.orientation()) << 2;
         unsigned second = static_cast<unsigned>(description.variantEastAsianRuby()) << 26
             | static_cast<unsigned>(description.variantEastAsianWidth()) << 24
             | static_cast<unsigned>(description.variantEastAsianVariant()) << 21
@@ -182,7 +176,7 @@ private:
     }
 
     bool m_isDeletedValue { false };
-    unsigned m_size { 0 };
+    float m_size { 0 };
     FontSelectionRequest m_fontSelectionRequest;
     std::array<unsigned, 2> m_flags { { 0, 0 } };
     AtomString m_locale;
@@ -227,7 +221,6 @@ private:
 };
 
 bool operator==(const FontFamilyName&, const FontFamilyName&);
-bool operator!=(const FontFamilyName&, const FontFamilyName&);
 
 struct FontCascadeCacheKey {
     FontDescriptionKey fontDescriptionKey; // Shared with the lower level FontCache (caching Font objects)

@@ -1632,18 +1632,18 @@ public class TreeTableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSort;
 
-    public void setOnSort(EventHandler<SortEvent<TreeTableView<S>>> value) {
+    public final void setOnSort(EventHandler<SortEvent<TreeTableView<S>>> value) {
         onSortProperty().set(value);
     }
 
-    public EventHandler<SortEvent<TreeTableView<S>>> getOnSort() {
+    public final EventHandler<SortEvent<TreeTableView<S>>> getOnSort() {
         if( onSort != null ) {
             return onSort.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSortProperty() {
+    public final ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSortProperty() {
         if( onSort == null ) {
             onSort = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
@@ -1698,18 +1698,18 @@ public class TreeTableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
 
-    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+    public final void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
         onScrollToProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+    public final EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
         if( onScrollTo != null ) {
             return onScrollTo.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
@@ -1752,18 +1752,18 @@ public class TreeTableView<S> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumn;
 
-    public void setOnScrollToColumn(EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> value) {
+    public final void setOnScrollToColumn(EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> value) {
         onScrollToColumnProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> getOnScrollToColumn() {
+    public final EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> getOnScrollToColumn() {
         if( onScrollToColumn != null ) {
             return onScrollToColumn.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumnProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumnProperty() {
         if( onScrollToColumn == null ) {
             onScrollToColumn = new ObjectPropertyBase<>() {
                 @Override

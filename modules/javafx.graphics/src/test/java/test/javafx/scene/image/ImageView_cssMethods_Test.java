@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,14 +74,16 @@ public final class ImageView_cssMethods_Test extends CssMethodsTestBase {
 
     @Parameters
     public static Collection data() {
+        boolean smooth = ImageView.SMOOTH_DEFAULT;
+
         return Arrays.asList(new Object[] {
-            config(TEST_IMAGE_VIEW, "image", null,
-                   "-fx-image", TEST_IMAGE_URL1, IMAGE_COMPARATOR),
-            config(TEST_IMAGE_VIEW, "image",
-                   TestImages.TEST_IMAGE_32x32,
-                   "-fx-image", TEST_IMAGE_URL2, IMAGE_COMPARATOR),
-            config(TEST_IMAGE_VIEW, "translateX", 0.0,
-                   "-fx-translate-x", 10.0)
+            config(TEST_IMAGE_VIEW, "image", null, "-fx-image", TEST_IMAGE_URL1, IMAGE_COMPARATOR),
+            config(TEST_IMAGE_VIEW, "image", TestImages.TEST_IMAGE_32x32, "-fx-image", TEST_IMAGE_URL2, IMAGE_COMPARATOR),
+            config(TEST_IMAGE_VIEW, "translateX", 0.0, "-fx-translate-x", 10.0),
+            config(TEST_IMAGE_VIEW, "fitHeight", 0.0, "-fx-fit-height", 10.0),
+            config(TEST_IMAGE_VIEW, "fitWidth", 0.0, "-fx-fit-width", 10.0),
+            config(TEST_IMAGE_VIEW, "preserveRatio", false, "-fx-preserve-ratio", true),
+            config(TEST_IMAGE_VIEW, "smooth", smooth, "-fx-smooth", !smooth),
         });
     }
 

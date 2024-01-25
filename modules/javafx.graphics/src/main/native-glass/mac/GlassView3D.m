@@ -510,9 +510,9 @@
 - (void)keyDown:(NSEvent *)theEvent
 {
     KEYLOG("keyDown");
-    [GlassApplication registerKeyEvent:theEvent];
 
     if (![[self inputContext] handleEvent:theEvent] || shouldProcessKeyEvent) {
+        [GlassApplication registerKeyEvent:theEvent];
         [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     }
     shouldProcessKeyEvent = YES;
@@ -810,8 +810,10 @@
     IMLOG("firstRectForCharacterRange called %lu %lu",
           (unsigned long)theRange.location, (unsigned long)theRange.length);
     NSRect result = [self->_delegate getInputMethodCandidatePosRequest:0];
-    NSRect screenFrame = [[NSScreen mainScreen] frame];
-    result.origin.y = screenFrame.size.height - result.origin.y;
+    if (NSScreen.screens.count) {
+        NSRect screenFrame = NSScreen.screens[0].frame;
+        result.origin.y = screenFrame.size.height - result.origin.y;
+    }
     return result;
 }
 

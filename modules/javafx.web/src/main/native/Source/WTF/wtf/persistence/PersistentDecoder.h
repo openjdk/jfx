@@ -25,9 +25,9 @@
 
 #pragma once
 
+#include <span>
 #include <wtf/EnumTraits.h>
 #include <wtf/SHA1.h>
-#include <wtf/Span.h>
 #include <wtf/persistence/PersistentCoders.h>
 
 namespace WTF::Persistence {
@@ -37,17 +37,17 @@ template<typename> struct Coder;
 class Decoder {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    WTF_EXPORT_PRIVATE Decoder(Span<const uint8_t>);
+    WTF_EXPORT_PRIVATE Decoder(std::span<const uint8_t>);
     WTF_EXPORT_PRIVATE ~Decoder();
 
     size_t length() const { return m_buffer.size(); }
-    size_t currentOffset() const { return m_bufferPosition - m_buffer.begin(); }
+    size_t currentOffset() const { return static_cast<size_t>(std::distance(m_buffer.begin(), m_bufferPosition)); }
 
     WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN bool rewind(size_t);
 
     WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN bool verifyChecksum();
 
-    WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN bool decodeFixedLengthData(Span<uint8_t>);
+    WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN bool decodeFixedLengthData(std::span<uint8_t>);
 
     WTF_EXPORT_PRIVATE Decoder& operator>>(std::optional<bool>&);
     WTF_EXPORT_PRIVATE Decoder& operator>>(std::optional<uint8_t>&);
@@ -96,8 +96,8 @@ private:
     WTF_EXPORT_PRIVATE WARN_UNUSED_RETURN bool bufferIsLargeEnoughToContain(size_t) const;
     template<typename Type> Decoder& decodeNumber(std::optional<Type>&);
 
-    const Span<const uint8_t> m_buffer;
-    const uint8_t* m_bufferPosition { nullptr };
+    const std::span<const uint8_t> m_buffer;
+    std::span<const uint8_t>::iterator m_bufferPosition;
 
     SHA1 m_sha1;
 };

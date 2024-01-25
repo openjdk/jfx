@@ -29,8 +29,8 @@ to build the project and
 (possibly after having gained root access) to install the library
 and associated include and scripts.
 
-When installing from a checkout of the GNOME CVS base:
-======================================================
+When installing from a Git clone:
+=================================
 
 
 run ./autogen.sh possibly indicating the desired installation prefix: 

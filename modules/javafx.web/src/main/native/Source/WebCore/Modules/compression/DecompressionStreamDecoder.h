@@ -63,37 +63,13 @@ public:
 #endif
             } else
                 deflateEnd(&m_zstream);
+        }
 #endif
     }
 
 private:
-
-    // When given an encoded input, it is difficult to guess the output size.
-    // My approach here is starting from one page and growing at a linear rate of x2 until the input data
-    // has been fully processed. To ensure the user's memory is not completely consumed, I am setting a cap
-    // of 1GB per allocation. This strategy enables very fast memory allocation growth without needing to perform
-    // unnecessarily large allocations upfront.
-    #if !PLATFORM(JAVA)
-        const size_t startingAllocationSize = 16384; // 16KB
-    const size_t maxAllocationSize = 1073741824; // 1GB
-    Formats::CompressionFormat m_format;
-    bool m_initialized { false };
-        bool m_usingAppleCompressionFramework { false };
-    z_stream m_zstream;
-    #endif
-        bool m_finish { false };
-
-
-
-    inline ExceptionOr<RefPtr<JSC::ArrayBuffer>> decompress(const uint8_t* input, const size_t inputLength);
-
-#if PLATFORM(COCOA)
-    compression_stream m_stream;
-    ExceptionOr<RefPtr<JSC::ArrayBuffer>> decompressAppleCompressionFramework(const uint8_t* input, const size_t inputLength);
-    ExceptionOr<bool> initializeAppleCompressionFramework();
-#endif
-
-
+    bool didInflateFinish(int) const;
+    bool didInflateContainExtraBytes(int) const;
 
     ExceptionOr<RefPtr<JSC::ArrayBuffer>> decompressZlib(const uint8_t* input, const size_t inputLength);
     ExceptionOr<bool> initialize();
@@ -103,16 +79,35 @@ private:
         : m_format(static_cast<Formats::CompressionFormat>(format))
 #endif
     {
-        UNUSED_PARAM(format);
 #if !PLATFORM(JAVA)
-    std::memset(&m_zstream, 0, sizeof(m_zstream));
-#endif
-#if PLATFORM(COCOA)
-    std::memset(&m_stream, 0, sizeof(m_stream));
-
-    if (m_format == Formats::CompressionFormat::Deflate)
-        m_usingAppleCompressionFramework = true;
+        std::memset(&m_zstream, 0, sizeof(m_zstream));
 #endif
     }
+
+    // When given an encoded input, it is difficult to guess the output size.
+    // My approach here is starting from one page and growing at a linear rate of x2 until the input data
+    // has been fully processed. To ensure the user's memory is not completely consumed, I am setting a cap
+    // of 1GB per allocation. This strategy enables very fast memory allocation growth without needing to perform
+    // unnecessarily large allocations upfront.
+    const size_t startingAllocationSize = 16384; // 16KB
+    const size_t maxAllocationSize = 1073741824; // 1GB
+
+    bool m_initialized { false };
+    bool m_didFinish { false };
+#if !PLATFORM(JAVA)
+    z_stream m_zstream;
+#endif
+
+    bool m_usingAppleCompressionFramework { false };
+
+    inline ExceptionOr<RefPtr<JSC::ArrayBuffer>> decompress(const uint8_t* input, const size_t inputLength);
+
+#if PLATFORM(COCOA)
+    compression_stream m_stream;
+    ExceptionOr<RefPtr<JSC::ArrayBuffer>> decompressAppleCompressionFramework(const uint8_t* input, const size_t inputLength);
+    ExceptionOr<bool> initializeAppleCompressionFramework();
+#endif
+
+    Formats::CompressionFormat m_format;
 };
 } // namespace WebCore

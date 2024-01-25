@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -38,6 +40,10 @@
 #include "gdatetime.h"
 #include "gdate.h"
 #include "genviron.h"
+
+#ifdef G_OS_UNIX
+#include "gstdio.h"
+#endif
 
 #ifdef G_OS_WIN32
 
@@ -439,9 +445,7 @@ zone_for_constant_offset (GTimeZone *gtz, const gchar *name)
   gtz->transitions = NULL;
 }
 
-#ifdef G_OS_UNIX
-
-#if defined(__sun) && defined(__SVR4)
+#if defined(G_OS_UNIX) && defined(__sun) && defined(__SVR4)
 /*
  * only used by Illumos distros or Solaris < 11: parse the /etc/default/init
  * text file looking for TZ= followed by the timezone, possibly quoted
@@ -507,6 +511,7 @@ zone_identifier_illumos (void)
 }
 #endif /* defined(__sun) && defined(__SRVR) */
 
+#ifdef G_OS_UNIX
 /*
  * returns the path to the top of the Olson zoneinfo timezone hierarchy.
  */
@@ -530,16 +535,50 @@ zone_identifier_unix (void)
   gchar *canonical_path = NULL;
   GError *read_link_err = NULL;
   const gchar *tzdir;
+  gboolean not_a_symlink_to_zoneinfo = FALSE;
+  struct stat file_status;
 
   /* Resolve the actual timezone pointed to by /etc/localtime. */
   resolved_identifier = g_file_read_link ("/etc/localtime", &read_link_err);
+
+  if (resolved_identifier != NULL)
+    {
+      if (!g_path_is_absolute (resolved_identifier))
+        {
+          gchar *absolute_resolved_identifier = g_build_filename ("/etc", resolved_identifier, NULL);
+          g_free (resolved_identifier);
+          resolved_identifier = g_steal_pointer (&absolute_resolved_identifier);
+        }
+
+      if (g_lstat (resolved_identifier, &file_status) == 0)
+        {
+          if ((file_status.st_mode & S_IFMT) != S_IFREG)
+            {
+              /* Some systems (e.g. toolbox containers) make /etc/localtime be a symlink
+               * to a symlink.
+               *
+               * Rather than try to cope with that, just ignore /etc/localtime and use
+               * the fallback code to read timezone from /etc/timezone
+               */
+              g_clear_pointer (&resolved_identifier, g_free);
+              not_a_symlink_to_zoneinfo = TRUE;
+            }
+        }
+      else
+        {
+          g_clear_pointer (&resolved_identifier, g_free);
+        }
+    }
+  else
+    {
+      not_a_symlink_to_zoneinfo = g_error_matches (read_link_err,
+                                                   G_FILE_ERROR,
+                                                   G_FILE_ERROR_INVAL);
+      g_clear_error (&read_link_err);
+    }
+
   if (resolved_identifier == NULL)
     {
-      gboolean not_a_symlink = g_error_matches (read_link_err,
-                                                G_FILE_ERROR,
-                                                G_FILE_ERROR_INVAL);
-      g_clear_error (&read_link_err);
-
       /* if /etc/localtime is not a symlink, try:
        *  - /var/db/zoneinfo : 'tzsetup' program on FreeBSD and
        *    DragonflyBSD stores the timezone chosen by the user there.
@@ -549,17 +588,17 @@ zone_identifier_unix (void)
        *    as a last-ditch effort to parse the TZ= setting from within
        *    /etc/default/init
        */
-      if (not_a_symlink && (g_file_get_contents ("/var/db/zoneinfo",
-                                                 &resolved_identifier,
-                                                 NULL, NULL) ||
-                            g_file_get_contents ("/etc/timezone",
-                                                 &resolved_identifier,
-                                                 NULL, NULL)
+      if (not_a_symlink_to_zoneinfo && (g_file_get_contents ("/var/db/zoneinfo",
+                                                             &resolved_identifier,
+                                                             NULL, NULL) ||
+                                        g_file_get_contents ("/etc/timezone",
+                                                             &resolved_identifier,
+                                                             NULL, NULL)
 #if defined(__sun) && defined(__SVR4)
-                                                             ||
-                            (resolved_identifier = zone_identifier_illumos ())
+                                        ||
+                                        (resolved_identifier = zone_identifier_illumos ())
 #endif
-                                                             ))
+                                            ))
         g_strchomp (resolved_identifier);
       else
         {
@@ -669,7 +708,7 @@ init_zone_from_iana_info (GTimeZone *gtz,
   const struct tzhead *header = header_data;
   GTimeZone *footertz = NULL;
   guint extra_time_count = 0, extra_type_count = 0;
-  gint64 last_explicit_transition_time;
+  gint64 last_explicit_transition_time = 0;
 
   g_return_if_fail (size >= sizeof (struct tzhead) &&
                     memcmp (header, "TZif", 4) == 0);
@@ -2186,7 +2225,7 @@ interval_valid (GTimeZone *tz,
  * g_time_zone_adjust_time:
  * @tz: a #GTimeZone
  * @type: the #GTimeType of @time_
- * @time_: a pointer to a number of seconds since January 1, 1970
+ * @time_: (inout): a pointer to a number of seconds since January 1, 1970
  *
  * Finds an interval within @tz that corresponds to the given @time_,
  * possibly adjusting @time_ if required to fit into an interval.

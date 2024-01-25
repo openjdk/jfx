@@ -1,7 +1,7 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
  * (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -73,14 +73,14 @@ public:
     void dirtyLineBoxes(bool fullLayout);
     void deleteLineBoxes();
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     Vector<IntRect> absoluteRectsForRange(unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool* wasFixed = nullptr) const;
 #if PLATFORM(IOS_FAMILY)
     void collectSelectionGeometries(Vector<SelectionGeometry>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max()) final;
 #endif
 
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const final;
-    Vector<FloatQuad> absoluteQuadsForRange(unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool ignoreEmptyTextSelections = false, bool* wasFixed = nullptr) const;
+    Vector<FloatQuad> absoluteQuadsForRange(unsigned startOffset = 0, unsigned endOffset = UINT_MAX, OptionSet<RenderObject::BoundingRectBehavior> = { }, bool* wasFixed = nullptr) const;
 
     Vector<FloatQuad> absoluteQuadsClippedToEllipsis() const;
 
@@ -121,15 +121,15 @@ public:
     WEBCORE_EXPORT virtual IntRect linesBoundingBox() const;
     WEBCORE_EXPORT IntPoint firstRunLocation() const;
 
-    virtual void setText(const String&, bool force = false);
+    void setText(const String&, bool force = false);
     void setTextWithOffset(const String&, unsigned offset, unsigned len, bool force = false);
 
     bool canBeSelectionLeaf() const override { return true; }
 
     LayoutRect collectSelectionGeometriesForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<FloatQuad>&);
 
-    LayoutUnit marginLeft() const { return minimumValueForLength(style().marginLeft(), 0); }
-    LayoutUnit marginRight() const { return minimumValueForLength(style().marginRight(), 0); }
+    inline LayoutUnit marginLeft() const;
+    inline LayoutUnit marginRight() const;
 
     LegacyInlineTextBox* firstTextBox() const { return m_lineBoxes.first(); }
     LegacyInlineTextBox* lastTextBox() const { return m_lineBoxes.last(); }
@@ -151,7 +151,7 @@ public:
 
     void momentarilyRevealLastTypedCharacter(unsigned offsetAfterLastTypedCharacter);
 
-    bool isAllCollapsibleWhitespace() const;
+    bool containsOnlyCollapsibleWhitespace() const;
 
     bool canUseSimpleFontCodePath() const { return m_canUseSimpleFontCodePath; }
 
@@ -170,9 +170,7 @@ public:
 
     StringView stringView(unsigned start = 0, std::optional<unsigned> stop = std::nullopt) const;
 
-    bool containsOnlyHTMLWhitespace(unsigned from, unsigned length) const;
-
-    bool canUseSimplifiedTextMeasuring() const { return m_canUseSimplifiedTextMeasuring; }
+    bool containsOnlyCSSWhitespace(unsigned from, unsigned length) const;
 
     Vector<std::pair<unsigned, unsigned>> draggedContentRangesBetweenOffsets(unsigned startOffset, unsigned endOffset) const;
 
@@ -184,12 +182,16 @@ public:
 
     static std::optional<bool> emphasisMarkExistsAndIsAbove(const RenderText&, const RenderStyle&);
 
+    void resetMinMaxWidth();
+
 protected:
-    virtual void computePreferredLogicalWidths(float leadWidth);
+    virtual void computePreferredLogicalWidths(float leadWidth, bool forcedMinMaxWidthComputation = false);
     void willBeDestroyed() override;
 
     virtual void setRenderedText(const String&);
     virtual UChar previousCharacter() const;
+
+    virtual void setTextInternal(const String&, bool force);
 
     RenderTextLineBoxes m_lineBoxes;
 
@@ -206,7 +208,7 @@ private:
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
 
-    void computePreferredLogicalWidths(float leadWidth, HashSet<const Font*>& fallbackFonts, GlyphOverflow&);
+    void computePreferredLogicalWidths(float leadWidth, HashSet<const Font*>& fallbackFonts, GlyphOverflow&, bool forcedMinMaxWidthComputation = false);
 
     bool computeCanUseSimpleFontCodePath() const;
 
@@ -218,7 +220,6 @@ private:
     void secureText(UChar mask);
 
     LayoutRect collectSelectionGeometriesForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<FloatQuad>*);
-    bool computeCanUseSimplifiedTextMeasuring() const;
 
     void node() const = delete;
     void container() const = delete; // Use parent() instead.
@@ -228,23 +229,22 @@ private:
     float widthFromCacheConsideringPossibleTrailingSpace(const RenderStyle&, const FontCascade&, unsigned startIndex, unsigned wordLen, float xPos, bool currentCharacterIsSpace, WordTrailingSpace&, HashSet<const Font*>& fallbackFonts, GlyphOverflow&) const;
 
     // We put the bitfield first to minimize padding on 64-bit.
-    unsigned m_hasBreakableChar : 1; // Whether or not we can be broken into multiple lines.
-    unsigned m_hasBreak : 1; // Whether or not we have a hard break (e.g., <pre> with '\n').
-    unsigned m_hasTab : 1; // Whether or not we have a variable width tab character (e.g., <pre> with '\t').
-    unsigned m_hasBeginWS : 1; // Whether or not we begin with WS (only true if we aren't pre)
-    unsigned m_hasEndWS : 1; // Whether or not we end with WS (only true if we aren't pre)
-    unsigned m_linesDirty : 1; // This bit indicates that the text run has already dirtied specific
+    unsigned m_hasBreakableChar : 1 { false }; // Whether or not we can be broken into multiple lines.
+    unsigned m_hasBreak : 1 { false }; // Whether or not we have a hard break (e.g., <pre> with '\n').
+    unsigned m_hasTab : 1 { false }; // Whether or not we have a variable width tab character (e.g., <pre> with '\t').
+    unsigned m_hasBeginWS : 1 { false }; // Whether or not we begin with WS (only true if we aren't pre)
+    unsigned m_hasEndWS : 1 { false }; // Whether or not we end with WS (only true if we aren't pre)
+    unsigned m_linesDirty : 1 { false }; // This bit indicates that the text run has already dirtied specific
                            // line boxes, and this hint will enable layoutInlineChildren to avoid
                            // just dirtying everything when character data is modified (e.g., appended/inserted
                            // or removed).
-    unsigned m_needsVisualReordering : 1;
-    unsigned m_isAllASCII : 1;
-    unsigned m_canUseSimpleFontCodePath : 1;
-    mutable unsigned m_knownToHaveNoOverflowAndNoFallbackFonts : 1;
-    unsigned m_useBackslashAsYenSymbol : 1;
-    unsigned m_originalTextDiffersFromRendered : 1;
-    unsigned m_hasInlineWrapperForDisplayContents : 1;
-    unsigned m_canUseSimplifiedTextMeasuring : 1;
+    unsigned m_needsVisualReordering : 1 { false };
+    unsigned m_containsOnlyASCII : 1 { false };
+    unsigned m_canUseSimpleFontCodePath : 1 { false };
+    mutable unsigned m_knownToHaveNoOverflowAndNoFallbackFonts : 1 { false };
+    unsigned m_useBackslashAsYenSymbol : 1 { false };
+    unsigned m_originalTextDiffersFromRendered : 1 { false };
+    unsigned m_hasInlineWrapperForDisplayContents : 1 { false };
 
 #if ENABLE(TEXT_AUTOSIZING)
     // FIXME: This should probably be part of the text sizing structures in Document instead. That would save some memory.
@@ -260,7 +260,8 @@ private:
 
 String applyTextTransform(const RenderStyle&, const String&, UChar previousCharacter);
 String capitalize(const String&, UChar previousCharacter);
-LineBreakIteratorMode mapLineBreakToIteratorMode(LineBreak);
+TextBreakIterator::LineMode::Behavior mapLineBreakToIteratorMode(LineBreak);
+TextBreakIterator::ContentAnalysis mapWordBreakToContentAnalysis(WordBreak);
 
 inline UChar RenderText::characterAt(unsigned i) const
 {
@@ -316,6 +317,12 @@ inline std::unique_ptr<RenderStyle> RenderText::selectionPseudoStyle() const
 inline RenderText* Text::renderer() const
 {
     return downcast<RenderText>(Node::renderer());
+}
+
+inline void RenderText::resetMinMaxWidth()
+{
+    m_minWidth = { };
+    m_maxWidth = { };
 }
 
 } // namespace WebCore

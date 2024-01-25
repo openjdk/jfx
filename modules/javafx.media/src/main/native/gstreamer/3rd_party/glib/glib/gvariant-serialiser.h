@@ -2,6 +2,8 @@
  * Copyright (C) 2007, 2008 Ryan Lortie
  * Copyright (C) 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -29,6 +31,27 @@ typedef struct
   guchar           *data;
   gsize             size;
   gsize             depth;  /* same semantics as GVariant.depth */
+
+  /* If ordered_offsets_up_to == n this means that all the frame offsets up to and
+   * including the frame offset determining the end of element n are in order.
+   * This guarantees that the bytes of element n don't overlap with any previous
+   * element.
+   *
+   * This is both read and set by g_variant_serialised_get_child() for arrays of
+   * non-fixed-width types, and for tuples.
+   *
+   * Even when dealing with tuples, @ordered_offsets_up_to is an element index,
+   * rather than an index into the frame offsets. */
+  gsize             ordered_offsets_up_to;
+
+  /* Similar to @ordered_offsets_up_to. This gives the index of the child element
+   * whose frame offset is the highest in the offset table which has been
+   * checked so far.
+   *
+   * This is always ≥ @ordered_offsets_up_to. It is always an element index.
+   *
+   * See documentation in gvariant-core.c for `struct GVariant` for details. */
+  gsize             checked_offsets_up_to;
 } GVariantSerialised;
 
 /* deserialization */

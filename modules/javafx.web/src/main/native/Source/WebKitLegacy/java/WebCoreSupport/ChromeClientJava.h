@@ -31,23 +31,24 @@
 namespace WebCore {
 
 class ChromeClientJava final : public ChromeClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ChromeClientJava(const JLObject &webPage);
     void chromeDestroyed() override;
 
     void setWindowRect(const FloatRect&) override;
-    FloatRect windowRect() override;
+    FloatRect windowRect() const override;
 
-    FloatRect pageRect() override;
+    FloatRect pageRect() const override;
 
     void focus() override;
     void unfocus() override;
 
-    bool canTakeFocus(FocusDirection) override;
+    bool canTakeFocus(FocusDirection) const override;
     void takeFocus(FocusDirection) override;
 
     void focusedElementChanged(Element*) override;
-    void focusedFrameChanged(Frame*) override;
+    void focusedFrameChanged(LocalFrame*) override;
 
     // The Frame pointer provides the ChromeClient with context about which
     // Frame wants to create the new Page. Also, the newly created window
@@ -55,35 +56,35 @@ public:
     // created Page has its show method called.
     // The FrameLoadRequest parameter is only for ChromeClient to check if the
     // request could be fulfilled. The ChromeClient should not load the request.
-    Page* createWindow(Frame&, const WindowFeatures&, const NavigationAction&) override;
+    Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) override;
     void show() override;
 
-    bool canRunModal() override;
+    bool canRunModal() const override;
     void runModal() override;
 
     void setToolbarsVisible(bool) override;
-    bool toolbarsVisible() override;
+    bool toolbarsVisible() const override;
 
     void setStatusbarVisible(bool) override;
-    bool statusbarVisible() override;
+    bool statusbarVisible() const override;
 
     void setScrollbarsVisible(bool) override;
-    bool scrollbarsVisible() override;
+    bool scrollbarsVisible() const override;
 
     void setMenubarVisible(bool) override;
-    bool menubarVisible() override;
+    bool menubarVisible() const override;
 
     void setResizable(bool) override;
 
     void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, unsigned columnNumber, const String& sourceID) override;
     bool canRunBeforeUnloadConfirmPanel() override;
-    bool runBeforeUnloadConfirmPanel(const String& message, Frame&) override;
+    bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame& Frame) override;
 
     void closeWindow() override;
 
-    void runJavaScriptAlert(Frame&, const String&) override;
-    bool runJavaScriptConfirm(Frame&, const String&) override;
-    bool runJavaScriptPrompt(Frame&, const String& message, const String& defaultValue, String& result) override;
+    void runJavaScriptAlert(LocalFrame&, const String&) override;
+    bool runJavaScriptConfirm(LocalFrame&, const String&) override;
+    bool runJavaScriptPrompt(LocalFrame&, const String& message, const String& defaultValue, String& result) override;
     void setStatusbarText(const String&) override;
     KeyboardUIMode keyboardUIMode() override;
 
@@ -112,14 +113,14 @@ public:
     void setTextIndicator(const TextIndicatorData&) const override {}
     // End methods used by HostWindow.
 
-    void contentsSizeChanged(Frame&, const IntSize&) const override;
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const String& toolTip, TextDirection) override;
+    void contentsSizeChanged(LocalFrame&, const IntSize&) const override;
+    void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>, const String& toolTip, TextDirection) override;
 
-    void setToolTip(const String&);
+    void setToolTip(const String&) override;
 
-    void print(Frame&, const StringWithDirection&) override;
+    void print(LocalFrame&, const StringWithDirection&) override;
 
-    void exceededDatabaseQuota(Frame&, const String& databaseName, DatabaseDetails) override;
+    void exceededDatabaseQuota(LocalFrame&, const String& databaseName, DatabaseDetails) override;
 
     // Callback invoked when the application cache fails to save a cache object
     // because storing it would grow the database file past its defined maximum
@@ -142,7 +143,7 @@ public:
     std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) override;
 #endif
 
-    void runOpenPanel(Frame&, FileChooser&) override;
+    void runOpenPanel(LocalFrame&, FileChooser&) override;
     // Asynchronous request to load an icon for specified filenames.
     void loadIconForFiles(const Vector<String>&, FileIconLoader&) override;
 
@@ -154,7 +155,7 @@ public:
     GraphicsLayerFactory* graphicsLayerFactory() const override { return nullptr; }
 
     // Pass 0 as the GraphicsLayer to detatch the root layer.
-    void attachRootGraphicsLayer(Frame&, GraphicsLayer*) override;
+    void attachRootGraphicsLayer(LocalFrame&, GraphicsLayer*) override;
     // Sets a flag to specify that the next time content is drawn to the window,
     // the changes appear on the screen in synchrony with updates to GraphicsLayers.
     void setNeedsOneShotDrawingSynchronization() override;
@@ -177,9 +178,6 @@ public:
     RefPtr<Icon> createIconForFiles(const Vector<String>&) override;
     void didFinishLoadingImageForElement(HTMLImageElement&) override;
     void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) override;
-    void classifyModalContainerControls(Vector<String>&& texts, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&) override;
-    void decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&) override;
-
 
 private:
     void repaint(const IntRect&);

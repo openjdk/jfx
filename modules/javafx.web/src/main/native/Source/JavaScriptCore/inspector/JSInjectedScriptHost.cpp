@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "DateInstance.h"
 #include "DeferGCInlines.h"
 #include "DirectArguments.h"
+#include "EnumerationMode.h"
 #include "FunctionPrototype.h"
 #include "HeapAnalyzer.h"
 #include "HeapIterationScope.h"
@@ -52,10 +53,12 @@
 #include "JSStringIterator.h"
 #include "JSTypedArrays.h"
 #include "JSWeakMap.h"
+#include "JSWeakObjectRef.h"
 #include "JSWeakSet.h"
 #include "MarkedSpaceInlines.h"
 #include "ObjectConstructor.h"
 #include "PreventCollectionScope.h"
+#include "PropertyNameArray.h"
 #include "ProxyObject.h"
 #include "RegExpObject.h"
 #include "ScopedArguments.h"
@@ -78,12 +81,6 @@ JSInjectedScriptHost::JSInjectedScriptHost(VM& vm, Structure* structure, Ref<Inj
     : Base(vm, structure)
     , m_wrapped(WTFMove(impl))
 {
-}
-
-void JSInjectedScriptHost::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
 }
 
 JSObject* JSInjectedScriptHost::createPrototype(VM& vm, JSGlobalObject* globalObject)
@@ -202,6 +199,8 @@ JSValue JSInjectedScriptHost::subtype(JSGlobalObject* globalObject, CallFrame* c
             return jsNontrivialString(vm, "regexp"_s);
         if (object->inherits<ProxyObject>())
             return jsNontrivialString(vm, "proxy"_s);
+        if (object->inherits<JSWeakObjectRef>())
+            return jsNontrivialString(vm, "weakref"_s);
 
         if (object->inherits<JSMap>())
             return jsNontrivialString(vm, "map"_s);
@@ -293,6 +292,38 @@ static JSObject* constructInternalProperty(JSGlobalObject* globalObject, const S
     return result;
 }
 
+JSValue JSInjectedScriptHost::getOwnPrivatePropertyDescriptors(JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    if (callFrame->argumentCount() < 1)
+        return jsUndefined();
+
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSValue value = callFrame->uncheckedArgument(0);
+
+    JSObject* result = constructEmptyObject(globalObject);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
+    JSObject* object = jsDynamicCast<JSObject*>(value);
+    if (!object)
+        return result;
+
+    PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Include);
+    JSObject::getOwnPropertyNames(object, globalObject, propertyNames, DontEnumPropertiesMode::Include);
+    for (const auto& propertyName : propertyNames) {
+        if (!propertyName.isPrivateName())
+            continue;
+
+        // Authored private properties are indistinguishable from internal private properties except for their use of the `#` prefix.
+        if (!propertyName.string().startsWith('#'))
+            continue;
+
+        result->putDirect(vm, Identifier::fromString(vm, String(propertyName.impl()->isolatedCopy())), objectConstructorGetOwnPropertyDescriptor(globalObject, object, propertyName));
+    }
+
+    return result;
+}
+
 JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     if (callFrame->argumentCount() < 1)
@@ -316,7 +347,7 @@ JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject
             array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "status"_s, jsNontrivialString(vm, "pending"_s)));
             return array;
         case JSPromise::Status::Fulfilled:
-            array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "status"_s, jsNontrivialString(vm, "resolved"_s)));
+            array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "status"_s, jsNontrivialString(vm, "fulfilled"_s)));
             RETURN_IF_EXCEPTION(scope, JSValue());
             scope.release();
             array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "result"_s, promise->result(vm)));
@@ -340,7 +371,7 @@ JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject
         RETURN_IF_EXCEPTION(scope, JSValue());
         array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "boundThis"_s, boundFunction->boundThis()));
         RETURN_IF_EXCEPTION(scope, JSValue());
-        if (boundFunction->boundArgs()) {
+        if (boundFunction->boundArgsLength()) {
             scope.release();
             array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "boundArgs"_s, boundFunction->boundArgsCopy(globalObject)));
             return array;
@@ -365,6 +396,16 @@ JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject
         RETURN_IF_EXCEPTION(scope, JSValue());
         scope.release();
         array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "handler"_s, proxy->handler()));
+        return array;
+    }
+
+    if (JSWeakObjectRef* weakRef = jsDynamicCast<JSWeakObjectRef*>(value)) {
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(globalObject, nullptr, 1);
+        RETURN_IF_EXCEPTION(scope, JSValue());
+        auto* target = weakRef->deref(vm);
+        array->putDirectIndex(globalObject, index++, constructInternalProperty(globalObject, "target"_s, target ? target : jsUndefined()));
+        RETURN_IF_EXCEPTION(scope, JSValue());
         return array;
     }
 
@@ -451,6 +492,23 @@ JSValue JSInjectedScriptHost::proxyTargetValue(CallFrame* callFrame)
         target = proxy->target();
 
     return target;
+}
+
+JSValue JSInjectedScriptHost::weakRefTargetValue(JSGlobalObject* globalObject, CallFrame* callFrame)
+{
+    if (callFrame->argumentCount() < 1)
+        return jsUndefined();
+
+    JSValue value = callFrame->uncheckedArgument(0);
+    JSWeakObjectRef* weakRef = jsDynamicCast<JSWeakObjectRef*>(value);
+    if (!weakRef)
+        return jsUndefined();
+
+    VM& vm = globalObject->vm();
+    JSCell* target = weakRef->deref(vm);
+    while (JSWeakObjectRef* weakRef = jsDynamicCast<JSWeakObjectRef*>(target))
+        target = weakRef->deref(vm);
+    return target ? target : jsUndefined();
 }
 
 JSValue JSInjectedScriptHost::weakMapSize(JSGlobalObject*, CallFrame* callFrame)

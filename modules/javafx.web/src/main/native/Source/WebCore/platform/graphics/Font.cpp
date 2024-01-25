@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,6 @@
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontCustomPlatformData.h"
-#include "OpenTypeMathData.h"
 #include "SharedBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
@@ -77,12 +76,8 @@ Ref<Font> Font::create(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, fl
 
 Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial interstitial, Visibility visibility, OrientationFallback orientationFallback, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
     : m_platformData(platformData)
-    , m_renderingResourceIdentifier(renderingResourceIdentifier)
-    , m_origin(origin)
-    , m_visibility(visibility)
+    , m_attributes({ renderingResourceIdentifier, origin, interstitial, visibility, orientationFallback })
     , m_treatAsFixedPitch(false)
-    , m_isInterstitial(interstitial == Interstitial::Yes)
-    , m_isTextOrientationFallback(orientationFallback == OrientationFallback::Yes)
     , m_isBrokenIdeographFallback(false)
     , m_hasVerticalGlyphs(false)
     , m_isUsedInSystemFallbackFontCache(false)
@@ -180,9 +175,14 @@ Font::~Font()
 
 RenderingResourceIdentifier Font::renderingResourceIdentifier() const
 {
-    if (!m_renderingResourceIdentifier)
-        m_renderingResourceIdentifier = RenderingResourceIdentifier::generate();
-    return *m_renderingResourceIdentifier;
+    return m_attributes.ensureRenderingResourceIdentifier();
+}
+
+RenderingResourceIdentifier Font::Attributes::ensureRenderingResourceIdentifier() const
+{
+    if (!renderingResourceIdentifier)
+        renderingResourceIdentifier = RenderingResourceIdentifier::generate();
+    return *renderingResourceIdentifier;
 }
 
 static bool fillGlyphPage(GlyphPage& pageToFill, UChar* buffer, unsigned bufferLength, const Font& font)
@@ -404,11 +404,6 @@ static RefPtr<GlyphPage> createAndFillGlyphPage(unsigned pageNumber, const Font&
 
 const GlyphPage* Font::glyphPage(unsigned pageNumber) const
 {
-    if (!pageNumber) {
-        if (!m_glyphPageZero)
-            m_glyphPageZero = createAndFillGlyphPage(0, *this);
-        return m_glyphPageZero.get();
-    }
     auto addResult = m_glyphPages.add(pageNumber, nullptr);
     if (addResult.isNewEntry)
         addResult.iterator->value = createAndFillGlyphPage(pageNumber, *this);
@@ -530,6 +525,7 @@ String Font::description() const
 }
 #endif
 
+#if ENABLE(MATHML)
 const OpenTypeMathData* Font::mathData() const
 {
     if (isInterstitial())
@@ -541,6 +537,7 @@ const OpenTypeMathData* Font::mathData() const
     }
     return m_mathData.get();
 }
+#endif
 
 RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {
@@ -554,9 +551,9 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer&, unsigned, unsigned, bool,
 }
 #endif
 
-RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontDescription& description, IsForPlatformFont isForPlatformFont) const
+RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontDescription& description, ResolvedEmojiPolicy resolvedEmojiPolicy, IsForPlatformFont isForPlatformFont) const
 {
-    return SystemFallbackFontCache::forCurrentThread().systemFallbackFontForCharacter(this, character, description, isForPlatformFont);
+    return SystemFallbackFontCache::forCurrentThread().systemFallbackFontForCharacter(this, character, description, resolvedEmojiPolicy, isForPlatformFont);
 }
 
 #if !PLATFORM(COCOA) && !USE(FREETYPE)
@@ -632,6 +629,20 @@ Path Font::pathForGlyph(Glyph glyph) const
 
     m_glyphPathMap->setMetricsForGlyph(glyph, path);
     return *m_glyphPathMap->existingMetricsForGlyph(glyph);
+}
+
+ColorGlyphType Font::colorGlyphType(Glyph glyph) const
+{
+    if (glyph == deletedGlyph)
+        return ColorGlyphType::Outline;
+
+    return WTF::switchOn(m_emojiType, [](NoEmojiGlyphs) {
+        return ColorGlyphType::Outline;
+    }, [](AllEmojiGlyphs) {
+        return ColorGlyphType::Color;
+    }, [glyph](const SomeEmojiGlyphs& someEmojiGlyphs) {
+        return someEmojiGlyphs.colorGlyphs.get(glyph) ? ColorGlyphType::Color : ColorGlyphType::Outline;
+    });
 }
 
 #if !LOG_DISABLED

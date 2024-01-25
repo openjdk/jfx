@@ -183,7 +183,7 @@ id3v2_ununsync_data (const guint8 * unsync_data, guint32 * size)
  * Creates a new tag list that contains the information parsed out of a
  * ID3 tag.
  *
- * Returns: A new #GstTagList with all tags that could be extracted from the
+ * Returns: (transfer full) (nullable): A new #GstTagList with all tags that could be extracted from the
  *          given vorbiscomment buffer or NULL on error.
  */
 GstTagList *

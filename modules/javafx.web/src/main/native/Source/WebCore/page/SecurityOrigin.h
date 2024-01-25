@@ -37,6 +37,8 @@
 
 namespace WebCore {
 
+class OriginAccessPatterns;
+
 class SecurityOrigin : public ThreadSafeRefCounted<SecurityOrigin> {
 public:
     enum Policy {
@@ -45,7 +47,9 @@ public:
         Ask
     };
 
+    // https://url.spec.whatwg.org/#concept-url-origin
     WEBCORE_EXPORT static Ref<SecurityOrigin> create(const URL&);
+    WEBCORE_EXPORT static Ref<SecurityOrigin> createForBlobURL(const URL&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> createOpaque();
 
     WEBCORE_EXPORT static Ref<SecurityOrigin> createFromString(const String&);
@@ -58,19 +62,6 @@ public:
     // navigations. This lets those documents specify the file path that should be allowed to be
     // displayed from their non-local origin.
     static Ref<SecurityOrigin> createNonLocalWithAllowedFilePath(const URL&, const String& filePath);
-
-    // Some URL schemes use nested URLs for their security context. For example,
-    // filesystem URLs look like the following:
-    //
-    //   filesystem:http://example.com/temporary/path/to/file.png
-    //
-    // We're supposed to use "http://example.com" as the origin.
-    //
-    // Generally, we add URL schemes to this list when WebKit support them. For
-    // example, we don't include the "jar" scheme, even though Firefox
-    // understands that "jar" uses an inner URL for it's security origin.
-    static bool shouldUseInnerURL(const URL&);
-    static URL extractInnerURL(const URL&);
 
     // Create a deep copy of this SecurityOrigin. This method is useful
     // when marshalling a SecurityOrigin to another thread.
@@ -90,8 +81,7 @@ public:
     static bool shouldIgnoreHost(const URL&);
 
     // Returns true if a given URL is secure, based either directly on its
-    // own protocol, or, when relevant, on the protocol of its "inner URL"
-    // Protocols like blob: and filesystem: fall into this latter category.
+    // own protocol, or, for blob:, on the protocol of its "inner URL"
     WEBCORE_EXPORT static bool isSecure(const URL&);
 
     // This method implements the "same origin-domain" algorithm from the HTML Standard:
@@ -105,7 +95,7 @@ public:
     // Returns true if this SecurityOrigin can read content retrieved from
     // the given URL. For example, call this function before issuing
     // XMLHttpRequests.
-    WEBCORE_EXPORT bool canRequest(const URL&) const;
+    WEBCORE_EXPORT bool canRequest(const URL&, const OriginAccessPatterns&) const;
 
     // Returns true if this SecurityOrigin can receive drag content from the
     // initiator. For example, call this function before allowing content to be
@@ -115,7 +105,7 @@ public:
     // Returns true if |document| can display content from the given URL (e.g.,
     // in an iframe or as an image). For example, web sites generally cannot
     // display content from the user's files system.
-    WEBCORE_EXPORT bool canDisplay(const URL&) const;
+    WEBCORE_EXPORT bool canDisplay(const URL&, const OriginAccessPatterns&) const;
 
     // Returns true if this SecurityOrigin can load local resources, such
     // as images, iframes, and style sheets, and can link to local URLs.
@@ -138,7 +128,7 @@ public:
     // Explicitly grant the ability to access very other SecurityOrigin.
     //
     // WARNING: This is an extremely powerful ability. Use with caution!
-    void grantUniversalAccess();
+    WEBCORE_EXPORT void grantUniversalAccess();
     bool hasUniversalAccess() const { return m_universalAccess; }
 
     void grantStorageAccessFromFileURLsQuirk();
@@ -182,7 +172,7 @@ public:
     // could make the string return "null".
     WEBCORE_EXPORT String toRawString() const;
 
-    URL toURL() const;
+    WEBCORE_EXPORT URL toURL() const;
 
     // This method checks for equality between SecurityOrigins, not whether
     // one origin can access another. It is used for hash table keys.
@@ -213,9 +203,6 @@ public:
     WEBCORE_EXPORT static bool isLocalHostOrLoopbackIPAddress(StringView);
 
     const SecurityOriginData& data() const { return m_data; }
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static RefPtr<SecurityOrigin> decode(Decoder&);
 
 private:
     friend struct IPC::ArgumentCoder<SecurityOrigin, void>;

@@ -98,7 +98,7 @@ void JIT::emit_op_new_object(const JSInstruction* currentInstruction)
 
     JumpList slowCases;
     auto butterfly = TrustedImmPtr(nullptr);
-    emitAllocateJSObject(resultReg, JITAllocator::variable(), allocatorReg, structureReg, butterfly, scratchReg, slowCases);
+    emitAllocateJSObject(resultReg, JITAllocator::variable(), allocatorReg, structureReg, butterfly, scratchReg, slowCases, SlowAllocationResult::UndefinedBehavior);
     load8(Address(structureReg, Structure::inlineCapacityOffset()), scratchReg);
     emitInitializeInlineStorage(resultReg, scratchReg);
     mutatorFence(*m_vm);
@@ -370,6 +370,21 @@ void JIT::emit_op_is_object(const JSInstruction* currentInstruction)
     compare8(AboveOrEqual, Address(jsRegT32.payloadGPR(), JSCell::typeInfoTypeOffset()), TrustedImm32(ObjectType), regT0);
     isNotCell.link(this);
 
+    boxBoolean(regT0, jsRegT10);
+    emitPutVirtualRegister(dst, jsRegT10);
+}
+
+void JIT::emit_op_has_structure_with_flags(const JSInstruction* currentInstruction)
+{
+    auto bytecode = currentInstruction->as<OpHasStructureWithFlags>();
+    VirtualRegister dst = bytecode.m_dst;
+    VirtualRegister object = bytecode.m_operand;
+    unsigned flags = bytecode.m_flags;
+
+    emitGetVirtualRegister(object, jsRegT10);
+    emitLoadStructure(vm(), jsRegT10.payloadGPR(), regT2);
+
+    test32(NonZero, Address(regT2, Structure::bitFieldOffset()), TrustedImm32(flags), regT0);
     boxBoolean(regT0, jsRegT10);
     emitPutVirtualRegister(dst, jsRegT10);
 }
@@ -927,12 +942,15 @@ void JIT::emit_op_to_number(const JSInstruction* currentInstruction)
     auto bytecode = currentInstruction->as<OpToNumber>();
     VirtualRegister dstVReg = bytecode.m_dst;
     VirtualRegister srcVReg = bytecode.m_operand;
+    UnaryArithProfile* arithProfile = &m_unlinkedCodeBlock->unaryArithProfile(bytecode.m_profileIndex);
 
     emitGetVirtualRegister(srcVReg, jsRegT10);
 
+    auto isInt32 = branchIfInt32(jsRegT10);
     addSlowCase(branchIfNotNumber(jsRegT10, regT2));
-
-    emitValueProfilingSite(bytecode, jsRegT10);
+    if (arithProfile && shouldEmitProfiling())
+        arithProfile->emitUnconditionalSet(*this, UnaryArithProfile::observedNumberBits());
+    isInt32.link(this);
     if (srcVReg != dstVReg)
         emitPutVirtualRegister(dstVReg, jsRegT10);
 }
@@ -942,18 +960,28 @@ void JIT::emit_op_to_numeric(const JSInstruction* currentInstruction)
     auto bytecode = currentInstruction->as<OpToNumeric>();
     VirtualRegister dstVReg = bytecode.m_dst;
     VirtualRegister srcVReg = bytecode.m_operand;
+    UnaryArithProfile* arithProfile = &m_unlinkedCodeBlock->unaryArithProfile(bytecode.m_profileIndex);
 
     emitGetVirtualRegister(srcVReg, jsRegT10);
 
+    auto isInt32 = branchIfInt32(jsRegT10);
+
     Jump isNotCell = branchIfNotCell(jsRegT10);
     addSlowCase(branchIfNotHeapBigInt(jsRegT10.payloadGPR()));
+    if (arithProfile && shouldEmitProfiling())
+        move(TrustedImm32(UnaryArithProfile::observedNonNumberBits()), regT5);
     Jump isBigInt = jump();
 
     isNotCell.link(this);
     addSlowCase(branchIfNotNumber(jsRegT10, regT2));
+    if (arithProfile && shouldEmitProfiling())
+        move(TrustedImm32(UnaryArithProfile::observedNumberBits()), regT5);
     isBigInt.link(this);
 
-    emitValueProfilingSite(bytecode, jsRegT10);
+    if (arithProfile && shouldEmitProfiling())
+        arithProfile->emitUnconditionalSet(*this, regT5);
+
+    isInt32.link(this);
     if (srcVReg != dstVReg)
         emitPutVirtualRegister(dstVReg, jsRegT10);
 }
@@ -1190,6 +1218,19 @@ void JIT::emit_op_neq_null(const JSInstruction* currentInstruction)
     emitPutVirtualRegister(dst, jsRegT10);
 }
 
+void JIT::emitGetScope(VirtualRegister destination)
+{
+    emitGetFromCallFrameHeaderPtr(CallFrameSlot::callee, regT0);
+    loadPtr(Address(regT0, JSFunction::offsetOfScopeChain()), regT0);
+    boxCell(regT0, jsRegT10);
+    emitPutVirtualRegister(destination, jsRegT10);
+}
+
+void JIT::emitCheckTraps()
+{
+    addSlowCase(branchTest32(NonZero, AbsoluteAddress(m_vm->traps().trapBitsAddress()), TrustedImm32(VMTraps::AsyncEvents)));
+}
+
 void JIT::emit_op_enter(const JSInstruction*)
 {
     // Even though CTI doesn't use them, we initialize our constant
@@ -1207,6 +1248,9 @@ void JIT::emit_op_enter(const JSInstruction*)
     move(TrustedImm32(canBeOptimized()), canBeOptimizedGPR);
     move(TrustedImm32(localsToInit), localsToInitGPR);
     emitNakedNearCall(vm().getCTIStub(op_enter_handlerGenerator).retaggedCode<NoPtrTag>());
+
+    emitGetScope(m_profiledCodeBlock->scopeRegister());
+    emitCheckTraps();
 }
 
 MacroAssemblerCodeRef<JITThunkPtrTag> JIT::op_enter_handlerGenerator(VM& vm)
@@ -1294,7 +1338,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> JIT::op_enter_handlerGenerator(VM& vm)
 #if OS(WINDOWS) && CPU(X86_64)
         // On Windows, return values larger than 8 bytes are retuened via an implicit pointer passed as
         // the first argument, and remaining arguments are shifted to the right. Make space for this.
-        static_assert(sizeof(SlowPathReturnType) == 16, "Assumed by generated call site below");
+        static_assert(sizeof(UGPRPair) == 16, "Assumed by generated call site below");
         jit.subPtr(MacroAssembler::TrustedImm32(16), MacroAssembler::stackPointerRegister);
         jit.move(MacroAssembler::stackPointerRegister, JIT::argumentGPR0);
         constexpr GPRReg vmPointerArgGPR { GPRInfo::argumentGPR1 };
@@ -1335,11 +1379,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> JIT::op_enter_handlerGenerator(VM& vm)
 void JIT::emit_op_get_scope(const JSInstruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpGetScope>();
-    VirtualRegister dst = bytecode.m_dst;
-    emitGetFromCallFrameHeaderPtr(CallFrameSlot::callee, regT0);
-    loadPtr(Address(regT0, JSFunction::offsetOfScopeChain()), regT0);
-    boxCell(regT0, jsRegT10);
-    emitPutVirtualRegister(dst, jsRegT10);
+    emitGetScope(bytecode.m_dst);
 }
 
 void JIT::emit_op_to_this(const JSInstruction* currentInstruction)
@@ -1382,7 +1422,7 @@ void JIT::emit_op_create_this(const JSInstruction* currentInstruction)
 
     JumpList slowCases;
     auto butterfly = TrustedImmPtr(nullptr);
-    emitAllocateJSObject(resultReg, JITAllocator::variable(), allocatorReg, structureReg, butterfly, scratchReg, slowCases);
+    emitAllocateJSObject(resultReg, JITAllocator::variable(), allocatorReg, structureReg, butterfly, scratchReg, slowCases, SlowAllocationResult::UndefinedBehavior);
     load8(Address(structureReg, Structure::inlineCapacityOffset()), scratchReg);
     emitInitializeInlineStorage(resultReg, scratchReg);
     mutatorFence(*m_vm);
@@ -1521,7 +1561,7 @@ void JIT::emitSlow_op_loop_hint(const JSInstruction* currentInstruction, Vector<
 
 void JIT::emit_op_check_traps(const JSInstruction*)
 {
-    addSlowCase(branchTest32(NonZero, AbsoluteAddress(m_vm->traps().trapBitsAddress()), TrustedImm32(VMTraps::AsyncEvents)));
+    emitCheckTraps();
 }
 
 void JIT::emit_op_nop(const JSInstruction*)
@@ -1536,6 +1576,11 @@ void JIT::emit_op_super_sampler_begin(const JSInstruction*)
 void JIT::emit_op_super_sampler_end(const JSInstruction*)
 {
     sub32(TrustedImm32(1), AbsoluteAddress(bitwise_cast<void*>(&g_superSamplerCount)));
+}
+
+void JIT::emitSlow_op_enter(const JSInstruction*, Vector<SlowCaseEntry>::iterator& iter)
+{
+    emitSlow_op_check_traps(nullptr, iter);
 }
 
 void JIT::emitSlow_op_check_traps(const JSInstruction*, Vector<SlowCaseEntry>::iterator& iter)

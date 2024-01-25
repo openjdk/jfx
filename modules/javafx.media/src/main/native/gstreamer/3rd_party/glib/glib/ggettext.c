@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1998  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -365,12 +367,12 @@ _g_dgettext_should_translate (void)
  * translations for the current locale.
  *
  * The advantage of using this function over dgettext() proper is that
- * libraries using this function (like GTK+) will not use translations
+ * libraries using this function (like GTK) will not use translations
  * if the application using the library does not have translations for
  * the current locale.  This results in a consistent English-only
  * interface instead of one having partial translations.  For this
  * feature to work, the call to textdomain() and setlocale() should
- * precede any g_dgettext() invocations.  For GTK+, it means calling
+ * precede any g_dgettext() invocations.  For GTK, it means calling
  * textdomain() before gtk_init or its variants.
  *
  * This function disables translations if and only if upon its first
@@ -388,7 +390,7 @@ _g_dgettext_should_translate (void)
  *
  * Note that this behavior may not be desired for example if an application
  * has its untranslated messages in a language other than English. In those
- * cases the application should call textdomain() after initializing GTK+.
+ * cases the application should call textdomain() after initializing GTK.
  *
  * Applications should normally not use this function directly,
  * but use the _() macro for translations.

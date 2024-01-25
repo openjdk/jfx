@@ -50,6 +50,7 @@ import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.*;
@@ -6348,6 +6349,8 @@ public class Scene implements EventTarget {
                 Window parent = null;
                 if (window instanceof Stage) {
                     parent = ((Stage)window).getOwner();
+                } else if (window instanceof EmbeddedWindow win) {
+                    return win.getNodeOrientation();
                 } else {
                     if (window instanceof PopupWindow) {
                         parent = ((PopupWindow)window).getOwnerWindow();

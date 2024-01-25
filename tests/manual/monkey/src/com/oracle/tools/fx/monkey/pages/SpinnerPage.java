@@ -59,10 +59,10 @@ public class SpinnerPage extends TestPaneBase {
     private Spinner<Number> control;
 
     public SpinnerPage() {
-        setId("SpinnerPage");
+        FX.name(this, "SpinnerPage");
 
         modeChoice = new ComboBox<>();
-        modeChoice.setId("modeChoice");
+        FX.name(modeChoice, "modeChoice");
         modeChoice.getItems().addAll(Mode.values());
         modeChoice.setEditable(false);
         modeChoice.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
@@ -70,7 +70,7 @@ public class SpinnerPage extends TestPaneBase {
         });
 
         converterChoice = new ComboBox<>();
-        converterChoice.setId("converterChoice");
+        FX.name(converterChoice, "converterChoice");
         converterChoice.getItems().addAll(Converter.values());
         converterChoice.setEditable(false);
         converterChoice.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
@@ -78,7 +78,7 @@ public class SpinnerPage extends TestPaneBase {
         });
 
         editable = new CheckBox("editable");
-        editable.setId("editable");
+        FX.name(editable, "editable");
         editable.selectedProperty().addListener((s, p, c) -> {
             if (control != null) {
                 control.setEditable(c);

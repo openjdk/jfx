@@ -206,6 +206,26 @@ template<size_t divisor, typename T> inline constexpr T* roundUpToMultipleOf(T* 
 }
 
 template<typename T, typename U>
+inline constexpr T roundUpToMultipleOfNonPowerOfTwo(U divisor, T x)
+{
+    T remainder = x % divisor;
+    if (!remainder)
+        return x;
+    return x + static_cast<T>(divisor - remainder);
+}
+
+template<typename T, typename C>
+inline constexpr Checked<T, C> roundUpToMultipleOfNonPowerOfTwo(Checked<T, C> divisor, Checked<T, C> x)
+{
+    if (x.hasOverflowed() || divisor.hasOverflowed())
+        return ResultOverflowed;
+    T remainder = x % divisor;
+    if (!remainder)
+        return x;
+    return x + static_cast<T>(divisor.value() - remainder);
+}
+
+template<typename T, typename U>
 inline constexpr T roundDownToMultipleOf(U divisor, T x)
 {
     ASSERT_UNDER_CONSTEXPR_CONTEXT(divisor && isPowerOfTwo(divisor));
@@ -223,6 +243,13 @@ template<size_t divisor, typename T> constexpr T roundDownToMultipleOf(T x)
 {
     static_assert(isPowerOfTwo(divisor), "'divisor' must be a power of two.");
     return roundDownToMultipleOf(divisor, x);
+}
+
+template<typename IntType>
+constexpr IntType toTwosComplement(IntType integer)
+{
+    using UnsignedIntType = typename std::make_unsigned_t<IntType>;
+    return static_cast<IntType>((~static_cast<UnsignedIntType>(integer)) + static_cast<UnsignedIntType>(1));
 }
 
 enum BinarySearchMode {
@@ -562,8 +589,23 @@ ALWAYS_INLINE constexpr typename remove_reference<T>::type&& move(T&& value)
 
 namespace WTF {
 
+template<typename T> class TypeHasRefMemberFunction {
+    template<typename> static std::false_type test(...);
+    template<typename U> static auto test(int) -> decltype(std::declval<U>().ref(), std::true_type());
+public:
+    static constexpr bool value = std::is_same<decltype(test<T>(0)), std::true_type>::value;
+};
+
 template<class T, class... Args>
 ALWAYS_INLINE decltype(auto) makeUnique(Args&&... args)
+{
+    static_assert(std::is_same<typename T::webkitFastMalloced, int>::value, "T is FastMalloced");
+    static_assert(!TypeHasRefMemberFunction<T>::value, "T should not be refcounted");
+    return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
+template<class T, class... Args>
+ALWAYS_INLINE decltype(auto) makeUniqueWithoutRefCountedCheck(Args&&... args)
 {
     static_assert(std::is_same<typename T::webkitFastMalloced, int>::value, "T is FastMalloced");
     return std::make_unique<T>(std::forward<Args>(args)...);
@@ -572,6 +614,7 @@ ALWAYS_INLINE decltype(auto) makeUnique(Args&&... args)
 template<class T, class... Args>
 ALWAYS_INLINE decltype(auto) makeUniqueWithoutFastMallocCheck(Args&&... args)
 {
+    static_assert(!TypeHasRefMemberFunction<T>::value, "T should not be refcounted");
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
@@ -675,10 +718,13 @@ using WTF::isPointerAligned;
 using WTF::isStatelessLambda;
 using WTF::makeUnique;
 using WTF::makeUniqueWithoutFastMallocCheck;
+using WTF::makeUniqueWithoutRefCountedCheck;
 using WTF::mergeDeduplicatedSorted;
 using WTF::roundUpToMultipleOf;
+using WTF::roundUpToMultipleOfNonPowerOfTwo;
 using WTF::roundDownToMultipleOf;
 using WTF::safeCast;
 using WTF::tryBinarySearch;
 using WTF::valueOrCompute;
 using WTF::valueOrDefault;
+using WTF::toTwosComplement;

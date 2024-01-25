@@ -55,8 +55,8 @@ public:
     SourcePosition currentPosition() const { return m_currentPosition; }
 
 private:
-    unsigned currentOffset() const { return m_currentPosition.m_offset; }
-    unsigned currentTokenLength() const { return currentOffset() - m_tokenStartingPosition.m_offset; }
+    unsigned currentOffset() const { return m_currentPosition.offset; }
+    unsigned currentTokenLength() const { return currentOffset() - m_tokenStartingPosition.offset; }
 
     Token makeToken(TokenType type)
     {
@@ -74,9 +74,9 @@ private:
     T shift(unsigned = 1);
     T peek(unsigned = 0);
     void newLine();
-    void skipBlockComments();
+    bool skipBlockComments();
     void skipLineComment();
-    void skipWhitespaceAndComments();
+    bool skipWhitespaceAndComments();
 
     // Reads [0-9]+
     std::optional<uint64_t> parseDecimalInteger();
@@ -85,8 +85,8 @@ private:
     // Checks whether there is an "i" or "u" coming, and return the right kind of literal token
     Token parseIntegerLiteralSuffix(double literalValue);
 
-    static bool isIdentifierStart(T character) { return isASCIIAlpha(character); }
-    static bool isValidIdentifierCharacter(T character) { return isASCIIAlphanumeric(character) || character == '_'; }
+    static bool isIdentifierStart(T character) { return isASCIIAlpha(character) || character == '_'; }
+    static bool isIdentifierContinue(T character) { return isASCIIAlphanumeric(character) || character == '_'; }
     static unsigned readDecimal(T character)
     {
         ASSERT(isASCIIDigit(character));

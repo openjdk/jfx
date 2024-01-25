@@ -579,7 +579,7 @@ gst_clear_structure (GstStructure ** structure_ptr)
  * gst_structure_take:
  * @oldstr_ptr: (inout) (transfer full) (nullable): pointer to a place of
  *     a #GstStructure to take
- * @newstr: (transfer full) (allow-none): a new #GstStructure
+ * @newstr: (transfer full) (nullable): a new #GstStructure
  *
  * Atomically modifies a pointer to point to a new structure.
  * The #GstStructure @oldstr_ptr is pointing to is freed and
@@ -1964,8 +1964,8 @@ gst_structure_get_fraction (const GstStructure * structure,
  * gst_structure_get_flagset:
  * @structure: a #GstStructure
  * @fieldname: the name of a field
- * @value_flags: (out) (allow-none): a pointer to a guint for the flags field
- * @value_mask: (out) (allow-none): a pointer to a guint for the mask field
+ * @value_flags: (out) (optional): a pointer to a guint for the flags field
+ * @value_mask: (out) (optional): a pointer to a guint for the mask field
  *
  * Read the GstFlagSet flags and mask out of the structure into the
  * provided pointers.
@@ -2046,9 +2046,11 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
     field = GST_STRUCTURE_FIELD (structure, i);
 
     if (G_VALUE_TYPE (&field->value) == GST_TYPE_ARRAY) {
-      t = _priv_gst_value_serialize_any_list (&field->value, "< ", " >", FALSE);
+      t = _priv_gst_value_serialize_any_list (&field->value, "< ", " >", FALSE,
+          flags);
     } else if (G_VALUE_TYPE (&field->value) == GST_TYPE_LIST) {
-      t = _priv_gst_value_serialize_any_list (&field->value, "{ ", " }", FALSE);
+      t = _priv_gst_value_serialize_any_list (&field->value, "{ ", " }", FALSE,
+          flags);
     } else if (!nested_structs_brackets
         || (G_VALUE_TYPE (&field->value) != GST_TYPE_STRUCTURE
             && G_VALUE_TYPE (&field->value) != GST_TYPE_CAPS)) {
@@ -2390,7 +2392,7 @@ gst_structure_new_from_string (const gchar * string)
 /**
  * gst_structure_from_string: (constructor):
  * @string: a string representation of a #GstStructure.
- * @end: (out) (allow-none) (transfer none) (skip): pointer to store the end of the string in.
+ * @end: (out) (optional) (transfer none) (skip): pointer to store the end of the string in.
  *
  * Creates a #GstStructure from a string representation.
  * If end is not %NULL, a pointer to the place inside the given string
@@ -3157,7 +3159,7 @@ gst_structure_is_equal (const GstStructure * structure1,
  *
  * Intersects @struct1 and @struct2 and returns the intersection.
  *
- * Returns: (nullable): Intersection of @struct1 and @struct2
+ * Returns: (transfer full) (nullable): Intersection of @struct1 and @struct2
  */
 GstStructure *
 gst_structure_intersect (const GstStructure * struct1,
@@ -3500,4 +3502,44 @@ gst_structure_set_list (GstStructure * structure, const gchar * fieldname,
     const GValueArray * array)
 {
   _gst_structure_set_any_list (structure, GST_TYPE_LIST, fieldname, array);
+}
+
+/**
+ * gst_structure_get_flags:
+ * @structure: a #GstStructure
+ * @fieldname: the name of a field
+ * @flags_type: the flags type of a field
+ * @value: (out): a pointer to an unsigned int to set
+ *
+ * Sets the unsigned int pointed to by @value corresponding to the value of the
+ * given field. Caller is responsible for making sure the field exists,
+ * has the correct type and that the flagstype is correct.
+ *
+ * Returns: %TRUE if the value could be set correctly. If there was no field
+ * with @fieldname or the existing field did not contain flags or
+ * did not contain flags of the given type, this function returns %FALSE.
+ *
+ * Since: 1.22
+ */
+gboolean
+gst_structure_get_flags (const GstStructure * structure,
+    const gchar * fieldname, GType flags_type, guint * value)
+{
+  GstStructureField *field;
+
+  g_return_val_if_fail (structure != NULL, FALSE);
+  g_return_val_if_fail (fieldname != NULL, FALSE);
+  g_return_val_if_fail (flags_type != G_TYPE_INVALID, FALSE);
+  g_return_val_if_fail (value != NULL, FALSE);
+
+  field = gst_structure_get_field (structure, fieldname);
+
+  if (field == NULL)
+    return FALSE;
+  if (!G_TYPE_CHECK_VALUE_TYPE (&field->value, flags_type))
+    return FALSE;
+
+  *value = g_value_get_flags (&field->value);
+
+  return TRUE;
 }

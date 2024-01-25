@@ -11,12 +11,12 @@ LIBFFI_DIR = ../../../$(THIRD_PARTY_DIR)/libffi
 DEP_DIRS = $(BUILD_DIR) $(OBJBASE_DIR)
 
 C_SOURCES = gatomicarray.c \
-	   gbinding.c \
+            gbinding.c \
             gboxed.c \
             gclosure.c \
             genums.c \
             gmarshal.c \
-	    gobject.c \
+            gobject.c \
             gparam.c \
             gparamspecs.c \
             gsignal.c \
@@ -33,14 +33,14 @@ COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
                  -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue \
                  -wd"4005" -wd"4018" -wd"4028" -wd"4090" -wd"4113" -wd"4267" -wd"4715" \
                  -wd"4146" -wd"4311" -wd"4312" -wd"4133" -wd"4146" -wd"4334" \
-                 -FI"msvc_recommended_pragmas.h" 
+                 -FI"msvc_recommended_pragmas.h"
 
 INCLUDES = -I$(SRCBASE_DIR) \
            -I$(SRCBASE_DIR)/glib \
            -I$(SRCBASE_DIR)/gobject \
            -I$(SRCBASE_DIR)/build/win32/vs100 \
-	  -I$(LIBFFI_DIR)/include \
-	  -I$(LIBFFI_DIR)/src/x86
+           -I$(LIBFFI_DIR)/include \
+           -I$(LIBFFI_DIR)/src/x86
 
 CFLAGS =   -DWIN32 \
            -D_WINDOWS \
@@ -51,11 +51,11 @@ CFLAGS =   -DWIN32 \
            -DHAVE_CONFIG_H \
            -DG_LOG_DOMAIN=\"Glib-GObject\" \
            -D_MBCS \
-	  -DG_OS_WIN32 \
-	  -DFFI_BUILDING \
+           -DG_OS_WIN32 \
+           -DFFI_BUILDING \
            -DG_DISABLE_DEPRECATED \
            $(INCLUDES) \
-	  $(COMPILER_FLAGS)
+           $(COMPILER_FLAGS)
 
 LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
 
@@ -81,7 +81,7 @@ OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
 
 default: $(TARGET)
 
-$(TARGET): $(OBJECTS) 
+$(TARGET): $(OBJECTS)
 	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
 
 $(OBJECTS): | $(DEP_DIRS)

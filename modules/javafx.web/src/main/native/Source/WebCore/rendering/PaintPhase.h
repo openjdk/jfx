@@ -51,6 +51,7 @@ enum class PaintPhase : uint16_t {
     Mask                     = 1 << 10,
     ClippingMask             = 1 << 11,
     EventRegion              = 1 << 12,
+    Accessibility            = 1 << 13,
 };
 
 enum class PaintBehavior : uint32_t {
@@ -65,13 +66,14 @@ enum class PaintBehavior : uint32_t {
     SelectionAndBackgroundsOnly         = 1 << 7,
     ExcludeSelection                    = 1 << 8,
     FlattenCompositingLayers            = 1 << 9, // Paint doesn't stop at compositing layer boundaries.
-    Snapshotting                        = 1 << 10,
-    TileFirstPaint                      = 1 << 11,
+    ForceSynchronousImageDecode         = 1 << 10, // Paint should always complete image decoding of painted images.
+    DefaultAsynchronousImageDecode      = 1 << 11, // Paint should always start asynchronous image decode of painted images, unless otherwise specified.
     CompositedOverflowScrollContent     = 1 << 12,
     AnnotateLinks                       = 1 << 13, // Collect all renderers with links to annotate their URLs (e.g. PDFs)
     EventRegionIncludeForeground        = 1 << 14, // FIXME: Event region painting should use paint phases.
     EventRegionIncludeBackground        = 1 << 15,
-    DontShowVisitedLinks                = 1 << 16,
+    Snapshotting                        = 1 << 16, // Paint is updating external backing store and visits all content, including composited content and always completes image decoding of painted images. FIXME: Will be removed.
+    DontShowVisitedLinks                = 1 << 17,
 };
 
 } // namespace WebCore

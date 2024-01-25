@@ -31,6 +31,7 @@
 #include "StyleValidity.h"
 #include "TaskSource.h"
 #include "TreeScope.h"
+#include <compare>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/CompactUniquePtrTuple.h>
 #include <wtf/FixedVector.h>
@@ -249,6 +250,9 @@ public:
     HTMLSlotElement* manuallyAssignedSlot() const;
     void setManuallyAssignedSlot(HTMLSlotElement*);
 
+    bool hasEverPaintedImages() const;
+    void setHasEverPaintedImages(bool);
+
     bool isUncustomizedCustomElement() const { return customElementState() == CustomElementState::Uncustomized; }
     bool isCustomElementUpgradeCandidate() const { return customElementState() == CustomElementState::Undefined; }
     bool isDefinedCustomElement() const { return customElementState() == CustomElementState::Custom; }
@@ -349,11 +353,8 @@ public:
 
     WEBCORE_EXPORT void inspect();
 
-    enum UserSelectAllTreatment {
-        UserSelectAllDoesNotAffectEditability,
-        UserSelectAllIsAlwaysNonEditable
-    };
-    bool hasEditableStyle(UserSelectAllTreatment treatment = UserSelectAllIsAlwaysNonEditable) const
+    enum class UserSelectAllTreatment : bool { NotEditable, Editable };
+    bool hasEditableStyle(UserSelectAllTreatment treatment = UserSelectAllTreatment::NotEditable) const
     {
         return computeEditability(treatment, ShouldUpdateStyle::DoNotUpdate) != Editability::ReadOnly;
     }
@@ -361,7 +362,7 @@ public:
     // FIXME: Replace every use of this function by helpers in Editing.h
     bool hasRichlyEditableStyle() const
     {
-        return computeEditability(UserSelectAllIsAlwaysNonEditable, ShouldUpdateStyle::DoNotUpdate) == Editability::CanEditRichly;
+        return computeEditability(UserSelectAllTreatment::NotEditable, ShouldUpdateStyle::DoNotUpdate) == Editability::CanEditRichly;
     }
 
     enum class Editability { ReadOnly, CanEditPlainText, CanEditRichly };
@@ -388,6 +389,8 @@ public:
     }
     void setTreeScopeRecursively(TreeScope&);
     static ptrdiff_t treeScopeMemoryOffset() { return OBJECT_OFFSETOF(Node, m_treeScope); }
+
+    TreeScope& treeScopeForSVGReferences() const;
 
     // Returns true if this node is associated with a document and is in its associated document's
     // node tree, false otherwise (https://dom.spec.whatwg.org/#connected).
@@ -636,7 +639,7 @@ protected:
     constexpr static auto CreateText = CreateCharacterData | NodeFlag::IsText;
     constexpr static auto CreateContainer = DefaultNodeFlags | NodeFlag::IsContainerNode;
     constexpr static auto CreateElement = CreateContainer | NodeFlag::IsElement;
-    constexpr static auto CreatePseudoElement = CreateElement | NodeFlag::IsConnected;
+    constexpr static auto CreatePseudoElement = CreateElement | NodeFlag::IsConnected | NodeFlag::HasCustomStyleResolveCallbacks;
     constexpr static auto CreateDocumentFragment = CreateContainer | NodeFlag::IsDocumentFragment;
     constexpr static auto CreateShadowRoot = CreateDocumentFragment | NodeFlag::IsShadowRoot | NodeFlag::IsInShadowTree;
     constexpr static auto CreateHTMLElement = CreateElement | NodeFlag::IsHTMLElement;
@@ -667,7 +670,6 @@ protected:
         DescendantsAffectedByForwardPositionalRules             = 1 << 10,
         ChildrenAffectedByBackwardPositionalRules               = 1 << 11,
         DescendantsAffectedByBackwardPositionalRules            = 1 << 12,
-        ChildrenAffectedByPropertyBasedBackwardPositionalRules  = 1 << 13,
     };
 
     struct StyleBitfields {
@@ -701,8 +703,6 @@ protected:
     NodeRareData* rareData() const { return m_rareDataWithBitfields.pointer(); }
     NodeRareData& ensureRareData();
     void clearRareData();
-
-    void setHasCustomStyleResolveCallbacks() { setNodeFlag(NodeFlag::HasCustomStyleResolveCallbacks); }
 
     void setTreeScope(TreeScope& scope) { m_treeScope = &scope; }
 
@@ -751,38 +751,17 @@ private:
 
 bool connectedInSameTreeScope(const Node*, const Node*);
 
-// Designed to be used the same way as C++20 std::partial_ordering class.
-// FIXME: Consider putting this in a separate header.
-// FIXME: Once we can require C++20, replace with std::partial_ordering.
-class PartialOrdering {
-public:
-    static const PartialOrdering less;
-    static const PartialOrdering equivalent;
-    static const PartialOrdering greater;
-    static const PartialOrdering unordered;
-
-    friend constexpr bool is_eq(PartialOrdering);
-    friend constexpr bool is_lt(PartialOrdering);
-    friend constexpr bool is_gt(PartialOrdering);
-
-private:
-    enum class Type : uint8_t { Less, Equivalent, Greater, Unordered };
-    constexpr PartialOrdering(Type type) : m_type { type } { }
-    Type m_type;
-};
-constexpr bool is_eq(PartialOrdering);
-constexpr bool is_lt(PartialOrdering);
-constexpr bool is_gt(PartialOrdering);
-constexpr bool is_neq(PartialOrdering);
-constexpr bool is_lteq(PartialOrdering);
-constexpr bool is_gteq(PartialOrdering);
+// FIXME: We should remove these but std::is_eq() / std::is_neq() are not available in
+// some of our SDKs yet (rdar://87314077).
+constexpr bool is_eq(std::partial_ordering cmp) { return cmp == 0; }
+constexpr bool is_neq(std::partial_ordering cmp) { return cmp != 0; }
 
 enum TreeType { Tree, ShadowIncludingTree, ComposedTree };
 template<TreeType = Tree> ContainerNode* parent(const Node&);
 template<TreeType = Tree> Node* commonInclusiveAncestor(const Node&, const Node&);
-template<TreeType = Tree> PartialOrdering treeOrder(const Node&, const Node&);
+template<TreeType = Tree> std::partial_ordering treeOrder(const Node&, const Node&);
 
-WEBCORE_EXPORT PartialOrdering treeOrderForTesting(TreeType, const Node&, const Node&);
+WEBCORE_EXPORT std::partial_ordering treeOrderForTesting(TreeType, const Node&, const Node&);
 
 #if ASSERT_ENABLED
 
@@ -902,44 +881,20 @@ inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
         moveTreeToNewScope(*this, *m_treeScope, newTreeScope);
 }
 
-#if PLATFORM(JAVA)
-// VS 2017 has buggy support for compile-time inline constants, so the
-// definitions are moved to Node.cpp
-#else
-inline constexpr PartialOrdering PartialOrdering::less(Type::Less);
-inline constexpr PartialOrdering PartialOrdering::equivalent(Type::Equivalent);
-inline constexpr PartialOrdering PartialOrdering::greater(Type::Greater);
-inline constexpr PartialOrdering PartialOrdering::unordered(Type::Unordered);
-#endif
-
-constexpr bool is_eq(PartialOrdering ordering)
+inline void EventTarget::ref()
 {
-    return ordering.m_type == PartialOrdering::Type::Equivalent;
+    if (LIKELY(isNode()))
+        downcast<Node>(*this).ref();
+    else
+        refEventTarget();
 }
 
-constexpr bool is_lt(PartialOrdering ordering)
+inline void EventTarget::deref()
 {
-    return ordering.m_type == PartialOrdering::Type::Less;
-}
-
-constexpr bool is_gt(PartialOrdering ordering)
-{
-    return ordering.m_type == PartialOrdering::Type::Greater;
-}
-
-constexpr bool is_neq(PartialOrdering ordering)
-{
-    return is_lt(ordering) || is_gt(ordering);
-}
-
-constexpr bool is_lteq(PartialOrdering ordering)
-{
-    return is_lt(ordering) || is_eq(ordering);
-}
-
-constexpr bool is_gteq(PartialOrdering ordering)
-{
-    return is_gt(ordering) || is_eq(ordering);
+    if (LIKELY(isNode()))
+        downcast<Node>(*this).deref();
+    else
+        derefEventTarget();
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Node&);

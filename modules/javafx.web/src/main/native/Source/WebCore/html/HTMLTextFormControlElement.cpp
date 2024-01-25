@@ -33,12 +33,11 @@
 #include "DocumentInlines.h"
 #include "Editing.h"
 #include "Editor.h"
-#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "HTMLBRElement.h"
 #include "HTMLFormElement.h"
@@ -48,12 +47,14 @@
 #include "InlineIteratorBox.h"
 #include "InlineIteratorLineBox.h"
 #include "LayoutDisallowedScope.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MutableStyleProperties.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderLineBreak.h"
+#include "RenderStyleSetters.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
 #include "ScriptDisallowedScope.h"
@@ -187,7 +188,7 @@ void HTMLTextFormControlElement::updatePlaceholderVisibility()
     if (m_isPlaceholderVisible == newIsPlaceholderVisible)
         return;
 
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassPlaceholderShown, newIsPlaceholderVisible);
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassType::PlaceholderShown, newIsPlaceholderVisible);
     m_isPlaceholderVisible = newIsPlaceholderVisible;
 
     if (RefPtr placeholder = placeholderElement())
@@ -360,7 +361,7 @@ bool HTMLTextFormControlElement::setSelectionRange(unsigned start, unsigned end,
             endPosition = positionForIndex(innerText.get(), end);
     }
 
-    if (RefPtr<Frame> frame = document().frame())
+    if (RefPtr frame = document().frame())
         frame->selection().moveWithoutValidationTo(startPosition, endPosition, direction != SelectionHasNoDirection, !hasFocus, revealMode, intent);
 
     return m_cachedSelectionStart != previousSelectionStart || m_cachedSelectionEnd != previousSelectionEnd || m_cachedSelectionDirection != previousSelectionDirection;
@@ -407,7 +408,7 @@ unsigned HTMLTextFormControlElement::selectionStart() const
 unsigned HTMLTextFormControlElement::computeSelectionStart() const
 {
     ASSERT(isTextField());
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame { document().frame() };
     if (!frame)
         return 0;
 
@@ -426,7 +427,7 @@ unsigned HTMLTextFormControlElement::selectionEnd() const
 unsigned HTMLTextFormControlElement::computeSelectionEnd() const
 {
     ASSERT(isTextField());
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame { document().frame() };
     if (!frame)
         return 0;
 
@@ -464,7 +465,7 @@ const AtomString& HTMLTextFormControlElement::selectionDirection() const
 TextFieldSelectionDirection HTMLTextFormControlElement::computeSelectionDirection() const
 {
     ASSERT(isTextField());
-    RefPtr<Frame> frame = document().frame();
+    RefPtr frame { document().frame() };
     if (!frame)
         return SelectionHasNoDirection;
 
@@ -549,13 +550,13 @@ void HTMLTextFormControlElement::scheduleSelectEvent()
     queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().selectEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
 }
 
-void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLTextFormControlElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == placeholderAttr) {
         updatePlaceholderText();
         updatePlaceholderVisibility();
     } else
-        HTMLFormControlElement::parseAttribute(name, value);
+        HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void HTMLTextFormControlElement::disabledStateChanged()
@@ -881,4 +882,4 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
 #endif
 }
 
-} // namespace Webcore
+} // namespace WebCore

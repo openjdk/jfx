@@ -52,7 +52,6 @@
 #include "JITCodeMap.h"
 #include "JITMathICForwards.h"
 #include "JSCast.h"
-#include "JSGlobalObject.h"
 #include "JumpTable.h"
 #include "LazyOperandValueProfile.h"
 #include "MetadataTable.h"
@@ -67,6 +66,7 @@
 #include "ValueProfile.h"
 #include "VirtualRegister.h"
 #include "Watchpoint.h"
+#include <wtf/ApproximateTime.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FixedVector.h>
 #include <wtf/HashSet.h>
@@ -147,7 +147,7 @@ public:
     bool hasHash() const;
     bool isSafeToComputeHash() const;
     CString hashAsStringIfPossible() const;
-    CString sourceCodeForTools() const; // Not quite the actual source we parsed; this will do things like prefix the source for a function with a reified signature.
+    CString sourceCodeForTools() const;
     CString sourceCodeOnOneLine() const; // As sourceCodeForTools(), but replaces all whitespace runs with a single space.
     void dumpAssumingJITType(PrintStream&, JITType) const;
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
@@ -204,7 +204,7 @@ public:
 
     static size_t estimatedSize(JSCell*, VM&);
     static void destroy(JSCell*);
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
     void notifyLexicalBindingUpdate();
 
@@ -409,6 +409,7 @@ public:
         return result;
     }
 
+    ValueProfile* tryGetValueProfileForBytecodeIndex(BytecodeIndex);
     ValueProfile& valueProfileForBytecodeIndex(BytecodeIndex);
     SpeculatedType valueProfilePredictionForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex);
 
@@ -905,11 +906,10 @@ private:
 
     unsigned numberOfNonArgumentValueProfiles() { return totalNumberOfValueProfiles() - numberOfArgumentValueProfiles(); }
     unsigned totalNumberOfValueProfiles() { return m_unlinkedCode->numberOfValueProfiles(); }
-    ValueProfile* tryGetValueProfileForBytecodeIndex(BytecodeIndex);
 
     Seconds timeSinceCreation()
     {
-        return MonotonicTime::now() - m_creationTime;
+        return ApproximateTime::now() - m_creationTime;
     }
 
     void createRareDataIfNecessary()
@@ -986,7 +986,7 @@ private:
 
     RefPtr<MetadataTable> m_metadata;
 
-    MonotonicTime m_creationTime;
+    ApproximateTime m_creationTime;
     double m_previousCounter { 0 };
 
     std::unique_ptr<RareData> m_rareData;
@@ -996,7 +996,7 @@ private:
     HashSet<UniquedStringImpl*> m_cachedIdentifierUids;
 #endif
 };
-#if !ASSERT_ENABLED && COMPILER(GCC_COMPATIBLE)
+#if defined(NDEBUG) && COMPILER(GCC_COMPATIBLE)
 static_assert(sizeof(CodeBlock) <= 240, "Keep it small for memory saving");
 #endif
 

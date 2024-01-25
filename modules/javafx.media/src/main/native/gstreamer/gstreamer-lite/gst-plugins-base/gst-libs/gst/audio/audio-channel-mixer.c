@@ -817,8 +817,7 @@ DEFINE_FLOAT_MIX_FUNC (double, planar, planar);
  *
  * Create a new channel mixer object for the given parameters.
  *
- * Returns: a new #GstAudioChannelMixer object, or %NULL if @format isn't supported,
- *   @matrix is invalid, or @matrix is %NULL and @in_channels != @out_channels.
+ * Returns: a new #GstAudioChannelMixer object.
  *   Free with gst_audio_channel_mixer_free() after usage.
  *
  * Since: 1.14
@@ -834,8 +833,8 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
       || format == GST_AUDIO_FORMAT_S32
       || format == GST_AUDIO_FORMAT_F32
       || format == GST_AUDIO_FORMAT_F64, NULL);
-  g_return_val_if_fail (in_channels > 0 && in_channels < 64, NULL);
-  g_return_val_if_fail (out_channels > 0 && out_channels < 64, NULL);
+  g_return_val_if_fail (in_channels > 0 && in_channels <= 64, NULL);
+  g_return_val_if_fail (out_channels > 0 && out_channels <= 64, NULL);
 
   mix = g_slice_new0 (GstAudioChannelMixer);
   mix->in_channels = in_channels;
@@ -980,7 +979,7 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
  *
  * Create a new channel mixer object for the given parameters.
  *
- * Returns: a new #GstAudioChannelMixer object, or %NULL if @format isn't supported.
+ * Returns: a new #GstAudioChannelMixer object.
  *   Free with gst_audio_channel_mixer_free() after usage.
  */
 GstAudioChannelMixer *
@@ -996,8 +995,8 @@ gst_audio_channel_mixer_new (GstAudioChannelMixerFlags flags,
       || format == GST_AUDIO_FORMAT_S32
       || format == GST_AUDIO_FORMAT_F32
       || format == GST_AUDIO_FORMAT_F64, NULL);
-  g_return_val_if_fail (in_channels > 0 && in_channels < 64, NULL);
-  g_return_val_if_fail (out_channels > 0 && out_channels < 64, NULL);
+  g_return_val_if_fail (in_channels > 0 && in_channels <= 64, NULL);
+  g_return_val_if_fail (out_channels > 0 && out_channels <= 64, NULL);
 
   matrix =
       gst_audio_channel_mixer_setup_matrix (flags, in_channels, in_position,

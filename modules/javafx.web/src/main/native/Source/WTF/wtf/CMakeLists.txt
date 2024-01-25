@@ -13,8 +13,8 @@ set(WTF_PUBLIC_HEADERS
     BackwardsGraph.h
     Bag.h
     BagToHashMap.h
+    BitSet.h
     BitVector.h
-    Bitmap.h
     BlockObjCExceptions.h
     BlockPtr.h
     BloomFilter.h
@@ -175,7 +175,6 @@ set(WTF_PUBLIC_HEADERS
     NotFound.h
     NumberOfCores.h
     OSAllocator.h
-    OSLogPrintStream.h
     OSObjectPtr.h
     OSRandomSource.h
     ObjCRuntimeExtras.h
@@ -235,6 +234,7 @@ set(WTF_PUBLIC_HEADERS
     RefCounter.h
     RefPtr.h
     RefVector.h
+    ReferenceWrapperVector.h
     ResourceUsage.h
     RetainPtr.h
     RobinHoodHashMap.h
@@ -261,7 +261,6 @@ set(WTF_PUBLIC_HEADERS
     SmallSet.h
     SoftLinking.h
     SortedArrayMap.h
-    Span.h
     SpanningTree.h
     Spectrum.h
     StackBounds.h
@@ -327,6 +326,7 @@ set(WTF_PUBLIC_HEADERS
     VectorHash.h
     VectorTraits.h
     WTFConfig.h
+    WTFProcess.h
     WTFSemaphore.h
     WallTime.h
     WeakHashCountedSet.h
@@ -381,7 +381,6 @@ set(WTF_PUBLIC_HEADERS
     text/ExternalStringImpl.h
     text/IntegerToStringConversion.h
     text/LChar.h
-    text/LineBreakIteratorPoolICU.h
     text/LineEnding.h
     text/NullTextBreakIterator.h
     text/OrdinalNumber.h
@@ -431,6 +430,7 @@ set(WTF_SOURCES
     AutomaticThread.cpp
     Bag.cpp
     BitVector.cpp
+    BloomFilter.cpp
     CPUTime.cpp
     ClockType.cpp
     CodePtr.cpp
@@ -475,7 +475,6 @@ set(WTF_SOURCES
     MetaAllocator.cpp
     MonotonicTime.cpp
     NumberOfCores.cpp
-    OSLogPrintStream.cpp
     OSRandomSource.cpp
     ObjectIdentifier.cpp
     PageBlock.cpp
@@ -516,7 +515,9 @@ set(WTF_SOURCES
     Vector.cpp
     WTFAssertions.cpp
     WTFConfig.cpp
+    WTFProcess.cpp
     WallTime.cpp
+    WeakPtr.cpp
     WeakRandomNumber.cpp
     WordLock.cpp
     WorkQueue.cpp
@@ -543,7 +544,6 @@ set(WTF_SOURCES
     text/Base64.cpp
     text/CString.cpp
     text/ExternalStringImpl.cpp
-    text/LineBreakIteratorPoolICU.cpp
     text/LineEnding.cpp
     text/StringBuffer.cpp
     text/StringBuilder.cpp
@@ -570,6 +570,12 @@ set(WTF_SOURCES
     unicode/icu/CollatorICU.cpp
     unicode/icu/ICUHelpers.cpp
 )
+
+if (APPLE)
+    list(APPEND WTF_PUBLIC_HEADERS
+        darwin/OSLogPrintStream.h
+    )
+endif ()
 
 set(WTF_PRIVATE_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}"

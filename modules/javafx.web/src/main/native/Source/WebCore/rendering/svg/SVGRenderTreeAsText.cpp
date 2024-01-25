@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Google Inc. All rights reserved.
  *           (C) 2005 Rob Buis <buis@kde.org>
  *           (C) 2006 Alexander Kellett <lypanov@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
@@ -30,7 +31,6 @@
 #include "SVGRenderTreeAsText.h"
 
 #include "ColorSerialization.h"
-#include "GraphicsTypes.h"
 #include "LegacyRenderSVGImage.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LegacyRenderSVGShapeInlines.h"
@@ -52,6 +52,7 @@
 #include "RenderSVGRoot.h"
 #include "RenderSVGShapeInlines.h"
 #include "RenderSVGText.h"
+#include "RenderStyleInlines.h"
 #include "SVGCircleElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGEllipseElement.h"
@@ -61,10 +62,10 @@
 #include "SVGPathUtilities.h"
 #include "SVGPolyElement.h"
 #include "SVGRectElement.h"
+#include "SVGRenderStyle.h"
 #include "SVGRootInlineBox.h"
 #include "SVGStopElement.h"
 #include "StyleCachedImage.h"
-
 #include <math.h>
 
 namespace WebCore {
@@ -412,10 +413,7 @@ static inline void writeSVGInlineTextBoxes(TextStream& ts, const RenderText& tex
     }
 }
 
-enum class WriteIndentOrNot {
-    No,
-    Yes
-};
+enum class WriteIndentOrNot : bool { No, Yes };
 
 static void writeStandardPrefix(TextStream& ts, const RenderObject& object, OptionSet<RenderAsTextFlag> behavior, WriteIndentOrNot writeIndent = WriteIndentOrNot::Yes)
 {
@@ -491,10 +489,10 @@ void writeSVGResourceContainer(TextStream& ts, const RenderSVGResourceContainer&
         writeNameValuePair(ts, "markerUnits", marker.markerUnits());
         ts << " [ref at " << marker.referencePoint() << "]";
         ts << " [angle=";
-        if (marker.angle() == -1)
-            ts << "auto" << "]\n";
+        if (auto angle = marker.angle())
+            ts << *angle << "]\n";
         else
-            ts << marker.angle() << "]\n";
+            ts << "auto" << "]\n";
     } else if (resource.resourceType() == PatternResourceType) {
         const auto& pattern = static_cast<const RenderSVGResourcePattern&>(resource);
 
@@ -609,7 +607,7 @@ void writeResources(TextStream& ts, const RenderObject& renderer, OptionSet<Rend
         auto* maskImage = style.maskImage();
         if (is<StyleCachedImage>(maskImage)) {
             auto resourceID = SVGURIReference::fragmentIdentifierFromIRIString(downcast<StyleCachedImage>(*maskImage).reresolvedURL(renderer.document()).string(), renderer.document());
-            if (auto* masker = getRenderSVGResourceById<RenderSVGResourceMasker>(renderer.document(), resourceID)) {
+            if (auto* masker = getRenderSVGResourceById<RenderSVGResourceMasker>(renderer.treeScopeForSVGReferences(), resourceID)) {
                 ts << indent << " ";
                 writeNameAndQuotedValue(ts, "masker", resourceID);
                 ts << " ";
@@ -621,7 +619,7 @@ void writeResources(TextStream& ts, const RenderObject& renderer, OptionSet<Rend
     if (style.clipPath() && is<ReferencePathOperation>(style.clipPath())) {
         auto resourceClipPath = downcast<ReferencePathOperation>(style.clipPath());
         AtomString id = resourceClipPath->fragment();
-        if (RenderSVGResourceClipper* clipper = getRenderSVGResourceById<RenderSVGResourceClipper>(renderer.document(), id)) {
+        if (RenderSVGResourceClipper* clipper = getRenderSVGResourceById<RenderSVGResourceClipper>(renderer.treeScopeForSVGReferences(), id)) {
             ts << indent << " ";
             writeNameAndQuotedValue(ts, "clipPath", resourceClipPath->fragment());
             ts << " ";
@@ -636,7 +634,7 @@ void writeResources(TextStream& ts, const RenderObject& renderer, OptionSet<Rend
             if (filterOperation.type() == FilterOperation::Type::Reference) {
                 const auto& referenceFilterOperation = downcast<ReferenceFilterOperation>(filterOperation);
                 AtomString id = SVGURIReference::fragmentIdentifierFromIRIString(referenceFilterOperation.url(), renderer.document());
-                if (RenderSVGResourceFilter* filter = getRenderSVGResourceById<RenderSVGResourceFilter>(renderer.document(), id)) {
+                if (RenderSVGResourceFilter* filter = getRenderSVGResourceById<RenderSVGResourceFilter>(renderer.treeScopeForSVGReferences(), id)) {
                     ts << indent << " ";
                     writeNameAndQuotedValue(ts, "filter", id);
                     ts << " ";

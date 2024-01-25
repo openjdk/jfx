@@ -162,6 +162,31 @@ public class BitSetTest {
     }
 
     @Test
+    void shouldBeEqualAfterGrowAndShrink() {
+        StyleClassSet set1 = new StyleClassSet();
+        StyleClassSet set2 = new StyleClassSet();
+
+        set1.add(StyleClassSet.getStyleClass("abc"));
+        set2.add(StyleClassSet.getStyleClass("abc"));
+
+        assertEquals(set1, set2);
+
+        for (int i = 0; i < 1000; i++) {
+            // grow internal bit set array:
+            set1.add(StyleClassSet.getStyleClass("" + i));
+
+            assertNotEquals(set1, set2);
+        }
+
+        for (int i = 0; i < 1000; i++) {
+            set1.remove(StyleClassSet.getStyleClass("" + i));
+        }
+
+        // still equal despite internal array sizes being different size:
+        assertEquals(set1, set2);
+    }
+
+    @Test
     void twoEmptyBitSetsShouldBeEqual() {
 
         /*

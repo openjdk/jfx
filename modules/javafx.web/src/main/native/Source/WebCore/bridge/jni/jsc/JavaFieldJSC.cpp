@@ -141,8 +141,9 @@ JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instanc
     default:
         break;
     }
-
+#if !PLATFORM(JAVA)  // debug build issue
     LOG(LiveConnect, "JavaField::valueFromInstance getting %s = %s", String(name().impl()).utf8().data(), jsresult.toString(globalObject)->value(globalObject).ascii().data());
+#endif
 
     return jsresult;
 }
@@ -151,7 +152,9 @@ bool JavaField::setValueToInstance(JSGlobalObject* globalObject, const Instance*
 {
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
     jvalue javaValue = convertValueToJValue(globalObject, i->rootObject(), aValue, m_type, typeClassName());
+#if !PLATFORM(JAVA)
     LOG(LiveConnect, "JavaField::setValueToInstance setting value %s to %s", String(name().impl()).utf8().data(), aValue.toString(globalObject)->value(globalObject).ascii().data());
+#endif
 
     jobject jfield = m_field->instance();
     // Since jfield is WeakGlobalRef, creating a localref to safeguard instance() from GC

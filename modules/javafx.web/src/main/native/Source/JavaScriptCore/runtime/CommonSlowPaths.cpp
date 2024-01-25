@@ -168,41 +168,6 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_cloned_arguments)
     RETURN(ClonedArguments::createWithMachineFrame(globalObject, callFrame, ArgumentsMode::Cloned));
 }
 
-JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_arguments_butterfly_excluding_this)
-{
-    BEGIN();
-    auto bytecode = pc->as<OpCreateArgumentsButterflyExcludingThis>();
-    JSCell* target = GET(bytecode.m_target).jsValue().asCell();
-    int32_t argumentCount = callFrame->argumentCount();
-    ASSERT(argumentCount > 1);
-
-    CheckedInt32 totalCount = argumentCount - 1;
-    int32_t additionalCount = 0;
-    JSImmutableButterfly* boundArgs = nullptr;
-    if (target->inherits<JSBoundFunction>()) {
-        JSBoundFunction* boundFunction = jsCast<JSBoundFunction*>(target);
-        if (boundFunction->canCloneBoundArgs()) {
-            boundArgs = boundFunction->boundArgs();
-            additionalCount = boundArgs ? boundArgs->length() : 0;
-            totalCount += additionalCount;
-            if (totalCount.hasOverflowed())
-                THROW(createOutOfMemoryError(globalObject));
-        }
-    }
-
-    JSImmutableButterfly* butterfly = JSImmutableButterfly::tryCreate(vm, vm.immutableButterflyStructures[arrayIndexFromIndexingType(CopyOnWriteArrayWithContiguous) - NumberOfIndexingShapes].get(), totalCount.value());
-    if (!butterfly)
-        THROW(createOutOfMemoryError(globalObject));
-    if (additionalCount) {
-        ASSERT(boundArgs);
-        for (int32_t index = 0; index < additionalCount; ++index)
-            butterfly->setIndex(vm, index, boundArgs->get(index));
-    }
-    for (int32_t index = 0; index < (argumentCount - 1); ++index)
-        butterfly->setIndex(vm, index + additionalCount, callFrame->uncheckedArgument(index + 1));
-    RETURN(butterfly);
-}
-
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_this)
 {
     BEGIN();
@@ -226,7 +191,7 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_create_this)
             JSObject* prototype = allocationProfile->prototype();
             ASSERT(prototype == constructor->prototypeForConstruction(vm, globalObject));
             result->putDirectOffset(vm, knownPolyProtoOffset, prototype);
-            prototype->didBecomePrototype();
+            prototype->didBecomePrototype(vm);
             ASSERT_WITH_MESSAGE(!hasIndexedProperties(result->indexingType()), "We rely on JSFinalObject not starting out with an indexing type otherwise we would potentially need to convert to slow put storage");
         }
     } else {
@@ -549,19 +514,28 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_to_number)
 {
     BEGIN();
     auto bytecode = pc->as<OpToNumber>();
+    auto& profile = codeBlock->unlinkedCodeBlock()->unaryArithProfile(bytecode.m_profileIndex);
     JSValue argument = GET_C(bytecode.m_operand).jsValue();
     JSValue result = jsNumber(argument.toNumber(globalObject));
-    RETURN_PROFILED(result);
+    CHECK_EXCEPTION();
+    RETURN_WITH_PROFILING(result, {
+        profile.argSawNonNumber();
+        profile.observeResult(result);
+    });
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_to_numeric)
 {
     BEGIN();
     auto bytecode = pc->as<OpToNumeric>();
+    auto& profile = codeBlock->unlinkedCodeBlock()->unaryArithProfile(bytecode.m_profileIndex);
     JSValue argument = GET_C(bytecode.m_operand).jsValue();
     JSValue result = argument.toNumeric(globalObject);
     CHECK_EXCEPTION();
-    RETURN_PROFILED(result);
+    RETURN_WITH_PROFILING(result, {
+        profile.argSawNonNumber();
+        profile.observeResult(result);
+    });
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_to_object)
@@ -664,24 +638,32 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_lshift)
 {
     BEGIN();
     auto bytecode = pc->as<OpLshift>();
+    auto& profile = codeBlock->unlinkedCodeBlock()->binaryArithProfile(bytecode.m_profileIndex);
     JSValue left = GET_C(bytecode.m_lhs).jsValue();
     JSValue right = GET_C(bytecode.m_rhs).jsValue();
 
+    profile.observeLHSAndRHS(left, right);
     JSValue result = jsLShift(globalObject, left, right);
     CHECK_EXCEPTION();
-    RETURN_PROFILED(result);
+    RETURN_WITH_PROFILING(result, {
+        updateArithProfileForBinaryArithOp(globalObject, codeBlock, pc, result, left, right);
+    });
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_rshift)
 {
     BEGIN();
     auto bytecode = pc->as<OpRshift>();
+    auto& profile = codeBlock->unlinkedCodeBlock()->binaryArithProfile(bytecode.m_profileIndex);
     JSValue left = GET_C(bytecode.m_lhs).jsValue();
     JSValue right = GET_C(bytecode.m_rhs).jsValue();
 
+    profile.observeLHSAndRHS(left, right);
     JSValue result = jsRShift(globalObject, left, right);
     CHECK_EXCEPTION();
-    RETURN_PROFILED(result);
+    RETURN_WITH_PROFILING(result, {
+        updateArithProfileForBinaryArithOp(globalObject, codeBlock, pc, result, left, right);
+    });
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_urshift)
@@ -708,47 +690,66 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_bitnot)
 {
     BEGIN();
     auto bytecode = pc->as<OpBitnot>();
+    auto& profile = codeBlock->unlinkedCodeBlock()->unaryArithProfile(bytecode.m_profileIndex);
     auto operand = GET_C(bytecode.m_operand).jsValue();
 
     auto result = jsBitwiseNot(globalObject, operand);
     CHECK_EXCEPTION();
-    RETURN_PROFILED(result);
+    RETURN_WITH_PROFILING(result, {
+        if (operand.isNumber())
+            profile.argSawNumber();
+        else
+            profile.argSawNonNumber();
+        profile.observeResult(result);
+    });
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_bitand)
 {
     BEGIN();
     auto bytecode = pc->as<OpBitand>();
+    auto& profile = codeBlock->unlinkedCodeBlock()->binaryArithProfile(bytecode.m_profileIndex);
     auto left = GET_C(bytecode.m_lhs).jsValue();
     auto right = GET_C(bytecode.m_rhs).jsValue();
 
+    profile.observeLHSAndRHS(left, right);
     JSValue result = jsBitwiseAnd(globalObject, left, right);
     CHECK_EXCEPTION();
-    RETURN_PROFILED(result);
+    RETURN_WITH_PROFILING(result, {
+        updateArithProfileForBinaryArithOp(globalObject, codeBlock, pc, result, left, right);
+    });
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_bitor)
 {
     BEGIN();
     auto bytecode = pc->as<OpBitor>();
+    auto& profile = codeBlock->unlinkedCodeBlock()->binaryArithProfile(bytecode.m_profileIndex);
     auto left = GET_C(bytecode.m_lhs).jsValue();
     auto right = GET_C(bytecode.m_rhs).jsValue();
 
+    profile.observeLHSAndRHS(left, right);
     JSValue result = jsBitwiseOr(globalObject, left, right);
     CHECK_EXCEPTION();
-    RETURN_PROFILED(result);
+    RETURN_WITH_PROFILING(result, {
+        updateArithProfileForBinaryArithOp(globalObject, codeBlock, pc, result, left, right);
+    });
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_bitxor)
 {
     BEGIN();
     auto bytecode = pc->as<OpBitxor>();
+    auto& profile = codeBlock->unlinkedCodeBlock()->binaryArithProfile(bytecode.m_profileIndex);
     auto left = GET_C(bytecode.m_lhs).jsValue();
     auto right = GET_C(bytecode.m_rhs).jsValue();
 
+    profile.observeLHSAndRHS(left, right);
     JSValue result = jsBitwiseXor(globalObject, left, right);
     CHECK_EXCEPTION();
-    RETURN_PROFILED(result);
+    RETURN_WITH_PROFILING(result, {
+        updateArithProfileForBinaryArithOp(globalObject, codeBlock, pc, result, left, right);
+    });
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_typeof)
@@ -802,7 +803,7 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_is_constructor)
 }
 
 template<OpcodeSize width>
-ALWAYS_INLINE SlowPathReturnType iteratorOpenTryFastImpl(VM& vm, JSGlobalObject* globalObject, CodeBlock* codeBlock, CallFrame* callFrame, const JSInstruction* pc)
+ALWAYS_INLINE UGPRPair iteratorOpenTryFastImpl(VM& vm, JSGlobalObject* globalObject, CodeBlock* codeBlock, CallFrame* callFrame, const JSInstruction* pc)
 {
     auto bytecode = pc->asKnownWidth<OpIteratorOpen, width>();
     auto& metadata = bytecode.metadata(codeBlock);
@@ -848,7 +849,7 @@ JSC_DEFINE_COMMON_SLOW_PATH(iterator_open_try_fast_wide32)
 }
 
 template<OpcodeSize width>
-ALWAYS_INLINE SlowPathReturnType iteratorNextTryFastImpl(VM& vm, JSGlobalObject* globalObject, CodeBlock* codeBlock, CallFrame* callFrame, ThrowScope& throwScope, const JSInstruction* pc)
+ALWAYS_INLINE UGPRPair iteratorNextTryFastImpl(VM& vm, JSGlobalObject* globalObject, CodeBlock* codeBlock, CallFrame* callFrame, ThrowScope& throwScope, const JSInstruction* pc)
 {
     auto bytecode = pc->asKnownWidth<OpIteratorNext, width>();
     auto& metadata = bytecode.metadata(codeBlock);
@@ -857,7 +858,7 @@ ALWAYS_INLINE SlowPathReturnType iteratorNextTryFastImpl(VM& vm, JSGlobalObject*
     JSObject* iterator = jsCast<JSObject*>(GET(bytecode.m_iterator).jsValue());;
     JSCell* iterable = GET(bytecode.m_iterable).jsValue().asCell();
     if (auto arrayIterator = jsDynamicCast<JSArrayIterator*>(iterator)) {
-        if (auto array = jsDynamicCast<JSArray*>(iterable)) {
+        if (auto array = jsDynamicCast<JSArray*>(iterable); array && isJSArray(array)) {
             metadata.m_iterableProfile.observeStructureID(array->structureID());
 
             metadata.m_iterationMetadata.seenModes = metadata.m_iterationMetadata.seenModes | IterationMode::FastArray;
@@ -923,6 +924,7 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_enter)
 {
     BEGIN();
     Heap::heap(codeBlock)->writeBarrier(codeBlock);
+    GET(codeBlock->scopeRegister()) = jsCast<JSCallee*>(callFrame->jsCallee())->scope();
     END();
 }
 
@@ -1012,6 +1014,23 @@ JSC_DEFINE_COMMON_SLOW_PATH(slow_path_enumerator_in_by_val)
 
     JSString* string = asString(GET(bytecode.m_propertyName).jsValue());
     RETURN(jsBoolean(CommonSlowPaths::opInByVal(globalObject, baseValue, string, &metadata.m_arrayProfile)));
+}
+
+JSC_DEFINE_COMMON_SLOW_PATH(slow_path_enumerator_put_by_val)
+{
+    BEGIN();
+    auto bytecode = pc->as<OpEnumeratorPutByVal>();
+    JSValue baseValue = GET_C(bytecode.m_base).jsValue();
+    JSValue propertyName = GET(bytecode.m_propertyName).jsValue();
+    JSValue value = GET_C(bytecode.m_value).jsValue();
+    auto& metadata = bytecode.metadata(codeBlock);
+    auto mode = static_cast<JSPropertyNameEnumerator::Flag>(GET(bytecode.m_mode).jsValue().asUInt32());
+    metadata.m_enumeratorMetadata |= static_cast<uint8_t>(mode);
+    JSPropertyNameEnumerator* enumerator = jsCast<JSPropertyNameEnumerator*>(GET(bytecode.m_enumerator).jsValue());
+    unsigned index = GET(bytecode.m_index).jsValue().asInt32();
+
+    CommonSlowPaths::opEnumeratorPutByVal(globalObject, baseValue, propertyName, value, bytecode.m_ecmaMode, index, mode, enumerator, &metadata.m_arrayProfile, &metadata.m_enumeratorMetadata);
+    END();
 }
 
 JSC_DEFINE_COMMON_SLOW_PATH(slow_path_enumerator_has_own_property)

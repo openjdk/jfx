@@ -42,8 +42,7 @@ template<typename T, size_t inlineCapacity> class DequeIteratorBase;
 template<typename T, size_t inlineCapacity> class DequeIterator;
 template<typename T, size_t inlineCapacity> class DequeConstIterator;
 
-template<typename T, size_t inlineCapacity = 0>
-class Deque final {
+template<typename T, size_t inlineCapacity> class Deque final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     typedef T ValueType;
@@ -202,7 +201,6 @@ public:
     T* operator->() const { return Base::after(); }
 
     bool operator==(const Iterator& other) const { return Base::isEqual(other); }
-    bool operator!=(const Iterator& other) const { return !Base::isEqual(other); }
 
     Iterator& operator++() { Base::increment(); return *this; }
     // postfix ++ intentionally omitted
@@ -241,7 +239,6 @@ public:
     const T* operator->() const { return Base::after(); }
 
     bool operator==(const Iterator& other) const { return Base::isEqual(other); }
-    bool operator!=(const Iterator& other) const { return !Base::isEqual(other); }
 
     Iterator& operator++() { Base::increment(); return *this; }
     // postfix ++ intentionally omitted
@@ -813,5 +810,3 @@ inline T* DequeIteratorBase<T, inlineCapacity>::before() const
 }
 
 } // namespace WTF
-
-using WTF::Deque;

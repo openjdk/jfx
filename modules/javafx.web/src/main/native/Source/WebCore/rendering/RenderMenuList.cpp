@@ -32,16 +32,20 @@
 #include "ColorBlending.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLSelectElement.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
 #include "PopupMenu.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderScrollbar.h"
+#include "RenderStyleSetters.h"
 #include "RenderText.h"
 #include "RenderTheme.h"
 #include "RenderTreeBuilder.h"
@@ -268,7 +272,7 @@ void RenderMenuList::setTextFromOption(int optionIndex)
     }
 #endif
 
-    setText(text.stripWhiteSpace());
+    setText(text.trim(deprecatedIsSpaceOrNewline));
     didUpdateActiveOption(optionIndex);
 }
 
@@ -319,7 +323,7 @@ void RenderMenuList::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, 
 {
     maxLogicalWidth = shouldApplySizeContainment() ? theme().minimumMenuListSize(style()) : std::max(m_optionsWidth, theme().minimumMenuListSize(style()));
     maxLogicalWidth += m_innerBlock->paddingLeft() + m_innerBlock->paddingRight();
-    if (shouldApplySizeContainment()) {
+    if (shouldApplySizeOrInlineSizeContainment()) {
         if (auto width = explicitIntrinsicInnerLogicalWidth())
             maxLogicalWidth = width.value();
     }
@@ -556,12 +560,12 @@ HostWindow* RenderMenuList::hostWindow() const
     return RenderFlexibleBox::hostWindow();
 }
 
-Ref<Scrollbar> RenderMenuList::createScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarControlSize controlSize)
+Ref<Scrollbar> RenderMenuList::createScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarWidth widthStyle)
 {
-    bool hasCustomScrollbarStyle = style().hasPseudoStyle(PseudoId::Scrollbar);
-    if (hasCustomScrollbarStyle)
+    bool usesLegacyScrollbarStyle = style().usesLegacyScrollbarStyle();
+    if (usesLegacyScrollbarStyle)
         return RenderScrollbar::createCustomScrollbar(scrollableArea, orientation, &selectElement());
-    return Scrollbar::createNativeScrollbar(scrollableArea, orientation, controlSize);
+    return Scrollbar::createNativeScrollbar(scrollableArea, orientation, widthStyle);
 }
 
 int RenderMenuList::clientInsetLeft() const

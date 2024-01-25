@@ -539,7 +539,8 @@ public abstract class TableRowSkinBase<T,
                 }
             }
             getChildren().removeAll(toRemove);
-        } else if (resetChildren || cellsEmpty) {
+        }
+        if (resetChildren || cellsEmpty) {
             getChildren().setAll(cells);
         }
     }

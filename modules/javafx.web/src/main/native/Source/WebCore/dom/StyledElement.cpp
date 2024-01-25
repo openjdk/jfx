@@ -69,11 +69,7 @@ void StyledElement::synchronizeStyleAttributeInternalImpl()
         setSynchronizedLazyAttribute(styleAttr, inlineStyle->asTextAtom());
 }
 
-StyledElement::~StyledElement()
-{
-    if (PropertySetCSSStyleDeclaration* cssomWrapper = inlineStyleCSSOMWrapper())
-        cssomWrapper->clearParentElement();
-}
+StyledElement::~StyledElement() = default;
 
 CSSStyleDeclaration& StyledElement::cssomStyle()
 {
@@ -99,16 +95,15 @@ MutableStyleProperties& StyledElement::ensureMutableInlineStyle()
 
 void StyledElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
 {
+    Element::attributeChanged(name, oldValue, newValue, reason);
     if (oldValue != newValue) {
         if (name == styleAttr)
             styleAttributeChanged(newValue, reason);
         else if (hasPresentationalHintsForAttribute(name)) {
             elementData()->setPresentationalHintStyleIsDirty(true);
-            invalidateStyle();
+            invalidateStyleInternal();
         }
     }
-
-    Element::attributeChanged(name, oldValue, newValue, reason);
 }
 
 PropertySetCSSStyleDeclaration* StyledElement::inlineStyleCSSOMWrapper()
@@ -155,12 +150,12 @@ void StyledElement::styleAttributeChanged(const AtomString& newStyleString, Attr
 
     if (newStyleString.isNull())
         ensureMutableInlineStyle().clear();
-    else if (reason == ModifiedByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, newStyleString.string(), CheckUnsafeHashes::Yes, *this, nonce(), isInUserAgentShadowTree()))
+    else if (reason == AttributeModificationReason::ByCloning || document().contentSecurityPolicy()->allowInlineStyle(document().url().string(), startLineNumber, newStyleString.string(), CheckUnsafeHashes::Yes, *this, nonce(), isInUserAgentShadowTree()))
         setInlineStyleFromString(newStyleString);
 
     elementData()->setStyleAttributeIsDirty(false);
 
-    invalidateStyle();
+    invalidateStyleInternal();
     InspectorInstrumentation::didInvalidateStyleAttr(*this);
 }
 
@@ -172,7 +167,7 @@ void StyledElement::invalidateStyleAttribute()
     }
 
     elementData()->setStyleAttributeIsDirty(true);
-    invalidateStyle();
+    invalidateStyleInternal();
 
     // In the rare case of selectors like "[style] ~ div" we need to synchronize immediately to invalidate.
     if (styleResolver().ruleSets().hasComplexSelectorsForStyleAttribute()) {
@@ -207,9 +202,7 @@ bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, CSSProperty
 
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, double value, CSSUnitType unit, bool important)
 {
-    auto cssValue = CSSPrimitiveValue::create(value, unit);
-    auto& style = ensureMutableInlineStyle();
-    style.setProperty(propertyID, WTFMove(cssValue), important);
+    ensureMutableInlineStyle().setProperty(propertyID, CSSPrimitiveValue::create(value, unit), important);
     inlineStyleChanged();
     return true;
 }
