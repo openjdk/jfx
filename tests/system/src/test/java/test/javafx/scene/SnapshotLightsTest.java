@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.PointLight;
@@ -46,6 +47,12 @@ import test.util.Util;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+
 import static org.junit.Assert.assertNotNull;
 
 public class SnapshotLightsTest extends SnapshotCommon {
@@ -94,14 +101,14 @@ public class SnapshotLightsTest extends SnapshotCommon {
         }
     }
 
-    private void compareSnapshots(WritableImage base, WritableImage node) {
-        assertEquals(base.getWidth(), node.getWidth(), 0.1);
-        assertEquals(base.getHeight(), node.getHeight(), 0.1);
+    private void compareSnapshots(WritableImage base, WritableImage comp) {
+        assertEquals(base.getWidth(), comp.getWidth(), 0.1);
+        assertEquals(base.getHeight(), comp.getHeight(), 0.1);
 
         PixelReader baseReader = base.getPixelReader();
-        PixelReader nodeReader = node.getPixelReader();
+        PixelReader compReader = comp.getPixelReader();
 
-        assertEquals(baseReader.getArgb(BOX_DIM / 2, BOX_DIM / 2), nodeReader.getArgb(BOX_DIM / 2, BOX_DIM / 2));
+        assertEquals(baseReader.getArgb(BOX_DIM / 2, BOX_DIM / 2), compReader.getArgb(BOX_DIM / 2, BOX_DIM / 2));
     }
 
     public SnapshotLightsTest() {
@@ -130,6 +137,31 @@ public class SnapshotLightsTest extends SnapshotCommon {
             Node boxNode = ss.getRoot().getChildrenUnmodifiable().get(0);
             WritableImage nodeSnapshot = boxNode.snapshot(null, null);
 
+            compareSnapshots(baseSnapshot, nodeSnapshot);
+        });
+    }
+
+    @Test
+    public void testSubSceneSnapshotWithSceneLights() throws Exception {
+        Util.runAndWait(() -> {
+            Scene scene = buildScene(true);
+
+            // SubScene is "separated" from Scene, so Scene's lights should not be included
+            // Add an extra red light to make sure it is actually not included
+            PointLight light = new PointLight(Color.RED);
+            light.setTranslateZ(-150);
+            StackPane sceneRootPane = (StackPane)scene.getRoot();
+            sceneRootPane.getChildren().add(light);
+
+            WritableImage baseSnapshot = scene.snapshot(null);
+
+            SubScene ss = (SubScene)scene.getRoot().getChildrenUnmodifiable().get(0);
+            WritableImage subSceneSnapshot = ss.snapshot(null, null);
+
+            Node boxNode = ss.getRoot().getChildrenUnmodifiable().get(0);
+            WritableImage nodeSnapshot = boxNode.snapshot(null, null);
+
+            compareSnapshots(baseSnapshot, subSceneSnapshot);
             compareSnapshots(baseSnapshot, nodeSnapshot);
         });
     }
