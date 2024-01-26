@@ -1045,7 +1045,7 @@ public class PrismTextLayout implements TextLayout {
                 int runEnd = textRun.getEnd();
 
                 for (int k = runStart; k < runEnd; k++) {
-                    if (chars[k] == ' ') {
+                    if (Character.isWhitespace(chars[k])) {
                         trailingSpaceWidth += textRun.positions[k];
 
                         if (--trailingSpaces == 0) {
@@ -1239,7 +1239,7 @@ public class PrismTextLayout implements TextLayout {
                 int runEnd = run.getEnd();
 
                 // Don't take spaces into account at the preferred wrap index:
-                while (offset + 1 < runEnd && chars[offset] == ' ') {
+                while (offset + 1 < runEnd && Character.isWhitespace(chars[offset])) {
                     offset++;
                 }
 
