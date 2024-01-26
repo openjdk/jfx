@@ -1348,10 +1348,12 @@ public class Scene implements EventTarget {
         }
 
         // Grab the lights from the scene and/or subscene
-        Stream<NGLightBase> lights = Stream.concat(
-            Optional.ofNullable(scene).stream().flatMap(s -> s.lights.stream()).map(LightBase::getPeer),
-            Optional.ofNullable(subScene).stream().flatMap(s -> s.getLights().stream()).map(LightBase::getPeer)
-        );
+        Stream<NGLightBase> lights;
+        if (subScene != null) {
+            lights = Optional.of(subScene).stream().flatMap(s -> s.getLights().stream()).map(LightBase::getPeer);
+        } else {
+            lights = Optional.ofNullable(scene).stream().flatMap(s -> s.lights.stream()).map(LightBase::getPeer);
+        }
 
         context.lights = lights.toArray(NGLightBase[]::new);
 
