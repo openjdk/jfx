@@ -26,6 +26,7 @@
 package javafx.animation;
 
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.TimerReceiver;
 import java.security.AccessControlContext;
@@ -105,9 +106,12 @@ public abstract class AnimationTimer {
      * @throws IllegalStateException if this method is called on a thread
      *                  other than the JavaFX Application Thread.
      */
-    @SuppressWarnings("removal")
     public void start() {
-        Toolkit.getToolkit().checkFxUserThread();
+        Utils.runOnFxThread(this::startOnFxThread);
+    }
+    
+    @SuppressWarnings("removal")
+    private void startOnFxThread() {
         if (!active) {
             // Capture the Access Control Context to be used during the animation pulse
             accessCtrlCtx = AccessController.getContext();
@@ -126,7 +130,10 @@ public abstract class AnimationTimer {
      *                  other than the JavaFX Application Thread.
      */
     public void stop() {
-        Toolkit.getToolkit().checkFxUserThread();
+        Utils.runOnFxThread(this::stopOnFxThread);
+    }
+
+    private void stopOnFxThread() {
         if (active) {
             timer.removeAnimationTimer(timerReceiver);
             active = false;
