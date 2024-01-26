@@ -42,7 +42,7 @@ InspectorAuditAgent::InspectorAuditAgent(AgentContext& context)
     : InspectorAgentBase("Audit"_s)
     , m_backendDispatcher(AuditBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_debugger(context.environment.debugger())
+    , m_debugger(*context.environment.debugger())
 {
 }
 
@@ -92,7 +92,7 @@ Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::op
     if (injectedScript.hasNoValue())
         return makeUnexpected(errorString);
 
-    auto functionString = makeString("(function(WebInspectorAudit) { \"use strict\"; return eval(`(", makeStringByReplacingAll(test, '`', "\\`"_s), ")`)(WebInspectorAudit); })");
+    auto functionString = makeString("(function(WebInspectorAudit) { \"use strict\"; return eval(`("_s, makeStringByReplacingAll(test, '`', "\\`"_s), ")`)(WebInspectorAudit); })"_s);
 
     InjectedScript::ExecuteOptions options;
     options.objectGroup = "audit"_s;

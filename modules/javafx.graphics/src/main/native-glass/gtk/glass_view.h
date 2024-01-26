@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,11 +23,13 @@
  * questions.
  */
 #ifndef GLASS_VIEW_H
-#define        GLASS_VIEW_H
+#define GLASS_VIEW_H
+
+#include "DeletedMemDebug.h"
 
 class WindowContext;
 
-struct GlassView {
+struct GlassView : public DeletedMemDebug<0xCC> {
     GlassView() : current_window(), embedded_window() {}
 
     WindowContext* current_window;

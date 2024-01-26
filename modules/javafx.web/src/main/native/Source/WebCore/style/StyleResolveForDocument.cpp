@@ -32,14 +32,14 @@
 #include "CSSFontSelector.h"
 #include "Document.h"
 #include "FontCascade.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "HTMLIFrameElement.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "LocaleToScriptMapping.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
 #include "RenderObject.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include "StyleAdjuster.h"
@@ -72,41 +72,18 @@ RenderStyle resolveForDocument(const Document& document)
 
     Adjuster::adjustEventListenerRegionTypesForRootStyle(documentStyle, document);
 
-    Element* docElement = document.documentElement();
-    RenderObject* docElementRenderer = docElement ? docElement->renderer() : nullptr;
-    if (docElementRenderer) {
-        // Use the direction and writing-mode of the body to set the
-        // viewport's direction and writing-mode unless the property is set on the document element.
-        // If there is no body, then use the document element.
-        auto* body = document.bodyOrFrameset();
-        RenderObject* bodyRenderer = body ? body->renderer() : nullptr;
-        if (bodyRenderer && !docElementRenderer->style().hasExplicitlySetWritingMode())
-            documentStyle.setWritingMode(bodyRenderer->style().writingMode());
-        else
-            documentStyle.setWritingMode(docElementRenderer->style().writingMode());
-        if (bodyRenderer && !docElementRenderer->style().hasExplicitlySetDirection())
-            documentStyle.setDirection(bodyRenderer->style().direction());
-        else
-            documentStyle.setDirection(docElementRenderer->style().direction());
-    }
-
     const Pagination& pagination = renderView.frameView().pagination();
-    if (pagination.mode != Pagination::Unpaginated) {
+    if (pagination.mode != Unpaginated) {
         documentStyle.setColumnStylesFromPaginationMode(pagination.mode);
         documentStyle.setColumnGap(GapLength(Length((int) pagination.gap, LengthType::Fixed)));
         if (renderView.multiColumnFlow())
             renderView.updateColumnProgressionFromStyle(documentStyle);
-        if (renderView.page().paginationLineGridEnabled()) {
-            documentStyle.setLineGrid("-webkit-default-pagination-grid"_s);
-            documentStyle.setLineSnap(LineSnap::Contain);
-        }
     }
 
     const Settings& settings = renderView.frame().settings();
 
     FontCascadeDescription fontDescription;
     fontDescription.setSpecifiedLocale(document.contentLanguage());
-    fontDescription.setRenderingMode(settings.fontRenderingMode());
     fontDescription.setOneFamily(standardFamily);
     fontDescription.setShouldAllowUserInstalledFonts(settings.shouldAllowUserInstalledFonts() ? AllowUserInstalledFonts::Yes : AllowUserInstalledFonts::No);
 

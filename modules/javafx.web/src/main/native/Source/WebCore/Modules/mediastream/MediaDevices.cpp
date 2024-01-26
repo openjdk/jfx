@@ -34,13 +34,16 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "AudioSession.h"
+#include "CaptureDeviceWithCapabilities.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
+#include "JSInputDeviceInfo.h"
 #include "JSMediaDeviceInfo.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MediaTrackSupportedConstraints.h"
 #include "RealtimeMediaSourceSettings.h"
@@ -48,8 +51,8 @@
 #include "UserGestureIndicator.h"
 #include "UserMediaController.h"
 #include "UserMediaRequest.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/IsoMallocInlines.h>
-#include <wtf/RandomNumber.h>
 
 namespace WebCore {
 
@@ -61,10 +64,10 @@ inline MediaDevices::MediaDevices(Document& document)
     , m_eventNames(eventNames())
     , m_groupIdHashSalt(createVersion4UUIDString())
 {
-    static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Monitor) == static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Monitor), "MediaDevices::DisplayCaptureSurfaceType::Monitor is not equal to RealtimeMediaSourceSettings::DisplaySurfaceType::Monitor as expected");
-    static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Window) == static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Window), "MediaDevices::DisplayCaptureSurfaceType::Window is not RealtimeMediaSourceSettings::DisplaySurfaceType::Window as expected");
-    static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Application) == static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Application), "MediaDevices::DisplayCaptureSurfaceType::Application is not RealtimeMediaSourceSettings::DisplaySurfaceType::Application as expected");
-    static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Browser) == static_cast<size_t>(RealtimeMediaSourceSettings::DisplaySurfaceType::Browser), "MediaDevices::DisplayCaptureSurfaceType::Browser is not RealtimeMediaSourceSettings::DisplaySurfaceType::Browser as expected");
+    static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Monitor) == static_cast<size_t>(DisplaySurfaceType::Monitor), "MediaDevices::DisplayCaptureSurfaceType::Monitor is not equal to DisplaySurfaceType::Monitor as expected");
+    static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Window) == static_cast<size_t>(DisplaySurfaceType::Window), "MediaDevices::DisplayCaptureSurfaceType::Window is not DisplaySurfaceType::Window as expected");
+    static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Application) == static_cast<size_t>(DisplaySurfaceType::Application), "MediaDevices::DisplayCaptureSurfaceType::Application is not DisplaySurfaceType::Application as expected");
+    static_assert(static_cast<size_t>(MediaDevices::DisplayCaptureSurfaceType::Browser) == static_cast<size_t>(DisplaySurfaceType::Browser), "MediaDevices::DisplayCaptureSurfaceType::Browser is not DisplaySurfaceType::Browser as expected");
 }
 
 MediaDevices::~MediaDevices() = default;
@@ -134,11 +137,22 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
         return;
     }
 
+#if USE(AUDIO_SESSION)
+    if (audioConstraints.isValid) {
+        auto categoryOverride = AudioSession::sharedSession().categoryOverride();
+        if (categoryOverride != AudioSessionCategory::None && categoryOverride != AudioSessionCategory::PlayAndRecord)  {
+            promise.reject(Exception { InvalidStateError, "AudioSession category is not compatible with audio capture."_s });
+            return;
+        }
+    }
+#endif
+
     bool isUserGesturePriviledged = false;
 
-    if (audioConstraints.isValid)
+    if (audioConstraints.isValid) {
         isUserGesturePriviledged |= computeUserGesturePriviledge(GestureAllowedRequest::Microphone);
-
+        audioConstraints.setDefaultAudioConstraints();
+    }
     if (videoConstraints.isValid) {
         isUserGesturePriviledged |= computeUserGesturePriviledge(GestureAllowedRequest::Camera);
         videoConstraints.setDefaultVideoConstraints();
@@ -168,7 +182,7 @@ static bool hasInvalidGetDisplayMediaConstraint(const MediaConstraints& constrai
     //     2. If value contains a member which in turn is a dictionary containing a member named either min or
     //        exact, return a promise rejected with a newly created TypeError.
     if (!constraints.isValid)
-        return false;
+        return true;
 
     if (!constraints.advancedConstraints.isEmpty())
         return true;
@@ -213,6 +227,8 @@ static bool hasInvalidGetDisplayMediaConstraint(const MediaConstraints& constrai
         case MediaConstraintType::SampleSize:
         case MediaConstraintType::Volume:
         case MediaConstraintType::EchoCancellation:
+        case MediaConstraintType::FocusDistance:
+        case MediaConstraintType::Zoom:
             // Ignored.
             break;
 
@@ -272,25 +288,7 @@ static inline bool checkSpeakerAccess(const Document& document)
         && isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::SpeakerSelection, document, LogFeaturePolicyFailure::No);
 }
 
-static inline MediaDeviceInfo::Kind toMediaDeviceInfoKind(CaptureDevice::DeviceType type)
-{
-    switch (type) {
-    case CaptureDevice::DeviceType::Microphone:
-        return MediaDeviceInfo::Kind::Audioinput;
-    case CaptureDevice::DeviceType::Speaker:
-        return MediaDeviceInfo::Kind::Audiooutput;
-    case CaptureDevice::DeviceType::Camera:
-    case CaptureDevice::DeviceType::Screen:
-    case CaptureDevice::DeviceType::Window:
-        return MediaDeviceInfo::Kind::Videoinput;
-    case CaptureDevice::DeviceType::SystemAudio:
-    case CaptureDevice::DeviceType::Unknown:
-        ASSERT_NOT_REACHED();
-    }
-    return MediaDeviceInfo::Kind::Audioinput;
-}
-
-void MediaDevices::exposeDevices(const Vector<CaptureDevice>& newDevices, const String& deviceIDHashSalt, EnumerateDevicesPromise&& promise)
+void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts, EnumerateDevicesPromise&& promise)
 {
     if (isContextStopped())
         return;
@@ -303,8 +301,9 @@ void MediaDevices::exposeDevices(const Vector<CaptureDevice>& newDevices, const 
 
     m_audioOutputDeviceIdToPersistentId.clear();
 
-    Vector<Ref<MediaDeviceInfo>> devices;
-    for (auto& newDevice : newDevices) {
+    Vector<std::variant<RefPtr<MediaDeviceInfo>, RefPtr<InputDeviceInfo>>> devices;
+    for (auto& newDeviceWithCapabilities : newDevices) {
+        auto& newDevice = newDeviceWithCapabilities.device;
         if (!canAccessMicrophone && newDevice.type() == CaptureDevice::DeviceType::Microphone)
             continue;
         if (!canAccessCamera && newDevice.type() == CaptureDevice::DeviceType::Camera)
@@ -312,15 +311,26 @@ void MediaDevices::exposeDevices(const Vector<CaptureDevice>& newDevices, const 
         if (!canAccessSpeaker && newDevice.type() == CaptureDevice::DeviceType::Speaker)
             continue;
 
-        auto deviceId = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalt);
-        auto groupId = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(newDevice.groupId(), m_groupIdHashSalt);
+        auto& center = RealtimeMediaSourceCenter::singleton();
+        String deviceId;
+        if (newDevice.isEphemeral())
+            deviceId = center.hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalts.ephemeralDeviceSalt);
+        else
+            deviceId = center.hashStringWithSalt(newDevice.persistentId(), deviceIDHashSalts.persistentDeviceSalt);
+        auto groupId = hashedGroupId(newDevice.groupId());
 
-        if (newDevice.type() == CaptureDevice::DeviceType::Speaker)
+        if (newDevice.type() == CaptureDevice::DeviceType::Speaker) {
             m_audioOutputDeviceIdToPersistentId.add(deviceId, newDevice.persistentId());
-
-        devices.append(MediaDeviceInfo::create(newDevice.label(), WTFMove(deviceId), WTFMove(groupId), toMediaDeviceInfoKind(newDevice.type())));
+            devices.append(RefPtr<MediaDeviceInfo> { MediaDeviceInfo::create(newDevice.label(), WTFMove(deviceId), WTFMove(groupId), toMediaDeviceInfoKind(newDevice.type())) });
+        } else
+            devices.append(RefPtr<InputDeviceInfo> { InputDeviceInfo::create(WTFMove(newDeviceWithCapabilities), WTFMove(deviceId), WTFMove(groupId)) });
     }
-    promise.resolve(devices);
+    promise.resolve(WTFMove(devices));
+}
+
+String MediaDevices::hashedGroupId(const String& groupId)
+{
+    return RealtimeMediaSourceCenter::singleton().hashStringWithSalt(groupId, m_groupIdHashSalt);
 }
 
 void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
@@ -341,10 +351,10 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
         return;
     }
 
-    controller->enumerateMediaDevices(*document, [this, weakThis = WeakPtr { *this }, promise = WTFMove(promise)](const auto& newDevices, const auto& deviceIDHashSalt) mutable {
+    controller->enumerateMediaDevices(*document, [this, weakThis = WeakPtr { *this }, promise = WTFMove(promise)](auto&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
         if (!weakThis)
             return;
-        exposeDevices(newDevices, deviceIDHashSalt, WTFMove(promise));
+        exposeDevices(WTFMove(newDevices), WTFMove(deviceIDHashSalts), WTFMove(promise));
     });
 }
 
@@ -363,6 +373,8 @@ MediaTrackSupportedConstraints MediaDevices::getSupportedConstraints()
     result.echoCancellation = supported.supportsEchoCancellation();
     result.deviceId = supported.supportsDeviceId();
     result.groupId = supported.supportsGroupId();
+    result.displaySurface = supported.supportsDisplaySurface();
+    result.zoom = supported.supportsZoom();
 
     return result;
 }
@@ -402,7 +414,7 @@ void MediaDevices::listenForDeviceChanges()
         if (!weakThis || isContextStopped() || m_scheduledEventTimer.isActive())
             return;
 
-        m_scheduledEventTimer.startOneShot(Seconds(randomNumber() / 2));
+        m_scheduledEventTimer.startOneShot(Seconds(cryptographicallyRandomUnitInterval() / 2));
     });
 }
 
@@ -411,7 +423,7 @@ bool MediaDevices::addEventListener(const AtomString& eventType, Ref<EventListen
     if (eventType == eventNames().devicechangeEvent)
         listenForDeviceChanges();
 
-    return EventTargetWithInlineData::addEventListener(eventType, WTFMove(listener), options);
+    return EventTarget::addEventListener(eventType, WTFMove(listener), options);
 }
 
 } // namespace WebCore

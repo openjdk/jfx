@@ -32,11 +32,9 @@ function initializeDecompressionStream(format)
     if (arguments.length < 1)
         @throwTypeError(errorMessage);
 
-    if (typeof arguments[0] !== "string")
-        @throwTypeError("CompressionStream input must be a string.");
-
     const algorithms = ['gzip', 'deflate', 'deflate-raw'];
-    const findAlgorithm = (element) => element === arguments[0].toLowerCase();
+    const lowercaseFormat = @toString(arguments[0]).toLowerCase();
+    const findAlgorithm = (element) => element === lowercaseFormat;
 
     // Pass the index to our new DecompressionStreamDecoder, so we do not need to reparse the string.
     // We need to ensure that the Formats.h and this file stay in sync.
@@ -55,7 +53,7 @@ function initializeDecompressionStream(format)
 
         try {
             const decoder = @getByIdDirectPrivate(this, "DecompressionStreamDecoder");
-            let buffer = decoder.@decode(chunk);
+            const buffer = decoder.@decode(chunk);
 
             if (buffer) {
                 const transformStream = @getByIdDirectPrivate(this, "DecompressionStreamTransform");
@@ -69,25 +67,26 @@ function initializeDecompressionStream(format)
         return @Promise.@resolve();
     };
     const flushAlgorithm = () => {
-        const decoder = @getByIdDirectPrivate(this, "DecompressionStreamDecoder");
-        
-        let buffer;
         try {
-        buffer = decoder.@flush();
-        } catch (e) {
-            return @Promise.@reject(@makeTypeError(e.message));
-        }
+        const decoder = @getByIdDirectPrivate(this, "DecompressionStreamDecoder");
+            const buffer = decoder.@flush();
+        
         if (buffer) {
             const transformStream = @getByIdDirectPrivate(this, "DecompressionStreamTransform");
             const controller = @getByIdDirectPrivate(transformStream, "controller");
             @transformStreamDefaultControllerEnqueue(controller, buffer);
         }
+        } catch (e) {
+            return @Promise.@reject(@makeTypeError(e.message));
+        }
 
         return @Promise.@resolve();
     };
 
-    const transform = @createTransformStream(startAlgorithm, transformAlgorithm, flushAlgorithm);
+    const [transform, readable, writable] = @createTransformStream(startAlgorithm, transformAlgorithm, flushAlgorithm);
     @putByIdDirectPrivate(this, "DecompressionStreamTransform", transform);
+    @putByIdDirectPrivate(this, "readable", readable);
+    @putByIdDirectPrivate(this, "writable", writable);
     @putByIdDirectPrivate(this, "DecompressionStreamDecoder", new @DecompressionStreamDecoder(index));
     return this;
 }
@@ -101,7 +100,7 @@ function readable()
     if (!transform)
         throw @makeThisTypeError("DecompressionStreamDecoder", "readable");
 
-    return @getByIdDirectPrivate(transform, "readable");
+    return @getByIdDirectPrivate(this, "readable");
 }
 
 @getter
@@ -113,5 +112,5 @@ function writable()
     if (!transform)
         throw @makeThisTypeError("DecompressionStreamDecoder", "writable");
 
-    return @getByIdDirectPrivate(transform, "writable");
+    return @getByIdDirectPrivate(this, "writable");
 }

@@ -25,15 +25,20 @@
 #include "config.h"
 #include "LibWebRTCCertificateGenerator.h"
 
-#if USE(LIBWEBRTC)
+#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
+#include "LibWebRTCProvider.h"
 #include "RTCCertificate.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_COMMA_BEGIN
 
+#include <webrtc/rtc_base/ref_counted_object.h>
 #include <webrtc/rtc_base/rtc_certificate_generator.h>
+#include <webrtc/rtc_base/ssl_certificate.h>
 
+ALLOW_COMMA_END
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
@@ -45,26 +50,21 @@ static inline String fromStdString(const std::string& value)
     return String::fromUTF8(value.data(), value.length());
 }
 
-class RTCCertificateGeneratorCallback : public ThreadSafeRefCounted<RTCCertificateGeneratorCallback, WTF::DestructionThread::Main>, public rtc::RTCCertificateGeneratorCallback {
+class RTCCertificateGeneratorCallbackWrapper : public ThreadSafeRefCounted<RTCCertificateGeneratorCallbackWrapper, WTF::DestructionThread::Main> {
 public:
-    RTCCertificateGeneratorCallback(Ref<SecurityOrigin>&& origin, Function<void(ExceptionOr<Ref<RTCCertificate>>&&)>&& resultCallback)
-        : m_origin(WTFMove(origin))
-        , m_resultCallback(WTFMove(resultCallback))
+    static Ref<RTCCertificateGeneratorCallbackWrapper> create(Ref<SecurityOrigin>&& origin, Function<void(ExceptionOr<Ref<RTCCertificate>>&&)>&& resultCallback)
     {
+        return adoptRef(*new RTCCertificateGeneratorCallbackWrapper(WTFMove(origin), WTFMove(resultCallback)));
     }
 
-    void AddRef() const { ref(); }
-    rtc::RefCountReleaseStatus Release() const
+    void process(rtc::scoped_refptr<rtc::RTCCertificate> certificate)
     {
-        auto result = refCount() - 1;
-        deref();
-        return result ? rtc::RefCountReleaseStatus::kOtherRefsRemained : rtc::RefCountReleaseStatus::kDroppedLastRef;
+        callOnMainThread([origin = m_origin.releaseNonNull(), callback = WTFMove(m_resultCallback), certificate = WTFMove(certificate)]() mutable {
+            if (!certificate) {
+                callback(Exception { TypeError, "Unable to create a certificate"_s });
+                return;
     }
 
-private:
-    void OnSuccess(const rtc::scoped_refptr<rtc::RTCCertificate>& certificate) final
-    {
-        callOnMainThread([origin = m_origin.releaseNonNull(), callback = WTFMove(m_resultCallback), certificate]() mutable {
             Vector<RTCCertificate::DtlsFingerprint> fingerprints;
             auto stats = certificate->GetSSLCertificate().GetStats();
             auto* info = stats.get();
@@ -79,11 +79,11 @@ private:
         });
     }
 
-    void OnFailure() final
+private:
+    RTCCertificateGeneratorCallbackWrapper(Ref<SecurityOrigin>&& origin, Function<void(ExceptionOr<Ref<RTCCertificate>>&&)>&& resultCallback)
+        : m_origin(WTFMove(origin))
+        , m_resultCallback(WTFMove(resultCallback))
     {
-        callOnMainThread([callback = WTFMove(m_resultCallback)]() mutable {
-            callback(Exception { TypeError, "Unable to create a certificate"_s});
-        });
     }
 
     RefPtr<SecurityOrigin> m_origin;
@@ -106,14 +106,16 @@ static inline rtc::KeyParams keyParamsFromCertificateType(const PeerConnectionBa
 
 void generateCertificate(Ref<SecurityOrigin>&& origin, LibWebRTCProvider& provider, const PeerConnectionBackend::CertificateInformation& info, Function<void(ExceptionOr<Ref<RTCCertificate>>&&)>&& resultCallback)
 {
-    rtc::scoped_refptr<RTCCertificateGeneratorCallback> callback(new rtc::RefCountedObject<RTCCertificateGeneratorCallback>(WTFMove(origin), WTFMove(resultCallback)));
+    auto callbackWrapper = RTCCertificateGeneratorCallbackWrapper::create(WTFMove(origin), WTFMove(resultCallback));
 
     absl::optional<uint64_t> expiresMs;
     if (info.expires)
         expiresMs = static_cast<uint64_t>(*info.expires);
 
-    provider.prepareCertificateGenerator([info, expiresMs, callback = WTFMove(callback)](auto& generator) mutable {
-        generator.GenerateCertificateAsync(keyParamsFromCertificateType(info), expiresMs, WTFMove(callback));
+    provider.prepareCertificateGenerator([info, expiresMs, callbackWrapper = WTFMove(callbackWrapper)](auto& generator) mutable {
+        generator.GenerateCertificateAsync(keyParamsFromCertificateType(info), expiresMs, [callbackWrapper = WTFMove(callbackWrapper)](rtc::scoped_refptr<rtc::RTCCertificate> certificate) mutable {
+            callbackWrapper->process(WTFMove(certificate));
+        });
     });
 }
 
@@ -121,4 +123,4 @@ void generateCertificate(Ref<SecurityOrigin>&& origin, LibWebRTCProvider& provid
 
 } // namespace WebCore
 
-#endif // USE(LIBWEBRTC)
+#endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

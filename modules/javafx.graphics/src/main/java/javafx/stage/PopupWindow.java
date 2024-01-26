@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package javafx.stage;
 
-import com.sun.javafx.scene.TreeShowingExpression;
+import com.sun.javafx.scene.TreeShowingProperty;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.event.DirectEvent;
 import java.util.ArrayList;
@@ -150,7 +150,7 @@ public abstract class PopupWindow extends Window {
     };
 
     private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener(changeListener);
-    private TreeShowingExpression treeShowingExpression;
+    private TreeShowingProperty treeShowingProperty;
 
     /**
      * Constructor for subclasses to call.
@@ -415,8 +415,8 @@ public abstract class PopupWindow extends Window {
 
         // PopupWindow should disappear when owner node is not visible
         if (ownerNode != null) {
-            treeShowingExpression = new TreeShowingExpression(ownerNode);
-            treeShowingExpression.addListener(weakOwnerNodeListener);
+            treeShowingProperty = new TreeShowingProperty(ownerNode);
+            treeShowingProperty.addListener(weakOwnerNodeListener);
         }
 
         updateWindow(anchorX, anchorY);
@@ -493,10 +493,10 @@ public abstract class PopupWindow extends Window {
 
         // When popup hides, remove listeners; these are added when the popup shows.
         if (getOwnerWindow() != null) getOwnerWindow().showingProperty().removeListener(weakOwnerNodeListener);
-        if (treeShowingExpression != null) {
-            treeShowingExpression.removeListener(weakOwnerNodeListener);
-            treeShowingExpression.dispose();
-            treeShowingExpression = null;
+        if (treeShowingProperty != null) {
+            treeShowingProperty.removeListener(weakOwnerNodeListener);
+            treeShowingProperty.dispose();
+            treeShowingProperty = null;
         }
     }
 

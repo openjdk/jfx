@@ -462,26 +462,26 @@ public class ListView<T> extends Control {
         return items;
     }
 
-
-    // --- Placeholder Node
-    private ObjectProperty<Node> placeholder;
     /**
-     * This Node is shown to the user when the listview has no content to show.
-     * This may be the case because the table model has no data in the first
-     * place or that a filter has been applied to the list model, resulting
-     * in there being nothing to show the user..
-     * @return the placeholder property for this ListView
+     * The {@code Node} to show to the user when the {@code ListView} has no content to show.
+     * This happens when the list model has no data or when a filter has been applied to the list model, resulting in
+     * there being nothing to show the user.
+     *
      * @since JavaFX 8.0
      */
+    private ObjectProperty<Node> placeholder;
+
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
             placeholder = new SimpleObjectProperty<>(this, "placeholder");
         }
         return placeholder;
     }
+
     public final void setPlaceholder(Node value) {
         placeholderProperty().set(value);
     }
+
     public final Node getPlaceholder() {
         return placeholder == null ? null : placeholder.get();
     }
@@ -996,18 +996,18 @@ public class ListView<T> extends Control {
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
 
-    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+    public final void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
         onScrollToProperty().set(value);
     }
 
-    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+    public final EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
         if( onScrollTo != null ) {
             return onScrollTo.get();
         }
         return null;
     }
 
-    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+    public final ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {

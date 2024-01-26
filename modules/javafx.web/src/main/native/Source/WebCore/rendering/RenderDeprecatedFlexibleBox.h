@@ -62,7 +62,12 @@ private:
     bool isVertical() const { return style().boxOrient() == BoxOrient::Vertical; }
     bool isHorizontal() const { return style().boxOrient() == BoxOrient::Horizontal; }
 
-    void applyLineClamp(FlexBoxIterator&, bool relayoutChildren);
+    struct ClampedContent {
+        LayoutUnit contentHeight;
+        WeakPtr<const RenderBlockFlow> renderer;
+    };
+    std::optional<ClampedContent> applyLineClamp(FlexBoxIterator&, bool relayoutChildren);
+    std::optional<ClampedContent> applyModernLineClamp(FlexBoxIterator&);
     void clearLineClamp();
 
     bool m_stretchingChildren;

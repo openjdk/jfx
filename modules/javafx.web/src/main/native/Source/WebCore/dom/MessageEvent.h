@@ -54,6 +54,13 @@ public:
     static Ref<MessageEvent> create(DataType&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<RefPtr<MessagePort>>&& = { });
     static Ref<MessageEvent> createForBindings();
 
+    struct MessageEventWithStrongData {
+        Ref<MessageEvent> event;
+        JSC::Strong<JSC::JSObject> strongWrapper; // Keep the wrapper alive until the event is fired, since it is what keeps `data` alive.
+    };
+
+    static MessageEventWithStrongData create(JSC::JSGlobalObject&, Ref<SerializedScriptValue>&&, const String& origin = { }, const String& lastEventId = { }, std::optional<MessageEventSource>&& = std::nullopt, Vector<RefPtr<MessagePort>>&& = { });
+
     struct Init : EventInit {
         JSC::JSValue data;
         String origin;
@@ -87,7 +94,7 @@ private:
 
     EventInterface eventInterface() const final;
 
-    DataType m_data;
+    DataType m_data WTF_GUARDED_BY_LOCK(m_concurrentDataAccessLock);
     String m_origin;
     String m_lastEventId;
     std::optional<MessageEventSource> m_source;

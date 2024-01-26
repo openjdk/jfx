@@ -26,6 +26,8 @@
 #include "config.h"
 #include "RenderThemeAdwaita.h"
 
+#if USE(THEME_ADWAITA)
+
 #include "Color.h"
 #include "FloatRoundedRect.h"
 #include "GraphicsContext.h"
@@ -36,17 +38,21 @@
 #include "RenderBox.h"
 #include "RenderObject.h"
 #include "RenderProgress.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include "ThemeAdwaita.h"
 #include "TimeRanges.h"
 #include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
+#include <wtf/text/Base64.h>
 
 #if PLATFORM(GTK)
 #include <gtk/gtk.h>
 #endif
 
-#include <wtf/text/Base64.h>
+#if PLATFORM(WIN)
+#include "WebCoreBundleWin.h"
+#include <wtf/FileSystem.h>
+#endif
 
 namespace WebCore {
 
@@ -103,34 +109,31 @@ static inline Color getSystemAccentColor()
 
 static inline Color getAccentColor(const RenderObject& renderObject)
 {
-    auto accentColor = renderObject.style().effectiveAccentColor();
-    if (accentColor.isValid())
-        return accentColor;
+    if (!renderObject.style().hasAutoAccentColor())
+        return renderObject.style().effectiveAccentColor();
 
     return getSystemAccentColor();
 }
 
-#if !PLATFORM(GTK)
 RenderTheme& RenderTheme::singleton()
 {
     static MainThreadNeverDestroyed<RenderThemeAdwaita> theme;
     return theme;
 }
-#endif
 
 bool RenderThemeAdwaita::supportsFocusRing(const RenderStyle& style) const
 {
     switch (style.effectiveAppearance()) {
-    case PushButtonPart:
-    case ButtonPart:
-    case TextFieldPart:
-    case TextAreaPart:
-    case SearchFieldPart:
-    case MenulistPart:
-    case RadioPart:
-    case CheckboxPart:
-    case SliderHorizontalPart:
-    case SliderVerticalPart:
+    case StyleAppearance::PushButton:
+    case StyleAppearance::Button:
+    case StyleAppearance::TextField:
+    case StyleAppearance::TextArea:
+    case StyleAppearance::SearchField:
+    case StyleAppearance::Menulist:
+    case StyleAppearance::Radio:
+    case StyleAppearance::Checkbox:
+    case StyleAppearance::SliderHorizontal:
+    case StyleAppearance::SliderVertical:
         return true;
     default:
         break;
@@ -229,11 +232,21 @@ String RenderThemeAdwaita::mediaControlsStyleSheet()
 
 String RenderThemeAdwaita::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
 {
+#if USE(GLIB)
     auto path = makeString("/org/webkit/media-controls/", iconName, '.', iconType);
     auto data = adoptGRef(g_resources_lookup_data(path.latin1().data(), G_RESOURCE_LOOKUP_FLAGS_NONE, nullptr));
     if (!data)
         return emptyString();
     return base64EncodeToString(g_bytes_get_data(data.get(), nullptr), g_bytes_get_size(data.get()));
+#elif PLATFORM(WIN)
+    auto path = webKitBundlePath(iconName, iconType, "media-controls"_s);
+    auto data = FileSystem::readEntireFile(path);
+    if (!data)
+        return { };
+    return base64EncodeToString(data->data(), data->size());
+#else
+    return { };
+#endif
 }
 
 String RenderThemeAdwaita::mediaControlsFormattedStringForDuration(double durationInSeconds)
@@ -397,7 +410,7 @@ void RenderThemeAdwaita::adjustMenuListButtonStyle(RenderStyle& style, const Ele
 
 LengthBox RenderThemeAdwaita::popupInternalPaddingBox(const RenderStyle& style, const Settings&) const
 {
-    if (style.effectiveAppearance() == NoControlPart)
+    if (style.effectiveAppearance() == StyleAppearance::None)
         return { };
 
     auto zoomedArrowSize = menuListButtonArrowSize * style.effectiveZoom();
@@ -420,7 +433,7 @@ bool RenderThemeAdwaita::paintMenuList(const RenderObject& renderObject, const P
     if (isHovered(renderObject))
         states.add(ControlStates::States::Hovered);
     ControlStates controlStates(states);
-    Theme::singleton().paint(ButtonPart, controlStates, graphicsContext, rect, 1., nullptr, 1., 1., false, renderObject.useDarkAppearance(), renderObject.style().effectiveAccentColor());
+    Theme::singleton().paint(StyleAppearance::Button, controlStates, graphicsContext, rect, 1., nullptr, 1., 1., false, renderObject.useDarkAppearance(), renderObject.style().effectiveAccentColor());
 
     auto zoomedArrowSize = menuListButtonArrowSize * renderObject.style().effectiveZoom();
     FloatRect fieldRect = rect;
@@ -453,7 +466,7 @@ Seconds RenderThemeAdwaita::animationDurationForProgressBar(const RenderProgress
     return progressAnimationFrameRate * progressAnimationFrameCount;
 }
 
-IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderObject&, const IntRect& bounds) const
+IntRect RenderThemeAdwaita::progressBarRectForBounds(const RenderProgress&, const IntRect& bounds) const
 {
     return { bounds.x(), bounds.y(), bounds.width(), progressBarSize };
 }
@@ -521,11 +534,11 @@ bool RenderThemeAdwaita::paintSliderTrack(const RenderObject& renderObject, cons
     auto& graphicsContext = paintInfo.context();
     GraphicsContextStateSaver stateSaver(graphicsContext);
 
-    ControlPart part = renderObject.style().effectiveAppearance();
-    ASSERT(part == SliderHorizontalPart || part == SliderVerticalPart);
+    auto appearance = renderObject.style().effectiveAppearance();
+    ASSERT(appearance == StyleAppearance::SliderHorizontal || appearance == StyleAppearance::SliderVertical);
 
     FloatRect fieldRect = rect;
-    if (part == SliderHorizontalPart) {
+    if (appearance == StyleAppearance::SliderHorizontal) {
         fieldRect.move(0, rect.height() / 2 - (sliderTrackSize / 2));
         fieldRect.setHeight(6);
     } else {
@@ -560,7 +573,7 @@ bool RenderThemeAdwaita::paintSliderTrack(const RenderObject& renderObject, cons
     }
     FloatRect rangeRect = fieldRect;
     FloatRoundedRect::Radii corners;
-    if (part == SliderHorizontalPart) {
+    if (appearance == StyleAppearance::SliderHorizontal) {
         if (renderObject.style().direction() == TextDirection::RTL) {
             rangeRect.move(thumbLocation.x(), 0);
             rangeRect.setWidth(rangeRect.width() - thumbLocation.x());
@@ -600,8 +613,8 @@ bool RenderThemeAdwaita::paintSliderTrack(const RenderObject& renderObject, cons
 
 void RenderThemeAdwaita::adjustSliderThumbSize(RenderStyle& style, const Element*) const
 {
-    ControlPart part = style.effectiveAppearance();
-    if (part != SliderThumbHorizontalPart && part != SliderThumbVerticalPart)
+    auto appearance = style.effectiveAppearance();
+    if (appearance != StyleAppearance::SliderThumbHorizontal && appearance != StyleAppearance::SliderThumbVertical)
         return;
 
     style.setWidth(Length(sliderThumbSize, LengthType::Fixed));
@@ -613,7 +626,7 @@ bool RenderThemeAdwaita::paintSliderThumb(const RenderObject& renderObject, cons
     auto& graphicsContext = paintInfo.context();
     GraphicsContextStateSaver stateSaver(graphicsContext);
 
-    ASSERT(renderObject.style().effectiveAppearance() == SliderThumbHorizontalPart || renderObject.style().effectiveAppearance() == SliderThumbVerticalPart);
+    ASSERT(renderObject.style().effectiveAppearance() == StyleAppearance::SliderThumbHorizontal || renderObject.style().effectiveAppearance() == StyleAppearance::SliderThumbVertical);
 
     SRGBA<uint8_t> sliderThumbBackgroundColor;
     SRGBA<uint8_t> sliderThumbBackgroundHoveredColor;
@@ -634,9 +647,9 @@ bool RenderThemeAdwaita::paintSliderThumb(const RenderObject& renderObject, cons
 
     FloatRect fieldRect = rect;
     Path path;
-    path.addEllipse(fieldRect);
+    path.addEllipseInRect(fieldRect);
     fieldRect.inflate(-sliderThumbBorderSize);
-    path.addEllipse(fieldRect);
+    path.addEllipseInRect(fieldRect);
     graphicsContext.setFillRule(WindRule::EvenOdd);
     if (isEnabled(renderObject) && isPressed(renderObject))
         graphicsContext.setFillColor(getAccentColor(renderObject));
@@ -645,7 +658,7 @@ bool RenderThemeAdwaita::paintSliderThumb(const RenderObject& renderObject, cons
     graphicsContext.fillPath(path);
     path.clear();
 
-    path.addEllipse(fieldRect);
+    path.addEllipseInRect(fieldRect);
     graphicsContext.setFillRule(WindRule::NonZero);
     if (!isEnabled(renderObject))
         graphicsContext.setFillColor(sliderThumbBackgroundDisabledColor);
@@ -680,12 +693,14 @@ void RenderThemeAdwaita::adjustListButtonStyle(RenderStyle& style, const Element
 #endif // ENABLE(DATALIST_ELEMENT)
 
 #if PLATFORM(GTK)
-Seconds RenderThemeAdwaita::caretBlinkInterval() const
+std::optional<Seconds> RenderThemeAdwaita::caretBlinkInterval() const
 {
     gboolean shouldBlink;
     gint time;
     g_object_get(gtk_settings_get_default(), "gtk-cursor-blink", &shouldBlink, "gtk-cursor-blink-time", &time, nullptr);
-    return shouldBlink ? 500_us * time : 0_s;
+    if (shouldBlink)
+        return { 500_us * time };
+    return { };
 }
 #endif
 
@@ -696,3 +711,5 @@ void RenderThemeAdwaita::setAccentColor(const Color& color)
 }
 
 } // namespace WebCore
+
+#endif // USE(THEME_ADWAITA)

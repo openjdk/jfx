@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,6 +51,10 @@ bool PlatformMediaSessionManager::m_opusDecoderEnabled;
 bool PlatformMediaSessionManager::m_alternateWebMPlayerEnabled;
 #endif
 
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+bool PlatformMediaSessionManager::s_useSCContentSharingPicker;
+#endif
+
 #if ENABLE(VP9)
 bool PlatformMediaSessionManager::m_vp9DecoderEnabled;
 bool PlatformMediaSessionManager::m_vp8DecoderEnabled;
@@ -89,6 +93,12 @@ void PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary()
 {
     if (auto existingManager = PlatformMediaSessionManager::sharedManagerIfExists())
         existingManager->scheduleSessionStatusUpdate();
+}
+
+void PlatformMediaSessionManager::updateAudioSessionCategoryIfNecessary()
+{
+    if (auto existingManager = PlatformMediaSessionManager::sharedManagerIfExists())
+        existingManager->scheduleUpdateSessionState();
 }
 
 PlatformMediaSessionManager::PlatformMediaSessionManager()
@@ -206,7 +216,7 @@ void PlatformMediaSessionManager::removeSession(PlatformMediaSession& session)
 
     m_sessions.remove(index);
 
-    if (hasNoSession())
+    if (hasNoSession() && !activeAudioSessionRequired())
         maybeDeactivateAudioSession();
 
 #if !RELEASE_LOG_DISABLED
@@ -437,8 +447,15 @@ void PlatformMediaSessionManager::sessionIsPlayingToWirelessPlaybackTargetChange
 void PlatformMediaSessionManager::sessionCanProduceAudioChanged()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
+    if (m_alreadyScheduledSessionStatedUpdate)
+        return;
+
+    m_alreadyScheduledSessionStatedUpdate = true;
+    callOnMainThread([this] {
+        m_alreadyScheduledSessionStatedUpdate = false;
     maybeActivateAudioSession();
     updateSessionState();
+    });
 }
 
 void PlatformMediaSessionManager::processDidReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType command, const PlatformMediaSession::RemoteCommandArgument& argument)
@@ -712,6 +729,24 @@ bool PlatformMediaSessionManager::alternateWebMPlayerEnabled()
 {
 #if ENABLE(ALTERNATE_WEBM_PLAYER)
     return m_alternateWebMPlayerEnabled;
+#else
+    return false;
+#endif
+}
+
+void PlatformMediaSessionManager::setUseSCContentSharingPicker(bool use)
+{
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+    s_useSCContentSharingPicker = use;
+#else
+    UNUSED_PARAM(use);
+#endif
+}
+
+bool PlatformMediaSessionManager::useSCContentSharingPicker()
+{
+#if HAVE(SC_CONTENT_SHARING_PICKER)
+    return s_useSCContentSharingPicker;
 #else
     return false;
 #endif

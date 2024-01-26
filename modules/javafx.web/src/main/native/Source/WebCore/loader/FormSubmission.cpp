@@ -41,14 +41,13 @@
 #include "FormData.h"
 #include "FormDataBuilder.h"
 #include "FormState.h"
-#include "Frame.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
+#include "LocalFrame.h"
 #include "ScriptDisallowedScope.h"
 #include <pal/text/TextEncoding.h>
 #include <wtf/WallTime.h>
@@ -96,8 +95,8 @@ ASCIILiteral FormSubmission::Attributes::methodString(Method method, bool dialog
 
 void FormSubmission::Attributes::parseAction(const String& action)
 {
-    // FIXME: Can we parse into a URL?
-    m_action = stripLeadingAndTrailingHTMLSpaces(action);
+    // FIXME: Can we parse into a URL? Then we also don't need to trim anymore.
+    m_action = action.trim(isASCIIWhitespace);
 }
 
 String FormSubmission::Attributes::parseEncodingType(const String& type)
@@ -210,7 +209,7 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, HTMLFormContro
     }
 
     auto dataEncoding = isMailtoForm ? PAL::UTF8Encoding() : encodingFromAcceptCharset(copiedAttributes.acceptCharset(), document);
-    auto domFormData = DOMFormData::create(dataEncoding.encodingForFormSubmissionOrURLParsing());
+    auto domFormData = DOMFormData::create(&document, dataEncoding.encodingForFormSubmissionOrURLParsing());
     StringPairVector formValues;
 
     auto result = form.constructEntryList(submitter.copyRef(), WTFMove(domFormData), &formValues);
@@ -224,7 +223,7 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement& form, HTMLFormContro
         formData = FormData::createMultiPart(domFormData);
         boundary = String::fromLatin1(formData->boundary().data());
     } else {
-        formData = FormData::create(domFormData, attributes.method() == Method::Get ? FormData::FormURLEncoded : FormData::parseEncodingType(encodingType));
+        formData = FormData::create(domFormData, attributes.method() == Method::Get ? FormData::EncodingType::FormURLEncoded : FormData::parseEncodingType(encodingType));
         if (copiedAttributes.method() == Method::Post && isMailtoForm) {
             // Convert the form data into a string that we put into the URL.
             appendMailtoPostFormDataToURL(actionURL, *formData, encodingType);

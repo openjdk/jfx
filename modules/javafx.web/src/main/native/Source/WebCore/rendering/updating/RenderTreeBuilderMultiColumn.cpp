@@ -29,10 +29,12 @@
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSet.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
+#include "RenderStyleInlines.h"
 #include "RenderTextControl.h"
 #include "RenderTreeBuilder.h"
 #include "RenderTreeBuilderBlock.h"
 #include "RenderView.h"
+#include <wtf/SetForScope.h>
 
 namespace WebCore {
 
@@ -177,6 +179,8 @@ void RenderTreeBuilder::MultiColumn::createFragmentedFlow(RenderBlockFlow& flow)
     flow.setMultiColumnFlow(fragmentedFlow);
 }
 
+static bool gRestoringColumnSpannersForContainer = false;
+
 void RenderTreeBuilder::MultiColumn::restoreColumnSpannersForContainer(const RenderElement& container, RenderMultiColumnFlow& multiColumnFlow)
 {
     auto& spanners = multiColumnFlow.spannerMap();
@@ -197,6 +201,7 @@ void RenderTreeBuilder::MultiColumn::restoreColumnSpannersForContainer(const Ren
         auto& spannerOriginalParent = *placeholder->parent();
         // Detaching the spanner takes care of removing the placeholder (and merges the RenderMultiColumnSets).
         auto spannerToReInsert = m_builder.detach(*spanner->parent(), *spanner);
+        auto restoreColumnSpannersScope = SetForScope { gRestoringColumnSpannersForContainer, true };
         m_builder.attach(spannerOriginalParent, WTFMove(spannerToReInsert));
     }
 }
@@ -278,7 +283,7 @@ static bool gShiftingSpanner = false;
 
 void RenderTreeBuilder::MultiColumn::multiColumnDescendantInserted(RenderMultiColumnFlow& flow, RenderObject& newDescendant)
 {
-    if (gShiftingSpanner || newDescendant.isRenderFragmentedFlow())
+    if (gShiftingSpanner || gRestoringColumnSpannersForContainer || newDescendant.isRenderFragmentedFlow())
         return;
 
     auto* subtreeRoot = &newDescendant;
@@ -341,9 +346,8 @@ RenderObject* RenderTreeBuilder::MultiColumn::processPossibleSpannerDescendant(R
         auto takenDescendant = m_builder.detach(*container, descendant);
 
         // This is a guard to stop an ancestor flow thread from processing the spanner.
-        gShiftingSpanner = true;
+        auto shiftingSpannerScope = SetForScope { gShiftingSpanner, true };
         m_builder.blockBuilder().attach(*multicolContainer, WTFMove(takenDescendant), insertBeforeMulticolChild);
-        gShiftingSpanner = false;
 
         // The spanner has now been moved out from the flow thread, but we don't want to
         // examine its children anyway. They are all part of the spanner and shouldn't trigger
@@ -369,7 +373,10 @@ RenderObject* RenderTreeBuilder::MultiColumn::processPossibleSpannerDescendant(R
             // column set at the end of the multicol container. We don't really check here if the
             // child inserted precedes any spanner or not (as that's an expensive operation). Just
             // make sure we have a column set at the end. It's no big deal if it remains unused.
-            if (!lastSet->nextSibling())
+
+            // Legends are siblings of RenderMultiColumnSets not because they are spanners, but because they don't participate in multi-column context.
+            auto hasMultiColumnSet = !lastSet->nextSibling() || lastSet->nextSibling()->isLegend();
+            if (hasMultiColumnSet)
                 return nextDescendant;
         }
     }

@@ -259,12 +259,16 @@ def riscLowerMalformedAddressesDouble(list)
             case node.opcode
             when "loadd"
                 newList << Instruction.new(node.codeOrigin, "loadd", [node.operands[0].riscDoubleAddress(newList), node.operands[1]], node.annotation)
+            when "loadv"
+                newList << Instruction.new(node.codeOrigin, "loadv", [node.operands[0].riscDoubleAddress(newList), node.operands[1]], node.annotation)
             when "loadf"
                 newList << Instruction.new(node.codeOrigin, "loadf", [node.operands[0].riscDoubleAddress(newList), node.operands[1]], node.annotation)
             when "stored"
                 newList << Instruction.new(node.codeOrigin, "stored", [node.operands[0], node.operands[1].riscDoubleAddress(newList)], node.annotation)
             when "storef"
                 newList << Instruction.new(node.codeOrigin, "storef", [node.operands[0], node.operands[1].riscDoubleAddress(newList)], node.annotation)
+            when "storev"
+                newList << Instruction.new(node.codeOrigin, "storev", [node.operands[0], node.operands[1].riscDoubleAddress(newList)], node.annotation)
             else
                 newList << node
             end
@@ -732,4 +736,23 @@ def riscLowerTest(list)
         end
     }
     return newList
+end
+
+def riscDropTags(list)
+    list.collect {
+        |node|
+        ret = node
+        if node.is_a?(Instruction)
+            case node.opcode
+            when "jmp", "call"
+                if node.operands.size > 1
+                    # Delete the extra pointer tagging arguments, otherwise
+                    # riscLowerMalformedImmediatesRecurse will pointlessly load
+                    # them in a register.
+                    ret = Instruction.new(node.codeOrigin, node.opcode, [node.operands[0]])
+                end
+            end
+        end
+        ret
+    }
 end

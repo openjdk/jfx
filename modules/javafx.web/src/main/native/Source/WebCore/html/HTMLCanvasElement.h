@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  *
@@ -28,9 +28,11 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "CSSParserContext.h"
 #include "CanvasBase.h"
 #include "Document.h"
 #include "FloatRect.h"
+#include "GraphicsTypes.h"
 #include "HTMLElement.h"
 #include <memory>
 #include <wtf/Forward.h>
@@ -44,15 +46,17 @@ namespace WebCore {
 class BlobCallback;
 class CanvasRenderingContext;
 class CanvasRenderingContext2D;
+class GPU;
+class GPUCanvasContext;
 class GraphicsContext;
 class Image;
+class ImageBitmapRenderingContext;
 class ImageBuffer;
 class ImageData;
 class MediaStream;
 class OffscreenCanvas;
 class VideoFrame;
 class WebGLRenderingContextBase;
-class GPUCanvasContext;
 class WebCoreOpaqueRoot;
 struct CanvasRenderingContext2DSettings;
 struct ImageBitmapRenderingContextSettings;
@@ -91,6 +95,10 @@ public:
     ImageBitmapRenderingContext* createContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&&);
     ImageBitmapRenderingContext* getContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&&);
 
+    static bool isWebGPUType(const String&);
+    GPUCanvasContext* createContextWebGPU(const String&, GPU*);
+    GPUCanvasContext* getContextWebGPU(const String&, GPU*);
+
     WEBCORE_EXPORT ExceptionOr<UncachedString> toDataURL(const String& mimeType, JSC::JSValue quality);
     WEBCORE_EXPORT ExceptionOr<UncachedString> toDataURL(const String& mimeType);
     ExceptionOr<void> toBlob(Ref<BlobCallback>&&, const String& mimeType, JSC::JSValue quality);
@@ -99,12 +107,14 @@ public:
 #endif
 
     // Used for rendering
-    void didDraw(const std::optional<FloatRect>&) final;
+    void didDraw(const std::optional<FloatRect>&, ShouldApplyPostProcessingToDirtyRect) final;
 
     void paint(GraphicsContext&, const LayoutRect&);
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
     RefPtr<VideoFrame> toVideoFrame();
+#endif
+#if ENABLE(MEDIA_STREAM)
     ExceptionOr<Ref<MediaStream>> captureStream(std::optional<double>&& frameRequestRate);
 #endif
 
@@ -114,17 +124,11 @@ public:
 
     SecurityOrigin* securityOrigin() const final;
 
-    bool shouldAccelerate(const IntSize&) const;
-    bool shouldAccelerate(unsigned area) const;
-
     WEBCORE_EXPORT void setUsesDisplayListDrawing(bool);
 
     // FIXME: Only some canvas rendering contexts need an ImageBuffer.
     // It would be better to have the contexts own the buffers.
-    void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&);
-
-    WEBCORE_EXPORT static void setMaxPixelMemoryForTesting(std::optional<size_t>);
-    WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
+    void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) final;
 
     bool needsPreparationForDisplay();
     void prepareForDisplay();
@@ -134,12 +138,15 @@ public:
 
     bool isControlledByOffscreen() const;
 
-    WEBCORE_EXPORT static size_t maxActivePixelMemory();
-
-#if PLATFORM(COCOA)
-    GraphicsContext* drawingContext() const final;
-#endif
     WEBCORE_EXPORT void setAvoidIOSurfaceSizeCheckInWebProcessForTesting();
+
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
+    void dispatchEvent(Event&) final;
+
+    CSSParserContext& cssParserContext();
+
+    using HTMLElement::ref;
+    using HTMLElement::deref;
 
 private:
     HTMLCanvasElement(const QualifiedName&, Document&);
@@ -153,7 +160,7 @@ private:
     // EventTarget.
     void eventListenersDidChange() final;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
@@ -185,6 +192,7 @@ private:
 
     std::unique_ptr<CanvasRenderingContext> m_context;
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
+    std::unique_ptr<CSSParserContext> m_cssParserContext;
 
     std::optional<bool> m_usesDisplayListDrawing;
 
@@ -197,10 +205,14 @@ private:
     bool m_hasRelevantWebGLEventListener { false };
 #endif
     bool m_isSnapshotting { false };
-#if PLATFORM(COCOA)
-    mutable bool m_mustGuardAgainstUseByPendingLayerTransaction { false };
-#endif
 };
+
+inline CSSParserContext& HTMLCanvasElement::cssParserContext()
+{
+    if (!m_cssParserContext)
+        m_cssParserContext = WTF::makeUnique<CSSParserContext>(document());
+    return *m_cssParserContext;
+}
 
 WebCoreOpaqueRoot root(HTMLCanvasElement*);
 

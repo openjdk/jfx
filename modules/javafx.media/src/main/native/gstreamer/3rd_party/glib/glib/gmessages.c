@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -184,21 +186,27 @@
 #include <sys/uio.h>
 #endif
 
-#include "glib-init.h"
 #include "galloca.h"
 #include "gbacktrace.h"
 #include "gcharset.h"
 #include "gconvert.h"
 #include "genviron.h"
+#include "glib-init.h"
+#include "glib-private.h"
 #include "gmain.h"
 #include "gmem.h"
+#include "gpattern.h"
 #include "gprintfint.h"
-#include "gtestutils.h"
-#include "gthread.h"
 #include "gstrfuncs.h"
 #include "gstring.h"
-#include "gpattern.h"
+#include "gtestutils.h"
+#include "gthread.h"
 #include "gthreadprivate.h"
+#include "gutilsprivate.h"
+
+#if defined(__linux__) && !defined(__BIONIC__)
+#include "gjournal-private.h"
+#endif
 
 #ifdef G_OS_UNIX
 #include <unistd.h>
@@ -211,22 +219,6 @@
 
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
-#endif
-
-#if defined (_MSC_VER) && (_MSC_VER >=1400)
-/* This is ugly, but we need it for isatty() in case we have bad fd's,
- * otherwise Windows will abort() the program on msvcrt80.dll and later
- */
-#include <crtdbg.h>
-
-_GLIB_EXTERN void
-myInvalidParameterHandler(const wchar_t *expression,
-                          const wchar_t *function,
-                          const wchar_t *file,
-                          unsigned int   line,
-                          uintptr_t      pReserved)
-{
-}
 #endif
 
 #include "gwin32.h"
@@ -250,7 +242,7 @@ myInvalidParameterHandler(const wchar_t *expression,
  * not advisable, as it cannot be filtered against using the `G_MESSAGES_DEBUG`
  * environment variable.
  *
- * For example, GTK+ uses this in its `Makefile.am`:
+ * For example, GTK uses this in its `Makefile.am`:
  * |[
  * AM_CPPFLAGS = -DG_LOG_DOMAIN=\"Gtk\"
  * ]|
@@ -510,12 +502,14 @@ struct _GLogHandler
   GLogHandler   *next;
 };
 
+static void g_default_print_func (const gchar *string);
+static void g_default_printerr_func (const gchar *string);
 
 /* --- variables --- */
 static GMutex         g_messages_lock;
 static GLogDomain    *g_log_domains = NULL;
-static GPrintFunc     glib_print_func = NULL;
-static GPrintFunc     glib_printerr_func = NULL;
+static GPrintFunc     glib_print_func = g_default_print_func;
+static GPrintFunc     glib_printerr_func = g_default_printerr_func;
 static GPrivate       g_log_depth;
 static GPrivate       g_log_structured_depth;
 static GLogFunc       default_log_func = g_log_default_handler;
@@ -530,6 +524,11 @@ static gboolean       g_log_debug_enabled = FALSE;  /* (atomic) */
 /* --- functions --- */
 
 static void _g_log_abort (gboolean breakpoint);
+static inline const char * format_string (const char *format,
+                                          va_list     args,
+                                          char      **out_allocated_string)
+                                          G_GNUC_PRINTF (1, 0);
+static inline FILE * log_level_to_file (GLogLevelFlags log_level);
 
 static void
 _g_log_abort (gboolean breakpoint)
@@ -595,7 +594,12 @@ static void
 write_string (FILE        *stream,
         const gchar *string)
 {
-  fputs (string, stream);
+  if (fputs (string, stream) == EOF)
+    {
+      /* Something failed, but it's not an error we can handle at glib level
+       * so let's just continue without the compiler blaming us
+       */
+    }
 }
 
 static void
@@ -606,8 +610,12 @@ write_string_sized (FILE        *stream,
   /* Is it nul-terminated? */
   if (length < 0)
     write_string (stream, string);
-  else
-    fwrite (string, 1, length, stream);
+  else if (fwrite (string, 1, length, stream) < (size_t) length)
+    {
+      /* Something failed, but it's not an error we can handle at glib level
+       * so let's just continue without the compiler blaming us
+       */
+    }
 }
 
 static GLogDomain*
@@ -673,7 +681,7 @@ g_log_domain_check_free_L (GLogDomain *domain)
 static GLogFunc
 g_log_domain_get_handler_L (GLogDomain  *domain,
                             GLogLevelFlags log_level,
-                gpointer    *data)
+                            gpointer    *data)
 {
   if (domain && log_level)
     {
@@ -824,7 +832,7 @@ g_log_set_fatal_mask (const gchar   *log_domain,
  *                    | G_LOG_FLAG_RECURSION, my_log_handler, NULL);
  * ]|
  *
- * This example adds a log handler for all critical messages from GTK+:
+ * This example adds a log handler for all critical messages from GTK:
  *
  * |[<!-- language="C" -->
  * g_log_set_handler ("Gtk", G_LOG_LEVEL_CRITICAL | G_LOG_FLAG_FATAL
@@ -992,7 +1000,7 @@ g_test_log_set_fatal_handler (GTestLogFatalFunc log_func,
  */
 void
 g_log_remove_handler (const gchar *log_domain,
-              guint    handler_id)
+                      guint    handler_id)
 {
   GLogDomain *domain;
 
@@ -1202,8 +1210,6 @@ mklevel_prefix (gchar          level_prefix[STRING_BUFFER_SIZE],
                 GLogLevelFlags log_level,
                 gboolean       use_color)
 {
-  gboolean to_stdout = !gmessages_use_stderr;
-
   /* we may not call _any_ GLib functions here */
 
   strcpy (level_prefix, log_level_to_color (log_level, use_color));
@@ -1212,19 +1218,15 @@ mklevel_prefix (gchar          level_prefix[STRING_BUFFER_SIZE],
     {
     case G_LOG_LEVEL_ERROR:
       strcat (level_prefix, "ERROR");
-      to_stdout = FALSE;
       break;
     case G_LOG_LEVEL_CRITICAL:
       strcat (level_prefix, "CRITICAL");
-      to_stdout = FALSE;
       break;
     case G_LOG_LEVEL_WARNING:
       strcat (level_prefix, "WARNING");
-      to_stdout = FALSE;
       break;
     case G_LOG_LEVEL_MESSAGE:
       strcat (level_prefix, "Message");
-      to_stdout = FALSE;
       break;
     case G_LOG_LEVEL_INFO:
       strcat (level_prefix, "INFO");
@@ -1254,7 +1256,7 @@ mklevel_prefix (gchar          level_prefix[STRING_BUFFER_SIZE],
   if ((log_level & G_LOG_FLAG_FATAL) != 0 && !g_test_initialized ())
     win32_keep_fatal_message = TRUE;
 #endif
-  return to_stdout ? stdout : stderr;
+  return log_level_to_file (log_level);
 }
 
 typedef struct {
@@ -1290,11 +1292,12 @@ void
 g_logv (const gchar   *log_domain,
         GLogLevelFlags log_level,
         const gchar   *format,
-    va_list        args)
+        va_list        args)
 {
   gboolean was_fatal = (log_level & G_LOG_FLAG_FATAL) != 0;
   gboolean was_recursion = (log_level & G_LOG_FLAG_RECURSION) != 0;
-  gchar buffer[1025], *msg, *msg_alloc = NULL;
+  char buffer[1025], *msg_alloc = NULL;
+  const char *msg;
   gint i;
 
   log_level &= G_LOG_LEVEL_MASK;
@@ -1312,7 +1315,9 @@ g_logv (const gchar   *log_domain,
       msg = buffer;
     }
   else
-    msg = msg_alloc = g_strdup_vprintf (format, args);
+    {
+      msg = format_string (format, args, &msg_alloc);
+    }
 
   if (expected_messages)
     {
@@ -1480,7 +1485,7 @@ log_level_to_priority (GLogLevelFlags log_level)
   return "5";
 }
 
-static FILE *
+static inline FILE *
 log_level_to_file (GLogLevelFlags log_level)
 {
   if (gmessages_use_stderr)
@@ -1636,6 +1641,12 @@ done_query:
  * the code which sets them. For example, custom keys from GLib all have a
  * `GLIB_` prefix.
  *
+ * Note that keys that expect UTF-8 strings (specifically `"MESSAGE"` and
+ * `"GLIB_DOMAIN"`) must be passed as NUL-terminated UTF-8 strings until GLib
+ * version 2.74.1 because the default log handler did not consider the length of
+ * the `GLogField`. Starting with GLib 2.74.1 this is fixed and
+ * non-NUL-terminated UTF-8 strings can be passed with their correct length.
+ *
  * The @log_domain will be converted into a `GLIB_DOMAIN` field. @log_level will
  * be converted into a
  * [`PRIORITY`](https://www.freedesktop.org/software/systemd/man/systemd.journal-fields.html#PRIORITY=)
@@ -1777,7 +1788,7 @@ g_log_structured (const gchar    *log_domain,
     }
   else
     {
-      message = message_allocated = g_strdup_vprintf (format, args);
+      message = format_string (format, args, &message_allocated);
     }
 
   /* Add MESSAGE, PRIORITY and GLIB_DOMAIN. */
@@ -2021,7 +2032,7 @@ g_log_structured_standard (const gchar    *log_domain,
     }
   else
     {
-      fields[4].value = message_allocated = g_strdup_vprintf (message_format, args);
+      fields[4].value = format_string (message_format, args, &message_allocated);
     }
 
   va_end (args);
@@ -2059,9 +2070,18 @@ g_log_set_writer_func (GLogWriterFunc func,
   g_return_if_fail (func != NULL);
 
   g_mutex_lock (&g_messages_lock);
+
+  if (log_writer_func != g_log_writer_default)
+    {
+      g_mutex_unlock (&g_messages_lock);
+      g_error ("g_log_set_writer_func() called multiple times");
+      return;
+    }
+
   log_writer_func = func;
   log_writer_user_data = user_data;
   log_writer_user_data_free = user_data_free;
+
   g_mutex_unlock (&g_messages_lock);
 }
 
@@ -2081,12 +2101,7 @@ g_log_writer_supports_color (gint output_fd)
 {
 #ifdef G_OS_WIN32
   gboolean result = FALSE;
-
-#if (defined (_MSC_VER) && _MSC_VER >= 1400)
-  _invalid_parameter_handler oldHandler, newHandler;
-  int prev_report_mode = 0;
-#endif
-
+  GWin32InvalidParameterHandler handler;
 #endif
 
   g_return_val_if_fail (output_fd >= 0, FALSE);
@@ -2113,17 +2128,7 @@ g_log_writer_supports_color (gint output_fd)
    */
 #ifdef G_OS_WIN32
 
-#if (defined (_MSC_VER) && _MSC_VER >= 1400)
-  /* Set up our empty invalid parameter handler, for isatty(),
-   * in case of bad fd's passed in for isatty(), so that
-   * msvcrt80.dll+ won't abort the program
-   */
-  newHandler = myInvalidParameterHandler;
-  oldHandler = _set_invalid_parameter_handler (newHandler);
-
-  /* Disable the message box for assertions. */
-  prev_report_mode = _CrtSetReportMode(_CRT_ASSERT, 0);
-#endif
+  g_win32_push_empty_invalid_parameter_handler (&handler);
 
   if (g_win32_check_windows_version (10, 0, 0, G_WIN32_OS_ANY))
     {
@@ -2155,10 +2160,7 @@ g_log_writer_supports_color (gint output_fd)
     result = win32_is_pipe_tty (output_fd);
 
 reset_invalid_param_handler:
-#if defined (_MSC_VER) && (_MSC_VER >= 1400)
-      _CrtSetReportMode(_CRT_ASSERT, prev_report_mode);
-      _set_invalid_parameter_handler (oldHandler);
-#endif
+  g_win32_pop_invalid_parameter_handler (&handler);
 
   return result;
 #else
@@ -2212,31 +2214,10 @@ gboolean
 g_log_writer_is_journald (gint output_fd)
 {
 #if defined(__linux__) && !defined(__BIONIC__)
-  /* FIXME: Use the new journal API for detecting whether we're writing to the
-   * journal. See: https://github.com/systemd/systemd/issues/2473
-   */
-  union {
-    struct sockaddr_storage storage;
-    struct sockaddr sa;
-    struct sockaddr_un un;
-  } addr;
-  socklen_t addr_len;
-  int err;
-
-  if (output_fd < 0)
-    return FALSE;
-
-  /* Namespaced journals start with `/run/systemd/journal.${name}/` (see
-   * `RuntimeDirectory=systemd/journal.%i` in `systemd-journald@.service`. The
-   * default journal starts with `/run/systemd/journal/`. */
-  addr_len = sizeof(addr);
-  err = getpeername (output_fd, &addr.sa, &addr_len);
-  if (err == 0 && addr.storage.ss_family == AF_UNIX)
-    return (g_str_has_prefix (addr.un.sun_path, "/run/systemd/journal/") ||
-            g_str_has_prefix (addr.un.sun_path, "/run/systemd/journal."));
-#endif
-
+  return _g_fd_is_journal (output_fd);
+#else
   return FALSE;
+#endif
 }
 
 static void escape_string (GString *string);
@@ -2274,11 +2255,13 @@ g_log_writer_format_fields (GLogLevelFlags   log_level,
   gsize i;
   const gchar *message = NULL;
   const gchar *log_domain = NULL;
+  gssize message_length = -1;
+  gssize log_domain_length = -1;
   gchar level_prefix[STRING_BUFFER_SIZE];
   GString *gstring;
   gint64 now;
   time_t now_secs;
-  struct tm *now_tm;
+  struct tm now_tm;
   gchar time_buf[128];
 
   /* Extract some common fields. */
@@ -2287,9 +2270,15 @@ g_log_writer_format_fields (GLogLevelFlags   log_level,
       const GLogField *field = &fields[i];
 
       if (g_strcmp0 (field->key, "MESSAGE") == 0)
-        message = field->value;
+        {
+          message = field->value;
+          message_length = field->length;
+        }
       else if (g_strcmp0 (field->key, "GLIB_DOMAIN") == 0)
-        log_domain = field->value;
+        {
+          log_domain = field->value;
+          log_domain_length = field->length;
+        }
     }
 
   /* Format things. */
@@ -2315,7 +2304,7 @@ g_log_writer_format_fields (GLogLevelFlags   log_level,
 
   if (log_domain != NULL)
     {
-      g_string_append (gstring, log_domain);
+      g_string_append_len (gstring, log_domain, log_domain_length);
       g_string_append_c (gstring, '-');
     }
   g_string_append (gstring, level_prefix);
@@ -2325,9 +2314,8 @@ g_log_writer_format_fields (GLogLevelFlags   log_level,
   /* Timestamp */
   now = g_get_real_time ();
   now_secs = (time_t) (now / 1000000);
-  now_tm = localtime (&now_secs);
-  if (G_LIKELY (now_tm != NULL))
-    strftime (time_buf, sizeof (time_buf), "%H:%M:%S", now_tm);
+  if (_g_localtime (now_secs, &now_tm))
+    strftime (time_buf, sizeof (time_buf), "%H:%M:%S", &now_tm);
   else
     strcpy (time_buf, "(error)");
 
@@ -2345,7 +2333,7 @@ g_log_writer_format_fields (GLogLevelFlags   log_level,
       GString *msg;
       const gchar *charset;
 
-      msg = g_string_new (message);
+      msg = g_string_new_len (message, message_length);
       escape_string (msg);
 
       if (g_get_console_charset (&charset))
@@ -3151,6 +3139,7 @@ _g_log_fallback_handler (const gchar   *log_domain,
   write_string (stream, level_prefix);
   write_string (stream, ": ");
   write_string (stream, message);
+  write_string (stream, "\n");
 }
 
 static void
@@ -3252,7 +3241,7 @@ void
 g_log_default_handler (const gchar   *log_domain,
                        GLogLevelFlags log_level,
                        const gchar   *message,
-               gpointer       unused_data)
+                       gpointer       unused_data)
 {
   GLogField fields[4];
   int n_fields = 0;
@@ -3297,29 +3286,95 @@ g_log_default_handler (const gchar   *log_domain,
 
 /**
  * g_set_print_handler:
- * @func: the new print handler
+ * @func: (nullable): the new print handler or %NULL to
+ *   reset to the default
  *
- * Sets the print handler.
+ * Sets the print handler to @func, or resets it to the
+ * default GLib handler if %NULL.
  *
  * Any messages passed to g_print() will be output via
- * the new handler. The default handler simply outputs
- * the message to stdout. By providing your own handler
- * you can redirect the output, to a GTK+ widget or a
+ * the new handler. The default handler outputs
+ * the encoded message to stdout. By providing your own handler
+ * you can redirect the output, to a GTK widget or a
  * log file for example.
  *
- * Returns: the old print handler
+ * Since 2.76 this functions always returns a valid
+ * #GPrintFunc, and never returns %NULL. If no custom
+ * print handler was set, it will return the GLib
+ * default print handler and that can be re-used to
+ * decorate its output and/or to write to stderr
+ * in all platforms. Before GLib 2.76, this was %NULL.
+ *
+ * Returns: (not nullable): the old print handler
  */
 GPrintFunc
 g_set_print_handler (GPrintFunc func)
 {
-  GPrintFunc old_print_func;
+  return g_atomic_pointer_exchange (&glib_print_func,
+                                    func ? func : g_default_print_func);
+}
 
-  g_mutex_lock (&g_messages_lock);
-  old_print_func = glib_print_func;
-  glib_print_func = func;
-  g_mutex_unlock (&g_messages_lock);
+static void
+print_string (FILE        *stream,
+              const gchar *string)
+{
+  const gchar *charset;
+  int ret;
 
-  return old_print_func;
+  if (g_get_console_charset (&charset))
+    {
+      /* charset is UTF-8 already */
+      ret = fputs (string, stream);
+    }
+  else
+    {
+      gchar *converted_string = strdup_convert (string, charset);
+
+      ret = fputs (converted_string, stream);
+      g_free (converted_string);
+    }
+
+  /* In case of failure we can just return early, but there's nothing else
+   * we can do at this level
+   */
+  if (ret == EOF)
+    return;
+
+  fflush (stream);
+}
+
+G_ALWAYS_INLINE static inline const char *
+format_string (const char *format,
+               va_list     args,
+               char      **out_allocated_string)
+{
+#ifdef G_ENABLE_DEBUG
+  g_assert (out_allocated_string != NULL);
+#endif
+
+  /* If there is no formatting to be done, avoid an allocation */
+  if (strchr (format, '%') == NULL)
+    {
+      *out_allocated_string = NULL;
+      return format;
+    }
+  else
+    {
+      *out_allocated_string = g_strdup_vprintf (format, args);
+      return *out_allocated_string;
+    }
+}
+
+static void
+g_default_print_func (const gchar *string)
+{
+  print_string (stdout, string);
+}
+
+static void
+g_default_printerr_func (const gchar *string)
+{
+  print_string (stderr, string);
 }
 
 /**
@@ -3328,7 +3383,7 @@ g_set_print_handler (GPrintFunc func)
  * @...: the parameters to insert into the format string
  *
  * Outputs a formatted message via the print handler.
- * The default print handler simply outputs the message to stdout, without
+ * The default print handler outputs the encoded message to stdout, without
  * appending a trailing new-line character. Typically, @format should end with
  * its own new-line character.
  *
@@ -3343,64 +3398,49 @@ g_print (const gchar *format,
          ...)
 {
   va_list args;
-  gchar *string;
+  const gchar *string;
+  gchar *free_me = NULL;
   GPrintFunc local_glib_print_func;
 
   g_return_if_fail (format != NULL);
 
   va_start (args, format);
-  string = g_strdup_vprintf (format, args);
+  string = format_string (format, args, &free_me);
   va_end (args);
 
-  g_mutex_lock (&g_messages_lock);
-  local_glib_print_func = glib_print_func;
-  g_mutex_unlock (&g_messages_lock);
-
-  if (local_glib_print_func)
-    local_glib_print_func (string);
-  else
-    {
-      const gchar *charset;
-
-      if (g_get_console_charset (&charset))
-        fputs (string, stdout); /* charset is UTF-8 already */
-      else
-        {
-          gchar *lstring = strdup_convert (string, charset);
-
-          fputs (lstring, stdout);
-          g_free (lstring);
-        }
-      fflush (stdout);
-    }
-  g_free (string);
+  local_glib_print_func = g_atomic_pointer_get (&glib_print_func);
+  local_glib_print_func (string);
+  g_free (free_me);
 }
 
 /**
  * g_set_printerr_handler:
- * @func: the new error message handler
+ * @func: (nullable): he new error message handler or %NULL
+ *  to reset to the default
  *
- * Sets the handler for printing error messages.
+ * Sets the handler for printing error messages to @func,
+ * or resets it to the default GLib handler if %NULL.
  *
  * Any messages passed to g_printerr() will be output via
- * the new handler. The default handler simply outputs the
+ * the new handler. The default handler outputs the encoded
  * message to stderr. By providing your own handler you can
- * redirect the output, to a GTK+ widget or a log file for
+ * redirect the output, to a GTK widget or a log file for
  * example.
  *
- * Returns: the old error message handler
+ * Since 2.76 this functions always returns a valid
+ * #GPrintFunc, and never returns %NULL. If no custom error
+ * print handler was set, it will return the GLib default
+ * error print handler and that can be re-used to decorate
+ * its output and/or to write to stderr in all platforms.
+ * Before GLib 2.76, this was %NULL.
+ *
+ * Returns: (not nullable): the old error message handler
  */
 GPrintFunc
 g_set_printerr_handler (GPrintFunc func)
 {
-  GPrintFunc old_printerr_func;
-
-  g_mutex_lock (&g_messages_lock);
-  old_printerr_func = glib_printerr_func;
-  glib_printerr_func = func;
-  g_mutex_unlock (&g_messages_lock);
-
-  return old_printerr_func;
+  return g_atomic_pointer_exchange (&glib_printerr_func,
+                                    func ? func : g_default_printerr_func);
 }
 
 /**
@@ -3409,7 +3449,7 @@ g_set_printerr_handler (GPrintFunc func)
  * @...: the parameters to insert into the format string
  *
  * Outputs a formatted message via the error message handler.
- * The default handler simply outputs the message to stderr, without appending
+ * The default handler outputs the encoded message to stderr, without appending
  * a trailing new-line character. Typically, @format should end with its own
  * new-line character.
  *
@@ -3422,37 +3462,19 @@ g_printerr (const gchar *format,
             ...)
 {
   va_list args;
-  gchar *string;
+  const char *string;
+  char *free_me = NULL;
   GPrintFunc local_glib_printerr_func;
 
   g_return_if_fail (format != NULL);
 
   va_start (args, format);
-  string = g_strdup_vprintf (format, args);
+  string = format_string (format, args, &free_me);
   va_end (args);
 
-  g_mutex_lock (&g_messages_lock);
-  local_glib_printerr_func = glib_printerr_func;
-  g_mutex_unlock (&g_messages_lock);
-
-  if (local_glib_printerr_func)
-    local_glib_printerr_func (string);
-  else
-    {
-      const gchar *charset;
-
-      if (g_get_console_charset (&charset))
-        fputs (string, stderr); /* charset is UTF-8 already */
-      else
-        {
-          gchar *lstring = strdup_convert (string, charset);
-
-          fputs (lstring, stderr);
-          g_free (lstring);
-        }
-      fflush (stderr);
-    }
-  g_free (string);
+  local_glib_printerr_func = g_atomic_pointer_get (&glib_printerr_func);
+  local_glib_printerr_func (string);
+  g_free (free_me);
 }
 
 /**

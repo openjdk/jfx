@@ -26,9 +26,9 @@
 
 namespace WebCore {
 
+class CSSCounterStyle;
 class RenderListItem;
-
-String listMarkerText(ListStyleType, int value);
+class StyleRuleCounterStyle;
 
 // Used to render the list item's marker.
 // The RenderListMarker always has to be a child of a RenderListItem.
@@ -47,6 +47,9 @@ public:
     void addOverflowFromListMarker();
 
     bool isImage() const final;
+
+    LayoutUnit lineLogicalOffsetForListItem() const { return m_lineLogicalOffsetForListItem; }
+    const RenderListItem* listItem() const;
 
 private:
     void willBeDestroyed() final;
@@ -75,12 +78,16 @@ private:
     struct TextRunWithUnderlyingString;
     TextRunWithUnderlyingString textRun() const;
 
+    RefPtr<CSSCounterStyle> counterStyle() const;
+    bool widthUsesMetricsOfPrimaryFont() const;
+
     String m_textWithSuffix;
     uint8_t m_textWithoutSuffixLength { 0 };
     bool m_textIsLeftToRightDirection { true };
     RefPtr<StyleImage> m_image;
     WeakPtr<RenderListItem> m_listItem;
     LayoutUnit m_lineOffsetForListItem;
+    LayoutUnit m_lineLogicalOffsetForListItem;
 };
 
 } // namespace WebCore

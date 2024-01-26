@@ -32,20 +32,21 @@
 
 namespace WebCore {
 
-enum ReasonForDismissingAlternativeText {
-    ReasonForDismissingAlternativeTextCancelled = 0,
-    ReasonForDismissingAlternativeTextIgnored,
-    ReasonForDismissingAlternativeTextAccepted
+enum class ReasonForDismissingAlternativeText : uint8_t {
+    Cancelled = 0,
+    Ignored,
+    Accepted
 };
 
-enum AlternativeTextType {
-    AlternativeTextTypeCorrection = 0,
-    AlternativeTextTypeReversion,
-    AlternativeTextTypeSpellingSuggestions,
-    AlternativeTextTypeDictationAlternatives
+enum class AlternativeTextType : uint8_t {
+    Correction = 0,
+    Reversion,
+    SpellingSuggestions,
+    GrammarSuggestions,
+    DictationAlternatives
 };
 
-enum class AutocorrectionResponse {
+enum class AutocorrectionResponse : uint8_t {
     Edited,
     Reverted,
     Accepted

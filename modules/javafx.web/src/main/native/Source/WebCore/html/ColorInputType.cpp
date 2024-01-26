@@ -35,11 +35,12 @@
 
 #include "ColorInputType.h"
 
+#include "AXObjectCache.h"
 #include "CSSPropertyNames.h"
 #include "Chrome.h"
 #include "Color.h"
 #include "ColorSerialization.h"
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "HTMLDataListElement.h"
@@ -52,6 +53,7 @@
 #include "ScriptDisallowedScope.h"
 #include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "UserGestureIndicator.h"
 
 namespace WebCore {
@@ -169,8 +171,12 @@ void ColorInputType::setValue(const String& value, bool valueChanged, TextFieldE
 
 void ColorInputType::attributeChanged(const QualifiedName& name)
 {
-    if (name == valueAttr)
+    if (name == valueAttr) {
         updateColorSwatch();
+
+        if (auto* cache = element()->document().existingAXObjectCache())
+            cache->valueChanged(element());
+    }
 
     InputType::attributeChanged(name);
 }
@@ -237,6 +243,9 @@ void ColorInputType::didChooseColor(const Color& color)
     element()->setValueFromRenderer(serializationForHTML(color));
     updateColorSwatch();
     element()->dispatchFormControlChangeEvent();
+
+    if (auto* cache = element()->document().existingAXObjectCache())
+        cache->valueChanged(element());
 }
 
 void ColorInputType::didEndChooser()

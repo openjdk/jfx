@@ -97,7 +97,9 @@ public:
 
     static Prototype* createPrototype(JSC::VM& vm, JSC::JSGlobalObject& globalObject)
     {
-        return Prototype::create(vm, &globalObject, Prototype::createStructure(vm, &globalObject, globalObject.iteratorPrototype()));
+        auto* structure = Prototype::createStructure(vm, &globalObject, globalObject.iteratorPrototype());
+        structure->setMayBePrototype(true);
+        return Prototype::create(vm, &globalObject, structure);
     }
 
     JSC::JSValue next(JSC::JSGlobalObject&);
@@ -107,7 +109,7 @@ public:
 protected:
     JSDOMIteratorBase(JSC::Structure* structure, JSWrapper& iteratedObject, IterationKind kind)
         : Base(structure, *iteratedObject.globalObject())
-        , m_iterator(iteratedObject.wrapped().createIterator())
+        , m_iterator(iteratedObject.wrapped().createIterator(iteratedObject.globalObject()->scriptExecutionContext()))
         , m_kind(kind)
     {
     }
@@ -210,7 +212,7 @@ template<typename JSIterator> JSC::JSValue iteratorForEach(JSC::JSGlobalObject& 
     if (callData.type == JSC::CallData::Type::None)
         return throwTypeError(&lexicalGlobalObject, scope, "Cannot call callback"_s);
 
-    auto iterator = thisObject.wrapped().createIterator();
+    auto iterator = thisObject.wrapped().createIterator(JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->scriptExecutionContext());
     while (auto value = iterator.next()) {
         JSC::MarkedArgumentBuffer arguments;
         appendForEachArguments<JSIterator>(lexicalGlobalObject, *thisObject.globalObject(), arguments, value);

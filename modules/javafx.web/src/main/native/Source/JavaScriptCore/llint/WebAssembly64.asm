@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 # Copyright (C) 2021 Igalia S.L. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -104,9 +104,19 @@ wasmOp(ref_is_null, WasmRefIsNull, macro(ctx)
     returni(ctx, t0)
 end)
 
+wasmOp(ref_as_non_null, WasmRefAsNonNull, macro(ctx)
+    mloadp(ctx, m_ref, t0)
+    bqeq t0, ValueNull, .nullRef
+    returnq(ctx, t0)
+
+.nullRef:
+    throwException(NullRefAsNonNull)
+end)
+
 wasmOp(get_global, WasmGetGlobal, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     loadq [t0, t1, 8], t0
     returnq(ctx, t0)
 end)
@@ -114,6 +124,7 @@ end)
 wasmOp(set_global, WasmSetGlobal, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     mloadq(ctx, m_value, t2)
     storeq t2, [t0, t1, 8]
     dispatch(ctx)
@@ -122,6 +133,7 @@ end)
 wasmOp(get_global_portable_binding, WasmGetGlobalPortableBinding, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     loadq [t0, t1, 8], t0
     loadq [t0], t0
     returnq(ctx, t0)
@@ -130,6 +142,7 @@ end)
 wasmOp(set_global_portable_binding, WasmSetGlobalPortableBinding, macro(ctx)
     loadp Wasm::Instance::m_globals[wasmInstance], t0
     wgetu(ctx, m_globalIndex, t1)
+    lshiftp 1, t1
     mloadq(ctx, m_value, t2)
     loadq [t0, t1, 8], t0
     storeq t2, [t0]
@@ -212,7 +225,7 @@ wasmOp(i32_rem_s, WasmI32RemS, macro (ctx)
         muli t1, t2
         subi t0, t2, t2
     elsif RISCV64
-        remis t1, t0
+        remis t0, t1, t2
     else
         error
     end
@@ -238,7 +251,7 @@ wasmOp(i32_rem_u, WasmI32RemU, macro (ctx)
         muli t1, t2
         subi t0, t2, t2
     elsif RISCV64
-        remi t1, t0
+        remi t0, t1, t2
     else
         error
     end
@@ -343,7 +356,7 @@ wasmOp(i64_rem_s, WasmI64RemS, macro (ctx)
         mulq t1, t2
         subq t0, t2, t2
     elsif RISCV64
-        remqs t1, t0
+        remqs t0, t1, t2
     else
         error
     end
@@ -369,7 +382,7 @@ wasmOp(i64_rem_u, WasmI64RemU, macro (ctx)
         mulq t1, t2
         subq t0, t2, t2
     elsif RISCV64
-        remq t1, t0
+        remq t0, t1, t2
     else
         error
     end
@@ -439,7 +452,6 @@ wasmOp(i64_eq, WasmI64Eq, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqeq t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -447,7 +459,6 @@ wasmOp(i64_ne, WasmI64Ne, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqneq t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -455,7 +466,6 @@ wasmOp(i64_lt_s, WasmI64LtS, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqlt t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -463,7 +473,6 @@ wasmOp(i64_le_s, WasmI64LeS, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqlteq t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -471,7 +480,6 @@ wasmOp(i64_lt_u, WasmI64LtU, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqb t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -479,7 +487,6 @@ wasmOp(i64_le_u, WasmI64LeU, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqbeq t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -487,7 +494,6 @@ wasmOp(i64_gt_s, WasmI64GtS, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqgt t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -495,7 +501,6 @@ wasmOp(i64_ge_s, WasmI64GeS, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqgteq t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -503,7 +508,6 @@ wasmOp(i64_gt_u, WasmI64GtU, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqa t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -511,7 +515,6 @@ wasmOp(i64_ge_u, WasmI64GeU, macro(ctx)
     mloadq(ctx, m_lhs, t0)
     mloadq(ctx, m_rhs, t1)
     cqaeq t0, t1, t2
-    andi 1, t2
     returni(ctx, t2)
 end)
 
@@ -1266,22 +1269,38 @@ wasmOp(i31_new, WasmI31New, macro(ctx)
     returnq(ctx, t0)
 end)
 
-wasmOp(i31_get_s, WasmI31GetS, macro(ctx)
+wasmOp(i31_get, WasmI31Get, macro(ctx)
     mloadp(ctx, m_ref, t0)
     bqeq t0, ValueNull, .throw
+    wgetu(ctx, m_isSigned, t1)
+    btiz t1, .unsigned
     lshifti 0x1, t0
     rshifti 0x1, t0
+.unsigned:
     returni(ctx, t0)
 
 .throw:
     throwException(NullI31Get)
 end)
 
-wasmOp(i31_get_u, WasmI31GetU, macro(ctx)
-    mloadp(ctx, m_ref, t0)
-    bqeq t0, ValueNull, .throw
+wasmOp(array_len, WasmArrayLen, macro(ctx)
+    mloadp(ctx, m_arrayref, t0)
+    bqeq t0, ValueNull, .nullArray
+    loadi JSWebAssemblyArray::m_size[t0], t0
     returni(ctx, t0)
 
-.throw:
-    throwException(NullI31Get)
+.nullArray:
+    throwException(NullArrayLen)
 end)
+
+wasmOp(extern_externalize, WasmExternExternalize, macro(ctx)
+    mloadp(ctx, m_reference, t0)
+    returnq(ctx, t0)
+end)
+
+if ARM64E
+    global _wasmTailCallJSEntrySlowPathTrampoline
+    _wasmTailCallJSEntrySlowPathTrampoline:
+        untagReturnAddress ws2
+        jmp ws0, JSEntryPtrTag
+end

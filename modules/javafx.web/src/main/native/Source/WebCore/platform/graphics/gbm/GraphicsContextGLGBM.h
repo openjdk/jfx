@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGL) && USE(LIBGBM) && USE(ANGLE)
+#if ENABLE(WEBGL) && USE(GBM)
 
 #include "GBMBufferSwapchain.h"
 #include "GraphicsContextGLANGLE.h"
@@ -50,12 +50,14 @@ public:
     // GraphicsContextGL overrides
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
     RefPtr<VideoFrame> paintCompositedResultsToVideoFrame() override;
 #endif
 #if ENABLE(VIDEO)
     bool copyTextureFromMedia(MediaPlayer&, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY) override;
 #endif
+    RefPtr<PixelBuffer> readCompositedResults() final;
+
 
     void setContextVisibility(bool) override;
     void prepareForDisplay() override;
@@ -65,7 +67,7 @@ public:
     bool platformInitialize() override;
 
     void prepareTexture() override;
-    bool reshapeDisplayBufferBacking() override;
+    bool reshapeDrawingBuffer() override;
 
     struct Swapchain {
         Swapchain() = default;
@@ -95,7 +97,7 @@ public:
     const EGLExtensions& eglExtensions() { return m_eglExtensions; }
 
 protected:
-    GraphicsContextGLGBM(WebCore::GraphicsContextGLAttributes&&);
+    explicit GraphicsContextGLGBM(WebCore::GraphicsContextGLAttributes&&);
 
 private:
     void allocateDrawBufferObject();
@@ -110,4 +112,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(LIBGBM) && USE(ANGLE)
+#endif // ENABLE(WEBGL) && USE(GBM)

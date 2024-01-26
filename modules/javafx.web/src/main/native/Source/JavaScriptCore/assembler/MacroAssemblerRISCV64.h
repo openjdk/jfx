@@ -653,6 +653,13 @@ public:
         m_assembler.maskRegister<32>(dest);
     }
 
+    void lshift32(Address src, RegisterID shiftAmount, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        load32(src, temp.data());
+        lshift32(temp.data(), shiftAmount, dest);
+    }
+
     void lshift64(RegisterID shiftAmount, RegisterID dest)
     {
         lshift64(dest, shiftAmount, dest);
@@ -671,6 +678,13 @@ public:
     void lshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.slliInsn(dest, src, uint32_t(imm.m_value & ((1 << 6) - 1)));
+    }
+
+    void lshift64(Address src, RegisterID shiftAmount, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        load64(src, temp.data());
+        lshift64(temp.data(), shiftAmount, dest);
     }
 
     void rshift32(RegisterID shiftAmount, RegisterID dest)
@@ -918,6 +932,23 @@ public:
         } else {
             load32(Address(src, offset.m_value), dest1);
             load32(Address(src, offset.m_value + 4), dest2);
+        }
+    }
+
+    void loadPair64(RegisterID src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(src, TrustedImm32(0), dest1, dest2);
+    }
+
+    void loadPair64(RegisterID src, TrustedImm32 offset, RegisterID dest1, RegisterID dest2)
+    {
+        ASSERT(dest1 != dest2);
+        if (src == dest1) {
+            load64(Address(src, offset.m_value + 8), dest2);
+            load64(Address(src, offset.m_value), dest1);
+        } else {
+            load64(Address(src, offset.m_value), dest1);
+            load64(Address(src, offset.m_value + 8), dest2);
         }
     }
 
@@ -1205,6 +1236,17 @@ public:
         store32(src2, Address(dest, offset.m_value + 4));
     }
 
+    void storePair64(RegisterID src1, RegisterID src2, RegisterID dest)
+    {
+        storePair64(src1, src2, dest, TrustedImm32(0));
+    }
+
+    void storePair64(RegisterID src1, RegisterID src2, RegisterID dest, TrustedImm32 offset)
+    {
+        store64(src1, Address(dest, offset.m_value));
+        store64(src2, Address(dest, offset.m_value + 8));
+    }
+
     void zeroExtend8To32(RegisterID src, RegisterID dest)
     {
         m_assembler.slliInsn<56>(dest, src);
@@ -1237,12 +1279,44 @@ public:
         m_assembler.srliInsn<32>(dest, dest);
     }
 
+    void zeroExtend8To64(RegisterID src, RegisterID dest)
+    {
+        zeroExtend8To32(src, dest);
+    }
+
+    void zeroExtend16To64(RegisterID src, RegisterID dest)
+    {
+        zeroExtend16To32(src, dest);
+    }
+
+    void signExtend8To64(RegisterID src, RegisterID dest)
+    {
+        signExtend8To32(src, dest);
+        signExtend32To64(dest, dest);
+    }
+
+    void signExtend16To64(RegisterID src, RegisterID dest)
+    {
+        signExtend16To32(src, dest);
+        signExtend32To64(dest, dest);
+    }
+
     void signExtend32ToPtr(RegisterID src, RegisterID dest)
+    {
+        signExtend32To64(src, dest);
+    }
+
+    void signExtend32ToPtr(TrustedImm32 imm, RegisterID dest)
+    {
+        signExtend32To64(imm, dest);
+    }
+
+    void signExtend32To64(RegisterID src, RegisterID dest)
     {
         m_assembler.addiwInsn(dest, src, Imm::I<0>());
     }
 
-    void signExtend32ToPtr(TrustedImm32 imm, RegisterID dest)
+    void signExtend32To64(TrustedImm32 imm, RegisterID dest)
     {
         loadImmediate(imm, dest);
     }
@@ -1677,8 +1751,10 @@ public:
         move(temp.data(), reg2);
     }
 
-    void swap(FPRegisterID reg1, FPRegisterID reg2)
+    void swapDouble(FPRegisterID reg1, FPRegisterID reg2)
     {
+        if (reg1 == reg2)
+            return;
         moveDouble(reg1, fpTempRegister);
         moveDouble(reg2, reg1);
         moveDouble(fpTempRegister, reg2);
@@ -1724,10 +1800,88 @@ public:
         m_assembler.fmvInsn<RISCV64Assembler::FMVType::D, RISCV64Assembler::FMVType::X>(dest, src);
     }
 
+    static bool supportsCountPopulation() { return false; }
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(countPopulation32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(countPopulation64);
+
+    // The RISC-V V vector extension is not yet standardized
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveVector);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(loadVector);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(storeVector);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorReplaceLaneInt64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorReplaceLaneInt32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorReplaceLaneInt16);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorReplaceLaneInt8);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorReplaceLaneFloat64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorReplaceLaneFloat32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneInt64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneInt32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneSignedInt16);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneUnsignedInt16);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneSignedInt8);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneUnsignedInt8);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneFloat64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtractLaneFloat32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDupElementInt8);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDupElementInt16);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDupElementInt32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDupElementInt64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDupElementFloat32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDupElementFloat64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatInt8);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatInt16);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatInt32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatInt64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatFloat32);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSplatFloat64);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(compareFloatingPointVector);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(compareIntegerVector);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(compareIntegerVectorWithZero);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAdd);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSub);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAddSat);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSubSat);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorMul);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDiv);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorMin);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorMax);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorPmin);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorPmax);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorNarrow);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorBitwiseSelect);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorNot);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAnd);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAndnot);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorOr);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorXor);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAbs);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorNeg);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorPopcnt);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorCeil);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorFloor);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorTrunc);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorTruncSat);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorConvert);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorConvertLow);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorNearest);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSqrt);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtendLow);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtendHigh);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorPromote);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDemote);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAnyTrue);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAllTrue);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorBitmask);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorExtaddPairwise);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorAvgRound);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorMulSat);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorDotProduct);
+    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(vectorSwizzle);
+
     template<PtrTag resultTag, PtrTag locationTag>
-    static FunctionPtr<resultTag> readCallTarget(CodeLocationCall<locationTag> call)
+    static CodePtr<resultTag> readCallTarget(CodeLocationCall<locationTag> call)
     {
-        return FunctionPtr<resultTag>(MacroAssemblerCodePtr<resultTag>(Assembler::readCallTarget(call.dataLocation())));
+        return CodePtr<resultTag>(Assembler::readCallTarget(call.dataLocation()));
     }
 
     template<PtrTag tag>
@@ -1765,24 +1919,24 @@ public:
     }
 
     template<PtrTag tag>
-    static void linkCall(void* code, Call call, FunctionPtr<tag> function)
+    static void linkCall(void* code, Call call, CodePtr<tag> function)
     {
         if (!call.isFlagSet(Call::Near))
-            Assembler::linkPointer(code, call.m_label, function.executableAddress());
+            Assembler::linkPointer(code, call.m_label, function.taggedPtr());
         else
-            Assembler::linkCall(code, call.m_label, function.template retaggedExecutableAddress<NoPtrTag>());
+            Assembler::linkCall(code, call.m_label, function.untaggedPtr());
     }
 
     template<PtrTag callTag, PtrTag destTag>
     static void repatchCall(CodeLocationCall<callTag> call, CodeLocationLabel<destTag> destination)
     {
-        Assembler::repatchPointer(call.dataLocation(), destination.executableAddress());
+        Assembler::repatchPointer(call.dataLocation(), destination.taggedPtr());
     }
 
     template<PtrTag callTag, PtrTag destTag>
-    static void repatchCall(CodeLocationCall<callTag> call, FunctionPtr<destTag> destination)
+    static void repatchCall(CodeLocationCall<callTag> call, CodePtr<destTag> destination)
     {
-        Assembler::repatchPointer(call.dataLocation(), destination.executableAddress());
+        Assembler::repatchPointer(call.dataLocation(), destination.taggedPtr());
     }
 
     Jump jump()
@@ -1883,6 +2037,16 @@ public:
                 m_assembler.jalInsn(RISCV64Registers::x1, Imm::J<0>());
             });
         return Call(label, Call::LinkableNear);
+    }
+
+    Call threadSafePatchableNearTailCall()
+    {
+        auto label = m_assembler.label();
+        m_assembler.nearCallPlaceholder(
+            [&] {
+                m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<0>());
+            });
+        return Call(label, Call::LinkableNearTail);
     }
 
     void ret()
@@ -2755,9 +2919,25 @@ public:
         return branchFP<32>(cond, lhs, rhs);
     }
 
+    Jump branchFloatWithZero(DoubleCondition cond, FPRegisterID left)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNREACHABLE_FOR_PLATFORM();
+        return { };
+    }
+
     Jump branchDouble(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs)
     {
         return branchFP<64>(cond, lhs, rhs);
+    }
+
+    Jump branchDoubleWithZero(DoubleCondition cond, FPRegisterID left)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNREACHABLE_FOR_PLATFORM();
+        return { };
     }
 
     Jump branchDoubleNonZero(FPRegisterID reg, FPRegisterID)
@@ -2835,10 +3015,10 @@ public:
     Call call(RegisterID target, RegisterID callTag) { UNUSED_PARAM(callTag); return call(target, NoPtrTag); }
     Call call(Address address, RegisterID callTag) { UNUSED_PARAM(callTag); return call(address, NoPtrTag); }
 
-    void callOperation(const FunctionPtr<OperationPtrTag> operation)
+    void callOperation(const CodePtr<OperationPtrTag> operation)
     {
         auto temp = temps<Data>();
-        loadImmediate(TrustedImmPtr(operation.executableAddress()), temp.data());
+        loadImmediate(TrustedImmPtr(operation.taggedPtr()), temp.data());
         m_assembler.jalrInsn(RISCV64Registers::x1, temp.data(), Imm::I<0>());
     }
 
@@ -3120,6 +3300,22 @@ public:
     void compareDouble(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs, RegisterID dest)
     {
         compareFP<64>(cond, lhs, rhs, dest);
+    }
+
+    void compareDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+
+    void compareFloatWithZero(DoubleCondition cond, FPRegisterID left, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
     }
 
     void convertInt32ToFloat(RegisterID src, FPRegisterID dest)
@@ -3435,6 +3631,38 @@ public:
         return failure;
     }
 
+    void atomicLoad32(Address address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        memoryFence();
+        m_assembler.lwInsn(dest, resolution.base, Imm::I(resolution.offset));
+        loadFence();
+    }
+
+    void atomicLoad32(BaseIndex address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        memoryFence();
+        m_assembler.lwInsn(dest, resolution.base, Imm::I(resolution.offset));
+        loadFence();
+    }
+
+    void atomicLoad64(Address address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        memoryFence();
+        m_assembler.ldInsn(dest, resolution.base, Imm::I(resolution.offset));
+        loadFence();
+    }
+
+    void atomicLoad64(BaseIndex address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        memoryFence();
+        m_assembler.ldInsn(dest, resolution.base, Imm::I(resolution.offset));
+        loadFence();
+    }
+
     void moveConditionally32(RelationalCondition cond, RegisterID lhs, RegisterID rhs, RegisterID src, RegisterID dest)
     {
         auto temp = temps<Data, Memory>();
@@ -3510,6 +3738,25 @@ public:
         end.link(this);
     }
 
+    void moveConditionallyFloatWithZero(DoubleCondition cond, FPRegisterID left, RegisterID src, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(src);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+
+    void moveConditionallyFloatWithZero(DoubleCondition cond, FPRegisterID left, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(thenCase);
+        UNUSED_PARAM(elseCase);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+
     void moveConditionallyDouble(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs, RegisterID src, RegisterID dest)
     {
         Jump invcondBranch = branchFP<64, true>(cond, lhs, rhs);
@@ -3525,6 +3772,25 @@ public:
         invcondBranch.link(this);
         m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
         end.link(this);
+    }
+
+    void moveConditionallyDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID src, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(src);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+
+    void moveConditionallyDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(thenCase);
+        UNUSED_PARAM(elseCase);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
     }
 
     void moveConditionallyTest32(ResultCondition cond, RegisterID value, RegisterID mask, RegisterID src, RegisterID dest)
@@ -3660,6 +3926,26 @@ public:
         invcondBranch.link(this);
         m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
         end.link(this);
+    }
+
+    void moveDoubleConditionallyFloatWithZero(DoubleCondition cond, FPRegisterID left, FPRegisterID thenCase, FPRegisterID elseCase, FPRegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(thenCase);
+        UNUSED_PARAM(elseCase);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
+    }
+
+    void moveDoubleConditionallyDoubleWithZero(DoubleCondition cond, FPRegisterID left, FPRegisterID thenCase, FPRegisterID elseCase, FPRegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(thenCase);
+        UNUSED_PARAM(elseCase);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
     }
 
     void moveDoubleConditionallyTest32(ResultCondition cond, RegisterID value, RegisterID mask, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)

@@ -2,6 +2,8 @@
  * Copyright (C) 2000-2001 Red Hat, Inc.
  * Copyright (C) 2005 Imendio AB
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -188,7 +190,7 @@ enum {
  * }
  * ]|
  *
- * Returns: (transfer none): a floating reference to a new #GClosure
+ * Returns: (transfer floating): a floating reference to a new #GClosure
  */
 GClosure*
 g_closure_new_simple (guint           sizeof_closure,
@@ -754,7 +756,7 @@ g_closure_remove_invalidate_notifier (GClosure      *closure,
       closure->data == notify_data)
     closure->marshal = NULL;
   else if (!closure_try_remove_inotify (closure, notify_data, notify_func))
-    g_warning (G_STRLOC ": unable to remove uninstalled invalidation notifier: %p (%p)",
+    g_critical (G_STRLOC ": unable to remove uninstalled invalidation notifier: %p (%p)",
          notify_func, notify_data);
 }
 
@@ -782,8 +784,8 @@ g_closure_remove_finalize_notifier (GClosure      *closure,
       closure->data == notify_data)
     closure->marshal = NULL;
   else if (!closure_try_remove_fnotify (closure, notify_data, notify_func))
-    g_warning (G_STRLOC ": unable to remove uninstalled finalization notifier: %p (%p)",
-               notify_func, notify_data);
+    g_critical (G_STRLOC ": unable to remove uninstalled finalization notifier: %p (%p)",
+                notify_func, notify_data);
 }
 
 /**
@@ -935,7 +937,7 @@ g_closure_set_marshal (GClosure       *closure,
   g_return_if_fail (marshal != NULL);
 
   if (closure->marshal && closure->marshal != marshal)
-    g_warning ("attempt to override closure->marshal (%p) with new marshal (%p)",
+    g_critical ("attempt to override closure->marshal (%p) with new marshal (%p)",
          closure->marshal, marshal);
   else
     closure->marshal = marshal;
@@ -953,7 +955,7 @@ _g_closure_set_va_marshal (GClosure       *closure,
   real_closure = G_REAL_CLOSURE (closure);
 
   if (real_closure->va_marshal && real_closure->va_marshal != marshal)
-    g_warning ("attempt to override closure->va_marshal (%p) with new marshal (%p)",
+    g_critical ("attempt to override closure->va_marshal (%p) with new marshal (%p)",
          real_closure->va_marshal, marshal);
   else
     real_closure->va_marshal = marshal;
@@ -970,7 +972,7 @@ _g_closure_set_va_marshal (GClosure       *closure,
  *
  * @destroy_data will be called as a finalize notifier on the #GClosure.
  *
- * Returns: (transfer none): a floating reference to a new #GCClosure
+ * Returns: (transfer floating): a floating reference to a new #GCClosure
  */
 GClosure*
 g_cclosure_new (GCallback      callback_func,
@@ -1004,7 +1006,7 @@ g_cclosure_new (GCallback      callback_func,
  *
  * @destroy_data will be called as a finalize notifier on the #GClosure.
  *
- * Returns: (transfer none): a floating reference to a new #GCClosure
+ * Returns: (transfer floating): a floating reference to a new #GCClosure
  */
 GClosure*
 g_cclosure_new_swap (GCallback      callback_func,
@@ -1176,7 +1178,7 @@ g_type_iface_meta_marshalv (GClosure *closure,
  * @struct_offset in the class structure of the interface or classed type
  * identified by @itype.
  *
- * Returns: (transfer none): a floating reference to a new #GCClosure
+ * Returns: (transfer floating): a floating reference to a new #GCClosure
  */
 GClosure*
 g_signal_type_cclosure_new (GType    itype,
@@ -1288,7 +1290,7 @@ value_to_ffi_type (const GValue *gvalue,
     default:
       rettype = &ffi_type_pointer;
       *value = NULL;
-      g_warning ("value_to_ffi_type: Unsupported fundamental type: %s", g_type_name (type));
+      g_critical ("value_to_ffi_type: Unsupported fundamental type: %s", g_type_name (type));
       break;
     }
   return rettype;
@@ -1368,9 +1370,9 @@ restart:
         goto restart;
       G_GNUC_FALLTHROUGH;
     default:
-      g_warning ("value_from_ffi_type: Unsupported fundamental type %s for type %s",
-                 g_type_name (g_type_fundamental (G_VALUE_TYPE (gvalue))),
-                 g_type_name (G_VALUE_TYPE (gvalue)));
+      g_critical ("value_from_ffi_type: Unsupported fundamental type %s for type %s",
+                  g_type_name (g_type_fundamental (G_VALUE_TYPE (gvalue))),
+                  g_type_name (G_VALUE_TYPE (gvalue)));
     }
 }
 
@@ -1448,7 +1450,7 @@ va_to_ffi_type (GType gtype,
     default:
       rettype = &ffi_type_pointer;
       storage->_guint64  = 0;
-      g_warning ("va_to_ffi_type: Unsupported fundamental type: %s", g_type_name (type));
+      g_critical ("va_to_ffi_type: Unsupported fundamental type: %s", g_type_name (type));
       break;
     }
   return rettype;
@@ -1628,7 +1630,7 @@ g_cclosure_marshal_generic_va (GClosure *closure,
       args[n_args-1] = &closure->data;
     }
 
-  G_VA_COPY (args_copy, args_list);
+  va_copy (args_copy, args_list);
 
   /* Box non-primitive arguments */
   for (i = 0; i < n_params; i++)

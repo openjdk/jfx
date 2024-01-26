@@ -38,7 +38,9 @@ public:
 private:
     void startMonitoringGamepads(GamepadProviderClient&) final;
     void stopMonitoringGamepads(GamepadProviderClient&) final;
-    const Vector<PlatformGamepad*>& platformGamepads() final;
+    const Vector<WeakPtr<PlatformGamepad>>& platformGamepads() final;
+    void playEffect(unsigned, const String&, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&&) final;
+    void stopEffects(unsigned, const String&, CompletionHandler<void()>&&) final;
 };
 
 }

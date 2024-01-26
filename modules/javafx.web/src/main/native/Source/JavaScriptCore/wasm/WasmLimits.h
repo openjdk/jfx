@@ -45,15 +45,20 @@ constexpr size_t maxExceptions = 100000;
 constexpr size_t maxGlobals = 1000000;
 constexpr size_t maxDataSegments = 100000;
 constexpr size_t maxStructFieldCount = 10000;
+constexpr size_t maxArrayNewFixedArgs = 10000;
+constexpr size_t maxRecursionGroupCount = 10000;
+constexpr size_t maxSubtypeSupertypeCount = 1;
 
 constexpr size_t maxStringSize = 100000;
 constexpr size_t maxModuleSize = 1024 * 1024 * 1024;
 constexpr size_t maxFunctionSize = 7654321;
 constexpr size_t maxFunctionLocals = 50000;
 constexpr size_t maxFunctionParams = 1000;
+constexpr size_t maxFunctionReturns = 1000;
 
 constexpr size_t maxTableEntries = 10000000;
 constexpr unsigned maxTables = 1000000;
+
 
 } } // namespace JSC::Wasm
 

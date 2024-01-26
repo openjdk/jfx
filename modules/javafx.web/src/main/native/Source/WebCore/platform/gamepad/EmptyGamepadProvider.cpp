@@ -28,6 +28,7 @@
 
 #if ENABLE(GAMEPAD)
 
+#include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Vector.h>
 
@@ -41,10 +42,20 @@ void EmptyGamepadProvider::stopMonitoringGamepads(GamepadProviderClient&)
 {
 }
 
-const Vector<PlatformGamepad*>& EmptyGamepadProvider::platformGamepads()
+const Vector<WeakPtr<PlatformGamepad>>& EmptyGamepadProvider::platformGamepads()
 {
-    static NeverDestroyed<Vector<PlatformGamepad*>> emptyGamepads;
+    static NeverDestroyed<Vector<WeakPtr<PlatformGamepad>>> emptyGamepads;
     return emptyGamepads;
+}
+
+void EmptyGamepadProvider::playEffect(unsigned, const String&, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&& completionHandler)
+{
+    completionHandler(false);
+}
+
+void EmptyGamepadProvider::stopEffects(unsigned, const String&, CompletionHandler<void()>&& completionHandler)
+{
+    completionHandler();
 }
 
 }

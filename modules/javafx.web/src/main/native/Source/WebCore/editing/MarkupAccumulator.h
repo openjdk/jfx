@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,38 +40,40 @@ class Range;
 
 typedef HashMap<AtomString, AtomStringImpl*> Namespaces;
 
-enum EntityMask {
-    EntityAmp = 0x0001,
-    EntityLt = 0x0002,
-    EntityGt = 0x0004,
-    EntityQuot = 0x0008,
-    EntityNbsp = 0x0010,
-    EntityTab = 0x0020,
-    EntityLineFeed = 0x0040,
-    EntityCarriageReturn = 0x0080,
+enum class EntityMask : uint8_t {
+    Amp = 1 << 0,
+    Lt = 1 << 1,
+    Gt = 1 << 2,
+    Quot = 1 << 3,
+    Nbsp = 1 << 4,
+    Tab = 1 << 5,
+    LineFeed = 1 << 6,
+    CarriageReturn = 1 << 7,
 
     // Non-breaking space needs to be escaped in innerHTML for compatibility reason. See http://trac.webkit.org/changeset/32879
     // However, we cannot do this in a XML document because it does not have the entity reference defined (See the bug 19215).
-    EntityMaskInCDATA = 0,
-    EntityMaskInPCDATA = EntityAmp | EntityLt | EntityGt,
-    EntityMaskInHTMLPCDATA = EntityMaskInPCDATA | EntityNbsp,
-    EntityMaskInAttributeValue = EntityAmp | EntityLt | EntityGt | EntityQuot | EntityTab | EntityLineFeed | EntityCarriageReturn,
-    EntityMaskInHTMLAttributeValue = EntityAmp | EntityQuot | EntityNbsp,
 };
+
+constexpr OptionSet<EntityMask> EntityMaskInCDATA = { };
+constexpr OptionSet<EntityMask> EntityMaskInPCDATA = { EntityMask::Amp, EntityMask::Lt, EntityMask::Gt };
+constexpr auto EntityMaskInHTMLPCDATA = EntityMaskInPCDATA | EntityMask::Nbsp;
+constexpr OptionSet<EntityMask> EntityMaskInAttributeValue = { EntityMask::Amp, EntityMask::Lt, EntityMask::Gt,
+    EntityMask::Quot, EntityMask::Tab, EntityMask::LineFeed, EntityMask::CarriageReturn };
+constexpr auto EntityMaskInHTMLAttributeValue = { EntityMask::Amp, EntityMask::Quot, EntityMask::Nbsp };
 
 class MarkupAccumulator {
     WTF_MAKE_NONCOPYABLE(MarkupAccumulator);
 public:
-    MarkupAccumulator(Vector<Node*>*, ResolveURLs, SerializationSyntax = SerializationSyntax::HTML);
+    MarkupAccumulator(Vector<Node*>*, ResolveURLs, SerializationSyntax);
     virtual ~MarkupAccumulator();
 
     String serializeNodes(Node& targetNode, SerializedNodes, Vector<QualifiedName>* tagNamesToSkip = nullptr);
 
-    static void appendCharactersReplacingEntities(StringBuilder&, const String&, unsigned, unsigned, EntityMask);
+    static void appendCharactersReplacingEntities(StringBuilder&, const String&, unsigned, unsigned, OptionSet<EntityMask>);
 
 protected:
     unsigned length() const { return m_markup.length(); }
-    bool isAllASCII() const { return m_markup.isAllASCII(); }
+    bool containsOnlyASCII() const { return m_markup.containsOnlyASCII(); }
 
     StringBuilder takeMarkup();
 
@@ -93,14 +95,13 @@ protected:
     static void appendAttributeValue(StringBuilder&, const String&, bool isSerializingHTML);
     void appendAttribute(StringBuilder&, const Element&, const Attribute&, Namespaces*);
 
-    EntityMask entityMaskForText(const Text&) const;
+    OptionSet<EntityMask> entityMaskForText(const Text&) const;
 
     Vector<Node*>* const m_nodes;
 
 private:
     void appendNamespace(StringBuilder&, const AtomString& prefix, const AtomString& namespaceURI, Namespaces&, bool allowEmptyDefaultNS = false);
     String resolveURLIfNeeded(const Element&, const String&) const;
-    void appendQuotedURLAttributeValue(StringBuilder&, const Element&, const Attribute&);
     void serializeNodesWithNamespaces(Node& targetNode, SerializedNodes, const Namespaces*, Vector<QualifiedName>* tagNamesToSkip);
     bool inXMLFragmentSerialization() const { return m_serializationSyntax == SerializationSyntax::XML; }
     void generateUniquePrefix(QualifiedName&, const Namespaces&);

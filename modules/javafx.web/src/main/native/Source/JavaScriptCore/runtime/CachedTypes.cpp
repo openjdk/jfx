@@ -30,6 +30,7 @@
 #include "BuiltinNames.h"
 #include "BytecodeCacheError.h"
 #include "BytecodeLivenessAnalysis.h"
+#include "JSCBytecodeCacheVersion.h"
 #include "JSCInlines.h"
 #include "JSImmutableButterfly.h"
 #include "JSTemplateObjectDescriptor.h"
@@ -50,7 +51,7 @@
 namespace JSC {
 
 namespace Yarr {
-enum class Flags : uint8_t;
+enum class Flags : uint16_t;
 }
 
 template <typename T, typename = void>
@@ -66,11 +67,6 @@ struct SourceTypeImpl<T, std::enable_if_t<!std::is_fundamental<T>::value && !std
 
 template<typename T>
 using SourceType = typename SourceTypeImpl<T>::type;
-
-static constexpr unsigned jscBytecodeCacheVersion()
-{
-    return StringHasher::computeHash(__TIMESTAMP__);
-}
 
 class Encoder {
     WTF_MAKE_NONCOPYABLE(Encoder);
@@ -358,38 +354,29 @@ RefPtr<SourceProvider> Decoder::provider() const
 }
 
 template<typename T>
-static std::enable_if_t<std::is_same<T, SourceType<T>>::value> encode(Encoder&, T& dst, const SourceType<T>& src)
+static void encode(Encoder& encoder, T& dst, const SourceType<T>& src)
 {
+    if constexpr (std::is_same_v<T, SourceType<T>>)
     dst = src;
-}
-
-template<typename T>
-static std::enable_if_t<!std::is_same<T, SourceType<T>>::value> encode(Encoder& encoder, T& dst, const SourceType<T>& src)
-{
+    else
     dst.encode(encoder, src);
 }
 
 template<typename T, typename... Args>
-static std::enable_if_t<std::is_same<T, SourceType<T>>::value> decode(Decoder&, const T& src, SourceType<T>& dst, Args...)
+static void decode(Decoder& decoder, const T& src, SourceType<T>& dst, Args... args)
 {
+    if constexpr (std::is_same_v<T, SourceType<T>>)
     dst = src;
-}
-
-template<typename T, typename... Args>
-static std::enable_if_t<!std::is_same<T, SourceType<T>>::value> decode(Decoder& decoder, const T& src, SourceType<T>& dst, Args... args)
-{
+    else
     src.decode(decoder, dst, args...);
 }
 
 template<typename T>
-static std::enable_if_t<std::is_same<T, SourceType<T>>::value, T> decode(Decoder&, T src)
+static T decode(Decoder& decoder, T src)
 {
+    if constexpr (std::is_same_v<T, SourceType<T>>)
     return src;
-}
-
-template<typename T>
-static std::enable_if_t<!std::is_same<T, SourceType<T>>::value, SourceType<T>>&& decode(Decoder& decoder, const T& src)
-{
+    else
     return src.decode(decoder);
 }
 
@@ -600,7 +587,7 @@ ptrdiff_t CachedWriteBarrierOffsets::ptrOffset()
     return OBJECT_OFFSETOF(CachedWriteBarrier<void>, m_ptr);
 }
 
-template<typename T, size_t InlineCapacity = 0, typename OverflowHandler = CrashOnOverflow, typename Malloc = WTF::VectorMalloc>
+template<typename T, size_t InlineCapacity = 0, typename OverflowHandler = CrashOnOverflow, typename Malloc = WTF::VectorBufferMalloc>
 class CachedVector : public VariableLengthObject<Vector<SourceType<T>, InlineCapacity, OverflowHandler, 16, Malloc>> {
 public:
     template<typename VectorContainer>
@@ -1191,7 +1178,7 @@ public:
     {
         m_map.encode(encoder, symbolTable.m_map);
         m_maxScopeOffset = symbolTable.m_maxScopeOffset;
-        m_usesNonStrictEval = symbolTable.m_usesNonStrictEval;
+        m_usesSloppyEval = symbolTable.m_usesSloppyEval;
         m_nestedLexicalScope = symbolTable.m_nestedLexicalScope;
         m_scopeType = symbolTable.m_scopeType;
         m_arguments.encode(encoder, symbolTable.m_arguments.get());
@@ -1203,7 +1190,7 @@ public:
         SymbolTable* symbolTable = SymbolTable::create(decoder.vm());
         m_map.decode(decoder, symbolTable->m_map);
         symbolTable->m_maxScopeOffset = m_maxScopeOffset;
-        symbolTable->m_usesNonStrictEval = m_usesNonStrictEval;
+        symbolTable->m_usesSloppyEval = m_usesSloppyEval;
         symbolTable->m_nestedLexicalScope = m_nestedLexicalScope;
         symbolTable->m_scopeType = m_scopeType;
         ScopedArgumentsTable* scopedArgumentsTable = m_arguments.decode(decoder);
@@ -1220,7 +1207,7 @@ public:
 private:
     CachedHashMap<CachedRefPtr<CachedUniquedStringImpl>, CachedSymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, SymbolTableIndexHashTraits> m_map;
     ScopeOffset m_maxScopeOffset;
-    unsigned m_usesNonStrictEval : 1;
+    unsigned m_usesSloppyEval : 1;
     unsigned m_nestedLexicalScope : 1;
     unsigned m_scopeType : 3;
     CachedPtr<CachedScopedArgumentsTable> m_arguments;
@@ -1540,6 +1527,7 @@ public:
     {
         m_sourceOrigin.encode(encoder, sourceProvider.sourceOrigin());
         m_sourceURL.encode(encoder, sourceProvider.sourceURL());
+        m_preRedirectURL.encode(encoder, sourceProvider.preRedirectURL());
         m_sourceURLDirective.encode(encoder, sourceProvider.sourceURLDirective());
         m_sourceMappingURLDirective.encode(encoder, sourceProvider.sourceMappingURLDirective());
         m_startPosition.encode(encoder, sourceProvider.startPosition());
@@ -1554,6 +1542,7 @@ public:
 protected:
     CachedSourceOrigin m_sourceOrigin;
     CachedString m_sourceURL;
+    CachedString m_preRedirectURL;
     CachedString m_sourceURLDirective;
     CachedString m_sourceMappingURLDirective;
     CachedTextPosition m_startPosition;
@@ -1788,14 +1777,13 @@ public:
 
     unsigned firstLineOffset() const { return m_firstLineOffset; }
     unsigned lineCount() const { return m_lineCount; }
-    unsigned unlinkedFunctionNameStart() const { return m_unlinkedFunctionNameStart; }
+    unsigned unlinkedFunctionStart() const { return m_unlinkedFunctionStart; }
     unsigned unlinkedBodyStartColumn() const { return m_unlinkedBodyStartColumn; }
     unsigned unlinkedBodyEndColumn() const { return m_unlinkedBodyEndColumn; }
     unsigned startOffset() const { return m_startOffset; }
     unsigned sourceLength() const { return m_sourceLength; }
     unsigned parametersStartOffset() const { return m_parametersStartOffset; }
-    unsigned typeProfilingStartOffset() const { return m_typeProfilingStartOffset; }
-    unsigned typeProfilingEndOffset() const { return m_typeProfilingEndOffset; }
+    unsigned unlinkedFunctionEnd() const { return m_unlinkedFunctionEnd; }
     unsigned parameterCount() const { return m_parameterCount; }
 
     CodeFeatures features() const { return m_mutableMetadata.m_features; }
@@ -1803,6 +1791,7 @@ public:
     SourceParseMode sourceParseMode() const { return m_sourceParseMode; }
 
     unsigned hasCapturedVariables() const { return m_mutableMetadata.m_hasCapturedVariables; }
+    ImplementationVisibility implementationVisibility() const { return static_cast<ImplementationVisibility>(m_implementationVisibility); }
     unsigned isBuiltinFunction() const { return m_isBuiltinFunction; }
     unsigned isBuiltinDefaultClassConstructor() const { return m_isBuiltinDefaultClassConstructor; }
     unsigned constructAbility() const { return m_constructAbility; }
@@ -1828,7 +1817,7 @@ private:
     unsigned m_firstLineOffset : 31;
     unsigned m_lineCount : 31;
     unsigned m_isBuiltinFunction : 1;
-    unsigned m_unlinkedFunctionNameStart : 31;
+    unsigned m_unlinkedFunctionStart : 31;
     unsigned m_isBuiltinDefaultClassConstructor : 1;
     unsigned m_unlinkedBodyStartColumn : 31;
     unsigned m_constructAbility: 1;
@@ -1838,8 +1827,7 @@ private:
     unsigned m_sourceLength : 31;
     unsigned m_superBinding : 1;
     unsigned m_parametersStartOffset : 31;
-    unsigned m_typeProfilingStartOffset;
-    unsigned m_typeProfilingEndOffset;
+    unsigned m_unlinkedFunctionEnd;
     unsigned m_parameterCount:31;
     unsigned m_privateBrandRequirement : 1;
     SourceParseMode m_sourceParseMode;
@@ -1847,6 +1835,7 @@ private:
     unsigned m_functionMode : 2; // FunctionMode
     unsigned m_derivedContextType: 2;
     unsigned m_needsClassFieldInitializer : 1;
+    unsigned m_implementationVisibility : bitWidthOfImplementationVisibility;
 
     CachedPtr<CachedFunctionExecutableRareData> m_rareData;
 
@@ -1888,7 +1877,6 @@ public:
 
     Ref<UnlinkedMetadataTable> metadata(Decoder& decoder) const { return m_metadata.decode(decoder); }
 
-    unsigned usesCallEval() const { return m_usesCallEval; }
     unsigned isConstructor() const { return m_isConstructor; }
     unsigned hasCapturedVariables() const { return m_hasCapturedVariables; }
     unsigned isBuiltinFunction() const { return m_isBuiltinFunction; }
@@ -1925,7 +1913,6 @@ private:
     VirtualRegister m_thisRegister;
     VirtualRegister m_scopeRegister;
 
-    unsigned m_usesCallEval : 1;
     unsigned m_isConstructor : 1;
     unsigned m_hasCapturedVariables : 1;
     unsigned m_isBuiltinFunction : 1;
@@ -2127,7 +2114,6 @@ ALWAYS_INLINE UnlinkedCodeBlock::UnlinkedCodeBlock(Decoder& decoder, Structure* 
     , m_scopeRegister(cachedCodeBlock.scopeRegister())
 
     , m_numVars(cachedCodeBlock.numVars())
-    , m_usesCallEval(cachedCodeBlock.usesCallEval())
     , m_numCalleeLocals(cachedCodeBlock.numCalleeLocals())
     , m_isConstructor(cachedCodeBlock.isConstructor())
     , m_numParameters(cachedCodeBlock.numParameters())
@@ -2205,14 +2191,13 @@ ALWAYS_INLINE void CachedFunctionExecutable::encode(Encoder& encoder, const Unli
 
     m_firstLineOffset = executable.m_firstLineOffset;
     m_lineCount = executable.m_lineCount;
-    m_unlinkedFunctionNameStart = executable.m_unlinkedFunctionNameStart;
+    m_unlinkedFunctionStart = executable.m_unlinkedFunctionStart;
     m_unlinkedBodyStartColumn = executable.m_unlinkedBodyStartColumn;
     m_unlinkedBodyEndColumn = executable.m_unlinkedBodyEndColumn;
     m_startOffset = executable.m_startOffset;
     m_sourceLength = executable.m_sourceLength;
     m_parametersStartOffset = executable.m_parametersStartOffset;
-    m_typeProfilingStartOffset = executable.m_typeProfilingStartOffset;
-    m_typeProfilingEndOffset = executable.m_typeProfilingEndOffset;
+    m_unlinkedFunctionEnd = executable.m_unlinkedFunctionEnd;
     m_parameterCount = executable.m_parameterCount;
 
     m_sourceParseMode = executable.m_sourceParseMode;
@@ -2226,6 +2211,7 @@ ALWAYS_INLINE void CachedFunctionExecutable::encode(Encoder& encoder, const Unli
     m_superBinding = executable.m_superBinding;
     m_derivedContextType = executable.m_derivedContextType;
     m_needsClassFieldInitializer = executable.m_needsClassFieldInitializer;
+    m_implementationVisibility = executable.m_implementationVisibility;
     m_privateBrandRequirement = executable.m_privateBrandRequirement;
 
     m_rareData.encode(encoder, executable.m_rareData.get());
@@ -2253,7 +2239,7 @@ ALWAYS_INLINE UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(Decoder& de
     , m_isGeneratedFromCache(true)
     , m_lineCount(cachedExecutable.lineCount())
     , m_hasCapturedVariables(cachedExecutable.hasCapturedVariables())
-    , m_unlinkedFunctionNameStart(cachedExecutable.unlinkedFunctionNameStart())
+    , m_unlinkedFunctionStart(cachedExecutable.unlinkedFunctionStart())
     , m_isBuiltinFunction(cachedExecutable.isBuiltinFunction())
     , m_unlinkedBodyStartColumn(cachedExecutable.unlinkedBodyStartColumn())
     , m_isBuiltinDefaultClassConstructor(cachedExecutable.isBuiltinDefaultClassConstructor())
@@ -2265,14 +2251,14 @@ ALWAYS_INLINE UnlinkedFunctionExecutable::UnlinkedFunctionExecutable(Decoder& de
     , m_superBinding(cachedExecutable.superBinding())
     , m_parametersStartOffset(cachedExecutable.parametersStartOffset())
     , m_isCached(false)
-    , m_typeProfilingStartOffset(cachedExecutable.typeProfilingStartOffset())
+    , m_unlinkedFunctionEnd(cachedExecutable.unlinkedFunctionEnd())
     , m_needsClassFieldInitializer(cachedExecutable.needsClassFieldInitializer())
-    , m_typeProfilingEndOffset(cachedExecutable.typeProfilingEndOffset())
     , m_parameterCount(cachedExecutable.parameterCount())
     , m_privateBrandRequirement(cachedExecutable.privateBrandRequirement())
     , m_features(cachedExecutable.features())
     , m_constructorKind(cachedExecutable.constructorKind())
     , m_sourceParseMode(cachedExecutable.sourceParseMode())
+    , m_implementationVisibility(static_cast<unsigned>(cachedExecutable.implementationVisibility()))
     , m_lexicalScopeFeatures(cachedExecutable.lexicalScopeFeatures())
     , m_functionMode(cachedExecutable.functionMode())
     , m_derivedContextType(cachedExecutable.derivedContextType())
@@ -2318,7 +2304,6 @@ ALWAYS_INLINE void CachedCodeBlock<CodeBlockType>::encode(Encoder& encoder, cons
 {
     m_thisRegister = codeBlock.m_thisRegister;
     m_scopeRegister = codeBlock.m_scopeRegister;
-    m_usesCallEval = codeBlock.m_usesCallEval;
     m_isConstructor = codeBlock.m_isConstructor;
     m_hasCapturedVariables = codeBlock.m_hasCapturedVariables;
     m_isBuiltinFunction = codeBlock.m_isBuiltinFunction;
@@ -2408,7 +2393,7 @@ protected:
 
     bool isUpToDate(Decoder& decoder) const
     {
-        if (m_cacheVersion != jscBytecodeCacheVersion())
+        if (m_cacheVersion != JSCBytecodeCacheVersion)
             return false;
         if (m_bootSessionUUID.decode(decoder) != bootSessionUUIDString())
             return false;
@@ -2416,7 +2401,7 @@ protected:
     }
 
 private:
-    uint32_t m_cacheVersion { jscBytecodeCacheVersion() };
+    uint32_t m_cacheVersion { JSCBytecodeCacheVersion };
     CachedString m_bootSessionUUID;
     CachedCodeBlockTag m_tag;
 };

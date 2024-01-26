@@ -49,7 +49,7 @@ public:
     WEBCORE_EXPORT ~ScrollingStateTree();
 
     ScrollingStateFrameScrollingNode* rootStateNode() const { return m_rootStateNode.get(); }
-    WEBCORE_EXPORT ScrollingStateNode* stateNodeForID(ScrollingNodeID) const;
+    WEBCORE_EXPORT RefPtr<ScrollingStateNode> stateNodeForID(ScrollingNodeID) const;
 
     ScrollingNodeID createUnparentedNode(ScrollingNodeType, ScrollingNodeID);
     WEBCORE_EXPORT ScrollingNodeID insertNode(ScrollingNodeType, ScrollingNodeID, ScrollingNodeID parentID, size_t childIndex);
@@ -97,6 +97,9 @@ private:
 
     void recursiveNodeWillBeRemoved(ScrollingStateNode&);
     void willRemoveNode(ScrollingStateNode&);
+
+    bool isValid() const;
+    void traverse(const ScrollingStateNode&, const Function<void(const ScrollingStateNode&)>&) const;
 
     AsyncScrollingCoordinator* m_scrollingCoordinator;
     // Contains all the nodes we know about (those in the m_rootStateNode tree, and in m_unparentedNodes subtrees).

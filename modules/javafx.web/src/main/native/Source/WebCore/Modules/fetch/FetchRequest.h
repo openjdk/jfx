@@ -29,13 +29,14 @@
 #pragma once
 
 #include "AbortSignal.h"
-#include "BlobURL.h"
 #include "ExceptionOr.h"
 #include "FetchBodyOwner.h"
 #include "FetchIdentifier.h"
 #include "FetchOptions.h"
+#include "FetchRequestDestination.h"
 #include "FetchRequestInit.h"
 #include "ResourceRequest.h"
+#include "URLKeepingBlobAlive.h"
 
 namespace WebCore {
 
@@ -86,8 +87,10 @@ public:
     FetchIdentifier navigationPreloadIdentifier() const { return m_navigationPreloadIdentifier; }
     void setNavigationPreloadIdentifier(FetchIdentifier identifier) { m_navigationPreloadIdentifier = identifier; }
 
+    RequestPriority fetchPriorityHint() const { return m_fetchPriorityHint; }
+
 private:
-    FetchRequest(ScriptExecutionContext*, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceRequest&&, FetchOptions&&, String&& referrer);
+    FetchRequest(ScriptExecutionContext&, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceRequest&&, FetchOptions&&, String&& referrer);
 
     ExceptionOr<void> initializeOptions(const Init&);
     ExceptionOr<void> initializeWith(FetchRequest&, Init&&);
@@ -99,26 +102,13 @@ private:
     const char* activeDOMObjectName() const final;
 
     ResourceRequest m_request;
+    URLKeepingBlobAlive m_requestURL;
     FetchOptions m_options;
+    RequestPriority m_fetchPriorityHint { RequestPriority::Auto };
     String m_referrer;
-    mutable String m_requestURL;
-    BlobURLHandle m_requestBlobURLLifetimeExtender;
     Ref<AbortSignal> m_signal;
     FetchIdentifier m_navigationPreloadIdentifier;
 };
-
-inline FetchRequest::FetchRequest(ScriptExecutionContext* context, std::optional<FetchBody>&& body, Ref<FetchHeaders>&& headers, ResourceRequest&& request, FetchOptions&& options, String&& referrer)
-    : FetchBodyOwner(context, WTFMove(body), WTFMove(headers))
-    , m_request(WTFMove(request))
-    , m_options(WTFMove(options))
-    , m_referrer(WTFMove(referrer))
-    , m_signal(AbortSignal::create(context))
-{
-    m_request.setRequester(ResourceRequest::Requester::Fetch);
-    if (m_request.url().protocolIsBlob())
-        m_requestBlobURLLifetimeExtender = m_request.url();
-    updateContentType();
-}
 
 WebCoreOpaqueRoot root(FetchRequest*);
 

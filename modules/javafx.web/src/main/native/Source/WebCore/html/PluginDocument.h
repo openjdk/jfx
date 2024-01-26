@@ -34,9 +34,11 @@ class PluginViewBase;
 class PluginDocument final : public HTMLDocument {
     WTF_MAKE_ISO_ALLOCATED(PluginDocument);
 public:
-    static Ref<PluginDocument> create(Frame& frame, const URL& url)
+    static Ref<PluginDocument> create(LocalFrame& frame, const URL& url)
     {
-        return adoptRef(*new PluginDocument(frame, url));
+        auto document = adoptRef(*new PluginDocument(frame, url));
+        document->addToContextsMap();
+        return document;
     }
 
     WEBCORE_EXPORT PluginViewBase* pluginWidget();
@@ -50,7 +52,7 @@ public:
     bool shouldLoadPluginManually() const { return m_shouldLoadPluginManually; }
 
 private:
-    PluginDocument(Frame&, const URL&);
+    PluginDocument(LocalFrame&, const URL&);
 
     Ref<DocumentParser> createParser() final;
 

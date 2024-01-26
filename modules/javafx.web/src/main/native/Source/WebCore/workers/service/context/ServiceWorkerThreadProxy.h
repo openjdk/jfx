@@ -37,6 +37,7 @@
 #include "ServiceWorkerInspectorProxy.h"
 #include "ServiceWorkerThread.h"
 #include "StorageBlockingPolicy.h"
+#include "WorkerBadgeProxy.h"
 #include "WorkerDebuggerProxy.h"
 #include "WorkerLoaderProxy.h"
 #include <wtf/HashMap.h>
@@ -53,7 +54,7 @@ class ServiceWorkerInspectorProxy;
 struct ServiceWorkerContextData;
 enum class WorkerThreadMode : bool;
 
-class ServiceWorkerThreadProxy final : public ThreadSafeRefCounted<ServiceWorkerThreadProxy>, public WorkerLoaderProxy, public WorkerDebuggerProxy {
+class ServiceWorkerThreadProxy final : public ThreadSafeRefCounted<ServiceWorkerThreadProxy>, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy {
 public:
     template<typename... Args> static Ref<ServiceWorkerThreadProxy> create(Args&&... args)
     {
@@ -89,6 +90,8 @@ public:
     void firePushEvent(std::optional<Vector<uint8_t>>&&, CompletionHandler<void(bool)>&&);
     void firePushSubscriptionChangeEvent(std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
     void fireNotificationEvent(NotificationData&&, NotificationEventType, CompletionHandler<void(bool)>&&);
+    void fireBackgroundFetchEvent(BackgroundFetchInformation&&, CompletionHandler<void(bool)>&&);
+    void fireBackgroundFetchClickEvent(BackgroundFetchInformation&&, CompletionHandler<void(bool)>&&);
 
     WEBCORE_EXPORT void didSaveScriptsToDisk(ScriptBuffer&&, HashMap<URL, ScriptBuffer>&& importedScripts);
 
@@ -103,12 +106,16 @@ private:
 
     // WorkerLoaderProxy
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
+    ScriptExecutionContextIdentifier loaderContextIdentifier() const final;
     RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
     RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
 
     // WorkerDebuggerProxy
     void postMessageToDebugger(const String&) final;
     void setResourceCachingDisabledByWebInspector(bool) final;
+
+    // WorkerBadgeProxy
+    void setAppBadge(std::optional<uint64_t>) final;
 
     UniqueRef<Page> m_page;
     Ref<Document> m_document;

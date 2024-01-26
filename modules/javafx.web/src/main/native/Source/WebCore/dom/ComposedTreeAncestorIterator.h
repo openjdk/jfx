@@ -43,7 +43,6 @@ public:
     Element* operator->() { return &get(); }
 
     bool operator==(const ComposedTreeAncestorIterator& other) const { return m_current == other.m_current; }
-    bool operator!=(const ComposedTreeAncestorIterator& other) const { return m_current != other.m_current; }
 
     ComposedTreeAncestorIterator& operator++() { return traverseParent(); }
 
@@ -101,9 +100,9 @@ public:
 
     iterator begin()
     {
-        if (auto shadowRoot = dynamicDowncast<ShadowRoot>(m_node))
+        if (auto shadowRoot = dynamicDowncast<ShadowRoot>(m_node.get()))
             return iterator(*shadowRoot->host());
-        if (auto pseudoElement = dynamicDowncast<PseudoElement>(m_node))
+        if (auto pseudoElement = dynamicDowncast<PseudoElement>(m_node.get()))
             return iterator(*pseudoElement->hostElement());
         return iterator(m_node).traverseParent();
     }
@@ -120,7 +119,7 @@ public:
     }
 
 private:
-    Node& m_node;
+    Ref<Node> m_node;
 };
 
 // FIXME: We should have const versions too.

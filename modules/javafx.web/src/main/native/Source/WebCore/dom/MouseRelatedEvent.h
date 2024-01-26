@@ -28,18 +28,20 @@
 
 namespace WebCore {
 
-class FrameView;
+class LocalFrameView;
 
 struct MouseRelatedEventInit : public EventModifierInit {
     int screenX { 0 };
     int screenY { 0 };
+    double movementX { 0 };
+    double movementY { 0 };
 };
 
 // Internal only: Helper class for what's common between mouse and wheel events.
 class MouseRelatedEvent : public UIEventWithKeyState {
     WTF_MAKE_ISO_ALLOCATED(MouseRelatedEvent);
 public:
-    enum class IsSimulated : uint8_t { Yes, No };
+    enum class IsSimulated : bool { No, Yes };
 
     // Note that these values are adjusted to counter the effects of zoom, so that values
     // exposed via DOM APIs are invariant under zooming.
@@ -48,8 +50,8 @@ public:
     const IntPoint& screenLocation() const { return m_screenLocation; }
     int clientX() const { return m_clientLocation.x(); }
     int clientY() const { return m_clientLocation.y(); }
-    int movementX() const { return m_movementDelta.x(); }
-    int movementY() const { return m_movementDelta.y(); }
+    double movementX() const { return m_movementX; }
+    double movementY() const { return m_movementY; }
 
     const LayoutPoint& clientLocation() const { return m_clientLocation; }
     int layerX() override;
@@ -69,15 +71,15 @@ public:
     // usable with RenderObject::absoluteToLocal).
     const LayoutPoint& absoluteLocation() const { return m_absoluteLocation; }
 
-    static FrameView* frameViewFromWindowProxy(WindowProxy*);
+    static LocalFrameView* frameViewFromWindowProxy(WindowProxy*);
 
-    static LayoutPoint pagePointToClientPoint(LayoutPoint pagePoint, FrameView*);
-    static LayoutPoint pagePointToAbsolutePoint(LayoutPoint pagePoint, FrameView*);
+    static LayoutPoint pagePointToClientPoint(LayoutPoint pagePoint, LocalFrameView*);
+    static LayoutPoint pagePointToAbsolutePoint(LayoutPoint pagePoint, LocalFrameView*);
 
 protected:
     MouseRelatedEvent() = default;
     MouseRelatedEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& windowLocation, const IntPoint& movementDelta, OptionSet<Modifier> modifiers,
+        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier> modifiers,
         IsSimulated = IsSimulated::No, IsTrusted = IsTrusted::Yes);
     MouseRelatedEvent(const AtomString& type, IsCancelable, MonotonicTime, RefPtr<WindowProxy>&&, const IntPoint& globalLocation, OptionSet<Modifier>);
     MouseRelatedEvent(const AtomString& type, const MouseRelatedEventInit&, IsTrusted = IsTrusted::No);
@@ -94,11 +96,12 @@ protected:
     // Expose these so MouseEvent::initMouseEvent can set them.
     IntPoint m_screenLocation;
     LayoutPoint m_clientLocation;
-    LayoutPoint m_movementDelta;
 
 private:
     void init(bool isSimulated, const IntPoint&);
 
+    double m_movementX { 0 };
+    double m_movementY { 0 };
     LayoutPoint m_pageLocation;
     LayoutPoint m_layerLocation;
     LayoutPoint m_offsetLocation;

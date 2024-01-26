@@ -119,7 +119,6 @@ import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
 import com.sun.javafx.css.PseudoClassState;
@@ -957,7 +956,6 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     if (oldParent != null) {
-                        clearParentsFocusWithin(oldParent);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) oldParent).localToSceneTransformProperty().removeListener(
                                     nodeTransformation.getLocalToSceneInvalidationListener());
@@ -966,6 +964,10 @@ public abstract class Node implements EventTarget, Styleable {
                     updateDisabled();
                     computeDerivedDepthTest();
                     final Parent newParent = get();
+
+                    // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
+                    updateParentsFocusWithin(oldParent, newParent);
+
                     if (newParent != null) {
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
                             ((Node) newParent).localToSceneTransformProperty().addListener(
@@ -1948,9 +1950,15 @@ public abstract class Node implements EventTarget, Styleable {
      * into the branch until it finds a match. If more than one sub-node matches the
      * specified selector, this function returns the first of them.
      * <p>
-     *     For example, if a Node is given the id of "myId", then the lookup method can
-     *     be used to find this node as follows: <code>scene.lookup("#myId");</code>.
-     * </p>
+     * If the lookup selector does not specify a pseudo class, the lookup will ignore pseudo class states;
+     * it will return the first matching node whether or not it contains pseudo classes.
+     * <p>
+     * For example, if a Node is given the id of "myId", then the lookup method can
+     * be used to find this node as follows: {@code scene.lookup("#myId");}.
+     * <p>
+     * For example, if two nodes, NodeA and NodeB, have the same style class "myStyle" and NodeA has
+     * a pseudo state "myPseudo", then to find NodeA, the lookup method can be used as follows:
+     * {@code scene.lookup(".myStyle:myPseudo");} or {@code scene.lookup(":myPseudo");}.
      *
      * @param selector The css selector of the node to find
      * @return The first node, starting from this {@code Node}, which matches
@@ -1959,13 +1967,23 @@ public abstract class Node implements EventTarget, Styleable {
     public Node lookup(String selector) {
         if (selector == null) return null;
         Selector s = Selector.createSelector(selector);
-        return s != null && s.applies(this) ? this : null;
+        return selectorMatches(s) ? this : null;
     }
 
     /**
      * Finds all {@code Node}s, including this one and any children, which match
      * the given CSS selector. If no matches are found, an empty unmodifiable set is
      * returned. The set is explicitly unordered.
+     * <p>
+     * If the lookupAll selector does not specify a pseudo class, the lookupAll will ignore pseudo class states;
+     * it will return all matching nodes whether or not the nodes contain pseudo classes.
+     * <p>
+     * For example, if there are multiple nodes with same style class "myStyle", then the lookupAll method can
+     * be used to find all these nodes as follows: {@code scene.lookupAll(".myStyle");}.
+     * <p>
+     * For example, if multiple nodes have same style class "myStyle" and few nodes have
+     * a pseudo state "myPseudo", then to find all nodes with "myPseudo" state, the lookupAll method can be used as follows:
+     * {@code scene.lookupAll(".myStyle:myPseudo");} or {@code scene.lookupAll(":myPseudo");}.
      *
      * @param selector The css selector of the nodes to find
      * @return All nodes, starting from and including this {@code Node}, which match
@@ -1984,11 +2002,12 @@ public abstract class Node implements EventTarget, Styleable {
      * Used by Node and Parent for traversing the tree and adding all nodes which
      * match the given selector.
      *
-     * @param selector The Selector. This will never be null.
-     * @param results The results. This will never be null.
+     * @param selector the css selector of the nodes to find
+     * @param results the results
+     * @return list of matching nodes
      */
     List<Node> lookupAll(Selector selector, List<Node> results) {
-        if (selector.applies(this)) {
+        if (selectorMatches(selector)) {
             // Lazily create the set to reduce some trash.
             if (results == null) {
                 results = new LinkedList<>();
@@ -2020,6 +2039,19 @@ public abstract class Node implements EventTarget, Styleable {
         if (getParent() != null) {
             getParent().toFront(this);
         }
+    }
+
+    /**
+     * Checks whether the provided selector matches the node with both styles and pseudo states.
+     * @param s selector to match
+     * @return {@code true} if the selector matches
+     */
+    private boolean selectorMatches(Selector s) {
+        boolean matches = s != null && s.applies(this);
+        if (matches && !s.createMatch().getPseudoClasses().isEmpty()) {
+            matches = s.stateMatches(this, this.getPseudoClassStates());
+        }
+        return matches;
     }
 
     // TODO: need to verify whether this is OK to do starting from a node in
@@ -6494,7 +6526,7 @@ public abstract class Node implements EventTarget, Styleable {
      * top right corner causing the node to layout children and draw from
      * right to left using a mirroring transformation.  Some nodes may wish
      * to draw from right to left without using a transformation.  These
-     * nodes will will answer {@code false} and implement right-to-left
+     * nodes will answer {@code false} and implement right-to-left
      * orientation without using the automatic transformation.
      * </p>
      * @return true if this {@code Node} should be mirrored
@@ -8172,21 +8204,37 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Called when the current node was removed from the scene graph.
-     * If the current node has the focusWithin bit, we also need to clear the focusWithin bits of this
-     * node's parents. Note that a scene graph can have more than a single focused node, for example when
-     * a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
+     * Called when the current node was removed from or added to the scene graph.
+     * If the current node has the focusWithin bit, we also need to clear and set the focusWithin bits of this
+     * node's old and new parents. Note that a scene graph can have more than a single focused node, for example
+     * when a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
      * focus, we need to adjust the focus-within count on all parents of the node.
      */
-    private void clearParentsFocusWithin(Node oldParent) {
-        if (oldParent != null && focusWithin.get()) {
-            Node node = oldParent;
-            while (node != null) {
-                node.focusWithin.adjust(-focusWithin.count);
-                node = node.getParent();
-            }
+    private void updateParentsFocusWithin(Node oldParent, Node newParent) {
+        if (!focusWithin.get()) {
+            return;
+        }
 
+        Node node = oldParent;
+        while (node != null) {
+            node.focusWithin.adjust(-focusWithin.count);
+            node = node.getParent();
+        }
+
+        node = newParent;
+        while (node != null) {
+            node.focusWithin.adjust(focusWithin.count);
+            node = node.getParent();
+        };
+
+        // Since focus changes are atomic, we only fire change notifications after
+        // all changes are committed on all old and new parents.
+        if (oldParent != null) {
             oldParent.notifyFocusListeners();
+        }
+
+        if (newParent != null) {
+            newParent.notifyFocusListeners();
         }
     }
 
@@ -8304,12 +8352,7 @@ public abstract class Node implements EventTarget, Styleable {
          */
         void adjust(int change) {
             count += change;
-
-            if (count == 1) {
-                set(true);
-            } else if (count == 0) {
-                set(false);
-            }
+            set(count > 0);
         }
     };
 
@@ -8551,7 +8594,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private boolean treeVisible = true;
-    private TreeVisiblePropertyReadOnly treeVisibleRO;
+    private TreeVisibleProperty treeVisibleProperty;
 
     final void setTreeVisible(boolean value) {
         if (treeVisible != value) {
@@ -8564,7 +8607,9 @@ public abstract class Node implements EventTarget, Styleable {
             if (treeVisible && !isDirtyEmpty()) {
                 addToSceneDirtyList();
             }
-            ((TreeVisiblePropertyReadOnly) treeVisibleProperty()).invalidate();
+            if (treeVisibleProperty != null) {
+                treeVisibleProperty.invalidate();
+            }
             if (Node.this instanceof Parent parent) {
                 for (Node child : parent.getChildren()) {
                     child.updateTreeVisible(true);
@@ -8584,42 +8629,31 @@ public abstract class Node implements EventTarget, Styleable {
         return treeVisibleProperty().get();
     }
 
-    final BooleanExpression treeVisibleProperty() {
-        if (treeVisibleRO == null) {
-            treeVisibleRO = new TreeVisiblePropertyReadOnly();
+    final ReadOnlyBooleanProperty treeVisibleProperty() {
+        if (treeVisibleProperty == null) {
+            treeVisibleProperty = new TreeVisibleProperty();
         }
-        return treeVisibleRO;
+        return treeVisibleProperty;
     }
 
-    class TreeVisiblePropertyReadOnly extends BooleanExpression {
+    class TreeVisibleProperty extends ReadOnlyBooleanPropertyBase {
 
-        private ExpressionHelper<Boolean> helper;
         private boolean valid;
 
         @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+        public Object getBean() {
+            return Node.this;
         }
 
         @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
+        public String getName() {
+            return "treeVisible";
         }
 
         protected void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 
@@ -8733,17 +8767,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     private NodeEventDispatcher internalEventDispatcher;
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Registers an event handler to this node. The handler is called when the
-     * node receives an {@code Event} of the specified type during the bubbling
-     * phase of event delivery.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
-     */
+    @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -8751,18 +8775,7 @@ public abstract class Node implements EventTarget, Styleable {
                                     .addEventHandler(eventType, eventHandler);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Unregisters a previously registered event handler from this node. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
-     */
+    @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -8771,17 +8784,7 @@ public abstract class Node implements EventTarget, Styleable {
                 .removeEventHandler(eventType, eventHandler);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Registers an event filter to this node. The filter is called when the
-     * node receives an {@code Event} of the specified type during the capturing
-     * phase of event delivery.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the type of the events to receive by the filter
-     * @param eventFilter the filter to register
-     * @throws NullPointerException if the event type or filter is null
-     */
+    @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -8789,18 +8792,7 @@ public abstract class Node implements EventTarget, Styleable {
                                     .addEventFilter(eventType, eventFilter);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Unregisters a previously registered event filter from this node. One
-     * filter might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the filter.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the event type from which to unregister
-     * @param eventFilter the filter to unregister
-     * @throws NullPointerException if the event type or filter is null
-     */
+    @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -8850,14 +8842,6 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private EventDispatcher preprocessMouseEventDispatcher;
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Construct an event dispatch chain for this node. The event dispatch chain
-     * contains all event dispatchers from the stage to this node.
-     *
-     * @param tail the initial chain to build from
-     * @return the resulting event dispatch chain for this node
-     */
     @Override
     public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
@@ -9751,37 +9735,15 @@ public abstract class Node implements EventTarget, Styleable {
     private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
 
     private static abstract class LazyTransformProperty
-            extends ReadOnlyObjectProperty<Transform> {
+            extends ReadOnlyObjectPropertyBase<Transform> {
 
         protected static final int VALID = 0;
         protected static final int INVALID = 1;
         protected static final int VALIDITY_UNKNOWN = 2;
         protected int valid = INVALID;
 
-        private ExpressionHelper<Transform> helper;
-
         private Transform transform;
         private boolean canReuse = false;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Transform> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Transform> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         protected Transform getInternalValue() {
             if (valid == INVALID ||
@@ -9810,7 +9772,7 @@ public abstract class Node implements EventTarget, Styleable {
         public void invalidate() {
             if (valid != INVALID) {
                 valid = INVALID;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 
@@ -9820,31 +9782,10 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private static abstract class LazyBoundsProperty
-            extends ReadOnlyObjectProperty<Bounds> {
-        private ExpressionHelper<Bounds> helper;
+            extends ReadOnlyObjectPropertyBase<Bounds> {
         private boolean valid;
 
         private Bounds bounds;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Bounds> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Bounds> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
 
         @Override
         public Bounds get() {
@@ -9859,7 +9800,7 @@ public abstract class Node implements EventTarget, Styleable {
         public void invalidate() {
             if (valid) {
                 valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
+                fireValueChangedEvent();
             }
         }
 

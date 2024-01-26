@@ -25,7 +25,7 @@
 
 [
     CustomIsReachable,
-    EnabledByDeprecatedGlobalSetting=OffscreenCanvasEnabled,
+    EnabledBySetting=OffscreenCanvasEnabled,
     Conditional=OFFSCREEN_CANVAS,
     ConditionalForWorker=OFFSCREEN_CANVAS_IN_WORKERS,
     EnabledForContext,
@@ -33,7 +33,7 @@
     JSGenerateToJSObject,
     JSCustomMarkFunction,
     TaggedWrapper,
-    // CallTracer=InspectorCanvasCallTracer, // FIXME: OffscreenCanvas.
+    CallTracer=InspectorCanvasCallTracer,
 ] interface OffscreenCanvasRenderingContext2D {
     readonly attribute OffscreenCanvas canvas;
     undefined commit();

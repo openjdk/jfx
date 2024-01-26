@@ -38,6 +38,7 @@
 #include "PlatformLocale.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
+#include "ResolvedStyle.h"
 #include "StyleResolver.h"
 #include "Text.h"
 #include <wtf/IsoMallocInlines.h>
@@ -52,10 +53,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(DateTimeFieldElement);
 DateTimeFieldElement::FieldOwner::~FieldOwner() = default;
 
 DateTimeFieldElement::DateTimeFieldElement(Document& document, FieldOwner& fieldOwner)
-    : HTMLDivElement(divTag, document)
+    : HTMLDivElement(divTag, document, CreateDateTimeFieldElement)
     , m_fieldOwner(fieldOwner)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 void DateTimeFieldElement::initialize(const AtomString& pseudo)
@@ -63,19 +63,16 @@ void DateTimeFieldElement::initialize(const AtomString& pseudo)
     setPseudo(pseudo);
 }
 
-std::optional<Style::ElementStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+std::optional<Style::ResolvedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto elementStyle = resolveStyle(resolutionContext);
-    if (!elementStyle.renderStyle)
-        return std::nullopt;
 
-    auto& style = *elementStyle.renderStyle;
-    adjustMinWidth(style);
+    adjustMinInlineSize(*elementStyle.style);
 
     if (!hasValue() && shadowHostStyle) {
         auto textColor = shadowHostStyle->visitedDependentColorWithColorFilter(CSSPropertyColor);
         auto backgroundColor = shadowHostStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
-        style.setColor(RenderTheme::singleton().datePlaceholderTextColor(textColor, backgroundColor));
+        elementStyle.style->setColor(RenderTheme::singleton().datePlaceholderTextColor(textColor, backgroundColor));
     }
 
     return elementStyle;

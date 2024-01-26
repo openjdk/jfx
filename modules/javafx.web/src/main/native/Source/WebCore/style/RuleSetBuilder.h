@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "MediaQuery.h"
 #include "RuleSet.h"
 
 namespace WebCore {
@@ -28,45 +29,51 @@ namespace Style {
 
 class RuleSetBuilder {
 public:
-    enum class ShrinkToFit { Enable, Disable };
-    RuleSetBuilder(RuleSet&, const MediaQueryEvaluator&, Resolver* = nullptr, ShrinkToFit = ShrinkToFit::Enable);
+    enum class ShrinkToFit : bool { Enable, Disable };
+    enum class ShouldResolveNesting : bool { No, Yes };
+    RuleSetBuilder(RuleSet&, const MQ::MediaQueryEvaluator&, Resolver* = nullptr, ShrinkToFit = ShrinkToFit::Enable, ShouldResolveNesting = ShouldResolveNesting::No);
     ~RuleSetBuilder();
 
-    void addRulesFromSheet(const StyleSheetContents&, const MediaQuerySet* sheetQuery = nullptr);
+    void addRulesFromSheet(const StyleSheetContents&, const MQ::MediaQueryList& sheetQuery = { });
     void addStyleRule(const StyleRule&);
 
 private:
-    RuleSetBuilder(const MediaQueryEvaluator&);
+    RuleSetBuilder(const MQ::MediaQueryEvaluator&);
 
+    void addStyleRule(StyleRuleWithNesting&);
     void addRulesFromSheetContents(const StyleSheetContents&);
-    void addChildRules(const Vector<RefPtr<StyleRuleBase>>&);
+    void addChildRules(const Vector<Ref<StyleRuleBase>>&);
+    void addChildRule(Ref<StyleRuleBase>);
     void disallowDynamicMediaQueryEvaluationIfNeeded();
+    void addStyleRuleWithSelectorList(const CSSSelectorList&, const StyleRule&);
 
     void registerLayers(const Vector<CascadeLayerName>&);
     void pushCascadeLayer(const CascadeLayerName&);
     void popCascadeLayer(const CascadeLayerName&);
     void updateCascadeLayerPriorities();
+
     void addMutatingRulesToResolver();
     void updateDynamicMediaQueries();
+    void resolveSelectorListWithNesting(StyleRuleWithNesting&);
 
     struct MediaQueryCollector {
         ~MediaQueryCollector();
 
-        const MediaQueryEvaluator& evaluator;
+        const MQ::MediaQueryEvaluator& evaluator;
         bool collectDynamic { false };
 
         struct DynamicContext {
-            Ref<const MediaQuerySet> set;
+            const MQ::MediaQueryList& queries;
             Vector<size_t> affectedRulePositions { };
             HashSet<Ref<const StyleRule>> affectedRules { };
         };
         Vector<DynamicContext> dynamicContextStack { };
 
         Vector<RuleSet::DynamicMediaQueryRules> dynamicMediaQueryRules { };
-        bool hasViewportDependentMediaQueries { false };
+        OptionSet<MQ::MediaQueryDynamicDependency> allDynamicDependencies { };
 
-        bool pushAndEvaluate(const MediaQuerySet*);
-        void pop(const MediaQuerySet*);
+        bool pushAndEvaluate(const MQ::MediaQueryList&);
+        void pop(const MQ::MediaQueryList&);
         void addRuleIfNeeded(const RuleData&);
     };
 
@@ -78,6 +85,8 @@ private:
     CascadeLayerName m_resolvedCascadeLayerName;
     HashMap<CascadeLayerName, RuleSet::CascadeLayerIdentifier> m_cascadeLayerIdentifierMap;
     RuleSet::CascadeLayerIdentifier m_currentCascadeLayerIdentifier { 0 };
+    Vector<const CSSSelectorList*> m_styleRuleStack;
+    const ShouldResolveNesting m_shouldResolveNesting { ShouldResolveNesting::No };
 
     RuleSet::ContainerQueryIdentifier m_currentContainerQueryIdentifier { 0 };
 

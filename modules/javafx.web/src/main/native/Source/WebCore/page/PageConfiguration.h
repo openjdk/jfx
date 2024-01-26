@@ -26,6 +26,8 @@
 #pragma once
 
 #include "ContentSecurityPolicy.h"
+#include "FrameIdentifier.h"
+#include "PageIdentifier.h"
 #include "ShouldRelaxThirdPartyCookieBlocking.h"
 #include <pal/SessionID.h>
 #include <wtf/Forward.h>
@@ -51,6 +53,7 @@ class ApplicationCacheStorage;
 class AttachmentElementClient;
 class AuthenticatorCoordinatorClient;
 class BackForwardClient;
+class BadgeClient;
 class BroadcastChannelRegistry;
 class CacheStorageProvider;
 class ChromeClient;
@@ -60,15 +63,16 @@ class DatabaseProvider;
 class DiagnosticLoggingClient;
 class DragClient;
 class EditorClient;
-class FrameLoaderClient;
 class InspectorClient;
+class LocalFrameLoaderClient;
 class MediaRecorderProvider;
 class ModelPlayerProvider;
 class PaymentCoordinatorClient;
 class PerformanceLoggingClient;
-class PermissionController;
 class PluginInfoProvider;
 class ProgressTrackerClient;
+class RemoteFrameClient;
+class ScreenOrientationManager;
 class SocketProvider;
 class SpeechRecognitionProvider;
 class SpeechSynthesisClient;
@@ -84,22 +88,54 @@ class WebRTCProvider;
 class PageConfiguration {
     WTF_MAKE_NONCOPYABLE(PageConfiguration); WTF_MAKE_FAST_ALLOCATED;
 public:
-    WEBCORE_EXPORT PageConfiguration(PAL::SessionID, UniqueRef<EditorClient>&&, Ref<SocketProvider>&&, UniqueRef<WebRTCProvider>&&, Ref<CacheStorageProvider>&&, Ref<UserContentProvider>&&, Ref<BackForwardClient>&&, Ref<CookieJar>&&, UniqueRef<ProgressTrackerClient>&&, UniqueRef<FrameLoaderClient>&&, UniqueRef<SpeechRecognitionProvider>&&, UniqueRef<MediaRecorderProvider>&&, Ref<BroadcastChannelRegistry>&&, Ref<PermissionController>&&, UniqueRef<StorageProvider>&&, UniqueRef<ModelPlayerProvider>&&);
+
+    WEBCORE_EXPORT PageConfiguration(
+        std::optional<PageIdentifier>,
+        PAL::SessionID,
+        UniqueRef<EditorClient>&&,
+        Ref<SocketProvider>&&,
+        UniqueRef<WebRTCProvider>&&,
+        Ref<CacheStorageProvider>&&,
+        Ref<UserContentProvider>&&,
+        Ref<BackForwardClient>&&,
+        Ref<CookieJar>&&,
+        UniqueRef<ProgressTrackerClient>&&,
+#if PLATFORM(JAVA)
+        UniqueRef<LocalFrameLoaderClient>,
+#else
+        std::variant<UniqueRef<LocalFrameLoaderClient>, UniqueRef<RemoteFrameClient>>&&,
+#endif
+        FrameIdentifier mainFrameIdentifier,
+        UniqueRef<SpeechRecognitionProvider>&&,
+        UniqueRef<MediaRecorderProvider>&&,
+        Ref<BroadcastChannelRegistry>&&,
+        UniqueRef<StorageProvider>&&,
+        UniqueRef<ModelPlayerProvider>&&,
+        Ref<BadgeClient>&&,
+#if ENABLE(CONTEXT_MENUS)
+        UniqueRef<ContextMenuClient>&&,
+#endif
+#if ENABLE(APPLE_PAY)
+        UniqueRef<PaymentCoordinatorClient>&&,
+#endif
+        UniqueRef<ChromeClient>&&
+    );
     WEBCORE_EXPORT ~PageConfiguration();
     PageConfiguration(PageConfiguration&&);
 
+    std::optional<PageIdentifier> identifier;
     PAL::SessionID sessionID;
     std::unique_ptr<AlternativeTextClient> alternativeTextClient;
-    ChromeClient* chromeClient { nullptr };
+    UniqueRef<ChromeClient> chromeClient;
 #if ENABLE(CONTEXT_MENUS)
-    ContextMenuClient* contextMenuClient { nullptr };
+    UniqueRef<ContextMenuClient> contextMenuClient;
 #endif
     UniqueRef<EditorClient> editorClient;
     Ref<SocketProvider> socketProvider;
     std::unique_ptr<DragClient> dragClient;
-    InspectorClient* inspectorClient { nullptr };
+    std::unique_ptr<InspectorClient> inspectorClient;
 #if ENABLE(APPLE_PAY)
-    PaymentCoordinatorClient* paymentCoordinatorClient { nullptr };
+    UniqueRef<PaymentCoordinatorClient> paymentCoordinatorClient;
 #endif
 
 #if ENABLE(WEB_AUTHN)
@@ -116,7 +152,13 @@ public:
     Ref<BackForwardClient> backForwardClient;
     Ref<CookieJar> cookieJar;
     std::unique_ptr<ValidationMessageClient> validationMessageClient;
-    UniqueRef<FrameLoaderClient> loaderClientForMainFrame;
+#if PLATFORM(JAVA)
+    UniqueRef<LocalFrameLoaderClient> clientForMainFrame;
+#else
+    std::variant<UniqueRef<LocalFrameLoaderClient>, UniqueRef<RemoteFrameClient>> clientForMainFrame;
+#endif
+
+    FrameIdentifier mainFrameIdentifier;
     std::unique_ptr<DiagnosticLoggingClient> diagnosticLoggingClient;
     std::unique_ptr<PerformanceLoggingClient> performanceLoggingClient;
 #if ENABLE(WEBGL)
@@ -134,6 +176,7 @@ public:
     Ref<UserContentProvider> userContentProvider;
     RefPtr<VisitedLinkStore> visitedLinkStore;
     Ref<BroadcastChannelRegistry> broadcastChannelRegistry;
+    WeakPtr<ScreenOrientationManager> screenOrientationManager;
 
 #if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
     RefPtr<DeviceOrientationUpdateProvider> deviceOrientationUpdateProvider;
@@ -150,13 +193,14 @@ public:
     ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking { ShouldRelaxThirdPartyCookieBlocking::No };
     bool httpsUpgradeEnabled { true };
 
-    Ref<PermissionController> permissionController;
     UniqueRef<StorageProvider> storageProvider;
 
     UniqueRef<ModelPlayerProvider> modelPlayerProvider;
 #if ENABLE(ATTACHMENT_ELEMENT)
     std::unique_ptr<AttachmentElementClient> attachmentElementClient;
 #endif
+
+    Ref<BadgeClient> badgeClient;
 
     ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension { WebCore::ContentSecurityPolicyModeForExtension::None };
 };

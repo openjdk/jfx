@@ -70,6 +70,7 @@ bool doesGC(Graph& graph, Node* node)
     case SetLocal:
     case MovHint:
     case InitializeEntrypointArguments:
+    case ZombieHint:
     case ExitOK:
     case Phantom:
     case Upsilon:
@@ -187,6 +188,7 @@ bool doesGC(Graph& graph, Node* node)
     case Check:
     case CheckVarargs:
     case CheckTypeInfoFlags:
+    case HasStructureWithFlags:
     case MultiGetByOffset:
     case MultiDeleteByOffset:
     case ValueRep:
@@ -202,6 +204,7 @@ bool doesGC(Graph& graph, Node* node)
     case GetTypedArrayByteOffset:
     case GetTypedArrayByteOffsetAsInt52:
     case GetPrototypeOf:
+    case GetWebAssemblyInstanceExports:
     case PutStructure:
     case GetByOffset:
     case GetGetterSetterByOffset:
@@ -259,19 +262,20 @@ bool doesGC(Graph& graph, Node* node)
     case DataViewSet:
     case PutByOffset:
     case WeakMapGet:
+    case NumberIsNaN:
         return false;
 
 #if ASSERT_ENABLED
     case ArrayPush:
     case ArrayPop:
+    case ArraySpliceExtract:
     case PushWithScope:
     case CreateActivation:
     case CreateDirectArguments:
     case CreateScopedArguments:
     case CreateClonedArguments:
-    case CreateArgumentsButterfly:
     case Call:
-    case CallEval:
+    case CallDirectEval:
     case CallForwardVarargs:
     case CallObjectConstructor:
     case CallVarargs:
@@ -289,14 +293,19 @@ bool doesGC(Graph& graph, Node* node)
     case DirectConstruct:
     case DirectTailCall:
     case DirectTailCallInlinedCaller:
+    case CallWasm:
     case ForceOSRExit:
     case FunctionToString:
+    case FunctionBind:
     case GetById:
     case GetByIdDirect:
     case GetByIdDirectFlush:
     case GetByIdFlush:
+    case GetByIdMegamorphic:
     case GetByIdWithThis:
+    case GetByIdWithThisMegamorphic:
     case GetByValWithThis:
+    case GetByValWithThisMegamorphic:
     case GetDynamicVar:
     case GetMapBucket:
     case HasIndexedProperty:
@@ -315,6 +324,7 @@ bool doesGC(Graph& graph, Node* node)
     case PutById:
     case PutByIdDirect:
     case PutByIdFlush:
+    case PutByIdMegamorphic:
     case PutByIdWithThis:
     case PutByValWithThis:
     case PutDynamicVar:
@@ -341,6 +351,7 @@ bool doesGC(Graph& graph, Node* node)
     case ResolveScopeForHoistingFuncDeclInEval:
     case Return:
     case StringCharAt:
+    case StringLocaleCompare:
     case TailCall:
     case TailCallForwardVarargs:
     case TailCallForwardVarargsInlinedCaller:
@@ -363,6 +374,9 @@ bool doesGC(Graph& graph, Node* node)
     case ObjectCreate:
     case ObjectKeys:
     case ObjectGetOwnPropertyNames:
+    case ObjectGetOwnPropertySymbols:
+    case ObjectToString:
+    case ReflectOwnKeys:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case Arrayify:
@@ -375,15 +389,19 @@ bool doesGC(Graph& graph, Node* node)
     case NewInternalFieldObject:
     case Spread:
     case NewArrayWithSize:
+    case NewArrayWithConstantSize:
+    case NewArrayWithSpecies:
     case NewArrayBuffer:
     case NewRegexp:
     case NewStringObject:
     case NewSymbol:
     case MakeRope:
+    case MakeAtomString:
     case NewFunction:
     case NewGeneratorFunction:
     case NewAsyncGeneratorFunction:
     case NewAsyncFunction:
+    case NewBoundFunction:
     case NewTypedArray:
     case ThrowStaticError:
     case GetPropertyEnumerator:
@@ -398,7 +416,9 @@ bool doesGC(Graph& graph, Node* node)
     case StrCat:
     case StringReplace:
     case StringReplaceRegExp:
+    case StringReplaceString:
     case StringSlice:
+    case StringSubstring:
     case StringValueOf:
     case CreateRest:
     case ToLowerCase:
@@ -409,6 +429,7 @@ bool doesGC(Graph& graph, Node* node)
     case ParseInt: // We might resolve a rope even though we don't clobber anything.
     case SetAdd:
     case MapSet:
+    case MapOrSetDelete:
     case ValueBitAnd:
     case ValueBitOr:
     case ValueBitXor:
@@ -422,12 +443,17 @@ bool doesGC(Graph& graph, Node* node)
     case ValuePow:
     case ValueBitNot:
     case ValueNegate:
+    case DateSetTime:
+    case StringIndexOf:
 #else // not ASSERT_ENABLED
     // See comment at the top for why the default for all nodes should be to
     // return true.
     default:
 #endif // not ASSERT_ENABLED
         return true;
+
+    case GlobalIsNaN:
+        return node->child1().useKind() != DoubleRepUse;
 
     case CallNumberConstructor:
         switch (node->child1().useKind()) {
@@ -502,6 +528,7 @@ bool doesGC(Graph& graph, Node* node)
         return false;
 
     case GetByVal:
+    case GetByValMegamorphic:
     case EnumeratorGetByVal:
         if (node->arrayMode().type() == Array::String)
             return true;
@@ -510,13 +537,13 @@ bool doesGC(Graph& graph, Node* node)
     case ResolveRope:
         return true;
 
-    case EnumeratorNextExtractMode:
-    case EnumeratorNextExtractIndex:
+    case ExtractFromTuple:
         return false;
 
     case PutByValDirect:
     case PutByVal:
     case PutByValAlias:
+    case PutByValMegamorphic:
         if (!graph.m_plan.isFTL()) {
             switch (node->arrayMode().modeForPut().type()) {
             case Array::Int8Array:
@@ -532,6 +559,9 @@ bool doesGC(Graph& graph, Node* node)
             }
         }
         return false;
+
+    case EnumeratorPutByVal:
+        return true;
 
     case MapHash:
         switch (node->child1().useKind()) {

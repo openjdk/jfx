@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,9 @@ class GtkWindow extends Window {
     protected native boolean _setView(long ptr, View view);
 
     @Override
+    protected native void _updateViewSize(long ptr);
+
+    @Override
     protected boolean _setMenubar(long ptr, long menubarPtr) {
         //TODO is it needed?
         return true;
@@ -55,8 +58,6 @@ class GtkWindow extends Window {
     private native void minimizeImpl(long ptr, boolean minimize);
 
     private native void maximizeImpl(long ptr, boolean maximize, boolean wasMaximized);
-
-    private native void setBoundsImpl(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch);
 
     private native void setVisibleImpl(long ptr, boolean visible);
 
@@ -139,14 +140,7 @@ class GtkWindow extends Window {
         return maximize;
     }
 
-    private native void _showOrHideChildren(long ptr, boolean show);
-
     protected void notifyStateChanged(final int state) {
-        if (state == WindowEvent.MINIMIZE) {
-            _showOrHideChildren(getNativeHandle(), false);
-        } else if (state == WindowEvent.RESTORE) {
-            _showOrHideChildren(getNativeHandle(), true);
-        }
         switch (state) {
             case WindowEvent.MINIMIZE:
             case WindowEvent.MAXIMIZE:
@@ -181,27 +175,10 @@ class GtkWindow extends Window {
         return _getNativeWindowImpl(super.getNativeWindow());
     }
 
-    private native void _setGravity(long ptr, float xGravity, float yGravity);
-
     @Override
-    protected void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch, float xGravity, float yGravity) {
-        _setGravity(ptr, xGravity, yGravity);
-        setBoundsImpl(ptr, x, y, xSet, ySet, w, h, cw, ch);
-
-        if ((w <= 0) && (cw > 0) || (h <= 0) && (ch > 0)) {
-            final int[] extarr = new int[4];
-            getFrameExtents(ptr, extarr);
-
-            // TODO: ((w <= 0) && (cw <= 0)) || ((h <= 0) && (ch <= 0))
-            notifyResize(WindowEvent.RESIZE,
-                         ((w <= 0) && (cw > 0)) ? cw + extarr[0] + extarr[1]
-                                                : w,
-                         ((h <= 0) && (ch > 0)) ? ch + extarr[2] + extarr[3]
-                                                : h);
-        }
-    }
-
-    private native void getFrameExtents(long ptr, int[] extarr);
+    protected native void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet,
+                                       int w, int h, int cw, int ch,
+                                       float xGravity, float yGravity);
 
     @Override
     protected void _requestInput(long ptr, String text, int type, double width, double height,

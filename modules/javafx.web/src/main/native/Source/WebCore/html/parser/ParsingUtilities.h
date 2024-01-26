@@ -38,7 +38,7 @@ namespace WebCore {
 
 template<typename CharacterType> inline bool isNotASCIISpace(CharacterType c)
 {
-    return !isASCIISpace(c);
+    return !isUnicodeCompatibleASCIIWhitespace(c);
 }
 
 template<typename CharacterType, typename DelimiterType> bool skipExactly(const CharacterType*& position, const CharacterType* end, DelimiterType delimiter)
@@ -131,6 +131,12 @@ template<bool characterPredicate(UChar)> void skipUntil(StringParsingBuffer<UCha
         ++buffer;
 }
 
+template<typename CharacterType, typename DelimiterType> void skipWhile(StringParsingBuffer<CharacterType>& buffer, DelimiterType delimiter)
+{
+    while (buffer.hasCharactersRemaining() && *buffer == delimiter)
+        ++buffer;
+}
+
 template<bool characterPredicate(LChar)> void skipWhile(const LChar*& position, const LChar* end)
 {
     while (position < end && characterPredicate(*position))
@@ -189,6 +195,19 @@ template<typename CharacterType> bool skipExactlyIgnoringASCIICase(StringParsing
     if (!equalLettersIgnoringASCIICase(buffer.position(), literalLength, literal))
         return false;
     buffer += literalLength;
+    return true;
+}
+
+template<typename CharacterType, unsigned characterCount> bool skipLettersExactlyIgnoringASCIICase(StringParsingBuffer<CharacterType>& buffer, const CharacterType(&letters)[characterCount])
+{
+    if (buffer.lengthRemaining() < characterCount)
+        return false;
+    for (unsigned i = 0; i < characterCount; ++i) {
+        ASSERT(isASCIIAlpha(letters[i]));
+        if (!isASCIIAlphaCaselessEqual(buffer.position()[i], static_cast<char>(letters[i])))
+            return false;
+    }
+    buffer += characterCount;
     return true;
 }
 

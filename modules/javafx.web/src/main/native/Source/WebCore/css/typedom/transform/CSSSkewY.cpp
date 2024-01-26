@@ -30,8 +30,10 @@
 #include "config.h"
 #include "CSSSkewY.h"
 
-#if ENABLE(CSS_TYPED_OM)
-
+#include "CSSFunctionValue.h"
+#include "CSSNumericFactory.h"
+#include "CSSNumericValue.h"
+#include "CSSStyleValueFactory.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
 #include <wtf/IsoMallocInlines.h>
@@ -47,10 +49,39 @@ ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(Ref<CSSNumericValue> ay)
     return adoptRef(*new CSSSkewY(WTFMove(ay)));
 }
 
+ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(CSSFunctionValue& cssFunctionValue)
+{
+    if (cssFunctionValue.name() != CSSValueSkewY) {
+        ASSERT_NOT_REACHED();
+        return CSSSkewY::create(CSSNumericFactory::deg(0));
+    }
+
+    if (cssFunctionValue.size() != 1 || !cssFunctionValue.item(0)) {
+        ASSERT_NOT_REACHED();
+        return Exception { TypeError, "Unexpected number of values."_s };
+    }
+
+    auto valueOrException = CSSStyleValueFactory::reifyValue(*cssFunctionValue.item(0), std::nullopt);
+    if (valueOrException.hasException())
+        return valueOrException.releaseException();
+    if (!is<CSSNumericValue>(valueOrException.returnValue()))
+        return Exception { TypeError, "Expected a CSSNumericValue."_s };
+    return CSSSkewY::create(downcast<CSSNumericValue>(valueOrException.releaseReturnValue().get()));
+}
+
 CSSSkewY::CSSSkewY(Ref<CSSNumericValue> ay)
     : CSSTransformComponent(Is2D::Yes)
     , m_ay(WTFMove(ay))
 {
+}
+
+ExceptionOr<void> CSSSkewY::setAy(Ref<CSSNumericValue> ay)
+{
+    if (!ay->type().matches<CSSNumericBaseType::Angle>())
+        return Exception { TypeError };
+
+    m_ay = WTFMove(ay);
+    return { };
 }
 
 void CSSSkewY::serialize(StringBuilder& builder) const
@@ -63,10 +94,27 @@ void CSSSkewY::serialize(StringBuilder& builder) const
 
 ExceptionOr<Ref<DOMMatrix>> CSSSkewY::toMatrix()
 {
-    // FIXME: Implement.
-    return DOMMatrix::fromMatrix(DOMMatrixInit { });
+    if (!is<CSSUnitValue>(m_ay))
+        return Exception { TypeError };
+
+    auto y = downcast<CSSUnitValue>(m_ay.get()).convertTo(CSSUnitType::CSS_DEG);
+    if (!y)
+        return Exception { TypeError };
+
+    TransformationMatrix matrix { };
+    matrix.skewY(y->value());
+
+    return { DOMMatrix::create(WTFMove(matrix), DOMMatrixReadOnly::Is2D::Yes) };
+}
+
+RefPtr<CSSValue> CSSSkewY::toCSSValue() const
+{
+    auto ay = m_ay->toCSSValue();
+    if (!ay)
+        return nullptr;
+    CSSValueListBuilder arguments;
+    arguments.append(ay.releaseNonNull());
+    return CSSFunctionValue::create(CSSValueSkewY, WTFMove(arguments));
 }
 
 } // namespace WebCore
-
-#endif

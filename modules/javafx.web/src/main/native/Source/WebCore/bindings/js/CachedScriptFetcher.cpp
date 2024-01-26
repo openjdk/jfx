@@ -58,14 +58,15 @@ CachedResourceHandle<CachedScript> CachedScriptFetcher::requestScriptWithCache(D
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     options.integrity = WTFMove(integrity);
     options.referrerPolicy = m_referrerPolicy;
+    options.fetchPriorityHint = m_fetchPriorityHint;
     options.nonce = m_nonce;
 
     auto request = createPotentialAccessControlRequest(sourceURL, WTFMove(options), document, crossOriginMode);
     request.upgradeInsecureRequestIfNeeded(document);
     request.setCharset(m_charset);
     request.setPriority(WTFMove(resourceLoadPriority));
-    if (!m_initiatorName.isNull())
-        request.setInitiator(m_initiatorName);
+    if (!m_initiatorType.isNull())
+        request.setInitiatorType(m_initiatorType);
 
     return document.cachedResourceLoader().requestScript(WTFMove(request)).value_or(nullptr);
 }

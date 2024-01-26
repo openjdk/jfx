@@ -2,13 +2,13 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2012, 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Google Inc. All rights reserved.
  * Copyright (C) 2014, 2020, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
@@ -32,10 +32,9 @@
 
 #include "CSSFontSelector.h"
 #include "DOMTokenList.h"
-#include "DOMWindow.h"
 #include "ElementInlines.h"
 #include "EventNames.h"
-#include "FrameView.h"
+#include "HTMLBodyElement.h"
 #include "HTMLDialogElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
@@ -45,13 +44,16 @@
 #include "HTMLTableElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrameView.h"
 #include "MathMLElement.h"
-#include "ModalContainerObserver.h"
+#include "NodeName.h"
 #include "Page.h"
 #include "Quirks.h"
 #include "RenderBox.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include "RenderTheme.h"
+#include "RenderView.h"
 #include "SVGElement.h"
 #include "SVGGraphicsElement.h"
 #include "SVGNames.h"
@@ -59,9 +61,20 @@
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "StyleSelfAlignmentData.h"
+#include "StyleUpdate.h"
 #include "Text.h"
+#include "TouchAction.h"
 #include "WebAnimationTypes.h"
 #include <wtf/RobinHoodHashSet.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
+
+#if ENABLE(FULLSCREEN_API)
+#include "FullscreenManager.h"
+#endif
 
 namespace WebCore {
 namespace Style {
@@ -76,6 +89,7 @@ Adjuster::Adjuster(const Document& document, const RenderStyle& parentStyle, con
 {
 }
 
+#if PLATFORM(COCOA)
 static void addIntrinsicMargins(RenderStyle& style)
 {
     // Intrinsic margin value.
@@ -97,8 +111,9 @@ static void addIntrinsicMargins(RenderStyle& style)
             style.setMarginBottom(Length(intrinsicMargin, LengthType::Fixed));
     }
 }
+#endif
 
-static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Document& document)
+static DisplayType equivalentBlockDisplay(const RenderStyle& style)
 {
     switch (auto display = style.display()) {
     case DisplayType::Block:
@@ -107,12 +122,7 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Docume
     case DisplayType::Flex:
     case DisplayType::Grid:
     case DisplayType::FlowRoot:
-        return display;
-
     case DisplayType::ListItem:
-        // It is a WinIE bug that floated list items lose their bullets, so we'll emulate the quirk, but only in quirks mode.
-        if (document.inQuirksMode() && style.isFloating())
-            return DisplayType::Block;
         return display;
     case DisplayType::InlineTable:
         return DisplayType::Table;
@@ -145,26 +155,42 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Docume
     return DisplayType::Block;
 }
 
+static bool isOutermostSVGElement(const Element* element)
+{
+    return element && element->isSVGElement() && downcast<SVGElement>(*element).isOutermostSVGSVGElement();
+}
+
 static bool shouldInheritTextDecorationsInEffect(const RenderStyle& style, const Element* element)
 {
     if (style.isFloating() || style.hasOutOfFlowPosition())
         return false;
 
-    auto isAtUserAgentShadowBoundary = [&] {
+    // Media elements have a special rendering where the media controls do not use a proper containing
+    // block model which means we need to manually stop text-decorations to apply to text inside media controls.
+    auto isAtMediaUAShadowBoundary = [&] {
         if (!element)
             return false;
+#if ENABLE(VIDEO)
         auto* parentNode = element->parentNode();
-        return parentNode && parentNode->isUserAgentShadowRoot();
+        return parentNode && parentNode->isUserAgentShadowRoot() && parentNode->parentOrShadowHostElement()->isMediaElement();
+#else
+        return false;
+#endif
     }();
 
+    // Outermost <svg> roots are considered to be atomic inline-level.
+    if (isOutermostSVGElement(element))
+        return false;
+
     // There is no other good way to prevent decorations from affecting user agent shadow trees.
-    if (isAtUserAgentShadowBoundary)
+    if (isAtMediaUAShadowBoundary)
         return false;
 
     switch (style.display()) {
-    case DisplayType::Table:
     case DisplayType::InlineTable:
     case DisplayType::InlineBlock:
+    case DisplayType::InlineGrid:
+    case DisplayType::InlineFlex:
     case DisplayType::InlineBox:
         return false;
     default:
@@ -210,13 +236,15 @@ static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& st
     return sharedTouchActions;
 }
 
-void Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
+bool Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
 {
     auto regionTypes = computeEventListenerRegionTypes(document, rootStyle, document, { });
     if (auto* window = document.domWindow())
         regionTypes.add(computeEventListenerRegionTypes(document, rootStyle, *window, { }));
 
+    bool changed = regionTypes != rootStyle.eventListenerRegionTypes();
     rootStyle.setEventListenerRegionTypes(regionTypes);
+    return changed;
 }
 
 OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(const Document& document, const RenderStyle& style, const EventTarget& eventTarget, OptionSet<EventListenerRegionType> parentTypes)
@@ -267,6 +295,11 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
     return types;
 }
 
+static bool isOverflowClipOrVisible(Overflow overflow)
+{
+    return overflow == Overflow::Clip || overflow == Overflow::Visible;
+}
+
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
 {
     if (style.display() == DisplayType::Contents)
@@ -274,30 +307,6 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
     if (style.display() != DisplayType::None && style.display() != DisplayType::Contents) {
         if (m_element) {
-            // If we have a <td> that specifies a float property, in quirks mode we just drop the float
-            // property.
-            // Sites also commonly use display:inline/block on <td>s and <table>s. In quirks mode we force
-            // these tags to retain their display types.
-            if (m_document.inQuirksMode()) {
-                if (m_element->hasTagName(tdTag)) {
-                    style.setEffectiveDisplay(DisplayType::TableCell);
-                    style.setFloating(Float::None);
-                } else if (is<HTMLTableElement>(*m_element))
-                    style.setEffectiveDisplay(style.isDisplayInlineType() ? DisplayType::InlineTable : DisplayType::Table);
-            }
-
-            if (m_element->hasTagName(tdTag) || m_element->hasTagName(thTag)) {
-                if (style.whiteSpace() == WhiteSpace::KHTMLNoWrap) {
-                    // Figure out if we are really nowrapping or if we should just
-                    // use normal instead. If the width of the cell is fixed, then
-                    // we don't actually use WhiteSpace::NoWrap.
-                    if (style.width().isFixed())
-                        style.setWhiteSpace(WhiteSpace::Normal);
-                    else
-                        style.setWhiteSpace(WhiteSpace::NoWrap);
-                }
-            }
-
             // Tables never support the -webkit-* values for text-align and will reset back to the default.
             if (is<HTMLTableElement>(*m_element) && (style.textAlign() == TextAlignMode::WebKitLeft || style.textAlign() == TextAlignMode::WebKitCenter || style.textAlign() == TextAlignMode::WebKitRight))
                 style.setTextAlign(TextAlignMode::Start);
@@ -316,17 +325,17 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             }
 
             if (m_element->hasTagName(legendTag))
-                style.setEffectiveDisplay(DisplayType::Block);
+                style.setEffectiveDisplay(equivalentBlockDisplay(style));
         }
 
         // Top layer elements are always position: absolute; unless the position is set to fixed.
         // https://fullscreen.spec.whatwg.org/#new-stacking-layer
-        if (style.position() != PositionType::Absolute && style.position() != PositionType::Fixed && isInTopLayerOrBackdrop(style, m_element))
+        if (m_element != m_document.documentElement() && style.position() != PositionType::Absolute && style.position() != PositionType::Fixed && isInTopLayerOrBackdrop(style, m_element))
             style.setPosition(PositionType::Absolute);
 
         // Absolute/fixed positioned elements, floating elements and the document element need block-like outside display.
         if (style.hasOutOfFlowPosition() || style.isFloating() || (m_element && m_document.documentElement() == m_element))
-            style.setEffectiveDisplay(equivalentBlockDisplay(style, m_document));
+            style.setEffectiveDisplay(equivalentBlockDisplay(style));
 
         // FIXME: Don't support this mutation for pseudo styles like first-letter or first-line, since it's not completely
         // clear how that should work.
@@ -358,7 +367,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         // "A parent with a grid or flex display value blockifies the box’s display type."
         if (m_parentBoxStyle.isDisplayFlexibleOrGridBox()) {
             style.setFloating(Float::None);
-            style.setEffectiveDisplay(equivalentBlockDisplay(style, m_document));
+            style.setEffectiveDisplay(equivalentBlockDisplay(style));
         }
     }
 
@@ -421,9 +430,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.clipPath()
             || style.boxReflect()
             || style.hasFilter()
-#if ENABLE(FILTERS_LEVEL_2)
             || style.hasBackdropFilter()
-#endif
             || style.hasBlendMode()
             || style.hasIsolation()
             || style.position() == PositionType::Sticky
@@ -455,7 +462,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             bool isVertical = style.marqueeDirection() == MarqueeDirection::Up || style.marqueeDirection() == MarqueeDirection::Down;
             // Make horizontal marquees not wrap.
             if (!isVertical) {
-                style.setWhiteSpace(WhiteSpace::NoWrap);
+                style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Collapse);
+                style.setTextWrap(TextWrap::NoWrap);
                 style.setTextAlign(TextAlignMode::Start);
             }
             // Apparently this is the expected legacy behavior.
@@ -469,25 +477,42 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     else
         style.setTextDecorationsInEffect(style.textDecorationLine());
 
-    auto overflowReplacement = [] (Overflow overflow, Overflow overflowInOtherDimension) -> std::optional<Overflow> {
-        if (overflow != Overflow::Visible && overflow != Overflow::Clip) {
-            if (overflowInOtherDimension == Overflow::Visible)
-                return Overflow::Auto;
-            if (overflowInOtherDimension == Overflow::Clip)
-                return Overflow::Hidden;
-        }
-        return std::nullopt;
-    };
+    bool overflowIsClipOrVisible = isOverflowClipOrVisible(style.overflowX()) && isOverflowClipOrVisible(style.overflowX());
 
-    // If either overflow value is not visible, change to auto. Similarly if either overflow
-    // value is not clip, change to hidden.
+    if (!overflowIsClipOrVisible && (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable)) {
+        // Tables only support overflow:hidden and overflow:visible and ignore anything else,
+        // see https://drafts.csswg.org/css2/#overflow. As a table is not a block
+        // container box the rules for resolving conflicting x and y values in CSS Overflow Module
+        // Level 3 do not apply. Arguably overflow-x and overflow-y aren't allowed on tables but
+        // all UAs allow it.
+        if (style.overflowX() != Overflow::Hidden)
+            style.setOverflowX(Overflow::Visible);
+        if (style.overflowY() != Overflow::Hidden)
+            style.setOverflowY(Overflow::Visible);
+        // If we are left with conflicting overflow values for the x and y axes on a table then resolve
+        // both to Overflow::Visible. This is interoperable behaviour but is not specced anywhere.
+        if (style.overflowX() == Overflow::Visible)
+            style.setOverflowY(Overflow::Visible);
+        else if (style.overflowY() == Overflow::Visible)
+            style.setOverflowX(Overflow::Visible);
+    } else if (!isOverflowClipOrVisible(style.overflowY())) {
     // FIXME: Once we implement pagination controls, overflow-x should default to hidden
     // if overflow-y is set to -webkit-paged-x or -webkit-page-y. For now, we'll let it
     // default to auto so we can at least scroll through the pages.
-    if (auto replacement = overflowReplacement(style.overflowY(), style.overflowX()))
-        style.setOverflowX(*replacement);
-    else if (auto replacement = overflowReplacement(style.overflowX(), style.overflowY()))
-        style.setOverflowY(*replacement);
+        // Values of 'clip' and 'visible' can only be used with 'clip' and 'visible'.
+        // If they aren't, 'clip' and 'visible' is reset.
+        if (style.overflowX() == Overflow::Visible)
+            style.setOverflowX(Overflow::Auto);
+        else if (style.overflowX() == Overflow::Clip)
+            style.setOverflowX(Overflow::Hidden);
+    } else if (!isOverflowClipOrVisible(style.overflowX())) {
+        // Values of 'clip' and 'visible' can only be used with 'clip' and 'visible'.
+        // If they aren't, 'clip' and 'visible' is reset.
+        if (style.overflowY() == Overflow::Visible)
+            style.setOverflowY(Overflow::Auto);
+        else if (style.overflowY() == Overflow::Clip)
+            style.setOverflowY(Overflow::Hidden);
+    }
 
     // Call setStylesForPaginationMode() if a pagination mode is set for any non-root elements. If these
     // styles are specified on a root element, then they will be incorporated in
@@ -495,25 +520,11 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if ((style.overflowY() == Overflow::PagedX || style.overflowY() == Overflow::PagedY) && !(m_element && (m_element->hasTagName(htmlTag) || m_element->hasTagName(bodyTag))))
         style.setColumnStylesFromPaginationMode(WebCore::paginationModeForRenderStyle(style));
 
-    // Table rows, sections and the table itself will support overflow:hidden and will ignore scroll/auto.
-    // FIXME: Eventually table sections will support auto and scroll.
-    if (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable
-        || style.display() == DisplayType::TableRowGroup || style.display() == DisplayType::TableRow) {
-        if (style.overflowX() != Overflow::Visible && style.overflowX() != Overflow::Hidden)
-            style.setOverflowX(Overflow::Visible);
-        if (style.overflowY() != Overflow::Visible && style.overflowY() != Overflow::Hidden)
-            style.setOverflowY(Overflow::Visible);
-    }
-
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     // Touch overflow scrolling creates a stacking context.
     if (style.hasAutoUsedZIndex() && style.useTouchOverflowScrolling() && (isScrollableOverflow(style.overflowX()) || isScrollableOverflow(style.overflowY())))
         style.setUsedZIndex(0);
 #endif
-
-    // contain: layout creates a stacking context.
-    if (style.hasAutoUsedZIndex() && style.containsLayout())
-        style.setUsedZIndex(0);
 
     // Cull out any useless layers and also repeat patterns into additional layers.
     style.adjustBackgroundLayers();
@@ -523,18 +534,22 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     style.adjustAnimations();
     style.adjustTransitions();
 
+#if PLATFORM(COCOA)
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DoesNotAddIntrinsicMarginsToFormControls)) {
     // Important: Intrinsic margins get added to controls before the theme has adjusted the style, since the theme will
     // alter fonts and heights/widths.
-    if (is<HTMLFormControlElement>(m_element) && style.computedFontPixelSize() >= 11) {
+        if (is<HTMLFormControlElement>(m_element) && style.computedFontSize() >= 11) {
         // Don't apply intrinsic margins to image buttons. The designer knows how big the images are,
         // so we have to treat all image buttons as though they were explicitly sized.
         if (!is<HTMLInputElement>(*m_element) || !downcast<HTMLInputElement>(*m_element).isImageButton())
             addIntrinsicMargins(style);
     }
+    }
+#endif
 
     // Let the theme also have a crack at adjusting the style.
     if (style.hasAppearance())
-        RenderTheme::singleton().adjustStyle(style, m_element, userAgentAppearanceStyle);
+        adjustThemeStyle(style, userAgentAppearanceStyle);
 
     // If we have first-letter pseudo style, do not share this style.
     if (style.hasPseudoStyle(PseudoId::FirstLetter))
@@ -549,9 +564,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasFilter()
             || style.hasIsolation()
             || style.hasMask()
-#if ENABLE(FILTERS_LEVEL_2)
             || style.hasBackdropFilter()
-#endif
             || style.hasBlendMode();
         style.setTransformStyleForcedToFlat(forceToFlat);
     }
@@ -575,6 +588,10 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             return true;
         if (hasInertAttribute(element))
             return true;
+#if ENABLE(FULLSCREEN_API)
+        if (m_document.fullscreenManager().fullscreenElement() && element == m_document.documentElement())
+            return true;
+#endif
         return false;
     };
     if (isInertSubtreeRoot(m_element))
@@ -585,53 +602,34 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
         if (m_element == m_document.activeModalDialog() && !hasInertAttribute(m_element))
             style.setEffectiveInert(false);
 
+#if ENABLE(FULLSCREEN_API)
+        if (m_element == m_document.fullscreenManager().fullscreenElement() && !hasInertAttribute(m_element))
+            style.setEffectiveInert(false);
+#endif
+
         style.setEventListenerRegionTypes(computeEventListenerRegionTypes(m_document, style, *m_element, m_parentStyle.eventListenerRegionTypes()));
+
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+        // Every element will automatically get an interaction region which is not useful, ignoring the `cursor: pointer;` on the body.
+        if (is<HTMLBodyElement>(*m_element) && style.cursor() == CursorType::Pointer && style.eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick))
+            style.setCursor(CursorType::Auto);
+#endif
 
 #if ENABLE(TEXT_AUTOSIZING)
         if (m_document.settings().textAutosizingUsesIdempotentMode())
             adjustForTextAutosizing(style, *m_element);
 #endif
-
-        if (auto observer = m_element->document().modalContainerObserverIfExists()) {
-            if (observer->shouldHide(*m_element))
-                style.setDisplay(DisplayType::None);
-            if (observer->shouldMakeVerticallyScrollable(*m_element))
-                style.setOverflowY(Overflow::Auto);
-        }
     }
+
+    if (isSkippedContentRoot(style, m_element))
+        style.setEffectiveSkippedContent(true);
 
     adjustForSiteSpecificQuirks(style);
 }
 
 static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 {
-    // https://drafts.csswg.org/css-display-3/#unbox-html
-    static NeverDestroyed<MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>> tagNames = [] {
-        static const HTMLQualifiedName* const tagList[] = {
-            &brTag.get(),
-            &wbrTag.get(),
-            &meterTag.get(),
-            &appletTag.get(),
-            &progressTag.get(),
-            &canvasTag.get(),
-            &embedTag.get(),
-            &objectTag.get(),
-            &audioTag.get(),
-            &iframeTag.get(),
-            &imgTag.get(),
-            &videoTag.get(),
-            &frameTag.get(),
-            &framesetTag.get(),
-            &inputTag.get(),
-            &textareaTag.get(),
-            &selectTag.get(),
-        };
-        MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> set;
-        set.reserveInitialCapacity(sizeof(tagList));
-        for (auto& name : tagList)
-            set.add(name->localName());
-        return set;
-    }();
+    using namespace ElementNames;
 
     // https://drafts.csswg.org/css-display-3/#unbox-svg
     // FIXME: <g>, <use> and <tspan> have special (?) behavior for display:contents in the current draft spec.
@@ -644,7 +642,32 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 #endif // ENABLE(MATHML)
     if (!is<HTMLElement>(element))
         return false;
-    return tagNames.get().contains(element.localName());
+
+    // https://drafts.csswg.org/css-display-3/#unbox-html
+    switch (element.elementName()) {
+    case HTML::br:
+    case HTML::wbr:
+    case HTML::meter:
+    case HTML::applet:
+    case HTML::progress:
+    case HTML::canvas:
+    case HTML::embed:
+    case HTML::object:
+    case HTML::audio:
+    case HTML::iframe:
+    case HTML::img:
+    case HTML::video:
+    case HTML::frame:
+    case HTML::frameset:
+    case HTML::input:
+    case HTML::textarea:
+    case HTML::select:
+        return true;
+    default:
+        break;
+    }
+
+    return false;
 }
 
 void Adjuster::adjustDisplayContentsStyle(RenderStyle& style) const
@@ -690,7 +713,8 @@ void Adjuster::adjustSVGElementStyle(RenderStyle& style, const SVGElement& svgEl
         ASSERT(!style.clipPath());
         ASSERT(!style.hasFilter());
 
-        if (svgElement.hasTagName(SVGNames::foreignObjectTag)
+        if (svgElement.isOutermostSVGSVGElement()
+            || svgElement.hasTagName(SVGNames::foreignObjectTag)
             || svgElement.hasTagName(SVGNames::imageTag)
             || svgElement.hasTagName(SVGNames::markerTag)
             || svgElement.hasTagName(SVGNames::maskTag)
@@ -726,6 +750,32 @@ void Adjuster::adjustAnimatedStyle(RenderStyle& style, OptionSet<AnimationImpact
 
     if (style.hasAutoUsedZIndex() && impact.contains(AnimationImpact::ForcesStackingContext))
         style.setUsedZIndex(0);
+}
+
+void Adjuster::adjustThemeStyle(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
+{
+    ASSERT(style.hasAppearance());
+    auto isOldWidthAuto = style.width().isAuto();
+    auto isOldMinWidthAuto = style.minWidth().isAuto();
+    auto isOldHeightAuto = style.height().isAuto();
+    auto isOldMinHeightAuto = style.minHeight().isAuto();
+
+    RenderTheme::singleton().adjustStyle(style, m_element, userAgentAppearanceStyle);
+
+    if (style.containsSize()) {
+        if (style.containIntrinsicWidthType() != ContainIntrinsicSizeType::None) {
+            if (isOldWidthAuto)
+                style.setWidth(Length(LengthType::Auto));
+            if (isOldMinWidthAuto)
+                style.setMinWidth(Length(LengthType::Auto));
+        }
+        if (style.containIntrinsicHeightType() != ContainIntrinsicSizeType::None) {
+            if (isOldHeightAuto)
+                style.setHeight(Length(LengthType::Auto));
+            if (isOldMinHeightAuto)
+                style.setMinHeight(Length(LengthType::Auto));
+        }
+    }
 }
 
 void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
@@ -774,6 +824,78 @@ void Adjuster::adjustForSiteSpecificQuirks(RenderStyle& style) const
         }
     }
 #endif
+}
+
+void Adjuster::propagateToDocumentElementAndInitialContainingBlock(Update& update, const Document& document)
+{
+    auto* body = document.body();
+    auto* bodyStyle = body ? update.elementStyle(*body) : nullptr;
+    auto* documentElementStyle = update.elementStyle(*document.documentElement());
+
+    if (!documentElementStyle)
+        return;
+
+    // https://drafts.csswg.org/css-contain-2/#contain-property
+    // "Additionally, when any containments are active on either the HTML html or body elements, propagation of
+    // properties from the body element to the initial containing block, the viewport, or the canvas background, is disabled."
+    auto shouldPropagateFromBody = [&] {
+        if (bodyStyle && !bodyStyle->effectiveContainment().isEmpty())
+            return false;
+        return documentElementStyle->effectiveContainment().isEmpty();
+    }();
+
+    auto writingMode = [&] {
+        // FIXME: The spec says body should win.
+        if (documentElementStyle->hasExplicitlySetWritingMode())
+            return documentElementStyle->writingMode();
+        if (shouldPropagateFromBody && bodyStyle && bodyStyle->hasExplicitlySetWritingMode())
+            return bodyStyle->writingMode();
+        return RenderStyle::initialWritingMode();
+    }();
+
+    auto direction = [&] {
+        if (documentElementStyle->hasExplicitlySetDirection())
+            return documentElementStyle->direction();
+        if (shouldPropagateFromBody && bodyStyle && bodyStyle->hasExplicitlySetDirection())
+            return bodyStyle->direction();
+        return RenderStyle::initialDirection();
+    }();
+
+    // https://drafts.csswg.org/css-writing-modes-3/#icb
+    auto& viewStyle = document.renderView()->style();
+    if (writingMode != viewStyle.writingMode() || direction != viewStyle.direction()) {
+        auto newRootStyle = RenderStyle::clonePtr(viewStyle);
+        newRootStyle->setWritingMode(writingMode);
+        newRootStyle->setDirection(direction);
+        newRootStyle->setColumnStylesFromPaginationMode(document.view()->pagination().mode);
+        update.addInitialContainingBlockUpdate(WTFMove(newRootStyle));
+    }
+
+    // https://drafts.csswg.org/css-writing-modes-3/#principal-flow
+    if (writingMode != documentElementStyle->writingMode() || direction != documentElementStyle->direction()) {
+        auto* documentElementUpdate = update.elementUpdate(*document.documentElement());
+        if (!documentElementUpdate) {
+            update.addElement(*document.documentElement(), nullptr, { RenderStyle::clonePtr(*documentElementStyle) });
+            documentElementUpdate = update.elementUpdate(*document.documentElement());
+        }
+        documentElementUpdate->style->setWritingMode(writingMode);
+        documentElementUpdate->style->setDirection(direction);
+        documentElementUpdate->change = std::max(documentElementUpdate->change, Change::Inherited);
+    }
+}
+
+std::unique_ptr<RenderStyle> Adjuster::restoreUsedDocumentElementStyleToComputed(const RenderStyle& style)
+{
+    if (style.writingMode() == RenderStyle::initialWritingMode() && style.direction() == RenderStyle::initialDirection())
+        return { };
+
+    auto adjusted = RenderStyle::clonePtr(style);
+    if (!style.hasExplicitlySetWritingMode())
+        adjusted->setWritingMode(RenderStyle::initialWritingMode());
+    if (!style.hasExplicitlySetDirection())
+        adjusted->setDirection(RenderStyle::initialDirection());
+
+    return adjusted;
 }
 
 #if ENABLE(TEXT_AUTOSIZING)

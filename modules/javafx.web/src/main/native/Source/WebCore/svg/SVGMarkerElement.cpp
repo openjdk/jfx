@@ -23,6 +23,7 @@
 #include "config.h"
 #include "SVGMarkerElement.h"
 
+#include "NodeName.h"
 #include "RenderSVGResourceMarker.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -32,7 +33,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMarkerElement);
 
 inline SVGMarkerElement::SVGMarkerElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGFitToViewBox(this)
 {
     // Spec: If the markerWidth/markerHeight attribute is not specified, the effect is as if a value of "3" were specified.
@@ -59,37 +60,41 @@ AffineTransform SVGMarkerElement::viewBoxToViewTransform(float viewWidth, float 
     return SVGFitToViewBox::viewBoxToViewTransform(viewBox(), preserveAspectRatio(), viewWidth, viewHeight);
 }
 
-void SVGMarkerElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGMarkerElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::markerUnitsAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGMarkerUnitsType>::fromString(value);
+    SVGParsingError parseError = NoError;
+    switch (name.nodeName()) {
+    case AttributeNames::markerUnitsAttr: {
+        auto propertyValue = SVGPropertyTraits<SVGMarkerUnitsType>::fromString(newValue);
         if (propertyValue > 0)
             m_markerUnits->setBaseValInternal<SVGMarkerUnitsType>(propertyValue);
         return;
     }
-
-    if (name == SVGNames::orientAttr) {
-        auto pair = SVGPropertyTraits<std::pair<SVGAngleValue, SVGMarkerOrientType>>::fromString(value);
+    case AttributeNames::orientAttr: {
+        auto pair = SVGPropertyTraits<std::pair<SVGAngleValue, SVGMarkerOrientType>>::fromString(newValue);
         m_orientAngle->setBaseValInternal(pair.first);
         m_orientType->setBaseValInternal(pair.second);
         return;
     }
+    case AttributeNames::refXAttr:
+        m_refX->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::refYAttr:
+        m_refY->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::markerWidthAttr:
+        m_markerWidth->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::markerHeightAttr:
+        m_markerHeight->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    SVGParsingError parseError = NoError;
-
-    if (name == SVGNames::refXAttr)
-        m_refX->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::refYAttr)
-        m_refY->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::markerWidthAttr)
-        m_markerWidth->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::markerHeightAttr)
-        m_markerHeight->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGElement::parseAttribute(name, value);
-    SVGFitToViewBox::parseAttribute(name, value);
+    SVGFitToViewBox::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGMarkerElement::svgAttributeChanged(const QualifiedName& attrName)

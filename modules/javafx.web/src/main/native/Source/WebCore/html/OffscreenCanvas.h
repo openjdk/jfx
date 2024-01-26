@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #if ENABLE(OFFSCREEN_CANVAS)
 
+#include "ActiveDOMObject.h"
 #include "AffineTransform.h"
 #include "CanvasBase.h"
 #include "ContextDestructionObserver.h"
@@ -43,18 +44,18 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
+
 #if ENABLE(WEBGL)
 #include "WebGLContextAttributes.h"
 #endif
 
-
 namespace WebCore {
 
 class CanvasRenderingContext;
-class CSSValuePool;
 class DeferredPromise;
 class HTMLCanvasElement;
 class ImageBitmap;
+class ImageBitmapRenderingContext;
 class ImageData;
 class OffscreenCanvasRenderingContext2D;
 class WebGL2RenderingContext;
@@ -64,10 +65,9 @@ class WebGLRenderingContextBase;
 using OffscreenRenderingContext = std::variant<
 #if ENABLE(WEBGL)
     RefPtr<WebGLRenderingContext>,
-#endif
-#if ENABLE(WEBGL2)
     RefPtr<WebGL2RenderingContext>,
 #endif
+    RefPtr<ImageBitmapRenderingContext>,
     RefPtr<OffscreenCanvasRenderingContext2D>
 >;
 
@@ -77,9 +77,9 @@ class DetachedOffscreenCanvas {
     friend class OffscreenCanvas;
 
 public:
-    DetachedOffscreenCanvas(RefPtr<ImageBuffer>&&, const IntSize&, bool originClean);
+    DetachedOffscreenCanvas(std::unique_ptr<SerializedImageBuffer>, const IntSize&, bool originClean);
 
-    RefPtr<ImageBuffer> takeImageBuffer();
+    RefPtr<ImageBuffer> takeImageBuffer(ScriptExecutionContext&);
     const IntSize& size() const { return m_size; }
     bool originClean() const { return m_originClean; }
     size_t memoryCost() const
@@ -89,16 +89,16 @@ public:
             return buffer->memoryCost();
         return 0;
     }
-    WeakPtr<HTMLCanvasElement> takePlaceholderCanvas();
+    WeakPtr<HTMLCanvasElement, WeakPtrImplWithEventTargetData> takePlaceholderCanvas();
 
 private:
-    RefPtr<ImageBuffer> m_buffer;
+    std::unique_ptr<SerializedImageBuffer> m_buffer;
     IntSize m_size;
     bool m_originClean;
-    WeakPtr<HTMLCanvasElement> m_placeholderCanvas;
+    WeakPtr<HTMLCanvasElement, WeakPtrImplWithEventTargetData> m_placeholderCanvas;
 };
 
-class OffscreenCanvas final : public RefCounted<OffscreenCanvas>, public CanvasBase, public EventTargetWithInlineData, private ContextDestructionObserver {
+class OffscreenCanvas final : public ActiveDOMObject, public RefCounted<OffscreenCanvas>, public CanvasBase, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(OffscreenCanvas);
 public:
 
@@ -110,7 +110,8 @@ public:
     enum class RenderingContextType {
         _2d,
         Webgl,
-        Webgl2
+        Webgl2,
+        Bitmaprenderer
     };
 
     static bool enabledForContext(ScriptExecutionContext&);
@@ -125,13 +126,15 @@ public:
     void setWidth(unsigned);
     void setHeight(unsigned);
 
+    void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) final;
+
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
 
     ExceptionOr<std::optional<OffscreenRenderingContext>> getContext(JSC::JSGlobalObject&, RenderingContextType, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments);
     ExceptionOr<RefPtr<ImageBitmap>> transferToImageBitmap();
     void convertToBlob(ImageEncodeOptions&&, Ref<DeferredPromise>&&);
 
-    void didDraw(const std::optional<FloatRect>&) final;
+    void didDraw(const std::optional<FloatRect>&, ShouldApplyPostProcessingToDirtyRect) final;
 
     Image* copiedImage() const final;
     void clearCopiedImage() const final;
@@ -145,13 +148,14 @@ public:
 
     void commitToPlaceholderCanvas();
 
-    CSSValuePool& cssValuePool();
+    const char* activeDOMObjectName() const final { return "OffscreenCanvas"_s; }
 
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
+    void dispatchEvent(Event&) final;
     using RefCounted::ref;
     using RefCounted::deref;
 
 private:
-
     OffscreenCanvas(ScriptExecutionContext&, unsigned width, unsigned height);
 
     bool isOffscreenCanvas() const final { return true; }
@@ -173,7 +177,7 @@ private:
 #endif
 
     void createImageBuffer() const final;
-    RefPtr<ImageBuffer> takeImageBuffer() const;
+    std::unique_ptr<SerializedImageBuffer> takeImageBuffer() const;
 
     void reset();
 
@@ -199,9 +203,9 @@ private:
             return adoptRef(*new PlaceholderData);
         }
 
-        WeakPtr<HTMLCanvasElement> canvas;
+        WeakPtr<HTMLCanvasElement, WeakPtrImplWithEventTargetData> canvas;
         RefPtr<ImageBufferPipe::Source> bufferPipeSource;
-        RefPtr<ImageBuffer> pendingCommitBuffer;
+        std::unique_ptr<SerializedImageBuffer> pendingCommitBuffer;
         mutable Lock bufferLock;
     };
 

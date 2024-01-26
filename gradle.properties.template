@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -69,13 +69,12 @@
 
 #INCLUDE_ES2 = true
 
-# Specifies whether to build SDK for running unit tests
-# By default, it is set to true and the tests are running of the
-# fresh-built SDK. If set to false, this flag removes main sources
-# compilation tasks and building the whole SDK. The existing SDK is used
-# instead, and must have been previously built
+# Specifies whether to build SDK for running the provided test task.
+# By default, it is set to false and the tests are running of the
+# fresh-built SDK. If set to true, this flag disables all non test tasks,
+# and it is expected that sdk and shims tasks have been previously built.
 
-#BUILD_SDK_FOR_TEST = false
+#TEST_ONLY = true
 
 # Specifies whether to do a full test run or a "smoke test" run. By default we
 # do a smoke test run which excludes all tests that show a window or play media.

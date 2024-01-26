@@ -32,13 +32,17 @@
 #include "ComplexGetStatus.h"
 #include "GetterSetterAccessCase.h"
 #include "ICStatusUtils.h"
+#include "InlineCacheCompiler.h"
+#include "InlineCallFrame.h"
 #include "IntrinsicGetterAccessCase.h"
 #include "ModuleNamespaceAccessCase.h"
-#include "PolymorphicAccess.h"
+#include "ProxyObjectAccessCase.h"
 #include "StructureStubInfo.h"
 #include <wtf/ListDump.h>
 
 namespace JSC {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GetByStatus);
 
 bool GetByStatus::appendVariant(const GetByVariant& variant)
 {
@@ -81,6 +85,11 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
         break;
 
     case op_get_by_val:
+    case op_get_by_val_with_this:
+    case op_get_by_id_with_this:
+        return GetByStatus(NoInformation, false);
+
+    case op_enumerator_get_by_val:
         return GetByStatus(NoInformation, false);
 
     case op_iterator_open: {
@@ -144,15 +153,14 @@ GetByStatus GetByStatus::computeFromLLInt(CodeBlock* profiledBlock, BytecodeInde
     return result;
 }
 
-GetByStatus GetByStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, BytecodeIndex bytecodeIndex, ExitFlag didExit, CallLinkStatus::ExitSiteData callExitSiteData)
+GetByStatus GetByStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, ExitFlag didExit, CallLinkStatus::ExitSiteData callExitSiteData, CodeOrigin codeOrigin)
 {
     ConcurrentJSLocker locker(profiledBlock->m_lock);
 
     GetByStatus result;
 
 #if ENABLE(DFG_JIT)
-    result = computeForStubInfoWithoutExitSiteFeedback(
-        locker, profiledBlock, map.get(CodeOrigin(bytecodeIndex)).stubInfo, callExitSiteData);
+    result = computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock, map.get(CodeOrigin(codeOrigin.bytecodeIndex())).stubInfo, callExitSiteData, codeOrigin);
 
     if (didExit)
         return result.slowVersion();
@@ -163,7 +171,7 @@ GetByStatus GetByStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, 
 #endif
 
     if (!result)
-        return computeFromLLInt(profiledBlock, bytecodeIndex);
+        return computeFromLLInt(profiledBlock, codeOrigin.bytecodeIndex());
 
     return result;
 }
@@ -179,6 +187,10 @@ GetByStatus::GetByStatus(StubInfoSummary summary, StructureStubInfo* stubInfo)
     case StubInfoSummary::Simple:
     case StubInfoSummary::MakesCalls:
         RELEASE_ASSERT_NOT_REACHED();
+        return;
+    case StubInfoSummary::Megamorphic:
+        ASSERT(stubInfo);
+        m_state = stubInfo->tookSlowPath ? ObservedTakesSlowPath : Megamorphic;
         return;
     case StubInfoSummary::TakesSlowPath:
         ASSERT(stubInfo);
@@ -199,8 +211,13 @@ GetByStatus::GetByStatus(const ModuleNamespaceAccessCase& accessCase)
 {
 }
 
-GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
-    const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CallLinkStatus::ExitSiteData callExitSiteData)
+GetByStatus::GetByStatus(const ProxyObjectAccessCase&)
+    : m_state(ProxyObject)
+    , m_wasSeenInJIT(true)
+{
+}
+
+GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CallLinkStatus::ExitSiteData callExitSiteData, CodeOrigin codeOrigin)
 {
     StubInfoSummary summary = StructureStubInfo::summary(profiledBlock->vm(), stubInfo);
     if (!isInlineable(summary))
@@ -242,6 +259,29 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
             switch (access.type()) {
             case AccessCase::ModuleNamespaceLoad:
                 return GetByStatus(access.as<ModuleNamespaceAccessCase>());
+            case AccessCase::ProxyObjectLoad: {
+                auto& accessCase = access.as<ProxyObjectAccessCase>();
+                auto status = GetByStatus(accessCase);
+                auto callLinkStatus = makeUnique<CallLinkStatus>();
+                if (CallLinkInfo* callLinkInfo = accessCase.callLinkInfo())
+                    *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
+                status.appendVariant(GetByVariant(accessCase.identifier(), { }, invalidOffset, { }, WTFMove(callLinkStatus)));
+                return status;
+            }
+            case AccessCase::LoadMegamorphic:
+            case AccessCase::IndexedMegamorphicLoad: {
+                // Emitting LoadMegamorphic means that we give up polymorphic IC optimization. So this needs very careful handling.
+                // It is possible that one function can be inlined from the other function, and then it gets limited # of structures.
+                // In this case, continue using IC is better than falling back to megamorphic case. But if the function gets compiled before,
+                // and even optimizing JIT saw the megamorphism, then this is likely that this function continues having megamorphic behavior,
+                // and inlined megamorphic code is faster. Currently, we use LoadMegamorphic only when the exact same form of CodeOrigin gets
+                // this megamorphic GetById before (same level of inlining etc.). This is very conservative but effective since IC is very fast
+                // when it worked well (but costly if it doesn't work and get megamorphic). Once this cost-benefit tradeoff gets changed (via
+                // handler IC), we can revisit this condition.
+                if (isSameStyledCodeOrigin(stubInfo->codeOrigin, codeOrigin) && !stubInfo->tookSlowPath)
+                    return GetByStatus(Megamorphic, /* wasSeenInJIT */ true);
+                break;
+            }
             default:
                 break;
             }
@@ -249,7 +289,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
 
         for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
             const AccessCase& access = list->at(listIndex);
-            if (access.viaProxy())
+            if (access.viaGlobalProxy())
                 return GetByStatus(JSC::slowVersion(summary), stubInfo);
 
             if (access.usesPolyProto())
@@ -286,7 +326,7 @@ GetByStatus GetByStatus::computeForStubInfoWithoutExitSiteFeedback(
             case ComplexGetStatus::Inlineable: {
                 std::unique_ptr<CallLinkStatus> callLinkStatus;
                 JSFunction* intrinsicFunction = nullptr;
-                FunctionPtr<CustomAccessorPtrTag> customAccessorGetter;
+                CodePtr<CustomAccessorPtrTag> customAccessorGetter;
                 std::unique_ptr<DOMAttributeAnnotation> domAttribute;
                 bool haveDOMAttribute = false;
 
@@ -373,9 +413,7 @@ GetByStatus GetByStatus::computeFor(
             if (!context->isInlined(codeOrigin)) {
                 // Merge with baseline result, which also happens to contain exit data for both
                 // inlined and not-inlined.
-                GetByStatus baselineResult = computeFor(
-                    profiledBlock, baselineMap, bytecodeIndex, didExit,
-                    callExitSiteData);
+                GetByStatus baselineResult = computeFor(profiledBlock, baselineMap, didExit, callExitSiteData, codeOrigin);
                 baselineResult.merge(result);
                 return baselineResult;
             }
@@ -388,8 +426,7 @@ GetByStatus GetByStatus::computeFor(
             GetByStatus result;
             {
                 ConcurrentJSLocker locker(context->optimizedCodeBlock->m_lock);
-                result = computeForStubInfoWithoutExitSiteFeedback(
-                    locker, context->optimizedCodeBlock, status.stubInfo, callExitSiteData);
+                result = computeForStubInfoWithoutExitSiteFeedback(locker, context->optimizedCodeBlock, status.stubInfo, callExitSiteData, codeOrigin);
             }
             if (result.isSet())
                 return bless(result);
@@ -399,7 +436,7 @@ GetByStatus GetByStatus::computeFor(
             return bless(*status.getStatus);
     }
 
-    return computeFor(profiledBlock, baselineMap, bytecodeIndex, didExit, callExitSiteData);
+    return computeFor(profiledBlock, baselineMap, didExit, callExitSiteData, codeOrigin);
 }
 
 GetByStatus GetByStatus::computeFor(const StructureSet& set, UniquedStringImpl* uid)
@@ -461,8 +498,10 @@ bool GetByStatus::makesCalls() const
                 return true;
         }
         return false;
+    case ProxyObject:
     case MakesCalls:
     case ObservedSlowPathAndMakesCalls:
+    case Megamorphic:
         return true;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -494,8 +533,19 @@ void GetByStatus::merge(const GetByStatus& other)
         *this = other;
         return;
 
+    case Megamorphic:
+        if (m_state != other.m_state) {
+            if (other.m_state == Simple || other.m_state == Custom) {
+                *this = other;
+                return;
+            }
+            return mergeSlow();
+        }
+        return;
+
     case Simple:
     case Custom:
+    case ProxyObject:
         if (m_state != other.m_state)
             return mergeSlow();
 
@@ -597,8 +647,14 @@ void GetByStatus::dump(PrintStream& out) const
     case Custom:
         out.print("Custom");
         break;
+    case Megamorphic:
+        out.print("Megamorphic");
+        break;
     case ModuleNamespace:
         out.print("ModuleNamespace");
+        break;
+    case ProxyObject:
+        out.print("ProxyObject");
         break;
     case LikelyTakesSlowPath:
         out.print("LikelyTakesSlowPath");

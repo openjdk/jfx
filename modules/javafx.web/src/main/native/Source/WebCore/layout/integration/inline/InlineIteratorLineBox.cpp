@@ -26,9 +26,10 @@
 #include "config.h"
 #include "InlineIteratorLineBox.h"
 
-#include "InlineIteratorBox.h"
+#include "InlineIteratorBoxInlines.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlow.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 
 namespace WebCore {
@@ -79,23 +80,25 @@ bool LineBoxIterator::operator==(const LineBoxIterator& other) const
 
 LineBoxIterator firstLineBoxFor(const RenderBlockFlow& flow)
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = flow.modernLineLayout())
         return lineLayout->firstLineBox();
-#endif
 
     return { LineBoxIteratorLegacyPath { flow.firstRootBox() } };
 }
 
 LineBoxIterator lastLineBoxFor(const RenderBlockFlow& flow)
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = flow.modernLineLayout())
         return lineLayout->lastLineBox();
-#endif
 
     return { LineBoxIteratorLegacyPath { flow.lastRootBox() } };
 }
+
+LineBoxIterator lineBoxFor(const LayoutIntegration::InlineContent& inlineContent, size_t lineIndex)
+{
+    return { LineBoxIteratorModernPath { inlineContent, lineIndex } };
+}
+
 
 LineBoxIterator LineBox::next() const
 {
@@ -140,22 +143,40 @@ LeafBoxIterator closestBoxForHorizontalPosition(const LineBox& lineBox, float ho
     if (firstBox == lastBox && (!editableOnly || isEditable(firstBox)))
         return firstBox;
 
-    if (firstBox && horizontalPosition <= firstBox->logicalLeft() && !firstBox->renderer().isListMarker() && (!editableOnly || isEditable(firstBox)))
+    if (firstBox && horizontalPosition <= firstBox->logicalLeftIgnoringInlineDirection() && !firstBox->renderer().isListMarker() && (!editableOnly || isEditable(firstBox)))
         return firstBox;
 
-    if (lastBox && horizontalPosition >= lastBox->logicalRight() && !lastBox->renderer().isListMarker() && (!editableOnly || isEditable(lastBox)))
+    if (lastBox && horizontalPosition >= lastBox->logicalRightIgnoringInlineDirection() && !lastBox->renderer().isListMarker() && (!editableOnly || isEditable(lastBox)))
         return lastBox;
 
     auto closestBox = lastBox;
     for (auto box = firstBox; box; box = box.traverseNextOnLineIgnoringLineBreak()) {
         if (!box->renderer().isListMarker() && (!editableOnly || isEditable(box))) {
-            if (horizontalPosition < box->logicalRight())
+            if (horizontalPosition < box->logicalRightIgnoringInlineDirection())
                 return box;
             closestBox = box;
         }
     }
 
     return closestBox;
+}
+
+RenderObject::HighlightState LineBox::ellipsisSelectionState() const
+{
+    auto lastLeafBox = this->lastLeafBox();
+    if (!lastLeafBox || !lastLeafBox->isText())
+        return RenderObject::HighlightState::None;
+
+    auto& text = downcast<InlineIterator::TextBox>(*lastLeafBox);
+    if (text.selectionState() == RenderObject::HighlightState::None)
+        return RenderObject::HighlightState::None;
+
+    auto selectionRange = text.selectableRange();
+    if (!selectionRange.truncation)
+        return RenderObject::HighlightState::None;
+
+    auto [selectionStart, selectionEnd] = formattingContextRoot().view().selection().rangeForTextBox(text.renderer(), selectionRange);
+    return selectionStart <= *selectionRange.truncation && selectionEnd >= *selectionRange.truncation ? RenderObject::HighlightState::Inside : RenderObject::HighlightState::None;
 }
 
 }

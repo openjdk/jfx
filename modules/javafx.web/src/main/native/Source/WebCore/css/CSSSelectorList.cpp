@@ -36,7 +36,8 @@ namespace WebCore {
 CSSSelectorList::CSSSelectorList(const CSSSelectorList& other)
 {
     unsigned otherComponentCount = other.componentCount();
-    ASSERT_WITH_SECURITY_IMPLICATION(otherComponentCount);
+    if (!otherComponentCount)
+        return;
 
     m_selectorArray = makeUniqueArray<CSSSelector>(otherComponentCount);
     for (unsigned i = 0; i < otherComponentCount; ++i)
@@ -70,7 +71,7 @@ CSSSelectorList::CSSSelectorList(Vector<std::unique_ptr<CSSParserSelector>>&& se
             if (current != first)
                 m_selectorArray[arrayIndex].setNotFirstInTagHistory();
             current = current->tagHistory();
-            ASSERT(!m_selectorArray[arrayIndex].isLastInSelectorList());
+            ASSERT(!m_selectorArray[arrayIndex].isLastInSelectorList() || (flattenedSize == arrayIndex + 1));
             if (current)
                 m_selectorArray[arrayIndex].setNotLastInTagHistory();
             ++arrayIndex;
@@ -156,7 +157,7 @@ class SelectorNeedsNamespaceResolutionFunctor {
 public:
     bool operator()(const CSSSelector* selector)
     {
-        if (selector->match() == CSSSelector::Tag && !selector->tagQName().prefix().isEmpty() && selector->tagQName().prefix() != starAtom())
+        if (selector->match() == CSSSelector::Match::Tag && !selector->tagQName().prefix().isEmpty() && selector->tagQName().prefix() != starAtom())
             return true;
         if (selector->isAttributeSelector() && !selector->attribute().prefix().isEmpty() && selector->attribute().prefix() != starAtom())
             return true;
@@ -182,6 +183,32 @@ bool CSSSelectorList::hasInvalidSelector() const
 {
     SelectorHasInvalidSelectorFunctor functor;
     return forEachSelector(functor, this);
+}
+
+bool CSSSelectorList::hasExplicitNestingParent() const
+{
+    auto functor = [](auto* selector) {
+        return selector->hasExplicitNestingParent();
+    };
+
+    return forEachSelector(functor, this);
+}
+
+bool CSSSelectorList::hasOnlyNestingSelector() const
+{
+    if (componentCount() != 1)
+        return false;
+
+    auto singleSelector = first();
+
+    if (!singleSelector)
+        return false;
+
+    // Selector should be a single selector
+    if (singleSelector->tagHistory())
+        return false;
+
+    return singleSelector->match() == CSSSelector::Match::NestingParent;
 }
 
 } // namespace WebCore

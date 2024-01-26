@@ -30,7 +30,7 @@
 
 #include "InspectorInstrumentation.h"
 #include "ScriptExecutionContext.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include "WebGLContextGroup.h"
 #include "WebGLRenderingContextBase.h"
 #include "WebGLShader.h"
@@ -39,10 +39,6 @@
 #include <wtf/Lock.h>
 #include <wtf/Locker.h>
 #include <wtf/NeverDestroyed.h>
-
-#if !USE(ANGLE)
-#include "GraphicsContextGLOpenGL.h"
-#endif
 
 namespace WebCore {
 
@@ -221,12 +217,8 @@ void WebGLProgram::cacheActiveAttribLocations(GraphicsContextGL* context3d)
     GCGLint numAttribs = context3d->getProgrami(object(), GraphicsContextGL::ACTIVE_ATTRIBUTES);
     m_activeAttribLocations.resize(static_cast<size_t>(numAttribs));
     for (int i = 0; i < numAttribs; ++i) {
-        GraphicsContextGL::ActiveInfo info;
-#if USE(ANGLE)
+        GraphicsContextGLActiveInfo info;
         context3d->getActiveAttrib(object(), i, info);
-#else
-        static_cast<GraphicsContextGLOpenGL*>(context3d)->getActiveAttribImpl(object(), i, info);
-#endif
         m_activeAttribLocations[i] = context3d->getAttribLocation(object(), info.name);
     }
 }

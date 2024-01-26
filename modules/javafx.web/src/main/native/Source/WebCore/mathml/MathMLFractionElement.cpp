@@ -30,6 +30,7 @@
 #if ENABLE(MATHML)
 
 #include "ElementInlines.h"
+#include "NodeName.h"
 #include "RenderMathMLFraction.h"
 #include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
@@ -57,7 +58,7 @@ const MathMLElement::Length& MathMLFractionElement::lineThickness()
 
     auto& thickness = attributeWithoutSynchronization(linethicknessAttr);
     if (document().settings().coreMathMLEnabled()) {
-        m_lineThickness = parseMathMLLength(thickness);
+        m_lineThickness = parseMathMLLength(thickness, false);
         return m_lineThickness.value();
     }
 
@@ -75,7 +76,7 @@ const MathMLElement::Length& MathMLFractionElement::lineThickness()
         m_lineThickness.value().type = LengthType::UnitLess;
         m_lineThickness.value().value = 2;
     } else
-        m_lineThickness = parseMathMLLength(thickness);
+        m_lineThickness = parseMathMLLength(thickness, true);
     return m_lineThickness.value();
 }
 
@@ -83,6 +84,11 @@ MathMLFractionElement::FractionAlignment MathMLFractionElement::cachedFractionAl
 {
     if (alignment)
         return alignment.value();
+
+    if (document().settings().coreMathMLEnabled()) {
+        alignment = FractionAlignmentCenter;
+        return alignment.value();
+    }
 
     auto& value = attributeWithoutSynchronization(name);
     if (equalLettersIgnoringASCIICase(value, "left"_s))
@@ -104,16 +110,23 @@ MathMLFractionElement::FractionAlignment MathMLFractionElement::denominatorAlign
     return cachedFractionAlignment(denomalignAttr, m_denominatorAlignment);
 }
 
-void MathMLFractionElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void MathMLFractionElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == linethicknessAttr)
+    switch (name.nodeName()) {
+    case AttributeNames::linethicknessAttr:
         m_lineThickness = std::nullopt;
-    else if (name == numalignAttr)
+        break;
+    case AttributeNames::numalignAttr:
         m_numeratorAlignment = std::nullopt;
-    else if (name == denomalignAttr)
+        break;
+    case AttributeNames::denomalignAttr:
         m_denominatorAlignment = std::nullopt;
+        break;
+    default:
+        break;
+    }
 
-    MathMLElement::parseAttribute(name, value);
+    MathMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 RenderPtr<RenderElement> MathMLFractionElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

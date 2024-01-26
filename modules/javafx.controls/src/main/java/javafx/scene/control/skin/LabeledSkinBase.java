@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -424,11 +424,14 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final Labeled labeled = getSkinnable();
         final Node g = labeled.getGraphic();
         if (!isIgnoreGraphic()) {
+            double graphicHeight = g.prefHeight(-1);
+            double textHeight = text.prefHeight(-1);
             ContentDisplay contentDisplay = labeled.getContentDisplay();
             if (contentDisplay == ContentDisplay.TOP) {
-                h = g.prefHeight(-1) + labeled.getGraphicTextGap() + textBaselineOffset;
-            } else if (contentDisplay == ContentDisplay.LEFT || contentDisplay == RIGHT) {
-                h = textBaselineOffset + (g.prefHeight(-1) - text.prefHeight(-1)) / 2;
+                h = graphicHeight + labeled.getGraphicTextGap() + textBaselineOffset;
+            } else if ((contentDisplay == ContentDisplay.LEFT || contentDisplay == RIGHT)
+                        && (graphicHeight > textHeight)) {
+                h = textBaselineOffset + (graphicHeight - textHeight) / 2;
             }
         }
 

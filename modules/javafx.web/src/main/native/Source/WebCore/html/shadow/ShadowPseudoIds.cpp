@@ -147,6 +147,20 @@ const AtomString& webkitListButton()
     return webkitListButton;
 }
 
+#if PLATFORM(JAVA)
+const AtomString& webkitMediaSliderThumb()
+{
+    static MainThreadNeverDestroyed<const AtomString> webkitMediaSliderThumb("-webkit-media-slider-thumb"_s);
+    return webkitMediaSliderThumb;
+}
+
+const AtomString& webkitMediaSliderContainer()
+{
+    static MainThreadNeverDestroyed<const AtomString> webkitMediaSliderContainer("-webkit-media-slider-container"_s);
+    return webkitMediaSliderContainer;
+}
+#endif
+
 const AtomString& webkitMediaTextTrackContainer()
 {
     static MainThreadNeverDestroyed<const AtomString> webkitMediaTextTrackContainer("-webkit-media-text-track-container"_s);

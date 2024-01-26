@@ -26,6 +26,7 @@
 #include "CSSStyleSheet.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
+#include "NodeName.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -36,7 +37,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGStyleElement);
 
 inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , m_styleSheetOwner(document, createdByParser)
     , m_loadEventTimer(*this, &SVGElement::loadEventTimerFired)
 {
@@ -77,9 +78,8 @@ void SVGStyleElement::setType(const AtomString& type)
 
 const AtomString& SVGStyleElement::media() const
 {
-    static MainThreadNeverDestroyed<const AtomString> defaultValue("all"_s);
-    const AtomString& n = attributeWithoutSynchronization(SVGNames::mediaAttr);
-    return n.isNull() ? defaultValue.get() : n;
+    auto& value = attributeWithoutSynchronization(SVGNames::mediaAttr);
+    return value.isNull() ? allAtom() : value;
 }
 
 void SVGStyleElement::setMedia(const AtomString& media)
@@ -92,23 +92,24 @@ String SVGStyleElement::title() const
     return attributeWithoutSynchronization(SVGNames::titleAttr);
 }
 
-void SVGStyleElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGStyleElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::titleAttr) {
+    switch (name.nodeName()) {
+    case AttributeNames::titleAttr:
         if (sheet() && !isInShadowTree())
-            sheet()->setTitle(value);
-        return;
-    }
-    if (name == SVGNames::typeAttr) {
-        m_styleSheetOwner.setContentType(value);
-        return;
-    }
-    if (name == SVGNames::mediaAttr) {
-        m_styleSheetOwner.setMedia(value);
-        return;
+            sheet()->setTitle(newValue);
+        break;
+    case AttributeNames::typeAttr:
+        m_styleSheetOwner.setContentType(newValue);
+        break;
+    case AttributeNames::mediaAttr:
+        m_styleSheetOwner.setMedia(newValue);
+        break;
+    default:
+        break;
     }
 
-    SVGElement::parseAttribute(name, value);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGStyleElement::finishParsingChildren()

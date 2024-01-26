@@ -381,7 +381,7 @@ ExceptionOr<void> TextTrack::removeCue(TextTrackCue& cue)
     return { };
 }
 
-void TextTrack::removeCuesNotInTimeRanges(PlatformTimeRanges& buffered)
+void TextTrack::removeCuesNotInTimeRanges(const PlatformTimeRanges& buffered)
 {
     ASSERT(shouldPurgeCuesFromUnbufferedRanges());
 
@@ -490,9 +490,10 @@ void TextTrack::cueDidChange(TextTrackCue& cue)
 int TextTrack::trackIndex()
 {
     if (!m_trackIndex) {
-        if (!m_textTrackList)
+        if (!textTrackList())
             return 0;
-        m_trackIndex = m_textTrackList->getTrackIndex(*this);
+
+        m_trackIndex = textTrackList()->getTrackIndex(*this);
     }
     return m_trackIndex.value();
 }
@@ -505,8 +506,13 @@ void TextTrack::invalidateTrackIndex()
 
 bool TextTrack::isRendered()
 {
-    return (m_kind == Kind::Captions || m_kind == Kind::Subtitles || m_kind == Kind::Forced)
+    return (m_kind == Kind::Captions || m_kind == Kind::Subtitles || m_kind == Kind::Forced || m_kind == Kind::Descriptions)
         && m_mode == Mode::Showing;
+}
+
+bool TextTrack::isSpoken()
+{
+    return m_kind == Kind::Descriptions && m_mode == Mode::Showing;
 }
 
 TextTrackCueList& TextTrack::ensureTextTrackCueList()
@@ -519,9 +525,10 @@ TextTrackCueList& TextTrack::ensureTextTrackCueList()
 int TextTrack::trackIndexRelativeToRenderedTracks()
 {
     if (!m_renderedTrackIndex) {
-        if (!m_textTrackList)
+        if (!textTrackList())
             return 0;
-        m_renderedTrackIndex = m_textTrackList->getTrackIndexRelativeToRenderedTracks(*this);
+
+        m_renderedTrackIndex = textTrackList()->getTrackIndexRelativeToRenderedTracks(*this);
     }
     return m_renderedTrackIndex.value();
 }

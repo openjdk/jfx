@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -260,6 +260,7 @@ class WinWindow extends Window {
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
     @Override native protected boolean _close(long ptr);
     @Override native protected boolean _setView(long ptr, View view);
+    @Override native protected void _updateViewSize(long ptr);
     @Override native protected boolean _setMenubar(long ptr, long menubarPtr);
     @Override native protected boolean _minimize(long ptr, boolean minimize);
     @Override native protected boolean _maximize(long ptr, boolean maximize, boolean wasMaximized);

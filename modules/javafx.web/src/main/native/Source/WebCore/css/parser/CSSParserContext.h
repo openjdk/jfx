@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,23 @@ namespace WebCore {
 
 class Document;
 
-struct ResolvedURL;
+struct ResolvedURL {
+    String specifiedURLString;
+    URL resolvedURL;
+
+    bool isLocalURL() const;
+};
+
+inline ResolvedURL makeResolvedURL(URL&& resolvedURL)
+{
+    auto string = resolvedURL.string();
+    return { WTFMove(string), WTFMove(resolvedURL) };
+}
+
+inline bool operator==(const ResolvedURL& a, const ResolvedURL& b)
+{
+    return a.specifiedURLString == b.specifiedURLString && a.resolvedURL == b.resolvedURL;
+}
 
 struct CSSParserContext {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -53,6 +69,7 @@ struct CSSParserContext {
 
     bool isContentOpaque { false };
     bool useSystemAppearance { false };
+    bool shouldIgnoreImportRules { false };
 
     // Settings, excluding those affecting properties.
     bool colorContrastEnabled { false };
@@ -73,6 +90,12 @@ struct CSSParserContext {
     bool gradientPremultipliedAlphaInterpolationEnabled { false };
     bool gradientInterpolationColorSpacesEnabled { false };
     bool subgridEnabled { false };
+    bool masonryEnabled { false };
+    bool cssNestingEnabled { false };
+    bool cssPaintingAPIEnabled { false };
+    bool cssTextUnderlinePositionLeftRightEnabled { false };
+    bool cssTextWrapNewValuesEnabled { false };
+    bool cssWordBreakAutoEnabled { false };
 
     // Settings, those affecting properties.
     CSSPropertySettings propertySettings;
@@ -83,7 +106,6 @@ struct CSSParserContext {
 };
 
 bool operator==(const CSSParserContext&, const CSSParserContext&);
-inline bool operator!=(const CSSParserContext& a, const CSSParserContext& b) { return !(a == b); }
 
 void add(Hasher&, const CSSParserContext&);
 

@@ -193,11 +193,6 @@ public:
         return m_value == other.m_value;
     }
 
-    constexpr bool operator!=(Seconds other) const
-    {
-        return m_value != other.m_value;
-    }
-
     constexpr bool operator<(Seconds other) const
     {
         return m_value < other.m_value;
@@ -223,33 +218,6 @@ public:
     Seconds isolatedCopy() const
     {
         return *this;
-    }
-
-    template<class Encoder>
-    void encode(Encoder& encoder) const
-    {
-        encoder << m_value;
-    }
-
-    template<class Decoder>
-    static std::optional<Seconds> decode(Decoder& decoder)
-    {
-        std::optional<double> seconds;
-        decoder >> seconds;
-        if (!seconds)
-            return std::nullopt;
-        return Seconds(*seconds);
-    }
-
-    template<class Decoder>
-    static WARN_UNUSED_RETURN bool decode(Decoder& decoder, Seconds& seconds)
-    {
-        double value;
-        if (!decoder.decode(value))
-            return false;
-
-        seconds = Seconds(value);
-        return true;
     }
 
     struct MarkableTraits;

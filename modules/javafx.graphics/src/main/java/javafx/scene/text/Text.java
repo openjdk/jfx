@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.text.TextRun;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -356,7 +357,7 @@ public class Text extends Shape {
     BaseBounds getSpanBounds() {
         if (spanBoundsInvalid) {
             GlyphList[] runs = getRuns();
-            if (runs.length != 0) {
+            if (runs != null && runs.length != 0) {
                 float left = Float.POSITIVE_INFINITY;
                 float top = Float.POSITIVE_INFINITY;
                 float right = 0;
@@ -1011,7 +1012,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Maps local point to index in the content.
+     * Maps local point to {@link HitInfo} in the content.
      *
      * @param point the specified point to be tested
      * @return a {@code HitInfo} representing the character index found
@@ -1022,9 +1023,25 @@ public class Text extends Shape {
         TextLayout layout = getTextLayout();
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
-        TextLayout.Hit layoutHit = layout.getHitInfo((float)x, (float)y);
-        return new HitInfo(layoutHit.getCharIndex(), layoutHit.getInsertionIndex(),
-                           layoutHit.isLeading(), getText());
+        GlyphList[] runs = getRuns();
+        int runIndex = 0;
+        if (runs.length != 0) {
+            double ptY = localToParent(x, y).getY();
+            while (runIndex < runs.length - 1) {
+                if (ptY > runs[runIndex].getLocation().y && ptY < runs[runIndex + 1].getLocation().y) {
+                    break;
+                }
+                runIndex++;
+            }
+        }
+        int textRunStart = 0;
+        int curRunStart = 0;
+        if (runs.length != 0) {
+            textRunStart = ((TextRun) runs[0]).getStart();
+            curRunStart = ((TextRun) runs[runIndex]).getStart();
+        }
+        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getText(), textRunStart, curRunStart);
+        return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
     }
 
     private PathElement[] getRange(int start, int end, int type) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,9 @@
 #pragma once
 
 #include "CanvasBase.h"
-#include "GraphicsLayer.h"
+#include "GraphicsLayerContentsDisplayDelegate.h"
 #include "ScriptWrappable.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/Lock.h>
@@ -36,17 +37,20 @@
 
 namespace WebCore {
 
+class CSSStyleImageValue;
+class CachedImage;
 class CanvasPattern;
 class DestinationColorSpace;
+class GraphicsLayer;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
 class ImageBitmap;
-class CSSStyleImageValue;
+class SVGImageElement;
 class WebGLObject;
 enum class PixelFormat : uint8_t;
 
-class CanvasRenderingContext : public ScriptWrappable {
+class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<CanvasRenderingContext>, public CanMakeCheckedPtr {
     WTF_MAKE_NONCOPYABLE(CanvasRenderingContext);
     WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext);
 public:
@@ -60,10 +64,12 @@ public:
 
     CanvasBase& canvasBase() const { return m_canvas; }
 
+    virtual bool is2dBase() const { return false; }
     virtual bool is2d() const { return false; }
     virtual bool isWebGL1() const { return false; }
     virtual bool isWebGL2() const { return false; }
     bool isWebGL() const { return isWebGL1() || isWebGL2(); }
+    virtual bool isWebGPU() const { return false; }
     virtual bool isGPUBased() const { return false; }
     virtual bool isAccelerated() const { return false; }
     virtual bool isBitmapRenderer() const { return false; }
@@ -78,6 +84,7 @@ public:
     virtual void prepareForDisplayWithPaint() { }
     virtual void paintRenderingResultsToCanvas() { }
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate();
+    virtual void setContentsToLayer(GraphicsLayer&);
 
     bool hasActiveInspectorCanvasCallTracer() const { return m_hasActiveInspectorCanvasCallTracer; }
     void setHasActiveInspectorCanvasCallTracer(bool hasActiveInspectorCanvasCallTracer) { m_hasActiveInspectorCanvasCallTracer = hasActiveInspectorCanvasCallTracer; }
@@ -91,16 +98,18 @@ public:
 
 protected:
     explicit CanvasRenderingContext(CanvasBase&);
-    bool wouldTaintOrigin(const CanvasPattern*);
-    bool wouldTaintOrigin(const CanvasBase*);
-    bool wouldTaintOrigin(const HTMLImageElement*);
-    bool wouldTaintOrigin(const HTMLVideoElement*);
-    bool wouldTaintOrigin(const ImageBitmap*);
-    bool wouldTaintOrigin(const URL&);
+    bool taintsOrigin(const CanvasPattern*);
+    bool taintsOrigin(const CanvasBase*);
+    bool taintsOrigin(const CachedImage*);
+    bool taintsOrigin(const HTMLImageElement*);
+    bool taintsOrigin(const SVGImageElement*);
+    bool taintsOrigin(const HTMLVideoElement*);
+    bool taintsOrigin(const ImageBitmap*);
+    bool taintsOrigin(const URL&);
 
     template<class T> void checkOrigin(const T* arg)
     {
-        if (wouldTaintOrigin(arg))
+        if (m_canvas.originClean() && taintsOrigin(arg))
             m_canvas.setOriginTainted();
     }
     void checkOrigin(const URL&);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include <array>
+#include <wtf/EnumTraits.h>
 
 namespace WTF {
 
@@ -33,7 +34,7 @@ namespace WTF {
 // This assumes the values of the enum start at 0 and monotonically increase by 1
 // (so the conversion function between size_t and the enum is just a simple static_cast).
 // LastValue is the maximum value of the enum, which determines the size of the array.
-template <typename Key, typename T, Key LastValue>
+template <typename Key, typename T, Key LastValue = EnumTraits<Key>::values::max>
 class EnumeratedArray {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -43,14 +44,7 @@ public:
     using const_reference = const value_type&;
     using pointer = value_type*;
     using const_pointer = const value_type*;
-
-private:
-    // We add 1 to the size because we expect that LastValue is the maximum value of the enum,
-    // rather than the count of items in the enum.
-    // We're assuming the values in the enum are zero-indexed.
     using UnderlyingType = std::array<T, static_cast<std::size_t>(LastValue) + 1>;
-
-public:
     using iterator = typename UnderlyingType::iterator;
     using const_iterator = typename UnderlyingType::const_iterator;
     using reverse_iterator = std::reverse_iterator<iterator>;
@@ -232,12 +226,6 @@ public:
     }
 
     template <typename Key2, typename T2, Key2 LastValue2>
-    bool operator!=(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
-    {
-        return m_storage != rhs.m_storage;
-    }
-
-    template <typename Key2, typename T2, Key2 LastValue2>
     bool operator<(const EnumeratedArray<Key2, T2, LastValue2>& rhs) const
     {
         return m_storage < rhs.m_storage;
@@ -262,7 +250,7 @@ public:
     }
 
 private:
-    typename UnderlyingType::size_type index(size_type pos)
+    typename UnderlyingType::size_type index(size_type pos) const
     {
         return static_cast<typename UnderlyingType::size_type>(pos);
     }

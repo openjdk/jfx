@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "ClientOrigin.h"
 #include "SharedWorkerIdentifier.h"
+#include "WorkerBadgeProxy.h"
 #include "WorkerDebuggerProxy.h"
 #include "WorkerLoaderProxy.h"
 #include "WorkerObjectProxy.h"
@@ -39,11 +41,10 @@ class Page;
 class SharedWorker;
 class SharedWorkerThread;
 
-struct ClientOrigin;
 struct WorkerFetchResult;
 struct WorkerInitializationData;
 
-class SharedWorkerThreadProxy final : public ThreadSafeRefCounted<SharedWorkerThreadProxy>, public WorkerObjectProxy, public WorkerLoaderProxy, public WorkerDebuggerProxy {
+class SharedWorkerThreadProxy final : public ThreadSafeRefCounted<SharedWorkerThreadProxy>, public WorkerObjectProxy, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy {
 public:
     template<typename... Args> static Ref<SharedWorkerThreadProxy> create(Args&&... args) { return adoptRef(*new SharedWorkerThreadProxy(std::forward<Args>(args)...)); }
     WEBCORE_EXPORT ~SharedWorkerThreadProxy();
@@ -67,20 +68,24 @@ private:
     void postMessageToWorkerObject(MessageWithMessagePorts&&) final { }
     void workerGlobalScopeDestroyed() final { }
     void workerGlobalScopeClosed() final;
-    void confirmMessageFromWorkerObject(bool) final { }
-    void reportPendingActivity(bool) final { }
 
     // WorkerLoaderProxy.
     RefPtr<CacheStorageConnection> createCacheStorageConnection() final;
     RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection() final;
     void postTaskToLoader(ScriptExecutionContext::Task&&) final;
+    ScriptExecutionContextIdentifier loaderContextIdentifier() const final;
 
     // WorkerDebuggerProxy.
     void postMessageToDebugger(const String&) final;
     void setResourceCachingDisabledByWebInspector(bool) final;
 
+    // WorkerBadgeProxy
+    void setAppBadge(std::optional<uint64_t>) final;
+
     static void networkStateChanged(bool isOnLine);
     void notifyNetworkStateChange(bool isOnline);
+
+    ReportingClient* reportingClient() const final;
 
     UniqueRef<Page> m_page;
     Ref<Document> m_document;
@@ -89,6 +94,7 @@ private:
     CacheStorageProvider& m_cacheStorageProvider;
     RefPtr<CacheStorageConnection> m_cacheStorageConnection;
     bool m_isTerminatingOrTerminated { false };
+    ClientOrigin m_clientOrigin;
 };
 
 } // namespace WebCore

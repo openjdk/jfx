@@ -1342,8 +1342,7 @@ gst_audio_resampler_options_set_quality (GstAudioResamplerMethod method,
  *
  * Make a new resampler.
  *
- * Returns: (skip) (transfer full): The new #GstAudioResampler, or
- * %NULL on failure.
+ * Returns: (skip) (transfer full): The new #GstAudioResampler.
  */
 GstAudioResampler *
 gst_audio_resampler_new (GstAudioResamplerMethod method,

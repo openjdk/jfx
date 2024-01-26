@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
- * Copyright (C) 2021 Apple, Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,29 +29,14 @@
 
 #if ENABLE(WEBXR)
 
-#if !USE(ANGLE)
-#include "ExtensionsGLOpenGLCommon.h"
-#if USE(OPENGL_ES)
-#include "ExtensionsGLOpenGLES.h"
-#include "GraphicsContextGLOpenGL.h"
-#else
-#include "ExtensionsGLOpenGL.h"
-#endif
-#include "GraphicsContextGL.h"
-#endif
 #include "IntSize.h"
-#if !USE(ANGLE)
-#include "TemporaryOpenGLSetting.h"
-#endif
 #include "WebGLFramebuffer.h"
-#include "WebGLRenderingContext.h"
-#if ENABLE(WEBGL2)
 #include "WebGL2RenderingContext.h"
-#endif
+#include "WebGLRenderingContext.h"
 #include "WebGLRenderingContextBase.h"
 #include <wtf/Scope.h>
 
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
+#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
 #include "GraphicsContextGLCocoa.h"
 #endif
 
@@ -59,41 +44,83 @@ namespace WebCore {
 
 using GL = GraphicsContextGL;
 
-std::unique_ptr<WebXROpaqueFramebuffer> WebXROpaqueFramebuffer::create(PlatformXR::LayerHandle handle, WebGLRenderingContextBase& context, Attributes&& attributes, uint32_t width, uint32_t height)
+#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+static std::optional<GL::EGLImageAttachResult> createAndBindCompositorTexture(GL& gl, GCGLenum target, GCGLOwnedTexture& texture, GL::EGLImageSource source)
+{
+    texture.ensure(gl);
+    gl.bindTexture(target, texture);
+    gl.texParameteri(target, GL::TEXTURE_MAG_FILTER, GL::LINEAR);
+    gl.texParameteri(target, GL::TEXTURE_MIN_FILTER, GL::LINEAR);
+    gl.texParameteri(target, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE);
+    gl.texParameteri(target, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE);
+
+    auto attachResult = gl.createAndBindEGLImage(target, source);
+    if (!attachResult || !std::get<GCEGLImage>(*attachResult) || std::get<IntSize>(*attachResult).isEmpty()) {
+        texture.release(gl);
+        return std::nullopt;
+    }
+
+    return attachResult;
+}
+
+static std::optional<GL::EGLImageAttachResult> createAndBindCompositorBuffer(GL& gl, GCGLOwnedRenderbuffer& buffer, GL::EGLImageSource source)
+{
+    buffer.ensure(gl);
+    gl.bindRenderbuffer(GL::RENDERBUFFER, buffer);
+
+    auto attachResult = gl.createAndBindEGLImage(GL::RENDERBUFFER, source);
+    if (!attachResult || !std::get<GCEGLImage>(*attachResult) || std::get<IntSize>(*attachResult).isEmpty()) {
+        buffer.release(gl);
+        return std::nullopt;
+    }
+
+    return attachResult;
+}
+
+static GL::EGLImageSource makeEGLImageSource(const std::tuple<WTF::MachSendRight, bool>& imageSource)
+{
+    auto [imageHandle, isSharedTexture] = imageSource;
+    if (isSharedTexture)
+        return GL::EGLImageSourceMTLSharedTextureHandle { WTF::MachSendRight(imageHandle) };
+    return GL::EGLImageSourceIOSurfaceHandle { WTF::MachSendRight(imageHandle) };
+}
+#endif
+
+std::unique_ptr<WebXROpaqueFramebuffer> WebXROpaqueFramebuffer::create(PlatformXR::LayerHandle handle, WebGLRenderingContextBase& context, Attributes&& attributes, IntSize framebufferSize)
 {
     auto framebuffer = WebGLFramebuffer::createOpaque(context);
-    auto opaque = std::unique_ptr<WebXROpaqueFramebuffer>(new WebXROpaqueFramebuffer(handle, WTFMove(framebuffer), context, WTFMove(attributes), width, height));
-    if (!opaque->setupFramebuffer())
-        return nullptr;
+    auto opaque = std::unique_ptr<WebXROpaqueFramebuffer>(new WebXROpaqueFramebuffer(handle, WTFMove(framebuffer), context, WTFMove(attributes), framebufferSize));
     return opaque;
 }
 
-WebXROpaqueFramebuffer::WebXROpaqueFramebuffer(PlatformXR::LayerHandle handle, Ref<WebGLFramebuffer>&& framebuffer, WebGLRenderingContextBase& context, Attributes&& attributes, uint32_t width, uint32_t height)
+WebXROpaqueFramebuffer::WebXROpaqueFramebuffer(PlatformXR::LayerHandle handle, Ref<WebGLFramebuffer>&& framebuffer, WebGLRenderingContextBase& context, Attributes&& attributes, IntSize framebufferSize)
     : m_handle(handle)
     , m_framebuffer(WTFMove(framebuffer))
     , m_context(context)
     , m_attributes(WTFMove(attributes))
-    , m_width(width)
-    , m_height(height)
+    , m_framebufferSize(framebufferSize)
 {
 }
 
 WebXROpaqueFramebuffer::~WebXROpaqueFramebuffer()
 {
     if (auto gl = m_context.graphicsContextGL()) {
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-        if (m_opaqueTexture)
-            gl->deleteTexture(m_opaqueTexture);
+#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+        m_colorTexture.release(*gl);
 #endif
-        if (m_stencilBuffer)
-            gl->deleteRenderbuffer(m_stencilBuffer);
-        if (m_depthStencilBuffer)
-            gl->deleteRenderbuffer(m_depthStencilBuffer);
-        if (m_multisampleColorBuffer)
-            gl->deleteRenderbuffer(m_multisampleColorBuffer);
-        if (m_resolvedFBO)
-            gl->deleteFramebuffer(m_resolvedFBO);
+        m_depthStencilBuffer.release(*gl);
+        m_multisampleColorBuffer.release(*gl);
+        m_resolvedFBO.release(*gl);
         m_context.deleteFramebuffer(m_framebuffer.ptr());
+    } else {
+        // The GraphicsContextGL is gone, so disarm the GCGLOwned objects so
+        // their destructors don't assert.
+#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+        m_colorTexture.release(*gl);
+#endif
+        m_depthStencilBuffer.leakObject();
+        m_multisampleColorBuffer.leakObject();
+        m_resolvedFBO.leakObject();
     }
 }
 
@@ -103,24 +130,17 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::Device::FrameData::Lay
         return;
     auto& gl = *m_context.graphicsContextGL();
 
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-    auto gCGL = static_cast<GraphicsContextGLCocoa*>(m_context.graphicsContextGL());
-    GCGLenum textureTarget = gCGL->drawingBufferTextureTarget();
-    GCGLenum textureTargetBinding = gCGL->drawingBufferTextureTargetQueryForDrawingTarget(textureTarget);
-#else
-    GCGLenum textureTarget = GL::TEXTURE_2D;
-    GCGLenum textureTargetBinding = GL::TEXTURE_BINDING_2D;
-#endif
+    auto [textureTarget, textureTargetBinding] = gl.externalImageTextureBindingPoint();
 
     m_framebuffer->setOpaqueActive(true);
 
-    GCGLint boundFBO { 0 };
-    GCGLint boundTexture { 0 };
-    gl.getIntegerv(GL::FRAMEBUFFER_BINDING, makeGCGLSpan(&boundFBO, 1));
-    gl.getIntegerv(textureTargetBinding, makeGCGLSpan(&boundTexture, 1));
+    GCGLint boundFBO = gl.getInteger(GL::FRAMEBUFFER_BINDING);
+    GCGLint boundRenderbuffer = gl.getInteger(GL::RENDERBUFFER_BINDING);
+    GCGLint boundTexture = gl.getInteger(textureTargetBinding);
 
-    auto scopedBindings = makeScopeExit([&gl, boundFBO, boundTexture, textureTarget]() {
+    auto scopedBindings = makeScopeExit([=, textureTarget = textureTarget, &gl]() {
         gl.bindFramebuffer(GL::FRAMEBUFFER, boundFBO);
+        gl.bindRenderbuffer(GL::RENDERBUFFER, boundRenderbuffer);
         gl.bindTexture(textureTarget, boundTexture);
     });
 
@@ -132,37 +152,32 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::Device::FrameData::Lay
     // the textures/renderbuffers.
 
 #if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-    ASSERT(data.surface);
-
-    if (!m_opaqueTexture)
-        m_opaqueTexture = gCGL->createTexture();
-
-    gCGL->bindTexture(textureTarget, m_opaqueTexture);
-    gCGL->texParameteri(textureTarget, GL::TEXTURE_MAG_FILTER, GL::LINEAR);
-    gCGL->texParameteri(textureTarget, GL::TEXTURE_MIN_FILTER, GL::LINEAR);
-    gCGL->texParameteri(textureTarget, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE);
-    gCGL->texParameteri(textureTarget, GL::TEXTURE_WRAP_T, GL::CLAMP_TO_EDGE);
-
-    // Tell the GraphicsContextGL to use the IOSurface as the backing store for m_opaqueTexture.
-    if (data.isShared) {
-#if !PLATFORM(IOS_FAMILY_SIMULATOR)
-        m_ioSurfaceTextureHandle = gCGL->attachIOSurfaceToSharedTexture(textureTarget, data.surface.get());
-        m_ioSurfaceTextureHandleIsShared = true;
-#else
-        ASSERT_NOT_REACHED();
+    // FIXME: This is temporary until Cocoa-specific platforms migrate to MTLTEXTURE_FOR_XR_LAYER_DATA.
+    auto colorTextureSource = makeEGLImageSource({ data.surface->createSendRight(), false });
+    auto depthStencilBufferSource = makeEGLImageSource({ MachSendRight(), false });
+#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+    auto colorTextureSource = makeEGLImageSource(data.colorTexture);
+    auto depthStencilBufferSource = makeEGLImageSource(data.depthStencilBuffer);
 #endif
-    } else {
-        auto size = data.surface->size();
-        if (!size.width() || !size.height())
-            return;
-        m_ioSurfaceTextureHandle = gCGL->createPbufferAndAttachIOSurface(textureTarget, GraphicsContextGLCocoa::PbufferAttachmentUsage::Write, GL::BGRA, size.width(), size.height(), GL::UNSIGNED_BYTE, data.surface->surface(), 0);
-        m_ioSurfaceTextureHandleIsShared = false;
-    }
 
-    if (!m_ioSurfaceTextureHandle) {
-        gCGL->deleteTexture(m_opaqueTexture);
-        m_opaqueTexture = 0;
+#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+    auto colorTextureAttachment = createAndBindCompositorTexture(gl, textureTarget, m_colorTexture, colorTextureSource);
+    auto depthStencilBufferAttachment = createAndBindCompositorBuffer(gl, m_depthStencilBuffer, depthStencilBufferSource);
+
+    if (!colorTextureAttachment)
         return;
+
+    IntSize bufferSize;
+    std::tie(m_colorImage, bufferSize) = colorTextureAttachment.value();
+    if (depthStencilBufferAttachment)
+        std::tie(m_depthStencilImage, std::ignore) = depthStencilBufferAttachment.value();
+
+    // The drawing target can change size at any point during the session. If this happens, we need
+    // to recreate the framebuffer.
+    if (m_framebufferSize != bufferSize) {
+        m_framebufferSize = bufferSize;
+        if (!setupFramebuffer())
+            return;
     }
 
     // Set up the framebuffer to use the texture that points to the IOSurface. If we're not multisampling,
@@ -170,24 +185,20 @@ void WebXROpaqueFramebuffer::startFrame(const PlatformXR::Device::FrameData::Lay
     // is the resolved framebuffer we created in setupFramebuffer.
     if (m_multisampleColorBuffer)
         gl.bindFramebuffer(GL::FRAMEBUFFER, m_resolvedFBO);
-    gl.framebufferTexture2D(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, textureTarget, m_opaqueTexture, 0);
+    gl.framebufferTexture2D(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, textureTarget, m_colorTexture, 0);
+    if (m_depthStencilBuffer)
+        gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
 
     // At this point the framebuffer should be "complete".
     ASSERT(gl.checkFramebufferStatus(GL::FRAMEBUFFER) == GL::FRAMEBUFFER_COMPLETE);
-
 #else
-    m_opaqueTexture = data.opaqueTexture;
-
-#if USE(OPENGL_ES) && !USE(ANGLE)
-    auto& extensions = reinterpret_cast<GraphicsContextGLOpenGL&>(gl).getExtensions();
-    if (m_attributes.antialias && extensions.isImagination()) {
-        extensions.framebufferTexture2DMultisampleIMG(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::TEXTURE_2D, m_opaqueTexture, 0, m_sampleCount);
-        return;
-    }
+    m_colorTexture = data.opaqueTexture;
+    if (!m_multisampleColorBuffer)
+        gl.framebufferTexture2D(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::TEXTURE_2D, m_colorTexture, 0);
 #endif
 
-    if (!m_multisampleColorBuffer)
-        gl.framebufferTexture2D(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::TEXTURE_2D, m_opaqueTexture, 0);
+#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+    m_completionSyncEvent = std::tuple(data.completionSyncEvent);
 #endif
 }
 
@@ -201,20 +212,19 @@ void WebXROpaqueFramebuffer::endFrame()
     auto& gl = *m_context.graphicsContextGL();
 
     if (m_multisampleColorBuffer) {
-#if !USE(ANGLE)
         // FIXME: These may be needed when using ANGLE, but it didn't compile in the initial implementation.
-        TemporaryOpenGLSetting scopedScissor(GL::SCISSOR_TEST, 0);
-        TemporaryOpenGLSetting scopedDither(GL::DITHER, 0);
-        TemporaryOpenGLSetting scopedDepth(GL::DEPTH_TEST, 0);
-        TemporaryOpenGLSetting scopedStencil(GL::STENCIL_TEST, 0);
-#endif
+        // https://bugs.webkit.org/show_bug.cgi?id=245210
+        // TemporaryOpenGLSetting scopedScissor(GL::SCISSOR_TEST, 0);
+        // TemporaryOpenGLSetting scopedDither(GL::DITHER, 0);
+        // TemporaryOpenGLSetting scopedDepth(GL::DEPTH_TEST, 0);
+        // TemporaryOpenGLSetting scopedStencil(GL::STENCIL_TEST, 0);
 
         GCGLint boundFBO { 0 };
         GCGLint boundReadFBO { 0 };
         GCGLint boundDrawFBO { 0 };
-        gl.getIntegerv(GL::FRAMEBUFFER_BINDING, makeGCGLSpan(&boundFBO, 1));
-        gl.getIntegerv(GL::READ_FRAMEBUFFER_BINDING, makeGCGLSpan(&boundReadFBO, 1));
-        gl.getIntegerv(GL::DRAW_FRAMEBUFFER_BINDING, makeGCGLSpan(&boundDrawFBO, 1));
+        gl.getIntegerv(GL::FRAMEBUFFER_BINDING, std::span(&boundFBO, 1));
+        gl.getIntegerv(GL::READ_FRAMEBUFFER_BINDING, std::span(&boundReadFBO, 1));
+        gl.getIntegerv(GL::DRAW_FRAMEBUFFER_BINDING, std::span(&boundDrawFBO, 1));
 
         auto scopedBindings = makeScopeExit([&gl, boundFBO, boundReadFBO, boundDrawFBO]() {
             gl.bindFramebuffer(GL::FRAMEBUFFER, boundFBO);
@@ -222,30 +232,40 @@ void WebXROpaqueFramebuffer::endFrame()
             gl.bindFramebuffer(GL::DRAW_FRAMEBUFFER, boundDrawFBO);
         });
 
+        GCGLbitfield buffers = GL::COLOR_BUFFER_BIT;
+        if (m_depthStencilBuffer)
+            buffers |= GL::DEPTH_BUFFER_BIT | GL::STENCIL_BUFFER_BIT;
+
         gl.bindFramebuffer(GL::READ_FRAMEBUFFER, m_framebuffer->object());
         gl.bindFramebuffer(GL::DRAW_FRAMEBUFFER, m_resolvedFBO);
-        gl.blitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL::COLOR_BUFFER_BIT, GL::NEAREST);
+        gl.blitFramebufferANGLE(0, 0, width(), height(), 0, 0, width(), height(), buffers, GL::NEAREST);
     }
 
+#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+    if (std::get<MachSendRight>(m_completionSyncEvent)) {
+        auto completionSync = gl.createEGLSync(m_completionSyncEvent);
+        ASSERT(completionSync);
+        constexpr uint64_t kTimeout = 1'000'000'000; // 1 second
+        gl.clientWaitEGLSyncWithFlush(completionSync, kTimeout);
+        gl.destroyEGLSync(completionSync);
+    } else
+        gl.finish();
+#else
     // FIXME: We have to call finish rather than flush because we only want to disconnect
     // the IOSurface and signal the DeviceProxy when we know the content has been rendered.
     // It might be possible to set this up so the completion of the rendering triggers
     // the endFrame call.
     gl.finish();
-
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-    if (m_ioSurfaceTextureHandle) {
-        auto gCGL = static_cast<GraphicsContextGLCocoa*>(&gl);
-        if (m_ioSurfaceTextureHandleIsShared) {
-#if !PLATFORM(IOS_FAMILY_SIMULATOR)
-            gCGL->detachIOSurfaceFromSharedTexture(m_ioSurfaceTextureHandle);
-#else
-            ASSERT_NOT_REACHED();
 #endif
-        } else
-            gCGL->destroyPbufferAndDetachIOSurface(m_ioSurfaceTextureHandle);
-        m_ioSurfaceTextureHandle = nullptr;
-        m_ioSurfaceTextureHandleIsShared = false;
+
+#if USE(IOSURFACE_FOR_XR_LAYER_DATA) || USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+    if (m_colorImage) {
+        gl.destroyEGLImage(m_colorImage);
+        m_colorImage = nullptr;
+    }
+    if (m_depthStencilImage) {
+        gl.destroyEGLImage(m_depthStencilImage);
+        m_depthStencilImage = nullptr;
     }
 #endif
 }
@@ -257,148 +277,83 @@ bool WebXROpaqueFramebuffer::setupFramebuffer()
     auto& gl = *m_context.graphicsContextGL();
 
     // Restore bindings when exiting the function.
-    GCGLint boundFBO { 0 };
-    GCGLint boundRenderbuffer { 0 };
-    gl.getIntegerv(GL::FRAMEBUFFER_BINDING, makeGCGLSpan(&boundFBO, 1));
-    gl.getIntegerv(GL::RENDERBUFFER_BINDING, makeGCGLSpan(&boundRenderbuffer, 1));
+    GCGLint boundFBO = gl.getInteger(GL::FRAMEBUFFER_BINDING);
+    GCGLint boundRenderbuffer = gl.getInteger(GL::RENDERBUFFER_BINDING);
 
-    auto scopedBindings = makeScopeExit([&gl, boundFBO, boundRenderbuffer]() {
+    auto scopedBindings = makeScopeExit([=, &gl]() {
         gl.bindFramebuffer(GL::FRAMEBUFFER, boundFBO);
         gl.bindRenderbuffer(GL::RENDERBUFFER, boundRenderbuffer);
     });
 
     // Set up color, depth and stencil formats
-    bool hasDepthOrStencil = m_attributes.stencil || m_attributes.depth;
-#if USE(ANGLE)
-    bool platformSupportsPackedDepthStencil = true;
-    auto depthFormat = platformSupportsPackedDepthStencil ? GL::DEPTH24_STENCIL8 : GL::DEPTH_COMPONENT;
-    auto stencilFormat = GL::STENCIL_INDEX8;
-#elif USE(OPENGL_ES)
-    auto& extensions = reinterpret_cast<GraphicsContextGLOpenGL&>(gl).getExtensions();
-    bool platformSupportsPackedDepthStencil = hasDepthOrStencil && extensions.supports("GL_OES_packed_depth_stencil"_s);
-    auto depthFormat = platformSupportsPackedDepthStencil ? GL::DEPTH24_STENCIL8 : GL::DEPTH_COMPONENT16;
-    auto stencilFormat = GL::STENCIL_INDEX8;
-#else
-    auto& extensions = reinterpret_cast<GraphicsContextGLOpenGL&>(gl).getExtensions();
-    bool platformSupportsPackedDepthStencil = hasDepthOrStencil && extensions.supports("GL_EXT_packed_depth_stencil"_s);
-    auto depthFormat = platformSupportsPackedDepthStencil ? GL::DEPTH24_STENCIL8 : GL::DEPTH_COMPONENT;
-    auto stencilFormat = GL::STENCIL_COMPONENT;
-#endif
+    const bool hasDepthOrStencil = m_attributes.stencil || m_attributes.depth;
 
     // Set up recommended samples for WebXR.
+    auto sampleCount = [](GraphicsContextGL& gl, bool isAntialias) {
+        if (!isAntialias)
+            return 0;
+
     // FIXME: check if we can get recommended values from each device platform.
-    if (m_attributes.antialias) {
         GCGLint maxSampleCount;
-#if USE(ANGLE)
-        gl.getIntegerv(GL::MAX_SAMPLES, makeGCGLSpan(&maxSampleCount, 1));
-#else
-        gl.getIntegerv(GraphicsContextGL::MAX_SAMPLES, makeGCGLSpan(&maxSampleCount, 1));
-#endif
-        // Cap the maxiumum multisample count at 4. Any more than this is likely overkill and will impact performance.
-        m_sampleCount = std::min(4, maxSampleCount);
-    }
+        gl.getIntegerv(GL::MAX_SAMPLES, std::span(&maxSampleCount, 1));
+        // Cap the maximum multisample count at 4. Any more than this is likely overkill and will impact performance.
+        return std::min(4, maxSampleCount);
+    }(gl, m_attributes.antialias);
 
-#if USE(OPENGL_ES) && !USE(ANGLE)
-    // Use multisampled_render_to_texture extension if available.
-    if (m_attributes.antialias && extensions.isImagination()) {
-        // framebufferTexture2DMultisampleIMG is set up in startFrame call.
-        if (!hasDepthOrStencil)
-            return true;
+    gl.bindFramebuffer(GL::FRAMEBUFFER, m_framebuffer->object());
 
-        gl.bindFramebuffer(GL::FRAMEBUFFER, m_framebuffer->object());
-        m_depthStencilBuffer = gl.createRenderbuffer();
-        if (platformSupportsPackedDepthStencil) {
-            gl.bindRenderbuffer(GL::RENDERBUFFER, m_depthStencilBuffer);
-            extensions.renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, m_sampleCount, depthFormat, m_width, m_height);
-            if (m_attributes.stencil)
-                gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::STENCIL_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-            if (m_attributes.depth)
-                gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-        } else {
-            if (m_attributes.stencil) {
-                m_stencilBuffer = gl.createRenderbuffer();
-                gl.bindRenderbuffer(GL::RENDERBUFFER, m_stencilBuffer);
-                extensions.renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, m_sampleCount, stencilFormat, m_width, m_height);
-                gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::STENCIL_ATTACHMENT, GL::RENDERBUFFER, m_stencilBuffer);
-            }
-            if (m_attributes.depth) {
-                gl.bindRenderbuffer(GL::RENDERBUFFER, m_depthStencilBuffer);
-                extensions.renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, m_sampleCount, depthFormat, m_width, m_height);
-                gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-            }
-        }
-        return true;
-    }
-#endif // USE(OPENGL_ES)
+    if (m_attributes.antialias) {
+        m_resolvedFBO.ensure(gl);
 
-    if (m_attributes.antialias && m_context.isWebGL2()) {
-        m_resolvedFBO = gl.createFramebuffer();
-        m_multisampleColorBuffer = gl.createRenderbuffer();
-        gl.bindFramebuffer(GL::FRAMEBUFFER, m_framebuffer->object());
-        gl.bindRenderbuffer(GL::RENDERBUFFER, m_multisampleColorBuffer);
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA) && !PLATFORM(IOS_FAMILY_SIMULATOR)
-        gl.renderbufferStorageMultisample(GL::RENDERBUFFER, m_sampleCount, GL::SRGB8_ALPHA8, m_width, m_height);
-#else
-        gl.renderbufferStorageMultisample(GL::RENDERBUFFER, m_sampleCount, GL::RGBA8, m_width, m_height);
-#endif
-        gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::RENDERBUFFER, m_multisampleColorBuffer);
-        if (hasDepthOrStencil) {
-            m_depthStencilBuffer = gl.createRenderbuffer();
-            if (platformSupportsPackedDepthStencil) {
-                gl.bindRenderbuffer(GL::RENDERBUFFER, m_depthStencilBuffer);
-                gl.renderbufferStorageMultisample(GL::RENDERBUFFER, m_sampleCount, depthFormat, m_width, m_height);
-                if (m_attributes.stencil)
-                    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::STENCIL_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-                if (m_attributes.depth)
-                    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-            } else {
-                if (m_attributes.stencil) {
-                    m_stencilBuffer = gl.createRenderbuffer();
-                    gl.bindRenderbuffer(GL::RENDERBUFFER, m_stencilBuffer);
-                    gl.renderbufferStorageMultisample(GL::RENDERBUFFER, m_sampleCount, stencilFormat, m_width, m_height);
-                    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::STENCIL_ATTACHMENT, GL::RENDERBUFFER, m_stencilBuffer);
-                }
-                if (m_attributes.depth) {
-                    gl.bindRenderbuffer(GL::RENDERBUFFER, m_depthStencilBuffer);
-                    gl.renderbufferStorageMultisample(GL::RENDERBUFFER, m_sampleCount, depthFormat, m_width, m_height);
-                    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-                }
-            }
-        }
-        return gl.checkFramebufferStatus(GL::FRAMEBUFFER) == GL::FRAMEBUFFER_COMPLETE;
-    }
+        auto colorBuffer = allocateColorStorage(gl, sampleCount, m_framebufferSize);
+        bindColorBuffer(gl, colorBuffer);
+        m_multisampleColorBuffer.adopt(gl, colorBuffer);
 
     if (hasDepthOrStencil) {
-        gl.bindFramebuffer(GL::FRAMEBUFFER, m_framebuffer->object());
-        m_depthStencilBuffer = gl.createRenderbuffer();
-        if (platformSupportsPackedDepthStencil) {
-            gl.bindRenderbuffer(GL::RENDERBUFFER, m_depthStencilBuffer);
-            gl.renderbufferStorage(GL::RENDERBUFFER, depthFormat, m_width, m_height);
-            if (m_context.isWebGL2()) {
-                if (m_attributes.stencil)
-                    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::STENCIL_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-                if (m_attributes.depth)
-                    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-            } else {
-                if (m_attributes.stencil || m_attributes.depth)
-                    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-            }
-        } else {
-            if (m_attributes.stencil) {
-                m_stencilBuffer = gl.createRenderbuffer();
-                gl.bindRenderbuffer(GL::RENDERBUFFER, m_stencilBuffer);
-                gl.renderbufferStorage(GL::RENDERBUFFER, stencilFormat, m_width, m_height);
-                gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::STENCIL_ATTACHMENT, GL::RENDERBUFFER, m_stencilBuffer);
-            }
-            if (m_attributes.depth) {
-                gl.bindRenderbuffer(GL::RENDERBUFFER, m_depthStencilBuffer);
-                gl.renderbufferStorage(GL::RENDERBUFFER, depthFormat, m_width, m_height);
-                gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_ATTACHMENT, GL::RENDERBUFFER, m_depthStencilBuffer);
-            }
+            auto depthStencilBuffer = allocateDepthStencilStorage(gl, sampleCount, m_framebufferSize);
+            bindDepthStencilBuffer(gl, depthStencilBuffer);
+            m_multisampleDepthStencilBuffer.adopt(gl, depthStencilBuffer);
         }
+    } else if (hasDepthOrStencil && !m_depthStencilBuffer) {
+        auto depthStencilBuffer = allocateDepthStencilStorage(gl, sampleCount, m_framebufferSize);
+        bindDepthStencilBuffer(gl, depthStencilBuffer);
+
+        m_depthStencilBuffer.adopt(gl, depthStencilBuffer);
     }
 
-    return true;
+    return gl.checkFramebufferStatus(GL::FRAMEBUFFER) == GL::FRAMEBUFFER_COMPLETE;
+}
+
+PlatformGLObject WebXROpaqueFramebuffer::allocateRenderbufferStorage(GraphicsContextGL& gl, GCGLsizei samples, GCGLenum internalFormat, IntSize size)
+{
+    PlatformGLObject renderbuffer = gl.createRenderbuffer();
+    ASSERT(renderbuffer);
+    gl.bindRenderbuffer(GL::RENDERBUFFER, renderbuffer);
+    gl.renderbufferStorageMultisampleANGLE(GL::RENDERBUFFER, samples, internalFormat, size.width(), size.height());
+
+    return renderbuffer;
+}
+
+PlatformGLObject WebXROpaqueFramebuffer::allocateColorStorage(GraphicsContextGL& gl, GCGLsizei samples, IntSize size)
+{
+    return allocateRenderbufferStorage(gl, samples, GL::SRGB8_ALPHA8, size);
+}
+
+PlatformGLObject WebXROpaqueFramebuffer::allocateDepthStencilStorage(GraphicsContextGL& gl, GCGLsizei samples, IntSize size)
+{
+    return allocateRenderbufferStorage(gl, samples, GL::DEPTH24_STENCIL8, size);
+}
+
+void WebXROpaqueFramebuffer::bindColorBuffer(GraphicsContextGL& gl, PlatformGLObject colorBuffer)
+{
+    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::COLOR_ATTACHMENT0, GL::RENDERBUFFER, colorBuffer);
+}
+
+void WebXROpaqueFramebuffer::bindDepthStencilBuffer(GraphicsContextGL& gl, PlatformGLObject depthStencilBuffer)
+{
+    // NOTE: In WebGL2, GL::DEPTH_STENCIL_ATTACHMENT is an alias to set GL::DEPTH_ATTACHMENT and GL::STENCIL_ATTACHMENT, which is all we require.
+    ASSERT(m_attributes.stencil || m_attributes.depth);
+    gl.framebufferRenderbuffer(GL::FRAMEBUFFER, GL::DEPTH_STENCIL_ATTACHMENT, GL::RENDERBUFFER, depthStencilBuffer);
 }
 
 } // namespace WebCore

@@ -25,6 +25,8 @@
 #include "config.h"
 #include "LibWebRTCRtpReceiverBackend.h"
 
+#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
+
 #include "Document.h"
 #include "LibWebRTCAudioModule.h"
 #include "LibWebRTCDtlsTransportBackend.h"
@@ -35,8 +37,6 @@
 #include "RTCRtpTransformBackend.h"
 #include "RealtimeIncomingAudioSource.h"
 #include "RealtimeIncomingVideoSource.h"
-
-#if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_DEPRECATED_DECLARATIONS_BEGIN
@@ -111,7 +111,7 @@ Ref<RealtimeMediaSource> LibWebRTCRtpReceiverBackend::createSource(Document& doc
     case cricket::MEDIA_TYPE_UNSUPPORTED:
         break;
     case cricket::MEDIA_TYPE_AUDIO: {
-        rtc::scoped_refptr<webrtc::AudioTrackInterface> audioTrack = static_cast<webrtc::AudioTrackInterface*>(rtcTrack.get());
+        rtc::scoped_refptr<webrtc::AudioTrackInterface> audioTrack { static_cast<webrtc::AudioTrackInterface*>(rtcTrack.get()) };
         auto source = RealtimeIncomingAudioSource::create(WTFMove(audioTrack), fromStdString(rtcTrack->id()));
         if (document.page()) {
             auto& webRTCProvider = reinterpret_cast<LibWebRTCProvider&>(document.page()->webRTCProvider());
@@ -120,8 +120,11 @@ Ref<RealtimeMediaSource> LibWebRTCRtpReceiverBackend::createSource(Document& doc
         return source;
     }
     case cricket::MEDIA_TYPE_VIDEO: {
-        rtc::scoped_refptr<webrtc::VideoTrackInterface> videoTrack = static_cast<webrtc::VideoTrackInterface*>(rtcTrack.get());
-        return RealtimeIncomingVideoSource::create(WTFMove(videoTrack), fromStdString(rtcTrack->id()));
+        rtc::scoped_refptr<webrtc::VideoTrackInterface> videoTrack { static_cast<webrtc::VideoTrackInterface*>(rtcTrack.get()) };
+        auto source = RealtimeIncomingVideoSource::create(WTFMove(videoTrack), fromStdString(rtcTrack->id()));
+        if (document.settings().webRTCMediaPipelineAdditionalLoggingEnabled())
+            source->enableFrameRatedMonitoring();
+        return source;
     }
     }
     RELEASE_ASSERT_NOT_REACHED();

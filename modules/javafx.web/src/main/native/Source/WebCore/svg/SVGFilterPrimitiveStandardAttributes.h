@@ -64,13 +64,15 @@ public:
     static void invalidateFilterPrimitiveParent(SVGElement*);
 
 protected:
-    SVGFilterPrimitiveStandardAttributes(const QualifiedName&, Document&);
+    SVGFilterPrimitiveStandardAttributes(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
     void childrenChanged(const ChildChange&) override;
+    void primitiveAttributeOnChildChanged(const Element&, const QualifiedName&);
 
     virtual bool setFilterEffectAttribute(FilterEffect&, const QualifiedName&) { return false; }
+    virtual bool setFilterEffectAttributeFromChild(FilterEffect&, const Element&, const QualifiedName&) { return false; }
     virtual RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const = 0;
 
 private:

@@ -40,6 +40,16 @@ TextStream& operator<<(TextStream& ts, ScrollType scrollType)
     return ts;
 }
 
+TextStream& operator<<(TextStream& ts, NativeScrollbarVisibility scrollBarHidden)
+{
+    switch (scrollBarHidden) {
+    case NativeScrollbarVisibility::Visible: ts << 0; break;
+    case NativeScrollbarVisibility::HiddenByStyle: ts << 1; break;
+    case NativeScrollbarVisibility::ReplacedByCustomScrollbar: ts << 2; break;
+    }
+    return ts;
+}
+
 TextStream& operator<<(TextStream& ts, ScrollClamping clamping)
 {
     switch (clamping) {
@@ -102,6 +112,84 @@ TextStream& operator<<(TextStream& ts, OverflowAnchor behavior)
         break;
     case OverflowAnchor::None:
         ts << 1;
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollDirection direction)
+{
+    switch (direction) {
+    case ScrollDirection::ScrollUp:
+        ts << "up";
+        break;
+    case ScrollDirection::ScrollDown:
+        ts << "down";
+        break;
+    case ScrollDirection::ScrollLeft:
+        ts << "left";
+        break;
+    case ScrollDirection::ScrollRight:
+        ts << "right";
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollGranularity granularity)
+{
+    switch (granularity) {
+    case ScrollGranularity::Line:
+        ts << "line";
+        break;
+    case ScrollGranularity::Page:
+        ts << "page";
+        break;
+    case ScrollGranularity::Document:
+        ts << "document";
+        break;
+    case ScrollGranularity::Pixel:
+        ts << "pixel";
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollbarWidth width)
+{
+    switch (width) {
+    case ScrollbarWidth::Auto:
+        ts << "auto";
+        break;
+    case ScrollbarWidth::Thin:
+        ts << "thin";
+        break;
+    case ScrollbarWidth::None:
+        ts << "none";
+        break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollPositionChangeOptions options)
+{
+    ts.dumpProperty("scroll-position-change-options-type", options.type);
+    ts.dumpProperty("scroll-position-change-options-clamping", options.clamping);
+    ts.dumpProperty("scroll-position-change-options-animated", (options.animated == ScrollIsAnimated::Yes ? "animated" : "not animated"));
+    ts.dumpProperty("scroll-position-change-options-snap-point-selection-method", options.snapPointSelectionMethod);
+    ts.dumpProperty("scroll-position-change-options-original-scroll-delta", options.originalScrollDelta ? *options.originalScrollDelta : FloatSize());
+
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollSnapPointSelectionMethod option)
+{
+    switch (option) {
+    case ScrollSnapPointSelectionMethod::Directional:
+        ts << "Directional";
+        break;
+    case ScrollSnapPointSelectionMethod::Closest:
+        ts << "Closest";
         break;
     }
     return ts;

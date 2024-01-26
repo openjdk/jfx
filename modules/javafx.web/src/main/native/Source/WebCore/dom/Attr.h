@@ -78,9 +78,11 @@ private:
 
     bool isAttributeNode() const final { return true; }
 
+    void parentOrShadowHostNode() const = delete; // Call parentNode() instead.
+
     // Attr wraps either an element/name, or a name/value pair (when it's a standalone Node.)
     // Note that m_name is always set, but m_element/m_standaloneValue may be null.
-    WeakPtr<Element> m_element;
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_element;
     QualifiedName m_name;
     AtomString m_standaloneValue;
 

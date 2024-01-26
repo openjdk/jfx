@@ -46,7 +46,6 @@
 #include "B3OptimizeAssociativeExpressionTrees.h"
 #include "B3Procedure.h"
 #include "B3ReduceDoubleToFloat.h"
-#include "B3ReduceLoopStrength.h"
 #include "B3ReduceStrength.h"
 #include "B3Validate.h"
 #include "CompilerTimingScope.h"
@@ -70,7 +69,7 @@ void generateToAir(Procedure& procedure)
 {
     CompilerTimingScope timingScope("Total B3", "generateToAir");
 
-    if (shouldDumpIR(procedure, B3Mode) && !shouldDumpIRAtEachPhase(B3Mode)) {
+    if ((shouldDumpIR(procedure, B3Mode) || Options::dumpGraphAfterParsing()) && !shouldDumpIRAtEachPhase(B3Mode)) {
         dataLog(tierName, "Initial B3:\n");
         dataLog(procedure);
     }
@@ -92,7 +91,6 @@ void generateToAir(Procedure& procedure)
             eliminateCommonSubexpressions(procedure);
         eliminateDeadCode(procedure);
         inferSwitches(procedure);
-        reduceLoopStrength(procedure);
         if (Options::useB3TailDup())
             duplicateTails(procedure);
         fixSSA(procedure);

@@ -22,20 +22,19 @@
 
 #pragma once
 
-#include "FormAssociatedElement.h"
+#include "FormListedElement.h"
 #include "HTMLPlugInImageElement.h"
 
 namespace WebCore {
 
 class HTMLFormElement;
 
-class HTMLObjectElement final : public HTMLPlugInImageElement, public FormAssociatedElement {
+class HTMLObjectElement final : public HTMLPlugInImageElement, public FormListedElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLObjectElement);
 public:
     static Ref<HTMLObjectElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     bool isExposed() const { return m_isExposed; }
-    bool containsJavaApplet() const;
 
     bool hasFallbackContent() const;
     bool useFallbackContent() const final { return m_useFallbackContent; }
@@ -48,13 +47,8 @@ public:
     static bool checkValidity() { return true; }
     static bool reportValidity() { return true; }
 
-    void setCustomValidity(const String&) final { }
-    String validationMessage() const final { return String(); }
-
     using HTMLPlugInImageElement::ref;
     using HTMLPlugInImageElement::deref;
-
-    HTMLFormElement* form() const final { return FormAssociatedElement::form(); }
 
 private:
     HTMLObjectElement(const QualifiedName&, Document&, HTMLFormElement*);
@@ -62,7 +56,7 @@ private:
 
     int defaultTabIndex() const final;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
@@ -86,18 +80,19 @@ private:
     // so that we can better share code between <object> and <embed>.
     void parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues, String& url, String& serviceType);
 
-    bool hasValidClassId();
+    void refFormAssociatedElement() const final { ref(); }
+    void derefFormAssociatedElement() const final { deref(); }
 
-    void refFormAssociatedElement() final { ref(); }
-    void derefFormAssociatedElement() final { deref(); }
-
-    FormNamedItem* asFormNamedItem() final { return this; }
     FormAssociatedElement* asFormAssociatedElement() final { return this; }
+    FormListedElement* asFormListedElement() final { return this; }
+    ValidatedFormListedElement* asValidatedFormListedElement() final { return nullptr; }
 
     // These functions can be called concurrently for ValidityState.
     HTMLObjectElement& asHTMLElement() final { return *this; }
     const HTMLObjectElement& asHTMLElement() const final { return *this; }
 
+    bool isFormListedElement() const final { return true; }
+    bool isValidatedFormListedElement() const final { return false; }
     bool isFormControlElement() const final { return false; }
 
     bool isEnumeratable() const final { return true; }

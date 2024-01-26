@@ -27,6 +27,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlDateTimeFormatConstructo
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlDateTimeFormatPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlDisplayNamesConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlDisplayNamesPrototype.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlDurationFormatConstructor.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlDurationFormatPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlListFormatConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlListFormatPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/IntlLocalePrototype.lut.h
@@ -46,7 +48,6 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSCBuiltins.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSDataViewPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSGlobalObject.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSInternalPromiseConstructor.lut.h
-$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSModuleLoader.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSONObject.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSPromiseConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSPromisePrototype.lut.h
@@ -54,6 +55,7 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JSWebAssembly.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/JavaScriptCore_BUILTINS_DEPENDENCIES_LIST
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/KeywordLookup.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/Lexer.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/MapConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/NumberConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/NumberPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/ObjectConstructor.lut.h
@@ -76,6 +78,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalNow.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalObject.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalPlainDateConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalPlainDatePrototype.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalPlainDateTimeConstructor.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalPlainDateTimePrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalPlainTimeConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalPlainTimePrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/TemporalTimeZoneConstructor.lut.h
@@ -84,6 +88,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/UnicodePatternTables.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WasmB3IRGeneratorInlines.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WasmLLIntGeneratorInlines.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WasmOps.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyArrayConstructor.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyArrayPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyCompileErrorConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyCompileErrorPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyExceptionConstructor.lut.h
@@ -104,6 +110,8 @@ $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyTableConstructor.
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyTablePrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyTagConstructor.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyTagPrototype.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyStructConstructor.lut.h
+$(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/WebAssemblyStructPrototype.lut.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/inspector/InspectorAlternateBackendDispatchers.h
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/inspector/InspectorBackendCommands.js
 $(BUILT_PRODUCTS_DIR)/DerivedSources/JavaScriptCore/inspector/InspectorBackendDispatchers.cpp

@@ -152,7 +152,7 @@ private:
     static Lock s_lock;
 
     RefPtr<ImageBuffer> m_imageBuffer;
-    RunLoop::Timer<ScratchBuffer> m_purgeTimer;
+    RunLoop::Timer m_purgeTimer;
 
     FloatRect m_lastInsetBounds;
     FloatRect m_lastShadowRect;
@@ -191,19 +191,17 @@ ShadowBlur::ShadowBlur(const FloatSize& radius, const FloatSize& offset, const C
     updateShadowBlurValues();
 }
 
-ShadowBlur::ShadowBlur(const DropShadow& dropShadow, bool shadowsIgnoreTransforms)
+ShadowBlur::ShadowBlur(const GraphicsDropShadow& dropShadow, bool shadowsIgnoreTransforms)
     : m_color(dropShadow.color)
-    , m_blurRadius(dropShadow.blurRadius, dropShadow.blurRadius)
+    , m_blurRadius(dropShadow.radius, dropShadow.radius)
     , m_offset(dropShadow.offset)
     , m_shadowsIgnoreTransforms(shadowsIgnoreTransforms)
 {
 #if USE(CG)
     // Core Graphics incorrectly renders shadows with radius > 8px (<rdar://problem/8103442>),
     // but we need to preserve this buggy behavior for canvas and -webkit-box-shadow.
-    if (dropShadow.radiusMode == ShadowRadiusMode::Legacy) {
-        float shadowBlur = radiusToLegacyRadius(dropShadow.blurRadius);
-        m_blurRadius = FloatSize(shadowBlur, shadowBlur);
-    }
+    if (dropShadow.radiusMode == ShadowRadiusMode::Legacy)
+        m_blurRadius = { radiusToLegacyRadius(m_blurRadius.width()), radiusToLegacyRadius(m_blurRadius.height()) };
 #endif
     updateShadowBlurValues();
 }
@@ -451,8 +449,8 @@ std::optional<ShadowBlur::LayerImageProperties> ShadowBlur::calculateLayerBoundi
 
     // Set the origin as the top left corner of the scratch image, or, in case there's a clipped
     // out region, set the origin accordingly to the full bounding rect's top-left corner.
-    float translationX = -shadowedRect.x() + inflation.width() - fabsf(clippedOut.width());
-    float translationY = -shadowedRect.y() + inflation.height() - fabsf(clippedOut.height());
+    float translationX = -shadowedRect.x() + inflation.width() - std::abs(clippedOut.width());
+    float translationY = -shadowedRect.y() + inflation.height() - std::abs(clippedOut.height());
     calculatedLayerImageProperties.layerContextTranslation = FloatSize(translationX, translationY);
 
     return calculatedLayerImageProperties;

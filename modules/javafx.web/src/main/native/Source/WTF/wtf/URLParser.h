@@ -51,13 +51,14 @@ public:
     // For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
     constexpr static size_t hostnameBufferLength = 2048;
 
-#define URLTextEncodingSentinelAllowingC0AtEndOfHash reinterpret_cast<const URLTextEncoding*>(-1)
+#define URLTextEncodingSentinelAllowingC0AtEnd reinterpret_cast<const URLTextEncoding*>(-1)
 
     WTF_EXPORT_PRIVATE static bool allValuesEqual(const URL&, const URL&);
     WTF_EXPORT_PRIVATE static bool internalValuesConsistent(const URL&);
 
-    using URLEncodedForm = Vector<WTF::KeyValuePair<String, String>>;
+    using URLEncodedForm = Vector<KeyValuePair<String, String>>;
     WTF_EXPORT_PRIVATE static URLEncodedForm parseURLEncodedForm(StringView);
+    WTF_EXPORT_PRIVATE static std::optional<KeyValuePair<String, String>> parseQueryNameAndValue(StringView);
     WTF_EXPORT_PRIVATE static String serialize(const URLEncodedForm&);
 
     WTF_EXPORT_PRIVATE static bool isSpecialScheme(StringView);
@@ -94,7 +95,7 @@ private:
     template<typename CharacterType> bool parsePort(CodePointIterator<CharacterType>&);
 
     void failure();
-    enum class ReportSyntaxViolation { No, Yes };
+    enum class ReportSyntaxViolation : bool { No, Yes };
     template<typename CharacterType, ReportSyntaxViolation reportSyntaxViolation = ReportSyntaxViolation::Yes>
     void advance(CodePointIterator<CharacterType>& iterator) { advance<CharacterType, reportSyntaxViolation>(iterator, iterator); }
     template<typename CharacterType, ReportSyntaxViolation = ReportSyntaxViolation::Yes>
@@ -119,7 +120,7 @@ private:
     template<typename CharacterType> std::optional<LCharBuffer> domainToASCII(StringImpl&, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
     template<typename CharacterType> LCharBuffer percentDecode(const LChar*, size_t, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
     static LCharBuffer percentDecode(const LChar*, size_t);
-    static bool hasForbiddenHostCodePoint(const LCharBuffer&);
+    bool hasForbiddenHostCodePoint(const LCharBuffer&);
     void percentEncodeByte(uint8_t);
     void appendToASCIIBuffer(UChar32);
     void appendToASCIIBuffer(const char*, size_t);
@@ -150,6 +151,8 @@ private:
 
     enum class URLPart;
     template<typename CharacterType> void copyURLPartsUntil(const URL& base, URLPart, const CodePointIterator<CharacterType>&, const URLTextEncoding*&);
+    template<typename CharacterType> bool isForbiddenHostCodePoint(CharacterType);
+    template<typename CharacterType> bool isForbiddenDomainCodePoint(CharacterType);
     static size_t urlLengthUntilPart(const URL&, URLPart);
     void popPath();
     bool shouldPopPath(unsigned);

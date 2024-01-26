@@ -66,14 +66,14 @@ struct OSRExit;
 // Every CallLinkRecord contains a reference to the call instruction & the function
 // that it needs to be linked to.
 struct CallLinkRecord {
-    CallLinkRecord(MacroAssembler::Call call, FunctionPtr<OperationPtrTag> function)
+    CallLinkRecord(MacroAssembler::Call call, CodePtr<OperationPtrTag> function)
         : m_call(call)
         , m_function(function)
     {
     }
 
     MacroAssembler::Call m_call;
-    FunctionPtr<OperationPtrTag> m_function;
+    CodePtr<OperationPtrTag> m_function;
 };
 
 // === JITCompiler ===
@@ -90,9 +90,6 @@ public:
 
     JITCompiler(Graph& dfg);
     ~JITCompiler();
-
-    void compile();
-    void compileFunction();
 
     // Accessors for properties.
     Graph& graph() { return m_graph; }
@@ -120,7 +117,7 @@ public:
         m_disassembler->setForNode(node, labelIgnoringWatchpoints());
     }
 
-    void setEndOfMainPath();
+    void setEndOfMainPath(CodeOrigin semanticOrigin);
     void setEndOfCode();
 
     CallSiteIndex addCallSite(CodeOrigin codeOrigin)
@@ -141,14 +138,23 @@ public:
     }
 
     // Add a call out from JIT code, without an exception check.
-    Call appendCall(const FunctionPtr<CFunctionPtrTag> function)
+    Call appendCall(const CodePtr<CFunctionPtrTag> function)
     {
         Call functionCall = call(OperationPtrTag);
         m_calls.append(CallLinkRecord(functionCall, function.retagged<OperationPtrTag>()));
         return functionCall;
     }
 
-    Call appendOperationCall(const FunctionPtr<OperationPtrTag> function)
+#if OS(WINDOWS) && CPU(X86_64)
+    JITCompiler::Call appendCallWithUGPRPair(const CodePtr<CFunctionPtrTag> function)
+    {
+        Call functionCall = callWithUGPRPair(OperationPtrTag);
+        m_calls.append(CallLinkRecord(functionCall, function.retagged<OperationPtrTag>()));
+        return functionCall;
+    }
+#endif
+
+    Call appendOperationCall(const CodePtr<OperationPtrTag> function)
     {
         Call functionCall = call(OperationPtrTag);
         m_calls.append(CallLinkRecord(functionCall, function));
@@ -160,11 +166,18 @@ public:
         call(address, OperationPtrTag);
     }
 
+#if OS(WINDOWS) && CPU(X86_64)
+    void appendCallWithUGPRPair(CCallHelpers::Address address)
+    {
+        callWithUGPRPair(address, OperationPtrTag);
+    }
+#endif
+
     void exceptionCheck();
 
-    void exceptionCheckWithCallFrameRollback()
+    void exceptionJumpWithCallFrameRollback()
     {
-        m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck(vm()));
+        m_exceptionChecksWithCallFrameRollback.append(jump());
     }
 
     OSRExitCompilationInfo& appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
@@ -192,6 +205,11 @@ public:
     void addGetByVal(const JITGetByValGenerator& gen, SlowPathGenerator* slowPath)
     {
         m_getByVals.append(InlineCacheWrapper<JITGetByValGenerator>(gen, slowPath));
+    }
+
+    void addGetByValWithThis(const JITGetByValWithThisGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_getByValsWithThis.append(InlineCacheWrapper<JITGetByValWithThisGenerator>(gen, slowPath));
     }
 
     void addPutById(const JITPutByIdGenerator& gen, SlowPathGenerator* slowPath)
@@ -234,7 +252,7 @@ public:
         m_privateBrandAccesses.append(InlineCacheWrapper<JITPrivateBrandAccessGenerator>(gen, slowPath));
     }
 
-    void addJSCall(Label slowPathStart, Label doneLocation, OptimizingCallLinkInfo* info)
+    void addJSCall(Label slowPathStart, Label doneLocation, CompileTimeCallLinkInfo info)
     {
         m_jsCalls.append(JSCallRecord(slowPathStart, doneLocation, info));
     }
@@ -277,6 +295,7 @@ public:
         return result;
     }
 
+
     unsigned appendSpeculationRecovery(const SpeculationRecovery& recovery)
     {
         unsigned result = m_speculationRecovery.size();
@@ -287,8 +306,6 @@ public:
     RefPtr<JITCode> jitCode() { return m_jitCode; }
 
     Vector<Label>& blockHeads() { return m_blockHeads; }
-
-    CallSiteIndex recordCallSiteAndGenerateExceptionHandlingOSRExitIfNeeded(const CodeOrigin&, unsigned eventStreamIndex);
 
     PCToCodeOriginMapBuilder& pcToCodeOriginMapBuilder() { return m_pcToCodeOriginMapBuilder; }
 
@@ -307,6 +324,7 @@ public:
     class LinkableConstant final : public CCallHelpers::ConstantMaterializer {
     public:
         enum NonCellTag { NonCell };
+        enum GlobalObjectTag { GlobalObject };
         LinkableConstant() = default;
         LinkableConstant(JITCompiler&, JSCell*);
         LinkableConstant(LinkerIR::Constant index)
@@ -328,6 +346,11 @@ public:
             return LinkableConstant(jit, structure.get());
         }
 
+        static LinkableConstant globalObject(JITCompiler& jit, Node* node)
+        {
+            return LinkableConstant(jit, GlobalObject, node->origin.semantic);
+        }
+
         bool isUnlinked() const { return m_index != UINT_MAX; }
 
         void* pointer() const { return m_pointer; }
@@ -343,6 +366,7 @@ public:
 
     private:
         LinkableConstant(JITCompiler&, void*, NonCellTag);
+        LinkableConstant(JITCompiler&, GlobalObjectTag, CodeOrigin);
 
         LinkerIR::Constant m_index { UINT_MAX };
         void* m_pointer { nullptr };
@@ -371,23 +395,23 @@ public:
     }
 
     std::tuple<CompileTimeStructureStubInfo, LinkableConstant> addStructureStubInfo();
+    std::tuple<CompileTimeCallLinkInfo, LinkableConstant> addCallLinkInfo(CodeOrigin);
     LinkerIR::Constant addToConstantPool(LinkerIR::Type, void*);
 
-private:
+    void appendExceptionHandlingOSRExit(SpeculativeJIT*, ExitKind, unsigned eventStreamIndex, CodeOrigin, HandlerInfo* exceptionHandler, CallSiteIndex, MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList());
+
+protected:
     friend class OSRExitJumpPlaceholder;
 
     // Internal implementation to compile.
     void compileEntry();
     void compileSetupRegistersForEntry();
     void compileEntryExecutionFlag();
-    void compileBody();
     void link(LinkBuffer&);
 
     void exitSpeculativeWithOSR(const OSRExit&, SpeculationRecovery*);
     void linkOSRExits();
     void disassemble(LinkBuffer&);
-
-    void appendExceptionHandlingOSRExit(ExitKind, unsigned eventStreamIndex, CodeOrigin, HandlerInfo* exceptionHandler, CallSiteIndex, MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList());
 
     void makeCatchOSREntryBuffer();
 
@@ -408,7 +432,7 @@ private:
 
 
     struct JSCallRecord {
-        JSCallRecord(Label slowPathStart, Label doneLocation, OptimizingCallLinkInfo* info)
+        JSCallRecord(Label slowPathStart, Label doneLocation, CompileTimeCallLinkInfo info)
             : slowPathStart(slowPathStart)
             , doneLocation(doneLocation)
             , info(info)
@@ -417,7 +441,7 @@ private:
 
         Label slowPathStart;
         Label doneLocation;
-        OptimizingCallLinkInfo* info;
+        CompileTimeCallLinkInfo info;
     };
 
     struct JSDirectCallRecord {
@@ -434,6 +458,7 @@ private:
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
     Vector<InlineCacheWrapper<JITGetByIdWithThisGenerator>, 4> m_getByIdsWithThis;
     Vector<InlineCacheWrapper<JITGetByValGenerator>, 4> m_getByVals;
+    Vector<InlineCacheWrapper<JITGetByValWithThisGenerator>, 4> m_getByValsWithThis;
     Vector<InlineCacheWrapper<JITPutByIdGenerator>, 4> m_putByIds;
     Vector<InlineCacheWrapper<JITPutByValGenerator>, 4> m_putByVals;
     Vector<InlineCacheWrapper<JITDelByIdGenerator>, 4> m_delByIds;
@@ -449,9 +474,8 @@ private:
     Vector<DFG::OSREntryData> m_osrEntry;
     Vector<DFG::OSRExit> m_osrExit;
     Vector<DFG::SpeculationRecovery> m_speculationRecovery;
-    Vector<LinkerIR::Value> m_constantPool;
-    HashMap<LinkerIR::Value, LinkerIR::Constant, LinkerIR::ValueHash, LinkerIR::ValueTraits> m_constantPoolMap;
     SegmentedVector<DFG::UnlinkedStructureStubInfo> m_unlinkedStubInfos;
+    SegmentedVector<DFG::UnlinkedCallLinkInfo> m_unlinkedCallLinkInfos;
 
     struct ExceptionHandlingOSRExitInfo {
         OSRExitCompilationInfo& exitInfo;
@@ -460,7 +484,6 @@ private:
     };
     Vector<ExceptionHandlingOSRExitInfo> m_exceptionHandlerOSRExitCallSites;
 
-    std::unique_ptr<SpeculativeJIT> m_speculative;
     PCToCodeOriginMapBuilder m_pcToCodeOriginMapBuilder;
 };
 

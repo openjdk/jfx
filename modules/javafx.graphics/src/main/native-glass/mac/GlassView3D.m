@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -510,9 +510,9 @@
 - (void)keyDown:(NSEvent *)theEvent
 {
     KEYLOG("keyDown");
-    [GlassApplication registerKeyEvent:theEvent];
 
     if (![[self inputContext] handleEvent:theEvent] || shouldProcessKeyEvent) {
+        [GlassApplication registerKeyEvent:theEvent];
         [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     }
     shouldProcessKeyEvent = YES;
@@ -577,14 +577,6 @@
 {
     DNDLOG("draggingExited");
     [self->_delegate sendJavaDndEvent:sender type:com_sun_glass_events_DndEvent_EXIT];
-}
-
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal
-{
-    // Deprecated for 10.7
-    // use NSDraggingSession - (NSDragOperation)draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context
-    DNDLOG("draggingSourceOperationMaskForLocal");
-    return [self->_delegate draggingSourceOperationMaskForLocal:isLocal];
 }
 
 #pragma mark --- Callbacks
@@ -818,8 +810,10 @@
     IMLOG("firstRectForCharacterRange called %lu %lu",
           (unsigned long)theRange.location, (unsigned long)theRange.length);
     NSRect result = [self->_delegate getInputMethodCandidatePosRequest:0];
-    NSRect screenFrame = [[NSScreen mainScreen] frame];
-    result.origin.y = screenFrame.size.height - result.origin.y;
+    if (NSScreen.screens.count) {
+        NSRect screenFrame = NSScreen.screens[0].frame;
+        result.origin.y = screenFrame.size.height - result.origin.y;
+    }
     return result;
 }
 

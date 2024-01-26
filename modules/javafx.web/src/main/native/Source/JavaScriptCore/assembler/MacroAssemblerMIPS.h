@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2010 MIPS Technologies, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -513,6 +513,13 @@ public:
             or32(imm, immTempRegister);
             m_assembler.sh(immTempRegister, addrTempRegister, adr & 0xffff);
         }
+    }
+
+    void or16(RegisterID mask, AbsoluteAddress dest)
+    {
+        load16(dest.m_ptr, immTempRegister);
+        or32(mask, immTempRegister);
+        store16(immTempRegister, dest.m_ptr);
     }
 
     void or32(RegisterID src, RegisterID dest)
@@ -3329,8 +3336,10 @@ public:
         convertInt32ToDouble(MIPSRegisters::zero, reg);
     }
 
-    void swap(FPRegisterID fr1, FPRegisterID fr2)
+    void swapDouble(FPRegisterID fr1, FPRegisterID fr2)
     {
+        if (fr1 == fr2)
+            return;
         moveDouble(fr1, fpTempRegister);
         moveDouble(fr2, fr1);
         moveDouble(fpTempRegister, fr2);
@@ -3701,9 +3710,9 @@ public:
     }
 
     template<PtrTag resultTag, PtrTag locationTag>
-    static FunctionPtr<resultTag> readCallTarget(CodeLocationCall<locationTag> call)
+    static CodePtr<resultTag> readCallTarget(CodeLocationCall<locationTag> call)
     {
-        return FunctionPtr<resultTag>(reinterpret_cast<void(*)()>(MIPSAssembler::readCallTarget(call.dataLocation())));
+        return CodePtr<resultTag>(reinterpret_cast<void(*)()>(MIPSAssembler::readCallTarget(call.dataLocation())));
     }
 
     template<PtrTag startTag, PtrTag destTag>
@@ -3767,13 +3776,13 @@ public:
     template<PtrTag callTag, PtrTag destTag>
     static void repatchCall(CodeLocationCall<callTag> call, CodeLocationLabel<destTag> destination)
     {
-        MIPSAssembler::relinkCall(call.dataLocation(), destination.executableAddress());
+        MIPSAssembler::relinkCall(call.dataLocation(), destination.taggedPtr());
     }
 
     template<PtrTag callTag, PtrTag destTag>
-    static void repatchCall(CodeLocationCall<callTag> call, FunctionPtr<destTag> destination)
+    static void repatchCall(CodeLocationCall<callTag> call, CodePtr<destTag> destination)
     {
-        MIPSAssembler::relinkCall(call.dataLocation(), destination.executableAddress());
+        MIPSAssembler::relinkCall(call.dataLocation(), destination.taggedPtr());
     }
 
 private:
@@ -3784,12 +3793,12 @@ private:
     friend class LinkBuffer;
 
     template<PtrTag tag>
-    static void linkCall(void* code, Call call, FunctionPtr<tag> function)
+    static void linkCall(void* code, Call call, CodePtr<tag> function)
     {
         if (call.isFlagSet(Call::Tail))
-            MIPSAssembler::linkJump(code, call.m_label, function.executableAddress());
+            MIPSAssembler::linkJump(code, call.m_label, function.taggedPtr());
         else
-            MIPSAssembler::linkCall(code, call.m_label, function.executableAddress());
+            MIPSAssembler::linkCall(code, call.m_label, function.taggedPtr());
     }
 
 };

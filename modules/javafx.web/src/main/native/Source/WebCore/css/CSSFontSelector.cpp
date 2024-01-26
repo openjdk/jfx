@@ -30,22 +30,22 @@
 #include "CachedFont.h"
 #include "CSSFontFace.h"
 #include "CSSFontFaceSource.h"
-#include "CSSFontFamily.h"
+#include "CSSFontFeatureValuesRule.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyNames.h"
 #include "CSSSegmentedFontFace.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "CachedResourceLoader.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "Font.h"
 #include "FontCache.h"
+#include "FontCascadeDescription.h"
 #include "FontFace.h"
 #include "FontFaceSet.h"
 #include "FontSelectorClient.h"
-#include "Frame.h"
 #include "FrameLoader.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "ResourceLoadObserver.h"
 #include "Settings.h"
@@ -183,7 +183,8 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
     RefPtr<CSSValue> src = style.getPropertyCSSValue(CSSPropertySrc);
     RefPtr<CSSValue> unicodeRange = style.getPropertyCSSValue(CSSPropertyUnicodeRange);
     RefPtr<CSSValue> featureSettings = style.getPropertyCSSValue(CSSPropertyFontFeatureSettings);
-    RefPtr<CSSValue> loadingBehavior = style.getPropertyCSSValue(CSSPropertyFontDisplay);
+    RefPtr<CSSValue> display = style.getPropertyCSSValue(CSSPropertyFontDisplay);
+    RefPtr<CSSValue> sizeAdjust = style.getPropertyCSSValue(CSSPropertySizeAdjust);
     if (!is<CSSValueList>(fontFamily) || !is<CSSValueList>(src) || (unicodeRange && !is<CSSValueList>(*unicodeRange)))
         return;
 
@@ -200,20 +201,21 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
     SetForScope creatingFont(m_creatingFont, true);
     auto fontFace = CSSFontFace::create(*this, &fontFaceRule);
 
-    if (!fontFace->setFamilies(*fontFamily))
-        return;
+    fontFace->setFamilies(familyList);
     if (fontStyle)
         fontFace->setStyle(*fontStyle);
     if (fontWeight)
         fontFace->setWeight(*fontWeight);
     if (fontStretch)
         fontFace->setStretch(*fontStretch);
-    if (rangeList && !fontFace->setUnicodeRange(*rangeList))
-        return;
+    if (rangeList)
+        fontFace->setUnicodeRange(*rangeList);
     if (featureSettings)
         fontFace->setFeatureSettings(*featureSettings);
-    if (loadingBehavior)
-        fontFace->setLoadingBehavior(*loadingBehavior);
+    if (display)
+        fontFace->setDisplay(downcast<CSSPrimitiveValue>(*display));
+    if (sizeAdjust)
+        fontFace->setSizeAdjust(*sizeAdjust);
 
     CSSFontFace::appendSources(fontFace, srcList, m_context.get(), isInitiatingElementInUserAgentShadowTree);
 
@@ -237,11 +239,34 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
     ++m_version;
 }
 
-void CSSFontSelector::addFontPaletteValuesRule(StyleRuleFontPaletteValues& fontPaletteValuesRule)
+void CSSFontSelector::addFontPaletteValuesRule(const StyleRuleFontPaletteValues& fontPaletteValuesRule)
 {
-    AtomString fontFamily = fontPaletteValuesRule.fontFamily().isNull() ? emptyAtom() : fontPaletteValuesRule.fontFamily();
-    AtomString name = fontPaletteValuesRule.name().isNull() ? emptyAtom() : fontPaletteValuesRule.name();
+
+    auto& name = fontPaletteValuesRule.name();
+    ASSERT(!name.isNull());
+
+    auto& fontFamily = fontPaletteValuesRule.fontFamily();
+    if (fontFamily.isNull())
+        return;
+
     m_paletteMap.set(std::make_pair(fontFamily, name), fontPaletteValuesRule.fontPaletteValues());
+
+    ++m_version;
+}
+
+void CSSFontSelector::addFontFeatureValuesRule(const StyleRuleFontFeatureValues& fontFeatureValuesRule)
+{
+    Ref<FontFeatureValues> fontFeatureValues = fontFeatureValuesRule.value();
+
+    for (const auto& fontFamily : fontFeatureValuesRule.fontFamilies()) {
+        // https://www.w3.org/TR/css-fonts-3/#font-family-casing
+        auto lowercased = fontFamily.string().convertToLowercaseWithoutLocale();
+        auto exist = m_featureValues.get(lowercased);
+        if (exist)
+            exist->updateOrInsert(fontFeatureValues.get());
+        else
+            m_featureValues.set(lowercased, fontFeatureValues);
+    }
 
     ++m_version;
 }
@@ -332,7 +357,19 @@ const FontPaletteValues& CSSFontSelector::lookupFontPaletteValues(const AtomStri
     auto iterator = m_paletteMap.find(std::make_pair(familyName, paletteName));
     if (iterator == m_paletteMap.end())
         return emptyFontPaletteValues.get();
+
     return iterator->value;
+}
+
+RefPtr<FontFeatureValues> CSSFontSelector::lookupFontFeatureValues(const AtomString& familyName)
+{
+    // https://www.w3.org/TR/css-fonts-3/#font-family-casing
+    auto lowercased = familyName.string().convertToLowercaseWithoutLocale();
+    auto iterator = m_featureValues.find(lowercased);
+    if (iterator == m_featureValues.end())
+        return nullptr;
+
+    return iterator->value.ptr();
 }
 
 FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescription, const AtomString& familyName)
@@ -346,27 +383,29 @@ FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescr
     AtomString familyForLookup = familyName;
     std::optional<FontDescription> overrideFontDescription;
     const FontDescription* fontDescriptionForLookup = &fontDescription;
-    auto resolveAndAssignGenericFamily = [&]() {
+    auto resolveAndAssignGenericFamily = [&] {
         if (auto genericFamilyOptional = resolveGenericFamily(fontDescription, familyName))
             familyForLookup = *genericFamilyOptional;
     };
 
     const auto& fontPaletteValues = lookupFontPaletteValues(familyName, fontDescription);
+    auto fontFeatureValues = lookupFontFeatureValues(familyName);
 
     if (resolveGenericFamilyFirst)
         resolveAndAssignGenericFamily();
     auto* document = dynamicDowncast<Document>(m_context.get());
     auto* face = m_cssFontFaceSet->fontFace(fontDescriptionForLookup->fontSelectionRequest(), familyForLookup);
     if (face) {
-        if (document && DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+        if (document && document->settings().webAPIStatisticsEnabled())
             ResourceLoadObserver::shared().logFontLoad(*document, familyForLookup.string(), true);
-        return face->fontRanges(*fontDescriptionForLookup, fontPaletteValues);
+        return face->fontRanges(*fontDescriptionForLookup, fontPaletteValues, fontFeatureValues);
     }
 
     if (!resolveGenericFamilyFirst)
         resolveAndAssignGenericFamily();
-    auto font = FontCache::forCurrentThread().fontForFamily(*fontDescriptionForLookup, familyForLookup, { { }, { }, fontPaletteValues });
-    if (document && DeprecatedGlobalSettings::webAPIStatisticsEnabled())
+
+    auto font = FontCache::forCurrentThread().fontForFamily(*fontDescriptionForLookup, familyForLookup, { { }, { }, fontPaletteValues, fontFeatureValues, 1.0 });
+    if (document && document->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logFontLoad(*document, familyForLookup.string(), !!font);
     return FontRanges { WTFMove(font) };
 }
@@ -397,7 +436,7 @@ RefPtr<Font> CSSFontSelector::fallbackFontAt(const FontDescription& fontDescript
         return nullptr;
     auto& pictographFontFamily = m_context->settingsValues().fontGenericFamilies.pictographFontFamily();
     auto font = FontCache::forCurrentThread().fontForFamily(fontDescription, pictographFontFamily);
-    if (DeprecatedGlobalSettings::webAPIStatisticsEnabled() && is<Document>(m_context))
+    if (is<Document>(m_context) && m_context->settingsValues().webAPIStatisticsEnabled)
         ResourceLoadObserver::shared().logFontLoad(downcast<Document>(*m_context), pictographFontFamily, !!font);
 
     return font;

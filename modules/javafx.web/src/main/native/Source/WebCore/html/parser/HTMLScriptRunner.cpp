@@ -31,13 +31,13 @@
 #include "Event.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLInputStream.h"
 #include "HTMLNames.h"
 #include "HTMLScriptRunnerHost.h"
 #include "IgnoreDestructiveWriteCountIncrementer.h"
 #include "InlineClassicScript.h"
+#include "LocalFrame.h"
 #include "MutationObserver.h"
 #include "NestingLevelIncrementer.h"
 #include "ScriptElement.h"
@@ -258,8 +258,12 @@ void HTMLScriptRunner::runScript(ScriptElement& scriptElement, const TextPositio
     else if (scriptElement.readyToBeParserExecuted()) {
         if (m_scriptNestingLevel == 1)
             m_parserBlockingScript = PendingScript::create(scriptElement, scriptStartPosition);
-        else
+        else {
+            if (scriptElement.scriptType() == ScriptType::Classic)
             scriptElement.executeClassicScript(ScriptSourceCode(scriptElement.element().textContent(), documentURLForScriptExecution(m_document.get()), scriptStartPosition, JSC::SourceProviderSourceType::Program, InlineClassicScript::create(scriptElement)));
+            else
+                scriptElement.registerImportMap(ScriptSourceCode(scriptElement.element().textContent(), documentURLForScriptExecution(m_document.get()), scriptStartPosition, JSC::SourceProviderSourceType::ImportMap));
+        }
     } else
         requestParsingBlockingScript(scriptElement);
 }

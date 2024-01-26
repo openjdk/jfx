@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,18 +36,18 @@ class ConditionEventListener;
 class SMILTimeContainer;
 class SVGSMILElement;
 
-template<typename T> class EventSender;
+template<typename T, typename Counter> class EventSender;
 
-using SMILEventSender = EventSender<SVGSMILElement>;
+using SMILEventSender = EventSender<SVGSMILElement, WeakPtrImplWithEventTargetData>;
 
 // This class implements SMIL interval timing model as needed for SVG animation.
 class SVGSMILElement : public SVGElement {
     WTF_MAKE_ISO_ALLOCATED(SVGSMILElement);
 public:
-    SVGSMILElement(const QualifiedName&, Document&);
+    SVGSMILElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
     virtual ~SVGSMILElement();
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
@@ -77,7 +78,6 @@ public:
     SMILTime elapsed() const;
 
     SMILTime intervalBegin() const { return m_intervalBegin; }
-    SMILTime intervalEnd() const { return m_intervalEnd; }
     SMILTime previousIntervalBegin() const { return m_previousIntervalBegin; }
     SMILTime simpleDuration() const;
 
@@ -91,7 +91,6 @@ public:
     static SMILTime parseOffsetValue(StringView);
 
     bool isContributing(SMILTime elapsed) const;
-    bool isInactive() const;
     bool isFrozen() const;
 
     unsigned documentOrderIndex() const { return m_documentOrderIndex; }
@@ -105,7 +104,7 @@ public:
     void connectConditions();
     bool hasConditionsConnected() const { return m_conditionsConnected; }
 
-    void dispatchPendingEvent(SMILEventSender*);
+    void dispatchPendingEvent(SMILEventSender*, const AtomString& eventType);
 
 protected:
     void addBeginTime(SMILTime eventTime, SMILTime endTime, SMILTimeWithOrigin::Origin = SMILTimeWithOrigin::ParserOrigin);
@@ -138,7 +137,7 @@ private:
     enum BeginOrEnd { Begin, End };
     SMILTime findInstanceTime(BeginOrEnd, SMILTime minimumTime, bool equalsMinimumOK) const;
     void resolveFirstInterval();
-    void resolveNextInterval(bool notifyDependents);
+    bool resolveNextInterval();
     void resolveInterval(bool first, SMILTime& beginResult, SMILTime& endResult) const;
     SMILTime resolveActiveEnd(SMILTime resolvedBegin, SMILTime resolvedEnd) const;
     SMILTime repeatingDuration() const;
@@ -185,7 +184,7 @@ private:
 
     QualifiedName m_attributeName;
 
-    WeakPtr<SVGElement> m_targetElement;
+    WeakPtr<SVGElement, WeakPtrImplWithEventTargetData> m_targetElement;
 
     Vector<Condition> m_conditions;
     bool m_conditionsConnected;
@@ -193,7 +192,7 @@ private:
 
     bool m_isWaitingForFirstInterval;
 
-    WeakHashSet<SVGSMILElement> m_timeDependents;
+    WeakHashSet<SVGSMILElement, WeakPtrImplWithEventTargetData> m_timeDependents;
 
     // Instance time lists
     Vector<SMILTimeWithOrigin> m_beginTimes;

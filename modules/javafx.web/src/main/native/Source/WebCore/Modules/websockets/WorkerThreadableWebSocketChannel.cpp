@@ -33,13 +33,12 @@
 
 #include "Blob.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
+#include "LocalFrame.h"
 #include "MixedContentChecker.h"
 #include "ScriptExecutionContext.h"
 #include "SocketProvider.h"
 #include "ThreadableWebSocketChannelClientWrapper.h"
-#include "WebSocketChannel.h"
 #include "WebSocketChannelClient.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
@@ -56,7 +55,7 @@ WorkerThreadableWebSocketChannel::WorkerThreadableWebSocketChannel(WorkerGlobalS
     , m_workerClientWrapper(ThreadableWebSocketChannelClientWrapper::create(context, client))
     , m_bridge(Bridge::create(m_workerClientWrapper.copyRef(), m_workerGlobalScope.copyRef(), taskMode, provider))
     , m_socketProvider(provider)
-    , m_progressIdentifier(WebSocketChannelIdentifier::generateThreadSafe())
+    , m_progressIdentifier(WebSocketChannelIdentifier::generate())
 {
     m_bridge->initialize(context);
 }
@@ -414,13 +413,10 @@ void WorkerThreadableWebSocketChannel::Bridge::connect(const URL& url, const Str
 
         auto& document = downcast<Document>(context);
 
-        // FIXME: make this mixed content check equivalent to the document mixed content check currently in WebSocket::connect()
-        if (auto* frame = document.frame()) {
-            if (auto errorString = MixedContentChecker::checkForMixedContentInFrameTree(*frame, url)) {
-                peer->fail(WTFMove(errorString).value());
+        if (document.frame() && !MixedContentChecker::frameAndAncestorsCanRunInsecureContent(*document.frame(), document.securityOrigin(), url, MixedContentChecker::ShouldLogWarning::No)) {
+            peer->fail(makeString("The page at ", document.url().stringCenterEllipsizedToLength(), " was blocked from connecting insecurely to ", url.stringCenterEllipsizedToLength(), " either because the protocol is insecure or the page is embedded from an insecure page."));
                 return;
             }
-        }
 
         if (peer->connect(url, protocol) == ThreadableWebSocketChannel::ConnectStatus::KO)
             peer->didReceiveMessageError(String { });
@@ -477,12 +473,12 @@ ThreadableWebSocketChannel::SendResult WorkerThreadableWebSocketChannel::Bridge:
         return ThreadableWebSocketChannel::SendFail;
     setMethodNotCompleted();
 
-    m_loaderProxy.postTaskToLoader([peer = m_peer, url = binaryData.url().isolatedCopy(), type = binaryData.type().isolatedCopy(), size = binaryData.size()](ScriptExecutionContext& context) {
+    m_loaderProxy.postTaskToLoader([peer = m_peer, url = binaryData.url().isolatedCopy(), type = binaryData.type().isolatedCopy(), size = binaryData.size(), memoryCost = binaryData.memoryCost()](ScriptExecutionContext& context) {
         ASSERT(isMainThread());
         ASSERT_UNUSED(context, context.isDocument());
         ASSERT(peer);
 
-        peer->send(Blob::deserialize(&context, url, type, size, { }));
+        peer->send(Blob::deserialize(&context, url, type, size, memoryCost, { }));
     });
 
     Ref<Bridge> protectedThis(*this);

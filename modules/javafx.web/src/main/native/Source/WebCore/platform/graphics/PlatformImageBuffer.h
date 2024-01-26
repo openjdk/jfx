@@ -59,7 +59,7 @@ using AcceleratedImageBufferBackend = UnacceleratedImageBufferBackend;
 #if HAVE(IOSURFACE)
 class IOSurfaceImageBuffer final : public ImageBuffer {
 public:
-    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const CreationContext& creationContext = { })
+    static auto create(const FloatSize& size, float resolutionScale, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat, RenderingPurpose purpose, const ImageBufferCreationContext& creationContext = { })
     {
         return ImageBuffer::create<ImageBufferIOSurfaceBackend, IOSurfaceImageBuffer>(size, resolutionScale, colorSpace, pixelFormat, purpose, creationContext);
     }

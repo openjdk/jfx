@@ -26,12 +26,18 @@
 #include "config.h"
 #include "testb3.h"
 
-#if ENABLE(B3_JIT)
+#if ENABLE(B3_JIT) && !CPU(ARM)
 
 Lock crashLock;
 
-bool shouldRun(const char* filter, const char* testName)
+bool shouldRun(const TestConfig* config, const char* testName)
 {
+    if (config->mode == TestConfig::Mode::ListTests) {
+        dataLogLn(testName);
+        return false;
+    }
+
+    const auto* filter = config->filter;
     // FIXME: These tests fail <https://bugs.webkit.org/show_bug.cgi?id=199330>.
     if (!filter && isARM64()) {
         for (auto& failingTest : {
@@ -126,7 +132,7 @@ void testComputeDivisionMagic(T value, T magicMultiplier, unsigned shift)
     CHECK(magic.shift == shift);
 }
 
-void run(const char* filter)
+void run(const TestConfig* config)
 {
     Deque<RefPtr<SharedTask<void()>>> tasks;
 
@@ -149,13 +155,13 @@ void run(const char* filter)
     RUN_UNARY(testAddTreeArg32, int32Operands());
     RUN_UNARY(testMulTreeArg32, int32Operands());
 
-    addArgTests(filter, tasks);
+    addArgTests(config, tasks);
 
     RUN_UNARY(testNegDouble, floatingPointOperands<double>());
     RUN_UNARY(testNegFloat, floatingPointOperands<float>());
     RUN_UNARY(testNegFloatWithUselessDoubleConversion, floatingPointOperands<float>());
 
-    addBitTests(filter, tasks);
+    addBitTests(config, tasks);
 
     RUN(testShlArgs(1, 0));
     RUN(testShlArgs(1, 1));
@@ -214,7 +220,7 @@ void run(const char* filter)
     RUN(testShlZShrArgImm32(0xffffffff, 1));
     RUN(testShlZShrArgImm32(0xffffffff, 63));
 
-    addShrTests(filter, tasks);
+    addShrTests(config, tasks);
 
     RUN_UNARY(testClzArg64, int64Operands());
     RUN_UNARY(testClzMem64, int64Operands());
@@ -312,7 +318,10 @@ void run(const char* filter)
     RUN_UNARY(testConvertDoubleToFloatToDouble, floatingPointOperands<double>());
     RUN_UNARY(testConvertDoubleToFloatToDoubleToFloat, floatingPointOperands<double>());
     RUN_UNARY(testConvertDoubleToFloatEqual, floatingPointOperands<double>());
+    RUN_UNARY(testStoreDouble, floatingPointOperands<double>());
+    RUN_UNARY(testStoreDoubleConstant, floatingPointOperands<double>());
     RUN_UNARY(testStoreFloat, floatingPointOperands<double>());
+    RUN_UNARY(testStoreFloatConstant, floatingPointOperands<double>());
     RUN_UNARY(testStoreDoubleConstantAsFloat, floatingPointOperands<double>());
     RUN_UNARY(testLoadFloatConvertDoubleConvertFloatStoreFloat, floatingPointOperands<float>());
     RUN_UNARY(testFroundArg, floatingPointOperands<double>());
@@ -533,10 +542,8 @@ void run(const char* filter)
     RUN(testEqualDouble(42, PNaN, false));
     RUN(testEqualDouble(PNaN, PNaN, false));
 
-    addLoadTests(filter, tasks);
-    addTupleTests(filter, tasks);
-
-    addCopyTests(filter, tasks);
+    addLoadTests(config, tasks);
+    addTupleTests(config, tasks);
 
     RUN(testSpillGP());
     RUN(testSpillFP());
@@ -546,11 +553,16 @@ void run(const char* filter)
     RUN(testStoreAfterClobberExitsSideways());
     RUN(testStoreAfterClobberDifferentWidthSuccessor());
     RUN(testStoreAfterClobberExitsSidewaysSuccessor());
+    RUN(testNarrowLoad());
+    RUN(testNarrowLoadClobber());
+    RUN(testNarrowLoadClobberNarrow());
+    RUN(testNarrowLoadNotClobber());
+    RUN(testNarrowLoadUpper());
 
     RUN(testInt32ToDoublePartialRegisterStall());
     RUN(testInt32ToDoublePartialRegisterWithoutStall());
 
-    addCallTests(filter, tasks);
+    addCallTests(config, tasks);
 
     RUN(testLinearScanWithCalleeOnStack());
 
@@ -654,7 +666,7 @@ void run(const char* filter)
     RUN(testTruncSExt32(1000000000ll));
     RUN(testTruncSExt32(-1000000000ll));
 
-    addSExtTests(filter, tasks);
+    addSExtTests(config, tasks);
 
     RUN(testBasicSelect());
     RUN(testSelectTest());
@@ -713,7 +725,7 @@ void run(const char* filter)
     RUN(testStore16Load16Z(12345678));
     RUN(testStore16Load16Z(-123));
 
-    addSShrShTests(filter, tasks);
+    addSShrShTests(config, tasks);
 
     RUN(testCheckMul64SShr());
 
@@ -767,6 +779,8 @@ void run(const char* filter)
     RUN(testTrappingStoreElimination());
     RUN(testMoveConstants());
     RUN(testMoveConstantsWithLargeOffsets());
+    if (Options::useWebAssemblySIMD())
+        RUN(testMoveConstantsSIMD());
     RUN(testPCOriginMapDoesntInsertNops());
     RUN(testPinRegisters());
     RUN(testReduceStrengthReassociation(true));
@@ -805,7 +819,7 @@ void run(const char* filter)
     RUN(testLICMReadsWritesOverlappingHeaps());
     RUN(testLICMDefaultCall());
 
-    addAtomicTests(filter, tasks);
+    addAtomicTests(config, tasks);
     RUN(testDepend32());
     RUN(testDepend64());
 
@@ -815,6 +829,7 @@ void run(const char* filter)
     RUN(testWasmBoundsCheck(std::numeric_limits<unsigned>::max() - 5));
 
     RUN(testWasmAddress());
+    RUN(testWasmAddressWithOffset());
 
     RUN(testFastTLSLoad());
     RUN(testFastTLSStore());
@@ -864,13 +879,30 @@ void run(const char* filter)
 
     RUN(testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead());
 
-    if (tasks.isEmpty())
-        usage();
+    if (isARM64() || isX86()) {
+        RUN(testVectorXorOrAllOnesToVectorAndXor());
+        RUN(testVectorXorAndAllOnesToVectorOrXor());
+        RUN(testVectorOrSelf());
+        RUN(testVectorAndSelf());
+        RUN(testVectorXorSelf());
+        RUN(testVectorExtractLane0Float());
+        RUN(testVectorExtractLane0Double());
+        RUN_UNARY(testVectorXorOrAllOnesConstantToVectorAndXor, v128Operands());
+        RUN_UNARY(testVectorXorAndAllOnesConstantToVectorOrXor, v128Operands());
+        RUN_BINARY(testVectorOrConstants, v128Operands(), v128Operands());
+        RUN_BINARY(testVectorAndConstants, v128Operands(), v128Operands());
+        RUN_BINARY(testVectorXorConstants, v128Operands(), v128Operands());
+        RUN_BINARY(testVectorAndConstantConstant, v128Operands(), v128Operands());
+        if (isARM64()) {
+            RUN(testVectorFmulByElementFloat());
+            RUN(testVectorFmulByElementDouble());
+        }
+    }
 
     Lock lock;
 
     Vector<Ref<Thread>> threads;
-    for (unsigned i = filter ? 1 : WTF::numberOfProcessorCores(); i--;) {
+    for (unsigned i = config->workerThreadCount; i--;) {
         threads.append(
             Thread::create(
                 "testb3 thread",
@@ -895,15 +927,6 @@ void run(const char* filter)
     crashLock.unlock();
 }
 
-#else // ENABLE(B3_JIT)
-
-static void run(const char*)
-{
-    dataLog("B3 JIT is not enabled.\n");
-}
-
-#endif // ENABLE(B3_JIT)
-
 #if ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY)
 extern const JSC::JITOperationAnnotation startOfJITOperationsInTestB3 __asm("section$start$__DATA_CONST$__jsc_ops");
 extern const JSC::JITOperationAnnotation endOfJITOperationsInTestB3 __asm("section$end$__DATA_CONST$__jsc_ops");
@@ -911,17 +934,24 @@ extern const JSC::JITOperationAnnotation endOfJITOperationsInTestB3 __asm("secti
 
 int main(int argc, char** argv)
 {
-    const char* filter = nullptr;
-    switch (argc) {
-    case 1:
-        break;
-    case 2:
-        filter = argv[1];
-        break;
-    default:
+    TestConfig config;
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "-filter")) {
+            if (i + 1 < argc) {
+                config.filter = argv[i + 1];
+                i += 1;
+            } else
         usage();
+        } else if (!strcmp(argv[i], "-list"))
+            config.mode = TestConfig::Mode::ListTests;
+        else {
+            // for backwards compatibility
+            config.filter = argv[i];
         break;
     }
+    }
+
+    config.workerThreadCount = config.filter ? 1 : WTF::numberOfProcessorCores();
 
     JSC::Config::configureForTesting();
 
@@ -938,7 +968,7 @@ int main(int argc, char** argv)
 
     for (unsigned i = 0; i <= 2; ++i) {
         JSC::Options::defaultB3OptLevel() = i;
-        run(filter);
+        run(&config);
     }
 
     return 0;
@@ -950,3 +980,13 @@ extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, cons
     return main(argc, const_cast<char**>(argv));
 }
 #endif
+
+#else // ENABLE(B3_JIT)
+
+int main(int, char**)
+{
+    WTF::initializeMainThread();
+    dataLog("B3 JIT is not enabled.\n");
+}
+
+#endif // ENABLE(B3_JIT)

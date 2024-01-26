@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.StyleClassSet;
 
@@ -86,7 +87,7 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * Gets the {@code Set} of {@code StyleClass}es of the {@code Selector}.
+     * Gets the immutable {@code Set} of {@code StyleClass}es of the {@code Selector}.
      * @return the {@code Set} of {@code StyleClass}es
      */
     public Set<StyleClass> getStyleClassSet() {
@@ -96,9 +97,10 @@ final public class SimpleSelector extends Selector {
     /**
      * styleClasses converted to a set of bit masks
      */
-    final private StyleClassSet styleClassSet;
+    private final Set<StyleClass> styleClassSet;
+    private final Set<StyleClass> unwrappedStyleClassSet;
 
-    final private String id;
+    private final String id;
 
     /**
      * Gets the value of the selector id.
@@ -108,33 +110,12 @@ final public class SimpleSelector extends Selector {
         return id;
     }
 
-    // a mask of bits corresponding to the pseudoclasses
-    final private PseudoClassState pseudoClassState;
+    // a mask of bits corresponding to the pseudoclasses (immutable)
+    private final Set<PseudoClass> pseudoClassState;
 
+    // for test purposes
     Set<PseudoClass> getPseudoClassStates() {
         return pseudoClassState;
-    }
-
-    /**
-     * Gets an immutable list of {@code String}s of pseudo classes of the {@code Selector}
-     * @return an immutable list of {@code String}s
-     */
-    List<String> getPseudoclasses() {
-
-        final List<String> names = new ArrayList<>();
-
-        Iterator<PseudoClass> iter = pseudoClassState.iterator();
-        while (iter.hasNext()) {
-            names.add(iter.next().getPseudoClassName());
-        }
-
-        if (nodeOrientation == RIGHT_TO_LEFT) {
-            names.add("dir(rtl)");
-        } else if (nodeOrientation == LEFT_TO_RIGHT) {
-            names.add("dir(ltr)");
-        }
-
-        return Collections.unmodifiableList(names);
     }
 
     // true if name is not a wildcard
@@ -168,41 +149,42 @@ final public class SimpleSelector extends Selector {
         // then match needs to check name
         this.matchOnName = (name != null && !("".equals(name)) && !("*".equals(name)));
 
-        this.styleClassSet = new StyleClassSet();
+        this.unwrappedStyleClassSet = new StyleClassSet();
 
-        int nMax = styleClasses != null ? styleClasses.size() : 0;
-        for(int n=0; n<nMax; n++) {
+        if (styleClasses != null) {
+            for (int n = 0; n < styleClasses.size(); n++) {
 
-            final String styleClassName = styleClasses.get(n);
-            if (styleClassName == null || styleClassName.isEmpty()) continue;
+                final String styleClassName = styleClasses.get(n);
+                if (styleClassName == null || styleClassName.isEmpty()) continue;
 
-            final StyleClass styleClass = StyleClassSet.getStyleClass(styleClassName);
-            this.styleClassSet.add(styleClass);
+                unwrappedStyleClassSet.add(StyleClassSet.getStyleClass(styleClassName));
+            }
         }
 
+        this.styleClassSet = Collections.unmodifiableSet(unwrappedStyleClassSet);
         this.matchOnStyleClass = (this.styleClassSet.size() > 0);
 
-        this.pseudoClassState = new PseudoClassState();
-
-        nMax = pseudoClasses != null ? pseudoClasses.size() : 0;
-
+        PseudoClassState pcs = new PseudoClassState();
         NodeOrientation dir = NodeOrientation.INHERIT;
-        for(int n=0; n<nMax; n++) {
 
-            final String pclass = pseudoClasses.get(n);
-            if (pclass == null || pclass.isEmpty()) continue;
+        if (pseudoClasses != null) {
+            for (int n = 0; n < pseudoClasses.size(); n++) {
 
-            // TODO: This is not how we should handle functional pseudo-classes in the long-run!
-            if ("dir(".regionMatches(true, 0, pclass, 0, 4)) {
-                final boolean rtl = "dir(rtl)".equalsIgnoreCase(pclass);
-                dir = rtl ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
-                continue;
+                final String pclass = pseudoClasses.get(n);
+                if (pclass == null || pclass.isEmpty()) continue;
+
+                // TODO: This is not how we should handle functional pseudo-classes in the long-run!
+                if ("dir(".regionMatches(true, 0, pclass, 0, 4)) {
+                    final boolean rtl = "dir(rtl)".equalsIgnoreCase(pclass);
+                    dir = rtl ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
+                    continue;
+                }
+
+                pcs.add(PseudoClassState.getPseudoClass(pclass));
             }
-
-            final PseudoClass pseudoClass = PseudoClassState.getPseudoClass(pclass);
-            this.pseudoClassState.add(pseudoClass);
         }
 
+        this.pseudoClassState = ImmutablePseudoClassSetsCache.of(pcs);
         this.nodeOrientation = dir;
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
@@ -308,7 +290,8 @@ final public class SimpleSelector extends Selector {
     // This selector matches when class="pastoral blue aqua marine" but does not
     // match for class="pastoral blue".
     private boolean matchStyleClasses(StyleClassSet otherStyleClasses) {
-        return otherStyleClasses.containsAll(styleClassSet);
+        // checks against unwrapped version so BitSet can do its special casing for performance
+        return otherStyleClasses.containsAll(unwrappedStyleClassSet);
     }
 
     @Override public boolean equals(Object obj) {

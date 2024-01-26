@@ -23,8 +23,8 @@
 #include "config.h"
 #include "SVGGradientElement.h"
 
-#include "ElementIterator.h"
-#include "RenderSVGHiddenContainer.h"
+#include "ElementChildIteratorInlines.h"
+#include "NodeName.h"
 #include "RenderSVGResourceLinearGradient.h"
 #include "RenderSVGResourceRadialGradient.h"
 #include "SVGElementTypeHelpers.h"
@@ -38,8 +38,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGradientElement);
 
-SVGGradientElement::SVGGradientElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+SVGGradientElement::SVGGradientElement(const QualifiedName& tagName, Document& document, UniqueRef<SVGPropertyRegistry>&& propertyRegistry)
+    : SVGElement(tagName, document, WTFMove(propertyRegistry))
     , SVGURIReference(this)
 {
     static std::once_flag onceFlag;
@@ -50,29 +50,30 @@ SVGGradientElement::SVGGradientElement(const QualifiedName& tagName, Document& d
     });
 }
 
-void SVGGradientElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGGradientElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::gradientUnitsAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
+    switch (name.nodeName()) {
+    case AttributeNames::gradientUnitsAttr: {
+        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
             m_gradientUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
-        return;
+        break;
     }
-
-    if (name == SVGNames::gradientTransformAttr) {
-        m_gradientTransform->baseVal()->parse(value);
-        return;
-    }
-
-    if (name == SVGNames::spreadMethodAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGSpreadMethodType>::fromString(value);
+    case AttributeNames::gradientTransformAttr:
+        m_gradientTransform->baseVal()->parse(newValue);
+        break;
+    case AttributeNames::spreadMethodAttr: {
+        auto propertyValue = SVGPropertyTraits<SVGSpreadMethodType>::fromString(newValue);
         if (propertyValue > 0)
             m_spreadMethod->setBaseValInternal<SVGSpreadMethodType>(propertyValue);
-        return;
+        break;
+    }
+    default:
+        break;
     }
 
-    SVGElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGGradientElement::svgAttributeChanged(const QualifiedName& attrName)

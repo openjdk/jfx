@@ -34,7 +34,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMPathElement);
 
 inline SVGMPathElement::SVGMPathElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGURIReference(this)
 {
     ASSERT(hasTagName(SVGNames::mpathTag));
@@ -56,14 +56,15 @@ void SVGMPathElement::buildPendingResource()
     if (!isConnected())
         return;
 
-    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScope());
+    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScopeForSVGReferences());
     if (!target.element) {
         // Do not register as pending if we are already pending this resource.
-        if (document().accessSVGExtensions().isPendingResource(*this, target.identifier))
+        auto& treeScope = treeScopeForSVGReferences();
+        if (treeScope.isPendingSVGResource(*this, target.identifier))
             return;
 
         if (!target.identifier.isEmpty()) {
-            document().accessSVGExtensions().addPendingResource(target.identifier, *this);
+            treeScope.addPendingSVGResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
     } else if (is<SVGElement>(*target.element))
@@ -79,14 +80,15 @@ void SVGMPathElement::clearResourceReferences()
 
 Node::InsertedIntoAncestorResult SVGMPathElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument)
         return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGMPathElement::didFinishInsertingNode()
 {
+    SVGElement::didFinishInsertingNode();
     buildPendingResource();
 }
 
@@ -98,10 +100,10 @@ void SVGMPathElement::removedFromAncestor(RemovalType removalType, ContainerNode
         clearResourceReferences();
 }
 
-void SVGMPathElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGMPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGMPathElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -117,7 +119,7 @@ void SVGMPathElement::svgAttributeChanged(const QualifiedName& attrName)
 
 RefPtr<SVGPathElement> SVGMPathElement::pathElement()
 {
-    auto target = targetElementFromIRIString(href(), treeScope());
+    auto target = targetElementFromIRIString(href(), treeScopeForSVGReferences());
     if (is<SVGPathElement>(target.element))
         return downcast<SVGPathElement>(target.element.get());
     return nullptr;

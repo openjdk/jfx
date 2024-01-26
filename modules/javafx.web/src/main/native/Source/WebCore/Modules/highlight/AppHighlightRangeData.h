@@ -65,14 +65,6 @@ public:
         {
             return identifier == other.identifier && nodeName == other.nodeName && textData == other.textData && pathIndex == other.pathIndex;
         }
-
-        bool operator!=(const NodePathComponent& other) const
-        {
-            return !(*this == other);
-        }
-
-        template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static std::optional<NodePathComponent> decode(Decoder&);
     };
 
     using NodePath = Vector<NodePathComponent>;
@@ -107,9 +99,6 @@ public:
     uint32_t startOffset() const { return m_startOffset; }
     const NodePath& endContainer() const { return m_endContainer; }
     uint32_t endOffset() const { return m_endOffset; }
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<AppHighlightRangeData> decode(Decoder&);
 
     Ref<FragmentedSharedBuffer> toSharedBuffer() const;
 

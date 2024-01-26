@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (C) 2020 Google  Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,10 +37,14 @@
 #include "LayoutRepainter.h"
 #include "Range.h"
 #include "RenderBoxFragmentInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "StyleResolver.h"
 #include <wtf/HexNumber.h>
@@ -128,7 +133,7 @@ LayoutUnit RenderFragmentContainer::logicalHeightOfAllFragmentedFlowContent() co
 
 LayoutRect RenderFragmentContainer::fragmentedFlowPortionOverflowRect()
 {
-    return overflowRectForFragmentedFlowPortion(fragmentedFlowPortionRect(), isFirstFragment(), isLastFragment(), VisualOverflow);
+    return overflowRectForFragmentedFlowPortion(fragmentedFlowPortionRect(), isFirstFragment(), isLastFragment());
 }
 
 LayoutPoint RenderFragmentContainer::fragmentedFlowPortionLocation() const
@@ -146,13 +151,13 @@ LayoutPoint RenderFragmentContainer::fragmentedFlowPortionLocation() const
     return portionLocation;
 }
 
-LayoutRect RenderFragmentContainer::overflowRectForFragmentedFlowPortion(const LayoutRect& fragmentedFlowPortionRect, bool isFirstPortion, bool isLastPortion, OverflowType overflowType)
+LayoutRect RenderFragmentContainer::overflowRectForFragmentedFlowPortion(const LayoutRect& fragmentedFlowPortionRect, bool isFirstPortion, bool isLastPortion)
 {
     ASSERT(isValid());
     if (shouldClipFragmentedFlowContent())
         return fragmentedFlowPortionRect;
 
-    LayoutRect fragmentedFlowOverflow = overflowType == VisualOverflow ? visualOverflowRectForBox(*m_fragmentedFlow) : layoutOverflowRectForBox(m_fragmentedFlow);
+    LayoutRect fragmentedFlowOverflow = visualOverflowRectForBox(*m_fragmentedFlow);
     LayoutRect clipRect;
     if (m_fragmentedFlow->isHorizontalWritingMode()) {
         LayoutUnit minY = isFirstPortion ? fragmentedFlowOverflow.y() : fragmentedFlowPortionRect.y();
@@ -205,23 +210,6 @@ void RenderFragmentContainer::styleDidChange(StyleDifference diff, const RenderS
 
     if (oldStyle && oldStyle->writingMode() != style().writingMode())
         m_fragmentedFlow->fragmentChangedWritingMode(this);
-}
-
-void RenderFragmentContainer::computeOverflowFromFragmentedFlow()
-{
-    ASSERT(isValid());
-
-    LayoutRect layoutRect = layoutOverflowRectForBox(m_fragmentedFlow);
-    layoutRect.setLocation(contentBoxRect().location() + (layoutRect.location() - m_fragmentedFlowPortionRect.location()));
-
-    // FIXME: Correctly adjust the layout overflow for writing modes.
-    addLayoutOverflow(layoutRect);
-    RenderFragmentedFlow* enclosingRenderFragmentedFlow = enclosingFragmentedFlow();
-    if (enclosingRenderFragmentedFlow)
-        enclosingRenderFragmentedFlow->addFragmentsLayoutOverflow(this, layoutRect);
-
-    updateLayerTransform();
-    updateScrollInfoAfterLayout();
 }
 
 void RenderFragmentContainer::repaintFragmentedFlowContent(const LayoutRect& repaintRect)
@@ -390,9 +378,8 @@ void RenderFragmentContainer::computeIntrinsicLogicalWidths(LayoutUnit& minLogic
         RenderBlockFlow::computeIntrinsicLogicalWidths(minLogicalWidth, maxLogicalWidth);
         return;
     }
-
-    minLogicalWidth = m_fragmentedFlow->minPreferredLogicalWidth();
-    maxLogicalWidth = m_fragmentedFlow->maxPreferredLogicalWidth();
+    maxLogicalWidth = { };
+    minLogicalWidth = { };
 }
 
 void RenderFragmentContainer::computePreferredLogicalWidths()
@@ -417,14 +404,6 @@ void RenderFragmentContainer::computePreferredLogicalWidths()
     RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), borderAndPaddingLogicalWidth());
 
     setPreferredLogicalWidthsDirty(false);
-}
-
-// FIXME: Unused.
-void RenderFragmentContainer::adjustFragmentBoundsFromFragmentedFlowPortionRect(LayoutRect& fragmentBounds) const
-{
-    LayoutRect flippedFragmentedFlowPortionRect = fragmentedFlowPortionRect();
-    fragmentedFlow()->flipForWritingMode(flippedFragmentedFlowPortionRect);
-    fragmentBounds.moveBy(flippedFragmentedFlowPortionRect.location());
 }
 
 void RenderFragmentContainer::ensureOverflowForBox(const RenderBox* box, RefPtr<RenderOverflow>& overflow, bool forceCreation)
@@ -515,15 +494,6 @@ void RenderFragmentContainer::addVisualOverflowForBox(const RenderBox* box, cons
     fragmentOverflow->addVisualOverflow(flippedRect);
 }
 
-LayoutRect RenderFragmentContainer::layoutOverflowRectForBox(const RenderBox* box)
-{
-    RefPtr<RenderOverflow> overflow;
-    ensureOverflowForBox(box, overflow, true);
-
-    ASSERT(overflow);
-    return overflow->layoutOverflowRect();
-}
-
 LayoutRect RenderFragmentContainer::visualOverflowRectForBox(const RenderBoxModelObject& box)
 {
     if (is<RenderInline>(box)) {
@@ -549,10 +519,14 @@ LayoutRect RenderFragmentContainer::layoutOverflowRectForBoxForPropagation(const
     // Only propagate interior layout overflow if we don't clip it.
     LayoutRect rect = box->borderBoxRectInFragment(this);
     rect = rectFlowPortionForBox(box, rect);
-    if (!box->hasNonVisibleOverflow())
-        rect.unite(layoutOverflowRectForBox(box));
+    if (!box->hasNonVisibleOverflow()) {
+        RefPtr<RenderOverflow> overflow;
+        ensureOverflowForBox(box, overflow, true);
+        ASSERT(overflow);
+        rect.unite(overflow->layoutOverflowRect());
+    }
 
-    bool hasTransform = box->hasTransform();
+    bool hasTransform = box->isTransformed();
     if (box->isInFlowPositioned() || hasTransform) {
         if (hasTransform)
             rect = box->layer()->currentTransform().mapRect(rect);

@@ -27,10 +27,11 @@
 #include "DOMCache.h"
 
 #include "CacheQueryOptions.h"
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "EventLoop.h"
 #include "FetchResponse.h"
 #include "HTTPParsers.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSFetchRequest.h"
 #include "JSFetchResponse.h"
 #include "ScriptExecutionContext.h"
@@ -40,14 +41,14 @@
 namespace WebCore {
 using namespace WebCore::DOMCacheEngine;
 
-Ref<DOMCache> DOMCache::create(ScriptExecutionContext& context, String&& name, uint64_t identifier, Ref<CacheStorageConnection>&& connection)
+Ref<DOMCache> DOMCache::create(ScriptExecutionContext& context, String&& name, DOMCacheIdentifier identifier, Ref<CacheStorageConnection>&& connection)
 {
     auto cache = adoptRef(*new DOMCache(context, WTFMove(name), identifier, WTFMove(connection)));
     cache->suspendIfNeeded();
     return cache;
 }
 
-DOMCache::DOMCache(ScriptExecutionContext& context, String&& name, uint64_t identifier, Ref<CacheStorageConnection>&& connection)
+DOMCache::DOMCache(ScriptExecutionContext& context, String&& name, DOMCacheIdentifier identifier, Ref<CacheStorageConnection>&& connection)
     : ActiveDOMObject(&context)
     , m_name(WTFMove(name))
     , m_identifier(identifier)
@@ -173,7 +174,7 @@ static inline bool hasResponseVaryStarHeaderValue(const FetchResponse& response)
     auto varyValue = response.headers().internalHeaders().get(WebCore::HTTPHeaderName::Vary);
     bool hasStar = false;
     varyValue.split(',', [&](StringView view) {
-        if (!hasStar && stripLeadingAndTrailingHTTPSpaces(view) == "*"_s)
+        if (!hasStar && view.trim(isASCIIWhitespaceWithoutFF<UChar>) == "*"_s)
             hasStar = true;
     });
     return hasStar;
@@ -340,7 +341,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
                 else
                     taskHandler->addResponseBody(recordPosition, response, data.takeAsContiguous());
             });
-        }, cachedResourceRequestInitiators().fetch);
+        }, cachedResourceRequestInitiatorTypes().fetch);
     }
 }
 
@@ -365,7 +366,7 @@ void DOMCache::putWithResponseData(DOMPromiseDeferred<void>&& promise, Ref<Fetch
 
 void DOMCache::put(RequestInfo&& info, Ref<FetchResponse>&& response, DOMPromiseDeferred<void>&& promise)
 {
-    if (UNLIKELY(!scriptExecutionContext()))
+    if (isContextStopped())
         return;
 
     bool ignoreMethod = false;
@@ -497,7 +498,10 @@ void DOMCache::queryCache(ResourceRequest&& request, const CacheQueryOptions& op
             return;
         }
 
-        callback(WTFMove(result.value()));
+        auto records = WTF::map(result.value(), [](auto&& record) {
+            return fromCrossThreadRecord(WTFMove(record));
+        });
+        callback(WTFMove(records));
     });
 
 }
@@ -547,7 +551,10 @@ void DOMCache::batchPutOperation(const FetchRequest& request, FetchResponse& res
 
 void DOMCache::batchPutOperation(Vector<Record>&& records, CompletionHandler<void(ExceptionOr<void>&&)>&& callback)
 {
-    m_connection->batchPutOperation(m_identifier, WTFMove(records), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](auto&& result) mutable {
+    auto crossThreadRecords = WTF::map(records, [](auto&& record) {
+        return toCrossThreadRecord(WTFMove(record));
+    });
+    m_connection->batchPutOperation(m_identifier, WTFMove(crossThreadRecords), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](auto&& result) mutable {
         if (m_isStopped) {
             callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
             return;

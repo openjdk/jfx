@@ -29,6 +29,7 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlow.h"
 #include "RenderInline.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 namespace InlineIterator {
@@ -110,19 +111,15 @@ InlineBoxIterator& InlineBoxIterator::traversePreviousInlineBox()
 
 InlineBoxIterator firstInlineBoxFor(const RenderInline& renderInline)
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = LayoutIntegration::LineLayout::containing(renderInline))
         return lineLayout->firstInlineBoxFor(renderInline);
-#endif
     return { BoxLegacyPath { renderInline.firstLineBox() } };
 }
 
 InlineBoxIterator firstRootInlineBoxFor(const RenderBlockFlow& block)
 {
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     if (auto* lineLayout = block.modernLineLayout())
         return lineLayout->firstRootInlineBox();
-#endif
     return { BoxLegacyPath { block.firstRootBox() } };
 }
 
@@ -131,7 +128,6 @@ InlineBoxIterator inlineBoxFor(const LegacyInlineFlowBox& legacyInlineFlowBox)
     return { BoxLegacyPath { &legacyInlineFlowBox } };
 }
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent& content, const InlineDisplay::Box& box)
 {
     return inlineBoxFor(content, content.indexForBox(box));
@@ -139,10 +135,9 @@ InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent& content, 
 
 InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent& content, size_t boxIndex)
 {
-    ASSERT(content.boxes[boxIndex].isInlineBox());
+    ASSERT(content.displayContent().boxes[boxIndex].isInlineBox());
     return { BoxModernPath { content, boxIndex } };
 }
-#endif
 
 }
 }

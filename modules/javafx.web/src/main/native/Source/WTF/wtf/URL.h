@@ -81,6 +81,10 @@ public:
     WTF_EXPORT_PRIVATE static URL fileURLWithFileSystemPath(StringView);
 
     WTF_EXPORT_PRIVATE String strippedForUseAsReferrer() const;
+    WTF_EXPORT_PRIVATE String strippedForUseAsReferrerWithExplicitPort() const;
+
+    // Similar to strippedForUseAsReferrer except we also remove the query component.
+    WTF_EXPORT_PRIVATE String strippedForUseAsReport() const;
 
     // Makes a deep copy. Helpful only if you need to use a URL on another
     // thread. Since the underlying StringImpl objects are immutable, there's
@@ -95,13 +99,6 @@ public:
     // Since we overload operator NSURL * we have this to prevent accidentally using that operator
     // when placing a URL in an if statment.
     operator bool() const = delete;
-
-    // Returns true if you can set the host and port for the URL.
-    // Non-hierarchical URLs don't have a host and port.
-    bool canSetHostOrPort() const { return isHierarchical(); }
-
-    bool canSetPathname() const { return isHierarchical(); }
-    WTF_EXPORT_PRIVATE bool isHierarchical() const;
 
     const String& string() const { return m_string; }
     WTF_EXPORT_PRIVATE String stringCenterEllipsizedToLength(unsigned length = 1024) const;
@@ -142,14 +139,14 @@ public:
     // Returns true if the current URL's protocol is the same as the null-
     // terminated ASCII argument. The argument must be lower-case.
     WTF_EXPORT_PRIVATE bool protocolIs(StringView) const;
+    bool protocolIsAbout() const { return protocolIs("about"_s); }
     bool protocolIsBlob() const { return protocolIs("blob"_s); }
     bool protocolIsData() const { return protocolIs("data"_s); }
-    WTF_EXPORT_PRIVATE bool protocolIsAbout() const;
+    bool protocolIsFile() const { return protocolIs("file"_s); }
     WTF_EXPORT_PRIVATE bool protocolIsJavaScript() const;
-    WTF_EXPORT_PRIVATE bool protocolIsInFTPFamily() const;
-    bool protocolIsInHTTPFamily() const;
-    WTF_EXPORT_PRIVATE bool isLocalFile() const;
-    bool cannotBeABaseURL() const { return m_cannotBeABaseURL; }
+    bool protocolIsInFTPFamily() const { return protocolIs("ftp"_s) || protocolIs("ftps"_s); }
+    bool protocolIsInHTTPFamily() const { return m_protocolIsInHTTPFamily; }
+    bool hasOpaquePath() const { return m_hasOpaquePath; }
 
     WTF_EXPORT_PRIVATE bool isAboutBlank() const;
     WTF_EXPORT_PRIVATE bool isAboutSrcDoc() const;
@@ -178,7 +175,7 @@ public:
 
     WTF_EXPORT_PRIVATE void setFragmentIdentifier(StringView);
     WTF_EXPORT_PRIVATE void removeFragmentIdentifier();
-
+    WTF_EXPORT_PRIVATE String consumefragmentDirective();
     WTF_EXPORT_PRIVATE void removeQueryAndFragmentIdentifier();
 
     WTF_EXPORT_PRIVATE static bool hostIsIPAddress(StringView);
@@ -212,11 +209,8 @@ public:
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 
-    template<typename Encoder> void encode(Encoder&) const;
-    template<typename Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, URL&);
-    template<typename Decoder> static std::optional<URL> decode(Decoder&);
-
     WTF_EXPORT_PRIVATE bool hasSpecialScheme() const;
+    WTF_EXPORT_PRIVATE bool hasLocalScheme() const;
 
 private:
     friend class URLParser;
@@ -226,6 +220,9 @@ private:
     unsigned credentialsEnd() const;
     void remove(unsigned start, unsigned length);
     void parse(String&&);
+    void parseAllowingC0AtEnd(String&&);
+
+    void maybeTrimTrailingSpacesFromOpaquePath();
 
     friend WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
 
@@ -237,7 +234,7 @@ private:
 
     unsigned m_isValid : 1;
     unsigned m_protocolIsInHTTPFamily : 1;
-    unsigned m_cannotBeABaseURL : 1;
+    unsigned m_hasOpaquePath : 1;
 
     // This is out of order to align the bits better. The port is after the host.
     unsigned m_portLength : 3;
@@ -259,16 +256,16 @@ static_assert(sizeof(URL) == sizeof(String) + 8 * sizeof(unsigned), "URL should 
 bool operator==(const URL&, const URL&);
 bool operator==(const URL&, const String&);
 bool operator==(const String&, const URL&);
-bool operator!=(const URL&, const URL&);
-bool operator!=(const URL&, const String&);
-bool operator!=(const String&, const URL&);
 
 WTF_EXPORT_PRIVATE bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
 WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
 WTF_EXPORT_PRIVATE Vector<KeyValuePair<String, String>> differingQueryParameters(const URL&, const URL&);
 WTF_EXPORT_PRIVATE Vector<KeyValuePair<String, String>> queryParameters(const URL&);
 WTF_EXPORT_PRIVATE bool isEqualIgnoringQueryAndFragments(const URL&, const URL&);
-WTF_EXPORT_PRIVATE void removeQueryParameters(URL&, const HashSet<String>&);
+
+// Returns the parameters that were removed (including duplicates), in the order that they appear in the URL.
+WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, const HashSet<String>&);
+WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, Function<bool(const String&)>&&);
 
 WTF_EXPORT_PRIVATE const URL& aboutBlankURL();
 WTF_EXPORT_PRIVATE const URL& aboutSrcDocURL();
@@ -280,7 +277,6 @@ WTF_EXPORT_PRIVATE const URL& aboutSrcDocURL();
 
 WTF_EXPORT_PRIVATE bool protocolIs(StringView url, ASCIILiteral protocol);
 WTF_EXPORT_PRIVATE bool protocolIsJavaScript(StringView url);
-WTF_EXPORT_PRIVATE bool protocolIsInFTPFamily(StringView url);
 WTF_EXPORT_PRIVATE bool protocolIsInHTTPFamily(StringView url);
 
 WTF_EXPORT_PRIVATE std::optional<uint16_t> defaultPortForProtocol(StringView protocol);
@@ -309,29 +305,6 @@ template<> struct HashTraits<URL>;
 
 // Function template and inline function definitions.
 
-template<typename Encoder> void URL::encode(Encoder& encoder) const
-{
-    encoder << m_string;
-}
-
-template<typename Decoder> bool URL::decode(Decoder& decoder, URL& url)
-{
-    auto optionalURL = decode(decoder);
-    if (!optionalURL)
-        return false;
-    url = WTFMove(*optionalURL);
-    return true;
-}
-
-template<typename Decoder> std::optional<URL> URL::decode(Decoder& decoder)
-{
-    std::optional<String> string;
-    decoder >> string;
-    if (!string)
-        return std::nullopt;
-    return URL(WTFMove(*string));
-}
-
 inline bool operator==(const URL& a, const URL& b)
 {
     return a.string() == b.string();
@@ -345,21 +318,6 @@ inline bool operator==(const URL& a, const String& b)
 inline bool operator==(const String& a, const URL& b)
 {
     return a == b.string();
-}
-
-inline bool operator!=(const URL& a, const URL& b)
-{
-    return a.string() != b.string();
-}
-
-inline bool operator!=(const URL& a, const String& b)
-{
-    return a.string() != b;
-}
-
-inline bool operator!=(const String& a, const URL& b)
-{
-    return a != b.string();
 }
 
 inline URL::URL(HashTableDeletedValueType)
@@ -400,11 +358,6 @@ inline bool URL::hasQuery() const
 inline bool URL::hasFragmentIdentifier() const
 {
     return m_isValid && m_string.length() > m_queryEnd;
-}
-
-inline bool URL::protocolIsInHTTPFamily() const
-{
-    return m_protocolIsInHTTPFamily;
 }
 
 inline unsigned URL::pathEnd() const

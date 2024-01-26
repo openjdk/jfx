@@ -31,7 +31,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGScriptElement);
 
 inline SVGScriptElement::SVGScriptElement(const QualifiedName& tagName, Document& document, bool wasInsertedByParser, bool alreadyStarted)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGURIReference(this)
     , ScriptElement(*this, wasInsertedByParser, alreadyStarted)
     , m_loadEventTimer(*this, &SVGElement::loadEventTimerFired)
@@ -44,10 +44,10 @@ Ref<SVGScriptElement> SVGScriptElement::create(const QualifiedName& tagName, Doc
     return adoptRef(*new SVGScriptElement(tagName, document, insertedByParser, false));
 }
 
-void SVGScriptElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGScriptElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGScriptElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -64,8 +64,9 @@ void SVGScriptElement::svgAttributeChanged(const QualifiedName& attrName)
 
 Node::InsertedIntoAncestorResult SVGScriptElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-    return ScriptElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result1 = SVGElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result2 = ScriptElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    return result1 == InsertedIntoAncestorResult::NeedsPostInsertionCallback ? result1 : result2;
 }
 
 void SVGScriptElement::didFinishInsertingNode()

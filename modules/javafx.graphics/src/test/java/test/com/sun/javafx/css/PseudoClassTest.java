@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -605,18 +605,10 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassState_retainAll_withNullArg() {
-
+    public void testPseudoClassState_retainAll_throwsWithNullArg() {
         PseudoClassState aStates = new PseudoClassState();
-        PseudoClassState bStates = null;
-        BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<>();
-        Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
-        while (iter.hasNext()) {
-            states.add(iter.next());
-        }
-        assertEquals(0, states.size(), 0.000001);
 
+        assertThrows(NullPointerException.class, () -> BitSetShim.retainAll(aStates, null));
     }
 
     @Test
@@ -711,18 +703,10 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassState_addAll_withNullArgs() {
-
+    public void testPseudoClassState_addAll_throwsWithNullArgs() {
         PseudoClassState aStates = new PseudoClassState();
-        PseudoClassState bStates = null;
-        BitSetShim.addAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<>();
-        Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
-        while (iter.hasNext()) {
-            states.add(iter.next());
-        }
-        assertEquals(0, states.size(), 0.000001);
 
+        assertThrows(NullPointerException.class, () -> BitSetShim.addAll(aStates, null));
     }
 
     @Test

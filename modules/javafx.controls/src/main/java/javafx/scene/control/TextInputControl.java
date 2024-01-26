@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -119,6 +119,37 @@ public abstract class TextInputControl extends Control {
         public int length();
     }
 
+    /**
+     * Package private base implementation of Content.
+     */
+    abstract static class ContentBase implements Content {
+        private ExpressionHelper<String> helper;
+
+        @Override
+        public void addListener(ChangeListener<? super String> changeListener) {
+            helper = ExpressionHelper.addListener(helper, this, changeListener);
+        }
+
+        @Override
+        public void removeListener(ChangeListener<? super String> changeListener) {
+            helper = ExpressionHelper.removeListener(helper, changeListener);
+        }
+
+        @Override
+        public void addListener(InvalidationListener listener) {
+            helper = ExpressionHelper.addListener(helper, this, listener);
+        }
+
+        @Override
+        public void removeListener(InvalidationListener listener) {
+            helper = ExpressionHelper.removeListener(helper, listener);
+        }
+
+        protected final void fireValueChangedEvent() {
+            ExpressionHelper.fireValueChangedEvent(helper);
+        }
+    }
+
     private boolean blockSelectedTextUpdate;
 
     /* *************************************************************************
@@ -181,6 +212,13 @@ public abstract class TextInputControl extends Control {
             } else {
                 int start = sel.getStart();
                 int end = sel.getEnd();
+                int length = txt.length();
+                if (end > start + length) {
+                    end = length;
+                }
+                if (start > length - 1) {
+                    start = end = 0;
+                }
                 selectedText.set(txt.substring(start, end));
             }
         }

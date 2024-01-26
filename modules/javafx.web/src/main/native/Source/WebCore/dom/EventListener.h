@@ -35,9 +35,9 @@ class ScriptExecutionContext;
 class Event;
 class EventTarget;
 
-class EventListener : public RefCounted<EventListener>, public CanMakeWeakPtr<EventListener> {
+class EventListener : public CanMakeWeakPtr<EventListener>, public RefCounted<EventListener> {
 public:
-    enum Type {
+    enum Type : uint8_t {
         JSEventListenerType,
         ImageEventListenerType,
         ObjCEventListenerType,
@@ -50,7 +50,8 @@ public:
     };
 
     virtual ~EventListener() = default;
-    virtual bool operator==(const EventListener&) const = 0;
+    virtual bool operator==(const EventListener& other) const { return this == &other; }
+
     virtual void handleEvent(ScriptExecutionContext&, Event&) = 0;
 
     virtual void visitJSFunction(JSC::AbstractSlotVisitor&) { }

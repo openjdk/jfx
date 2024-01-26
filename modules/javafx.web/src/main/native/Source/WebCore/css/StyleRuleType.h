@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,8 @@
 
 namespace WebCore {
 
+// https://w3c.github.io/csswg-drafts/cssom-1/#the-cssrule-interface
+
 enum class StyleRuleType : uint8_t {
     Unknown = 0,
     Style = 1,
@@ -41,10 +43,17 @@ enum class StyleRuleType : uint8_t {
     Namespace = 10,
     CounterStyle = 11,
     Supports = 12,
+    FontFeatureValues = 14,
+    // Numbers above 15 are not exposed to the web.
     LayerBlock = 16,
-    LayerStatement = 17,
-    Container = 18,
-    FontPaletteValues = 19,
+    LayerStatement,
+    Container,
+    FontPaletteValues,
+    FontFeatureValuesBlock,
+    Property,
+    StyleWithNesting,
 };
+
+static constexpr auto firstUnexposedStyleRuleType = StyleRuleType::LayerBlock;
 
 } // namespace WebCore

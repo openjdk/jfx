@@ -30,6 +30,7 @@
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLObjectElement.h"
+#include "LiveNodeListInlines.h"
 #include "NodeRareData.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -40,7 +41,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RadioNodeList);
 
 RadioNodeList::RadioNodeList(ContainerNode& rootNode, const AtomString& name)
-    : CachedLiveNodeList(rootNode, InvalidateForFormControls)
+    : CachedLiveNodeList(rootNode, NodeListInvalidationType::InvalidateForFormControls)
     , m_name(name)
     , m_isRootedAtTreeScope(is<HTMLFormElement>(rootNode))
 {
@@ -56,12 +57,12 @@ RadioNodeList::~RadioNodeList()
     ownerNode().nodeLists()->removeCacheWithAtomName(*this, m_name);
 }
 
-static RefPtr<HTMLInputElement> nonEmptyRadioButton(Element& element)
+static RefPtr<HTMLInputElement> nonEmptyRadioButton(Node& node)
 {
-    if (!is<HTMLInputElement>(element))
+    if (!is<HTMLInputElement>(node))
         return nullptr;
 
-    auto& inputElement = downcast<HTMLInputElement>(element);
+    auto& inputElement = downcast<HTMLInputElement>(node);
     if (!inputElement.isRadioButton() || inputElement.value().isEmpty())
         return nullptr;
     return &inputElement;
@@ -94,19 +95,15 @@ void RadioNodeList::setValue(const String& value)
 
 bool RadioNodeList::elementMatches(Element& element) const
 {
-    if (!is<HTMLObjectElement>(element) && !is<HTMLFormControlElement>(element))
+    if (!element.isFormListedElement())
         return false;
 
     if (is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isImageButton())
         return false;
 
     if (is<HTMLFormElement>(ownerNode())) {
-        RefPtr<HTMLFormElement> form;
-        if (is<HTMLObjectElement>(element))
-            form = downcast<HTMLObjectElement>(element).form();
-        else
-            form = downcast<HTMLFormControlElement>(element).form();
-        if (!form || form != &ownerNode())
+        RefPtr form = element.asFormListedElement()->form();
+        if (form != &ownerNode())
             return false;
     }
 

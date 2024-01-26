@@ -29,11 +29,12 @@
 #include "ElementTraversal.h"
 #include "NodeRenderStyle.h"
 #include "PseudoClassChangeInvalidation.h"
+#include "RenderElement.h"
 #include "ShadowRoot.h"
 #include "SlotAssignment.h"
 #include "StyleResolver.h"
 #include "StyleScopeRuleSets.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 
 namespace WebCore::Style {
 
@@ -101,7 +102,7 @@ void ChildChangeInvalidation::invalidateForChangedElement(Element& changedElemen
         }
     };
 
-    for (auto key : makePseudoClassInvalidationKeys(CSSSelector::PseudoClassHas, changedElement))
+    for (auto key : makePseudoClassInvalidationKeys(CSSSelector::PseudoClassType::Has, changedElement))
         addHasInvalidation(ruleSets.hasPseudoClassInvalidationRuleSets(key));
 
     Invalidator::invalidateWithMatchElementRuleSets(changedElement, matchElementRuleSets);

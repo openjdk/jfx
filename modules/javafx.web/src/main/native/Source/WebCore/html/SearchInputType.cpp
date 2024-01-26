@@ -35,6 +35,7 @@
 #include "ElementInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "HTMLParserIdioms.h"
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
 #include "NodeRenderStyle.h"
@@ -146,6 +147,7 @@ auto SearchInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBase
     if (key == "U+001B"_s) {
         Ref<HTMLInputElement> protectedInputElement(*element());
         protectedInputElement->setValue(emptyString(), DispatchChangeEvent);
+        if (protectedInputElement->document().settings().searchInputIncrementalAttributeAndSearchEventEnabled())
         protectedInputElement->onSearch();
         event.setDefaultHandled();
         return ShouldCallBaseEventHandler::Yes;
@@ -190,7 +192,8 @@ void SearchInputType::searchEventTimerFired()
 bool SearchInputType::searchEventsShouldBeDispatched() const
 {
     ASSERT(element());
-    return element()->hasAttributeWithoutSynchronization(incrementalAttr);
+    return element()->document().settings().searchInputIncrementalAttributeAndSearchEventEnabled()
+        && element()->hasAttributeWithoutSynchronization(incrementalAttr);
 }
 
 void SearchInputType::didSetValueByUserEdit()
@@ -209,16 +212,23 @@ bool SearchInputType::sizeShouldIncludeDecoration(int, int& preferredSize) const
 {
     ASSERT(element());
     preferredSize = element()->size();
-    return true;
+    // https://html.spec.whatwg.org/multipage/input.html#the-size-attribute
+    // If the attribute is present, then its value must be parsed using the rules for parsing non-negative integers, and if the
+    // result is a number greater than zero, then the user agent should ensure that at least that many characters are visible.
+    if (!element()->hasAttributeWithoutSynchronization(sizeAttr))
+        return false;
+    if (auto parsedSize = parseHTMLNonNegativeInteger(element()->attributeWithoutSynchronization(sizeAttr)))
+        return static_cast<int>(parsedSize.value()) == preferredSize;
+    return false;
 }
 
 float SearchInputType::decorationWidth() const
 {
     float width = 0;
-    if (m_resultsButton)
-        width += m_resultsButton->computedStyle()->logicalWidth().value();
-    if (m_cancelButton)
-        width += m_cancelButton->computedStyle()->logicalWidth().value();
+    if (m_resultsButton && m_resultsButton->renderStyle())
+        width += m_resultsButton->renderStyle()->logicalWidth().value();
+    if (m_cancelButton && m_cancelButton->renderStyle())
+        width += m_cancelButton->renderStyle()->logicalWidth().value();
     return width;
 }
 

@@ -59,6 +59,7 @@ enum class MediaProducerMediaState : uint32_t {
     HasActiveSystemAudioCaptureDevice = 1 << 24,
     HasMutedSystemAudioCaptureDevice = 1 << 25,
     HasInterruptedSystemAudioCaptureDevice = 1 << 26,
+    HasStreamingActivity = 1 << 27,
 };
 using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 
@@ -139,17 +140,6 @@ protected:
 
 namespace WTF {
 
-template<> struct EnumTraits<WebCore::MediaProducerMediaCaptureKind> {
-    using values = EnumValues<
-        WebCore::MediaProducerMediaCaptureKind,
-        WebCore::MediaProducerMediaCaptureKind::Microphone,
-        WebCore::MediaProducerMediaCaptureKind::Camera,
-        WebCore::MediaProducerMediaCaptureKind::Display,
-        WebCore::MediaProducerMediaCaptureKind::SystemAudio,
-        WebCore::MediaProducerMediaCaptureKind::EveryKind
-    >;
-};
-
 template<> struct EnumTraits<WebCore::MediaProducerMediaState> {
     using values = EnumValues<
         WebCore::MediaProducerMediaState,
@@ -179,7 +169,8 @@ template<> struct EnumTraits<WebCore::MediaProducerMediaState> {
         WebCore::MediaProducerMediaState::HasInterruptedWindowCaptureDevice,
         WebCore::MediaProducerMediaState::HasActiveSystemAudioCaptureDevice,
         WebCore::MediaProducerMediaState::HasMutedSystemAudioCaptureDevice,
-        WebCore::MediaProducerMediaState::HasInterruptedSystemAudioCaptureDevice
+        WebCore::MediaProducerMediaState::HasInterruptedSystemAudioCaptureDevice,
+        WebCore::MediaProducerMediaState::HasStreamingActivity
     >;
 };
 

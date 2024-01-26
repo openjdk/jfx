@@ -62,18 +62,23 @@
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTarget);
-WTF_MAKE_ISO_ALLOCATED_IMPL(EventTargetWithInlineData);
+
+struct SameSizeAsEventTarget : public ScriptWrappable, public CanMakeWeakPtr<EventTarget, WeakPtrFactoryInitialization::Lazy, WeakPtrImplWithEventTargetData> {
+    virtual ~SameSizeAsEventTarget() = default; // Allocate vtable pointer.
+};
+
+static_assert(sizeof(EventTarget) == sizeof(SameSizeAsEventTarget), "EventTarget should stay small");
 
 Ref<EventTarget> EventTarget::create(ScriptExecutionContext& context)
 {
     return EventTargetConcrete::create(context);
 }
 
-EventTarget::~EventTarget() = default;
-
-bool EventTarget::isNode() const
+EventTarget::~EventTarget()
 {
-    return false;
+    // Explicitly tearing down since WeakPtrImpl can be alive longer than EventTarget.
+    if (auto* eventTargetData = this->eventTargetData())
+        eventTargetData->clear();
 }
 
 bool EventTarget::isPaymentRequest() const
@@ -224,8 +229,8 @@ EventListener* EventTarget::attributeEventListener(const AtomString& eventType, 
         if (!listener.isAttribute())
             continue;
 
-        auto& listenerWorld = downcast<JSEventListener>(listener).isolatedWorld();
-        if (&listenerWorld == &isolatedWorld)
+        auto& listenerWorld = downcast<JSEventListener>(listener);
+        if (listenerWorld.isolatedWorld() == &isolatedWorld)
             return &listener;
 #else
         auto& listener = eventListener->callback();
@@ -233,7 +238,7 @@ EventListener* EventTarget::attributeEventListener(const AtomString& eventType, 
             continue;
 
         auto& jsListener = downcast<JSEventListener>(listener);
-        if (jsListener.isAttribute() && &jsListener.isolatedWorld() == &isolatedWorld)
+        if (jsListener.isAttribute() && jsListener.isolatedWorld() == &isolatedWorld)
             return &jsListener;
 #endif
     }
@@ -305,7 +310,12 @@ static const AtomString& legacyType(const Event& event)
 // https://dom.spec.whatwg.org/#concept-event-listener-invoke
 void EventTarget::fireEventListeners(Event& event, EventInvokePhase phase)
 {
-    ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::isEventAllowedInMainThread());
+#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+    if (auto* node = dynamicDowncast<Node>(*this))
+        ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(*node));
+    else
+        ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::isScriptAllowedInMainThread());
+#endif
     ASSERT(event.isInitialized());
 
     auto* data = eventTargetData();
@@ -437,8 +447,8 @@ void EventTarget::invalidateEventListenerRegions()
     auto* document = [&]() -> Document* {
         if (is<Document>(*this))
             return &downcast<Document>(*this);
-        if (is<DOMWindow>(*this))
-            return downcast<DOMWindow>(*this).document();
+        if (is<LocalDOMWindow>(*this))
+            return downcast<LocalDOMWindow>(*this).document();
         return nullptr;
     }();
 

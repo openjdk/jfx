@@ -26,8 +26,8 @@
 #include "ElementInlines.h"
 #include "Logging.h"
 #include "MediaList.h"
-#include "MediaQueryEvaluator.h"
 #include "MediaQueryParser.h"
+#include "MediaQueryParserContext.h"
 #include "ScriptableDocumentParser.h"
 #include "ShadowRoot.h"
 #include "StyleScope.h"
@@ -86,7 +86,7 @@ InlineStyleSheetOwner::~InlineStyleSheetOwner()
 
 void InlineStyleSheetOwner::insertedIntoDocument(Element& element)
 {
-    m_styleScope = &Style::Scope::forNode(element);
+    m_styleScope = Style::Scope::forNode(element);
     m_styleScope->addStyleSheetCandidateNode(element, m_isParsingChildren);
 
     if (m_isParsingChildren)
@@ -96,11 +96,11 @@ void InlineStyleSheetOwner::insertedIntoDocument(Element& element)
 
 void InlineStyleSheetOwner::removedFromDocument(Element& element)
 {
-    if (m_styleScope) {
-        if (m_styleScope->hasPendingSheet(element))
-            m_styleScope->removePendingSheet(element);
-        m_styleScope->removeStyleSheetCandidateNode(element);
-        m_styleScope = nullptr;
+    if (auto* scope = m_styleScope.get()) {
+        if (scope->hasPendingSheet(element))
+            scope->removePendingSheet(element);
+        scope->removeStyleSheetCandidateNode(element);
+        scope = nullptr;
     }
     if (m_sheet)
         clearSheet();
@@ -111,9 +111,9 @@ void InlineStyleSheetOwner::clearDocumentData(Element& element)
     if (m_sheet)
         m_sheet->clearOwnerNode();
 
-    if (m_styleScope) {
-        m_styleScope->removeStyleSheetCandidateNode(element);
-        m_styleScope = nullptr;
+    if (auto* scope = m_styleScope.get()) {
+        scope->removeStyleSheetCandidateNode(element);
+        scope = nullptr;
     }
 }
 
@@ -170,13 +170,15 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
 
     ASSERT(document.contentSecurityPolicy());
     const ContentSecurityPolicy& contentSecurityPolicy = *document.contentSecurityPolicy();
-    if (!contentSecurityPolicy.allowInlineStyle(document.url().string(), m_startTextPosition.m_line, text, CheckUnsafeHashes::No, element, element.nonce(), element.isInUserAgentShadowTree()))
+    if (!contentSecurityPolicy.allowInlineStyle(document.url().string(), m_startTextPosition.m_line, text, CheckUnsafeHashes::No, element, element.nonce(), element.isInUserAgentShadowTree())) {
+        element.notifyLoadedSheetAndAllCriticalSubresources(true);
         return;
+    }
 
-    auto mediaQueries = MediaQuerySet::create(m_media, MediaQueryParserContext(document));
+    auto mediaQueries = MQ::MediaQueryParser::parse(m_media, MediaQueryParserContext(document));
 
-    if (m_styleScope)
-        m_styleScope->addPendingSheet(element);
+    if (auto* scope = m_styleScope.get())
+        scope->addPendingSheet(element);
 
     auto cacheKey = makeInlineStyleSheetCacheKey(text, element);
     if (cacheKey) {
@@ -234,16 +236,16 @@ bool InlineStyleSheetOwner::sheetLoaded(Element& element)
     if (isLoading())
         return false;
 
-    if (m_styleScope)
-        m_styleScope->removePendingSheet(element);
+    if (auto* scope = m_styleScope.get())
+        scope->removePendingSheet(element);
 
     return true;
 }
 
 void InlineStyleSheetOwner::startLoadingDynamicSheet(Element& element)
 {
-    if (m_styleScope && !m_styleScope->hasPendingSheet(element))
-        m_styleScope->addPendingSheet(element);
+    if (auto* scope = m_styleScope.get(); scope && !scope->hasPendingSheet(element))
+        scope->addPendingSheet(element);
 }
 
 void InlineStyleSheetOwner::clearCache()

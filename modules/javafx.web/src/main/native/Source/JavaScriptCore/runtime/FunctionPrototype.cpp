@@ -36,6 +36,7 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(FunctionPrototype);
 const ClassInfo FunctionPrototype::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionPrototype) };
 
 static JSC_DECLARE_HOST_FUNCTION(functionProtoFuncToString);
+static JSC_DECLARE_HOST_FUNCTION(functionProtoFuncBind);
 static JSC_DECLARE_HOST_FUNCTION(callFunctionPrototype);
 
 static JSC_DECLARE_CUSTOM_GETTER(argumentsGetter);
@@ -65,7 +66,7 @@ void FunctionPrototype::addFunctionProperties(VM& vm, JSGlobalObject* globalObje
 
     *applyFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().applyPublicName(), functionPrototypeApplyCodeGenerator(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
     *callFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().callPublicName(), functionPrototypeCallCodeGenerator(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->bind, functionPrototypeBindCodeGenerator(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->bind, functionProtoFuncBind, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public, FunctionBindIntrinsic);
 
     putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->arguments, CustomGetterSetter::create(vm, argumentsGetter, callerAndArgumentsSetter), PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor);
     putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->caller, CustomGetterSetter::create(vm, callerGetter, callerAndArgumentsSetter), PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor);
@@ -100,6 +101,63 @@ JSC_DEFINE_HOST_FUNCTION(functionProtoFuncToString, (JSGlobalObject* globalObjec
     }
 
     return throwVMTypeError(globalObject, scope);
+}
+
+JSC_DEFINE_HOST_FUNCTION(functionProtoFuncBind, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = callFrame->thisValue();
+    if (UNLIKELY(!thisValue.isCallable()))
+        return throwVMTypeError(globalObject, scope, "|this| is not a function inside Function.prototype.bind"_s);
+    JSObject* target = asObject(thisValue);
+
+    JSValue boundThis;
+    ArgList boundArgs;
+    size_t numBoundArgs;
+    if (size_t argCount = callFrame->argumentCount(); argCount > 1) {
+        boundThis = callFrame->uncheckedArgument(0);
+        boundArgs = ArgList(callFrame, 1);
+        numBoundArgs = argCount - 1;
+    } else {
+        boundThis = callFrame->argument(0);
+        boundArgs = ArgList();
+        numBoundArgs = 0;
+    }
+
+    double length = 0;
+    JSString* name = nullptr;
+    JSFunction* function = jsDynamicCast<JSFunction*>(target);
+    if (LIKELY(function && function->canAssumeNameAndLengthAreOriginal(vm))) {
+        // Do nothing! 'length' and 'name' computation are lazily done.
+        // And this is totally OK since we know that wrapped functions have canAssumeNameAndLengthAreOriginal condition
+        // at the time of creation of JSBoundFunction.
+        length = PNaN; // Defer computation.
+    } else {
+        bool found = target->hasOwnProperty(globalObject, vm.propertyNames->length);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (found) {
+            JSValue lengthValue = target->get(globalObject, vm.propertyNames->length);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (lengthValue.isNumber()) {
+                length = lengthValue.toIntegerOrInfinity(globalObject);
+                RETURN_IF_EXCEPTION(scope, { });
+                if (length > numBoundArgs)
+                    length -= numBoundArgs;
+                else
+                    length = 0;
+            }
+        }
+        JSValue nameValue = target->get(globalObject, vm.propertyNames->name);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (nameValue.isString())
+            name = asString(nameValue);
+        else
+            name = jsEmptyString(vm);
+    }
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs, length, name)));
 }
 
 // https://github.com/claudepache/es-legacy-function-reflection/blob/master/spec.md#isallowedreceiverfunctionforcallerandargumentsfunc-expectedrealm (except step 3)
@@ -148,7 +206,7 @@ static JSValue retrieveArguments(VM& vm, CallFrame* callFrame, JSFunction* funct
 {
     RetrieveArgumentsFunctor functor(vm, functionObj);
     if (callFrame)
-        callFrame->iterate(vm, functor);
+        StackVisitor::visit(callFrame, vm, functor);
     return functor.result();
 }
 
@@ -217,7 +275,7 @@ static JSValue retrieveCallerFunction(VM& vm, CallFrame* callFrame, JSFunction* 
 {
     RetrieveCallerFunctionFunctor functor(functionObj);
     if (callFrame)
-        callFrame->iterate(vm, functor);
+        StackVisitor::visit(callFrame, vm, functor);
     return functor.result();
 }
 

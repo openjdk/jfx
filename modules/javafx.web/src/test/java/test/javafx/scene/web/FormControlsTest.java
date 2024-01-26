@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,6 @@ import javafx.scene.Node;
 import javafx.scene.web.WebEngineShim;
 
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized.Parameters;
@@ -89,7 +88,6 @@ public final class FormControlsTest extends TestBase {
             exMessage.contains("Exception") || exMessage.contains("Error"));
     }
 
-    @Ignore("JDK-8300954")
     @Test
     public void testRendering() {
         final Runnable testBody = () -> {

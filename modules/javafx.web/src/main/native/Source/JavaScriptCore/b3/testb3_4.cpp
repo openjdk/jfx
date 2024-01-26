@@ -26,7 +26,7 @@
 #include "config.h"
 #include "testb3.h"
 
-#if ENABLE(B3_JIT)
+#if ENABLE(B3_JIT) && !CPU(ARM)
 
 void testStoreRelAddLoadAcq32(int amount)
 {
@@ -143,7 +143,7 @@ void testStoreRelAddFenceLoadAcq8(int amount, B3::Opcode loadOpcode)
     Value* loadedValue = root->appendNew<MemoryValue>(
         proc, loadOpcode, Origin(), slotPtr, 0, HeapRange(42), HeapRange(42));
     PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
-    patchpoint->clobber(RegisterSet::macroScratchRegisters());
+    patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
     patchpoint->setGenerator(
         [&] (CCallHelpers& jit, const StackmapGenerationParams&) {
             AllowMacroScratchRegisterUsage allowScratch(jit);
@@ -969,6 +969,90 @@ void testStoreLoadStackSlot(int value)
     CHECK(compileAndRun<int>(proc, value) == value);
 }
 
+void testStoreDouble(double input)
+{
+    // Simple store from an address in a register.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsDouble = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+
+        Value* destinationAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsDouble, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        double output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, input, &output));
+        CHECK(isIdentical(input, output));
+    }
+
+    // Simple indexed store.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsDouble = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+
+        Value* destinationBaseAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* index = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* scaledIndex = root->appendNew<Value>(
+            proc, Shl, Origin(),
+            index,
+            root->appendNew<Const32Value>(proc, Origin(), 3));
+        Value* destinationAddress = root->appendNew<Value>(proc, Add, Origin(), scaledIndex, destinationBaseAddress);
+
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsDouble, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        double output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, input, &output - 1, 1));
+        CHECK(isIdentical(input, output));
+    }
+}
+
+void testStoreDoubleConstant(double input)
+{
+    // Simple store from an address in a register.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsDouble = root->appendNew<ConstDoubleValue>(proc, Origin(), input);
+
+        Value* destinationAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsDouble, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        double output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, &output));
+        CHECK(isIdentical(input, output));
+    }
+
+    // Simple indexed store.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsDouble = root->appendNew<ConstDoubleValue>(proc, Origin(), input);
+
+        Value* destinationBaseAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* index = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* scaledIndex = root->appendNew<Value>(
+            proc, Shl, Origin(),
+            index,
+            root->appendNew<Const32Value>(proc, Origin(), 3));
+        Value* destinationAddress = root->appendNew<Value>(proc, Add, Origin(), scaledIndex, destinationBaseAddress);
+
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsDouble, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        double output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, &output - 1, 1));
+        CHECK(isIdentical(input, output));
+    }
+}
+
 void testStoreFloat(double input)
 {
     // Simple store from an address in a register.
@@ -1009,6 +1093,48 @@ void testStoreFloat(double input)
 
         float output = 0.;
         CHECK(!compileAndRun<int64_t>(proc, input, &output - 1, 1));
+        CHECK(isIdentical(static_cast<float>(input), output));
+    }
+}
+
+void testStoreFloatConstant(double input)
+{
+    // Simple store from an address in a register.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsFloat = root->appendNew<ConstFloatValue>(proc, Origin(), static_cast<float>(input));
+
+        Value* destinationAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsFloat, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        float output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, &output));
+        CHECK(isIdentical(static_cast<float>(input), output));
+    }
+
+    // Simple indexed store.
+    {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argumentAsFloat = root->appendNew<ConstFloatValue>(proc, Origin(), static_cast<float>(input));
+
+        Value* destinationBaseAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* index = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* scaledIndex = root->appendNew<Value>(
+            proc, Shl, Origin(),
+            index,
+            root->appendNew<Const32Value>(proc, Origin(), 2));
+        Value* destinationAddress = root->appendNew<Value>(proc, Add, Origin(), scaledIndex, destinationBaseAddress);
+
+        root->appendNew<MemoryValue>(proc, Store, Origin(), argumentAsFloat, destinationAddress);
+
+        root->appendNewControlValue(proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
+
+        float output = 0.;
+        CHECK(!compileAndRun<int64_t>(proc, &output - 1, 1));
         CHECK(isIdentical(static_cast<float>(input), output));
     }
 }
@@ -2512,7 +2638,7 @@ void testSimplePatchpointWithoutOuputClobbersGPArgs()
     Value* const2 = root->appendNew<Const64Value>(proc, Origin(), 13);
 
     PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
-    patchpoint->clobberLate(RegisterSet(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1));
+    patchpoint->clobberLate(RegisterSetBuilder(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1));
     patchpoint->append(ConstrainedValue(const1, ValueRep::SomeRegister));
     patchpoint->append(ConstrainedValue(const2, ValueRep::SomeRegister));
     patchpoint->setGenerator(
@@ -2558,10 +2684,10 @@ void testSimplePatchpointWithOuputClobbersGPArgs()
 
     PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Int64, Origin());
 
-    RegisterSet clobberAll = RegisterSet::allGPRs();
-    clobberAll.exclude(RegisterSet::stackRegisters());
-    clobberAll.exclude(RegisterSet::reservedHardwareRegisters());
-    clobberAll.clear(GPRInfo::argumentGPR2);
+    RegisterSetBuilder clobberAll = RegisterSetBuilder::allGPRs();
+    clobberAll.exclude(RegisterSetBuilder::stackRegisters());
+    clobberAll.exclude(RegisterSetBuilder::reservedHardwareRegisters());
+    clobberAll.remove(GPRInfo::argumentGPR2);
     patchpoint->clobberLate(clobberAll);
 
     patchpoint->append(ConstrainedValue(const1, ValueRep::SomeRegister));
@@ -2577,7 +2703,7 @@ void testSimplePatchpointWithOuputClobbersGPArgs()
             jit.move(params[1].gpr(), params[0].gpr());
             jit.add64(params[2].gpr(), params[0].gpr());
 
-            clobberAll.forEach([&] (Reg reg) {
+            clobberAll.buildAndValidate().forEach([&] (Reg reg) {
                 jit.move(CCallHelpers::TrustedImm32(0x00ff00ff), reg.gpr());
             });
         });
@@ -2599,7 +2725,10 @@ void testSimplePatchpointWithoutOuputClobbersFPArgs()
     Value* const2 = root->appendNew<ConstDoubleValue>(proc, Origin(), 13.1);
 
     PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
-    patchpoint->clobberLate(RegisterSet(FPRInfo::argumentFPR0, FPRInfo::argumentFPR1));
+    RegisterSetBuilder fpClobbers;
+    fpClobbers.add(FPRInfo::argumentFPR0, IgnoreVectors);
+    fpClobbers.add(FPRInfo::argumentFPR1, IgnoreVectors);
+    patchpoint->clobberLate(fpClobbers);
     patchpoint->append(ConstrainedValue(const1, ValueRep::SomeRegister));
     patchpoint->append(ConstrainedValue(const2, ValueRep::SomeRegister));
     patchpoint->setGenerator(
@@ -2638,10 +2767,10 @@ void testSimplePatchpointWithOuputClobbersFPArgs()
 
     PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Double, Origin());
 
-    RegisterSet clobberAll = RegisterSet::allFPRs();
-    clobberAll.exclude(RegisterSet::stackRegisters());
-    clobberAll.exclude(RegisterSet::reservedHardwareRegisters());
-    clobberAll.clear(FPRInfo::argumentFPR2);
+    RegisterSetBuilder clobberAll = RegisterSetBuilder::allFPRs();
+    clobberAll.exclude(RegisterSetBuilder::stackRegisters());
+    clobberAll.exclude(RegisterSetBuilder::reservedHardwareRegisters());
+    clobberAll.remove(FPRInfo::argumentFPR2);
     patchpoint->clobberLate(clobberAll);
 
     patchpoint->append(ConstrainedValue(const1, ValueRep::SomeRegister));
@@ -2656,7 +2785,7 @@ void testSimplePatchpointWithOuputClobbersFPArgs()
             CHECK(params[2].isFPR());
             jit.addDouble(params[1].fpr(), params[2].fpr(), params[0].fpr());
 
-            clobberAll.forEach([&] (Reg reg) {
+            clobberAll.buildAndValidate().forEach([&] (Reg reg) {
                 jit.moveZeroToDouble(reg.fpr());
             });
         });
@@ -2679,7 +2808,7 @@ void testPatchpointWithEarlyClobber()
         PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Int32, Origin());
         patchpoint->append(ConstrainedValue(arg1, ValueRep::SomeRegister));
         patchpoint->append(ConstrainedValue(arg2, ValueRep::SomeRegister));
-        patchpoint->clobberEarly(RegisterSet(registerToClobber));
+        patchpoint->clobberEarly(RegisterSetBuilder(registerToClobber));
         unsigned optLevel = proc.optLevel();
         patchpoint->setGenerator(
             [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -2803,8 +2932,8 @@ void testPatchpointGPScratch()
             CHECK(params.gpScratch(1) != params[0].gpr());
             CHECK(params.gpScratch(1) != params[1].gpr());
             CHECK(params.gpScratch(1) != params[2].gpr());
-            CHECK(!params.unavailableRegisters().get(params.gpScratch(0)));
-            CHECK(!params.unavailableRegisters().get(params.gpScratch(1)));
+            CHECK(!params.unavailableRegisters().buildAndValidate().contains(params.gpScratch(0), IgnoreVectors));
+            CHECK(!params.unavailableRegisters().buildAndValidate().contains(params.gpScratch(1), IgnoreVectors));
             add32(jit, params[1].gpr(), params[2].gpr(), params[0].gpr());
         });
     root->appendNewControlValue(proc, Return, Origin(), patchpoint);
@@ -2833,8 +2962,8 @@ void testPatchpointFPScratch()
             CHECK(params.fpScratch(0) != InvalidFPRReg);
             CHECK(params.fpScratch(1) != InvalidFPRReg);
             CHECK(params.fpScratch(1) != params.fpScratch(0));
-            CHECK(!params.unavailableRegisters().get(params.fpScratch(0)));
-            CHECK(!params.unavailableRegisters().get(params.fpScratch(1)));
+            CHECK(!params.unavailableRegisters().buildAndValidate().contains(params.fpScratch(0), IgnoreVectors));
+            CHECK(!params.unavailableRegisters().buildAndValidate().contains(params.fpScratch(1), IgnoreVectors));
             add32(jit, params[1].gpr(), params[2].gpr(), params[0].gpr());
         });
     root->appendNewControlValue(proc, Return, Origin(), patchpoint);
@@ -2859,7 +2988,7 @@ void testPatchpointLotsOfLateAnys()
     }
 
     PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Int32, Origin());
-    patchpoint->clobber(RegisterSet::macroScratchRegisters());
+    patchpoint->clobber(RegisterSetBuilder::macroClobberedGPRs());
     for (Value* value : values)
         patchpoint->append(ConstrainedValue(value, ValueRep::LateColdAny));
     patchpoint->setGenerator(
@@ -2912,7 +3041,7 @@ void testPatchpointAnyImm(ValueRep rep)
     CHECK(compileAndRun<int>(proc, 1) == 43);
 }
 
-void addSExtTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addSExtTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testSExt8(0));
     RUN(testSExt8(1));

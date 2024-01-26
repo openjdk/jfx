@@ -45,11 +45,21 @@ AccessibilityTree::AccessibilityTree(RenderObject* renderer)
 {
 }
 
+AccessibilityTree::AccessibilityTree(Node& node)
+    : AccessibilityRenderObject(node)
+{
+}
+
 AccessibilityTree::~AccessibilityTree() = default;
 
 Ref<AccessibilityTree> AccessibilityTree::create(RenderObject* renderer)
 {
     return adoptRef(*new AccessibilityTree(renderer));
+}
+
+Ref<AccessibilityTree> AccessibilityTree::create(Node& node)
+{
+    return adoptRef(*new AccessibilityTree(node));
 }
 
 bool AccessibilityTree::computeAccessibilityIsIgnored() const
@@ -65,20 +75,10 @@ AccessibilityRole AccessibilityTree::determineAccessibilityRole()
     return isTreeValid() ? AccessibilityRole::Tree : AccessibilityRole::Group;
 }
 
-bool AccessibilityTree::nodeHasTreeItemChild(Node& node) const
-{
-    for (auto* child = node.firstChild(); child; child = child->nextSibling()) {
-        if (nodeHasRole(child, "treeitem"_s))
-            return true;
-    }
-    return false;
-}
-
 bool AccessibilityTree::isTreeValid() const
 {
-    // A valid tree can only have treeitem or group of treeitems as a child
+    // A valid tree can only have treeitem or group of treeitems as a child.
     // https://www.w3.org/TR/wai-aria/#tree
-
     Node* node = this->node();
     if (!node)
         return false;
@@ -94,12 +94,7 @@ bool AccessibilityTree::isTreeValid() const
             continue;
         if (nodeHasRole(child, "treeitem"_s))
             continue;
-        if (nodeHasRole(child, "presentation"_s)) {
-            if (!nodeHasTreeItemChild(*child))
-                return false;
-            continue;
-        }
-        if (!nodeHasRole(child, "group"_s))
+        if (!nodeHasRole(child, "group"_s) && !nodeHasRole(child, "presentation"_s))
             return false;
 
         for (auto* groupChild = child->firstChild(); groupChild; groupChild = groupChild->nextSibling())

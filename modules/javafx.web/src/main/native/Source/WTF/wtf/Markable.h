@@ -36,6 +36,7 @@
 
 #include <optional>
 #include <type_traits>
+#include <wtf/Hasher.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -154,6 +155,11 @@ private:
     T m_value;
 };
 
+template <typename T, typename Traits> inline void add(Hasher& hasher, const Markable<T, Traits>& value)
+{
+    add(hasher, value.asOptional());
+}
+
 template <typename T, typename Traits> constexpr bool operator==(const Markable<T, Traits>& x, const Markable<T, Traits>& y)
 {
     if (bool(x) != bool(y))
@@ -164,10 +170,6 @@ template <typename T, typename Traits> constexpr bool operator==(const Markable<
 }
 template <typename T, typename Traits> constexpr bool operator==(const Markable<T, Traits>& x, const T& v) { return bool(x) && x.value() == v; }
 template <typename T, typename Traits> constexpr bool operator==(const T& v, const Markable<T, Traits>& x) { return bool(x) && v == x.value(); }
-
-template <typename T, typename Traits> constexpr bool operator!=(const Markable<T, Traits>& x, const Markable<T, Traits>& y) { return !(x == y); }
-template <typename T, typename Traits> constexpr bool operator!=(const Markable<T, Traits>& x, const T& v) { return !(x == v); }
-template <typename T, typename Traits> constexpr bool operator!=(const T& v, const Markable<T, Traits>& x) { return !(v == x); }
 
 template <typename T, typename Traits>
 template<typename Encoder>

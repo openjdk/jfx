@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1098,9 +1098,14 @@ public class FXMLLoader {
                     if (loadListener != null) {
                         loadListener.readInternalAttribute(localName, value);
                     }
-
-                    resources = ResourceBundle.getBundle(value, Locale.getDefault(),
-                            FXMLLoader.this.resources.getClass().getClassLoader());
+                    if (FXMLLoader.this.resources == null) {
+                        resources = ResourceBundle.getBundle(value, Locale.getDefault());
+                    } else {
+                        final ClassLoader cl = FXMLLoader.this.resources.getClass().getClassLoader();
+                        resources = (cl == null) ?
+                                ResourceBundle.getBundle(value, Locale.getDefault()) :
+                                ResourceBundle.getBundle(value, Locale.getDefault(), cl);
+                    }
                 } else if (localName.equals(INCLUDE_CHARSET_ATTRIBUTE)) {
                     if (loadListener != null) {
                         loadListener.readInternalAttribute(localName, value);

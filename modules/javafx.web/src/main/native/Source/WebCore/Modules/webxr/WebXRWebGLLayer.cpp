@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
+ * Copyright (C) 2023 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,20 +29,12 @@
 
 #if ENABLE(WEBXR)
 
-#if !USE(ANGLE)
-#include "GraphicsContextGL.h"
-#endif
 #include "HTMLCanvasElement.h"
 #include "IntSize.h"
 #include "OffscreenCanvas.h"
-#if !USE(ANGLE)
-#include "TemporaryOpenGLSetting.h"
-#endif
+#include "WebGL2RenderingContext.h"
 #include "WebGLFramebuffer.h"
 #include "WebGLRenderingContext.h"
-#if ENABLE(WEBGL2)
-#include "WebGL2RenderingContext.h"
-#endif
 #include "WebGLRenderingContextBase.h"
 #include "WebXRFrame.h"
 #include "WebXROpaqueFramebuffer.h"
@@ -71,16 +64,15 @@ static ExceptionOr<std::unique_ptr<WebXROpaqueFramebuffer>> createOpaqueFramebuf
 
     float scaleFactor = std::clamp(init.framebufferScaleFactor, MinFramebufferScalingFactor, device->maxFramebufferScalingFactor());
 
-    IntSize recommendedSize = session.recommendedWebGLFramebufferResolution();
-    auto width = static_cast<uint32_t>(std::ceil(recommendedSize.width() * scaleFactor));
-    auto height = static_cast<uint32_t>(std::ceil(recommendedSize.height() * scaleFactor));
+    FloatSize recommendedSize = session.recommendedWebGLFramebufferResolution();
+    IntSize size = expandedIntSize(recommendedSize.scaled(scaleFactor));
 
     // 9.3. Initialize layer’s framebuffer to a new opaque framebuffer with the dimensions framebufferSize
     //      created with context, session initialized to session, and layerInit’s depth, stencil, and alpha values.
     // 9.4. Allocate and initialize resources compatible with session’s XR device, including GPU accessible memory buffers,
     //      as required to support the compositing of layer.
     // 9.5. If layer’s resources were unable to be created for any reason, throw an OperationError and abort these steps.
-    auto layerHandle = device->createLayerProjection(width, height, init.alpha);
+    auto layerHandle = device->createLayerProjection(size.width(), size.height(), init.alpha);
     if (!layerHandle)
         return Exception { OperationError, "Unable to allocate XRWebGLLayer GPU resources."_s };
 
@@ -91,7 +83,7 @@ static ExceptionOr<std::unique_ptr<WebXROpaqueFramebuffer>> createOpaqueFramebuf
         .stencil = init.stencil
     };
 
-    auto framebuffer = WebXROpaqueFramebuffer::create(*layerHandle, context, WTFMove(attributes), width, height);
+    auto framebuffer = WebXROpaqueFramebuffer::create(*layerHandle, context, WTFMove(attributes), size);
     if (!framebuffer)
         return Exception { OperationError, "Unable to create a framebuffer."_s };
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2008 Rob Buis <buis@kde.org>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
@@ -29,10 +29,12 @@
 #include "FloatQuad.h"
 #include "InlineRunAndOffset.h"
 #include "LegacyRenderSVGRoot.h"
+#include "RenderAncestorIterator.h"
 #include "RenderBlock.h"
 #include "RenderSVGText.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGInlineTextBoxInlines.h"
+#include "SVGLayerTransformComputation.h"
 #include "SVGRenderingContext.h"
 #include "SVGRootInlineBox.h"
 #include "StyleFontSizeFunctions.h"
@@ -93,8 +95,8 @@ void RenderSVGInlineText::styleDidChange(StyleDifference diff, const RenderStyle
     RenderText::styleDidChange(diff, oldStyle);
     updateScaledFont();
 
-    bool newPreserves = style().whiteSpace() == WhiteSpace::Pre;
-    bool oldPreserves = oldStyle ? oldStyle->whiteSpace() == WhiteSpace::Pre : false;
+    bool newPreserves = style().whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve;
+    bool oldPreserves = oldStyle ? oldStyle->whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve : false;
     if (oldPreserves && !newPreserves) {
         setText(applySVGWhitespaceRules(originalText(), false), true);
         return;
@@ -110,7 +112,7 @@ void RenderSVGInlineText::styleDidChange(StyleDifference diff, const RenderStyle
 
     // The text metrics may be influenced by style changes.
     if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this))
-        textAncestor->subtreeStyleDidChange(this);
+        textAncestor->setNeedsLayout();
 }
 
 std::unique_ptr<LegacyInlineTextBox> RenderSVGInlineText::createTextBox()
@@ -205,10 +207,21 @@ void RenderSVGInlineText::updateScaledFont()
     computeNewScaledFontForStyle(*this, style(), m_scalingFactor, m_scaledFont);
 }
 
+float RenderSVGInlineText::computeScalingFactorForRenderer(const RenderObject& renderer)
+{
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (renderer.document().settings().layerBasedSVGEngineEnabled()) {
+            if (const auto* layerRenderer = lineageOfType<RenderLayerModelObject>(renderer).first())
+                return SVGLayerTransformComputation(*layerRenderer).calculateScreenFontSizeScalingFactor();
+        }
+#endif
+        return SVGRenderingContext::calculateScreenFontSizeScalingFactor(renderer);
+}
+
 void RenderSVGInlineText::computeNewScaledFontForStyle(const RenderObject& renderer, const RenderStyle& style, float& scalingFactor, FontCascade& scaledFont)
 {
     // Alter font-size to the right on-screen value to avoid scaling the glyphs themselves, except when GeometricPrecision is specified
-    scalingFactor = SVGRenderingContext::calculateScreenFontSizeScalingFactor(renderer);
+    scalingFactor = computeScalingFactorForRenderer(renderer);
     if (!scalingFactor || style.fontDescription().textRenderingMode() == TextRenderingMode::GeometricPrecision) {
         scalingFactor = 1;
         scaledFont = style.fontCascade();

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2014 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,7 +40,9 @@
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
+#include "NodeName.h"
 #include "PlatformLocale.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderTextControl.h"
 #include "StepRange.h"
 #include <limits>
@@ -110,10 +112,6 @@ double NumberInputType::valueAsDouble() const
 
 ExceptionOr<void> NumberInputType::setValueAsDouble(double newValue, TextFieldEventBehavior eventBehavior) const
 {
-    // FIXME: We should use numeric_limits<double>::max for number input type.
-    const double floatMax = std::numeric_limits<float>::max();
-    if (newValue < -floatMax || newValue > floatMax)
-        return Exception { InvalidStateError };
     ASSERT(element());
     element()->setValue(serializeForNumberType(newValue), eventBehavior);
     return { };
@@ -121,10 +119,6 @@ ExceptionOr<void> NumberInputType::setValueAsDouble(double newValue, TextFieldEv
 
 ExceptionOr<void> NumberInputType::setValueAsDecimal(const Decimal& newValue, TextFieldEventBehavior eventBehavior) const
 {
-    // FIXME: We should use numeric_limits<double>::max for number input type.
-    const Decimal floatMax = Decimal::fromDouble(std::numeric_limits<float>::max());
-    if (newValue < -floatMax || newValue > floatMax)
-        return Exception { InvalidStateError };
     ASSERT(element());
     element()->setValue(serializeForNumberType(newValue), eventBehavior);
     return { };
@@ -151,8 +145,7 @@ StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) cons
     if (stepBase.isNaN())
         stepBase = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(valueAttr), numberDefaultStepBase);
 
-    // FIXME: We should use numeric_limits<double>::max for number input type.
-    const Decimal floatMax = Decimal::fromDouble(std::numeric_limits<float>::max());
+    const Decimal doubleMax = Decimal::fromDouble(std::numeric_limits<double>::max());
     const Element& element = *this->element();
 
     RangeLimitations rangeLimitations = RangeLimitations::Invalid;
@@ -165,8 +158,8 @@ StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) cons
         }
         return defaultValue;
     };
-    Decimal minimum = extractBound(minAttr, -floatMax);
-    Decimal maximum = extractBound(maxAttr, floatMax);
+    Decimal minimum = extractBound(minAttr, -doubleMax);
+    Decimal maximum = extractBound(maxAttr, doubleMax);
 
     const Decimal step = StepRange::parseStep(anyStepHandling, stepDescription, element.attributeWithoutSynchronization(stepAttr));
     return StepRange(stepBase, rangeLimitations, minimum, maximum, step, stepDescription);
@@ -294,18 +287,26 @@ bool NumberInputType::supportsPlaceholder() const
 void NumberInputType::attributeChanged(const QualifiedName& name)
 {
     ASSERT(element());
-    if (name == maxAttr || name == minAttr) {
+    switch (name.nodeName()) {
+    case AttributeNames::maxAttr:
+    case AttributeNames::minAttr:
         if (auto* element = this->element()) {
             element->invalidateStyleForSubtree();
             if (auto* renderer = element->renderer())
                 renderer->setNeedsLayoutAndPrefWidthsRecalc();
         }
-    } else if (name == stepAttr) {
+        break;
+    case AttributeNames::classAttr:
+    case AttributeNames::stepAttr:
         if (auto* element = this->element()) {
             if (auto* renderer = element->renderer())
                 renderer->setNeedsLayoutAndPrefWidthsRecalc();
         }
+        break;
+    default:
+        break;
     }
+
     TextFieldInputType::attributeChanged(name);
 }
 

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "TableFormattingContext.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "BlockFormattingState.h"
 #include "FloatingState.h"
 #include "InlineFormattingState.h"
@@ -36,6 +34,7 @@
 #include "LayoutChildIterator.h"
 #include "LayoutContext.h"
 #include "LayoutInitialContainingBlock.h"
+#include "RenderStyleInlines.h"
 #include "TableFormattingConstraints.h"
 #include "TableFormattingState.h"
 #include <wtf/IsoMallocInlines.h>
@@ -46,7 +45,7 @@ namespace Layout {
 WTF_MAKE_ISO_ALLOCATED_IMPL(TableFormattingContext);
 
 // https://www.w3.org/TR/css-tables-3/#table-layout-algorithm
-TableFormattingContext::TableFormattingContext(const ContainerBox& formattingContextRoot, TableFormattingState& formattingState)
+TableFormattingContext::TableFormattingContext(const ElementBox& formattingContextRoot, TableFormattingState& formattingState)
     : FormattingContext(formattingContextRoot, formattingState)
     , m_tableFormattingGeometry(*this)
     , m_tableFormattingQuirks(*this)
@@ -161,11 +160,8 @@ void TableFormattingContext::setUsedGeometryForCells(LayoutUnit availableHorizon
                         formattingState.boxGeometry(*child).moveVertically(intrinsicPaddingTop);
                     }
                     if (cellBox.establishesInlineFormattingContext()) {
-                        auto& inlineFormattingStatee = layoutState().formattingStateForInlineFormattingContext(cellBox);
-                        for (auto& box : inlineFormattingStatee.boxes())
-                            box.moveVertically(intrinsicPaddingTop);
-                        for (auto& line : inlineFormattingStatee.lines())
-                            line.moveVertically(intrinsicPaddingTop);
+                        // FIXME: Adjust inline display content when applicable.
+                        ASSERT_NOT_IMPLEMENTED_YET();
                     }
                 };
                 adjustCellContentWithInstrinsicPaddingBefore();
@@ -182,7 +178,7 @@ void TableFormattingContext::setUsedGeometryForRows(LayoutUnit availableHorizont
     auto& rows = grid.rows().list();
 
     auto rowLogicalTop = grid.verticalSpacing();
-    const ContainerBox* previousRow = nullptr;
+    const ElementBox* previousRow = nullptr;
     for (size_t rowIndex = 0; rowIndex < rows.size(); ++rowIndex) {
         auto& row = rows[rowIndex];
         auto& rowBox = row.box();
@@ -264,7 +260,7 @@ void TableFormattingContext::setUsedGeometryForSections(const ConstraintsForInFl
     auto verticalSpacing = grid.verticalSpacing();
     auto paddingBefore = std::optional<LayoutUnit> { verticalSpacing };
     auto paddingAfter = verticalSpacing;
-    for (auto& sectionBox : childrenOfType<ContainerBox>(tableBox)) {
+    for (auto& sectionBox : childrenOfType<ElementBox>(tableBox)) {
         auto& sectionBoxGeometry = formattingState().boxGeometry(sectionBox);
         // Section borders are either collapsed or ignored.
         sectionBoxGeometry.setBorder({ });
@@ -278,7 +274,7 @@ void TableFormattingContext::setUsedGeometryForSections(const ConstraintsForInFl
         sectionBoxGeometry.setContentBoxWidth(sectionWidth);
         auto sectionContentHeight = LayoutUnit { };
         size_t rowCount = 0;
-        for (auto& rowBox : childrenOfType<ContainerBox>(sectionBox)) {
+        for (auto& rowBox : childrenOfType<ElementBox>(sectionBox)) {
             sectionContentHeight += geometryForBox(rowBox).borderBoxHeight();
             ++rowCount;
         }
@@ -567,4 +563,3 @@ void TableFormattingContext::computeAndDistributeExtraSpace(LayoutUnit available
 }
 }
 
-#endif

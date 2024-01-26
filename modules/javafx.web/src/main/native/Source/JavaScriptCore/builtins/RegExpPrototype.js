@@ -95,6 +95,10 @@ function hasObservableSideEffectsForRegExpMatch(regexp)
     if (regexpUnicode !== @regExpProtoUnicodeGetter)
         return true;
 
+    var regexpUnicodeSets = @tryGetById(regexp, "unicodeSets");
+    if (regexpUnicodeSets !== @regExpProtoUnicodeSetsGetter)
+        return true;
+
     return typeof regexp.lastIndex !== "number";
 }
 
@@ -189,7 +193,7 @@ function getSubstitution(matched, str, position, captures, namedCaptures, replac
 
     for (var start = 0; start = @stringIndexOfInternal.@call(replacement, "$", lastStart), start !== -1; lastStart = start) {
         if (start - lastStart > 0)
-            result = result + @stringSubstringInternal.@call(replacement, lastStart, start);
+            result = result + @stringSubstring.@call(replacement, lastStart, start);
         start++;
         if (start >= replacementLength)
             result = result + "$";
@@ -207,12 +211,12 @@ function getSubstitution(matched, str, position, captures, namedCaptures, replac
                 break;
             case "`":
                 if (position > 0)
-                    result = result + @stringSubstringInternal.@call(str, 0, position);
+                    result = result + @stringSubstring.@call(str, 0, position);
                 start++;
                 break;
             case "'":
                 if (tailPos < stringLength)
-                    result = result + @stringSubstringInternal.@call(str, tailPos);
+                    result = result + @stringSubstring.@call(str, tailPos);
                 start++;
                 break;
             case "<":
@@ -220,7 +224,7 @@ function getSubstitution(matched, str, position, captures, namedCaptures, replac
                     var groupNameStartIndex = start + 1;
                     var groupNameEndIndex = @stringIndexOfInternal.@call(replacement, ">", groupNameStartIndex);
                     if (groupNameEndIndex !== -1) {
-                        var groupName = @stringSubstringInternal.@call(replacement, groupNameStartIndex, groupNameEndIndex);
+                        var groupName = @stringSubstring.@call(replacement, groupNameStartIndex, groupNameEndIndex);
                         var capture = namedCaptures[groupName];
                         if (capture !== @undefined)
                             result = result + @toString(capture);
@@ -241,7 +245,7 @@ function getSubstitution(matched, str, position, captures, namedCaptures, replac
 
                     var n = chCode - 0x30;
                     if (n > m) {
-                        result = result + @stringSubstringInternal.@call(replacement, originalStart, start);
+                        result = result + @stringSubstring.@call(replacement, originalStart, start);
                         break;
                     }
 
@@ -257,7 +261,7 @@ function getSubstitution(matched, str, position, captures, namedCaptures, replac
                     }
 
                     if (n == 0) {
-                        result = result + @stringSubstringInternal.@call(replacement, originalStart, start);
+                        result = result + @stringSubstring.@call(replacement, originalStart, start);
                         break;
                     }
 
@@ -271,7 +275,7 @@ function getSubstitution(matched, str, position, captures, namedCaptures, replac
         }
     }
 
-    return result + @stringSubstringInternal.@call(replacement, lastStart);
+    return result + @stringSubstring.@call(replacement, lastStart);
 }
 
 @overriddenName="[Symbol.replace]"
@@ -368,7 +372,7 @@ function replace(strArg, replace)
         }
 
         if (position >= nextSourcePosition) {
-            accumulatedResult = accumulatedResult + @stringSubstringInternal.@call(str, nextSourcePosition, position) + replacement;
+            accumulatedResult = accumulatedResult + @stringSubstring.@call(str, nextSourcePosition, position) + replacement;
             nextSourcePosition = position + matchLength;
         }
     }
@@ -376,7 +380,7 @@ function replace(strArg, replace)
     if (nextSourcePosition >= stringLength)
         return  accumulatedResult;
 
-    return accumulatedResult + @stringSubstringInternal.@call(str, nextSourcePosition);
+    return accumulatedResult + @stringSubstring.@call(str, nextSourcePosition);
 }
 
 // 21.2.5.9 RegExp.prototype[@@search] (string)
@@ -460,6 +464,9 @@ function hasObservableSideEffectsForRegExpSplit(regexp)
     var regexpUnicode = @tryGetById(regexp, "unicode");
     if (regexpUnicode !== @regExpProtoUnicodeGetter)
         return true;
+    var regexpUnicodeSets = @tryGetById(regexp, "unicodeSets");
+    if (regexpUnicodeSets !== @regExpProtoUnicodeSetsGetter)
+        return true;
     
     // These are accessed by the RegExp species constructor.
     var regexpSource = @tryGetById(regexp, "source");
@@ -496,9 +503,9 @@ function split(string, limit)
     // 5. Let flags be ? ToString(? Get(rx, "flags")).
     var flags = @toString(regexp.flags);
 
-    // 6. If flags contains "u", var unicodeMatching be true.
+    // 6. If flags contains "u" or flags contains "v", var unicodeMatching be true.
     // 7. Else, let unicodeMatching be false.
-    var unicodeMatching = @stringIncludesInternal.@call(flags, "u");
+    var unicodeMatching = @stringIncludesInternal.@call(flags, "u") || @stringIncludesInternal.@call(flags, "v");
     // 8. If flags contains "y", var newFlags be flags.
     // 9. Else, let newFlags be the string that is the concatenation of flags and "y".
     var newFlags = @stringIncludesInternal.@call(flags, "y") ? flags : flags + "y";
@@ -564,7 +571,7 @@ function split(string, limit)
             // iv. Else e != p,
             else {
                 // 1. Let T be a String value equal to the substring of S consisting of the elements at indices p (inclusive) through q (exclusive).
-                var subStr = @stringSubstringInternal.@call(str, position, matchPosition);
+                var subStr = @stringSubstring.@call(str, position, matchPosition);
                 // 2. Perform ! CreateDataProperty(A, ! ToString(lengthA), T).
                 // 3. Let lengthA be lengthA + 1.
                 @arrayPush(result, subStr);
@@ -599,7 +606,7 @@ function split(string, limit)
         }
     }
     // 20. Let T be a String value equal to the substring of S consisting of the elements at indices p (inclusive) through size (exclusive).
-    var remainingStr = @stringSubstringInternal.@call(str, position, size);
+    var remainingStr = @stringSubstring.@call(str, position, size);
     // 21. Perform ! CreateDataProperty(A, ! ToString(lengthA), T).
     @arrayPush(result, remainingStr);
     // 22. Return A.

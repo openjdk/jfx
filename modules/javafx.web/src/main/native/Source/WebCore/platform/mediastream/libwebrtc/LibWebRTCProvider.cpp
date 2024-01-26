@@ -39,6 +39,7 @@
 #include <dlfcn.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
+ALLOW_COMMA_BEGIN
 
 #include <webrtc/api/async_resolver_factory.h>
 #include <webrtc/api/audio_codecs/builtin_audio_decoder_factory.h>
@@ -53,6 +54,7 @@ ALLOW_UNUSED_PARAMETERS_BEGIN
 #include <webrtc/rtc_base/task_queue_gcd.h>
 
 ALLOW_UNUSED_PARAMETERS_END
+ALLOW_COMMA_END
 
 #include <wtf/Function.h>
 #include <wtf/NeverDestroyed.h>
@@ -112,32 +114,31 @@ public:
         return m_socketFactory->CreateUdpSocket(prepareSocketAddress(address, m_disableNonLocalhostConnections), minPort, maxPort);
     }
 
-    rtc::AsyncPacketSocket* CreateServerTcpSocket(const rtc::SocketAddress& address, uint16_t minPort, uint16_t maxPort, int options) final
+    rtc::AsyncListenSocket* CreateServerTcpSocket(const rtc::SocketAddress&, uint16_t, uint16_t, int) final
     {
-        return m_socketFactory->CreateServerTcpSocket(prepareSocketAddress(address, m_disableNonLocalhostConnections), minPort, maxPort, options);
+        return nullptr;
     }
 
     rtc::AsyncPacketSocket* CreateClientTcpSocket(const rtc::SocketAddress& localAddress, const rtc::SocketAddress& remoteAddress, const rtc::ProxyInfo& info, const std::string& name, const rtc::PacketSocketTcpOptions& options)
     {
         return m_socketFactory->CreateClientTcpSocket(prepareSocketAddress(localAddress, m_disableNonLocalhostConnections), remoteAddress, info, name, options);
     }
+ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     rtc::AsyncResolverInterface* CreateAsyncResolver() final { return m_socketFactory->CreateAsyncResolver(); }
+ALLOW_DEPRECATED_DECLARATIONS_END
 
 private:
     bool m_disableNonLocalhostConnections { false };
     UniqueRef<rtc::BasicPacketSocketFactory> m_socketFactory;
 };
 
-struct PeerConnectionFactoryAndThreads : public rtc::MessageHandler {
+struct PeerConnectionFactoryAndThreads {
     std::unique_ptr<rtc::Thread> networkThread;
     std::unique_ptr<rtc::Thread> signalingThread;
     bool networkThreadWithSocketServer { false };
     std::unique_ptr<rtc::NetworkManager> networkManager;
     std::unique_ptr<BasicPacketSocketFactory> packetSocketFactory;
     std::unique_ptr<rtc::RTCCertificateGenerator> certificateGenerator;
-
-private:
-    void OnMessage(rtc::Message*);
 };
 
 static void doReleaseLogging(rtc::LoggingSeverity severity, const char* message)
@@ -216,21 +217,6 @@ PeerConnectionFactoryAndThreads& LibWebRTCProvider::getStaticFactoryAndThreads(b
     return factoryAndThreads;
 }
 
-struct ThreadMessageData : public rtc::MessageData {
-    ThreadMessageData(Function<void()>&& callback)
-        : callback(WTFMove(callback))
-    { }
-    Function<void()> callback;
-};
-
-void PeerConnectionFactoryAndThreads::OnMessage(rtc::Message* message)
-{
-    ASSERT(message->message_id == 1);
-    auto* data = static_cast<ThreadMessageData*>(message->pdata);
-    data->callback();
-    delete data;
-}
-
 bool LibWebRTCProvider::hasWebRTCThreads()
 {
     return !!staticFactoryAndThreads().networkThread;
@@ -239,13 +225,13 @@ bool LibWebRTCProvider::hasWebRTCThreads()
 void LibWebRTCProvider::callOnWebRTCNetworkThread(Function<void()>&& callback)
 {
     PeerConnectionFactoryAndThreads& threads = staticFactoryAndThreads();
-    threads.networkThread->Post(RTC_FROM_HERE, &threads, 1, new ThreadMessageData(WTFMove(callback)));
+    threads.networkThread->PostTask(WTFMove(callback));
 }
 
 void LibWebRTCProvider::callOnWebRTCSignalingThread(Function<void()>&& callback)
 {
     PeerConnectionFactoryAndThreads& threads = staticFactoryAndThreads();
-    threads.signalingThread->Post(RTC_FROM_HERE, &threads, 1, new ThreadMessageData(WTFMove(callback)));
+    threads.signalingThread->PostTask(WTFMove(callback));
 }
 
 rtc::Thread& LibWebRTCProvider::signalingThread()
@@ -287,12 +273,17 @@ void LibWebRTCProvider::enableEnumeratingAllNetworkInterfaces()
     m_enableEnumeratingAllNetworkInterfaces = true;
 }
 
+void LibWebRTCProvider::enableEnumeratingVisibleNetworkInterfaces()
+{
+    m_enableEnumeratingVisibleNetworkInterfaces = true;
+}
+
 void LibWebRTCProvider::disableNonLocalhostConnections()
 {
     m_disableNonLocalhostConnections = true;
 }
 
-std::unique_ptr<LibWebRTCProvider::SuspendableSocketFactory> LibWebRTCProvider::createSocketFactory(String&& /* userAgent */, bool /* isFirstParty */, RegistrableDomain&&)
+std::unique_ptr<LibWebRTCProvider::SuspendableSocketFactory> LibWebRTCProvider::createSocketFactory(String&& /* userAgent */, ScriptExecutionContextIdentifier, bool /* isFirstParty */, RegistrableDomain&&)
 {
     return nullptr;
 }
@@ -311,7 +302,7 @@ webrtc::PeerConnectionFactoryInterface* LibWebRTCProvider::factory()
 
     m_factory = createPeerConnectionFactory(factoryAndThreads.networkThread.get(), factoryAndThreads.signalingThread.get());
 
-    return m_factory;
+    return m_factory.get();
 }
 
 void LibWebRTCProvider::clearFactory()
@@ -322,11 +313,13 @@ void LibWebRTCProvider::clearFactory()
 
 rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> LibWebRTCProvider::createPeerConnectionFactory(rtc::Thread* networkThread, rtc::Thread* signalingThread)
 {
+    willCreatePeerConnectionFactory();
+
     ASSERT(!m_audioModule);
-    auto audioModule = rtc::scoped_refptr<LibWebRTCAudioModule>(new rtc::RefCountedObject<LibWebRTCAudioModule>());
+    auto audioModule = rtc::make_ref_counted<LibWebRTCAudioModule>();
     m_audioModule = audioModule.get();
 
-    return webrtc::CreatePeerConnectionFactory(networkThread, signalingThread, signalingThread, WTFMove(audioModule), webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(), createEncoderFactory(), createDecoderFactory(), nullptr, nullptr, nullptr
+    return webrtc::CreatePeerConnectionFactory(networkThread, signalingThread, signalingThread, WTFMove(audioModule), webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(), createEncoderFactory(), createDecoderFactory(), nullptr, nullptr, nullptr, nullptr
 #if PLATFORM(COCOA)
         , webrtc::CreateTaskQueueGcdFactory()
 #endif
@@ -353,7 +346,6 @@ void LibWebRTCProvider::setPeerConnectionFactory(rtc::scoped_refptr<webrtc::Peer
     auto* thread = getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer).signalingThread.get();
     m_factory = webrtc::PeerConnectionFactoryProxy::Create(thread, thread, WTFMove(factory));
 }
-
 rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPeerConnection(ScriptExecutionContextIdentifier, webrtc::PeerConnectionObserver& observer, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&& configuration)
 {
     // Default WK1 implementation.
@@ -361,7 +353,7 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPee
     auto& factoryAndThreads = getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer);
 
     if (!factoryAndThreads.networkManager)
-        factoryAndThreads.networkManager = makeUniqueWithoutFastMallocCheck<rtc::BasicNetworkManager>();
+        factoryAndThreads.networkManager = makeUniqueWithoutFastMallocCheck<rtc::BasicNetworkManager>(factoryAndThreads.networkThread->socketserver());
 
     if (!factoryAndThreads.packetSocketFactory)
         factoryAndThreads.packetSocketFactory = makeUnique<BasicPacketSocketFactory>(*factoryAndThreads.networkThread);
@@ -400,7 +392,7 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPee
     auto& factoryAndThreads = getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer);
 
     std::unique_ptr<cricket::BasicPortAllocator> portAllocator;
-    factoryAndThreads.signalingThread->Invoke<void>(RTC_FROM_HERE, [&]() {
+    factoryAndThreads.signalingThread->BlockingCall([&]() {
         auto basicPortAllocator = makeUniqueWithoutFastMallocCheck<cricket::BasicPortAllocator>(&networkManager, &packetSocketFactory);
 
         basicPortAllocator->set_allow_tcp_listen(false);
@@ -433,7 +425,6 @@ void LibWebRTCProvider::prepareCertificateGenerator(Function<void(rtc::RTCCertif
         callback(generator);
     });
 }
-
 static inline std::optional<cricket::MediaType> typeFromKind(const String& kind)
 {
     if (kind == "audio"_s)
@@ -565,11 +556,14 @@ std::optional<MediaCapabilitiesDecodingInfo> LibWebRTCProvider::videoDecodingCap
         }
         info.powerEfficient = decodingInfo ? decodingInfo->powerEfficient : true;
         info.smooth = decodingInfo ? decodingInfo->smooth : isVPSoftwareDecoderSmooth(configuration);
-    } else {
+    } else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s)) {
         // FIXME: Provide more granular H.264 decoder information.
-        info.powerEfficient = true;
-        info.smooth = true;
-    }
+        info.powerEfficient = info.smooth = isH264EncoderSmooth(configuration);
+    } else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s))
+        info.powerEfficient = info.smooth = true;
+    else if (equalLettersIgnoringASCIICase(containerType, "video/av1"_s))
+        info.powerEfficient = false;
+
     info.supported = true;
     return { info };
 }
@@ -579,16 +573,16 @@ std::optional<MediaCapabilitiesEncodingInfo> LibWebRTCProvider::videoEncodingCap
     MediaCapabilitiesEncodingInfo info;
     ContentType contentType { configuration.contentType };
     auto containerType = contentType.containerType();
-    if (equalLettersIgnoringASCIICase(containerType, "video/vp8"_s) || equalLettersIgnoringASCIICase(containerType, "video/vp9"_s)) {
+    if (equalLettersIgnoringASCIICase(containerType, "video/vp8"_s) || equalLettersIgnoringASCIICase(containerType, "video/vp9"_s))
         info.powerEfficient = info.smooth = isVPXEncoderSmooth(configuration);
-        info.supported = true;
-    } else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s)) {
+    else if (equalLettersIgnoringASCIICase(containerType, "video/h264"_s))
         info.powerEfficient = info.smooth = isH264EncoderSmooth(configuration);
-        info.supported = true;
-    } else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s)) {
+    else if (equalLettersIgnoringASCIICase(containerType, "video/h265"_s))
         info.powerEfficient = info.smooth = true;
+    else if (equalLettersIgnoringASCIICase(containerType, "video/av1"_s))
+        info.powerEfficient = info.smooth = false;
+
         info.supported = true;
-    }
     return { info };
 }
 

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AdvancedPrivacyProtections.h"
 #include "FrameLoaderTypes.h"
 #include "ReferrerPolicy.h"
 #include "ResourceRequest.h"
@@ -35,13 +36,13 @@
 namespace WebCore {
 
 class Document;
-class Frame;
+class LocalFrame;
 class SecurityOrigin;
 
 class FrameLoadRequest {
 public:
-    WEBCORE_EXPORT FrameLoadRequest(Document&, SecurityOrigin&, ResourceRequest&&, const AtomString& frameName, InitiatedByMainFrame, const AtomString& downloadAttribute = { }, const SystemPreviewInfo& = { });
-    WEBCORE_EXPORT FrameLoadRequest(Frame&, const ResourceRequest&, const SubstituteData& = SubstituteData());
+    WEBCORE_EXPORT FrameLoadRequest(Document&, SecurityOrigin&, ResourceRequest&&, const AtomString& frameName, InitiatedByMainFrame, const AtomString& downloadAttribute = { });
+    WEBCORE_EXPORT FrameLoadRequest(LocalFrame&, const ResourceRequest&, const SubstituteData& = SubstituteData());
 
     WEBCORE_EXPORT ~FrameLoadRequest();
 
@@ -50,7 +51,7 @@ public:
 
     bool isEmpty() const { return m_resourceRequest.isEmpty(); }
 
-    Document& requester();
+    WEBCORE_EXPORT Document& requester();
     const SecurityOrigin& requesterSecurityOrigin() const;
 
     ResourceRequest& resourceRequest() { return m_resourceRequest; }
@@ -74,6 +75,9 @@ public:
 
     LockBackForwardList lockBackForwardList() const { return m_lockBackForwardList; }
     void setLockBackForwardList(LockBackForwardList value) { m_lockBackForwardList = value; }
+
+    bool isInitialFrameSrcLoad() const { return m_isInitialFrameSrcLoad; }
+    void setIsInitialFrameSrcLoad(bool isInitialFrameSrcLoad) { m_isInitialFrameSrcLoad = isInitialFrameSrcLoad; }
 
     const String& clientRedirectSourceForHistory() const { return m_clientRedirectSourceForHistory; }
     void setClientRedirectSourceForHistory(const String& clientRedirectSourceForHistory) { m_clientRedirectSourceForHistory = clientRedirectSourceForHistory; }
@@ -99,11 +103,11 @@ public:
 
     InitiatedByMainFrame initiatedByMainFrame() const { return m_initiatedByMainFrame; }
 
-    bool isSystemPreview() const { return m_systemPreviewInfo.isPreview; }
-    const SystemPreviewInfo& systemPreviewInfo() const { return m_systemPreviewInfo; }
-
     void setIsRequestFromClientOrUserInput() { m_isRequestFromClientOrUserInput = true; }
     bool isRequestFromClientOrUserInput() const { return m_isRequestFromClientOrUserInput; }
+
+    void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> policy) { m_advancedPrivacyProtections = policy; }
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
 
 private:
     Ref<Document> m_requester;
@@ -124,8 +128,9 @@ private:
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
     AtomString m_downloadAttribute;
     InitiatedByMainFrame m_initiatedByMainFrame { InitiatedByMainFrame::Unknown };
-    SystemPreviewInfo m_systemPreviewInfo;
     bool m_isRequestFromClientOrUserInput { false };
+    bool m_isInitialFrameSrcLoad { false };
+    OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
 };
 
 } // namespace WebCore

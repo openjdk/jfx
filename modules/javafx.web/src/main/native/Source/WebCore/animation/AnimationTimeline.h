@@ -26,25 +26,25 @@
 
 #pragma once
 
-#include "RenderStyle.h"
-#include "WebAnimation.h"
+#include "WebAnimationTypes.h"
 #include <wtf/Forward.h>
-#include <wtf/Markable.h>
-#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
+
+class WebAnimation;
 
 class AnimationTimeline : public RefCounted<AnimationTimeline>, public CanMakeWeakPtr<AnimationTimeline> {
 public:
     virtual ~AnimationTimeline();
 
-    virtual bool isDocumentTimeline() const { return false; }
+    // DocumentTimeline is currently the only subclass of AnimationTimeline.
+    constexpr static bool isDocumentTimeline() { return true; }
 
     const AnimationCollection& relevantAnimations() const { return m_animations; }
 
-    void forgetAnimation(WebAnimation*);
     virtual void animationTimingDidChange(WebAnimation&);
     virtual void removeAnimation(WebAnimation&);
 
@@ -52,9 +52,8 @@ public:
     virtual std::optional<Seconds> currentTime() { return m_currentTime; }
 
 protected:
-    explicit AnimationTimeline();
+    AnimationTimeline();
 
-    Vector<WeakPtr<WebAnimation>> m_allAnimations;
     AnimationCollection m_animations;
 
 private:

@@ -42,7 +42,7 @@ namespace JSC {
 #define USES USES_OR_DEFS
 #define DEFS USES_OR_DEFS
 
-void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const JSInstruction* instruction, Checkpoint checkpoint, const ScopedLambda<void(VirtualRegister)>& functor)
+void computeUsesForBytecodeIndexImpl(const JSInstruction* instruction, Checkpoint checkpoint, const ScopedLambda<void(VirtualRegister)>& functor)
 {
     OpcodeID opcodeID = instruction->opcodeID();
 
@@ -58,8 +58,6 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const JSInst
         int lastArg = -static_cast<int>(op.m_argv) + CallFrame::thisArgumentOffset();
         for (int i = 0; i < static_cast<int>(op.m_argc); i++)
             functor(VirtualRegister { lastArg + i });
-        if (opcodeID == op_call_eval)
-            functor(scopeRegister);
         return;
     };
 
@@ -91,7 +89,6 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const JSInst
     case op_profile_control_flow:
     case op_create_direct_arguments:
     case op_create_cloned_arguments:
-    case op_create_arguments_butterfly:
     case op_get_rest_length:
     case op_check_traps:
     case op_get_argument:
@@ -205,6 +202,7 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const JSInst
     USES(OpUnsigned, operand)
     USES(OpMov, src)
     USES(OpNewArrayWithSize, length)
+    USES(OpNewArrayWithSpecies, length, array)
     USES(OpCreateThis, callee)
     USES(OpCreatePromise, callee)
     USES(OpCreateGenerator, callee)
@@ -229,6 +227,7 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const JSInst
     USES(OpInByVal, base, property)
     USES(OpHasPrivateName, base, property)
     USES(OpHasPrivateBrand, base, brand)
+    USES(OpHasStructureWithFlags, operand)
     USES(OpOverridesHasInstance, constructor, hasInstanceValue)
     USES(OpInstanceof, value, prototype)
     USES(OpAdd, lhs, rhs)
@@ -289,6 +288,7 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const JSInst
     USES(OpEnumeratorNext, mode, index, base, enumerator)
     USES(OpEnumeratorGetByVal, base, mode, propertyName, index, enumerator)
     USES(OpEnumeratorInByVal, base, mode, propertyName, index, enumerator)
+    USES(OpEnumeratorPutByVal, base, mode, propertyName, index, enumerator, value)
     USES(OpEnumeratorHasOwnProperty, base, mode, propertyName, index, enumerator)
 
     case op_iterator_open: {
@@ -300,8 +300,8 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const JSInst
 
     case op_iterator_next: {
         auto bytecode = instruction->as<OpIteratorNext>();
-        useAtEachCheckpoint(bytecode.m_iterator);
-        useAtEachCheckpointStartingWith(OpIteratorNext::computeNext, bytecode.m_next, bytecode.m_iterable);
+        useAtEachCheckpoint(bytecode.m_iterator, bytecode.m_next);
+        useAtEachCheckpointStartingWith(OpIteratorNext::computeNext, bytecode.m_iterable);
         return;
     }
 
@@ -323,14 +323,21 @@ void computeUsesForBytecodeIndexImpl(VirtualRegister scopeRegister, const JSInst
     case op_construct:
         handleOpCallLike(instruction->as<OpConstruct>());
         return;
-    case op_call_eval:
-        handleOpCallLike(instruction->as<OpCallEval>());
+    case op_call_direct_eval: {
+        auto bytecode = instruction->as<OpCallDirectEval>();
+        handleOpCallLike(bytecode);
+        functor(bytecode.m_thisValue);
+        functor(bytecode.m_scope);
         return;
+    }
     case op_call:
         handleOpCallLike(instruction->as<OpCall>());
         return;
     case op_tail_call:
         handleOpCallLike(instruction->as<OpTailCall>());
+        return;
+    case op_call_ignore_result:
+        handleOpCallLike(instruction->as<OpCallIgnoreResult>());
         return;
 
     default:
@@ -397,6 +404,7 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const JSInstruction* inst
     case op_put_setter_by_val:
     case op_put_by_val:
     case op_put_by_val_direct:
+    case op_enumerator_put_by_val:
     case op_put_private_name:
     case op_set_private_brand:
     case op_check_private_brand:
@@ -406,6 +414,7 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const JSInstruction* inst
     case op_profile_type:
     case op_profile_control_flow:
     case op_put_to_arguments:
+    case op_call_ignore_result:
     case op_set_function_name:
     case op_check_traps:
     case op_log_shadow_chicken_prologue:
@@ -440,6 +449,7 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const JSInstruction* inst
     DEFS(OpSpread, dst)
     DEFS(OpNewArrayBuffer, dst)
     DEFS(OpNewArrayWithSize, dst)
+    DEFS(OpNewArrayWithSpecies, dst)
     DEFS(OpNewRegexp, dst)
     DEFS(OpNewFunc, dst)
     DEFS(OpNewFuncExp, dst)
@@ -469,7 +479,7 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const JSInstruction* inst
     DEFS(OpGetFromScope, dst)
     DEFS(OpCall, dst)
     DEFS(OpTailCall, dst)
-    DEFS(OpCallEval, dst)
+    DEFS(OpCallDirectEval, dst)
     DEFS(OpConstruct, dst)
     DEFS(OpTryGetById, dst)
     DEFS(OpGetById, dst)
@@ -500,6 +510,7 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const JSInstruction* inst
     DEFS(OpInByVal, dst)
     DEFS(OpHasPrivateName, dst)
     DEFS(OpHasPrivateBrand, dst)
+    DEFS(OpHasStructureWithFlags, dst)
     DEFS(OpToNumber, dst)
     DEFS(OpToNumeric, dst)
     DEFS(OpToString, dst)
@@ -542,7 +553,6 @@ void computeDefsForBytecodeIndexImpl(unsigned numVars, const JSInstruction* inst
     DEFS(OpCreateDirectArguments, dst)
     DEFS(OpCreateScopedArguments, dst)
     DEFS(OpCreateClonedArguments, dst)
-    DEFS(OpCreateArgumentsButterfly, dst)
     DEFS(OpDelById, dst)
     DEFS(OpDelByVal, dst)
     DEFS(OpUnsigned, dst)

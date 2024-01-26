@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -78,6 +78,7 @@ class JITStubRoutine;
 class JITStubRoutineSet;
 class JSCell;
 class JSImmutableButterfly;
+class JSRopeString;
 class JSString;
 class JSValue;
 class MachineThreads;
@@ -85,7 +86,7 @@ class MarkStackArray;
 class MarkStackMergingConstraint;
 class MarkedJSValueRefArray;
 class BlockDirectory;
-class MarkedArgumentBufferBase;
+class MarkedVectorBase;
 class MarkingConstraint;
 class MarkingConstraintSet;
 class MutatorScheduler;
@@ -124,7 +125,7 @@ class Heap;
     v(getterSetterSpace, cellHeapCellType, GetterSetter) \
     v(globalLexicalEnvironmentSpace, globalLexicalEnvironmentHeapCellType, JSGlobalLexicalEnvironment) \
     v(internalFunctionSpace, cellHeapCellType, InternalFunction) \
-    v(jsProxySpace, cellHeapCellType, JSProxy) \
+    v(jsGlobalProxySpace, cellHeapCellType, JSGlobalProxy) \
     v(nativeExecutableSpace, destructibleCellHeapCellType, NativeExecutable) \
     v(numberObjectSpace, cellHeapCellType, NumberObject) \
     v(plainObjectSpace, cellHeapCellType, JSNonFinalObject) \
@@ -133,7 +134,7 @@ class Heap;
     v(propertyTableSpace, destructibleCellHeapCellType, PropertyTable) \
     v(regExpSpace, destructibleCellHeapCellType, RegExp) \
     v(regExpObjectSpace, cellHeapCellType, RegExpObject) \
-    v(ropeStringSpace, stringHeapCellType, JSRopeString) \
+    v(ropeStringSpace, ropeStringHeapCellType, JSRopeString) \
     v(scopedArgumentsSpace, cellHeapCellType, ScopedArguments) \
     v(sparseArrayValueMapSpace, destructibleCellHeapCellType, SparseArrayValueMap) \
     v(stringSpace, stringHeapCellType, JSString) \
@@ -169,12 +170,13 @@ class Heap;
 
 #if ENABLE(WEBASSEMBLY)
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v) \
-    v(jsToWasmICCalleeSpace, cellHeapCellType, JSToWasmICCallee) \
+    v(webAssemblyArraySpace, webAssemblyArrayHeapCellType, JSWebAssemblyArray) \
     v(webAssemblyExceptionSpace, webAssemblyExceptionHeapCellType, JSWebAssemblyException) \
     v(webAssemblyFunctionSpace, webAssemblyFunctionHeapCellType, WebAssemblyFunction) \
     v(webAssemblyGlobalSpace, webAssemblyGlobalHeapCellType, JSWebAssemblyGlobal) \
     v(webAssemblyInstanceSpace, webAssemblyInstanceHeapCellType, JSWebAssemblyInstance) \
     v(webAssemblyMemorySpace, webAssemblyMemoryHeapCellType, JSWebAssemblyMemory) \
+    v(webAssemblyStructSpace, webAssemblyStructHeapCellType, JSWebAssemblyStruct) \
     v(webAssemblyModuleSpace, webAssemblyModuleHeapCellType, JSWebAssemblyModule) \
     v(webAssemblyModuleRecordSpace, webAssemblyModuleRecordHeapCellType, WebAssemblyModuleRecord) \
     v(webAssemblyTableSpace, webAssemblyTableHeapCellType, JSWebAssemblyTable) \
@@ -220,6 +222,7 @@ class Heap;
     v(intlCollatorSpace, intlCollatorHeapCellType, IntlCollator) \
     v(intlDateTimeFormatSpace, intlDateTimeFormatHeapCellType, IntlDateTimeFormat) \
     v(intlDisplayNamesSpace, intlDisplayNamesHeapCellType, IntlDisplayNames) \
+    v(intlDurationFormatSpace, intlDurationFormatHeapCellType, IntlDurationFormat) \
     v(intlListFormatSpace, intlListFormatHeapCellType, IntlListFormat) \
     v(intlLocaleSpace, intlLocaleHeapCellType, IntlLocale) \
     v(intlNumberFormatSpace, intlNumberFormatHeapCellType, IntlNumberFormat) \
@@ -230,6 +233,7 @@ class Heap;
     v(intlSegmentsSpace, intlSegmentsHeapCellType, IntlSegments) \
     v(javaScriptCallFrameSpace, javaScriptCallFrameHeapCellType, Inspector::JSJavaScriptCallFrame) \
     v(jsModuleRecordSpace, jsModuleRecordHeapCellType, JSModuleRecord) \
+    v(syntheticModuleRecordSpace, syntheticModuleRecordHeapCellType, SyntheticModuleRecord) \
     v(mapBucketSpace, cellHeapCellType, JSMap::BucketType) \
     v(mapIteratorSpace, cellHeapCellType, JSMapIterator) \
     v(mapSpace, cellHeapCellType, JSMap) \
@@ -255,6 +259,7 @@ class Heap;
     v(temporalDurationSpace, cellHeapCellType, TemporalDuration) \
     v(temporalInstantSpace, cellHeapCellType, TemporalInstant) \
     v(temporalPlainDateSpace, cellHeapCellType, TemporalPlainDate) \
+    v(temporalPlainDateTimeSpace, cellHeapCellType, TemporalPlainDateTime) \
     v(temporalPlainTimeSpace, cellHeapCellType, TemporalPlainTime) \
     v(temporalTimeZoneSpace, cellHeapCellType, TemporalTimeZone) \
     v(uint8ArraySpace, cellHeapCellType, JSUint8Array) \
@@ -383,6 +388,7 @@ public:
     // call both of these functions: Calling only one may trigger catastropic
     // memory growth.
     void reportExtraMemoryAllocated(size_t);
+    void reportExtraMemoryAllocated(GCDeferralContext*, size_t);
     JS_EXPORT_PRIVATE void reportExtraMemoryVisited(size_t);
 
 #if ENABLE(RESOURCE_USAGE)
@@ -409,7 +415,7 @@ public:
     JS_EXPORT_PRIVATE std::unique_ptr<TypeCountSet> protectedObjectTypeCounts();
     JS_EXPORT_PRIVATE std::unique_ptr<TypeCountSet> objectTypeCounts();
 
-    HashSet<MarkedArgumentBufferBase*>& markListSet();
+    HashSet<MarkedVectorBase*>& markListSet();
     void addMarkedJSValueRefArray(MarkedJSValueRefArray*);
 
     template<typename Functor> void forEachProtectedCell(const Functor&);
@@ -607,7 +613,7 @@ private:
 
     Lock& lock() { return m_lock; }
 
-    JS_EXPORT_PRIVATE void reportExtraMemoryAllocatedSlowCase(size_t);
+    JS_EXPORT_PRIVATE void reportExtraMemoryAllocatedSlowCase(GCDeferralContext*, size_t);
     JS_EXPORT_PRIVATE void deprecatedReportExtraMemorySlowCase(size_t);
 
     bool shouldCollectInCollectorThread(const AbstractLocker&);
@@ -689,7 +695,7 @@ private:
     void harvestWeakReferences();
 
     template<typename CellType, typename CellSet>
-    void finalizeMarkedUnconditionalFinalizers(CellSet&);
+    void finalizeMarkedUnconditionalFinalizers(CellSet&, CollectionScope);
 
     void finalizeUnconditionalFinalizers();
 
@@ -778,7 +784,7 @@ private:
     size_t m_deprecatedExtraMemorySize { 0 };
 
     ProtectCountSet m_protectedValues;
-    HashSet<MarkedArgumentBufferBase*> m_markListSet;
+    HashSet<MarkedVectorBase*> m_markListSet;
     SentinelLinkedList<MarkedJSValueRefArray, BasicRawSentinelNode<MarkedJSValueRefArray>> m_markedJSValueRefArrays;
 
     std::unique_ptr<MachineThreads> m_machineThreads;
@@ -935,9 +941,11 @@ public:
     IsoHeapCellType injectedScriptHostSpaceHeapCellType;
     IsoHeapCellType javaScriptCallFrameHeapCellType;
     IsoHeapCellType jsModuleRecordHeapCellType;
+    IsoHeapCellType syntheticModuleRecordHeapCellType;
     IsoHeapCellType moduleNamespaceObjectHeapCellType;
     IsoHeapCellType nativeStdFunctionHeapCellType;
     IsoInlinedHeapCellType<JSString> stringHeapCellType;
+    IsoInlinedHeapCellType<JSRopeString> ropeStringHeapCellType;
     IsoHeapCellType weakMapHeapCellType;
     IsoHeapCellType weakSetHeapCellType;
     JSDestructibleObjectHeapCellType destructibleObjectHeapCellType;
@@ -953,6 +961,7 @@ public:
     IsoHeapCellType intlCollatorHeapCellType;
     IsoHeapCellType intlDateTimeFormatHeapCellType;
     IsoHeapCellType intlDisplayNamesHeapCellType;
+    IsoHeapCellType intlDurationFormatHeapCellType;
     IsoHeapCellType intlListFormatHeapCellType;
     IsoHeapCellType intlLocaleHeapCellType;
     IsoHeapCellType intlNumberFormatHeapCellType;
@@ -962,11 +971,13 @@ public:
     IsoHeapCellType intlSegmenterHeapCellType;
     IsoHeapCellType intlSegmentsHeapCellType;
 #if ENABLE(WEBASSEMBLY)
+    IsoHeapCellType webAssemblyArrayHeapCellType;
     IsoHeapCellType webAssemblyExceptionHeapCellType;
     IsoHeapCellType webAssemblyFunctionHeapCellType;
     IsoHeapCellType webAssemblyGlobalHeapCellType;
     IsoHeapCellType webAssemblyInstanceHeapCellType;
     IsoHeapCellType webAssemblyMemoryHeapCellType;
+    IsoHeapCellType webAssemblyStructHeapCellType;
     IsoHeapCellType webAssemblyModuleHeapCellType;
     IsoHeapCellType webAssemblyModuleRecordHeapCellType;
     IsoHeapCellType webAssemblyTableHeapCellType;

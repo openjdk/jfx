@@ -1,6 +1,7 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,7 +23,9 @@
 #include "SVGTextChunk.h"
 
 #include "RenderSVGInlineText.h"
+#include "RenderStyleInlines.h"
 #include "SVGInlineTextBoxInlines.h"
+#include "SVGRenderStyle.h"
 #include "SVGTextContentElement.h"
 #include "SVGTextFragment.h"
 
@@ -141,7 +144,10 @@ void SVGTextChunk::layout(HashMap<SVGInlineTextBox*, AffineTransform>& textBoxTr
 
 void SVGTextChunk::processTextLengthSpacingCorrection() const
 {
-    float textLengthShift = (desiredTextLength() - totalLength()) / totalCharacters();
+    float textLengthShift = 0;
+    if (totalCharacters() > 1)
+        textLengthShift = (desiredTextLength() - totalLength()) / (totalCharacters() - 1);
+
     bool isVerticalText = m_chunkStyle & VerticalText;
     unsigned atCharacter = 0;
 

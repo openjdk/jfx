@@ -35,34 +35,29 @@
 #include "ReferrerPolicy.h"
 #include "SecurityOriginData.h"
 #include <wtf/Forward.h>
-#include <wtf/JSONValues.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
 class FormData;
-class Frame;
 class HTTPHeaderMap;
+class LocalFrame;
 class ResourceRequest;
 
-enum class ViolationReportType : uint8_t {
-    ContentSecurityPolicy,
-    StandardReportingAPIViolation // https://www.w3.org/TR/reporting/#try-delivery
-};
-
 enum class ContentSecurityPolicyImposition : uint8_t;
+enum class ViolationReportType : uint8_t;
 
 class PingLoader {
 public:
-    static void loadImage(Frame&, const URL&);
-    static void sendPing(Frame&, const URL& pingURL, const URL& destinationURL);
-    WEBCORE_EXPORT static void sendViolationReport(Frame&, const URL& reportURL, Ref<FormData>&& report, ViolationReportType);
+    static void loadImage(LocalFrame&, const URL&);
+    static void sendPing(LocalFrame&, const URL& pingURL, const URL& destinationURL);
+    WEBCORE_EXPORT static void sendViolationReport(LocalFrame&, const URL& reportURL, Ref<FormData>&& report, ViolationReportType);
 
     static String sanitizeURLForReport(const URL&);
 
 private:
-    enum class ShouldFollowRedirects { No, Yes };
-    static void startPingLoad(Frame&, ResourceRequest&, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects, ContentSecurityPolicyImposition, ReferrerPolicy, std::optional<ViolationReportType> = std::nullopt);
+    enum class ShouldFollowRedirects : bool { No, Yes };
+    static void startPingLoad(LocalFrame&, ResourceRequest&, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects, ContentSecurityPolicyImposition, ReferrerPolicy, std::optional<ViolationReportType> = std::nullopt);
 };
 
 } // namespace WebCore

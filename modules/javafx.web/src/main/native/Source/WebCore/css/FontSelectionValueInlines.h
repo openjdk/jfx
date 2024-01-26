@@ -30,33 +30,6 @@
 
 namespace WebCore {
 
-inline bool isCSS21Weight(FontSelectionValue weight)
-{
-    return weight == FontSelectionValue(100)
-        || weight == FontSelectionValue(200)
-        || weight == FontSelectionValue(300)
-        || weight == FontSelectionValue(400)
-        || weight == FontSelectionValue(500)
-        || weight == FontSelectionValue(600)
-        || weight == FontSelectionValue(700)
-        || weight == FontSelectionValue(800)
-        || weight == FontSelectionValue(900);
-}
-
-inline bool isCSS21Weight(int weight)
-{
-    return !((weight % 100) || weight < 100 || weight > 900);
-}
-
-inline std::optional<CSSValueID> fontWeightKeyword(FontSelectionValue weight)
-{
-    if (weight == normalWeightValue())
-        return CSSValueNormal;
-    if (weight == boldWeightValue())
-        return CSSValueBold;
-    return std::nullopt;
-}
-
 inline std::optional<FontSelectionValue> fontWeightValue(CSSValueID value)
 {
     switch (value) {
@@ -128,6 +101,11 @@ inline std::optional<CSSValueID> fontStyleKeyword(std::optional<FontSelectionVal
     if (style.value() == italicValue())
         return axis == FontStyleAxis::ital ? CSSValueItalic : CSSValueOblique;
     return std::nullopt;
+}
+
+inline FontSelectionValue normalizedFontItalicValue(float inputValue)
+{
+    return FontSelectionValue { std::clamp(inputValue, -90.0f, 90.0f) };
 }
 
 }

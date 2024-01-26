@@ -27,7 +27,9 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "AudioUtilities.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/MathExtras.h>
+#include <wtf/WeakRandom.h>
 
 namespace WebCore {
 
@@ -69,11 +71,19 @@ size_t timeToSampleFrame(double time, double sampleRate, SampleFrameRounding rou
     }
 
     // Just return the largest possible size_t value if necessary.
-    if (frame >= std::numeric_limits<size_t>::max())
+    if (frame >= static_cast<double>(std::numeric_limits<size_t>::max()))
         return std::numeric_limits<size_t>::max();
 
     return static_cast<size_t>(frame);
 }
+
+void applyNoise(float* values, size_t numberOfElementsToProcess, float magnitude)
+{
+    WeakRandom generator;
+    for (size_t i = 0; i < numberOfElementsToProcess; ++i)
+        values[i] *= 1 + magnitude * (2 * generator.get() - 1);
+}
+
 } // AudioUtilites
 
 } // WebCore

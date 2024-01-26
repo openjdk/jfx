@@ -75,7 +75,7 @@ bool ThreadedScrollingTree::handleWheelEventAfterMainThread(const PlatformWheelE
     OptionSet<WheelEventProcessingSteps> processingSteps;
     if (gestureState.value_or(WheelScrollGestureState::Blocking) == WheelScrollGestureState::NonBlocking) {
         allowLatching = true;
-        processingSteps = { WheelEventProcessingSteps::ScrollingThread, WheelEventProcessingSteps::MainThreadForNonBlockingDOMEventDispatch };
+        processingSteps = { WheelEventProcessingSteps::AsyncScrolling, WheelEventProcessingSteps::NonBlockingDOMEventDispatch };
     }
 
     SetForScope disallowLatchingScope(m_allowLatching, allowLatching);
@@ -171,10 +171,18 @@ void ThreadedScrollingTree::didCommitTreeOnScrollingThread()
         if (!is<ScrollingTreeScrollingNode>(targetNode))
             continue;
 
-        downcast<ScrollingTreeScrollingNode>(*targetNode).startAnimatedScrollToPosition(it.value.scrollPosition);
+        auto& node = downcast<ScrollingTreeScrollingNode>(*targetNode);
+        node.startAnimatedScrollToPosition(it.value.destinationPosition(node.currentScrollPosition()));
     }
 
-    m_nodesWithPendingScrollAnimations.clear();
+    auto nodesWithPendingKeyboardScrollAnimations = std::exchange(m_nodesWithPendingKeyboardScrollAnimations, { });
+    for (const auto& [key, value] : nodesWithPendingKeyboardScrollAnimations) {
+        RefPtr targetNode = nodeForID(key);
+        if (!is<ScrollingTreeScrollingNode>(targetNode))
+            continue;
+
+        downcast<ScrollingTreeScrollingNode>(*targetNode).handleKeyboardScrollRequest(value);
+    }
 }
 
 bool ThreadedScrollingTree::scrollingTreeNodeRequestsScroll(ScrollingNodeID nodeID, const RequestedScrollData& request)
@@ -184,6 +192,12 @@ bool ThreadedScrollingTree::scrollingTreeNodeRequestsScroll(ScrollingNodeID node
         return true;
     }
     return false;
+}
+
+bool ThreadedScrollingTree::scrollingTreeNodeRequestsKeyboardScroll(ScrollingNodeID nodeID, const RequestedKeyboardScrollData& request)
+{
+    m_nodesWithPendingKeyboardScrollAnimations.set(nodeID, request);
+    return true;
 }
 
 void ThreadedScrollingTree::propagateSynchronousScrollingReasons(const HashSet<ScrollingNodeID>& synchronousScrollingNodes)
@@ -227,12 +241,10 @@ bool ThreadedScrollingTree::canUpdateLayersOnScrollingThread() const
 
 void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingTreeScrollingNode& node, ScrollingLayerPositionAction scrollingLayerPositionAction)
 {
+    ScrollingTree::scrollingTreeNodeDidScroll(node, scrollingLayerPositionAction);
+
     if (!m_scrollingCoordinator)
         return;
-
-    auto scrollPosition = node.currentScrollPosition();
-    if (node.isRootNode())
-        setMainFrameScrollPosition(scrollPosition);
 
     if (isHandlingProgrammaticScroll())
         return;
@@ -241,6 +253,7 @@ void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingTreeScrollingNod
     if (is<ScrollingTreeFrameScrollingNode>(node))
         layoutViewportOrigin = downcast<ScrollingTreeFrameScrollingNode>(node).layoutViewport().location();
 
+    auto scrollPosition = node.currentScrollPosition();
     auto scrollUpdate = ScrollUpdate { node.scrollingNodeID(), scrollPosition, layoutViewportOrigin, ScrollUpdateType::PositionUpdate, scrollingLayerPositionAction };
 
     if (RunLoop::isMain()) {
@@ -252,21 +265,21 @@ void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingTreeScrollingNod
 
     addPendingScrollUpdate(WTFMove(scrollUpdate));
 
-    auto deferrer = WheelEventTestMonitorCompletionDeferrer { wheelEventTestMonitor(), reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(node.scrollingNodeID()), WheelEventTestMonitor::ScrollingThreadSyncNeeded };
+    auto deferrer = ScrollingTreeWheelEventTestMonitorCompletionDeferrer { *this, node.scrollingNodeID(), WheelEventTestMonitor::ScrollingThreadSyncNeeded };
     RunLoop::main().dispatch([strongThis = Ref { *this }, deferrer = WTFMove(deferrer)] {
         if (auto* scrollingCoordinator = strongThis->m_scrollingCoordinator.get())
             scrollingCoordinator->scrollingThreadAddedPendingUpdate();
     });
 }
 
-void ThreadedScrollingTree::scrollingTreeNodeDidStopAnimatedScroll(ScrollingTreeScrollingNode& node)
+void ThreadedScrollingTree::scrollingTreeNodeScrollUpdated(ScrollingTreeScrollingNode& node, const ScrollUpdateType& scrollUpdateType)
 {
     if (!m_scrollingCoordinator)
         return;
 
-    LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingTree::scrollingTreeNodeDidStopAnimatedScroll " << node.scrollingNodeID());
+    LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingTree::scrollingTreeNodeScrollUpdated " << node.scrollingNodeID() << " update type " << scrollUpdateType);
 
-    auto scrollUpdate = ScrollUpdate { node.scrollingNodeID(), { }, { }, ScrollUpdateType::AnimatedScrollDidEnd };
+    auto scrollUpdate = ScrollUpdate { node.scrollingNodeID(), { }, { }, scrollUpdateType };
 
     if (RunLoop::isMain()) {
         m_scrollingCoordinator->applyScrollUpdate(WTFMove(scrollUpdate));
@@ -279,6 +292,26 @@ void ThreadedScrollingTree::scrollingTreeNodeDidStopAnimatedScroll(ScrollingTree
         if (auto* scrollingCoordinator = strongThis->m_scrollingCoordinator.get())
             scrollingCoordinator->scrollingThreadAddedPendingUpdate();
     });
+}
+
+void ThreadedScrollingTree::scrollingTreeNodeWillStartAnimatedScroll(ScrollingTreeScrollingNode& node)
+{
+    scrollingTreeNodeScrollUpdated(node, ScrollUpdateType::AnimatedScrollWillStart);
+}
+
+void ThreadedScrollingTree::scrollingTreeNodeDidStopAnimatedScroll(ScrollingTreeScrollingNode& node)
+{
+    scrollingTreeNodeScrollUpdated(node, ScrollUpdateType::AnimatedScrollDidEnd);
+}
+
+void ThreadedScrollingTree::scrollingTreeNodeWillStartWheelEventScroll(ScrollingTreeScrollingNode& node)
+{
+    scrollingTreeNodeScrollUpdated(node, ScrollUpdateType::WheelEventScrollWillStart);
+}
+
+void ThreadedScrollingTree::scrollingTreeNodeDidStopWheelEventScroll(ScrollingTreeScrollingNode& node)
+{
+    scrollingTreeNodeScrollUpdated(node, ScrollUpdateType::WheelEventScrollDidEnd);
 }
 
 void ThreadedScrollingTree::reportSynchronousScrollingReasonsChanged(MonotonicTime timestamp, OptionSet<SynchronousScrollingReason> reasons)
@@ -326,6 +359,7 @@ void ThreadedScrollingTree::handleWheelEventPhase(ScrollingNodeID nodeID, Platfo
         scrollingCoordinator->handleWheelEventPhase(nodeID, phase);
     });
 }
+#endif
 
 void ThreadedScrollingTree::setActiveScrollSnapIndices(ScrollingNodeID nodeID, std::optional<unsigned> horizontalIndex, std::optional<unsigned> verticalIndex)
 {
@@ -337,7 +371,6 @@ void ThreadedScrollingTree::setActiveScrollSnapIndices(ScrollingNodeID nodeID, s
         scrollingCoordinator->setActiveScrollSnapIndices(nodeID, horizontalIndex, verticalIndex);
     });
 }
-#endif
 
 void ThreadedScrollingTree::lockLayersForHitTesting()
 {
@@ -347,11 +380,6 @@ void ThreadedScrollingTree::lockLayersForHitTesting()
 void ThreadedScrollingTree::unlockLayersForHitTesting()
 {
     m_layerHitTestMutex.unlock();
-}
-
-bool ThreadedScrollingTree::scrollingThreadIsActive()
-{
-    return hasProcessedWheelEventsRecently() || hasNodeWithActiveScrollAnimations();
 }
 
 void ThreadedScrollingTree::didScheduleRenderingUpdate()
@@ -365,7 +393,7 @@ void ThreadedScrollingTree::willStartRenderingUpdate()
 
     m_renderingUpdateWasScheduled = false;
 
-    if (!scrollingThreadIsActive())
+    if (!hasRecentActivity())
         return;
 
     tracePoint(ScrollingThreadRenderUpdateSyncStart);
@@ -383,18 +411,6 @@ void ThreadedScrollingTree::willStartRenderingUpdate()
     m_state = SynchronizationState::InRenderingUpdate;
 }
 
-Seconds ThreadedScrollingTree::frameDuration()
-{
-    auto displayFPS = nominalFramesPerSecond().value_or(FullSpeedFramesPerSecond);
-    return 1_s / (double)displayFPS;
-}
-
-Seconds ThreadedScrollingTree::maxAllowableRenderingUpdateDurationForSynchronization()
-{
-    constexpr double allowableFrameFraction = 0.5;
-    return allowableFrameFraction * frameDuration();
-}
-
 void ThreadedScrollingTree::hasNodeWithAnimatedScrollChanged(bool hasNodeWithAnimatedScroll)
 {
     auto scrollingCoordinator = m_scrollingCoordinator;
@@ -404,19 +420,6 @@ void ThreadedScrollingTree::hasNodeWithAnimatedScrollChanged(bool hasNodeWithAni
     RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), hasNodeWithAnimatedScroll] {
         scrollingCoordinator->hasNodeWithAnimatedScrollChanged(hasNodeWithAnimatedScroll);
     });
-}
-
-void ThreadedScrollingTree::serviceScrollAnimations(MonotonicTime currentTime)
-{
-    ASSERT(ScrollingThread::isCurrentThread());
-
-    for (auto nodeID : nodesWithActiveScrollAnimations()) {
-        RefPtr targetNode = nodeForID(nodeID);
-        if (!is<ScrollingTreeScrollingNode>(targetNode))
-            continue;
-
-        downcast<ScrollingTreeScrollingNode>(*targetNode).serviceScrollAnimation(currentTime);
-    }
 }
 
 // This code allows the main thread about half a frame to complete its rendering udpate. If the main thread
@@ -482,7 +485,7 @@ void ThreadedScrollingTree::scheduleDelayedRenderingUpdateDetectionTimer(Seconds
     ASSERT(m_treeLock.isLocked());
 
     if (!m_delayedRenderingUpdateDetectionTimer)
-        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer<ThreadedScrollingTree>>(RunLoop::current(), this, &ThreadedScrollingTree::delayedRenderingUpdateDetectionTimerFired);
+        m_delayedRenderingUpdateDetectionTimer = makeUnique<RunLoop::Timer>(RunLoop::current(), this, &ThreadedScrollingTree::delayedRenderingUpdateDetectionTimerFired);
 
     m_delayedRenderingUpdateDetectionTimer->startOneShot(delay);
 }
@@ -529,7 +532,7 @@ void ThreadedScrollingTree::displayDidRefreshOnScrollingThread()
 
 void ThreadedScrollingTree::displayDidRefresh(PlatformDisplayID displayID)
 {
-    bool scrollingThreadIsActive = this->scrollingThreadIsActive();
+    bool scrollingThreadIsActive = hasRecentActivity();
 
     // We're on the EventDispatcher thread or in the ThreadedCompositor thread here.
     tracePoint(ScrollingTreeDisplayDidRefresh, displayID, scrollingThreadIsActive);
@@ -553,6 +556,45 @@ void ThreadedScrollingTree::removePendingScrollAnimationForNode(ScrollingNodeID 
 bool ThreadedScrollingTree::isScrollingSynchronizedWithMainThread()
 {
     return m_state != SynchronizationState::Desynchronized;
+}
+
+void ThreadedScrollingTree::receivedWheelEventWithPhases(PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase)
+{
+    auto scrollingCoordinator = m_scrollingCoordinator;
+    if (!scrollingCoordinator)
+        return;
+
+    RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), phase, momentumPhase] {
+        scrollingCoordinator->receivedWheelEventWithPhases(phase, momentumPhase);
+    });
+}
+
+void ThreadedScrollingTree::deferWheelEventTestCompletionForReason(ScrollingNodeID nodeID, WheelEventTestMonitor::DeferReason reason)
+{
+    if (!isMonitoringWheelEvents())
+        return;
+
+    auto scrollingCoordinator = m_scrollingCoordinator;
+    if (!scrollingCoordinator)
+        return;
+
+    RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), nodeID, reason] {
+        scrollingCoordinator->deferWheelEventTestCompletionForReason(nodeID, reason);
+    });
+}
+
+void ThreadedScrollingTree::removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID nodeID, WheelEventTestMonitor::DeferReason reason)
+{
+    if (!isMonitoringWheelEvents())
+        return;
+
+    auto scrollingCoordinator = m_scrollingCoordinator;
+    if (!scrollingCoordinator)
+        return;
+
+    RunLoop::main().dispatch([scrollingCoordinator = WTFMove(scrollingCoordinator), nodeID, reason] {
+        scrollingCoordinator->removeWheelEventTestCompletionDeferralForReason(nodeID, reason);
+    });
 }
 
 } // namespace WebCore

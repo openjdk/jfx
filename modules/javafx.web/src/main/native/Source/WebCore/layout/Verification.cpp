@@ -26,18 +26,18 @@
 #include "config.h"
 #include "LayoutState.h"
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+#if ASSERT_ENABLED
 
-#ifndef NDEBUG
 #include "BlockFormattingState.h"
 #include "InlineFormattingState.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
-#include "LayoutContainerBox.h"
 #include "LayoutContext.h"
+#include "LayoutElementBox.h"
+#include "LayoutInitialContainingBlock.h"
 #include "LayoutTreeBuilder.h"
 #include "LegacyInlineTextBox.h"
-#include "RenderBox.h"
+#include "RenderBoxInlines.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
 #include "RenderTableCell.h"
@@ -54,7 +54,7 @@ static bool areEssentiallyEqual(LayoutUnit a, LayoutUnit b)
         return true;
     // 1/4th CSS pixel.
     constexpr float epsilon = kFixedPointDenominator / 4;
-    return abs(a.rawValue() - b.rawValue()) <= epsilon;
+    return std::abs(a.rawValue() - b.rawValue()) <= epsilon;
 }
 
 static bool areEssentiallyEqual(float a, InlineLayoutUnit b)
@@ -81,13 +81,13 @@ static bool checkForMatchingNonTextRuns(const InlineDisplay::Box& box, const Web
 
 static bool checkForMatchingTextRuns(InlineDisplay::Box& box, const WebCore::LegacyInlineTextBox& inlineTextBox)
 {
-    if (!box.text())
+    if (!box.isTextOrSoftLineBreak())
         return false;
     return areEssentiallyEqual(inlineTextBox.left(), box.left())
         && areEssentiallyEqual(inlineTextBox.right(), box.right())
         && areEssentiallyEqual(inlineTextBox.top(), box.top())
         && areEssentiallyEqual(inlineTextBox.bottom(), box.bottom())
-        && (inlineTextBox.isLineBreak() || (inlineTextBox.start() == box.text()->start() && inlineTextBox.end() == box.text()->end()));
+        && (inlineTextBox.isLineBreak() || (inlineTextBox.start() == box.text().start() && inlineTextBox.end() == box.text().end()));
 }
 
 static void collectFlowBoxSubtree(const LegacyInlineFlowBox& flowbox, Vector<WebCore::LegacyInlineBox*>& inlineBoxes)
@@ -115,10 +115,12 @@ static void collectInlineBoxes(const RenderBlockFlow& root, Vector<WebCore::Lega
     }
 }
 
-static bool outputMismatchingComplexLineInformationIfNeeded(TextStream& stream, const LayoutState& layoutState, const RenderBlockFlow& blockFlow, const ContainerBox& inlineFormattingRoot)
+static bool outputMismatchingComplexLineInformationIfNeeded(TextStream& stream, const LayoutState& layoutState, const RenderBlockFlow& blockFlow, const ElementBox& inlineFormattingRoot)
 {
-    auto& inlineFormattingState = layoutState.formattingStateForFormattingContext(inlineFormattingRoot);
-    auto& boxes = downcast<InlineFormattingState>(inlineFormattingState).boxes();
+    UNUSED_PARAM(layoutState);
+    UNUSED_PARAM(inlineFormattingRoot);
+    // FIXME: Populate display boxes.
+    auto boxes = InlineDisplay::Boxes { };
     // Collect inlineboxes.
     Vector<WebCore::LegacyInlineBox*> inlineBoxes;
     collectInlineBoxes(blockFlow, inlineBoxes);
@@ -153,8 +155,8 @@ static bool outputMismatchingComplexLineInformationIfNeeded(TextStream& stream, 
             stream << " (" << inlineBox->logicalLeft() << ", " << inlineBox->logicalTop() << ") (" << inlineBox->logicalWidth() << "x" << inlineBox->logicalHeight() << ")";
 
             stream << " inline box";
-            if (box.text())
-                stream << " (" << box.text()->start() << ", " << box.text()->end() << ")";
+            if (box.isTextOrSoftLineBreak())
+                stream << " (" << box.text().start() << ", " << box.text().end() << ")";
             stream << " (" << box.left() << ", " << box.top() << ") (" << box.width() << "x" << box.height() << ")";
             stream.nextLine();
             mismatched = true;
@@ -184,7 +186,7 @@ static bool outputMismatchingBlockBoxInformationIfNeeded(TextStream& stream, con
             return BoxGeometry::borderBoxRect(boxGeometry);
 
         // Produce a RenderBox matching margin box.
-        auto containingBlockWidth = layoutState.geometryForBox(layoutBox.containingBlock()).contentBoxWidth();
+        auto containingBlockWidth = layoutState.geometryForBox(FormattingContext::containingBlock(layoutBox)).contentBoxWidth();
         auto marginStart = LayoutUnit { };
         auto& marginStartStyle = layoutBox.style().marginStart();
         if (marginStartStyle.isFixed() || marginStartStyle.isPercent() || marginStartStyle.isCalculated())
@@ -197,8 +199,8 @@ static bool outputMismatchingBlockBoxInformationIfNeeded(TextStream& stream, con
 
         auto marginBefore = boxGeometry.marginBefore();
         auto marginAfter = boxGeometry.marginAfter();
-        if (layoutBox.formattingContextRoot().establishesBlockFormattingContext()) {
-            auto& formattingState = downcast<BlockFormattingState>(layoutState.formattingStateForBox(layoutBox));
+        if (FormattingContext::formattingContextRoot(layoutBox).establishesBlockFormattingContext()) {
+            auto& formattingState = downcast<BlockFormattingState>(layoutState.formattingStateForFormattingContext(FormattingContext::formattingContextRoot(layoutBox)));
             auto verticalMargin = formattingState.usedVerticalMargin(layoutBox);
             marginBefore = verticalMargin.nonCollapsedValues.before;
             marginAfter = verticalMargin.nonCollapsedValues.after;
@@ -221,7 +223,7 @@ static bool outputMismatchingBlockBoxInformationIfNeeded(TextStream& stream, con
     if (layoutBox.isTableBox()) {
         // When the <table> is out-of-flow positioned, the wrapper table box has the offset
         // while the actual table box is static, inflow.
-        auto& tableWrapperBoxGeometry = layoutState.geometryForBox(layoutBox.containingBlock());
+        auto& tableWrapperBoxGeometry = layoutState.geometryForBox(FormattingContext::containingBlock(layoutBox));
         boxGeometry.moveBy(BoxGeometry::borderBoxTopLeft(tableWrapperBoxGeometry));
         // Table wrapper box has the margin values for the table.
         boxGeometry.setHorizontalMargin(tableWrapperBoxGeometry.horizontalMargin());
@@ -288,15 +290,15 @@ static bool verifyAndOutputSubtree(TextStream& stream, const LayoutState& contex
 {
     // Rendering code does not have the concept of table wrapper box. Skip it by verifying the first child(table box) instead.
     if (layoutBox.isTableWrapperBox())
-        return verifyAndOutputSubtree(stream, context, renderer, *downcast<ContainerBox>(layoutBox).firstChild());
+        return verifyAndOutputSubtree(stream, context, renderer, *downcast<ElementBox>(layoutBox).firstChild());
 
     auto mismtachingGeometry = outputMismatchingBlockBoxInformationIfNeeded(stream, context, renderer, layoutBox);
 
-    if (!is<ContainerBox>(layoutBox))
+    if (!is<ElementBox>(layoutBox))
         return mismtachingGeometry;
 
-    auto& containerBox = downcast<ContainerBox>(layoutBox);
-    auto* childLayoutBox = containerBox.firstChild();
+    auto& elementBox = downcast<ElementBox>(layoutBox);
+    auto* childLayoutBox = elementBox.firstChild();
     auto* childRenderer = renderer.firstChild();
 
     while (childRenderer) {
@@ -318,7 +320,7 @@ static bool verifyAndOutputSubtree(TextStream& stream, const LayoutState& contex
                 return true;
 
             auto& blockFlow = downcast<RenderBlockFlow>(*childRenderer);
-            auto& formattingRoot = downcast<ContainerBox>(*childLayoutBox);
+            auto& formattingRoot = downcast<ElementBox>(*childLayoutBox);
             mismtachingGeometry |= outputMismatchingComplexLineInformationIfNeeded(stream, context, blockFlow, formattingRoot);
         } else {
             auto mismatchingSubtreeGeometry = verifyAndOutputSubtree(stream, context, downcast<RenderBox>(*childRenderer), *childLayoutBox);
@@ -341,7 +343,7 @@ void LayoutContext::verifyAndOutputMismatchingLayoutTree(const LayoutState& layo
         return;
 #if ENABLE(TREE_DEBUGGING)
     showRenderTree(&rootRenderer);
-    showLayoutTree(layoutRoot, &layoutState);
+    showLayoutTree(downcast<InitialContainingBlock>(layoutRoot), &layoutState);
 #endif
     WTFLogAlways("%s", stream.release().utf8().data());
     ASSERT_NOT_REACHED();
@@ -350,6 +352,4 @@ void LayoutContext::verifyAndOutputMismatchingLayoutTree(const LayoutState& layo
 }
 }
 
-#endif
-
-#endif
+#endif // ASSERT_ENABLED

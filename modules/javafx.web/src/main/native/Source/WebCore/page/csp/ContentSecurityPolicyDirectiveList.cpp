@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google, Inc. All rights reserved.
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,8 @@
 
 #include "ContentSecurityPolicyDirectiveNames.h"
 #include "Document.h"
-#include "Frame.h"
 #include "HTTPParsers.h"
+#include "LocalFrame.h"
 #include "ParsingUtilities.h"
 #include "SecurityContext.h"
 #include <wtf/text/StringParsingBuffer.h>
@@ -44,7 +44,7 @@ template<typename CharacterType> static bool isDirectiveNameCharacter(CharacterT
 
 template<typename CharacterType> static bool isDirectiveValueCharacter(CharacterType c)
 {
-    return isASCIISpace(c) || (c >= 0x21 && c <= 0x7e); // Whitespace + VCHAR
+    return isUnicodeCompatibleASCIIWhitespace(c) || (c >= 0x21 && c <= 0x7e); // Whitespace + VCHAR
 }
 
 static inline bool checkEval(ContentSecurityPolicySourceListDirective* directive)
@@ -91,7 +91,7 @@ static inline bool checkNonce(ContentSecurityPolicySourceListDirective* directiv
 }
 
 // Used to compute the comparison URL when checking frame-ancestors. We do this weird conversion so that child
-// frames of a page with a unique origin (e.g. about:blank) are not blocked due to their frame-ancestors policy
+// frames of a page with an opaque origin (e.g. about:blank) are not blocked due to their frame-ancestors policy
 // and do not need to add the parent's URL to their policy. The latter could allow the child page to be framed
 // by anyone. See <https://github.com/w3c/webappsec/issues/311> for more details.
 static inline URL urlFromOrigin(const SecurityOrigin& origin)
@@ -99,13 +99,16 @@ static inline URL urlFromOrigin(const SecurityOrigin& origin)
     return { URL { }, origin.toString() };
 }
 
-static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective* directive, const Frame& frame)
+static inline bool checkFrameAncestors(ContentSecurityPolicySourceListDirective* directive, const LocalFrame& frame)
 {
     if (!directive)
         return true;
     bool didReceiveRedirectResponse = false;
-    for (Frame* current = frame.tree().parent(); current; current = current->tree().parent()) {
-        URL origin = urlFromOrigin(current->document()->securityOrigin());
+    for (auto* current = frame.tree().parent(); current; current = current->tree().parent()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(current);
+        if (!localFrame)
+            continue;
+        URL origin = urlFromOrigin(localFrame->document()->securityOrigin());
         if (!origin.isValid() || !directive->allows(origin, didReceiveRedirectResponse, ContentSecurityPolicySourceListDirective::ShouldAllowEmptyURLIfSourceListIsNotNone::No))
             return false;
     }
@@ -129,7 +132,7 @@ static inline bool checkMediaType(ContentSecurityPolicyMediaListDirective* direc
 {
     if (!directive)
         return true;
-    if (typeAttribute.isEmpty() || typeAttribute.stripWhiteSpace() != type)
+    if (typeAttribute.isEmpty() || StringView(typeAttribute).trim(deprecatedIsSpaceOrNewline) != type)
         return false;
     return directive->allows(type);
 }
@@ -152,8 +155,8 @@ std::unique_ptr<ContentSecurityPolicyDirectiveList> ContentSecurityPolicyDirecti
     if (!checkWasmEval(directives->operativeDirective(directives->m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrc)))
         directives->setWebAssemblyDisabledErrorMessage(makeString("Refused to create a WebAssembly object because 'unsafe-eval' or 'wasm-unsafe-eval' is not an allowed source of script in the following Content Security Policy directive: \"", directives->operativeDirective(directives->m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrc)->text(), "\".\n"));
 
-    if (directives->isReportOnly() && directives->reportURIs().isEmpty())
-        policy.reportMissingReportURI(header);
+    if (directives->isReportOnly() && (directives->reportToTokens().isEmpty() && directives->reportURIs().isEmpty()))
+        policy.reportMissingReportToTokens(header);
 
     return directives;
 }
@@ -340,7 +343,7 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
     return operativeDirective;
 }
 
-const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForFrameAncestor(const Frame& frame) const
+const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForFrameAncestor(const LocalFrame& frame) const
 {
     if (checkFrameAncestors(m_frameAncestors.get(), frame))
         return nullptr;
@@ -357,6 +360,14 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
 const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForImage(const URL& url, bool didReceiveRedirectResponse) const
 {
     auto* operativeDirective = this->operativeDirective(m_imgSrc.get(), ContentSecurityPolicyDirectiveNames::imgSrc);
+    if (checkSource(operativeDirective, url, didReceiveRedirectResponse))
+        return nullptr;
+    return operativeDirective;
+}
+
+const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForPrefetch(const URL& url, bool didReceiveRedirectResponse) const
+{
+    auto* operativeDirective = this->operativeDirective(m_prefetchSrc.get(), ContentSecurityPolicyDirectiveNames::prefetchSrc);
     if (checkSource(operativeDirective, url, didReceiveRedirectResponse))
         return nullptr;
     return operativeDirective;
@@ -390,6 +401,7 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
     return operativeDirective;
 }
 
+// FIXME: typeAttribute should be a StringView throughout
 const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForPluginType(const String& type, const String& typeAttribute) const
 {
     if (checkMediaType(m_pluginTypes.get(), type, typeAttribute))
@@ -437,7 +449,7 @@ void ContentSecurityPolicyDirectiveList::parse(const String& policy, ContentSecu
     // A meta tag delievered CSP could contain invalid HTTP header values depending on how it was formatted in the document.
     // We want to store the CSP as a valid HTTP header for e.g. blob URL inheritance.
     if (policyFrom == ContentSecurityPolicy::PolicyFrom::HTTPEquivMeta) {
-        m_header = stripLeadingAndTrailingHTTPSpaces(policy).removeCharacters([](auto c) {
+        m_header = policy.trim(isASCIIWhitespaceWithoutFF<UChar>).removeCharacters([](auto c) {
             return c == 0x00 || c == '\r' || c == '\n';
         });
     } else
@@ -465,7 +477,8 @@ void ContentSecurityPolicyDirectiveList::parse(const String& policy, ContentSecu
                     }
                 } else if (policyFrom == ContentSecurityPolicy::PolicyFrom::InheritedForPluginDocument) {
                     if (!equalIgnoringASCIICase(directive->name, ContentSecurityPolicyDirectiveNames::pluginTypes)
-                        && !equalIgnoringASCIICase(directive->name, ContentSecurityPolicyDirectiveNames::reportURI))
+                        && !equalIgnoringASCIICase(directive->name, ContentSecurityPolicyDirectiveNames::reportURI)
+                        && !equalIgnoringASCIICase(directive->name, ContentSecurityPolicyDirectiveNames::reportTo))
                         continue;
                 }
                 addDirective(WTFMove(*directive));
@@ -483,7 +496,7 @@ void ContentSecurityPolicyDirectiveList::parse(const String& policy, ContentSecu
 //
 template<typename CharacterType> auto ContentSecurityPolicyDirectiveList::parseDirective(StringParsingBuffer<CharacterType> buffer) -> std::optional<ParsedDirective>
 {
-    skipWhile<isASCIISpace>(buffer);
+    skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
     // Empty directive (e.g. ";;;"). Exit early.
     if (buffer.atEnd())
@@ -504,13 +517,13 @@ template<typename CharacterType> auto ContentSecurityPolicyDirectiveList::parseD
     if (buffer.atEnd())
         return ParsedDirective { WTFMove(name), { } };
 
-    if (!skipExactly<isASCIISpace>(buffer)) {
+    if (!skipExactly<isUnicodeCompatibleASCIIWhitespace>(buffer)) {
         skipWhile<isNotASCIISpace>(buffer);
         m_policy.reportUnsupportedDirective(String(nameBegin, buffer.position() - nameBegin));
         return std::nullopt;
     }
 
-    skipWhile<isASCIISpace>(buffer);
+    skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
     auto valueBegin = buffer.position();
     skipWhile<isDirectiveValueCharacter>(buffer);
@@ -538,7 +551,7 @@ void ContentSecurityPolicyDirectiveList::parseReportURI(ParsedDirective&& direct
     readCharactersForParsing(directive.value, [&](auto buffer) {
         auto begin = buffer.position();
         while (buffer.hasCharactersRemaining()) {
-            skipWhile<isASCIISpace>(buffer);
+            skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
 
             auto urlBegin = buffer.position();
             skipWhile<isNotASCIISpace>(buffer);
@@ -549,6 +562,26 @@ void ContentSecurityPolicyDirectiveList::parseReportURI(ParsedDirective&& direct
     });
 }
 
+void ContentSecurityPolicyDirectiveList::parseReportTo(ParsedDirective&& directive)
+{
+    if (!m_reportToTokens.isEmpty()) {
+        m_policy.reportDuplicateDirective(directive.name);
+        return;
+    }
+
+    readCharactersForParsing(directive.value, [&](auto buffer) {
+        auto begin = buffer.position();
+        while (buffer.hasCharactersRemaining()) {
+            skipWhile<isUnicodeCompatibleASCIIWhitespace>(buffer);
+
+            auto urlBegin = buffer.position();
+            skipWhile<isNotASCIISpace>(buffer);
+
+            if (urlBegin < buffer.position())
+                m_reportToTokens.append(directive.value.substring(urlBegin - begin, buffer.position() - urlBegin));
+        }
+    });
+}
 
 template<class CSPDirectiveType>
 void ContentSecurityPolicyDirectiveList::setCSPDirective(ParsedDirective&& directive, std::unique_ptr<CSPDirectiveType>& existingDirective)
@@ -660,8 +693,12 @@ void ContentSecurityPolicyDirectiveList::addDirective(ParsedDirective&& directiv
         setCSPDirective<ContentSecurityPolicySourceListDirective>(WTFMove(directive), m_frameAncestors);
     } else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::pluginTypes))
         setCSPDirective<ContentSecurityPolicyMediaListDirective>(WTFMove(directive), m_pluginTypes);
+    else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::prefetchSrc))
+        setCSPDirective<ContentSecurityPolicySourceListDirective>(WTFMove(directive), m_prefetchSrc);
     else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::sandbox))
         applySandboxPolicy(WTFMove(directive));
+    else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::reportTo))
+        parseReportTo(WTFMove(directive));
     else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::reportURI))
         parseReportURI(WTFMove(directive));
     else if (equalIgnoringASCIICase(directive.name, ContentSecurityPolicyDirectiveNames::upgradeInsecureRequests))

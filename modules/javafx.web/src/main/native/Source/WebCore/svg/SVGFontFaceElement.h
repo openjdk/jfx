@@ -55,7 +55,7 @@ private:
     SVGFontFaceElement(const QualifiedName&, Document&);
     ~SVGFontFaceElement();
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     void childrenChanged(const ChildChange&) final;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
@@ -64,7 +64,7 @@ private:
     bool rendererIsNeeded(const RenderStyle&) final { return false; }
 
     Ref<StyleRuleFontFace> m_fontFaceRule;
-    WeakPtr<SVGFontElement> m_fontElement;
+    WeakPtr<SVGFontElement, WeakPtrImplWithEventTargetData> m_fontElement;
 };
 
 } // namespace WebCore

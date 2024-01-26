@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -116,7 +116,7 @@ extern NSSize maxScreenDimensions;
         return nil;
     }
 
-    if (windowStyle & (NSUtilityWindowMask | NSNonactivatingPanelMask)) {
+    if (windowStyle & (NSWindowStyleMaskUtilityWindow | NSWindowStyleMaskNonactivatingPanel)) {
         self->nsWindow = [[GlassWindow_Panel alloc] initWithDelegate:self
                                                            frameRect:contentRect
                                                            styleMask:windowStyle
@@ -220,11 +220,11 @@ extern NSSize maxScreenDimensions;
 - (void)_setResizable
 {
     NSUInteger mask = [self->nsWindow styleMask];
-    if ((mask & NSResizableWindowMask) != 0)
+    if ((mask & NSWindowStyleMaskResizable) != 0)
     {
         if (self->isDecorated == YES)
         {
-            mask &= ~(NSUInteger)NSResizableWindowMask;
+            mask &= ~(NSUInteger)NSWindowStyleMaskResizable;
             [self->nsWindow setStyleMask: mask];
             [self->nsWindow setShowsResizeIndicator:NO];
 
@@ -237,7 +237,7 @@ extern NSSize maxScreenDimensions;
     {
         if (self->isDecorated == YES)
         {
-            mask |= NSResizableWindowMask;
+            mask |= NSWindowStyleMaskResizable;
             [self->nsWindow setStyleMask: mask];
             [self->nsWindow setShowsResizeIndicator:YES];
 

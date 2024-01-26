@@ -45,6 +45,7 @@ public:
         DisplayCapture,
         Geolocation,
         Payment,
+        ScreenWakeLock,
         SyncXHR,
         Fullscreen,
         WebShare,
@@ -78,6 +79,7 @@ private:
     AllowRule m_syncXHRRule;
     AllowRule m_fullscreenRule;
     AllowRule m_webShareRule;
+    AllowRule m_screenWakeLockRule;
 
 #if ENABLE(DEVICE_ORIENTATION)
     AllowRule m_gyroscopeRule;
@@ -92,7 +94,7 @@ private:
 #endif
 };
 
-enum class LogFeaturePolicyFailure { No, Yes };
+enum class LogFeaturePolicyFailure : bool { No, Yes };
 extern bool isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type, const Document&, LogFeaturePolicyFailure = LogFeaturePolicyFailure::Yes);
 
 } // namespace WebCore

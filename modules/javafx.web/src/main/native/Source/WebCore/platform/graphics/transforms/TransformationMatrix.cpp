@@ -33,6 +33,7 @@
 #include "IntRect.h"
 #include "LayoutRect.h"
 #include <cmath>
+#include <float.h>
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/TextStream.h>
@@ -217,7 +218,7 @@ static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationM
     // then the inverse matrix is not unique.
     double det = determinant4x4(matrix);
 
-    if (fabs(det) < SMALL_NUMBER)
+    if (std::abs(det) < SMALL_NUMBER)
         return false;
 
     // Scale the adjoint matrix to get the inverse
@@ -397,7 +398,8 @@ static bool decompose4(const TransformationMatrix::Matrix4& mat, TransformationM
         // rightHandSide by the inverse. (This is the easiest way, not
         // necessarily the best.)
         TransformationMatrix::Matrix4 inversePerspectiveMatrix, transposedInversePerspectiveMatrix;
-        inverse(perspectiveMatrix, inversePerspectiveMatrix);
+        if (!inverse(perspectiveMatrix, inversePerspectiveMatrix))
+            return false;
         transposeMatrix4(inversePerspectiveMatrix, transposedInversePerspectiveMatrix);
 
         Vector4 perspectivePoint;
@@ -586,7 +588,6 @@ TransformationMatrix::TransformationMatrix(const AffineTransform& t)
 {
     setMatrix(t.a(), t.b(), t.c(), t.d(), t.e(), t.f());
 }
-
 
 // FIXME: Once https://bugs.webkit.org/show_bug.cgi?id=220856 is addressed we can reuse this function in TransformationMatrix::recompose4().
 TransformationMatrix TransformationMatrix::fromQuaternion(double qx, double qy, double qz, double qw)
@@ -915,6 +916,13 @@ TransformationMatrix& TransformationMatrix::scale3d(double sx, double sy, double
     return *this;
 }
 
+static double roundEpsilonToZero(double val)
+{
+    if (-DBL_EPSILON < val && val < DBL_EPSILON)
+        return 0.0f;
+    return val;
+}
+
 TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double z, double angle)
 {
     // Normalize the axis of rotation
@@ -935,8 +943,8 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
     // Angles are in degrees. Switch to radians.
     angle = deg2rad(angle);
 
-    double sinTheta = sin(angle);
-    double cosTheta = cos(angle);
+    double sinTheta = roundEpsilonToZero(sin(angle));
+    double cosTheta = roundEpsilonToZero(cos(angle));
 
     TransformationMatrix mat;
 
@@ -1012,8 +1020,8 @@ TransformationMatrix& TransformationMatrix::rotate(double angle)
         return *this;
 
     angle = deg2rad(angle);
-    double sinZ = sin(angle);
-    double cosZ = cos(angle);
+    double sinZ = roundEpsilonToZero(sin(angle));
+    double cosZ = roundEpsilonToZero(cos(angle));
     multiply({ cosZ, sinZ, -sinZ, cosZ, 0, 0 });
     return *this;
 }
@@ -1027,8 +1035,8 @@ TransformationMatrix& TransformationMatrix::rotate3d(double rx, double ry, doubl
 
     TransformationMatrix mat;
 
-    double sinTheta = sin(rz);
-    double cosTheta = cos(rz);
+    double sinTheta = roundEpsilonToZero(sin(rz));
+    double cosTheta = roundEpsilonToZero(cos(rz));
 
     mat.m_matrix[0][0] = cosTheta;
     mat.m_matrix[0][1] = sinTheta;
@@ -1597,7 +1605,7 @@ bool TransformationMatrix::isInvertible() const
     if (type == Type::IdentityOrTranslation)
         return true;
 
-    return fabs(type == Type::Affine ? (m11() * m22() - m12() * m21()) : WebCore::determinant4x4(m_matrix)) >= SMALL_NUMBER;
+    return std::abs(type == Type::Affine ? (m11() * m22() - m12() * m21()) : WebCore::determinant4x4(m_matrix)) >= SMALL_NUMBER;
 }
 
 std::optional<TransformationMatrix> TransformationMatrix::inverse() const
@@ -1623,7 +1631,7 @@ std::optional<TransformationMatrix> TransformationMatrix::inverse() const
         double e = m41();
         double f = m42();
         double determinant = a * d - b * c;
-        if (fabs(determinant) < SMALL_NUMBER)
+        if (std::abs(determinant) < SMALL_NUMBER)
             return std::nullopt;
 
         double inverseDeterminant = 1 / determinant;
@@ -1676,10 +1684,12 @@ static inline void blendFloat(double& from, double to, double progress, Composit
         from = from + (to - from) * progress;
         break;
     case CompositeOperation::Accumulate:
-        from += from + (to - from - 1) * progress;
+        ASSERT(progress == 1.0);
+        from += to - 1;
         break;
     case CompositeOperation::Add:
-        from += from + (to - from) * progress;
+        ASSERT(progress == 1.0);
+        from += to;
         break;
     }
 }
@@ -1707,7 +1717,7 @@ void TransformationMatrix::blend2(const TransformationMatrix& from, double progr
     if (!toDecomp.angle)
         toDecomp.angle = 360;
 
-    if (fabs(fromDecomp.angle - toDecomp.angle) > 180) {
+    if (std::abs(fromDecomp.angle - toDecomp.angle) > 180) {
         if (fromDecomp.angle > toDecomp.angle)
             fromDecomp.angle -= 360;
         else
@@ -1962,7 +1972,7 @@ bool TransformationMatrix::isBackFaceVisible() const
     double determinant = WebCore::determinant4x4(m_matrix);
 
     // If the matrix is not invertible, then we assume its backface is not visible.
-    if (fabs(determinant) < SMALL_NUMBER)
+    if (std::abs(determinant) < SMALL_NUMBER)
         return false;
 
     double cofactor33 = determinant3x3(m11(), m12(), m14(), m21(), m22(), m24(), m41(), m42(), m44());

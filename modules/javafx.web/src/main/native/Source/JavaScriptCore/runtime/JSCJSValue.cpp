@@ -30,12 +30,11 @@
 #include "JSBigInt.h"
 #include "JSCInlines.h"
 #include "NumberObject.h"
+#include "NumberPrototype.h"
 #include "ParseInt.h"
 #include "TypeError.h"
 
 namespace JSC {
-
-const ASCIILiteral SymbolCoercionError { "Cannot convert a symbol to a string"_s };
 
 double JSValue::toIntegerPreserveNaN(JSGlobalObject* globalObject) const
 {
@@ -44,16 +43,14 @@ double JSValue::toIntegerPreserveNaN(JSGlobalObject* globalObject) const
     return trunc(toNumber(globalObject));
 }
 
-double JSValue::toLength(JSGlobalObject* globalObject) const
+uint64_t JSValue::toLength(JSGlobalObject* globalObject) const
 {
     // ECMA 7.1.15
     // http://www.ecma-international.org/ecma-262/6.0/#sec-tolength
     double d = toIntegerOrInfinity(globalObject);
     if (d <= 0)
-        return 0.0;
-    if (std::isinf(d))
-        return maxSafeInteger();
-    return std::min(d, maxSafeInteger());
+        return 0;
+    return static_cast<uint64_t>(std::min(d, maxSafeInteger()));
 }
 
 double JSValue::toNumberSlowCase(JSGlobalObject* globalObject) const
@@ -164,13 +161,8 @@ JSObject* JSValue::toObjectSlowCase(JSGlobalObject* globalObject) const
     return nullptr;
 }
 
-JSValue JSValue::toThisSlowCase(JSGlobalObject* globalObject, ECMAMode ecmaMode) const
+JSValue JSValue::toThisSloppySlowCase(JSGlobalObject* globalObject) const
 {
-    ASSERT(!isCell());
-
-    if (ecmaMode.isStrict())
-        return *this;
-
     if (isInt32() || isDouble())
         return constructNumber(globalObject, asValue());
     if (isTrue() || isFalse())
@@ -179,9 +171,8 @@ JSValue JSValue::toThisSlowCase(JSGlobalObject* globalObject, ECMAMode ecmaMode)
     if (isBigInt32())
         return BigIntObject::create(globalObject->vm(), globalObject, *this);
 #endif
-
-    ASSERT(isUndefinedOrNull());
-    return globalObject->globalThis();
+    ASSERT(isCell());
+    return toObject(globalObject);
 }
 
 JSObject* JSValue::synthesizePrototype(JSGlobalObject* globalObject) const
@@ -389,14 +380,10 @@ JSString* JSValue::toStringSlowCase(JSGlobalObject* globalObject, bool returnEmp
     };
 
     ASSERT(!isString());
-    if (isInt32()) {
-        auto integer = asInt32();
-        if (static_cast<unsigned>(integer) <= 9)
-            return vm.smallStrings.singleCharacterString(integer + '0');
-        return jsNontrivialString(vm, vm.numericStrings.add(integer));
-    }
+    if (isInt32())
+        return int32ToString(vm, asInt32(), 10);
     if (isDouble())
-        return jsString(vm, vm.numericStrings.add(asDouble()));
+        return JSC::numberToString(vm, asDouble(), 10);
     if (isTrue())
         return vm.smallStrings.trueString();
     if (isFalse())
@@ -406,34 +393,12 @@ JSString* JSValue::toStringSlowCase(JSGlobalObject* globalObject, bool returnEmp
     if (isUndefined())
         return vm.smallStrings.undefinedString();
 #if USE(BIGINT32)
-    if (isBigInt32()) {
-        auto integer = bigInt32AsInt32();
-        if (static_cast<unsigned>(integer) <= 9)
-            return vm.smallStrings.singleCharacterString(integer + '0');
-        return jsNontrivialString(vm, vm.numericStrings.add(integer));
-    }
+    if (isBigInt32())
+        return int32ToString(vm, bigInt32AsInt32(), 10);
 #endif
-    if (isHeapBigInt()) {
-        JSBigInt* bigInt = asHeapBigInt();
-        // FIXME: we should rather have two cases here: one-character string vs jsNonTrivialString for everything else.
-        auto string = bigInt->toString(globalObject, 10);
-        RETURN_IF_EXCEPTION(scope, errorValue());
-        JSString* returnString = JSString::create(vm, string.releaseImpl().releaseNonNull());
+    JSString* returnString = asCell()->toStringInline(globalObject);
         RETURN_IF_EXCEPTION(scope, errorValue());
         return returnString;
-    }
-    if (isSymbol()) {
-        throwTypeError(globalObject, scope, SymbolCoercionError);
-        return errorValue();
-    }
-
-    ASSERT(isObject()); // String, Symbol, and HeapBigInt are already handled.
-    JSValue value = asObject(asCell())->toPrimitive(globalObject, PreferString);
-    RETURN_IF_EXCEPTION(scope, errorValue());
-    ASSERT(!value.isObject());
-    JSString* result = value.toString(globalObject);
-    RETURN_IF_EXCEPTION(scope, errorValue());
-    return result;
 }
 
 String JSValue::toWTFStringSlowCase(JSGlobalObject* globalObject) const
@@ -473,9 +438,11 @@ WTF::String JSValue::toWTFStringForConsole(JSGlobalObject* globalObject) const
     String result = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     if (isString())
-        return tryMakeString("\"", result, "\"");
+        return tryMakeString('"', result, '"');
     if (jsDynamicCast<JSArray*>(*this))
-        return tryMakeString("[", result, "]");
+        return tryMakeString('[', result, ']');
+    if (jsDynamicCast<JSBigInt*>(*this))
+        return tryMakeString(result, 'n');
     return result;
 }
 

@@ -28,6 +28,7 @@
 #include "Document.h"
 #include "FloatPoint.h"
 #include "LinearGradientAttributes.h"
+#include "NodeName.h"
 #include "RenderSVGResourceLinearGradient.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGLengthValue.h"
@@ -41,7 +42,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGLinearGradientElement);
 
 inline SVGLinearGradientElement::SVGLinearGradientElement(const QualifiedName& tagName, Document& document)
-    : SVGGradientElement(tagName, document)
+    : SVGGradientElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     // Spec: If the x2 attribute is not specified, the effect is as if a value of "100%" were specified.
     ASSERT(hasTagName(SVGNames::linearGradientTag));
@@ -60,22 +61,29 @@ Ref<SVGLinearGradientElement> SVGLinearGradientElement::create(const QualifiedNa
     return adoptRef(*new SVGLinearGradientElement(tagName, document));
 }
 
-void SVGLinearGradientElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGLinearGradientElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
-    if (name == SVGNames::x1Attr)
-        m_x1->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::y1Attr)
-        m_y1->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::x2Attr)
-        m_x2->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::y2Attr)
-        m_y2->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
+    switch (name.nodeName()) {
+    case AttributeNames::x1Attr:
+        m_x1->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::y1Attr:
+        m_y1->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::x2Attr:
+        m_x2->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::y2Attr:
+        m_y2->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGGradientElement::parseAttribute(name, value);
+    SVGGradientElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGLinearGradientElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -139,7 +147,7 @@ bool SVGLinearGradientElement::collectGradientAttributes(LinearGradientAttribute
 
     while (true) {
         // Respect xlink:href, take attributes from referenced element
-        auto target = SVGURIReference::targetElementFromIRIString(current->href(), treeScope());
+        auto target = SVGURIReference::targetElementFromIRIString(current->href(), treeScopeForSVGReferences());
         if (is<SVGGradientElement>(target.element)) {
             current = downcast<SVGGradientElement>(*target.element);
 

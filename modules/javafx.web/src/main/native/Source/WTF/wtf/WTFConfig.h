@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,6 +58,7 @@ constexpr size_t ConfigSizeToProtect = std::max(CeilingOnPageSize, 16 * KB);
 
 struct Config {
     WTF_EXPORT_PRIVATE static void permanentlyFreeze();
+    WTF_EXPORT_PRIVATE static void initialize();
 
     struct AssertNotFrozenScope {
         AssertNotFrozenScope();
@@ -68,7 +69,11 @@ struct Config {
     // initial value is 0 / null / falsy because Config is instantiated
     // as a global singleton.
 
+    uintptr_t lowestAccessibleAddress;
+    uintptr_t highestAccessibleAddress;
+
     bool isPermanentlyFrozen;
+    bool useSpecialAbortForExtraSecurityImplications;
 #if PLATFORM(COCOA)
     bool disableForwardingVPrintfStdErrToOSLog;
 #endif
@@ -78,9 +83,7 @@ struct Config {
     bool isThreadSuspendResumeSignalConfigured;
     int sigThreadSuspendResume;
 #endif
-#if OS(UNIX)
     SignalHandlers signalHandlers;
-#endif
     PtrTagLookup* ptrTagLookupHead;
 
     uint64_t spaceForExtensions[1];
@@ -109,6 +112,8 @@ inline void setPermissionsOfConfigPage() { }
 extern "C" WTF_EXPORT_PRIVATE Config g_wtfConfig;
 
 #endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+
+constexpr size_t offsetOfWTFConfigLowestAccessibleAddress = offsetof(WTF::Config, lowestAccessibleAddress);
 
 ALWAYS_INLINE Config::AssertNotFrozenScope::AssertNotFrozenScope()
 {

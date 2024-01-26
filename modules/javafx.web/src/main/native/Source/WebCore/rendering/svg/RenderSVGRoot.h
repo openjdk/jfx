@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2009 Google, Inc.  All rights reserved.
+ * Copyright (C) 2009-2016 Google, Inc.  All rights reserved.
  * Copyright (C) 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2020, 2021, 2022 Igalia S.L.
  *
@@ -26,13 +26,12 @@
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "FloatRect.h"
 #include "RenderReplaced.h"
-#include "RenderSVGViewportContainer.h"
 #include "SVGBoundingBoxComputation.h"
 
 namespace WebCore {
 
-class AffineTransform;
 class RenderSVGResourceContainer;
+class RenderSVGViewportContainer;
 class SVGSVGElement;
 
 class RenderSVGRoot final : public RenderReplaced {
@@ -47,7 +46,8 @@ public:
     bool isEmbeddedThroughSVGImage() const;
     bool isEmbeddedThroughFrameContainingSVGDocument() const;
 
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const final;
+    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const final;
+    bool hasIntrinsicAspectRatio() const final;
 
     bool isLayoutSizeChanged() const { return m_isLayoutSizeChanged; }
     bool didTransformToRootUpdate() const { return m_didTransformToRootUpdate; }
@@ -71,8 +71,7 @@ public:
 
     LayoutRect visualOverflowRectEquivalent() const { return SVGBoundingBoxComputation::computeVisualOverflowRect(*this); }
 
-    RenderSVGViewportContainer* viewportContainer() const { return m_viewportContainer.get(); }
-    void setViewportContainer(RenderSVGViewportContainer&);
+    RenderSVGViewportContainer* viewportContainer() const;
 
 private:
     void element() const = delete;
@@ -82,6 +81,7 @@ private:
     bool requiresLayer() const final { return true; }
 
     bool updateLayoutSizeIfNeeded();
+    bool paintingAffectedByExternalOffset() const;
 
     // To prevent certain legacy code paths to hit assertions in debug builds, when switching off LBSE (during the teardown of the LBSE tree).
     std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject*, VisibleRectContext) const final { return std::nullopt; }
@@ -101,7 +101,10 @@ private:
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void updateFromStyle() final;
+    bool needsHasSVGTransformFlags() const final;
     void updateLayerTransform() final;
+
+    FloatSize calculateIntrinsicSize() const;
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
@@ -110,7 +113,7 @@ private:
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const final;
 
     bool canBeSelectionLeaf() const final { return false; }
@@ -124,8 +127,7 @@ private:
     FloatRect m_objectBoundingBox;
     FloatRect m_objectBoundingBoxWithoutTransformations;
     FloatRect m_strokeBoundingBox;
-    HashSet<RenderSVGResourceContainer*> m_resourcesNeedingToInvalidateClients;
-    WeakPtr<RenderSVGViewportContainer> m_viewportContainer;
+    WeakHashSet<RenderSVGResourceContainer> m_resourcesNeedingToInvalidateClients;
 };
 
 } // namespace WebCore

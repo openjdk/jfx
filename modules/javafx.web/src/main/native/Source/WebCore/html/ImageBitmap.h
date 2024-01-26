@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include "IDLTypes.h"
 #include "ImageBitmapBacking.h"
 #include "ScriptWrappable.h"
@@ -41,6 +42,7 @@ namespace WebCore {
 
 class Blob;
 class CanvasBase;
+class CSSStyleImageValue;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
@@ -53,7 +55,10 @@ class OffscreenCanvas;
 #endif
 class PendingImageBitmap;
 class ScriptExecutionContext;
-class CSSStyleImageValue;
+#if ENABLE(WEB_CODECS)
+class WebCodecsVideoFrame;
+#endif
+
 struct ImageBitmapOptions;
 
 template<typename IDLType> class DOMPromiseDeferred;
@@ -71,8 +76,9 @@ public:
 #if ENABLE(OFFSCREEN_CANVAS)
         RefPtr<OffscreenCanvas>,
 #endif
-#if ENABLE(CSS_TYPED_OM)
         RefPtr<CSSStyleImageValue>,
+#if ENABLE(WEB_CODECS)
+        RefPtr<WebCodecsVideoFrame>,
 #endif
         RefPtr<Blob>,
         RefPtr<ImageData>
@@ -80,10 +86,14 @@ public:
 
     using Promise = DOMPromiseDeferred<IDLInterface<ImageBitmap>>;
 
+    using ImageBitmapCompletionHandler = CompletionHandler<void(ExceptionOr<Ref<ImageBitmap>>&&)>;
+    static void createCompletionHandler(ScriptExecutionContext&, Source&&, ImageBitmapOptions&&, ImageBitmapCompletionHandler&&);
+
     static void createPromise(ScriptExecutionContext&, Source&&, ImageBitmapOptions&&, Promise&&);
     static void createPromise(ScriptExecutionContext&, Source&&, ImageBitmapOptions&&, int sx, int sy, int sw, int sh, Promise&&);
 
     static RefPtr<ImageBuffer> createImageBuffer(ScriptExecutionContext&, const FloatSize&, RenderingMode, DestinationColorSpace, float resolutionScale = 1);
+    static RefPtr<ImageBuffer> createImageBuffer(ScriptExecutionContext&, const FloatSize&, DestinationColorSpace, float resolutionScale = 1);
 
     static Ref<ImageBitmap> create(ScriptExecutionContext&, const IntSize&, DestinationColorSpace);
     static Ref<ImageBitmap> create(std::optional<ImageBitmapBacking>&&);
@@ -116,22 +126,25 @@ private:
 
     ImageBitmap(std::optional<ImageBitmapBacking>&&);
 
-    static void resolveWithBlankImageBuffer(ScriptExecutionContext&, bool originClean, Promise&&);
+    static Ref<ImageBitmap> createBlankImageBuffer(ScriptExecutionContext&, bool originClean);
 
-    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLImageElement>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<HTMLImageElement>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
 #if ENABLE(VIDEO)
-    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLVideoElement>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<HTMLVideoElement>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
 #endif
-    static void createPromise(ScriptExecutionContext&, RefPtr<ImageBitmap>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
-    static void createPromise(ScriptExecutionContext&, RefPtr<HTMLCanvasElement>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<ImageBitmap>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<HTMLCanvasElement>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
 #if ENABLE(OFFSCREEN_CANVAS)
-    static void createPromise(ScriptExecutionContext&, RefPtr<OffscreenCanvas>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<OffscreenCanvas>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
 #endif
-    static void createPromise(ScriptExecutionContext&, CanvasBase&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
-    static void createPromise(ScriptExecutionContext&, RefPtr<Blob>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
-    static void createPromise(ScriptExecutionContext&, RefPtr<ImageData>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
-    static void createPromise(ScriptExecutionContext&, RefPtr<CSSStyleImageValue>&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
-    static void createFromBuffer(ScriptExecutionContext&, Ref<ArrayBuffer>&&, String mimeType, long long expectedContentLength, const URL&, ImageBitmapOptions&&, std::optional<IntRect>, Promise&&);
+#if ENABLE(WEB_CODECS)
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<WebCodecsVideoFrame>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
+#endif
+    static void createCompletionHandler(ScriptExecutionContext&, CanvasBase&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<Blob>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<ImageData>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
+    static void createCompletionHandler(ScriptExecutionContext&, RefPtr<CSSStyleImageValue>&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
+    static void createFromBuffer(ScriptExecutionContext&, Ref<ArrayBuffer>&&, String mimeType, long long expectedContentLength, const URL&, ImageBitmapOptions&&, std::optional<IntRect>, ImageBitmapCompletionHandler&&);
     void updateMemoryCost();
 
     std::optional<ImageBitmapBacking> m_backingStore;

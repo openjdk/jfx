@@ -38,6 +38,7 @@ namespace WebCore {
 
 typedef HashSet<String, ASCIICaseInsensitiveHash> HTTPHeaderSet;
 
+class ResourceResponse;
 enum class HTTPHeaderName;
 
 enum class XSSProtectionDisposition {
@@ -69,6 +70,15 @@ enum class CrossOriginResourcePolicy : uint8_t {
     Invalid
 };
 
+enum class ClearSiteDataValue : uint8_t {
+    Cache = 1 << 0,
+    Cookies = 1 << 1,
+    ExecutionContexts = 1 << 2,
+    Storage = 1 << 3,
+};
+
+enum class RangeAllowWhitespace : bool { No, Yes };
+
 bool isValidReasonPhrase(const String&);
 bool isValidHTTPHeaderValue(const String&);
 bool isValidAcceptHeaderValue(const String&);
@@ -81,14 +91,14 @@ bool isValidHTTPToken(StringView);
 std::optional<WallTime> parseHTTPDate(const String&);
 StringView filenameFromHTTPContentDisposition(StringView);
 WEBCORE_EXPORT String extractMIMETypeFromMediaType(const String&);
-StringView extractCharsetFromMediaType(StringView);
+WEBCORE_EXPORT StringView extractCharsetFromMediaType(StringView);
 XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& failureReason, unsigned& failurePosition, String& reportURL);
 AtomString extractReasonPhraseFromHTTPStatusLine(const String&);
 WEBCORE_EXPORT XFrameOptionsDisposition parseXFrameOptionsHeader(StringView);
-std::optional<std::pair<StringView, HashMap<String, String>>> parseStructuredFieldValue(StringView header);
+WEBCORE_EXPORT OptionSet<ClearSiteDataValue> parseClearSiteDataHeader(const ResourceResponse&);
 
 // -1 could be set to one of the return parameters to indicate the value is not specified.
-WEBCORE_EXPORT bool parseRange(StringView, long long& rangeOffset, long long& rangeEnd, long long& rangeSuffixLength);
+WEBCORE_EXPORT bool parseRange(StringView, RangeAllowWhitespace, long long& rangeStart, long long& rangeEnd);
 
 ContentTypeOptionsDisposition parseContentTypeOptionsHeader(StringView header);
 
@@ -97,11 +107,12 @@ size_t parseHTTPHeader(const uint8_t* data, size_t length, String& failureReason
 size_t parseHTTPRequestBody(const uint8_t* data, size_t length, Vector<uint8_t>& body);
 
 // HTTP Header routine as per https://fetch.spec.whatwg.org/#terminology-headers
+bool isForbiddenHeader(const String& name, StringView value);
 bool isForbiddenHeaderName(const String&);
 bool isNoCORSSafelistedRequestHeaderName(const String&);
 bool isPriviledgedNoCORSRequestHeaderName(const String&);
 bool isForbiddenResponseHeaderName(const String&);
-bool isForbiddenMethod(const String&);
+bool isForbiddenMethod(StringView);
 bool isSimpleHeader(const String& name, const String& value);
 bool isCrossOriginSafeHeader(HTTPHeaderName, const HTTPHeaderSet&);
 bool isCrossOriginSafeHeader(const String&, const HTTPHeaderSet&);
@@ -112,22 +123,6 @@ bool isSafeMethod(const String&);
 
 WEBCORE_EXPORT CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView);
 
-inline bool isHTTPSpace(UChar character)
-{
-    return character <= ' ' && (character == ' ' || character == '\n' || character == '\t' || character == '\r');
-}
-
-// Strip leading and trailing whitespace as defined in https://fetch.spec.whatwg.org/#concept-header-value-normalize.
-inline String stripLeadingAndTrailingHTTPSpaces(const String& string)
-{
-    return string.stripLeadingAndTrailingCharacters(isHTTPSpace);
-}
-
-inline StringView stripLeadingAndTrailingHTTPSpaces(StringView string)
-{
-    return string.stripLeadingAndTrailingMatchedCharacters(isHTTPSpace);
-}
-
 template<class HashType>
 bool addToAccessControlAllowList(const String& string, unsigned start, unsigned end, HashSet<String, HashType>& set)
 {
@@ -136,7 +131,7 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
         return true;
 
     // Skip white space from start.
-    while (start <= end && isHTTPSpace((*stringImpl)[start]))
+    while (start <= end && isASCIIWhitespaceWithoutFF((*stringImpl)[start]))
         ++start;
 
     // only white space
@@ -144,7 +139,7 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
         return true;
 
     // Skip white space from end.
-    while (end && isHTTPSpace((*stringImpl)[end]))
+    while (end && isASCIIWhitespaceWithoutFF((*stringImpl)[end]))
         --end;
 
     auto token = string.substring(start, end - start + 1);

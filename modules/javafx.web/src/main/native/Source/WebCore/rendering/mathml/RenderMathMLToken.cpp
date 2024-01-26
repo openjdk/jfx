@@ -34,8 +34,11 @@
 #include "MathMLNames.h"
 #include "MathMLTokenElement.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderElement.h"
 #include "RenderIterator.h"
+#include "RenderStyleInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -455,23 +458,23 @@ static UChar32 mathVariant(UChar32 codePoint, MathMLElement::MathVariant mathvar
         switch (mathvariant) {
         case MathMLElement::MathVariant::Initial:
             mapTable = arabicInitialMapTable;
-            tableLength = WTF_ARRAY_LENGTH(arabicInitialMapTable);
+            tableLength = std::size(arabicInitialMapTable);
             break;
         case MathMLElement::MathVariant::Tailed:
             mapTable = arabicTailedMapTable;
-            tableLength = WTF_ARRAY_LENGTH(arabicTailedMapTable);
+            tableLength = std::size(arabicTailedMapTable);
             break;
         case MathMLElement::MathVariant::Stretched:
             mapTable = arabicStretchedMapTable;
-            tableLength = WTF_ARRAY_LENGTH(arabicStretchedMapTable);
+            tableLength = std::size(arabicStretchedMapTable);
             break;
         case MathMLElement::MathVariant::Looped:
             mapTable = arabicLoopedMapTable;
-            tableLength = WTF_ARRAY_LENGTH(arabicLoopedMapTable);
+            tableLength = std::size(arabicLoopedMapTable);
             break;
         case MathMLElement::MathVariant::DoubleStruck:
             mapTable = arabicDoubleMapTable;
-            tableLength = WTF_ARRAY_LENGTH(arabicDoubleMapTable);
+            tableLength = std::size(arabicDoubleMapTable);
             break;
         default:
             return codePoint; // No valid transformations exist.
@@ -486,7 +489,7 @@ static UChar32 mathVariant(UChar32 codePoint, MathMLElement::MathVariant mathvar
         // See the Number case for an explanation of the following calculation
         tempChar = baseChar + mathBoldUpperA + multiplier * (mathItalicUpperA - mathBoldUpperA);
         // There are roughly twenty characters that are located outside of the mathematical block, so the spaces where they ought to be are used as keys for a lookup table containing the correct character mappings.
-        newChar = MathVariantMappingSearch(tempChar, latinExceptionMapTable, WTF_ARRAY_LENGTH(latinExceptionMapTable));
+        newChar = MathVariantMappingSearch(tempChar, latinExceptionMapTable, std::size(latinExceptionMapTable));
     }
 
     if (newChar)
@@ -568,6 +571,11 @@ void RenderMathMLToken::layoutBlock(bool relayoutChildren, LayoutUnit pageLogica
 {
     ASSERT(needsLayout());
 
+    for (auto& box : childrenOfType<RenderBox>(*this)) {
+        if (box.isOutOfFlowPositioned())
+            box.containingBlock()->insertPositionedObject(box);
+    }
+
     if (!relayoutChildren && simplifiedLayout())
         return;
 
@@ -609,7 +617,7 @@ void RenderMathMLToken::paint(PaintInfo& info, const LayoutPoint& paintOffset)
     LayoutUnit glyphAscent = static_cast<int>(lroundf(-mathVariantGlyph.font->boundsForGlyph(mathVariantGlyph.glyph).y()));
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(mathVariantGlyph.font->widthForGlyph(mathVariantGlyph.glyph));
-    info.context().drawGlyphs(*mathVariantGlyph.font, &mathVariantGlyph.glyph, &advance, 1, paintOffset + location() + LayoutPoint(0_lu, glyphAscent), style().fontCascade().fontDescription().fontSmoothing());
+    info.context().drawGlyphs(*mathVariantGlyph.font, &mathVariantGlyph.glyph, &advance, 1, paintOffset + location() + LayoutPoint(0_lu, glyphAscent), style().fontCascade().fontDescription().usedFontSmoothing());
 }
 
 void RenderMathMLToken::paintChildren(PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintInfo& paintInfoForChild, bool usePrintRect)

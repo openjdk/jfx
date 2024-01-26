@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -581,16 +581,13 @@ public:
         static const STGMEDIUM empty_data = {0};
         for (jsize i = 0; i < ckeys; ++i) {
             JString mime(env, (jstring)env->GetObjectArrayElement(keys, i));
-            static const size_t fcsSize = wcslen(MS_FILE_CONTENT);
-            static const size_t gulSize = wcslen(GLASS_URI_LIST);
-            static const size_t gulAFNSize = wcslen(GLASS_IE_URL_SHORTCUT_FILENAME);
-            if (wcsncmp(MS_FILE_CONTENT, mime, fcsSize) == 0) {
+            if (wcscmp(MS_FILE_CONTENT, mime) == 0) {
                 //File content transfer.
                 //Need to be rewritten.
                 hasFileContent = true;
-            } else if (wcsncmp(GLASS_URI_LIST, mime, gulSize) == 0) {
+            } else if (wcscmp(GLASS_URI_LIST, mime) == 0) {
                 hasUrl = true;
-            } else if (wcsncmp(GLASS_IE_URL_SHORTCUT_FILENAME, mime, gulAFNSize) == 0) {
+            } else if (wcscmp(GLASS_IE_URL_SHORTCUT_FILENAME, mime) == 0) {
                 hasIEShortcutName = true;
                 //that is the synthetic mime, it would be translated to
                 //system pair MS_FILE_DESCRIPTOR_UNICODE/MS_FILE_CONTENT

@@ -34,6 +34,8 @@
 
 namespace WebCore {
 
+class StyleSheetContents;
+
 // A CSSParserTokenRange is an iterator over a subrange of a vector of CSSParserTokens.
 // Accessing outside of the range will return an endless stream of EOF tokens.
 // This class refers to half-open intervals [first, last).
@@ -84,6 +86,8 @@ public:
         while (peek().type() == WhitespaceToken)
             ++m_first;
     }
+
+    CSSParserTokenRange consumeAll() { return { std::exchange(m_first, m_last), m_last }; }
 
     String serialize() const;
 

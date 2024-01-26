@@ -2,7 +2,7 @@
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007, 2008, 2009 Rob Buis <buis@kde.org>
  * Copyright (C) 2007 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2009 Google, Inc.
+ * Copyright (C) 2009-2023 Google, Inc.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -24,12 +24,14 @@
 #include "config.h"
 #include "LegacyRenderSVGRoot.h"
 
-#include "Frame.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "LayoutRepainter.h"
+#include "LocalFrame.h"
 #include "Page.h"
+#include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderLayoutState.h"
@@ -54,12 +56,21 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(LegacyRenderSVGRoot);
 
+const int defaultWidth = 300;
+const int defaultHeight = 150;
+
 LegacyRenderSVGRoot::LegacyRenderSVGRoot(SVGSVGElement& element, RenderStyle&& style)
     : RenderReplaced(element, WTFMove(style))
     , m_isLayoutSizeChanged(false)
     , m_needsBoundariesOrTransformUpdate(true)
     , m_hasBoxDecorations(false)
 {
+    LayoutSize intrinsicSize(calculateIntrinsicSize());
+    if (!intrinsicSize.width())
+        intrinsicSize.setWidth(defaultWidth);
+    if (!intrinsicSize.height())
+        intrinsicSize.setHeight(defaultHeight);
+    setIntrinsicSize(intrinsicSize);
 }
 
 LegacyRenderSVGRoot::~LegacyRenderSVGRoot() = default;
@@ -69,47 +80,43 @@ SVGSVGElement& LegacyRenderSVGRoot::svgSVGElement() const
     return downcast<SVGSVGElement>(nodeForNonAnonymous());
 }
 
-void LegacyRenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const
+bool LegacyRenderSVGRoot::hasIntrinsicAspectRatio() const
+{
+    return computeIntrinsicAspectRatio();
+}
+
+FloatSize LegacyRenderSVGRoot::calculateIntrinsicSize() const
+{
+    return FloatSize(floatValueForLength(svgSVGElement().intrinsicWidth(), 0), floatValueForLength(svgSVGElement().intrinsicHeight(), 0));
+}
+
+void LegacyRenderSVGRoot::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const
 {
     ASSERT(!shouldApplySizeContainment());
 
-    // Spec: http://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
-    // SVG needs to specify how to calculate some intrinsic sizing properties to enable inclusion within other languages.
-
-    // The intrinsic aspect ratio of the viewport of SVG content is necessary for example, when including SVG from an ‘object’
-    // element in HTML styled with CSS. It is possible (indeed, common) for an SVG graphic to have an intrinsic aspect ratio but
-    // not to have an intrinsic width or height. The intrinsic aspect ratio must be calculated based upon the following rules:
-    // - The aspect ratio is calculated by dividing a width by a height.
-    // - If the ‘width’ and ‘height’ of the rootmost ‘svg’ element are both specified with unit identifiers (in, mm, cm, pt, pc,
-    //   px, em, ex) or in user units, then the aspect ratio is calculated from the ‘width’ and ‘height’ attributes after
-    //   resolving both values to user units.
-    intrinsicSize.setWidth(floatValueForLength(svgSVGElement().intrinsicWidth(), 0));
-    intrinsicSize.setHeight(floatValueForLength(svgSVGElement().intrinsicHeight(), 0));
+    // https://www.w3.org/TR/SVG/coords.html#IntrinsicSizing
+    intrinsicSize = calculateIntrinsicSize();
 
     if (style().aspectRatioType() == AspectRatioType::Ratio) {
-        intrinsicRatio = style().logicalAspectRatio();
+        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
         return;
     }
 
-    std::optional<double> intrinsicRatioValue;
+    std::optional<FloatSize> intrinsicRatioValue;
     if (!intrinsicSize.isEmpty())
-        intrinsicRatioValue = intrinsicSize.width() / static_cast<double>(intrinsicSize.height());
+        intrinsicRatio = { intrinsicSize.width(), intrinsicSize.height() };
     else {
-        // - If either/both of the ‘width’ and ‘height’ of the rootmost ‘svg’ element are in percentage units (or omitted), the
-        //   aspect ratio is calculated from the width and height values of the ‘viewBox’ specified for the current SVG document
-        //   fragment. If the ‘viewBox’ is not correctly specified, or set to 'none', the intrinsic aspect ratio cannot be
-        //   calculated and is considered unspecified.
         FloatSize viewBoxSize = svgSVGElement().viewBox().size();
         if (!viewBoxSize.isEmpty()) {
             // The viewBox can only yield an intrinsic ratio, not an intrinsic size.
-            intrinsicRatioValue = viewBoxSize.width() / static_cast<double>(viewBoxSize.height());
+            intrinsicRatioValue = { viewBoxSize.width(), viewBoxSize.height() };
         }
     }
 
     if (intrinsicRatioValue)
         intrinsicRatio = *intrinsicRatioValue;
     else if (style().aspectRatioType() == AspectRatioType::AutoAndRatio)
-        intrinsicRatio = style().logicalAspectRatio();
+        intrinsicRatio = FloatSize::narrowPrecision(style().aspectRatioLogicalWidth(), style().aspectRatioLogicalHeight());
 }
 
 bool LegacyRenderSVGRoot::isEmbeddedThroughSVGImage() const
@@ -121,7 +128,7 @@ bool LegacyRenderSVGRoot::isEmbeddedThroughFrameContainingSVGDocument() const
 {
     // If our frame has an owner renderer, we're embedded through eg. object/embed/iframe,
     // but we only negotiate if we're in an SVG document.
-    if (!frame().ownerRenderer())
+    if (!frame().ownerRenderer() || !isDocumentElementRenderer())
         return false;
     return frame().document()->isSVGDocument();
 }
@@ -174,11 +181,11 @@ void LegacyRenderSVGRoot::layout()
     m_isLayoutSizeChanged = needsLayout || (svgSVGElement().hasRelativeLengths() && oldSize != size());
     SVGRenderSupport::layoutChildren(*this, needsLayout || SVGRenderSupport::filtersForceContainerLayout(*this));
 
-    if (!m_resourcesNeedingToInvalidateClients.isEmpty()) {
+    if (!m_resourcesNeedingToInvalidateClients.isEmptyIgnoringNullReferences()) {
         // Invalidate resource clients, which may mark some nodes for layout.
         for (auto& resource :  m_resourcesNeedingToInvalidateClients) {
-            resource->removeAllClientsFromCache();
-            SVGResourcesCache::clientStyleChanged(*resource, StyleDifference::Layout, nullptr, resource->style());
+            resource.removeAllClientsFromCache();
+            SVGResourcesCache::clientStyleChanged(resource, StyleDifference::Layout, nullptr, resource.style());
         }
 
         m_isLayoutSizeChanged = false;
@@ -213,10 +220,7 @@ bool LegacyRenderSVGRoot::shouldApplyViewportClip() const
     // the outermost svg is clipped if auto, and svg document roots are always clipped
     // When the svg is stand-alone (isDocumentElement() == true) the viewport clipping should always
     // be applied, noting that the window scrollbars should be hidden if overflow=hidden.
-    return effectiveOverflowX() == Overflow::Hidden
-        || style().overflowX() == Overflow::Auto
-        || style().overflowX() == Overflow::Scroll
-        || this->isDocumentElementRenderer();
+    return isNonVisibleOverflow(effectiveOverflowX()) || style().overflowX() == Overflow::Auto || this->isDocumentElementRenderer();
 }
 
 void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -242,7 +246,7 @@ void LegacyRenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint&
     GraphicsContext& context = paintInfo.context();
     if (context.detectingContentfulPaint()) {
         for (auto& current : childrenOfType<RenderObject>(*this)) {
-            if (!current.isSVGHiddenContainer()) {
+            if (!current.isLegacySVGHiddenContainer()) {
                 context.setContentfulPaintDetected();
                 return;
             }
@@ -400,9 +404,6 @@ std::optional<FloatRect> LegacyRenderSVGRoot::computeFloatVisibleRectInContainer
 // to convert from SVG viewport coordinates to local CSS box coordinates.
 void LegacyRenderSVGRoot::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
 {
-    ASSERT(!mode.contains(IsFixed)); // We should have no fixed content in the SVG rendering tree.
-    ASSERT(mode.contains(UseTransforms)); // mapping a point through SVG w/o respecting transforms is useless.
-
     RenderReplaced::mapLocalToContainer(ancestorContainer, transformState, mode | ApplyContainerFlip, wasFixed);
 }
 
@@ -471,7 +472,7 @@ void LegacyRenderSVGRoot::addResourceForClientInvalidation(RenderSVGResourceCont
     LegacyRenderSVGRoot* svgRoot = SVGRenderSupport::findTreeRootObject(*resource);
     if (!svgRoot)
         return;
-    svgRoot->m_resourcesNeedingToInvalidateClients.add(resource);
+    svgRoot->m_resourcesNeedingToInvalidateClients.add(*resource);
 }
 
 }

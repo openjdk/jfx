@@ -31,9 +31,10 @@
 
 #include "CSSValueKeywords.h"
 #include "Document.h"
-#include "Frame.h"
+#include "FontMetrics.h"
 #include "FrameDestructionObserverInlines.h"
-#include "RenderStyle.h"
+#include "LocalFrame.h"
+#include "RenderStyleInlines.h"
 #include "Settings.h"
 
 namespace WebCore {
@@ -46,7 +47,7 @@ float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize
     // exempt from minimum font size rules. Acid3 relies on this for pixel-perfect
     // rendering. This is also compatible with other browsers that have minimum
     // font size settings (e.g. Firefox).
-    if (fabsf(specifiedSize) < std::numeric_limits<float>::epsilon())
+    if (std::abs(specifiedSize) < std::numeric_limits<float>::epsilon())
         return 0.0f;
 
     // We support two types of minimum font size. The first is a hard override that applies to
@@ -86,7 +87,7 @@ float computedFontSizeFromSpecifiedSize(float specifiedSize, bool isAbsoluteSize
     float zoomFactor = 1.0f;
     if (!useSVGZoomRules) {
         zoomFactor = style->effectiveZoom();
-        Frame* frame = document.frame();
+        auto* frame = document.frame();
         if (frame && style->textZoom() != TextZoom::Reset)
             zoomFactor *= frame->textZoomFactor();
     }
@@ -183,5 +184,66 @@ int legacyFontSizeForPixelSize(int pixelFontSize, bool shouldUseFixedDefaultSize
     return findNearestLegacyFontSize<float>(pixelFontSize, fontSizeFactors, mediumSize);
 }
 
+static float adjustedFontSize(float size, float sizeAdjust, float metricValue)
+{
+    if (!size)
+        return 0;
+
+    float aspectValue = metricValue / size;
+    return size * (sizeAdjust / aspectValue);
 }
+
+float adjustedFontSize(float size, const FontSizeAdjust& sizeAdjust, const FontMetrics& metrics)
+{
+    // FIXME: The behavior for missing metrics has yet to be defined.
+    // https://github.com/w3c/csswg-drafts/issues/6384
+    switch (sizeAdjust.metric) {
+    case FontSizeAdjust::Metric::CapHeight:
+        return metrics.hasCapHeight() ? adjustedFontSize(size, *sizeAdjust.value, metrics.floatCapHeight()) : size;
+    case FontSizeAdjust::Metric::ChWidth:
+        return metrics.zeroWidth() ? adjustedFontSize(size, *sizeAdjust.value, *metrics.zeroWidth()) : size;
+    // FIXME: Are ic-height and ic-width the same? Gecko treats them the same.
+    case FontSizeAdjust::Metric::IcWidth:
+    case FontSizeAdjust::Metric::IcHeight:
+        return metrics.ideogramWidth() > 0 ? adjustedFontSize(size, *sizeAdjust.value, metrics.ideogramWidth()) : size;
+    case FontSizeAdjust::Metric::ExHeight:
+    default:
+        return metrics.hasXHeight() ? adjustedFontSize(size, *sizeAdjust.value, metrics.xHeight()) : size;
+    }
+
+    ASSERT_NOT_REACHED();
 }
+
+std::optional<float> aspectValueOfPrimaryFont(const RenderStyle& style, FontSizeAdjust::Metric metric)
+{
+    const auto& metrics = style.metricsOfPrimaryFont();
+    std::optional<float> metricValue;
+    switch (metric) {
+    case FontSizeAdjust::Metric::CapHeight:
+        if (metrics.hasCapHeight())
+            metricValue = metrics.floatCapHeight();
+        break;
+    case FontSizeAdjust::Metric::ChWidth:
+        if (metrics.zeroWidth())
+            metricValue = metrics.zeroWidth();
+        break;
+    // FIXME: Are ic-height and ic-width the same? Gecko treats them the same.
+    case FontSizeAdjust::Metric::IcWidth:
+    case FontSizeAdjust::Metric::IcHeight:
+        if (metrics.ideogramWidth() > 0)
+            metricValue = metrics.ideogramWidth();
+        break;
+    case FontSizeAdjust::Metric::ExHeight:
+    default:
+        if (metrics.hasXHeight())
+            metricValue = metrics.xHeight();
+    }
+
+    float computedFontSize = style.computedFontSize();
+    return metricValue.has_value() && computedFontSize
+        ? std::make_optional(*metricValue / computedFontSize)
+        : std::nullopt;
+}
+
+} // namespace Style
+} // namespace WebCore

@@ -131,9 +131,9 @@ public:
 #endif // !PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(WIN)
-    IntPoint(const POINT&);
-    operator POINT() const;
-    IntPoint(const POINTS&);
+    WEBCORE_EXPORT IntPoint(const POINT&);
+    WEBCORE_EXPORT operator POINT() const;
+    WEBCORE_EXPORT IntPoint(const POINTS&);
     operator POINTS() const;
 #endif
 
@@ -181,11 +181,6 @@ inline IntPoint operator-(const IntPoint& point)
 inline bool operator==(const IntPoint& a, const IntPoint& b)
 {
     return a.x() == b.x() && a.y() == b.y();
-}
-
-inline bool operator!=(const IntPoint& a, const IntPoint& b)
-{
-    return a.x() != b.x() || a.y() != b.y();
 }
 
 inline IntSize toIntSize(const IntPoint& a)

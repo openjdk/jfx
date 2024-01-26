@@ -52,7 +52,6 @@
 #include "JITCodeMap.h"
 #include "JITMathICForwards.h"
 #include "JSCast.h"
-#include "JSGlobalObject.h"
 #include "JumpTable.h"
 #include "LazyOperandValueProfile.h"
 #include "MetadataTable.h"
@@ -67,6 +66,7 @@
 #include "ValueProfile.h"
 #include "VirtualRegister.h"
 #include "Watchpoint.h"
+#include <wtf/ApproximateTime.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FixedVector.h>
 #include <wtf/HashSet.h>
@@ -147,7 +147,7 @@ public:
     bool hasHash() const;
     bool isSafeToComputeHash() const;
     CString hashAsStringIfPossible() const;
-    CString sourceCodeForTools() const; // Not quite the actual source we parsed; this will do things like prefix the source for a function with a reified signature.
+    CString sourceCodeForTools() const;
     CString sourceCodeOnOneLine() const; // As sourceCodeForTools(), but replaces all whitespace runs with a single space.
     void dumpAssumingJITType(PrintStream&, JITType) const;
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
@@ -156,7 +156,7 @@ public:
 
     unsigned numParameters() const { return m_numParameters; }
 private:
-    void setNumParameters(unsigned newValue);
+    void setNumParameters(unsigned newValue, bool allocateArgumentValueProfiles);
 public:
 
     unsigned numberOfArgumentsToSkip() const { return m_numberOfArgumentsToSkip; }
@@ -204,7 +204,7 @@ public:
 
     static size_t estimatedSize(JSCell*, VM&);
     static void destroy(JSCell*);
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
     void notifyLexicalBindingUpdate();
 
@@ -367,8 +367,6 @@ public:
 
     VirtualRegister thisRegister() const { return m_unlinkedCode->thisRegister(); }
 
-    bool usesCallEval() const { return m_unlinkedCode->usesCallEval(); }
-
     void setScopeRegister(VirtualRegister scopeRegister)
     {
         ASSERT(scopeRegister.isLocal() || !scopeRegister.isValid());
@@ -399,17 +397,19 @@ public:
     static ptrdiff_t offsetOfArgumentValueProfiles() { return OBJECT_OFFSETOF(CodeBlock, m_argumentValueProfiles); }
     unsigned numberOfArgumentValueProfiles()
     {
-        ASSERT(m_argumentValueProfiles.size() == static_cast<unsigned>(m_numParameters) || !Options::useJIT());
+        ASSERT(m_argumentValueProfiles.size() == static_cast<unsigned>(m_numParameters) || !Options::useJIT() || !JITCode::isBaselineCode(jitType()));
         return m_argumentValueProfiles.size();
     }
 
     ValueProfile& valueProfileForArgument(unsigned argumentIndex)
     {
         ASSERT(Options::useJIT()); // This is only called from the various JIT compilers or places that first check numberOfArgumentValueProfiles before calling this.
+        ASSERT(JITCode::isBaselineCode(jitType()));
         ValueProfile& result = m_argumentValueProfiles[argumentIndex];
         return result;
     }
 
+    ValueProfile* tryGetValueProfileForBytecodeIndex(BytecodeIndex);
     ValueProfile& valueProfileForBytecodeIndex(BytecodeIndex);
     SpeculatedType valueProfilePredictionForBytecodeIndex(const ConcurrentJSLocker&, BytecodeIndex);
 
@@ -426,7 +426,6 @@ public:
     bool couldTakeSpecialArithFastCase(BytecodeIndex bytecodeOffset);
 
     ArrayProfile* getArrayProfile(const ConcurrentJSLocker&, BytecodeIndex);
-    ArrayProfile* getArrayProfile(BytecodeIndex);
 
     // Exception handling support
 
@@ -524,6 +523,12 @@ public:
 #if ENABLE(JIT)
     SimpleJumpTable& baselineSwitchJumpTable(int tableIndex);
     StringJumpTable& baselineStringSwitchJumpTable(int tableIndex);
+    void setBaselineJITData(std::unique_ptr<BaselineJITData>&& jitData)
+    {
+        ASSERT(!m_jitData);
+        WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
+        m_jitData = jitData.release();
+    }
     BaselineJITData* baselineJITData()
     {
         if (!JITCode::isOptimizingJIT(jitType()))
@@ -535,6 +540,7 @@ public:
     void setDFGJITData(std::unique_ptr<DFG::JITData>&& jitData)
     {
         ASSERT(!m_jitData);
+        WTF::storeStoreFence(); // m_jitData is accessed from concurrent GC threads.
         m_jitData = jitData.release();
     }
 
@@ -619,7 +625,7 @@ public:
     void countReoptimization();
 
 #if !ENABLE(C_LOOP)
-    static unsigned numberOfLLIntBaselineCalleeSaveRegisters() { return RegisterSet::llintBaselineCalleeSaveRegisters().numberOfSetRegisters(); }
+    static unsigned numberOfLLIntBaselineCalleeSaveRegisters() { return RegisterSetBuilder::llintBaselineCalleeSaveRegisters().numberOfSetRegisters(); }
     static size_t llintBaselineCalleeSaveSpaceAsVirtualRegisters();
     static size_t calleeSaveSpaceAsVirtualRegisters(const RegisterAtOffsetList&);
 #else
@@ -715,9 +721,10 @@ public:
 #endif
 
     bool shouldOptimizeNow();
-    void updateAllValueProfilePredictions();
+    void updateAllNonLazyValueProfilePredictions(const ConcurrentJSLocker&);
+    void updateAllLazyValueProfilePredictions(const ConcurrentJSLocker&);
     void updateAllArrayProfilePredictions(const ConcurrentJSLocker&);
-    void updateAllArrayPredictions();
+    void updateAllArrayAllocationProfilePredictions();
     void updateAllPredictions();
 
     unsigned frameRegisterCount();
@@ -769,7 +776,15 @@ public:
     // concurrent compilation threads finish what they're doing.
     mutable ConcurrentJSLock m_lock;
 
-    bool m_shouldAlwaysBeInlined; // Not a bitfield because the JIT wants to store to it.
+    bool m_shouldAlwaysBeInlined { true }; // Not a bitfield because the JIT wants to store to it.
+
+#if USE(JSVALUE64)
+    // 64bit environment does not need a lock for ValueProfile operations.
+    NoLockingNecessaryTag valueProfileLock() { return NoLockingNecessary; }
+#else
+    ConcurrentJSLock& valueProfileLock() { return m_lock; }
+#endif
+
     static ptrdiff_t offsetOfShouldAlwaysBeInlined() { return OBJECT_OFFSETOF(CodeBlock, m_shouldAlwaysBeInlined); }
 
 #if ENABLE(JIT)
@@ -867,7 +882,7 @@ private:
 
     double optimizationThresholdScalingFactor();
 
-    void updateAllValueProfilePredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
+    void updateAllNonLazyValueProfilePredictionsAndCountLiveness(const ConcurrentJSLocker&, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 
     Vector<unsigned> setConstantRegisters(const FixedVector<WriteBarrier<Unknown>>& constants, const FixedVector<SourceCodeRepresentation>& constantsSourceCodeRepresentation);
     void initializeTemplateObjects(ScriptExecutable* topLevelExecutable, const Vector<unsigned>& templateObjectIndices);
@@ -891,11 +906,10 @@ private:
 
     unsigned numberOfNonArgumentValueProfiles() { return totalNumberOfValueProfiles() - numberOfArgumentValueProfiles(); }
     unsigned totalNumberOfValueProfiles() { return m_unlinkedCode->numberOfValueProfiles(); }
-    ValueProfile* tryGetValueProfileForBytecodeIndex(BytecodeIndex);
 
     Seconds timeSinceCreation()
     {
-        return MonotonicTime::now() - m_creationTime;
+        return ApproximateTime::now() - m_creationTime;
     }
 
     void createRareDataIfNecessary()
@@ -972,7 +986,7 @@ private:
 
     RefPtr<MetadataTable> m_metadata;
 
-    MonotonicTime m_creationTime;
+    ApproximateTime m_creationTime;
     double m_previousCounter { 0 };
 
     std::unique_ptr<RareData> m_rareData;
@@ -982,7 +996,7 @@ private:
     HashSet<UniquedStringImpl*> m_cachedIdentifierUids;
 #endif
 };
-#if !ASSERT_ENABLED && COMPILER(GCC_COMPATIBLE)
+#if defined(NDEBUG) && COMPILER(GCC_COMPATIBLE)
 static_assert(sizeof(CodeBlock) <= 240, "Keep it small for memory saving");
 #endif
 

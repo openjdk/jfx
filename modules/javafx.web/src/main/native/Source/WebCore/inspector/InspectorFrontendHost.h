@@ -32,6 +32,7 @@
 #include "ContextMenuProvider.h"
 #include "ExceptionOr.h"
 #include "InspectorFrontendClient.h"
+#include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -145,6 +146,8 @@ public:
     bool isBeingInspected();
     void setAllowsInspectingInspector(bool);
 
+    bool engineeringSettingsAllowed();
+
     bool supportsDiagnosticLogging();
 #if ENABLE(INSPECTOR_TELEMETRY)
     bool diagnosticLoggingAvailable();
@@ -176,7 +179,7 @@ private:
     WEBCORE_EXPORT InspectorFrontendHost(InspectorFrontendClient*, Page* frontendPage);
 
     InspectorFrontendClient* m_client;
-    Page* m_frontendPage;
+    WeakPtr<Page> m_frontendPage;
 #if ENABLE(CONTEXT_MENUS)
     FrontendMenuProvider* m_menuProvider;
 #endif

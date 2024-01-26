@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "LegacyInlineFlowBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderLineBoxList.h"
 
@@ -46,7 +45,7 @@ public:
     LayoutUnit marginStart(const RenderStyle* otherStyle = 0) const final;
     LayoutUnit marginEnd(const RenderStyle* otherStyle = 0) const final;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const final;
@@ -55,6 +54,9 @@ public:
     {
         return LayoutRect(LayoutPoint(), linesBoundingBox().size());
     }
+
+    LayoutUnit innerPaddingBoxWidth() const;
+    LayoutUnit innerPaddingBoxHeight() const;
 
     WEBCORE_EXPORT IntRect linesBoundingBox() const;
     LayoutRect linesVisualOverflowBoundingBox() const;
@@ -77,12 +79,12 @@ public:
 
     LayoutSize offsetForInFlowPositionedInline(const RenderBox* child) const;
 
-    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) final;
+    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const final;
     void paintOutline(PaintInfo&, const LayoutPoint&);
 
     bool mayAffectLayout() const;
 
-    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
+    bool requiresLayer() const override;
 
 protected:
     void willBeDestroyed() override;
@@ -140,12 +142,7 @@ private:
 
     void imageChanged(WrappedImagePtr, const IntRect* = 0) final;
 
-    void paintOutlineForLine(GraphicsContext&, const LayoutPoint&, const LayoutRect& prevLine, const LayoutRect& thisLine, const LayoutRect& nextLine, const Color&);
-
-    bool willChangeCreatesStackingContext() const
-    {
-        return style().willChange() && style().willChange()->canCreateStackingContext();
-    }
+    inline bool willChangeCreatesStackingContext() const;
 
     RenderLineBoxList m_lineBoxes;   // All of the line boxes created for this inline flow.  For example, <i>Hello<br>world.</i> will have two <i> line boxes.
 };

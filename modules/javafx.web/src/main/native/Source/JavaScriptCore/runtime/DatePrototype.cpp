@@ -241,7 +241,7 @@ const ClassInfo DatePrototype::s_info = { "Object"_s, &Base::s_info, &dateProtot
   getUTCMilliseconds    dateProtoFuncGetUTCMilliseconds      DontEnum|Function       0  DatePrototypeGetUTCMillisecondsIntrinsic
   getTimezoneOffset     dateProtoFuncGetTimezoneOffset       DontEnum|Function       0  DatePrototypeGetTimezoneOffsetIntrinsic
   getYear               dateProtoFuncGetYear                 DontEnum|Function       0  DatePrototypeGetYearIntrinsic
-  setTime               dateProtoFuncSetTime                 DontEnum|Function       1
+  setTime               dateProtoFuncSetTime                 DontEnum|Function       1  DatePrototypeSetTimeIntrinsic
   setMilliseconds       dateProtoFuncSetMilliSeconds         DontEnum|Function       1
   setUTCMilliseconds    dateProtoFuncSetUTCMilliseconds      DontEnum|Function       1
   setSeconds            dateProtoFuncSetSeconds              DontEnum|Function       2
@@ -931,7 +931,7 @@ JSC_DEFINE_HOST_FUNCTION(dateProtoFuncToTemporalInstant, (JSGlobalObject* global
     if (!isInteger(epochMilliseconds))
         return throwVMError(globalObject, scope, createRangeError(globalObject, "Invalid integer number of Epoch Millseconds"_s));
 
-    ASSERT(epochMilliseconds >= std::numeric_limits<int64_t>::min() && epochMilliseconds <= std::numeric_limits<int64_t>::max());
+    ASSERT(epochMilliseconds >= std::numeric_limits<int64_t>::min() && epochMilliseconds <= static_cast<double>(std::numeric_limits<int64_t>::max()));
     ISO8601::ExactTime exactTime = ISO8601::ExactTime::fromEpochMilliseconds(epochMilliseconds);
     return JSValue::encode(TemporalInstant::create(vm, globalObject->instantStructure(), exactTime));
 }

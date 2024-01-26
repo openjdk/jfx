@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004 Allan Sandfeld Jensen (kde@carewolf.com)
- * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +27,7 @@
 
 namespace WebCore {
 
+class CSSCounterStyle;
 class CounterNode;
 
 class RenderCounter final : public RenderText {
@@ -36,11 +38,10 @@ public:
 
     static void destroyCounterNodes(RenderElement&);
     static void destroyCounterNode(RenderElement&, const AtomString& identifier);
-    static void rendererSubtreeAttached(RenderElement&);
-    static void rendererRemovedFromTree(RenderElement&);
     static void rendererStyleChanged(RenderElement&, const RenderStyle* oldStyle, const RenderStyle& newStyle);
 
     void updateCounter();
+    bool canBeSelectionLeaf() const final { return false; }
 
 private:
     void willBeDestroyed() override;
@@ -50,22 +51,13 @@ private:
     bool isCounter() const override;
     String originalText() const override;
 
-    void computePreferredLogicalWidths(float leadWidth) override;
+    RefPtr<CSSCounterStyle> counterStyle() const;
 
     CounterContent m_counter;
-    CounterNode* m_counterNode { nullptr };
+    CheckedPtr<CounterNode> m_counterNode;
     RenderCounter* m_nextForSameCounter { nullptr };
     friend class CounterNode;
 };
-
-
-inline void RenderCounter::rendererStyleChanged(RenderElement& renderer, const RenderStyle* oldStyle, const RenderStyle& newStyle)
-{
-    if ((!oldStyle || !oldStyle->counterDirectives()) && !newStyle.counterDirectives())
-        return;
-
-    rendererStyleChangedSlowCase(renderer, oldStyle, newStyle);
-}
 
 } // namespace WebCore
 

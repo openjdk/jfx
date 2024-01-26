@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,12 @@ package test.javafx.scene.control.skin;
 import java.util.AbstractList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -68,6 +70,7 @@ public class VirtualFlowTest {
     private CellStub a;
     private CellStub b;
     private CellStub c;
+    private int prefSizeCounter;
 
     // The VirtualFlow we are going to test. By default, there are 100 cells
     // and each cell is 100 wide and 25 tall, except for the 30th cell, which
@@ -76,6 +79,7 @@ public class VirtualFlowTest {
 
 
     @Before public void setUp() {
+        prefSizeCounter = 0;
         list = new ArrayLinkedListShim<>();
         a = new CellStub(flow, "A");
         b = new CellStub(flow, "B");
@@ -97,7 +101,8 @@ public class VirtualFlowTest {
 
             @Override
             protected double computePrefWidth(double height) {
-                return flow.isVertical() ? (c.getIndex() == 29 ? 200 : 100) : (c.getIndex() == 29 ? 100 : 25);
+                prefSizeCounter++;
+                return flow.isVertical() ? (getIndex() == 29 ? 200 : 100) : (getIndex() == 29 ? 100 : 25);
             }
 
             @Override
@@ -112,7 +117,8 @@ public class VirtualFlowTest {
 
             @Override
             protected double computePrefHeight(double width) {
-                return flow.isVertical() ? (c.getIndex() == 29 ? 100 : 25) : (c.getIndex() == 29 ? 200 : 100);
+                prefSizeCounter++;
+                return flow.isVertical() ? (getIndex() == 29 ? 100 : 25) : (getIndex() == 29 ? 200 : 100);
             }
         });
         flow.setCellCount(100);
@@ -1223,6 +1229,38 @@ public class VirtualFlowTest {
     }
 
     @Test
+    // see JDK-8306447
+    public void testPositionCellRemainsConstantWithManyItems() {
+        flow.setVertical(true);
+        flow.setCellCount(100);
+        flow.resize(300, 300);
+        // scroll up and down, to populate the size cache
+        for (int i = 0; i < 20; i++) {
+            flow.scrollPixels(1);
+            pulse();
+            flow.scrollPixels(-1);
+            pulse();
+        }
+        flow.scrollPixels(911);
+        pulse();
+
+        IndexedCell vc = flow.getCell(33);
+        double cellPosition = flow.getCellPosition(vc);
+        // cell 33 should be at (32 x 25 + 1 x 100) - 911 = -11
+        assertEquals("Wrong first cell position", -11d, cellPosition, 0d);
+
+        for (int i = 1; i < 10; i++) {
+            flow.setCellCount(100 + i);
+            pulse();
+            vc = flow.getCell(33);
+            cellPosition = flow.getCellPosition(vc);
+            assertEquals("First cell position changed after adding " + i + " cells on large irregular list", -11d, cellPosition, 0d);
+        }
+    }
+
+
+
+    @Test
     // see JDK-8252811
     public void testSheetChildrenRemainsConstant() {
         flow.setVertical(true);
@@ -1491,6 +1529,377 @@ assertEquals(0, firstCell.getIndex());
         assertEquals(3, firstCell.getIndex());
         assertEquals(-10, firstCell.getLayoutY(),1);
     }
+
+    /**
+     * The VirtualFlow should never call the compute height methods when a fixed cell size is set.
+     * If it is called the height will be wrong for some cells.
+     */
+    @Test
+    public void testComputeHeightShouldNotBeUsedWhenFixedCellSizeIsSet() {
+        int cellSize = 24;
+
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(cellSize);
+        flow.setCellFactory(p -> new CellStub(flow) {
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return 1337;
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return 1337;
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                return 1337;
+            }
+        });
+        flow.setCellCount(100);
+        flow.resize(cellSize * 10, cellSize * 10);
+
+        pulse();
+        pulse();
+
+        for (int i = 0; i < 10; i++) {
+            IndexedCell<?> cell = flow.getCell(i);
+            double cellPosition = flow.getCellPosition(cell);
+            int expectedPosition = i * cellSize;
+            assertEquals(expectedPosition, cellPosition, 0d);
+            assertEquals(cellSize, cell.getHeight(), 0d);
+
+            assertNotEquals(cellSize, cell.getWidth(), 0d);
+        }
+
+        flow.scrollPixels(cellSize * 10);
+
+        for (int i = 10; i < 20; i++) {
+            IndexedCell<?> cell = flow.getCell(i);
+            double cellPosition = flow.getCellPosition(cell);
+            int expectedPosition = (i - 10) * cellSize;
+            assertEquals(expectedPosition, cellPosition, 0d);
+            assertEquals(cellSize, cell.getHeight(), 0d);
+
+            assertNotEquals(cellSize, cell.getWidth(), 0d);
+        }
+    }
+
+    /**
+     * The VirtualFlow should never call the compute width methods when a fixed cell size is set.
+     * If it is called the width will be wrong for some cells.
+     */
+    @Test
+    public void testComputeWidthShouldNotBeUsedWhenFixedCellSizeIsSet() {
+        int cellSize = 24;
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(false);
+        flow.setFixedCellSize(cellSize);
+        flow.setCellFactory(p -> new CellStub(flow) {
+
+            @Override
+            protected double computeMinWidth(double height) {
+                return 1337;
+            }
+
+            @Override
+            protected double computeMaxWidth(double height) {
+                return 1337;
+            }
+
+            @Override
+            protected double computePrefWidth(double height) {
+                return 1337;
+            }
+        });
+        flow.setCellCount(100);
+        flow.resize(cellSize * 10, cellSize * 10);
+
+        pulse();
+        pulse();
+
+        for (int i = 0; i < 10; i++) {
+            IndexedCell<?> cell = flow.getCell(i);
+            double cellPosition = flow.getCellPosition(cell);
+            int expectedPosition = i * cellSize;
+            assertEquals(expectedPosition, cellPosition, 0d);
+            assertEquals(cellSize, cell.getWidth(), 0d);
+
+            assertNotEquals(cellSize, cell.getHeight(), 0d);
+        }
+
+        flow.scrollPixels(cellSize * 10);
+
+        for (int i = 10; i < 20; i++) {
+            IndexedCell<?> cell = flow.getCell(i);
+            double cellPosition = flow.getCellPosition(cell);
+            int expectedPosition = (i - 10) * cellSize;
+            assertEquals(expectedPosition, cellPosition, 0d);
+            assertEquals(cellSize, cell.getWidth(), 0d);
+
+            assertNotEquals(cellSize, cell.getHeight(), 0d);
+        }
+    }
+
+    /**
+     * The VirtualFlow should never call the compute height methods when a fixed cell size is set.
+     */
+    @Test
+    public void testComputeHeightShouldNotBeCalledWhenFixedCellSizeIsSet() {
+        int cellSize = 24;
+
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(cellSize);
+        flow.setCellFactory(p -> new CellStub(flow) {
+
+            @Override
+            protected double computeMinHeight(double width) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                fail();
+                return 1337;
+            }
+        });
+        flow.setCellCount(100);
+        flow.resize(cellSize * 10, cellSize * 10);
+
+        // Trigger layout and see if the computeXXX method are called above.
+        pulse();
+        pulse();
+    }
+
+    /**
+     * The VirtualFlow should never call the compute width methods when a fixed cell size is set.
+     */
+    @Test
+    public void testComputeWidthShouldNotBeCalledWhenFixedCellSizeIsSet() {
+        int cellSize = 24;
+
+        flow = new VirtualFlowShim<>();
+        flow.setVertical(false);
+        flow.setFixedCellSize(cellSize);
+        flow.setCellFactory(p -> new CellStub(flow) {
+
+            @Override
+            protected double computeMinWidth(double height) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computeMaxWidth(double height) {
+                fail();
+                return 1337;
+            }
+
+            @Override
+            protected double computePrefWidth(double height) {
+                fail();
+                return 1337;
+            }
+        });
+        flow.setCellCount(100);
+        flow.resize(cellSize * 10, cellSize * 10);
+
+        // Trigger layout and see if the computeXXX method are called above.
+        pulse();
+        pulse();
+    }
+
+    @Test
+    public void testLowerCellCount() {
+        flow.setCellCount(10000);
+        int idx = flow.shim_computeCurrentIndex();
+        assertEquals(0, idx);
+
+        assertTrue(prefSizeCounter < 500);
+        int cntr = prefSizeCounter;
+        flow.scrollTo(9999);
+        pulse();
+        idx = flow.shim_computeCurrentIndex();
+        assertTrue(idx < 10000);
+        int newCounter = prefSizeCounter - cntr;
+        assertTrue(newCounter < 100);
+        cntr = prefSizeCounter;
+
+        flow.setCellCount(5000);
+        idx = flow.shim_computeCurrentIndex();
+        assertTrue(idx < 5000);
+        newCounter = prefSizeCounter - cntr;
+        assertTrue(newCounter < 100);
+        cntr = prefSizeCounter;
+
+        pulse();
+        idx = flow.shim_computeCurrentIndex();
+        assertTrue(idx < 5000);
+        newCounter = prefSizeCounter - cntr;
+
+        assertTrue(newCounter < 100);
+
+    }
+
+    @Test
+    public void testAddCellWithBigCurrentOne() {
+        int idx = flow.shim_computeCurrentIndex();
+        assertEquals(0, idx);
+        for (int i = 0; i < 20; i++) {
+            flow.scrollPixels(40);
+            pulse();
+        }
+        pulse();
+        idx = flow.shim_computeCurrentIndex();
+        assertEquals(29, idx);
+        flow.setCellCount(101);
+        pulse();
+        idx = flow.shim_computeCurrentIndex();
+        assertEquals(29, idx);
+    }
+
+    /**
+     * Scrolling via the trough (-> {@link com.sun.javafx.scene.control.VirtualScrollBar#adjustValue(double)}) should
+     * not throw any exception.
+     * This happened in the past when scrolling up (more) when we already only see the uppermost cell with the index 0.
+     * This index was subtracted by 1, leading to an {@link IndexOutOfBoundsException}.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8311983">JDK-8311983</a>
+     */
+    @Test
+    public void testScrollBarValueAdjustmentShouldNotThrowIOOBE() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(2);
+        flow.resize(250, 300);
+
+        pulse();
+
+        // Scroll down.
+        flow.shim_getVbar().adjustValue(0.9605263157894737);
+        // Scroll up.
+        flow.shim_getVbar().adjustValue(0.05263157894736842);
+
+        // This should not throw any exception. It used to throw an IndexOutOfBoundsException.
+        flow.shim_getVbar().adjustValue(0.05263157894736842);
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentShouldScrollOneDown() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(5);
+        flow.resize(250, 300);
+
+        pulse();
+
+        assertEquals(0, flow.getLastVisibleCell().getIndex());
+
+        // Scroll down.
+        flow.shim_getVbar().adjustValue(1);
+        pulse();
+
+        assertEquals(1, flow.getLastVisibleCell().getIndex());
+    }
+
+    @Test
+    public void testScrollBarValueAdjustmentShouldScrollOneUp() {
+        flow = new VirtualFlowShim<>();
+        flow.setFixedCellSize(512);
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(5);
+        flow.resize(250, 300);
+
+        pulse();
+
+        assertEquals(0, flow.getFirstVisibleCell().getIndex());
+
+        // Scroll completely down.
+        flow.shim_getVbar().setValue(1.0);
+        pulse();
+
+        assertEquals(4, flow.getFirstVisibleCell().getIndex());
+
+        // Scroll up.
+        flow.shim_getVbar().adjustValue(0.0);
+        pulse();
+
+        assertEquals(3, flow.getFirstVisibleCell().getIndex());
+    }
+
+    /**
+     * The first cell should always be the same when scrolling down just a little bit.
+     * This is mainly a regression test to check that no leading cells are added where they should not be.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8316590">JDK-8316590</a>
+     */
+    @Test
+    public void testFirstCellShouldBeTheSameOnScroll() {
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(50);
+        flow.resize(250, 300);
+
+        pulse();
+
+        IndexedCell<?> cell1 = flow.cells_get(flow.cells, 0);
+
+        flow.scrollPixels(0.01);
+        IndexedCell<?> cell2 = flow.cells_get(flow.cells, 0);
+
+        assertSame(cell1, cell2);
+    }
+
+    @Test
+    public void testFirstCellShouldHaveTheSameIndexOnScroll() {
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(50);
+        flow.resize(250, 300);
+
+        pulse();
+
+        IndexedCell<?> cell1 = flow.cells_get(flow.cells, 0);
+        assertEquals(0, cell1.getIndex());
+
+        flow.scrollPixels(0.01);
+
+        assertEquals(0, cell1.getIndex());
+    }
+
+    /**
+     * The first cell should always be at the same position (when visible), no matter if we scroll down or not.
+     *
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8316590">JDK-8316590</a>
+     */
+    @Test
+    public void testFirstCellShouldBeAtPosition0OnScroll() {
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(fw -> new CellStub(flow));
+        flow.setCellCount(50);
+        flow.resize(250, 300);
+
+        pulse();
+
+        IndexedCell<?> cell1 = flow.cells_get(flow.cells, 0);
+        assertEquals(0.0, cell1.getLayoutY(), 0);
+
+        flow.scrollPixels(0.01);
+
+        assertEquals(0.0, cell1.getLayoutY(), 0);
+    }
+
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {

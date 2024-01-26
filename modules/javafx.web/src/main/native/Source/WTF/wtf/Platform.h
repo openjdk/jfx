@@ -148,7 +148,7 @@
 #endif
 
 /* FIXME: The availability of RSA_PSS should not depend on the policy decision to USE(GCRYPT). */
-#if PLATFORM(MAC) || PLATFORM(IOS) || PLATFORM(MACCATALYST) || USE(GCRYPT) || USE(OPENSSL)
+#if PLATFORM(MAC) || PLATFORM(IOS) || PLATFORM(MACCATALYST) || PLATFORM(VISION) || USE(GCRYPT) || USE(OPENSSL)
 #define HAVE_RSA_PSS 1
 #endif
 
@@ -157,14 +157,7 @@
 #define USE_LIBWEBRTC 1
 #endif
 
-#if PLATFORM(COCOA) && ENABLE(WEBGL)
-#define USE_ANGLE 1
-#ifndef GL_SILENCE_DEPRECATION
-#define GL_SILENCE_DEPRECATION 1
-#endif
-#endif
-
 /* FIXME: This is used to "turn on a specific feature of WebKit", so should be converted to an ENABLE macro. */
-#if (PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)) && ENABLE(ACCESSIBILITY)
+#if (PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(JAVA) || PLATFORM(WPE)) && ENABLE(ACCESSIBILITY)
 #define USE_ACCESSIBILITY_CONTEXT_MENUS 1
 #endif

@@ -25,9 +25,7 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
-#include "LayoutContainerBox.h"
+#include "LayoutElementBox.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
@@ -41,18 +39,19 @@ class RenderView;
 
 namespace Layout {
 
+class InitialContainingBlock;
 class LayoutState;
 
 class LayoutTree {
     WTF_MAKE_ISO_ALLOCATED(LayoutTree);
 public:
-    LayoutTree(std::unique_ptr<ContainerBox>);
+    LayoutTree(std::unique_ptr<ElementBox>);
     ~LayoutTree() = default;
 
-    const ContainerBox& root() const { return *m_root; }
+    const ElementBox& root() const { return *m_root; }
 
 private:
-    std::unique_ptr<ContainerBox> m_root;
+    std::unique_ptr<ElementBox> m_root;
 };
 
 class TreeBuilder {
@@ -62,25 +61,23 @@ public:
 private:
     TreeBuilder();
 
-    void buildSubTree(const RenderElement& parentRenderer, ContainerBox& parentContainer);
-    void buildTableStructure(const RenderTable& tableRenderer, ContainerBox& tableWrapperBox);
-    std::unique_ptr<Box> createLayoutBox(const ContainerBox& parentContainer, const RenderObject& childRenderer);
+    void buildSubTree(const RenderElement& parentRenderer, ElementBox& parentContainer);
+    void buildTableStructure(const RenderTable& tableRenderer, ElementBox& tableWrapperBox);
+    std::unique_ptr<Box> createLayoutBox(const ElementBox& parentContainer, const RenderObject& childRenderer);
 
-    std::unique_ptr<Box> createReplacedBox(std::optional<Box::ElementAttributes>, RenderStyle&&);
-    std::unique_ptr<Box> createTextBox(String text, bool canUseSimplifiedTextMeasuring, bool canUseSimpleFontCodePath, RenderStyle&&);
-    std::unique_ptr<Box> createLineBreakBox(bool isOptional, RenderStyle&&);
-    std::unique_ptr<ContainerBox> createContainer(std::optional<Box::ElementAttributes>, RenderStyle&&);
+    std::unique_ptr<Box> createReplacedBox(Box::ElementAttributes, ElementBox::ReplacedAttributes&&, RenderStyle&&);
+    std::unique_ptr<Box> createTextBox(String text, bool isCombined, bool canUseSimplifiedTextMeasuring, bool canUseSimpleFontCodePath, RenderStyle&&);
+    std::unique_ptr<ElementBox> createContainer(Box::ElementAttributes, RenderStyle&&);
 };
 
 #if ENABLE(TREE_DEBUGGING)
-String layoutTreeAsText(const Box&, const LayoutState*);
-void showLayoutTree(const Box&, const LayoutState*);
-void showLayoutTree(const Box&);
-void showInlineTreeAndRuns(TextStream&, const LayoutState&, const ContainerBox& inlineFormattingRoot, size_t depth);
+String layoutTreeAsText(const InitialContainingBlock&, const LayoutState*);
+void showLayoutTree(const InitialContainingBlock&, const LayoutState*);
+void showLayoutTree(const InitialContainingBlock&);
+void showInlineTreeAndRuns(TextStream&, const LayoutState&, const ElementBox& inlineFormattingRoot, size_t depth);
 void printLayoutTreeForLiveDocuments();
 #endif
 
 }
 }
 
-#endif

@@ -25,17 +25,12 @@
 
 #pragma once
 
-#include "AST/ShaderModule.h"
 #include "CompilationMessage.h"
-#include "Lexer.h"
-#include <wtf/Expected.h>
 
 namespace WGSL {
 
-template<typename Lexer>
-Expected<AST::ShaderModule, Error> parse(const String& wgsl);
+class ShaderModule;
 
-Expected<AST::ShaderModule, Error> parseLChar(const String& wgsl);
-Expected<AST::ShaderModule, Error> parseUChar(const String& wgsl);
+std::optional<Error> parse(ShaderModule&);
 
 } // namespace WGSL

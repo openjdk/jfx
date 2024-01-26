@@ -92,11 +92,11 @@ public:
     SVGAnimatedEnumeration& lengthAdjustAnimated() { return m_lengthAdjust; }
 
 protected:
-    SVGTextContentElement(const QualifiedName&, Document&);
+    SVGTextContentElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
 
     bool isValid() const override { return SVGTests::isValid(); }
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     void svgAttributeChanged(const QualifiedName&) override;

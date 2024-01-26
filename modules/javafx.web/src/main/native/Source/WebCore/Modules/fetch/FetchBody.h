@@ -46,7 +46,7 @@ class ScriptExecutionContext;
 class FetchBody {
 public:
     void arrayBuffer(FetchBodyOwner&, Ref<DeferredPromise>&&);
-    void blob(FetchBodyOwner&, Ref<DeferredPromise>&&, const String&);
+    void blob(FetchBodyOwner&, Ref<DeferredPromise>&&);
     void json(FetchBodyOwner&, Ref<DeferredPromise>&&);
     void text(FetchBodyOwner&, Ref<DeferredPromise>&&);
     void formData(FetchBodyOwner&, Ref<DeferredPromise>&&);
@@ -56,8 +56,16 @@ public:
     using Init = std::variant<RefPtr<Blob>, RefPtr<ArrayBufferView>, RefPtr<ArrayBuffer>, RefPtr<DOMFormData>, RefPtr<URLSearchParams>, RefPtr<ReadableStream>, String>;
     static ExceptionOr<FetchBody> extract(Init&&, String&);
     FetchBody() = default;
+    FetchBody(FetchBody&&) = default;
+    WEBCORE_EXPORT ~FetchBody();
+    FetchBody& operator=(FetchBody&&) = default;
 
-    WEBCORE_EXPORT static std::optional<FetchBody> fromFormData(ScriptExecutionContext&, FormData&);
+    explicit FetchBody(String&& data)
+        : m_data(WTFMove(data))
+    {
+    }
+
+    WEBCORE_EXPORT static std::optional<FetchBody> fromFormData(ScriptExecutionContext&, Ref<FormData>&&);
 
     void loadingFailed(const Exception&);
     void loadingSucceeded(const String& contentType);
@@ -70,7 +78,7 @@ public:
     void setAsFormData(Ref<FormData>&& data) { m_data = WTFMove(data); }
     FetchBodyConsumer& consumer() { return m_consumer; }
 
-    void consumeOnceLoadingFinished(FetchBodyConsumer::Type, Ref<DeferredPromise>&&, const String&);
+    void consumeOnceLoadingFinished(FetchBodyConsumer::Type, Ref<DeferredPromise>&&);
     void cleanConsumer() { m_consumer.clean(); }
 
     FetchBody clone();
@@ -93,9 +101,8 @@ private:
     explicit FetchBody(Ref<const ArrayBuffer>&& data) : m_data(WTFMove(data)) { }
     explicit FetchBody(Ref<const ArrayBufferView>&& data) : m_data(WTFMove(data)) { }
     explicit FetchBody(Ref<FormData>&& data) : m_data(WTFMove(data)) { }
-    explicit FetchBody(String&& data) : m_data(WTFMove(data)) { }
     explicit FetchBody(Ref<const URLSearchParams>&& data) : m_data(WTFMove(data)) { }
-    explicit FetchBody(Ref<ReadableStream>&& stream) : m_data(stream) { m_readableStream = WTFMove(stream); }
+    explicit FetchBody(Ref<ReadableStream>&& stream) : m_data(stream), m_readableStream(WTFMove(stream)) { }
     explicit FetchBody(FetchBodyConsumer&& consumer) : m_consumer(WTFMove(consumer)) { }
 
     void consume(FetchBodyOwner&, Ref<DeferredPromise>&&);
@@ -125,6 +132,11 @@ private:
 
     FetchBodyConsumer m_consumer { FetchBodyConsumer::Type::None };
     RefPtr<ReadableStream> m_readableStream;
+};
+
+struct FetchBodyWithType {
+    FetchBody body;
+    String type;
 };
 
 } // namespace WebCore

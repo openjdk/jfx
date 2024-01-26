@@ -36,11 +36,12 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "AudioSession.h"
 #include "DocumentInlines.h"
-#include "Frame.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaStream.h"
 #include "JSOverconstrainedError.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MediaConstraints.h"
 #include "PlatformMediaSessionManager.h"
@@ -149,7 +150,7 @@ static inline bool isMediaStreamCorrectlyStarted(const MediaStream& stream)
     });
 }
 
-void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, String&& deviceIdentifierHashSalt, CompletionHandler<void()>&& completionHandler)
+void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, MediaDeviceHashSalts&& deviceIdentifierHashSalt, CompletionHandler<void()>&& completionHandler)
 {
     RELEASE_LOG(MediaStream, "UserMediaRequest::allow %s %s", audioDevice ? audioDevice.persistentId().utf8().data() : "", videoDevice ? videoDevice.persistentId().utf8().data() : "");
     m_allowCompletionHandler = WTFMove(completionHandler);
@@ -163,8 +164,9 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
 
             if (!privateStreamOrError.has_value()) {
                 RELEASE_LOG(MediaStream, "UserMediaRequest::allow failed to create media stream!");
-                scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, privateStreamOrError.error());
-                deny(MediaAccessDenialReason::HardwareError);
+                auto error = privateStreamOrError.error();
+                scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, error.errorMessage);
+                deny(error.denialReason, error.errorMessage);
                 return;
             }
             auto privateStream = WTFMove(privateStreamOrError).value();
@@ -181,6 +183,9 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
             }
 
             if (auto* audioTrack = stream->getFirstAudioTrack()) {
+#if USE(AUDIO_SESSION)
+                AudioSession::sharedSession().tryToSetActive(true);
+#endif
                 if (std::holds_alternative<MediaTrackConstraints>(m_audioConstraints))
                     audioTrack->setConstraints(std::get<MediaTrackConstraints>(WTFMove(m_audioConstraints)));
             }
@@ -190,7 +195,7 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
             }
 
             ASSERT(document.isCapturing());
-            stream->document()->setHasCaptureMediaStreamTrack();
+            document.setHasCaptureMediaStreamTrack();
             m_promise->resolve(WTFMove(stream));
         };
 
@@ -214,6 +219,10 @@ void UserMediaRequest::deny(MediaAccessDenialReason reason, const String& messag
 
     ExceptionCode code;
     switch (reason) {
+    case MediaAccessDenialReason::NoReason:
+        ASSERT_NOT_REACHED();
+        code = AbortError;
+        break;
     case MediaAccessDenialReason::NoConstraints:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - no constraints");
         code = TypeError;

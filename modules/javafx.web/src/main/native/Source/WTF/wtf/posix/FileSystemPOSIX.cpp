@@ -35,6 +35,7 @@
 #include <fnmatch.h>
 #include <libgen.h>
 #include <stdio.h>
+#include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/types.h>
@@ -44,6 +45,10 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
+
+#if USE(GLIB)
+#include <glib.h>
+#endif
 
 namespace WTF {
 
@@ -61,7 +66,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
     case FileOpenMode::Read:
         platformFlag |= O_RDONLY;
         break;
-    case FileOpenMode::Write:
+    case FileOpenMode::Truncate:
         platformFlag |= (O_WRONLY | O_CREAT | O_TRUNC);
         break;
     case FileOpenMode::ReadWrite:
@@ -92,6 +97,11 @@ void closeFile(PlatformFileHandle& handle)
         close(handle);
         handle = invalidPlatformFileHandle;
     }
+}
+
+int posixFileDescriptor(PlatformFileHandle handle)
+{
+    return handle;
 }
 
 long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
@@ -172,22 +182,44 @@ std::optional<uint64_t> fileSize(PlatformFileHandle handle)
 
 std::optional<WallTime> fileCreationTime(const String& path)
 {
-#if OS(DARWIN) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD)
+#if (OS(LINUX) && HAVE(STATX)) || OS(DARWIN) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD)
     CString fsRep = fileSystemRepresentation(path);
-
     if (!fsRep.data() || fsRep.data()[0] == '\0')
         return std::nullopt;
 
+#if OS(LINUX) && HAVE(STATX)
+    struct statx fileInfo;
+
+    if (statx(-1, fsRep.data(), 0, STATX_BTIME, &fileInfo) == -1)
+        return std::nullopt;
+
+    return WallTime::fromRawSeconds(fileInfo.stx_btime.tv_sec);
+#elif OS(DARWIN) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD)
     struct stat fileInfo;
 
-    if (stat(fsRep.data(), &fileInfo))
+    if (stat(fsRep.data(), &fileInfo) == -1)
         return std::nullopt;
 
     return WallTime::fromRawSeconds(fileInfo.st_birthtime);
-#else
+#endif
+#endif
+
     UNUSED_PARAM(path);
     return std::nullopt;
-#endif
+}
+
+std::optional<PlatformFileID> fileID(PlatformFileHandle handle)
+{
+    struct stat fileInfo;
+    if (fstat(handle, &fileInfo))
+        return std::nullopt;
+
+    return fileInfo.st_ino;
+}
+
+bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+{
+    return a == b;
 }
 
 std::optional<uint32_t> volumeFileBlockSize(const String& path)
@@ -215,18 +247,26 @@ CString fileSystemRepresentation(const String& path)
 #endif
 
 #if !PLATFORM(COCOA)
+static const char* temporaryFileDirectory()
+{
+#if USE(GLIB)
+    return g_get_tmp_dir();
+#else
+    if (auto* tmpDir = getenv("TMPDIR"))
+        return tmpDir;
+
+    return "/tmp";
+#endif
+}
+
 String openTemporaryFile(StringView prefix, PlatformFileHandle& handle, StringView suffix)
 {
-    // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
+    // Suffix is not supported because that's incompatible with mkstemp.
+    // This is OK for now since the code using it is built on macOS only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
 
     char buffer[PATH_MAX];
-    const char* tmpDir = getenv("TMPDIR");
-
-    if (!tmpDir)
-        tmpDir = "/tmp";
-
-    if (snprintf(buffer, PATH_MAX, "%s/%sXXXXXX", tmpDir, prefix.utf8().data()) >= PATH_MAX)
+    if (snprintf(buffer, PATH_MAX, "%s/%sXXXXXX", temporaryFileDirectory(), prefix.utf8().data()) >= PATH_MAX)
         goto end;
 
     handle = mkstemp(buffer);
@@ -254,6 +294,8 @@ std::optional<int32_t> getFileDeviceId(const String& path)
     return fileStat.st_dev;
 }
 
+// On macOS, stat() used by std::filesystem is much slower than access() when sandboxed.
+// This fast path exists to avoid calls to stat(). It's not needed on other platforms.
 #if ENABLE(FILESYSTEM_POSIX_FAST_PATH)
 
 bool fileExists(const String& path)

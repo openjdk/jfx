@@ -22,13 +22,12 @@
 #include "config.h"
 #include "SVGFEComponentTransferElement.h"
 
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "FEComponentTransfer.h"
+#include "NodeName.h"
+#include "SVGComponentTransferFunctionElement.h"
+#include "SVGComponentTransferFunctionElementInlines.h"
 #include "SVGElementTypeHelpers.h"
-#include "SVGFEFuncAElement.h"
-#include "SVGFEFuncBElement.h"
-#include "SVGFEFuncGElement.h"
-#include "SVGFEFuncRElement.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -37,7 +36,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEComponentTransferElement);
 
 inline SVGFEComponentTransferElement::SVGFEComponentTransferElement(const QualifiedName& tagName, Document& document)
-    : SVGFilterPrimitiveStandardAttributes(tagName, document)
+    : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feComponentTransferTag));
 
@@ -52,14 +51,12 @@ Ref<SVGFEComponentTransferElement> SVGFEComponentTransferElement::create(const Q
     return adoptRef(*new SVGFEComponentTransferElement(tagName, document));
 }
 
-void SVGFEComponentTransferElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFEComponentTransferElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::inAttr) {
-        m_in1->setBaseValInternal(value);
-        return;
-    }
+    if (name == SVGNames::inAttr)
+        m_in1->setBaseValInternal(newValue);
 
-    SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
+    SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFEComponentTransferElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -75,23 +72,69 @@ void SVGFEComponentTransferElement::svgAttributeChanged(const QualifiedName& att
 
 RefPtr<FilterEffect> SVGFEComponentTransferElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
-    ComponentTransferFunction red;
-    ComponentTransferFunction green;
-    ComponentTransferFunction blue;
-    ComponentTransferFunction alpha;
+    ComponentTransferFunctions functions;
 
-    for (auto& child : childrenOfType<SVGElement>(*this)) {
-        if (is<SVGFEFuncRElement>(child))
-            red = downcast<SVGFEFuncRElement>(child).transferFunction();
-        else if (is<SVGFEFuncGElement>(child))
-            green = downcast<SVGFEFuncGElement>(child).transferFunction();
-        else if (is<SVGFEFuncBElement>(child))
-            blue = downcast<SVGFEFuncBElement>(child).transferFunction();
-        else if (is<SVGFEFuncAElement>(child))
-            alpha = downcast<SVGFEFuncAElement>(child).transferFunction();
+    for (auto& child : childrenOfType<SVGComponentTransferFunctionElement>(*this))
+        functions[child.channel()] = child.transferFunction();
+
+    return FEComponentTransfer::create(WTFMove(functions));
+}
+
+static bool isRelevantTransferFunctionElement(const Element& child)
+{
+    auto name = child.elementName();
+
+    ASSERT(is<SVGComponentTransferFunctionElement>(child));
+
+    for (auto laterSibling = child.nextElementSibling(); laterSibling; laterSibling = laterSibling->nextElementSibling()) {
+        if (laterSibling->elementName() == name)
+            return false;
     }
 
-    return FEComponentTransfer::create(red, green, blue, alpha);
+    return true;
+}
+
+bool SVGFEComponentTransferElement::setFilterEffectAttributeFromChild(FilterEffect& filterEffect, const Element& childElement, const QualifiedName& attrName)
+{
+    ASSERT(isRelevantTransferFunctionElement(childElement));
+
+    if (!is<SVGComponentTransferFunctionElement>(childElement)) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    auto& effect = downcast<FEComponentTransfer>(filterEffect);
+    auto& child = downcast<SVGComponentTransferFunctionElement>(childElement);
+
+    switch (attrName.nodeName()) {
+    case AttributeNames::typeAttr:
+        return effect.setType(child.channel(), child.type());
+    case AttributeNames::slopeAttr:
+        return effect.setSlope(child.channel(), child.slope());
+    case AttributeNames::interceptAttr:
+        return effect.setIntercept(child.channel(), child.intercept());
+    case AttributeNames::amplitudeAttr:
+        return effect.setAmplitude(child.channel(), child.amplitude());
+    case AttributeNames::exponentAttr:
+        return effect.setExponent(child.channel(), child.exponent());
+    case AttributeNames::offsetAttr:
+        return effect.setOffset(child.channel(), child.offset());
+    case AttributeNames::tableValuesAttr:
+        return effect.setTableValues(child.channel(), child.tableValues());
+    default:
+        break;
+    }
+    return false;
+}
+
+void SVGFEComponentTransferElement::transferFunctionAttributeChanged(SVGComponentTransferFunctionElement& child, const QualifiedName& attrName)
+{
+    ASSERT(child.parentNode() == this);
+
+    if (!isRelevantTransferFunctionElement(child))
+        return;
+
+    primitiveAttributeOnChildChanged(child, attrName);
 }
 
 } // namespace WebCore

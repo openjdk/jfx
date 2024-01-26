@@ -25,16 +25,14 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "DisplayLayerController.h"
 #include "LayoutUnits.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 
-class Frame;
-class FrameView;
+class LocalFrame;
+class LocalFrameView;
 class Page;
 
 namespace Layout {
@@ -48,7 +46,7 @@ namespace Display {
 class View {
     WTF_MAKE_ISO_ALLOCATED(View);
 public:
-    explicit View(FrameView&);
+    explicit View(LocalFrameView&);
     ~View();
 
     const Tree* tree() const { return m_displayTree.get(); }
@@ -59,8 +57,8 @@ public:
     void setIsInWindow(bool);
 
     Page* page() const;
-    FrameView& frameView() const { return m_frameView; }
-    Frame& frame() const;
+    LocalFrameView& frameView() const { return m_frameView; }
+    LocalFrame& frame() const;
 
     // FIXME: Temporary.
     void setNeedsDisplay();
@@ -70,7 +68,7 @@ public:
 private:
     const Layout::LayoutState* layoutState() const;
 
-    FrameView& m_frameView;
+    LocalFrameView& m_frameView;
     LayerController m_layerController;
     std::unique_ptr<Display::Tree> m_displayTree;
 };
@@ -78,4 +76,3 @@ private:
 } // namespace Display
 } // namespace WebCore
 
-#endif // ENABLE(LAYOUT_FORMATTING_CONTEXT)

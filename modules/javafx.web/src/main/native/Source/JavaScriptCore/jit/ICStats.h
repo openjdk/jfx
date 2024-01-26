@@ -52,21 +52,22 @@ namespace JSC {
     macro(OperationGetByIdOptimize) \
     macro(OperationGetByValOptimize) \
     macro(OperationGetByIdWithThisOptimize) \
+    macro(OperationGetByValWithThisOptimize) \
     macro(OperationGenericIn) \
     macro(OperationInByIdGeneric) \
     macro(OperationInByIdOptimize) \
     macro(OperationPutByIdStrict) \
-    macro(OperationPutByIdNonStrict) \
+    macro(OperationPutByIdSloppy) \
     macro(OperationPutByIdDirectStrict) \
-    macro(OperationPutByIdDirectNonStrict) \
+    macro(OperationPutByIdDirectSloppy) \
     macro(OperationPutByIdStrictOptimize) \
-    macro(OperationPutByIdNonStrictOptimize) \
+    macro(OperationPutByIdSloppyOptimize) \
     macro(OperationPutByIdDirectStrictOptimize) \
-    macro(OperationPutByIdDirectNonStrictOptimize) \
+    macro(OperationPutByIdDirectSloppyOptimize) \
     macro(OperationPutByIdStrictBuildList) \
-    macro(OperationPutByIdNonStrictBuildList) \
-    macro(OperationPutByIdDefinePrivateFieldFieldStrictOptimize) \
-    macro(OperationPutByIdPutPrivateFieldFieldStrictOptimize) \
+    macro(OperationPutByIdSloppyBuildList) \
+    macro(OperationPutByIdDefinePrivateFieldStrictOptimize) \
+    macro(OperationPutByIdPutPrivateFieldStrictOptimize) \
     macro(PutByAddAccessCase) \
     macro(PutByReplaceWithJump) \
     macro(PutBySelfPatch) \
@@ -80,7 +81,8 @@ namespace JSC {
     macro(CheckPrivateBrandAddAccessCase) \
     macro(SetPrivateBrandAddAccessCase) \
     macro(CheckPrivateBrandReplaceWithJump) \
-    macro(SetPrivateBrandReplaceWithJump)
+    macro(SetPrivateBrandReplaceWithJump) \
+    macro(OperationPutByIdSetPrivateFieldStrictOptimize)
 
 class ICEvent {
 public:
@@ -126,11 +128,6 @@ public:
         return m_kind == other.m_kind
             && m_classInfo == other.m_classInfo
             && m_propertyName == other.m_propertyName;
-    }
-
-    bool operator!=(const ICEvent& other) const
-    {
-        return !(*this == other);
     }
 
     bool operator<(const ICEvent& other) const;

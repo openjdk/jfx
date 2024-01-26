@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SVGMaskElement.h"
 
+#include "NodeName.h"
 #include "RenderSVGResourceMaskerInlines.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
@@ -41,7 +42,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMaskElement);
 
 inline SVGMaskElement::SVGMaskElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGTests(this)
 {
     // Spec: If the x/y attribute is not specified, the effect is as if a value of "-10%" were specified.
@@ -64,36 +65,41 @@ Ref<SVGMaskElement> SVGMaskElement::create(const QualifiedName& tagName, Documen
     return adoptRef(*new SVGMaskElement(tagName, document));
 }
 
-void SVGMaskElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGMaskElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::maskUnitsAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
+    SVGParsingError parseError = NoError;
+    switch (name.nodeName()) {
+    case AttributeNames::maskUnitsAttr: {
+        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
             m_maskUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
-        return;
+        break;
     }
-    if (name == SVGNames::maskContentUnitsAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
+    case AttributeNames::maskContentUnitsAttr: {
+        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
             m_maskContentUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
-        return;
+        break;
     }
+    case AttributeNames::xAttr:
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::yAttr:
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::widthAttr:
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::heightAttr:
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    SVGParsingError parseError = NoError;
-
-    if (name == SVGNames::xAttr)
-        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::yAttr)
-        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::widthAttr)
-        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::heightAttr)
-        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGElement::parseAttribute(name, value);
-    SVGTests::parseAttribute(name, value);
+    SVGTests::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGMaskElement::svgAttributeChanged(const QualifiedName& attrName)

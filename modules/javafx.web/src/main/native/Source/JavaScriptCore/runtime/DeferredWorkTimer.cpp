@@ -26,6 +26,7 @@
 #include "config.h"
 #include "DeferredWorkTimer.h"
 
+#include "GlobalObjectMethodTable.h"
 #include "JSPromise.h"
 #include "StrongInlines.h"
 #include "VM.h"
@@ -116,12 +117,12 @@ void DeferredWorkTimer::doWork(VM& vm)
             task(ticket);
             ticketData = nullptr;
             if (Exception* exception = scope.exception()) {
-                scope.clearException();
+                if (scope.clearExceptionExceptTermination())
                 globalObject->globalObjectMethodTable()->reportUncaughtExceptionAtEventLoop(globalObject, exception);
             }
 
             vm.drainMicrotasks();
-            ASSERT(!vm.exceptionForInspection());
+            ASSERT(!vm.exceptionForInspection() || vm.hasPendingTerminationException());
         }
         m_currentlyRunningTask = false;
     }
@@ -218,6 +219,12 @@ void DeferredWorkTimer::didResumeScriptExecutionOwner()
     Locker locker { m_taskLock };
     if (!isScheduled() && m_tasks.size())
         setTimeUntilFire(0_s);
+}
+
+bool DeferredWorkTimer::hasAnyPendingWork() const
+{
+    ASSERT(m_apiLock->vm()->currentThreadIsHoldingAPILock() || (Thread::mayBeGCThread() && m_apiLock->vm()->heap.worldIsStopped()));
+    return !m_pendingTickets.isEmpty();
 }
 
 } // namespace JSC

@@ -42,7 +42,6 @@ public:
     void enterFullscreen() const;
     void toggleMute();
 
-    bool hasControlsAttributeSet() const;
     String interactiveVideoDuration() const;
     bool isPlaying() const;
     bool isAutoplayEnabled() const;
@@ -67,5 +66,7 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityMediaObject, isMediaObject())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityMediaObject) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isMediaObject(); } \
+SPECIALIZE_TYPE_TRAITS_END()
 #endif // PLATFORM(IOS_FAMILY)

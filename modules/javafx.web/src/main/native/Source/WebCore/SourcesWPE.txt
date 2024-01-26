@@ -38,6 +38,8 @@ accessibility/atspi/AccessibilityObjectValueAtspi.cpp
 accessibility/atspi/AccessibilityRootAtspi.cpp
 accessibility/atspi/AXObjectCacheAtspi.cpp
 
+dom/wpe/PointerEventWPE.cpp
+
 editing/atspi/FrameSelectionAtspi.cpp
 editing/libwpe/EditorLibWPE.cpp
 
@@ -48,40 +50,34 @@ page/linux/ResourceUsageThreadLinux.cpp
 
 page/scrolling/nicosia/ScrollingCoordinatorNicosia.cpp
 page/scrolling/nicosia/ScrollingStateNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeFixedNode.cpp
+page/scrolling/nicosia/ScrollingTreeFixedNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeFrameScrollingNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNode.cpp
+page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeOverflowScrollingNodeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreePositionedNode.cpp
+page/scrolling/nicosia/ScrollingTreePositionedNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeScrollingNodeDelegateNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.cpp
 
-platform/UserAgentQuirks.cpp
+platform/gamepad/libwpe/GamepadLibWPE.cpp
+platform/gamepad/libwpe/GamepadProviderLibWPE.cpp
 
-platform/adwaita/ScrollbarThemeAdwaita.cpp
-platform/adwaita/ThemeAdwaita.cpp
-
-platform/gamepad/wpe/WPEGamepad.cpp
-platform/gamepad/wpe/WPEGamepadProvider.cpp
 
 platform/generic/ScrollbarsControllerGeneric.cpp
 
-platform/graphics/ANGLEWebKitBridge.cpp
-platform/graphics/GLContext.cpp
-platform/graphics/PlatformDisplay.cpp
+platform/graphics/PlatformDisplay.cpp @no-unify
+
+platform/graphics/angle/PlatformDisplayANGLE.cpp @no-unify
 
 platform/graphics/wpe/SystemFontDatabaseWPE.cpp
 
-platform/graphics/egl/GLContextEGL.cpp
-platform/graphics/egl/GLContextEGLLibWPE.cpp
+platform/graphics/egl/GLContext.cpp
+platform/graphics/egl/GLContextLibWPE.cpp
 
 platform/graphics/gbm/GBMBufferSwapchain.cpp
 platform/graphics/gbm/GBMDevice.cpp
-platform/graphics/gbm/GraphicsContextGLANGLELinux.cpp
-platform/graphics/gbm/GraphicsContextGLFallback.cpp
-platform/graphics/gbm/GraphicsContextGLGBM.cpp
-platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.cpp
+platform/graphics/gbm/GraphicsContextGLGBM.cpp @no-unify
+platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.cpp @no-unify
 
 platform/graphics/libwpe/PlatformDisplayLibWPE.cpp
 
@@ -99,5 +95,3 @@ platform/unix/LoggingUnix.cpp
 platform/wpe/PlatformScreenWPE.cpp
 
 platform/xdg/MIMETypeRegistryXdg.cpp
-
-rendering/RenderThemeAdwaita.cpp

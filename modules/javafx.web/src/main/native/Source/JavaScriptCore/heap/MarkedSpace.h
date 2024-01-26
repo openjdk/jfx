@@ -57,7 +57,7 @@ public:
     // Sizes up to this amount get a size class for each size step.
     static constexpr size_t preciseCutoff = 80;
 
-    // The amount of available payload in a block is the block's size minus the footer.
+    // The amount of available payload in a block is the block's size minus the header.
     static constexpr size_t blockPayload = MarkedBlock::payloadSize;
 
     // The largest cell we're willing to allocate in a MarkedBlock the "normal way" (i.e. using size
@@ -105,8 +105,10 @@ public:
 
     void prepareForAllocation();
 
-    template<typename Visitor> void visitWeakSets(Visitor&);
     void reapWeakSets();
+
+    template<typename Visitor>
+    Ref<SharedTask<void(Visitor&)>> forEachWeakInParallel();
 
     MarkedBlockSet& blocks() { return m_blocks; }
 

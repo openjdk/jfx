@@ -29,7 +29,6 @@ typedef (USVString or CSSOMVariableReferenceValue) CSSUnparsedSegment;
 [
     InterfaceName=CSSUnparsedValue,
     EnabledBySetting=CSSTypedOMEnabled,
-    Conditional=CSS_TYPED_OM,
     Exposed=(Window,Worker,PaintWorklet),
     JSGenerateToNativeObject
 ] interface CSSUnparsedValue : CSSStyleValue {
@@ -37,6 +36,6 @@ typedef (USVString or CSSOMVariableReferenceValue) CSSUnparsedSegment;
 
     iterable<CSSUnparsedSegment>;
     readonly attribute unsigned long length;
-    getter CSSUnparsedSegment (unsigned long index);
+    getter CSSUnparsedSegment? (unsigned long index);
     setter CSSUnparsedSegment (unsigned long index, CSSUnparsedSegment val);
 };

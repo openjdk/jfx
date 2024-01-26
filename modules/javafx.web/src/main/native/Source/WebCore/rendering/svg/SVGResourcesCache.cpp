@@ -22,6 +22,7 @@
 
 #include "ElementInlines.h"
 #include "RenderSVGResourceContainer.h"
+#include "SVGRenderStyle.h"
 #include "SVGResources.h"
 #include "SVGResourcesCycleSolver.h"
 
@@ -44,15 +45,14 @@ void SVGResourcesCache::addResourcesFromRenderer(RenderElement& renderer, const 
     SVGResources& resources = *m_cache.add(&renderer, WTFMove(newResources)).iterator->value;
 
     // Run cycle-detection _afterwards_, so self-references can be caught as well.
-    SVGResourcesCycleSolver solver(renderer, resources);
-    solver.resolveCycles();
+    SVGResourcesCycleSolver::resolveCycles(renderer, resources);
 
     // Walk resources and register the render object at each resources.
-    HashSet<RenderSVGResourceContainer*> resourceSet;
+    WeakHashSet<RenderSVGResourceContainer> resourceSet;
     resources.buildSetOfResources(resourceSet);
 
-    for (auto* resourceContainer : resourceSet)
-        resourceContainer->addClient(renderer);
+    for (auto& resourceContainer : resourceSet)
+        resourceContainer.addClient(renderer);
 }
 
 void SVGResourcesCache::removeResourcesFromRenderer(RenderElement& renderer)
@@ -62,11 +62,11 @@ void SVGResourcesCache::removeResourcesFromRenderer(RenderElement& renderer)
         return;
 
     // Walk resources and register the render object at each resources.
-    HashSet<RenderSVGResourceContainer*> resourceSet;
+    WeakHashSet<RenderSVGResourceContainer> resourceSet;
     resources->buildSetOfResources(resourceSet);
 
-    for (auto* resourceContainer : resourceSet)
-        resourceContainer->removeClient(renderer);
+    for (auto& resourceContainer : resourceSet)
+        resourceContainer.removeClient(renderer);
 }
 
 static inline SVGResourcesCache& resourcesCacheFromRenderer(const RenderElement& renderer)
@@ -108,11 +108,20 @@ static inline bool rendererCanHaveResources(RenderObject& renderer)
 
 void SVGResourcesCache::clientStyleChanged(RenderElement& renderer, StyleDifference diff, const RenderStyle* oldStyle, const RenderStyle& newStyle)
 {
-    if (diff == StyleDifference::Equal || !renderer.parent())
+    if (!renderer.parent())
         return;
 
-    // In this case the proper SVGFE*Element will decide whether the modified CSS properties require a relayout or repaint.
-    if (renderer.isSVGResourceFilterPrimitive() && (diff == StyleDifference::Repaint || diff == StyleDifference::RepaintIfText))
+    // For filter primitives, when diff is Repaint or RepaintIsText, the
+    // SVGFE*Element will decide whether the modified CSS properties require a
+    // relayout or repaint.
+    //
+    // Since diff can be Equal even if we have have a filter property change
+    // (due to how RenderElement::adjustStyleDifference works), in general we
+    // want to continue to the comparison of oldStyle and newStyle below, and
+    // so we don't return early just when diff == StyleDifference::Equal. But
+    // this isn't necessary for filter primitives, to which the filter property
+    // doesn't apply, so we check for it here too.
+    if (renderer.isSVGResourceFilterPrimitive() && (diff == StyleDifference::Equal || diff == StyleDifference::Repaint || diff == StyleDifference::RepaintIfText))
         return;
 
     auto& cache = resourcesCacheFromRenderer(renderer);
@@ -206,7 +215,8 @@ void SVGResourcesCache::resourceDestroyed(RenderSVGResourceContainer& resource)
         if (it.value->resourceDestroyed(resource)) {
             // Mark users of destroyed resources as pending resolution based on the id of the old resource.
             auto& clientElement = *it.key->element();
-            clientElement.document().accessSVGExtensions().addPendingResource(resource.element().getIdAttribute(), clientElement);
+            RELEASE_ASSERT(is<SVGElement>(clientElement));
+            clientElement.treeScopeForSVGReferences().addPendingSVGResource(resource.element().getIdAttribute(), downcast<SVGElement>(clientElement));
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,12 +31,12 @@
 #include "CachedRawResource.h"
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
-#include "GraphicsLayer.h"
 #include "HTMLElement.h"
 #include "HTMLModelElementCamera.h"
 #include "IDLTypes.h"
 #include "ModelPlayerClient.h"
 #include "PlatformLayer.h"
+#include "PlatformLayerIdentifier.h"
 #include "SharedBuffer.h"
 #include <wtf/UniqueRef.h>
 
@@ -54,8 +54,9 @@ template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 class HTMLModelElement final : public HTMLElement, private CachedRawResourceClient, public ModelPlayerClient, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLModelElement);
 public:
-    using WeakValueType = HTMLElement::WeakValueType;
     using HTMLElement::weakPtrFactory;
+    using HTMLElement::WeakValueType;
+    using HTMLElement::WeakPtrImplType;
 
     static Ref<HTMLModelElement> create(const QualifiedName&, Document&);
     virtual ~HTMLModelElement();
@@ -117,8 +118,10 @@ public:
 #endif
 
 private:
+    constexpr static auto CreateHTMLModelElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLModelElement(const QualifiedName&, Document&);
 
+    URL selectModelSource() const;
     void setSourceURL(const URL&);
     void modelDidChange();
     void createModelPlayer();
@@ -131,7 +134,12 @@ private:
 
     // DOM overrides.
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
+    bool isURLAttribute(const Attribute&) const final;
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
+
+    // StyledElement
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
     // Rendering overrides.
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
@@ -144,7 +152,7 @@ private:
     // ModelPlayerClient overrides.
     void didFinishLoading(ModelPlayer&) final;
     void didFailLoading(ModelPlayer&, const ResourceError&) final;
-    GraphicsLayer::PlatformLayerID platformLayerID() final;
+    PlatformLayerIdentifier platformLayerID() final;
 
     void defaultEventHandler(Event&) final;
     void dragDidStart(MouseEvent&);

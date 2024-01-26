@@ -34,9 +34,10 @@
 namespace WebCore {
 
 class Document;
-class Frame;
 class HTMLScriptRunnerHost;
+class LocalFrame;
 class ScriptSourceCode;
+class WeakPtrImplWithEventTargetData;
 
 class HTMLScriptRunner {
     WTF_MAKE_FAST_ALLOCATED;
@@ -58,7 +59,7 @@ public:
     bool isExecutingScript() const { return !!m_scriptNestingLevel; }
 
 private:
-    Frame* frame() const;
+    LocalFrame* frame() const;
 
     void executePendingScriptAndDispatchEvent(PendingScript&);
     void executeParsingBlockingScripts();
@@ -72,7 +73,7 @@ private:
     void stopWatchingForLoad(PendingScript&);
     bool isPendingScriptReady(const PendingScript&);
 
-    WeakPtr<Document> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     HTMLScriptRunnerHost& m_host;
     RefPtr<PendingScript> m_parserBlockingScript;
     Deque<Ref<PendingScript>> m_scriptsToExecuteAfterParsing; // http://www.whatwg.org/specs/web-apps/current-work/#list-of-scripts-that-will-execute-when-the-document-has-finished-parsing

@@ -74,21 +74,18 @@ public:
     void clearColor(const Color&) override;
 
     void bindSurface(BitmapTexture* surface) override;
-    BitmapTexture* currentSurface();
+    BitmapTexture* currentSurface() override;
     void beginClip(const TransformationMatrix&, const FloatRoundedRect&) override;
-    void beginPainting(PaintFlags = 0) override;
+    void beginPainting(PaintFlags = 0, BitmapTexture* = nullptr) override;
     void endPainting() override;
     void endClip() override;
-    void beginPreserves3D() override;
-    void endPreserves3D() override;
     IntRect clipBounds() override;
     IntSize maxTextureSize() const override { return IntSize(2000, 2000); }
-    Ref<BitmapTexture> createTexture() override { return createTexture(GL_DONT_CARE); }
-    Ref<BitmapTexture> createTexture(GLint internalFormat) override;
+    Ref<BitmapTexture> createTexture() override;
+    void setDepthRange(double zNear, double zFar) override;
 
     void drawFiltered(const BitmapTexture& sourceTexture, const BitmapTexture* contentTexture, const FilterOperation&, int pass);
 
-    void setEnableEdgeDistanceAntialiasing(bool enabled) { m_enableEdgeDistanceAntialiasing = enabled; }
     void drawTextureExternalOES(GLuint texture, Flags, const FloatRect&, const TransformationMatrix& modelViewMatrix, float opacity);
 
 private:
@@ -105,10 +102,11 @@ private:
     ClipStack& clipStack();
     inline TextureMapperGLData& data() { return *m_data; }
 
+    void updateProjectionMatrix();
+
     TextureMapperContextAttributes m_contextAttributes;
     TextureMapperGLData* m_data;
     ClipStack m_clipStack;
-    bool m_enableEdgeDistanceAntialiasing;
 };
 
 } // namespace WebCore

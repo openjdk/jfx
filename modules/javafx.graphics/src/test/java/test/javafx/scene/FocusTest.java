@@ -1105,4 +1105,61 @@ public class FocusTest {
         assertNotFocusWithin(node4);
     }
 
+    @Test public void testFocusWithinBitsAreSetOnParentsWhenAddedNodeIsAlreadyFocused() {
+        class N extends Group {
+            N(Node... children) { super(children); }
+            void _setFocused(boolean value) { setFocused(value); }
+        }
+
+        N node1, node2, node3 = new N();
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N()
+            )
+        );
+
+        node3._setFocused(true);
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node2);
+
+        node2.getChildren().add(node3);
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertIsFocusWithin(node3);
+    }
+
+    @Test public void testFocusWithinBitsAreSetAndClearedOnParentsOfNodeContainingMultipleFocuses() {
+        class N extends Group {
+            N(Node... children) { super(children); }
+            void _setFocused(boolean value) { setFocused(value); }
+        }
+
+        N node1, node2, node3, node4;
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N()
+            )
+        );
+
+        node3 = new N(
+            node4 = new N()
+        );
+
+        node3._setFocused(true);
+        node4._setFocused(true);
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node2);
+
+        node2.getChildren().add(node3);
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertIsFocusWithin(node3);
+
+        node2.getChildren().clear();
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node2);
+    }
+
 }

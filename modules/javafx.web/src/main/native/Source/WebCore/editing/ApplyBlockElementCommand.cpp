@@ -31,7 +31,7 @@
 #include "HTMLBRElement.h"
 #include "HTMLNames.h"
 #include "RenderElement.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "Text.h"
 #include "VisibleUnits.h"
 
@@ -105,8 +105,11 @@ void ApplyBlockElementCommand::doApply()
         // FIXME: Add a new TextIteratorBehavior to suppress it.
         if (start.isNotNull() && end.isNull())
             end = lastPositionInNode(endScope.get());
-        if (start.isNotNull() && end.isNotNull())
-            setEndingSelection(VisibleSelection(start, end, endingSelection().isDirectional()));
+        if (start.isNotNull() && end.isNotNull()) {
+            VisibleSelection selection { start, end, endingSelection().isDirectional() };
+            // Use canonicalized positions for start & end.
+            setEndingSelection(VisibleSelection(selection.start(), selection.end(), selection.isDirectional()));
+        }
     }
 }
 

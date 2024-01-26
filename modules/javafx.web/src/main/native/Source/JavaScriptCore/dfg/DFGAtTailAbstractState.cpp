@@ -36,12 +36,14 @@ namespace JSC { namespace DFG {
 AtTailAbstractState::AtTailAbstractState(Graph& graph)
     : m_graph(graph)
     , m_valuesAtTailMap(m_graph)
+    , m_tupleAbstractValues(m_graph)
 {
     for (BasicBlock* block : graph.blocksInNaturalOrder()) {
         auto& valuesAtTail = m_valuesAtTailMap.at(block);
         valuesAtTail.clear();
         for (auto& valueAtTailPair : block->ssa->valuesAtTail)
             valuesAtTail.add(valueAtTailPair.node, valueAtTailPair.value);
+        m_tupleAbstractValues.at(block).grow(m_graph.m_tupleData.size());
     }
 }
 
@@ -54,6 +56,7 @@ void AtTailAbstractState::createValueForNode(NodeFlowProjection node)
 
 AbstractValue& AtTailAbstractState::forNode(NodeFlowProjection node)
 {
+    ASSERT(!node->isTuple());
     auto& valuesAtTail = m_valuesAtTailMap.at(m_block);
     HashMap<NodeFlowProjection, AbstractValue>::iterator iter = valuesAtTail.find(node);
     DFG_ASSERT(m_graph, node.node(), iter != valuesAtTail.end());

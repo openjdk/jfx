@@ -34,8 +34,8 @@
 
 namespace WebCore {
 
-enum class AuthenticatorAttachment;
-enum class AuthenticatorTransport;
+enum class AuthenticatorAttachment : uint8_t;
+enum class AuthenticatorTransport : uint8_t;
 
 struct AuthenticatorResponseData;
 

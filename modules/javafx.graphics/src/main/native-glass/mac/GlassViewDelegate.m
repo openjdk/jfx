@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,7 @@
  * questions.
  */
 
+#include "GlassDraggingSource.h"
 #import "common.h"
 #import "com_sun_glass_events_ViewEvent.h"
 #import "com_sun_glass_events_MouseEvent.h"
@@ -953,77 +954,93 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     return [GlassDragSource mapJavaMaskToNsOperation:[GlassDragSource getMask]];
 }
 
-- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)isLocal
-{
-    // The Command key masks out every operation other than NSDragOperationGeneric. We want
-    // internal Move events to get through this filtering so we copy the Move bit into the
-    // Generic bit and treat Generic as a synonym for Move.
-    if (isLocal)
-    {
-        NSDragOperation result = self->dragOperation;
-        if (result & NSDragOperationMove)
-            result |= NSDragOperationGeneric;
-        return result;
-    }
-    return self->dragOperation;
-}
-
 // called from Java layer drag handler, triggered by DnD Pasteboard flush
-- (void)startDrag:(NSDragOperation)operation
+- (void)startDrag:(NSDragOperation)operation withItems:(NSArray<NSDraggingItem*>*)items
 {
     DNDLOG("startDrag");
-    self->dragOperation = operation;
+
+    // Set up frames for dragging items
+    for (NSDraggingItem* item in items)
     {
         NSPoint dragPoint = [self->nsView convertPoint:[self->lastEvent locationInWindow] fromView:nil];
-        NSPasteboard *pasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
         NSImage *image = nil;
+        NSRect rect = [item draggingFrame];
 
-        if ([[pasteboard types] containsObject:DRAG_IMAGE_MIME]) {
+        NSPasteboardItem *pbItem = (NSPasteboardItem*)[item item];
+        NSArray<NSPasteboardType> *pbItemTypes = [pbItem types];
+
+        if ([pbItemTypes containsObject:DRAG_IMAGE_MIME]) {
             //Try to init with drag image specified by the user
-            image = [[NSImage alloc] initWithData:[pasteboard dataForType:DRAG_IMAGE_MIME]];
+            image = [[NSImage alloc] initWithData:[pbItem dataForType:DRAG_IMAGE_MIME]];
         }
 
-        if (image == nil && [NSImage canInitWithPasteboard:pasteboard] == YES)
+        if (image == nil && [pbItemTypes containsObject:NSPasteboardTypeFileURL])
         {
-            // ask the Pasteboard for ist own image representation of its contents
-            image = [[NSImage alloc] initWithPasteboard:pasteboard];
-        }
+            // create an image with contents of URL
+            NSString *fileURL = [[[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeFileURL] encoding:NSUTF8StringEncoding] autorelease];
+            image = [[NSImage alloc] initByReferencingFile:fileURL];
 
-        if (image != nil)
-        {
-            // check the drag image size and scale it down as needed using Safari behavior (sizes) as reference
-            CGFloat width = [image size].width;
-            CGFloat height = [image size].height;
-            if ((width > MAX_DRAG_SIZE) || (height > MAX_DRAG_SIZE))
+            // this only works if we reference image files though, so make sure the image is valid
+            if ([image isValid] == NO)
             {
-                if (width >= height)
-                {
-                    CGFloat ratio = height/width;
-                    width = MIN(width, MAX_DRAG_SIZE);
-                    height = ratio * width;
-                    [image setSize:NSMakeSize(width, height)];
-                }
-                else
-                {
-                    CGFloat ratio = width/height;
-                    height = MIN(height, MAX_DRAG_SIZE);
-                    width = ratio * height;
-                    [image setSize:NSMakeSize(width, height)];
-                }
+                [image release];
+                image = nil;
             }
-        } else {
-            NSArray *items = [pasteboard pasteboardItems];
+        }
+
+        if (image == nil && [pbItemTypes containsObject:NSPasteboardTypeURL])
+        {
+            // create an image with contents of URL
+            NSString *url = [[[NSString alloc] initWithData:[pbItem dataForType:NSPasteboardTypeURL] encoding:NSUTF8StringEncoding] autorelease];
+            image = [[NSImage alloc] initByReferencingURL:[NSURL URLWithString:url]];
+
+            // same as with File URL, regular URL can also be invalid
+            if ([image isValid] == NO)
+            {
+                [image release];
+                image = nil;
+            }
+        }
+
+        if (image == nil)
+        {
             if ([items count] == 1)
             {
+                // with no custom MIME image default to generic document icon
                 image = [[NSImage alloc] initWithContentsOfFile:@"/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericDocumentIcon.icns"];
             }
-
-            if (image == nil)
+            else
             {
+                // create multiple document image for more than one item in the clipboard
                 image = [[NSImage imageNamed:NSImageNameMultipleDocuments] retain];
             }
 
             [image setSize:NSMakeSize(DEFAULT_DRAG_SIZE, DEFAULT_DRAG_SIZE)];
+        }
+
+        if (image != nil)
+        {
+            DNDLOG("created an image with dim %dx%d", [image size].width, [image size].height);
+            // check the drag image size and scale it down as needed using Safari behavior (sizes) as reference
+            rect.size.width = [image size].width;
+            rect.size.height = [image size].height;
+            if ((rect.size.width > MAX_DRAG_SIZE) || (rect.size.height > MAX_DRAG_SIZE))
+            {
+                if (rect.size.width >= rect.size.height)
+                {
+                    CGFloat ratio = rect.size.height/rect.size.width;
+                    rect.size.width = MIN(rect.size.width, MAX_DRAG_SIZE);
+                    rect.size.height = ratio * rect.size.width;
+                    [image setSize:NSMakeSize(rect.size.width, rect.size.height)];
+                }
+                else
+                {
+                    CGFloat ratio = rect.size.width/rect.size.height;
+                    rect.size.height = MIN(rect.size.height, MAX_DRAG_SIZE);
+                    rect.size.width = ratio * rect.size.height;
+                    [image setSize:NSMakeSize(rect.size.width, rect.size.height)];
+                }
+            }
         }
 
         if (image != nil)
@@ -1033,9 +1050,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             // would be nice to get this info from the Java layer,
             // so that we could adjust the drag image origin based on where in the src it was clicked on
             dragPoint.x -= ([image size].width/2.0f);
-            dragPoint.y += ([image size].height/2.0f);
+            dragPoint.y -= ([image size].height/2.0f);
 
-            NSString *offsetString = [pasteboard stringForType:DRAG_IMAGE_OFFSET];
+            NSString *offsetString = [pbItem stringForType:DRAG_IMAGE_OFFSET];
             if (offsetString != nil) {
                 NSPoint offset = NSPointFromString(offsetString);
                 //Adjust offset to the image size
@@ -1048,25 +1065,24 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 if (offset.y > imageHalfY || offset.y < -imageHalfY) {
                     offset.y = imageHalfY * (offset.y > 0 ? 1 : -1);
                 }
-
-                dragPoint.x += offset.x;
-                dragPoint.y -= offset.y;
             }
         }
         else
         {
             // last resource: "empty" image
-            image = [[NSImage alloc] initWithSize:NSMakeSize(1.0f, 1.0f)];
+            rect.size.width = 1.0f;
+            rect.size.height = 1.0f;
+            image = [[NSImage alloc] initWithSize:NSMakeSize(rect.size.width, rect.size.height)];
         }
-        [self->nsView dragImage:image at:dragPoint offset:NSZeroSize event:self->lastEvent pasteboard:pasteboard source:self->nsView slideBack:YES];
 
-        // main thread blocked here until drag completes
-
-        [GlassDragSource setDelegate:nil];
-
+        rect.origin = NSPointToCGPoint(dragPoint);
+        [item setDraggingFrame:rect contents:image];
         [image release];
     }
-    self->dragOperation = NSDragOperationNone;
+
+    self->draggingSource = [[GlassDraggingSource alloc] initWithOperation:operation];
+
+    NSDraggingSession *session = [self->nsView beginDraggingSessionWithItems:items event:self->lastEvent source:self->draggingSource];
 }
 
 - (void)synthesizeMouseUp:(NSEventType)type
@@ -1087,6 +1103,16 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)draggingEnded
 {
+    DNDLOG("draggingEnded");
+
+    if (self->draggingSource)
+    {
+        [self->draggingSource release];
+        self->draggingSource = nil;
+    }
+
+    [GlassDragSource setDelegate:nil];
+
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd,  [GlassDragSource getMask]);
     GLASS_CHECK_EXCEPTION(env);

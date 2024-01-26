@@ -48,7 +48,9 @@ public:
 
     void startMonitoringGamepads(GamepadProviderClient&) final;
     void stopMonitoringGamepads(GamepadProviderClient&) final;
-    const Vector<PlatformGamepad*>& platformGamepads() final { return m_gamepadVector; }
+    const Vector<WeakPtr<PlatformGamepad>>& platformGamepads() final { return m_gamepadVector; }
+    void playEffect(unsigned, const String&, GamepadHapticEffectType, const GamepadEffectParameters&, CompletionHandler<void(bool)>&&) final;
+    void stopEffects(unsigned, const String&, CompletionHandler<void()>&&) final;
 
     void deviceConnected(ManetteDevice*);
     void deviceDisconnected(ManetteDevice*);
@@ -65,13 +67,13 @@ private:
     void initialGamepadsConnectedTimerFired();
     void inputNotificationTimerFired();
 
-    Vector<PlatformGamepad*> m_gamepadVector;
+    Vector<WeakPtr<PlatformGamepad>> m_gamepadVector;
     HashMap<ManetteDevice*, std::unique_ptr<ManetteGamepad>> m_gamepadMap;
     bool m_initialGamepadsConnected { false };
 
     GRefPtr<ManetteMonitor> m_monitor;
-    RunLoop::Timer<ManetteGamepadProvider> m_initialGamepadsConnectedTimer;
-    RunLoop::Timer<ManetteGamepadProvider> m_inputNotificationTimer;
+    RunLoop::Timer m_initialGamepadsConnectedTimer;
+    RunLoop::Timer m_inputNotificationTimer;
 };
 
 } // namespace WebCore

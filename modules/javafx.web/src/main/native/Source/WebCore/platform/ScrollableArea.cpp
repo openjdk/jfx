@@ -32,6 +32,8 @@
 #include "config.h"
 #include "ScrollableArea.h"
 
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "FloatPoint.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
@@ -39,23 +41,24 @@
 #include "Logging.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollAnimator.h"
+#include "ScrollbarGutter.h"
 #include "ScrollbarTheme.h"
 #include "ScrollbarsControllerMock.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-struct SameSizeAsScrollableArea {
-    virtual ~SameSizeAsScrollableArea();
-#if ASSERT_ENABLED
-    bool weakPtrFactorWasConstructedOnMainThread;
-#endif
+struct SameSizeAsScrollableArea : public CanMakeWeakPtr<SameSizeAsScrollableArea>, public CanMakeCheckedPtr {
+    ~SameSizeAsScrollableArea() { }
+    SameSizeAsScrollableArea() { }
     void* pointer[3];
     IntPoint origin;
     bool bytes[9];
 };
 
+#if CPU(ADDRESS64)
 static_assert(sizeof(ScrollableArea) == sizeof(SameSizeAsScrollableArea), "ScrollableArea should stay small");
+#endif
 
 ScrollableArea::ScrollableArea() = default;
 ScrollableArea::~ScrollableArea() = default;
@@ -70,16 +73,32 @@ ScrollAnimator& ScrollableArea::scrollAnimator() const
 
 ScrollbarsController& ScrollableArea::scrollbarsController() const
 {
-    if (!m_scrollbarsController) {
-        if (mockScrollbarsControllerEnabled()) {
-            m_scrollbarsController = makeUnique<ScrollbarsControllerMock>(const_cast<ScrollableArea&>(*this), [this](const String& message) {
-                logMockScrollbarsControllerMessage(message);
-            });
-        } else
-            m_scrollbarsController = ScrollbarsController::create(const_cast<ScrollableArea&>(*this));
-    }
+    if (!m_scrollbarsController)
+        const_cast<ScrollableArea&>(*this).internalCreateScrollbarsController();
 
     return *m_scrollbarsController.get();
+}
+
+void ScrollableArea::internalCreateScrollbarsController()
+{
+        if (mockScrollbarsControllerEnabled()) {
+        auto mockController = makeUnique<ScrollbarsControllerMock>(const_cast<ScrollableArea&>(*this), [this](const String& message) {
+                logMockScrollbarsControllerMessage(message);
+            });
+        setScrollbarsController(WTFMove(mockController));
+        } else
+        createScrollbarsController();
+}
+
+void ScrollableArea::createScrollbarsController()
+{
+    auto controller = ScrollbarsController::create(const_cast<ScrollableArea&>(*this));
+    setScrollbarsController(WTFMove(controller));
+}
+
+void ScrollableArea::setScrollbarsController(std::unique_ptr<ScrollbarsController>&& scrollbarsController)
+{
+    m_scrollbarsController = WTFMove(scrollbarsController);
 }
 
 void ScrollableArea::setScrollOrigin(const IntPoint& origin)
@@ -130,19 +149,35 @@ bool ScrollableArea::scroll(ScrollDirection direction, ScrollGranularity granula
     return scrollAnimator().singleAxisScroll(axis, scrollDelta, ScrollAnimator::ScrollBehavior::RespectScrollSnap);
 }
 
+void ScrollableArea::beginKeyboardScroll(const KeyboardScroll& scrollData)
+{
+    bool startedAnimation = requestStartKeyboardScrollAnimation(scrollData);
+
+    if (startedAnimation)
+        setScrollAnimationStatus(ScrollAnimationStatus::Animating);
+}
+
+void ScrollableArea::endKeyboardScroll(bool immediate)
+{
+    bool finishedAnimation = requestStopKeyboardScrollAnimation(immediate);
+
+    if (finishedAnimation)
+        setScrollAnimationStatus(ScrollAnimationStatus::NotAnimating);
+}
+
 void ScrollableArea::scrollToPositionWithoutAnimation(const FloatPoint& position, ScrollClamping clamping)
 {
     LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea " << this << " scrollToPositionWithoutAnimation " << position);
     scrollAnimator().scrollToPositionWithoutAnimation(position, clamping);
 }
 
-void ScrollableArea::scrollToPositionWithAnimation(const FloatPoint& position, ScrollClamping clamping)
+void ScrollableArea::scrollToPositionWithAnimation(const FloatPoint& position, const ScrollPositionChangeOptions& options)
 {
     LOG_WITH_STREAM(Scrolling, stream << "ScrollableArea " << this << " scrollToPositionWithAnimation " << position);
 
-    bool startedAnimation = requestAnimatedScrollToPosition(roundedIntPoint(position), clamping);
+    bool startedAnimation = requestScrollToPosition(roundedIntPoint(position), { ScrollType::Programmatic, options.clamping, ScrollIsAnimated::Yes, options.snapPointSelectionMethod, options.originalScrollDelta });
     if (!startedAnimation)
-        startedAnimation = scrollAnimator().scrollToPositionWithAnimation(position, clamping);
+        startedAnimation = scrollAnimator().scrollToPositionWithAnimation(position, options.clamping);
 
     if (startedAnimation)
         setScrollAnimationStatus(ScrollAnimationStatus::Animating);
@@ -238,7 +273,7 @@ void ScrollableArea::setScrollPositionFromAnimation(const ScrollPosition& positi
     // An early return here if the position hasn't changed breaks an iOS RTL scrolling test: webkit.org/b/230450.
     auto scrollType = currentScrollType();
     auto clamping = scrollType == ScrollType::User ? ScrollClamping::Unclamped : ScrollClamping::Clamped;
-    if (requestScrollPositionUpdate(position, scrollType, clamping))
+    if (requestScrollToPosition(position, { scrollType, clamping, ScrollIsAnimated::No }))
         return;
 
     scrollPositionChanged(position);
@@ -378,6 +413,8 @@ void ScrollableArea::setScrollbarOverlayStyle(ScrollbarOverlayStyle overlayStyle
 
 void ScrollableArea::invalidateScrollbars()
 {
+    invalidateScrollCorner(scrollCornerRect());
+
     if (auto* scrollbar = horizontalScrollbar()) {
         scrollbar->invalidate();
         scrollbarsController().invalidateScrollbarPartLayers(scrollbar);
@@ -397,6 +434,9 @@ bool ScrollableArea::useDarkAppearanceForScrollbars() const
 
 void ScrollableArea::invalidateScrollbar(Scrollbar& scrollbar, const IntRect& rect)
 {
+    if (!scrollbarsController().shouldDrawIntoScrollbarLayer(scrollbar))
+        return;
+
     if (&scrollbar == horizontalScrollbar()) {
         if (GraphicsLayer* graphicsLayer = layerForHorizontalScrollbar()) {
             graphicsLayer->setNeedsDisplay();
@@ -471,6 +511,11 @@ String ScrollableArea::verticalScrollbarStateForTesting() const
     return scrollbarsController().verticalScrollbarStateForTesting();
 }
 
+ScrollbarGutter ScrollableArea::scrollbarGutterStyle() const
+{
+    return { };
+}
+
 const LayoutScrollSnapOffsetsInfo* ScrollableArea::snapOffsetsInfo() const
 {
     return existingScrollAnimator() ? existingScrollAnimator()->snapOffsetsInfo() : nullptr;
@@ -519,10 +564,10 @@ void ScrollableArea::setCurrentVerticalSnapPointIndex(std::optional<unsigned> in
 
 void ScrollableArea::resnapAfterLayout()
 {
-    LOG_WITH_STREAM(ScrollSnap, stream << *this << " updateScrollSnapState: isScrollSnapInProgress " << isScrollSnapInProgress() << " isUserScrollInProgress " << isUserScrollInProgress());
+    LOG_WITH_STREAM(ScrollSnap, stream << *this << " resnapAfterLayout: isScrollSnapInProgress " << isScrollSnapInProgress() << " isUserScrollInProgress " << isUserScrollInProgress());
 
     auto* scrollAnimator = existingScrollAnimator();
-    if (!scrollAnimator || isScrollSnapInProgress() || isUserScrollInProgress())
+    if (!scrollAnimator || isScrollSnapInProgress() || isUserScrollInProgress() || !isInStableState())
         return;
 
     scrollAnimator->resnapAfterLayout();
@@ -549,7 +594,7 @@ void ScrollableArea::resnapAfterLayout()
     }
 
     if (correctedOffset != currentOffset) {
-        LOG_WITH_STREAM(ScrollSnap, stream << " adjusting offset from " << currentOffset << " to " << correctedOffset);
+        LOG_WITH_STREAM(ScrollSnap, stream << "ScrollableArea::resnapAfterLayout - adjusting scroll position from " << currentOffset << " to " << correctedOffset << " for snap point at index " << currentVerticalSnapPointIndex());
         auto position = scrollPositionFromOffset(correctedOffset);
         if (scrollAnimationStatus() == ScrollAnimationStatus::NotAnimating)
             scrollToOffsetWithoutAnimation(correctedOffset);
@@ -573,6 +618,8 @@ void ScrollableArea::doPostThumbMoveSnapping(ScrollbarOrientation orientation)
 
     if (newOffset == currentOffset)
         return;
+
+    LOG_WITH_STREAM(ScrollSnap, stream << "ScrollableArea::doPostThumbMoveSnapping - adjusting scroll position from " << currentOffset << " to " << newOffset);
 
     auto position = scrollPositionFromOffset(newOffset);
     scrollAnimator->scrollToPositionWithAnimation(position);
@@ -760,26 +807,26 @@ LayoutPoint ScrollableArea::constrainScrollPositionForOverhang(const LayoutPoint
     return constrainScrollPositionForOverhang(visibleContentRect(), totalContentsSize(), scrollPosition, scrollOrigin(), headerHeight(), footerHeight());
 }
 
-void ScrollableArea::computeScrollbarValueAndOverhang(float currentPosition, float totalSize, float visibleSize, float& doubleValue, float& overhangAmount)
+void ScrollableArea::computeScrollbarValueAndOverhang(float currentPosition, float totalSize, float visibleSize, float& scrollbarValue, float& overhangAmount)
 {
-    doubleValue = 0;
+    scrollbarValue = 0;
     overhangAmount = 0;
     float maximum = totalSize - visibleSize;
 
     if (currentPosition < 0) {
         // Scrolled past the top.
-        doubleValue = 0;
+        scrollbarValue = 0;
         overhangAmount = -currentPosition;
     } else if (visibleSize + currentPosition > totalSize) {
         // Scrolled past the bottom.
-        doubleValue = 1;
+        scrollbarValue = 1;
         overhangAmount = currentPosition + visibleSize - totalSize;
     } else {
         // Within the bounds of the scrollable area.
         if (maximum > 0)
-            doubleValue = currentPosition / maximum;
+            scrollbarValue = currentPosition / maximum;
         else
-            doubleValue = 0;
+            scrollbarValue = 0;
     }
 }
 
@@ -806,23 +853,28 @@ std::optional<BoxSide> ScrollableArea::targetSideForScrollDelta(FloatSize delta,
     return { };
 }
 
-LayoutRect ScrollableArea::getRectToExposeForScrollIntoView(const LayoutRect& visibleRect, const LayoutRect& exposeRect, const ScrollAlignment& alignX, const ScrollAlignment& alignY) const
+LayoutRect ScrollableArea::getRectToExposeForScrollIntoView(const LayoutRect& visibleBounds, const LayoutRect& exposeRect, const ScrollAlignment& alignX, const ScrollAlignment& alignY, const std::optional<LayoutRect> visibilityCheckRect) const
 {
     static const int minIntersectForReveal = 32;
 
     ScrollAlignment::Behavior scrollX = alignX.getHiddenBehavior();
-    bool intersectsInX = exposeRect.maxX() >= visibleRect.x() && exposeRect.x() <= visibleRect.maxX();
+
+    bool intersectsInX = false;
+    if (visibilityCheckRect)
+        intersectsInX = visibilityCheckRect->maxX() >= visibleBounds.x() && visibilityCheckRect->x() <= visibleBounds.maxX();
+    else
+        intersectsInX = exposeRect.maxX() >= visibleBounds.x() && exposeRect.x() <= visibleBounds.maxX();
 
     // Determine the appropriate X behavior.
     if (intersectsInX) {
-        LayoutUnit intersectWidth = std::max(LayoutUnit(), std::min(visibleRect.maxX(), exposeRect.maxX()) - std::max(visibleRect.x(), exposeRect.x()));
+        LayoutUnit intersectWidth = std::max(LayoutUnit(), std::min(visibleBounds.maxX(), exposeRect.maxX()) - std::max(visibleBounds.x(), exposeRect.x()));
 
         if (intersectWidth == exposeRect.width() || (alignX.legacyHorizontalVisibilityThresholdEnabled() && intersectWidth >= minIntersectForReveal)) {
             // If the rectangle is fully visible, use the specified visible behavior.
             // If the rectangle is partially visible, but over a certain threshold,
             // then treat it as fully visible to avoid unnecessary horizontal scrolling
             scrollX = alignX.getVisibleBehavior();
-        } else if (intersectWidth == visibleRect.width()) {
+        } else if (intersectWidth == visibleBounds.width()) {
             // If the rect is bigger than the visible area, don't bother trying to center. Other alignments will work.
             scrollX = alignX.getVisibleBehavior();
             if (scrollX == ScrollAlignment::Behavior::AlignCenter)
@@ -835,31 +887,36 @@ LayoutRect ScrollableArea::getRectToExposeForScrollIntoView(const LayoutRect& vi
     }
 
     // If we're trying to align to the closest edge, and the exposeRect is further right
-    // than the visibleRect, and not bigger than the visible area, then align with the right.
-    if (scrollX == ScrollAlignment::Behavior::AlignToClosestEdge && exposeRect.maxX() > visibleRect.maxX() && exposeRect.width() < visibleRect.width())
+    // than the visibleBounds, and not bigger than the visible area, then align with the right.
+    if (scrollX == ScrollAlignment::Behavior::AlignToClosestEdge && exposeRect.maxX() > visibleBounds.maxX() && exposeRect.width() < visibleBounds.width())
         scrollX = ScrollAlignment::Behavior::AlignRight;
 
     // Given the X behavior, compute the X coordinate.
     LayoutUnit x;
     if (scrollX == ScrollAlignment::Behavior::NoScroll)
-        x = visibleRect.x();
+        x = visibleBounds.x();
     else if (scrollX == ScrollAlignment::Behavior::AlignRight)
-        x = exposeRect.maxX() - visibleRect.width();
+        x = exposeRect.maxX() - visibleBounds.width();
     else if (scrollX == ScrollAlignment::Behavior::AlignCenter)
-        x = exposeRect.x() + (exposeRect.width() - visibleRect.width()) / 2;
+        x = exposeRect.x() + (exposeRect.width() - visibleBounds.width()) / 2;
     else
         x = exposeRect.x();
 
     ScrollAlignment::Behavior scrollY = alignY.getHiddenBehavior();
-    bool intersectsInY = exposeRect.maxY() >= visibleRect.y() && exposeRect.y() <= visibleRect.maxY();
+
+    bool intersectsInY = false;
+    if (visibilityCheckRect)
+        intersectsInY = visibilityCheckRect->maxY() >= visibleBounds.y() && visibilityCheckRect->y() <= visibleBounds.maxY();
+    else
+        intersectsInY = exposeRect.maxY() >= visibleBounds.y() && exposeRect.y() <= visibleBounds.maxY();
 
     // Determine the appropriate Y behavior.
     if (intersectsInY) {
-        LayoutUnit intersectHeight = std::max(LayoutUnit(), std::min(visibleRect.maxY(), exposeRect.maxY()) - std::max(visibleRect.y(), exposeRect.y()));
+        LayoutUnit intersectHeight = std::max(LayoutUnit(), std::min(visibleBounds.maxY(), exposeRect.maxY()) - std::max(visibleBounds.y(), exposeRect.y()));
         if (intersectHeight == exposeRect.height()) {
             // If the rectangle is fully visible, use the specified visible behavior.
             scrollY = alignY.getVisibleBehavior();
-        } else if (intersectHeight == visibleRect.height()) {
+        } else if (intersectHeight == visibleBounds.height()) {
             // If the rect is bigger than the visible area, don't bother trying to center. Other alignments will work.
             scrollY = alignY.getVisibleBehavior();
             if (scrollY == ScrollAlignment::Behavior::AlignCenter)
@@ -872,22 +929,22 @@ LayoutRect ScrollableArea::getRectToExposeForScrollIntoView(const LayoutRect& vi
     }
 
     // If we're trying to align to the closest edge, and the exposeRect is further down
-    // than the visibleRect, and not bigger than the visible area, then align with the bottom.
-    if (scrollY == ScrollAlignment::Behavior::AlignToClosestEdge && exposeRect.maxY() > visibleRect.maxY() && exposeRect.height() < visibleRect.height())
+    // than the visibleBounds, and not bigger than the visible area, then align with the bottom.
+    if (scrollY == ScrollAlignment::Behavior::AlignToClosestEdge && exposeRect.maxY() > visibleBounds.maxY() && exposeRect.height() < visibleBounds.height())
         scrollY = ScrollAlignment::Behavior::AlignBottom;
 
     // Given the Y behavior, compute the Y coordinate.
     LayoutUnit y;
     if (scrollY == ScrollAlignment::Behavior::NoScroll)
-        y = visibleRect.y();
+        y = visibleBounds.y();
     else if (scrollY == ScrollAlignment::Behavior::AlignBottom)
-        y = exposeRect.maxY() - visibleRect.height();
+        y = exposeRect.maxY() - visibleBounds.height();
     else if (scrollY == ScrollAlignment::Behavior::AlignCenter)
-        y = exposeRect.y() + (exposeRect.height() - visibleRect.height()) / 2;
+        y = exposeRect.y() + (exposeRect.height() - visibleBounds.height()) / 2;
     else
         y = exposeRect.y();
 
-    return LayoutRect(LayoutPoint(x, y), visibleRect.size());
+    return LayoutRect(LayoutPoint(x, y), visibleBounds.size());
 }
 
 TextStream& operator<<(TextStream& ts, const ScrollableArea& scrollableArea)

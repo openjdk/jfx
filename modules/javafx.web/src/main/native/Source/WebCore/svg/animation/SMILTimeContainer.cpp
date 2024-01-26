@@ -33,6 +33,7 @@
 #include "SVGSMILElement.h"
 #include "SVGSVGElement.h"
 #include "ScopedEventQueue.h"
+#include "TypedElementDescendantIteratorInlines.h"
 
 namespace WebCore {
 
@@ -114,7 +115,8 @@ bool SMILTimeContainer::isStarted() const
 
 void SMILTimeContainer::begin()
 {
-    ASSERT(!m_beginTime);
+    if (isStarted())
+        return;
 
     ASSERT(Page::nonUtilityPageCount());
     if (!Page::nonUtilityPageCount())

@@ -57,10 +57,10 @@ class TimeRanges;
 class VideoTrackList;
 class WebCoreOpaqueRoot;
 
-class SourceBuffer final
+class SourceBuffer
     : public RefCounted<SourceBuffer>
     , public ActiveDOMObject
-    , public EventTargetWithInlineData
+    , public EventTarget
     , private SourceBufferPrivateClient
     , private AudioTrackClient
     , private VideoTrackClient
@@ -71,14 +71,15 @@ class SourceBuffer final
 {
     WTF_MAKE_ISO_ALLOCATED(SourceBuffer);
 public:
-    using WeakValueType = EventTarget::WeakValueType;
     using EventTarget::weakPtrFactory;
+    using EventTarget::WeakValueType;
+    using EventTarget::WeakPtrImplType;
 
-    static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource*);
+    static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource&);
     virtual ~SourceBuffer();
 
     bool updating() const { return m_updating; }
-    ExceptionOr<Ref<TimeRanges>> buffered() const;
+    ExceptionOr<Ref<TimeRanges>> buffered();
     double timestampOffset() const;
     ExceptionOr<void> setTimestampOffset(double);
 
@@ -100,13 +101,13 @@ public:
     ExceptionOr<void> remove(const MediaTime&, const MediaTime&);
     ExceptionOr<void> changeType(const String&);
 
-    const TimeRanges& bufferedInternal() const { ASSERT(m_private->buffered()); return *m_private->buffered(); }
+    const PlatformTimeRanges& bufferedInternal() const { return m_private->buffered(); }
 
     void abortIfUpdating();
     void removedFromMediaSource();
     void seekToTime(const MediaTime&);
 
-    bool canPlayThroughRange(PlatformTimeRanges&);
+    bool canPlayThroughRange(const PlatformTimeRanges&);
 
     bool hasVideo() const;
 
@@ -144,9 +145,15 @@ public:
 
     WebCoreOpaqueRoot opaqueRoot();
 
-private:
-    SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource*);
+#if ENABLE(MANAGED_MEDIA_SOURCE)
+    virtual bool isManaged() const { return false; }
+    void memoryPressure();
+#endif
 
+protected:
+    SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource&);
+
+private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -158,13 +165,12 @@ private:
     // SourceBufferPrivateClient
     void sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&, CompletionHandler<void(ReceiveResult)>&&) final;
     void sourceBufferPrivateStreamEndedWithDecodeError() final;
-    void sourceBufferPrivateAppendError(bool decodeError) final;
     void sourceBufferPrivateAppendComplete(AppendResult) final;
+    void sourceBufferPrivateBufferedChanged(const PlatformTimeRanges&, CompletionHandler<void()>&&) final;
     void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&) final;
-    void sourceBufferPrivateDurationChanged(const MediaTime& duration) final;
+    void sourceBufferPrivateDurationChanged(const MediaTime& duration, CompletionHandler<void()>&&) final;
     void sourceBufferPrivateDidParseSample(double sampleDuration) final;
     void sourceBufferPrivateDidDropSample() final;
-    void sourceBufferPrivateBufferedDirtyChanged(bool) final;
     void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) final;
     void sourceBufferPrivateReportExtraMemoryCost(uint64_t) final;
 
@@ -262,7 +268,7 @@ private:
     bool m_active { false };
     bool m_shouldGenerateTimestamps { false };
     bool m_pendingInitializationSegmentForChangeType { false };
-
+    Ref<TimeRanges> m_buffered;
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
     const void* m_logIdentifier;

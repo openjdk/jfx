@@ -34,14 +34,13 @@ class AbsolutePositionConstraints {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     AbsolutePositionConstraints() = default;
+    WEBCORE_EXPORT AbsolutePositionConstraints(const FloatSize&, const FloatPoint&);
 
     bool operator==(const AbsolutePositionConstraints& other) const
     {
         return alignmentOffset() == other.alignmentOffset()
             && layerPositionAtLastLayout() == other.layerPositionAtLastLayout();
     }
-
-    bool operator!=(const AbsolutePositionConstraints& other) const { return !(*this == other); }
 
     FloatSize alignmentOffset() const { return m_alignmentOffset; }
     void setAlignmentOffset(FloatSize offset) { m_alignmentOffset = offset; }
@@ -115,8 +114,6 @@ public:
             && m_layerPositionAtLastLayout == other.m_layerPositionAtLastLayout;
     }
 
-    bool operator!=(const FixedPositionViewportConstraints& other) const { return !(*this == other); }
-
 private:
     ConstraintType constraintType() const override { return FixedPositionConstraint; };
 
@@ -180,8 +177,6 @@ public:
             && m_stickyOffsetAtLastLayout == other.m_stickyOffsetAtLastLayout
             && m_layerPositionAtLastLayout == other.m_layerPositionAtLastLayout;
     }
-
-    bool operator!=(const StickyPositionViewportConstraints& other) const { return !(*this == other); }
 
 private:
     ConstraintType constraintType() const override { return StickyPositionConstraint; };

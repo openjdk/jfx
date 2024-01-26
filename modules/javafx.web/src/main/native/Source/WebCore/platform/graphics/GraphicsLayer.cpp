@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,12 +32,17 @@
 #include "GraphicsContext.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "LayoutRect.h"
+#include "MediaPlayerEnums.h"
 #include "RotateTransformOperation.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#include "AcceleratedEffectStack.h"
+#endif
 
 #ifndef NDEBUG
 #include <stdio.h>
@@ -89,11 +94,6 @@ bool GraphicsLayer::supportsLayerType(Type type)
     ASSERT_NOT_REACHED();
     return false;
 }
-
-bool GraphicsLayer::supportsSubpixelAntialiasedLayerText()
-{
-    return false;
-}
 #endif
 
 #if !USE(COORDINATED_GRAPHICS)
@@ -122,7 +122,6 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_type(type)
     , m_beingDestroyed(false)
     , m_contentsOpaque(false)
-    , m_supportsSubpixelAntialiasedText(false)
     , m_preserves3D(type == Type::Structural)
     , m_backfaceVisibility(true)
     , m_masksToBounds(false)
@@ -140,6 +139,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_isTrackingDisplayListReplay(false)
     , m_userInteractionEnabled(true)
     , m_canDetachBackingStore(true)
+    , m_shouldPaintUsingCompositeCopy(false)
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
     , m_isSeparated(false)
 #if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
@@ -422,6 +422,24 @@ void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
     m_maskLayer = WTFMove(layer);
 }
 
+MediaPlayerVideoGravity GraphicsLayer::videoGravity() const
+{
+#if USE(CA)
+    return m_videoGravity;
+#else
+    return MediaPlayerVideoGravity::ResizeAspect;
+#endif
+}
+
+void GraphicsLayer::setVideoGravity(MediaPlayerVideoGravity gravity)
+{
+#if USE(CA)
+    m_videoGravity = gravity;
+#else
+    UNUSED_PARAM(gravity);
+#endif
+}
+
 Path GraphicsLayer::shapeLayerPath() const
 {
 #if USE(CA)
@@ -547,7 +565,7 @@ void GraphicsLayer::setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase> phase
     m_paintingPhase = phase;
 }
 
-void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
+void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior> layerPaintBehavior)
 {
     auto offset = offsetFromRenderer() - toFloatSize(scrollOffset());
     auto clipRect = clip;
@@ -618,7 +636,7 @@ FloatRect GraphicsLayer::adjustCoverageRectForMovement(const FloatRect& coverage
     return unionRect(coverageRect, expandedRect);
 }
 
-String GraphicsLayer::animationNameForTransition(AnimatedPropertyID property)
+String GraphicsLayer::animationNameForTransition(AnimatedProperty property)
 {
     // | is not a valid identifier character in CSS, so this can never conflict with a keyframe identifier.
     return makeString("-|transition", static_cast<int>(property), '-');
@@ -634,6 +652,11 @@ void GraphicsLayer::resumeAnimations()
 
 void GraphicsLayer::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose)
 {
+}
+
+RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> GraphicsLayer::createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate*)
+{
+    return nullptr;
 }
 
 void GraphicsLayer::getDebugBorderInfo(Color& color, float& width) const
@@ -695,9 +718,9 @@ static inline const FilterOperations& filterOperationsAt(const KeyframeValueList
 int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
 {
 #if ENABLE(FILTERS_LEVEL_2)
-    ASSERT(valueList.property() == AnimatedPropertyFilter || valueList.property() == AnimatedPropertyWebkitBackdropFilter);
+    ASSERT(valueList.property() == AnimatedProperty::Filter || valueList.property() == AnimatedProperty::WebkitBackdropFilter);
 #else
-    ASSERT(valueList.property() == AnimatedPropertyFilter);
+    ASSERT(valueList.property() == AnimatedProperty::Filter);
 #endif
 
     if (valueList.size() < 2)
@@ -728,6 +751,22 @@ int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
 
     return firstIndex;
 }
+
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+void GraphicsLayer::setAcceleratedEffectsAndBaseValues(AcceleratedEffects&& effects, AcceleratedEffectValues&& baseValues)
+{
+    if (effects.isEmpty()) {
+        m_effectStack = nullptr;
+        return;
+    }
+
+    if (!m_effectStack)
+        m_effectStack = makeUnique<AcceleratedEffectStack>();
+
+    m_effectStack->setEffects(WTFMove(effects));
+    m_effectStack->setBaseValues(WTFMove(baseValues));
+}
+#endif
 
 double GraphicsLayer::backingStoreMemoryEstimate() const
 {
@@ -820,7 +859,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     if (m_boundsOrigin != FloatPoint())
         ts << indent << "(bounds origin " << m_boundsOrigin.x() << " " << m_boundsOrigin.y() << ")\n";
 
-    if (m_anchorPoint != FloatPoint3D(0.5f, 0.5f, 0)) {
+    if (client().shouldDumpPropertyForLayer(this, "anchorPoint", options)) {
         ts << indent << "(anchor " << m_anchorPoint.x() << " " << m_anchorPoint.y();
         if (m_anchorPoint.z())
             ts << " " << m_anchorPoint.z();
@@ -844,9 +883,6 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     bool needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack = client().needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack(*this);
     if (m_contentsOpaque || needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack)
         ts << indent << "(contentsOpaque " << (m_contentsOpaque || needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack) << ")\n";
-
-    if (m_supportsSubpixelAntialiasedText)
-        ts << indent << "(supports subpixel antialiased text " << m_supportsSubpixelAntialiasedText << ")\n";
 
     if (m_masksToBounds && options & LayerTreeAsTextOptions::IncludeClipping)
         ts << indent << "(clips " << m_masksToBounds << ")\n";
@@ -967,7 +1003,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOpti
     }
 }
 
-TextStream& operator<<(TextStream& ts, const Vector<GraphicsLayer::PlatformLayerID>& layers)
+TextStream& operator<<(TextStream& ts, const Vector<PlatformLayerIdentifier>& layers)
 {
     for (size_t i = 0; i < layers.size(); ++i) {
         if (i)

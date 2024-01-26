@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,9 +42,9 @@ constexpr bool isARMv7IDIVSupported()
 #endif
 }
 
-constexpr bool isARM()
+constexpr bool isARM_THUMB2()
 {
-#if CPU(ARM)
+#if CPU(ARM_THUMB2)
     return true;
 #else
     return false;
@@ -69,6 +69,25 @@ constexpr bool isARM64E()
 #endif
 }
 
+#if CPU(ARM64)
+#if CPU(ARM64E)
+JS_EXPORT_PRIVATE bool isARM64E_FPAC();
+#else
+constexpr bool isARM64E_FPAC() { return false; }
+#endif
+
+#if CPU(ARM64E) || OS(MAC_OS_X)
+// ARM64E or all macOS ARM64 CPUs have LSE.
+constexpr bool isARM64_LSE() { return true; }
+#else
+JS_EXPORT_PRIVATE bool isARM64_LSE();
+#endif
+
+#else // not CPU(ARM64)
+constexpr bool isARM64_LSE() { return false; }
+constexpr bool isARM64E_FPAC() { return false; }
+#endif
+
 constexpr bool isX86()
 {
 #if CPU(X86_64) || CPU(X86)
@@ -86,6 +105,15 @@ constexpr bool isX86_64()
     return false;
 #endif
 }
+
+#if CPU(X86_64)
+JS_EXPORT_PRIVATE bool isX86_64_AVX();
+#else
+constexpr bool isX86_64_AVX()
+{
+    return false;
+}
+#endif
 
 constexpr bool isMIPS()
 {
@@ -129,6 +157,27 @@ constexpr bool isAddress32Bit()
     return !isAddress64Bit();
 }
 
+constexpr size_t registerSize()
+{
+#if CPU(REGISTER64)
+    return 8;
+#elif CPU(REGISTER32)
+    return 4;
+#else
+#  error "Unknown register size"
+#endif
+}
+
+constexpr bool isRegister64Bit()
+{
+    return registerSize() == 8;
+}
+
+constexpr bool isRegister32Bit()
+{
+    return registerSize() == 4;
+}
+
 inline bool optimizeForARMv7IDIVSupported()
 {
     return isARMv7IDIVSupported() && Options::useArchitectureSpecificOptimizations();
@@ -153,6 +202,10 @@ inline bool hasSensibleDoubleToInt()
 {
     return optimizeForX86();
 }
+
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
+bool isKernOpenSource();
+#endif
 
 #if (CPU(X86) || CPU(X86_64)) && OS(DARWIN)
 bool isKernTCSMAvailable();

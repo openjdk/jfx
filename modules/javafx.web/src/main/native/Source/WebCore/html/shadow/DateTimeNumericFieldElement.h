@@ -63,7 +63,7 @@ protected:
 
 private:
     // DateTimeFieldElement functions:
-    void adjustMinWidth(RenderStyle&) const final;
+    void adjustMinInlineSize(RenderStyle&) const final;
     String value() const final;
     String placeholderValue() const final;
     void handleKeyboardEvent(KeyboardEvent&) final;
@@ -71,6 +71,7 @@ private:
 
     String formatValue(int) const;
     void setValueAsIntegerByStepping(int);
+    void setARIAValueAttributesWithInteger(int);
 
     const Range m_range;
     const String m_placeholder;

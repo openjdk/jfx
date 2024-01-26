@@ -48,7 +48,6 @@
 #include "ApplePayShippingMethodUpdate.h"
 #include "Document.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "JSApplePayCouponCodeDetails.h"
 #include "JSApplePayError.h"
 #include "JSApplePayPayment.h"
@@ -56,6 +55,7 @@
 #include "JSApplePayRequest.h"
 #include "JSDOMConvert.h"
 #include "LinkIconCollector.h"
+#include "LocalFrame.h"
 #include "MerchantValidationEvent.h"
 #include "Page.h"
 #include "PayerErrorFields.h"
@@ -286,6 +286,10 @@ ExceptionOr<void> ApplePayPaymentHandler::show(Document& document)
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
         request.setMultiTokenContexts(WTFMove(applePayModifier.multiTokenContexts));
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+        request.setDeferredPaymentRequest(WTFMove(applePayModifier.deferredPaymentRequest));
 #endif
     }
 
@@ -546,6 +550,13 @@ static ExceptionOr<void> validate(const ApplePayModifier& applePayModifier)
     }
 #endif
 
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+    if (const auto& deferredPaymentRequest = applePayModifier.deferredPaymentRequest) {
+        if (auto validity = deferredPaymentRequest->validate(); validity.hasException())
+            return validity.releaseException();
+    }
+#endif
+
     UNUSED_PARAM(applePayModifier);
     return { };
 }
@@ -602,12 +613,24 @@ ExceptionOr<void> ApplePayPaymentHandler::detailsUpdated(PaymentRequest::UpdateR
     switch (reason) {
     case Reason::ShowDetailsResolved:
         return { };
-    case Reason::ShippingAddressChanged:
-        return shippingAddressUpdated(computeErrors(WTFMove(error), WTFMove(addressErrors), WTFMove(payerErrors), paymentMethodErrors));
+    case Reason::ShippingAddressChanged: {
+        auto errors = computeErrors(WTFMove(error), WTFMove(addressErrors), WTFMove(payerErrors), paymentMethodErrors);
+        // computeErrors() may run JavaScript, which may abort the request, so we need to make sure
+        // sure we still have an active session.
+        if (!paymentCoordinator().hasActiveSession())
+            return Exception { InvalidStateError };
+        return shippingAddressUpdated(WTFMove(errors));
+    }
     case Reason::ShippingOptionChanged:
         return shippingOptionUpdated();
-    case Reason::PaymentMethodChanged:
-        return paymentMethodUpdated(computeErrors(WTFMove(error), WTFMove(addressErrors), WTFMove(payerErrors), paymentMethodErrors));
+    case Reason::PaymentMethodChanged: {
+        auto errors = computeErrors(WTFMove(error), WTFMove(addressErrors), WTFMove(payerErrors), paymentMethodErrors);
+        // computeErrors() may run JavaScript, which may abort the request, so we need to make sure
+        // sure we still have an active session.
+        if (!paymentCoordinator().hasActiveSession())
+            return Exception { InvalidStateError };
+        return paymentMethodUpdated(WTFMove(errors));
+    }
     }
 
     ASSERT_NOT_REACHED();
@@ -626,6 +649,11 @@ ExceptionOr<void> ApplePayPaymentHandler::merchantValidationCompleted(JSC::JSVal
     auto merchantSession = PaymentMerchantSession::fromJS(*document().globalObject(), asObject(merchantSessionValue), errorMessage);
     if (!merchantSession)
         return Exception { TypeError, WTFMove(errorMessage) };
+
+    // PaymentMerchantSession::fromJS() may run JS, which may abort the request so we need to
+    // check again if there is an active session.
+    if (!paymentCoordinator().hasActiveSession())
+        return Exception { InvalidStateError };
 
     paymentCoordinator().completeMerchantValidation(*merchantSession);
     return { };
@@ -666,6 +694,10 @@ ExceptionOr<void> ApplePayPaymentHandler::shippingAddressUpdated(Vector<RefPtr<A
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
         update.newMultiTokenContexts = WTFMove(applePayModifier.multiTokenContexts);
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+        update.newDeferredPaymentRequest = WTFMove(applePayModifier.deferredPaymentRequest);
 #endif
     }
 
@@ -710,6 +742,10 @@ ExceptionOr<void> ApplePayPaymentHandler::shippingOptionUpdated()
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
         update.newMultiTokenContexts = WTFMove(applePayModifier.multiTokenContexts);
 #endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+        update.newDeferredPaymentRequest = WTFMove(applePayModifier.deferredPaymentRequest);
+#endif
     }
 
     paymentCoordinator().completeShippingMethodSelection(WTFMove(update));
@@ -752,6 +788,10 @@ ExceptionOr<void> ApplePayPaymentHandler::paymentMethodUpdated(Vector<RefPtr<App
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
             update.newMultiTokenContexts = WTFMove(applePayModifier.multiTokenContexts);
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+            update.newDeferredPaymentRequest = WTFMove(applePayModifier.deferredPaymentRequest);
 #endif
         }
 
@@ -798,6 +838,10 @@ ExceptionOr<void> ApplePayPaymentHandler::paymentMethodUpdated(Vector<RefPtr<App
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
         update.newMultiTokenContexts = WTFMove(applePayModifier.multiTokenContexts);
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
+        update.newDeferredPaymentRequest = WTFMove(applePayModifier.deferredPaymentRequest);
 #endif
     }
 
@@ -884,11 +928,18 @@ ExceptionOr<void> ApplePayPaymentHandler::retry(PaymentValidationErrors&& valida
     if (exception.hasException())
         return exception.releaseException();
 
+    // computePaymentMethodErrors() may run JS, which may abort the request so we need to
+    // make sure we still have an active session.
+    if (!paymentCoordinator().hasActiveSession())
+        return Exception { AbortError };
+
     // Ensure there is always at least one error to avoid having a final result.
     if (errors.isEmpty())
         errors.append(ApplePayError::create(ApplePayErrorCode::Unknown, std::nullopt, nullString()));
 
-    ApplePayPaymentAuthorizationResult authorizationResult { ApplePayPaymentAuthorizationResult::Failure, WTFMove(errors) };
+    ApplePayPaymentAuthorizationResult authorizationResult;
+    authorizationResult.status = ApplePayPaymentAuthorizationResult::Failure;
+    authorizationResult.errors = WTFMove(errors);
     ASSERT(!authorizationResult.isFinalState());
     paymentCoordinator().completePaymentSession(WTFMove(authorizationResult));
     return { };

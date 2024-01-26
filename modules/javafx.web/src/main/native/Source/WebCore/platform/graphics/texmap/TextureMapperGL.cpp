@@ -72,6 +72,8 @@ public:
     GLint previousDepthState { 0 };
     GLint viewport[4] { 0, };
     GLint previousScissor[4] { 0, };
+    double zNear { 0 };
+    double zFar { 0 };
     RefPtr<BitmapTexture> currentSurface;
     const BitmapTextureGL::FilterInfo* filterInfo { nullptr };
 
@@ -125,11 +127,6 @@ TextureMapperGLData::~TextureMapperGLData()
 {
     for (auto& entry : m_vbos)
         glDeleteBuffers(1, &entry.value);
-
-#if !USE(OPENGL_ES)
-    if (GLContext::current()->version() >= 320 && m_vao)
-        glDeleteVertexArrays(1, &m_vao);
-#endif
 }
 
 void TextureMapperGLData::initializeStencil()
@@ -162,11 +159,6 @@ GLuint TextureMapperGLData::getStaticVBO(GLenum target, GLsizeiptr size, const v
 
 GLuint TextureMapperGLData::getVAO()
 {
-#if !USE(OPENGL_ES)
-    if (GLContext::current()->version() >= 320 && !m_vao)
-        glGenVertexArrays(1, &m_vao);
-#endif
-
     return m_vao;
 }
 
@@ -180,7 +172,6 @@ Ref<TextureMapperShaderProgram> TextureMapperGLData::getShaderProgram(TextureMap
 
 TextureMapperGL::TextureMapperGL()
     : m_contextAttributes(TextureMapperContextAttributes::get())
-    , m_enableEdgeDistanceAntialiasing(false)
 {
     void* platformContext = GLContext::current()->platformContext();
     ASSERT(platformContext);
@@ -196,12 +187,11 @@ ClipStack& TextureMapperGL::clipStack()
     return data().currentSurface ? toBitmapTextureGL(data().currentSurface.get())->clipStack() : m_clipStack;
 }
 
-void TextureMapperGL::beginPainting(PaintFlags flags)
+void TextureMapperGL::beginPainting(PaintFlags flags, BitmapTexture* surface)
 {
     glGetIntegerv(GL_CURRENT_PROGRAM, &data().previousProgram);
     data().previousScissorState = glIsEnabled(GL_SCISSOR_TEST);
     data().previousDepthState = glIsEnabled(GL_DEPTH_TEST);
-    glDisable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_SCISSOR_TEST);
     data().didModifyStencil = false;
@@ -210,18 +200,12 @@ void TextureMapperGL::beginPainting(PaintFlags flags)
     m_clipStack.reset(IntRect(0, 0, data().viewport[2], data().viewport[3]), flags & PaintingMirrored ? ClipStack::YAxisMode::Default : ClipStack::YAxisMode::Inverted);
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &data().targetFrameBuffer);
     data().PaintFlags = flags;
-    bindSurface(0);
-
-#if !USE(OPENGL_ES)
-    if (GLContext::current()->version() >= 320) {
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &data().previousVAO);
-        glBindVertexArray(data().getVAO());
-    }
-#endif
+    bindSurface(surface);
 }
 
 void TextureMapperGL::endPainting()
 {
+    glBindFramebuffer(GL_FRAMEBUFFER, data().targetFrameBuffer);
     if (data().didModifyStencil) {
         glClearStencil(1);
         glClear(GL_STENCIL_BUFFER_BIT);
@@ -239,11 +223,6 @@ void TextureMapperGL::endPainting()
         glEnable(GL_DEPTH_TEST);
     else
         glDisable(GL_DEPTH_TEST);
-
-#if !USE(OPENGL_ES)
-    if (GLContext::current()->version() >= 320)
-        glBindVertexArray(data().previousVAO);
-#endif
 }
 
 void TextureMapperGL::drawBorder(const Color& color, float width, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix)
@@ -310,28 +289,28 @@ void TextureMapperGL::drawNumber(int number, const Color& color, const FloatPoin
 #endif
 }
 
-static TextureMapperShaderProgram::Options optionsForFilterType(FilterOperation::OperationType type, unsigned pass)
+static TextureMapperShaderProgram::Options optionsForFilterType(FilterOperation::Type type, unsigned pass)
 {
     switch (type) {
-    case FilterOperation::GRAYSCALE:
+    case FilterOperation::Type::Grayscale:
         return { TextureMapperShaderProgram::TextureRGB, TextureMapperShaderProgram::GrayscaleFilter };
-    case FilterOperation::SEPIA:
+    case FilterOperation::Type::Sepia:
         return { TextureMapperShaderProgram::TextureRGB, TextureMapperShaderProgram::SepiaFilter };
-    case FilterOperation::SATURATE:
+    case FilterOperation::Type::Saturate:
         return { TextureMapperShaderProgram::TextureRGB, TextureMapperShaderProgram::SaturateFilter };
-    case FilterOperation::HUE_ROTATE:
+    case FilterOperation::Type::HueRotate:
         return { TextureMapperShaderProgram::TextureRGB, TextureMapperShaderProgram::HueRotateFilter };
-    case FilterOperation::INVERT:
+    case FilterOperation::Type::Invert:
         return { TextureMapperShaderProgram::TextureRGB, TextureMapperShaderProgram::InvertFilter };
-    case FilterOperation::BRIGHTNESS:
+    case FilterOperation::Type::Brightness:
         return { TextureMapperShaderProgram::TextureRGB, TextureMapperShaderProgram::BrightnessFilter };
-    case FilterOperation::CONTRAST:
+    case FilterOperation::Type::Contrast:
         return { TextureMapperShaderProgram::TextureRGB, TextureMapperShaderProgram::ContrastFilter };
-    case FilterOperation::OPACITY:
+    case FilterOperation::Type::Opacity:
         return { TextureMapperShaderProgram::TextureRGB, TextureMapperShaderProgram::OpacityFilter };
-    case FilterOperation::BLUR:
+    case FilterOperation::Type::Blur:
         return { TextureMapperShaderProgram::BlurFilter };
-    case FilterOperation::DROP_SHADOW:
+    case FilterOperation::Type::DropShadow:
         if (!pass)
             return { TextureMapperShaderProgram::AlphaBlur };
         return { TextureMapperShaderProgram::AlphaBlur, TextureMapperShaderProgram::ContentTexture, TextureMapperShaderProgram::SolidColor };
@@ -379,19 +358,19 @@ static void prepareFilterProgram(TextureMapperShaderProgram& program, const Filt
     glUseProgram(program.programID());
 
     switch (operation.type()) {
-    case FilterOperation::GRAYSCALE:
-    case FilterOperation::SEPIA:
-    case FilterOperation::SATURATE:
-    case FilterOperation::HUE_ROTATE:
+    case FilterOperation::Type::Grayscale:
+    case FilterOperation::Type::Sepia:
+    case FilterOperation::Type::Saturate:
+    case FilterOperation::Type::HueRotate:
         glUniform1f(program.filterAmountLocation(), static_cast<const BasicColorMatrixFilterOperation&>(operation).amount());
         break;
-    case FilterOperation::INVERT:
-    case FilterOperation::BRIGHTNESS:
-    case FilterOperation::CONTRAST:
-    case FilterOperation::OPACITY:
+    case FilterOperation::Type::Invert:
+    case FilterOperation::Type::Brightness:
+    case FilterOperation::Type::Contrast:
+    case FilterOperation::Type::Opacity:
         glUniform1f(program.filterAmountLocation(), static_cast<const BasicComponentTransferFilterOperation&>(operation).amount());
         break;
-    case FilterOperation::BLUR: {
+    case FilterOperation::Type::Blur: {
         const BlurFilterOperation& blur = static_cast<const BlurFilterOperation&>(operation);
         FloatSize radius;
 
@@ -405,7 +384,7 @@ static void prepareFilterProgram(TextureMapperShaderProgram& program, const Filt
         glUniform1fv(program.gaussianKernelLocation(), GaussianKernelHalfWidth, gaussianKernel());
         break;
     }
-    case FilterOperation::DROP_SHADOW: {
+    case FilterOperation::Type::DropShadow: {
         const DropShadowFilterOperation& shadow = static_cast<const DropShadowFilterOperation&>(operation);
         glUniform1fv(program.gaussianKernelLocation(), GaussianKernelHalfWidth, gaussianKernel());
         switch (pass) {
@@ -469,8 +448,7 @@ void TextureMapperGL::drawTexture(const BitmapTexture& texture, const FloatRect&
 
 void TextureMapperGL::drawTexture(GLuint texture, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, unsigned exposedEdges)
 {
-    bool useAntialiasing = m_enableEdgeDistanceAntialiasing
-        && exposedEdges == AllEdges
+    bool useAntialiasing = exposedEdges == AllEdges
         && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options;
@@ -539,8 +517,7 @@ static void prepareTransformationMatrixWithFlags(TransformationMatrix& patternTr
 
 void TextureMapperGL::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, const std::array<GLfloat, 16>& yuvToRgbMatrix, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, std::optional<GLuint> alphaPlane, unsigned exposedEdges)
 {
-    bool useAntialiasing = m_enableEdgeDistanceAntialiasing
-        && exposedEdges == AllEdges
+    bool useAntialiasing = exposedEdges == AllEdges
         && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = alphaPlane ? TextureMapperShaderProgram::TextureYUVA : TextureMapperShaderProgram::TextureYUV;
@@ -599,8 +576,7 @@ void TextureMapperGL::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures
 
 void TextureMapperGL::drawTextureSemiPlanarYUV(const std::array<GLuint, 2>& textures, bool uvReversed, const std::array<GLfloat, 16>& yuvToRgbMatrix, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, unsigned exposedEdges)
 {
-    bool useAntialiasing = m_enableEdgeDistanceAntialiasing
-        && exposedEdges == AllEdges
+    bool useAntialiasing = exposedEdges == AllEdges
         && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = uvReversed ?
@@ -653,8 +629,7 @@ void TextureMapperGL::drawTextureSemiPlanarYUV(const std::array<GLuint, 2>& text
 
 void TextureMapperGL::drawTexturePackedYUV(GLuint texture, const std::array<GLfloat, 16>& yuvToRgbMatrix, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, unsigned exposedEdges)
 {
-    bool useAntialiasing = m_enableEdgeDistanceAntialiasing
-        && exposedEdges == AllEdges
+    bool useAntialiasing = exposedEdges == AllEdges
         && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
     TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::TexturePackedYUV;
@@ -867,14 +842,13 @@ void TextureMapperGL::drawFiltered(const BitmapTexture& sampler, const BitmapTex
     drawTexturedQuadWithProgram(program.get(), static_cast<const BitmapTextureGL&>(sampler).id(), 0, targetRect, TransformationMatrix(), 1);
 }
 
-static inline TransformationMatrix createProjectionMatrix(const IntSize& size, bool mirrored)
+static inline TransformationMatrix createProjectionMatrix(const IntSize& size, bool mirrored, double zNear, double zFar)
 {
-    const float nearValue = -99999;
-    const float farValue = 9999999;
-
-    return TransformationMatrix(2.0 / float(size.width()), 0, 0, 0,
-                                0, (mirrored ? 2.0 : -2.0) / float(size.height()), 0, 0,
-                                0, 0, -2.f / (farValue - nearValue), 0,
+    const double nearValue = std::min(zNear + 1, 9999999.0);
+    const double farValue = std::max(zFar - 1, -99999.0);
+    return TransformationMatrix(2.0 / size.width(), 0, 0, 0,
+        0, (mirrored ? 2.0 : -2.0) / size.height(), 0, 0,
+        0, 0, 2.0 / (farValue - nearValue), 0,
                                 -1, mirrored ? -1 : 1, -(farValue + nearValue) / (farValue - nearValue), 1);
 }
 
@@ -887,10 +861,11 @@ void TextureMapperGL::bindDefaultSurface()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, data().targetFrameBuffer);
     auto& viewport = data().viewport;
-    data().projectionMatrix = createProjectionMatrix(IntSize(viewport[2], viewport[3]), data().PaintFlags & PaintingMirrored);
     glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    glDisable(GL_DEPTH_TEST);
     m_clipStack.apply();
     data().currentSurface = nullptr;
+    updateProjectionMatrix();
 }
 
 void TextureMapperGL::bindSurface(BitmapTexture *surface)
@@ -901,8 +876,8 @@ void TextureMapperGL::bindSurface(BitmapTexture *surface)
     }
 
     static_cast<BitmapTextureGL*>(surface)->bindAsSurface();
-    data().projectionMatrix = createProjectionMatrix(surface->size(), true /* mirrored */);
     data().currentSurface = surface;
+    updateProjectionMatrix();
 }
 
 BitmapTexture* TextureMapperGL::currentSurface()
@@ -1025,20 +1000,30 @@ IntRect TextureMapperGL::clipBounds()
     return clipStack().current().scissorBox;
 }
 
-void TextureMapperGL::beginPreserves3D()
+Ref<BitmapTexture> TextureMapperGL::createTexture()
 {
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_DEPTH_BUFFER_BIT);
+    return BitmapTextureGL::create(m_contextAttributes);
 }
 
-void TextureMapperGL::endPreserves3D()
+void TextureMapperGL::setDepthRange(double zNear, double zFar)
 {
-    glDisable(GL_DEPTH_TEST);
+    data().zNear = zNear;
+    data().zFar = zFar;
+    updateProjectionMatrix();
 }
 
-Ref<BitmapTexture> TextureMapperGL::createTexture(GLint internalFormat)
+void TextureMapperGL::updateProjectionMatrix()
 {
-    return BitmapTextureGL::create(m_contextAttributes, internalFormat);
+    bool mirrored;
+    IntSize size;
+    if (data().currentSurface) {
+        size = data().currentSurface->size();
+        mirrored = true;
+    } else {
+        size = IntSize(data().viewport[2], data().viewport[3]);
+        mirrored = data().PaintFlags & PaintingMirrored;
+    }
+    data().projectionMatrix = createProjectionMatrix(size, mirrored, data().zNear, data().zFar);
 }
 
 std::unique_ptr<TextureMapper> TextureMapper::platformCreateAccelerated()

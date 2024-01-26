@@ -28,10 +28,10 @@
 #include "WebConsoleAgent.h"
 
 #include "CommandLineAPIHost.h"
-#include "DOMWindow.h"
 #include "InspectorNetworkAgent.h"
 #include "InspectorWebAgentBase.h"
 #include "JSExecState.h"
+#include "LocalDOMWindow.h"
 #include "Logging.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
@@ -45,12 +45,23 @@ namespace WebCore {
 
 using namespace Inspector;
 
+static String blockedTrackerErrorMessage(const ResourceError& error)
+{
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    if (error.blockedKnownTracker())
+        return "Blocked connection to known tracker"_s;
+#else
+    UNUSED_PARAM(error);
+#endif
+    return { };
+}
+
 WebConsoleAgent::WebConsoleAgent(WebAgentContext& context)
     : InspectorConsoleAgent(context)
 {
 }
 
-void WebConsoleAgent::frameWindowDiscarded(DOMWindow& window)
+void WebConsoleAgent::frameWindowDiscarded(LocalDOMWindow& window)
 {
     if (auto* document = window.document()) {
         for (auto& message : m_consoleMessages) {
@@ -78,8 +89,14 @@ void WebConsoleAgent::didFailLoading(ResourceLoaderIdentifier requestIdentifier,
     if (error.isCancellation())
         return;
 
-    auto message = makeString("Failed to load resource", error.localizedDescription().isEmpty() ? "" : ": ", error.localizedDescription());
-    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::Network, MessageType::Log, MessageLevel::Error, message, error.failingURL().string(), 0, 0, nullptr, requestIdentifier.toUInt64()));
+    auto level = MessageLevel::Error;
+    auto message = blockedTrackerErrorMessage(error);
+    if (message.isEmpty())
+        message = makeString("Failed to load resource", error.localizedDescription().isEmpty() ? "" : ": ", error.localizedDescription());
+    else
+        level = MessageLevel::Info;
+
+    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::Network, MessageType::Log, level, WTFMove(message), error.failingURL().string(), 0, 0, nullptr, requestIdentifier.toUInt64()));
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +31,8 @@
 
 #include "Font.h"
 #include "FontCascade.h"
-#include <pal/spi/cg/CoreGraphicsSPI.h>
-
-#if PLATFORM(COCOA)
 #include <pal/spi/cf/CoreTextSPI.h>
-#else
-#include <pal/spi/win/CoreTextSPIWin.h>
-#endif
+#include <pal/spi/cg/CoreGraphicsSPI.h>
 
 namespace WebCore {
 
@@ -52,7 +47,6 @@ static bool shouldFillWithVerticalGlyphs(const UChar* buffer, unsigned bufferLen
     return false;
 }
 
-static const constexpr CGGlyph deletedGlyph = 0xFFFF;
 
 bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
 {
@@ -71,7 +65,7 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
     for (unsigned i = 0; i < GlyphPage::size; ++i) {
         auto theGlyph = glyphs[i * glyphStep];
         if (theGlyph && theGlyph != deletedGlyph) {
-            setGlyphForIndex(i, theGlyph);
+            setGlyphForIndex(i, theGlyph, font.colorGlyphType(theGlyph));
             haveGlyphs = true;
         }
     }

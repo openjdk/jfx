@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -99,7 +99,27 @@ public:
     ~RetainPtr();
 
     void clear();
-    PtrType leakRef() WARN_UNUSED_RETURN;
+
+#ifdef __OBJC__
+    template<typename U = T>
+    std::enable_if_t<std::is_convertible_v<U, id>, PtrType> leakRef() NS_RETURNS_RETAINED WARN_UNUSED_RETURN {
+        static_assert(std::is_same_v<T, U>, "explicit specialization not allowed");
+        return fromStorageType(std::exchange(m_ptr, nullptr));
+    }
+#else
+    template<typename U = T>
+    std::enable_if_t<std::is_same_v<U, id>, PtrType> leakRef() CF_RETURNS_RETAINED WARN_UNUSED_RETURN {
+        static_assert(std::is_same_v<T, U>, "explicit specialization not allowed");
+        return fromStorageType(std::exchange(m_ptr, nullptr));
+    }
+#endif
+
+    template<typename U = T>
+    std::enable_if_t<!std::is_convertible_v<U, id>, PtrType> leakRef() CF_RETURNS_RETAINED WARN_UNUSED_RETURN {
+        static_assert(std::is_same_v<T, U>, "explicit specialization not allowed");
+        return fromStorageType(std::exchange(m_ptr, nullptr));
+    }
+
 #if HAVE(CFAUTORELEASE)
     PtrType autorelease();
 #endif
@@ -155,7 +175,7 @@ private:
     }
     constexpr PtrType fromStorageType(CFTypeRef ptr) const { return fromStorageTypeHelper<PtrType>(ptr); }
     constexpr CFTypeRef toStorageType(id ptr) const { return (__bridge CFTypeRef)ptr; }
-    constexpr CFTypeRef toStorageType(CFTypeRef ptr) const { return (CFTypeRef)ptr; }
+    constexpr CFTypeRef toStorageType(CFTypeRef ptr) const { return ptr; }
 #else
     constexpr PtrType fromStorageType(CFTypeRef ptr) const
     {
@@ -201,11 +221,6 @@ template<typename T> inline void RetainPtr<T>::clear()
         CFRelease(ptr);
 }
 
-template<typename T> inline auto RetainPtr<T>::leakRef() -> PtrType
-{
-    return fromStorageType(std::exchange(m_ptr, nullptr));
-}
-
 #if HAVE(CFAUTORELEASE)
 template<typename T> inline auto RetainPtr<T>::autorelease() -> PtrType
 {
@@ -224,7 +239,7 @@ template<typename T> inline auto RetainPtr<T>::autorelease() -> PtrType
 // FIXME: It would be better if we could base the return type on the type that is toll-free bridged with T rather than using id.
 template<typename T> inline id RetainPtr<T>::bridgingAutorelease()
 {
-    static_assert((!std::is_convertible<PtrType, id>::value), "Don't use bridgingAutorelease for Objective-C pointer types.");
+    static_assert(!std::is_convertible_v<PtrType, id>, "Don't use bridgingAutorelease for Objective-C pointer types.");
     return CFBridgingRelease(leakRef());
 }
 
@@ -297,25 +312,10 @@ template<typename T, typename U> constexpr bool operator==(T* a, const RetainPtr
     return a == b.get();
 }
 
-template<typename T, typename U> constexpr bool operator!=(const RetainPtr<T>& a, const RetainPtr<U>& b)
-{
-    return a.get() != b.get();
-}
-
-template<typename T, typename U> constexpr bool operator!=(const RetainPtr<T>& a, U* b)
-{
-    return a.get() != b;
-}
-
-template<typename T, typename U> constexpr bool operator!=(T* a, const RetainPtr<U>& b)
-{
-    return a != b.get();
-}
-
 template<typename T> constexpr RetainPtr<T> adoptCF(T CF_RELEASES_ARGUMENT ptr)
 {
 #ifdef __OBJC__
-    static_assert((!std::is_convertible<T, id>::value), "Don't use adoptCF with Objective-C pointer types, use adoptNS.");
+    static_assert(!std::is_convertible_v<T, id>, "Don't use adoptCF with Objective-C pointer types, use adoptNS.");
 #endif
     return RetainPtr<T>(ptr, RetainPtr<T>::Adopt);
 }
@@ -323,6 +323,7 @@ template<typename T> constexpr RetainPtr<T> adoptCF(T CF_RELEASES_ARGUMENT ptr)
 #ifdef __OBJC__
 template<typename T> inline RetainPtr<typename RetainPtr<T>::HelperPtrType> adoptNS(T NS_RELEASES_ARGUMENT ptr)
 {
+    static_assert(std::is_convertible_v<T, id>, "Don't use adoptNS with Core Foundation pointer types, use adoptCF.");
 #if __has_feature(objc_arc)
     return ptr;
 #elif defined(OBJC_NO_GC)

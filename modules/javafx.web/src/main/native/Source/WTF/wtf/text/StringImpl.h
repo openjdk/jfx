@@ -31,7 +31,6 @@
 #include <wtf/Expected.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Packed.h>
-#include <wtf/Span.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 #include <wtf/text/ASCIIFastPath.h>
@@ -71,6 +70,7 @@ struct CStringTranslator;
 struct HashAndUTF8CharactersTranslator;
 struct HashTranslatorASCIILiteral;
 struct LCharBufferTranslator;
+struct StringViewHashTranslator;
 struct SubstringTranslator;
 struct UCharBufferTranslator;
 
@@ -82,7 +82,7 @@ template<typename> struct HashAndCharactersTranslator;
 // Define STRING_STATS to 1 turn on runtime statistics of string sizes and memory usage.
 #define STRING_STATS 0
 
-template<bool isSpecialCharacter(UChar), typename CharacterType> bool isAllSpecialCharacters(const CharacterType*, size_t length);
+template<bool isSpecialCharacter(UChar), typename CharacterType> bool containsOnly(const CharacterType*, size_t length);
 
 #if STRING_STATS
 
@@ -190,6 +190,7 @@ class StringImpl : private StringImplShape {
     friend struct WTF::HashAndUTF8CharactersTranslator;
     friend struct WTF::HashTranslatorASCIILiteral;
     friend struct WTF::LCharBufferTranslator;
+    friend struct WTF::StringViewHashTranslator;
     friend struct WTF::SubstringTranslator;
     friend struct WTF::UCharBufferTranslator;
 
@@ -322,16 +323,19 @@ public:
 
     static WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> utf8ForCharacters(const LChar* characters, unsigned length);
     static WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> utf8ForCharacters(const UChar* characters, unsigned length, ConversionMode = LenientConversion);
+    static WTF_EXPORT_PRIVATE Expected<size_t, UTF8ConversionError> utf8ForCharactersIntoBuffer(const UChar* characters, unsigned length, ConversionMode, Vector<char, 1024>&);
 
     template<typename Func>
-    Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUtf8ForRange(const Func&, unsigned offset, unsigned length, ConversionMode = LenientConversion) const;
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8ForRange(unsigned offset, unsigned length, ConversionMode = LenientConversion) const;
-    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUtf8(ConversionMode = LenientConversion) const;
+    static Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8ForCharacters(const Func&, const LChar* characters, unsigned length);
+    template<typename Func>
+    static Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8ForCharacters(const Func&, const UChar* characters, unsigned length, ConversionMode = LenientConversion);
+
+    template<typename Func>
+    Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
+    WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
 
 private:
-    static WTF_EXPORT_PRIVATE UTF8ConversionError utf8Impl(const UChar* characters, unsigned length, char*& buffer, size_t bufferSize, ConversionMode);
-
     // The high bits of 'hash' are always empty, but we prefer to store our flags
     // in the low bits because it makes them slightly more efficient to access.
     // So, we shift left and right when setting and getting our hash code.
@@ -389,16 +393,38 @@ public:
         //       StringImpl::hash() only sets a new hash iff !hasHash().
         //       Additionally, StringImpl::setHash() asserts hasHash() and !isStatic().
 
-        template<unsigned characterCount> constexpr StaticStringImpl(const char (&characters)[characterCount], StringKind = StringNormal);
-        template<unsigned characterCount> constexpr StaticStringImpl(const char16_t (&characters)[characterCount], StringKind = StringNormal);
+        template<unsigned characterCount> explicit constexpr StaticStringImpl(const char (&characters)[characterCount], StringKind = StringNormal);
+        template<unsigned characterCount> explicit constexpr StaticStringImpl(const char16_t (&characters)[characterCount], StringKind = StringNormal);
         operator StringImpl&();
     };
 
     WTF_EXPORT_PRIVATE static StaticStringImpl s_emptyAtomString;
     ALWAYS_INLINE static StringImpl* empty() { return reinterpret_cast<StringImpl*>(&s_emptyAtomString); }
 
-    // FIXME: Does this really belong in StringImpl?
-    template<typename SourceCharacterType, typename DestinationCharacterType> static void copyCharacters(DestinationCharacterType* destination, const SourceCharacterType* source, unsigned numCharacters);
+    // FIXME: Do these functions really belong in StringImpl?
+    template<typename CharacterType>
+    ALWAYS_INLINE static void copyCharacters(CharacterType* destination, const CharacterType* source, unsigned length)
+    {
+        return copyElements(destination, source, length);
+    }
+
+    ALWAYS_INLINE static void copyCharacters(UChar* destination, const LChar* source, unsigned length)
+    {
+        static_assert(sizeof(UChar) == sizeof(uint16_t));
+        static_assert(sizeof(LChar) == sizeof(uint8_t));
+        return copyElements(bitwise_cast<uint16_t*>(destination), bitwise_cast<const uint8_t*>(source), length);
+    }
+
+    ALWAYS_INLINE static void copyCharacters(LChar* destination, const UChar* source, unsigned length)
+    {
+        static_assert(sizeof(UChar) == sizeof(uint16_t));
+        static_assert(sizeof(LChar) == sizeof(uint8_t));
+#if ASSERT_ENABLED
+        for (unsigned i = 0; i < length; ++i)
+            ASSERT(isLatin1(source[i]));
+#endif
+        return copyElements(bitwise_cast<uint8_t*>(destination), bitwise_cast<const uint16_t*>(source), length);
+    }
 
     // Some string features, like reference counting and the atomicity flag, are not
     // thread-safe. We achieve thread safety by isolation, giving each thread
@@ -427,16 +453,14 @@ public:
 
     Ref<StringImpl> foldCase();
 
-    WTF_EXPORT_PRIVATE Ref<StringImpl> stripWhiteSpace();
-    WTF_EXPORT_PRIVATE Ref<StringImpl> simplifyWhiteSpace();
-    Ref<StringImpl> simplifyWhiteSpace(CodeUnitMatchFunction);
+    WTF_EXPORT_PRIVATE Ref<StringImpl> simplifyWhiteSpace(CodeUnitMatchFunction);
 
-    Ref<StringImpl> stripLeadingAndTrailingCharacters(CodeUnitMatchFunction);
+    WTF_EXPORT_PRIVATE Ref<StringImpl> trim(CodeUnitMatchFunction);
     template<typename Predicate> Ref<StringImpl> removeCharacters(const Predicate&);
 
-    bool isAllASCII() const;
-    bool isAllLatin1() const;
-    template<bool isSpecialCharacter(UChar)> bool isAllSpecialCharacters() const;
+    bool containsOnlyASCII() const;
+    bool containsOnlyLatin1() const;
+    template<bool isSpecialCharacter(UChar)> bool containsOnly() const;
 
     size_t find(LChar character, unsigned start = 0);
     size_t find(char character, unsigned start = 0);
@@ -473,7 +497,7 @@ public:
     WTF_EXPORT_PRIVATE Ref<StringImpl> replace(StringView, StringView);
     WTF_EXPORT_PRIVATE Ref<StringImpl> replace(unsigned start, unsigned length, StringView);
 
-    WTF_EXPORT_PRIVATE UCharDirection defaultWritingDirection(bool* hasStrongDirectionality = nullptr);
+    WTF_EXPORT_PRIVATE std::optional<UCharDirection> defaultWritingDirection();
 
 #if USE(CF)
     RetainPtr<CFStringRef> createCFString();
@@ -522,7 +546,7 @@ private:
     WTF_EXPORT_PRIVATE static Ref<StringImpl> createWithoutCopyingNonEmpty(const LChar*, unsigned length);
     WTF_EXPORT_PRIVATE static Ref<StringImpl> createWithoutCopyingNonEmpty(const UChar*, unsigned length);
 
-    template<class CodeUnitPredicate> Ref<StringImpl> stripMatchedCharacters(CodeUnitPredicate);
+    template<class CodeUnitPredicate> Ref<StringImpl> trimMatchedCharacters(CodeUnitPredicate);
     template<typename CharacterType, typename Predicate> ALWAYS_INLINE Ref<StringImpl> removeCharactersImpl(const CharacterType* characters, const Predicate&);
     template<typename CharacterType, class CodeUnitPredicate> Ref<StringImpl> simplifyMatchedCharactersToSpace(CodeUnitPredicate);
     template<typename CharacterType> static Ref<StringImpl> constructInternal(StringImpl&, unsigned);
@@ -617,10 +641,14 @@ template<size_t inlineCapacity> bool equalIgnoringNullity(const Vector<UChar, in
 template<typename CharacterType1, typename CharacterType2> int codePointCompare(const CharacterType1*, unsigned length1, const CharacterType2*, unsigned length2);
 int codePointCompare(const StringImpl*, const StringImpl*);
 
-// FIXME: Should rename this to make clear it uses the Unicode definition of whitespace.
-// Most WebKit callers don't want that would use isASCIISpace or isHTMLSpace instead.
-bool isSpaceOrNewline(UChar32);
-bool isNotSpaceOrNewline(UChar32);
+bool isUnicodeWhitespace(UChar);
+
+// Deprecated as this excludes U+0085 and U+00A0 which are part of Unicode's White_Space definition:
+// https://www.unicode.org/Public/UCD/latest/ucd/PropList.txt
+bool deprecatedIsSpaceOrNewline(UChar);
+
+// Inverse of deprecatedIsSpaceOrNewline for predicates
+bool deprecatedIsNotSpaceOrNewline(UChar);
 
 // StringHash is the default hash for StringImpl* and RefPtr<StringImpl>
 template<typename> struct DefaultHash;
@@ -776,15 +804,22 @@ inline int codePointCompare(const StringImpl* string1, const StringImpl* string2
     return codePointCompare(string1->characters16(), string1->length(), string2->characters16(), string2->length());
 }
 
-inline bool isSpaceOrNewline(UChar32 character)
+// FIXME: For LChar, isUnicodeCompatibleASCIIWhitespace(character) || character == 0x0085 || character == noBreakSpace would be enough
+inline bool isUnicodeWhitespace(UChar character)
 {
-    // Use isASCIISpace() for all Latin-1 characters. This will include newlines, which aren't included in Unicode DirWS.
-    return isLatin1(character) ? isASCIISpace(character) : u_charDirection(character) == U_WHITE_SPACE_NEUTRAL;
+    return isASCII(character) ? isUnicodeCompatibleASCIIWhitespace(character) : u_isUWhiteSpace(character);
 }
 
-inline bool isNotSpaceOrNewline(UChar32 character)
+inline bool deprecatedIsSpaceOrNewline(UChar character)
 {
-    return !isSpaceOrNewline(character);
+    // Use isUnicodeCompatibleASCIIWhitespace() for all Latin-1 characters, which is incorrect as it
+    // excludes U+0085 and U+00A0.
+    return isLatin1(character) ? isUnicodeCompatibleASCIIWhitespace(character) : u_charDirection(character) == U_WHITE_SPACE_NEUTRAL;
+}
+
+inline bool deprecatedIsNotSpaceOrNewline(UChar character)
+{
+    return !deprecatedIsSpaceOrNewline(character);
 }
 
 inline StringImplShape::StringImplShape(unsigned refCount, unsigned length, const LChar* data8, unsigned hashAndFlags)
@@ -832,25 +867,25 @@ inline Ref<StringImpl> StringImpl::isolatedCopy() const
     return create(m_data16, m_length);
 }
 
-inline bool StringImpl::isAllASCII() const
+inline bool StringImpl::containsOnlyASCII() const
 {
     if (is8Bit())
         return charactersAreAllASCII(characters8(), length());
     return charactersAreAllASCII(characters16(), length());
 }
 
-inline bool StringImpl::isAllLatin1() const
+inline bool StringImpl::containsOnlyLatin1() const
 {
     if (is8Bit())
         return true;
     auto* characters = characters16();
-    UChar ored = 0;
-    for (size_t i = 0; i < length(); ++i)
-        ored |= characters[i];
-    return !(ored & 0xFF00);
+    UChar mergedCharacterBits = 0;
+    for (unsigned i = 0; i < length(); ++i)
+        mergedCharacterBits |= characters[i];
+    return isLatin1(mergedCharacterBits);
 }
 
-template<bool isSpecialCharacter(UChar), typename CharacterType> inline bool isAllSpecialCharacters(const CharacterType* characters, size_t length)
+template<bool isSpecialCharacter(UChar), typename CharacterType> inline bool containsOnly(const CharacterType* characters, size_t length)
 {
     for (size_t i = 0; i < length; ++i) {
         if (!isSpecialCharacter(characters[i]))
@@ -859,11 +894,11 @@ template<bool isSpecialCharacter(UChar), typename CharacterType> inline bool isA
     return true;
 }
 
-template<bool isSpecialCharacter(UChar)> inline bool StringImpl::isAllSpecialCharacters() const
+template<bool isSpecialCharacter(UChar)> inline bool StringImpl::containsOnly() const
 {
     if (is8Bit())
-        return WTF::isAllSpecialCharacters<isSpecialCharacter>(characters8(), length());
-    return WTF::isAllSpecialCharacters<isSpecialCharacter>(characters16(), length());
+        return WTF::containsOnly<isSpecialCharacter>(characters8(), length());
+    return WTF::containsOnly<isSpecialCharacter>(characters16(), length());
 }
 
 inline StringImpl::StringImpl(unsigned length, Force8Bit)
@@ -1124,26 +1159,6 @@ inline void StringImpl::deref()
     m_refCount = tempRefCount;
 }
 
-template<typename SourceCharacterType, typename DestinationCharacterType>
-inline void StringImpl::copyCharacters(DestinationCharacterType* destination, const SourceCharacterType* source, unsigned numCharacters)
-{
-    ASSERT(destination || !numCharacters); // Workaround for clang static analyzer (<rdar://problem/82475719>).
-    static_assert(std::is_same_v<SourceCharacterType, LChar> || std::is_same_v<SourceCharacterType, UChar>);
-    static_assert(std::is_same_v<DestinationCharacterType, LChar> || std::is_same_v<DestinationCharacterType, UChar>);
-    if constexpr (std::is_same_v<SourceCharacterType, DestinationCharacterType>) {
-        if (numCharacters == 1) {
-            *destination = *source;
-            return;
-        }
-        memcpy(destination, source, numCharacters * sizeof(DestinationCharacterType));
-    } else {
-        // FIXME: We should ensure that UChar -> LChar copying happens when UChar only contains Latin-1.
-        // https://bugs.webkit.org/show_bug.cgi?id=205355
-        for (unsigned i = 0; i < numCharacters; ++i)
-            destination[i] = source[i];
-    }
-}
-
 inline UChar StringImpl::at(unsigned i) const
 {
     ASSERT_WITH_SECURITY_IMPLICATION(i < m_length);
@@ -1297,7 +1312,6 @@ template<typename CharacterType, typename Predicate> ALWAYS_INLINE Ref<StringImp
     auto* to = data.characters();
     unsigned outc = from - characters;
 
-    if (outc)
         copyCharacters(to, characters, outc);
 
     do {
@@ -1315,6 +1329,7 @@ template<typename CharacterType, typename Predicate> ALWAYS_INLINE Ref<StringImp
 template<typename Predicate>
 inline Ref<StringImpl> StringImpl::removeCharacters(const Predicate& findMatch)
 {
+    static_assert(!std::is_function_v<Predicate>, "Passing a lambda instead of a function pointer helps the compiler with inlining");
     if (is8Bit())
         return removeCharactersImpl(characters8(), findMatch);
     return removeCharactersImpl(characters16(), findMatch);
@@ -1359,18 +1374,23 @@ inline Ref<StringImpl> StringImpl::createByReplacingInCharacters(const UChar* ch
 }
 
 template<typename Func>
-inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> StringImpl::tryGetUtf8ForRange(const Func& function, unsigned offset, unsigned length, ConversionMode mode) const
+inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8(const Func& function, ConversionMode mode) const
 {
-    ASSERT(offset <= this->length());
-    ASSERT(offset + length <= this->length());
+    if (is8Bit())
+        return tryGetUTF8ForCharacters(function, characters8(), length());
+    return tryGetUTF8ForCharacters(function, characters16(), length(), mode);
+}
 
+template<typename Func>
+inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8ForCharacters(const Func& function, const LChar* characters, unsigned length)
+{
     if (!length) {
-        const char* const emptyString = "";
-        return function(Span<const char> { emptyString, emptyString });
+        constexpr const char* emptyString = "";
+        return function(std::span(emptyString, emptyString));
     }
 
     // Allocate a buffer big enough to hold all the characters
-    // (an individual UTF-16 UChar can only expand to 3 UTF-8 bytes).
+    // (an individual LChar can only expand to 2 UTF-8 bytes).
     // Optimization ideas, if we find this function is hot:
     //  * We could speculatively create a CStringBuffer to contain 'length'
     //    characters, and resize if necessary (i.e. if the buffer contains
@@ -1379,41 +1399,51 @@ inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionErro
     //  * We could allocate a CStringBuffer with an appropriate size to
     //    have a good chance of being able to write the string into the
     //    buffer without reallocing (say, 1.5 x length).
-    if (length > MaxLength / 3)
+    if (length > MaxLength / 2)
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
-    if (is8Bit()) {
-        const LChar* characters = this->characters8() + offset;
 #if CPU(ARM64)
         if (const LChar* nonASCII = find8NonASCII(characters, length)) {
             size_t prefixLength = nonASCII - characters;
             size_t remainingLength = length - prefixLength;
-            Vector<char, 1024> bufferVector(prefixLength + remainingLength * 3);
+
+        Vector<char, 1024> bufferVector(prefixLength + remainingLength * 2);
             char* buffer = bufferVector.data();
 
             memcpy(buffer, characters, prefixLength);
             buffer += prefixLength;
 
             auto success = Unicode::convertLatin1ToUTF8(&nonASCII, characters + length, &buffer, buffer + (bufferVector.size() - prefixLength));
-            ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
-            return function(Span<const char> { bufferVector.data(), buffer });
-        } else
-            return function(Span<const char> { bitwise_cast<const char*>(characters), bitwise_cast<const char*>(characters + length) });
-#else
-        Vector<char, 1024> bufferVector(length * 3);
-        char* buffer = bufferVector.data();
-        auto success = Unicode::convertLatin1ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size());
-        ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
-        return function(Span<const char> { bufferVector.data(), buffer });
-#endif
+        ASSERT_UNUSED(success, success); // (length * 2) should be sufficient for any conversion from Latin1
+        return function(std::span(bufferVector.data(), buffer));
     }
+    return function(std::span(bitwise_cast<const char*>(characters), bitwise_cast<const char*>(characters + length)));
+#else
+    Vector<char, 1024> bufferVector(length * 2);
+        char* buffer = bufferVector.data();
+    const LChar* source = characters;
+    bool success = Unicode::convertLatin1ToUTF8(&source, source + length, &buffer, buffer + bufferVector.size());
+    ASSERT_UNUSED(success, success); // (length * 2) should be sufficient for any conversion from Latin1
+    return function(std::span(bufferVector.data(), buffer));
+#endif
+}
 
-    Vector<char, 1024> bufferVector(length * 3);
-    char* buffer = bufferVector.data();
-    UTF8ConversionError error = utf8Impl(this->characters16() + offset, length, buffer, bufferVector.size(), mode);
-    if (error != UTF8ConversionError::None)
-        return makeUnexpected(error);
-    return function(Span<const char> { bufferVector.data(), buffer });
+template<typename Func>
+inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> StringImpl::tryGetUTF8ForCharacters(const Func& function, const UChar* characters, unsigned length, ConversionMode mode)
+{
+    if (!length) {
+        constexpr const char* emptyString = "";
+        return function(std::span(emptyString, emptyString));
+    }
+    if (length > MaxLength / 3)
+        return makeUnexpected(UTF8ConversionError::OutOfMemory);
+
+    size_t bufferSize = length * 3;
+    Vector<char, 1024> bufferVector(bufferSize);
+    auto convertedSize = utf8ForCharactersIntoBuffer(characters, length, mode, bufferVector);
+    if (!convertedSize)
+        return makeUnexpected(convertedSize.error());
+    return function(std::span(bufferVector.data(), *convertedSize));
 }
 
 } // namespace WTF
@@ -1421,5 +1451,6 @@ inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionErro
 using WTF::StaticStringImpl;
 using WTF::StringImpl;
 using WTF::equal;
-using WTF::isNotSpaceOrNewline;
-using WTF::isSpaceOrNewline;
+using WTF::isUnicodeWhitespace;
+using WTF::deprecatedIsSpaceOrNewline;
+using WTF::deprecatedIsNotSpaceOrNewline;

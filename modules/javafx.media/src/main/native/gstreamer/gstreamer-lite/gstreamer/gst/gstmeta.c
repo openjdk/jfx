@@ -57,6 +57,7 @@ static GRWLock lock;
 
 GQuark _gst_meta_transform_copy;
 GQuark _gst_meta_tag_memory;
+GQuark _gst_meta_tag_memory_reference;
 
 typedef struct
 {
@@ -88,6 +89,8 @@ _priv_gst_meta_initialize (void)
 
   _gst_meta_transform_copy = g_quark_from_static_string ("gst-copy");
   _gst_meta_tag_memory = g_quark_from_static_string ("memory");
+  _gst_meta_tag_memory_reference =
+      g_quark_from_static_string ("memory-reference");
 }
 
 static gboolean
@@ -133,7 +136,7 @@ gst_meta_api_type_register (const gchar * api, const gchar ** tags)
   GST_CAT_DEBUG (GST_CAT_META, "register API \"%s\"", api);
   type = g_pointer_type_register_static (api);
 
-  if (type != 0) {
+  if (type != G_TYPE_INVALID) {
     gint i;
 
     for (i = 0; tags[i]; i++) {
@@ -188,7 +191,7 @@ custom_transform_func (GstBuffer * transbuf, GstMeta * meta,
     gst_structure_take (&custom->structure,
         gst_structure_copy (cmeta->structure));
     gst_structure_set_parent_refcount (custom->structure,
-        &GST_MINI_OBJECT_REFCOUNT (buffer));
+        &GST_MINI_OBJECT_REFCOUNT (transbuf));
   } else {
     return FALSE;
   }
@@ -388,7 +391,7 @@ gst_meta_register (GType api, const gchar * impl, gsize size,
    * that this fails because it was already registered. Don't warn,
    * glib did this for us already. */
   type = g_pointer_type_register_static (impl);
-  if (type == 0)
+  if (type == G_TYPE_INVALID)
     return NULL;
 
   info = (GstMetaInfo *) g_slice_new (GstMetaInfoImpl);

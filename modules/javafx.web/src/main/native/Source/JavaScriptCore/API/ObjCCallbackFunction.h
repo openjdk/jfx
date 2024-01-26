@@ -32,6 +32,8 @@
 #import <JavaScriptCore/JSCallbackFunction.h>
 
 #if defined(__OBJC__)
+@class JSContext;
+
 JSObjectRef objCCallbackFunctionForMethod(JSContext *, Class, Protocol *, BOOL isInstanceMethod, SEL, const char* types);
 JSObjectRef objCCallbackFunctionForBlock(JSContext *, id);
 JSObjectRef objCCallbackFunctionForInit(JSContext *, Class, Protocol *, SEL, const char* types);
@@ -42,6 +44,9 @@ id tryUnwrapConstructor(JSObjectRef);
 namespace JSC {
 
 class ObjCCallbackFunctionImpl;
+
+#define OBJC_CALLBACK_FUNCTION_METHOD(method) \
+    WTF_VTBL_FUNCPTR_PTRAUTH_STR("ObjCCallbackFunction." #method) method
 
 class ObjCCallbackFunction : public InternalFunction {
     friend struct APICallbackFunction;
@@ -75,10 +80,12 @@ private:
     JSObjectCallAsFunctionCallback functionCallback() { return m_functionCallback; }
     JSObjectCallAsConstructorCallback constructCallback() { return m_constructCallback; }
 
-    JSObjectCallAsFunctionCallback m_functionCallback;
-    JSObjectCallAsConstructorCallback m_constructCallback;
+    JSObjectCallAsFunctionCallback OBJC_CALLBACK_FUNCTION_METHOD(m_functionCallback);
+    JSObjectCallAsConstructorCallback OBJC_CALLBACK_FUNCTION_METHOD(m_constructCallback);
     std::unique_ptr<ObjCCallbackFunctionImpl> m_impl;
 };
+
+#undef OBJC_CALLBACK_FUNCTION_METHOD
 
 } // namespace JSC
 

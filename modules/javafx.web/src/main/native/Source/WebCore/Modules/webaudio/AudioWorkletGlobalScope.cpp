@@ -40,7 +40,7 @@
 #include "JSAudioWorkletProcessor.h"
 #include "JSAudioWorkletProcessorConstructor.h"
 #include "JSDOMConvert.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/IsoMallocInlines.h>
@@ -54,7 +54,9 @@ RefPtr<AudioWorkletGlobalScope> AudioWorkletGlobalScope::tryCreate(AudioWorkletT
     auto vm = JSC::VM::tryCreate();
     if (!vm)
         return nullptr;
-    return adoptRef(*new AudioWorkletGlobalScope(thread, vm.releaseNonNull(), parameters));
+    auto scope = adoptRef(*new AudioWorkletGlobalScope(thread, vm.releaseNonNull(), parameters));
+    scope->addToContextsMap();
+    return scope;
 }
 
 AudioWorkletGlobalScope::AudioWorkletGlobalScope(AudioWorkletThread& thread, Ref<JSC::VM>&& vm, const WorkletParameters& parameters)
@@ -142,8 +144,11 @@ RefPtr<AudioWorkletProcessor> AudioWorkletGlobalScope::createProcessor(const Str
     m_pendingProcessorConstructionData = makeUnique<AudioWorkletProcessorConstructionData>(String { name }, MessagePort::entangle(*this, WTFMove(port)));
 
     JSC::MarkedArgumentBuffer args;
-    auto arg = options->deserialize(*globalObject, globalObject, SerializationErrorMode::NonThrowing);
+    bool didFail = false;
+    auto arg = options->deserialize(*globalObject, globalObject, SerializationErrorMode::NonThrowing, &didFail);
     RETURN_IF_EXCEPTION(scope, nullptr);
+    if (didFail)
+        return nullptr;
     args.append(arg);
     ASSERT(!args.hasOverflowed());
 
@@ -155,11 +160,7 @@ RefPtr<AudioWorkletProcessor> AudioWorkletGlobalScope::createProcessor(const Str
     if (!jsProcessor)
         return nullptr;
 
-    {
-        Locker locker { m_processorsLock };
         m_processors.add(jsProcessor->wrapped());
-    }
-
     return &jsProcessor->wrapped();
 }
 
@@ -182,12 +183,11 @@ AudioWorkletThread& AudioWorkletGlobalScope::thread() const
 
 void AudioWorkletGlobalScope::handlePreRenderTasks()
 {
-    // We grab the JS API lock at the beginning of rendering and release it at the end of rendering.
     // This makes sure that we only drain the MicroTask queue after each render quantum.
     // It is only safe to grab the lock if we are on the context thread. We might get called on
     // another thread if audio rendering started before the audio worklet got started.
     if (isContextThread())
-        m_lockDuringRendering.emplace(script()->vm());
+        m_delayMicrotaskDrainingDuringRendering = script()->vm().drainMicrotaskDelayScope();
 }
 
 void AudioWorkletGlobalScope::handlePostRenderTasks(size_t currentFrame)
@@ -199,19 +199,17 @@ void AudioWorkletGlobalScope::handlePostRenderTasks(size_t currentFrame)
         // explicitly allow the following allocation(s).
         DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
         // This takes care of processing the MicroTask queue after rendering.
-        m_lockDuringRendering = std::nullopt;
+        m_delayMicrotaskDrainingDuringRendering = std::nullopt;
     }
 }
 
 void AudioWorkletGlobalScope::processorIsNoLongerNeeded(AudioWorkletProcessor& processor)
 {
-    Locker locker { m_processorsLock };
     m_processors.remove(processor);
 }
 
 void AudioWorkletGlobalScope::visitProcessors(JSC::AbstractSlotVisitor& visitor)
 {
-    Locker locker { m_processorsLock };
     m_processors.forEach([&](auto& processor) {
         addWebCoreOpaqueRoot(visitor, processor);
     });

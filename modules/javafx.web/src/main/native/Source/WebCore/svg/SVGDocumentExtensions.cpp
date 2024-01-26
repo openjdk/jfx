@@ -22,12 +22,12 @@
 #include "config.h"
 #include "SVGDocumentExtensions.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "EventListener.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "SMILTimeContainer.h"
 #include "SVGElement.h"
@@ -42,10 +42,15 @@
 
 namespace WebCore {
 
+static bool animationsPausedForDocument(Document& document)
+{
+    return !document.page() || !document.page()->isVisible() || !document.page()->imageAnimationEnabled();
+}
+
 SVGDocumentExtensions::SVGDocumentExtensions(Document& document)
     : m_document(document)
     , m_resourcesCache(makeUnique<SVGResourcesCache>())
-    , m_areAnimationsPaused(!document.page() || !document.page()->isVisible())
+    , m_areAnimationsPaused(animationsPausedForDocument(document))
 {
 }
 
@@ -63,29 +68,9 @@ void SVGDocumentExtensions::removeTimeContainer(SVGSVGElement& element)
     m_timeContainers.remove(element);
 }
 
-void SVGDocumentExtensions::addResource(const AtomString& id, RenderSVGResourceContainer& resource)
+Vector<Ref<SVGSVGElement>> SVGDocumentExtensions::allSVGSVGElements() const
 {
-    if (id.isEmpty())
-        return;
-
-    // Replaces resource if already present, to handle potential id changes
-    m_resources.set(id, &resource);
-}
-
-void SVGDocumentExtensions::removeResource(const AtomString& id)
-{
-    if (id.isEmpty())
-        return;
-
-    m_resources.remove(id);
-}
-
-RenderSVGResourceContainer* SVGDocumentExtensions::resourceById(const AtomString& id) const
-{
-    if (id.isEmpty())
-        return 0;
-
-    return m_resources.get(id);
+    return copyToVectorOf<Ref<SVGSVGElement>>(m_timeContainers);
 }
 
 void SVGDocumentExtensions::startAnimations()
@@ -108,6 +93,10 @@ void SVGDocumentExtensions::pauseAnimations()
 
 void SVGDocumentExtensions::unpauseAnimations()
 {
+    // If animations are paused at the document level, don't allow `this` to be unpaused.
+    if (animationsPausedForDocument(m_document))
+        return;
+
     for (auto& container : m_timeContainers)
         container.unpauseAnimations();
     m_areAnimationsPaused = false;
@@ -137,121 +126,6 @@ void SVGDocumentExtensions::reportWarning(const String& message)
 void SVGDocumentExtensions::reportError(const String& message)
 {
     reportMessage(m_document, MessageLevel::Error, "Error: " + message);
-}
-
-void SVGDocumentExtensions::addPendingResource(const AtomString& id, Element& element)
-{
-    if (id.isEmpty())
-        return;
-
-    auto result = m_pendingResources.add(id, WeakHashSet<Element> { });
-    result.iterator->value.add(element);
-
-    element.setHasPendingResources();
-}
-
-bool SVGDocumentExtensions::isIdOfPendingResource(const AtomString& id) const
-{
-    if (id.isEmpty())
-        return false;
-
-    return m_pendingResources.contains(id);
-}
-
-bool SVGDocumentExtensions::isElementWithPendingResources(Element& element) const
-{
-    // This algorithm takes time proportional to the number of pending resources and need not.
-    // If performance becomes an issue we can keep a counted set of elements and answer the question efficiently.
-    return WTF::anyOf(m_pendingResources.values(), [&] (auto& elements) {
-        return elements.contains(element);
-    });
-}
-
-bool SVGDocumentExtensions::isPendingResource(Element& element, const AtomString& id) const
-{
-    if (id.isEmpty())
-        return false;
-
-    auto it = m_pendingResources.find(id);
-    if (it == m_pendingResources.end())
-        return false;
-
-    return it->value.contains(element);
-}
-
-void SVGDocumentExtensions::clearHasPendingResourcesIfPossible(Element& element)
-{
-    if (!isElementWithPendingResources(element))
-        element.clearHasPendingResources();
-}
-
-void SVGDocumentExtensions::removeElementFromPendingResources(Element& element)
-{
-    // Remove the element from pending resources.
-    if (!m_pendingResources.isEmpty() && element.hasPendingResources()) {
-        Vector<AtomString> toBeRemoved;
-        for (auto& resource : m_pendingResources) {
-            auto& elements = resource.value;
-            elements.remove(element);
-            if (elements.computesEmpty())
-                toBeRemoved.append(resource.key);
-        }
-
-        clearHasPendingResourcesIfPossible(element);
-
-        // We use the removePendingResource function here because it deals with set lifetime correctly.
-        for (auto& resource : toBeRemoved)
-            removePendingResource(resource);
-    }
-
-    // Remove the element from pending resources that were scheduled for removal.
-    if (!m_pendingResourcesForRemoval.isEmpty()) {
-        Vector<AtomString> toBeRemoved;
-        for (auto& resource : m_pendingResourcesForRemoval) {
-            auto& elements = resource.value;
-            elements.remove(element);
-            if (elements.computesEmpty())
-                toBeRemoved.append(resource.key);
-        }
-
-        // We use the removePendingResourceForRemoval function here because it deals with set lifetime correctly.
-        for (auto& resource : toBeRemoved)
-            m_pendingResourcesForRemoval.remove(resource);
-    }
-}
-
-void SVGDocumentExtensions::markPendingResourcesForRemoval(const AtomString& id)
-{
-    if (id.isEmpty())
-        return;
-
-    ASSERT(!m_pendingResourcesForRemoval.contains(id));
-
-    auto existing = m_pendingResources.take(id);
-    if (!existing.computesEmpty())
-        m_pendingResourcesForRemoval.add(id, WTFMove(existing));
-}
-
-RefPtr<Element> SVGDocumentExtensions::takeElementFromPendingResourcesForRemovalMap(const AtomString& id)
-{
-    if (id.isEmpty())
-        return nullptr;
-
-    auto it = m_pendingResourcesForRemoval.find(id);
-    if (it == m_pendingResourcesForRemoval.end())
-        return nullptr;
-
-    auto& resourceSet = it->value;
-    RefPtr firstElement = resourceSet.begin().get();
-    if (!firstElement)
-        return nullptr;
-
-    resourceSet.remove(*firstElement);
-
-    if (resourceSet.computesEmpty())
-        m_pendingResourcesForRemoval.remove(id);
-
-    return firstElement;
 }
 
 void SVGDocumentExtensions::addElementToRebuild(SVGElement& element)

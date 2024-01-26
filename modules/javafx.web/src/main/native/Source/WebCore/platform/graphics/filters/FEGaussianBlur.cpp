@@ -47,6 +47,14 @@ FEGaussianBlur::FEGaussianBlur(float x, float y, EdgeModeType edgeMode)
 {
 }
 
+bool FEGaussianBlur::operator==(const FEGaussianBlur& other) const
+{
+    return FilterEffect::operator==(other)
+        && m_stdX == other.m_stdX
+        && m_stdY == other.m_stdY
+        && m_edgeMode == other.m_edgeMode;
+}
+
 bool FEGaussianBlur::setStdDeviationX(float stdX)
 {
     if (m_stdX == stdX)
@@ -114,9 +122,9 @@ IntSize FEGaussianBlur::calculateOutsetSize(FloatSize stdDeviation)
     return { 3 * kernelSize.width() / 2, 3 * kernelSize.height() / 2 };
 }
 
-FloatRect FEGaussianBlur::calculateImageRect(const Filter& filter, const FilterImageVector& inputs, const FloatRect& primitiveSubregion) const
+FloatRect FEGaussianBlur::calculateImageRect(const Filter& filter, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const
 {
-    auto imageRect = inputs[0]->imageRect();
+    auto imageRect = inputImageRects[0];
 
     // Edge modes other than 'none' do not inflate the affected paint rect.
     if (m_edgeMode != EdgeModeType::None)
@@ -142,9 +150,25 @@ bool FEGaussianBlur::resultIsAlphaImage(const FilterImageVector& inputs) const
     return inputs[0]->isAlphaImage();
 }
 
+OptionSet<FilterRenderingMode> FEGaussianBlur::supportedFilterRenderingModes() const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if HAVE(CGSTYLE_COLORMATRIX_BLUR)
+    if (m_stdX == m_stdY)
+        modes.add(FilterRenderingMode::GraphicsContext);
+#endif
+    return modes;
+}
+
 std::unique_ptr<FilterEffectApplier> FEGaussianBlur::createSoftwareApplier() const
 {
     return FilterEffectApplier::create<FEGaussianBlurSoftwareApplier>(*this);
+}
+
+std::optional<GraphicsStyle> FEGaussianBlur::createGraphicsStyle(const Filter& filter) const
+{
+    auto radius = calculateUnscaledKernelSize(filter.resolvedSize({ m_stdX, m_stdY }));
+    return GraphicsGaussianBlur { radius };
 }
 
 TextStream& FEGaussianBlur::externalRepresentation(TextStream& ts, FilterRepresentation representation) const

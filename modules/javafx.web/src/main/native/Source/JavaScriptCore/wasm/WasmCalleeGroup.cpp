@@ -31,14 +31,20 @@
 #include "LinkBuffer.h"
 #include "WasmBBQPlan.h"
 #include "WasmCallee.h"
+#include "WasmIPIntPlan.h"
 #include "WasmLLIntPlan.h"
 #include "WasmWorklist.h"
 
 namespace JSC { namespace Wasm {
 
-Ref<CalleeGroup> CalleeGroup::create(VM& vm, MemoryMode mode, ModuleInformation& moduleInformation, RefPtr<LLIntCallees> llintCallees)
+Ref<CalleeGroup> CalleeGroup::createFromLLInt(VM& vm, MemoryMode mode, ModuleInformation& moduleInformation, RefPtr<LLIntCallees> llintCallees)
 {
     return adoptRef(*new CalleeGroup(vm, mode, moduleInformation, llintCallees));
+}
+
+Ref<CalleeGroup> CalleeGroup::createFromIPInt(VM& vm, MemoryMode mode, ModuleInformation& moduleInformation, RefPtr<IPIntCallees> ipintCallees)
+{
+    return adoptRef(*new CalleeGroup(vm, mode, moduleInformation, ipintCallees));
 }
 
 Ref<CalleeGroup> CalleeGroup::createFromExisting(MemoryMode mode, const CalleeGroup& other)
@@ -50,11 +56,14 @@ CalleeGroup::CalleeGroup(MemoryMode mode, const CalleeGroup& other)
     : m_calleeCount(other.m_calleeCount)
     , m_mode(mode)
     , m_llintCallees(other.m_llintCallees)
-    , m_embedderCallees(other.m_embedderCallees)
+    , m_jsEntrypointCallees(other.m_jsEntrypointCallees)
     , m_wasmIndirectCallEntryPoints(other.m_wasmIndirectCallEntryPoints)
-    , m_wasmToWasmCallsites(other.m_wasmToWasmCallsites)
     , m_wasmToWasmExitStubs(other.m_wasmToWasmExitStubs)
+    , m_callsiteCollection(m_calleeCount)
 {
+    Locker locker { m_lock };
+    auto callsites = other.callsiteCollection().calleeGroupCallsites();
+    m_callsiteCollection.addCalleeGroupCallsites(locker, *this, WTFMove(callsites));
     setCompilationFinished();
 }
 
@@ -62,9 +71,9 @@ CalleeGroup::CalleeGroup(VM& vm, MemoryMode mode, ModuleInformation& moduleInfor
     : m_calleeCount(moduleInformation.internalFunctionCount())
     , m_mode(mode)
     , m_llintCallees(llintCallees)
+    , m_callsiteCollection(m_calleeCount)
 {
     RefPtr<CalleeGroup> protectedThis = this;
-
     if (Options::useWasmLLInt()) {
         m_plan = adoptRef(*new LLIntPlan(vm, moduleInformation, m_llintCallees->data(), createSharedTask<Plan::CallbackType>([this, protectedThis = WTFMove(protectedThis)] (Plan&) {
             Locker locker { m_lock };
@@ -74,14 +83,14 @@ CalleeGroup::CalleeGroup(VM& vm, MemoryMode mode, ModuleInformation& moduleInfor
                 return;
             }
 
-            m_wasmIndirectCallEntryPoints = FixedVector<MacroAssemblerCodePtr<WasmEntryPtrTag>>(m_calleeCount);
+            m_wasmIndirectCallEntryPoints = FixedVector<CodePtr<WasmEntryPtrTag>>(m_calleeCount);
 
             for (unsigned i = 0; i < m_calleeCount; ++i)
                 m_wasmIndirectCallEntryPoints[i] = m_llintCallees->at(i)->entrypoint();
 
             m_wasmToWasmExitStubs = m_plan->takeWasmToWasmExitStubs();
-            m_wasmToWasmCallsites = m_plan->takeWasmToWasmCallsites();
-            m_embedderCallees = static_cast<LLIntPlan*>(m_plan.get())->takeEmbedderCallees();
+            m_callsiteCollection.addCalleeGroupCallsites(locker, *this, m_plan->takeWasmToWasmCallsites());
+            m_jsEntrypointCallees = static_cast<LLIntPlan*>(m_plan.get())->takeJSCallees();
 
             setCompilationFinished();
         })));
@@ -96,12 +105,12 @@ CalleeGroup::CalleeGroup(VM& vm, MemoryMode mode, ModuleInformation& moduleInfor
                 return;
             }
 
-            m_wasmIndirectCallEntryPoints = FixedVector<MacroAssemblerCodePtr<WasmEntryPtrTag>>(m_calleeCount);
+            m_wasmIndirectCallEntryPoints = FixedVector<CodePtr<WasmEntryPtrTag>>(m_calleeCount);
 
             BBQPlan* bbqPlan = static_cast<BBQPlan*>(m_plan.get());
-            bbqPlan->initializeCallees([&] (unsigned calleeIndex, RefPtr<EmbedderEntrypointCallee>&& embedderEntrypointCallee, RefPtr<BBQCallee>&& wasmEntrypoint) {
-                if (embedderEntrypointCallee) {
-                    auto result = m_embedderCallees.set(calleeIndex, WTFMove(embedderEntrypointCallee));
+            bbqPlan->initializeCallees([&] (unsigned calleeIndex, RefPtr<JSEntrypointCallee>&& jsEntrypointCallee, RefPtr<BBQCallee>&& wasmEntrypoint) {
+                if (jsEntrypointCallee) {
+                    auto result = m_jsEntrypointCallees.set(calleeIndex, WTFMove(jsEntrypointCallee));
                     ASSERT_UNUSED(result, result.isNewEntry);
                 }
                 m_wasmIndirectCallEntryPoints[calleeIndex] = wasmEntrypoint->entrypoint();
@@ -109,7 +118,71 @@ CalleeGroup::CalleeGroup(VM& vm, MemoryMode mode, ModuleInformation& moduleInfor
             });
 
             m_wasmToWasmExitStubs = m_plan->takeWasmToWasmExitStubs();
-            m_wasmToWasmCallsites = m_plan->takeWasmToWasmCallsites();
+            m_callsiteCollection.addCalleeGroupCallsites(locker, *this, m_plan->takeWasmToWasmCallsites());
+
+            setCompilationFinished();
+        })));
+    }
+#endif
+    m_plan->setMode(mode);
+
+    auto& worklist = Wasm::ensureWorklist();
+    // Note, immediately after we enqueue the plan, there is a chance the above callback will be called.
+    worklist.enqueue(*m_plan.get());
+}
+
+CalleeGroup::CalleeGroup(VM& vm, MemoryMode mode, ModuleInformation& moduleInformation, RefPtr<IPIntCallees> ipintCallees)
+    : m_calleeCount(moduleInformation.internalFunctionCount())
+    , m_mode(mode)
+    , m_ipintCallees(ipintCallees)
+    , m_callsiteCollection(m_calleeCount)
+{
+    RefPtr<CalleeGroup> protectedThis = this;
+    if (Options::useWasmIPInt()) {
+        m_plan = adoptRef(*new IPIntPlan(vm, moduleInformation, m_ipintCallees->data(), createSharedTask<Plan::CallbackType>([this, protectedThis = WTFMove(protectedThis)] (Plan&) {
+            Locker locker { m_lock };
+            if (m_plan->failed()) {
+                m_errorMessage = m_plan->errorMessage();
+                setCompilationFinished();
+                return;
+            }
+
+            m_wasmIndirectCallEntryPoints = FixedVector<CodePtr<WasmEntryPtrTag>>(m_calleeCount);
+
+            for (unsigned i = 0; i < m_calleeCount; ++i)
+                m_wasmIndirectCallEntryPoints[i] = m_ipintCallees->at(i)->entrypoint();
+
+            m_wasmToWasmExitStubs = m_plan->takeWasmToWasmExitStubs();
+            m_callsiteCollection.addCalleeGroupCallsites(locker, *this, m_plan->takeWasmToWasmCallsites());
+            m_jsEntrypointCallees = static_cast<IPIntPlan*>(m_plan.get())->takeJSCallees();
+
+            setCompilationFinished();
+        })));
+    }
+#if ENABLE(WEBASSEMBLY_B3JIT)
+    else {
+        m_plan = adoptRef(*new BBQPlan(vm, moduleInformation, CompilerMode::FullCompile, createSharedTask<Plan::CallbackType>([this, protectedThis = WTFMove(protectedThis)] (Plan&) {
+            Locker locker { m_lock };
+            if (m_plan->failed()) {
+                m_errorMessage = m_plan->errorMessage();
+                setCompilationFinished();
+                return;
+            }
+
+            m_wasmIndirectCallEntryPoints = FixedVector<CodePtr<WasmEntryPtrTag>>(m_calleeCount);
+
+            BBQPlan* bbqPlan = static_cast<BBQPlan*>(m_plan.get());
+            bbqPlan->initializeCallees([&] (unsigned calleeIndex, RefPtr<JSEntrypointCallee>&& jsEntrypointCallee, RefPtr<BBQCallee>&& wasmEntrypoint) {
+                if (jsEntrypointCallee) {
+                    auto result = m_jsEntrypointCallees.set(calleeIndex, WTFMove(jsEntrypointCallee));
+                    ASSERT_UNUSED(result, result.isNewEntry);
+                }
+                m_wasmIndirectCallEntryPoints[calleeIndex] = wasmEntrypoint->entrypoint();
+                setBBQCallee(locker, calleeIndex, adoptRef(*static_cast<BBQCallee*>(wasmEntrypoint.leakRef())));
+            });
+
+            m_wasmToWasmExitStubs = m_plan->takeWasmToWasmExitStubs();
+            m_callsiteCollection.addCalleeGroupCallsites(locker, *this, m_plan->takeWasmToWasmCallsites());
 
             setCompilationFinished();
         })));
@@ -166,15 +239,13 @@ bool CalleeGroup::isSafeToRun(MemoryMode memoryMode)
         return false;
 
     switch (m_mode) {
-    case Wasm::MemoryMode::BoundsChecking:
+    case MemoryMode::BoundsChecking:
         return true;
-#if ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
-    case Wasm::MemoryMode::Signaling:
+    case MemoryMode::Signaling:
         // Code being in Signaling mode means that it performs no bounds checks.
         // Its memory, even if empty, absolutely must also be in Signaling mode
         // because the page protection detects out-of-bounds accesses.
-        return memoryMode == Wasm::MemoryMode::Signaling;
-#endif
+        return memoryMode == MemoryMode::Signaling;
     }
     RELEASE_ASSERT_NOT_REACHED();
     return false;

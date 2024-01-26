@@ -37,8 +37,7 @@ namespace WebCore {
 
 ScriptBuffer::ScriptBuffer(const String& string)
 {
-    auto utf8 = string.utf8();
-    m_buffer.append(utf8.data(), utf8.length());
+    append(string);
 }
 
 ScriptBuffer ScriptBuffer::empty()
@@ -65,8 +64,11 @@ bool ScriptBuffer::containsSingleFileMappedSegment() const
 
 void ScriptBuffer::append(const String& string)
 {
-    auto utf8 = string.utf8();
-    m_buffer.append(utf8.data(), utf8.length());
+    auto result = string.tryGetUTF8([&](std::span<const char> span) -> bool {
+        m_buffer.append(span.data(), span.size());
+        return true;
+    });
+    RELEASE_ASSERT(result);
 }
 
 void ScriptBuffer::append(const FragmentedSharedBuffer& buffer)
@@ -81,11 +83,6 @@ bool operator==(const ScriptBuffer& a, const ScriptBuffer& b)
     if (!a.buffer() || !b.buffer())
         return false;
     return *a.buffer() == *b.buffer();
-}
-
-bool operator!=(const ScriptBuffer& a, const ScriptBuffer& b)
-{
-    return !(a == b);
 }
 
 } // namespace WebCore

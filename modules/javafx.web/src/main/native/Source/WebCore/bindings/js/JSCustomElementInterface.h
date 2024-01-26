@@ -27,6 +27,7 @@
 #pragma once
 
 #include "ActiveDOMCallback.h"
+#include "CustomElementFormValue.h"
 #include "QualifiedName.h"
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Weak.h>
@@ -47,11 +48,10 @@ namespace WebCore {
 class DOMWrapperWorld;
 class Document;
 class Element;
+class HTMLElement;
 class JSDOMGlobalObject;
-class MathMLElement;
-class SVGElement;
 
-enum class ParserConstructElementWithEmptyStack { No, Yes };
+enum class ParserConstructElementWithEmptyStack : bool { No, Yes };
 
 class JSCustomElementInterface : public RefCounted<JSCustomElementInterface>, public ActiveDOMCallback {
 public:
@@ -62,6 +62,7 @@ public:
 
     Ref<Element> constructElementWithFallback(Document&, const AtomString&, ParserConstructElementWithEmptyStack = ParserConstructElementWithEmptyStack::No);
     Ref<Element> constructElementWithFallback(Document&, const QualifiedName&);
+    Ref<HTMLElement> createElement(Document&);
 
     void upgradeElement(Element&);
 
@@ -81,8 +82,30 @@ public:
     bool observesAttribute(const AtomString& name) const { return m_observedAttributes.contains(name); }
     void invokeAttributeChangedCallback(Element&, const QualifiedName&, const AtomString& oldValue, const AtomString& newValue);
 
+    void disableElementInternals() { m_isElementInternalsDisabled = true; }
+    bool isElementInternalsDisabled() const { return m_isElementInternalsDisabled; }
+
     void disableShadow() { m_isShadowDisabled = true; }
     bool isShadowDisabled() const { return m_isShadowDisabled; }
+
+    void setIsFormAssociated() { m_isFormAssociated = true; }
+    bool isFormAssociated() const { return m_isFormAssociated; }
+
+    void setFormAssociatedCallback(JSC::JSObject*);
+    bool hasFormAssociatedCallback() const { return !!m_formAssociatedCallback; }
+    void invokeFormAssociatedCallback(Element&, HTMLFormElement*);
+
+    void setFormResetCallback(JSC::JSObject*);
+    bool hasFormResetCallback() const { return !!m_formResetCallback; }
+    void invokeFormResetCallback(Element&);
+
+    void setFormDisabledCallback(JSC::JSObject*);
+    bool hasFormDisabledCallback() const { return !!m_formDisabledCallback; }
+    void invokeFormDisabledCallback(Element&, bool isDisabled);
+
+    void setFormStateRestoreCallback(JSC::JSObject*);
+    bool hasFormStateRestoreCallback() const { return !!m_formStateRestoreCallback; }
+    void invokeFormStateRestoreCallback(Element&, CustomElementFormValue state);
 
     ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }
     JSC::JSObject* constructor() { return m_constructor.get(); }
@@ -95,6 +118,7 @@ public:
 
     virtual ~JSCustomElementInterface();
 
+    template<typename Visitor> void visitJSFunctions(Visitor&) const;
 private:
     JSCustomElementInterface(const QualifiedName&, JSC::JSObject* callback, JSDOMGlobalObject*);
 
@@ -108,10 +132,16 @@ private:
     JSC::Weak<JSC::JSObject> m_disconnectedCallback;
     JSC::Weak<JSC::JSObject> m_adoptedCallback;
     JSC::Weak<JSC::JSObject> m_attributeChangedCallback;
+    JSC::Weak<JSC::JSObject> m_formAssociatedCallback;
+    JSC::Weak<JSC::JSObject> m_formResetCallback;
+    JSC::Weak<JSC::JSObject> m_formDisabledCallback;
+    JSC::Weak<JSC::JSObject> m_formStateRestoreCallback;
     Ref<DOMWrapperWorld> m_isolatedWorld;
     Vector<RefPtr<Element>, 1> m_constructionStack;
     MemoryCompactRobinHoodHashSet<AtomString> m_observedAttributes;
+    bool m_isElementInternalsDisabled : 1;
     bool m_isShadowDisabled : 1;
+    bool m_isFormAssociated : 1;
 };
 
 } // namespace WebCore

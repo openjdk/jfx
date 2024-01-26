@@ -28,6 +28,7 @@
 #include "GridBaselineAlignment.h"
 #include "GridTrackSize.h"
 #include "LayoutSize.h"
+#include "RenderBoxInlines.h"
 
 namespace WebCore {
 
@@ -61,7 +62,8 @@ class GridTrack {
 public:
     GridTrack() = default;
 
-    const LayoutUnit& baseSize() const;
+    LayoutUnit baseSize() const;
+    LayoutUnit unclampedBaseSize() const;
     void setBaseSize(LayoutUnit);
 
     const LayoutUnit& growthLimit() const;
@@ -69,7 +71,7 @@ public:
     void setGrowthLimit(LayoutUnit);
 
     bool infiniteGrowthPotential() const { return growthLimitIsInfinite() || m_infinitelyGrowable; }
-    const LayoutUnit& growthLimitIfNotInfinite() const;
+    LayoutUnit growthLimitIfNotInfinite() const;
 
     const LayoutUnit& plannedSize() const { return m_plannedSize; }
     void setPlannedSize(LayoutUnit plannedSize) { m_plannedSize = plannedSize; }
@@ -84,11 +86,11 @@ public:
     void setGrowthLimitCap(std::optional<LayoutUnit>);
     std::optional<LayoutUnit> growthLimitCap() const { return m_growthLimitCap; }
 
-    const GridTrackSize& cachedTrackSize() const { return *m_cachedTrackSize; }
+    const GridTrackSize& cachedTrackSize() const;
     void setCachedTrackSize(const GridTrackSize&);
 
 private:
-    bool isGrowthLimitBiggerThanBaseSize() const { return growthLimitIsInfinite() || m_growthLimit >= m_baseSize; }
+    bool isGrowthLimitBiggerThanBaseSize() const { return growthLimitIsInfinite() || m_growthLimit >= std::max(m_baseSize, 0_lu); }
 
     void ensureGrowthLimitIsBiggerThanBaseSize();
 
@@ -118,9 +120,6 @@ public:
 
     // Required by RenderGrid. Try to minimize the exposed surface.
     const Grid& grid() const { return m_grid; }
-    // FIXME (jfernandez): We should remove any public getter for this attribute
-    // and encapsulate any access in the algorithm class.
-    Grid& mutableGrid() const { return m_grid; }
 
     const RenderGrid* renderGrid() const { return m_renderGrid; };
 
@@ -128,6 +127,10 @@ public:
     LayoutUnit maxContentSize() const { return m_maxContentSize; };
 
     LayoutUnit baselineOffsetForChild(const RenderBox&, GridAxis) const;
+
+    // The estimated grid area should be use pre-layout versus the grid area, which should be used once
+    // layout is complete.
+    std::optional<LayoutUnit> gridAreaBreadthForChild(const RenderBox&, GridTrackSizingDirection) const;
     std::optional<LayoutUnit> estimatedGridAreaBreadthForChild(const RenderBox&, GridTrackSizingDirection) const;
 
     void cacheBaselineAlignedItem(const RenderBox&, GridAxis);
@@ -172,8 +175,6 @@ private:
     LayoutUnit itemSizeForTrackSizeComputationPhase(TrackSizeComputationPhase, RenderBox&) const;
     template <TrackSizeComputationVariant variant, TrackSizeComputationPhase phase> void distributeSpaceToTracks(Vector<GridTrack*>& tracks, Vector<GridTrack*>* growBeyondGrowthLimitsTracks, LayoutUnit& freeSpace) const;
 
-    std::optional<LayoutUnit> gridAreaBreadthForChild(const RenderBox&, GridTrackSizingDirection) const;
-
     void computeBaselineAlignmentContext();
     void updateBaselineAlignmentContext(const RenderBox&, GridAxis);
     bool canParticipateInBaselineAlignment(const RenderBox&, GridAxis) const;
@@ -203,6 +204,8 @@ private:
     // State machine.
     void advanceNextState();
     bool isValidTransition() const;
+
+    bool isDirectionInMasonryDirection() const;
 
     // Data.
     bool wasSetup() const { return !!m_strategy; }
@@ -241,7 +244,6 @@ private:
 
     enum SizingState {
         ColumnSizingFirstIteration,
-        ColumnSizingExtraIterationForSizeContainment,
         RowSizingFirstIteration,
         RowSizingExtraIterationForSizeContainment,
         ColumnSizingSecondIteration,
@@ -283,6 +285,7 @@ public:
     virtual LayoutUnit freeSpaceForStretchAutoTracksStep() const = 0;
     virtual bool isComputingSizeContainment() const = 0;
     virtual bool isComputingInlineSizeContainment() const = 0;
+    virtual bool isComputingSizeOrInlineSizeContainment() const = 0;
 
 protected:
     GridTrackSizingAlgorithmStrategy(GridTrackSizingAlgorithm& algorithm)

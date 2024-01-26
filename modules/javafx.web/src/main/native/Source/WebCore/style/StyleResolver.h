@@ -22,16 +22,14 @@
 #pragma once
 
 #include "CSSSelector.h"
-#include "Document.h"
 #include "ElementRuleCollector.h"
 #include "InspectorCSSOMWrappers.h"
 #include "MatchedDeclarationsCache.h"
 #include "MediaQueryEvaluator.h"
-#include "RenderStyle.h"
 #include "RuleSet.h"
-#include "StyleBuilderState.h"
 #include "StyleScopeRuleSets.h"
 #include <memory>
+#include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -45,6 +43,7 @@ class Document;
 class Element;
 class KeyframeList;
 class KeyframeValue;
+class RenderStyle;
 class RuleData;
 class RuleSet;
 class SelectorFilter;
@@ -70,17 +69,8 @@ enum class RuleMatchingBehavior: uint8_t {
 
 namespace Style {
 
+struct ResolvedStyle;
 struct SelectorMatchingState;
-
-struct ElementStyle {
-    ElementStyle(std::unique_ptr<RenderStyle> renderStyle, std::unique_ptr<Relations> relations = { })
-        : renderStyle(WTFMove(renderStyle))
-        , relations(WTFMove(relations))
-    { }
-
-    std::unique_ptr<RenderStyle> renderStyle;
-    std::unique_ptr<Relations> relations;
-};
 
 struct ResolutionContext {
     const RenderStyle* parentStyle;
@@ -88,33 +78,38 @@ struct ResolutionContext {
     // This needs to be provided during style resolution when up-to-date document element style is not available via DOM.
     const RenderStyle* documentElementStyle { nullptr };
     SelectorMatchingState* selectorMatchingState { nullptr };
+    bool isSVGUseTreeRoot { false };
 };
 
-class Resolver : public RefCounted<Resolver> {
+class Resolver : public RefCounted<Resolver>, public CanMakeCheckedPtr {
     WTF_MAKE_ISO_ALLOCATED(Resolver);
 public:
-    static Ref<Resolver> create(Document&);
+    // Style resolvers are shared between shadow trees with identical styles. That's why we don't simply provide a Style::Scope.
+    enum class ScopeType : bool { Document, ShadowTree };
+    static Ref<Resolver> create(Document&, ScopeType);
     ~Resolver();
 
-    ElementStyle styleForElement(const Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
+    ResolvedStyle styleForElement(const Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
 
     void keyframeStylesForAnimation(const Element&, const RenderStyle& elementStyle, const ResolutionContext&, KeyframeList&);
 
-    WEBCORE_EXPORT std::unique_ptr<RenderStyle> pseudoStyleForElement(const Element&, const PseudoElementRequest&, const ResolutionContext&);
+    WEBCORE_EXPORT std::optional<ResolvedStyle> styleForPseudoElement(const Element&, const PseudoElementRequest&, const ResolutionContext&);
 
     std::unique_ptr<RenderStyle> styleForPage(int pageIndex);
     std::unique_ptr<RenderStyle> defaultStyleForElement(const Element*);
 
-    Document& document() { return m_document; }
-    const Document& document() const { return m_document; }
-    const Settings& settings() const { return m_document.settings(); }
+    Document& document();
+    const Document& document() const;
+    const Settings& settings() const;
+
+    ScopeType scopeType() const { return m_scopeType; }
 
     void appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&);
 
     ScopeRuleSets& ruleSets() { return m_ruleSets; }
     const ScopeRuleSets& ruleSets() const { return m_ruleSets; }
 
-    const MediaQueryEvaluator& mediaQueryEvaluator() const { return m_mediaQueryEvaluator; }
+    const MQ::MediaQueryEvaluator& mediaQueryEvaluator() const { return m_mediaQueryEvaluator; }
 
     void addCurrentSVGFontFaceRules();
 
@@ -152,8 +147,11 @@ public:
     bool isSharedBetweenShadowTrees() const { return m_isSharedBetweenShadowTrees; }
     void setSharedBetweenShadowTrees() { m_isSharedBetweenShadowTrees = true; }
 
+    const RenderStyle* rootDefaultStyle() const { return m_rootDefaultStyle.get(); }
+
 private:
-    Resolver(Document&);
+    Resolver(Document&, ScopeType);
+    void initialize();
 
     class State;
 
@@ -161,15 +159,16 @@ private:
 
     void applyMatchedProperties(State&, const MatchResult&);
 
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
+    const ScopeType m_scopeType;
+
     ScopeRuleSets m_ruleSets;
 
     typedef HashMap<AtomString, RefPtr<StyleRuleKeyframes>> KeyframesRuleMap;
     KeyframesRuleMap m_keyframesRuleMap;
 
-    MediaQueryEvaluator m_mediaQueryEvaluator;
+    MQ::MediaQueryEvaluator m_mediaQueryEvaluator;
     std::unique_ptr<RenderStyle> m_rootDefaultStyle;
-
-    Document& m_document;
 
     InspectorCSSOMWrappers m_inspectorCSSOMWrappers;
 
@@ -178,20 +177,6 @@ private:
     bool m_matchAuthorAndUserStyles { true };
     bool m_isSharedBetweenShadowTrees { false };
 };
-
-inline bool Resolver::hasSelectorForAttribute(const Element& element, const AtomString &attributeName) const
-{
-    ASSERT(!attributeName.isEmpty());
-    if (element.isHTMLElement())
-        return m_ruleSets.features().attributeCanonicalLocalNamesInRules.contains(attributeName);
-    return m_ruleSets.features().attributeLocalNamesInRules.contains(attributeName);
-}
-
-inline bool Resolver::hasSelectorForId(const AtomString& idValue) const
-{
-    ASSERT(!idValue.isEmpty());
-    return m_ruleSets.features().idsInRules.contains(idValue);
-}
 
 } // namespace Style
 } // namespace WebCore

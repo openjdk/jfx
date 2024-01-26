@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "CallFrameClosure.h"
+#include "CachedCall.h"
 #include "Exception.h"
 #include "FunctionCodeBlock.h"
 #include "FunctionExecutable.h"
@@ -34,6 +34,7 @@
 #include "Interpreter.h"
 #include "JSCPtrTag.h"
 #include "LLIntData.h"
+#include "LLIntThunks.h"
 #include "ProtoCallFrameInlines.h"
 #include "StackAlignment.h"
 #include "UnlinkedCodeBlock.h"
@@ -41,6 +42,11 @@
 #include <wtf/UnalignedAccess.h>
 
 namespace JSC {
+
+ALWAYS_INLINE VM& Interpreter::vm()
+{
+    return *bitwise_cast<VM*>(bitwise_cast<uint8_t*>(this) - OBJECT_OFFSETOF(VM, interpreter));
+}
 
 inline CallFrame* calleeFrameForVarargs(CallFrame* callFrame, unsigned numUsedStackSlots, unsigned argumentCountIncludingThis)
 {
@@ -87,9 +93,9 @@ inline OpcodeID Interpreter::getOpcodeID(Opcode opcode)
 #endif
 }
 
-ALWAYS_INLINE JSValue Interpreter::execute(CallFrameClosure& closure)
+ALWAYS_INLINE JSValue Interpreter::executeCachedCall(CachedCall& cachedCall)
 {
-    VM& vm = *closure.vm;
+    VM& vm = this->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(!vm.isCollectorBusyOnCurrentThread());
@@ -97,32 +103,37 @@ ALWAYS_INLINE JSValue Interpreter::execute(CallFrameClosure& closure)
 
     StackStats::CheckPoint stackCheckPoint;
 
+    auto clobberizeValidator = makeScopeExit([&] {
+        vm.didEnterVM = true;
+    });
+
     if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
-        ASSERT(vm.topCallFrame == closure.oldCallFrame);
         if (vm.hasExceptionsAfterHandlingTraps())
             return throwScope.exception();
     }
 
-    {
+    auto* codeBlock = cachedCall.functionExecutable()->codeBlockForCall();
+    void* addressForCall = codeBlock ? codeBlock->jitCode()->addressForCall() : nullptr;
+    if (cachedCall.m_addressForCall != addressForCall) {
         DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
 
         // Reload CodeBlock since GC can replace CodeBlock owned by Executable.
         CodeBlock* codeBlock;
-        closure.functionExecutable->prepareForExecution<FunctionExecutable>(vm, closure.function, closure.scope, CodeForCall, codeBlock);
-        RETURN_IF_EXCEPTION(throwScope, checkedReturn(throwScope.exception()));
+        cachedCall.functionExecutable()->prepareForExecution<FunctionExecutable>(vm, cachedCall.function(), cachedCall.scope(), CodeForCall, codeBlock);
+        RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
 
         ASSERT(codeBlock);
         codeBlock->m_shouldAlwaysBeInlined = false;
         {
             DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
-            closure.protoCallFrame->setCodeBlock(codeBlock);
+            cachedCall.m_protoCallFrame.setCodeBlock(codeBlock);
+            cachedCall.m_addressForCall = codeBlock->jitCode()->addressForCall();
         }
     }
 
     // Execute the code:
     throwScope.release();
-    JSValue result = closure.functionExecutable->generatedJITCodeForCall()->execute(&vm, closure.protoCallFrame);
-    return checkedReturn(result);
+    return JSValue::decode(vmEntryToJavaScript(cachedCall.m_addressForCall, &vm, &cachedCall.m_protoCallFrame));
 }
 
 } // namespace JSC

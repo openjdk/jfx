@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -349,6 +349,7 @@ public abstract class Window {
     }
 
     protected abstract boolean _setView(long ptr, View view);
+    protected abstract void _updateViewSize(long ptr);
     public void setView(final View view) {
         Application.checkEventThread();
         checkNotClosed();
@@ -370,6 +371,10 @@ public abstract class Window {
         if (view != null && _setView(this.ptr, view)) {
             this.view = view;
             this.view.setWindow(this);
+            // View size update (especially notifyResize event) has to happen
+            // after we call view.setWindow(this); otherwise with UI scaling different than
+            // 100% some platforms might display scenes wrong after Window was shown.
+            _updateViewSize(this.ptr);
             if (this.isDecorated == false) {
                 this.helper = new UndecoratedMoveResizeHelper();
             }

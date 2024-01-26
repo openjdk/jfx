@@ -28,6 +28,7 @@
 namespace WebCore {
 
 class CSSPrimitiveValue;
+class Element;
 class SVGLengthContext;
 
 enum class SVGLengthType : uint8_t {
@@ -55,6 +56,8 @@ enum class SVGLengthNegativeValuesMode : uint8_t {
     Forbid
 };
 
+enum class ShouldConvertNumberToPxLength : bool { No, Yes };
+
 class SVGLengthValue {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -66,8 +69,8 @@ public:
     static SVGLengthValue construct(SVGLengthMode, StringView, SVGParsingError&, SVGLengthNegativeValuesMode = SVGLengthNegativeValuesMode::Allow);
     static SVGLengthValue blend(const SVGLengthValue& from, const SVGLengthValue& to, float progress);
 
-    static SVGLengthValue fromCSSPrimitiveValue(const CSSPrimitiveValue&);
-    static Ref<CSSPrimitiveValue> toCSSPrimitiveValue(const SVGLengthValue&);
+    static SVGLengthValue fromCSSPrimitiveValue(const CSSPrimitiveValue&, const CSSToLengthConversionData&, ShouldConvertNumberToPxLength = ShouldConvertNumberToPxLength::No);
+    Ref<CSSPrimitiveValue> toCSSPrimitiveValue(const Element* = nullptr) const;
 
     SVGLengthType lengthType() const { return m_lengthType; }
     SVGLengthMode lengthMode() const { return m_lengthMode; }
@@ -101,11 +104,6 @@ private:
 inline bool operator==(const SVGLengthValue& a, const SVGLengthValue& b)
 {
     return a.valueInSpecifiedUnits() == b.valueInSpecifiedUnits() && a.lengthType() == b.lengthType() && a.lengthMode() == b.lengthMode();
-}
-
-inline bool operator!=(const SVGLengthValue& a, const SVGLengthValue& b)
-{
-    return a.valueInSpecifiedUnits() != b.valueInSpecifiedUnits() || a.lengthType() != b.lengthType() || a.lengthMode() != b.lengthMode();
 }
 
 WTF::TextStream& operator<<(WTF::TextStream&, const SVGLengthValue&);

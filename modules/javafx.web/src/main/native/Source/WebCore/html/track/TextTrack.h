@@ -44,7 +44,7 @@ class TextTrackCueList;
 class VTTRegion;
 class VTTRegionList;
 
-class TextTrack : public TrackBase, public EventTargetWithInlineData, public ActiveDOMObject {
+class TextTrack : public TrackBase, public EventTarget, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TextTrack);
 public:
     static Ref<TextTrack> create(Document*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language);
@@ -107,6 +107,7 @@ public:
     void invalidateTrackIndex();
 
     bool isRendered();
+    bool isSpoken();
     int trackIndexRelativeToRenderedTracks();
 
     bool hasBeenConfigured() const { return m_hasBeenConfigured; }
@@ -131,12 +132,12 @@ public:
     const std::optional<Vector<String>>& styleSheets() const { return m_styleSheets; }
 
     virtual bool shouldPurgeCuesFromUnbufferedRanges() const { return false; }
-    virtual void removeCuesNotInTimeRanges(PlatformTimeRanges&);
+    virtual void removeCuesNotInTimeRanges(const PlatformTimeRanges&);
+
+    Document& document() const;
 
 protected:
     TextTrack(ScriptExecutionContext*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language, TextTrackType);
-
-    Document& document() const;
 
     RefPtr<TextTrackCue> matchCue(TextTrackCue&, TextTrackCue::CueMatchRules = TextTrackCue::MatchAllFields);
     bool hasCue(TextTrackCue& cue, TextTrackCue::CueMatchRules rules = TextTrackCue::MatchAllFields) { return matchCue(cue, rules); }
@@ -163,8 +164,6 @@ private:
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "TextTrack"; }
 #endif
-
-    WeakPtr<TextTrackList> m_textTrackList;
 
     VTTRegionList& ensureVTTRegionList();
     RefPtr<VTTRegionList> m_regions;

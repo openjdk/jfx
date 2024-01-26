@@ -32,9 +32,9 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "EventLoop.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "SuspendableTimer.h"
 #include "ThreadableLoaderClient.h"
 #include "Timer.h"
 #include <wtf/URL.h>
@@ -46,7 +46,7 @@ class MessageEvent;
 class TextResourceDecoder;
 class ThreadableLoader;
 
-class EventSource final : public RefCounted<EventSource>, public EventTargetWithInlineData, private ThreadableLoaderClient, public ActiveDOMObject {
+class EventSource final : public RefCounted<EventSource>, public EventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(EventSource);
 public:
     struct Init {
@@ -114,7 +114,7 @@ private:
 
     Ref<TextResourceDecoder> m_decoder;
     RefPtr<ThreadableLoader> m_loader;
-    SuspendableTimer m_connectTimer;
+    EventLoopTimerHandle m_connectTimer;
     Vector<UChar> m_receiveBuffer;
     bool m_discardTrailingNewline { false };
     bool m_requestInFlight { false };

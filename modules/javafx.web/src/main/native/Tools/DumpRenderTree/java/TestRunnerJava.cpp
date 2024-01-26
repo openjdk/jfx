@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,6 +100,16 @@ void TestRunner::dispatchPendingLoadRequests()
 {
     // FIXME: implement
 }
+void TestRunner::removeAllCookies(JSValueRef callback)
+{
+    //FIXME: Implement
+}
+
+void TestRunner::generateTestReport(JSStringRef message, JSStringRef group)
+{
+    //FIXME: Implement
+}
+
 
 void TestRunner::display()
 {

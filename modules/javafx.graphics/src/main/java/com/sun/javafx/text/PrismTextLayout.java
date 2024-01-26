@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
+import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Translate2D;
 import com.sun.javafx.scene.text.GlyphList;
@@ -420,14 +421,18 @@ public class PrismTextLayout implements TextLayout {
     }
 
     @Override
-    public Hit getHitInfo(float x, float y) {
+    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart) {
         int charIndex = -1;
+        int insertionIndex = -1;
         boolean leading = false;
+        int relIndex = 0;
+        int textWidthPrevLine = 0;
 
         ensureLayout();
-        int lineIndex = getLineIndex(y);
+        int lineIndex = getLineIndex(y, text, curRunStart);
         if (lineIndex >= getLineCount()) {
             charIndex = getCharCount();
+            insertionIndex = charIndex + 1;
         } else {
             if (isMirrored()) {
                 x = getMirroringWidth() - x;
@@ -438,25 +443,86 @@ public class PrismTextLayout implements TextLayout {
             TextRun run = null;
             x -= bounds.getMinX();
             //TODO binary search
-            for (int i = 0; i < runs.length; i++) {
-                run = runs[i];
-                if (x < run.getWidth()) break;
-                if (i + 1 < runs.length) {
-                    if (runs[i + 1].isLinebreak()) break;
-                    x -= run.getWidth();
+            if (text == null || spans == null) {
+                for (int i = 0; i < runs.length; i++) {
+                    run = runs[i];
+                    if (x < run.getWidth()) break;
+                    if (i + 1 < runs.length) {
+                        if (runs[i + 1].isLinebreak()) break;
+                        x -= run.getWidth();
+                    }
+                }
+            } else {
+                for (int i = 0; i < lineIndex; i++) {
+                    for (TextRun r: lines[i].runs) {
+                        if (r.getTextSpan() != null && r.getStart() >= textRunStart && r.getTextSpan().getText().equals(text)) {
+                            textWidthPrevLine += r.getLength();
+                        }
+                    }
+                }
+                int prevNodeLength = 0;
+                boolean isPrevNodeExcluded = false;
+                for (TextRun r: runs) {
+                    if (!r.getTextSpan().getText().equals(text) || (r.getStart() < textRunStart && r.getTextSpan().getText().equals(text))) {
+                        prevNodeLength += r.getWidth();
+                        continue;
+                    }
+                    if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)) {
+                        BaseBounds textBounds = new BoxBounds();
+                        getBounds(r.getTextSpan(), textBounds);
+                        if (textBounds.getMinX() == 0 && !isPrevNodeExcluded) {
+                            x -= prevNodeLength;
+                            isPrevNodeExcluded = true;
+                        }
+                        if (x > r.getWidth()) {
+                            x -= r.getWidth();
+                            relIndex += r.getLength();
+                            continue;
+                        }
+                        run = r;
+                        break;
+                    }
                 }
             }
+
             if (run != null) {
                 int[] trailing = new int[1];
-                charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
+                if (text != null && spans != null) {
+                    charIndex = run.getOffsetAtX(x, trailing);
+                    charIndex += textWidthPrevLine;
+                    charIndex += relIndex;
+                } else {
+                    charIndex = run.getStart() + run.getOffsetAtX(x, trailing);
+                }
                 leading = (trailing[0] == 0);
+
+                insertionIndex = charIndex;
+                if (getText() != null && insertionIndex < getText().length) {
+                    if (!leading) {
+                        BreakIterator charIterator = BreakIterator.getCharacterInstance();
+                        if (text != null) {
+                            charIterator.setText(text);
+                        } else {
+                            charIterator.setText(new String(getText()));
+                        }
+                        int next = charIterator.following(insertionIndex);
+                        if (next == BreakIterator.DONE) {
+                            insertionIndex += 1;
+                        } else {
+                            insertionIndex = next;
+                        }
+                    }
+                } else if (!leading) {
+                    insertionIndex += 1;
+                }
             } else {
                 //empty line, set to line break leading
                 charIndex = line.getStart();
                 leading = true;
+                insertionIndex = charIndex;
             }
         }
-        return new Hit(charIndex, -1, leading);
+        return new Hit(charIndex, insertionIndex, leading);
     }
 
     @Override
@@ -683,14 +749,32 @@ public class PrismTextLayout implements TextLayout {
      *                                                                         *
      **************************************************************************/
 
-    private int getLineIndex(float y) {
+    private int getLineIndex(float y, String text, int runStart) {
         int index = 0;
         float bottom = 0;
+        /* Initializing textFound as true when text is null
+         * because when this function is called for TextFlow text parameter will be null */
+        boolean textFound = (text == null);
+
         int lineCount = getLineCount();
         while (index < lineCount) {
+            if (!textFound) {
+                for (TextRun r : lines[index].runs) {
+                    if (r.getTextSpan() == null || (r.getStart() == runStart && r.getTextSpan().getText().equals(text))) {
+                        /* Span will present only for Rich Text.
+                         * Hence making textFound as true */
+                        textFound = true;
+                        break;
+                    }
+                }
+            }
             bottom += lines[index].getBounds().getHeight() + spacing;
-            if (index + 1 == lineCount) bottom -= lines[index].getLeading();
-            if (bottom > y) break;
+            if (index + 1 == lineCount) {
+                bottom -= lines[index].getLeading();
+            }
+            if (bottom > y && textFound) {
+                break;
+            }
             index++;
         }
         return index;

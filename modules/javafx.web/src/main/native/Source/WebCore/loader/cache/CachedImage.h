@@ -30,11 +30,13 @@
 #include "LayoutSize.h"
 #include "SVGImageCache.h"
 #include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 
 namespace WebCore {
 
 class CachedImageClient;
 class CachedResourceLoader;
+class WeakPtrImplWithEventTargetData;
 class FloatSize;
 class MemoryCache;
 class RenderElement;
@@ -88,7 +90,7 @@ public:
 
     bool isOriginClean(SecurityOrigin*);
 
-    bool isClientWaitingForAsyncDecoding(CachedImageClient&) const;
+    bool isClientWaitingForAsyncDecoding(const CachedImageClient&) const;
     void addClientWaitingForAsyncDecoding(CachedImageClient&);
     void removeAllClientsWaitingForAsyncDecoding();
 
@@ -98,6 +100,9 @@ public:
     bool canSkipRevalidation(const CachedResourceLoader&, const CachedResourceRequest&) const;
 
     bool isVisibleInViewport(const Document&) const;
+    bool allowsAnimation(const Image&) const;
+
+    bool layerBasedSVGEngineEnabled() const { return m_layerBasedSVGEngineEnabled; }
 
 private:
     void clear();
@@ -135,19 +140,19 @@ private:
     // For compatibility, images keep loading even if there are HTTP errors.
     bool shouldIgnoreHTTPStatusCodeErrors() const override { return true; }
 
-    class CachedImageObserver final : public RefCounted<CachedImageObserver>, public ImageObserver {
+    class CachedImageObserver final : public ImageObserver {
     public:
         static Ref<CachedImageObserver> create(CachedImage& image) { return adoptRef(*new CachedImageObserver(image)); }
-        HashSet<CachedImage*>& cachedImages() { return m_cachedImages; }
-        const HashSet<CachedImage*>& cachedImages() const { return m_cachedImages; }
+        WeakHashSet<CachedImage>& cachedImages() { return m_cachedImages; }
+        const WeakHashSet<CachedImage>& cachedImages() const { return m_cachedImages; }
 
     private:
         explicit CachedImageObserver(CachedImage&);
 
         // ImageObserver API
-        URL sourceUrl() const override { return !m_cachedImages.isEmpty() ? (*m_cachedImages.begin())->url() : URL(); }
-        String mimeType() const override { return !m_cachedImages.isEmpty() ? (*m_cachedImages.begin())->mimeType() : emptyString(); }
-        long long expectedContentLength() const override { return !m_cachedImages.isEmpty() ? (*m_cachedImages.begin())->expectedContentLength() : 0; }
+        URL sourceUrl() const override { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).url() : URL(); }
+        String mimeType() const override { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).mimeType() : emptyString(); }
+        long long expectedContentLength() const override { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).expectedContentLength() : 0; }
 
         void encodedDataStatusChanged(const Image&, EncodedDataStatus) final;
         void decodedSizeChanged(const Image&, long long delta) final;
@@ -158,7 +163,10 @@ private:
         void changedInRect(const Image&, const IntRect*) final;
         void scheduleRenderingUpdate(const Image&) final;
 
-        HashSet<CachedImage*> m_cachedImages;
+        bool allowsAnimation(const Image&) const final;
+        bool layerBasedSVGEngineEnabled() const final { return !m_cachedImages.isEmptyIgnoringNullReferences() ? (*m_cachedImages.begin()).m_layerBasedSVGEngineEnabled : false; }
+
+        WeakHashSet<CachedImage> m_cachedImages;
     };
 
     void encodedDataStatusChanged(const Image&, EncodedDataStatus);
@@ -182,7 +190,7 @@ private:
     using ContainerContextRequests = HashMap<const CachedImageClient*, ContainerContext>;
     ContainerContextRequests m_pendingContainerContextRequests;
 
-    HashSet<CachedImageClient*> m_clientsWaitingForAsyncDecoding;
+    WeakHashSet<CachedImageClient> m_clientsWaitingForAsyncDecoding;
 
     RefPtr<CachedImageObserver> m_imageObserver;
     RefPtr<Image> m_image;
@@ -190,13 +198,14 @@ private:
 
     MonotonicTime m_lastUpdateImageDataTime;
 
-    WeakPtr<Document> m_skippingRevalidationDocument;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_skippingRevalidationDocument;
 
     static constexpr unsigned maxUpdateImageDataCount = 4;
     unsigned m_updateImageDataCount : 3;
     bool m_isManuallyCached : 1;
     bool m_shouldPaintBrokenImage : 1;
     bool m_forceUpdateImageDataEnabledForTesting : 1;
+    bool m_layerBasedSVGEngineEnabled : 1 { false };
 };
 
 } // namespace WebCore

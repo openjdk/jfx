@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,7 @@
 #include "ChromeClient.h"
 #include "DocumentLoader.h"
 #include "EventNames.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLHeadElement.h"
@@ -44,12 +42,14 @@
 #include "HTMLSourceElement.h"
 #include "HTMLVideoElement.h"
 #include "KeyboardEvent.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "NodeList.h"
 #include "Page.h"
 #include "RawDataDocumentParser.h"
 #include "ScriptController.h"
 #include "ShadowRoot.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -77,7 +77,7 @@ private:
     void appendBytes(DocumentWriter&, const uint8_t*, size_t) final;
     void createDocumentStructure();
 
-    WeakPtr<HTMLMediaElement> m_mediaElement;
+    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
     String m_outgoingReferrer;
 };
 
@@ -121,7 +121,7 @@ void MediaDocumentParser::createDocumentStructure()
     body->appendChild(videoElement);
     document.setHasVisuallyNonEmptyCustomContent();
 
-    RefPtr<Frame> frame = document.frame();
+    RefPtr frame = document.frame();
     if (!frame)
         return;
 
@@ -138,10 +138,10 @@ void MediaDocumentParser::appendBytes(DocumentWriter&, const uint8_t*, size_t)
     finish();
 }
 
-MediaDocument::MediaDocument(Frame* frame, const Settings& settings, const URL& url)
+MediaDocument::MediaDocument(LocalFrame* frame, const Settings& settings, const URL& url)
     : HTMLDocument(frame, settings, url, { }, { DocumentClass::Media })
 {
-    setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
+    setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
     lockCompatibilityMode();
     if (frame)
         m_outgoingReferrer = frame->loader().outgoingReferrer();

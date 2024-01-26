@@ -129,26 +129,25 @@ StringImpl::~StringImpl()
             symbolRegistry->remove(*symbol.asRegisteredSymbolImpl());
     }
 
-    BufferOwnership ownership = bufferOwnership();
-
-    if (ownership == BufferInternal)
-        return;
-    if (ownership == BufferOwned) {
+    switch (bufferOwnership()) {
+    case BufferInternal:
+        break;
+    case BufferOwned:
         // We use m_data8, but since it is a union with m_data16 this works either way.
         ASSERT(m_data8);
         StringImplMalloc::free(const_cast<LChar*>(m_data8));
-        return;
-    }
-    if (ownership == BufferExternal) {
+        break;
+    case BufferExternal: {
         auto* external = static_cast<ExternalStringImpl*>(this);
         external->freeExternalBuffer(const_cast<LChar*>(m_data8), sizeInBytes());
         external->m_free.~ExternalStringImplFreeFunction();
-        return;
+        break;
     }
-
-    ASSERT(ownership == BufferSubstring);
+    case BufferSubstring:
     ASSERT(substringBuffer());
     substringBuffer()->deref();
+        break;
+    }
 }
 
 void StringImpl::destroy(StringImpl* stringImpl)
@@ -714,7 +713,7 @@ Ref<StringImpl> StringImpl::convertToASCIIUppercase()
     return convertASCIICase<CaseConvertType::Upper>(*this, m_data16, m_length);
 }
 
-template<typename CodeUnitPredicate> inline Ref<StringImpl> StringImpl::stripMatchedCharacters(CodeUnitPredicate predicate)
+template<typename CodeUnitPredicate> inline Ref<StringImpl> StringImpl::trimMatchedCharacters(CodeUnitPredicate predicate)
 {
     if (!m_length)
         return *this;
@@ -741,14 +740,9 @@ template<typename CodeUnitPredicate> inline Ref<StringImpl> StringImpl::stripMat
     return create(m_data16 + start, end + 1 - start);
 }
 
-Ref<StringImpl> StringImpl::stripWhiteSpace()
+Ref<StringImpl> StringImpl::trim(CodeUnitMatchFunction predicate)
 {
-    return stripMatchedCharacters(isSpaceOrNewline);
-}
-
-Ref<StringImpl> StringImpl::stripLeadingAndTrailingCharacters(CodeUnitMatchFunction predicate)
-{
-    return stripMatchedCharacters(predicate);
+    return trimMatchedCharacters(predicate);
 }
 
 template<typename CharacterType, class UCharPredicate> inline Ref<StringImpl> StringImpl::simplifyMatchedCharactersToSpace(UCharPredicate predicate)
@@ -785,13 +779,6 @@ template<typename CharacterType, class UCharPredicate> inline Ref<StringImpl> St
     data.shrink(outc);
 
     return adopt(WTFMove(data));
-}
-
-Ref<StringImpl> StringImpl::simplifyWhiteSpace()
-{
-    if (is8Bit())
-        return StringImpl::simplifyMatchedCharactersToSpace<LChar>(isSpaceOrNewline);
-    return StringImpl::simplifyMatchedCharactersToSpace<UChar>(isSpaceOrNewline);
 }
 
 Ref<StringImpl> StringImpl::simplifyWhiteSpace(CodeUnitMatchFunction isWhiteSpace)
@@ -1417,9 +1404,11 @@ template<typename CharacterType> inline bool equalInternal(const StringImpl* a, 
 
     if (a->length() != length)
         return false;
+    if (!length)
+        return true;
     if (a->is8Bit())
-        return equal(a->characters8(), b, length);
-    return equal(a->characters16(), b, length);
+        return *a->characters8() == *b && equal(a->characters8() + 1, b + 1, length - 1);
+    return *a->characters16() == *b && equal(a->characters16() + 1, b + 1, length - 1);
 }
 
 bool equal(const StringImpl* a, const LChar* b, unsigned length)
@@ -1437,7 +1426,7 @@ bool equal(const StringImpl* a, const LChar* b)
     if (!a)
         return !b;
     if (!b)
-        return !a;
+        return false;
 
     unsigned length = a->length();
 
@@ -1493,25 +1482,17 @@ bool equalIgnoringASCIICaseNonNull(const StringImpl* a, const StringImpl* b)
     return equalIgnoringASCIICase(*a, *b);
 }
 
-UCharDirection StringImpl::defaultWritingDirection(bool* hasStrongDirectionality)
+std::optional<UCharDirection> StringImpl::defaultWritingDirection()
 {
     for (auto codePoint : StringView(this).codePoints()) {
         auto charDirection = u_charDirection(codePoint);
-        if (charDirection == U_LEFT_TO_RIGHT) {
-            if (hasStrongDirectionality)
-                *hasStrongDirectionality = true;
+        if (charDirection == U_LEFT_TO_RIGHT)
             return U_LEFT_TO_RIGHT;
-        }
         if (charDirection == U_RIGHT_TO_LEFT || charDirection == U_RIGHT_TO_LEFT_ARABIC) {
-            if (hasStrongDirectionality)
-                *hasStrongDirectionality = true;
             return U_RIGHT_TO_LEFT;
         }
     }
-
-    if (hasStrongDirectionality)
-        *hasStrongDirectionality = false;
-    return U_LEFT_TO_RIGHT;
+    return std::nullopt;
 }
 
 Ref<StringImpl> StringImpl::adopt(StringBuffer<LChar>&& buffer)
@@ -1543,124 +1524,91 @@ size_t StringImpl::sizeInBytes() const
 static inline void putUTF8Triple(char*& buffer, UChar character)
 {
     ASSERT(character >= 0x0800);
-    *buffer++ = static_cast<char>(((character >> 12) & 0x0F) | 0xE0);
-    *buffer++ = static_cast<char>(((character >> 6) & 0x3F) | 0x80);
-    *buffer++ = static_cast<char>((character & 0x3F) | 0x80);
+    int i = 0;
+    U8_APPEND_UNSAFE(buffer, i, character);
+    ASSERT(i == 3);
+    buffer += i;
 }
 
-UTF8ConversionError StringImpl::utf8Impl(const UChar* characters, unsigned length, char*& buffer, size_t bufferSize, ConversionMode mode)
+Expected<CString, UTF8ConversionError> StringImpl::utf8ForCharacters(const LChar* source, unsigned length)
 {
-    if (mode == StrictConversionReplacingUnpairedSurrogatesWithFFFD) {
-        const UChar* charactersEnd = characters + length;
-        char* bufferEnd = buffer + bufferSize;
+    return tryGetUTF8ForCharacters([] (std::span<const char> converted) {
+        return CString(converted.data(), converted.size());
+    }, source, length);
+}
+
+Expected<CString, UTF8ConversionError> StringImpl::utf8ForCharacters(const UChar* characters, unsigned length, ConversionMode mode)
+{
+    return tryGetUTF8ForCharacters([] (std::span<const char> converted) {
+        return CString(converted.data(), converted.size());
+    }, characters, length, mode);
+}
+
+Expected<size_t, UTF8ConversionError> StringImpl::utf8ForCharactersIntoBuffer(const UChar* characters, unsigned length, ConversionMode mode, Vector<char, 1024>& bufferVector)
+{
+    ASSERT(bufferVector.size() == length * 3);
+
+    char* buffer = bufferVector.data();
+    const UChar* const charactersEnd = characters + length;
+    char* const bufferEnd = buffer + bufferVector.size();
+
+    switch (mode) {
+    case StrictConversionReplacingUnpairedSurrogatesWithFFFD: {
         while (characters < charactersEnd) {
             // Use strict conversion to detect unpaired surrogates.
             auto result = convertUTF16ToUTF8(&characters, charactersEnd, &buffer, bufferEnd);
-            ASSERT(result != TargetExhausted);
+            ASSERT(result != ConversionResult::TargetExhausted);
             // Conversion fails when there is an unpaired surrogate.
             // Put replacement character (U+FFFD) instead of the unpaired surrogate.
-            if (result != ConversionOK) {
-                ASSERT((0xD800 <= *characters && *characters <= 0xDFFF));
+            if (result != ConversionResult::Success) {
+                ASSERT(U16_IS_SURROGATE(*characters));
                 // There should be room left, since one UChar hasn't been converted.
                 ASSERT((buffer + 3) <= bufferEnd);
                 putUTF8Triple(buffer, replacementCharacter);
                 ++characters;
             }
         }
-    } else {
+        break;
+    }
+    case StrictConversion:
+    case LenientConversion: {
         bool strict = mode == StrictConversion;
-        const UChar* originalCharacters = characters;
-        auto result = convertUTF16ToUTF8(&characters, characters + length, &buffer, buffer + bufferSize, strict);
-        ASSERT(result != TargetExhausted); // (length * 3) should be sufficient for any conversion
-
-        // Only produced from strict conversion.
-        if (result == SourceIllegal) {
-            ASSERT(strict);
-            return UTF8ConversionError::IllegalSource;
-        }
-
-        // Check for an unconverted high surrogate.
-        if (result == SourceExhausted) {
+        auto conversionResult = convertUTF16ToUTF8(&characters, charactersEnd, &buffer, bufferEnd, strict);
+        switch (conversionResult) {
+        case ConversionResult::Success:
+            break;
+        case ConversionResult::SourceExhausted:
             if (strict)
-                return UTF8ConversionError::SourceExhausted;
-            // This should be one unpaired high surrogate. Treat it the same
-            // was as an unpaired high surrogate would have been handled in
-            // the middle of a string with non-strict conversion - which is
-            // to say, simply encode it to UTF-8.
-            ASSERT_UNUSED(
-                originalCharacters, (characters + 1) == (originalCharacters + length));
-            ASSERT((*characters >= 0xD800) && (*characters <= 0xDBFF));
-            // There should be room left, since one UChar hasn't been converted.
-            ASSERT((buffer + 3) <= (buffer + bufferSize));
+                return makeUnexpected(UTF8ConversionError::SourceExhausted);
+            ASSERT(characters + 1 == charactersEnd);
+            ASSERT(U16_IS_SURROGATE(*characters));
             putUTF8Triple(buffer, *characters);
+                break;
+        case ConversionResult::TargetExhausted:
+            // (length * 3) should be sufficient for any conversion.
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+
+        case ConversionResult::SourceIllegal:
+        // Only produced from strict conversion.
+            ASSERT(strict);
+            return makeUnexpected(UTF8ConversionError::IllegalSource);
+        }
         }
     }
-
-    return UTF8ConversionError::None;
+    return buffer - bufferVector.data();
 }
 
-Expected<CString, UTF8ConversionError> StringImpl::utf8ForCharacters(const LChar* characters, unsigned length)
+Expected<CString, UTF8ConversionError> StringImpl::tryGetUTF8(ConversionMode mode) const
 {
-    if (!length)
-        return CString("", 0);
-    if (length > MaxLength / 3)
-        return makeUnexpected(UTF8ConversionError::OutOfMemory);
-
-#if CPU(ARM64)
-    if (const LChar* nonASCII = find8NonASCII(characters, length)) {
-        size_t prefixLength = nonASCII - characters;
-        size_t remainingLength = length - prefixLength;
-
-        Vector<char, 1024> bufferVector(prefixLength + remainingLength * 3);
-        char* buffer = bufferVector.data();
-
-        memcpy(buffer, characters, prefixLength);
-        buffer += prefixLength;
-
-        auto success = Unicode::convertLatin1ToUTF8(&nonASCII, characters + length, &buffer, buffer + (bufferVector.size() - prefixLength));
-        ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
-        return CString(bufferVector.data(), buffer - bufferVector.data());
-    } else
-        return CString(bitwise_cast<const char*>(characters), length);
-#else
-    Vector<char, 1024> bufferVector(length * 3);
-    char* buffer = bufferVector.data();
-    const LChar* source = characters;
-    bool success = convertLatin1ToUTF8(&source, source + length, &buffer, buffer + bufferVector.size());
-    ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
-    return CString(bufferVector.data(), buffer - bufferVector.data());
-#endif
-}
-
-Expected<CString, UTF8ConversionError> StringImpl::utf8ForCharacters(const UChar* characters, unsigned length, ConversionMode mode)
-{
-    if (!length)
-        return CString("", 0);
-    if (length > MaxLength / 3)
-        return makeUnexpected(UTF8ConversionError::OutOfMemory);
-    Vector<char, 1024> bufferVector(length * 3);
-    char* buffer = bufferVector.data();
-    UTF8ConversionError error = utf8Impl(characters, length, buffer, bufferVector.size(), mode);
-    if (error != UTF8ConversionError::None)
-        return makeUnexpected(error);
-    return CString(bufferVector.data(), buffer - bufferVector.data());
-}
-
-Expected<CString, UTF8ConversionError> StringImpl::tryGetUtf8ForRange(unsigned offset, unsigned length, ConversionMode mode) const
-{
-    return tryGetUtf8ForRange([](Span<const char> span) -> CString {
-        return CString(span.data(), span.size());
-    }, offset, length, mode);
-}
-
-Expected<CString, UTF8ConversionError> StringImpl::tryGetUtf8(ConversionMode mode) const
-{
-    return tryGetUtf8ForRange(0, length(), mode);
+    if (is8Bit())
+        return utf8ForCharacters(characters8(), length());
+    return utf8ForCharacters(characters16(), length(), mode);
 }
 
 CString StringImpl::utf8(ConversionMode mode) const
 {
-    auto expectedString = tryGetUtf8ForRange(0, length(), mode);
+    auto expectedString = tryGetUTF8(mode);
     RELEASE_ASSERT(expectedString);
     return expectedString.value();
 }
@@ -1699,7 +1647,7 @@ bool equalIgnoringNullity(const UChar* a, size_t aLength, StringImpl* b)
         }
         return true;
     }
-    return !memcmp(a, b->characters16(), b->length() * sizeof(UChar));
+    return equal(a, b->characters16(), b->length());
 }
 
 } // namespace WTF

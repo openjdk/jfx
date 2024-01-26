@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "LayoutUnits.h"
 
 namespace WebCore {
@@ -63,6 +61,10 @@ public:
     void moveVertically(InlineLayoutUnit);
     void moveBy(InlineLayoutPoint);
 
+    void shiftLeftTo(InlineLayoutUnit);
+    void shiftLeftBy(InlineLayoutUnit);
+    void shiftRightBy(InlineLayoutUnit);
+
     void expand(std::optional<InlineLayoutUnit>, std::optional<InlineLayoutUnit>);
     void expandToContain(const InlineRect&);
     void expandHorizontally(InlineLayoutUnit delta) { expand(delta, { }); }
@@ -97,6 +99,11 @@ private:
 #endif // ASSERT_ENABLED
     InlineLayoutRect m_rect;
 };
+
+inline bool operator==(const InlineRect& a, const InlineRect& b)
+{
+    return static_cast<InlineLayoutRect>(a) == static_cast<InlineLayoutRect>(b);
+}
 
 inline InlineRect::InlineRect(InlineLayoutUnit top, InlineLayoutUnit left, InlineLayoutUnit width, InlineLayoutUnit height)
     : m_rect(left, top, width, height)
@@ -269,6 +276,24 @@ inline void InlineRect::moveBy(InlineLayoutPoint offset)
     m_rect.moveBy(offset);
 }
 
+inline void InlineRect::shiftLeftTo(InlineLayoutUnit left)
+{
+    ASSERT(m_hasValidLeft);
+    m_rect.shiftXEdgeTo(left);
+}
+
+inline void InlineRect::shiftLeftBy(InlineLayoutUnit offset)
+{
+    ASSERT(m_hasValidLeft);
+    m_rect.shiftXEdgeBy(offset);
+}
+
+inline void InlineRect::shiftRightBy(InlineLayoutUnit offset)
+{
+    ASSERT(m_hasValidLeft && m_hasValidWidth);
+    m_rect.shiftMaxXEdgeBy(offset);
+}
+
 inline void InlineRect::expand(std::optional<InlineLayoutUnit> width, std::optional<InlineLayoutUnit> height)
 {
     ASSERT(!width || m_hasValidWidth);
@@ -324,4 +349,3 @@ inline InlineRect::operator InlineLayoutRect() const
 
 }
 }
-#endif

@@ -61,6 +61,11 @@ public:
         }
     }
 
+    template<typename InputIterator> FixedVector(InputIterator begin, InputIterator end)
+        : m_storage(begin == end ? nullptr : Storage::create(begin, end).moveToUniquePtr())
+    {
+    }
+
     FixedVector& operator=(const FixedVector& other)
     {
         FixedVector tmp(other);
@@ -78,6 +83,12 @@ public:
     explicit FixedVector(size_t size)
         : m_storage(size ? Storage::create(size).moveToUniquePtr() : nullptr)
     { }
+
+    FixedVector(size_t size, const T& value)
+        : m_storage(size ? Storage::create(size).moveToUniquePtr() : nullptr)
+    {
+        fill(value);
+    }
 
     template<size_t inlineCapacity, typename OverflowHandler>
     explicit FixedVector(const Vector<T, inlineCapacity, OverflowHandler>& other)
@@ -153,11 +164,6 @@ public:
         if (!m_storage)
             return;
         m_storage->fill(val);
-    }
-
-    bool operator!=(const FixedVector<T>& other) const
-    {
-        return !(*this == other);
     }
 
     bool operator==(const FixedVector<T>& other) const

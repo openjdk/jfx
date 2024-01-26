@@ -25,10 +25,9 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
 #include "InlineFormattingState.h"
-#include "LayoutContainerBox.h"
+#include "InlineLineTypes.h"
+#include "LayoutElementBox.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -37,30 +36,29 @@ class InlineTextBox;
 
 class InlineItemsBuilder {
 public:
-    InlineItemsBuilder(const ContainerBox& formattingContextRoot, InlineFormattingState&);
-    InlineItems build();
+    InlineItemsBuilder(const ElementBox& formattingContextRoot, InlineFormattingState&);
+    void build(InlineItemPosition startPosition);
 
 private:
-    void collectInlineItems(InlineItems&);
+    void collectInlineItems(InlineItems&, FormattingState::OutOfFlowBoxList&, InlineItemPosition startPosition);
     void breakAndComputeBidiLevels(InlineItems&);
     void computeInlineTextItemWidths(InlineItems&);
 
-    void handleTextContent(const InlineTextBox&, InlineItems&);
+    void handleTextContent(const InlineTextBox&, InlineItems&, std::optional<size_t> partialContentOffset);
     void handleInlineBoxStart(const Box&, InlineItems&);
     void handleInlineBoxEnd(const Box&, InlineItems&);
     void handleInlineLevelBox(const Box&, InlineItems&);
 
-    bool needsVisualReordering() const { return m_needsVisualReordering; }
+    bool contentRequiresVisualReordering() const { return m_contentRequiresVisualReordering; }
 
-    const ContainerBox& root() const { return m_root; }
+    const ElementBox& root() const { return m_root; }
 
-    const ContainerBox& m_root;
+    const ElementBox& m_root;
     // FIXME: We should not need this here. This is only required by the out of flow boxes.
     InlineFormattingState& m_formattingState;
-    bool m_needsVisualReordering { false };
+    bool m_contentRequiresVisualReordering { false };
 };
 
 }
 }
 
-#endif

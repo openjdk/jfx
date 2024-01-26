@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,20 +27,20 @@ package com.sun.glass.ui.win;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ResourceBundle;
+import java.util.Map;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
-    static float   overrideUIScale;
-    private static final String BASE_NAME = "com/sun/glass/ui/win/themes";
+
+    static float overrideUIScale;
 
     private static boolean getBoolean(String propname, boolean defval, String description) {
         String str = System.getProperty(propname);
@@ -111,6 +111,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     private final InvokeLaterDispatcher invokeLaterDispatcher;
+
     WinApplication() {
         // Embedded in SWT, with shared event thread
         @SuppressWarnings("removal")
@@ -126,7 +127,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private static boolean verbose;
 
-    // returng toolkit window HWND
+    // returning toolkit window HWND
     private native long _init(int awarenessRequested);
     private native void _setClassLoader(ClassLoader classLoader);
     private native void _runLoop(Runnable launchable);
@@ -340,17 +341,6 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    public String getHighContrastScheme(String themeName) {
-        return PlatformImpl.HighContrastScheme.fromThemeName(ResourceBundle.getBundle(BASE_NAME)::getString, themeName);
-    }
-
-    private native String _getHighContrastTheme();
-    @Override public String getHighContrastTheme() {
-        checkEventThread();
-        return getHighContrastScheme(_getHighContrastTheme());
-    }
-
-    @Override
     protected boolean _supportsInputMethods() {
         return true;
     }
@@ -378,4 +368,42 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected native int _isKeyLocked(int keyCode);
+
+    @Override
+    public native Map<String, Object> getPlatformPreferences();
+
+    @Override
+    public Map<String, String> getPlatformKeyMappings() {
+        return Map.of(
+            "Windows.UIColor.ForegroundColor", "foregroundColor",
+            "Windows.UIColor.BackgroundColor", "backgroundColor",
+            "Windows.UIColor.AccentColor", "accentColor"
+        );
+    }
+
+    // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for Windows.
+    @Override
+    public Map<String, Class<?>> getPlatformKeys() {
+        return Map.ofEntries(
+            Map.entry("Windows.SPI.HighContrast", Boolean.class),
+            Map.entry("Windows.SPI.HighContrastColorScheme", String.class),
+            Map.entry("Windows.SysColor.COLOR_3DFACE", Color.class),
+            Map.entry("Windows.SysColor.COLOR_BTNTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_GRAYTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HIGHLIGHT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HIGHLIGHTTEXT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_HOTLIGHT", Color.class),
+            Map.entry("Windows.SysColor.COLOR_WINDOW", Color.class),
+            Map.entry("Windows.SysColor.COLOR_WINDOWTEXT", Color.class),
+            Map.entry("Windows.UIColor.Background", Color.class),
+            Map.entry("Windows.UIColor.Foreground", Color.class),
+            Map.entry("Windows.UIColor.AccentDark3", Color.class),
+            Map.entry("Windows.UIColor.AccentDark2", Color.class),
+            Map.entry("Windows.UIColor.AccentDark1", Color.class),
+            Map.entry("Windows.UIColor.Accent", Color.class),
+            Map.entry("Windows.UIColor.AccentLight1", Color.class),
+            Map.entry("Windows.UIColor.AccentLight2", Color.class),
+            Map.entry("Windows.UIColor.AccentLight3", Color.class)
+        );
+    }
 }

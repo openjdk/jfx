@@ -35,6 +35,7 @@
         },
         "CEReactions": {
             "contextsAllowed": ["attribute", "operation"],
+            "values": ["Needed", "NotNeeded"],
             "standard": {
                 "url": "https://html.spec.whatwg.org/multipage/custom-elements.html#cereactions"
             }
@@ -317,8 +318,7 @@
             "contextsAllowed": ["attribute"],
             "standard": {
                 "url": "https://webidl.spec.whatwg.org/#LegacyLenientSetter"
-            },
-            "unsupported": true
+            }
         },
         "LegacyLenientThis": {
             "contextsAllowed": ["attribute"],
@@ -420,6 +420,10 @@
                 "url": "https://webidl.spec.whatwg.org/#PutForwards"
             }
         },
+        "RaisesException": {
+            "contextsAllowed": ["operation"],
+            "notes": "Should only be used on indexed getters that have to throw an exception in some cases"
+        },
         "Reflect": {
             "contextsAllowed": ["attribute"],
             "values": ["*"]
@@ -447,11 +451,6 @@
         },
         "ReturnValue": {
             "contextsAllowed": ["argument"]
-        },
-        "EnabledConditionallyReadWriteByDeprecatedGlobalSetting": {
-            "contextsAllowed": ["attribute"],
-            "values": ["*"],
-            "supportsConjunction": true
         },
         "SameObject": {
             "contextsAllowed": ["attribute"],

@@ -7094,6 +7094,58 @@ public class TreeTableViewTest {
         assertTrue(arrowMaxX < cornerMinX);
     }
 
+    // See JDK-8311127
+    @Test
+    public void testTreeTableMenuButtonOnlyChangesLastVisibleColumnHeader() {
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setTableMenuButtonVisible(true);
+        for (int i = 0; i < 10; i++) {
+            TreeTableColumn<String, String> column = new TreeTableColumn<>(i + "          ");
+            column.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+            table.getColumns().add(column);
+        }
+
+        TreeItem<String> root = new TreeItem<>();
+        root.setExpanded(true);
+        for (int i = 0; i < 10; i++) {
+            root.getChildren().add(new TreeItem<>(Integer.toString(i)));
+        }
+        table.setRoot(root);
+        table.setShowRoot(false);
+
+        stageLoader = new StageLoader(new Scene(table, 300, 300));
+
+        List<Double> labelWidths = table.getColumns().stream()
+                .map(column -> VirtualFlowTestUtils.getTableColumnHeader(table, column))
+                .map(columnHeader -> columnHeader.getChildrenUnmodifiable().get(0))
+                .map(node -> node.getLayoutBounds().getWidth())
+                .toList();
+
+        // Verify that the column header width for all columns is the same:
+        for (int i = 1; i < 10; i++) {
+            assertEquals(labelWidths.get(i), labelWidths.get(0));
+        }
+
+        // scroll to last column and sort
+        table.scrollToColumnIndex(9);
+        TreeTableColumn<String, ?> lastColumn = table.getColumns().get(9);
+        lastColumn.setSortType(TreeTableColumn.SortType.DESCENDING);
+        table.getSortOrder().setAll(lastColumn);
+        Toolkit.getToolkit().firePulse();
+
+        List<Double> newLabelWidths = table.getColumns().stream()
+                .map(column -> VirtualFlowTestUtils.getTableColumnHeader(table, column))
+                .map(columnHeader -> columnHeader.getChildrenUnmodifiable().get(0))
+                .map(node -> node.getLayoutBounds().getWidth())
+                .toList();
+        // Verify that the column header width didn't change for the first 9 columns:
+        for (int i = 0; i < 9; i++) {
+            assertEquals(labelWidths.get(i), newLabelWidths.get(i));
+        }
+        // and did change for the last one:
+        assertTrue(labelWidths.get(9) > newLabelWidths.get(9));
+    }
+
     // See JDK-8089280
     @Test
     public void testSuppressHorizontalScrollBar() {
@@ -7197,5 +7249,31 @@ public class TreeTableViewTest {
 
         treeTableView.getSelectionModel().selectIndices(1, new int[]{1, 2});
         assertEquals(2, treeTableView.getSelectionModel().getSelectedIndex());
+    }
+
+    @Test
+    public void testRootNullShouldNotThrow() {
+        TreeTableColumn<String, String> c = new TreeTableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+        treeTableView.getColumns().add(c);
+
+        treeTableView.setRoot(new TreeItem<String>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        stageLoader = new StageLoader(treeTableView);
+        treeTableView.setRoot(null);
+        // Should not throw an NPE.
+        Toolkit.getToolkit().firePulse();
+    }
+
+    @Test
+    public void testTreeTableRootNullQueryAcceessibleAttributeRowCountShouldNotThrow() {
+        treeTableView.setRoot(null);
+        // Should not throw an NPE.
+        treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
     }
 }

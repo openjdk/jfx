@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,72 +25,20 @@
 
 #pragma once
 
+#include "StyleAppearance.h"
+
 namespace WTF {
 class TextStream;
 }
 
 namespace WebCore {
 
-// Must follow CSSValueKeywords.in order
-enum ControlPart {
-    NoControlPart,
-    AutoPart,
-    CheckboxPart,
-    RadioPart,
-    PushButtonPart,
-    SquareButtonPart,
-    ButtonPart,
-    DefaultButtonPart,
-    ListboxPart,
-    MenulistPart,
-    MenulistButtonPart,
-    MeterPart,
-    ProgressBarPart,
-    SliderHorizontalPart,
-    SliderVerticalPart,
-    SearchFieldPart,
-#if ENABLE(APPLE_PAY)
-    ApplePayButtonPart,
-#endif
-#if ENABLE(ATTACHMENT_ELEMENT)
-    AttachmentPart,
-    BorderlessAttachmentPart,
-#endif
-    TextAreaPart,
-    TextFieldPart,
-    // Internal-only Values
-    CapsLockIndicatorPart,
-#if ENABLE(INPUT_TYPE_COLOR)
-    ColorWellPart,
-#endif
-#if ENABLE(SERVICE_CONTROLS)
-    ImageControlsButtonPart,
-#endif
-    InnerSpinButtonPart,
-#if ENABLE(DATALIST_ELEMENT)
-    ListButtonPart,
-#endif
-    SearchFieldDecorationPart,
-    SearchFieldResultsDecorationPart,
-    SearchFieldResultsButtonPart,
-    SearchFieldCancelButtonPart,
-    SliderThumbHorizontalPart,
-    SliderThumbVerticalPart
+enum class SelectionPart : bool {
+    Background,
+    Foreground
 };
 
-#if ENABLE(SERVICE_CONTROLS)
-constexpr ControlPart largestControlPart = ImageControlsButtonPart;
-#else
-constexpr ControlPart largestControlPart = CapsLockIndicatorPart;
-#endif
-
-
-enum SelectionPart {
-    SelectionBackground,
-    SelectionForeground
-};
-
-enum ThemeFont {
+enum class ThemeFont : uint8_t {
     CaptionFont,
     IconFont,
     MenuFont,
@@ -102,7 +50,7 @@ enum ThemeFont {
     ControlFont
 };
 
-enum ThemeColor {
+enum class ThemeColor : uint8_t {
     ActiveBorderColor,
     ActiveCaptionColor,
     ActiveTextColor,
@@ -141,7 +89,6 @@ enum ThemeColor {
     FocusRingColor
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, ControlPart);
 WTF::TextStream& operator<<(WTF::TextStream&, SelectionPart);
 WTF::TextStream& operator<<(WTF::TextStream&, ThemeFont);
 WTF::TextStream& operator<<(WTF::TextStream&, ThemeColor);

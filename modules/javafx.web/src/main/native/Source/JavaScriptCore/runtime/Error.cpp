@@ -192,7 +192,7 @@ bool getLineColumnAndSource(VM& vm, Vector<StackFrame>* stackTrace, unsigned& li
         StackFrame& frame = stackTrace->at(i);
         if (frame.hasLineAndColumnInfo()) {
             frame.computeLineAndColumn(line, column);
-            sourceURL = frame.sourceURL(vm);
+            sourceURL = frame.sourceURLStripped(vm);
             return true;
         }
     }
@@ -255,19 +255,48 @@ JSObject* addErrorInfo(VM& vm, JSObject* error, int line, const SourceCode& sour
     return error;
 }
 
+JSObject* createTypeErrorCopy(JSGlobalObject* globalObject, JSValue error)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+    String errorString = "Error encountered during evaluation"_s;
+
+    if (error.isPrimitive()) {
+        errorString = error.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+    } else if (error.isObject()) {
+        auto structure = error.asCell()->structure();
+        if (!structure->isProxy()) {
+            auto slot = PropertySlot(error, PropertySlot::InternalMethodType::GetOwnProperty);
+            bool found = error.getOwnPropertySlot(globalObject, vm.propertyNames->message, slot);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (found) {
+                if (slot.isValue()) {
+                    JSValue message = slot.getValue(globalObject, vm.propertyNames->message);
+                    RETURN_IF_EXCEPTION(scope, { });
+                    errorString = message.toWTFString(globalObject);
+                    RETURN_IF_EXCEPTION(scope, { });
+                }
+            }
+        }
+    }
+
+    return createTypeError(globalObject, errorString);
+}
+
 String makeDOMAttributeGetterTypeErrorMessage(const char* interfaceName, const String& attributeName)
 {
-    return makeString("The ", interfaceName, '.', attributeName, " getter can only be used on instances of ", interfaceName);
+    return makeString("The "_s, interfaceName, '.', attributeName, " getter can only be used on instances of "_s, interfaceName);
 }
 
 String makeDOMAttributeSetterTypeErrorMessage(const char* interfaceName, const String& attributeName)
 {
-    return makeString("The ", interfaceName, '.', attributeName, " setter can only be used on instances of ", interfaceName);
+    return makeString("The "_s, interfaceName, '.', attributeName, " setter can only be used on instances of "_s, interfaceName);
 }
 
 Exception* throwConstructorCannotBeCalledAsFunctionTypeError(JSGlobalObject* globalObject, ThrowScope& scope, const char* constructorName)
 {
-    return throwTypeError(globalObject, scope, makeString("calling ", constructorName, " constructor without new is invalid"));
+    return throwTypeError(globalObject, scope, makeString("calling "_s, constructorName, " constructor without new is invalid"_s));
 }
 
 Exception* throwTypeError(JSGlobalObject* globalObject, ThrowScope& scope)
@@ -366,7 +395,7 @@ JSObject* createOutOfMemoryError(JSGlobalObject* globalObject, const String& mes
 {
     if (message.isEmpty())
         return createOutOfMemoryError(globalObject);
-    auto* error = createRangeError(globalObject, makeString("Out of memory: ", message), nullptr);
+    auto* error = createRangeError(globalObject, makeString("Out of memory: "_s, message), nullptr);
     jsCast<ErrorInstance*>(error)->setOutOfMemoryError();
     return error;
 }

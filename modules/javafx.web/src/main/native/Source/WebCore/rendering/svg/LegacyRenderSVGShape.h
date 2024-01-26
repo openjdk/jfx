@@ -83,7 +83,7 @@ protected:
     float strokeWidth() const;
     bool hasSmoothStroke() const;
 
-    bool hasNonScalingStroke() const { return style().svgStyle().vectorEffect() == VectorEffect::NonScalingStroke; }
+    inline bool hasNonScalingStroke() const;
     AffineTransform nonScalingStrokeTransform() const;
     Path* nonScalingStrokePath(const Path*, const AffineTransform&) const;
 
@@ -105,7 +105,7 @@ private:
 
     void layout() final;
     void paint(PaintInfo&, const LayoutPoint&) final;
-    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) final;
+    void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const final;
 
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) final;
 
@@ -124,8 +124,8 @@ private:
     void processMarkerPositions();
 
     void fillShape(const RenderStyle&, GraphicsContext&);
+    void strokeShapeInternal(const RenderStyle&, GraphicsContext&);
     void strokeShape(const RenderStyle&, GraphicsContext&);
-    void strokeShape(GraphicsContext&);
     void fillStrokeMarkers(PaintInfo&);
     void drawMarkers(PaintInfo&);
 

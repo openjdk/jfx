@@ -38,6 +38,7 @@
 #include <wtf/Atomics.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 
 #if DEBUG_AUDIONODE_REFERENCES
 #include <stdio.h>
@@ -94,7 +95,7 @@ String convertEnumerationToString(AudioNode::NodeType enumerationValue)
     static_assert(static_cast<size_t>(AudioNode::NodeTypeIIRFilter) == 19, "AudioNode::NodeTypeIIRFilter is not 19 as expected");
     static_assert(static_cast<size_t>(AudioNode::NodeTypeWorklet) == 20, "AudioNode::NodeTypeWorklet is not 20 as expected");
 
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
 
     return values[static_cast<size_t>(enumerationValue)];
 }
@@ -698,7 +699,7 @@ BaseAudioContext& AudioNode::context()
 {
     return WTF::switchOn(m_context, [](Ref<BaseAudioContext>& context) -> BaseAudioContext& {
         return context.get();
-    }, [](WeakPtr<BaseAudioContext>& context) -> BaseAudioContext& {
+    }, [](WeakPtr<BaseAudioContext, WeakPtrImplWithEventTargetData>& context) -> BaseAudioContext& {
         return *context;
     });
 }
@@ -707,9 +708,14 @@ const BaseAudioContext& AudioNode::context() const
 {
     return WTF::switchOn(m_context, [](const Ref<BaseAudioContext>& context) -> const BaseAudioContext& {
         return context.get();
-    }, [](const WeakPtr<BaseAudioContext>& context) -> const BaseAudioContext& {
+    }, [](const WeakPtr<BaseAudioContext, WeakPtrImplWithEventTargetData>& context) -> const BaseAudioContext& {
         return *context;
     });
+}
+
+NoiseInjectionPolicy AudioNode::noiseInjectionPolicy() const
+{
+    return context().noiseInjectionPolicy();
 }
 
 #if DEBUG_AUDIONODE_REFERENCES

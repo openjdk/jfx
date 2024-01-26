@@ -34,6 +34,8 @@
 
 namespace WebCore {
 
+struct AudioInfo;
+
 class AudioTrackPrivate : public TrackPrivateBase {
 public:
     static Ref<AudioTrackPrivate> create()
@@ -76,7 +78,9 @@ public:
             m_client->configurationChanged(m_configuration);
     }
 
-    virtual bool operator==(const AudioTrackPrivate& track) const
+    virtual void setFormatDescription(Ref<AudioInfo>&&) { }
+
+    bool operator==(const AudioTrackPrivate& track) const
     {
         return TrackPrivateBase::operator==(track)
             && configuration() == track.configuration()
@@ -86,6 +90,8 @@ public:
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "AudioTrackPrivate"; }
 #endif
+
+    Type type() const final { return Type::Audio; }
 
 protected:
     AudioTrackPrivate() = default;
@@ -98,6 +104,10 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AudioTrackPrivate)
+static bool isType(const WebCore::TrackPrivateBase& track) { return track.type() == WebCore::TrackPrivateBase::Type::Audio; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 namespace WTF {
 

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Igalia S.L.
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,6 +34,7 @@
 #include FT_TRUETYPE_IDS_H
 #include "RefPtrCairo.h"
 #include "RefPtrFontconfig.h"
+#include "StyleFontSizeFunctions.h"
 #include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
@@ -87,7 +88,7 @@ bool FontCache::configurePatternForFontDescription(FcPattern* pattern, const Fon
         return false;
     if (!FcPatternAddInteger(pattern, FC_WEIGHT, fontWeightToFontconfigWeight(fontDescription.weight())))
         return false;
-    if (!FcPatternAddDouble(pattern, FC_PIXEL_SIZE, fontDescription.computedPixelSize()))
+    if (!FcPatternAddDouble(pattern, FC_PIXEL_SIZE, fontDescription.computedSize()))
         return false;
     return true;
 }
@@ -100,7 +101,7 @@ static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescripti
         fixedWidth = true;
 
     syntheticBold = false;
-    bool descriptionAllowsSyntheticBold = fontDescription.fontSynthesis() & FontSynthesisWeight;
+    bool descriptionAllowsSyntheticBold = fontDescription.hasAutoFontSynthesisWeight();
     if (descriptionAllowsSyntheticBold && isFontWeightBold(fontDescription.weight())) {
         // The FC_EMBOLDEN property instructs us to fake the boldness of the font.
         FcBool fontConfigEmbolden = FcFalse;
@@ -116,7 +117,7 @@ static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescripti
     // We requested an italic font, but Fontconfig gave us one that was neither oblique nor italic.
     syntheticOblique = false;
     int actualFontSlant;
-    bool descriptionAllowsSyntheticOblique = fontDescription.fontSynthesis() & FontSynthesisStyle;
+    bool descriptionAllowsSyntheticOblique = fontDescription.hasAutoFontSynthesisStyle();
     if (descriptionAllowsSyntheticOblique && fontDescription.italic()
         && FcPatternGetInteger(pattern, FC_SLANT, 0, &actualFontSlant) == FcResultMatch) {
         syntheticOblique = actualFontSlant == FC_SLANT_ROMAN;
@@ -133,7 +134,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& descr
     getFontPropertiesFromPattern(resultPattern.get(), description, fixedWidth, syntheticBold, syntheticOblique);
 
     RefPtr<cairo_font_face_t> fontFace = adoptRef(cairo_ft_font_face_create_for_pattern(resultPattern.get()));
-    FontPlatformData alternateFontData(fontFace.get(), WTFMove(resultPattern), description.computedPixelSize(), fixedWidth, syntheticBold, syntheticOblique, description.orientation());
+    FontPlatformData alternateFontData(fontFace.get(), WTFMove(resultPattern), description.computedSize(), fixedWidth, syntheticBold, syntheticOblique, description.orientation());
     return fontForPlatformData(alternateFontData);
 }
 
@@ -456,19 +457,25 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     RefPtr<cairo_scaled_font_t> scaledFont = adoptRef(cairo_scaled_font_create(fontFace.get(), &matrix, &matrix, options.get()));
     CairoFtFaceLocker cairoFtFaceLocker(scaledFont.get());
     if (FT_Face freeTypeFace = cairoFtFaceLocker.ftFace()) {
-        auto variants = buildVariationSettings(freeTypeFace, fontDescription);
+        auto variants = buildVariationSettings(freeTypeFace, fontDescription, fontCreationContext);
         if (!variants.isEmpty())
             FcPatternAddString(resultPattern.get(), FC_FONT_VARIATIONS, reinterpret_cast<const FcChar8*>(variants.utf8().data()));
     }
 #endif
-    auto platformData = makeUnique<FontPlatformData>(fontFace.get(), WTFMove(resultPattern), fontDescription.computedPixelSize(), fixedWidth, syntheticBold, syntheticOblique, fontDescription.orientation());
+
+    auto size = fontDescription.adjustedSizeForFontFace(fontCreationContext.sizeAdjust());
+    FontPlatformData platformData(fontFace.get(), WTFMove(resultPattern), size, fixedWidth, syntheticBold, syntheticOblique, fontDescription.orientation());
+
+    platformData.updateSizeWithFontSizeAdjust(fontDescription.fontSizeAdjust(), fontDescription.computedSize());
+    auto platformDataUniquePtr = makeUnique<FontPlatformData>(platformData);
+
     // Verify that this font has an encoding compatible with Fontconfig. Fontconfig currently
     // supports three encodings in FcFreeTypeCharIndex: Unicode, Symbol and AppleRoman.
     // If this font doesn't have one of these three encodings, don't select it.
-    if (!platformData->hasCompatibleCharmap())
+    if (!platformDataUniquePtr->hasCompatibleCharmap())
         return nullptr;
 
-    return platformData;
+    return platformDataUniquePtr;
 }
 
 std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
@@ -542,12 +549,33 @@ VariationDefaultsMap defaultVariationValues(FT_Face face, ShouldLocalizeAxisName
     return result;
 }
 
-String buildVariationSettings(FT_Face face, const FontDescription& fontDescription)
+String buildVariationSettings(FT_Face face, const FontDescription& fontDescription, const FontCreationContext& fontCreationContext)
 {
     auto defaultValues = defaultVariationValues(face, ShouldLocalizeAxisNames::No);
     const auto& variations = fontDescription.variationSettings();
 
     VariationsMap variationsToBeApplied;
+
+    auto fontSelectionRequest = fontDescription.fontSelectionRequest();
+    float weight = fontSelectionRequest.weight;
+    float width = fontSelectionRequest.width;
+    float slope = fontSelectionRequest.slope.value_or(normalItalicValue());
+    auto fontStyleAxis = fontDescription.fontStyleAxis();
+
+    if (auto weightValue = fontCreationContext.fontFaceCapabilities().weight)
+        weight = std::max(std::min(weight, static_cast<float>(weightValue->maximum)), static_cast<float>(weightValue->minimum));
+    if (auto widthValue = fontCreationContext.fontFaceCapabilities().width)
+        width = std::max(std::min(width, static_cast<float>(widthValue->maximum)), static_cast<float>(widthValue->minimum));
+    if (auto slopeValue = fontCreationContext.fontFaceCapabilities().slope)
+        slope = std::max(std::min(slope, static_cast<float>(slopeValue->maximum)), static_cast<float>(slopeValue->minimum));
+
+    variationsToBeApplied.set({ { 'w', 'g', 'h', 't' } }, weight);
+    variationsToBeApplied.set({ { 'w', 'd', 't', 'h' } }, width);
+    if (fontStyleAxis == FontStyleAxis::ital)
+        variationsToBeApplied.set({ { 'i', 't', 'a', 'l' } }, 1);
+    else
+        variationsToBeApplied.set({ { 's', 'l', 'n', 't' } }, slope);
+
     auto applyVariation = [&](const FontTag& tag, float value) {
         auto iterator = defaultValues.find(tag);
         if (iterator == defaultValues.end())

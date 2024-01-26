@@ -31,10 +31,11 @@ namespace WebCore {
 
 struct CompositionHighlight {
     CompositionHighlight() = default;
-    CompositionHighlight(unsigned startOffset, unsigned endOffset, const Color& c)
+    CompositionHighlight(unsigned startOffset, unsigned endOffset, const std::optional<Color>& backgroundColor, const std::optional<Color>& foregroundColor)
         : startOffset(startOffset)
         , endOffset(endOffset)
-        , color(c)
+        , backgroundColor(backgroundColor)
+        , foregroundColor(foregroundColor)
     {
     }
 
@@ -46,39 +47,8 @@ struct CompositionHighlight {
 
     unsigned startOffset { 0 };
     unsigned endOffset { 0 };
-    Color color { defaultCompositionFillColor };
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<CompositionHighlight> decode(Decoder&);
+    std::optional<Color> backgroundColor;
+    std::optional<Color> foregroundColor;
 };
-
-template<class Encoder>
-void CompositionHighlight::encode(Encoder& encoder) const
-{
-    encoder << startOffset;
-    encoder << endOffset;
-    encoder << color;
-}
-
-template<class Decoder>
-std::optional<CompositionHighlight> CompositionHighlight::decode(Decoder& decoder)
-{
-    std::optional<unsigned> startOffset;
-    decoder >> startOffset;
-    if (!startOffset)
-        return std::nullopt;
-
-    std::optional<unsigned> endOffset;
-    decoder >> endOffset;
-    if (!endOffset)
-        return std::nullopt;
-
-    std::optional<Color> color;
-    decoder >> color;
-    if (!color)
-        return std::nullopt;
-
-    return {{ *startOffset, *endOffset, *color }};
-}
 
 } // namespace WebCore

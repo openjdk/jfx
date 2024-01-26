@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -26,6 +26,8 @@
 #include "JSGlobalObjectFunctions.h"
 
 #include "CallFrame.h"
+#include "GlobalObjectMethodTable.h"
+#include "ImportMap.h"
 #include "IndirectEvalExecutable.h"
 #include "InlineCallFrame.h"
 #include "Interpreter.h"
@@ -52,17 +54,17 @@ const ASCIILiteral ObjectProtoCalledOnNullOrUndefinedError { "Object.prototype._
 const ASCIILiteral RestrictedPropertyAccessError { "'arguments', 'callee', and 'caller' cannot be accessed in this context."_s };
 
 template<unsigned charactersCount>
-static constexpr Bitmap<256> makeCharacterBitmap(const char (&characters)[charactersCount])
+static constexpr WTF::BitSet<256> makeCharacterBitmap(const char (&characters)[charactersCount])
 {
     static_assert(charactersCount > 0, "Since string literal is null terminated, characterCount is always larger than 0");
-    Bitmap<256> bitmap;
+    WTF::BitSet<256> bitmap;
     for (unsigned i = 0; i < charactersCount - 1; ++i)
         bitmap.set(characters[i]);
     return bitmap;
 }
 
 template<typename CharacterType>
-static JSValue encode(JSGlobalObject* globalObject, const Bitmap<256>& doNotEscape, const CharacterType* characters, unsigned length)
+static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNotEscape, const CharacterType* characters, unsigned length)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -143,7 +145,7 @@ static JSValue encode(JSGlobalObject* globalObject, const Bitmap<256>& doNotEsca
     return jsString(vm, builder.toString());
 }
 
-static JSValue encode(JSGlobalObject* globalObject, JSValue argument, const Bitmap<256>& doNotEscape)
+static JSValue encode(JSGlobalObject* globalObject, JSValue argument, const WTF::BitSet<256>& doNotEscape)
 {
     return toStringView(globalObject, argument, [&] (StringView view) {
         if (view.is8Bit())
@@ -154,7 +156,7 @@ static JSValue encode(JSGlobalObject* globalObject, JSValue argument, const Bitm
 
 template <typename CharType>
 ALWAYS_INLINE
-static JSValue decode(JSGlobalObject* globalObject, const CharType* characters, int length, const Bitmap<256>& doNotUnescape, bool strict)
+static JSValue decode(JSGlobalObject* globalObject, const CharType* characters, int length, const WTF::BitSet<256>& doNotUnescape, bool strict)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -227,7 +229,7 @@ static JSValue decode(JSGlobalObject* globalObject, const CharType* characters, 
     RELEASE_AND_RETURN(scope, jsString(vm, builder.toString()));
 }
 
-static JSValue decode(JSGlobalObject* globalObject, JSValue argument, const Bitmap<256>& doNotUnescape, bool strict)
+static JSValue decode(JSGlobalObject* globalObject, JSValue argument, const WTF::BitSet<256>& doNotUnescape, bool strict)
 {
     return toStringView(globalObject, argument, [&] (StringView view) {
         if (view.is8Bit())
@@ -412,6 +414,15 @@ double jsToNumber(StringView s)
         return PNaN;
     }
 
+    if (size == 2 && s[0] == '-') {
+        UChar c = s[1];
+        if (c == '0')
+            return -0.0;
+        if (isASCIIDigit(c))
+            return -static_cast<int32_t>(c - '0');
+        return PNaN;
+    }
+
     if (s.is8Bit())
         return toDouble(s.characters8(), size);
     return toDouble(s.characters16(), size);
@@ -483,10 +494,10 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
 
     JSValue parsedObject;
     if (s.is8Bit()) {
-        LiteralParser<LChar> preparser(globalObject, s.characters8(), s.length(), NonStrictJSON, nullptr);
+        LiteralParser<LChar> preparser(globalObject, s.characters8(), s.length(), SloppyJSON, nullptr);
         parsedObject = preparser.tryLiteralParse();
     } else {
-        LiteralParser<UChar> preparser(globalObject, s.characters16(), s.length(), NonStrictJSON, nullptr);
+        LiteralParser<UChar> preparser(globalObject, s.characters16(), s.length(), SloppyJSON, nullptr);
         parsedObject = preparser.tryLiteralParse();
     }
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -499,7 +510,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     if (!eval)
         return encodedJSValue();
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(vm.interpreter.execute(eval, globalObject, globalObject->globalThis(), globalObject->globalScope())));
+    RELEASE_AND_RETURN(scope, JSValue::encode(vm.interpreter.executeEval(eval, globalObject->globalThis(), globalObject->globalScope())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncParseInt, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -507,21 +518,13 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncParseInt, (JSGlobalObject* globalObject, Call
     JSValue value = callFrame->argument(0);
     JSValue radixValue = callFrame->argument(1);
 
-    // Optimized handling for numbers:
-    // If the argument is 0 or a number in range 10^-6 <= n < INT_MAX+1, then parseInt
-    // results in a truncation to integer. In the case of -0, this is converted to 0.
-    //
-    // This is also a truncation for values in the range INT_MAX+1 <= n < 10^21,
-    // however these values cannot be trivially truncated to int since 10^21 exceeds
-    // even the int64_t range. Negative numbers are a little trickier, the case for
-    // values in the range -10^21 < n <= -1 are similar to those for integer, but
-    // values in the range -1 < n <= -10^-6 need to truncate to -0, not 0.
-    static const double tenToTheMinus6 = 0.000001;
-    static const double intMaxPlusOne = 2147483648.0;
     if (value.isNumber()) {
-        double n = value.asNumber();
-        if (((n < intMaxPlusOne && n >= tenToTheMinus6) || !n) && radixValue.isUndefinedOrNull())
-            return JSValue::encode(jsNumber(static_cast<int32_t>(n)));
+        if (radixValue.isUndefinedOrNull() || (radixValue.isInt32() && radixValue.asInt32() == 10)) {
+            if (value.isInt32())
+                return JSValue::encode(value);
+            if (auto result = parseIntDouble(value.asDouble()))
+            return JSValue::encode(jsNumber(result.value()));
+    }
     }
 
     // If ToString throws, we shouldn't call ToInt32.
@@ -535,7 +538,16 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncParseFloat, (JSGlobalObject* globalObject, Ca
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* jsString = callFrame->argument(0).toString(globalObject);
+    JSValue value = callFrame->argument(0);
+    if (value.isNumber()) {
+        if (value.isInt32())
+            return JSValue::encode(value);
+        if (value.asDouble() == 0.0) // Makes -0.0 to 0.0 too.
+            return JSValue::encode(jsNumber(0.0));
+        return JSValue::encode(value);
+    }
+
+    auto* jsString = value.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     auto viewWithString = jsString->viewWithUnderlyingString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
@@ -553,7 +565,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURI, (JSGlobalObject* globalObject, Cal
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURIComponent, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static constexpr Bitmap<256> emptyBitmap;
+    static constexpr WTF::BitSet<256> emptyBitmap;
     return JSValue::encode(decode(globalObject, callFrame->argument(0), emptyBitmap, true));
 }
 
@@ -813,6 +825,15 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncBuiltinDescribe, (JSGlobalObject* globalObjec
     return JSValue::encode(jsString(globalObject->vm(), toString(callFrame->argument(0))));
 }
 
+JSC_DEFINE_HOST_FUNCTION(globalFuncImportMapStatus, (JSGlobalObject* globalObject, CallFrame*))
+{
+    // https://wicg.github.io/import-maps/#integration-wait-for-import-maps
+    globalObject->importMap().setAcquiringImportMaps();
+    if (auto* promise = globalObject->importMapStatusPromise())
+        return JSValue::encode(promise);
+    return JSValue::encode(jsUndefined());
+}
+
 JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -828,7 +849,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, 
 
     // We always specify parameters as undefined. Once dynamic import() starts accepting fetching parameters,
     // we should retrieve this from the arguments.
-    JSValue parameters = jsUndefined();
+    JSValue parameters = callFrame->argument(1);
     auto* internalPromise = globalObject->moduleLoader()->importModule(globalObject, specifier, parameters, sourceOrigin);
     RETURN_IF_EXCEPTION(scope, JSValue::encode(promise->rejectWithCaughtException(globalObject, scope)));
 
@@ -847,9 +868,7 @@ static bool canPerformFastPropertyEnumerationForCopyDataProperties(Structure* st
     // https://bugs.webkit.org/show_bug.cgi?id=185358
     if (hasIndexedProperties(structure->indexingType()))
         return false;
-    if (structure->hasGetterSetterProperties())
-        return false;
-    if (structure->hasCustomGetterSetterProperties())
+    if (structure->hasAnyKindOfGetterSetterProperties())
         return false;
     if (structure->isUncacheableDictionary())
         return false;
@@ -862,6 +881,8 @@ static CodeBlock* getCallerCodeBlock(CallFrame* callFrame)
     CodeOrigin codeOrigin = callerFrame->codeOrigin();
     if (codeOrigin && codeOrigin.inlineCallFrame())
         return baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame());
+    if (callerFrame->isWasmFrame())
+        return nullptr;
     return callerFrame->codeBlock();
 }
 
@@ -992,6 +1013,63 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncDateTimeFormat, (JSGlobalObject* globalObject
     double value = callFrame->argument(2).toNumber(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     RELEASE_AND_RETURN(scope, JSValue::encode(dateTimeFormat->format(globalObject, value)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncHandleNegativeProxyHasTrapResult, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSObject* target = asObject(callFrame->uncheckedArgument(0));
+
+    Identifier propertyName = callFrame->uncheckedArgument(1).toPropertyKey(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    scope.release();
+    ProxyObject::validateNegativeHasTrapResult(globalObject, target, propertyName);
+
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncHandleProxyGetTrapResult, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue trapResult = callFrame->uncheckedArgument(0);
+    JSObject* target = asObject(callFrame->uncheckedArgument(1));
+
+    Identifier propertyName = callFrame->uncheckedArgument(2).toPropertyKey(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    scope.release();
+    ProxyObject::validateGetTrapResult(globalObject, trapResult, target, propertyName);
+
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncHandlePositiveProxySetTrapResult, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSObject* target = asObject(callFrame->uncheckedArgument(0));
+
+    Identifier propertyName = callFrame->uncheckedArgument(1).toPropertyKey(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    JSValue putValue = callFrame->uncheckedArgument(2);
+
+    scope.release();
+    ProxyObject::validatePositiveSetTrapResult(globalObject, target, propertyName, putValue);
+
+    return JSValue::encode(jsUndefined());
+}
+
+JSC_DEFINE_HOST_FUNCTION(globalFuncIsNaN, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    JSValue argument = callFrame->argument(0);
+    return JSValue::encode(jsBoolean(std::isnan(argument.toNumber(globalObject))));
 }
 
 } // namespace JSC

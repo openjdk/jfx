@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -501,9 +501,19 @@ public class VBox extends Pane {
         }
         }
 
+        double pixelSize = isSnapToPixel() ? 1 / Region.getSnapScaleY(this) : 0.0;
         double available = extraHeight; // will be negative in shrinking case
-        outer: while (Math.abs(available) > 1 && adjustingNumber > 0) {
-            final double portion = snapPortionY(available / adjustingNumber); // negative in shrinking case
+        outer: while (Math.abs(available) >= pixelSize && adjustingNumber > 0) {
+            double portion = snapPortionY(available / adjustingNumber); // negative in shrinking case
+
+            if (portion == 0) {
+                if (pixelSize == 0) {
+                    break;
+                }
+
+                portion = pixelSize * Math.signum(available);
+            }
+
             for (int i = 0, size = managed.size(); i < size; i++) {
                 if (temp[i] == -1) {
                     continue;
@@ -512,7 +522,7 @@ public class VBox extends Pane {
                 final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
                 usedHeights[i] += change;
                 available -= change;
-                if (Math.abs(available) < 1) {
+                if (Math.abs(available) < pixelSize) {
                     break outer;
                 }
                 if (Math.abs(change) < Math.abs(portion)) {

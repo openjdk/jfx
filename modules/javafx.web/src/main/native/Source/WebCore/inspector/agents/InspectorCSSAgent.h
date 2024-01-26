@@ -35,7 +35,9 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/JSONValues.h>
+#include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
@@ -50,11 +52,13 @@ class CSSStyleRule;
 class CSSStyleSheet;
 class Document;
 class Element;
+class EventTarget;
 class Node;
 class NodeList;
 class RenderObject;
 class Settings;
 class StyleRule;
+class WeakPtrImplWithEventTargetData;
 
 namespace Style {
 class Resolver;
@@ -84,10 +88,6 @@ public:
         ContentSecurityPolicy* m_contentSecurityPolicy;
     };
 
-    static CSSStyleRule* asCSSStyleRule(CSSRule&);
-
-    static RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> layoutFlagsForNode(Node&);
-
     static std::optional<Inspector::Protocol::CSS::PseudoId> protocolValueForPseudoId(PseudoId);
 
     // InspectorAgentBase
@@ -107,6 +107,7 @@ public:
     Inspector::Protocol::ErrorStringOr<void> setStyleSheetText(const Inspector::Protocol::CSS::StyleSheetId&, const String& text);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::CSS::CSSStyle>> setStyleText(Ref<JSON::Object>&& styleId, const String& text);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::CSS::CSSRule>> setRuleSelector(Ref<JSON::Object>&& ruleId, const String& selector);
+    Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::CSS::Grouping>> setGroupingHeaderText(Ref<JSON::Object>&& ruleId, const String& headerText);
     Inspector::Protocol::ErrorStringOr<Inspector::Protocol::CSS::StyleSheetId> createStyleSheet(const Inspector::Protocol::Network::FrameId&);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::CSS::CSSRule>> addRule(const Inspector::Protocol::CSS::StyleSheetId&, const String& selector);
     Inspector::Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSPropertyInfo>>> getSupportedCSSProperties();
@@ -123,10 +124,22 @@ public:
     void activeStyleSheetsUpdated(Document&);
     bool forcePseudoState(const Element&, CSSSelector::PseudoClassType);
     void didChangeRendererForDOMNode(Node&);
+    void didAddEventListener(EventTarget&);
+    void willRemoveEventListener(EventTarget&);
 
     // InspectorDOMAgent hooks
     void didRemoveDOMNode(Node&, Inspector::Protocol::DOM::NodeId);
     void didModifyDOMAttr(Element&);
+
+    enum class LayoutFlag : uint8_t {
+        Rendered = 1 << 0,
+        Flex = 1 << 1,
+        Grid = 1 << 2,
+        Event = 1 << 3,
+        Scrollable = 1 << 4,
+    };
+    OptionSet<LayoutFlag> layoutFlagsForNode(Node&);
+    RefPtr<JSON::ArrayOf<String /* Inspector::Protocol::CSS::LayoutFlag */>> protocolLayoutFlagsForNode(Node&);
 
     void reset();
 
@@ -134,7 +147,7 @@ private:
     class StyleSheetAction;
     class SetStyleSheetTextAction;
     class SetStyleTextAction;
-    class SetRuleSelectorAction;
+    class SetRuleHeaderTextAction;
     class AddRuleAction;
 
     typedef HashMap<Inspector::Protocol::CSS::StyleSheetId, RefPtr<InspectorStyleSheet>> IdToInspectorStyleSheet;
@@ -162,6 +175,7 @@ private:
     Ref<JSON::ArrayOf<Inspector::Protocol::CSS::RuleMatch>> buildArrayForMatchedRuleList(const Vector<RefPtr<const StyleRule>>&, Style::Resolver&, Element&, PseudoId);
     RefPtr<Inspector::Protocol::CSS::CSSStyle> buildObjectForAttributesStyle(StyledElement&);
 
+    void nodeHasLayoutFlagsChange(Node&);
     void nodesWithPendingLayoutFlagsChangeDispatchTimerFired();
 
     void resetPseudoStates();
@@ -181,7 +195,8 @@ private:
     int m_lastStyleSheetId { 1 };
     bool m_creatingViaInspectorStyleSheet { false };
 
-    WeakHashSet<Node> m_nodesWithPendingLayoutFlagsChange;
+    WeakHashMap<Node, OptionSet<LayoutFlag>, WeakPtrImplWithEventTargetData> m_lastLayoutFlagsForNode;
+    WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_nodesWithPendingLayoutFlagsChange;
     Timer m_nodesWithPendingLayoutFlagsChangeDispatchTimer;
 
     Inspector::Protocol::CSS::LayoutContextTypeChangedMode m_layoutContextTypeChangedMode { Inspector::Protocol::CSS::LayoutContextTypeChangedMode::Observed };

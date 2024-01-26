@@ -287,7 +287,7 @@ public:
     }
 
     template<typename Visitor> static void visitOutputConstraints(JSCell*, Visitor&);
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
 
 private:
     template<typename Visitor>
@@ -383,7 +383,7 @@ private:
                     continue;
                 ++size;
             }
-            ASSERT(size == m_keyCount);
+            ASSERT_UNUSED(size, size == m_keyCount);
         }
     }
 

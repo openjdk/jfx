@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,11 +97,6 @@ final public class CompoundSelector extends Selector {
                 : Collections.EMPTY_LIST;
     }
 
-    private CompoundSelector() {
-        this(null, null);
-    }
-
-
     @Override public Match createMatch() {
         final PseudoClassState allPseudoClasses = new PseudoClassState();
         int idCount = 0;
@@ -110,7 +105,7 @@ final public class CompoundSelector extends Selector {
         for(int n=0, nMax=selectors.size(); n<nMax; n++) {
             Selector sel = selectors.get(n);
             Match match = sel.createMatch();
-            allPseudoClasses.addAll(match.pseudoClasses);
+            allPseudoClasses.addAll(match.getPseudoClasses());
             idCount += match.idCount;
             styleClassCount += match.styleClassCount;
         }
@@ -151,7 +146,9 @@ final public class CompoundSelector extends Selector {
                 final Set<PseudoClass> pseudoClassIn = tempStates[n];
 
                 if (pseudoClassOut != null) {
-                    pseudoClassOut.addAll(pseudoClassIn);
+                    if (pseudoClassIn != null) {
+                        pseudoClassOut.addAll(pseudoClassIn);
+                    }
                 } else {
                     triggerStates[n] = pseudoClassIn;
                 }

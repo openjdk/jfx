@@ -35,6 +35,7 @@
 #include "LongRange.h"
 #include "MediaProducer.h"
 #include "MediaStreamTrackPrivate.h"
+#include "MediaTrackCapabilities.h"
 #include "MediaTrackConstraints.h"
 #include "PlatformMediaSession.h"
 #include <wtf/LoggerHelper.h>
@@ -51,7 +52,7 @@ template<typename IDLType> class DOMPromiseDeferred;
 class MediaStreamTrack
     : public RefCounted<MediaStreamTrack>
     , public ActiveDOMObject
-    , public EventTargetWithInlineData
+    , public EventTarget
     , private MediaStreamTrackPrivate::Observer
     , private PlatformMediaSession::AudioCaptureSource
 #if !RELEASE_LOG_DISABLED
@@ -113,26 +114,14 @@ public:
         std::optional<int> sampleRate;
         std::optional<int> sampleSize;
         std::optional<bool> echoCancellation;
-        std::optional<bool> displaySurface;
-        String logicalSurface;
+        String displaySurface;
         String deviceId;
         String groupId;
+        std::optional<double> zoom;
     };
     TrackSettings getSettings() const;
 
-    struct TrackCapabilities {
-        std::optional<LongRange> width;
-        std::optional<LongRange> height;
-        std::optional<DoubleRange> aspectRatio;
-        std::optional<DoubleRange> frameRate;
-        std::optional<Vector<String>> facingMode;
-        std::optional<DoubleRange> volume;
-        std::optional<LongRange> sampleRate;
-        std::optional<LongRange> sampleSize;
-        std::optional<Vector<bool>> echoCancellation;
-        String deviceId;
-        String groupId;
-    };
+    using TrackCapabilities = MediaTrackCapabilities;
     TrackCapabilities getCapabilities() const;
 
     const MediaTrackConstraints& getConstraints() const { return m_constraints; }
@@ -155,12 +144,12 @@ public:
 
     void setIdForTesting(String&& id) { m_private->setIdForTesting(WTFMove(id)); }
 
-    Document* document() const;
-
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_private->logger(); }
     const void* logIdentifier() const final { return m_private->logIdentifier(); }
 #endif
+
+    void setShouldFireMuteEventImmediately(bool value) { m_shouldFireMuteEventImmediately = value; }
 
 protected:
     MediaStreamTrack(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
@@ -192,9 +181,12 @@ private:
     void trackMutedChanged(MediaStreamTrackPrivate&) final;
     void trackSettingsChanged(MediaStreamTrackPrivate&) final;
     void trackEnabledChanged(MediaStreamTrackPrivate&) final;
+    void trackConfigurationChanged(MediaStreamTrackPrivate&) final;
 
     // PlatformMediaSession::AudioCaptureSource
     bool isCapturingAudio() const final;
+
+    void updateVideoCaptureAccordingMicrophoneInterruption(Document&, bool);
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "MediaStreamTrack"; }
@@ -204,13 +196,14 @@ private:
     Vector<Observer*> m_observers;
 
     MediaTrackConstraints m_constraints;
-    std::unique_ptr<DOMPromiseDeferred<void>> m_promise;
 
+    String m_groupId;
     State m_readyState { State::Live };
     bool m_muted { false };
     bool m_ended { false };
     const bool m_isCaptureTrack { false };
     bool m_isInterrupted { false };
+    bool m_shouldFireMuteEventImmediately { false };
 };
 
 typedef Vector<Ref<MediaStreamTrack>> MediaStreamTrackVector;

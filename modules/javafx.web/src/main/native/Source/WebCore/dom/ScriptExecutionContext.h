@@ -38,10 +38,12 @@
 #include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/HandleTypes.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -65,21 +67,20 @@ class CachedScript;
 class CSSFontSelector;
 class CSSValuePool;
 class DatabaseContext;
+class DeferredPromise;
 class EventQueue;
 class EventLoopTaskGroup;
 class EventTarget;
 class FontLoadRequest;
 class MessagePort;
 class NotificationClient;
-class PermissionController;
 class PublicURLManager;
 class RejectedPromiseTracker;
 class RTCDataChannelRemoteHandlerConnection;
 class ResourceRequest;
 class SocketProvider;
 class WebCoreOpaqueRoot;
-enum class LoadedFromOpaqueSource : uint8_t;
-enum class ReferrerPolicy : uint8_t;
+enum class LoadedFromOpaqueSource : bool;
 enum class TaskSource : uint8_t;
 
 #if ENABLE(NOTIFICATIONS)
@@ -95,7 +96,7 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class ScriptExecutionContext : public SecurityContext, public CanMakeWeakPtr<ScriptExecutionContext> {
+class ScriptExecutionContext : public SecurityContext, public CanMakeWeakPtr<ScriptExecutionContext>, public CanMakeCheckedPtr {
 public:
     explicit ScriptExecutionContext(ScriptExecutionContextIdentifier = { });
     virtual ~ScriptExecutionContext();
@@ -111,12 +112,10 @@ public:
     virtual EventLoopTaskGroup& eventLoop() = 0;
 
     virtual const URL& url() const = 0;
-    enum class ForceUTF8 { No, Yes };
+    enum class ForceUTF8 : bool { No, Yes };
     virtual URL completeURL(const String& url, ForceUTF8 = ForceUTF8::No) const = 0;
 
     virtual String userAgent(const URL&) const = 0;
-
-    virtual ReferrerPolicy referrerPolicy() const = 0;
 
     virtual const Settings::Values& settingsValues() const = 0;
 
@@ -127,9 +126,10 @@ public:
     virtual void disableWebAssembly(const String& errorMessage) = 0;
 
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
-    virtual RefPtr<PermissionController> permissionController();
 
     virtual SocketProvider* socketProvider() = 0;
+
+    virtual std::optional<uint64_t> noiseInjectionHashSalt() const = 0;
 
     virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection();
 
@@ -161,6 +161,8 @@ public:
 
     JSC::ScriptExecutionStatus jscScriptExecutionStatus() const;
 
+    URL currentSourceURL() const;
+
     // Called from the constructor and destructors of ActiveDOMObject.
     void didCreateActiveDOMObject(ActiveDOMObject&);
     void willDestroyActiveDOMObject(ActiveDOMObject&);
@@ -172,8 +174,7 @@ public:
     void willDestroyDestructionObserver(ContextDestructionObserver&);
 
     // MessagePort is conceptually a kind of ActiveDOMObject, but it needs to be tracked separately for message dispatch.
-    void processMessageWithMessagePortsSoon();
-    void dispatchMessagePortEvents();
+    void processMessageWithMessagePortsSoon(CompletionHandler<void()>&&);
     void createdMessagePort(MessagePort&);
     void destroyedMessagePort(MessagePort&);
 
@@ -181,7 +182,7 @@ public:
 
     virtual CSSFontSelector* cssFontSelector() { return nullptr; }
     virtual CSSValuePool& cssValuePool();
-    virtual std::unique_ptr<FontLoadRequest> fontLoadRequest(String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource);
+    virtual std::unique_ptr<FontLoadRequest> fontLoadRequest(const String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource);
     virtual void beginLoadingFontSoon(FontLoadRequest&) { }
 
     WEBCORE_EXPORT static void setCrossOriginMode(CrossOriginMode);
@@ -238,8 +239,8 @@ public:
     // Gets the next id in a circular sequence from 1 to 2^31-1.
     int circularSequentialID();
 
-    bool addTimeout(int timeoutId, DOMTimer& timer) { return m_timeouts.add(timeoutId, timer).isNewEntry; }
-    void removeTimeout(int timeoutId) { m_timeouts.remove(timeoutId); }
+    bool addTimeout(int timeoutId, DOMTimer& timer) { return m_timeouts.add(timeoutId, &timer).isNewEntry; }
+    RefPtr<DOMTimer> takeTimeout(int timeoutId) { return m_timeouts.take(timeoutId); }
     DOMTimer* findTimeout(int timeoutId) { return m_timeouts.get(timeoutId); }
 
     virtual JSC::VM& vm() = 0;
@@ -266,6 +267,11 @@ public:
     int timerNestingLevel() const { return m_timerNestingLevel; }
     void setTimerNestingLevel(int timerNestingLevel) { m_timerNestingLevel = timerNestingLevel; }
 
+    RejectedPromiseTracker* rejectedPromiseTracker()
+    {
+        return m_rejectedPromiseTracker.get();
+    }
+
     RejectedPromiseTracker* ensureRejectedPromiseTracker()
     {
         if (m_rejectedPromiseTracker)
@@ -273,7 +279,7 @@ public:
         return ensureRejectedPromiseTrackerSlow();
     }
 
-    WEBCORE_EXPORT JSC::JSGlobalObject* globalObject();
+    WEBCORE_EXPORT JSC::JSGlobalObject* globalObject() const;
 
     WEBCORE_EXPORT String domainForCachePartition() const;
     void setDomainForCachePartition(String&& domain) { m_domainForCachePartition = WTFMove(domain); }
@@ -316,10 +322,13 @@ public:
     WEBCORE_EXPORT HasResourceAccess canAccessResource(ResourceType) const;
 
     enum NotificationCallbackIdentifierType { };
-    using NotificationCallbackIdentifier = ObjectIdentifier<NotificationCallbackIdentifierType>;
+    using NotificationCallbackIdentifier = AtomicObjectIdentifier<NotificationCallbackIdentifierType>;
 
     WEBCORE_EXPORT NotificationCallbackIdentifier addNotificationCallback(CompletionHandler<void()>&&);
     WEBCORE_EXPORT CompletionHandler<void()> takeNotificationCallback(NotificationCallbackIdentifier);
+
+    void addDeferredPromise(Ref<DeferredPromise>&&);
+    RefPtr<DeferredPromise> takeDeferredPromise(DeferredPromise*);
 
 protected:
     class AddConsoleMessageTask : public Task {
@@ -342,6 +351,7 @@ protected:
     ReasonForSuspension reasonForSuspendingActiveDOMObjects() const { return m_reasonForSuspendingActiveDOMObjects; }
 
     bool hasPendingActivity() const;
+    WEBCORE_EXPORT void addToContextsMap();
     void removeFromContextsMap();
     void removeRejectedPromiseTracker();
     void regenerateIdentifier();
@@ -357,7 +367,9 @@ private:
     virtual void refScriptExecutionContext() = 0;
     virtual void derefScriptExecutionContext() = 0;
 
-    enum class ShouldContinue { No, Yes };
+    void dispatchMessagePortEvents();
+
+    enum class ShouldContinue : bool { No, Yes };
     void forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>&) const;
 
     RejectedPromiseTracker* ensureRejectedPromiseTrackerSlow();
@@ -368,13 +380,11 @@ private:
     HashSet<ContextDestructionObserver*> m_destructionObservers;
     HashSet<ActiveDOMObject*> m_activeDOMObjects;
 
-    HashMap<int, Ref<DOMTimer>> m_timeouts;
+    HashMap<int, RefPtr<DOMTimer>> m_timeouts;
 
     struct PendingException;
     std::unique_ptr<Vector<std::unique_ptr<PendingException>>> m_pendingExceptions;
     std::unique_ptr<RejectedPromiseTracker> m_rejectedPromiseTracker;
-
-    ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
 
     std::unique_ptr<PublicURLManager> m_publicURLManager;
 
@@ -383,11 +393,7 @@ private:
     int m_circularSequentialID { 0 };
     int m_timerNestingLevel { 0 };
 
-    bool m_activeDOMObjectsAreSuspended { false };
-    bool m_activeDOMObjectsAreStopped { false };
-    bool m_inDispatchErrorEvent { false };
-    mutable bool m_activeDOMObjectAdditionForbidden { false };
-    bool m_willprocessMessageWithMessagePortsSoon { false };
+    Vector<CompletionHandler<void()>> m_processMessageWithMessagePortsSoonHandlers;
 
 #if ASSERT_ENABLED
     bool m_inScriptExecutionContextDestructor { false };
@@ -401,10 +407,18 @@ private:
     String m_domainForCachePartition;
     mutable ScriptExecutionContextIdentifier m_identifier;
 
-    bool m_hasLoggedAuthenticatedEncryptionWarning { false };
-    StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
-
     HashMap<NotificationCallbackIdentifier, CompletionHandler<void()>> m_notificationCallbacks;
+    HashSet<Ref<DeferredPromise>> m_deferredPromises;
+
+    StorageBlockingPolicy m_storageBlockingPolicy { StorageBlockingPolicy::AllowAll };
+    ReasonForSuspension m_reasonForSuspendingActiveDOMObjects { static_cast<ReasonForSuspension>(-1) };
+
+    bool m_activeDOMObjectsAreSuspended { false };
+    bool m_activeDOMObjectsAreStopped { false };
+    bool m_inDispatchErrorEvent { false };
+    mutable bool m_activeDOMObjectAdditionForbidden { false };
+    bool m_willprocessMessageWithMessagePortsSoon { false };
+    bool m_hasLoggedAuthenticatedEncryptionWarning { false };
 };
 
 WebCoreOpaqueRoot root(ScriptExecutionContext*);

@@ -22,7 +22,6 @@
 
 #if USE(ATSPI)
 #include "AXObjectCache.h"
-#include "AccessibilityAtspiEnums.h"
 #include "AccessibilityAtspiInterfaces.h"
 #include "AccessibilityObjectInterface.h"
 #include "AccessibilityRootAtspi.h"
@@ -51,7 +50,7 @@ static inline bool roleIsTextType(AccessibilityRole role)
 {
     return role == AccessibilityRole::Paragraph
         || role == AccessibilityRole::Heading
-        || role == AccessibilityRole::Div
+        || role == AccessibilityRole::Generic
         || role == AccessibilityRole::Cell
         || role == AccessibilityRole::Link
         || role == AccessibilityRole::WebCoreLink
@@ -150,7 +149,7 @@ void AccessibilityObjectAtspi::elementDestroyed()
     AccessibilityAtspi::singleton().unregisterObject(*this);
 }
 
-static unsigned atspiRole(AccessibilityRole role)
+static Atspi::Role atspiRole(AccessibilityRole role)
 {
     switch (role) {
     case AccessibilityRole::Annotation:
@@ -292,7 +291,8 @@ static unsigned atspiRole(AccessibilityRole role)
     case AccessibilityRole::Footnote:
         return Atspi::Role::Footnote;
     case AccessibilityRole::ApplicationTextGroup:
-    case AccessibilityRole::Div:
+    case AccessibilityRole::Code:
+    case AccessibilityRole::Generic:
     case AccessibilityRole::Pre:
     case AccessibilityRole::SVGText:
     case AccessibilityRole::TextGroup:
@@ -411,10 +411,8 @@ GDBusInterfaceVTable AccessibilityObjectAtspi::s_accessibleFunctions = {
         else if (!g_strcmp0(methodName, "GetState")) {
             GVariantBuilder builder = G_VARIANT_BUILDER_INIT(G_VARIANT_TYPE("(au)"));
 
-            auto states = atspiObject->state();
             g_variant_builder_open(&builder, G_VARIANT_TYPE("au"));
-            g_variant_builder_add(&builder, "u", static_cast<uint32_t>(states & 0xffffffff));
-            g_variant_builder_add(&builder, "u", static_cast<uint32_t>(states >> 32));
+            atspiObject->buildStates(&builder);
             g_variant_builder_close(&builder);
 
             g_dbus_method_invocation_return_value(invocation, g_variant_builder_end(&builder));
@@ -739,94 +737,92 @@ static bool shouldIncludeOrientationState(const AXCoreObject& coreObject)
         || coreObject.isSlider();
 }
 
-uint64_t AccessibilityObjectAtspi::state() const
+OptionSet<Atspi::State> AccessibilityObjectAtspi::states() const
 {
-    uint64_t states = 0;
-
-    auto addState = [&](Atspi::State atspiState) {
-        states |= (G_GUINT64_CONSTANT(1) << atspiState);
-    };
+    OptionSet<Atspi::State> states;
 
     if (!m_coreObject) {
-        addState(Atspi::State::Defunct);
+        states.add(Atspi::State::Defunct);
         return states;
     }
 
+    auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
+
     if (m_coreObject->isEnabled()) {
-        addState(Atspi::State::Enabled);
-        addState(Atspi::State::Sensitive);
+        states.add(Atspi::State::Enabled);
+        states.add(Atspi::State::Sensitive);
     }
 
     if (m_coreObject->isVisible()) {
-        addState(Atspi::State::Visible);
+        states.add(Atspi::State::Visible);
         if (!m_coreObject->isOffScreen())
-            addState(Atspi::State::Showing);
+            states.add(Atspi::State::Showing);
     }
 
     if (m_coreObject->isSelectedOptionActive() || m_coreObject->currentState() != AccessibilityCurrentState::False)
-        addState(Atspi::State::Active);
+        states.add(Atspi::State::Active);
 
     if (m_coreObject->canSetFocusAttribute())
-        addState(Atspi::State::Focusable);
+        states.add(Atspi::State::Focusable);
 
     if (m_coreObject->isFocused() && !m_coreObject->activeDescendant())
-        addState(Atspi::State::Focused);
-    else if (m_coreObject->isActiveDescendantOfFocusedContainer()) {
-        addState(Atspi::State::Focusable);
-        addState(Atspi::State::Focused);
+        states.add(Atspi::State::Focused);
+    else if (liveObject->isActiveDescendantOfFocusedContainer()) {
+        states.add(Atspi::State::Focusable);
+        states.add(Atspi::State::Focused);
     }
 
     if (m_coreObject->canSetValueAttribute()) {
         if (m_coreObject->supportsChecked())
-            addState(Atspi::State::Checkable);
+            states.add(Atspi::State::Checkable);
 
         if (m_coreObject->isTextControl() || m_coreObject->isNonNativeTextControl())
-            addState(Atspi::State::Editable);
-    } else if (m_coreObject->supportsReadOnly())
-        addState(Atspi::State::ReadOnly);
+            states.add(Atspi::State::Editable);
+    } else if (liveObject && liveObject->supportsReadOnly())
+        states.add(Atspi::State::ReadOnly);
 
     if (m_coreObject->isChecked())
-        addState(Atspi::State::Checked);
+        states.add(Atspi::State::Checked);
 
     if (m_coreObject->isPressed())
-        addState(Atspi::State::Pressed);
+        states.add(Atspi::State::Pressed);
 
     if (m_coreObject->isRequired())
-        addState(Atspi::State::Required);
+        states.add(Atspi::State::Required);
 
     if (m_coreObject->roleValue() == AccessibilityRole::TextArea || m_coreObject->ariaIsMultiline())
-        addState(Atspi::State::MultiLine);
+        states.add(Atspi::State::MultiLine);
     else if (m_coreObject->roleValue() == AccessibilityRole::TextField || m_coreObject->roleValue() == AccessibilityRole::SearchField)
-        addState(Atspi::State::SingleLine);
+        states.add(Atspi::State::SingleLine);
 
     if (m_coreObject->isTextControl())
-        addState(Atspi::State::SelectableText);
+        states.add(Atspi::State::SelectableText);
 
     if (m_coreObject->canSetSelectedAttribute())
-        addState(Atspi::State::Selectable);
+        states.add(Atspi::State::Selectable);
 
     if (m_coreObject->isMultiSelectable())
-        addState(Atspi::State::Multiselectable);
+        states.add(Atspi::State::Multiselectable);
 
     if (m_coreObject->isSelected())
-        addState(Atspi::State::Selected);
+        states.add(Atspi::State::Selected);
 
     if (m_coreObject->canSetExpandedAttribute())
-        addState(Atspi::State::Expandable);
+        states.add(Atspi::State::Expandable);
 
     if (m_coreObject->isExpanded())
-        addState(Atspi::State::Expanded);
+        states.add(Atspi::State::Expanded);
 
     if (m_coreObject->hasPopup())
-        addState(Atspi::State::HasPopup);
+        states.add(Atspi::State::HasPopup);
 
     if (shouldIncludeOrientationState(*m_coreObject)) {
         switch (m_coreObject->orientation()) {
         case AccessibilityOrientation::Horizontal:
-            addState(Atspi::State::Horizontal);
+            states.add(Atspi::State::Horizontal);
             break;
         case AccessibilityOrientation::Vertical:
-            addState(Atspi::State::Vertical);
+            states.add(Atspi::State::Vertical);
             break;
         case AccessibilityOrientation::Undefined:
             break;
@@ -834,21 +830,21 @@ uint64_t AccessibilityObjectAtspi::state() const
     }
 
     if (m_coreObject->isIndeterminate())
-        addState(Atspi::State::Indeterminate);
+        states.add(Atspi::State::Indeterminate);
     else if ((m_coreObject->isCheckboxOrRadio() || m_coreObject->isMenuItem() || m_coreObject->isToggleButton()) && m_coreObject->checkboxOrRadioValue() == AccessibilityButtonState::Mixed)
-        addState(Atspi::State::Indeterminate);
+        states.add(Atspi::State::Indeterminate);
 
     if (m_coreObject->isModalNode())
-        addState(Atspi::State::Modal);
+        states.add(Atspi::State::Modal);
 
     if (m_coreObject->isBusy())
-        addState(Atspi::State::Busy);
+        states.add(Atspi::State::Busy);
 
     if (m_coreObject->invalidStatus() != "false"_s)
-        addState(Atspi::State::InvalidEntry);
+        states.add(Atspi::State::InvalidEntry);
 
-    if (m_coreObject->supportsAutoComplete() && m_coreObject->autoCompleteValue() != "none"_s)
-        addState(Atspi::State::SupportsAutocompletion);
+    if (liveObject && liveObject->supportsAutoComplete() && liveObject->autoCompleteValue() != "none"_s)
+        states.add(Atspi::State::SupportsAutocompletion);
 
     return states;
 }
@@ -879,6 +875,8 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
 #endif
     if (!m_coreObject)
         return map;
+
+    RefPtr liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
 
     String tagName = m_coreObject->tagName();
     if (!tagName.isEmpty())
@@ -925,7 +923,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     if (!placeholder.isEmpty())
         map.add("placeholder-text"_s, placeholder);
 
-    if (m_coreObject->supportsAutoComplete())
+    if (liveObject && liveObject->supportsAutoComplete())
         map.add("autocomplete"_s, m_coreObject->autoCompleteValue());
 
     if (m_coreObject->supportsHasPopup())
@@ -985,7 +983,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
         // to be obtainable in the same fashion as an ARIA landmark, fall back on the computedRoleString.
         // We also want to do this for the style-format-group element types so that the type of format
         // group it is doesn't get lost to a generic platform role.
-        if (m_coreObject->ariaRoleAttribute() == AccessibilityRole::Unknown && (m_coreObject->isLandmark() || m_coreObject->isStyleFormatGroup()))
+        if (liveObject && liveObject->ariaRoleAttribute() == AccessibilityRole::Unknown && (liveObject->isLandmark() || liveObject->isStyleFormatGroup()))
             map.set("xml-roles"_s, computedRoleString);
     }
 
@@ -1000,16 +998,17 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     if (m_coreObject->supportsDragging())
         map.add("grabbed"_s, m_coreObject->isGrabbed() ? "true"_s : "false"_s);
 
-    String keyShortcuts = m_coreObject->keyShortcutsValue();
+    String keyShortcuts = m_coreObject->keyShortcuts();
     if (!keyShortcuts.isEmpty())
         map.add("keyshortcuts"_s, keyShortcuts);
 
-    if (m_coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSuperscript) || m_coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSubscript))
+    if (liveObject && (liveObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSuperscript) || liveObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSubscript)))
         map.add("multiscript-type"_s, "pre"_s);
-    else if (m_coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSuperscript) || m_coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSubscript))
+    else if (liveObject && (liveObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSuperscript) || liveObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSubscript)))
         map.add("multiscript-type"_s, "post"_s);
 
-    if (auto* liveContainer = m_coreObject->liveRegionAncestor(false)) {
+    auto* liveContainer = liveObject ? liveObject->liveRegionAncestor(false) : nullptr;
+    if (liveContainer) {
         auto liveStatus = liveContainer->liveRegionStatus();
         map.add("container-live"_s, liveStatus);
         auto relevant = liveContainer->liveRegionRelevant();
@@ -1039,9 +1038,9 @@ void AccessibilityObjectAtspi::buildAttributes(GVariantBuilder* builder) const
         g_variant_builder_add(builder, "{ss}", it.key.utf8().data(), it.value.utf8().data());
 }
 
-HashMap<uint32_t, Vector<RefPtr<AccessibilityObjectAtspi>>> AccessibilityObjectAtspi::relationMap() const
+RelationMap AccessibilityObjectAtspi::relationMap() const
 {
-    HashMap<uint32_t, Vector<RefPtr<AccessibilityObjectAtspi>>> map;
+    RelationMap map;
     if (!m_coreObject)
         return map;
 
@@ -1069,32 +1068,32 @@ HashMap<uint32_t, Vector<RefPtr<AccessibilityObjectAtspi>>> AccessibilityObjectA
         }
     } else if (!m_coreObject->correspondingControlForLabelElement())
         ariaLabelledByElements = m_coreObject->labelledByObjects();
-    addRelation(Atspi::LabelledBy, ariaLabelledByElements);
+    addRelation(Atspi::Relation::LabelledBy, ariaLabelledByElements);
 
     AccessibilityObject::AccessibilityChildrenVector labelForObjects;
     if (auto* control = m_coreObject->correspondingControlForLabelElement())
         labelForObjects.append(control);
     else
         labelForObjects = m_coreObject->labelForObjects();
-    addRelation(Atspi::LabelFor, labelForObjects);
+    addRelation(Atspi::Relation::LabelFor, labelForObjects);
 
-    addRelation(Atspi::FlowsTo, m_coreObject->flowToObjects());
-    addRelation(Atspi::FlowsFrom, m_coreObject->flowFromObjects());
+    addRelation(Atspi::Relation::FlowsTo, m_coreObject->flowToObjects());
+    addRelation(Atspi::Relation::FlowsFrom, m_coreObject->flowFromObjects());
 
-    addRelation(Atspi::DescribedBy, m_coreObject->describedByObjects());
-    addRelation(Atspi::DescriptionFor, m_coreObject->descriptionForObjects());
+    addRelation(Atspi::Relation::DescribedBy, m_coreObject->describedByObjects());
+    addRelation(Atspi::Relation::DescriptionFor, m_coreObject->descriptionForObjects());
 
-    addRelation(Atspi::ControllerFor, m_coreObject->controlledObjects());
-    addRelation(Atspi::ControlledBy, m_coreObject->controllers());
+    addRelation(Atspi::Relation::ControllerFor, m_coreObject->controlledObjects());
+    addRelation(Atspi::Relation::ControlledBy, m_coreObject->controllers());
 
-    addRelation(Atspi::NodeParentOf, m_coreObject->ownedObjects());
-    addRelation(Atspi::NodeChildOf, m_coreObject->owners());
+    addRelation(Atspi::Relation::NodeParentOf, m_coreObject->ownedObjects());
+    addRelation(Atspi::Relation::NodeChildOf, m_coreObject->owners());
 
-    addRelation(Atspi::Details, m_coreObject->detailedByObjects());
-    addRelation(Atspi::DetailsFor, m_coreObject->detailsForObjects());
+    addRelation(Atspi::Relation::Details, m_coreObject->detailedByObjects());
+    addRelation(Atspi::Relation::DetailsFor, m_coreObject->detailsForObjects());
 
-    addRelation(Atspi::ErrorMessage, m_coreObject->errorMessageObjects());
-    addRelation(Atspi::ErrorFor, m_coreObject->errorMessageForObjects());
+    addRelation(Atspi::Relation::ErrorMessage, m_coreObject->errorMessageObjects());
+    addRelation(Atspi::Relation::ErrorFor, m_coreObject->errorMessageForObjects());
 
     return map;
 }
@@ -1105,7 +1104,7 @@ void AccessibilityObjectAtspi::buildRelationSet(GVariantBuilder* builder) const
         GVariantBuilder arrayBuilder = G_VARIANT_BUILDER_INIT(G_VARIANT_TYPE("a(so)"));
         for (const auto& atspiObject : it.value)
             g_variant_builder_add(&arrayBuilder, "@(so)", atspiObject->reference());
-        g_variant_builder_add(builder, "(ua(so))", it.key, &arrayBuilder);
+        g_variant_builder_add(builder, "(ua(so))", static_cast<unsigned>(it.key), &arrayBuilder);
     }
 }
 
@@ -1139,6 +1138,13 @@ void AccessibilityObjectAtspi::buildInterfaces(GVariantBuilder* builder) const
         g_variant_builder_add(builder, "s", webkit_collection_interface.name);
 }
 
+void AccessibilityObjectAtspi::buildStates(GVariantBuilder* builder) const
+{
+    uint64_t states = this->states().toRaw();
+    g_variant_builder_add(builder, "u", static_cast<uint32_t>(states & 0xffffffff));
+    g_variant_builder_add(builder, "u", static_cast<uint32_t>(states >> 32));
+}
+
 void AccessibilityObjectAtspi::serialize(GVariantBuilder* builder) const
 {
     g_variant_builder_add(builder, "(so)", AccessibilityAtspi::singleton().uniqueName(), m_path.utf8().data());
@@ -1149,9 +1155,9 @@ void AccessibilityObjectAtspi::serialize(GVariantBuilder* builder) const
     // Do not set the children count in cache, because children are handled by children-changed signals.
     g_variant_builder_add(builder, "i", -1);
 
-    GVariantBuilder interfaces = G_VARIANT_BUILDER_INIT(G_VARIANT_TYPE("as"));
-    buildInterfaces(&interfaces);
-    g_variant_builder_add(builder, "@as", g_variant_new("as", &interfaces));
+    GVariantBuilder interfacesBuilder = G_VARIANT_BUILDER_INIT(G_VARIANT_TYPE("as"));
+    buildInterfaces(&interfacesBuilder);
+    g_variant_builder_add(builder, "@as", g_variant_new("as", &interfacesBuilder));
 
     g_variant_builder_add(builder, "s", name().data());
 
@@ -1159,11 +1165,9 @@ void AccessibilityObjectAtspi::serialize(GVariantBuilder* builder) const
 
     g_variant_builder_add(builder, "s", description().data());
 
-    GVariantBuilder states = G_VARIANT_BUILDER_INIT(G_VARIANT_TYPE("au"));
-    auto atspiStates = state();
-    g_variant_builder_add(&states, "u", static_cast<uint32_t>(atspiStates & 0xffffffff));
-    g_variant_builder_add(&states, "u", static_cast<uint32_t>(atspiStates >> 32));
-    g_variant_builder_add(builder, "@au", g_variant_builder_end(&states));
+    GVariantBuilder statesBuilder = G_VARIANT_BUILDER_INIT(G_VARIANT_TYPE("au"));
+    buildStates(&statesBuilder);
+    g_variant_builder_add(builder, "@au", g_variant_builder_end(&statesBuilder));
 }
 
 void AccessibilityObjectAtspi::childAdded(AccessibilityObjectAtspi& child)
@@ -1195,14 +1199,16 @@ void AccessibilityObjectAtspi::loadEvent(const char* event)
     AccessibilityAtspi::singleton().loadEvent(*this, event);
 }
 
-std::optional<unsigned> AccessibilityObjectAtspi::effectiveRole() const
+std::optional<Atspi::Role> AccessibilityObjectAtspi::effectiveRole() const
 {
-    if (m_coreObject->isPasswordField())
+    if (m_coreObject->isSecureField())
         return Atspi::Role::PasswordText;
+
+    RefPtr liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
 
     switch (m_coreObject->roleValue()) {
     case AccessibilityRole::Form:
-        if (m_coreObject->ariaRoleAttribute() != AccessibilityRole::Unknown)
+        if (liveObject && liveObject->ariaRoleAttribute() != AccessibilityRole::Unknown)
             return Atspi::Role::Landmark;
         break;
     case AccessibilityRole::ListMarker: {
@@ -1218,19 +1224,19 @@ std::optional<unsigned> AccessibilityObjectAtspi::effectiveRole() const
             return Atspi::Role::TableRow;
         if (m_coreObject->isMathTableCell())
             return Atspi::Role::TableCell;
-        if (m_coreObject->isMathSubscriptSuperscript() || m_coreObject->isMathMultiscript())
+        if (m_coreObject->isMathUnderOver() || m_coreObject->isMathSubscriptSuperscript() || m_coreObject->isMathMultiscript())
             return Atspi::Role::Section;
         if (m_coreObject->isMathFraction())
             return Atspi::Role::MathFraction;
         if (m_coreObject->isMathSquareRoot() || m_coreObject->isMathRoot())
             return Atspi::Role::MathRoot;
-        if (m_coreObject->isMathScriptObject(AccessibilityMathScriptObjectType::Subscript)
-            || m_coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSubscript)
-            || m_coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSubscript))
+        if (liveObject && (liveObject->isMathScriptObject(AccessibilityMathScriptObjectType::Subscript)
+            || liveObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSubscript)
+            || liveObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSubscript)))
             return Atspi::Role::Subscript;
-        if (m_coreObject->isMathScriptObject(AccessibilityMathScriptObjectType::Superscript)
-            || m_coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSuperscript)
-            || m_coreObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSuperscript))
+        if (liveObject && (liveObject->isMathScriptObject(AccessibilityMathScriptObjectType::Superscript)
+            || liveObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PreSuperscript)
+            || liveObject->isMathMultiscriptObject(AccessibilityMathMultiscriptObjectType::PostSuperscript)))
             return Atspi::Role::Superscript;
         if (m_coreObject->isMathToken())
             return Atspi::Role::Static;
@@ -1247,7 +1253,7 @@ std::optional<unsigned> AccessibilityObjectAtspi::effectiveRole() const
     return std::nullopt;
 }
 
-unsigned AccessibilityObjectAtspi::role() const
+Atspi::Role AccessibilityObjectAtspi::role() const
 {
     if (!m_coreObject)
         return Atspi::Role::InvalidRole;
@@ -1338,7 +1344,7 @@ const char* AccessibilityObjectAtspi::effectiveLocalizedRoleName() const
     case Atspi::Role::TableCell:
         return AccessibilityAtspi::localizedRoleName(AccessibilityRole::Cell);
     case Atspi::Role::Section:
-        return AccessibilityAtspi::localizedRoleName(AccessibilityRole::Div);
+        return AccessibilityAtspi::localizedRoleName(AccessibilityRole::Generic);
     case Atspi::Role::MathFraction:
         return _("math fraction");
     case Atspi::Role::MathRoot:
@@ -1418,7 +1424,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
         return AccessibilityObjectInclusion::IgnoreObject;
 
     // Entries and password fields have extraneous children which we want to ignore.
-    if (parent->isPasswordField() || parent->isTextControl())
+    if (parent->isSecureField() || parent->isTextControl())
         return AccessibilityObjectInclusion::IgnoreObject;
 
     // We expose the slider as a whole but not its value indicator.

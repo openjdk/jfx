@@ -27,12 +27,10 @@
 #include "CSSNumericArray.h"
 
 #include "ExceptionOr.h"
+#include <wtf/FixedVector.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
-
-#if ENABLE(CSS_TYPED_OM)
-
-#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
@@ -58,10 +56,10 @@ CSSNumericArray::CSSNumericArray(FixedVector<Ref<CSSNumericValue>>&& values)
 {
 }
 
-ExceptionOr<Ref<CSSNumericValue>> CSSNumericArray::item(size_t index)
+RefPtr<CSSNumericValue> CSSNumericArray::item(size_t index)
 {
     if (index >= m_array.size())
-        return Exception { RangeError, makeString("Index ", index, " exceeds index range for CSSNumericArray.") };
+        return nullptr;
     return m_array[index].copyRef();
 }
 
@@ -72,5 +70,3 @@ void CSSNumericArray::forEach(Function<void(const CSSNumericValue&, bool first)>
 }
 
 } // namespace WebCore
-
-#endif

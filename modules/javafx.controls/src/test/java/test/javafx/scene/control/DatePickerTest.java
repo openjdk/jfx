@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -733,6 +733,33 @@ public class DatePickerTest {
 
         assertEquals(LocalDate.of(2021, 11, 24), datePicker.getValue());
         assertEquals("11/24/2021", datePicker.getEditor().getText());
+
+        stageLoader.dispose();
+    }
+
+    /**
+     * When DatePicker looses focus with misformatted text in the editor,
+     * checks that the value is not changed, and the text is reverted to the value
+     */
+    @Test
+    public void testFocusLostWithTypo() {
+        Button button = new Button();
+        StageLoader stageLoader = new StageLoader(new HBox(datePicker, button));
+
+        // initial value
+        datePicker.setValue(LocalDate.of(2015, 03, 25));
+        assertEquals("3/25/2015", datePicker.getEditor().getText());
+
+        // set misformatted text
+        datePicker.requestFocus();
+        datePicker.getEditor().setText("11/24/20xx");
+
+        // loosing focus triggers cancelEdit() because the text cannot be parsed
+        button.requestFocus();
+
+        // check that value remains unchanged, and text is reverted
+        assertEquals(LocalDate.of(2015, 03, 25), datePicker.getValue());
+        assertEquals("3/25/2015", datePicker.getEditor().getText());
 
         stageLoader.dispose();
     }

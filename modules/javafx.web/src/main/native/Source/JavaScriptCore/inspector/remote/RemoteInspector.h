@@ -157,7 +157,11 @@ public:
     ProcessID parentProcessIdentifier() const { return m_parentProcessIdentifier; }
     RetainPtr<CFDataRef> parentProcessAuditData() const { return m_parentProcessAuditData; }
     void setParentProcessInformation(ProcessID, RetainPtr<CFDataRef> auditData);
-    void setParentProcessInfomationIsDelayed();
+    std::optional<audit_token_t> parentProcessAuditToken();
+
+    void setUsePerTargetPresentingApplicationPIDs(bool usePerTargetPresentingApplicationPIDs) { m_usePerTargetPresentingApplicationPIDs = usePerTargetPresentingApplicationPIDs; }
+
+    bool isSimulatingCustomerInstall() const { return m_simulateCustomerInstall; }
 #endif
 
     void updateTargetListing(TargetID);
@@ -190,6 +194,7 @@ private:
     void initialize();
     void setPendingMainThreadInitialization(bool pendingInitialization);
     void setupXPCConnectionIfNeeded();
+    void updateFromGlobalNotifyState() WTF_REQUIRES_LOCK(m_mutex);
 #endif
 #if USE(GLIB)
     void setupConnection(Ref<SocketConnection>&&);
@@ -234,6 +239,7 @@ private:
     void receivedAutomaticInspectionConfigurationMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
     void receivedAutomaticInspectionRejectMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
     void receivedAutomationSessionRequestMessage(NSDictionary *userInfo) WTF_REQUIRES_LOCK(m_mutex);
+    void receivedPingSuccessMessage() WTF_REQUIRES_LOCK(m_mutex);
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
     HashMap<String, CallHandler>& dispatchMap() final;
@@ -271,7 +277,7 @@ private:
 
 #if PLATFORM(COCOA)
     RefPtr<RemoteInspectorXPCConnection> m_relayConnection;
-    bool m_shouldReconnectToRelayOnFailure { false };
+    bool m_shouldReconnectToRelayOnFailure WTF_GUARDED_BY_LOCK(m_mutex) { false };
 
     bool m_pendingMainThreadInitialization WTF_GUARDED_BY_LOCK(m_mutex) { false };
 #endif
@@ -304,6 +310,8 @@ private:
 #if PLATFORM(COCOA)
     RetainPtr<CFDataRef> m_parentProcessAuditData;
     bool m_messageDataTypeChunkSupported { false };
+    bool m_simulateCustomerInstall { false };
+    bool m_usePerTargetPresentingApplicationPIDs { false };
 #endif
     bool m_shouldSendParentProcessInformation { false };
     bool m_automaticInspectionEnabled WTF_GUARDED_BY_LOCK(m_mutex) { false };

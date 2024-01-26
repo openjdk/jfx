@@ -38,8 +38,8 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "ExtensionStyleSheets.h"
-#include "Frame.h"
-#include "FrameLoaderClient.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Page.h"
 #include "ResourceLoadInfo.h"
 #include "ScriptController.h"
@@ -150,7 +150,7 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
     return actionsStruct;
 }
 
-auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& resourceLoadInfo) const -> Vector<ActionsFromContentRuleList>
+auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& resourceLoadInfo, const RuleListFilter& ruleListFilter) const -> Vector<ActionsFromContentRuleList>
 {
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
     MonotonicTime addedTimeStart = MonotonicTime::now();
@@ -161,14 +161,17 @@ auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& re
         return { };
 
     const String& urlString = resourceLoadInfo.resourceURL.string();
-    ASSERT_WITH_MESSAGE(urlString.isAllASCII(), "A decoded URL should only contain ASCII characters. The matching algorithm assumes the input is ASCII.");
+    ASSERT_WITH_MESSAGE(urlString.containsOnlyASCII(), "A decoded URL should only contain ASCII characters. The matching algorithm assumes the input is ASCII.");
 
     Vector<ActionsFromContentRuleList> actionsVector;
     actionsVector.reserveInitialCapacity(m_contentExtensions.size());
     ASSERT(!(resourceLoadInfo.getResourceFlags() & ActionConditionMask));
     const ResourceFlags flags = resourceLoadInfo.getResourceFlags() | ActionConditionMask;
-    for (auto& contentExtension : m_contentExtensions.values())
+    for (auto& [identifier, contentExtension] : m_contentExtensions) {
+        if (ruleListFilter(identifier) == ShouldSkipRuleList::Yes)
+            continue;
         actionsVector.uncheckedAppend(actionsFromContentRuleList(contentExtension.get(), urlString, resourceLoadInfo, flags));
+    }
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
     MonotonicTime addedTimeEnd = MonotonicTime::now();
     dataLogF("Time added: %f microseconds %s \n", (addedTimeEnd - addedTimeStart).microseconds(), resourceLoadInfo.resourceURL.string().utf8().data());
@@ -188,7 +191,36 @@ StyleSheetContents* ContentExtensionsBackend::globalDisplayNoneStyleSheet(const 
     return contentExtension ? contentExtension->globalDisplayNoneStyleSheet() : nullptr;
 }
 
-ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom)
+std::optional<String> customTrackerBlockingMessageForConsole(const ContentRuleListResults& results, const URL& requestURL, const URL& documentURL)
+{
+#if ENABLE(ADVANCED_PRIVACY_PROTECTIONS)
+    bool blockedKnownTracker = results.results.containsIf([](auto& identifierAndResult) {
+        auto& [identifier, result] = identifierAndResult;
+        if (!result.blockedLoad)
+            return false;
+        return identifier.startsWith("com.apple."_s) && identifier.endsWith(".TrackingResourceRequestContentBlocker"_s);
+    });
+
+    if (!blockedKnownTracker)
+        return std::nullopt;
+
+    auto trackerBlockingMessage = "Blocked connection to known tracker"_s;
+    if (!requestURL.isEmpty() && !documentURL.isEmpty())
+        return makeString(trackerBlockingMessage, ' ', requestURL.string(), " in frame displaying "_s, documentURL.string());
+
+    if (!requestURL.isEmpty())
+        return makeString(trackerBlockingMessage, ' ', requestURL.string());
+
+    return trackerBlockingMessage;
+#else
+    UNUSED_PARAM(results);
+    UNUSED_PARAM(requestURL);
+    UNUSED_PARAM(documentURL);
+    return std::nullopt;
+#endif
+}
+
+ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter& ruleListFilter)
 {
     Document* currentDocument = nullptr;
     URL mainDocumentURL;
@@ -203,8 +235,10 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             && frame->isMainFrame()
             && resourceType == ResourceType::Document)
             mainDocumentURL = url;
-        else if (auto* mainDocument = frame->mainFrame().document())
+        else if (auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame())) {
+            if (auto* mainDocument = localFrame->document())
             mainDocumentURL = mainDocument->url();
+    }
     }
     if (currentDocument)
         frameURL = currentDocument->url();
@@ -212,7 +246,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
         frameURL = url;
 
     ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType, mainFrameContext };
-    auto actions = actionsForResourceLoad(resourceLoadInfo);
+    auto actions = actionsForResourceLoad(resourceLoadInfo, ruleListFilter);
 
     ContentRuleListResults results;
     if (page.httpsUpgradeEnabled())
@@ -276,7 +310,12 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
             currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Promoted URL from ", url.string(), " to ", newProtocol));
         }
         if (results.summary.blockedLoad) {
-            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Content blocker prevented frame displaying ", mainDocumentURL.string(), " from loading a resource from ", url.string()));
+            String consoleMessage;
+            if (auto message = customTrackerBlockingMessageForConsole(results, url, mainDocumentURL))
+                consoleMessage = WTFMove(*message);
+            else
+                consoleMessage = makeString("Content blocker prevented frame displaying ", mainDocumentURL.string(), " from loading a resource from ", url.string());
+            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, WTFMove(consoleMessage));
 
             // Quirk for content-blocker interference with Google's anti-flicker optimization (rdar://problem/45968770).
             // https://developers.google.com/optimize/
@@ -336,19 +375,18 @@ void applyResultsToRequest(ContentRuleListResults&& results, Page* page, Resourc
         request.setAllowCookies(false);
 
     if (results.summary.madeHTTPS) {
-        const URL& originalURL = request.url();
-        ASSERT(originalURL.protocolIs("http"_s));
-        ASSERT(!originalURL.port() || WTF::isDefaultPortForProtocol(originalURL.port().value(), originalURL.protocol()));
-
-        URL newURL = originalURL;
-        newURL.setProtocol("https"_s);
-        if (originalURL.port())
-            newURL.setPort(WTF::defaultPortForProtocol("https"_s).value());
-        request.setURL(newURL);
+        ASSERT(!request.url().port() || WTF::isDefaultPortForProtocol(request.url().port().value(), request.url().protocol()));
+        request.upgradeToHTTPS();
     }
 
+    std::sort(results.summary.modifyHeadersActions.begin(), results.summary.modifyHeadersActions.end(),
+        [] (const ModifyHeadersAction& a, const ModifyHeadersAction& b) {
+        return a.priority > b.priority;
+    });
+
+    HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType> headerNameToFirstOperationApplied;
     for (auto& action : results.summary.modifyHeadersActions)
-        action.applyToRequest(request);
+        action.applyToRequest(request, headerNameToFirstOperationApplied);
 
     for (auto& pair : results.summary.redirectActions)
         pair.first.applyToRequest(request, pair.second);

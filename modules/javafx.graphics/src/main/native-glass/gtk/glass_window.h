@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,14 @@
 #include <set>
 #include <vector>
 
+#include "DeletedMemDebug.h"
+
 #include "glass_view.h"
+
+enum WindowManager {
+    COMPIZ,
+    UNKNOWN
+};
 
 enum WindowFrameType {
     TITLED,
@@ -44,12 +51,6 @@ enum WindowType {
     NORMAL,
     UTILITY,
     POPUP
-};
-
-enum request_type {
-    REQUEST_NONE,
-    REQUEST_RESIZABLE,
-    REQUEST_NOT_RESIZABLE
 };
 
 struct WindowFrameExtents {
@@ -68,7 +69,7 @@ enum BoundsType {
 
 struct WindowGeometry {
     WindowGeometry(): final_width(), final_height(),
-    refx(), refy(), gravity_x(), gravity_y(), current_width(), current_height(), extents() {}
+    size_assigned(false), x(), y(), gravity_x(), gravity_y(), extents() {}
     // estimate of the final width the window will get after all pending
     // configure requests are processed by the window manager
     struct {
@@ -81,26 +82,19 @@ struct WindowGeometry {
         BoundsType type;
     } final_height;
 
-    float refx;
-    float refy;
+    bool size_assigned;
+
+    int x;
+    int y;
     float gravity_x;
     float gravity_y;
 
-    // the last width which was configured or obtained from configure
-    // notification
-    int current_width;
-
-    // the last height which was configured or obtained from configure
-    // notification
-    int current_height;
-
     WindowFrameExtents extents;
-
 };
 
 class WindowContextTop;
 
-class WindowContext {
+class WindowContext : public DeletedMemDebug<0xCC> {
 public:
     virtual bool isEnabled() = 0;
     virtual bool hasIME() = 0;
@@ -112,10 +106,9 @@ public:
 
     virtual void enter_fullscreen() = 0;
     virtual void exit_fullscreen() = 0;
-    virtual void show_or_hide_children(bool) = 0;
     virtual void set_visible(bool) = 0;
     virtual bool is_visible() = 0;
-    virtual void set_bounds(int, int, bool, bool, int, int, int, int) = 0;
+    virtual void set_bounds(int, int, bool, bool, int, int, int, int, float, float) = 0;
     virtual void set_resizable(bool) = 0;
     virtual void request_focus() = 0;
     virtual void set_focusable(bool)= 0;
@@ -131,16 +124,16 @@ public:
     virtual void set_minimized(bool) = 0;
     virtual void set_maximized(bool) = 0;
     virtual void set_icon(GdkPixbuf*) = 0;
-    virtual void restack(bool) = 0;
+    virtual void to_front() = 0;
+    virtual void to_back() = 0;
     virtual void set_cursor(GdkCursor*) = 0;
     virtual void set_modal(bool, WindowContext* parent = NULL) = 0;
-    virtual void set_gravity(float, float) = 0;
     virtual void set_level(int) = 0;
     virtual void set_background(float, float, float) = 0;
 
+    virtual void process_realize() = 0;
     virtual void process_property_notify(GdkEventProperty*) = 0;
     virtual void process_configure(GdkEventConfigure*) = 0;
-    virtual void process_map() = 0;
     virtual void process_focus(GdkEventFocus*) = 0;
     virtual void process_destroy() = 0;
     virtual void process_delete() = 0;
@@ -154,6 +147,8 @@ public:
 
     virtual void notify_state(jint) = 0;
     virtual void notify_on_top(bool) {}
+    virtual void update_view_size() = 0;
+    virtual void notify_view_resize() = 0;
 
     virtual void add_child(WindowContextTop* child) = 0;
     virtual void remove_child(WindowContextTop* child) = 0;
@@ -173,7 +168,7 @@ public:
 
 class WindowContextBase: public WindowContext {
 
-    struct _XIM{
+    struct _XIM {
         XIM im;
         XIC ic;
         bool enabled;
@@ -186,12 +181,13 @@ protected:
     jobject jwindow;
     jobject jview;
     GtkWidget* gtk_widget;
-    GdkWindow* gdk_window;
+    GdkWindow* gdk_window = NULL;
     GdkWMFunction gdk_windowManagerFunctions;
 
     bool is_iconified;
     bool is_maximized;
     bool is_mouse_entered;
+    bool is_disabled;
 
     /*
      * sm_grab_window points to WindowContext holding a mouse grab.
@@ -224,8 +220,6 @@ public:
 
     void add_child(WindowContextTop*);
     void remove_child(WindowContextTop*);
-    void show_or_hide_children(bool);
-    void reparent_children(WindowContext* parent);
     void set_visible(bool);
     bool is_visible();
     bool set_view(jobject);
@@ -237,7 +231,6 @@ public:
     void set_level(int) {}
     void set_background(float, float, float);
 
-    void process_map() {}
     void process_focus(GdkEventFocus*);
     void process_destroy();
     void process_delete();
@@ -269,50 +262,35 @@ class WindowContextTop: public WindowContextBase {
     WindowType window_type;
     struct WindowContext *owner;
     WindowGeometry geometry;
-    struct _Resizable{// we can't use set/get gtk_window_resizable function
-        _Resizable(): request(REQUEST_NONE), value(true), prev(false),
-                minw(-1), minh(-1), maxw(-1), maxh(-1){}
-        request_type request; //request for future setResizable
+    struct _Resizable {// we can't use set/get gtk_window_resizable function
+        _Resizable(): value(true),
+                minw(-1), minh(-1), maxw(-1), maxh(-1) {}
         bool value; //actual value of resizable for a window
-        bool prev; //former resizable value (used in setEnabled for parents of modal window)
         int minw, minh, maxw, maxh; //minimum and maximum window width/height;
     } resizable;
 
-    bool frame_extents_initialized;
-    bool map_received;
-    bool location_assigned;
-    bool size_assigned;
     bool on_top;
-
-    struct _Size {
-        int width, height;
-        int client_width, client_height;
-    } requested_bounds;
-
-    bool is_null_extents() { return is_null_extents(geometry.extents); }
-
-    bool is_null_extents(WindowFrameExtents ex) {
-        return !ex.top && !ex.left && !ex.bottom && !ex.right;
-    }
+    bool is_fullscreen;
 
     static WindowFrameExtents normal_extents;
     static WindowFrameExtents utility_extents;
 
-    long event_serial;
-
+    WindowManager wmanager;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
-    void process_map();
+
+    void process_realize();
     void process_property_notify(GdkEventProperty*);
+    void process_state(GdkEventWindowState*);
     void process_configure(GdkEventConfigure*);
     void process_destroy();
-    void process_net_wm_property();
+    void work_around_compiz_state();
 
     WindowFrameExtents get_frame_extents();
 
     void set_minimized(bool);
     void set_maximized(bool);
-    void set_bounds(int, int, bool, bool, int, int, int, int);
+    void set_bounds(int, int, bool, bool, int, int, int, int, float, float);
     void set_resizable(bool);
     void request_focus();
     void set_focusable(bool);
@@ -322,12 +300,14 @@ public:
     void set_minimum_size(int, int);
     void set_maximum_size(int, int);
     void set_icon(GdkPixbuf*);
-    void restack(bool);
+    void to_front();
+    void to_back();
     void set_modal(bool, WindowContext* parent = NULL);
-    void set_gravity(float, float);
     void set_level(int);
     void set_visible(bool);
     void notify_on_top(bool);
+    void update_view_size();
+    void notify_view_resize();
 
     void enter_fullscreen();
     void exit_fullscreen();
@@ -336,24 +316,21 @@ public:
 
     GtkWindow *get_gtk_window();
     void detach_from_java();
-    void process_key(GdkEventKey*);
-    void process_mouse_button(GdkEventButton*);
+
 protected:
     void applyShapeMask(void*, uint width, uint height);
 private:
-    bool get_frame_extents_property(int *, int *, int *, int *);
     void request_frame_extents();
-    void activate_window();
-    bool update_frame_extents();
+    void update_frame_extents();
     void set_cached_extents(WindowFrameExtents ex);
     WindowFrameExtents get_cached_extents();
-    void window_configure(XWindowChanges *, unsigned int);
+    bool get_frame_extents_property(int *, int *, int *, int *);
     void update_window_constraints();
-    void set_window_resizable(bool);
     void update_ontop_tree(bool);
     bool on_top_inherited();
     bool effective_on_top();
-    void ensure_window_size();
+    void notify_window_move();
+    void notify_window_resize();
     WindowContextTop(WindowContextTop&);
     WindowContextTop& operator= (const WindowContextTop&);
 };
@@ -366,14 +343,18 @@ private:
 public:
     explicit EventsCounterHelper(WindowContext* context) {
         ctx = context;
-        ctx->increment_events_counter();
+        if (ctx != nullptr) {
+            ctx->increment_events_counter();
+        }
     }
     ~EventsCounterHelper() {
-        ctx->decrement_events_counter();
-        if (ctx->is_dead() && ctx->get_events_count() == 0) {
-            delete ctx;
+        if (ctx != nullptr) {
+            ctx->decrement_events_counter();
+            if (ctx->is_dead() && ctx->get_events_count() == 0) {
+                delete ctx;
+            }
+            ctx = NULL;
         }
-        ctx = NULL;
     }
 };
 

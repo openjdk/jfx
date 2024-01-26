@@ -55,10 +55,6 @@ const int MCOUNT = 6;
 typedef double* PlatformTransformationMatrix;
 #endif
 
-#if PLATFORM(WIN)
-struct D2D_MATRIX_3X2_F;
-typedef D2D_MATRIX_3X2_F D2D1_MATRIX_3X2_F;
-#endif
 
 namespace WTF {
 class TextStream;
@@ -106,6 +102,16 @@ public:
             { c, d, 0, 0 },
             { 0, 0, 1, 0 },
             { e, f, 0, 1 },
+        }
+    {
+    }
+
+    constexpr TransformationMatrix(double tx, double ty)
+        : m_matrix {
+            { 1, 0, 0, 0 },
+            { 0, 1, 0, 0 },
+            { 0, 0, 1, 0 },
+            { tx, ty, 0, 1 },
         }
     {
     }
@@ -276,11 +282,11 @@ public:
     TransformationMatrix& rotate3d(double x, double y, double z, double angle);
 
     WEBCORE_EXPORT TransformationMatrix& translate(double tx, double ty);
-    TransformationMatrix& translate3d(double tx, double ty, double tz);
+    WEBCORE_EXPORT TransformationMatrix& translate3d(double tx, double ty, double tz);
 
     // translation added with a post-multiply
     TransformationMatrix& translateRight(double tx, double ty);
-    TransformationMatrix& translateRight3d(double tx, double ty, double tz);
+    WEBCORE_EXPORT TransformationMatrix& translateRight3d(double tx, double ty, double tz);
 
     WEBCORE_EXPORT TransformationMatrix& flipX();
     WEBCORE_EXPORT TransformationMatrix& flipY();
@@ -340,10 +346,10 @@ public:
         }
     };
 
-    bool decompose2(Decomposed2Type&) const;
+    bool decompose2(Decomposed2Type&) const WARN_UNUSED_RETURN;
     void recompose2(const Decomposed2Type&);
 
-    bool decompose4(Decomposed4Type&) const;
+    bool decompose4(Decomposed4Type&) const WARN_UNUSED_RETURN;
     void recompose4(const Decomposed4Type&);
 
     WEBCORE_EXPORT void blend(const TransformationMatrix& from, double progress, CompositeOperation = CompositeOperation::Replace);
@@ -381,8 +387,6 @@ public:
                 m_matrix[3][3] == m2.m_matrix[3][3]);
     }
 
-    bool operator!=(const TransformationMatrix& other) const { return !(*this == other); }
-
     // *this = *this * t
     TransformationMatrix& operator*=(const TransformationMatrix& t)
     {
@@ -407,7 +411,7 @@ public:
 #endif
 
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS))
-    operator XFORM() const;
+    WEBCORE_EXPORT operator XFORM() const;
 #endif
 
     bool isIdentityOrTranslation() const

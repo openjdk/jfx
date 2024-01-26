@@ -42,18 +42,19 @@ enum class LinkIconType : uint8_t;
 
 struct LinkRelAttribute {
     Markable<LinkIconType, EnumMarkableTraits<LinkIconType>> iconType;
-    bool isStyleSheet : 1;
-    bool isAlternate : 1;
-    bool isDNSPrefetch : 1;
-    bool isLinkPreload : 1;
-    bool isLinkPreconnect : 1;
-    bool isLinkPrefetch : 1;
+    bool isStyleSheet : 1 { false };
+    bool isAlternate : 1 { false };
+    bool isDNSPrefetch : 1 { false };
+    bool isLinkModulePreload : 1 { false };
+    bool isLinkPreload : 1 { false };
+    bool isLinkPreconnect : 1 { false };
+    bool isLinkPrefetch : 1 { false };
 #if ENABLE(APPLICATION_MANIFEST)
-    bool isApplicationManifest : 1;
+    bool isApplicationManifest : 1 { false };
 #endif
 
-    LinkRelAttribute();
-    LinkRelAttribute(Document&, const String&);
+    LinkRelAttribute() = default;
+    LinkRelAttribute(Document&, StringView);
 
     static bool isSupported(Document&, StringView);
 };
@@ -64,6 +65,7 @@ inline bool operator==(const LinkRelAttribute& left, const LinkRelAttribute& rig
         && left.isStyleSheet == right.isStyleSheet
         && left.isAlternate == right.isAlternate
         && left.isDNSPrefetch == right.isDNSPrefetch
+        && left.isLinkModulePreload == right.isLinkModulePreload
         && left.isLinkPreload == right.isLinkPreload
         && left.isLinkPreconnect == right.isLinkPreconnect
         && left.isLinkPrefetch == right.isLinkPrefetch
@@ -71,11 +73,6 @@ inline bool operator==(const LinkRelAttribute& left, const LinkRelAttribute& rig
         && left.isApplicationManifest == right.isApplicationManifest
 #endif
         ;
-}
-
-inline bool operator!=(const LinkRelAttribute& left, const LinkRelAttribute& right)
-{
-    return !(left == right);
 }
 
 }

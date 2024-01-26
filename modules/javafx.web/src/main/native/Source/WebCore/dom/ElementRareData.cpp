@@ -34,14 +34,16 @@
 namespace WebCore {
 
 struct SameSizeAsElementRareData : NodeRareData {
+    unsigned short m_childIndex;
+    int m_tabIndex;
+    uint32_t contentRelevancy;
     IntPoint savedLayerScrollPosition;
     Vector<std::unique_ptr<ElementAnimationRareData>> animationRareData;
-    void* pointers[11];
+    void* pointers[16];
     void* intersectionObserverData;
-#if ENABLE(CSS_TYPED_OM)
     void* typedOMData[2];
-#endif
     void* resizeObserverData;
+    Markable<LayoutUnit, LayoutUnitMarkableTraits> lastRemembedSize[2];
     ExplicitlySetAttrElementsMap explicitlySetAttrElementsMap;
 };
 

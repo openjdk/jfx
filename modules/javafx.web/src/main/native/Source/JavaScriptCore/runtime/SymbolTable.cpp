@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,18 +81,13 @@ SymbolTableEntry::FatEntry* SymbolTableEntry::inflateSlow()
 
 SymbolTable::SymbolTable(VM& vm)
     : JSCell(vm, vm.symbolTableStructure.get())
-    , m_usesNonStrictEval(false)
+    , m_usesSloppyEval(false)
     , m_nestedLexicalScope(false)
     , m_scopeType(VarScope)
 {
 }
 
 SymbolTable::~SymbolTable() { }
-
-void SymbolTable::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-}
 
 template<typename Visitor>
 void SymbolTable::visitChildrenImpl(JSCell* thisCell, Visitor& visitor)
@@ -103,8 +98,8 @@ void SymbolTable::visitChildrenImpl(JSCell* thisCell, Visitor& visitor)
 
     visitor.append(thisSymbolTable->m_arguments);
 
-    if (thisSymbolTable->m_rareData)
-        visitor.append(thisSymbolTable->m_rareData->m_codeBlock);
+    if (auto* rareData = thisSymbolTable->m_rareData.get())
+        visitor.append(rareData->m_codeBlock);
 
     // Save some memory. This is O(n) to rebuild and we do so on the fly.
     ConcurrentJSLocker locker(thisSymbolTable->m_lock);
@@ -146,7 +141,7 @@ SymbolTable* SymbolTable::cloneScopePart(VM& vm)
 {
     SymbolTable* result = SymbolTable::create(vm);
 
-    result->m_usesNonStrictEval = m_usesNonStrictEval;
+    result->m_usesSloppyEval = m_usesSloppyEval;
     result->m_nestedLexicalScope = m_nestedLexicalScope;
     result->m_scopeType = m_scopeType;
 
@@ -164,7 +159,7 @@ SymbolTable* SymbolTable::cloneScopePart(VM& vm)
         result->m_arguments.set(vm, result, arguments);
 
     if (m_rareData) {
-        result->m_rareData = makeUnique<SymbolTableRareData>();
+        result->ensureRareData();
 
         {
             auto iter = m_rareData->m_uniqueIDMap.begin();
@@ -201,11 +196,11 @@ void SymbolTable::prepareForTypeProfiling(const ConcurrentJSLocker&)
     if (m_rareData)
         return;
 
-    m_rareData = makeUnique<SymbolTableRareData>();
+    auto& rareData = ensureRareData();
 
     for (auto iter = m_map.begin(), end = m_map.end(); iter != end; ++iter) {
-        m_rareData->m_uniqueIDMap.set(iter->key, TypeProfilerNeedsUniqueIDGeneration);
-        m_rareData->m_offsetToVariableMap.set(iter->value.varOffset(), iter->key);
+        rareData.m_uniqueIDMap.set(iter->key, TypeProfilerNeedsUniqueIDGeneration);
+        rareData.m_offsetToVariableMap.set(iter->value.varOffset(), iter->key);
     }
 }
 
@@ -219,11 +214,9 @@ CodeBlock* SymbolTable::rareDataCodeBlock()
 
 void SymbolTable::setRareDataCodeBlock(CodeBlock* codeBlock)
 {
-    if (!m_rareData)
-        m_rareData = makeUnique<SymbolTableRareData>();
-
-    ASSERT(!m_rareData->m_codeBlock);
-    m_rareData->m_codeBlock.set(codeBlock->vm(), this, codeBlock);
+    auto& rareData = ensureRareData();
+    ASSERT(!rareData.m_codeBlock);
+    rareData.m_codeBlock.set(codeBlock->vm(), this, codeBlock);
 }
 
 GlobalVariableID SymbolTable::uniqueIDForVariable(const ConcurrentJSLocker&, UniquedStringImpl* key, VM& vm)
@@ -283,6 +276,14 @@ RefPtr<TypeSet> SymbolTable::globalTypeSetForVariable(const ConcurrentJSLocker& 
         return nullptr;
 
     return iter->value;
+}
+
+SymbolTable::SymbolTableRareData& SymbolTable::ensureRareDataSlow()
+{
+    auto rareData = makeUnique<SymbolTableRareData>();
+    WTF::storeStoreFence();
+    m_rareData = WTFMove(rareData);
+    return *m_rareData;
 }
 
 void SymbolTable::dump(PrintStream& out) const

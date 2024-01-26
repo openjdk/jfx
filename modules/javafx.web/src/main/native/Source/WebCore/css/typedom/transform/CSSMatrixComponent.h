@@ -25,21 +25,21 @@
 
 #pragma once
 
-#if ENABLE(CSS_TYPED_OM)
-
 #include "CSSMatrixComponentOptions.h"
 #include "CSSTransformComponent.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 
+class CSSFunctionValue;
 class DOMMatrixReadOnly;
 template<typename> class ExceptionOr;
 
 class CSSMatrixComponent : public CSSTransformComponent {
     WTF_MAKE_ISO_ALLOCATED(CSSMatrixComponent);
 public:
-    static Ref<CSSTransformComponent> create(Ref<DOMMatrixReadOnly>&&, std::optional<CSSMatrixComponentOptions>&&);
+    static Ref<CSSTransformComponent> create(Ref<DOMMatrixReadOnly>&&, CSSMatrixComponentOptions&& = { });
+    static ExceptionOr<Ref<CSSTransformComponent>> create(CSSFunctionValue&);
 
     DOMMatrix& matrix();
     void setMatrix(Ref<DOMMatrix>&&);
@@ -48,8 +48,11 @@ public:
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
 
     CSSTransformType getType() const final { return CSSTransformType::MatrixComponent; }
+
+    RefPtr<CSSValue> toCSSValue() const final;
+
 private:
-    CSSMatrixComponent(Ref<DOMMatrixReadOnly>&&, std::optional<CSSMatrixComponentOptions>&&);
+    CSSMatrixComponent(Ref<DOMMatrixReadOnly>&&, Is2D);
     Ref<DOMMatrix> m_matrix;
 };
 
@@ -58,5 +61,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSMatrixComponent)
     static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::MatrixComponent; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif

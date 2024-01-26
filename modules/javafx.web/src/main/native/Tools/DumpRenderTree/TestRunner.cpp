@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Joone Hur <joone@kldp.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -268,8 +268,11 @@ static JSValueRef removeAllVisitedLinksCallback(JSContextRef context, JSObjectRe
 
 static JSValueRef removeAllCookiesCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    //controller->removeAllCookies(); // need to be looked again
+    controller->removeAllCookies(JSValueToObject(context, arguments[0], 0));
     return JSValueMakeUndefined(context);
 }
 
@@ -530,6 +533,17 @@ static JSValueRef findStringCallback(JSContextRef context, JSObjectRef function,
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
     return JSValueMakeBoolean(context, controller->findString(context, target.get(), options));
+}
+
+static JSValueRef generateTestReportCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    auto message = argumentCount > 0 ? WTR::createJSString(context, arguments[0]) : JSRetainPtr<JSStringRef>();
+    auto group = argumentCount > 1 ? WTR::createJSString(context, arguments[1]) : JSRetainPtr<JSStringRef>();
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->generateTestReport(message.get(), group.get());
+
+    return JSValueMakeUndefined(context);
 }
 
 static JSValueRef goBackCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
@@ -2017,6 +2031,7 @@ const JSStaticFunction* TestRunner::staticFunctions()
         { "evaluateScriptInIsolatedWorld", evaluateScriptInIsolatedWorldCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "execCommand", execCommandCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "findString", findStringCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "generateTestReport", generateTestReportCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "originsWithApplicationCache", originsWithApplicationCacheCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "goBack", goBackCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "ignoreLegacyWebNotificationPermissionRequests", ignoreLegacyWebNotificationPermissionRequestsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2327,6 +2342,11 @@ void TestRunner::uiScriptDidComplete(const String& result, unsigned callbackID)
 void TestRunner::setAllowsAnySSLCertificate(bool allowsAnySSLCertificate)
 {
     WebCoreTestSupport::setAllowsAnySSLCertificate(allowsAnySSLCertificate);
+}
+
+bool TestRunner::allowsAnySSLCertificate()
+{
+    return WebCoreTestSupport::allowsAnySSLCertificate();
 }
 
 void TestRunner::setOpenPanelFiles(JSContextRef context, JSValueRef filesValue)

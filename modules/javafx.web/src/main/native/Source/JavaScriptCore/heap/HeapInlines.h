@@ -34,7 +34,6 @@
 #include <type_traits>
 #include <wtf/Assertions.h>
 #include <wtf/MainThread.h>
-#include <wtf/RandomNumber.h>
 
 namespace JSC {
 
@@ -206,7 +205,7 @@ inline void Heap::decrementDeferralDepthAndGCIfNeeded()
     }
 }
 
-inline HashSet<MarkedArgumentBufferBase*>& Heap::markListSet()
+inline HashSet<MarkedVectorBase*>& Heap::markListSet()
 {
     return m_markListSet;
 }
@@ -214,7 +213,13 @@ inline HashSet<MarkedArgumentBufferBase*>& Heap::markListSet()
 inline void Heap::reportExtraMemoryAllocated(size_t size)
 {
     if (size > minExtraMemory)
-        reportExtraMemoryAllocatedSlowCase(size);
+        reportExtraMemoryAllocatedSlowCase(nullptr, size);
+}
+
+inline void Heap::reportExtraMemoryAllocated(GCDeferralContext* deferralContext, size_t size)
+{
+    if (size > minExtraMemory)
+        reportExtraMemoryAllocatedSlowCase(deferralContext, size);
 }
 
 inline void Heap::deprecatedReportExtraMemory(size_t size)

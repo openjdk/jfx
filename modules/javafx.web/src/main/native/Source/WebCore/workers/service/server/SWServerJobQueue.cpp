@@ -59,8 +59,8 @@ bool SWServerJobQueue::isCurrentlyProcessingJob(const ServiceWorkerJobDataIdenti
 
 static bool doCertificatesMatch(const CertificateInfo& first, const CertificateInfo& second)
 {
-#if PLATFORM(COCOA) && HAVE(SEC_TRUST_SERIALIZATION)
-    return first.trust() == second.trust() || certificatesMatch(first.trust(), second.trust());
+#if PLATFORM(COCOA)
+    return first.trust() == second.trust() || certificatesMatch(first.trust().get(), second.trust().get());
 #else
     // FIXME: Add support for certificate matching in CertificateInfo.
     UNUSED_PARAM(first);
@@ -69,7 +69,7 @@ static bool doCertificatesMatch(const CertificateInfo& first, const CertificateI
 #endif
 }
 
-void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerJobDataIdentifier& jobDataIdentifier, WorkerFetchResult&& result)
+void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerJobDataIdentifier& jobDataIdentifier, const std::optional<ProcessIdentifier>& requestingProcessIdentifier, WorkerFetchResult&& result)
 {
     if (!isCurrentlyProcessingJob(jobDataIdentifier))
         return;
@@ -105,7 +105,7 @@ void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerJobDataIdentifier&
         auto scriptURLs = newestWorker->importedScriptURLs();
         if (!scriptURLs.isEmpty()) {
             m_workerFetchResult = WTFMove(result);
-            m_server.refreshImportedScripts(job, *registration, scriptURLs);
+            m_server.refreshImportedScripts(job, *registration, scriptURLs, requestingProcessIdentifier);
             return;
         }
 
@@ -116,10 +116,10 @@ void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerJobDataIdentifier&
         return;
     }
 
-    m_server.updateWorker(job.identifier(), *registration, job.scriptURL, result.script, result.certificateInfo, result.contentSecurityPolicy, result.crossOriginEmbedderPolicy, result.referrerPolicy, job.workerType, { }, job.serviceWorkerPageIdentifier());
+    m_server.updateWorker(job.identifier(), requestingProcessIdentifier, *registration, job.scriptURL, result.script, result.certificateInfo, result.contentSecurityPolicy, result.crossOriginEmbedderPolicy, result.referrerPolicy, job.workerType, { }, job.serviceWorkerPageIdentifier());
 }
 
-void SWServerJobQueue::importedScriptsFetchFinished(const ServiceWorkerJobDataIdentifier& jobDataIdentifier, const Vector<std::pair<URL, ScriptBuffer>>& importedScripts)
+void SWServerJobQueue::importedScriptsFetchFinished(const ServiceWorkerJobDataIdentifier& jobDataIdentifier, const Vector<std::pair<URL, ScriptBuffer>>& importedScripts, const std::optional<ProcessIdentifier>& requestingProcessIdentifier)
 {
     if (!isCurrentlyProcessingJob(jobDataIdentifier))
         return;
@@ -137,7 +137,7 @@ void SWServerJobQueue::importedScriptsFetchFinished(const ServiceWorkerJobDataId
         return;
     }
 
-    m_server.updateWorker(job.identifier(), *registration, job.scriptURL, m_workerFetchResult.script, m_workerFetchResult.certificateInfo, m_workerFetchResult.contentSecurityPolicy, m_workerFetchResult.crossOriginEmbedderPolicy, m_workerFetchResult.referrerPolicy, job.workerType, { }, job.serviceWorkerPageIdentifier());
+    m_server.updateWorker(job.identifier(), requestingProcessIdentifier, *registration, job.scriptURL, m_workerFetchResult.script, m_workerFetchResult.certificateInfo, m_workerFetchResult.contentSecurityPolicy, m_workerFetchResult.crossOriginEmbedderPolicy, m_workerFetchResult.referrerPolicy, job.workerType, { }, job.serviceWorkerPageIdentifier());
 }
 
 void SWServerJobQueue::scriptAndImportedScriptsFetchFinished(const ServiceWorkerJobData& job, SWServerRegistration& registration)
@@ -158,6 +158,10 @@ void SWServerJobQueue::scriptContextFailedToStart(const ServiceWorkerJobDataIden
     // If an uncaught runtime script error occurs during the above step, then:
     auto* registration = m_server.getRegistration(m_registrationKey);
     ASSERT(registration);
+    if (!registration || !registration->preInstallationWorker()) {
+        RELEASE_LOG_ERROR(ServiceWorker, "SWServerJobQueue::scriptContextFailedToStart registration is null (%d) or pre installation worker is null", !registration);
+        return;
+    }
 
     ASSERT(registration->preInstallationWorker());
     registration->preInstallationWorker()->terminate();
@@ -181,6 +185,10 @@ void SWServerJobQueue::scriptContextStarted(const ServiceWorkerJobDataIdentifier
 
     auto* registration = m_server.getRegistration(m_registrationKey);
     ASSERT(registration);
+    if (!registration) {
+        RELEASE_LOG_ERROR(ServiceWorker, "SWServerJobQueue::scriptContextStarted registration is null");
+        return;
+    }
 
     install(*registration, identifier);
 }
@@ -303,6 +311,7 @@ void SWServerJobQueue::runNextJobSynchronously()
 void SWServerJobQueue::runRegisterJob(const ServiceWorkerJobData& job)
 {
     ASSERT(job.type == ServiceWorkerJobType::Register);
+    ASSERT(job.registrationOptions);
 
     if (!job.isFromServiceWorkerPage && !shouldTreatAsPotentiallyTrustworthy(job.scriptURL) && !m_server.canHandleScheme(job.scriptURL.protocol()))
         return rejectCurrentJob(ExceptionData { SecurityError, "Script URL is not potentially trustworthy"_s });
@@ -318,18 +327,18 @@ void SWServerJobQueue::runRegisterJob(const ServiceWorkerJobData& job)
     // If registration is not null (in our parlance "empty"), then:
     if (auto* registration = m_server.getRegistration(m_registrationKey)) {
         auto* newestWorker = registration->getNewestWorker();
-        if (newestWorker && equalIgnoringFragmentIdentifier(job.scriptURL, newestWorker->scriptURL()) && job.workerType == newestWorker->type() && job.registrationOptions.updateViaCache == registration->updateViaCache()) {
+        if (newestWorker && equalIgnoringFragmentIdentifier(job.scriptURL, newestWorker->scriptURL()) && job.workerType == newestWorker->type() && job.registrationOptions->updateViaCache == registration->updateViaCache()) {
             RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found directly reusable registration %llu for job %s (DONE)", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
             m_server.resolveRegistrationJob(job, registration->data(), ShouldNotifyWhenResolved::No);
             finishCurrentJob();
             return;
         }
         // This is not specified yet (https://github.com/w3c/ServiceWorker/issues/1189).
-        if (registration->updateViaCache() != job.registrationOptions.updateViaCache)
-            registration->setUpdateViaCache(job.registrationOptions.updateViaCache);
+        if (registration->updateViaCache() != job.registrationOptions->updateViaCache)
+            registration->setUpdateViaCache(job.registrationOptions->updateViaCache);
         RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found registration %llu for job %s but it needs updating", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
     } else {
-        auto newRegistration = makeUnique<SWServerRegistration>(m_server, m_registrationKey, job.registrationOptions.updateViaCache, job.scopeURL, job.scriptURL, job.serviceWorkerPageIdentifier(), NavigationPreloadState::defaultValue());
+        auto newRegistration = makeUnique<SWServerRegistration>(m_server, m_registrationKey, job.registrationOptions->updateViaCache, job.scopeURL, job.scriptURL, job.serviceWorkerPageIdentifier(), NavigationPreloadState::defaultValue());
         m_server.addRegistration(WTFMove(newRegistration));
 
         RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: No existing registration for job %s, constructing a new one.", this, job.identifier().loggingString().utf8().data());

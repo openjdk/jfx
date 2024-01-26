@@ -31,10 +31,10 @@
 #include "CachedApplicationManifest.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
-#include "CachedResourceRequestInitiators.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
+#include "LocalFrame.h"
 
 namespace WebCore {
 
@@ -53,7 +53,7 @@ ApplicationManifestLoader::~ApplicationManifestLoader()
 bool ApplicationManifestLoader::startLoading()
 {
     ASSERT(!m_resource);
-    auto* frame = m_documentLoader.frame();
+    auto* frame = m_documentLoader->frame();
     if (!frame)
         return false;
 
@@ -67,6 +67,8 @@ bool ApplicationManifestLoader::startLoading()
 #endif
 
     auto credentials = m_useCredentials ? FetchOptions::Credentials::Include : FetchOptions::Credentials::Omit;
+    // The "linked resource fetch setup steps" are defined as part of:
+    // https://html.spec.whatwg.org/#link-type-manifest
     auto options = ResourceLoaderOptions(
         SendCallbackPolicy::SendCallbacks,
         ContentSniffingPolicy::SniffContent,
@@ -75,12 +77,13 @@ bool ApplicationManifestLoader::startLoading()
         ClientCredentialPolicy::CannotAskClientForCredentials,
         credentials,
         SecurityCheckPolicy::DoSecurityCheck,
-        FetchOptions::Mode::NoCors,
+        FetchOptions::Mode::Cors,
         CertificateInfoPolicy::DoNotIncludeCertificateInfo,
         ContentSecurityPolicyImposition::DoPolicyCheck,
         DefersLoadingPolicy::AllowDefersLoading,
         CachingPolicy::AllowCaching);
     options.destination = FetchOptions::Destination::Manifest;
+    options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     CachedResourceRequest request(WTFMove(resourceRequest), options);
 
     auto cachedResource = frame->document()->cachedResourceLoader().requestApplicationManifest(WTFMove(request));
@@ -107,8 +110,8 @@ std::optional<ApplicationManifest>& ApplicationManifestLoader::processManifest()
 {
     if (!m_processedManifest && m_resource) {
         auto manifestURL = m_url;
-        auto documentURL = m_documentLoader.url();
-        auto frame = m_documentLoader.frame();
+        auto documentURL = m_documentLoader->url();
+        auto frame = m_documentLoader->frame();
         auto document = frame ? frame->document() : nullptr;
         m_processedManifest = m_resource->process(manifestURL, documentURL, document);
     }
@@ -118,7 +121,7 @@ std::optional<ApplicationManifest>& ApplicationManifestLoader::processManifest()
 void ApplicationManifestLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
-    m_documentLoader.finishedLoadingApplicationManifest(*this);
+    m_documentLoader->finishedLoadingApplicationManifest(*this);
 }
 
 } // namespace WebCore

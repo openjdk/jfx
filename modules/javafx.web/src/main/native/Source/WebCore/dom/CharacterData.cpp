@@ -34,7 +34,6 @@
 #include "ProcessingInstruction.h"
 #include "RenderText.h"
 #include "StyleInheritedData.h"
-#include <unicode/ubrk.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 
@@ -50,8 +49,8 @@ CharacterData::~CharacterData()
 static bool canUseSetDataOptimization(const CharacterData& node)
 {
     auto& document = node.document();
-    return !document.hasListenerType(Document::DOMCHARACTERDATAMODIFIED_LISTENER) && !document.hasMutationObserversOfType(MutationObserverOptionType::CharacterData)
-        && !document.hasListenerType(Document::DOMSUBTREEMODIFIED_LISTENER);
+    return !document.hasListenerType(Document::ListenerType::DOMCharacterDataModified) && !document.hasMutationObserversOfType(MutationObserverOptionType::CharacterData)
+        && !document.hasListenerType(Document::ListenerType::DOMSubtreeModified);
 }
 
 void CharacterData::setData(const String& data)
@@ -85,51 +84,30 @@ static ContainerNode::ChildChange makeChildChange(CharacterData& characterData, 
         nullptr,
         ElementTraversal::previousSibling(characterData),
         ElementTraversal::nextSibling(characterData),
-        source
+        source,
+        ContainerNode::ChildChange::AffectsElements::No
     };
 }
 
-unsigned CharacterData::parserAppendData(const String& string, unsigned offset, unsigned lengthLimit)
+void CharacterData::parserAppendData(StringView string)
 {
-    unsigned oldLength = m_data.length();
-
-    ASSERT(lengthLimit >= oldLength);
-
-    unsigned characterLength = string.length() - offset;
-    unsigned characterLengthLimit = std::min(characterLength, lengthLimit - oldLength);
-
-    // Check that we are not on an unbreakable boundary.
-    // Some text break iterator implementations work best if the passed buffer is as small as possible,
-    // see <https://bugs.webkit.org/show_bug.cgi?id=29092>.
-    // We need at least two characters look-ahead to account for UTF-16 surrogates.
-    if (characterLengthLimit < characterLength) {
-        NonSharedCharacterBreakIterator it(StringView(string).substring(offset, (characterLengthLimit + 2 > characterLength) ? characterLength : characterLengthLimit + 2));
-        if (!ubrk_isBoundary(it, characterLengthLimit))
-            characterLengthLimit = ubrk_preceding(it, characterLengthLimit);
-    }
-
-    if (!characterLengthLimit)
-        return 0;
-
     auto childChange = makeChildChange(*this, ContainerNode::ChildChange::Source::Parser);
     std::optional<Style::ChildChangeInvalidation> styleInvalidation;
     if (auto* parent = parentNode())
         styleInvalidation.emplace(*parent, childChange);
 
     String oldData = m_data;
-    m_data = makeString(m_data, StringView(string).substring(offset, characterLengthLimit));
+    m_data = makeString(m_data, string);
 
     ASSERT(!renderer() || is<Text>(*this));
     if (auto text = dynamicDowncast<Text>(*this))
-        text->updateRendererAfterContentChange(oldLength, 0);
+        text->updateRendererAfterContentChange(oldData.length(), 0);
 
     notifyParentAfterChange(childChange);
 
     auto mutationRecipients = MutationObserverInterestGroup::createForCharacterDataMutation(*this);
     if (UNLIKELY(mutationRecipients))
         mutationRecipients->enqueueMutationRecord(MutationRecord::createCharacterData(*this, oldData));
-
-    return characterLengthLimit;
 }
 
 void CharacterData::appendData(const String& data)
@@ -233,7 +211,7 @@ void CharacterData::dispatchModifiedEvent(const String& oldData)
         mutationRecipients->enqueueMutationRecord(MutationRecord::createCharacterData(*this, oldData));
 
     if (!isInShadowTree()) {
-        if (document().hasListenerType(Document::DOMCHARACTERDATAMODIFIED_LISTENER))
+        if (document().hasListenerType(Document::ListenerType::DOMCharacterDataModified))
             dispatchScopedEvent(MutationEvent::create(eventNames().DOMCharacterDataModifiedEvent, Event::CanBubble::Yes, nullptr, oldData, m_data));
         dispatchSubtreeModifiedEvent();
     }

@@ -29,17 +29,24 @@
 #import "HardwareCapabilities.h"
 #import <IOSurface/IOSurfaceRef.h>
 #import "Queue.h"
+#import <CoreVideo/CVMetalTextureCache.h>
+#import <CoreVideo/CoreVideo.h>
+#import <simd/matrix_types.h>
 #import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Function.h>
 #import <wtf/Ref.h>
-#import <wtf/ThreadSafeRefCounted.h>
+#import <wtf/ThreadSafeWeakPtr.h>
 #import <wtf/Vector.h>
 #import <wtf/WeakPtr.h>
 #import <wtf/text/WTFString.h>
 
 struct WGPUDeviceImpl {
 };
+
+namespace WGSL {
+struct PipelineLayout;
+}
 
 namespace WebGPU {
 
@@ -48,19 +55,19 @@ class BindGroupLayout;
 class Buffer;
 class CommandEncoder;
 class ComputePipeline;
+class ExternalTexture;
 class Instance;
 class PipelineLayout;
+class PresentationContext;
 class QuerySet;
 class RenderBundleEncoder;
 class RenderPipeline;
 class Sampler;
 class ShaderModule;
-class Surface;
-class SwapChain;
 class Texture;
 
 // https://gpuweb.github.io/gpuweb/#gpudevice
-class Device : public WGPUDeviceImpl, public ThreadSafeRefCounted<Device>, public CanMakeWeakPtr<Device> {
+class Device : public WGPUDeviceImpl, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Device> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<Device> create(id<MTLDevice>, String&& deviceLabel, HardwareCapabilities&&, Adapter&);
@@ -77,15 +84,18 @@ public:
     Ref<CommandEncoder> createCommandEncoder(const WGPUCommandEncoderDescriptor&);
     Ref<ComputePipeline> createComputePipeline(const WGPUComputePipelineDescriptor&);
     void createComputePipelineAsync(const WGPUComputePipelineDescriptor&, CompletionHandler<void(WGPUCreatePipelineAsyncStatus, Ref<ComputePipeline>&&, String&& message)>&& callback);
+    Ref<ExternalTexture> createExternalTexture(const WGPUExternalTextureDescriptor&);
     Ref<PipelineLayout> createPipelineLayout(const WGPUPipelineLayoutDescriptor&);
     Ref<QuerySet> createQuerySet(const WGPUQuerySetDescriptor&);
     Ref<RenderBundleEncoder> createRenderBundleEncoder(const WGPURenderBundleEncoderDescriptor&);
+    Ref<PipelineLayout> extracted(const Vector<Vector<WGPUBindGroupLayoutEntry>> &bindGroupEntries);
+
     Ref<RenderPipeline> createRenderPipeline(const WGPURenderPipelineDescriptor&);
     void createRenderPipelineAsync(const WGPURenderPipelineDescriptor&, CompletionHandler<void(WGPUCreatePipelineAsyncStatus, Ref<RenderPipeline>&&, String&& message)>&& callback);
     Ref<Sampler> createSampler(const WGPUSamplerDescriptor&);
     Ref<ShaderModule> createShaderModule(const WGPUShaderModuleDescriptor&);
-    Ref<SwapChain> createSwapChain(const Surface&, const WGPUSwapChainDescriptor&);
-    Ref<Texture> createTexture(const WGPUTextureDescriptor&, IOSurfaceRef = nullptr);
+    Ref<PresentationContext> createSwapChain(PresentationContext&, const WGPUSwapChainDescriptor&);
+    Ref<Texture> createTexture(const WGPUTextureDescriptor&);
     void destroy();
     size_t enumerateFeatures(WGPUFeatureName* features);
     bool getLimits(WGPUSupportedLimits&);
@@ -93,7 +103,6 @@ public:
     bool hasFeature(WGPUFeatureName);
     bool popErrorScope(CompletionHandler<void(WGPUErrorType, String&&)>&& callback);
     void pushErrorScope(WGPUErrorFilter);
-    void setDeviceLostCallback(Function<void(WGPUDeviceLostReason, String&&)>&&);
     void setUncapturedErrorCallback(Function<void(WGPUErrorType, String&&)>&&);
     void setLabel(String&&);
 
@@ -106,9 +115,14 @@ public:
     id<MTLDevice> device() const { return m_device; }
 
     void generateAValidationError(String&& message);
+    void generateAnOutOfMemoryError(String&& message);
+    void generateAnInternalError(String&& message);
 
     Instance& instance() const { return m_adapter->instance(); }
     bool hasUnifiedMemory() const { return m_device.hasUnifiedMemory; }
+
+    uint32_t maxBuffersPlusVertexBuffersForVertexStage() const;
+    uint32_t vertexBufferIndexForBindGroup(uint32_t groupIndex) const;
 
 private:
     Device(id<MTLDevice>, id<MTLCommandQueue> defaultQueue, HardwareCapabilities&&, Adapter&);
@@ -121,9 +135,21 @@ private:
     bool validateCreateTexture(const WGPUTextureDescriptor&, const Vector<WGPUTextureFormat>& viewFormats);
     bool validateCreateIOSurfaceBackedTexture(const WGPUTextureDescriptor&, const Vector<WGPUTextureFormat>& viewFormats, IOSurfaceRef backing);
 
+    bool validateRenderPipeline(const WGPURenderPipelineDescriptor&);
+
     void makeInvalid() { m_device = nil; }
+    void addPipelineLayouts(Vector<Vector<WGPUBindGroupLayoutEntry>>&, const std::optional<WGSL::PipelineLayout>&);
+    Ref<PipelineLayout> generatePipelineLayout(const Vector<Vector<WGPUBindGroupLayoutEntry>> &bindGroupEntries);
 
     void loseTheDevice(WGPUDeviceLostReason);
+    void captureFrameIfNeeded() const;
+    struct ExternalTextureData {
+        id<MTLTexture> texture0 { nil };
+        id<MTLTexture> texture1 { nil };
+        simd::float3x2 uvRemappingMatrix;
+        simd::float4x3 colorSpaceConversionMatrix;
+    };
+    ExternalTextureData createExternalTextureFromPixelBuffer(CVPixelBufferRef, WGPUColorSpace) const;
 
     struct Error {
         WGPUErrorType type;
@@ -147,6 +173,9 @@ private:
     HardwareCapabilities m_capabilities { };
 
     const Ref<Adapter> m_adapter;
+#if HAVE(COREVIDEO_METAL_SUPPORT)
+    RetainPtr<CVMetalTextureCacheRef> m_coreVideoTextureCache;
+#endif
 };
 
 } // namespace WebGPU

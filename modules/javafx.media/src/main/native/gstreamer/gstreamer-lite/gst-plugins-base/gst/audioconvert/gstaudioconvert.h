@@ -41,6 +41,7 @@ struct _GstAudioConvert
 
   /* properties */
   GstAudioDitherMethod dither;
+  guint dither_threshold;
   GstAudioNoiseShapingMethod ns;
   GValue mix_matrix;
   gboolean mix_matrix_is_set;

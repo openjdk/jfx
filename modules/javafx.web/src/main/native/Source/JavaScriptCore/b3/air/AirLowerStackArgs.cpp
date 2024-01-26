@@ -48,7 +48,7 @@ void lowerStackArgs(Code& code)
                     // such an awesome assumption.
                     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=150454
                     ASSERT(arg.offset() >= 0);
-                    code.requestCallArgAreaSizeInBytes(arg.offset() + 8);
+                    code.requestCallArgAreaSizeInBytes(arg.offset() + (code.usesSIMD() ? conservativeRegisterBytes(arg.bank()) : conservativeRegisterBytesWithoutVectors(arg.bank())));
                 }
             }
         }
@@ -120,12 +120,16 @@ void lowerStackArgs(Code& code)
                         }
 
                         Arg result = Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), offsetFromFP);
-                        if (result.isValidForm(width))
+                        if (result.isValidForm(Move, width))
                             return result;
 
                         result = Arg::addr(Air::Tmp(MacroAssembler::stackPointerRegister), offsetFromSP);
-                        if (result.isValidForm(width))
+                        if (result.isValidForm(Move, width))
                             return result;
+
+                        if (inst.kind.opcode == Patch)
+                            return Arg::extendedOffsetAddr(offsetFromFP);
+
 #if CPU(ARM64) || CPU(RISCV64)
                         Air::Tmp tmp = Air::Tmp(extendedOffsetAddrRegister());
 
@@ -133,6 +137,10 @@ void lowerStackArgs(Code& code)
                         insertionSet.insert(instIndex, Move, inst.origin, largeOffset, tmp);
                         insertionSet.insert(instIndex, Add64, inst.origin, Air::Tmp(MacroAssembler::stackPointerRegister), tmp);
                         result = Arg::addr(tmp, 0);
+                        return result;
+#elif CPU(ARM)
+                        // We solve this in AirAllocateRegistersAndStackAndGenerateCode.cpp.
+                        UNUSED_PARAM(instIndex);
                         return result;
 #elif CPU(X86_64)
                         UNUSED_PARAM(instIndex);
@@ -146,9 +154,11 @@ void lowerStackArgs(Code& code)
                     switch (arg.kind()) {
                     case Arg::Stack: {
                         StackSlot* slot = arg.stackSlot();
+                        if (inst.kind.opcode == Move && slot->kind() == StackSlotKind::Spill)
+                            inst.kind.spill = true;
                         if (Arg::isZDef(role)
                             && slot->kind() == StackSlotKind::Spill
-                            && slot->byteSize() > bytes(width)) {
+                            && slot->byteSize() > bytesForWidth(width)) {
                             // Currently we only handle this simple case because it's the only one
                             // that arises: ZDef's are only 32-bit right now. So, when we hit these
                             // assertions it means that we need to implement those other kinds of
@@ -157,10 +167,10 @@ void lowerStackArgs(Code& code)
                             RELEASE_ASSERT(width == Width32);
 
 #if CPU(ARM64) || CPU(RISCV64)
-                            Air::Opcode storeOpcode = Store32;
+                            Air::Opcode storeOpcode = Move32;
                             Air::Arg::Kind operandKind = Arg::ZeroReg;
                             Air::Arg operand = Arg::zeroReg();
-#elif CPU(X86_64)
+#elif CPU(X86_64) || CPU(ARM)
                             Air::Opcode storeOpcode = Move32;
                             Air::Arg::Kind operandKind = Arg::Imm;
                             Air::Arg operand = Arg::imm(0);

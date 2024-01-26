@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,22 +66,22 @@ Java_com_sun_media_jfxmediaimpl_NativeAudioEqualizer_nativeAddBand(JNIEnv *env, 
         CEqualizerBand *band = pEqualizer->AddBand(centerFrequency, bandWidth, gain);
         if (NULL != band) {
             jclass bandClass = env->FindClass("com/sun/media/jfxmediaimpl/NativeEqualizerBand");
-            if (jenv.reportException()) {
+            if (jenv.reportException() || bandClass == NULL) {
                 return NULL;
             }
 
             if (NULL == mid_EqualizerBandConstructor)
             {
                 mid_EqualizerBandConstructor = env->GetMethodID(bandClass, "<init>", "(J)V");
-                if (jenv.reportException()) {
+                if (jenv.reportException() || mid_EqualizerBandConstructor == NULL) {
                     env->DeleteLocalRef(bandClass);
                     return NULL;
                 }
             }
 
             jobject band_instance = env->NewObject(bandClass, mid_EqualizerBandConstructor, ptr_to_jlong(band));
-            env->DeleteLocalRef(bandClass);
             jenv.reportException(); // Report exception from NewObject()
+            env->DeleteLocalRef(bandClass);
 
             return band_instance;
         }

@@ -32,7 +32,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #if !PLATFORM(JAVA)
-    #include <zlib.h>
+#include <zlib.h>
 #endif
 
 namespace WebCore {
@@ -51,31 +51,38 @@ public:
     {
 /* removing zlib dependency , as newly added module compression requires zlib */
 #if !PLATFORM(JAVA)
-        if (initailized)
-            deflateEnd(&zstream);
+        if (m_initialized)
+            deflateEnd(&m_zstream);
 #endif
     }
 
 private:
+    bool didDeflateFinish(int) const;
+
+    ExceptionOr<RefPtr<JSC::ArrayBuffer>> compress(const uint8_t* input, const size_t inputLength);
+    ExceptionOr<bool> initialize();
+
+    explicit CompressionStreamEncoder(unsigned char format)
+#if !PLATFORM(JAVA)
+        : m_format(static_cast<Formats::CompressionFormat>(format))
+#endif
+    {
+#if !PLATFORM(JAVA)
+        std::memset(&m_zstream, 0, sizeof(m_zstream));
+#endif
+    }
+
     // If the user provides too small of an input size we will automatically allocate a page worth of memory instead.
     // Very small input sizes can result in a larger output than their input. This would require an additional
     // encode call then, which is not desired.
     const size_t startingAllocationSize = 16384; // 16KB
+    const size_t maxAllocationSize = 1073741824; // 1GB
 
-    bool initailized { false };
-    bool finish { false };
+    bool m_initialized { false };
+    bool m_didFinish { false };
 #if !PLATFORM(JAVA)
-    z_stream zstream;
+    z_stream m_zstream;
 #endif
-
     Formats::CompressionFormat m_format;
-
-    ExceptionOr<Vector<uint8_t>> compress(const uint8_t* input, const size_t inputLength);
-    ExceptionOr<bool> initialize();
-
-    explicit CompressionStreamEncoder(unsigned char format)
-        : m_format(static_cast<Formats::CompressionFormat>(format))
-    {
-    }
 };
 } // namespace WebCore

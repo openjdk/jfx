@@ -26,22 +26,22 @@
 #include "config.h"
 #include "CurlSSLHandle.h"
 
+#include <CertificateStore/CertificateStore.h>
 namespace WebCore {
 
-static String getCACertPathEnv()
-{
-    char* envPath = getenv("CURL_CA_BUNDLE_PATH");
-    if (envPath)
-        return { envPath };
 
-    return emptyString();
-}
 
 void CurlSSLHandle::platformInitialize()
 {
-    auto caCertPath = getCACertPathEnv();
-    if (!caCertPath.isEmpty())
-        setCACertPath(WTFMove(caCertPath));
+    auto certificateData = CertificateData::create();
+    CertificateStore::getTrustedRootCA(*certificateData);
+    CertificateInfo::Certificate caCertData;
+    caCertData.append(certificateData->data(), certificateData->size());
+    if (certificateData->size())
+        setCACertData(WTFMove(caCertData));
+    setCipherList(CertificateStore::cipherSuites());
+    setECCurves(CertificateStore::supportedGroups());
+    setIgnoreSSLErrors(CertificateStore::shouldIgnoreTLSErrors());
 }
 
 } // namespace WebCore

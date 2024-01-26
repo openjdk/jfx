@@ -30,9 +30,9 @@
 #include "CachedResourceLoader.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTTPParsers.h"
+#include "LocalFrame.h"
 #include "Navigator.h"
 #include "Page.h"
 #include <wtf/URL.h>
@@ -123,7 +123,7 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
 
     ResourceRequest request(parsedUrl);
     request.setHTTPMethod("POST"_s);
-    request.setRequester(ResourceRequest::Requester::Beacon);
+    request.setRequester(ResourceRequestRequester::Beacon);
     if (auto* documentLoader = document.loader())
         request.setIsAppInitiated(documentLoader->lastNavigationWasAppInitiated());
 

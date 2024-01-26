@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +44,7 @@ public:
     ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& duration);
     WEBCORE_EXPORT ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, AtomString&& cueID, String&& cueText, String&& settings = { }, String&& sourceID = { }, String&& originalStartTime = { });
     ISOWebVTTCue(const ISOWebVTTCue&) = default;
+    WEBCORE_EXPORT ISOWebVTTCue();
     WEBCORE_EXPORT ISOWebVTTCue(ISOWebVTTCue&&);
     WEBCORE_EXPORT ~ISOWebVTTCue();
 
@@ -63,70 +64,9 @@ public:
 
     String toJSONString() const;
 
-    template<class Encoder>
-    void encode(Encoder& encoder) const
-    {
-        encoder << m_presentationTime;
-        encoder << m_duration;
-        encoder << m_sourceID;
-        encoder << m_identifier;
-        encoder << m_originalStartTime;
-        encoder << m_settings;
-        encoder << m_cueText;
-    }
-
-    template <class Decoder>
-    static std::optional<ISOWebVTTCue> decode(Decoder& decoder)
-    {
-        std::optional<MediaTime> presentationTime;
-        decoder >> presentationTime;
-        if (!presentationTime)
-            return std::nullopt;
-
-        std::optional<MediaTime> duration;
-        decoder >> duration;
-        if (!duration)
-            return std::nullopt;
-
-        std::optional<String> sourceID;
-        decoder >> sourceID;
-        if (!sourceID)
-            return std::nullopt;
-
-        std::optional<AtomString> identifier;
-        decoder >> identifier;
-        if (!identifier)
-            return std::nullopt;
-
-        std::optional<String> originalStartTime;
-        decoder >> originalStartTime;
-        if (!originalStartTime)
-            return std::nullopt;
-
-        std::optional<String> settings;
-        decoder >> settings;
-        if (!settings)
-            return std::nullopt;
-
-        std::optional<String> cueText;
-        decoder >> cueText;
-        if (!cueText)
-            return std::nullopt;
-
-        return {{
-            WTFMove(*presentationTime),
-            WTFMove(*duration),
-            WTFMove(*identifier),
-            WTFMove(*cueText),
-            WTFMove(*settings),
-            WTFMove(*sourceID),
-            WTFMove(*originalStartTime)
-        }};
-    }
+    WEBCORE_EXPORT bool parse(JSC::DataView&, unsigned& offset) override;
 
 private:
-    bool parse(JSC::DataView&, unsigned& offset) override;
-
     MediaTime m_presentationTime;
     MediaTime m_duration;
 

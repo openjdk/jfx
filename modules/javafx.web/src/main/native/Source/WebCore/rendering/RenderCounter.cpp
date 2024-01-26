@@ -22,16 +22,17 @@
 #include "config.h"
 #include "RenderCounter.h"
 
+#include "CSSCounterStyleRegistry.h"
+#include "CounterDirectives.h"
 #include "CounterNode.h"
 #include "Document.h"
-#include "Element.h"
 #include "ElementInlines.h"
 #include "ElementTraversal.h"
 #include "HTMLNames.h"
 #include "HTMLOListElement.h"
 #include "PseudoElement.h"
+#include "RenderElementInlines.h"
 #include "RenderListItem.h"
-#include "RenderListMarker.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include <wtf/IsoMallocInlines.h>
@@ -48,7 +49,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderCounter);
 
 using CounterMap = HashMap<AtomString, Ref<CounterNode>>;
-using CounterMaps = HashMap<const RenderElement*, std::unique_ptr<CounterMap>>;
+using CounterMaps = WeakHashMap<RenderElement, std::unique_ptr<CounterMap>>;
 
 static CounterNode* makeCounterNode(RenderElement&, const AtomString& identifier, bool alwaysCreateCounter);
 
@@ -73,18 +74,31 @@ static Element* ancestorStyleContainmentObject(const Element& element)
 }
 
 // This function processes the renderer tree in the order of the DOM tree
-// including pseudo elements as defined in CSS 2.1.
-static RenderElement* previousInPreOrder(const RenderElement& renderer)
+// including pseudo elements as defined in CSS 2.1. This method will always
+// return either a previous element within the same contain: style scope or nullptr.
+static RenderElement* previousInPreOrderRespectingContainment(const RenderElement& renderer)
 {
     ASSERT(renderer.element());
     Element* previous = ElementTraversal::previousIncludingPseudo(*renderer.element());
-    Element* styleContainAncestor = ancestorStyleContainmentObject(*renderer.element());
+    Element* styleContainmentAncestor = ancestorStyleContainmentObject(*renderer.element());
 
+    while (previous) {
     while (previous && !previous->renderer())
-        previous = ElementTraversal::previousIncludingPseudo(*previous, styleContainAncestor);
+            previous = ElementTraversal::previousIncludingPseudo(*previous, styleContainmentAncestor);
     if (!previous)
-        return nullptr;
+            break;
+        auto* previousStyleContainmentAncestor = ancestorStyleContainmentObject(*previous);
+        // If the candidate's containment ancestor is the same as elements, then
+        // that's a valid candidate.
+        if (previousStyleContainmentAncestor == styleContainmentAncestor)
     return previous->renderer();
+
+        // If the candidate does have a containment ancestor, it could be
+        // that we entered a new sub-containment. Try again starting from the
+        // contain ancestor.
+        previous = previousStyleContainmentAncestor;
+    }
+    return nullptr;
 }
 
 static inline Element* parentOrPseudoHostElement(const RenderElement& renderer)
@@ -194,10 +208,7 @@ static std::optional<CounterPlan> planCounter(RenderElement& renderer, const Ato
         return std::nullopt; // Counters are forbidden from all other pseudo elements.
     }
 
-    CounterDirectives directives;
-
-    if (auto map = style.counterDirectives())
-        directives = map->get(identifier);
+    auto directives = style.counterDirectives().map.get(identifier);
 
     if (identifier == "list-item"_s) {
         auto itemDirectives = listItemCounterDirectives(renderer);
@@ -243,8 +254,22 @@ static CounterInsertionPoint findPlaceForCounter(RenderElement& counterOwner, co
     // We check renderers in preOrder from the renderer that our counter is attached to
     // towards the begining of the document for counters with the same identifier as the one
     // we are trying to find a place for. This is the next renderer to be checked.
-    RenderElement* currentRenderer = previousInPreOrder(counterOwner);
+    RenderElement* currentRenderer = previousInPreOrderRespectingContainment(counterOwner);
     RefPtr<CounterNode> previousSibling;
+
+    // Establish counter nodes previous to currentRenderer in order that calling
+    // makeCounterNode on currentRenderer does not recurse into this function.
+    if (currentRenderer && !currentRenderer->hasCounterNodeMap()) {
+        Vector<RenderElement*> previousRenderers;
+        RenderElement* current = currentRenderer;
+        while (current && !current->hasCounterNodeMap()) {
+            if (!current->style().counterDirectives().map.isEmpty())
+                previousRenderers.append(current);
+            current = previousInPreOrderRespectingContainment(*current);
+        }
+        while (!previousRenderers.isEmpty())
+            makeCounterNode(*previousRenderers.takeLast(), identifier, false);
+    }
 
     while (currentRenderer) {
         auto currentCounter = makeCounterNode(*currentRenderer, identifier, false);
@@ -329,7 +354,7 @@ static CounterInsertionPoint findPlaceForCounter(RenderElement& counterOwner, co
         if (previousSibling)
             currentRenderer = previousSiblingOrParent(*currentRenderer);
         else
-            currentRenderer = previousInPreOrder(*currentRenderer);
+            currentRenderer = previousInPreOrderRespectingContainment(*currentRenderer);
     }
     return { };
 }
@@ -337,8 +362,8 @@ static CounterInsertionPoint findPlaceForCounter(RenderElement& counterOwner, co
 static CounterNode* makeCounterNode(RenderElement& renderer, const AtomString& identifier, bool alwaysCreateCounter)
 {
     if (renderer.hasCounterNodeMap()) {
-        ASSERT(counterMaps().contains(&renderer));
-        if (auto* node = counterMaps().find(&renderer)->value->get(identifier))
+        ASSERT(counterMaps().contains(renderer));
+        if (auto* node = counterMaps().find(renderer)->value->get(identifier))
             return node;
     }
 
@@ -354,7 +379,7 @@ static CounterNode* makeCounterNode(RenderElement& renderer, const AtomString& i
     if (place.parent)
         place.parent->insertAfter(newNode, place.previousSibling.get(), identifier);
 
-    maps.add(&renderer, makeUnique<CounterMap>()).iterator->value->add(identifier, newNode.copyRef());
+    maps.add(renderer, makeUnique<CounterMap>()).iterator->value->add(identifier, newNode.copyRef());
     renderer.setHasCounterNodeMap(true);
 
     if (newNode->parent() || renderer.shouldApplyStyleContainment())
@@ -368,7 +393,7 @@ static CounterNode* makeCounterNode(RenderElement& renderer, const AtomString& i
         skipDescendants = currentRenderer->shouldApplyStyleContainment();
         if (!currentRenderer->hasCounterNodeMap())
             continue;
-        auto* currentCounter = maps.find(currentRenderer)->value->get(identifier);
+        CheckedPtr currentCounter = maps.find(*currentRenderer)->value->get(identifier);
         if (!currentCounter)
             continue;
         skipDescendants = true;
@@ -386,7 +411,7 @@ RenderCounter::RenderCounter(Document& document, const CounterContent& counter)
     : RenderText(document, emptyString())
     , m_counter(counter)
 {
-    view().addRenderCounter();
+    view().addCounterNeedingUpdate(*this);
 }
 
 RenderCounter::~RenderCounter()
@@ -396,8 +421,6 @@ RenderCounter::~RenderCounter()
 
 void RenderCounter::willBeDestroyed()
 {
-    view().removeRenderCounter();
-
     if (m_counterNode) {
         m_counterNode->removeRenderer(*this);
         ASSERT(!m_counterNode);
@@ -418,31 +441,32 @@ bool RenderCounter::isCounter() const
 
 String RenderCounter::originalText() const
 {
-    if (!m_counterNode) {
-        RenderElement* beforeAfterContainer = parent();
-        while (true) {
-            if (!beforeAfterContainer)
-                return String();
-            if (!beforeAfterContainer->isAnonymous() && !beforeAfterContainer->isPseudoElement())
-                return String(); // RenderCounters are restricted to before and after pseudo elements
-            PseudoId containerStyle = beforeAfterContainer->style().styleType();
-            if ((containerStyle == PseudoId::Before) || (containerStyle == PseudoId::After))
-                break;
-            beforeAfterContainer = beforeAfterContainer->parent();
-        }
-        makeCounterNode(*beforeAfterContainer, m_counter.identifier(), true)->addRenderer(const_cast<RenderCounter&>(*this));
-        ASSERT(m_counterNode);
-    }
-    CounterNode* child = m_counterNode;
+    if (!m_counterNode)
+        return emptyString();
+
+    CheckedPtr child = m_counterNode;
     int value = child->actsAsReset() ? child->value() : child->countInParent();
 
-    String text = listMarkerText(m_counter.listStyle(), value);
+    auto counterText = [](const ListStyleType& styleType, int value, CSSCounterStyle* counterStyle) {
+        if (styleType.type == ListStyleType::Type::None)
+            return emptyString();
+
+        if (styleType.type == ListStyleType::Type::CounterStyle) {
+            ASSERT(counterStyle);
+            return counterStyle->text(value);
+        }
+
+        ASSERT_NOT_REACHED();
+        return emptyString();
+    };
+    auto counterStyle = this->counterStyle();
+    String text = counterText(m_counter.listStyleType(), value, counterStyle.get());
 
     if (!m_counter.separator().isNull()) {
         if (!child->actsAsReset())
             child = child->parent();
         while (CounterNode* parent = child->parent()) {
-            text = listMarkerText(m_counter.listStyle(), child->countInParent())
+            text = counterText(m_counter.listStyleType(), child->countInParent(), counterStyle.get())
                 + m_counter.separator() + text;
             child = parent;
         }
@@ -453,21 +477,22 @@ String RenderCounter::originalText() const
 
 void RenderCounter::updateCounter()
 {
-    computePreferredLogicalWidths(0);
-}
+    if (!m_counterNode) {
+        RenderElement* beforeAfterContainer = parent();
+        while (true) {
+            if (!beforeAfterContainer)
+                return;
+            if (!beforeAfterContainer->isAnonymous() && !beforeAfterContainer->isPseudoElement())
+                return;
+            auto containerStyle = beforeAfterContainer->style().styleType();
+            if (containerStyle == PseudoId::Before || containerStyle == PseudoId::After)
+                break;
+            beforeAfterContainer = beforeAfterContainer->parent();
+        }
+        makeCounterNode(*beforeAfterContainer, m_counter.identifier(), true)->addRenderer(const_cast<RenderCounter&>(*this));
+    }
 
-void RenderCounter::computePreferredLogicalWidths(float lead)
-{
-    // FIXME: We shouldn't be modifying the tree in computePreferredLogicalWidths.
-    // Instead, we should properly hook the appropriate changes in the DOM and modify
-    // the render tree then. When that's done, we also won't need to override
-    // computePreferredLogicalWidths at all.
-    // https://bugs.webkit.org/show_bug.cgi?id=104829
-    SetLayoutNeededForbiddenScope layoutForbiddenScope(*this, false);
-
-    setRenderedText(originalText());
-
-    RenderText::computePreferredLogicalWidths(lead);
+    setText(originalText(), true);
 }
 
 static void destroyCounterNodeWithoutMapRemoval(const AtomString& identifier, CounterNode& node)
@@ -476,8 +501,8 @@ static void destroyCounterNodeWithoutMapRemoval(const AtomString& identifier, Co
     for (RefPtr<CounterNode> child = node.lastDescendant(); child && child != &node; child = WTFMove(previous)) {
         previous = child->previousInPreOrder();
         child->parent()->removeChild(*child);
-        ASSERT(counterMaps().find(&child->owner())->value->get(identifier) == child);
-        counterMaps().find(&child->owner())->value->remove(identifier);
+        ASSERT(counterMaps().find(child->owner())->value->get(identifier) == child);
+        counterMaps().find(child->owner())->value->remove(identifier);
     }
     if (auto* parent = node.parent())
         parent->removeChild(node);
@@ -487,8 +512,8 @@ void RenderCounter::destroyCounterNodes(RenderElement& owner)
 {
     ASSERT(owner.hasCounterNodeMap());
     auto& maps = counterMaps();
-    ASSERT(maps.contains(&owner));
-    auto counterMap = maps.take(&owner);
+    ASSERT(maps.contains(owner));
+    auto counterMap = maps.take(owner);
     for (auto& counterMapEntry : *counterMap)
         destroyCounterNodeWithoutMapRemoval(counterMapEntry.key, counterMapEntry.value);
     owner.setHasCounterNodeMap(false);
@@ -496,7 +521,7 @@ void RenderCounter::destroyCounterNodes(RenderElement& owner)
 
 void RenderCounter::destroyCounterNode(RenderElement& owner, const AtomString& identifier)
 {
-    auto map = counterMaps().find(&owner);
+    auto map = counterMaps().find(owner);
     if (map == counterMaps().end())
         return;
     auto node = map->value->take(identifier);
@@ -510,79 +535,6 @@ void RenderCounter::destroyCounterNode(RenderElement& owner, const AtomString& i
     // will be called.
 }
 
-void RenderCounter::rendererRemovedFromTree(RenderElement& renderer)
-{
-    if (!renderer.view().hasRenderCounters())
-        return;
-    RenderObject* currentRenderer = renderer.lastLeafChild();
-    if (!currentRenderer)
-        currentRenderer = &renderer;
-    while (true) {
-        if (is<RenderElement>(*currentRenderer)) {
-            auto& counterNodeRenderer = downcast<RenderElement>(*currentRenderer);
-            if (counterNodeRenderer.hasCounterNodeMap())
-                destroyCounterNodes(counterNodeRenderer);
-        }
-        if (currentRenderer == &renderer)
-            break;
-        currentRenderer = currentRenderer->previousInPreOrder();
-    }
-}
-
-static void updateCounters(RenderElement& renderer)
-{
-    auto* directiveMap = renderer.style().counterDirectives();
-    if (!directiveMap)
-        return;
-    if (!renderer.hasCounterNodeMap()) {
-        for (auto& key : directiveMap->keys())
-            makeCounterNode(renderer, key, false);
-        return;
-    }
-    ASSERT(counterMaps().contains(&renderer));
-    auto* counterMap = counterMaps().find(&renderer)->value.get();
-    for (auto& key : directiveMap->keys()) {
-        RefPtr<CounterNode> node = counterMap->get(key);
-        if (!node) {
-            makeCounterNode(renderer, key, false);
-            continue;
-        }
-        auto place = findPlaceForCounter(renderer, key, node->hasResetType());
-        if (node != counterMap->get(key))
-            continue;
-        CounterNode* parent = node->parent();
-        if (place.parent == parent && place.previousSibling == node->previousSibling())
-            continue;
-        if (parent)
-            parent->removeChild(*node);
-        if (place.parent)
-            place.parent->insertAfter(*node, place.previousSibling.get(), key);
-    }
-}
-
-void RenderCounter::rendererSubtreeAttached(RenderElement& renderer)
-{
-    if (!renderer.view().hasRenderCounters())
-        return;
-    Element* element = renderer.element();
-    if (element && !element->isPseudoElement())
-        element = element->parentElement();
-    else
-        element = renderer.generatingElement();
-    if (element && !element->renderer())
-        return; // No need to update if the parent is not attached yet
-
-    bool crossedStyleContainmentBoundary = false;
-    for (RenderObject* descendant = &renderer; descendant; descendant = descendant->nextInPreOrder(&renderer)) {
-        if (!is<RenderElement>(descendant))
-            continue;
-
-        crossedStyleContainmentBoundary = crossedStyleContainmentBoundary || downcast<RenderElement>(*descendant).shouldApplyStyleContainment();
-        if (crossedStyleContainmentBoundary)
-            updateCounters(downcast<RenderElement>(*descendant));
-    }
-}
-
 void RenderCounter::rendererStyleChangedSlowCase(RenderElement& renderer, const RenderStyle* oldStyle, const RenderStyle& newStyle)
 {
     Element* element = renderer.generatingElement();
@@ -590,11 +542,11 @@ void RenderCounter::rendererStyleChangedSlowCase(RenderElement& renderer, const 
         return; // cannot have generated content or if it can have, it will be handled during attaching
 
     const CounterDirectiveMap* oldCounterDirectives;
-    if (oldStyle && (oldCounterDirectives = oldStyle->counterDirectives())) {
-        if (auto* newCounterDirectives = newStyle.counterDirectives()) {
-            for (auto& keyValue : *newCounterDirectives) {
-                auto existingEntry = oldCounterDirectives->find(keyValue.key);
-                if (existingEntry != oldCounterDirectives->end()) {
+    if (oldStyle && !(oldCounterDirectives = &oldStyle->counterDirectives())->map.isEmpty()) {
+        if (auto& newCounterDirectives = newStyle.counterDirectives().map; !newCounterDirectives.isEmpty()) {
+            for (auto& keyValue : newCounterDirectives) {
+                auto existingEntry = oldCounterDirectives->map.find(keyValue.key);
+                if (existingEntry != oldCounterDirectives->map.end()) {
                     if (existingEntry->value == keyValue.value)
                         continue;
                     RenderCounter::destroyCounterNode(renderer, keyValue.key);
@@ -605,8 +557,8 @@ void RenderCounter::rendererStyleChangedSlowCase(RenderElement& renderer, const 
                 makeCounterNode(renderer, keyValue.key, false);
             }
             // Destroying old counters that do not exist in the new counterDirective map.
-            for (auto& key : oldCounterDirectives->keys()) {
-                if (!newCounterDirectives->contains(key))
+            for (auto& key : oldCounterDirectives->map.keys()) {
+                if (!newCounterDirectives.contains(key))
                     RenderCounter::destroyCounterNode(renderer, key);
             }
         } else {
@@ -614,15 +566,18 @@ void RenderCounter::rendererStyleChangedSlowCase(RenderElement& renderer, const 
                 RenderCounter::destroyCounterNodes(renderer);
         }
     } else {
-        if (auto* newCounterDirectives = newStyle.counterDirectives()) {
-            for (auto& key : newCounterDirectives->keys()) {
+        for (auto& key : newStyle.counterDirectives().map.keys()) {
                 // We must create this node here, because the added node may be a node with no display such as
                 // as those created by the increment or reset directives and the re-layout that will happen will
                 // not catch the change if the node had no children.
                 makeCounterNode(renderer, key, false);
             }
         }
-    }
+}
+
+RefPtr<CSSCounterStyle> RenderCounter::counterStyle() const
+{
+    return document().counterStyleRegistry().resolvedCounterStyle(m_counter.listStyleType());
 }
 
 } // namespace WebCore
@@ -647,7 +602,7 @@ void showCounterRendererTree(const WebCore::RenderObject* renderer, const char* 
         fprintf(stderr, "%p N:%p P:%p PS:%p NS:%p C:%p\n",
             current, current->node(), current->parent(), current->previousSibling(),
             current->nextSibling(), downcast<WebCore::RenderElement>(*current).hasCounterNodeMap() ?
-            counterName ? WebCore::counterMaps().find(downcast<WebCore::RenderElement>(current))->value->get(identifier) : (WebCore::CounterNode*)1 : (WebCore::CounterNode*)0);
+            counterName ? WebCore::counterMaps().find(*downcast<WebCore::RenderElement>(current))->value->get(identifier) : (WebCore::CounterNode*)1 : (WebCore::CounterNode*)0);
     }
     fflush(stderr);
 }

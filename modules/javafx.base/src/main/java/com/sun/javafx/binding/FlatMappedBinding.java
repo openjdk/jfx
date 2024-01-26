@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.function.Function;
 
 import javafx.beans.value.ObservableValue;
+import javafx.util.Subscription;
 
 /**
  * A binding holding the value of an indirect source. The indirect source results from
@@ -71,7 +72,7 @@ public class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
 
         if (isObserved() && indirectSource != newIndirectSource) {  // only resubscribe when observed and the indirect source changed
             indirectSourceSubscription.unsubscribe();
-            indirectSourceSubscription = newIndirectSource == null ? Subscription.EMPTY : Subscription.subscribeInvalidations(newIndirectSource, this::invalidate);
+            indirectSourceSubscription = newIndirectSource == null ? Subscription.EMPTY : newIndirectSource.subscribe(this::invalidate);
             indirectSource = newIndirectSource;
         }
 
@@ -80,7 +81,7 @@ public class FlatMappedBinding<S, T> extends LazyObjectBinding<T> {
 
     @Override
     protected Subscription observeSources() {
-        Subscription subscription = Subscription.subscribeInvalidations(source, this::invalidateAll);
+        Subscription subscription = source.subscribe(this::invalidateAll);
 
         return () -> {
             subscription.unsubscribe();

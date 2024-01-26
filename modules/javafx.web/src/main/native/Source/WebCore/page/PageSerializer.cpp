@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,23 +40,24 @@
 #include "CommonAtomStrings.h"
 #include "DocumentInlines.h"
 #include "ElementInlines.h"
-#include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLHeadElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLLinkElement.h"
 #include "HTMLMetaCharsetParser.h"
+#include "HTMLMetaElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLStyleElement.h"
 #include "HTTPParsers.h"
 #include "Image.h"
+#include "LocalFrame.h"
 #include "MarkupAccumulator.h"
 #include "Page.h"
 #include "RenderElement.h"
 #include "StyleCachedImage.h"
 #include "StyleImage.h"
-#include "StyleProperties.h"
+#include "StylePropertiesInlines.h"
 #include "StyleRule.h"
 #include "StyleSheetContents.h"
 #include "Text.h"
@@ -66,22 +68,23 @@
 
 namespace WebCore {
 
-static bool isCharsetSpecifyingNode(const Node& node)
+static bool isCharsetSpecifyingNode(const HTMLMetaElement& element)
 {
-    if (!is<HTMLElement>(node))
+    if (!element.hasAttributes())
         return false;
-
-    const HTMLElement& element = downcast<HTMLElement>(node);
-    if (!element.hasTagName(HTMLNames::metaTag))
-        return false;
-    HTMLMetaCharsetParser::AttributeList attributes;
-    if (element.hasAttributes()) {
-        for (const Attribute& attribute : element.attributesIterator()) {
-            // FIXME: We should deal appropriately with the attribute if they have a namespace.
-            attributes.append({ attribute.name().toAtomString(), attribute.value() });
-        }
+    Vector<std::pair<StringView, StringView>> attributes;
+    for (auto& attribute : element.attributesIterator()) {
+        if (attribute.name().hasPrefix())
+            continue;
+        attributes.append({ StringView { attribute.name().localName() }, StringView { attribute.value() } });
     }
     return HTMLMetaCharsetParser::encodingFromMetaAttributes(attributes).isValid();
+}
+
+template<typename NodeType> static bool isCharsetSpecifyingNode(const NodeType& node)
+{
+    auto* metaElement = dynamicDowncast<HTMLMetaElement>(node);
+    return metaElement && isCharsetSpecifyingNode(*metaElement);
 }
 
 static bool shouldIgnoreElement(const Element& element)
@@ -110,7 +113,7 @@ private:
 };
 
 PageSerializer::SerializerMarkupAccumulator::SerializerMarkupAccumulator(PageSerializer& serializer, Document& document, Vector<Node*>* nodes)
-    : MarkupAccumulator(nodes, ResolveURLs::Yes)
+    : MarkupAccumulator(nodes, ResolveURLs::Yes, document.isHTMLDocument() ? SerializationSyntax::HTML : SerializationSyntax::XML)
     , m_serializer(serializer)
     , m_document(document)
 {
@@ -143,7 +146,7 @@ void PageSerializer::SerializerMarkupAccumulator::appendCustomAttributes(StringB
         return;
 
     const HTMLFrameOwnerElement& frameOwner = downcast<HTMLFrameOwnerElement>(element);
-    Frame* frame = frameOwner.contentFrame();
+    auto* frame = dynamicDowncast<LocalFrame>(frameOwner.contentFrame());
     if (!frame)
         return;
 
@@ -169,10 +172,11 @@ PageSerializer::PageSerializer(Vector<PageSerializer::Resource>& resources)
 
 void PageSerializer::serialize(Page& page)
 {
-    serializeFrame(&page.mainFrame());
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame()))
+        serializeFrame(localMainFrame);
 }
 
-void PageSerializer::serializeFrame(Frame* frame)
+void PageSerializer::serializeFrame(LocalFrame* frame)
 {
     Document* document = frame->document();
     URL url = document->url();
@@ -188,19 +192,19 @@ void PageSerializer::serializeFrame(Frame* frame)
         return;
     }
 
-    Vector<Node*> nodes;
-    SerializerMarkupAccumulator accumulator(*this, *document, &nodes);
     PAL::TextEncoding textEncoding(document->charset());
-    CString data;
     if (!textEncoding.isValid()) {
         // FIXME: iframes used as images trigger this. We should deal with them correctly.
         return;
     }
+
+    Vector<Node*> serializedNodes;
+    SerializerMarkupAccumulator accumulator(*this, *document, &serializedNodes);
     String text = accumulator.serializeNodes(*document->documentElement(), SerializedNodes::SubtreeIncludingNode);
     m_resources.append({ url, document->suggestedMIMEType(), SharedBuffer::create(textEncoding.encode(text, PAL::UnencodableHandling::Entities)) });
     m_resourceURLs.add(url);
 
-    for (auto& node : nodes) {
+    for (auto& node : serializedNodes) {
         if (!is<Element>(*node))
             continue;
 
@@ -227,8 +231,12 @@ void PageSerializer::serializeFrame(Frame* frame)
         }
     }
 
-    for (Frame* childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling())
-        serializeFrame(childFrame);
+    for (auto* childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling()) {
+        auto* localFrame = dynamicDowncast<LocalFrame>(childFrame);
+        if (!localFrame)
+            continue;
+        serializeFrame(localFrame);
+    }
 }
 
 void PageSerializer::serializeCSSStyleSheet(CSSStyleSheet* styleSheet, const URL& url)
@@ -300,9 +308,8 @@ void PageSerializer::retrieveResourcesForProperties(const StyleProperties* style
     // The background-image and list-style-image (for ul or ol) are the CSS properties
     // that make use of images. We iterate to make sure we include any other
     // image properties there might be.
-    unsigned propertyCount = styleDeclaration->propertyCount();
-    for (unsigned i = 0; i < propertyCount; ++i) {
-        RefPtr<CSSValue> cssValue = styleDeclaration->propertyAt(i).value();
+    for (auto property : *styleDeclaration) {
+        auto cssValue = property.value();
         if (!is<CSSImageValue>(*cssValue))
             continue;
 
@@ -314,7 +321,7 @@ void PageSerializer::retrieveResourcesForProperties(const StyleProperties* style
     }
 }
 
-URL PageSerializer::urlForBlankFrame(Frame* frame)
+URL PageSerializer::urlForBlankFrame(LocalFrame* frame)
 {
     auto iterator = m_blankFrameURLs.find(frame);
     if (iterator != m_blankFrameURLs.end())

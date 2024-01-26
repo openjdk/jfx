@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2010-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,46 +41,6 @@
 
 namespace WebCore {
 
-template <typename CharType>
-static String stripLeadingAndTrailingHTMLSpaces(String string, CharType characters, unsigned length)
-{
-    unsigned numLeadingSpaces = 0;
-    unsigned numTrailingSpaces = 0;
-
-    for (; numLeadingSpaces < length; ++numLeadingSpaces) {
-        if (isNotHTMLSpace(characters[numLeadingSpaces]))
-            break;
-    }
-
-    if (numLeadingSpaces == length)
-        return string.isNull() ? string : emptyAtom().string();
-
-    for (; numTrailingSpaces < length; ++numTrailingSpaces) {
-        if (isNotHTMLSpace(characters[length - numTrailingSpaces - 1]))
-            break;
-    }
-
-    ASSERT(numLeadingSpaces + numTrailingSpaces < length);
-
-    if (!(numLeadingSpaces | numTrailingSpaces))
-        return string;
-
-    return string.substring(numLeadingSpaces, length - (numLeadingSpaces + numTrailingSpaces));
-}
-
-String stripLeadingAndTrailingHTMLSpaces(const String& string)
-{
-    unsigned length = string.length();
-
-    if (!length)
-        return string.isNull() ? string : emptyAtom().string();
-
-    if (string.is8Bit())
-        return stripLeadingAndTrailingHTMLSpaces(string, string.characters8(), length);
-
-    return stripLeadingAndTrailingHTMLSpaces(string, string.characters16(), length);
-}
-
 String serializeForNumberType(const Decimal& number)
 {
     if (number.isZero()) {
@@ -98,7 +59,7 @@ String serializeForNumberType(double number)
 
 Decimal parseToDecimalForNumberType(StringView string, const Decimal& fallbackValue)
 {
-    // See HTML5 2.5.4.3 `Real numbers.' and parseToDoubleForNumberType
+    // https://html.spec.whatwg.org/#floating-point-numbers and parseToDoubleForNumberType
     if (string.isEmpty())
         return fallbackValue;
 
@@ -111,11 +72,9 @@ Decimal parseToDecimalForNumberType(StringView string, const Decimal& fallbackVa
     if (!value.isFinite())
         return fallbackValue;
 
-    // Numbers are considered finite IEEE 754 single-precision floating point values.
-    // See HTML5 2.5.4.3 `Real numbers.'
-    // FIXME: We should use numeric_limits<double>::max for number input type.
-    const Decimal floatMax = Decimal::fromDouble(std::numeric_limits<float>::max());
-    if (value < -floatMax || value > floatMax)
+    // Numbers are considered finite IEEE 754 Double-precision floating point values.
+    const Decimal doubleMax = Decimal::fromDouble(std::numeric_limits<double>::max());
+    if (value < -doubleMax || value > doubleMax)
         return fallbackValue;
 
     // We return +0 for -0 case.
@@ -129,7 +88,7 @@ Decimal parseToDecimalForNumberType(StringView string)
 
 double parseToDoubleForNumberType(StringView string, double fallbackValue)
 {
-    // See HTML5 2.5.4.3 `Real numbers.'
+    // https://html.spec.whatwg.org/#floating-point-numbers
     if (string.isEmpty())
         return fallbackValue;
 
@@ -156,10 +115,8 @@ double parseToDoubleForNumberType(StringView string, double fallbackValue)
     if (!std::isfinite(value))
         return fallbackValue;
 
-    // Numbers are considered finite IEEE 754 single-precision floating point values.
-    // See HTML5 2.5.4.3 `Real numbers.'
-    if (-std::numeric_limits<float>::max() > value || value > std::numeric_limits<float>::max())
-        return fallbackValue;
+    // Numbers are considered finite IEEE 754 Double-precision floating point values.
+    ASSERT(-std::numeric_limits<double>::max() <= value || value < std::numeric_limits<double>::max());
 
     // The following expression converts -0 to +0.
     return value ? value : 0;
@@ -173,7 +130,7 @@ double parseToDoubleForNumberType(StringView string)
 template <typename CharacterType>
 static Expected<int, HTMLIntegerParsingError> parseHTMLIntegerInternal(const CharacterType* position, const CharacterType* end)
 {
-    while (position < end && isHTMLSpace(*position))
+    while (position < end && isASCIIWhitespace(*position))
         ++position;
 
     if (position == end)
@@ -299,7 +256,7 @@ std::optional<double> parseValidHTMLFloatingPointNumber(StringView input)
 
 static inline bool isHTMLSpaceOrDelimiter(UChar character)
 {
-    return isHTMLSpace(character) || character == ',' || character == ';';
+    return isASCIIWhitespace(character) || character == ',' || character == ';';
 }
 
 static inline bool isNumberStart(UChar character)
@@ -376,7 +333,7 @@ String parseCORSSettingsAttribute(const AtomString& value)
 template <typename CharacterType>
 static bool parseHTTPRefreshInternal(const CharacterType* position, const CharacterType* end, double& parsedDelay, String& parsedURL)
 {
-    while (position < end && isHTMLSpace(*position))
+    while (position < end && isASCIIWhitespace(*position))
         ++position;
 
     unsigned time = 0;
@@ -404,18 +361,18 @@ static bool parseHTTPRefreshInternal(const CharacterType* position, const Charac
         return true;
     }
 
-    if (*position != ';' && *position != ',' && !isHTMLSpace(*position))
+    if (*position != ';' && *position != ',' && !isASCIIWhitespace(*position))
         return false;
 
     parsedDelay = time;
 
-    while (position < end && isHTMLSpace(*position))
+    while (position < end && isASCIIWhitespace(*position))
         ++position;
 
     if (position < end && (*position == ';' || *position == ','))
         ++position;
 
-    while (position < end && isHTMLSpace(*position))
+    while (position < end && isASCIIWhitespace(*position))
         ++position;
 
     if (position == end)
@@ -440,7 +397,7 @@ static bool parseHTTPRefreshInternal(const CharacterType* position, const Charac
             return true;
         }
 
-        while (position < end && isHTMLSpace(*position))
+        while (position < end && isASCIIWhitespace(*position))
             ++position;
 
         if (position < end && *position == '=')
@@ -450,7 +407,7 @@ static bool parseHTTPRefreshInternal(const CharacterType* position, const Charac
             return true;
         }
 
-        while (position < end && isHTMLSpace(*position))
+        while (position < end && isASCIIWhitespace(*position))
             ++position;
     }
 
@@ -506,7 +463,7 @@ static std::optional<HTMLDimensionParsingResult> parseHTMLDimensionNumber(const 
 
     const auto* begin = position;
     const auto* end = position + length;
-    skipWhile<isHTMLSpace>(position, end);
+    skipWhile<isASCIIWhitespace>(position, end);
     if (position == end)
         return std::nullopt;
 

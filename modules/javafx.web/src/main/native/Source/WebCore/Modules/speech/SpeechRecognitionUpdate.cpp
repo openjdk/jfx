@@ -26,6 +26,8 @@
 #include "config.h"
 #include "SpeechRecognitionUpdate.h"
 
+#include <wtf/NeverDestroyed.h>
+
 namespace WebCore {
 
 String convertEnumerationToString(SpeechRecognitionUpdateType enumerationValue)
@@ -54,7 +56,7 @@ String convertEnumerationToString(SpeechRecognitionUpdateType enumerationValue)
     static_assert(static_cast<size_t>(SpeechRecognitionUpdateType::NoMatch) == 8, "SpeechRecognitionUpdateType::NoMatch is not 9 as expected");
     static_assert(static_cast<size_t>(SpeechRecognitionUpdateType::Error) == 9, "SpeechRecognitionUpdateType::Error is not 10 as expected");
     static_assert(static_cast<size_t>(SpeechRecognitionUpdateType::End) == 10, "SpeechRecognitionUpdateType::End is not 11 as expected");
-    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    ASSERT(static_cast<size_t>(enumerationValue) < std::size(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
 

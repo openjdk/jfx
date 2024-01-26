@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,9 +39,9 @@ static JGClass jMainThreadCls;
 static jmethodID fwkScheduleDispatchFunctions;
 
 #if OS(UNIX)
-static pthread_t mainThread;
+static pthread_t s_mainThread;
 #elif OS(WINDOWS)
-static ThreadIdentifier mainThread { 0 };
+static ThreadIdentifier s_mainThread { 0 };
 #endif
 
 void scheduleDispatchFunctionsOnMainThread()
@@ -89,22 +89,21 @@ void initializeMainThreadPlatform()
     ASSERT(fwkScheduleDispatchFunctions);
 
 #if OS(UNIX)
-    mainThread = pthread_self();
+    s_mainThread = pthread_self();
 #elif OS(WINDOWS)
-    mainThread = Thread::currentID();
-    RunLoop::registerRunLoopMessageWindowClass();
+    s_mainThread = Thread::currentID();
 #endif
 }
 
 #if OS(UNIX)
 bool isMainThread()
 {
-    return pthread_equal(pthread_self(), mainThread);
+    return pthread_equal(pthread_self(), s_mainThread);
 }
 #elif OS(WINDOWS)
 bool isMainThread()
 {
-    return mainThread == Thread::currentID();
+    return s_mainThread == Thread::currentID();
 }
 #endif
 

@@ -36,24 +36,25 @@ namespace WebCore {
  *  three phases invoked on them during this phase.
  */
 
-enum class PaintPhase : uint8_t {
-    BlockBackground,
-    ChildBlockBackground,
-    ChildBlockBackgrounds,
-    Float,
-    Foreground,
-    Outline,
-    ChildOutlines,
-    SelfOutline,
-    Selection,
-    CollapsedTableBorders,
-    TextClip,
-    Mask,
-    ClippingMask,
-    EventRegion,
+enum class PaintPhase : uint16_t {
+    BlockBackground          = 0,
+    ChildBlockBackground     = 1 << 0,
+    ChildBlockBackgrounds    = 1 << 1,
+    Float                    = 1 << 2,
+    Foreground               = 1 << 3,
+    Outline                  = 1 << 4,
+    ChildOutlines            = 1 << 5,
+    SelfOutline              = 1 << 6,
+    Selection                = 1 << 7,
+    CollapsedTableBorders    = 1 << 8,
+    TextClip                 = 1 << 9,
+    Mask                     = 1 << 10,
+    ClippingMask             = 1 << 11,
+    EventRegion              = 1 << 12,
+    Accessibility            = 1 << 13,
 };
 
-enum class PaintBehavior : uint16_t {
+enum class PaintBehavior : uint32_t {
     Normal                              = 0,
     SelectionOnly                       = 1 << 0,
     SkipSelectionHighlight              = 1 << 1,
@@ -65,12 +66,14 @@ enum class PaintBehavior : uint16_t {
     SelectionAndBackgroundsOnly         = 1 << 7,
     ExcludeSelection                    = 1 << 8,
     FlattenCompositingLayers            = 1 << 9, // Paint doesn't stop at compositing layer boundaries.
-    Snapshotting                        = 1 << 10,
-    TileFirstPaint                      = 1 << 11,
+    ForceSynchronousImageDecode         = 1 << 10, // Paint should always complete image decoding of painted images.
+    DefaultAsynchronousImageDecode      = 1 << 11, // Paint should always start asynchronous image decode of painted images, unless otherwise specified.
     CompositedOverflowScrollContent     = 1 << 12,
     AnnotateLinks                       = 1 << 13, // Collect all renderers with links to annotate their URLs (e.g. PDFs)
     EventRegionIncludeForeground        = 1 << 14, // FIXME: Event region painting should use paint phases.
     EventRegionIncludeBackground        = 1 << 15,
+    Snapshotting                        = 1 << 16, // Paint is updating external backing store and visits all content, including composited content and always completes image decoding of painted images. FIXME: Will be removed.
+    DontShowVisitedLinks                = 1 << 17,
 };
 
 } // namespace WebCore

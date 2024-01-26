@@ -162,10 +162,10 @@ struct PtrTagLookup {
 #if CPU(ARM64E)
 #define ENABLE_PTRTAG_DEBUGGING ASSERT_ENABLED
 
+#if ENABLE(PTRTAG_DEBUGGING)
+
 WTF_EXPORT_PRIVATE void registerPtrTagLookup(PtrTagLookup*);
 WTF_EXPORT_PRIVATE void reportBadTag(const void*, PtrTag expectedTag);
-
-#if ENABLE(PTRTAG_DEBUGGING)
 
 WTF_EXPORT_PRIVATE const char* ptrTagName(PtrTag);
 WTF_EXPORT_PRIVATE const char* tagForPtr(const void*);
@@ -439,6 +439,7 @@ template<typename T>
 inline T* tagArrayPtr(std::nullptr_t ptr, size_t length)
 {
     ASSERT(!length);
+    length = length & ((1ull << 48) - 1); // See rdar://107561209, rdar://107724053.
     return ptrauth_sign_unauthenticated(static_cast<T*>(ptr), ptrauth_key_process_dependent_data, length);
 }
 
@@ -446,6 +447,7 @@ inline T* tagArrayPtr(std::nullptr_t ptr, size_t length)
 template<typename T>
 inline T* tagArrayPtr(T* ptr, size_t length)
 {
+    length = length & ((1ull << 48) - 1); // See rdar://107561209, rdar://107724053.
     return ptrauth_sign_unauthenticated(ptr, ptrauth_key_process_dependent_data, length);
 }
 
@@ -464,6 +466,7 @@ inline T* removeArrayPtrTag(T* ptr)
 template<typename T>
 inline T* retagArrayPtr(T* ptr, size_t oldLength, size_t newLength)
 {
+    newLength = newLength & ((1ull << 48) - 1); // See rdar://107561209, rdar://107724053.
     return ptrauth_auth_and_resign(ptr, ptrauth_key_process_dependent_data, oldLength, ptrauth_key_process_dependent_data, newLength);
 }
 
@@ -573,7 +576,9 @@ using WTF::PtrTag;
 using WTF::PtrTagCallerType;
 using WTF::PtrTagCalleeType;
 
+#if ENABLE(PTRTAG_DEBUGGING)
 using WTF::reportBadTag;
+#endif
 
 using WTF::untagReturnPC;
 using WTF::tagArrayPtr;

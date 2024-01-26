@@ -27,12 +27,15 @@
 
 #if ENABLE(B3_JIT)
 
+#include "AirOpcode.h"
 #include "AirTmp.h"
 #include "B3Bank.h"
 #include "B3Common.h"
 #include "B3Type.h"
 #include "B3Value.h"
 #include "B3Width.h"
+#include "Fits.h"
+#include "OpcodeSize.h"
 
 #if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
@@ -90,7 +93,9 @@ public:
         WidthArg,
 
         // ZeroReg is interpreted as a zero register in ARM64
-        ZeroReg
+        ZeroReg,
+
+        SIMDInfo
     };
 
     enum Temperature : int8_t {
@@ -493,8 +498,26 @@ public:
     {
     }
 
+    static Arg simdInfo(SIMDLane simdLane, SIMDSignMode signMode = SIMDSignMode::None)
+    {
+        Arg result;
+        result.m_kind = SIMDInfo;
+        result.m_simdInfo = ::JSC::SIMDInfo { simdLane, signMode };
+        return result;
+    }
+
+    static Arg simdInfo(::JSC::SIMDInfo info)
+    {
+        Arg result;
+        result.m_kind = SIMDInfo;
+        result.m_simdInfo = info;
+        return result;
+    }
+
     static Arg imm(int64_t value)
     {
+        if constexpr (is32Bit())
+            RELEASE_ASSERT((Fits<int64_t, Wide32>::check(value) || Fits<uint64_t, Wide32>::check(value)));
         Arg result;
         result.m_kind = Imm;
         result.m_offset = value;
@@ -503,14 +526,28 @@ public:
 
     static Arg bigImm(int64_t value)
     {
+        if constexpr (is32Bit())
+            RELEASE_ASSERT((Fits<int64_t, Wide32>::check(value) || Fits<uint64_t, Wide32>::check(value)));
         Arg result;
         result.m_kind = BigImm;
         result.m_offset = value;
         return result;
     }
 
+    static Arg bigImmLo32(int64_t value)
+    {
+        return bigImm(value & 0xffffffff);
+    }
+
+    static Arg bigImmHi32(int64_t value)
+    {
+        return bigImm(value >> 32);
+    }
+
     static Arg bitImm(int64_t value)
     {
+        if constexpr (is32Bit())
+            RELEASE_ASSERT((Fits<int64_t, Wide32>::check(value)));
         Arg result;
         result.m_kind = BitImm;
         result.m_offset = value;
@@ -519,6 +556,8 @@ public:
 
     static Arg bitImm64(int64_t value)
     {
+        if constexpr (is32Bit())
+            UNREACHABLE_FOR_PLATFORM();
         Arg result;
         result.m_kind = BitImm64;
         result.m_offset = value;
@@ -594,18 +633,18 @@ public:
     {
         switch (scale) {
         case 1:
-            if (isX86() || isARM64())
+            if (isX86() || isARM64() || isARM_THUMB2())
                 return true;
             return false;
         case 2:
         case 4:
         case 8:
-            if (isX86())
+            if (isX86() || isARM_THUMB2())
                 return true;
             if (isARM64()) {
                 if (!width)
                     return true;
-                return scale == 1 || scale == bytes(*width);
+                return scale == 1 || scale == bytesForWidth(*width);
             }
             return false;
         default:
@@ -624,6 +663,8 @@ public:
             return 2;
         case 8:
             return 3;
+        case 16:
+            return 4;
         default:
             ASSERT_NOT_REACHED();
             return 0;
@@ -719,7 +760,7 @@ public:
     {
         Arg result;
         result.m_kind = WidthArg;
-        result.m_offset = width;
+        result.m_offset = bytesForWidth(width);
         return result;
     }
 
@@ -738,11 +779,6 @@ public:
             && m_base == other.m_base
             && m_index == other.m_index
             && m_scale == other.m_scale;
-    }
-
-    bool operator!=(const Arg& other) const
-    {
-        return !(*this == other);
     }
 
     explicit operator bool() const { return *this != Arg(); }
@@ -910,6 +946,11 @@ public:
         return isTmp() || isStack();
     }
 
+    bool isSIMDInfo() const
+    {
+        return kind() == SIMDInfo;
+    }
+
     Air::Tmp tmp() const
     {
         ASSERT(kind() == Tmp);
@@ -941,6 +982,8 @@ public:
                 return B3::isRepresentableAs<int32_t>(value);
             case Width64:
                 return B3::isRepresentableAs<int64_t>(value);
+            case Width128:
+                break;
             }
             RELEASE_ASSERT_NOT_REACHED();
         case Unsigned:
@@ -953,6 +996,8 @@ public:
                 return B3::isRepresentableAs<uint32_t>(value);
             case Width64:
                 return B3::isRepresentableAs<uint64_t>(value);
+            case Width128:
+                break;
             }
         }
         RELEASE_ASSERT_NOT_REACHED();
@@ -973,6 +1018,8 @@ public:
                 return static_cast<int32_t>(value);
             case Width64:
                 return static_cast<int64_t>(value);
+            case Width128:
+                break;
             }
             RELEASE_ASSERT_NOT_REACHED();
         case Unsigned:
@@ -985,6 +1032,8 @@ public:
                 return static_cast<uint32_t>(value);
             case Width64:
                 return static_cast<uint64_t>(value);
+            case Width128:
+                break;
             }
         }
         RELEASE_ASSERT_NOT_REACHED();
@@ -1056,7 +1105,7 @@ public:
     Width width() const
     {
         ASSERT(kind() == WidthArg);
-        return static_cast<Width>(m_offset);
+        return widthForBytes(m_offset);
     }
 
     bool isGPTmp() const
@@ -1095,6 +1144,7 @@ public:
             return true;
         case Tmp:
             return isGPTmp();
+        case SIMDInfo:
         case Invalid:
             return false;
         }
@@ -1116,6 +1166,7 @@ public:
         case WidthArg:
         case Invalid:
         case ZeroReg:
+        case SIMDInfo:
             return false;
         case SimpleAddr:
         case Addr:
@@ -1218,8 +1269,16 @@ public:
     {
         if (isX86())
             return B3::isRepresentableAs<int32_t>(value);
-        if (isARM64())
-            return isUInt12(value);
+        if (isARM64()) {
+            if (isUInt12(value) || isUInt12(toTwosComplement(value)))
+                return true;
+            int64_t shifted = value >> 12;
+            if ((shifted << 12) == value)
+                return isUInt12(shifted) || isUInt12(toTwosComplement(shifted));
+            return false;
+        }
+        if (isARM_THUMB2())
+            return isValidARMThumb2Immediate(value);
         return false;
     }
 
@@ -1229,6 +1288,8 @@ public:
             return B3::isRepresentableAs<int32_t>(value);
         if (isARM64())
             return ARM64LogicalImmediate::create32(value).isValid();
+        if (isARM_THUMB2())
+            return isValidARMThumb2Immediate(value);
         return false;
     }
 
@@ -1242,14 +1303,18 @@ public:
     }
 
     template<typename Int, typename = Value::IsLegalOffset<Int>>
-    static bool isValidAddrForm(Int offset, std::optional<Width> width = std::nullopt)
+    static bool isValidAddrForm(Air::Opcode opcode, Int offset, std::optional<Width> width = std::nullopt)
     {
+#if !CPU(ARM_THUMB2)
+        UNUSED_PARAM(opcode);
+#endif
         if (isX86())
             return true;
-        if (isARM64()) {
+
             if (!width)
                 return true;
 
+        if (isARM64()) {
             if (isValidSignedImm9(offset))
                 return true;
 
@@ -1262,13 +1327,30 @@ public:
                 return isValidScaledUImm12<32>(offset);
             case Width64:
                 return isValidScaledUImm12<64>(offset);
+            case Width128:
+                return isValidScaledUImm12<128>(offset);
             }
+            }
+
+#if CPU(ARM_THUMB2)
+        switch (opcode) {
+        case Move:
+        case Move32:
+            return MacroAssemblerARMv7::BoundsNonDoubleWordOffset::within(offset);
+        case MoveDouble:
+        case MoveFloat:
+            if (!std::is_signed<Int>::value)
+                return !((offset & 3) || (offset > (255 * 4)));
+            return !((offset & 3) || (offset > (255 * 4)) || (static_cast<typename std::make_signed<Int>::type>(offset) < -(255 * 4)));
+        default:
+            return false;
         }
+#endif
         return false;
     }
 
     template<typename Int, typename = Value::IsLegalOffset<Int>>
-    static bool isValidIndexForm(unsigned scale, Int offset, std::optional<Width> width = std::nullopt)
+    static bool isValidIndexForm(Air::Opcode opcode, unsigned scale, Int offset, std::optional<Width> width = std::nullopt)
     {
         if (!isValidScale(scale, width))
             return false;
@@ -1276,6 +1358,15 @@ public:
             return true;
         if (isARM64())
             return !offset;
+        if (isARM_THUMB2()) {
+            switch (opcode) {
+            case MoveFloat:
+            case MoveDouble:
+                return false;
+            default:
+                return !offset;
+            }
+        }
         return false;
     }
 
@@ -1290,7 +1381,7 @@ public:
     // If you don't pass a width then this optimistically assumes that you're using the right width. But
     // the width is relevant to validity, so passing a null width is only useful for assertions. Don't
     // pass null widths when cascading through Args in the instruction selector!
-    bool isValidForm(std::optional<Width> width = std::nullopt) const
+    bool isValidForm(Air::Opcode opcode, std::optional<Width> width = std::nullopt) const
     {
         switch (kind()) {
         case Invalid:
@@ -1308,13 +1399,14 @@ public:
         case ZeroReg:
         case SimpleAddr:
         case ExtendedOffsetAddr:
+        case SIMDInfo:
             return true;
         case Addr:
         case Stack:
         case CallArg:
-            return isValidAddrForm(offset(), width);
+            return isValidAddrForm(opcode, offset(), width);
         case Index:
-            return isValidIndexForm(scale(), offset(), width);
+            return isValidIndexForm(opcode, scale(), offset(), width);
         case PreIndex:
         case PostIndex:
             return isValidIncrementIndexForm(offset());
@@ -1402,13 +1494,22 @@ public:
         return MacroAssembler::TrustedImm32(static_cast<Value::OffsetType>(m_offset));
     }
 
-#if USE(JSVALUE64)
     MacroAssembler::TrustedImm64 asTrustedImm64() const
     {
+        if constexpr (is32Bit())
+            UNREACHABLE_FOR_PLATFORM();
         ASSERT(isBigImm() || isBitImm64());
         return MacroAssembler::TrustedImm64(value());
     }
-#endif
+
+    decltype(auto) asTrustedBigImm() const
+    {
+        ASSERT(isBigImm());
+        if constexpr (is32Bit())
+            return MacroAssembler::TrustedImm32(value());
+        else
+            return MacroAssembler::TrustedImm64(value());
+    }
 
 #if CPU(ARM64)
     MacroAssembler::RegisterID asZeroReg() const
@@ -1476,6 +1577,18 @@ public:
     {
         ASSERT(isStatusCond());
         return static_cast<MacroAssembler::StatusCondition>(m_offset);
+    }
+
+    ::JSC::SIMDInfo simdInfo() const
+    {
+        ASSERT(isSIMDInfo());
+        return m_simdInfo;
+    }
+
+    SIMDSignMode simdSignMode() const
+    {
+        ASSERT(isSIMDInfo());
+        return m_simdInfo.signMode;
     }
 
     // Tells you if the Arg is invertible. Only condition arguments are invertible, and even for those, there
@@ -1560,6 +1673,7 @@ private:
     int32_t m_scale { 1 };
     Air::Tmp m_base;
     Air::Tmp m_index;
+    JSC::SIMDInfo m_simdInfo;
 };
 
 struct ArgHash {

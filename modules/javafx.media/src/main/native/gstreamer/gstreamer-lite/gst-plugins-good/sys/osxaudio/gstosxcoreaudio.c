@@ -477,7 +477,7 @@ gst_core_audio_asbd_to_caps (AudioStreamBasicDescription * asbd,
   GstAudioFormat format = GST_AUDIO_FORMAT_UNKNOWN;
   guint rate, channels, bps, endianness;
   guint64 channel_mask;
-  gboolean sign, interleaved;
+  gboolean sign;
   GstAudioChannelPosition pos[GST_OSX_AUDIO_MAX_CHANNEL];
 
   if (asbd->mFormatID != kAudioFormatLinearPCM) {
@@ -505,8 +505,6 @@ gst_core_audio_asbd_to_caps (AudioStreamBasicDescription * asbd,
   endianness = asbd->mFormatFlags & kAudioFormatFlagIsBigEndian ?
       G_BIG_ENDIAN : G_LITTLE_ENDIAN;
   sign = asbd->mFormatFlags & kAudioFormatFlagIsSignedInteger ? TRUE : FALSE;
-  interleaved = asbd->mFormatFlags & kAudioFormatFlagIsNonInterleaved ?
-      TRUE : FALSE;
 
   if (asbd->mFormatFlags & kAudioFormatFlagIsFloat) {
     if (bps == 32) {

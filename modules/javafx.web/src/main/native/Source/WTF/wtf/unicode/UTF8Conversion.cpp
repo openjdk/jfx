@@ -31,20 +31,20 @@
 #include <wtf/text/StringHasher.h>
 #include <wtf/unicode/CharacterNames.h>
 
-namespace WTF {
-namespace Unicode {
+namespace WTF::Unicode {
 
-bool convertLatin1ToUTF8(const LChar** sourceStart, const LChar* sourceEnd, char** targetStart, char* targetEnd)
+bool convertLatin1ToUTF8(const LChar** sourceStart, const LChar* sourceEnd, char** targetStart, const char* targetEnd)
 {
     const LChar* source;
     char* target = *targetStart;
-    int i = 0;
+    int32_t i = 0;
     for (source = *sourceStart; source < sourceEnd; ++source) {
         UBool sawError = false;
         // Work around bug in either Windows compiler or old version of ICU, where passing a uint8_t to
         // U8_APPEND warns, by converting from uint8_t to a wider type.
         UChar32 character = *source;
         U8_APPEND(reinterpret_cast<uint8_t*>(target), i, targetEnd - *targetStart, character, sawError);
+        ASSERT_WITH_MESSAGE(!sawError, "UTF8 destination buffer was not big enough");
         if (sawError)
             return false;
     }
@@ -53,31 +53,31 @@ bool convertLatin1ToUTF8(const LChar** sourceStart, const LChar* sourceEnd, char
     return true;
 }
 
-ConversionResult convertUTF16ToUTF8(const UChar** sourceStart, const UChar* sourceEnd, char** targetStart, char* targetEnd, bool strict)
+ConversionResult convertUTF16ToUTF8(const UChar** sourceStart, const UChar* sourceEnd, char** targetStart, const char* targetEnd, bool strict)
 {
-    ConversionResult result = ConversionOK;
+    auto result = ConversionResult::Success;
     const UChar* source = *sourceStart;
     char* target = *targetStart;
     UBool sawError = false;
-    int i = 0;
+    int32_t i = 0;
     while (source < sourceEnd) {
         UChar32 ch;
         int j = 0;
         U16_NEXT(source, j, sourceEnd - source, ch);
         if (U_IS_SURROGATE(ch)) {
             if (source + j == sourceEnd && U_IS_SURROGATE_LEAD(ch)) {
-                result = SourceExhausted;
+                result = ConversionResult::SourceExhausted;
                 break;
             }
             if (strict) {
-                result = SourceIllegal;
+                result = ConversionResult::SourceIllegal;
                 break;
             }
             ch = replacementCharacter;
         }
         U8_APPEND(reinterpret_cast<uint8_t*>(target), i, targetEnd - target, ch, sawError);
         if (sawError) {
-            result = TargetExhausted;
+            result = ConversionResult::TargetExhausted;
             break;
         }
         source += j;
@@ -88,7 +88,7 @@ ConversionResult convertUTF16ToUTF8(const UChar** sourceStart, const UChar* sour
 }
 
 template<bool replaceInvalidSequences>
-bool convertUTF8ToUTF16Impl(const char* source, const char* sourceEnd, UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII)
+bool convertUTF8ToUTF16Impl(const char* source, const char* sourceEnd, UChar** targetStart, const UChar* targetEnd, bool* sourceAllASCII)
 {
     RELEASE_ASSERT(sourceEnd - source <= std::numeric_limits<int>::max());
     UBool error = false;
@@ -117,12 +117,12 @@ bool convertUTF8ToUTF16Impl(const char* source, const char* sourceEnd, UChar** t
     return true;
 }
 
-bool convertUTF8ToUTF16(const char* source, const char* sourceEnd, UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII)
+bool convertUTF8ToUTF16(const char* source, const char* sourceEnd, UChar** targetStart, const UChar* targetEnd, bool* sourceAllASCII)
 {
     return convertUTF8ToUTF16Impl<false>(source, sourceEnd, targetStart, targetEnd, sourceAllASCII);
 }
 
-bool convertUTF8ToUTF16ReplacingInvalidSequences(const char* source, const char* sourceEnd, UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII)
+bool convertUTF8ToUTF16ReplacingInvalidSequences(const char* source, const char* sourceEnd, UChar** targetStart, const UChar* targetEnd, bool* sourceAllASCII)
 {
     return convertUTF8ToUTF16Impl<true>(source, sourceEnd, targetStart, targetEnd, sourceAllASCII);
 }
@@ -207,5 +207,4 @@ bool equalLatin1WithUTF8(const LChar* a, const char* b, const char* bEnd)
     return true;
 }
 
-} // namespace Unicode
-} // namespace WTF
+} // namespace WTF::Unicode

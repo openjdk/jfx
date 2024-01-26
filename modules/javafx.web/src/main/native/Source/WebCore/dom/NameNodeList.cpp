@@ -23,6 +23,8 @@
 #include "config.h"
 #include "NameNodeList.h"
 
+#include "ElementInlines.h"
+#include "LiveNodeListInlines.h"
 #include "NodeRareData.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -33,7 +35,7 @@ using namespace HTMLNames;
 WTF_MAKE_ISO_ALLOCATED_IMPL(NameNodeList);
 
 NameNodeList::NameNodeList(ContainerNode& rootNode, const AtomString& name)
-    : CachedLiveNodeList(rootNode, InvalidateOnNameAttrChange)
+    : CachedLiveNodeList(rootNode, NodeListInvalidationType::InvalidateOnNameAttrChange)
     , m_name(name)
 {
 }
@@ -46,6 +48,11 @@ Ref<NameNodeList> NameNodeList::create(ContainerNode& rootNode, const AtomString
 NameNodeList::~NameNodeList()
 {
     ownerNode().nodeLists()->removeCacheWithAtomName(*this, m_name);
+}
+
+bool NameNodeList::elementMatches(Element& element) const
+{
+    return element.getNameAttribute() == m_name;
 }
 
 } // namespace WebCore

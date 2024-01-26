@@ -32,8 +32,8 @@
 #include "EditingStyle.h"
 #include "EditorInsertAction.h"
 #include "FindOptions.h"
-#include "Frame.h"
 #include "FrameSelection.h"
+#include "LocalFrame.h"
 #include "PasteboardWriterData.h"
 #include <wtf/RobinHoodHashSet.h>
 #include "ScrollView.h"
@@ -68,11 +68,11 @@ class EditCommandComposition;
 class EditorClient;
 class EditorInternalCommand;
 class File;
-class Frame;
 class HTMLElement;
 class HitTestResult;
 class KeyboardEvent;
 class KillRing;
+class LocalFrame;
 class Pasteboard;
 class PasteboardWriterData;
 class RenderLayer;
@@ -99,10 +99,10 @@ struct PromisedAttachmentInfo;
 struct SerializedAttachmentData;
 #endif
 
-enum EditorCommandSource { CommandFromMenuOrKeyBinding, CommandFromDOM, CommandFromDOMWithUserInterface };
-enum EditorParagraphSeparator { EditorParagraphSeparatorIsDiv, EditorParagraphSeparatorIsP };
+enum class EditorCommandSource : uint8_t { MenuOrKeyBinding, DOM, DOMWithUserInterface };
+enum class EditorParagraphSeparator : bool { div, p };
 
-enum class MailBlockquoteHandling {
+enum class MailBlockquoteHandling : bool {
     RespectBlockquote,
     IgnoreBlockquote,
 };
@@ -111,7 +111,7 @@ enum class MailBlockquoteHandling {
 class HTMLAttachmentElement;
 #endif
 
-enum class TemporarySelectionOption : uint8_t {
+enum class TemporarySelectionOption : uint16_t {
     RevealSelection = 1 << 0,
     DoNotSetFocus = 1 << 1,
 
@@ -128,6 +128,8 @@ enum class TemporarySelectionOption : uint8_t {
     RevealSelectionBounds = 1 << 6,
 
     UserTriggered = 1 << 7,
+
+    ForceCenterScroll = 1 << 8,
 };
 
 class TemporarySelectionChange {
@@ -139,7 +141,7 @@ public:
     WEBCORE_EXPORT void invalidate();
 
 private:
-    enum class IsTemporarySelection { No, Yes };
+    enum class IsTemporarySelection : bool { No, Yes };
 
     void setSelection(const VisibleSelection&, IsTemporarySelection);
 
@@ -155,7 +157,7 @@ private:
 class IgnoreSelectionChangeForScope {
     WTF_MAKE_NONCOPYABLE(IgnoreSelectionChangeForScope); WTF_MAKE_FAST_ALLOCATED;
 public:
-    IgnoreSelectionChangeForScope(Frame& frame)
+    IgnoreSelectionChangeForScope(LocalFrame& frame)
         : m_selectionChange(*frame.document(), std::nullopt, TemporarySelectionOption::IgnoreSelectionChanges)
     {
     }
@@ -193,8 +195,8 @@ public:
     WEBCORE_EXPORT bool canEdit() const;
     WEBCORE_EXPORT bool canEditRichly() const;
 
-    bool canDHTMLCut();
-    bool canDHTMLCopy();
+    WEBCORE_EXPORT bool canDHTMLCut();
+    WEBCORE_EXPORT bool canDHTMLCopy();
     WEBCORE_EXPORT bool canDHTMLPaste();
     bool tryDHTMLCopy();
     bool tryDHTMLCut();
@@ -205,6 +207,7 @@ public:
     WEBCORE_EXPORT bool canDelete() const;
     WEBCORE_EXPORT bool canSmartCopyOrDelete();
     bool shouldSmartDelete();
+    bool canCopyFont() const;
 
     enum class FromMenuOrKeyBinding : bool { No, Yes };
     WEBCORE_EXPORT void cut(FromMenuOrKeyBinding = FromMenuOrKeyBinding::No);
@@ -314,9 +317,9 @@ public:
         const EditorInternalCommand* m_command { nullptr };
         EditorCommandSource m_source;
         RefPtr<Document> m_document;
-        RefPtr<Frame> m_frame;
+        RefPtr<LocalFrame> m_frame;
     };
-    WEBCORE_EXPORT Command command(const String& commandName); // Command source is CommandFromMenuOrKeyBinding.
+    WEBCORE_EXPORT Command command(const String& commandName); // Command source is EditorCommandSource::MenuOrKeyBinding.
     Command command(const String& commandName, EditorCommandSource);
     WEBCORE_EXPORT static bool commandIsSupportedFromMenuOrKeyBinding(const String& commandName); // Works without a frame.
 
@@ -367,7 +370,7 @@ public:
     bool shouldBeginEditing(const SimpleRange&);
     bool shouldEndEditing(const SimpleRange&);
 
-    void clearUndoRedoOperations();
+    WEBCORE_EXPORT void clearUndoRedoOperations();
     bool canUndo() const;
     void undo();
     bool canRedo() const;
@@ -393,12 +396,12 @@ public:
 
     // international text input composition
     bool hasComposition() const { return m_compositionNode; }
-    WEBCORE_EXPORT void setComposition(const String&, const Vector<CompositionUnderline>&, const Vector<CompositionHighlight>&, unsigned selectionStart, unsigned selectionEnd);
+    WEBCORE_EXPORT void setComposition(const String&, const Vector<CompositionUnderline>&, const Vector<CompositionHighlight>&, const HashMap<String, Vector<CharacterRange>>&, unsigned selectionStart, unsigned selectionEnd);
     WEBCORE_EXPORT void confirmComposition();
     WEBCORE_EXPORT void confirmComposition(const String&); // if no existing composition, replaces selection
     void confirmOrCancelCompositionAndNotifyClient();
     WEBCORE_EXPORT void cancelComposition();
-    bool cancelCompositionIfSelectionIsInvalid();
+    WEBCORE_EXPORT bool cancelCompositionIfSelectionIsInvalid();
     WEBCORE_EXPORT std::optional<SimpleRange> compositionRange() const;
     WEBCORE_EXPORT bool getCompositionSelection(unsigned& selectionStart, unsigned& selectionEnd) const;
 
@@ -410,12 +413,14 @@ public:
     const Vector<CompositionUnderline>& customCompositionUnderlines() const { return m_customCompositionUnderlines; }
     bool compositionUsesCustomHighlights() const { return !m_customCompositionHighlights.isEmpty(); }
     const Vector<CompositionHighlight>& customCompositionHighlights() const { return m_customCompositionHighlights; }
+    bool compositionUsesCustomAnnotations() const { return !m_customCompositionAnnotations.isEmpty(); }
+    const HashMap<String, Vector<CharacterRange>>& customCompositionAnnotations() const { return m_customCompositionAnnotations; }
 
     // FIXME: This should be a page-level concept (i.e. on EditorClient) instead of on the Editor, which
     // is a frame-specific concept, because executing an editing command can run JavaScript that can do
     // anything, including changing the focused frame. That is, it is not enough to set this setting on
     // one Editor to disallow selection changes in all frames.
-    enum class RevealSelection { No, Yes };
+    enum class RevealSelection : bool { No, Yes };
     WEBCORE_EXPORT void setIgnoreSelectionChanges(bool, RevealSelection shouldRevealExistingSelection = RevealSelection::Yes);
     bool ignoreSelectionChanges() const { return m_ignoreSelectionChanges; }
 
@@ -430,7 +435,7 @@ public:
 
     EditingBehavior behavior() const;
 
-    std::optional<SimpleRange> selectedRange();
+    WEBCORE_EXPORT std::optional<SimpleRange> selectedRange();
 
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void confirmMarkedText();
@@ -608,7 +613,7 @@ private:
 
     void quoteFragmentForPasting(DocumentFragment&);
 
-    void revealSelectionAfterEditingOperation(const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = DoNotRevealExtent);
+    void revealSelectionAfterEditingOperation(const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = RevealExtentOption::DoNotRevealExtent);
     std::optional<SimpleRange> markMisspellingsOrBadGrammar(const VisibleSelection&, bool checkSpelling);
     OptionSet<TextCheckingType> resolveTextCheckingTypeMask(const Node& rootEditableElement, OptionSet<TextCheckingType>);
 
@@ -650,6 +655,7 @@ private:
 
     void postTextStateChangeNotificationForCut(const String&, const VisibleSelection&);
 
+    WeakPtr<EditorClient> m_client;
     Document& m_document;
     RefPtr<CompositeEditCommand> m_lastEditCommand;
     RefPtr<Text> m_compositionNode;
@@ -657,13 +663,14 @@ private:
     unsigned m_compositionEnd;
     Vector<CompositionUnderline> m_customCompositionUnderlines;
     Vector<CompositionHighlight> m_customCompositionHighlights;
+    HashMap<String, Vector<CharacterRange>> m_customCompositionAnnotations;
     bool m_ignoreSelectionChanges { false };
     bool m_shouldStartNewKillRingSequence { false };
     bool m_shouldStyleWithCSS { false };
     const std::unique_ptr<PAL::KillRing> m_killRing;
     const std::unique_ptr<SpellChecker> m_spellChecker;
     const std::unique_ptr<AlternativeTextController> m_alternativeTextController;
-    EditorParagraphSeparator m_defaultParagraphSeparator { EditorParagraphSeparatorIsDiv };
+    EditorParagraphSeparator m_defaultParagraphSeparator { EditorParagraphSeparator::div };
     bool m_overwriteModeEnabled { false };
 
 #if ENABLE(ATTACHMENT_ELEMENT)

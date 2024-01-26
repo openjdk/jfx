@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SVGFilterElement.h"
 
+#include "NodeName.h"
 #include "RenderSVGResourceFilter.h"
 #include "SVGElementInlines.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
@@ -39,7 +40,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFilterElement);
 
 inline SVGFilterElement::SVGFilterElement(const QualifiedName& tagName, Document& document)
-    : SVGElement(tagName, document)
+    : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
     , SVGURIReference(this)
 {
     // Spec: If the x/y attribute is not specified, the effect is as if a value of "-10%" were specified.
@@ -62,31 +63,42 @@ Ref<SVGFilterElement> SVGFilterElement::create(const QualifiedName& tagName, Doc
     return adoptRef(*new SVGFilterElement(tagName, document));
 }
 
-void SVGFilterElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFilterElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
-    if (name == SVGNames::filterUnitsAttr) {
-        SVGUnitTypes::SVGUnitType propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
+    switch (name.nodeName()) {
+    case AttributeNames::filterUnitsAttr: {
+        SVGUnitTypes::SVGUnitType propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
             m_filterUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
-    } else if (name == SVGNames::primitiveUnitsAttr) {
-        SVGUnitTypes::SVGUnitType propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
+        break;
+    }
+    case AttributeNames::primitiveUnitsAttr: {
+        SVGUnitTypes::SVGUnitType propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
         if (propertyValue > 0)
             m_primitiveUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
-    } else if (name == SVGNames::xAttr)
-        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::yAttr)
-        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::widthAttr)
-        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::heightAttr)
-        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
+        break;
+    }
+    case AttributeNames::xAttr:
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::yAttr:
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::widthAttr:
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::heightAttr:
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFilterElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -122,41 +134,43 @@ RenderPtr<RenderElement> SVGFilterElement::createElementRenderer(RenderStyle&& s
 
 bool SVGFilterElement::childShouldCreateRenderer(const Node& child) const
 {
+    using namespace ElementNames;
+
     if (!child.isSVGElement())
         return false;
 
-    const SVGElement& svgElement = downcast<SVGElement>(child);
-
-    static NeverDestroyed<HashSet<QualifiedName>> allowedChildElementTags;
-    if (allowedChildElementTags.get().isEmpty()) {
-        allowedChildElementTags.get().add(SVGNames::feBlendTag);
-        allowedChildElementTags.get().add(SVGNames::feColorMatrixTag);
-        allowedChildElementTags.get().add(SVGNames::feComponentTransferTag);
-        allowedChildElementTags.get().add(SVGNames::feCompositeTag);
-        allowedChildElementTags.get().add(SVGNames::feConvolveMatrixTag);
-        allowedChildElementTags.get().add(SVGNames::feDiffuseLightingTag);
-        allowedChildElementTags.get().add(SVGNames::feDisplacementMapTag);
-        allowedChildElementTags.get().add(SVGNames::feDistantLightTag);
-        allowedChildElementTags.get().add(SVGNames::feDropShadowTag);
-        allowedChildElementTags.get().add(SVGNames::feFloodTag);
-        allowedChildElementTags.get().add(SVGNames::feFuncATag);
-        allowedChildElementTags.get().add(SVGNames::feFuncBTag);
-        allowedChildElementTags.get().add(SVGNames::feFuncGTag);
-        allowedChildElementTags.get().add(SVGNames::feFuncRTag);
-        allowedChildElementTags.get().add(SVGNames::feGaussianBlurTag);
-        allowedChildElementTags.get().add(SVGNames::feImageTag);
-        allowedChildElementTags.get().add(SVGNames::feMergeTag);
-        allowedChildElementTags.get().add(SVGNames::feMergeNodeTag);
-        allowedChildElementTags.get().add(SVGNames::feMorphologyTag);
-        allowedChildElementTags.get().add(SVGNames::feOffsetTag);
-        allowedChildElementTags.get().add(SVGNames::fePointLightTag);
-        allowedChildElementTags.get().add(SVGNames::feSpecularLightingTag);
-        allowedChildElementTags.get().add(SVGNames::feSpotLightTag);
-        allowedChildElementTags.get().add(SVGNames::feTileTag);
-        allowedChildElementTags.get().add(SVGNames::feTurbulenceTag);
+    switch (downcast<SVGElement>(child).elementName()) {
+    case SVG::feBlend:
+    case SVG::feColorMatrix:
+    case SVG::feComponentTransfer:
+    case SVG::feComposite:
+    case SVG::feConvolveMatrix:
+    case SVG::feDiffuseLighting:
+    case SVG::feDisplacementMap:
+    case SVG::feDistantLight:
+    case SVG::feDropShadow:
+    case SVG::feFlood:
+    case SVG::feFuncA:
+    case SVG::feFuncB:
+    case SVG::feFuncG:
+    case SVG::feFuncR:
+    case SVG::feGaussianBlur:
+    case SVG::feImage:
+    case SVG::feMerge:
+    case SVG::feMergeNode:
+    case SVG::feMorphology:
+    case SVG::feOffset:
+    case SVG::fePointLight:
+    case SVG::feSpecularLighting:
+    case SVG::feSpotLight:
+    case SVG::feTile:
+    case SVG::feTurbulence:
+        return true;
+    default:
+        break;
     }
 
-    return allowedChildElementTags.get().contains<SVGAttributeHashTranslator>(svgElement.tagQName());
+    return false;
 }
 
 }

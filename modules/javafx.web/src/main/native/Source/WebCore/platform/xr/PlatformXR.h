@@ -38,7 +38,7 @@
 #endif
 
 namespace WebCore {
-struct SecurityOriginData;
+class SecurityOriginData;
 }
 
 namespace PlatformXR {
@@ -89,7 +89,7 @@ enum class XRTargetRayMode {
 };
 
 // https://immersive-web.github.io/webxr/#feature-descriptor
-enum class SessionFeature {
+enum class SessionFeature : uint8_t {
     ReferenceSpaceTypeViewer,
     ReferenceSpaceTypeLocal,
     ReferenceSpaceTypeLocalFloor,
@@ -121,7 +121,7 @@ inline SessionFeature sessionFeatureFromReferenceSpaceType(ReferenceSpaceType re
 
 inline std::optional<SessionFeature> parseSessionFeatureDescriptor(StringView string)
 {
-    auto feature = string.stripWhiteSpace().convertToASCIILowercase();
+    auto feature = string.trim(isUnicodeCompatibleASCIIWhitespace<UChar>).convertToASCIILowercase();
 
     if (feature == "viewer"_s)
         return SessionFeature::ReferenceSpaceTypeViewer;
@@ -293,8 +293,14 @@ public:
 #if USE(IOSURFACE_FOR_XR_LAYER_DATA)
             std::unique_ptr<WebCore::IOSurface> surface;
             bool isShared { false };
+#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+            std::tuple<MachSendRight, bool> colorTexture = { MachSendRight(), false };
+            std::tuple<MachSendRight, bool> depthStencilBuffer = { MachSendRight(), false };
 #else
             PlatformGLObject opaqueTexture { 0 };
+#endif
+#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+            std::tuple<MachSendRight, uint64_t> completionSyncEvent;
 #endif
 
             template<class Encoder> void encode(Encoder&) const;
@@ -576,10 +582,16 @@ void Device::FrameData::LayerData::encode(Encoder& encoder) const
 {
 #if USE(IOSURFACE_FOR_XR_LAYER_DATA)
     MachSendRight surfaceSendRight = surface ? surface->createSendRight() : MachSendRight();
-    encoder << surfaceSendRight;
+    encoder << WTFMove(surfaceSendRight);
     encoder << isShared;
+#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+    encoder << std::tuple(colorTexture);
+    encoder << std::tuple(depthStencilBuffer);
 #else
     encoder << opaqueTexture;
+#endif
+#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+    encoder << std::tuple(completionSyncEvent);
 #endif
 }
 
@@ -591,11 +603,20 @@ std::optional<Device::FrameData::LayerData> Device::FrameData::LayerData::decode
     MachSendRight surfaceSendRight;
     if (!decoder.decode(surfaceSendRight))
         return std::nullopt;
-    layerData.surface = WebCore::IOSurface::createFromSendRight(WTFMove(surfaceSendRight), WebCore::DestinationColorSpace::SRGB());
+    layerData.surface = WebCore::IOSurface::createFromSendRight(WTFMove(surfaceSendRight));
     if (!decoder.decode(layerData.isShared))
+        return std::nullopt;
+#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
+    if (!decoder.decode(layerData.colorTexture))
+        return std::nullopt;
+    if (!decoder.decode(layerData.depthStencilBuffer))
         return std::nullopt;
 #else
     if (!decoder.decode(layerData.opaqueTexture))
+        return std::nullopt;
+#endif
+#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
+    if (!decoder.decode(layerData.completionSyncEvent))
         return std::nullopt;
 #endif
     return layerData;

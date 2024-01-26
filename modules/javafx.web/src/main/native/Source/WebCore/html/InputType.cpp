@@ -2,10 +2,10 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2007 Samuel Weinig (sam@webkit.org)
- * Copyright (C) 2009, 2010, 2011, 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2009-2015 Google Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -91,11 +91,30 @@ using namespace HTMLNames;
 typedef bool (Settings::*InputTypeConditionalFunction)() const;
 typedef const AtomString& (*InputTypeNameFunction)();
 typedef Ref<InputType> (*InputTypeFactoryFunction)(HTMLInputElement&);
-typedef MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, std::pair<InputTypeConditionalFunction, InputTypeFactoryFunction>> InputTypeFactoryMap;
 
-template<class T> static Ref<InputType> createInputType(HTMLInputElement& element)
+struct InputTypeFactory {
+    InputTypeConditionalFunction conditionalFunction;
+    InputTypeFactoryFunction factoryFunction;
+};
+
+typedef MemoryCompactLookupOnlyRobinHoodHashMap<AtomString, InputTypeFactory> InputTypeFactoryMap;
+
+template<typename T> static Ref<InputType> createInputType(HTMLInputElement& element)
 {
-    return adoptRef(*new T(element));
+    return T::create(element);
+}
+
+template<typename DowncastedType>
+ALWAYS_INLINE bool isInvalidInputType(const InputType& baseInputType, const String& value)
+{
+    auto& inputType = static_cast<const DowncastedType&>(baseInputType);
+    return inputType.typeMismatch()
+        || inputType.stepMismatch(value)
+        || inputType.rangeUnderflow(value)
+        || inputType.rangeOverflow(value)
+        || inputType.patternMismatch(value)
+        || inputType.valueMissing(value)
+        || inputType.hasBadInput();
 }
 
 static InputTypeFactoryMap createInputTypeFactoryMap()
@@ -143,32 +162,39 @@ static InputTypeFactoryMap createInputTypeFactoryMap()
 
     InputTypeFactoryMap map;
     for (auto& inputType : inputTypes)
-        map.add(inputType.nameFunction(), std::make_pair(inputType.conditionalFunction, inputType.factoryFunction));
+        map.add(inputType.nameFunction(), InputTypeFactory { inputType.conditionalFunction, inputType.factoryFunction });
     return map;
 }
 
-static inline std::pair<InputTypeConditionalFunction, InputTypeFactoryFunction> findFactory(const AtomString& typeName)
+static inline std::pair<const AtomString&, InputTypeFactory*> findFactory(const AtomString& typeName)
 {
     static NeverDestroyed factoryMap = createInputTypeFactoryMap();
-    auto factory = factoryMap.get().get(typeName);
-    if (UNLIKELY(!factory.second))
-        factory = factoryMap.get().get(typeName.convertToASCIILowercase());
-    return factory;
+    auto& map = factoryMap.get();
+    auto it = map.find(typeName);
+    if (UNLIKELY(it == map.end())) {
+        it = map.find(typeName.convertToASCIILowercase());
+        if (it == map.end())
+            return { nullAtom(), nullptr };
+    }
+    return { it->key, &it->value };
 }
 
-Ref<InputType> InputType::create(HTMLInputElement& element, const AtomString& typeName)
+RefPtr<InputType> InputType::createIfDifferent(HTMLInputElement& element, const AtomString& typeName, InputType* currentInputType)
 {
     if (!typeName.isEmpty()) {
-        auto [conditional, factory] = findFactory(typeName);
-        if (LIKELY(factory && (!conditional || std::invoke(conditional, element.document().settings()))))
-            return factory(element);
+        auto& currentTypeName = currentInputType ? currentInputType->formControlType() : nullAtom();
+        if (typeName == currentTypeName)
+            return nullptr;
+        if (auto factory = findFactory(typeName); LIKELY(factory.second)) {
+            if (factory.first == currentTypeName)
+                return nullptr;
+            if (!factory.second->conditionalFunction || std::invoke(factory.second->conditionalFunction, element.document().settings()))
+                return factory.second->factoryFunction(element);
+        }
     }
-    return adoptRef(*new TextInputType(element));
-}
-
-Ref<InputType> InputType::createText(HTMLInputElement& element)
-{
-    return adoptRef(*new TextInputType(element));
+    if (currentInputType && currentInputType->type() == Type::Text)
+        return nullptr;
+    return TextInputType::create(element);
 }
 
 InputType::~InputType() = default;
@@ -315,35 +341,10 @@ ExceptionOr<void> InputType::setValueAsDecimal(const Decimal&, TextFieldEventBeh
     return Exception { InvalidStateError };
 }
 
-bool InputType::typeMismatchFor(const String&) const
-{
-    return false;
-}
-
-bool InputType::typeMismatch() const
-{
-    return false;
-}
-
 bool InputType::supportsRequired() const
 {
     // Almost all validatable types support @required.
     return supportsValidation();
-}
-
-bool InputType::valueMissing(const String&) const
-{
-    return false;
-}
-
-bool InputType::hasBadInput() const
-{
-    return false;
-}
-
-bool InputType::patternMismatch(const String&) const
-{
-    return false;
 }
 
 bool InputType::rangeUnderflow(const String& value) const
@@ -492,6 +493,8 @@ bool InputType::isInRange(const String& value) const
     if (!stepRange.hasRangeLimitations())
         return false;
 
+    // This function should return true if both of validity.rangeUnderflow and
+    // validity.rangeOverflow are false. If the INPUT has no value, they are false.
     const Decimal numericValue = parseToNumberOrNaN(value);
     if (!numericValue.isFinite())
         return true;
@@ -508,9 +511,11 @@ bool InputType::isOutOfRange(const String& value) const
     if (!stepRange.hasRangeLimitations())
         return false;
 
+    // This function should return true if both of validity.rangeUnderflow and
+    // validity.rangeOverflow are true. If the INPUT has no value, they are false.
     const Decimal numericValue = parseToNumberOrNaN(value);
     if (!numericValue.isFinite())
-        return true;
+        return false;
 
     return numericValue < stepRange.minimum() || numericValue > stepRange.maximum();
 }
@@ -559,14 +564,18 @@ String InputType::validationMessage() const
     if (typeMismatch())
         return typeMismatchText();
 
-    if (patternMismatch(value))
+    if (patternMismatch(value)) {
+        auto title = element()->attributeWithoutSynchronization(HTMLNames::titleAttr).string().trim(isASCIIWhitespace).simplifyWhiteSpace(isASCIIWhitespace);
+        if (title.isEmpty())
         return validationMessagePatternMismatchText();
+        return validationMessagePatternMismatchText(title);
+    }
 
     if (element()->tooShort())
-        return validationMessageTooShortText(numGraphemeClusters(value), element()->minLength());
+        return validationMessageTooShortText(value.length(), element()->minLength());
 
     if (element()->tooLong())
-        return validationMessageTooLongText(numGraphemeClusters(value), element()->effectiveMaxLength());
+        return validationMessageTooLongText(value.length(), element()->effectiveMaxLength());
 
     if (!isSteppable())
         return emptyString();
@@ -813,16 +822,15 @@ void InputType::setValue(const String& sanitizedValue, bool valueChanged, TextFi
     bool wasInRange = isInRange(element()->value());
     bool inRange = isInRange(sanitizedValue);
 
-    bool dummy;
-    auto oldDirection = element()->directionalityIfhasDirAutoAttribute(dummy);
+    auto oldDirection = element()->directionalityIfDirIsAuto();
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (wasInRange != inRange)
-        emplace(styleInvalidation, *element(), { { CSSSelector::PseudoClassInRange, inRange }, { CSSSelector::PseudoClassOutOfRange, !inRange } });
+        emplace(styleInvalidation, *element(), { { CSSSelector::PseudoClassType::InRange, inRange }, { CSSSelector::PseudoClassType::OutOfRange, !inRange } });
 
     element()->setValueInternal(sanitizedValue, eventBehavior);
 
-    if (oldDirection != element()->directionalityIfhasDirAutoAttribute(dummy))
+    if (oldDirection.value_or(TextDirection::LTR) != element()->directionalityIfDirIsAuto().value_or(TextDirection::LTR))
         element()->invalidateStyleInternal();
 
     switch (eventBehavior) {
@@ -908,7 +916,7 @@ bool InputType::isInteractiveContent() const
     return m_type != Type::Hidden;
 }
 
-bool InputType::supportLabels() const
+bool InputType::isLabelable() const
 {
     return m_type != Type::Hidden;
 }
@@ -1040,7 +1048,7 @@ ExceptionOr<void> InputType::applyStep(int count, AnyStepHandling anyStepHandlin
     // 8. If the element has a minimum, and value is less than that minimum, then set value to the smallest value that, when subtracted from the step
     // base, is an integral multiple of the allowed value step, and that is more than or equal to minimum.
     if (newValue < stepRange.minimum()) {
-        const Decimal alignedMinimum = base + ((stepRange.minimum() - base) / step).ceiling() * step;
+        const Decimal alignedMinimum = base + ((stepRange.minimum() - base) / step).ceil() * step;
         ASSERT(alignedMinimum >= stepRange.minimum());
         newValue = alignedMinimum;
     }
@@ -1170,7 +1178,7 @@ void InputType::stepUpFromRenderer(int n)
             if (sign < 0)
                 newValue = base + ((current - base) / step).floor() * step;
             else if (sign > 0)
-                newValue = base + ((current - base) / step).ceiling() * step;
+                newValue = base + ((current - base) / step).ceil() * step;
             else
                 newValue = current;
 

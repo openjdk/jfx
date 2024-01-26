@@ -176,8 +176,8 @@ struct _GstBufferPoolClass {
   /**
    * GstBufferPoolClass::acquire_buffer:
    * @pool: the #GstBufferPool
-   * @buffer: (out): a location for a #GstBuffer
-   * @params: (transfer none) (allow-none): parameters.
+   * @buffer: (out) (transfer full) (nullable): a location for a #GstBuffer
+   * @params: (transfer none) (nullable): parameters.
    *
    * Get a new buffer from the pool. The default implementation
    * will take a buffer from the queue and optionally wait for a buffer to
@@ -192,8 +192,8 @@ struct _GstBufferPoolClass {
   /**
    * GstBufferPoolClass::alloc_buffer:
    * @pool: the #GstBufferPool
-   * @buffer: (out): a location for a #GstBuffer
-   * @params: (transfer none) (allow-none): parameters.
+   * @buffer: (out) (transfer full) (nullable): a location for a #GstBuffer
+   * @params: (transfer none) (nullable): parameters.
    *
    * Allocate a buffer. the default implementation allocates
    * buffers from the configured memory allocator and with the configured

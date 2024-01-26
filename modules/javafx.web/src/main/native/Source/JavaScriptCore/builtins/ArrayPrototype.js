@@ -141,7 +141,7 @@ function filter(callback /*, thisArg */)
         @throwTypeError("Array.prototype.filter callback must be a function");
     
     var thisArg = @argument(1);
-    var result = @arraySpeciesCreate(array, 0);
+    var result = @newArrayWithSpecies(0, array);
 
     var nextIndex = 0;
     for (var i = 0; i < length; i++) {
@@ -156,58 +156,6 @@ function filter(callback /*, thisArg */)
     return result;
 }
 
-function group(callback /*, thisArg */)
-{
-    "use strict";
-
-    var array = @toObject(this, "Array.prototype.group requires that |this| not be null or undefined");
-    var length = @toLength(array.length);
-
-    if (!@isCallable(callback))
-        @throwTypeError("Array.prototype.group callback must be a function");
-
-    var thisArg = @argument(1);
-
-    var groups = @Object.@create(null);
-    for (var i = 0; i < length; ++i) {
-        var value = array[i];
-        var key = @toPropertyKey(callback.@call(thisArg, value, i, array));
-        var group = groups[key];
-        if (!group) {
-            group = [];
-            @putByValDirect(groups, key, group);
-        }
-        @putByValDirect(group, group.length, value);
-    }
-    return groups;
-}
-
-function groupToMap(callback /*, thisArg */)
-{
-    "use strict";
-
-    var array = @toObject(this, "Array.prototype.groupToMap requires that |this| not be null or undefined");
-    var length = @toLength(array.length);
-
-    if (!@isCallable(callback))
-        @throwTypeError("Array.prototype.groupToMap callback must be a function");
-
-    var thisArg = @argument(1);
-
-    var groups = new @Map;
-    for (var i = 0; i < length; ++i) {
-        var value = array[i];
-        var key = callback.@call(thisArg, value, i, array);
-        var group = groups.@get(key);
-        if (!group) {
-            group = [];
-            groups.@set(key, group);
-        }
-        @putByValDirect(group, group.length, value);
-    }
-    return groups;
-}
-
 function map(callback /*, thisArg */)
 {
     "use strict";
@@ -219,7 +167,7 @@ function map(callback /*, thisArg */)
         @throwTypeError("Array.prototype.map callback must be a function");
     
     var thisArg = @argument(1);
-    var result = @arraySpeciesCreate(array, length);
+    var result = @newArrayWithSpecies(length, array);
 
     for (var i = 0; i < length; i++) {
         if (!(i in array))
@@ -597,7 +545,7 @@ function concatSlowPath()
     var currentElement = @toObject(this, "Array.prototype.concat requires that |this| not be null or undefined");
     var argCount = arguments.length;
 
-    var result = @arraySpeciesCreate(currentElement, 0);
+    var result = @newArrayWithSpecies(0, currentElement);
     var resultIsArray = @isJSArray(result);
 
     var resultIndex = 0;
@@ -738,7 +686,7 @@ function flat()
     if (depth !== @undefined)
         depthNum = @toIntegerOrInfinity(depth);
 
-    var result = @arraySpeciesCreate(array, 0);
+    var result = @newArrayWithSpecies(0, array);
 
     @flatIntoArray(result, array, length, 0, depthNum);
     return result;
@@ -777,7 +725,7 @@ function flatMap(callback)
 
     var thisArg = @argument(1);
 
-    var result = @arraySpeciesCreate(array, 0);
+    var result = @newArrayWithSpecies(0, array);
 
     return @flatIntoArrayWithCallback(result, array, length, 0, callback, thisArg);
 }

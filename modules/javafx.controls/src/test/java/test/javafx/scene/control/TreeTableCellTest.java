@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 import static org.junit.Assert.*;
 
 public class TreeTableCellTest {
-    private TreeTableCell<String, String> cell;
+    private TreeTableCellShim<String, String> cell;
     private TreeTableView<String> tree;
     private TreeTableRow<String> row;
 
@@ -83,7 +83,7 @@ public class TreeTableCellTest {
             }
         });
 
-        cell = new TreeTableCell<>();
+        cell = new TreeTableCellShim<>();
 
         root = new TreeItem<>(ROOT);
         apples = new TreeItem<>(APPLES);
@@ -1163,7 +1163,7 @@ public class TreeTableCellTest {
          }
          if (editingColumn != null ) cell.updateTableColumn(editingColumn);
          // force into editable state (not empty)
-         TreeTableCellShim.set_lockItemOnEdit(cell, true);
+         cell.setLockItemOnStartEdit(true);
          CellShim.updateItem(cell, "something", false);
      }
 
@@ -1212,6 +1212,29 @@ public class TreeTableCellTest {
             assertFalse("cell must not be editing", cell.isEditing());
             assertNull("table editing must be cancelled by cell", tree.getEditingCell());
         }
+    }
+
+    /**
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8187314">JDK-8187314</a>.
+     */
+    @Test
+    public void testEditCommitValueChangeIsReflectedInCell() {
+        setupForEditing();
+        editingColumn.setCellValueFactory(cc -> new SimpleObjectProperty<>(cc.getValue().getValue()));
+        editingColumn.setOnEditCommit(event -> {
+            assertEquals("ABCDEF", event.getNewValue());
+            // Change the underlying item.
+            root.setValue("ABCDEF [Changed]");
+        });
+
+        cell.updateIndex(0);
+
+        assertEquals("Root", cell.getItem());
+
+        cell.startEdit();
+        cell.commitEdit("ABCDEF");
+
+        assertEquals("ABCDEF [Changed]", cell.getItem());
     }
 
     public static class MisbehavingOnCancelTreeTableCell<S, T> extends TreeTableCell<S, T> {

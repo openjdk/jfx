@@ -21,16 +21,18 @@
 #include "LegacyRootInlineBox.h"
 
 #include "BidiResolver.h"
+#include "CSSLineBoxContainValue.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
-#include "Frame.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "LegacyEllipsisBox.h"
 #include "LegacyInlineTextBox.h"
+#include "LocalFrame.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderLayoutState.h"
@@ -820,7 +822,7 @@ LayoutUnit LegacyRootInlineBox::verticalPositionForBox(LegacyInlineBox* box, Ver
         const RenderStyle& parentLineStyle = firstLine ? parent->firstLineStyle() : parent->style();
         const FontCascade& font = parentLineStyle.fontCascade();
         const FontMetrics& fontMetrics = font.metricsOfPrimaryFont();
-        int fontSize = font.pixelSize();
+        auto fontSize = font.size();
 
         LineDirectionMode lineDirection = parent->isHorizontalWritingMode() ? HorizontalLine : VerticalLine;
 
@@ -915,6 +917,11 @@ bool LegacyRootInlineBox::fitsToGlyphs() const
 bool LegacyRootInlineBox::includesRootLineBoxFontOrLeading() const
 {
     return renderer().style().lineBoxContain().containsAny({ LineBoxContain::Block, LineBoxContain::Inline, LineBoxContain::Font });
+}
+
+LayoutUnit LegacyRootInlineBox::lineBoxWidth() const
+{
+    return blockFlow().availableLogicalWidthForLine(lineBoxTop(), isFirstLine() ? IndentText : DoNotIndentText, lineBoxHeight());
 }
 
 #if ENABLE(TREE_DEBUGGING)

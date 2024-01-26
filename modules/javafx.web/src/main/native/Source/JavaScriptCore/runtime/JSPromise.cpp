@@ -28,6 +28,7 @@
 
 #include "BuiltinNames.h"
 #include "DeferredWorkTimer.h"
+#include "GlobalObjectMethodTable.h"
 #include "JSCInlines.h"
 #include "JSInternalFieldObjectImplInlines.h"
 #include "JSPromiseConstructor.h"
@@ -124,11 +125,11 @@ JSPromise::DeferredData JSPromise::convertCapabilityToDeferredData(JSGlobalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    result.promise = promiseCapability.getAs<JSPromise*>(globalObject, vm.propertyNames->builtinNames().promisePrivateName());
+    result.promise = promiseCapability.getAs<JSPromise*>(globalObject, vm.propertyNames->builtinNames().promisePublicName());
     RETURN_IF_EXCEPTION(scope, { });
-    result.resolve = promiseCapability.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().resolvePrivateName());
+    result.resolve = promiseCapability.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().resolvePublicName());
     RETURN_IF_EXCEPTION(scope, { });
-    result.reject = promiseCapability.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().rejectPrivateName());
+    result.reject = promiseCapability.getAs<JSFunction*>(globalObject, vm.propertyNames->builtinNames().rejectPublicName());
     RETURN_IF_EXCEPTION(scope, { });
 
     return result;
@@ -154,6 +155,7 @@ JSPromise* JSPromise::resolvedPromise(JSGlobalObject* globalObject, JSValue valu
 
     MarkedArgumentBuffer arguments;
     arguments.append(value);
+    ASSERT(!arguments.hasOverflowed());
     auto result = call(globalObject, function, callData, globalObject->promiseConstructor(), arguments);
     RETURN_IF_EXCEPTION(scope, nullptr);
     ASSERT(result.inherits<JSPromise>());
@@ -263,6 +265,7 @@ void JSPromise::performPromiseThen(JSGlobalObject* globalObject, JSFunction* onF
     arguments.append(onFulFilled);
     arguments.append(onRejected);
     arguments.append(resultCapability);
+    arguments.append(jsUndefined());
     ASSERT(!arguments.hasOverflowed());
     call(globalObject, performPromiseThenFunction, callData, jsUndefined(), arguments);
 }

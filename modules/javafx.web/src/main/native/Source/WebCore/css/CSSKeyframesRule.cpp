@@ -134,15 +134,6 @@ void CSSKeyframesRule::appendRule(const String& ruleText)
     m_childRuleCSSOMWrappers.grow(length());
 }
 
-void CSSKeyframesRule::insertRule(const String& ruleText)
-{
-    if (CSSStyleSheet* parent = parentStyleSheet()) {
-        if (Document* ownerDocument = parent->ownerDocument())
-            ownerDocument->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "CSSKeyframesRule 'insertRule' function is deprecated.  Use 'appendRule' instead."_s);
-    }
-    appendRule(ruleText);
-}
-
 void CSSKeyframesRule::deleteRule(const String& s)
 {
     ASSERT(m_childRuleCSSOMWrappers.size() == m_keyframesRule->keyframes().size());
@@ -195,14 +186,13 @@ CSSKeyframeRule* CSSKeyframesRule::item(unsigned index) const
 CSSRuleList& CSSKeyframesRule::cssRules()
 {
     if (!m_ruleListCSSOMWrapper)
-        m_ruleListCSSOMWrapper = makeUnique<LiveCSSRuleList<CSSKeyframesRule>>(*this);
+        m_ruleListCSSOMWrapper = makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSKeyframesRule>>(*this);
     return *m_ruleListCSSOMWrapper;
 }
 
 void CSSKeyframesRule::reattach(StyleRuleBase& rule)
 {
-    ASSERT_WITH_SECURITY_IMPLICATION(rule.isKeyframesRule());
-    m_keyframesRule = static_cast<StyleRuleKeyframes&>(rule);
+    m_keyframesRule = downcast<StyleRuleKeyframes>(rule);
 }
 
 } // namespace WebCore

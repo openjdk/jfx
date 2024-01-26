@@ -34,20 +34,14 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ScopedArguments);
 
 const ClassInfo ScopedArguments::s_info = { "Arguments"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ScopedArguments) };
 
-ScopedArguments::ScopedArguments(VM& vm, Structure* structure, WriteBarrier<Unknown>* storage, unsigned totalLength)
+ScopedArguments::ScopedArguments(VM& vm, Structure* structure, WriteBarrier<Unknown>* storage, unsigned totalLength, JSFunction* callee, ScopedArgumentsTable* table, JSLexicalEnvironment* scope)
     : GenericArguments(vm, structure)
     , m_totalLength(totalLength)
+    , m_callee(callee, WriteBarrierEarlyInit)
+    , m_table(table, WriteBarrierEarlyInit)
+    , m_scope(scope, WriteBarrierEarlyInit)
+    , m_storage(storage, WriteBarrierEarlyInit)
 {
-    if (storage)
-        m_storage.set(vm, this, storage);
-}
-
-void ScopedArguments::finishCreation(VM& vm, JSFunction* callee, ScopedArgumentsTable* table, JSLexicalEnvironment* scope)
-{
-    Base::finishCreation(vm);
-    m_callee.set(vm, this, callee);
-    m_table.set(vm, this, table);
-    m_scope.set(vm, this, scope);
 }
 
 ScopedArguments* ScopedArguments::createUninitialized(VM& vm, Structure* structure, JSFunction* callee, ScopedArgumentsTable* table, JSLexicalEnvironment* scope, unsigned totalLength)
@@ -61,8 +55,8 @@ ScopedArguments* ScopedArguments::createUninitialized(VM& vm, Structure* structu
     ScopedArguments* result = new (
         NotNull,
         allocateCell<ScopedArguments>(vm))
-        ScopedArguments(vm, structure, storage, totalLength);
-    result->finishCreation(vm, callee, table, scope);
+        ScopedArguments(vm, structure, storage, totalLength, callee, table, scope);
+    result->finishCreation(vm);
     return result;
 }
 
@@ -147,6 +141,7 @@ void ScopedArguments::unmapArgument(JSGlobalObject* globalObject, uint32_t i)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT_WITH_SECURITY_IMPLICATION(i < m_totalLength);
+    m_hasUnmappedArgument = true;
     unsigned namedLength = m_table->length();
     if (i < namedLength) {
         auto* maybeCloned = m_table->trySet(vm, i, ScopeOffset());
@@ -162,6 +157,25 @@ void ScopedArguments::unmapArgument(JSGlobalObject* globalObject, uint32_t i)
 void ScopedArguments::copyToArguments(JSGlobalObject* globalObject, JSValue* firstElementDest, unsigned offset, unsigned length)
 {
     GenericArguments::copyToArguments(globalObject, firstElementDest, offset, length);
+}
+
+bool ScopedArguments::isIteratorProtocolFastAndNonObservable()
+{
+    Structure* structure = this->structure();
+    JSGlobalObject* globalObject = structure->globalObject();
+    if (!globalObject->isArgumentsPrototypeIteratorProtocolFastAndNonObservable())
+        return false;
+
+    if (UNLIKELY(m_overrodeThings))
+        return false;
+
+    if (UNLIKELY(m_hasUnmappedArgument))
+        return false;
+
+    if (structure->didTransition())
+        return false;
+
+    return true;
 }
 
 } // namespace JSC

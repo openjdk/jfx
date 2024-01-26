@@ -65,19 +65,20 @@ public:
         size_t argumentCountIncludingThis() const { return m_argumentCountIncludingThis; }
         bool callerIsEntryFrame() const { return m_callerIsEntryFrame; }
         CallFrame* callerFrame() const { return m_callerFrame; }
+        EntryFrame* entryFrame() const { return m_entryFrame; }
         CalleeBits callee() const { return m_callee; }
         CodeBlock* codeBlock() const { return m_codeBlock; }
         BytecodeIndex bytecodeIndex() const { return m_bytecodeIndex; }
         InlineCallFrame* inlineCallFrame() const {
 #if ENABLE(DFG_JIT)
-            return m_inlineCallFrame;
+            return m_inlineDFGCallFrame;
 #else
             return nullptr;
 #endif
         }
 
         bool isNativeFrame() const { return !codeBlock() && !isWasmFrame(); }
-        bool isInlinedFrame() const { return !!inlineCallFrame(); }
+        bool isInlinedDFGFrame() const { return !isWasmFrame() && !!inlineCallFrame(); }
         bool isWasmFrame() const { return m_isWasmFrame; }
         Wasm::IndexOrName const wasmFunctionIndexOrName()
         {
@@ -87,6 +88,7 @@ public:
 
         JS_EXPORT_PRIVATE String functionName() const;
         JS_EXPORT_PRIVATE String sourceURL() const;
+        JS_EXPORT_PRIVATE String preRedirectURL() const;
         JS_EXPORT_PRIVATE String toString() const;
 
         JS_EXPORT_PRIVATE SourceID sourceID();
@@ -115,8 +117,9 @@ public:
         void setToEnd();
 
 #if ENABLE(DFG_JIT)
-        InlineCallFrame* m_inlineCallFrame;
+        InlineCallFrame* m_inlineDFGCallFrame;
 #endif
+        unsigned m_wasmDistanceFromDeepestInlineFrame { 0 };
         CallFrame* m_callFrame;
         EntryFrame* m_entryFrame;
         EntryFrame* m_callerEntryFrame;
@@ -167,6 +170,7 @@ private:
     JS_EXPORT_PRIVATE void gotoNextFrame();
 
     void readFrame(CallFrame*);
+    void readInlinableWasmFrame(CallFrame*);
     void readNonInlinedFrame(CallFrame*, CodeOrigin* = nullptr);
 #if ENABLE(DFG_JIT)
     void readInlinedFrame(CallFrame*, CodeOrigin*);

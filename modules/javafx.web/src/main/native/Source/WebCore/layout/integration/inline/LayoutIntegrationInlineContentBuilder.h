@@ -25,9 +25,8 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
-
-#include "InlineFormattingState.h"
+#include "InlineDisplayContent.h"
+#include "InlineFormattingContext.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -43,10 +42,12 @@ class InlineContentBuilder {
 public:
     InlineContentBuilder(const RenderBlockFlow&, BoxTree&);
 
-    void build(Layout::InlineFormattingState&, InlineContent&) const;
+    FloatRect build(Layout::InlineLayoutResult&&, InlineContent&, const Layout::InlineDamage*) const;
+    void updateLineOverflow(InlineContent&) const;
 
 private:
-    void createDisplayLines(Layout::InlineFormattingState&, InlineContent&) const;
+    void adjustDisplayLines(InlineContent&) const;
+    void computeIsFirstIsLastBoxForInlineContent(InlineContent&) const;
 
     const RenderBlockFlow& m_blockFlow;
     BoxTree& m_boxTree;
@@ -54,4 +55,3 @@ private:
 
 }
 }
-#endif

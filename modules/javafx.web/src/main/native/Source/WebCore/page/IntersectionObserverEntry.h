@@ -31,12 +31,16 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class Element;
 
 class IntersectionObserverEntry : public RefCounted<IntersectionObserverEntry> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(IntersectionObserverEntry);
 public:
 
     struct Init {
@@ -75,5 +79,6 @@ private:
     bool m_isIntersecting { false };
 };
 
+TextStream& operator<<(TextStream&, const IntersectionObserverEntry&);
 
 } // namespace WebCore

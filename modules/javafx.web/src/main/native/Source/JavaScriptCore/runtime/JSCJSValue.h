@@ -214,8 +214,7 @@ public:
     explicit JSValue(unsigned long long);
 
     explicit operator bool() const;
-    bool operator==(const JSValue& other) const;
-    bool operator!=(const JSValue& other) const;
+    bool operator==(const JSValue&) const;
 
     bool isInt32() const;
     bool isUInt32() const;
@@ -305,12 +304,12 @@ public:
     int32_t toInt32(JSGlobalObject*) const;
     uint32_t toUInt32(JSGlobalObject*) const;
     uint32_t toIndex(JSGlobalObject*, const char* errorName) const;
-    size_t toTypedArrayIndex(JSGlobalObject*, const char* errorName) const;
-    double toLength(JSGlobalObject*) const;
+    size_t toTypedArrayIndex(JSGlobalObject*, ASCIILiteral) const;
+    uint64_t toLength(JSGlobalObject*) const;
 
     JS_EXPORT_PRIVATE JSValue toBigInt(JSGlobalObject*) const;
     int64_t toBigInt64(JSGlobalObject*) const;
-    uint64_t toBigUInt64(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE uint64_t toBigUInt64(JSGlobalObject*) const;
 
     std::optional<uint32_t> toUInt32AfterToNumeric(JSGlobalObject*) const;
 
@@ -530,7 +529,7 @@ private:
     JS_EXPORT_PRIVATE JSString* toStringSlowCase(JSGlobalObject*, bool returnEmptyStringOnError) const;
     JS_EXPORT_PRIVATE WTF::String toWTFStringSlowCase(JSGlobalObject*) const;
     JS_EXPORT_PRIVATE JSObject* toObjectSlowCase(JSGlobalObject*) const;
-    JS_EXPORT_PRIVATE JSValue toThisSlowCase(JSGlobalObject*, ECMAMode) const;
+    JS_EXPORT_PRIVATE JSValue toThisSloppySlowCase(JSGlobalObject*) const;
 
     EncodedValueDescriptor u;
 };
@@ -687,10 +686,6 @@ ALWAYS_INLINE EncodedJSValue encodedJSValue()
 
 inline bool operator==(const JSValue a, const JSCell* b) { return a == JSValue(b); }
 inline bool operator==(const JSCell* a, const JSValue b) { return JSValue(a) == b; }
-
-inline bool operator!=(const JSValue a, const JSCell* b) { return a != JSValue(b); }
-inline bool operator!=(const JSCell* a, const JSValue b) { return JSValue(a) != b; }
-
 
 bool isThisValueAltered(const PutPropertySlot&, JSObject* baseObject);
 

@@ -41,6 +41,7 @@
 #include "B3UpsilonValue.h"
 #include "B3ValueKeyInlines.h"
 #include "B3ValueInlines.h"
+#include "SIMDShuffle.h"
 #include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
@@ -90,6 +91,14 @@ static constexpr bool verbose = false;
 // FIXME: This IntRange stuff should be refactored into a general constant propagator. It's weird
 // that it's just sitting here in this file.
 class IntRange {
+
+#define DUMP_INT_RANGE_AND_RETURN(range)                           \
+    do {                                                           \
+        if (UNLIKELY(B3ReduceStrengthInternal::verbose))           \
+            dataLogLn("    IntRange for ", *value, " is ", range); \
+        return range;                                              \
+    } while (false);
+
 public:
     IntRange()
     {
@@ -99,6 +108,7 @@ public:
         : m_min(min)
         , m_max(max)
     {
+        ASSERT(m_min <= m_max);
     }
 
     template<typename T>
@@ -447,9 +457,15 @@ public:
     {
         ASSERT(m_min >= INT32_MIN);
         ASSERT(m_max <= INT32_MAX);
-        int32_t min = m_min;
-        int32_t max = m_max;
-        return IntRange(static_cast<uint64_t>(static_cast<uint32_t>(min)), static_cast<uint64_t>(static_cast<uint32_t>(max)));
+        uint64_t min = static_cast<uint64_t>(static_cast<uint32_t>(m_min));
+        uint64_t max = static_cast<uint64_t>(static_cast<uint32_t>(m_max));
+        if (m_max < 0 || m_min >= 0) {
+            // m_min = -2, m_max = -1 then should return [0xFFFF_FFFE, 0xFFFF_FFFF]
+            // m_min =  1, m_max =  2 then should return [1, 2]
+            return IntRange(min, max);
+        }
+        // m_min = a negative integer, m_max >= 0 then should return [0, 0xFFFF_FFFF]
+        return IntRange(0, std::numeric_limits<uint32_t>::max());
     }
 
 private:
@@ -623,10 +639,9 @@ private:
             // Into this: Shl(value, 1)
             // This is a useful canonicalization. It's not meant to be a strength reduction.
             if (m_value->isInteger() && m_value->child(0) == m_value->child(1)) {
-                replaceWithNewValue(
-                    m_proc.add<Value>(
+                replaceWithNew<Value>(
                         Shl, m_value->origin(), m_value->child(0),
-                        m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), 1)));
+                    m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), 1));
                 break;
             }
 
@@ -638,9 +653,11 @@ private:
             //    0 + -0 = 0
             //    -0 + 0 = 0
             //    -0 + -0 = -0
+            if (!m_value->isSensitiveToNaN()) {
             if (m_value->child(1)->isInt(0) || m_value->child(1)->isNegativeZero()) {
                 replaceWithIdentity(m_value->child(0));
                 break;
+            }
             }
 
             if (m_value->isInteger()) {
@@ -870,11 +887,10 @@ private:
                 // Into this: Shl(value, log2(constant))
                 if (hasOneBitSet(factor)) {
                     unsigned shiftAmount = WTF::fastLog2(static_cast<uint64_t>(factor));
-                    replaceWithNewValue(
-                        m_proc.add<Value>(
+                    replaceWithNew<Value>(
                             Shl, m_value->origin(), m_value->child(0),
                             m_insertionSet.insert<Const32Value>(
-                                m_index, m_value->origin(), shiftAmount)));
+                            m_index, m_value->origin(), shiftAmount));
                     break;
                 }
             } else if (m_value->child(1)->hasDouble()) {
@@ -882,10 +898,12 @@ private:
 
                 // Turn this: Mul(value, 1)
                 // Into this: value
+                if (!m_value->isSensitiveToNaN()) {
                 if (factor == 1) {
                     replaceWithIdentity(m_value->child(0));
                     break;
                 }
+            }
             }
 
             if (m_value->isInteger()) {
@@ -921,8 +939,7 @@ private:
                 case -1:
                     // Turn this: Div(value, -1)
                     // Into this: Neg(value)
-                    replaceWithNewValue(
-                        m_proc.add<Value>(Neg, m_value->origin(), m_value->child(0)));
+                    replaceWithNew<Value>(Neg, m_value->origin(), m_value->child(0));
                     break;
 
                 case 0:
@@ -1312,7 +1329,7 @@ private:
             }
 
             // Turn this: BitOr(BitOr(value, constant1), constant2)
-            // Into this: BitOr(value, constant1 & constant2).
+            // Into this: BitOr(value, constant1 | constant2).
             if (m_value->child(0)->opcode() == BitOr) {
                 Value* newConstant = m_value->child(1)->bitOrConstant(m_proc, m_value->child(0)->child(1));
                 if (newConstant) {
@@ -1475,9 +1492,7 @@ private:
                     if (m_value->type() == Int32) {
                         // Turn this: SShr(Shl(value, 16), 16)
                         // Into this: SExt16(value)
-                        replaceWithNewValue(
-                            m_proc.add<Value>(
-                                SExt16, m_value->origin(), m_value->child(0)->child(0)));
+                        replaceWithNew<Value>(SExt16, m_value->origin(), m_value->child(0)->child(0));
                     }
                     break;
 
@@ -1485,9 +1500,7 @@ private:
                     if (m_value->type() == Int32) {
                         // Turn this: SShr(Shl(value, 24), 24)
                         // Into this: SExt8(value)
-                        replaceWithNewValue(
-                            m_proc.add<Value>(
-                                SExt8, m_value->origin(), m_value->child(0)->child(0)));
+                        replaceWithNew<Value>(SExt8, m_value->origin(), m_value->child(0)->child(0));
                     }
                     break;
 
@@ -1495,17 +1508,37 @@ private:
                     if (m_value->type() == Int64) {
                         // Turn this: SShr(Shl(value, 32), 32)
                         // Into this: SExt32(Trunc(value))
-                        replaceWithNewValue(
-                            m_proc.add<Value>(
+                        replaceWithNew<Value>(
                                 SExt32, m_value->origin(),
                                 m_insertionSet.insert<Value>(
                                     m_index, Trunc, m_value->origin(),
-                                    m_value->child(0)->child(0))));
+                                m_value->child(0)->child(0)));
                     }
                     break;
 
-                // FIXME: Add cases for 48 and 56, but that would translate to SExt32(SExt8) or
-                // SExt32(SExt16), which we don't currently lower efficiently.
+                case 48:
+                    if (m_value->type() == Int64) {
+                        // Turn this: SShr(Shl(value, 48), 48)
+                        // Into this: SExt16To64(Trunc(value))
+                        replaceWithNew<Value>(
+                            SExt16To64, m_value->origin(),
+                            m_insertionSet.insert<Value>(
+                                m_index, Trunc, m_value->origin(),
+                                m_value->child(0)->child(0)));
+                    }
+                    break;
+
+                case 56:
+                    if (m_value->type() == Int64) {
+                        // Turn this: SShr(Shl(value, 56), 56)
+                        // Into this: SExt8To64(Trunc(value))
+                        replaceWithNew<Value>(
+                            SExt8To64, m_value->origin(),
+                            m_insertionSet.insert<Value>(
+                                m_index, Trunc, m_value->origin(),
+                                m_value->child(0)->child(0)));
+                    }
+                    break;
 
                 default:
                     break;
@@ -1740,11 +1773,10 @@ private:
                 // Turn this: SExt8(BitAnd(input, mask)) where (mask & 0x80) == 0
                 // Into this: BitAnd(input, const & 0x7f)
                 if (!(mask & 0x80)) {
-                    replaceWithNewValue(
-                        m_proc.add<Value>(
+                    replaceWithNew<Value>(
                             BitAnd, m_value->origin(), input,
                             m_insertionSet.insert<Const32Value>(
-                                m_index, m_value->origin(), mask & 0x7f)));
+                            m_index, m_value->origin(), mask & 0x7f));
                     break;
                 }
             }
@@ -1798,11 +1830,10 @@ private:
                 // Turn this: SExt16(BitAnd(input, mask)) where (mask & 0x8000) == 0
                 // Into this: BitAnd(input, const & 0x7fff)
                 if (!(mask & 0x8000)) {
-                    replaceWithNewValue(
-                        m_proc.add<Value>(
+                    replaceWithNew<Value>(
                             BitAnd, m_value->origin(), input,
                             m_insertionSet.insert<Const32Value>(
-                                m_index, m_value->origin(), mask & 0x7fff)));
+                            m_index, m_value->origin(), mask & 0x7fff));
                     break;
                 }
             }
@@ -1813,6 +1844,92 @@ private:
                 if (isAtomicXchg(m_value->child(0)->opcode())
                     && m_value->child(0)->as<AtomicValue>()->accessWidth() == Width16) {
                     replaceWithIdentity(m_value->child(0));
+                    break;
+                }
+            }
+            break;
+
+        case SExt8To64:
+            // Turn this: SExt8To64(constant)
+            // Into this: static_cast<int8_t>(constant)
+            if (m_value->child(0)->hasInt32()) {
+                int64_t result = static_cast<int8_t>(m_value->child(0)->asInt32());
+                replaceWithNewValue(m_proc.addIntConstant(m_value, result));
+                break;
+            }
+
+            // Turn this: SExt8To64(SExt8(value))
+            //   or this: SExt8To64(SExt16(value))
+            // Into this: SExt8To64(value)
+            if (m_value->child(0)->opcode() == SExt8 || m_value->child(0)->opcode() == SExt16) {
+                m_value->child(0) = m_value->child(0)->child(0);
+                m_changed = true;
+            }
+
+            if (m_value->child(0)->opcode() == BitAnd && m_value->child(0)->child(1)->hasInt32()) {
+                Value* input = m_value->child(0)->child(0);
+                int32_t mask = m_value->child(0)->child(1)->asInt32();
+
+                // Turn this: SExt8To64(BitAnd(input, mask)) where (mask & 0xff) == 0xff
+                // Into this: SExt8To64(input)
+                if ((mask & 0xff) == 0xff) {
+                    m_value->child(0) = input;
+                    m_changed = true;
+                    break;
+                }
+
+                // Turn this: SExt8To64(BitAnd(input, mask)) where (mask & 0x80) == 0
+                // Into this: ZExt32(BitAnd(input, mask & 0x7f))
+                if (!(mask & 0x80)) {
+                    Const32Value* maskValue = m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), mask & 0x7f);
+                    Value* bitAndValue = m_insertionSet.insert<Value>(m_index, BitAnd, m_value->origin(), input, maskValue);
+                    replaceWithNew<Value>(ZExt32, m_value->origin(), bitAndValue);
+                    break;
+                }
+            }
+            break;
+
+        case SExt16To64:
+            // Turn this: SExt16To64(constant)
+            // Into this: static_cast<int16_t>(constant)
+            if (m_value->child(0)->hasInt32()) {
+                int64_t result = static_cast<int16_t>(m_value->child(0)->asInt32());
+                replaceWithNewValue(m_proc.addIntConstant(m_value, result));
+                break;
+            }
+
+            // Turn this: SExt16To64(SExt16(value))
+            // Into this: SExt16To64(value)
+            if (m_value->child(0)->opcode() == SExt16) {
+                m_value->child(0) = m_value->child(0)->child(0);
+                m_changed = true;
+            }
+
+            // Turn this: SExt16To64(SExt8(value))
+            // Into this: SExt8To64(value)
+            if (m_value->child(0)->opcode() == SExt8) {
+                replaceWithNew<Value>(SExt8To64, m_value->origin(), m_value->child(0));
+                break;
+            }
+
+            if (m_value->child(0)->opcode() == BitAnd && m_value->child(0)->child(1)->hasInt32()) {
+                Value* input = m_value->child(0)->child(0);
+                int32_t mask = m_value->child(0)->child(1)->asInt32();
+
+                // Turn this: SExt16To64(BitAnd(input, mask)) where (mask & 0xffff) == 0xffff
+                // Into this: SExt16To64(input)
+                if ((mask & 0xffff) == 0xffff) {
+                    m_value->child(0) = input;
+                    m_changed = true;
+                    break;
+                }
+
+                // Turn this: SExt16To64(BitAnd(input, mask)) where (mask & 0x8000) == 0
+                // Into this: ZExt32(BitAnd(input, mask & 0x7fff))
+                if (!(mask & 0x8000)) {
+                    Const32Value* maskValue = m_insertionSet.insert<Const32Value>(m_index, m_value->origin(), mask & 0x7fff);
+                    Value* bitAndValue = m_insertionSet.insert<Value>(m_index, BitAnd, m_value->origin(), input, maskValue);
+                    replaceWithNew<Value>(ZExt32, m_value->origin(), bitAndValue);
                     break;
                 }
             }
@@ -1830,9 +1947,21 @@ private:
             // Into this: ZExt32(BitAnd(input, mask))
             if (m_value->child(0)->opcode() == BitAnd && m_value->child(0)->child(1)->hasInt32()
                 && !(m_value->child(0)->child(1)->asInt32() & 0x80000000)) {
-                replaceWithNewValue(
-                    m_proc.add<Value>(
-                        ZExt32, m_value->origin(), m_value->child(0)));
+                replaceWithNew<Value>(ZExt32, m_value->origin(), m_value->child(0));
+                break;
+            }
+
+            // Turn this: SExt32(SExt8(value))
+            // Into this: SExt8To64(value)
+            if (m_value->child(0)->opcode() == SExt8) {
+                replaceWithNew<Value>(SExt8To64, m_value->origin(), m_value->child(0)->child(0));
+                break;
+            }
+
+            // Turn this: SExt32(SExt16(value))
+            // Into this: SExt16To64(value)
+            if (m_value->child(0)->opcode() == SExt16) {
+                replaceWithNew<Value>(SExt16To64, m_value->origin(), m_value->child(0)->child(0));
                 break;
             }
             break;
@@ -1862,6 +1991,20 @@ private:
             // Into this: value
             if (m_value->child(0)->opcode() == SExt32 || m_value->child(0)->opcode() == ZExt32) {
                 replaceWithIdentity(m_value->child(0)->child(0));
+                break;
+            }
+
+            // Turn this: Trunc(SExt8To64(value))
+            // Into this: SExt8(value)
+            if (m_value->child(0)->opcode() == SExt8To64) {
+                replaceWithNew<Value>(SExt8, m_value->origin(), m_value->child(0)->child(0));
+                break;
+            }
+
+            // Turn this: Trunc(SExt16To64(value))
+            // Into this: SExt16(value)
+            if (m_value->child(0)->opcode() == SExt16To64) {
+                replaceWithNew<Value>(SExt16, m_value->origin(), m_value->child(0)->child(0));
                 break;
             }
 
@@ -1920,9 +2063,11 @@ private:
         case DoubleToFloat:
             // Turn this: DoubleToFloat(FloatToDouble(value))
             // Into this: value
+            if (!m_value->isSensitiveToNaN()) {
             if (m_value->child(0)->opcode() == FloatToDouble) {
                 replaceWithIdentity(m_value->child(0)->child(0));
                 break;
+            }
             }
 
             // Turn this: DoubleToFloat(constant)
@@ -2024,6 +2169,26 @@ private:
                     address = newAddress;
                     memory->lastChild() = newAddress;
                     memory->setOffset(0);
+                    m_changed = true;
+                }
+            }
+
+            if (m_value->opcode() == Store) {
+                // Turn this: Store(float-constant, address)
+                // Into this: Store(int32-constant, address)
+                if (m_value->child(0)->hasFloat()) {
+                    float value = m_value->child(0)->asFloat();
+                    Value* constant = m_insertionSet.insert<Const32Value>(m_index, m_value->child(0)->origin(), bitwise_cast<int32_t>(value));
+                    m_value->child(0) = constant;
+                    m_changed = true;
+                }
+
+                // Turn this: Store(double-constant, address)
+                // Into this: Store(int64-constant, address)
+                if (m_value->child(0)->hasDouble()) {
+                    double value = m_value->child(0)->asDouble();
+                    Value* constant = m_insertionSet.insert<Const64Value>(m_index, m_value->child(0)->origin(), bitwise_cast<int64_t>(value));
+                    m_value->child(0) = constant;
                     m_changed = true;
                 }
             }
@@ -2177,8 +2342,7 @@ private:
             IntRange leftRange = rangeFor(m_value->child(0));
             IntRange rightRange = rangeFor(m_value->child(1));
             if (!leftRange.couldOverflowAdd(rightRange, m_value->type())) {
-                replaceWithNewValue(
-                    m_proc.add<Value>(Add, m_value->origin(), m_value->child(0), m_value->child(1)));
+                replaceWithNew<Value>(Add, m_value->origin(), m_value->child(0), m_value->child(1));
                 break;
             }
             break;
@@ -2204,8 +2368,7 @@ private:
             IntRange leftRange = rangeFor(m_value->child(0));
             IntRange rightRange = rangeFor(m_value->child(1));
             if (!leftRange.couldOverflowSub(rightRange, m_value->type())) {
-                replaceWithNewValue(
-                    m_proc.add<Value>(Sub, m_value->origin(), m_value->child(0), m_value->child(1)));
+                replaceWithNew<Value>(Sub, m_value->origin(), m_value->child(0), m_value->child(1));
                 break;
             }
             break;
@@ -2242,8 +2405,7 @@ private:
             IntRange leftRange = rangeFor(m_value->child(0));
             IntRange rightRange = rangeFor(m_value->child(1));
             if (!leftRange.couldOverflowMul(rightRange, m_value->type())) {
-                replaceWithNewValue(
-                    m_proc.add<Value>(Mul, m_value->origin(), m_value->child(0), m_value->child(1)));
+                replaceWithNew<Value>(Mul, m_value->origin(), m_value->child(0), m_value->child(1));
                 break;
             }
             break;
@@ -2416,6 +2578,7 @@ private:
 
         case Const32:
         case Const64:
+        case Const128:
         case ConstFloat:
         case ConstDouble: {
             ValueKey key = m_value->key();
@@ -2433,6 +2596,371 @@ private:
                 m_valueForConstant.add(key, constInRoot);
                 m_value->replaceWithIdentity(constInRoot);
                 m_changed = true;
+            }
+            break;
+        }
+
+        case VectorOr: {
+            handleCommutativity();
+
+            // Turn this: VectorOr(constant1, constant2)
+            // Into this: constant1 | constant2
+            if (Value* constantVectorOr = m_value->child(0)->vectorOrConstant(m_proc, m_value->child(1))) {
+                replaceWithNewValue(constantVectorOr);
+                break;
+            }
+
+            // Turn this: VectorOr(VectorOr(value, constant1), constant2)
+            // Into this: VectorOr(value, constant1 | constant2).
+            if (m_value->child(0)->opcode() == VectorOr) {
+                Value* newConstant = m_value->child(1)->vectorOrConstant(m_proc, m_value->child(0)->child(1));
+                if (newConstant) {
+                    m_insertionSet.insertValue(m_index, newConstant);
+                    m_value->child(0) = m_value->child(0)->child(0);
+                    m_value->child(1) = newConstant;
+                    m_changed = true;
+                }
+            }
+
+            // Turn this: VectorOr(valueX, valueX)
+            // Into this: valueX.
+            if (m_value->child(0) == m_value->child(1)) {
+                replaceWithIdentity(m_value->child(0));
+                break;
+            }
+
+            // Turn this: VectorOr(value, zero-constant)
+            // Into this: value.
+            if (m_value->child(1)->isV128(vectorAllZeros())) {
+                replaceWithIdentity(m_value->child(0));
+                break;
+            }
+
+            // Turn this: VectorOr(value, all-ones)
+            // Into this: all-ones.
+            if (m_value->child(1)->isV128(vectorAllOnes())) {
+                replaceWithIdentity(m_value->child(1));
+                break;
+            }
+
+            // Turn this: VectorOr(VectorXor(x1, allOnes), VectorXor(x2, allOnes)
+            // Into this: VectorXor(VectorAnd(x1, x2), allOnes)
+            // By applying De Morgan laws
+            if (m_value->child(0)->opcode() == VectorXor
+                && m_value->child(1)->opcode() == VectorXor
+                && m_value->child(0)->child(1)->isV128(vectorAllOnes())
+                && m_value->child(1)->child(1)->isV128(vectorAllOnes())) {
+                Value* vectorAnd = m_insertionSet.insert<SIMDValue>(m_index, m_value->origin(), VectorAnd, B3::V128, SIMDLane::v128, SIMDSignMode::None, m_value->child(0)->child(0), m_value->child(1)->child(0));
+                replaceWithNew<SIMDValue>(m_value->origin(), VectorXor, B3::V128, SIMDLane::v128, SIMDSignMode::None, vectorAnd, m_value->child(1)->child(1));
+                break;
+            }
+
+            // Turn this: VectorOr(VectorXor(x, allOnes), c)
+            // Into this: VectorXor(VectorAnd(x, ~c), allOnes)
+            // This is a variation on the previous optimization, treating c as if it were VectorXor(~c, allOnes)
+            // It does not reduce the number of operations, but provides some normalization (we try to get VectorXor by allOnes at the outermost point), and some chance to float Xors to a place where they might get eliminated.
+            if (m_value->child(0)->opcode() == VectorXor
+                && m_value->child(1)->hasV128()
+                && m_value->child(0)->child(1)->isV128(vectorAllOnes())) {
+                Value* newConstant = m_value->child(1)->vectorXorConstant(m_proc, m_value->child(0)->child(1));
+                ASSERT(newConstant);
+                m_insertionSet.insertValue(m_index, newConstant);
+                Value* vectorAnd = m_insertionSet.insert<SIMDValue>(m_index, m_value->origin(), VectorAnd, B3::V128, SIMDLane::v128, SIMDSignMode::None, m_value->child(0)->child(0), newConstant);
+                replaceWithNew<SIMDValue>(m_value->origin(), VectorXor, B3::V128, SIMDLane::v128, SIMDSignMode::None, vectorAnd, m_value->child(0)->child(1));
+                break;
+            }
+            break;
+        }
+
+        case VectorAnd: {
+            handleCommutativity();
+
+            // Turn this: VectorAnd(constant1, constant2)
+            // Into this: constant1 & constant2
+            if (Value* constantVectorAnd = m_value->child(0)->vectorAndConstant(m_proc, m_value->child(1))) {
+                replaceWithNewValue(constantVectorAnd);
+                break;
+            }
+
+            // Turn this: VectorAnd(VectorAnd(value, constant1), constant2)
+            // Into this: VectorAnd(value, constant1 & constant2).
+            if (m_value->child(0)->opcode() == VectorAnd) {
+                Value* newConstant = m_value->child(1)->vectorAndConstant(m_proc, m_value->child(0)->child(1));
+                if (newConstant) {
+                    m_insertionSet.insertValue(m_index, newConstant);
+                    m_value->child(0) = m_value->child(0)->child(0);
+                    m_value->child(1) = newConstant;
+                    m_changed = true;
+                }
+            }
+
+            // Turn this: VectorAnd(valueX, valueX)
+            // Into this: valueX.
+            if (m_value->child(0) == m_value->child(1)) {
+                replaceWithIdentity(m_value->child(0));
+                break;
+            }
+
+            // Turn this: VectorAnd(value, zero-constant)
+            // Into this: zero-constant.
+            if (m_value->child(1)->isV128(vectorAllZeros())) {
+                replaceWithIdentity(m_value->child(1));
+                break;
+            }
+
+            // Turn this: VectorAnd(value, all-ones)
+            // Into this: value.
+            if (m_value->child(1)->isV128(vectorAllOnes())) {
+                replaceWithIdentity(m_value->child(0));
+                break;
+            }
+
+            // Turn this: VectorAnd(Op(value, constant1), constant2)
+            //     where !(constant1 & constant2)
+            //       and Op is VectorOr or VectorXor
+            // into this: VectorAnd(value, constant2)
+            if (m_value->child(1)->hasV128()) {
+                bool replaced = false;
+                v128_t constant2 = m_value->child(1)->asV128();
+                switch (m_value->child(0)->opcode()) {
+                case VectorOr:
+                case VectorXor:
+                    if (m_value->child(0)->child(1)->hasV128()
+                        && bitEquals(vectorAnd(m_value->child(0)->child(1)->asV128(), constant2), vectorAllZeros())) {
+                        m_value->child(0) = m_value->child(0)->child(0);
+                        m_changed = true;
+                        replaced = true;
+                        break;
+                    }
+                    break;
+                default:
+                    break;
+                }
+                if (replaced)
+                    break;
+            }
+
+            // Turn this: VectorAnd(VectorXor(x1, allOnes), VectorXor(x2, allOnes))
+            // Into this: VectorXor(VectorOr(x1, x2), allOnes)
+            // By applying De Morgan laws
+            if (m_value->child(0)->opcode() == VectorXor
+                && m_value->child(1)->opcode() == VectorXor
+                && (m_value->child(0)->child(1)->isV128(vectorAllOnes()) && m_value->child(1)->child(1)->isV128(vectorAllOnes()))) {
+                Value* vectorOr = m_insertionSet.insert<SIMDValue>(m_index, m_value->origin(), VectorOr, B3::V128, SIMDLane::v128, SIMDSignMode::None, m_value->child(0)->child(0), m_value->child(1)->child(0));
+                replaceWithNew<SIMDValue>(m_value->origin(), VectorXor, B3::V128, SIMDLane::v128, SIMDSignMode::None, vectorOr, m_value->child(1)->child(1));
+                break;
+            }
+
+            // Turn this: VectorAnd(VectorXor(x, allOnes), c)
+            // Into this: VectorXor(VectorOr(x, ~c), allOnes)
+            // This is a variation on the previous optimization, treating c as if it were VectorXor(~c, allOnes)
+            // It does not reduce the number of operations, but provides some normalization (we try to get VectorXor by allOnes at the outermost point), and some chance to float Xors to a place where they might get eliminated.
+            if (m_value->child(0)->opcode() == VectorXor
+                && m_value->child(1)->hasV128()
+                && m_value->child(0)->child(1)->isV128(vectorAllOnes())) {
+                Value* newConstant = m_value->child(1)->vectorXorConstant(m_proc, m_value->child(0)->child(1));
+                ASSERT(newConstant);
+                m_insertionSet.insertValue(m_index, newConstant);
+                Value* vectorOr = m_insertionSet.insert<SIMDValue>(m_index, m_value->origin(), VectorOr, B3::V128, SIMDLane::v128, SIMDSignMode::None, m_value->child(0)->child(0), newConstant);
+                replaceWithNew<SIMDValue>(m_value->origin(), VectorXor, B3::V128, SIMDLane::v128, SIMDSignMode::None, vectorOr, m_value->child(0)->child(1));
+                break;
+            }
+
+            break;
+        }
+
+        case VectorXor: {
+            handleCommutativity();
+
+            // Turn this: VectorXor(constant1, constant2)
+            // Into this: constant1 ^ constant2
+            if (Value* constantVectorXor = m_value->child(0)->vectorXorConstant(m_proc, m_value->child(1))) {
+                replaceWithNewValue(constantVectorXor);
+                break;
+            }
+
+            // Turn this: VectorXor(VectorXor(value, constant1), constant2)
+            // Into this: VectorXor(value, constant1 ^ constant2).
+            if (m_value->child(0)->opcode() == VectorXor) {
+                Value* newConstant = m_value->child(1)->vectorXorConstant(m_proc, m_value->child(0)->child(1));
+                if (newConstant) {
+                    m_insertionSet.insertValue(m_index, newConstant);
+                    m_value->child(0) = m_value->child(0)->child(0);
+                    m_value->child(1) = newConstant;
+                    m_changed = true;
+                }
+            }
+
+            // Turn this: VectorXor(valueX, valueX)
+            // Into this: zero-constant.
+            if (m_value->child(0) == m_value->child(1)) {
+                replaceWithNewValue(m_proc.addConstant(m_value->origin(), B3::V128, vectorAllZeros()));
+                break;
+            }
+
+            // Turn this: VectorXor(value, zero-constant)
+            // Into this: value.
+            if (m_value->child(1)->isV128(vectorAllZeros())) {
+                replaceWithIdentity(m_value->child(0));
+                break;
+            }
+
+            break;
+        }
+
+        case VectorSwizzle: {
+            if (m_value->numChildren() == 2 && m_value->child(1)->isConstant()) {
+                v128_t pattern = m_value->child(1)->as<Const128Value>()->value();
+                if (SIMDShuffle::isIdentity(pattern)) {
+                    replaceWithIdentity(m_value->child(0));
+                    break;
+                }
+
+                if (SIMDShuffle::isAllOutOfBoundsForUnaryShuffle(pattern)) {
+                    replaceWithNewValue(m_proc.addConstant(m_value->origin(), B3::V128, vectorAllZeros()));
+                    break;
+                }
+
+                if constexpr (isARM64()) {
+                    if (auto lane = SIMDShuffle::isI64x2DupElement(pattern)) {
+                        replaceWithNew<SIMDValue>(m_value->origin(), VectorDupElement, B3::V128, SIMDLane::i64x2, SIMDSignMode::None, lane.value(), m_value->child(0));
+                        break;
+                    }
+
+                    if (auto lane = SIMDShuffle::isI32x4DupElement(pattern)) {
+                        replaceWithNew<SIMDValue>(m_value->origin(), VectorDupElement, B3::V128, SIMDLane::i32x4, SIMDSignMode::None, lane.value(), m_value->child(0));
+                        break;
+                    }
+
+                    if (auto lane = SIMDShuffle::isI16x8DupElement(pattern)) {
+                        replaceWithNew<SIMDValue>(m_value->origin(), VectorDupElement, B3::V128, SIMDLane::i16x8, SIMDSignMode::None, lane.value(), m_value->child(0));
+                        break;
+                    }
+
+                    if (auto lane = SIMDShuffle::isI8x16DupElement(pattern)) {
+                        replaceWithNew<SIMDValue>(m_value->origin(), VectorDupElement, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, lane.value(), m_value->child(0));
+                        break;
+                    }
+                    break;
+                }
+            }
+
+            if constexpr (isARM64()) {
+                if (m_value->numChildren() == 3 && m_value->child(2)->isConstant()) {
+                    v128_t pattern = m_value->child(2)->as<Const128Value>()->value();
+                    if (auto child = SIMDShuffle::isOnlyOneSideMask(pattern)) {
+                        switch (child.value()) {
+                        case 0: {
+                            replaceWithNew<SIMDValue>(m_value->origin(), VectorSwizzle, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, m_value->child(0), m_value->child(2));
+                            break;
+                        }
+                        case 1: {
+                            v128_t newPattern = pattern;
+                            for (unsigned i = 0; i < 16; ++i)
+                                newPattern.u8x16[i] = pattern.u8x16[i] - 16;
+                            Value* newPatternValue = m_proc.addConstant(m_value->origin(), B3::V128, newPattern);
+                            m_insertionSet.insertValue(m_index, newPatternValue);
+                            replaceWithNew<SIMDValue>(m_value->origin(), VectorSwizzle, B3::V128, SIMDLane::i8x16, SIMDSignMode::None, m_value->child(1), newPatternValue);
+                            break;
+                        }
+                        }
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+
+        case VectorMul: {
+            if constexpr (isARM64()) {
+                SIMDValue* value = m_value->as<SIMDValue>();
+                Value* left = m_value->child(0);
+                Value* right = m_value->child(1);
+
+                if (!scalarTypeIsFloatingPoint(value->simdInfo().lane))
+                    break;
+
+                auto tryReplaceWithVectorMulByElement = [&] (Value* left, Value* right) -> bool {
+                    if (right->opcode() != VectorDupElement)
+                        return false;
+                    if (elementByteSize(right->as<SIMDValue>()->simdInfo().lane) != elementByteSize(value->simdInfo().lane))
+                        return false;
+                    replaceWithNew<SIMDValue>(value->origin(), VectorMulByElement, B3::V128, value->simdInfo(), right->as<SIMDValue>()->immediate(), left, right->child(0));
+                    return true;
+                };
+
+                if (tryReplaceWithVectorMulByElement(left, right) || tryReplaceWithVectorMulByElement(right, left))
+                    break;
+            }
+            break;
+        }
+
+        case VectorSplat: {
+            SIMDValue* value = m_value->as<SIMDValue>();
+            v128_t constant { };
+            switch (value->simdLane()) {
+            case SIMDLane::i8x16: {
+                if (value->child(0)->hasInt32()) {
+                    uint8_t value = static_cast<uint8_t>(bitwise_cast<uint32_t>(m_value->child(0)->asInt32()));
+                    for (unsigned i = 0; i < 16; ++i)
+                        constant.u8x16[i] = value;
+                    replaceWithNewValue(m_proc.addConstant(m_value->origin(), B3::V128, constant));
+                    break;
+                }
+                break;
+            }
+            case SIMDLane::i16x8: {
+                if (value->child(0)->hasInt32()) {
+                    uint16_t value = static_cast<uint16_t>(bitwise_cast<uint32_t>(m_value->child(0)->asInt32()));
+                    for (unsigned i = 0; i < 8; ++i)
+                        constant.u16x8[i] = value;
+                    replaceWithNewValue(m_proc.addConstant(m_value->origin(), B3::V128, constant));
+                    break;
+                }
+                break;
+            }
+            case SIMDLane::i32x4: {
+                if (value->child(0)->hasInt32()) {
+                    uint32_t value = bitwise_cast<uint32_t>(m_value->child(0)->asInt32());
+                    for (unsigned i = 0; i < 4; ++i)
+                        constant.u32x4[i] = value;
+                    replaceWithNewValue(m_proc.addConstant(m_value->origin(), B3::V128, constant));
+                    break;
+                }
+                break;
+            }
+            case SIMDLane::i64x2: {
+                if (value->child(0)->hasInt64()) {
+                    uint64_t value = bitwise_cast<uint64_t>(m_value->child(0)->asInt64());
+                    for (unsigned i = 0; i < 2; ++i)
+                        constant.u64x2[i] = value;
+                    replaceWithNewValue(m_proc.addConstant(m_value->origin(), B3::V128, constant));
+                    break;
+                }
+                break;
+            }
+            case SIMDLane::f32x4: {
+                if (value->child(0)->hasFloat()) {
+                    float value = m_value->child(0)->asFloat();
+                    for (unsigned i = 0; i < 4; ++i)
+                        constant.f32x4[i] = value;
+                    replaceWithNewValue(m_proc.addConstant(m_value->origin(), B3::V128, constant));
+                    break;
+                }
+                break;
+            }
+            case SIMDLane::f64x2: {
+                if (value->child(0)->hasDouble()) {
+                    double value = m_value->child(0)->asDouble();
+                    for (unsigned i = 0; i < 2; ++i)
+                        constant.f64x2[i] = value;
+                    replaceWithNewValue(m_proc.addConstant(m_value->origin(), B3::V128, constant));
+                    break;
+                }
+                break;
+            }
+            default:
+                break;
             }
             break;
         }
@@ -2772,68 +3300,70 @@ private:
     IntRange rangeFor(Value* value, unsigned timeToLive = 5)
     {
         if (!timeToLive)
-            return IntRange::top(value->type());
+            DUMP_INT_RANGE_AND_RETURN(IntRange::top(value->type()));
 
         switch (value->opcode()) {
         case Const32:
         case Const64: {
             int64_t intValue = value->asInt();
-            return IntRange(intValue, intValue);
+            DUMP_INT_RANGE_AND_RETURN(IntRange(intValue, intValue));
         }
 
         case BitAnd:
             if (value->child(1)->hasInt())
-                return IntRange::rangeForMask(value->child(1)->asInt(), value->type());
+                DUMP_INT_RANGE_AND_RETURN(IntRange::rangeForMask(value->child(1)->asInt(), value->type()));
             break;
 
         case SShr:
             if (value->child(1)->hasInt32()) {
-                return rangeFor(value->child(0), timeToLive - 1).sShr(
-                    value->child(1)->asInt32(), value->type());
+                DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).sShr(
+                    value->child(1)->asInt32(), value->type()));
             }
             break;
 
         case ZShr:
             if (value->child(1)->hasInt32()) {
-                return rangeFor(value->child(0), timeToLive - 1).zShr(
-                    value->child(1)->asInt32(), value->type());
+                DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).zShr(
+                    value->child(1)->asInt32(), value->type()));
             }
             break;
 
         case Shl:
             if (value->child(1)->hasInt32()) {
-                return rangeFor(value->child(0), timeToLive - 1).shl(
-                    value->child(1)->asInt32(), value->type());
+                DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).shl(
+                    value->child(1)->asInt32(), value->type()));
             }
             break;
 
         case Add:
-            return rangeFor(value->child(0), timeToLive - 1).add(
-                rangeFor(value->child(1), timeToLive - 1), value->type());
+            DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).add(
+                rangeFor(value->child(1), timeToLive - 1), value->type()));
 
         case Sub:
-            return rangeFor(value->child(0), timeToLive - 1).sub(
-                rangeFor(value->child(1), timeToLive - 1), value->type());
+            DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).sub(
+                rangeFor(value->child(1), timeToLive - 1), value->type()));
 
         case Mul:
-            return rangeFor(value->child(0), timeToLive - 1).mul(
-                rangeFor(value->child(1), timeToLive - 1), value->type());
+            DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).mul(
+                rangeFor(value->child(1), timeToLive - 1), value->type()));
 
         case SExt8:
-            return rangeFor(value->child(0), timeToLive - 1).sExt<int8_t>();
+        case SExt8To64:
+            DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).sExt<int8_t>());
         case SExt16:
-            return rangeFor(value->child(0), timeToLive - 1).sExt<int16_t>();
+        case SExt16To64:
+            DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).sExt<int16_t>());
         case SExt32:
-            return rangeFor(value->child(0), timeToLive - 1).sExt<int32_t>();
+            DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).sExt<int32_t>());
 
         case ZExt32:
-            return rangeFor(value->child(0), timeToLive - 1).zExt32();
+            DUMP_INT_RANGE_AND_RETURN(rangeFor(value->child(0), timeToLive - 1).zExt32());
 
         default:
             break;
         }
 
-        return IntRange::top(value->type());
+        DUMP_INT_RANGE_AND_RETURN(IntRange::top(value->type()));
     }
 
     template<typename ValueType, typename... Arguments>

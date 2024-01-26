@@ -81,6 +81,9 @@ void InspectorCSSOMWrappers::collect(ListType* listType)
             break;
         case StyleRuleType::Style:
             m_styleRuleToCSSOMWrapperMap.add(&downcast<CSSStyleRule>(*cssRule).styleRule(), downcast<CSSStyleRule>(cssRule));
+
+            // Eagerly collect rules nested in this style rule.
+            collect(downcast<CSSStyleRule>(cssRule));
             break;
         default:
             break;
@@ -122,7 +125,10 @@ void InspectorCSSOMWrappers::collectDocumentWrappers(ExtensionStyleSheets& exten
         collectFromStyleSheetContents(UserAgentStyle::svgStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mathMLStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mediaControlsStyleSheet);
+        collectFromStyleSheetContents(UserAgentStyle::horizontalFormControlsStyleSheet);
+#if ENABLE(FULLSCREEN_API)
         collectFromStyleSheetContents(UserAgentStyle::fullscreenStyleSheet);
+#endif
 #if ENABLE(DATALIST_ELEMENT)
         collectFromStyleSheetContents(UserAgentStyle::dataListStyleSheet);
 #endif
@@ -131,9 +137,6 @@ void InspectorCSSOMWrappers::collectDocumentWrappers(ExtensionStyleSheets& exten
 #endif
 #if ENABLE(IOS_FORM_CONTROL_REFRESH)
         collectFromStyleSheetContents(UserAgentStyle::legacyFormControlsIOSStyleSheet);
-#endif
-#if ENABLE(ALTERNATE_FORM_CONTROL_DESIGN)
-        collectFromStyleSheetContents(UserAgentStyle::alternateFormControlDesignStyleSheet);
 #endif
         collectFromStyleSheetContents(UserAgentStyle::plugInsStyleSheet);
         collectFromStyleSheetContents(UserAgentStyle::mediaQueryStyleSheet);

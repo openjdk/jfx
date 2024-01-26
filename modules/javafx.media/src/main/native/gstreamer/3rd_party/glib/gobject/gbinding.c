@@ -2,6 +2,8 @@
  *
  * Copyright (C) 2010  Intel Corp.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -462,11 +464,11 @@ default_transform (GBinding     *binding,
             return TRUE;
         }
 
-      g_warning ("%s: Unable to convert a value of type %s to a "
-                 "value of type %s",
-                 G_STRLOC,
-                 g_type_name (G_VALUE_TYPE (value_a)),
-                 g_type_name (G_VALUE_TYPE (value_b)));
+      g_critical ("%s: Unable to convert a value of type %s to a "
+                  "value of type %s",
+                  G_STRLOC,
+                  g_type_name (G_VALUE_TYPE (value_a)),
+                  g_type_name (G_VALUE_TYPE (value_b)));
 
       return FALSE;
     }
@@ -550,7 +552,7 @@ on_source_notify (GObject          *source,
     {
       binding->is_frozen = TRUE;
 
-      g_param_value_validate (binding->target_pspec, &to_value);
+      (void) g_param_value_validate (binding->target_pspec, &to_value);
       g_object_set_property (target, binding->target_pspec->name, &to_value);
 
       binding->is_frozen = FALSE;
@@ -618,7 +620,7 @@ on_target_notify (GObject          *target,
     {
       binding->is_frozen = TRUE;
 
-      g_param_value_validate (binding->source_pspec, &to_value);
+      (void) g_param_value_validate (binding->source_pspec, &to_value);
       g_object_set_property (source, binding->source_pspec->name, &to_value);
 
       binding->is_frozen = FALSE;
@@ -697,30 +699,6 @@ static gboolean
 is_canonical (const gchar *key)
 {
   return (strchr (key, '_') == NULL);
-}
-
-static gboolean
-is_valid_property_name (const gchar *key)
-{
-  const gchar *p;
-
-  /* First character must be a letter. */
-  if ((key[0] < 'A' || key[0] > 'Z') &&
-      (key[0] < 'a' || key[0] > 'z'))
-    return FALSE;
-
-  for (p = key; *p != 0; p++)
-    {
-      const gchar c = *p;
-
-      if (c != '-' && c != '_' &&
-          (c < '0' || c > '9') &&
-          (c < 'A' || c > 'Z') &&
-          (c < 'a' || c > 'z'))
-        return FALSE;
-    }
-
-  return TRUE;
 }
 
 static void
@@ -1268,14 +1246,14 @@ g_object_bind_property_full (gpointer               source,
 
   g_return_val_if_fail (G_IS_OBJECT (source), NULL);
   g_return_val_if_fail (source_property != NULL, NULL);
-  g_return_val_if_fail (is_valid_property_name (source_property), NULL);
+  g_return_val_if_fail (g_param_spec_is_valid_name (source_property), NULL);
   g_return_val_if_fail (G_IS_OBJECT (target), NULL);
   g_return_val_if_fail (target_property != NULL, NULL);
-  g_return_val_if_fail (is_valid_property_name (target_property), NULL);
+  g_return_val_if_fail (g_param_spec_is_valid_name (target_property), NULL);
 
   if (source == target && g_strcmp0 (source_property, target_property) == 0)
     {
-      g_warning ("Unable to bind the same property on the same instance");
+      g_critical ("Unable to bind the same property on the same instance");
       return NULL;
     }
 
@@ -1291,82 +1269,82 @@ g_object_bind_property_full (gpointer               source,
   pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (source), source_property);
   if (pspec == NULL)
     {
-      g_warning ("%s: The source object of type %s has no property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (source),
-                 source_property);
+      g_critical ("%s: The source object of type %s has no property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (source),
+                  source_property);
       return NULL;
     }
 
   if (!(pspec->flags & G_PARAM_READABLE))
     {
-      g_warning ("%s: The source object of type %s has no readable property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (source),
-                 source_property);
+      g_critical ("%s: The source object of type %s has no readable property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (source),
+                  source_property);
       return NULL;
     }
 
   if ((flags & G_BINDING_BIDIRECTIONAL) &&
       ((pspec->flags & G_PARAM_CONSTRUCT_ONLY) || !(pspec->flags & G_PARAM_WRITABLE)))
     {
-      g_warning ("%s: The source object of type %s has no writable property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (source),
-                 source_property);
+      g_critical ("%s: The source object of type %s has no writable property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (source),
+                  source_property);
       return NULL;
     }
 
   if ((flags & G_BINDING_INVERT_BOOLEAN) &&
       !(G_PARAM_SPEC_VALUE_TYPE (pspec) == G_TYPE_BOOLEAN))
     {
-      g_warning ("%s: The G_BINDING_INVERT_BOOLEAN flag can only be used "
-                 "when binding boolean properties; the source property '%s' "
-                 "is of type '%s'",
-                 G_STRLOC,
-                 source_property,
-                 g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
+      g_critical ("%s: The G_BINDING_INVERT_BOOLEAN flag can only be used "
+                  "when binding boolean properties; the source property '%s' "
+                  "is of type '%s'",
+                  G_STRLOC,
+                  source_property,
+                  g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
       return NULL;
     }
 
   pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (target), target_property);
   if (pspec == NULL)
     {
-      g_warning ("%s: The target object of type %s has no property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (target),
-                 target_property);
+      g_critical ("%s: The target object of type %s has no property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (target),
+                  target_property);
       return NULL;
     }
 
   if ((pspec->flags & G_PARAM_CONSTRUCT_ONLY) || !(pspec->flags & G_PARAM_WRITABLE))
     {
-      g_warning ("%s: The target object of type %s has no writable property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (target),
-                 target_property);
+      g_critical ("%s: The target object of type %s has no writable property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (target),
+                  target_property);
       return NULL;
     }
 
   if ((flags & G_BINDING_BIDIRECTIONAL) &&
       !(pspec->flags & G_PARAM_READABLE))
     {
-      g_warning ("%s: The target object of type %s has no readable property called '%s'",
-                 G_STRLOC,
-                 G_OBJECT_TYPE_NAME (target),
-                 target_property);
+      g_critical ("%s: The target object of type %s has no readable property called '%s'",
+                  G_STRLOC,
+                  G_OBJECT_TYPE_NAME (target),
+                  target_property);
       return NULL;
     }
 
   if ((flags & G_BINDING_INVERT_BOOLEAN) &&
       !(G_PARAM_SPEC_VALUE_TYPE (pspec) == G_TYPE_BOOLEAN))
     {
-      g_warning ("%s: The G_BINDING_INVERT_BOOLEAN flag can only be used "
-                 "when binding boolean properties; the target property '%s' "
-                 "is of type '%s'",
-                 G_STRLOC,
-                 target_property,
-                 g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
+      g_critical ("%s: The G_BINDING_INVERT_BOOLEAN flag can only be used "
+                  "when binding boolean properties; the target property '%s' "
+                  "is of type '%s'",
+                  G_STRLOC,
+                  target_property,
+                  g_type_name (G_PARAM_SPEC_VALUE_TYPE (pspec)));
       return NULL;
     }
 

@@ -85,10 +85,9 @@ Ref<TextTrackCueBox> TextTrackCueBox::create(Document& document, TextTrackCue& c
 }
 
 TextTrackCueBox::TextTrackCueBox(Document& document, TextTrackCue& cue)
-    : HTMLElement(HTMLNames::divTag, document)
+    : HTMLElement(HTMLNames::divTag, document, CreateTextTrackCueBox)
     , m_cue(cue)
 {
-    setHasCustomStyleResolveCallbacks();
 }
 
 void TextTrackCueBox::initialize()
@@ -426,10 +425,7 @@ String TextTrackCue::toJSONString() const
 
 TextStream& operator<<(TextStream& stream, const TextTrackCue& cue)
 {
-    String text;
-    if (is<VTTCue>(cue))
-        text = downcast<VTTCue>(cue).text();
-    return stream << &cue << " id=" << cue.id() << " interval=" << cue.startTime() << "-->" << cue.endTime() << " cue=" << text << ')';
+    return stream << &cue << " id=" << cue.id() << " interval=" << cue.startTime() << "-->" << cue.endTime() << " cue=" << cue.text() << ')';
 }
 
 #endif
@@ -457,7 +453,7 @@ bool TextTrackCue::isRenderable() const
     return m_cueNode && m_cueNode->firstChild();
 }
 
-RefPtr<TextTrackCueBox> TextTrackCue::getDisplayTree(const IntSize&, int)
+RefPtr<TextTrackCueBox> TextTrackCue::getDisplayTree()
 {
     if (m_displayTree && !m_displayTreeNeedsUpdate)
         return m_displayTree;
@@ -477,7 +473,7 @@ void TextTrackCue::removeDisplayTree()
     m_displayTree->remove();
 }
 
-void TextTrackCue::setFontSize(int fontSize, const IntSize&, bool important)
+void TextTrackCue::setFontSize(int fontSize, bool important)
 {
     if (fontSize == m_fontSize && important == m_fontSizeIsImportant)
         return;

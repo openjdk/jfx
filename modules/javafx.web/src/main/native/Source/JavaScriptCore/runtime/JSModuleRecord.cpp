@@ -44,17 +44,18 @@ Structure* JSModuleRecord::createStructure(VM& vm, JSGlobalObject* globalObject,
     return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
-JSModuleRecord* JSModuleRecord::create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
+JSModuleRecord* JSModuleRecord::create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables, CodeFeatures features)
 {
-    JSModuleRecord* instance = new (NotNull, allocateCell<JSModuleRecord>(vm)) JSModuleRecord(vm, structure, moduleKey, sourceCode, declaredVariables, lexicalVariables);
+    JSModuleRecord* instance = new (NotNull, allocateCell<JSModuleRecord>(vm)) JSModuleRecord(vm, structure, moduleKey, sourceCode, declaredVariables, lexicalVariables, features);
     instance->finishCreation(globalObject, vm);
     return instance;
 }
-JSModuleRecord::JSModuleRecord(VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
+JSModuleRecord::JSModuleRecord(VM& vm, Structure* structure, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables, CodeFeatures features)
     : Base(vm, structure, moduleKey)
     , m_sourceCode(sourceCode)
     , m_declaredVariables(declaredVariables)
     , m_lexicalVariables(lexicalVariables)
+    , m_features(features)
 {
 }
 
@@ -125,15 +126,15 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
             RETURN_IF_EXCEPTION(scope, void());
             switch (resolution.type) {
             case Resolution::Type::NotFound:
-                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '", String(exportEntry.exportName.impl()), "' is not found."));
+                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '"_s, StringView(exportEntry.exportName.impl()), "' is not found."_s));
                 return;
 
             case Resolution::Type::Ambiguous:
-                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '", String(exportEntry.exportName.impl()), "' cannot be resolved due to ambiguous multiple bindings."));
+                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name '"_s, StringView(exportEntry.exportName.impl()), "' cannot be resolved due to ambiguous multiple bindings."_s));
                 return;
 
             case Resolution::Type::Error:
-                throwSyntaxError(globalObject, scope, makeString("Indirectly exported binding name 'default' cannot be resolved by star export entries."));
+                throwSyntaxError(globalObject, scope, "Indirectly exported binding name 'default' cannot be resolved by star export entries."_s);
                 return;
 
             case Resolution::Type::Resolved:
@@ -150,6 +151,19 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
     for (const auto& pair : importEntries()) {
         const ImportEntry& importEntry = pair.value;
         AbstractModuleRecord* importedModule = hostResolveImportedModule(globalObject, importEntry.moduleRequest);
+
+#if CPU(ADDRESS64)
+        // rdar://107531050: Speculative crash mitigation
+        if (UNLIKELY(importedModule == bitwise_cast<AbstractModuleRecord*>(encodedJSUndefined()))) {
+            RELEASE_ASSERT(vm.exceptionForInspection(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
+            RELEASE_ASSERT(vm.traps().maybeNeedHandling(), vm.traps().maybeNeedHandling(), vm.exceptionForInspection(), importedModule);
+            if (!vm.exceptionForInspection() || !vm.traps().maybeNeedHandling()) {
+                throwSyntaxError(globalObject, scope, makeString("Importing module '", String(importEntry.moduleRequest.impl()), "' is not found."));
+                return;
+            }
+        }
+#endif
+
         RETURN_IF_EXCEPTION(scope, void());
         switch (importEntry.type) {
         case AbstractModuleRecord::ImportEntryType::Namespace: {
@@ -166,15 +180,15 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
             RETURN_IF_EXCEPTION(scope, void());
             switch (resolution.type) {
             case Resolution::Type::NotFound:
-                throwSyntaxError(globalObject, scope, makeString("Importing binding name '", String(importEntry.importName.impl()), "' is not found."));
+                throwSyntaxError(globalObject, scope, makeString("Importing binding name '"_s, StringView(importEntry.importName.impl()), "' is not found."_s));
                 return;
 
             case Resolution::Type::Ambiguous:
-                throwSyntaxError(globalObject, scope, makeString("Importing binding name '", String(importEntry.importName.impl()), "' cannot be resolved due to ambiguous multiple bindings."));
+                throwSyntaxError(globalObject, scope, makeString("Importing binding name '"_s, StringView(importEntry.importName.impl()), "' cannot be resolved due to ambiguous multiple bindings."_s));
                 return;
 
             case Resolution::Type::Error:
-                throwSyntaxError(globalObject, scope, makeString("Importing binding name 'default' cannot be resolved by star export entries."));
+                throwSyntaxError(globalObject, scope, "Importing binding name 'default' cannot be resolved by star export entries."_s);
                 return;
 
             case Resolution::Type::Resolved: {
@@ -218,8 +232,8 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
             ASSERT(!unlinkedFunctionExecutable->name().isEmpty());
             if (vm.typeProfiler() || vm.controlFlowProfiler()) {
                 vm.functionHasExecutedCache()->insertUnexecutedRange(moduleProgramExecutable->sourceID(),
-                    unlinkedFunctionExecutable->typeProfilingStartOffset(),
-                    unlinkedFunctionExecutable->typeProfilingEndOffset());
+                    unlinkedFunctionExecutable->unlinkedFunctionStart(),
+                    unlinkedFunctionExecutable->unlinkedFunctionEnd());
             }
             JSFunction* function = JSFunction::create(vm, unlinkedFunctionExecutable->link(vm, moduleProgramExecutable, moduleProgramExecutable->source()), moduleEnvironment);
             bool putResult = false;
@@ -228,7 +242,7 @@ void JSModuleRecord::instantiateDeclarations(JSGlobalObject* globalObject, Modul
         }
     }
 
-    {
+    if (m_features & ImportMetaFeature) {
         JSObject* metaProperties = globalObject->moduleLoader()->createImportMetaProperties(globalObject, identifierToJSValue(vm, moduleKey()), this, scriptFetcher);
         RETURN_IF_EXCEPTION(scope, void());
         bool putResult = false;

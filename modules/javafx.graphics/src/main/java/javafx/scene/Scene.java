@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.*;
@@ -2123,6 +2124,10 @@ public class Scene implements EventTarget {
         if (windowFocused && accessible != null) {
             accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
         }
+
+        if (!windowFocused) {
+            getInternalEventDispatcher().getKeyboardShortcutsHandler().setMnemonicsDisplayEnabled(false);
+        }
     }
 
     /**
@@ -3274,7 +3279,7 @@ public class Scene implements EventTarget {
 
         private void processDropEnd(DragEvent de) {
             if (source == null) {
-                System.out.println("Scene.DnDGesture.processDropEnd() - UNEXPECTD - source is NULL");
+                System.out.println("Scene.DnDGesture.processDropEnd() - UNEXPECTED - source is NULL");
                 return;
             }
 
@@ -4231,17 +4236,7 @@ public class Scene implements EventTarget {
         }
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Registers an event handler to this scene. The handler is called when the
-     * scene receives an {@code Event} of the specified type during the bubbling
-     * phase of event delivery.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the type of the events to receive by the handler
-     * @param eventHandler the handler to register
-     * @throws NullPointerException if the event type or handler is null
-     */
+    @Override
     public final <T extends Event> void addEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -4249,18 +4244,7 @@ public class Scene implements EventTarget {
                                     .addEventHandler(eventType, eventHandler);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Unregisters a previously registered event handler from this scene. One
-     * handler might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the handler.
-     *
-     * @param <T> the specific event class of the handler
-     * @param eventType the event type from which to unregister
-     * @param eventHandler the handler to unregister
-     * @throws NullPointerException if the event type or handler is null
-     */
+    @Override
     public final <T extends Event> void removeEventHandler(
             final EventType<T> eventType,
             final EventHandler<? super T> eventHandler) {
@@ -4269,17 +4253,7 @@ public class Scene implements EventTarget {
                                                         eventHandler);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Registers an event filter to this scene. The filter is called when the
-     * scene receives an {@code Event} of the specified type during the
-     * capturing phase of event delivery.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the type of the events to receive by the filter
-     * @param eventFilter the filter to register
-     * @throws NullPointerException if the event type or filter is null
-     */
+    @Override
     public final <T extends Event> void addEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -4287,18 +4261,7 @@ public class Scene implements EventTarget {
                                     .addEventFilter(eventType, eventFilter);
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Unregisters a previously registered event filter from this scene. One
-     * filter might have been registered for different event types, so the
-     * caller needs to specify the particular event type from which to
-     * unregister the filter.
-     *
-     * @param <T> the specific event class of the filter
-     * @param eventType the event type from which to unregister
-     * @param eventFilter the filter to unregister
-     * @throws NullPointerException if the event type or filter is null
-     */
+    @Override
     public final <T extends Event> void removeEventFilter(
             final EventType<T> eventType,
             final EventHandler<? super T> eventFilter) {
@@ -4390,14 +4353,6 @@ public class Scene implements EventTarget {
                                            .getAccelerators();
     }
 
-    // PENDING_DOC_REVIEW
-    /**
-     * Construct an event dispatch chain for this scene. The event dispatch
-     * chain contains all event dispatchers from the stage to this scene.
-     *
-     * @param tail the initial chain to build from
-     * @return the resulting event dispatch chain for this scene
-     */
     @Override
     public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
@@ -6394,6 +6349,8 @@ public class Scene implements EventTarget {
                 Window parent = null;
                 if (window instanceof Stage) {
                     parent = ((Stage)window).getOwner();
+                } else if (window instanceof EmbeddedWindow win) {
+                    return win.getNodeOrientation();
                 } else {
                     if (window instanceof PopupWindow) {
                         parent = ((PopupWindow)window).getOwnerWindow();

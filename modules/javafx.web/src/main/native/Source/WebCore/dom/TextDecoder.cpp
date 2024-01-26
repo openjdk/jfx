@@ -25,13 +25,12 @@
 #include "config.h"
 #include "TextDecoder.h"
 
-#include "HTMLParserIdioms.h"
 #include <pal/text/TextCodec.h>
 #include <pal/text/TextEncodingRegistry.h>
 
 namespace WebCore {
 
-TextDecoder::TextDecoder(const char* label, Options options)
+TextDecoder::TextDecoder(StringView label, Options options)
     : m_textEncoding(label)
     , m_options(options)
 {
@@ -41,11 +40,11 @@ TextDecoder::~TextDecoder() = default;
 
 ExceptionOr<Ref<TextDecoder>> TextDecoder::create(const String& label, Options options)
 {
-    String strippedLabel = stripLeadingAndTrailingHTMLSpaces(label);
+    auto trimmedLabel = label.trim(isASCIIWhitespace);
     const UChar nullCharacter = '\0';
-    if (strippedLabel.contains(nullCharacter))
+    if (trimmedLabel.contains(nullCharacter))
         return Exception { RangeError };
-    auto decoder = adoptRef(*new TextDecoder(strippedLabel.utf8().data(), options));
+    auto decoder = adoptRef(*new TextDecoder(trimmedLabel, options));
     if (!decoder->m_textEncoding.isValid() || !strcmp(decoder->m_textEncoding.name(), "replacement"))
         return Exception { RangeError };
     return decoder;

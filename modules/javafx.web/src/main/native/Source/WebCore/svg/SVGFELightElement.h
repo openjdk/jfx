@@ -64,13 +64,11 @@ protected:
 
 private:
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFELightElement, SVGElement>;
-    const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
     void childrenChanged(const ChildChange&) override;
 
-    PropertyRegistry m_propertyRegistry { *this };
     Ref<SVGAnimatedNumber> m_azimuth { SVGAnimatedNumber::create(this) };
     Ref<SVGAnimatedNumber> m_elevation { SVGAnimatedNumber::create(this) };
     Ref<SVGAnimatedNumber> m_x { SVGAnimatedNumber::create(this) };

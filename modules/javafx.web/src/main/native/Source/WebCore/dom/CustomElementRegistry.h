@@ -27,6 +27,7 @@
 
 #include "ContextDestructionObserver.h"
 #include "QualifiedName.h"
+#include <wtf/Lock.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/text/AtomString.h>
@@ -34,6 +35,7 @@
 
 namespace JSC {
 
+class JSGlobalObject;
 class JSObject;
 class JSValue;
 
@@ -42,8 +44,9 @@ class JSValue;
 namespace WebCore {
 
 class CustomElementRegistry;
-class DOMWindow;
+class LocalDOMWindow;
 class DeferredPromise;
+class Document;
 class Element;
 class JSCustomElementInterface;
 class Node;
@@ -51,8 +54,10 @@ class QualifiedName;
 
 class CustomElementRegistry : public RefCounted<CustomElementRegistry>, public ContextDestructionObserver {
 public:
-    static Ref<CustomElementRegistry> create(DOMWindow&, ScriptExecutionContext*);
+    static Ref<CustomElementRegistry> create(LocalDOMWindow&, ScriptExecutionContext*);
     ~CustomElementRegistry();
+
+    Document* document() const;
 
     RefPtr<DeferredPromise> addElementDefinition(Ref<JSCustomElementInterface>&&);
 
@@ -65,21 +70,24 @@ public:
     bool containsConstructor(const JSC::JSObject*) const;
 
     JSC::JSValue get(const AtomString&);
+    String getName(JSC::JSValue);
     void upgrade(Node& root);
 
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>>& promiseMap() { return m_promiseMap; }
     bool isShadowDisabled(const AtomString& name) const { return m_disabledShadowSet.contains(name); }
 
+    template<typename Visitor> void visitJSCustomElementInterfaces(Visitor&) const;
 private:
-    CustomElementRegistry(DOMWindow&, ScriptExecutionContext*);
+    CustomElementRegistry(LocalDOMWindow&, ScriptExecutionContext*);
 
-    DOMWindow& m_window;
+    LocalDOMWindow& m_window;
     HashMap<AtomString, Ref<JSCustomElementInterface>> m_nameMap;
-    HashMap<const JSC::JSObject*, JSCustomElementInterface*> m_constructorMap;
+    HashMap<const JSC::JSObject*, JSCustomElementInterface*> m_constructorMap WTF_GUARDED_BY_LOCK(m_constructorMapLock);
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>> m_promiseMap;
     MemoryCompactRobinHoodHashSet<AtomString> m_disabledShadowSet;
 
     bool m_elementDefinitionIsRunning { false };
+    mutable Lock m_constructorMapLock;
 
     friend class ElementDefinitionIsRunningSetForScope;
 };

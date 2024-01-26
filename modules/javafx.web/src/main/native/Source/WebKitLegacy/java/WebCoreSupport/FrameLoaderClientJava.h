@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@
 #include <WebCore/FormState.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
-#include <WebCore/FrameLoaderClient.h>
+#include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/HTMLFrameOwnerElement.h>
 #include <WebCore/PlatformJavaClasses.h>
@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-class FrameLoaderClientJava : public FrameLoaderClient {
+class FrameLoaderClientJava : public LocalFrameLoaderClient {
 public:
     FrameLoaderClientJava(const JLObject &webPage);
     ~FrameLoaderClientJava();
@@ -53,8 +53,7 @@ public:
     void makeRepresentation(DocumentLoader*) override;
     void forceLayoutForNonHTML() override;
 
-    std::optional<PageIdentifier> pageID() const final;
-    std::optional<FrameIdentifier> frameID() const final;
+    //std::optional<PageIdentifier> pageID() const final;
 
     void setCopiesOnScroll() override;
 
@@ -83,14 +82,14 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>) override;
-    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
+    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>, std::optional<WasPrivateRelayed>) override;
+    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading,WillInternallyHandleFailure) override;
     void dispatchDidFailLoad(const ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;
     void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&) override;
 
-    Frame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) override;
+    LocalFrame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
@@ -108,11 +107,11 @@ public:
     void revertToProvisionalState(DocumentLoader*) override;
     void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
 
-    RefPtr<Frame> createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement) override;
+    RefPtr<LocalFrame> createFrame(const AtomString& name, HTMLFrameOwnerElement& ownerElement) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually);
+    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement& element, const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually) override;
     void redirectDataToPlugin(Widget&) override;
-    String overrideMediaType() const override;
+    AtomString overrideMediaType() const override;
 
     void setMainFrameDocumentReady(bool) override;
 
@@ -137,7 +136,6 @@ public:
     // script) from an insecure source.  Note that the insecure content can
     // spread to other frames in the same origin.
     void didRunInsecureContent(SecurityOrigin&, const URL&) override;
-    void didDetectXSS(const URL&, bool) override;
 
     ResourceError cancelledError(const ResourceRequest&) const override;
     ResourceError blockedByContentBlockerError(const ResourceRequest& request) const override;
@@ -147,6 +145,7 @@ public:
 
     ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
     ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
+        ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
     ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
     bool shouldFallBack(const ResourceError&) const override;
@@ -193,6 +192,7 @@ public:
     bool isJavaFrameLoaderClient() override { return true; }
     void prefetchDNS(const String&) override;
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
+    void broadcastFrameRemovalToOtherProcesses() override;
 private:
     Page* m_page;
     Frame* m_frame;

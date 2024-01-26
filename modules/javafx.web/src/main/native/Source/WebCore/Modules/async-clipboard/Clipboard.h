@@ -34,12 +34,12 @@ namespace WebCore {
 
 class ClipboardItem;
 class DeferredPromise;
-class Frame;
+class LocalFrame;
 class Navigator;
 class Pasteboard;
 class PasteboardCustomData;
 
-class Clipboard final : public RefCounted<Clipboard>, public EventTargetWithInlineData {
+class Clipboard final : public RefCounted<Clipboard>, public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(Clipboard);
 public:
     static Ref<Clipboard> create(Navigator&);
@@ -48,7 +48,7 @@ public:
     EventTargetInterface eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
 
-    Frame* frame() const;
+    LocalFrame* frame() const;
     Navigator* navigator();
 
     using RefCounted::ref;
@@ -76,7 +76,7 @@ private:
 
     Pasteboard& activePasteboard();
 
-    enum class SessionIsValid { No, Yes };
+    enum class SessionIsValid : bool { No, Yes };
     SessionIsValid updateSessionValidity();
 
     class ItemWriter : public RefCounted<ItemWriter> {
@@ -98,14 +98,12 @@ private:
         void didSetAllData();
         void reject();
 
-        WeakPtr<Clipboard> m_clipboard;
+        WeakPtr<Clipboard, WeakPtrImplWithEventTargetData> m_clipboard;
         Vector<std::optional<PasteboardCustomData>> m_dataToWrite;
         RefPtr<DeferredPromise> m_promise;
         unsigned m_pendingItemCount;
         std::unique_ptr<Pasteboard> m_pasteboard;
-#if PLATFORM(COCOA)
         int64_t m_changeCountAtStart { 0 };
-#endif
     };
 
     void didResolveOrReject(ItemWriter&);

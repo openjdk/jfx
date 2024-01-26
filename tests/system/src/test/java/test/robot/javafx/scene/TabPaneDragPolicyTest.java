@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -142,8 +142,8 @@ public class TabPaneDragPolicyTest {
 
     @Test
     public void testReorderTop() {
-        // Disable on Mac until JDK-8213136 is fixed
-        assumeTrue(!PlatformUtil.isMac());
+        // Disable on Mac and Linux until JDK-8213136 is fixed
+        assumeTrue(!PlatformUtil.isMac() && !PlatformUtil.isLinux());
         expectedTab = tabs[1];
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.TOP);
         tabPane.getTabs().addListener(reorderListener);
@@ -157,8 +157,8 @@ public class TabPaneDragPolicyTest {
 
     @Test
     public void testReorderBottom() {
-        // Disable on Mac until JDK-8213136 is fixed
-        assumeTrue(!PlatformUtil.isMac());
+        // Disable on Mac and Linux until JDK-8213136 is fixed
+        assumeTrue(!PlatformUtil.isMac() && !PlatformUtil.isLinux());
         expectedTab = tabs[1];
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.BOTTOM);
         tabPane.getTabs().addListener(reorderListener);
@@ -172,8 +172,8 @@ public class TabPaneDragPolicyTest {
 
     @Test
     public void testReorderLeft() {
-        // Disable on Mac until JDK-8213136 is fixed
-        assumeTrue(!PlatformUtil.isMac());
+        // Disable on Mac and Linux until JDK-8213136 is fixed
+        assumeTrue(!PlatformUtil.isMac() && !PlatformUtil.isLinux());
         expectedTab = tabs[1];
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.LEFT);
         tabPane.getTabs().addListener(reorderListener);
@@ -187,8 +187,8 @@ public class TabPaneDragPolicyTest {
 
     @Test
     public void testReorderRight() {
-        // Disable on Mac until JDK-8213136 is fixed
-        assumeTrue(!PlatformUtil.isMac());
+        // Disable on Mac and Linux until JDK-8213136 is fixed
+        assumeTrue(!PlatformUtil.isMac() && !PlatformUtil.isLinux());
         expectedTab = tabs[1];
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.RIGHT);
         tabPane.getTabs().addListener(reorderListener);

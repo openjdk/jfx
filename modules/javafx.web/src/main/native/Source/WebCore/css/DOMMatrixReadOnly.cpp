@@ -30,6 +30,7 @@
 #include "CSSToLengthConversionData.h"
 #include "DOMMatrix.h"
 #include "DOMPoint.h"
+#include "MutableStyleProperties.h"
 #include "ScriptExecutionContext.h"
 #include "StyleProperties.h"
 #include "TransformFunctions.h"
@@ -233,15 +234,15 @@ ExceptionOr<DOMMatrixReadOnly::AbstractMatrix> DOMMatrixReadOnly::parseStringInt
     auto value = styleDeclaration->getPropertyCSSValue(CSSPropertyTransform);
 
     // Check for a "none" or empty transform. In these cases we can use the default identity matrix.
-    if (!value || (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).valueID() == CSSValueNone))
+    if (!value || (is<CSSPrimitiveValue>(*value) && value->valueID() == CSSValueNone))
         return AbstractMatrix { };
 
-    TransformOperations operations;
-    if (!transformsForValue(*value, { }, operations))
+    auto operations = transformsForValue(*value, { });
+    if (!operations)
         return Exception { SyntaxError };
 
     AbstractMatrix matrix;
-    for (auto& operation : operations.operations()) {
+    for (auto& operation : operations->operations()) {
         if (operation->apply(matrix.matrix, { 0, 0 }))
             return Exception { SyntaxError };
         if (operation->is3DOperation())

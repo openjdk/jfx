@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,12 +32,16 @@
 #include "Element.h"
 #include "HTMLDocument.h"
 #include "HTMLElement.h"
+#include "HTMLFrameOwnerElement.h"
 #include "DOMException.h"
+#include "LocalFrame.h"
 
 #include <wtf/java/JavaEnv.h>
 
 #include "JavaDOMUtils.h"
 #include "runtime_root.h"
+
+class LocalFrame;
 
 namespace WebCore {
 
@@ -102,7 +106,8 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_WebPage_twkGetDocument
     if (!frame)
         return nullptr;
 
-    Document* document = frame->document();
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    Document* document = localFrame->document();
     if (!document)
         return nullptr;
 

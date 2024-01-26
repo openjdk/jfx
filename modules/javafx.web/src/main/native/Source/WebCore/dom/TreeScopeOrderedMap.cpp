@@ -32,11 +32,12 @@
 #include "TreeScopeOrderedMap.h"
 
 #include "ContainerNodeAlgorithms.h"
-#include "ElementIterator.h"
+#include "ElementInlines.h"
 #include "HTMLImageElement.h"
 #include "HTMLLabelElement.h"
 #include "HTMLMapElement.h"
 #include "HTMLNameCollection.h"
+#include "TypedElementDescendantIteratorInlines.h"
 
 namespace WebCore {
 
@@ -114,6 +115,8 @@ inline Element* TreeScopeOrderedMap::get(const AtomStringImpl& key, const TreeSc
 
     // We know there's at least one node that matches; iterate to find the first one.
     for (auto& element : descendantsOfType<Element>(scope.rootNode())) {
+        if (!element.isInTreeScope())
+            continue;
         if (!keyMatches(key, element))
             continue;
         entry.element = &element;
@@ -123,7 +126,7 @@ inline Element* TreeScopeOrderedMap::get(const AtomStringImpl& key, const TreeSc
     }
 
 #if ASSERT_ENABLED
-    // FormAssociatedElement may call getElementById to find its owner form in the middle of a tree removal.
+    // FormListedElement may call getElementById to find its owner form in the middle of a tree removal.
     if (auto* currentScope = ContainerChildRemovalScope::currentScope()) {
         ASSERT(&scope.rootNode() == &currentScope->parentOfRemovedTree().rootNode());
         Node& removedTree = currentScope->removedChild();
@@ -140,6 +143,31 @@ inline Element* TreeScopeOrderedMap::get(const AtomStringImpl& key, const TreeSc
 #endif // ASSERT_ENABLED
 
     return nullptr;
+}
+
+template <typename KeyMatchingFunction>
+inline Vector<Element*>* TreeScopeOrderedMap::getAll(const AtomStringImpl& key, const TreeScope& scope, const KeyMatchingFunction& keyMatches) const
+{
+    m_map.checkConsistency();
+
+    auto mapIterator = m_map.find(&key);
+    if (mapIterator == m_map.end())
+        return nullptr;
+
+    auto& entry = mapIterator->value;
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
+
+    if (entry.orderedList.isEmpty()) {
+        entry.orderedList.reserveCapacity(entry.count);
+        auto elementDescendants = descendantsOfType<Element>(scope.rootNode());
+        for (auto it = entry.element ? elementDescendants.beginAt(*entry.element) : elementDescendants.begin(); it; ++it) {
+            if (keyMatches(key, *it))
+                entry.orderedList.append(&*it);
+        }
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.orderedList.size() == entry.count);
+    }
+
+    return &entry.orderedList;
 }
 
 Element* TreeScopeOrderedMap::getElementById(const AtomStringImpl& key, const TreeScope& scope) const
@@ -171,11 +199,11 @@ HTMLImageElement* TreeScopeOrderedMap::getElementByUsemap(const AtomStringImpl& 
     }));
 }
 
-HTMLLabelElement* TreeScopeOrderedMap::getElementByLabelForAttribute(const AtomStringImpl& key, const TreeScope& scope) const
+const Vector<Element*>* TreeScopeOrderedMap::getElementsByLabelForAttribute(const AtomStringImpl& key, const TreeScope& scope) const
 {
-    return downcast<HTMLLabelElement>(get(key, scope, [] (const AtomStringImpl& key, const Element& element) {
+    return getAll(key, scope, [] (const AtomStringImpl& key, const Element& element) {
         return is<HTMLLabelElement>(element) && element.attributeWithoutSynchronization(forAttr).impl() == &key;
-    }));
+    });
 }
 
 Element* TreeScopeOrderedMap::getElementByWindowNamedItem(const AtomStringImpl& key, const TreeScope& scope) const
@@ -194,26 +222,9 @@ Element* TreeScopeOrderedMap::getElementByDocumentNamedItem(const AtomStringImpl
 
 const Vector<Element*>* TreeScopeOrderedMap::getAllElementsById(const AtomStringImpl& key, const TreeScope& scope) const
 {
-    m_map.checkConsistency();
-
-    auto mapIterator = m_map.find(&key);
-    if (mapIterator == m_map.end())
-        return nullptr;
-
-    auto& entry = mapIterator->value;
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
-
-    if (entry.orderedList.isEmpty()) {
-        entry.orderedList.reserveCapacity(entry.count);
-        auto elementDescendants = descendantsOfType<Element>(scope.rootNode());
-        for (auto it = entry.element ? elementDescendants.beginAt(*entry.element) : elementDescendants.begin(); it; ++it) {
-            if (it->getIdAttribute().impl() == &key)
-                entry.orderedList.append(&*it);
-        }
-        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.orderedList.size() == entry.count);
-    }
-
-    return &entry.orderedList;
+    return getAll(key, scope, [] (const AtomStringImpl& key, const Element& element) {
+        return element.getIdAttribute().impl() == &key;
+    });
 }
 
 const Vector<AtomString> TreeScopeOrderedMap::keys() const

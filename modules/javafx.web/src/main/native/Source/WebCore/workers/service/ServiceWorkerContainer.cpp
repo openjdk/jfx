@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,15 +37,14 @@
 #include "EventNames.h"
 #include "Exception.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "IDLTypes.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSNavigationPreloadState.h"
 #include "JSPushSubscription.h"
 #include "JSServiceWorkerRegistration.h"
 #include "LegacySchemeRegistry.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
-#include "MessageEvent.h"
 #include "NavigatorBase.h"
 #include "Page.h"
 #include "PushSubscriptionOptions.h"
@@ -219,7 +218,11 @@ void ServiceWorkerContainer::willSettleRegistrationPromise(bool success)
     if (!page || !page->isServiceWorkerPage())
         return;
 
-    page->mainFrame().loader().client().didFinishServiceWorkerPageRegistration(success);
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
+    if (!localMainFrame)
+        return;
+
+    localMainFrame->loader().client().didFinishServiceWorkerPageRegistration(success);
 }
 
 void ServiceWorkerContainer::unregisterRegistration(ServiceWorkerRegistrationIdentifier registrationIdentifier, DOMPromiseDeferred<IDLBoolean>&& promise)
@@ -349,10 +352,19 @@ void ServiceWorkerContainer::getRegistrations(Ref<DeferredPromise>&& promise)
 
 void ServiceWorkerContainer::startMessages()
 {
+    auto* context = this->context();
+    if (!context) {
+        CONTAINER_RELEASE_LOG_ERROR("Container without ScriptExecutionContext is attempting to start post message delivery");
+        return;
+    }
+
     m_shouldDeferMessageEvents = false;
-    auto deferredMessageEvents = WTFMove(m_deferredMessageEvents);
-    for (auto& messageEvent : deferredMessageEvents)
-        queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, WTFMove(messageEvent));
+
+    for (auto&& messageEvent : std::exchange(m_deferredMessageEvents, Vector<MessageEvent::MessageEventWithStrongData> { })) {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, messageEvent = WTFMove(messageEvent)] {
+            dispatchEvent(messageEvent.event);
+        });
+    }
 }
 
 void ServiceWorkerContainer::jobFailedWithException(ServiceWorkerJob& job, const Exception& exception)
@@ -431,6 +443,8 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
                 notifyRegistrationIsSettled(iterator->value);
                 m_ongoingSettledRegistrations.remove(iterator);
             });
+            if (UNLIKELY(promise->needsAbort()))
+                return;
         }
 
         promise->resolve<IDLInterface<ServiceWorkerRegistration>>(WTFMove(registration));
@@ -440,14 +454,32 @@ void ServiceWorkerContainer::jobResolvedWithRegistration(ServiceWorkerJob& job, 
 void ServiceWorkerContainer::postMessage(MessageWithMessagePorts&& message, ServiceWorkerData&& sourceData, String&& sourceOrigin)
 {
     auto& context = *scriptExecutionContext();
+    if (UNLIKELY(context.isJSExecutionForbidden()))
+        return;
+
+    auto* globalObject = context.globalObject();
+    if (!globalObject)
+        return;
+
+    auto& vm = globalObject->vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
     MessageEventSource source = RefPtr<ServiceWorker> { ServiceWorker::getOrCreate(context, WTFMove(sourceData)) };
 
-    auto messageEvent = MessageEvent::create(message.message.releaseNonNull(), sourceOrigin, { }, WTFMove(source), MessagePort::entanglePorts(context, WTFMove(message.transferredPorts)));
+    auto messageEvent = MessageEvent::create(*globalObject, message.message.releaseNonNull(), sourceOrigin, { }, WTFMove(source), MessagePort::entanglePorts(context, WTFMove(message.transferredPorts)));
+    if (UNLIKELY(scope.exception())) {
+        // Currently, we assume that the only way we can get here is if we have a termination.
+        RELEASE_ASSERT(vm.hasPendingTerminationException());
+        return;
+    }
+
     if (m_shouldDeferMessageEvents)
         m_deferredMessageEvents.append(WTFMove(messageEvent));
     else {
         ASSERT(m_deferredMessageEvents.isEmpty());
-        queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, WTFMove(messageEvent));
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, messageEvent = WTFMove(messageEvent)] {
+            dispatchEvent(messageEvent.event);
+        });
     }
 }
 
@@ -629,7 +661,9 @@ void ServiceWorkerContainer::getNotifications(const URL& serviceWorkerRegistrati
 
         auto data = result.releaseReturnValue();
         auto notifications = map(data, [context](auto&& data) {
-            return Notification::create(*context, WTFMove(data));
+            auto notification = Notification::create(*context, WTFMove(data));
+            notification->markAsShown();
+            return notification;
         });
         promise.resolve(WTFMove(notifications));
     });
@@ -683,7 +717,7 @@ bool ServiceWorkerContainer::addEventListener(const AtomString& eventType, Ref<E
     if (eventListener->isAttribute() && eventType == eventNames().messageEvent)
         startMessages();
 
-    return EventTargetWithInlineData::addEventListener(eventType, WTFMove(eventListener), options);
+    return EventTarget::addEventListener(eventType, WTFMove(eventListener), options);
 }
 
 void ServiceWorkerContainer::enableNavigationPreload(ServiceWorkerRegistrationIdentifier identifier, VoidPromise&& promise)

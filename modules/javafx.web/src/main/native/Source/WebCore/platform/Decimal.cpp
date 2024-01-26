@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2015 Google Inc. All rights reserved.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -48,7 +48,7 @@ static int const ExponentMax = 1023;
 static int const ExponentMin = -1023;
 static int const Precision = 18;
 
-static const uint64_t MaxCoefficient = UINT64_C(0x16345785D89FFFF); // 999999999999999999 == 18 9's
+static const uint64_t MaxCoefficient = UINT64_C(0XDE0B6B3A763FFFF); // 999999999999999999 == 18 9's
 
 // This class handles Decimal special values.
 class SpecialValueHandler {
@@ -142,7 +142,6 @@ public:
 private:
     static uint32_t highUInt32(uint64_t x) { return static_cast<uint32_t>(x >> 32); }
     static uint32_t lowUInt32(uint64_t x) { return static_cast<uint32_t>(x & ((static_cast<uint64_t>(1) << 32) - 1)); }
-    bool isZero() const { return !m_low && !m_high; }
     static uint64_t makeUInt64(uint32_t low, uint32_t high) { return low | (static_cast<uint64_t>(high) << 32); }
 
     static uint64_t multiplyHigh(uint64_t, uint64_t);
@@ -491,13 +490,18 @@ Decimal Decimal::operator/(const Decimal& rhs) const
     uint64_t remainder = lhs.m_data.coefficient();
     const uint64_t divisor = rhs.m_data.coefficient();
     uint64_t result = 0;
-    while (result < MaxCoefficient / 100) {
-        while (remainder < divisor) {
+    for (;;) {
+        while (remainder < divisor && result < MaxCoefficient / 10) {
             remainder *= 10;
             result *= 10;
             --resultExponent;
         }
-        result += remainder / divisor;
+        if (remainder < divisor)
+            break;
+        uint64_t quotient = remainder / divisor;
+        if (result > MaxCoefficient - quotient)
+            break;
+        result += quotient;
         remainder %= divisor;
         if (!remainder)
             break;
@@ -615,8 +619,7 @@ Decimal::AlignedOperands Decimal::alignOperands(const Decimal& lhs, const Decima
 }
 
 // Round toward positive infinity.
-// Note: Mac ports defines ceil(x) as wtf_ceil(x), so we can't use name "ceil" here.
-Decimal Decimal::ceiling() const
+Decimal Decimal::ceil() const
 {
     if (isSpecial())
         return *this;
@@ -627,7 +630,7 @@ Decimal Decimal::ceiling() const
     uint64_t result = m_data.coefficient();
     const int numberOfDigits = countDigits(result);
     const int numberOfDropDigits = -exponent();
-    if (numberOfDigits < numberOfDropDigits)
+    if (numberOfDigits <= numberOfDropDigits)
         return isPositive() ? Decimal(1) : zero(Positive);
 
     result = scaleDown(result, numberOfDropDigits - 1);
@@ -746,19 +749,6 @@ Decimal Decimal::fromString(StringView str)
             return nan();
 
         case StateDot:
-            if (isASCIIDigit(ch)) {
-                if (numberOfDigits < Precision) {
-                    ++numberOfDigits;
-                    ++numberOfDigitsAfterDot;
-                    accumulator *= 10;
-                    accumulator += ch - '0';
-                }
-                state = StateDotDigit;
-                break;
-            }
-            // FIXME: <http://webkit.org/b/127667> Decimal::fromString's EBNF documentation does not match implementation
-            FALLTHROUGH;
-
         case StateDotDigit:
             if (isASCIIDigit(ch)) {
                 if (numberOfDigits < Precision) {
@@ -767,6 +757,8 @@ Decimal Decimal::fromString(StringView str)
                     accumulator *= 10;
                     accumulator += ch - '0';
                 }
+                // FIXME: <http://webkit.org/b/127667> Decimal::fromString's EBNF documentation does not match implementation.
+                state = StateDotDigit;
                 break;
             }
 
@@ -910,7 +902,7 @@ Decimal Decimal::nan()
 Decimal Decimal::remainder(const Decimal& rhs) const
 {
     const Decimal quotient = *this / rhs;
-    return quotient.isSpecial() ? quotient : *this - (quotient.isNegative() ? quotient.ceiling() : quotient.floor()) * rhs;
+    return quotient.isSpecial() ? quotient : *this - (quotient.isNegative() ? quotient.ceil() : quotient.floor()) * rhs;
 }
 
 Decimal Decimal::round() const

@@ -3,8 +3,8 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2005 Allan Sandfeld Jensen (kde@carewolf.com)
  *           (C) 2005, 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
- * Copyright (C) 2010, 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,18 +25,26 @@
 #include "config.h"
 #include "RenderLayerModelObject.h"
 
+#include "InspectorInstrumentation.h"
+#include "RenderDescendantIterator.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 #include "RenderLayerCompositor.h"
 #include "RenderLayerScrollableArea.h"
+#include "RenderMultiColumnSet.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGBlock.h"
 #include "RenderSVGModelObject.h"
+#include "RenderSVGText.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
+#include "SVGTextElement.h"
 #include "Settings.h"
 #include "StyleScrollSnapPoints.h"
 #include "TransformState.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/MathExtras.h>
 
 namespace WebCore {
 
@@ -44,7 +52,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderLayerModelObject);
 
 bool RenderLayerModelObject::s_wasFloating = false;
 bool RenderLayerModelObject::s_hadLayer = false;
-bool RenderLayerModelObject::s_hadTransform = false;
+bool RenderLayerModelObject::s_wasTransformed = false;
 bool RenderLayerModelObject::s_layerWasSelfPainting = false;
 
 RenderLayerModelObject::RenderLayerModelObject(Element& element, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
@@ -79,7 +87,8 @@ void RenderLayerModelObject::willBeDestroyed()
 
 void RenderLayerModelObject::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
-    if (auto* layer = this->layer(); layer && layer->needsFullRepaint() && isInternalMove == IsInternalMove::No)
+    bool shouldNotRepaint = is<RenderMultiColumnSet>(this->previousSibling());
+    if (auto* layer = this->layer(); layer && layer->needsFullRepaint() && isInternalMove == IsInternalMove::No && !shouldNotRepaint && containingBlock())
         issueRepaint(std::nullopt, ClipRepaintToLayer::No, ForceRepaint::Yes);
 
     RenderElement::willBeRemovedFromTree(isInternalMove);
@@ -89,6 +98,9 @@ void RenderLayerModelObject::destroyLayer()
 {
     ASSERT(!hasLayer());
     ASSERT(m_layer);
+#if PLATFORM(IOS_FAMILY)
+    m_layer->willBeDestroyed();
+#endif
     m_layer = nullptr;
 }
 
@@ -109,7 +121,7 @@ void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderS
 {
     s_wasFloating = isFloating();
     s_hadLayer = hasLayer();
-    s_hadTransform = hasTransform();
+    s_wasTransformed = isTransformed();
     if (s_hadLayer)
         s_layerWasSelfPainting = layer()->isSelfPaintingLayer();
 
@@ -124,8 +136,25 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
     RenderElement::styleDidChange(diff, oldStyle);
     updateFromStyle();
 
+    // When an out-of-flow-positioned element changes its display between block and inline-block,
+    // then an incremental layout on the element's containing block lays out the element through
+    // LayoutPositionedObjects, which skips laying out the element's parent.
+    // The element's parent needs to relayout so that it calls
+    // RenderBlockFlow::setStaticInlinePositionForChild with the out-of-flow-positioned child, so
+    // that when it's laid out, its RenderBox::computePositionedLogicalWidth/Height takes into
+    // account its new inline/block position rather than its old block/inline position.
+    // Position changes and other types of display changes are handled elsewhere.
+    if ((oldStyle && isOutOfFlowPositioned() && parent() && (parent() != containingBlock()))
+        && (style().position() == oldStyle->position())
+        && (style().isOriginalDisplayInlineType() != oldStyle->isOriginalDisplayInlineType())
+        && ((style().isOriginalDisplayBlockType()) || (style().isOriginalDisplayInlineType()))
+        && ((oldStyle->isOriginalDisplayBlockType()) || (oldStyle->isOriginalDisplayInlineType())))
+            parent()->setChildNeedsLayout();
+
+    bool gainedOrLostLayer = false;
     if (requiresLayer()) {
         if (!layer() && layerCreationAllowedForSubtree()) {
+            gainedOrLostLayer = true;
             if (s_wasFloating && isFloating())
                 setChildNeedsLayout();
             createLayer();
@@ -133,6 +162,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
                 layer()->setRepaintStatus(NeedsFullRepaint);
         }
     } else if (layer() && layer()->parent()) {
+        gainedOrLostLayer = true;
 #if ENABLE(CSS_COMPOSITING)
         if (oldStyle && oldStyle->hasBlendMode())
             layer()->willRemoveChildWithBlendMode();
@@ -150,9 +180,12 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
         layer()->removeOnlyThisLayer(RenderLayer::LayerChangeTiming::StyleChange); // calls destroyLayer() which clears m_layer
         if (s_wasFloating && isFloating())
             setChildNeedsLayout();
-        if (s_hadTransform)
+        if (s_wasTransformed)
             setNeedsLayoutAndPrefWidthsRecalc();
     }
+
+    if (gainedOrLostLayer)
+        InspectorInstrumentation::didAddOrRemoveScrollbars(*this);
 
     if (layer()) {
         layer()->styleChanged(diff, oldStyle);
@@ -172,7 +205,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
     const RenderStyle& newStyle = style();
     if (oldStyle && oldStyle->scrollPadding() != newStyle.scrollPadding()) {
         if (isDocumentElementRenderer()) {
-            FrameView& frameView = view().frameView();
+            LocalFrameView& frameView = view().frameView();
             frameView.updateScrollbarSteps();
         } else if (RenderLayer* renderLayer = layer())
             renderLayer->updateScrollbarSteps();
@@ -259,6 +292,23 @@ void RenderLayerModelObject::updateLayerTransform()
 }
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
+bool RenderLayerModelObject::shouldPaintSVGRenderer(const PaintInfo& paintInfo, const OptionSet<PaintPhase> relevantPaintPhases) const
+{
+    if (paintInfo.context().paintingDisabled())
+        return false;
+
+    if (!relevantPaintPhases.isEmpty() && !relevantPaintPhases.contains(paintInfo.phase))
+        return false;
+
+    if (!paintInfo.shouldPaintWithinRoot(*this))
+        return false;
+
+    if (style().visibility() == Visibility::Hidden || style().display() == DisplayType::None)
+        return false;
+
+    return true;
+}
+
 std::optional<LayoutRect> RenderLayerModelObject::computeVisibleRectInSVGContainer(const LayoutRect& rect, const RenderLayerModelObject* container, RenderObject::VisibleRectContext context) const
 {
     ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
@@ -311,9 +361,7 @@ std::optional<LayoutRect> RenderLayerModelObject::computeVisibleRectInSVGContain
 
 void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, OptionSet<MapCoordinatesMode> mode, bool* wasFixed) const
 {
-    // FIXME: [LBSE] Upstream RenderSVGBlock changes
-    // ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
-    ASSERT(is<RenderSVGModelObject>(this));
+    ASSERT(is<RenderSVGModelObject>(this) || is<RenderSVGBlock>(this));
     ASSERT(style().position() == PositionType::Static);
 
     if (ancestorContainer == this)
@@ -330,7 +378,7 @@ void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject
 
     // If this box has a transform, it acts as a fixed position container for fixed descendants,
     // and may itself also be fixed position. So propagate 'fixed' up only if this box is fixed position.
-    if (hasTransform())
+    if (isTransformed())
         mode.remove(IsFixed);
 
     if (wasFixed)
@@ -338,27 +386,22 @@ void RenderLayerModelObject::mapLocalToSVGContainer(const RenderLayerModelObject
 
     auto containerOffset = offsetFromContainer(*container, LayoutPoint(transformState.mappedPoint()));
 
-    bool preserve3D = mode & UseTransforms && (container->style().preserves3D() || style().preserves3D());
-    if (mode & UseTransforms && shouldUseTransformFromContainer(container)) {
-        TransformationMatrix t;
-        getTransformFromContainer(container, containerOffset, t);
-        transformState.applyTransform(t, preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
-    } else
-        transformState.move(containerOffset.width(), containerOffset.height(), preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform);
+    pushOntoTransformState(transformState, mode, nullptr, container, containerOffset, false);
 
     mode.remove(ApplyContainerFlip);
 
     container->mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
 }
 
-void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, SVGGraphicsElement& graphicsElement, const RenderStyle& style, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption> options) const
+void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, const SVGGraphicsElement& graphicsElement, const RenderStyle& style, const FloatRect& boundingBox, const std::optional<AffineTransform>& preApplySVGTransformMatrix, const std::optional<AffineTransform>& postApplySVGTransformMatrix, OptionSet<RenderStyle::TransformOperationOption> options) const
 {
-    auto svgTransform = graphicsElement.animatedLocalTransform();
+    auto svgTransform = graphicsElement.transform().concatenate();
+    auto* supplementalTransform = graphicsElement.supplementalTransform(); // SMIL <animateMotion>
 
     // This check does not use style.hasTransformRelatedProperty() on purpose -- we only want to know if either the 'transform' property, an
     // offset path, or the individual transform operations are set (perspective / transform-style: preserve-3d are not relevant here).
     bool hasCSSTransform = style.hasTransform() || style.rotate() || style.translate() || style.scale();
-    bool hasSVGTransform = !svgTransform.isIdentity() || preApplySVGTransformMatrix || postApplySVGTransformMatrix;
+    bool hasSVGTransform = !svgTransform.isIdentity() || preApplySVGTransformMatrix || postApplySVGTransformMatrix || supplementalTransform;
 
     // Common case: 'viewBox' set on outermost <svg> element -> 'preApplySVGTransformMatrix'
     // passed by RenderSVGViewportContainer::applyTransform(), the anonymous single child
@@ -372,6 +415,8 @@ void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, 
             return true;
         if (postApplySVGTransformMatrix && !postApplySVGTransformMatrix->isIdentityOrTranslation())
             return true;
+        if (supplementalTransform && !supplementalTransform->isIdentityOrTranslation())
+            return true;
         if (hasCSSTransform)
             return style.affectedByTransformOrigin();
         return !svgTransform.isIdentityOrTranslation();
@@ -382,6 +427,9 @@ void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, 
         originTranslate = style.computeTransformOrigin(boundingBox);
 
     style.applyTransformOrigin(transform, originTranslate);
+
+    if (supplementalTransform)
+        transform.multiplyAffineTransform(*supplementalTransform);
 
     if (preApplySVGTransformMatrix)
         transform.multiplyAffineTransform(preApplySVGTransformMatrix.value());
@@ -398,11 +446,76 @@ void RenderLayerModelObject::applySVGTransform(TransformationMatrix& transform, 
     style.unapplyTransformOrigin(transform, originTranslate);
 }
 
-void RenderLayerModelObject::updateHasSVGTransformFlags(const SVGGraphicsElement& graphicsElement)
+void RenderLayerModelObject::updateHasSVGTransformFlags()
 {
-    bool hasSVGTransform = !graphicsElement.animatedLocalTransform().isIdentity();
-    setHasTransformRelatedProperty(style().hasTransformRelatedProperty() || hasSVGTransform);
+    ASSERT(document().settings().layerBasedSVGEngineEnabled());
+
+    bool hasSVGTransform = needsHasSVGTransformFlags();
+    setHasTransformRelatedProperty(hasSVGTransform || style().hasTransformRelatedProperty());
     setHasSVGTransform(hasSVGTransform);
+}
+
+void RenderLayerModelObject::repaintOrRelayoutAfterSVGTransformChange()
+{
+    ASSERT(document().settings().layerBasedSVGEngineEnabled());
+
+    auto determineIfLayerTransformChangeModifiesScale = [&]() -> bool {
+        updateHasSVGTransformFlags();
+
+        // LBSE shares the text rendering code with the legacy SVG engine, largely unmodified.
+        // At present text layout depends on transformations ('screen font scaling factor' is used to
+        // determine which font to use for layout / painting). Therefore if the x/y scaling factors
+        // of the transformation matrix changes due to the transform update, we have to recompute the text metrics
+        // of all RenderSVGText descendants of the renderer in the ancestor chain, that will receive the transform
+        // update.
+        //
+        // There is no intrinsic reason for that, besides historical ones. If we decouple
+        // the 'font size screen scaling factor' from layout and only use it during painting
+        // we can optimize transformations for text, simply by avoid the need for layout.
+        auto previousTransform = layerTransform() ? layerTransform()->toAffineTransform() : identity;
+        updateLayerTransform();
+
+        auto currentTransform = layerTransform() ? layerTransform()->toAffineTransform() : identity;
+        if (previousTransform == currentTransform)
+            return false;
+
+        // Only if the effective x/y scale changes, a re-layout is necessary, due to changed on-screen scaling factors.
+        // The next RenderSVGText layout will see a different 'screen font scaling factor', different text metrics etc.
+        if (!WTF::areEssentiallyEqual(previousTransform.xScale(), currentTransform.xScale()))
+            return true;
+
+        if (!WTF::areEssentiallyEqual(previousTransform.yScale(), currentTransform.yScale()))
+            return true;
+
+        return false;
+    };
+
+    if (determineIfLayerTransformChangeModifiesScale()) {
+        if (auto* textAffectedByTransformChange = dynamicDowncast<RenderSVGText>(this)) {
+            // Mark text metrics for update, and only trigger a relayout and not an explicit repaint.
+            textAffectedByTransformChange->setNeedsTextMetricsUpdate();
+            textAffectedByTransformChange->textElement().updateSVGRendererForElementChange();
+            return;
+        }
+
+        // Recursively mark text metrics for update in all descendant RenderSVGText objects.
+        bool markedAny = false;
+        for (auto& textDescendantAffectedByTransformChange : descendantsOfType<RenderSVGText>(*this)) {
+            textDescendantAffectedByTransformChange.setNeedsTextMetricsUpdate();
+            textDescendantAffectedByTransformChange.textElement().updateSVGRendererForElementChange();
+            if (!markedAny)
+                markedAny = true;
+        }
+
+        // If we marked a text descendant for relayout, we are expecting a relayout ourselves, so no reason for an explicit repaint().
+        if (markedAny)
+            return;
+    }
+
+    // Instead of performing a full-fledged layout (issuing repaints), just recompute the layer transform, and repaint.
+    // In LBSE transformations do not affect the layout (except for text, where it still does!) -- SVG follows closely the CSS/HTML route, to avoid costly layouts.
+    updateLayerTransform();
+    repaint();
 }
 #endif
 

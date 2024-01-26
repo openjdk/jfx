@@ -25,10 +25,8 @@
 
 #pragma once
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "InlineDisplayBox.h"
-#include "LayoutIntegrationLine.h"
+#include "InlineDisplayContent.h"
 #include <wtf/HashMap.h>
 #include <wtf/IteratorRange.h>
 #include <wtf/Vector.h>
@@ -45,6 +43,7 @@ class Box;
 
 namespace InlineDisplay {
 struct Box;
+class Line;
 }
 
 namespace LayoutIntegration {
@@ -57,13 +56,14 @@ struct InlineContent : public CanMakeWeakPtr<InlineContent> {
     InlineContent(const LineLayout&);
     ~InlineContent();
 
-    using Boxes = Vector<InlineDisplay::Box>;
-    using Lines = Vector<Line>;
+    InlineDisplay::Content& displayContent() { return m_displayContent; }
+    const InlineDisplay::Content& displayContent() const { return m_displayContent; }
 
-    Boxes boxes;
-    Lines lines;
-
+    float clearGapBeforeFirstLine { 0 };
     float clearGapAfterLastLine { 0 };
+    float firstLinePaginationOffset { 0 };
+
+    bool isPaginated { false };
     bool hasMultilinePaintOverlap { false };
 
     bool hasContent() const;
@@ -71,7 +71,7 @@ struct InlineContent : public CanMakeWeakPtr<InlineContent> {
     bool hasVisualOverflow() const { return m_hasVisualOverflow; }
     void setHasVisualOverflow() { m_hasVisualOverflow = true; }
 
-    const Line& lineForBox(const InlineDisplay::Box& box) const { return lines[box.lineIndex()]; }
+    const InlineDisplay::Line& lineForBox(const InlineDisplay::Box& box) const { return displayContent().lines[box.lineIndex()]; }
 
     IteratorRange<const InlineDisplay::Box*> boxesForRect(const LayoutRect&) const;
 
@@ -79,7 +79,7 @@ struct InlineContent : public CanMakeWeakPtr<InlineContent> {
 
     const LineLayout& lineLayout() const { return *m_lineLayout; }
     const RenderObject& rendererForLayoutBox(const Layout::Box&) const;
-    const RenderBlockFlow& containingBlock() const;
+    const RenderBlockFlow& formattingContextRoot() const;
 
     size_t indexForBox(const InlineDisplay::Box&) const;
 
@@ -94,6 +94,7 @@ struct InlineContent : public CanMakeWeakPtr<InlineContent> {
 private:
     CheckedPtr<const LineLayout> m_lineLayout;
 
+    InlineDisplay::Content m_displayContent;
     using FirstBoxIndexCache = HashMap<CheckedRef<const Layout::Box>, size_t>;
     mutable std::unique_ptr<FirstBoxIndexCache> m_firstBoxIndexCache;
 
@@ -105,10 +106,9 @@ private:
 template<typename Function> void InlineContent::traverseNonRootInlineBoxes(const Layout::Box& layoutBox, Function&& function)
 {
     for (auto index : nonRootInlineBoxIndexesForLayoutBox(layoutBox))
-        function(boxes[index]);
+        function(displayContent().boxes[index]);
 }
 
 }
 }
 
-#endif

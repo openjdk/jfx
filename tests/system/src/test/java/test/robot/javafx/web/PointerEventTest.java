@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  p * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
@@ -25,6 +25,9 @@
 package test.robot.javafx.web;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
+
+import com.sun.javafx.PlatformUtil;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -41,6 +44,7 @@ import javafx.stage.Stage;
 
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -187,6 +191,11 @@ public class PointerEventTest {
     @AfterClass
     public static void exit() {
         Util.shutdown(stage);
+    }
+
+    @Before
+    public void skipOnLinux() {
+        assumeTrue(!PlatformUtil.isLinux()); // JDK-8304923
     }
 
     @After

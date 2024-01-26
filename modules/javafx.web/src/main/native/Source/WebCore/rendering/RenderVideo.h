@@ -53,12 +53,16 @@ public:
     bool failedToLoadPosterImage() const;
 
     void updateFromElement() final;
+    bool hasVideoMetadata() const;
+    bool hasPosterFrameSize() const;
+    bool hasDefaultObjectSize() const;
 
 private:
     void willBeDestroyed() override;
     void mediaElement() const = delete;
 
     void intrinsicSizeChanged() final;
+    LayoutSize calculateIntrinsicSizeInternal();
     LayoutSize calculateIntrinsicSize();
     bool updateIntrinsicSize();
 
@@ -72,22 +76,17 @@ private:
     void paintReplaced(PaintInfo&, const LayoutPoint&) final;
 
     void layout() final;
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 
     void visibleInViewportStateChanged() final;
 
     LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const final;
     LayoutUnit minimumReplacedHeight() const final;
 
-#if ENABLE(FULLSCREEN_API)
-    LayoutUnit offsetLeft() const final;
-    LayoutUnit offsetTop() const final;
-    LayoutUnit offsetWidth() const final;
-    LayoutUnit offsetHeight() const final;
-#endif
-
     void updatePlayer();
 
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const final;
+    bool inElementOrVideoFullscreen() const;
 
     LayoutSize m_cachedImageSize;
 };

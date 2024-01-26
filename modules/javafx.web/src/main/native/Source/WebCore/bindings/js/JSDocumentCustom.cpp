@@ -20,13 +20,16 @@
 #include "config.h"
 #include "JSDocument.h"
 
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
-#include "JSDOMWindowCustom.h"
+#include "JSCSSStyleSheet.h"
+#include "JSDOMConvert.h"
+#include "JSDOMGlobalObjectInlines.h"
 #include "JSHTMLDocument.h"
+#include "JSLocalDOMWindowCustom.h"
 #include "JSXMLDocument.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/HeapAnalyzer.h>
 
 namespace WebCore {
@@ -57,7 +60,7 @@ JSObject* cachedDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobal
     if (!window)
         return nullptr;
 
-    auto* documentGlobalObject = toJSDOMGlobalObject<JSDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
+    auto* documentGlobalObject = toJSDOMGlobalObject<JSLocalDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
     if (!documentGlobalObject)
         return nullptr;
 
@@ -91,6 +94,22 @@ JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObjec
     if (auto* wrapper = cachedDocumentWrapper(*lexicalGlobalObject, *globalObject, document))
         return wrapper;
     return toJSNewlyCreated(lexicalGlobalObject, globalObject, Ref<Document>(document));
+}
+
+void setAdoptedStyleSheetsOnTreeScope(TreeScope& treeScope, JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+{
+    auto& vm = JSC::getVM(&lexicalGlobalObject);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+    auto nativeValue = convert<IDLFrozenArray<IDLInterface<CSSStyleSheet>>>(lexicalGlobalObject, value);
+    RETURN_IF_EXCEPTION(throwScope, void());
+    invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
+        return treeScope.setAdoptedStyleSheets(WTFMove(nativeValue));
+    });
+}
+
+void JSDocument::setAdoptedStyleSheets(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+{
+    setAdoptedStyleSheetsOnTreeScope(wrapped(), lexicalGlobalObject, value);
 }
 
 template<typename Visitor>

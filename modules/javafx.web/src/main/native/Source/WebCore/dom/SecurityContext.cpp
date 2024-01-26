@@ -28,7 +28,6 @@
 #include "SecurityContext.h"
 
 #include "ContentSecurityPolicy.h"
-#include "HTMLParserIdioms.h"
 #include "PolicyContainer.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
@@ -77,8 +76,8 @@ void SecurityContext::enforceSandboxFlags(SandboxFlags mask, SandboxFlagsSource 
     m_sandboxFlags |= mask;
 
     // The SandboxOrigin is stored redundantly in the security origin.
-    if (isSandboxed(SandboxOrigin) && securityOriginPolicy() && !securityOriginPolicy()->origin().isUnique())
-        setSecurityOriginPolicy(SecurityOriginPolicy::create(SecurityOrigin::createUnique()));
+    if (isSandboxed(SandboxOrigin) && securityOriginPolicy() && !securityOriginPolicy()->origin().isOpaque())
+        setSecurityOriginPolicy(SecurityOriginPolicy::create(SecurityOrigin::createOpaque()));
 }
 
 bool SecurityContext::isSupportedSandboxPolicy(StringView policy)
@@ -86,7 +85,8 @@ bool SecurityContext::isSupportedSandboxPolicy(StringView policy)
     static constexpr ASCIILiteral supportedPolicies[] = {
         "allow-top-navigation-to-custom-protocols"_s, "allow-forms"_s, "allow-same-origin"_s, "allow-scripts"_s,
         "allow-top-navigation"_s, "allow-pointer-lock"_s, "allow-popups"_s, "allow-popups-to-escape-sandbox"_s,
-        "allow-top-navigation-by-user-activation"_s, "allow-modals"_s, "allow-storage-access-by-user-activation"_s
+        "allow-top-navigation-by-user-activation"_s, "allow-modals"_s, "allow-storage-access-by-user-activation"_s,
+        "allow-downloads"_s
     };
 
     for (auto supportedPolicy : supportedPolicies) {
@@ -107,18 +107,20 @@ SandboxFlags SecurityContext::parseSandboxPolicy(StringView policy, String& inva
     unsigned numberOfTokenErrors = 0;
     StringBuilder tokenErrors;
     while (true) {
-        while (start < length && isHTMLSpace(policy[start]))
+        while (start < length && isASCIIWhitespace(policy[start]))
             ++start;
         if (start >= length)
             break;
         unsigned end = start + 1;
-        while (end < length && !isHTMLSpace(policy[end]))
+        while (end < length && !isASCIIWhitespace(policy[end]))
             ++end;
 
         // Turn off the corresponding sandbox flag if it's set as "allowed".
         auto sandboxToken = policy.substring(start, end - start);
         if (equalLettersIgnoringASCIICase(sandboxToken, "allow-same-origin"_s))
             flags &= ~SandboxOrigin;
+        else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-downloads"_s))
+            flags &= ~SandboxDownloads;
         else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-forms"_s))
             flags &= ~SandboxForms;
         else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-scripts"_s)) {
@@ -164,18 +166,36 @@ SandboxFlags SecurityContext::parseSandboxPolicy(StringView policy, String& inva
     return flags;
 }
 
-const CrossOriginOpenerPolicy& SecurityContext::crossOriginOpenerPolicy() const
+void SecurityContext::setReferrerPolicy(ReferrerPolicy referrerPolicy)
 {
-    static NeverDestroyed<CrossOriginOpenerPolicy> coop;
-    return coop;
+    // Do not override existing referrer policy with the "empty string" one as the "empty string" means we should use
+    // the policy defined elsewhere.
+    if (referrerPolicy == ReferrerPolicy::EmptyString)
+        return;
+
+    m_referrerPolicy = referrerPolicy;
 }
 
 PolicyContainer SecurityContext::policyContainer() const
 {
+    ASSERT(m_contentSecurityPolicy);
     return {
+        m_contentSecurityPolicy->responseHeaders(),
         crossOriginEmbedderPolicy(),
-        crossOriginOpenerPolicy()
+        crossOriginOpenerPolicy(),
+        referrerPolicy()
     };
+}
+
+void SecurityContext::inheritPolicyContainerFrom(const PolicyContainer& policyContainer)
+{
+    if (!contentSecurityPolicy())
+        setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { }, nullptr, nullptr));
+
+    contentSecurityPolicy()->inheritHeadersFrom(policyContainer.contentSecurityPolicyResponseHeaders);
+    setCrossOriginOpenerPolicy(policyContainer.crossOriginOpenerPolicy);
+    setCrossOriginEmbedderPolicy(policyContainer.crossOriginEmbedderPolicy);
+    setReferrerPolicy(policyContainer.referrerPolicy);
 }
 
 }

@@ -19,7 +19,6 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #pragma once
@@ -36,13 +35,10 @@ struct BlendingContext;
 class TransformOperations {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit TransformOperations(bool makeIdentity = false);
+    TransformOperations() = default;
+    WEBCORE_EXPORT explicit TransformOperations(Vector<RefPtr<TransformOperation>>&&);
 
     bool operator==(const TransformOperations& o) const;
-    bool operator!=(const TransformOperations& o) const
-    {
-        return !(*this == o);
-    }
 
     void apply(const FloatSize& size, TransformationMatrix& matrix) const { apply(0, size, matrix); }
     void apply(unsigned start, const FloatSize& size, TransformationMatrix& matrix) const
@@ -66,7 +62,7 @@ public:
     bool hasMatrixOperation() const
     {
         return std::any_of(m_operations.begin(), m_operations.end(), [](auto operation) {
-            return operation->type() == WebCore::TransformOperation::MATRIX;
+            return operation->type() == WebCore::TransformOperation::Type::Matrix;
         });
     }
 
@@ -118,11 +114,11 @@ public:
     virtual ~SharedPrimitivesPrefix() = default;
     void update(const TransformOperations&);
     bool hadIncompatibleTransformFunctions() { return m_indexOfFirstMismatch.has_value(); }
-    const Vector<TransformOperation::OperationType>& primitives() const { return m_primitives; }
+    const Vector<TransformOperation::Type>& primitives() const { return m_primitives; }
 
 private:
     std::optional<size_t> m_indexOfFirstMismatch;
-    Vector<TransformOperation::OperationType> m_primitives;
+    Vector<TransformOperation::Type> m_primitives;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const TransformOperations&);

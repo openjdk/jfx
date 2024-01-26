@@ -165,10 +165,6 @@ public:
     {
         return m_epochNanoseconds == other.m_epochNanoseconds;
     }
-    constexpr bool operator!=(ExactTime other) const
-    {
-        return m_epochNanoseconds != other.m_epochNanoseconds;
-    }
     constexpr bool operator>=(ExactTime other) const
     {
         return m_epochNanoseconds >= other.m_epochNanoseconds;
@@ -260,6 +256,13 @@ public:
     {
     }
 
+    friend bool operator==(PlainDate lhs, PlainDate rhs)
+    {
+        return lhs.year() == rhs.year()
+            && lhs.month() == rhs.month()
+            && lhs.day() == rhs.day();
+    }
+
     int32_t year() const { return m_year; }
     uint8_t month() const { return m_month; }
     uint8_t day() const { return m_day; }
@@ -293,7 +296,7 @@ struct CalendarRecord {
 std::optional<TimeZoneID> parseTimeZoneName(StringView);
 std::optional<Duration> parseDuration(StringView);
 std::optional<int64_t> parseTimeZoneNumericUTCOffset(StringView);
-enum class ValidateTimeZoneID { Yes, No };
+enum class ValidateTimeZoneID : bool { No, Yes };
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(StringView);
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringView);
 std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>>> parseDateTime(StringView);
@@ -305,15 +308,18 @@ uint8_t weekOfYear(PlainDate);
 uint8_t daysInMonth(int32_t year, uint8_t month);
 uint8_t daysInMonth(uint8_t month);
 String formatTimeZoneOffsetString(int64_t);
-String temporalTimeToString(PlainTime, std::tuple<Precision, unsigned> precision);
+String temporalTimeToString(PlainTime, std::tuple<Precision, unsigned>);
 String temporalDateToString(PlainDate);
+String temporalDateTimeToString(PlainDate, PlainTime, std::tuple<Precision, unsigned>);
 String monthCode(uint32_t);
+uint8_t monthFromCode(StringView);
 
 bool isValidDuration(const Duration&);
 
 std::optional<ExactTime> parseInstant(StringView);
 
 bool isDateTimeWithinLimits(int32_t year, uint8_t month, uint8_t day, unsigned hour, unsigned minute, unsigned second, unsigned millisecond, unsigned microsecond, unsigned nanosecond);
+bool isYearWithinLimits(double year);
 
 } // namespace ISO8601
 } // namespace JSC

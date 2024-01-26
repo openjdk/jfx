@@ -28,6 +28,8 @@
 
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
+#include "JSDOMPromiseDeferred.h"
+#include "Page.h"
 #include "ScriptSourceCode.h"
 #include "SecurityOrigin.h"
 #include "WorkerRunLoop.h"

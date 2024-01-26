@@ -85,16 +85,6 @@ static String processAppIdExtension(const SecurityOrigin& facetId, const String&
     return appId;
 }
 
-// The default behaviour for google.com is to always turn on the legacy AppID support.
-static bool processGoogleLegacyAppIdSupportExtension(const std::optional<AuthenticationExtensionsClientInputs>& extensions, const String& rpId)
-{
-    if (rpId != "google.com"_s)
-        return false;
-    if (!extensions)
-        return true;
-    return extensions->googleLegacyAppidSupport;
-}
-
 } // namespace AuthenticatorCoordinatorInternal
 
 AuthenticatorCoordinator::AuthenticatorCoordinator(std::unique_ptr<AuthenticatorCoordinatorClient>&& client)
@@ -107,7 +97,7 @@ void AuthenticatorCoordinator::setClient(std::unique_ptr<AuthenticatorCoordinato
     m_client = WTFMove(client);
 }
 
-void AuthenticatorCoordinator::create(const Document& document, const PublicKeyCredentialCreationOptions& options, WebAuthn::Scope scope, RefPtr<AbortSignal>&& abortSignal, CredentialPromise&& promise) const
+void AuthenticatorCoordinator::create(const Document& document, const PublicKeyCredentialCreationOptions& options, WebAuthn::Scope scope, RefPtr<AbortSignal>&& abortSignal, CredentialPromise&& promise)
 {
     using namespace AuthenticatorCoordinatorInternal;
 
@@ -160,9 +150,20 @@ void AuthenticatorCoordinator::create(const Document& document, const PublicKeyC
     }
 
     // Step 12-13.
-    // Only Google Legacy AppID Support Extension is supported.
     ASSERT(options.rp.id);
-    options.extensions = AuthenticationExtensionsClientInputs { String(), processGoogleLegacyAppIdSupportExtension(options.extensions, *options.rp.id), options.extensions && options.extensions->credProps };
+
+    AuthenticationExtensionsClientInputs extensionInputs = {
+        String(),
+        false,
+        std::nullopt
+    };
+
+    if (auto extensions = options.extensions) {
+        extensionInputs.credProps = extensions->credProps;
+        extensionInputs.largeBlob = extensions->largeBlob;
+    }
+
+    options.extensions = extensionInputs;
 
     // Step 14-16.
     auto clientDataJson = buildClientDataJson(ClientDataType::Create, options.challenge, callerOrigin, scope);
@@ -174,13 +175,15 @@ void AuthenticatorCoordinator::create(const Document& document, const PublicKeyC
         return;
     }
 
-    auto callback = [clientDataJson = WTFMove(clientDataJson), promise = WTFMove(promise), abortSignal = WTFMove(abortSignal)] (AuthenticatorResponseData&& data, AuthenticatorAttachment attachment, ExceptionData&& exception) mutable {
+    auto callback = [weakThis = WeakPtr { *this }, clientDataJson = WTFMove(clientDataJson), promise = WTFMove(promise), abortSignal = WTFMove(abortSignal)] (AuthenticatorResponseData&& data, AuthenticatorAttachment attachment, ExceptionData&& exception) mutable {
         if (abortSignal && abortSignal->aborted()) {
             promise.reject(Exception { AbortError, "Aborted by AbortSignal."_s });
             return;
         }
 
         if (auto response = AuthenticatorResponse::tryCreate(WTFMove(data), attachment)) {
+            if (weakThis)
+                weakThis->resetUserGestureRequirement();
             response->setClientDataJSON(WTFMove(clientDataJson));
             promise.resolve(PublicKeyCredential::create(response.releaseNonNull()).ptr());
             return;
@@ -192,7 +195,7 @@ void AuthenticatorCoordinator::create(const Document& document, const PublicKeyC
     m_client->makeCredential(*frame, callerOrigin, clientDataJsonHash, options, WTFMove(callback));
 }
 
-void AuthenticatorCoordinator::discoverFromExternalSource(const Document& document, CredentialRequestOptions&& requestOptions, const ScopeAndCrossOriginParent& scopeAndCrossOriginParent, CredentialPromise&& promise) const
+void AuthenticatorCoordinator::discoverFromExternalSource(const Document& document, CredentialRequestOptions&& requestOptions, const ScopeAndCrossOriginParent& scopeAndCrossOriginParent, CredentialPromise&& promise)
 {
     using namespace AuthenticatorCoordinatorInternal;
 
@@ -247,13 +250,23 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
         return;
     }
 
-    auto callback = [clientDataJson = WTFMove(clientDataJson), promise = WTFMove(promise), abortSignal = WTFMove(requestOptions.signal)] (AuthenticatorResponseData&& data, AuthenticatorAttachment attachment, ExceptionData&& exception) mutable {
+    if (requestOptions.signal) {
+        requestOptions.signal->addAlgorithm([weakThis = WeakPtr { *this }](JSC::JSValue) {
+            if (!weakThis)
+                return;
+            weakThis->m_client->cancel();
+        });
+    }
+
+    auto callback = [weakThis = WeakPtr { *this }, clientDataJson = WTFMove(clientDataJson), promise = WTFMove(promise), abortSignal = WTFMove(requestOptions.signal)] (AuthenticatorResponseData&& data, AuthenticatorAttachment attachment, ExceptionData&& exception) mutable {
         if (abortSignal && abortSignal->aborted()) {
             promise.reject(Exception { AbortError, "Aborted by AbortSignal."_s });
             return;
         }
 
         if (auto response = AuthenticatorResponse::tryCreate(WTFMove(data), attachment)) {
+            if (weakThis)
+                weakThis->resetUserGestureRequirement();
             response->setClientDataJSON(WTFMove(clientDataJson));
             promise.resolve(PublicKeyCredential::create(response.releaseNonNull()).ptr());
             return;
@@ -265,7 +278,7 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const Document& docume
     m_client->getAssertion(*frame, callerOrigin, clientDataJsonHash, options, requestOptions.mediation, scopeAndCrossOriginParent, WTFMove(callback));
 }
 
-void AuthenticatorCoordinator::isUserVerifyingPlatformAuthenticatorAvailable(DOMPromiseDeferred<IDLBoolean>&& promise) const
+void AuthenticatorCoordinator::isUserVerifyingPlatformAuthenticatorAvailable(const Document& document, DOMPromiseDeferred<IDLBoolean>&& promise) const
 {
     // The following implements https://www.w3.org/TR/webauthn/#isUserVerifyingPlatformAuthenticatorAvailable
     // as of 5 December 2017.
@@ -279,12 +292,13 @@ void AuthenticatorCoordinator::isUserVerifyingPlatformAuthenticatorAvailable(DOM
     auto completionHandler = [promise = WTFMove(promise)] (bool result) mutable {
         promise.resolve(result);
     };
+
     // Async operation are dispatched and handled in the messenger.
-    m_client->isUserVerifyingPlatformAuthenticatorAvailable(WTFMove(completionHandler));
+    m_client->isUserVerifyingPlatformAuthenticatorAvailable(document.securityOrigin(), WTFMove(completionHandler));
 }
 
 
-void AuthenticatorCoordinator::isConditionalMediationAvailable(DOMPromiseDeferred<IDLBoolean>&& promise) const
+void AuthenticatorCoordinator::isConditionalMediationAvailable(const Document& document, DOMPromiseDeferred<IDLBoolean>&& promise) const
 {
     if (!m_client)  {
         promise.reject(Exception { UnknownError, "Unknown internal error."_s });
@@ -295,7 +309,7 @@ void AuthenticatorCoordinator::isConditionalMediationAvailable(DOMPromiseDeferre
         promise.resolve(result);
     };
     // Async operations are dispatched and handled in the messenger.
-    m_client->isConditionalMediationAvailable(WTFMove(completionHandler));
+    m_client->isConditionalMediationAvailable(document.securityOrigin(), WTFMove(completionHandler));
 }
 
 void AuthenticatorCoordinator::resetUserGestureRequirement()

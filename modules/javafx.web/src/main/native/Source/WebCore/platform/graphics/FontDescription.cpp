@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Nicholas Shanks <contact@nickshanks.com>
- * Copyright (C) 2008, 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,15 +37,17 @@
 namespace WebCore {
 
 FontDescription::FontDescription()
-    : m_fontPalette({ FontPalette::Type::Normal, nullAtom() })
+    : m_variantAlternates(FontCascadeDescription::initialVariantAlternates())
+    , m_fontPalette({ FontPalette::Type::Normal, nullAtom() })
     , m_fontSelectionRequest { FontCascadeDescription::initialWeight(), FontCascadeDescription::initialStretch(), FontCascadeDescription::initialItalic() }
     , m_orientation(static_cast<unsigned>(FontOrientation::Horizontal))
     , m_nonCJKGlyphOrientation(static_cast<unsigned>(NonCJKGlyphOrientation::Mixed))
     , m_widthVariant(static_cast<unsigned>(FontWidthVariant::RegularWidth))
-    , m_renderingMode(static_cast<unsigned>(FontRenderingMode::Normal))
     , m_textRendering(static_cast<unsigned>(TextRenderingMode::AutoTextRendering))
     , m_script(USCRIPT_COMMON)
-    , m_fontSynthesis(FontSynthesisWeight | FontSynthesisStyle | FontSynthesisSmallCaps)
+    , m_fontSynthesisWeight(static_cast<unsigned>(FontSynthesisLonghandValue::Auto))
+    , m_fontSynthesisStyle(static_cast<unsigned>(FontSynthesisLonghandValue::Auto))
+    , m_fontSynthesisCaps(static_cast<unsigned>(FontSynthesisLonghandValue::Auto))
     , m_variantCommonLigatures(static_cast<unsigned>(FontVariantLigatures::Normal))
     , m_variantDiscretionaryLigatures(static_cast<unsigned>(FontVariantLigatures::Normal))
     , m_variantHistoricalLigatures(static_cast<unsigned>(FontVariantLigatures::Normal))
@@ -57,7 +59,6 @@ FontDescription::FontDescription()
     , m_variantNumericFraction(static_cast<unsigned>(FontVariantNumericFraction::Normal))
     , m_variantNumericOrdinal(static_cast<unsigned>(FontVariantNumericOrdinal::Normal))
     , m_variantNumericSlashedZero(static_cast<unsigned>(FontVariantNumericSlashedZero::Normal))
-    , m_variantAlternates(static_cast<unsigned>(FontVariantAlternates::Normal))
     , m_variantEastAsianVariant(static_cast<unsigned>(FontVariantEastAsianVariant::Normal))
     , m_variantEastAsianWidth(static_cast<unsigned>(FontVariantEastAsianWidth::Normal))
     , m_variantEastAsianRuby(static_cast<unsigned>(FontVariantEastAsianRuby::Normal))
@@ -116,4 +117,10 @@ AtomString FontDescription::platformResolveGenericFamily(UScriptCode, const Atom
 }
 #endif
 
+float FontDescription::adjustedSizeForFontFace(float fontFaceSizeAdjust) const
+{
+    // It is not worth modifying the used size with @font-face size-adjust if we are to re-adjust it later with font-size-adjust. This is because font-size-adjust will overrule this change, since size-adjust also modifies the font's metric values and thus, keeps the aspect-value unchanged.
+    return fontSizeAdjust().value ? computedSize() : fontFaceSizeAdjust * computedSize();
+
+}
 } // namespace WebCore

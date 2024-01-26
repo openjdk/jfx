@@ -26,6 +26,8 @@
 #include "config.h"
 #include "ChromeClient.h"
 
+#include "ScrollbarsController.h"
+
 #if ENABLE(WEBGL)
 #include "GraphicsContextGL.h"
 #endif
@@ -42,5 +44,15 @@ RefPtr<GraphicsContextGL> ChromeClient::createGraphicsContextGL(const GraphicsCo
     return createWebProcessGraphicsContextGL(attributes);
 }
 #endif
+
+RefPtr<ImageBuffer> ChromeClient::sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer> imageBuffer)
+{
+    return SerializedImageBuffer::sinkIntoImageBuffer(WTFMove(imageBuffer));
+}
+
+std::unique_ptr<ScrollbarsController> ChromeClient::createScrollbarsController(Page&, ScrollableArea&) const
+{
+    return nullptr;
+}
 
 }

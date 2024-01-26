@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,6 +178,10 @@ final class MonocleWindow extends Window {
         }
         return result;
     }
+
+    // empty - not needed by this implementation
+    @Override
+    protected void _updateViewSize(long ptr) {}
 
     /**
      * Returns the handle used to create a rendering context in Prism

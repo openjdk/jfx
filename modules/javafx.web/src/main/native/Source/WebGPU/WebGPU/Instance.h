@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ struct WGPUInstanceImpl {
 namespace WebGPU {
 
 class Adapter;
-class Surface;
+class PresentationContext;
 
 // https://gpuweb.github.io/gpuweb/#gpu
 class Instance : public WGPUInstanceImpl, public ThreadSafeRefCounted<Instance> {
@@ -52,7 +52,7 @@ public:
 
     ~Instance();
 
-    Ref<Surface> createSurface(const WGPUSurfaceDescriptor&);
+    Ref<PresentationContext> createSurface(const WGPUSurfaceDescriptor&);
     void processEvents();
     void requestAdapter(const WGPURequestAdapterOptions&, CompletionHandler<void(WGPURequestAdapterStatus, Ref<Adapter>&&, String&&)>&& callback);
 
@@ -64,7 +64,7 @@ public:
 
 private:
     Instance(WGPUScheduleWorkBlock);
-    Instance();
+    explicit Instance();
 
     // This can be called on a background thread.
     void defaultScheduleWork(WGPUWorkItem&&);

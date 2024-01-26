@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "Color.h"
 #include "DeprecatedCSSOMPrimitiveValue.h"
 #include <wtf/Ref.h>
 
@@ -42,7 +43,7 @@ public:
 private:
     template<typename NumberType> static Ref<DeprecatedCSSOMPrimitiveValue> createWrapper(CSSStyleDeclaration& owner, NumberType number)
     {
-        return CSSPrimitiveValue::create(number, CSSUnitType::CSS_NUMBER)->createDeprecatedCSSOMPrimitiveWrapper(owner);
+        return DeprecatedCSSOMPrimitiveValue::create(CSSPrimitiveValue::create(number), owner);
     }
 
     DeprecatedCSSOMRGBColor(CSSStyleDeclaration& owner, const Color& color)

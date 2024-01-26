@@ -28,9 +28,9 @@
 
 #include "Document.h"
 #include "InstrumentingAgents.h"
+#include "Page.h"
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
-
 
 namespace WebCore {
 
@@ -137,7 +137,7 @@ void InspectorWorkerAgent::connectToAllWorkerInspectorProxiesForPage()
 {
     ASSERT(m_connectedProxies.isEmpty());
 
-    for (Ref proxy : WorkerInspectorProxy::allWorkerInspectorProxies()) {
+    for (Ref proxy : WorkerInspectorProxy::allWorkerInspectorProxiesCopy()) {
         if (!is<Document>(proxy->scriptExecutionContext()))
             continue;
 

@@ -3,7 +3,7 @@
  * Copyright (C) 2004, 2005 Rob Buis <buis@kde.org>
  * Copyright (C) 2005 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2010 Dirk Schulze <krit@webkit.org>
- * Copyright (C) 2021-2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc.  All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -38,24 +38,25 @@ class FEImage final : public FilterEffect {
 public:
     WEBCORE_EXPORT static Ref<FEImage> create(SourceImage&&, const FloatRect& sourceImageRect, const SVGPreserveAspectRatioValue&);
 
+    bool operator==(const FEImage&) const;
+
     const SourceImage& sourceImage() const { return m_sourceImage; }
     void setImageSource(SourceImage&& sourceImage) { m_sourceImage = WTFMove(sourceImage); }
 
     FloatRect sourceImageRect() const { return m_sourceImageRect; }
     const SVGPreserveAspectRatioValue& preserveAspectRatio() const { return m_preserveAspectRatio; }
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<Ref<FEImage>> decode(Decoder&);
-
 private:
     FEImage(SourceImage&&, const FloatRect& sourceImageRect, const SVGPreserveAspectRatioValue&);
+
+    bool operator==(const FilterEffect& other) const override { return areEqual<FEImage>(*this, other); }
 
     unsigned numberOfEffectInputs() const override { return 0; }
 
     // FEImage results are always in DestinationColorSpace::SRGB()
     void setOperatingColorSpace(const DestinationColorSpace&) override { }
 
-    FloatRect calculateImageRect(const Filter&, const FilterImageVector& inputs, const FloatRect& primitiveSubregion) const override;
+    FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const final;
 
@@ -65,35 +66,6 @@ private:
     FloatRect m_sourceImageRect;
     SVGPreserveAspectRatioValue m_preserveAspectRatio;
 };
-
-template<class Encoder>
-void FEImage::encode(Encoder& encoder) const
-{
-    encoder << m_sourceImage;
-    encoder << m_sourceImageRect;
-    encoder << m_preserveAspectRatio;
-}
-
-template<class Decoder>
-std::optional<Ref<FEImage>> FEImage::decode(Decoder& decoder)
-{
-    std::optional<SourceImage> sourceImage;
-    decoder >> sourceImage;
-    if (!sourceImage)
-        return std::nullopt;
-
-    std::optional<FloatRect> sourceImageRect;
-    decoder >> sourceImageRect;
-    if (!sourceImageRect)
-        return std::nullopt;
-
-    std::optional<SVGPreserveAspectRatioValue> preserveAspectRatio;
-    decoder >> preserveAspectRatio;
-    if (!preserveAspectRatio)
-        return std::nullopt;
-
-    return FEImage::create(WTFMove(*sourceImage), *sourceImageRect, *preserveAspectRatio);
-}
 
 } // namespace WebCore
 

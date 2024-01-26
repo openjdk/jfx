@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
  *
@@ -26,9 +26,9 @@
 
 #include "CSSHelper.h"
 #include "FontMetrics.h"
-#include "Frame.h"
 #include "LegacyRenderSVGRoot.h"
 #include "LengthFunctions.h"
+#include "LocalFrame.h"
 #include "RenderView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
@@ -230,8 +230,6 @@ static inline const RenderStyle* renderStyleForLengthResolving(const SVGElement*
         currentContext = currentContext->parentNode();
     } while (currentContext);
 
-    // There must be at least a LegacyRenderSVGRoot renderer, carrying a style.
-    ASSERT_NOT_REACHED();
     return nullptr;
 }
 
@@ -241,7 +239,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEMS(float value)
     if (!style)
         return Exception { NotSupportedError };
 
-    float fontSize = style->computedFontPixelSize();
+    float fontSize = style->computedFontSize();
     if (!fontSize)
         return Exception { NotSupportedError };
 
@@ -254,7 +252,7 @@ ExceptionOr<float> SVGLengthContext::convertValueFromEMSToUserUnits(float value)
     if (!style)
         return Exception { NotSupportedError };
 
-    return value * style->computedFontPixelSize();
+    return value * style->computedFontSize();
 }
 
 ExceptionOr<float> SVGLengthContext::convertValueFromUserUnitsToEXS(float value) const
@@ -303,9 +301,14 @@ std::optional<FloatSize> SVGLengthContext::computeViewportSize() const
     ASSERT(m_overriddenViewport.isZero());
     ASSERT(m_context);
 
-    // Root <svg> element lengths are resolved against the top level viewport.
+    // Root <svg> element lengths are resolved against the top level viewport,
+    // however excluding 'zoom' induced scaling. Length within the <svg> subtree
+    // shall be resolved against the 'vanilla' viewport size, excluding zoom, because
+    // the (anonymous) RenderSVGViewportContainer (first and only child of RenderSVGRoot)
+    // applies zooming/panning for the whole SVG subtree as affine transform. Therefore
+    // any length within the SVG subtree needs to exclude the 'zoom' information.
     if (m_context->isOutermostSVGSVGElement())
-        return downcast<SVGSVGElement>(*m_context).currentViewportSize();
+        return downcast<SVGSVGElement>(*m_context).currentViewportSizeExcludingZoom();
 
     // Take size from nearest viewport element.
     RefPtr viewportElement = m_context->viewportElement();
@@ -315,7 +318,7 @@ std::optional<FloatSize> SVGLengthContext::computeViewportSize() const
     const SVGSVGElement& svg = downcast<SVGSVGElement>(*viewportElement);
     auto viewportSize = svg.currentViewBoxRect().size();
     if (viewportSize.isEmpty())
-        viewportSize = svg.currentViewportSize();
+        viewportSize = svg.currentViewportSizeExcludingZoom();
 
     return viewportSize;
 }

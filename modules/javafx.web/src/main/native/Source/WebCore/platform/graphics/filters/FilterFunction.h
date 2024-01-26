@@ -28,9 +28,11 @@
 #include "FilterEffectGeometry.h"
 #include "FilterImage.h"
 #include "FilterImageVector.h"
+#include "FilterRenderingMode.h"
+#include "FilterStyle.h"
 #include "FloatRect.h"
 #include "LengthBox.h"
-#include <wtf/RefCounted.h>
+#include "RenderingResource.h"
 #include <wtf/text/AtomString.h>
 
 namespace WTF {
@@ -47,7 +49,7 @@ enum class FilterRepresentation : uint8_t {
     Debugging
 };
 
-class FilterFunction : public RefCounted<FilterFunction> {
+class FilterFunction : public RenderingResource {
 public:
     enum class Type : uint8_t {
         CSSFilter,
@@ -78,14 +80,14 @@ public:
         FELast = SourceGraphic
     };
 
-    FilterFunction(Type);
+    FilterFunction(Type, std::optional<RenderingResourceIdentifier> = std::nullopt);
     virtual ~FilterFunction() = default;
 
     Type filterType() const { return m_filterType; }
 
     bool isCSSFilter() const { return m_filterType == Type::CSSFilter; }
     bool isSVGFilter() const { return m_filterType == Type::SVGFilter; }
-    bool isFilter() const { return m_filterType == Type::CSSFilter || m_filterType == Type::SVGFilter; }
+    bool isFilter() const override { return m_filterType == Type::CSSFilter || m_filterType == Type::SVGFilter; }
     bool isFilterEffect() const { return m_filterType >= Type::FEFirst && m_filterType <= Type::FELast; }
 
     static AtomString filterName(Type);
@@ -93,8 +95,9 @@ public:
     static AtomString sourceGraphicName() { return filterName(Type::SourceGraphic); }
     AtomString filterName() const { return filterName(m_filterType); }
 
-    virtual bool supportsAcceleratedRendering() const { return false; }
+    virtual OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const { return FilterRenderingMode::Software; }
     virtual RefPtr<FilterImage> apply(const Filter&, FilterImage&, FilterResults&) { return nullptr; }
+    virtual FilterStyleVector createFilterStyles(const Filter&, const FilterStyle&) const { return { }; }
 
     virtual WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation = FilterRepresentation::TestOutput) const = 0;
 
