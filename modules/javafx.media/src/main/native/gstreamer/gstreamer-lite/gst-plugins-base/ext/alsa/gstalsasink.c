@@ -572,7 +572,14 @@ success:
       alsa->period_size);
 
   /* Check if hardware supports pause */
+#ifdef GSTREAMER_LITE
+  // See JDK-8308955. For some reason after stop we will skip ~500 ms of
+  // audio if we use hardware pause. So, for workaround we will never use
+  // hardware pause even if supported.
+  alsa->hw_support_pause = FALSE;
+#else // GSTREAMER_LITE
   alsa->hw_support_pause = snd_pcm_hw_params_can_pause (params);
+#endif // GSTREAMER_LITE
   GST_DEBUG_OBJECT (alsa, "Hw support pause: %s",
       alsa->hw_support_pause ? "yes" : "no");
 
