@@ -1001,7 +1001,7 @@ public abstract class Animation {
                     if (isNearZero(rate)) {
                         pauseReceiver();
                     } else {
-    
+
                     }
                 } else {
                     runHandler(getOnFinished());
