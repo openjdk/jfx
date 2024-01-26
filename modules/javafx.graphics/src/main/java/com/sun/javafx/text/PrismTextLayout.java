@@ -1046,7 +1046,7 @@ public class PrismTextLayout implements TextLayout {
 
                 for (int k = runStart; k < runEnd; k++) {
                     if (chars[k] == ' ') {
-                        trailingSpaceWidth += textRun.positions[k - runStart];
+                        trailingSpaceWidth += textRun.positions[k];
 
                         if (--trailingSpaces == 0) {
                             return trailingSpaceWidth;
