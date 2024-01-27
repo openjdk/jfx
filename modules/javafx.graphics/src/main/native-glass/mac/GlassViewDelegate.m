@@ -46,6 +46,8 @@
 #import "GlassPasteboard.h"
 #import "GlassTouches.h"
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)

@@ -41,6 +41,8 @@
 #import "GlassLayer3D.h"
 #import "GlassHelper.h"
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 //#include <stdio.h>
 //#include <stdarg.h>
 //

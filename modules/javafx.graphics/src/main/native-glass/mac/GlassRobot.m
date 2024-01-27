@@ -33,6 +33,9 @@
 #import "GlassKey.h"
 #import "GlassHelper.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
@@ -111,8 +114,11 @@ static inline void PostGlassKeyEvent(jint code, BOOL keyPressed)
     if (GetMacKey(code, &macCode)) {
         // Using CGEvent API proved to be problematic - events for some keys were missing sometimes.
         // So we use the A11Y API instead - just as we do in AWT. It works fine in all cases.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         AXUIElementRef elem = AXUIElementCreateSystemWide();
         AXUIElementPostKeyboardEvent(elem, (CGCharCode)0, macCode, keyPressed);
+#pragma clang diagnostic push
         CFRelease(elem);
     }
 }

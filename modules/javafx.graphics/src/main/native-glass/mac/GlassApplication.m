@@ -41,6 +41,8 @@
 #import <Security/SecRequirement.h>
 #import <Carbon/Carbon.h>
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
