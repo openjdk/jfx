@@ -970,7 +970,7 @@ public abstract class Animation {
         jumpTo(Duration.ZERO);
         play();
     }
-    
+
     /**
      * Plays {@code Animation} from current position in the direction indicated
      * by {@code rate}. If the {@code Animation} is running, it has no effect.
