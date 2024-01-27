@@ -109,7 +109,7 @@ public abstract class AnimationTimer {
     public void start() {
         Utils.runOnFxThread(this::startOnFxThread);
     }
-    
+
     @SuppressWarnings("removal")
     private void startOnFxThread() {
         if (!active) {
