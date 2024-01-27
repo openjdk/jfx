@@ -102,6 +102,7 @@ public abstract class AnimationTimer {
      * The {@code AnimationTimer} can be stopped by calling {@link #stop()}.
      * <p>
      * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      */
     public void start() {
         Utils.runOnFxThread(this::startOnFxThread);
@@ -122,6 +123,7 @@ public abstract class AnimationTimer {
      * {@link #start()}.
      * <p>
      * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      */
     public void stop() {
         Utils.runOnFxThread(this::stopOnFxThread);
