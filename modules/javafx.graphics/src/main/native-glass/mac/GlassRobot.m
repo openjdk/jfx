@@ -33,9 +33,6 @@
 #import "GlassKey.h"
 #import "GlassHelper.h"
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
