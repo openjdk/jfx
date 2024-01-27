@@ -33,16 +33,18 @@ public class TextLine implements com.sun.javafx.scene.text.TextLine {
     private final int start;
     private final int length;
     private final float leading;
+    private final float trailingSpaceWidth;
 
     private float lsb, rsb;
 
     public TextLine(int start, int length, TextRun[] runs,
-                    float width, float ascent, float descent, float leading) {
+                    float width, float ascent, float descent, float leading, float trailingSpaceWidth) {
         this.start = start;
         this.length = length;
         this.bounds = new RectBounds(0, ascent, width, descent + leading);
         this.leading = leading;
         this.runs = runs;
+        this.trailingSpaceWidth = trailingSpaceWidth;
     }
 
     @Override
@@ -67,6 +69,10 @@ public class TextLine implements com.sun.javafx.scene.text.TextLine {
     @Override
     public int getLength() {
         return length;
+    }
+
+    public float getTrailingSpaceWidth() {
+        return trailingSpaceWidth;
     }
 
     public void setSideBearings(float lsb, float rsb) {

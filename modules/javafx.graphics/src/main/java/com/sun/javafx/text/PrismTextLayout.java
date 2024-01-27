@@ -1019,7 +1019,7 @@ public class PrismTextLayout implements TextLayout {
 
         if (width > layoutWidth) layoutWidth = width;
         return new TextLine(startOffset, length, lineRuns,
-                            width, ascent, descent, leading);
+                            width, ascent, descent, leading, trailingSpaceWidth);
     }
 
     private float computeTrailingSpaceWidth(int startOffset, int length, TextRun[] lineRuns) {
