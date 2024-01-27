@@ -454,7 +454,7 @@ public class PrismTextLayout implements TextLayout {
                 }
             } else {
                 for (int i = 0; i < lineIndex; i++) {
-                    for (TextRun r: lines[i].runs) {
+                    for (TextRun r: lines[i].getRuns()) {
                         if (r.getTextSpan() != null && r.getStart() >= textRunStart && r.getTextSpan().getText().equals(text)) {
                             textWidthPrevLine += r.getLength();
                         }
@@ -759,7 +759,7 @@ public class PrismTextLayout implements TextLayout {
         int lineCount = getLineCount();
         while (index < lineCount) {
             if (!textFound) {
-                for (TextRun r : lines[index].runs) {
+                for (TextRun r : lines[index].getRuns()) {
                     if (r.getTextSpan() == null || (r.getStart() == runStart && r.getTextSpan().getText().equals(text))) {
                         /* Span will present only for Rich Text.
                          * Hence making textFound as true */
