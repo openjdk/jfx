@@ -1360,7 +1360,8 @@ public class PrismTextLayout implements TextLayout {
             RectBounds bounds = line.getBounds();
 
             /* Center and right alignment */
-            float lineX = (wrapWidth - bounds.getWidth() + line.getTrailingSpaceWidth()) * align;
+            float unusedWidth = wrapWidth - bounds.getWidth() + line.getTrailingSpaceWidth();
+            float lineX = unusedWidth * align;
             line.setAlignment(lineX);
 
             /* Justify */
@@ -1378,7 +1379,7 @@ public class PrismTextLayout implements TextLayout {
                         if (hitChar && chars[j] == ' ') wsCount++;
                     }
                     if (wsCount != 0) {
-                        float inc = (fullWidth - bounds.getWidth()) / wsCount;
+                        float inc = unusedWidth / wsCount;
                         done:
                         for (int j = 0; j < lineRunCount; j++) {
                             TextRun textRun = lineRuns[j];
