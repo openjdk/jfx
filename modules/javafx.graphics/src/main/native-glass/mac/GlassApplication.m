@@ -644,8 +644,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 char *path = getenv([property UTF8String]);
                 if (path != NULL)
                 {
+                    BOOL isFolder = NO;
                     NSString *overridenPath = [NSString stringWithFormat:@"%s", path];
-                    if ([[NSFileManager defaultManager] fileExistsAtPath:overridenPath] == YES)
+                    if ([[NSFileManager defaultManager] fileExistsAtPath:overridenPath isDirectory:&isFolder] && !isFolder)
                     {
                         iconPath = overridenPath;
                     }
@@ -658,15 +659,15 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
                 NSImage *image = nil;
                 {
-                    BOOL dir = NO;
-                    if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath isDirectory:&dir] == YES && dir == NO)
+                    BOOL isFolder = NO;
+                    if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath isDirectory:&isFolder] && !isFolder)
                     {
                         image = [[NSImage alloc] initWithContentsOfFile:iconPath];
                     }
                     if (image == nil)
                     {
                         // last resort - if still no icon, then ask for an empty standard app icon, which is guranteed to exist
-                        image = [[NSImage imageNamed:@"NSApplicationIcon"] retain];
+                        image = [[NSImage imageNamed:@"NSImageNameApplicationIcon"] retain];
                     }
                 }
                 [app setApplicationIconImage:image];
