@@ -883,6 +883,9 @@ public abstract class Animation {
      *
      * Note that unlike {@link #playFromStart()} calling this method will not
      * change the playing direction of this {@code Animation}.
+     * <p>
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @param cuePoint
      *            name of the cue point
@@ -894,6 +897,10 @@ public abstract class Animation {
      * @see #getCuePoints()
      */
     public void playFrom(String cuePoint) {
+        Utils.runOnFxThread(() -> playFromOnFxThread(cuePoint));
+    }
+
+    private void playFromOnFxThread(String cuePoint) {
         jumpTo(cuePoint);
         play();
     }
@@ -911,6 +918,9 @@ public abstract class Animation {
      *
      * Note that unlike {@link #playFromStart()} calling this method will not
      * change the playing direction of this {@code Animation}.
+     * <p>
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @param time
      *            position where to play from
@@ -923,6 +933,10 @@ public abstract class Animation {
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void playFrom(Duration time) {
+        Utils.runOnFxThread(() -> playFromOnFxThread(time));
+    }
+
+    private void playFromOnFxThread(Duration time) {
         jumpTo(time);
         play();
     }
@@ -938,23 +952,25 @@ public abstract class Animation {
      *      animation.jumpTo(Duration.ZERO);<br>
      *      animation.play();<br>
      *  </code>
-     *
      * <p>
-     * Note: <ul>
-     * <li>{@code playFromStart()} is an asynchronous call, {@code Animation} may
-     * not start immediately. </ul>
+     * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @throws IllegalStateException
      *             if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void playFromStart() {
+        Utils.runOnFxThread(this::playFromStartOnFxThread);
+    }
+
+    private void playFromStartOnFxThread() {
         stop();
         setRate(Math.abs(getRate()));
         jumpTo(Duration.ZERO);
         play();
     }
-
+    
     /**
      * Plays {@code Animation} from current position in the direction indicated
      * by {@code rate}. If the {@code Animation} is running, it has no effect.
@@ -977,6 +993,7 @@ public abstract class Animation {
      * </code>
      * <p>
      * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @throws IllegalStateException if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
@@ -1035,6 +1052,7 @@ public abstract class Animation {
      * the animation is already stopped, this method has no effect.
      * <p>
      * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @throws IllegalStateException if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
@@ -1069,6 +1087,7 @@ public abstract class Animation {
      * method has no effect.
      * <p>
      * Note: if this method is not called on the JavaFX Application Thread, it is delegated to it automatically.
+     * In this case, the call is asynchronous and may not happen immediately.
      *
      * @throws IllegalStateException if embedded in another animation,
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
