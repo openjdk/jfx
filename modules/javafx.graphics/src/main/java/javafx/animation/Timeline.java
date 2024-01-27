@@ -200,6 +200,6 @@ public final class Timeline extends Animation {
         if (getStatus() == Status.RUNNING) {
             clipCore.abort();
         }
-        super.stop();
+        super.stopOnFxThread();
     }
 }
