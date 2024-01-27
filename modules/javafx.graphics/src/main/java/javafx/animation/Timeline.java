@@ -193,7 +193,6 @@ public final class Timeline extends Animation {
 
     @Override
     void stopOnFxThread() {
-        // The parent check is redone in the super method. Consider refactoring.
         if (parent != null) {
             throw new IllegalStateException("Cannot stop when embedded in another animation");
         }

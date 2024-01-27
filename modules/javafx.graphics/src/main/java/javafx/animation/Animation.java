@@ -999,13 +999,13 @@ public abstract class Animation {
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void play() {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot start when embedded in another animation");
+        }
         Utils.runOnFxThread(this::playOnFxThread);
     }
 
     private void playOnFxThread() {
-        if (parent != null) {
-            throw new IllegalStateException("Cannot start when embedded in another animation");
-        }
         switch (getStatus()) {
             case STOPPED:
                 if (startable(true)) {
@@ -1058,14 +1058,14 @@ public abstract class Animation {
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void stop() {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot stop when embedded in another animation");
+        }
         Utils.runOnFxThread(this::stopOnFxThread);
     }
 
     // package-private for Timeline
     void stopOnFxThread() {
-        if (parent != null) {
-            throw new IllegalStateException("Cannot stop when embedded in another animation");
-        }
         if (!isStopped()) {
             clipEnvelope.abortCurrentPulse();
             doStop();
@@ -1093,13 +1093,13 @@ public abstract class Animation {
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void pause() {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot pause when embedded in another animation");
+        }
         Utils.runOnFxThread(this::pauseOnFxThread);
     }
 
     private void pauseOnFxThread() {
-        if (parent != null) {
-            throw new IllegalStateException("Cannot pause when embedded in another animation");
-        }
         if (isRunning()) {
             clipEnvelope.abortCurrentPulse();
             pauseReceiver();
