@@ -720,8 +720,11 @@
 - (void)setInputMethodEnabled:(BOOL)enabled
 {
     IMLOG("setInputMethodEnabled called with arg is %s", (enabled ? "YES" : "NO") );
-    [self unmarkText];
-    self->imEnabled = enabled;
+    if (enabled != imEnabled) {
+        [self unmarkText];
+        [self.inputContext discardMarkedText];
+        imEnabled = enabled;
+    }
 }
 
 /*
