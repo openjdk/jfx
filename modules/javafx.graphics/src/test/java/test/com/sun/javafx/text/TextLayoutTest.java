@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,32 @@
 
 package test.com.sun.javafx.text;
 
-import javafx.scene.text.Font;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.sun.javafx.font.PGFont;
-import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.scene.text.TextSpan;
-import com.sun.javafx.scene.text.TextLine;
-import com.sun.javafx.scene.text.FontHelper;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import com.sun.javafx.font.CharToGlyphMapper;
+import com.sun.javafx.font.PGFont;
+import com.sun.javafx.geom.Point2D;
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.scene.text.FontHelper;
+import com.sun.javafx.scene.text.GlyphList;
+import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.PrismTextLayout;
 
-import org.junit.Ignore;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import javafx.scene.text.Font;
 
 public class TextLayoutTest {
-    private String J = "\u3041";  //Japanese not complex
-    private String D = "\u0907"; //Devanagari complex
-    private String T = "\u0E34"; //Devanagari complex
+    private static final String J = "\u3041";  // Japanese not complex
+    private static final String D = "\u0907";  // Devanagari complex
+    private static final String T = "\u0E34";  // Thai complex
+
+    private final PrismTextLayout layout = new PrismTextLayout();
+    private final PGFont font = (PGFont) FontHelper.getNativeFont(Font.font("Monaco", 12));
+    private final PGFont font2 = (PGFont) FontHelper.getNativeFont(Font.font("Tahoma", 12));
 
     class TestSpan implements TextSpan {
         String text;
@@ -64,9 +70,6 @@ public class TextLayoutTest {
         }
     }
 
-    public TextLayoutTest() {
-    }
-
     private void setContent(PrismTextLayout layout, Object... content) {
         int count = content.length / 2;
         TextSpan[] spans = new TextSpan[count];
@@ -77,132 +80,224 @@ public class TextLayoutTest {
         layout.setContent(spans);
     }
 
-    private void verifyLayout(PrismTextLayout layout, int lineCount, int runCount, int... glyphCount) {
+    private void assertLineCount(int lineCount) {
+        assertEquals(lineCount, layout.getLines().length, "lineCount");
+    }
+
+    private void assertLineBounds(RectBounds... rectBounds) {
+        assertLineCount(rectBounds.length);
+
         TextLine[] lines = layout.getLines();
-        assertEquals("lineCount", lineCount, lines.length);
-        GlyphList[] runs = layout.getRuns();
-        assertEquals("runCount", runCount, runs.length);
-        assertEquals("runCount", runCount, glyphCount.length);
-        for (int i = 0; i < runs.length; i++) {
-            assertEquals("run " +i, glyphCount[i], runs[i].getGlyphCount());
+
+        for (int i = 0; i < lines.length; i++) {
+            assertEquals(rectBounds[i], lines[i].getBounds(), "line " + i);
         }
     }
 
-    private void verifyComplex(PrismTextLayout layout, boolean... complex) {
-        GlyphList[] runs = layout.getRuns();
-        for (int i = 0; i < runs.length; i++) {
-            assertEquals("run " +i, complex[i], runs[i].isComplex());
+    private void assertLineLocations(Point2D... locations) {
+        assertLineCount(locations.length);
+
+        TextLine[] lines = layout.getLines();
+
+        for (int i = 0; i < lines.length; i++) {
+            assertEquals(locations[i], lines[i].getRuns()[0].getLocation(), "line " + i);
         }
     }
 
-    @Ignore("JDK-8087615")
-    @Test public void buildRuns() {
+    private void assertGlyphsPerRun(int... glyphCount) {
+        GlyphList[] runs = layout.getRuns();
 
-        PrismTextLayout layout = new PrismTextLayout();
-        PGFont font = (PGFont) FontHelper.getNativeFont(Font.font("Monaco", 12));
-        PGFont font2 = (PGFont) FontHelper.getNativeFont(Font.font("Tahoma", 12));
+        assertEquals(glyphCount.length, runs.length, "number of glyph counts given does not match number of runs");
 
-        /* simple case */
-        layout.setContent("hello", font);
-        verifyLayout(layout, 1, 1, 5);
+        for (int i = 0; i < runs.length; i++) {
+            assertEquals(glyphCount[i], runs[i].getGlyphCount(), "run " + i);
+        }
+    }
 
-        /* simple case, two workd*/
-        layout.setContent("hello world", font);
-        verifyLayout(layout, 1, 1, 11);
+    private void verifyLayout(int lineCount, int runCount, int... glyphCount) {
+        TextLine[] lines = layout.getLines();
+        assertEquals(lineCount, lines.length, "lineCount");
+        GlyphList[] runs = layout.getRuns();
+        assertEquals(runCount, runs.length, "runCount");
+        assertEquals(runCount, glyphCount.length, "runCount");
+        for (int i = 0; i < runs.length; i++) {
+            assertEquals(glyphCount[i], runs[i].getGlyphCount(), "run " + i);
+        }
+    }
 
-        /* empty string */
-        layout.setContent("", font);
-        verifyLayout(layout, 1, 1, 0);
+    private void verifyComplex(boolean... complex) {
+        GlyphList[] runs = layout.getRuns();
+        for (int i = 0; i < runs.length; i++) {
+            assertEquals(complex[i], runs[i].isComplex(), "run " + i);
+        }
+    }
 
-        /* line break */
-        layout.setContent("\n", font); //first line has the line break (glyphCount=0),
-        verifyLayout(layout, 2, 2, 0,0);
-        layout.setContent("\r", font);
-        verifyLayout(layout, 2, 2, 0,0);
-        layout.setContent("\r\n", font);
-        verifyLayout(layout, 2, 2, 0,0);
-        layout.setContent("a\nb", font);
-        verifyLayout(layout, 2, 3, 1, 0, 1);
-        layout.setContent("\n\n\r\r\n", font);
-        verifyLayout(layout, 5, 5, 0,0,0,0,0);
-
-        /* tabs */
-        layout.setContent("\t", font);
-        verifyLayout(layout, 1, 1, 0);
-        layout.setContent("\t\t", font);
-        verifyLayout(layout, 1, 2, 0,0);
-        layout.setContent("a\tb", font);
-        verifyLayout(layout, 1, 3, 1,0,1);
-
-        /* complex */
-        layout.setContent("aa"+J+J, font);
-        verifyLayout(layout, 1, 1, 4);// no complex (english to japanese)
-        verifyComplex(layout, false);
-
+    /**
+     * These tests were broken for a long time (as early as 2013-06-28, see JDK-8087615).
+     *
+     * The reason they break is two fold:
+     *
+     * - Content that is split into multiple runs will have all runs set to "complex"
+     *   if at least one run is set to "complex", while this test was expecting the
+     *   runs containing non-complex characters to not become "complex".
+     *
+     * - The Tahoma font when used with a Thai character generates 2 glyphs per Thai
+     *   character, while this test was expecting 1 glyph.
+     */
+    @Disabled
+    @Test
+    void complexTestsThatAreBrokenSince2013() {
+        layout.setContent("aa" + J + J, font);
+        verifyLayout(1, 1, 4);  // no complex (english to japanese)
+        verifyComplex(false);
 
         layout.setContent(D, font);
-        verifyLayout(layout, 1, 1, 1);// complex (english to devanagari)
-        verifyComplex(layout, true);
+        verifyLayout(1, 1, 1);  // complex (english to devanagari)
+        verifyComplex(true);
 
-        layout.setContent("aa"+D+D, font);
-        verifyLayout(layout, 1, 2, 2,2);// complex (english to devanagari)
-        verifyComplex(layout, false, true);
+        layout.setContent("aa" + D + D, font);
+        verifyLayout(1, 2, 2, 2);  // complex (english to devanagari)
+        verifyComplex(false, true);
 
-        layout.setContent(D+D+"aa", font);
-        verifyLayout(layout, 1, 2, 2,2);// complex (devanagari to english)
-        verifyComplex(layout, true, false);
+        layout.setContent(D + D + "aa", font);
+        verifyLayout(1, 2, 2, 2);  // complex (devanagari to english)
+        verifyComplex(true, false);
 
-        layout.setContent("aa"+D+D+J+J, font);
-        verifyLayout(layout, 1, 3, 2,2,2);// complex (english to devanagari to japanese)
-        verifyComplex(layout, false, true, false);
+        layout.setContent("aa" + D + D + J + J, font);
+        verifyLayout(1, 3, 2, 2, 2);  // complex (english to devanagari to japanese)
+        verifyComplex(false, true, false);
 
-        /*Tahoma has Thai but no Hindi, font slot break expected*/
-        layout.setContent(D+D+T+T, font2);
-        verifyLayout(layout, 1, 2, 2,2);// complex (devanagari to thai)
-        verifyComplex(layout, true, true);
+        // Tahoma has Thai but no Hindi, font slot break expected
+        layout.setContent(D + D + T + T, font2);
+        verifyLayout(1, 2, 2, 2);  // complex (devanagari to thai)
+        verifyComplex(true, true);
 
-        layout.setContent(T+T+D+D+T+T, font2);
-        verifyLayout(layout, 1, 3, 2,2,2);
-        verifyComplex(layout, true, true, true);
+        layout.setContent(T + T + D + D + T + T, font2);
+        verifyLayout(1, 3, 2, 2, 2);
+        verifyComplex(true, true, true);
 
-        layout.setContent(T+T+D+D+"aa", font2);
-        verifyLayout(layout, 1, 3, 2,2,2);
-        verifyComplex(layout, true, true, false);
+        layout.setContent(T + T + D + D + "aa", font2);
+        verifyLayout(1, 3, 2, 2, 2);
+        verifyComplex(true, true, false);
 
-        layout.setContent(T+T+"aa"+T+T, font2);
-        verifyLayout(layout, 1, 3, 2,2,2);
-        verifyComplex(layout, true, false, true);
+        layout.setContent(T + T + "aa" + T + T, font2);
+        verifyLayout(1, 3, 2, 2, 2);
+        verifyComplex(true, false, true);
 
-        layout.setContent("aa"+D+D+T+T, font2);
-        verifyLayout(layout, 1, 3, 2,2,2);
-        verifyComplex(layout, false, true, true);
+        layout.setContent("aa" + D + D + T + T, font2);
+        verifyLayout(1, 3, 2, 2, 2);
+        verifyComplex(false, true, true);
+    }
 
-        /* Rich Text test */
+    /**
+     * These are fixed versions of the above tests to avoid
+     * further regressions.
+     */
+    @Test
+    void fixedComplexTestsToEnsureNoFurtherRegressions() {
+        layout.setContent("aa" + J + J, font);
+        verifyLayout(1, 1, 4);  // no complex (english to japanese)
+        verifyComplex(false);
 
+        layout.setContent(D, font);
+        verifyLayout(1, 1, 1);  // complex (english to devanagari)
+        verifyComplex(true);
+
+        layout.setContent("aa" + D + D, font);
+        verifyLayout(1, 2, 2, 2);  // complex (english to devanagari)
+        verifyComplex(true, true);
+
+        layout.setContent(D + D + "aa", font);
+        verifyLayout(1, 2, 2, 2);  // complex (devanagari to english)
+        verifyComplex(true, true);
+
+        layout.setContent("aa" + D + D + J + J, font);
+        verifyLayout(1, 3, 2, 2, 2);  // complex (english to devanagari to japanese)
+        verifyComplex(true, true, true);
+
+        // Tahoma has Thai but no Hindi, font slot break expected
+        layout.setContent(D + D + T + T, font2);
+        verifyLayout(1, 2, 2, 4);  // complex (devanagari to thai)
+        verifyComplex(true, true);
+
+        layout.setContent(T + T + D + D + T + T, font2);
+        verifyLayout(1, 3, 4, 2, 4);
+        verifyComplex(true, true, true);
+
+        layout.setContent(T + T + D + D + "aa", font2);
+        verifyLayout(1, 3, 4, 2, 2);
+        verifyComplex(true, true, true);
+
+        layout.setContent(T + T + "aa" + T + T, font2);
+        verifyLayout(1, 3, 4, 2, 4);
+        verifyComplex(true, true, true);
+
+        layout.setContent("aa" + D + D + T + T, font2);
+        verifyLayout(1, 3, 2, 2, 4);
+        verifyComplex(true, true, true);
+    }
+
+    @Test
+    void basicTest() {
+        // simple case
+        layout.setContent("hello", font);
+        verifyLayout(1, 1, 5);
+
+        // simple case, two words
+        layout.setContent("hello world", font);
+        verifyLayout(1, 1, 11);
+
+        // empty string
+        layout.setContent("", font);
+        verifyLayout(1, 1, 0);
+
+        // line break
+        layout.setContent("\n", font);  // first line has the line break (glyphCount=0)
+        verifyLayout(2, 2, 0, 0);
+        layout.setContent("\r", font);
+        verifyLayout(2, 2, 0, 0);
+        layout.setContent("\r\n", font);
+        verifyLayout(2, 2, 0, 0);
+        layout.setContent("a\nb", font);
+        verifyLayout(2, 3, 1, 0, 1);
+        layout.setContent("\n\n\r\r\n", font);
+        verifyLayout(5, 5, 0, 0, 0, 0, 0);
+
+        // tabs
+        layout.setContent("\t", font);
+        verifyLayout(1, 1, 0);
+        layout.setContent("\t\t", font);
+        verifyLayout(1, 2, 0, 0);
+        layout.setContent("a\tb", font);
+        verifyLayout(1, 3, 1, 0, 1);
+    }
+
+    @Test
+    void richTextTest() {
         setContent(layout, "hello ", font, "world", font);
-        verifyLayout(layout, 1, 2, 6,5);
-        verifyComplex(layout, false, false);
+        verifyLayout(1, 2, 6, 5);
+        verifyComplex(false, false);
 
-        setContent(layout, "aaa", font, J+J+J, font);
-        verifyLayout(layout, 1, 2, 3,3);
-        verifyComplex(layout, false, false);
+        setContent(layout, "aaa", font, J + J + J, font);
+        verifyLayout(1, 2, 3, 3);
+        verifyComplex(false, false);
 
-        setContent(layout, "aaa", font, D+D+D, font);
-        verifyLayout(layout, 1, 2, 3,3);
-        verifyComplex(layout, false, true);
+        setContent(layout, "aaa", font, D + D + D, font);
+        verifyLayout(1, 2, 3, 3);
+        verifyComplex(false, true);
 
-        /* can't merge \r\n in different spans*/
+        // can't merge \r\n in different spans
         setContent(layout, "aa\r", font, "\nbb", font);
-        verifyLayout(layout, 3, 4, 2,0,0,2);
-        verifyComplex(layout, false, false, false, false);
+        verifyLayout(3, 4, 2, 0, 0, 2);
+        verifyComplex(false, false, false, false);
 
         setContent(layout, "aa\r\n", font, "bb", font);
-        verifyLayout(layout, 2, 3, 2,0,2);
-        verifyComplex(layout, false, false, false);
+        verifyLayout(2, 3, 2, 0, 2);
+        verifyComplex(false, false, false);
 
-        /* can't merge surrogate pairs in different spans*/
+        // can't merge surrogate pairs in different spans
         setContent(layout, "\uD840\uDC0B", font, "\uD840\uDC89\uD840\uDCA2", font);
-        verifyLayout(layout, 1, 2, 2, 4);
+        verifyLayout(1, 2, 2, 4);
         GlyphList[] runs = layout.getRuns();
         assertTrue(runs[0].getGlyphCode(0) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);
         assertTrue(runs[0].getGlyphCode(1) == CharToGlyphMapper.INVISIBLE_GLYPH_ID);
@@ -211,17 +306,125 @@ public class TextLayoutTest {
         assertTrue(runs[1].getGlyphCode(2) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);
         assertTrue(runs[1].getGlyphCode(3) == CharToGlyphMapper.INVISIBLE_GLYPH_ID);
 
-        /* Split surrogate pair*/
+        // Split surrogate pair
         setContent(layout, "\uD840\uDC0B\uD840", font, "\uDC89\uD840\uDCA2", font);
-        verifyLayout(layout, 1, 2, 3, 3);
+        verifyLayout(1, 2, 3, 3);
         runs = layout.getRuns();
         assertTrue(runs[0].getGlyphCode(0) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);
         assertTrue(runs[0].getGlyphCode(1) == CharToGlyphMapper.INVISIBLE_GLYPH_ID);
-        assertTrue(runs[0].getGlyphCode(2) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);//broken pair, results in missing glyph
-        assertTrue(runs[1].getGlyphCode(0) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);//broken pair, results in missing glyph
+        assertTrue(runs[0].getGlyphCode(2) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);  // broken pair, results in missing glyph
+        assertTrue(runs[1].getGlyphCode(0) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);  // broken pair, results in missing glyph
         assertTrue(runs[1].getGlyphCode(1) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);
         assertTrue(runs[1].getGlyphCode(2) == CharToGlyphMapper.INVISIBLE_GLYPH_ID);
+    }
 
+    @Test
+    void shouldWrap() {
+        layout.setWrapWidth(200);
+
+        setContent(layout, "The quick brown fox jumps over the lazy dog", font);
+
+        layout.setAlignment(0);  // 0 == left
+
+        assertGlyphsPerRun(26, 17);
+        assertLineBounds(
+            new RectBounds(0, -12, 187.23047f, 4.001953f),
+            new RectBounds(0, -12, 122.41992f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(0, 0),
+            new Point2D(0, 16.001953f)
+        );
+
+        layout.setAlignment(1);  // 1 == center
+
+        assertGlyphsPerRun(26, 17);
+        assertLineBounds(
+            new RectBounds(9.985352f, -12, 197.21582f, 4.001953f),
+            new RectBounds(38.79004f, -12, 161.20996f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(9.985352f, 0),
+            new Point2D(38.79004f, 16.001953f)
+        );
+
+        layout.setAlignment(2);  // 2 == right
+
+        assertGlyphsPerRun(26, 17);
+        assertLineBounds(
+            new RectBounds(19.970703f, -12, 207.20117f, 4.001953f),
+            new RectBounds(77.58008f, -12, 200.0f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(19.970703f, 0),
+            new Point2D(77.58008f, 16.001953f)
+        );
+
+        layout.setAlignment(3);  // 3 == justify
+
+        assertGlyphsPerRun(26, 17);
+        assertLineBounds(
+            new RectBounds(0, -12, 200.0f, 4.001953f),
+            new RectBounds(0, -12, 122.41992f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(0, 0),
+            new Point2D(0, 16.001953f)
+        );
+
+        // Same tests with 10 additional spaces on the break point;
+        // note how starting location of each line doesn't change for the same
+        // alignment (but the bound width does) despite the different content:
+
+        setContent(layout, "The quick brown fox jumps           over the lazy dog", font);
+
+        layout.setAlignment(0);  // 0 == left
+
+        assertGlyphsPerRun(36, 17);
+        assertLineBounds(
+            new RectBounds(0, -12, 259.2422f, 4.001953f),
+            new RectBounds(0, -12, 122.41992f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(0, 0),
+            new Point2D(0, 16.001953f)
+        );
+
+        layout.setAlignment(1);  // 1 == center
+
+        assertGlyphsPerRun(36, 17);
+        assertLineBounds(
+            new RectBounds(9.985352f, -12, 269.22754f, 4.001953f),
+            new RectBounds(38.79004f, -12, 161.20996f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(9.985352f, 0),
+            new Point2D(38.79004f, 16.001953f)
+        );
+
+        layout.setAlignment(2);  // 2 == right
+
+        assertGlyphsPerRun(36, 17);
+        assertLineBounds(
+            new RectBounds(19.970703f, -12, 279.2129f, 4.001953f),
+            new RectBounds(77.58008f, -12, 200.0f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(19.970703f, 0),
+            new Point2D(77.58008f, 16.001953f)
+        );
+
+        layout.setAlignment(3);  // 3 == justify
+
+        assertGlyphsPerRun(36, 17);
+        assertLineBounds(
+            new RectBounds(0, -12, 259.2422f, 4.001953f),
+            new RectBounds(0, -12, 122.41992f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(0, 0),
+            new Point2D(0, 16.001953f)
+        );
     }
 
 }
