@@ -105,11 +105,16 @@ public abstract class AnimationTimer {
      * In this case, the call is asynchronous and may not happen immediately.
      */
     public void start() {
-        Utils.runOnFxThread(this::startOnFxThread);
+        Utils.runOnFxThread(this::startImpl);
     }
 
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #start()
+     */
     @SuppressWarnings("removal")
-    private void startOnFxThread() {
+    private void startImpl() {
         if (!active) {
             // Capture the Access Control Context to be used during the animation pulse
             accessCtrlCtx = AccessController.getContext();
@@ -126,10 +131,15 @@ public abstract class AnimationTimer {
      * In this case, the call is asynchronous and may not happen immediately.
      */
     public void stop() {
-        Utils.runOnFxThread(this::stopOnFxThread);
+        Utils.runOnFxThread(this::stopImpl);
     }
 
-    private void stopOnFxThread() {
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #stop()
+     */
+    private void stopImpl() {
         if (active) {
             timer.removeAnimationTimer(timerReceiver);
             active = false;

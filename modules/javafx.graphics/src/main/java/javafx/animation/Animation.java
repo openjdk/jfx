@@ -1002,10 +1002,15 @@ public abstract class Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
-        Utils.runOnFxThread(this::playOnFxThread);
+        Utils.runOnFxThread(this::playImpl);
     }
 
-    private void playOnFxThread() {
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #play()
+     */
+    private void playImpl() {
         switch (getStatus()) {
             case STOPPED:
                 if (startable(true)) {
@@ -1061,11 +1066,16 @@ public abstract class Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot stop when embedded in another animation");
         }
-        Utils.runOnFxThread(this::stopOnFxThread);
+        Utils.runOnFxThread(this::stopImpl);
     }
 
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #stop()
+     */
     // package-private for Timeline
-    void stopOnFxThread() {
+    void stopImpl() {
         if (!isStopped()) {
             clipEnvelope.abortCurrentPulse();
             doStop();
@@ -1096,10 +1106,15 @@ public abstract class Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot pause when embedded in another animation");
         }
-        Utils.runOnFxThread(this::pauseOnFxThread);
+        Utils.runOnFxThread(this::pauseImpl);
     }
 
-    private void pauseOnFxThread() {
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #pause()
+     */
+    private void pauseImpl() {
         if (isRunning()) {
             clipEnvelope.abortCurrentPulse();
             pauseReceiver();
