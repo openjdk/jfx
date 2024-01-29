@@ -906,7 +906,7 @@ public abstract class Animation {
     /**
      * This method must be run on the JavaFX Application Thread.
      *
-     * @see #playFromStartImpl(String)
+     * @see #playFrom(String)
      */
     private void playFromImpl(String cuePoint) {
         jumpTo(cuePoint);
@@ -950,7 +950,7 @@ public abstract class Animation {
     /**
      * This method must be run on the JavaFX Application Thread.
      *
-     * @see #playFromStartImpl(Duration)
+     * @see #playFrom(Duration)
      */
     private void playFromImpl(Duration time) {
         jumpTo(time);
@@ -986,7 +986,7 @@ public abstract class Animation {
     /**
      * This method must be run on the JavaFX Application Thread.
      *
-     * @see #playFromStartImpl()
+     * @see #playFromStart()
      */
     private void playFromStartImpl() {
         stop();
