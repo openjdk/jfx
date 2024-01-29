@@ -105,8 +105,7 @@ public abstract class AnimationTimer {
      * In this case, the call is asynchronous and may not happen immediately.
      */
     public void start() {
-//        Utils.runOnFxThread(this::startImpl);
-        startImpl();
+        Utils.runOnFxThread(this::startImpl);
     }
 
     /**
@@ -132,8 +131,7 @@ public abstract class AnimationTimer {
      * In this case, the call is asynchronous and may not happen immediately.
      */
     public void stop() {
-//        Utils.runOnFxThread(this::stopImpl);
-        stopImpl();
+        Utils.runOnFxThread(this::stopImpl);
     }
 
     /**
