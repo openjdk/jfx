@@ -900,10 +900,15 @@ public abstract class Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
-        Utils.runOnFxThread(() -> playFromOnFxThread(cuePoint));
+        Utils.runOnFxThread(() -> playFromImpl(cuePoint));
     }
 
-    private void playFromOnFxThread(String cuePoint) {
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #playFromStartImpl(String)
+     */
+    private void playFromImpl(String cuePoint) {
         jumpTo(cuePoint);
         play();
     }
@@ -939,10 +944,15 @@ public abstract class Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
-        Utils.runOnFxThread(() -> playFromOnFxThread(time));
+        Utils.runOnFxThread(() -> playFromImpl(time));
     }
 
-    private void playFromOnFxThread(Duration time) {
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #playFromStartImpl(Duration)
+     */
+    private void playFromImpl(Duration time) {
         jumpTo(time);
         play();
     }
@@ -970,10 +980,15 @@ public abstract class Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
-        Utils.runOnFxThread(this::playFromStartOnFxThread);
+        Utils.runOnFxThread(this::playFromStartImpl);
     }
 
-    private void playFromStartOnFxThread() {
+    /**
+     * This method must be run on the JavaFX Application Thread.
+     *
+     * @see #playFromStartImpl()
+     */
+    private void playFromStartImpl() {
         stop();
         setRate(Math.abs(getRate()));
         jumpTo(Duration.ZERO);
