@@ -192,13 +192,13 @@ public final class Timeline extends Animation {
     }
 
     @Override
-    void stopOnFxThread() {
+    void stopImpl() {
         if (parent != null) {
             throw new IllegalStateException("Cannot stop when embedded in another animation");
         }
         if (getStatus() == Status.RUNNING) {
             clipCore.abort();
         }
-        super.stopOnFxThread();
+        super.stopImpl();
     }
 }
