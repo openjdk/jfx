@@ -897,6 +897,9 @@ public abstract class Animation {
      * @see #getCuePoints()
      */
     public void playFrom(String cuePoint) {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot start when embedded in another animation");
+        }
         Utils.runOnFxThread(() -> playFromOnFxThread(cuePoint));
     }
 
@@ -933,6 +936,9 @@ public abstract class Animation {
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void playFrom(Duration time) {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot start when embedded in another animation");
+        }
         Utils.runOnFxThread(() -> playFromOnFxThread(time));
     }
 
@@ -961,6 +967,9 @@ public abstract class Animation {
      *                such as {@link SequentialTransition} or {@link ParallelTransition}
      */
     public void playFromStart() {
+        if (parent != null) {
+            throw new IllegalStateException("Cannot start when embedded in another animation");
+        }
         Utils.runOnFxThread(this::playFromStartOnFxThread);
     }
 
