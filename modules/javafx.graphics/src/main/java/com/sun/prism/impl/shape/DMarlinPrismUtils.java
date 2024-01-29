@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,17 +108,13 @@ public final class DMarlinPrismUtils {
             final double det = a * d - c * b;
 
             if (Math.abs(det) <= (2.0d * Double.MIN_VALUE)) {
-                // this rendering engine takes one dimensional curves and turns
+                // This rendering engine takes one dimensional curves and turns
                 // them into 2D shapes by giving them width.
                 // However, if everything is to be passed through a singular
                 // transformation, these 2D shapes will be squashed down to 1D
                 // again so, nothing can be drawn.
 
-                // Every path needs an initial moveTo and a pathDone. If these
-                // are not there this causes a SIGSEGV in libawt.so (at the time
-                // of writing of this comment (September 16, 2010)). Actually,
-                // I am not sure if the moveTo is necessary to avoid the SIGSEGV
-                // but the pathDone is definitely needed.
+                // Every path needs an initial moveTo and a pathDone.
                 out.moveTo(0.0d, 0.0d);
                 out.pathDone();
                 return null;
