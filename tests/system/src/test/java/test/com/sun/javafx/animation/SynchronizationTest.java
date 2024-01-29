@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -76,8 +77,8 @@ public class SynchronizationTest {
     final private CountDownLatch waiter = new CountDownLatch(1);
     final private ExecutorService executor = Executors.newCachedThreadPool();
 
-    private Thread thread;
-    private Throwable throwable;
+    private final AtomicReference<Thread> thread = new AtomicReference<>();
+    private final AtomicReference<Throwable> throwable = new AtomicReference<>();
 
     protected void runTest(Runnable runnable) throws InterruptedException {
         Platform.runLater(() -> registerExceptionHandler());
@@ -90,13 +91,13 @@ public class SynchronizationTest {
         // If an exception is thrown, await completes via countDown() instead and the test will fail.
         waiter.await(GRACE_PERIOD, TimeUnit.SECONDS);
         executor.shutdownNow();
-        assertFalse(failed.get(), "<" + throwable + "> was thrown on " + thread);
+        assertFalse(failed.get(), "<" + throwable.get() + "> was thrown on " + thread.get());
     }
 
     protected void registerExceptionHandler() {
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
-            thread = t;
-            throwable = e;
+            thread.set(t);
+            throwable.set(e);
             failed.set(true);
             waiter.countDown();
         });
