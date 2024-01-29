@@ -25,7 +25,6 @@
 
 package test.javafx.scene;
 
-import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.PointLight;
@@ -38,45 +37,39 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.IOException;
-
-import javax.imageio.ImageIO;
-
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class SnapshotLightsTest extends SnapshotCommon {
 
     static final int BOX_DIM = 50;
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() {
         doSetupOnce();
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         doTeardownOnce();
     }
 
-    @Before
+    @BeforeEach
     public void setupEach() {
         assertNotNull(myApp);
         assertNotNull(myApp.primaryStage);
         assertTrue(myApp.primaryStage.isShowing());
     }
 
-    @After
+    @AfterEach
     public void teardownEach() {
     }
 

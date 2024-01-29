@@ -1347,7 +1347,7 @@ public class Scene implements EventTarget {
             context.camera = null;
         }
 
-        // Grab the lights from the scene and/or subscene
+        // Grab the lights from the scene or subscene
         Stream<NGLightBase> lights;
         if (subScene != null) {
             lights = Optional.of(subScene).stream().flatMap(s -> s.getLights().stream()).map(LightBase::getPeer);
