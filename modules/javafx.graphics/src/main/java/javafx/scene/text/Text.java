@@ -1029,11 +1029,21 @@ public class Text extends Shape {
         int textRunStart = 0;
         int curRunStart = 0;
         if (runs.length != 0) {
-            textRunStart = ((TextRun) runs[0]).getStart();
+            textRunStart = findFirstRunStart(x, y, runs);
             curRunStart = ((TextRun) runs[runIndex]).getStart();
         }
         TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getText(), textRunStart, curRunStart, false);
         return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
+    }
+
+    private int findFirstRunStart(double x, double y, GlyphList[] runs) {
+        int start = Integer.MAX_VALUE;
+        for (GlyphList r: runs) {
+            if (((TextRun) r).getStart() < start) {
+                start = ((TextRun) r).getStart();
+            }
+        }
+        return start;
     }
 
     private int findRunIndex(double x, double y, GlyphList[] runs) {

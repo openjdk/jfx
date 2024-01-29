@@ -497,32 +497,26 @@ public class PrismTextLayout implements TextLayout {
                     for (TextRun r: runs) {
                         if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text)) {
                             isMultiRunText = true;
+                            break;
                         }
                     }
 
                     for (int i = 0; i < runs.length; i++) {
                         run = runs[i];
-                        if (run.getStart() != curRunStart && run.getTextSpan().getText().equals(text) && x > run.getWidth()) {
-                            x -= run.getWidth();
+                        if (run.getStart() != curRunStart) {
+                            if (run.getTextSpan().getText().equals(text) && x > run.getWidth() && (run.getLevel() & 0x01) != 1) {
+                                x -= run.getWidth();
+                            }
                             continue;
                         }
                         if (run.getTextSpan() != null && run.getTextSpan().getText().equals(text)) {
-                            if ((x > run.getWidth() && !isMultiRunText) || textWidthPrevLine > 0) {
+                            if ((x > run.getWidth() && (!isMultiRunText || run.getStart() == curRunStart)) || textWidthPrevLine > 0) {
                                 getBounds(run.getTextSpan(), textBounds);
                                 x -= (run.getLocation().x - textBounds.getMinX());
-                                break;
                             }
-                            if (x > run.getWidth()) {
-                                x -= run.getWidth();
-                                relIndex += run.getLength();
-                                continue;
-                            }
-                            for (int j = runs.length - 1; j >= 0; j--) {
+                            for (int j = runs.length - 1; j > i; j--) {
                                 if (runs[j].getStart() != curRunStart && runs[j].getTextSpan().getText().equals(text)) {
                                     ltrIndex += runs[j].getLength();
-                                }
-                                if (runs[j].getStart() == curRunStart) {
-                                    break;
                                 }
                             }
                             break;
@@ -564,12 +558,9 @@ public class PrismTextLayout implements TextLayout {
                     charIndex = run.getOffsetAtX(x, trailing);
                     charIndex += textWidthPrevLine;
                     charIndex += relIndex;
-                    if ((run.getLevel() & 0x01) != 0) {
-                        /* Odd level represents RTL text.
-                        *  If the RTL text has LTR text embedded,
-                        *  add the LTR index here to get effective character index */
-                        charIndex += ltrIndex;
-                    }
+                    /*  When RTL text has LTR text embedded,
+                     *  add the LTR index here to get effective character index */
+                    charIndex += ltrIndex;
                 } else {
                     int indexOffset;
                     if (isMirrored) {
