@@ -66,6 +66,7 @@
 #include "WebCodecsEncodedVideoChunk.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/ArrayConventions.h>
 #include <JavaScriptCore/BigIntObject.h>
 #include <JavaScriptCore/BooleanObject.h>
 #include <JavaScriptCore/CatchScope.h>
@@ -529,8 +530,9 @@ const uint8_t cryptoKeyOKPOpNameTagMaximumValue = 1;
  * Version 12. added support for agent cluster ID.
  * Version 13. added support for ErrorInstance objects.
  * Version 14. encode booleans as uint8_t instead of int32_t.
+ * Version 15. changed the terminator of the indexed property section in array.
  */
-static constexpr unsigned CurrentVersion = 14;
+static constexpr unsigned CurrentVersion = 15;
 static constexpr unsigned TerminatorTag = 0xFFFFFFFF;
 static constexpr unsigned StringPoolTag = 0xFFFFFFFE;
 static constexpr unsigned NonIndexPropertiesTag = 0xFFFFFFFD;
@@ -538,6 +540,8 @@ static constexpr uint32_t ImageDataPoolTag = 0xFFFFFFFE;
 
 // The high bit of a StringData's length determines the character size.
 static constexpr unsigned StringDataIs8BitFlag = 0x80000000;
+
+static_assert(TerminatorTag > MAX_ARRAY_INDEX);
 
 /*
  * Object serialization is performed according to the following grammar, all tags
@@ -551,7 +555,7 @@ static constexpr unsigned StringDataIs8BitFlag = 0x80000000;
  * Value :- Array | Object | Map | Set | Terminal
  *
  * Array :-
- *     ArrayTag <length:uint32_t>(<index:uint32_t><value:Value>)* TerminatorTag
+ *     ArrayTag <length:uint32_t>(<index:uint32_t><value:Value>)* TerminatorTag (NonIndexPropertiesTag (<name:StringData><value:Value>)*) TerminatorTag
  *
  * Object :-
  *     ObjectTag (<name:StringData><value:Value>)* TerminatorTag
@@ -2361,6 +2365,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 if (index == lengthStack.last()) {
                     indexStack.removeLast();
                     lengthStack.removeLast();
+                    write(TerminatorTag); // Terminate the indexed property section.
 
                     propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                     array->getOwnNonIndexPropertyNames(m_lexicalGlobalObject, propertyStack.last(), DontEnumPropertiesMode::Exclude);
@@ -3158,43 +3163,40 @@ private:
                 return false;
         }
 
+        auto makeArrayBufferView = [&] (auto view) -> bool {
+            if (!view)
+                return false;
+            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, WTFMove(view));
+            if (!arrayBufferView)
+                return false;
+            return true;
+        };
+
         switch (arrayBufferViewSubtag) {
         case DataViewTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, DataView::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(DataView::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Int8ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Int8Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Int8Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Uint8ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Uint8Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Uint8Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Uint8ClampedArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Uint8ClampedArray::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Uint8ClampedArray::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Int16ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Int16Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Int16Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Uint16ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Uint16Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Uint16Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Int32ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Int32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Int32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Uint32ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Uint32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Uint32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Float32ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Float32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Float32Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case Float64ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, Float64Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(Float64Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case BigInt64ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, BigInt64Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(BigInt64Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         case BigUint64ArrayTag:
-            arrayBufferView = toJS(m_lexicalGlobalObject, m_globalObject, BigUint64Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
-            return true;
+            return makeArrayBufferView(BigUint64Array::wrappedAs(arrayBuffer.releaseNonNull(), byteOffset, length).get());
         default:
             return false;
         }
@@ -4156,8 +4158,10 @@ private:
     JSValue readTerminal()
     {
         SerializationTag tag = readTag();
-        if (!isTypeExposedToGlobalObject(*m_globalObject, tag))
+        if (!isTypeExposedToGlobalObject(*m_globalObject, tag)) {
+            fail();
             return JSValue();
+        }
         switch (tag) {
         case UndefinedTag:
             return jsUndefined();
@@ -4713,12 +4717,32 @@ DeserializationResult CloneDeserializer::deserialize()
                 fail();
                 goto error;
             }
+
+            if (m_version >= 15) {
+                if (index == TerminatorTag) {
+                    // We reached the end of the indexed properties section.
+                    if (!read(index)) {
+                        fail();
+                        goto error;
+                    }
+                    // At this point, we're either done with the array or is starting the
+                    // non-indexed property section.
             if (index == TerminatorTag) {
                 JSObject* outArray = outputObjectStack.last();
                 outValue = outArray;
                 outputObjectStack.removeLast();
                 break;
-            } else if (index == NonIndexPropertiesTag) {
+                    }
+                    if (index == NonIndexPropertiesTag)
+                        goto objectStartVisitMember;
+                }
+            } else {
+                if (index == TerminatorTag) {
+                    JSObject* outArray = outputObjectStack.last();
+                    outValue = outArray;
+                    outputObjectStack.removeLast();
+                    break;
+                } else if (index == NonIndexPropertiesTag)
                 goto objectStartVisitMember;
             }
 
