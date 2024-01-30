@@ -993,6 +993,9 @@ public class PrismTextLayout implements TextLayout {
 
     private TextLine createLine(int start, int end, int startOffset) {
         int count = end - start + 1;
+
+        assert count > 0 : "number of TextRuns in a TextLine cannot be less than one: " + count;
+
         TextRun[] lineRuns = new TextRun[count];
         if (start < runCount) {
             System.arraycopy(runs, start, lineRuns, 0, count);
@@ -1011,10 +1014,10 @@ public class PrismTextLayout implements TextLayout {
         }
 
         /*
-         * Calculate the width of trailing spaces for the new TextLine so they're
+         * Calculate the width of trailing spaces for the new TextLine so they
          * can be excluded when doing later alignment calculations:
          */
-        float trailingSpaceWidth = computeTrailingSpaceWidth(startOffset, length, lineRuns);
+        float trailingSpaceWidth = computeTrailingSpaceWidth(lineRuns);
 
         if (width > layoutWidth) layoutWidth = width;
         return new TextLine(startOffset, length, lineRuns,
@@ -1027,26 +1030,28 @@ public class PrismTextLayout implements TextLayout {
      * <p>Note: textRuns is split in such a way that it matches the line, so the last text run's last
      * character is the point of a line break.
      *
-     * @param startOffset the character offset of the start of a line in the text
-     * @param length the length of the line
      * @param textRuns the text runs the line consists off
      * @return the X size of the white space trailing the line
      */
-    private float computeTrailingSpaceWidth(int startOffset, int length, TextRun[] textRuns) {
-        int run = textRuns.length;
-        TextRun textRun = textRuns[--run];
-        int textOffset = startOffset + length;
-        int runOffset = textRun.getLength();
+    private float computeTrailingSpaceWidth(TextRun[] textRuns) {
+        TextRun textRun = textRuns[textRuns.length - 1];
         float trailingSpaceWidth = 0;
         char[] chars = getText();
 
-        while (--textOffset >= startOffset && Character.isWhitespace(chars[textOffset])) {
-            while (runOffset < 0) {  // just in case the trailing white spaces are split over multiple runs (unsure if this can ever happen)
-                textRun = textRuns[--run];
-                runOffset = textRun.getLength();
+        /*
+         * As the loop below exits when encountering a non-white space character,
+         * testing each trailing glyph in turn for white space is safe, as white
+         * space is always represented with only a single glyph:
+         */
+
+        for (int i = textRun.getGlyphCount() - 1; i >= 0; i--) {
+            int textOffset = textRun.getStart() + textRun.getCharOffset(i);
+
+            if (!Character.isWhitespace(chars[textOffset])) {
+                break;
             }
 
-            trailingSpaceWidth += textRun.getAdvance(--runOffset);
+            trailingSpaceWidth += textRun.getAdvance(i);
         }
 
         return trailingSpaceWidth;

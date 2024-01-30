@@ -144,7 +144,7 @@ public class TextLayoutTest {
      * - The Tahoma font when used with a Thai character generates 2 glyphs per Thai
      *   character, while this test was expecting 1 glyph.
      */
-    @Disabled
+    @Disabled("JDK-8087615")
     @Test
     void complexTestsThatAreBrokenSince2013() {
         layout.setContent("aa" + J + J, font);
@@ -319,7 +319,7 @@ public class TextLayoutTest {
     }
 
     @Test
-    void shouldWrap() {
+    void shouldWrapIgnoringTrailingWhiteSpace() {
         layout.setWrapWidth(200);
 
         setContent(layout, "The quick brown fox jumps over the lazy dog", font);
@@ -427,4 +427,112 @@ public class TextLayoutTest {
         );
     }
 
+    @Test
+    void shouldWrapIgnoringTrailingWhiteSpaceComplex() {
+        layout.setWrapWidth(200);
+
+        setContent(layout, "The quick brown लोमड़ी jumps over the lazy कुत्ता", font);
+
+        layout.setAlignment(0);  // 0 == left
+
+        assertGlyphsPerRun(16, 6, 6, 14, 4);
+        assertLineBounds(
+            new RectBounds(0, -12, 197.09766f, 4.001953f),
+            new RectBounds(0, -12, 122.583984f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(0, 0),
+            new Point2D(0, 16.001953f)
+        );
+
+        layout.setAlignment(1);  // 1 == center
+
+        assertGlyphsPerRun(16, 6, 6, 14, 4);
+        assertLineBounds(
+            new RectBounds(5.051758f, -12, 202.14941f, 4.001953f),
+            new RectBounds(38.708008f, -12, 161.29199f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(5.051758f, 0),
+            new Point2D(38.708008f, 16.001953f)
+        );
+
+        layout.setAlignment(2);  // 2 == right
+
+        assertGlyphsPerRun(16, 6, 6, 14, 4);
+        assertLineBounds(
+            new RectBounds(10.103516f, -12, 207.20117f, 4.001953f),
+            new RectBounds(77.416016f, -12, 200.0f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(10.103516f, 0),
+            new Point2D(77.416016f, 16.001953f)
+        );
+
+        layout.setAlignment(3);  // 3 == justify
+
+        assertGlyphsPerRun(16, 6, 6, 14, 4);
+        assertLineBounds(
+            new RectBounds(0, -12, 200.0f, 4.001953f),
+            new RectBounds(0, -12, 122.583984f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(0, 0),
+            new Point2D(0, 16.001953f)
+        );
+
+        // Same tests with 10 additional spaces on the break point;
+        // note how starting location of each line doesn't change for the same
+        // alignment (but the bound width does) despite the different content:
+
+        setContent(layout, "The quick brown लोमड़ी jumps           over the lazy कुत्ता", font);
+
+        layout.setAlignment(0);  // 0 == left
+
+        assertGlyphsPerRun(16, 6, 16, 14, 4);
+        assertLineBounds(
+            new RectBounds(0, -12, 269.10938f, 4.001953f),
+            new RectBounds(0, -12, 122.583984f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(0, 0),
+            new Point2D(0, 16.001953f)
+        );
+
+        layout.setAlignment(1);  // 1 == center
+
+        assertGlyphsPerRun(16, 6, 16, 14, 4);
+        assertLineBounds(
+            new RectBounds(5.051758f, -12, 274.16113f, 4.001953f),
+            new RectBounds(38.708008f, -12, 161.29199f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(5.051758f, 0),
+            new Point2D(38.708008f, 16.001953f)
+        );
+
+        layout.setAlignment(2);  // 2 == right
+
+        assertGlyphsPerRun(16, 6, 16, 14, 4);
+        assertLineBounds(
+            new RectBounds(10.103516f, -12, 279.2129f, 4.001953f),
+            new RectBounds(77.416016f, -12, 200.0f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(10.103516f, 0),
+            new Point2D(77.416016f, 16.001953f)
+        );
+
+        layout.setAlignment(3);  // 3 == justify
+
+        assertGlyphsPerRun(16, 6, 16, 14, 4);
+        assertLineBounds(
+            new RectBounds(0, -12, 269.10938f, 4.001953f),
+            new RectBounds(0, -12, 122.583984f, 4.001953f)
+        );
+        assertLineLocations(
+            new Point2D(0, 0),
+            new Point2D(0, 16.001953f)
+        );
+    }
 }
