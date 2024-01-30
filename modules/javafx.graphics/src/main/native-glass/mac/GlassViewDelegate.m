@@ -434,7 +434,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             break;
 
         default:
-            // To mollify the compiler.
             break;
     }
 
