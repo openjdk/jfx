@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,19 @@ public class PlatformPreferencesChangedTest extends Application {
         var clearButton = new Button("Clear Log");
         clearButton.setOnAction(e -> textArea.setText(""));
 
+        var backgroundColorLabel = new Label();
+        var foregroundColorLabel = new Label();
+        var accentColorLabel = new Label();
+        var colorSchemeLabel = new Label();
+
+        Runnable updateColorProperties = () -> {
+            var preferences = Platform.getPreferences();
+            backgroundColorLabel.setText(preferences.getBackgroundColor().toString());
+            foregroundColorLabel.setText(preferences.getForegroundColor().toString());
+            accentColorLabel.setText(preferences.getAccentColor().toString());
+            colorSchemeLabel.setText(preferences.getColorScheme().toString());
+        };
+
         var box = new VBox();
         box.setSpacing(20);
         box.getChildren().add(new VBox(10,
@@ -72,7 +85,13 @@ public class PlatformPreferencesChangedTest extends Application {
             new VBox(
                 new Label("2. Observe whether the changed preferences are reported in the log below."),
                 new Label("    Added or removed preferences are marked with a plus or minus sign.")),
-            new Label("3. Click \"Pass\" if the changes were correctly reported, otherwise click \"Fail\"."),
+            new VBox(
+                new Label("3. Check whether the following computed properties reflect the reported preferences:"),
+                new HBox(new BoldLabel("    backgroundColor: "), backgroundColorLabel),
+                new HBox(new BoldLabel("    foregroundColor: "), foregroundColorLabel),
+                new HBox(new BoldLabel("    accentColor: "), accentColorLabel),
+                new HBox(new BoldLabel("    colorScheme: "), colorSchemeLabel)),
+            new Label("4. Click \"Pass\" if the changes were correctly reported, otherwise click \"Fail\"."),
             new HBox(5, passButton, failButton, clearButton)
         ));
 
@@ -83,9 +102,11 @@ public class PlatformPreferencesChangedTest extends Application {
         BorderPane.setMargin(textArea, new Insets(20, 0, 0, 0));
 
         appendText(textArea, "preferences: " + formatPrefs(Platform.getPreferences().entrySet()));
+        updateColorProperties.run();
 
         Platform.getPreferences().addListener((InvalidationListener)observable -> {
             appendText(textArea, "\r\nchanged:");
+            updateColorProperties.run();
         });
 
         Platform.getPreferences().addListener((MapChangeListener<String, Object>)change -> {
@@ -125,5 +146,12 @@ public class PlatformPreferencesChangedTest extends Application {
         }
 
         return key + "=" + value;
+    }
+
+    private static class BoldLabel extends Label {
+        BoldLabel(String text) {
+            super(text);
+            setStyle("-fx-font-weight: bold");
+        }
     }
 }
