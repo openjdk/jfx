@@ -1348,7 +1348,7 @@ public class PrismTextLayout implements TextLayout {
         lines = new TextLine[linesList.size()];
         linesList.toArray(lines);
 
-        float fullWidth = Math.max(wrapWidth, layoutWidth);
+        float fullWidth = wrapWidth > 0 ? wrapWidth : layoutWidth;  // layoutWidth = widest line, wrapWidth is user set
         float lineY = 0;
         float align;
         if (isMirrored()) {
@@ -1365,7 +1365,7 @@ public class PrismTextLayout implements TextLayout {
             RectBounds bounds = line.getBounds();
 
             /* Center and right alignment */
-            float unusedWidth = wrapWidth - bounds.getWidth() + line.getTrailingSpaceWidth();
+            float unusedWidth = fullWidth - bounds.getWidth() + line.getTrailingSpaceWidth();
             float lineX = unusedWidth * align;
             line.setAlignment(lineX);
 

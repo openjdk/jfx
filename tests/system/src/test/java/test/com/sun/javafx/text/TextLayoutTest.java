@@ -28,8 +28,12 @@ package test.com.sun.javafx.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.PGFont;
@@ -91,26 +95,6 @@ public class TextLayoutTest {
 
         for (int i = 0; i < lines.length; i++) {
             assertEquals(rectBounds[i], lines[i].getBounds(), "line " + i);
-        }
-    }
-
-    private void assertLineLocations(Point2D... locations) {
-        assertLineCount(locations.length);
-
-        TextLine[] lines = layout.getLines();
-
-        for (int i = 0; i < lines.length; i++) {
-            assertEquals(locations[i], lines[i].getRuns()[0].getLocation(), "line " + i);
-        }
-    }
-
-    private void assertGlyphsPerRun(int... glyphCount) {
-        GlyphList[] runs = layout.getRuns();
-
-        assertEquals(glyphCount.length, runs.length, "number of glyph counts given does not match number of runs");
-
-        for (int i = 0; i < runs.length; i++) {
-            assertEquals(glyphCount[i], runs[i].getGlyphCount(), "run " + i);
         }
     }
 
@@ -319,220 +303,143 @@ public class TextLayoutTest {
     }
 
     @Test
-    void shouldWrapIgnoringTrailingWhiteSpace() {
-        layout.setWrapWidth(200);
+    void shouldIgnoreAlignmentWhenWrappingIsDisabled() {
+        layout.setContent("The quick brown fox jumps over the lazy dog", font);
 
-        setContent(layout, "The quick brown fox jumps over the lazy dog", font);
+        for (int i = 0; i < 3; i++) {
+            layout.setAlignment(i);
 
-        layout.setAlignment(0);  // 0 == left
-
-        assertGlyphsPerRun(26, 17);
-        assertLineBounds(
-            new RectBounds(0, -12, 187.23047f, 4.001953f),
-            new RectBounds(0, -12, 122.41992f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(0, 0),
-            new Point2D(0, 16.001953f)
-        );
-
-        layout.setAlignment(1);  // 1 == center
-
-        assertGlyphsPerRun(26, 17);
-        assertLineBounds(
-            new RectBounds(9.985352f, -12, 197.21582f, 4.001953f),
-            new RectBounds(38.79004f, -12, 161.20996f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(9.985352f, 0),
-            new Point2D(38.79004f, 16.001953f)
-        );
-
-        layout.setAlignment(2);  // 2 == right
-
-        assertGlyphsPerRun(26, 17);
-        assertLineBounds(
-            new RectBounds(19.970703f, -12, 207.20117f, 4.001953f),
-            new RectBounds(77.58008f, -12, 200.0f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(19.970703f, 0),
-            new Point2D(77.58008f, 16.001953f)
-        );
-
-        layout.setAlignment(3);  // 3 == justify
-
-        assertGlyphsPerRun(26, 17);
-        assertLineBounds(
-            new RectBounds(0, -12, 200.0f, 4.001953f),
-            new RectBounds(0, -12, 122.41992f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(0, 0),
-            new Point2D(0, 16.001953f)
-        );
-
-        // Same tests with 10 additional spaces on the break point;
-        // note how starting location of each line doesn't change for the same
-        // alignment (but the bound width does) despite the different content:
-
-        setContent(layout, "The quick brown fox jumps           over the lazy dog", font);
-
-        layout.setAlignment(0);  // 0 == left
-
-        assertGlyphsPerRun(36, 17);
-        assertLineBounds(
-            new RectBounds(0, -12, 259.2422f, 4.001953f),
-            new RectBounds(0, -12, 122.41992f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(0, 0),
-            new Point2D(0, 16.001953f)
-        );
-
-        layout.setAlignment(1);  // 1 == center
-
-        assertGlyphsPerRun(36, 17);
-        assertLineBounds(
-            new RectBounds(9.985352f, -12, 269.22754f, 4.001953f),
-            new RectBounds(38.79004f, -12, 161.20996f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(9.985352f, 0),
-            new Point2D(38.79004f, 16.001953f)
-        );
-
-        layout.setAlignment(2);  // 2 == right
-
-        assertGlyphsPerRun(36, 17);
-        assertLineBounds(
-            new RectBounds(19.970703f, -12, 279.2129f, 4.001953f),
-            new RectBounds(77.58008f, -12, 200.0f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(19.970703f, 0),
-            new Point2D(77.58008f, 16.001953f)
-        );
-
-        layout.setAlignment(3);  // 3 == justify
-
-        assertGlyphsPerRun(36, 17);
-        assertLineBounds(
-            new RectBounds(0, -12, 259.2422f, 4.001953f),
-            new RectBounds(0, -12, 122.41992f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(0, 0),
-            new Point2D(0, 16.001953f)
-        );
+            assertLineCount(1);
+            assertLineBounds(new RectBounds(0, -12, 309.6504f, 4.001953f));
+        }
     }
 
-    @Test
-    void shouldWrapIgnoringTrailingWhiteSpaceComplex() {
-        layout.setWrapWidth(200);
+    enum Case {
+        SIMPLE(new Parameters(
+            "The quick brown fox jumps over the lazy dog",
+            Font.font("Monaco", 12),
+            200.0f, List.of(180.0293f, 122.41992f), List.of(7.20117f, 0.0f),
+            12.0f, 4.001953f
+        )),
+        SIMPLE_WITH_EXTRA_TRAILING_SPACE(new Parameters(
+            "The quick brown fox jumps           over the lazy dog",
+            Font.font("Monaco", 12),
+            200.0f, List.of(180.0293f, 122.41992f), List.of(79.2129f, 0.0f),
+            12.0f, 4.001953f
+        )),
+        COMPLEX(new Parameters(
+            "The quick brown लोमड़ी jumps over the lazy कुत्ता",
+            Font.font("Monaco", 12),
+            200.0f, List.of(189.89649f, 122.583984f), List.of(7.20117f, 0.0f),
+            12.0f, 4.001953f
+        )),
+        COMPLEX_WITH_EXTRA_TRAILING_SPACE(new Parameters(
+            "The quick brown लोमड़ी jumps           over the lazy कुत्ता",
+            Font.font("Monaco", 12),
+            200.0f, List.of(189.89649f, 122.583984f), List.of(79.2129f, 0.0f),
+            12.0f, 4.001953f
+        ));
 
-        setContent(layout, "The quick brown लोमड़ी jumps over the lazy कुत्ता", font);
+        Parameters parameters;
+
+        Case(Parameters parameters) {
+            this.parameters = parameters;
+        }
+
+        record Parameters(String text, Font font, float wrapWidth, List<Float> lineWidths, List<Float> trailingWhiteSpaceWidths, float ascent, float descent) {
+            Parameters {
+                assert text != null;
+                assert font != null;
+                assert wrapWidth > 0;
+                assert lineWidths != null;
+                assert trailingWhiteSpaceWidths != null;
+                assert ascent > 0;
+                assert descent > 0;
+                assert lineWidths.size() == trailingWhiteSpaceWidths.size();
+            }
+
+            int lineCount() {
+                return lineWidths.size();
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(Case.class)
+    void caseTest(Case c) {
+        Case.Parameters p = c.parameters;
+
+        final float ASCENT = p.ascent;
+        final float DESCENT = p.descent;
+        final float WRAP = p.wrapWidth;
+        final float CENTER = 0.5f * WRAP;
+
+        layout.setContent(p.text, FontHelper.getNativeFont(p.font));
+        layout.setWrapWidth(p.wrapWidth);
+
+        // LEFT ALIGNMENT
 
         layout.setAlignment(0);  // 0 == left
 
-        assertGlyphsPerRun(16, 6, 6, 14, 4);
-        assertLineBounds(
-            new RectBounds(0, -12, 197.09766f, 4.001953f),
-            new RectBounds(0, -12, 122.583984f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(0, 0),
-            new Point2D(0, 16.001953f)
-        );
+        assertLineCount(p.lineCount());
+
+        for (int i = 0; i < p.lineCount(); i++) {
+            TextLine[] lines = layout.getLines();
+            String description = "left aligned: line " + i + " for " + c.parameters;
+            RectBounds expectedBounds = new RectBounds(0, -ASCENT, p.lineWidths.get(i) + p.trailingWhiteSpaceWidths.get(i), DESCENT);
+            Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
+
+            assertEquals(expectedBounds, lines[i].getBounds(), description);
+            assertEquals(expectedLocation, lines[i].getRuns()[0].getLocation(), description);
+        }
+
+        // CENTER ALIGNMENT
 
         layout.setAlignment(1);  // 1 == center
 
-        assertGlyphsPerRun(16, 6, 6, 14, 4);
-        assertLineBounds(
-            new RectBounds(5.051758f, -12, 202.14941f, 4.001953f),
-            new RectBounds(38.708008f, -12, 161.29199f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(5.051758f, 0),
-            new Point2D(38.708008f, 16.001953f)
-        );
+        assertLineCount(p.lineCount());
 
-        layout.setAlignment(2);  // 2 == right
+        for (int i = 0; i < p.lineCount(); i++) {
+            TextLine[] lines = layout.getLines();
+            String description = "centered: line " + i + " for " + p;
+            RectBounds expectedBounds = new RectBounds(CENTER - 0.5f * p.lineWidths.get(i), -ASCENT, CENTER + 0.5f * p.lineWidths.get(i) + p.trailingWhiteSpaceWidths.get(i), DESCENT);
+            Point2D expectedLocation = new Point2D(CENTER - 0.5f * p.lineWidths.get(i), i * (ASCENT + DESCENT));
 
-        assertGlyphsPerRun(16, 6, 6, 14, 4);
-        assertLineBounds(
-            new RectBounds(10.103516f, -12, 207.20117f, 4.001953f),
-            new RectBounds(77.416016f, -12, 200.0f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(10.103516f, 0),
-            new Point2D(77.416016f, 16.001953f)
-        );
+            assertEquals(expectedBounds, lines[i].getBounds(), description);
+            assertEquals(expectedLocation, lines[i].getRuns()[0].getLocation(), description);
+        }
 
-        layout.setAlignment(3);  // 3 == justify
+        // RIGHT ALIGNMENT
 
-        assertGlyphsPerRun(16, 6, 6, 14, 4);
-        assertLineBounds(
-            new RectBounds(0, -12, 200.0f, 4.001953f),
-            new RectBounds(0, -12, 122.583984f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(0, 0),
-            new Point2D(0, 16.001953f)
-        );
+        layout.setAlignment(2);  // 2 == center
 
-        // Same tests with 10 additional spaces on the break point;
-        // note how starting location of each line doesn't change for the same
-        // alignment (but the bound width does) despite the different content:
+        assertLineCount(p.lineCount());
 
-        setContent(layout, "The quick brown लोमड़ी jumps           over the lazy कुत्ता", font);
+        for (int i = 0; i < p.lineCount(); i++) {
+            TextLine[] lines = layout.getLines();
+            String description = "right aligned: line " + i + " for " + p;
+            RectBounds expectedBounds = new RectBounds(WRAP - p.lineWidths.get(i), -ASCENT, WRAP + p.trailingWhiteSpaceWidths.get(i), DESCENT);
+            Point2D expectedLocation = new Point2D(WRAP - p.lineWidths.get(i), i * (ASCENT + DESCENT));
 
-        layout.setAlignment(0);  // 0 == left
+            assertEquals(expectedBounds, lines[i].getBounds(), description);
+            assertEquals(expectedLocation, lines[i].getRuns()[0].getLocation(), description);
+        }
 
-        assertGlyphsPerRun(16, 6, 16, 14, 4);
-        assertLineBounds(
-            new RectBounds(0, -12, 269.10938f, 4.001953f),
-            new RectBounds(0, -12, 122.583984f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(0, 0),
-            new Point2D(0, 16.001953f)
-        );
+        // JUSTIFIED ALIGNMENT
 
-        layout.setAlignment(1);  // 1 == center
+        layout.setAlignment(3);  // 3 == justified
 
-        assertGlyphsPerRun(16, 6, 16, 14, 4);
-        assertLineBounds(
-            new RectBounds(5.051758f, -12, 274.16113f, 4.001953f),
-            new RectBounds(38.708008f, -12, 161.29199f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(5.051758f, 0),
-            new Point2D(38.708008f, 16.001953f)
-        );
+        assertLineCount(p.lineCount());
 
-        layout.setAlignment(2);  // 2 == right
+        for (int i = 0; i < p.lineCount(); i++) {
+            TextLine[] lines = layout.getLines();
+            String description = "justified: line " + i + " for " + p;
+            boolean lastLine = i == p.lineCount() - 1;
+            RectBounds expectedBounds = new RectBounds(0, -ASCENT, lastLine ? p.lineWidths.get(i) : WRAP, DESCENT);
+            Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
 
-        assertGlyphsPerRun(16, 6, 16, 14, 4);
-        assertLineBounds(
-            new RectBounds(10.103516f, -12, 279.2129f, 4.001953f),
-            new RectBounds(77.416016f, -12, 200.0f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(10.103516f, 0),
-            new Point2D(77.416016f, 16.001953f)
-        );
-
-        layout.setAlignment(3);  // 3 == justify
-
-        assertGlyphsPerRun(16, 6, 16, 14, 4);
-        assertLineBounds(
-            new RectBounds(0, -12, 269.10938f, 4.001953f),
-            new RectBounds(0, -12, 122.583984f, 4.001953f)
-        );
-        assertLineLocations(
-            new Point2D(0, 0),
-            new Point2D(0, 16.001953f)
-        );
+            assertEquals(expectedBounds, lines[i].getBounds(), description);
+            assertEquals(expectedLocation, lines[i].getRuns()[0].getLocation(), description);
+        }
     }
 }
