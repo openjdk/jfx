@@ -81,10 +81,12 @@ public class SynchronizationTest {
     private final AtomicReference<Throwable> throwable = new AtomicReference<>();
 
     protected void runTest(Runnable runnable) throws InterruptedException {
-        Platform.runLater(() -> registerExceptionHandler());
+        Platform.runLater(() -> Thread.currentThread().setUncaughtExceptionHandler(this::handleThrowable));
+
+        Runnable wrappedRunnable = wrap(runnable);
 
         for (int i = 0; i < 10; i++) {
-            executor.submit(runnable);
+            executor.submit(wrappedRunnable);
         }
 
         // If no exception is thrown after GRACE_PERIOD seconds, await completes and the test will succeed.
@@ -94,12 +96,20 @@ public class SynchronizationTest {
         assertFalse(failed.get(), "<" + throwable.get() + "> was thrown on " + thread.get());
     }
 
-    protected void registerExceptionHandler() {
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
-            thread.set(t);
-            throwable.set(e);
-            failed.set(true);
-            waiter.countDown();
-        });
+    private Runnable wrap(Runnable runnable) {
+        return () -> {
+            try {
+                runnable.run();
+            } catch (Throwable e) {
+                handleThrowable(Thread.currentThread(), e);
+            }
+        };
+    }
+
+    private void handleThrowable(Thread t, Throwable e) {
+        thread.set(t);
+        throwable.set(e);
+        failed.set(true);
+        waiter.countDown();
     }
 }
