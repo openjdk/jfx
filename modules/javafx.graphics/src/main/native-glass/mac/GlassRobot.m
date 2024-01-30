@@ -115,7 +115,7 @@ static inline void PostGlassKeyEvent(jint code, BOOL keyPressed)
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         AXUIElementRef elem = AXUIElementCreateSystemWide();
         AXUIElementPostKeyboardEvent(elem, (CGCharCode)0, macCode, keyPressed);
-#pragma clang diagnostic push
+#pragma clang diagnostic pop
         CFRelease(elem);
     }
 }
