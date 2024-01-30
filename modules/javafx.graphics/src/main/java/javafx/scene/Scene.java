@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,6 +92,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 import com.sun.javafx.logging.PulseLogger;
 
@@ -1300,7 +1301,7 @@ public class Scene implements EventTarget {
 
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
     // we might be doing a Node snapshot with a null scene
-    static WritableImage doSnapshot(Scene scene,
+    static WritableImage doSnapshot(Scene scene, SubScene subScene,
             double x, double y, double w, double h,
             Node root, BaseTransform transform, boolean depthBuffer,
             Paint fill, Camera camera, WritableImage wimg) {
@@ -1346,14 +1347,15 @@ public class Scene implements EventTarget {
             context.camera = null;
         }
 
-        // Grab the lights from the scene
-        context.lights = null;
-        if (scene != null && !scene.lights.isEmpty()) {
-            context.lights = new NGLightBase[scene.lights.size()];
-            for (int i = 0; i < scene.lights.size(); i++) {
-                context.lights[i] = scene.lights.get(i).getPeer();
-            }
+        // Grab the lights from the scene or subscene
+        Stream<NGLightBase> lights;
+        if (subScene != null) {
+            lights = Optional.of(subScene).stream().flatMap(s -> s.getLights().stream()).map(LightBase::getPeer);
+        } else {
+            lights = Optional.ofNullable(scene).stream().flatMap(s -> s.lights.stream()).map(LightBase::getPeer);
         }
+
+        context.lights = lights.toArray(NGLightBase[]::new);
 
         Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
         context.platformImage = accessor.getTkImageLoader(wimg);
@@ -1394,7 +1396,7 @@ public class Scene implements EventTarget {
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
-        return doSnapshot(this, 0, 0, w, h,
+        return doSnapshot(this, null, 0, 0, w, h,
                 getRoot(), transform, isDepthBufferInternal(),
                 getFill(), getEffectiveCamera(), img);
     }
