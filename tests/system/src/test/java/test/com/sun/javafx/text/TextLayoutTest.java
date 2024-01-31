@@ -28,6 +28,7 @@ package test.com.sun.javafx.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.jupiter.api.Disabled;
@@ -315,24 +316,78 @@ public class TextLayoutTest {
     }
 
     enum Case {
+
+        /**
+         * Checks that alignment variations have no effect when not wrapping.
+         */
+        NO_WRAP(new Parameters(
+            "The quick brown fox jumps over the lazy dog",
+            Font.font("Monaco", 12),
+            0.0f, List.of(309.6504f), List.of(0.0f),
+            12.0f, 4.001953f
+        )),
+
+        /**
+         * Checks that the individual lines of hard wrapped text are still
+         * taking alignment into account (in this specific case, the first
+         * line, which is the widest line, will not be aligned, but the 2nd
+         * line will be aligned as it is less wide).
+         */
+        HARD_WRAP(new Parameters(
+            "The quick brown fox jumps\nover the lazy dog",
+            Font.font("Monaco", 12),
+            0.0f, List.of(180.0293f, 122.41992f), List.of(0.0f, 0.0f),
+            12.0f, 4.001953f
+        )),
+
+        /**
+         * Checks that trailing white space is NOT ignored when wrapping
+         * is not enabled.
+         */
+        HARD_WRAP_WITH_EXTRA_TRAILING_SPACE(new Parameters(
+            "The quick brown fox jumps           \nover the lazy dog           ",
+            Font.font("Monaco", 12),
+            0.0f, List.of(180.0293f + 79.2129f, 122.41992f + 79.2129f), List.of(0.0f, 0.0f),
+            12.0f, 4.001953f
+        )),
+
+        /**
+         * Checks that single trailing white spaces are ignored for alignment
+         * purposes when wrapping is enabled in simple text.
+         */
         SIMPLE(new Parameters(
             "The quick brown fox jumps over the lazy dog",
             Font.font("Monaco", 12),
             200.0f, List.of(180.0293f, 122.41992f), List.of(7.20117f, 0.0f),
             12.0f, 4.001953f
         )),
+
+        /**
+         * Checks that multiple trailing white spaces are ignored for alignment
+         * purposes when wrapping is enabled in simple text.
+         */
         SIMPLE_WITH_EXTRA_TRAILING_SPACE(new Parameters(
             "The quick brown fox jumps           over the lazy dog",
             Font.font("Monaco", 12),
             200.0f, List.of(180.0293f, 122.41992f), List.of(79.2129f, 0.0f),
             12.0f, 4.001953f
         )),
+
+        /**
+         * Checks that single trailing white spaces are ignored for alignment
+         * purposes when wrapping is enabled in complex text.
+         */
         COMPLEX(new Parameters(
             "The quick brown लोमड़ी jumps over the lazy कुत्ता",
             Font.font("Monaco", 12),
             200.0f, List.of(189.89649f, 122.583984f), List.of(7.20117f, 0.0f),
             12.0f, 4.001953f
         )),
+
+        /**
+         * Checks that multiple trailing white spaces are ignored for alignment
+         * purposes when wrapping is enabled in complex text.
+         */
         COMPLEX_WITH_EXTRA_TRAILING_SPACE(new Parameters(
             "The quick brown लोमड़ी jumps           over the lazy कुत्ता",
             Font.font("Monaco", 12),
@@ -350,16 +405,21 @@ public class TextLayoutTest {
             Parameters {
                 assert text != null;
                 assert font != null;
-                assert wrapWidth > 0;
+                assert wrapWidth >= 0;
                 assert lineWidths != null;
                 assert trailingWhiteSpaceWidths != null;
                 assert ascent > 0;
                 assert descent > 0;
+                assert lineWidths.size() > 0;
                 assert lineWidths.size() == trailingWhiteSpaceWidths.size();
             }
 
             int lineCount() {
                 return lineWidths.size();
+            }
+
+            float maxWidth() {
+                return lineWidths.stream().max(Float::compareTo).orElseThrow();
             }
         }
     }
@@ -371,10 +431,11 @@ public class TextLayoutTest {
 
         final float ASCENT = p.ascent;
         final float DESCENT = p.descent;
-        final float WRAP = p.wrapWidth;
+        final float WRAP = p.wrapWidth == 0 ? p.maxWidth() : p.wrapWidth;
         final float CENTER = 0.5f * WRAP;
 
-        layout.setContent(p.text, FontHelper.getNativeFont(p.font));
+        // split content on line feeds (without removing the line feeds):
+        layout.setContent(Arrays.stream(p.text.split("(?<=\n)")).map(text -> new TestSpan(text, FontHelper.getNativeFont(p.font))).toArray(TextSpan[]::new));
         layout.setWrapWidth(p.wrapWidth);
 
         // LEFT ALIGNMENT

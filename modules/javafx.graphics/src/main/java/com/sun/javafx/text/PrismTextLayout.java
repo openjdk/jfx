@@ -1365,7 +1365,7 @@ public class PrismTextLayout implements TextLayout {
             RectBounds bounds = line.getBounds();
 
             /* Center and right alignment */
-            float unusedWidth = fullWidth - bounds.getWidth() + line.getTrailingSpaceWidth();
+            float unusedWidth = fullWidth - bounds.getWidth() + (wrapWidth > 0 ? line.getTrailingSpaceWidth() : 0);
             float lineX = unusedWidth * align;
             line.setAlignment(lineX);
 
