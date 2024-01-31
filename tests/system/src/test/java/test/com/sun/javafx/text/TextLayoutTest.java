@@ -472,7 +472,7 @@ public class TextLayoutTest {
 
         // RIGHT ALIGNMENT
 
-        layout.setAlignment(2);  // 2 == center
+        layout.setAlignment(2);  // 2 == right
 
         assertLineCount(p.lineCount());
 
