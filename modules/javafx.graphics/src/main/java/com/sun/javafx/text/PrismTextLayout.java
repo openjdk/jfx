@@ -513,8 +513,9 @@ public class PrismTextLayout implements TextLayout {
                                 x -= (runs[0].getLocation().x - textBounds.getMinX());
                             }
                             for (int j = runs.length - 1; j > i; j--) {
-                                if (runs[j].getStart() != curRunStart && runs[j].getTextSpan().getText().equals(text) && !runs[j].isLinebreak()) {
-                                    ltrIndex += runs[j].getLength();
+                                TextRun r = runs[j];
+                                if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text) && !r.isLinebreak()) {
+                                    ltrIndex += r.getLength();
                                 }
                             }
                             break;
