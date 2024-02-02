@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -372,12 +372,13 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     @Override
     public native Map<String, Object> getPlatformPreferences();
 
+    // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for Windows.
     @Override
     public Map<String, String> getPlatformKeyMappings() {
         return Map.of(
-            "Windows.UIColor.ForegroundColor", "foregroundColor",
-            "Windows.UIColor.BackgroundColor", "backgroundColor",
-            "Windows.UIColor.AccentColor", "accentColor"
+            "Windows.UIColor.Foreground", "foregroundColor",
+            "Windows.UIColor.Background", "backgroundColor",
+            "Windows.UIColor.Accent", "accentColor"
         );
     }
 
