@@ -64,10 +64,14 @@ void WorkerStorageConnection::getPersisted(ClientOrigin&& origin, StorageConnect
 {
     ASSERT(m_scope);
 
+    auto* workerLoaderProxy = m_scope->thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return completionHandler(false);
+
     auto callbackIdentifier = ++m_lastCallbackIdentifier;
     m_getPersistedCallbacks.add(callbackIdentifier, WTFMove(completionHandler));
 
-    m_scope->thread().workerLoaderProxy().postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
+    workerLoaderProxy->postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
         ASSERT(isMainThread());
 
         auto& document = downcast<Document>(context);
@@ -94,10 +98,14 @@ void WorkerStorageConnection::getEstimate(ClientOrigin&& origin, StorageConnecti
 {
     ASSERT(m_scope);
 
+    auto* workerLoaderProxy = m_scope->thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return completionHandler(Exception { InvalidStateError });
+
     auto callbackIdentifier = ++m_lastCallbackIdentifier;
     m_getEstimateCallbacks.add(callbackIdentifier, WTFMove(completionHandler));
 
-    m_scope->thread().workerLoaderProxy().postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
+    workerLoaderProxy->postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
         ASSERT(isMainThread());
 
         auto& document = downcast<Document>(context);
@@ -124,10 +132,14 @@ void WorkerStorageConnection::fileSystemGetDirectory(ClientOrigin&& origin, Stor
 {
     ASSERT(m_scope);
 
+    auto* workerLoaderProxy = m_scope->thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return completionHandler(Exception { InvalidStateError });
+
     auto callbackIdentifier = ++m_lastCallbackIdentifier;
     m_getDirectoryCallbacks.add(callbackIdentifier, WTFMove(completionHandler));
 
-    m_scope->thread().workerLoaderProxy().postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
+    workerLoaderProxy->postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
         ASSERT(isMainThread());
 
         auto& document = downcast<Document>(context);

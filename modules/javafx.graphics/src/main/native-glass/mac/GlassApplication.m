@@ -585,7 +585,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
 
         // List of RunLoopModes in which we will run runnables passed
-        // to _invokeAndWait and _invokeAndExit. This includes
+        // to _invokeAndWait and _submitForLaterInvocation. This includes
         // JavaRunLoopMode to avoid a possible deadlock with AWT.
         // There is no harm always adding it, since it will have no
         // effect if the run loop that receives this message does not
