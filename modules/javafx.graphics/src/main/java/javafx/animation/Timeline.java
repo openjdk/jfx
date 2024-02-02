@@ -191,17 +191,14 @@ public final class Timeline extends Animation {
         clipCore.start(forceSync);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void stop() {
+    void stopImpl() {
         if (parent != null) {
             throw new IllegalStateException("Cannot stop when embedded in another animation");
         }
         if (getStatus() == Status.RUNNING) {
             clipCore.abort();
         }
-        super.stop();
+        super.stopImpl();
     }
 }
