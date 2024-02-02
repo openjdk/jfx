@@ -27,7 +27,6 @@ package test.com.sun.marlin;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
-import static org.junit.Assert.assertEquals;
 
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
@@ -41,7 +40,6 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Labeled;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
@@ -60,17 +58,11 @@ import test.util.Util;
 /**
  * @test
  * @bug 8312603
- * @summary Check the crash with MarlinFX renderer
+ * @summary Check the crash with MarlinFX renderer if scaleX or scaleY is pure 0.0
  */
-public class Scale0Test {
+public class ScaleX0Test {
 
     private final static int SIZE = 800;
-
-    // Used to launch the application before running any test
-    private static final CountDownLatch launchLatch = new CountDownLatch(1);
-
-    // Singleton Application instance
-    static MyApp myApp;
 
     static final ByteArrayOutputStream out = new ByteArrayOutputStream(2048 * 1024);
     static final PrintStream defaultErrorStream = System.err;
@@ -79,39 +71,17 @@ public class Scale0Test {
         Locale.setDefault(Locale.US);
 
         System.setProperty("prism.verbose", "false");
-        // enable Marlin logging & internal checks:
+        // Enable Marlin logging
         System.setProperty("prism.marlin.log", "true");
-    }
-
-    // Application class. An instance is created and initialized before running
-    // the first test, and it lives through the execution of all tests.
-    public static class MyApp extends Application {
-
-        Stage stage = null;
-
-        public MyApp() {
-            super();
-        }
-
-        @Override
-        public void init() {
-            Scale0Test.myApp = this;
-        }
-
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            this.stage = primaryStage;
-            launchLatch.countDown();
-        }
     }
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        // Capture stderr:
-        System.setErr(new PrintStream(out, true));
-
-        Util.launch(launchLatch, MyApp.class);
-        assertEquals(0, launchLatch.getCount());
+        CountDownLatch startupLatch = new CountDownLatch(1);
+        Util.startup(startupLatch, () -> {
+            Platform.setImplicitExit(false);
+            startupLatch.countDown();
+        });
     }
 
     @AfterClass
@@ -120,24 +90,30 @@ public class Scale0Test {
     }
 
     @Test(timeout = 15000)
-    public void TestBug() {
+    public void testMarlinAIOOBEwhenScaleXIs0() {
+
+        Scene scene = createScene();
+
+        // Capture stderr:
+        System.setErr(new PrintStream(out, true));
 
         Platform.runLater(() -> {
-            myApp.stage.setScene(createScene());
-            myApp.stage.show();
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
         });
 
         try {
             Thread.sleep(2000L);
         } catch (InterruptedException ie) {
-            Logger.getLogger(Scale0Test.class.getName()).log(Level.SEVERE, "interrupted", ie);
+            Logger.getLogger(ScaleX0Test.class.getName()).log(Level.SEVERE, "interrupted", ie);
         }
 
         // Restore stderr:
         System.setErr(defaultErrorStream);
 
         // Get stderr to check exception:
-        final String stdErr = out.toString();
+        String stdErr = out.toString();
 
         if (!stdErr.isEmpty()) {
             System.err.println("Captured System.err output (" + stdErr.length() + " chars):");
@@ -151,11 +127,8 @@ public class Scale0Test {
         }
     }
 
-    private Group leftPane;
-    private Slider slider;
-
-    private Scene createScene() {
-        slider = new Slider(0, 2, 0) {
+    private static Scene createScene() {
+        Slider slider = new Slider(0, 2, 0) {
             {
                 setBlockIncrement((getMax() - getMin()) / 4);
                 setMajorTickUnit((getMax() - getMin()) / 4);
@@ -165,22 +138,22 @@ public class Scale0Test {
                 setShowTickMarks(true);
             }
         };
-        leftPane = new Group();
 
-        final NodeAndGraphic leftNode = create();
-        preparePane(this.leftPane, leftNode.node);
+        Group leftPane = new Group();
+        NodeAndGraphic leftNode = create();
+        preparePane(leftPane, leftNode.node);
 
         try {
-            String propertyName = "scaleXProperty"; //Works fine for translateXProperty
+            String propertyName = "scaleXProperty"; // Works fine for translateXProperty
             Method method = leftNode.graphic.getClass().getMethod(propertyName, (Class[]) null);
             Object bindableObj = method.invoke(leftNode.graphic);
             Method bindMethod = bindableObj.getClass().getMethod("bind", ObservableValue.class);
             bindMethod.invoke(bindableObj, slider.valueProperty());
         } catch (Throwable th) {
-            Logger.getLogger(Scale0Test.class.getName()).log(Level.SEVERE, "bind exception", th);
+            Logger.getLogger(ScaleX0Test.class.getName()).log(Level.SEVERE, "bind exception", th);
         }
 
-        final Pane leftContainer = new Pane() {
+        Pane leftContainer = new Pane() {
             {
                 setStyle("-fx-border-color: rosybrown;");
                 getChildren().add(leftPane);
@@ -189,8 +162,8 @@ public class Scale0Test {
                 setMinSize(300, 300);
             }
         };
-        GridPane.setConstraints(leftContainer, 0, 2);
 
+        GridPane.setConstraints(leftContainer, 0, 2);
         GridPane field = new GridPane() {
             {
                 getChildren().addAll(slider, leftContainer);
@@ -201,41 +174,29 @@ public class Scale0Test {
     }
 
     private static NodeAndGraphic create() {
-        Button button = new Button();
+        Button button = new Button("Button");
         button.setLayoutX(50);
         button.setLayoutY(50);
         button.setPrefSize(100, 50);
         button.setMinSize(100, 50);
         button.setMaxSize(100, 50);
-        if (button instanceof Labeled) {
-            Labeled l = (Labeled) button;
-            Circle circle = new Circle(10);
-            circle.setFill(Color.LIGHTGREEN);
-            circle.setStroke(Color.DARKGREEN);
-            circle.getStrokeDashArray().add(10.);
-            circle.getStrokeDashArray().add(8.);
-            l.setGraphic(circle);
-        }
+
+        Circle circle = new Circle(20);
+        circle.setFill(Color.LIGHTGREEN);
+        circle.setStroke(Color.DARKGREEN);
+        circle.getStrokeDashArray().add(10.);
+        circle.getStrokeDashArray().add(8.);
+
+        button.setGraphic(circle);
+
         return new NodeAndGraphic(button, button.getGraphic());
     }
 
     private static void preparePane(Group pane, Node node) {
         pane.getChildren().clear();
-        final Rectangle bounds = new Rectangle() {
-            {
-                setWidth(300);
-                setHeight(300);
-                setFill(Color.TRANSPARENT);
-            }
-        };
-
+        Rectangle bounds = new Rectangle(300, 300, Color.TRANSPARENT);
         pane.getChildren().add(bounds);
-        pane.setClip(new Rectangle() {
-            {
-                setWidth(300);
-                setHeight(300);
-            }
-        });
+        pane.setClip(new Rectangle(300, 300));
         pane.getChildren().add(node);
     }
 
@@ -249,5 +210,4 @@ public class Scale0Test {
             this.graphic = graphic;
         }
     }
-
 }
