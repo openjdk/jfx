@@ -511,6 +511,7 @@
 
     handlingKeyEvent = YES;
     didCommitText = NO;
+    BOOL hadMarkedText = (nsAttrBuffer.length > 0);
     BOOL inputContextHandledEvent = (imEnabled && [self.inputContext handleEvent:theEvent]);
     handlingKeyEvent = NO;
 
@@ -518,8 +519,12 @@
         // Exit composition mode
         didCommitText = NO;
         nsAttrBuffer = [nsAttrBuffer initWithString: @""];
-    }
-    else if (!inputContextHandledEvent || (nsAttrBuffer.length == 0)) {
+    } else if (hadMarkedText) {
+        // Either we still have marked text or the keystroke removed it
+        // (ESC can do that). In either case we don't want to generate a key
+        // event.
+        ;
+    } else if (!inputContextHandledEvent || (nsAttrBuffer.length == 0)) {
         [GlassApplication registerKeyEvent:theEvent];
         [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     }
@@ -721,7 +726,11 @@
 {
     IMLOG("setInputMethodEnabled called with arg is %s", (enabled ? "YES" : "NO") );
     if (enabled != imEnabled) {
-        [self unmarkText];
+        // If enabled is false this has nowhere to go. If enabled is true this
+        // wasn't intended for the newly focused node.
+        if (nsAttrBuffer.length) {
+            nsAttrBuffer = [nsAttrBuffer initWithString:@""];
+        }
         [self.inputContext discardMarkedText];
         imEnabled = enabled;
     }
