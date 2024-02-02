@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
 import com.sun.javafx.css.PseudoClassState;
@@ -51,7 +52,7 @@ import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
  * @since 9
  * @deprecated This class was exposed erroneously and will be removed in a future version
  */
-@Deprecated(since = "22", forRemoval = true)
+@Deprecated(since = "23", forRemoval = true)
 final public class SimpleSelector extends Selector {
 
     /**
@@ -192,6 +193,11 @@ final public class SimpleSelector extends Selector {
         // if id is not null and not empty, then match needs to check id
         this.matchOnId = (id != null && !("".equals(id)));
 
+    }
+
+    @Override
+    public Set<String> getClasses() {
+        return styleClassSet.stream().map(StyleClass::getStyleClassName).collect(Collectors.toUnmodifiableSet());
     }
 
     @Override public Match createMatch() {
