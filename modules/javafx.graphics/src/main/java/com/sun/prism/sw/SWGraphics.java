@@ -661,6 +661,7 @@ final class SWGraphics implements ReadbackGraphics {
                 (strike.getAAMode() == FontResource.AA_LCD) &&
                 getRenderTarget().isOpaque() &&
                 (this.paint.getType() == Paint.Type.COLOR) &&
+                ((Color)this.paint).getAlpha() == 1.0f &&
                 tx.is2D();
         BaseTransform glyphTx = null;
 
