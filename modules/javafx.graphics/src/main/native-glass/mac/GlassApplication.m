@@ -295,15 +295,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (@available(macOS 14.0, *)) {
-        if (!NSApp.isActive && requiresActivation) {
-            // As of macOS 14, application gets to the foreground,
-            // but it doesn't get activated, so this is needed:
-            LOG("-> need to active application");
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [NSApp activate];
-            });
-        }
+    if (!NSApp.isActive && requiresActivation) {
+        // As of macOS 14, application gets to the foreground,
+        // but it doesn't get activated, so this is needed:
+        LOG("-> need to active application");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [NSApp performSelector: @selector(activate)];
+        });
+        // TODO: performSelector is used only to avoid a compiler
+        // warning with the 13.3 SDK. After updating to SDK 14
+        // this can be converted to a standard call.
     }
 }
 
