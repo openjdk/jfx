@@ -747,7 +747,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         {
             if ([NSThread isMainThread] == YES) {
                 // The NSNotification is ignored but the compiler insists on a non-NULL argument.
-                [glassApp applicationWillFinishLaunching: [[[NSNotification alloc] init] autorelease]];
+                NSNotification* notification = [NSNotification notificationWithName: NSApplicationWillFinishLaunchingNotification
+                    object: NSApp
+                    userInfo: nil];
+                [glassApp applicationWillFinishLaunching: notification];
             } else {
                 [glassApp performSelectorOnMainThread:@selector(applicationWillFinishLaunching:) withObject:NULL waitUntilDone:NO];
             }
