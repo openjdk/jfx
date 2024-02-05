@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -39,6 +40,8 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.GridPane;
@@ -46,7 +49,6 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -54,6 +56,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import test.util.Util;
+import static test.util.Util.TIMEOUT;
 
 /**
  * @test
@@ -64,8 +67,10 @@ public class ScaleX0Test {
 
     private final static int SIZE = 800;
 
-    static final ByteArrayOutputStream out = new ByteArrayOutputStream(2048 * 1024);
-    static final PrintStream defaultErrorStream = System.err;
+    static CountDownLatch launchLatch = new CountDownLatch(1);
+
+    static final ByteArrayOutputStream out = new ByteArrayOutputStream(1024 * 1024);
+    static PrintStream defaultErrorStream = System.err;
 
     static {
         Locale.setDefault(Locale.US);
@@ -77,6 +82,10 @@ public class ScaleX0Test {
 
     @BeforeClass
     public static void setupOnce() throws Exception {
+        defaultErrorStream = System.err;
+        // Capture stderr:
+        System.setErr(new PrintStream(out, true));
+
         CountDownLatch startupLatch = new CountDownLatch(1);
         Util.startup(startupLatch, () -> {
             Platform.setImplicitExit(false);
@@ -86,30 +95,34 @@ public class ScaleX0Test {
 
     @AfterClass
     public static void teardownOnce() {
+        System.setErr(defaultErrorStream);
         Util.shutdown();
     }
 
     @Test(timeout = 15000)
     public void testMarlinAIOOBEwhenScaleXIs0() {
-
         Scene scene = createScene();
-
-        // Capture stderr:
-        System.setErr(new PrintStream(out, true));
 
         Platform.runLater(() -> {
             Stage stage = new Stage();
             stage.setScene(scene);
+            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> Platform.runLater(launchLatch::countDown));
             stage.show();
         });
 
         try {
-            Thread.sleep(2000L);
+            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
+                Assert.fail("Timeout waiting for stage to show");
+            }
+            // Wait to ensure stderr will contain the potential exception:
+            Thread.sleep(500L);
+
         } catch (InterruptedException ie) {
             Logger.getLogger(ScaleX0Test.class.getName()).log(Level.SEVERE, "interrupted", ie);
         }
 
         // Restore stderr:
+        System.err.flush();
         System.setErr(defaultErrorStream);
 
         // Get stderr to check exception:
