@@ -493,36 +493,44 @@ public class PrismTextLayout implements TextLayout {
 
                 BaseBounds textBounds = new BoxBounds();
                 if (isMirrored) {
-                    boolean isMultiRunText = false;
+                    int runIdx = 0;
                     for (TextRun r: runs) {
-                        if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text)) {
-                            isMultiRunText = true;
+                        if (r.getStart() == curRunStart) {
+                            run = r;
                             break;
                         }
+                        runIdx++;
                     }
 
-                    for (int i = 0; i < runs.length; i++) {
-                        run = runs[i];
-                        if (run.getStart() != curRunStart && run.getTextSpan().getText().equals(text) && x > run.getWidth()) {
-                            x -= run.getWidth();
+                    boolean textFound = false;
+                    for (int i = 0; i <= runIdx; i++) {
+                        TextRun r = runs[i];
+                        if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text)
+                                && x > r.getWidth() && textWidthPrevLine == 0) {
+                            x -= r.getWidth();
+                            textFound = true;
                             continue;
                         }
-                        if (run.getTextSpan() != null && run.getTextSpan().getText().equals(text)) {
-                            if ((x > run.getWidth() && (!isMultiRunText || run.getStart() == curRunStart)) || textWidthPrevLine > 0) {
-                                getBounds(run.getTextSpan(), textBounds);
-                                x -= (runs[0].getLocation().x - textBounds.getMinX());
-                            }
-                            for (int j = runs.length - 1; j > i; j--) {
-                                TextRun r = runs[j];
-                                if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text) && !r.isLinebreak()) {
-                                    ltrIndex += r.getLength();
-                                }
+                        if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)
+                                && r.getStart() == curRunStart) {
+                            if (x > r.getWidth() || textWidthPrevLine > 0) {
+                                getBounds(r.getTextSpan(), textBounds);
+                                x -= (run.getLocation().x - textBounds.getMinX());
                             }
                             break;
                         }
-                        // This condition handles LTR Text nodes embedded in TextFlow in RTL mode.
-                        if (!run.getTextSpan().getText().equals(text) && x > run.getWidth() && run.getStart() < curRunStart) {
-                            x -= run.getWidth();
+                        /* This condition handles LTR Text nodes present between
+                           a Text node containing both LTR and RTL text. */
+                        if (!r.getTextSpan().getText().equals(text) && textFound
+                                && x > r.getWidth() && r.getStart() < curRunStart) {
+                            x -= r.getWidth();
+                        }
+                    }
+                    for (int i = runs.length - 1; i > runIdx; i--) {
+                        TextRun r = runs[i];
+                        if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text)
+                                && !r.isLinebreak() && run.getLevel() != r.getLevel()) {
+                            ltrIndex += r.getLength();
                         }
                     }
                 } else {
