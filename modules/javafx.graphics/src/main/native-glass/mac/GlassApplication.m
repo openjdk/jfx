@@ -61,6 +61,21 @@ static BOOL disableSyncRendering = NO;
 static BOOL firstActivation = YES;
 static BOOL shouldReactivate = NO;
 
+// Custom NSRunLoopMode constant that matches the one used by AWT in its
+// doAWTRunLoopImpl method. This is not formally documented yet, but all
+// versions of the JDK use it. We might consider a request to document it.
+static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
+
+// List of allowable runLoop modes that Java runnables can run in.
+// This is used when calling performSelectorOnMainThread from
+// the JNI _invokeAndWait and _submitForLaterInvocation methods.
+// We include JavaRunLoopMode in the list of allowable run modes in case
+// we are running on the AWT event thread. This will allow JavaFX
+// runnables to be scheduled when AWT is running doAWTRunLoopImpl
+// on the AppKit thread (which it does for IME callbacks) so that we
+// don't deadlock.
+static NSArray<NSString*> *runLoopModes = nil;
+
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
@@ -568,6 +583,19 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 GLASS_CHECK_EXCEPTION(jEnv);
             }
         }
+
+        // List of RunLoopModes in which we will run runnables passed
+        // to _invokeAndWait and _submitForLaterInvocation. This includes
+        // JavaRunLoopMode to avoid a possible deadlock with AWT.
+        // There is no harm always adding it, since it will have no
+        // effect if the run loop that receives this message does not
+        // specify it.
+        runLoopModes = [[NSArray alloc] initWithObjects:
+            NSDefaultRunLoopMode,
+            NSModalPanelRunLoopMode,
+            NSEventTrackingRunLoopMode,
+            JavaRunLoopMode,
+            nil];
 
         // Determine if we're running embedded (in AWT, SWT, elsewhere)
         NSApplication *app = [NSApplicationFX sharedApplication];
@@ -1080,7 +1108,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1submitForLater
     if (jEnv != NULL)
     {
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
-        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:NO];
+        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:NO modes:runLoopModes];
     }
 }
 
@@ -1098,7 +1126,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1invokeAndWait
     if (jEnv != NULL)
     {
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
-        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:YES];
+        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:YES modes:runLoopModes];
     }
 }
 

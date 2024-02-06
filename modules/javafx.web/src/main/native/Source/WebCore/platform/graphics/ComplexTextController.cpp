@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,12 @@
 #include "CharacterProperties.h"
 #include "FloatSize.h"
 #include "FontCascade.h"
+#include "GlyphBuffer.h"
 #include "RenderBlock.h"
 #include "RenderText.h"
 #include "TextRun.h"
 #include <unicode/ubrk.h>
+#include <unicode/utf16.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -209,7 +211,7 @@ unsigned ComplexTextController::offsetForPosition(float h, bool includePartialGl
                 }
 
                 unsigned stringLength = complexTextRun.stringLength();
-                CachedTextBreakIterator cursorPositionIterator(StringView(complexTextRun.characters(), stringLength), TextBreakIterator::Mode::Caret, nullAtom());
+                CachedTextBreakIterator cursorPositionIterator(StringView(complexTextRun.characters(), stringLength), nullptr, 0, TextBreakIterator::CaretMode { }, nullAtom());
                 unsigned clusterStart;
                 if (cursorPositionIterator.isBoundary(hitIndex))
                     clusterStart = hitIndex;
@@ -312,7 +314,7 @@ static bool shouldSynthesize(bool dontSynthesizeSmallCaps, const Font* nextFont,
         return false;
     if (!nextFont || nextFont == Font::systemFallback())
         return false;
-    if (engageAllSmallCapsProcessing && isASCIISpace(baseCharacter))
+    if (engageAllSmallCapsProcessing && isUnicodeCompatibleASCIIWhitespace(baseCharacter))
         return false;
     if (!engageAllSmallCapsProcessing && !capitalizedBase)
         return false;
@@ -353,13 +355,16 @@ void ComplexTextController::collectComplexTextRuns()
     const Font* synthesizedFont = nullptr;
     const Font* smallSynthesizedFont = nullptr;
 
-    CachedTextBreakIterator graphemeClusterIterator(m_run.text(), TextBreakIterator::Mode::Character, m_font.fontDescription().computedLocale());
+    CachedTextBreakIterator graphemeClusterIterator(m_run.text(), nullptr, 0, TextBreakIterator::CharacterMode { }, m_font.fontDescription().computedLocale());
 
     unsigned markCount;
     UChar32 baseCharacter;
     if (!advanceByCombiningCharacterSequence(graphemeClusterIterator, currentIndex, baseCharacter, markCount))
         return;
 
+    // We don't perform font fallback on the capitalized characters when small caps is synthesized.
+    // We may want to change this code to do so in the future; if we do, then the logic in initiateFontLoadingByAccessingGlyphDataIfApplicable()
+    // would need to be updated accordingly too.
     nextFont = m_font.fontForCombiningCharacterSequence(baseOfString, currentIndex);
 
     bool isSmallCaps = false;
@@ -696,11 +701,24 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             CGGlyph glyph = glyphs[i];
             FloatSize advance = treatAsSpace ? FloatSize(spaceWidth, advances[i].height()) : advances[i];
 
-            if (ch == tabCharacter && m_run.allowTabs())
+            if (ch == tabCharacter && m_run.allowTabs()) {
                 advance.setWidth(m_font.tabWidth(font, m_run.tabSize(), m_run.xPos() + m_totalAdvance.width(), Font::SyntheticBoldInclusion::Exclude));
+                // Like simple text path in WidthIterator::applyCSSVisibilityRules,
+                // make tabCharacter glyph invisible after advancing.
+                glyph = deletedGlyph;
+            }
             else if (FontCascade::treatAsZeroWidthSpace(ch) && !treatAsSpace) {
                 advance.setWidth(0);
                 glyph = font.spaceGlyph();
+            }
+
+            // https://www.w3.org/TR/css-text-3/#white-space-processing
+            // "Control characters (Unicode category Cc)—other than tabs (U+0009), line feeds (U+000A), carriage returns (U+000D) and sequences that form a segment break—must be rendered as a visible glyph"
+            // Also, we're omitting Null (U+0000) from this set because Chrome and Firefox do so and it's needed for compat. See https://github.com/w3c/csswg-drafts/pull/6983.
+            if (ch != newlineCharacter && ch != carriageReturn && ch != noBreakSpace && ch != tabCharacter && ch != nullCharacter && isControlCharacter(ch)) {
+                // Let's assume that .notdef is visible.
+                glyph = 0;
+                advance.setWidth(font.widthForGlyph(glyph));
             }
 
             if (!i) {
@@ -767,9 +785,14 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
             m_totalAdvance += advance;
 
+            if (m_forTextEmphasis) {
+                UChar32 ch32 = ch;
+                if (U16_IS_SURROGATE(ch))
+                    U16_GET(cp, 0, characterIndex, complexTextRun.stringLength(), ch32);
             // FIXME: Combining marks should receive a text emphasis mark if they are combine with a space.
-            if (m_forTextEmphasis && (!FontCascade::canReceiveTextEmphasis(ch) || (U_GET_GC_MASK(ch) & U_GC_M_MASK)))
-                glyph = 0;
+                if (!FontCascade::canReceiveTextEmphasis(ch32) || (U_GET_GC_MASK(ch) & U_GC_M_MASK))
+                    glyph = deletedGlyph;
+            }
 
             m_adjustedBaseAdvances.append(advance);
             if (auto* origins = complexTextRun.glyphOrigins()) {

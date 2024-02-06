@@ -144,9 +144,6 @@ void StaticPasteboard::write(const PasteboardWebContent& content)
 {
     String markup;
     String text;
-#if PLATFORM(JAVA)
-    UNUSED_PARAM(content);
-#endif
 
 #if PLATFORM(COCOA)
     markup = content.dataInHTMLFormat;

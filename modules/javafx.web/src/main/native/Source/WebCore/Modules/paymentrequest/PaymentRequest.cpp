@@ -66,7 +66,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentRequest);
 static bool isWellFormedCurrencyCode(const String& currency)
 {
     if (currency.length() == 3)
-        return currency.isAllSpecialCharacters<isASCIIAlpha>();
+        return currency.containsOnly<isASCIIAlpha>();
     return false;
 }
 
@@ -99,7 +99,7 @@ static ExceptionOr<void> checkAndCanonicalizeAmount(PaymentCurrencyAmount& amoun
     return { };
 }
 
-enum class NegativeAmountAllowed { Yes, No };
+enum class NegativeAmountAllowed : bool { No, Yes };
 static ExceptionOr<void> checkAndCanonicalizePaymentItem(PaymentItem& item, NegativeAmountAllowed negativeAmountAllowed)
 {
     auto exception = checkAndCanonicalizeAmount(item.amount);
@@ -362,7 +362,7 @@ PaymentRequest::PaymentRequest(Document& document, PaymentOptions&& options, Pay
 
 PaymentRequest::~PaymentRequest()
 {
-    ASSERT(!hasPendingActivity());
+    ASSERT(!hasPendingActivity() || isContextStopped());
     ASSERT(!m_activePaymentHandler);
 }
 
@@ -440,6 +440,10 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
 
 void PaymentRequest::abortWithException(Exception&& exception)
 {
+    // If state is "closed", then the request has already been aborted.
+    if (m_state == State::Closed)
+        return;
+
     ASSERT(m_state == State::Interactive);
     closeActivePaymentHandler();
 
@@ -467,7 +471,9 @@ void PaymentRequest::closeActivePaymentHandler()
 void PaymentRequest::stop()
 {
     closeActivePaymentHandler();
-    settleShowPromise(Exception { AbortError });
+    queueTaskKeepingObjectAlive(*this, TaskSource::Payment, [this] {
+        settleShowPromise(Exception { AbortError });
+    });
 }
 
 void PaymentRequest::suspend(ReasonForSuspension reason)

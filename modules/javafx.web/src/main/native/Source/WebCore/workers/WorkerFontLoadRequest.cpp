@@ -81,7 +81,6 @@ bool WorkerFontLoadRequest::ensureCustomFontData()
         if (m_data)
             contiguousData = m_data.takeAsContiguous();
 #if PLATFORM(JAVA)
-#else
         convertWOFFToSfntIfNecessary(contiguousData);
 #endif
         if (contiguousData) {

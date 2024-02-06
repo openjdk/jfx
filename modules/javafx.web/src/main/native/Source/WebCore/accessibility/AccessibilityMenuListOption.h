@@ -43,7 +43,7 @@ private:
 
     AccessibilityRole roleValue() const final { return AccessibilityRole::MenuListOption; }
     bool canHaveChildren() const final { return false; }
-    AccessibilityObject* parentObject() const final { return m_parent; }
+    AccessibilityObject* parentObject() const final { return m_parent.get(); }
 
     Element* actionElement() const final;
     Node* node() const final;
@@ -51,7 +51,6 @@ private:
     bool isVisible() const final;
     bool isOffScreen() const final;
     bool isSelected() const final;
-    String nameForMSAA() const final;
     void setSelected(bool) final;
     bool canSetSelectedAttribute() const final;
     LayoutRect elementRect() const final;
@@ -59,9 +58,11 @@ private:
     bool computeAccessibilityIsIgnored() const final;
 
     WeakPtr<HTMLOptionElement, WeakPtrImplWithEventTargetData> m_element;
-    AccessibilityObject* m_parent;
+    WeakPtr<AccessibilityObject> m_parent;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityMenuListOption, isMenuListOption())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityMenuListOption) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isMenuListOption(); } \
+SPECIALIZE_TYPE_TRAITS_END()

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003 - 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Holger Hans Peter Freyther
  *
  * This library is free software; you can redistribute it and/or
@@ -89,26 +89,6 @@ inline auto WidthIterator::applyFontTransforms(GlyphBuffer& glyphBuffer, unsigne
         beforeWidth += width(advances[i]);
 
     auto initialAdvance = font.applyTransforms(glyphBuffer, lastGlyphCount, m_currentCharacterIndex, m_enableKerning, m_requiresShaping, m_font.fontDescription().computedLocale(), m_run.text(), m_run.direction());
-
-#if USE(CTFONTSHAPEGLYPHS_WORKAROUND)
-    // <rdar://problem/80798113>: If a character is not in BMP, and we don't have a glyph for it,
-    // we'll end up with two 0 glyphs in a row for the two surrogates of the character.
-    // We need to make sure that, after shaping, these double-0-glyphs aren't preserved.
-    if (&font == &m_font.primaryFont() && !m_run.text().is8Bit()) {
-        for (unsigned i = 0; i < glyphBuffer.size() - 1; ++i) {
-            if (!glyphBuffer.glyphAt(i) && !glyphBuffer.glyphAt(i + 1)) {
-                if (const auto& firstStringOffset = glyphBuffer.checkedStringOffsetAt(i, m_run.length())) {
-                    if (const auto& secondStringOffset = glyphBuffer.checkedStringOffsetAt(i + 1, m_run.length())) {
-                        if (secondStringOffset.value() == firstStringOffset.value() + 1
-                            && U_IS_LEAD(m_run.text()[firstStringOffset.value()]) && U_IS_TRAIL(m_run.text()[secondStringOffset.value()])) {
-                            glyphBuffer.remove(i + 1, 1);
-                        }
-                    }
-                }
-            }
-        }
-    }
-#endif
 
     glyphBufferSize = glyphBuffer.size();
     advances = glyphBuffer.advances(0);
@@ -241,16 +221,13 @@ bool WidthIterator::hasExtraSpacing() const
 static void addToGlyphBuffer(GlyphBuffer& glyphBuffer, Glyph glyph, const Font& font, float width, GlyphBufferStringOffset currentCharacterIndex, UChar32 character)
 {
     glyphBuffer.add(glyph, font, width, currentCharacterIndex);
-#if USE(CTFONTSHAPEGLYPHS)
+
     // These 0 glyphs are needed by shapers if the source text has surrogate pairs.
     // However, CTFontTransformGlyphs() can't delete these 0 glyphs from the shaped text,
     // so we shouldn't add them in the first place if we're using that shaping routine.
     // Any other shaping routine should delete these glyphs from the shaped text.
     if (!U_IS_BMP(character))
         glyphBuffer.add(0, font, 0, currentCharacterIndex + 1);
-#else
-    UNUSED_PARAM(character);
-#endif
 }
 
 template <typename TextIterator>
@@ -296,7 +273,6 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
         if (!glyph && !characterMustDrawSomething) {
             commitCurrentFontRange(glyphBuffer, lastGlyphCount, currentCharacterIndex, lastFontData, primaryFont, primaryFont, character, widthOfCurrentFontRange, width, charactersTreatedAsSpace);
 
-            Glyph deletedGlyph = 0xFFFF;
             addToGlyphBuffer(glyphBuffer, deletedGlyph, primaryFont, 0, currentCharacterIndex, character);
 
             textIterator.advance(advanceLength);
@@ -323,7 +299,7 @@ inline void WidthIterator::advanceInternal(TextIterator& textIterator, GlyphBuff
         }
 
         if (m_forTextEmphasis && !FontCascade::canReceiveTextEmphasis(character))
-            glyph = 0;
+            glyph = deletedGlyph;
 
         addToGlyphBuffer(glyphBuffer, glyph, font, width, currentCharacterIndex, character);
 
@@ -557,7 +533,6 @@ void WidthIterator::applyCSSVisibilityRules(GlyphBuffer& glyphBuffer, unsigned g
 
     auto adjustForSyntheticBold = [&](auto index) {
         auto glyph = glyphBuffer.glyphAt(index);
-        static constexpr const GlyphBufferGlyph deletedGlyph = 0xFFFF;
         auto syntheticBoldOffset = glyph == deletedGlyph ? 0 : glyphBuffer.fontAt(index).syntheticBoldOffset();
         m_runWidthSoFar += syntheticBoldOffset;
         auto& advance = glyphBuffer.advances(index)[0];
@@ -615,7 +590,7 @@ void WidthIterator::applyCSSVisibilityRules(GlyphBuffer& glyphBuffer, unsigned g
 
         // https://www.w3.org/TR/css-text-3/#white-space-processing
         // "Control characters (Unicode category Cc)—other than tabs (U+0009), line feeds (U+000A), carriage returns (U+000D) and sequences that form a segment break—must be rendered as a visible glyph"
-        // Also, we're omitting NULL (U+0000) from this set because Chrome and Firefox do so and it's needed for compat. See https://github.com/w3c/csswg-drafts/pull/6983.
+        // Also, we're omitting Null (U+0000) from this set because Chrome and Firefox do so and it's needed for compat. See https://github.com/w3c/csswg-drafts/pull/6983.
         if (characterResponsibleForThisGlyph != nullCharacter && isControlCharacter(characterResponsibleForThisGlyph)) {
             // Let's assume that .notdef is visible.
             GlyphBufferGlyph visibleGlyph = 0;

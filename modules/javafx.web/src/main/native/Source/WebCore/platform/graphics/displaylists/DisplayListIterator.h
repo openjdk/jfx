@@ -32,7 +32,7 @@ namespace DisplayList {
 
 class DisplayList::Iterator {
 public:
-    enum class ImmediatelyMoveToEnd { No, Yes };
+    enum class ImmediatelyMoveToEnd : bool { No, Yes };
     Iterator(const DisplayList& displayList, ImmediatelyMoveToEnd immediatelyMoveToEnd = ImmediatelyMoveToEnd::No)
         : m_displayList(displayList)
     {
@@ -50,7 +50,6 @@ public:
     }
 
     bool operator==(const Iterator& other) const { return &m_displayList == &other.m_displayList && m_cursor == other.m_cursor; }
-    bool operator!=(const Iterator& other) const { return !(*this == other); }
     void operator++() { advance(); }
 
     struct Value {

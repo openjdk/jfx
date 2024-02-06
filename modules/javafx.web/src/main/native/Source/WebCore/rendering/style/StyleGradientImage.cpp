@@ -38,6 +38,7 @@
 #include "GradientImage.h"
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
+#include "RenderStyleInlines.h"
 #include "StyleBuilderState.h"
 
 namespace WebCore {
@@ -91,9 +92,10 @@ static inline bool operator==(const StyleGradientImage::ConicData& a, const Styl
 static bool stopsAreCacheable(const Vector<StyleGradientImage::Stop>& stops)
 {
     for (auto& stop : stops) {
+        // FIXME: Do we need handle calc() here?
         if (stop.position && stop.position->isFontRelativeLength())
             return false;
-        if (stop.color && stop.color->isCurrentColor())
+        if (stop.color && stop.color->containsCurrentColor())
             return false;
     }
     return true;
@@ -189,7 +191,7 @@ RefPtr<Image> StyleGradientImage::image(const RenderElement* renderer, const Flo
 
     bool cacheable = m_knownCacheableBarringFilter && !renderer->style().hasAppleColorFilter();
     if (cacheable) {
-        if (!clients().contains(const_cast<RenderElement*>(renderer)))
+        if (!clients().contains(const_cast<RenderElement&>(*renderer)))
             return nullptr;
         if (auto* result = const_cast<StyleGradientImage&>(*this).cachedImageForSize(size))
             return result;

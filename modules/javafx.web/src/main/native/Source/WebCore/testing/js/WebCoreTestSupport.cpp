@@ -28,7 +28,8 @@
 #include "WebCoreTestSupport.h"
 
 #include "DeprecatedGlobalSettings.h"
-#include "Frame.h"
+#include "DocumentFragment.h"
+#include "FragmentScriptingPermission.h"
 #include "FrameDestructionObserverInlines.h"
 #include "InternalSettings.h"
 #include "Internals.h"
@@ -36,6 +37,7 @@
 #include "JSInternals.h"
 #include "JSServiceWorkerInternals.h"
 #include "JSWorkerGlobalScope.h"
+#include "LocalFrame.h"
 #include "LogInitialization.h"
 #include "Logging.h"
 #include "MockGamepadProvider.h"
@@ -44,6 +46,7 @@
 #include "SWContextManager.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "WheelEventTestMonitor.h"
+#include "XMLDocument.h"
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/IdentifierInlines.h>
@@ -92,7 +95,7 @@ void resetInternalsObject(JSContextRef context)
     InternalSettings::from(page)->resetToConsistentState();
 }
 
-void monitorWheelEvents(WebCore::Frame& frame, bool clearLatchingState)
+void monitorWheelEvents(WebCore::LocalFrame& frame, bool clearLatchingState)
 {
     Page* page = frame.page();
     if (!page)
@@ -101,7 +104,7 @@ void monitorWheelEvents(WebCore::Frame& frame, bool clearLatchingState)
     page->startMonitoringWheelEvents(clearLatchingState);
 }
 
-void setWheelEventMonitorTestCallbackAndStartMonitoring(bool expectWheelEndOrCancel, bool expectMomentumEnd, WebCore::Frame& frame, JSContextRef context, JSObjectRef jsCallbackFunction)
+void setWheelEventMonitorTestCallbackAndStartMonitoring(bool expectWheelEndOrCancel, bool expectMomentumEnd, WebCore::LocalFrame& frame, JSContextRef context, JSObjectRef jsCallbackFunction)
 {
     Page* page = frame.page();
     if (!page || !page->isMonitoringWheelEvents())
@@ -117,7 +120,7 @@ void setWheelEventMonitorTestCallbackAndStartMonitoring(bool expectWheelEndOrCan
     }
 }
 
-void clearWheelEventTestMonitor(WebCore::Frame& frame)
+void clearWheelEventTestMonitor(WebCore::LocalFrame& frame)
 {
     Page* page = frame.page();
     if (!page)
@@ -230,7 +233,7 @@ void setMockGamepadButtonValue(unsigned gamepadIndex, unsigned buttonIndex, doub
 void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier)
 {
 #if ENABLE(SERVICE_WORKER)
-    auto identifier = makeObjectIdentifier<ServiceWorkerIdentifierType>(serviceWorkerIdentifier);
+    auto identifier = AtomicObjectIdentifier<ServiceWorkerIdentifierType>(serviceWorkerIdentifier);
     SWContextManager::singleton().postTaskToServiceWorker(identifier, [identifier] (ServiceWorkerGlobalScope& globalScope) {
         auto* script = globalScope.script();
         if (!script)
@@ -285,5 +288,16 @@ void populateDisassemblyLabels()
 #endif // ENABLE(JIT_OPERATION_DISASSEMBLY)
 
 #endif // ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY)
+
+bool testDocumentFragmentParseXML(const String& chunk, OptionSet<ParserContentPolicy> parserContentPolicy)
+{
+    ProcessWarming::prewarmGlobally();
+
+    auto settings = Settings::create(nullptr);
+    auto document = WebCore::XMLDocument::createXHTML(nullptr, settings, URL());
+    auto fragment = document->createDocumentFragment();
+
+    return fragment->parseXML(chunk, nullptr, parserContentPolicy);
+}
 
 } // namespace WebCoreTestSupport

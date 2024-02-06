@@ -47,6 +47,7 @@
 
 - (GlassViewDelegate*)delegate;
 - (void)setInputMethodEnabled:(BOOL)enabled;
+- (void)finishInputMethodComposition;
 
 - (void)notifyScaleFactorChanged:(CGFloat)scale;
 

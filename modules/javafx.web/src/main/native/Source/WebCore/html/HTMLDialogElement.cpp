@@ -32,10 +32,11 @@
 #include "EventNames.h"
 #include "FocusOptions.h"
 #include "HTMLNames.h"
+#include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderElement.h"
 #include "ScopedEventQueue.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -49,28 +50,40 @@ HTMLDialogElement::HTMLDialogElement(const QualifiedName& tagName, Document& doc
 {
 }
 
-void HTMLDialogElement::show()
+ExceptionOr<void> HTMLDialogElement::show()
 {
     // If the element already has an open attribute, then return.
-    if (isOpen())
-        return;
+    if (isOpen()) {
+        if (!isModal())
+            return { };
+        return Exception { InvalidStateError, "Cannot call show() on an open modal dialog."_s };
+    }
 
     setBooleanAttribute(openAttr, true);
 
     m_previouslyFocusedElement = document().focusedElement();
 
+    document().hideAllPopoversUntil(nullptr, FocusPreviousElement::No, FireEvents::No);
+
     runFocusingSteps();
+    return { };
 }
 
 ExceptionOr<void> HTMLDialogElement::showModal()
 {
     // If subject already has an open attribute, then throw an "InvalidStateError" DOMException.
-    if (isOpen())
-        return Exception { InvalidStateError };
+    if (isOpen()) {
+        if (isModal())
+            return { };
+        return Exception { InvalidStateError, "Cannot call showModal() on an open non-modal dialog."_s };
+    }
 
     // If subject is not connected, then throw an "InvalidStateError" DOMException.
     if (!isConnected())
-        return Exception { InvalidStateError };
+        return Exception { InvalidStateError, "Element is not connected."_s };
+
+    if (isPopoverShowing())
+        return Exception { InvalidStateError, "Element is already an open popover."_s };
 
     // setBooleanAttribute will dispatch a DOMSubtreeModified event.
     // Postpone callback execution that can potentially make the dialog disconnected.
@@ -84,6 +97,8 @@ ExceptionOr<void> HTMLDialogElement::showModal()
 
     m_previouslyFocusedElement = document().focusedElement();
 
+    document().hideAllPopoversUntil(nullptr, FocusPreviousElement::No, FireEvents::No);
+
     runFocusingSteps();
 
     return { };
@@ -96,13 +111,13 @@ void HTMLDialogElement::close(const String& result)
 
     setBooleanAttribute(openAttr, false);
 
+    if (isModal())
+        removeFromTopLayer();
+
     setIsModal(false);
 
     if (!result.isNull())
         m_returnValue = result;
-
-    if (isInTopLayer())
-        removeFromTopLayer();
 
     if (RefPtr element = std::exchange(m_previouslyFocusedElement, nullptr).get()) {
         FocusOptions options;
@@ -126,7 +141,11 @@ void HTMLDialogElement::queueCancelTask()
 // https://html.spec.whatwg.org/multipage/interactive-elements.html#dialog-focusing-steps
 void HTMLDialogElement::runFocusingSteps()
 {
-    RefPtr control = findFocusDelegate();
+    RefPtr<Element> control;
+    if (m_isModal && hasAttributeWithoutSynchronization(HTMLNames::autofocusAttr))
+        control = this;
+    if (!control)
+        control = findFocusDelegate();
 
     if (!control)
         control = this;
@@ -154,7 +173,7 @@ void HTMLDialogElement::setIsModal(bool newValue)
 {
     if (m_isModal == newValue)
         return;
-    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassModal, newValue);
+    Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClassType::Modal, newValue);
     m_isModal = newValue;
 }
 

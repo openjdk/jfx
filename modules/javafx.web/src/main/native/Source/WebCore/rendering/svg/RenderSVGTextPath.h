@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "Path.h"
 #include "RenderSVGInline.h"
 
 namespace WebCore {
@@ -37,8 +38,6 @@ public:
 
     Path layoutPath() const;
     const SVGLengthValue& startOffset() const;
-    bool exactAlignment() const;
-    bool stretchMethod() const;
 
 private:
     void graphicsElement() const = delete;

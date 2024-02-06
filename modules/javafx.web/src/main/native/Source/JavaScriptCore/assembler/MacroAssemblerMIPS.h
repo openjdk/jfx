@@ -515,6 +515,13 @@ public:
         }
     }
 
+    void or16(RegisterID mask, AbsoluteAddress dest)
+    {
+        load16(dest.m_ptr, immTempRegister);
+        or32(mask, immTempRegister);
+        store16(immTempRegister, dest.m_ptr);
+    }
+
     void or32(RegisterID src, RegisterID dest)
     {
         m_assembler.orInsn(dest, dest, src);
@@ -3329,8 +3336,10 @@ public:
         convertInt32ToDouble(MIPSRegisters::zero, reg);
     }
 
-    void swap(FPRegisterID fr1, FPRegisterID fr2)
+    void swapDouble(FPRegisterID fr1, FPRegisterID fr2)
     {
+        if (fr1 == fr2)
+            return;
         moveDouble(fr1, fpTempRegister);
         moveDouble(fr2, fr1);
         moveDouble(fpTempRegister, fr2);

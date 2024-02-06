@@ -42,12 +42,15 @@ namespace WebCore {
 
 class FloatRect;
 class GraphicsContext;
-struct ImageOrientation;
 class NativeImage;
+class PixelBuffer;
 class ProcessIdentity;
 #if USE(AVFOUNDATION) && PLATFORM(COCOA)
 class VideoFrameCV;
 #endif
+
+struct ImageOrientation;
+struct PlatformVideoColorSpace;
 
 struct ComputedPlaneLayout {
     size_t destinationOffset { 0 };
@@ -71,10 +74,12 @@ public:
     virtual ~VideoFrame() = default;
 
     static RefPtr<VideoFrame> fromNativeImage(NativeImage&);
-    static RefPtr<VideoFrame> createNV12(Span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
-    static RefPtr<VideoFrame> createRGBA(Span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
-    static RefPtr<VideoFrame> createBGRA(Span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
-    static RefPtr<VideoFrame> createI420(Span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+    static RefPtr<VideoFrame> createFromPixelBuffer(Ref<PixelBuffer>&&, PlatformVideoColorSpace&& = { });
+    static RefPtr<VideoFrame> createNV12(std::span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+    static RefPtr<VideoFrame> createRGBA(std::span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+    static RefPtr<VideoFrame> createBGRA(std::span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+    static RefPtr<VideoFrame> createI420(std::span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
+    static RefPtr<VideoFrame> createI420A(std::span<const uint8_t>, size_t width, size_t height, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, const ComputedPlaneLayout&, PlatformVideoColorSpace&&);
 
     using Rotation = VideoFrameRotation;
 
@@ -85,10 +90,9 @@ public:
 #if PLATFORM(COCOA) && USE(AVFOUNDATION)
     WEBCORE_EXPORT RefPtr<VideoFrameCV> asVideoFrameCV();
 #endif
-    WEBCORE_EXPORT RefPtr<JSC::Uint8ClampedArray> getRGBAImageData() const;
 
     using CopyCallback = CompletionHandler<void(std::optional<Vector<PlaneLayout>>&&)>;
-    void copyTo(Span<uint8_t>, VideoPixelFormat, Vector<ComputedPlaneLayout>&&, CopyCallback&&);
+    void copyTo(std::span<uint8_t>, VideoPixelFormat, Vector<ComputedPlaneLayout>&&, CopyCallback&&);
 
     virtual FloatSize presentationSize() const = 0;
     virtual uint32_t pixelFormat() const = 0;
@@ -101,6 +105,8 @@ public:
 #endif
 #if PLATFORM(COCOA)
     virtual CVPixelBufferRef pixelBuffer() const { return nullptr; };
+    using ResourceIdentifier = std::pair<uint64_t, uint64_t>;
+    virtual ResourceIdentifier resourceIdentifier() const { return { }; }
 #endif
     WEBCORE_EXPORT virtual void setOwnershipIdentity(const ProcessIdentity&) { }
 

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "FrameView.h"
+#include "LocalFrameView.h"
 #include "Region.h"
 #include "RenderBlockFlow.h"
 #include "RenderWidget.h"
@@ -36,6 +36,7 @@ namespace WebCore {
 class ImageQualityController;
 class RenderLayerCompositor;
 class RenderLayoutState;
+class RenderCounter;
 class RenderQuote;
 
 namespace Layout {
@@ -64,7 +65,7 @@ public:
     // The same as the FrameView's layoutHeight/layoutWidth but with null check guards.
     int viewHeight() const;
     int viewWidth() const;
-    int viewLogicalWidth() const { return style().isHorizontalWritingMode() ? viewWidth() : viewHeight(); }
+    inline int viewLogicalWidth() const;
     int viewLogicalHeight() const;
 
     LayoutUnit clientLogicalWidthForFixedPosition() const;
@@ -72,11 +73,11 @@ public:
 
     float zoomFactor() const;
 
-    FrameView& frameView() const { return m_frameView; }
+    LocalFrameView& frameView() const { return m_frameView; }
 
     Layout::InitialContainingBlock& initialContainingBlock() { return m_initialContainingBlock.get(); }
     const Layout::InitialContainingBlock& initialContainingBlock() const { return m_initialContainingBlock.get(); }
-    Layout::LayoutState& ensureLayoutState();
+    Layout::LayoutState& layoutState() { return *m_layoutState; }
     void updateQuirksMode();
 
     bool needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly() const { return m_needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly; };
@@ -99,7 +100,7 @@ public:
 
     bool printing() const;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const override;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     LayoutRect viewRect() const;
@@ -157,13 +158,8 @@ public:
     bool hasQuotesNeedingUpdate() const { return m_hasQuotesNeedingUpdate; }
     void setHasQuotesNeedingUpdate(bool b) { m_hasQuotesNeedingUpdate = b; }
 
-    // FIXME: This is a work around because the current implementation of counters
-    // requires walking the entire tree repeatedly and most pages don't actually use either
-    // feature so we shouldn't take the performance hit when not needed. Long term we should
-    // rewrite the counter code.
-    void addRenderCounter() { ++m_renderCounterCount; }
-    void removeRenderCounter() { ASSERT(m_renderCounterCount > 0); --m_renderCounterCount; }
-    bool hasRenderCounters() const { return m_renderCounterCount; }
+    void addCounterNeedingUpdate(RenderCounter&);
+    WeakHashSet<RenderCounter> takeCountersNeedingUpdate();
 
     void incrementRendersWithOutline() { ++m_renderersWithOutlineCount; }
     void decrementRendersWithOutline() { ASSERT(m_renderersWithOutlineCount > 0); --m_renderersWithOutlineCount; }
@@ -234,13 +230,15 @@ private:
 
     Node* nodeForHitTest() const override;
 
-    FrameView& m_frameView;
+    void updateInitialContainingBlockSize();
+
+    LocalFrameView& m_frameView;
 
     // Include this RenderView.
     uint64_t m_rendererCount { 1 };
 
     UniqueRef<Layout::InitialContainingBlock> m_initialContainingBlock;
-    std::unique_ptr<Layout::LayoutState> m_layoutState;
+    UniqueRef<Layout::LayoutState> m_layoutState;
 
     mutable std::unique_ptr<Region> m_accumulatedRepaintRegion;
     SelectionRangeData m_selection;
@@ -272,6 +270,7 @@ private:
 
     bool m_hasQuotesNeedingUpdate { false };
 
+    WeakHashSet<RenderCounter> m_countersNeedingUpdate;
     unsigned m_renderCounterCount { 0 };
     unsigned m_renderersWithOutlineCount { 0 };
 

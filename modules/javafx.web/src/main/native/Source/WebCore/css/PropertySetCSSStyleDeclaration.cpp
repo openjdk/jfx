@@ -26,11 +26,11 @@
 #include "CSSRule.h"
 #include "CSSStyleSheet.h"
 #include "CustomElementReactionQueue.h"
-#include "DOMWindow.h"
 #include "HTMLNames.h"
 #include "InspectorInstrumentation.h"
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWindowBase.h"
+#include "LocalDOMWindow.h"
 #include "MutableStyleProperties.h"
 #include "MutationObserverInterestGroup.h"
 #include "MutationRecord.h"
@@ -376,7 +376,6 @@ Ref<MutableStyleProperties> PropertySetCSSStyleDeclaration::copyProperties() con
 
 StyleRuleCSSStyleDeclaration::StyleRuleCSSStyleDeclaration(MutableStyleProperties& propertySet, CSSRule& parentRule)
     : PropertySetCSSStyleDeclaration(propertySet)
-    , m_refCount(1)
     , m_parentRuleType(parentRule.styleRuleType())
     , m_parentRule(&parentRule)
 {
@@ -386,18 +385,6 @@ StyleRuleCSSStyleDeclaration::StyleRuleCSSStyleDeclaration(MutableStylePropertie
 StyleRuleCSSStyleDeclaration::~StyleRuleCSSStyleDeclaration()
 {
     m_propertySet->deref();
-}
-
-void StyleRuleCSSStyleDeclaration::ref()
-{
-    ++m_refCount;
-}
-
-void StyleRuleCSSStyleDeclaration::deref()
-{
-    ASSERT(m_refCount);
-    if (!--m_refCount)
-        delete this;
 }
 
 bool StyleRuleCSSStyleDeclaration::willMutate()

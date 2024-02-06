@@ -33,7 +33,6 @@
 #include "ComposedTreeAncestorIterator.h"
 #include "ContainerNodeAlgorithms.h"
 #include "ContextMenuController.h"
-#include "DOMWindow.h"
 #include "DataTransfer.h"
 #include "DocumentInlines.h"
 #include "DocumentType.h"
@@ -44,7 +43,6 @@
 #include "EventHandler.h"
 #include "EventLoop.h"
 #include "EventNames.h"
-#include "FrameView.h"
 #include "GCReachableRef.h"
 #include "HTMLAreaElement.h"
 #include "HTMLBodyElement.h"
@@ -57,9 +55,15 @@
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
 #include "KeyboardEvent.h"
+#include "LiveNodeListInlines.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MutationEvent.h"
+#include "NodeName.h"
+#include "NodeRareDataInlines.h"
 #include "NodeRenderStyle.h"
+#include "PointerEvent.h"
 #include "ProcessingInstruction.h"
 #include "ProgressEvent.h"
 #include "RenderBlock.h"
@@ -426,9 +430,6 @@ Node::~Node()
     ASSERT(!m_previous);
     ASSERT(!m_next);
 
-    if (auto* textManipulationController = document().textManipulationControllerIfExists(); UNLIKELY(textManipulationController))
-        textManipulationController->removeNode(*this);
-
     document().decrementReferencingNodeCount();
 
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && (ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS))
@@ -770,12 +771,12 @@ const AtomString& Node::namespaceURI() const
 
 bool Node::isContentEditable() const
 {
-    return computeEditability(UserSelectAllDoesNotAffectEditability, ShouldUpdateStyle::Update) != Editability::ReadOnly;
+    return computeEditability(UserSelectAllTreatment::Editable, ShouldUpdateStyle::Update) != Editability::ReadOnly;
 }
 
 bool Node::isContentRichlyEditable() const
 {
-    return computeEditability(UserSelectAllIsAlwaysNonEditable, ShouldUpdateStyle::Update) == Editability::CanEditRichly;
+    return computeEditability(UserSelectAllTreatment::NotEditable, ShouldUpdateStyle::Update) == Editability::CanEditRichly;
 }
 
 void Node::inspect()
@@ -792,7 +793,7 @@ static Node::Editability computeEditabilityFromComputedStyle(const RenderStyle& 
 
         // Elements with user-select: all style are considered atomic
         // therefore non editable.
-    if (treatment == Node::UserSelectAllIsAlwaysNonEditable && style.effectiveUserSelect() == UserSelect::All)
+    if (treatment == Node::UserSelectAllTreatment::NotEditable && style.effectiveUserSelect() == UserSelect::All)
             return Node::Editability::ReadOnly;
 
         if (pageIsEditable == PageIsEditable::Yes)
@@ -874,6 +875,7 @@ LayoutRect Node::renderRect(bool* isReplaced)
         }
         renderer = renderer->parent();
     }
+    *isReplaced = false;
     return LayoutRect();
 }
 
@@ -983,7 +985,7 @@ inline bool Document::shouldInvalidateNodeListAndCollectionCaches() const
 
 inline bool Document::shouldInvalidateNodeListAndCollectionCachesForAttribute(const QualifiedName& attrName) const
 {
-    return shouldInvalidateNodeListCachesForAttr<DoNotInvalidateOnAttributeChanges + 1>(m_nodeListAndCollectionCounts, attrName);
+    return shouldInvalidateNodeListCachesForAttr<static_cast<uint8_t>(NodeListInvalidationType::DoNotInvalidateOnAttributeChanges) + 1>(m_nodeListAndCollectionCounts, attrName);
 }
 
 template <typename InvalidationFunction>
@@ -1277,6 +1279,16 @@ void Node::setManuallyAssignedSlot(HTMLSlotElement* slotElement)
     ensureRareData().setManuallyAssignedSlot(slotElement);
 }
 
+bool Node::hasEverPaintedImages() const
+{
+    return hasRareData() && rareData()->hasEverPaintedImages();
+}
+
+void Node::setHasEverPaintedImages(bool hasEverPaintedImages)
+{
+    ensureRareData().setHasEverPaintedImages(hasEverPaintedImages);
+}
+
 ContainerNode* Node::parentInComposedTree() const
 {
     ASSERT(isMainThreadOrGCThread());
@@ -1300,6 +1312,17 @@ Element* Node::parentElementInComposedTree() const
             return downcast<Element>(parent);
     }
     return nullptr;
+}
+
+TreeScope& Node::treeScopeForSVGReferences() const
+{
+    if (auto* shadowRoot = containingShadowRoot(); shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent) {
+        if (shadowRoot->host() && shadowRoot->host()->elementName() == ElementNames::SVG::use) {
+            ASSERT(m_treeScope->parentTreeScope());
+            return *m_treeScope->parentTreeScope();
+        }
+    }
+    return treeScope();
 }
 
 bool Node::isInUserAgentShadowTree() const
@@ -1522,6 +1545,11 @@ static const AtomString& locateDefaultNamespace(const Node& node, const AtomStri
 {
     switch (node.nodeType()) {
     case Node::ELEMENT_NODE: {
+        if (prefix == xmlAtom())
+            return XMLNames::xmlNamespaceURI.get();
+        if (prefix == xmlnsAtom())
+            return XMLNSNames::xmlnsNamespaceURI.get();
+
         auto& element = downcast<Element>(node);
         auto& namespaceURI = element.namespaceURI();
         if (!namespaceURI.isNull() && element.prefix() == prefix)
@@ -2436,7 +2464,7 @@ void Node::dispatchSubtreeModifiedEvent()
 
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(*this));
 
-    if (!document().hasListenerType(Document::DOMSUBTREEMODIFIED_LISTENER))
+    if (!document().hasListenerType(Document::ListenerType::DOMSubtreeModified))
         return;
     const AtomString& subtreeModifiedEventName = eventNames().DOMSubtreeModifiedEvent;
     if (!parentNode() && !hasEventListeners(subtreeModifiedEventName))
@@ -2469,20 +2497,21 @@ void Node::defaultEventHandler(Event& event)
     auto& eventNames = WebCore::eventNames();
     if (eventType == eventNames.keydownEvent || eventType == eventNames.keypressEvent || eventType == eventNames.keyupEvent) {
         if (is<KeyboardEvent>(event)) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultKeyboardEventHandler(downcast<KeyboardEvent>(event));
         }
     } else if (eventType == eventNames.clickEvent) {
         dispatchDOMActivateEvent(event);
 #if ENABLE(CONTEXT_MENUS)
     } else if (eventType == eventNames.contextmenuEvent) {
-        if (Frame* frame = document().frame())
-            if (Page* page = frame->page())
+        if (auto* frame = document().frame()) {
+            if (auto* page = frame->page())
                 page->contextMenuController().handleContextMenuEvent(event);
+        }
 #endif
     } else if (eventType == eventNames.textInputEvent) {
         if (is<TextEvent>(event)) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultTextInputEventHandler(downcast<TextEvent>(event));
         }
 #if ENABLE(PAN_SCROLLING)
@@ -2502,7 +2531,7 @@ void Node::defaultEventHandler(Event& event)
                 renderer = renderer->parent();
 
             if (renderer) {
-                if (Frame* frame = document().frame())
+                if (auto* frame = document().frame())
                     frame->eventHandler().startPanScrolling(downcast<RenderBox>(*renderer));
             }
         }
@@ -2515,7 +2544,7 @@ void Node::defaultEventHandler(Event& event)
             startNode = startNode->parentOrShadowHostNode();
 
         if (startNode && startNode->renderer()) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultWheelEventHandler(startNode, downcast<WheelEvent>(event));
         }
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
@@ -2536,7 +2565,7 @@ void Node::defaultEventHandler(Event& event)
             renderer = renderer->parent();
 
         if (renderer && renderer->node()) {
-            if (Frame* frame = document().frame())
+            if (auto* frame = document().frame())
                 frame->eventHandler().defaultTouchEventHandler(*renderer->node(), downcast<TouchEvent>(event));
         }
 #endif
@@ -2570,9 +2599,9 @@ Node::Editability Node::computeEditabilityForMouseClickEvents(const RenderStyle*
 {
     // FIXME: Why is the iOS code path different from the non-iOS code path?
 #if PLATFORM(IOS_FAMILY)
-    auto userSelectAllTreatment = UserSelectAllDoesNotAffectEditability;
+    auto userSelectAllTreatment = UserSelectAllTreatment::Editable;
 #else
-    auto userSelectAllTreatment = UserSelectAllIsAlwaysNonEditable;
+    auto userSelectAllTreatment = UserSelectAllTreatment::NotEditable;
 #endif
 
     return computeEditabilityWithStyle(style, userSelectAllTreatment, style ? ShouldUpdateStyle::DoNotUpdate : ShouldUpdateStyle::Update);
@@ -2794,44 +2823,35 @@ static bool isSiblingSubsequent(const Node& siblingA, const Node& siblingB)
     return false;
 }
 
-#if PLATFORM(JAVA)
-// VS 2017 has buggy support for compile-time inline constants, so they
-// are defined here as runtime constants
-const PartialOrdering PartialOrdering::less(Type::Less);
-const PartialOrdering PartialOrdering::equivalent(Type::Equivalent);
-const PartialOrdering PartialOrdering::greater(Type::Greater);
-const PartialOrdering PartialOrdering::unordered(Type::Unordered);
-#endif
-
-template<TreeType treeType> PartialOrdering treeOrder(const Node& a, const Node& b)
+template<TreeType treeType> std::partial_ordering treeOrder(const Node& a, const Node& b)
 {
     if (&a == &b)
-        return PartialOrdering::equivalent;
+        return std::partial_ordering::equivalent;
     auto result = commonInclusiveAncestorAndChildren<treeType>(a, b);
     if (!result.commonAncestor)
-        return PartialOrdering::unordered;
+        return std::partial_ordering::unordered;
     if (!result.distinctAncestorA)
-        return PartialOrdering::less;
+        return std::partial_ordering::less;
     if (!result.distinctAncestorB)
-        return PartialOrdering::greater;
+        return std::partial_ordering::greater;
     bool isShadowRootA = result.distinctAncestorA->isShadowRoot();
     bool isShadowRootB = result.distinctAncestorB->isShadowRoot();
     if (isShadowRootA || isShadowRootB) {
         if (!isShadowRootB)
-            return PartialOrdering::less;
+            return std::partial_ordering::less;
         if (!isShadowRootA)
-            return PartialOrdering::greater;
+            return std::partial_ordering::greater;
         ASSERT_NOT_REACHED();
-        return PartialOrdering::unordered;
+        return std::partial_ordering::unordered;
     }
-    return isSiblingSubsequent(*result.distinctAncestorA, *result.distinctAncestorB) ? PartialOrdering::less : PartialOrdering::greater;
+    return isSiblingSubsequent(*result.distinctAncestorA, *result.distinctAncestorB) ? std::partial_ordering::less : std::partial_ordering::greater;
 }
 
-template PartialOrdering treeOrder<Tree>(const Node&, const Node&);
-template PartialOrdering treeOrder<ShadowIncludingTree>(const Node&, const Node&);
-template PartialOrdering treeOrder<ComposedTree>(const Node&, const Node&);
+template std::partial_ordering treeOrder<Tree>(const Node&, const Node&);
+template std::partial_ordering treeOrder<ShadowIncludingTree>(const Node&, const Node&);
+template std::partial_ordering treeOrder<ComposedTree>(const Node&, const Node&);
 
-PartialOrdering treeOrderForTesting(TreeType type, const Node& a, const Node& b)
+std::partial_ordering treeOrderForTesting(TreeType type, const Node& a, const Node& b)
 {
     switch (type) {
     case Tree:
@@ -2842,7 +2862,7 @@ PartialOrdering treeOrderForTesting(TreeType type, const Node& a, const Node& b)
         return treeOrder<ComposedTree>(a, b);
     }
     ASSERT_NOT_REACHED();
-    return PartialOrdering::unordered;
+    return std::partial_ordering::unordered;
 }
 
 TextStream& operator<<(TextStream& ts, const Node& node)

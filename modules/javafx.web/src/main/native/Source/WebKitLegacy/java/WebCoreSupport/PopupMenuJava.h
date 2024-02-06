@@ -27,20 +27,21 @@
 
 #include <WebCore/PopupMenu.h>
 #include <WebCore/PlatformJavaClasses.h>
+#include <WebCore/LocalFrameView.h>
+#include <WebCore/Frame.h>
+#include <WebCore/Page.h>
 
 namespace WebCore {
 
-class FrameView;
 class Scrollbar;
 class PopupMenuClient;
-class Page;
 
 class PopupMenuJava final : public PopupMenu {
 public:
     PopupMenuJava(PopupMenuClient*);
     ~PopupMenuJava() override;
 
-    void show(const IntRect&, FrameView*, int index) override;
+    void show(const IntRect&, LocalFrameView*, int index) override;
     void hide() override;
     void updateFromElement() override;
     void disconnectClient() override;
