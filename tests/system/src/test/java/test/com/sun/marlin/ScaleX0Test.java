@@ -27,10 +27,10 @@ package test.com.sun.marlin;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,7 +41,6 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.GridPane;
@@ -84,8 +83,7 @@ public class ScaleX0Test {
     public static void setupOnce() throws Exception {
         defaultErrorStream = System.err;
         // Capture stderr:
-        System.setErr(new PrintStream(out, true));
-
+        System.setErr(new PrintStream(out, true, StandardCharsets.UTF_8));
         CountDownLatch startupLatch = new CountDownLatch(1);
         Util.startup(startupLatch, () -> {
             Platform.setImplicitExit(false);
@@ -106,27 +104,24 @@ public class ScaleX0Test {
         Platform.runLater(() -> {
             Stage stage = new Stage();
             stage.setScene(scene);
-            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> Platform.runLater(launchLatch::countDown));
+            stage.setOnShown(e -> Platform.runLater(launchLatch::countDown));
             stage.show();
         });
 
+        Util.waitForLatch(launchLatch, TIMEOUT, "Failed to show the stage");
+
         try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                Assert.fail("Timeout waiting for stage to show");
-            }
             // Wait to ensure stderr will contain the potential exception:
             Thread.sleep(500L);
-
         } catch (InterruptedException ie) {
             Logger.getLogger(ScaleX0Test.class.getName()).log(Level.SEVERE, "interrupted", ie);
         }
 
         // Restore stderr:
-        System.err.flush();
         System.setErr(defaultErrorStream);
 
         // Get stderr to check exception:
-        String stdErr = out.toString();
+        String stdErr = out.toString(StandardCharsets.UTF_8);
 
         if (!stdErr.isEmpty()) {
             System.err.println("Captured System.err output (" + stdErr.length() + " chars):");
