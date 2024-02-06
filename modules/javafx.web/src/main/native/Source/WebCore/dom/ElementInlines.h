@@ -25,12 +25,11 @@
 
 #pragma once
 
-#include "Document.h"
 #include "DocumentInlines.h"
 #include "Element.h"
 #include "ElementData.h"
 #include "HTMLNames.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "StyleChange.h"
 
 namespace WebCore {
@@ -210,6 +209,19 @@ inline const AtomString& Element::getAttribute(const QualifiedName& name, const 
 inline bool isInTopLayerOrBackdrop(const RenderStyle& style, const Element* element)
 {
     return (element && element->isInTopLayer()) || style.styleType() == PseudoId::Backdrop;
+}
+
+inline void Element::hideNonce()
+{
+    // In the common case, Elements don't have a nonce parameter to hide.
+    if (LIKELY(!isConnected() || !hasAttributeWithoutSynchronization(HTMLNames::nonceAttr)))
+        return;
+    hideNonceSlow();
+}
+
+inline Element* Document::cssTarget() const
+{
+    return m_cssTarget.get();
 }
 
 }

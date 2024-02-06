@@ -243,11 +243,6 @@ bool StringView::GraphemeClusters::Iterator::operator==(const Iterator& other) c
     return *m_impl == *(other.m_impl);
 }
 
-bool StringView::GraphemeClusters::Iterator::operator!=(const Iterator& other) const
-{
-    return !(*this == other);
-}
-
 enum class ASCIICase { Lower, Upper };
 
 template<ASCIICase type, typename CharacterType>
@@ -369,11 +364,6 @@ bool equalRespectingNullity(StringView a, StringView b)
         return a.isNull() == b.isNull();
 
     return equalCommon(a, b);
-}
-
-StringView StringView::stripWhiteSpace() const
-{
-    return stripLeadingAndTrailingMatchedCharacters(isASCIISpace<UChar>);
 }
 
 size_t StringView::reverseFind(StringView matchString, unsigned start) const

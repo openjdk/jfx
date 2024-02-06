@@ -35,6 +35,8 @@
 #include "LayoutRepainter.h"
 #include "LegacyRenderSVGRoot.h"
 #include "PointerEventsHitRules.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderIterator.h"
 #include "RenderSVGBlockInlines.h"
 #include "RenderSVGInline.h"
@@ -43,6 +45,7 @@
 #include "RenderSVGRoot.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGLengthList.h"
+#include "SVGRenderStyle.h"
 #include "SVGResourcesCache.h"
 #include "SVGRootInlineBox.h"
 #include "SVGTextElement.h"
@@ -632,6 +635,34 @@ void RenderSVGText::updatePositionAndOverflow(const FloatRect& boundaries)
     setSize(boundingRect.size());
     m_objectBoundingBox = boundingRect;
     ASSERT(m_objectBoundingBox == frameRect());
+}
+
+void RenderSVGText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+{
+    auto needsTransformUpdate = [&]() {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (document().settings().layerBasedSVGEngineEnabled())
+            return false;
+#endif
+        if (diff != StyleDifference::Layout)
+            return false;
+
+        auto& newStyle = style();
+        if (!oldStyle)
+            return newStyle.affectsTransform();
+
+        return (oldStyle->affectsTransform() != newStyle.affectsTransform()
+            || oldStyle->transform() != newStyle.transform()
+            || oldStyle->translate() != newStyle.translate()
+            || oldStyle->scale() != newStyle.scale()
+            || oldStyle->rotate() != newStyle.rotate()
+            || oldStyle->offsetPath() != newStyle.offsetPath());
+    };
+
+    if (needsTransformUpdate())
+        setNeedsTransformUpdate();
+
+    RenderSVGBlock::styleDidChange(diff, oldStyle);
 }
 
 }

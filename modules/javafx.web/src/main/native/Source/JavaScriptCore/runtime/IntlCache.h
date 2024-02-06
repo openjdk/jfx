@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "IntlDisplayNames.h"
 #include <unicode/udatpg.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/CString.h>

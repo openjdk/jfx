@@ -56,40 +56,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacPixels__1initIDs
     return com_sun_glass_ui_Pixels_Format_BYTE_BGRA_PRE;
 }
 
-/*
- * Class:     com_sun_glass_ui_mac_MacPixels
- * Method:    _copyPixels
- * Signature: (Ljava/nio/Buffer;Ljava/nio/Buffer;I)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1copyPixels
-(JNIEnv *env, jobject jPixels, jobject jSrc, jobject jDst, jint jSize)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacPixels__1copyPixels");
-
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-
-    void *src = (*env)->GetDirectBufferAddress(env, jSrc);
-    void *dst = (*env)->GetDirectBufferAddress(env, jDst);
-    if ((src != NULL) && (src != NULL) && (jSize > 0))
-    {
-        memcpy(src, dst, jSize);
-    }
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacPixels
- * Method:    _attachInt
- * Signature: (JIILjava/nio/IntBuffer;[II)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachInt
-(JNIEnv *env, jobject jPixels, jlong jPtr, jint jWidth, jint jHeight, jobject jBuffer, jintArray jArray, jint jOffset)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacPixels__1attachInt");
-
-    Java_com_sun_glass_ui_mac_MacPixels__1attachByte(env, jPixels, jPtr, jWidth, jHeight, jBuffer, jArray, 4*jOffset);
-}
-
 NSImage* getImage(u_int8_t* data, int jWidth, int jHeight, int jOffset) {
     NSImage* image = NULL;
     CGImageRef cgImage = NULL;
@@ -119,16 +85,9 @@ NSImage* getImage(u_int8_t* data, int jWidth, int jHeight, int jOffset) {
     return image;
 }
 
-/*
- * Class:     com_sun_glass_ui_mac_MacPixels
- * Method:    _attachByte
- * Signature: (JIILjava/nio/ByteBuffer;[BI)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachByte
+void attachCommon
 (JNIEnv *env, jobject jPixels, jlong jPtr, jint jWidth, jint jHeight, jobject jBuffer, jbyteArray jArray, jint jOffset)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacPixels__1attachByte");
-
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     {
         u_int8_t *data = NULL;
@@ -151,4 +110,78 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachByte
         }
     }
     GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacPixels
+ * Method:    _attachInt
+ * Signature: (JIILjava/nio/IntBuffer;[II)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachInt
+(JNIEnv *env, jobject jPixels, jlong jPtr, jint jWidth, jint jHeight, jobject jBuffer, jintArray jArray, jint jOffset)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacPixels__1attachInt");
+
+    if (!jPtr) return;
+    if (!(jArray || jBuffer)) return;
+    if (jOffset < 0) return;
+    if (jWidth <= 0 || jHeight <= 0) return;
+
+    if (jOffset > (INT_MAX / 4)) {
+        return;
+    }
+
+    if (jWidth > (((INT_MAX - 4 * jOffset) / 4) / jHeight))
+    {
+        return;
+    }
+
+    jsize numElem;
+    if (jArray != NULL) {
+        numElem = (*env)->GetArrayLength(env, jArray);
+    } else {
+        numElem = (*env)->GetDirectBufferCapacity(env, jBuffer);
+    }
+
+    if ((jWidth * jHeight + jOffset) > numElem)
+    {
+        return;
+    }
+
+    attachCommon(env, jPixels, jPtr, jWidth, jHeight, jBuffer, jArray, 4 * jOffset);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacPixels
+ * Method:    _attachByte
+ * Signature: (JIILjava/nio/ByteBuffer;[BI)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachByte
+(JNIEnv *env, jobject jPixels, jlong jPtr, jint jWidth, jint jHeight, jobject jBuffer, jbyteArray jArray, jint jOffset)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacPixels__1attachByte");
+
+    if (!jPtr) return;
+    if (!(jArray || jBuffer)) return;
+    if (jOffset < 0) return;
+    if (jWidth <= 0 || jHeight <= 0) return;
+
+    if (jWidth > (((INT_MAX - jOffset) / 4) / jHeight))
+    {
+        return;
+    }
+
+    jsize numElem;
+    if (jArray != NULL) {
+        numElem = (*env)->GetArrayLength(env, jArray);
+    } else {
+        numElem = (*env)->GetDirectBufferCapacity(env, jBuffer);
+    }
+
+    if ((4 * jWidth * jHeight + jOffset) > numElem)
+    {
+        return;
+    }
+
+    attachCommon(env, jPixels, jPtr, jWidth, jHeight, jBuffer, jArray, jOffset);
 }

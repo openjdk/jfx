@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,14 +24,11 @@
 
 #include "CursorList.h"
 #include "QuotesData.h"
-#include "RenderStyle.h"
 #include "RenderStyleConstants.h"
+#include "RenderStyleInlines.h"
 #include "ShadowData.h"
-#include "StyleColorScheme.h"
-#include "StyleCustomPropertyData.h"
 #include "StyleFilterData.h"
 #include "StyleImage.h"
-#include <wtf/DataRef.h>
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -42,12 +39,12 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     StyleColor firstColor;
     StyleColor colors[10];
     void* ownPtrs[1];
-    AtomString atomStrings[6];
+    AtomString atomStrings[5];
     void* refPtrs[3];
     Length lengths[2];
     float secondFloat;
     TextUnderlineOffset offset;
-    TextEdge textEdge;
+    TextBoxEdge textBoxEdge;
     void* customPropertyDataRefs[1];
     unsigned bitfields[7];
     short pagedMediaShorts[2];
@@ -56,10 +53,6 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
 
 #if ENABLE(TEXT_AUTOSIZING)
     TextSizeAdjustment textSizeAdjust;
-#endif
-
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    float imageResolutionFloats;
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
@@ -71,6 +64,10 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
 #endif
     TextSpacingTrim textSpacingTrim;
     TextAutospace textAutospace;
+
+    ListStyleType listStyleType;
+
+    Markable<ScrollbarColor> scrollbarColor;
 };
 
 static_assert(sizeof(StyleRareInheritedData) <= sizeof(GreaterThanOrSameSizeAsStyleRareInheritedData), "StyleRareInheritedData should bit pack");
@@ -80,20 +77,19 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
 StyleRareInheritedData::StyleRareInheritedData()
     : textStrokeWidth(RenderStyle::initialTextStrokeWidth())
     , listStyleImage(RenderStyle::initialListStyleImage())
-    , listStyleStringValue(RenderStyle::initialListStyleStringValue())
     , textStrokeColor(RenderStyle::initialTextStrokeColor())
     , textFillColor(RenderStyle::initialTextFillColor())
     , textEmphasisColor(RenderStyle::initialTextEmphasisColor())
     , visitedLinkTextStrokeColor(RenderStyle::initialTextStrokeColor())
     , visitedLinkTextFillColor(RenderStyle::initialTextFillColor())
     , visitedLinkTextEmphasisColor(RenderStyle::initialTextEmphasisColor())
-    , caretColor(RenderStyle::currentColor())
-    , visitedLinkCaretColor(RenderStyle::currentColor())
-    , accentColor(RenderStyle::currentColor())
+    , caretColor(StyleColor::currentColor())
+    , visitedLinkCaretColor(StyleColor::currentColor())
+    , accentColor(StyleColor::currentColor())
     , indent(RenderStyle::initialTextIndent())
     , effectiveZoom(RenderStyle::initialZoom())
     , textUnderlineOffset(RenderStyle::initialTextUnderlineOffset())
-    , textEdge(RenderStyle::initialTextEdge())
+    , textBoxEdge(RenderStyle::initialTextBoxEdge())
     , miterLimit(RenderStyle::initialStrokeMiterLimit())
     , customProperties(StyleCustomPropertyData::create())
     , widows(RenderStyle::initialWidows())
@@ -107,7 +103,6 @@ StyleRareInheritedData::StyleRareInheritedData()
     , nbspMode(static_cast<unsigned>(NBSPMode::Normal))
     , lineBreak(static_cast<unsigned>(LineBreak::Auto))
     , userSelect(static_cast<unsigned>(RenderStyle::initialUserSelect()))
-    , speakAs(RenderStyle::initialSpeakAs().toRaw())
     , hyphens(static_cast<unsigned>(Hyphens::Manual))
     , textCombine(static_cast<unsigned>(RenderStyle::initialTextCombine()))
     , textEmphasisFill(static_cast<unsigned>(TextEmphasisFill::Filled))
@@ -124,15 +119,10 @@ StyleRareInheritedData::StyleRareInheritedData()
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     , useTouchOverflowScrolling(RenderStyle::initialUseTouchOverflowScrolling())
 #endif
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    , imageResolutionSource(RenderStyle::initialImageResolutionSource())
-    , imageResolutionSnap(RenderStyle::initialImageResolutionSnap())
-#endif
     , textAlignLast(static_cast<unsigned>(RenderStyle::initialTextAlignLast()))
     , textJustify(static_cast<unsigned>(RenderStyle::initialTextJustify()))
     , textDecorationSkipInk(static_cast<unsigned>(RenderStyle::initialTextDecorationSkipInk()))
     , textUnderlinePosition(static_cast<unsigned>(RenderStyle::initialTextUnderlinePosition()))
-    , textWrap(static_cast<unsigned>(RenderStyle::initialTextWrap()))
     , rubyPosition(static_cast<unsigned>(RenderStyle::initialRubyPosition()))
     , textZoom(static_cast<unsigned>(RenderStyle::initialTextZoom()))
 #if PLATFORM(IOS_FAMILY)
@@ -150,7 +140,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , hasAutoAccentColor(true)
     , effectiveInert(false)
     , isInSubtreeWithBlendMode(false)
-    , effectiveSkipsContent(false)
+    , effectiveSkippedContent(false)
     , effectiveTouchActions(RenderStyle::initialTouchActions())
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
@@ -163,14 +153,13 @@ StyleRareInheritedData::StyleRareInheritedData()
 #if ENABLE(TEXT_AUTOSIZING)
     , textSizeAdjust(RenderStyle::initialTextSizeAdjust())
 #endif
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    , imageResolution(RenderStyle::initialImageResolution())
-#endif
 #if ENABLE(TOUCH_EVENTS)
     , tapHighlightColor(RenderStyle::initialTapHighlightColor())
 #endif
     , textSpacingTrim(RenderStyle::initialTextSpacingTrim())
     , textAutospace(RenderStyle::initialTextAutospace())
+    , listStyleType(RenderStyle::initialListStyleType())
+    , scrollbarColor(RenderStyle::initialScrollbarColor())
 {
 }
 
@@ -178,7 +167,6 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     : RefCounted<StyleRareInheritedData>()
     , textStrokeWidth(o.textStrokeWidth)
     , listStyleImage(o.listStyleImage)
-    , listStyleStringValue(o.listStyleStringValue)
     , textStrokeColor(o.textStrokeColor)
     , textFillColor(o.textFillColor)
     , textEmphasisColor(o.textEmphasisColor)
@@ -193,7 +181,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , indent(o.indent)
     , effectiveZoom(o.effectiveZoom)
     , textUnderlineOffset(o.textUnderlineOffset)
-    , textEdge(o.textEdge)
+    , textBoxEdge(o.textBoxEdge)
     , miterLimit(o.miterLimit)
     , customProperties(o.customProperties)
     , widows(o.widows)
@@ -224,15 +212,10 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     , useTouchOverflowScrolling(o.useTouchOverflowScrolling)
 #endif
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    , imageResolutionSource(o.imageResolutionSource)
-    , imageResolutionSnap(o.imageResolutionSnap)
-#endif
     , textAlignLast(o.textAlignLast)
     , textJustify(o.textJustify)
     , textDecorationSkipInk(o.textDecorationSkipInk)
     , textUnderlinePosition(o.textUnderlinePosition)
-    , textWrap(o.textWrap)
     , rubyPosition(o.rubyPosition)
     , textZoom(o.textZoom)
 #if PLATFORM(IOS_FAMILY)
@@ -250,7 +233,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , hasAutoAccentColor(o.hasAutoAccentColor)
     , effectiveInert(o.effectiveInert)
     , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
-    , effectiveSkipsContent(o.effectiveSkipsContent)
+    , effectiveSkippedContent(o.effectiveSkippedContent)
     , effectiveTouchActions(o.effectiveTouchActions)
     , eventListenerRegionTypes(o.eventListenerRegionTypes)
     , strokeWidth(o.strokeWidth)
@@ -270,14 +253,13 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
 #if ENABLE(TEXT_AUTOSIZING)
     , textSizeAdjust(o.textSizeAdjust)
 #endif
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-    , imageResolution(o.imageResolution)
-#endif
 #if ENABLE(TOUCH_EVENTS)
     , tapHighlightColor(o.tapHighlightColor)
 #endif
     , textSpacingTrim(o.textSpacingTrim)
     , textAutospace(o.textAutospace)
+    , listStyleType(o.listStyleType)
+    , scrollbarColor(o.scrollbarColor)
 {
 }
 
@@ -308,7 +290,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && indent == o.indent
         && effectiveZoom == o.effectiveZoom
         && textUnderlineOffset == o.textUnderlineOffset
-        && textEdge == o.textEdge
+        && textBoxEdge == o.textBoxEdge
         && wordSpacing == o.wordSpacing
         && miterLimit == o.miterLimit
         && widows == o.widows
@@ -355,16 +337,10 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && lineGrid == o.lineGrid
         && imageOrientation == o.imageOrientation
         && imageRendering == o.imageRendering
-#if ENABLE(CSS_IMAGE_RESOLUTION)
-        && imageResolutionSource == o.imageResolutionSource
-        && imageResolutionSnap == o.imageResolutionSnap
-        && imageResolution == o.imageResolution
-#endif
         && textAlignLast == o.textAlignLast
         && textJustify == o.textJustify
         && textDecorationSkipInk == o.textDecorationSkipInk
         && textUnderlinePosition == o.textUnderlinePosition
-        && textWrap == o.textWrap
         && rubyPosition == o.rubyPosition
         && textZoom == o.textZoom
         && lineSnap == o.lineSnap
@@ -383,15 +359,16 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && effectiveTouchActions == o.effectiveTouchActions
         && eventListenerRegionTypes == o.eventListenerRegionTypes
         && effectiveInert == o.effectiveInert
-        && effectiveSkipsContent == o.effectiveSkipsContent
+        && effectiveSkippedContent == o.effectiveSkippedContent
         && strokeWidth == o.strokeWidth
         && strokeColor == o.strokeColor
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor
         && customProperties == o.customProperties
         && arePointingToEqualData(listStyleImage, o.listStyleImage)
-        && listStyleStringValue == o.listStyleStringValue
+        && listStyleType == o.listStyleType
         && textSpacingTrim == o.textSpacingTrim
-        && textAutospace == o.textAutospace;
+        && textAutospace == o.textAutospace
+        && scrollbarColor == o.scrollbarColor;
 }
 
 bool StyleRareInheritedData::hasColorFilters() const

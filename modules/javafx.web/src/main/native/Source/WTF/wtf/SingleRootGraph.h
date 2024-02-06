@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/CommaPrinter.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/GraphNodeWorklist.h>
 #include <wtf/Noncopyable.h>
@@ -57,11 +58,6 @@ public:
     {
         return m_node == other.m_node
             && m_isRoot == other.m_isRoot;
-    }
-
-    bool operator!=(const SingleRootGraphNode& other) const
-    {
-        return !(*this == other);
     }
 
     explicit operator bool() const { return *this != SingleRootGraphNode(); }

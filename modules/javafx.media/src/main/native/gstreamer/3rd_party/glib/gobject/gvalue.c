@@ -1,6 +1,8 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 1997-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -139,7 +141,7 @@
  *   g_value_set_boxed (value, mystruct);
  *   // [... your code ....]
  *   g_value_unset (value);
- *   g_value_free (value);
+ *   g_free (value);
  * }
  * ]|
  */
@@ -209,12 +211,12 @@ g_value_init (GValue *value,
       value_table->value_init (value);
     }
   else if (G_VALUE_TYPE (value))
-    g_warning ("%s: cannot initialize GValue with type '%s', the value has already been initialized as '%s'",
+    g_critical ("%s: cannot initialize GValue with type '%s', the value has already been initialized as '%s'",
                G_STRLOC,
                g_type_name (g_type),
                g_type_name (G_VALUE_TYPE (value)));
   else /* !G_TYPE_IS_VALUE (g_type) */
-    g_warning ("%s: cannot initialize GValue with type '%s', %s",
+    g_critical ("%s: cannot initialize GValue with type '%s', %s",
                G_STRLOC,
                g_type_name (g_type),
                value_table ? "this type is abstract with regards to GValue use, use a more specific (derived) type" : "this type has no GTypeValueTable implementation");
@@ -405,7 +407,7 @@ g_value_set_instance (GValue  *value,
   error_msg = value_table->collect_value (value, 1, &cvalue, 0);
   if (error_msg)
     {
-      g_warning ("%s: %s", G_STRLOC, error_msg);
+      g_critical ("%s: %s", G_STRLOC, error_msg);
       g_free (error_msg);
 
       /* we purposely leak the value here, it might not be
@@ -469,7 +471,7 @@ g_value_init_from_instance (GValue  *value,
       error_msg = value_table->collect_value (value, 1, &cvalue, 0);
       if (error_msg)
         {
-          g_warning ("%s: %s", G_STRLOC, error_msg);
+          g_critical ("%s: %s", G_STRLOC, error_msg);
           g_free (error_msg);
 
           /* we purposely leak the value here, it might not be

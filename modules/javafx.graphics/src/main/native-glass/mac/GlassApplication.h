@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,19 @@
 
 -(void)setAppleMenu:(NSMenu *)aMenu;
 
+@end
+
+
+/*
+ * NSApplicationFX is a subclass of NSApplication that we use when we
+ * initialize the application.
+ * We need to subclass NSApplication in order to stop AWT from installing
+ * their NSApplicationDelegate delegate, overwriting the one we install.
+ *
+ * We don't override anything in NSApplication. All work is done in our
+ * NSApplicationDelegate as recommended by Apple.
+ */
+@interface NSApplicationFX : NSApplication
 @end
 
 @interface GlassApplication : NSObject <NSApplicationDelegate>

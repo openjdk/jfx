@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2011 Canonical Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -44,6 +46,9 @@ void g_crash_handler_win32_deinit (void);
 gboolean _g_win32_call_rtl_version (OSVERSIONINFOEXW *info);
 extern HMODULE glib_dll;
 gchar *g_win32_find_helper_executable_path (const gchar *process_name, void *dll_handle);
+int g_win32_reopen_noninherited (int fd, int mode, GError **err);
+gboolean g_win32_handle_is_socket (void *h);
+
 #endif
 
 #endif /* __GLIB_INIT_H__ */

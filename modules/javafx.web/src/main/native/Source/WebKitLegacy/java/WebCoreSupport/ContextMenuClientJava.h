@@ -33,15 +33,14 @@ namespace WebCore {
 class ContextMenu;
 
 class ContextMenuClientJava : public ContextMenuClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ContextMenuClientJava(const JLObject &webPage);
 
-    void contextMenuDestroyed() override;
-
     void downloadURL(const URL& url) override;
-    void searchWithGoogle(const Frame*) override;
-    void lookUpInDictionary(Frame*) override;
-    bool isSpeaking() override;
+    void searchWithGoogle(const LocalFrame*) override;
+    void lookUpInDictionary(LocalFrame*) override;
+    bool isSpeaking() const override;
     void speak(const String&) override;
     void stopSpeaking() override;
 

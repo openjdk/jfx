@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,6 +52,10 @@ private:
             return true;
         }
 
+        auto bytesRemaining = view.byteLength() - localOffset;
+        if (characterCount > bytesRemaining)
+            return false;
+
         Vector<LChar> characters;
         characters.reserveInitialCapacity(static_cast<size_t>(characterCount));
         while (characterCount--) {
@@ -91,6 +95,7 @@ ISOWebVTTCue::ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, A
 {
 }
 
+ISOWebVTTCue::ISOWebVTTCue() = default;
 ISOWebVTTCue::ISOWebVTTCue(ISOWebVTTCue&&) = default;
 ISOWebVTTCue::~ISOWebVTTCue() = default;
 

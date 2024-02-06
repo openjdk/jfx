@@ -27,6 +27,7 @@
 
 #include "ChromiumBridge.h"
 #include <wtf/Language.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 

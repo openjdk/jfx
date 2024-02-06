@@ -446,7 +446,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         double tableHeaderRowHeight = tableHeaderRow.prefHeight(-1);
         layoutInArea(tableHeaderRow, x, y, w, tableHeaderRowHeight, baselineOffset,
                 HPos.CENTER, VPos.CENTER);
-        y += tableHeaderRowHeight;
+
+        double yWithTableHeaderRowHeight = y + tableHeaderRowHeight;
 
         // let the virtual flow take up all remaining space
         // TODO this calculation is to ensure the bottom border is visible when
@@ -455,11 +456,11 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         double flowHeight = Math.floor(h - tableHeaderRowHeight);
         if (getItemCount() == 0 || visibleColCount == 0) {
             // show message overlay instead of empty table
-            layoutInArea(placeholderRegion, x, y,
+            layoutInArea(placeholderRegion, x, yWithTableHeaderRowHeight,
                     w, flowHeight,
                     baselineOffset, HPos.CENTER, VPos.CENTER);
         } else {
-            layoutInArea(flow, x, y,
+            layoutInArea(flow, x, yWithTableHeaderRowHeight,
                     w, flowHeight,
                     baselineOffset, HPos.CENTER, VPos.CENTER);
         }
@@ -475,38 +476,36 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                 // either from the left-edge of the column, or 0, if the column
                 // is off the left-side of the TableView (i.e. horizontal
                 // scrolling has occured).
-                double minX = tableHeaderRow.sceneToLocal(n.localToScene(n.getBoundsInLocal())).getMinX();
+                double tableHeaderRowX = tableHeaderRow.sceneToLocal(n.localToScene(n.getBoundsInLocal())).getMinX();
                 double overlayWidth = reorderingColumnHeader.getWidth();
-                if (minX < 0) {
-                    overlayWidth += minX;
+                if (tableHeaderRowX < 0) {
+                    overlayWidth += tableHeaderRowX;
                 }
-                minX = minX < 0 ? 0 : minX;
+                tableHeaderRowX = tableHeaderRowX < 0 ? 0 : tableHeaderRowX;
 
                 // prevent the overlay going out the right-hand side of the
                 // TableView
-                if (minX + overlayWidth > w) {
-                    overlayWidth = w - minX;
+                if (tableHeaderRowX + overlayWidth > w) {
+                    overlayWidth = w - tableHeaderRowX;
 
                     if (flow.getVbar().isVisible()) {
                         overlayWidth -= flow.getVbar().getWidth() - 1;
                     }
                 }
 
-                double contentAreaHeight = flowHeight;
+                double overlayHeight = flowHeight;
                 if (flow.getHbar().isVisible()) {
-                    contentAreaHeight -= flow.getHbar().getHeight();
+                    overlayHeight -= flow.getHbar().getHeight();
                 }
 
-                columnReorderOverlay.resize(overlayWidth, contentAreaHeight);
-
-                columnReorderOverlay.setLayoutX(minX);
-                columnReorderOverlay.setLayoutY(tableHeaderRow.getHeight());
+                double columnReorderOverlayX = x + tableHeaderRowX;
+                columnReorderOverlay.resizeRelocate(columnReorderOverlayX, yWithTableHeaderRowHeight, overlayWidth, overlayHeight);
             }
 
             // paint the reorder line as well
-            double cw = columnReorderLine.snappedLeftInset() + columnReorderLine.snappedRightInset();
+            double lineWidth = columnReorderLine.snappedLeftInset() + columnReorderLine.snappedRightInset();
             double lineHeight = h - (flow.getHbar().isVisible() ? flow.getHbar().getHeight() - 1 : 0);
-            columnReorderLine.resizeRelocate(0, columnReorderLine.snappedTopInset(), cw, lineHeight);
+            columnReorderLine.resizeRelocate(x, y, lineWidth, lineHeight);
         }
 
         columnReorderLine.setVisible(tableHeaderRow.isReordering());
@@ -907,7 +906,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             contentWidth -= flow.getVbar().getWidth();
         }
 
-        if ((contentWidth <= 0) || (TableSkinUtils.getItemCount(this) == 0)) {
+        if ((contentWidth <= 0) || (getItemCount() == 0)) {
             // when there is no content in the TableView.
             Control c = getSkinnable();
             contentWidth = c.getWidth() - (snappedLeftInset() + snappedRightInset());

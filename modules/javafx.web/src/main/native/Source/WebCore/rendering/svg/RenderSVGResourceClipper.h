@@ -34,17 +34,13 @@ struct ClipperData {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
     struct Inputs {
-        bool operator==(const Inputs& other) const
-        {
-            return std::tie(objectBoundingBox, clippedContentBounds, scale, effectiveZoom) == std::tie(other.objectBoundingBox, other.clippedContentBounds, other.scale, other.effectiveZoom);
-        }
-
-        bool operator!=(const Inputs& other) const { return !(*this == other); }
+        bool operator==(const Inputs& other) const = default;
 
         FloatRect objectBoundingBox;
         FloatRect clippedContentBounds;
         FloatSize scale;
         float effectiveZoom = 1;
+        bool paintingDisabled { false };
     };
 
     bool invalidate(const Inputs& inputs)
@@ -68,7 +64,7 @@ public:
 
     inline SVGClipPathElement& clipPathElement() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
@@ -94,7 +90,7 @@ private:
     ASCIILiteral renderName() const override { return "RenderSVGResourceClipper"_s; }
     bool isSVGResourceClipper() const override { return true; }
 
-    ClipperData::Inputs computeInputs(RenderElement&, const FloatRect& objectBoundingBox, const FloatRect& clippedContentBounds, float effectiveZoom);
+    ClipperData::Inputs computeInputs(const GraphicsContext&, const RenderElement&, const FloatRect& objectBoundingBox, const FloatRect& clippedContentBounds, float effectiveZoom);
     bool pathOnlyClipping(GraphicsContext&, const AffineTransform&, const FloatRect&, float effectiveZoom);
     bool drawContentIntoMaskImage(ImageBuffer&, const FloatRect& objectBoundingBox, float effectiveZoom);
     void calculateClipContentRepaintRect();

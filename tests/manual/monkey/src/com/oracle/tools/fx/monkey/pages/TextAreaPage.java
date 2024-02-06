@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.FontSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.Templates;
@@ -40,7 +41,7 @@ public class TextAreaPage extends TestPaneBase {
     private final TextSelector textSelector;
 
     public TextAreaPage() {
-        setId("TextAreaPage");
+        FX.name(this, "TextAreaPage");
 
         control = new TextArea();
         control.setPromptText("<prompt>");
@@ -54,13 +55,13 @@ public class TextAreaPage extends TestPaneBase {
         FontSelector fontSelector = new FontSelector("font", control::setFont);
 
         CheckBox wrap = new CheckBox("wrap text");
-        wrap.setId("wrapText");
+        FX.name(wrap, "wrapText");
         wrap.selectedProperty().addListener((s, p, on) -> {
             control.setWrapText(on);
         });
 
         CheckBox editable = new CheckBox("editable");
-        editable.setId("editable");
+        FX.name(editable, "editable");
         editable.selectedProperty().bindBidirectional(control.editableProperty());
 
         TextSelector promptChoice = Templates.promptChoice("promptChoice", control::setPromptText);

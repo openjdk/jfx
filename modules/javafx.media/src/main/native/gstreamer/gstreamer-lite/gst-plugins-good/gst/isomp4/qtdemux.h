@@ -65,6 +65,19 @@ enum QtDemuxState
   QTDEMUX_STATE_BUFFER_MDAT     /* Buffering the mdat atom */
 };
 
+typedef enum {
+  /* Regular behaviour */
+  VARIANT_NONE,
+
+  /* We're working with a MediaSource Extensions ISO BMFF Bytestream. */
+  VARIANT_MSE_BYTESTREAM,
+
+  /* We're working with a smoothstreaming fragment.
+   * Mss doesn't have 'moov' or any information about the streams format,
+   * requiring qtdemux to expose and create the streams */
+  VARIANT_MSS_FRAGMENTED,
+} Variant;
+
 struct _GstQTDemux {
   GstElement element;
 
@@ -89,6 +102,7 @@ struct _GstQTDemux {
   gint     n_video_streams;
   gint     n_audio_streams;
   gint     n_sub_streams;
+  gint     n_meta_streams;
 
   GstFlowCombiner *flowcombiner;
 
@@ -118,6 +132,10 @@ struct _GstQTDemux {
   /* Global duration (in global timescale). Use QTTIME macros to get GstClockTime */
   guint64 duration;
 
+  /* Start UTC time as extracted from the AFIdentification box, reset on every
+   * moov */
+  GstClockTime start_utc_time;
+
   /* Total size of header atoms. Used to calculate fallback overall bitrate */
   guint header_size;
 
@@ -137,10 +155,7 @@ struct _GstQTDemux {
 
   guint32 segment_seqnum;
 
-  /* flag to indicate that we're working with a smoothstreaming fragment
-   * Mss doesn't have 'moov' or any information about the streams format,
-   * requiring qtdemux to expose and create the streams */
-  gboolean mss_mode;
+  Variant variant;
 
   /* Set to TRUE if the incoming stream is either a MSS stream or
    * a Fragmented MP4 (containing the [mvex] atom in the header) */

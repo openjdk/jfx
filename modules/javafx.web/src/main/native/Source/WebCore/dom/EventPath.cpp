@@ -21,13 +21,13 @@
 #include "config.h"
 #include "EventPath.h"
 
-#include "DOMWindow.h"
 #include "ElementRareData.h"
 #include "Event.h"
 #include "EventContext.h"
 #include "EventNames.h"
 #include "FullscreenManager.h"
 #include "HTMLSlotElement.h"
+#include "LocalDOMWindow.h"
 #include "MouseEvent.h"
 #include "Node.h"
 #include "PseudoElement.h"
@@ -177,6 +177,17 @@ void EventPath::setRelatedTarget(Node& origin, Node& relatedNode)
     }
 }
 
+void EventPath::adjustForDisabledFormControl()
+{
+    for (unsigned i = 0; i < m_path.size(); ++i) {
+        auto* element = dynamicDowncast<Element>(m_path[i].node());
+        if (element && element->isDisabledFormControl()) {
+            m_path.shrink(i);
+            return;
+        }
+    }
+}
+
 #if ENABLE(TOUCH_EVENTS)
 
 void EventPath::retargetTouch(EventContext::TouchListType type, const Touch& touch)
@@ -267,6 +278,11 @@ EventPath::EventPath(const Vector<EventTarget*>& targets)
         ASSERT(!is<Node>(target));
         return EventContext { EventContext::Type::Normal, nullptr, target, *targets.begin(), 0 };
     });
+}
+
+EventPath::EventPath(EventTarget& target)
+{
+    m_path = { EventContext { EventContext::Type::Normal, nullptr, &target, &target, 0 } };
 }
 
 static Node* moveOutOfAllShadowRoots(Node& startingNode)

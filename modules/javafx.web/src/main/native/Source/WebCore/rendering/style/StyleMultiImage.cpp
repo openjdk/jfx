@@ -30,6 +30,7 @@
 #include "CSSImageValue.h"
 #include "CSSNamedImageValue.h"
 #include "CSSPaintImageValue.h"
+#include "CSSVariableData.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
 #include "RenderElement.h"
@@ -64,6 +65,7 @@ void StyleMultiImage::load(CachedResourceLoader& loader, const ResourceLoaderOpt
     m_isPending = false;
 
     auto bestFitImage = selectBestFitImage(*loader.document());
+
     ASSERT(is<StyleCachedImage>(bestFitImage.image) || is<StyleGeneratedImage>(bestFitImage.image));
 
     if (is<StyleGeneratedImage>(bestFitImage.image)) {

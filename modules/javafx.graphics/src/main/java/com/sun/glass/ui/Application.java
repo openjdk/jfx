@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,8 +84,7 @@ public abstract class Application {
         // currently used only on Mac OS X
         public void handleQuitAction(Application app, long time) {
         }
-        public boolean handleThemeChanged(String themeName) {
-            return false;
+        public void handlePreferencesChanged(Map<String, Object> preferences) {
         }
     }
 
@@ -259,12 +258,11 @@ public abstract class Application {
         }
     }
 
-    protected boolean notifyThemeChanged(String themeName) {
+    protected void notifyPreferencesChanged(Map<String, Object> preferences) {
         EventHandler handler = getEventHandler();
         if (handler != null) {
-            return handler.handleThemeChanged(themeName);
+            handler.handlePreferencesChanged(preferences);
         }
-        return false;
     }
 
     protected void notifyDidResignActive() {
@@ -675,19 +673,6 @@ public abstract class Application {
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
 
-    public String getHighContrastScheme(String themeName) {
-        return themeName;
-    }
-
-    /**
-     * Gets the Name of the currently active high contrast theme.
-     * If null, then high contrast is not enabled.
-     */
-    public String getHighContrastTheme() {
-        checkEventThread();
-        return null;
-    }
-
     protected boolean _supportsInputMethods() {
         // Overridden in subclasses
         return false;
@@ -767,5 +752,52 @@ public abstract class Application {
             default:
                 return Optional.empty();
         }
+    }
+
+    /**
+     * Returns the current set of platform properties as a map of platform-specific keys to
+     * arbitrary values. This is a snapshot, and won't be updated. There are no guarantees on
+     * the implementation type, modifiability or serializability of the returned {@code Map}.
+     *
+     * @return the current set of platform preferences
+     */
+    public Map<String, Object> getPlatformPreferences() {
+        return Map.of();
+    }
+
+    /**
+     * Returns a map of platform-specific keys to platform-independent keys defined by JavaFX.
+     * <p>
+     * For example, the platform-specific key "Windows.UIColor.Foreground" is mapped to the key "foregroundColor",
+     * which makes it easier to write shared code without depending on platform-specific details.
+     * <p>
+     * The following platform-independent keys are currently supported, which correspond to the names of color
+     * properties on the {@link com.sun.javafx.application.preferences.PreferenceProperties} class:
+     * <ul>
+     *     <li>foregroundColor
+     *     <li>backgroundColor
+     *     <li>accentColor
+     * </ul>
+     *
+     * @return a map of platform-specific keys to well-known keys
+     */
+    public Map<String, String> getPlatformKeyMappings() {
+        return Map.of();
+    }
+
+    /**
+     * Returns a mapping of platform-specific keys to the types of their values.
+     * Polymorphic types are supported by specifying the common base type; for example, a key can
+     * be mapped to {@code Paint.class} to support any type of paint.
+     * <p>
+     * Implementors must keep this map in sync with the mappings reported by the native Glass toolkit.
+     * If a native toolkit reports mappings for keys that are not contained in this map, the typed getters
+     * in {@link javafx.application.Platform.Preferences} might not throw {@code IllegalArgumentException}
+     * as specified.
+     *
+     * @return a map of platform-specific keys to types
+     */
+    public Map<String, Class<?>> getPlatformKeys() {
+        return Map.of();
     }
 }

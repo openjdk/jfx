@@ -2,6 +2,8 @@
  * Copyright (C) 2008 Ryan Lortie
  * Copyright (C) 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -33,6 +35,7 @@
 
 #ifdef G_BIT_LOCK_FORCE_FUTEX_EMULATION
 #undef HAVE_FUTEX
+#undef HAVE_FUTEX_TIME64
 #endif
 
 #ifndef HAVE_FUTEX
@@ -40,7 +43,7 @@ static GMutex g_futex_mutex;
 static GSList *g_futex_address_list = NULL;
 #endif
 
-#ifdef HAVE_FUTEX
+#if defined(HAVE_FUTEX) || defined(HAVE_FUTEX_TIME64)
 /*
  * We have headers for futex(2) on the build machine.  This does not
  * imply that every system that ever runs the resulting glib will have
@@ -49,14 +52,6 @@ static GSList *g_futex_address_list = NULL;
  *
  * If anyone actually gets bit by this, please file a bug. :)
  */
-#include <linux/futex.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-
-#ifndef FUTEX_WAIT_PRIVATE
-#define FUTEX_WAIT_PRIVATE FUTEX_WAIT
-#define FUTEX_WAKE_PRIVATE FUTEX_WAKE
-#endif
 
 /* < private >
  * g_futex_wait:
@@ -79,7 +74,7 @@ static void
 g_futex_wait (const gint *address,
               gint        value)
 {
-  syscall (__NR_futex, address, (gsize) FUTEX_WAIT_PRIVATE, (gsize) value, NULL);
+  g_futex_simple (address, (gsize) FUTEX_WAIT_PRIVATE, (gsize) value, NULL);
 }
 
 /* < private >
@@ -96,7 +91,7 @@ g_futex_wait (const gint *address,
 static void
 g_futex_wake (const gint *address)
 {
-  syscall (__NR_futex, address, (gsize) FUTEX_WAKE_PRIVATE, (gsize) 1, NULL);
+  g_futex_simple (address, (gsize) FUTEX_WAKE_PRIVATE, (gsize) 1, NULL);
 }
 
 #else

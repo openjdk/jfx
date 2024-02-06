@@ -26,10 +26,10 @@
 #include "config.h"
 #include "LazyLoadImageObserver.h"
 
-#include "Frame.h"
 #include "HTMLImageElement.h"
 #include "IntersectionObserverCallback.h"
-
+#include "IntersectionObserverEntry.h"
+#include "LocalFrame.h"
 #include <limits>
 
 namespace WebCore {

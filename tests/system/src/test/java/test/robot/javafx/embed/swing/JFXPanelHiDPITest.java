@@ -32,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.sun.javafx.PlatformUtil;
+
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.embed.swing.JFXPanelShim;
@@ -56,6 +57,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
+import test.util.Util;
 import static test.util.Util.TIMEOUT;
 
 public class JFXPanelHiDPITest {
@@ -82,7 +84,7 @@ public class JFXPanelHiDPITest {
         launchLatch = new CountDownLatch(1);
 
         // Start the Application
-        SwingUtilities.invokeLater(() -> myApp = new MyApp());
+        SwingUtilities.invokeAndWait(() -> myApp = new MyApp());
 
         assertTrue("Timeout waiting for Application to launch",
                 launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS));
@@ -149,7 +151,7 @@ public class JFXPanelHiDPITest {
         }
 
         private void createScene(final JFXPanel fxPanel) {
-            Platform.runLater(() -> {
+            Util.runAndWait(() -> {
                 StackPane root = new StackPane();
 
                 Rectangle rect = new Rectangle(PANEL_WIDTH - 100, (double) PANEL_HEIGHT / 8);

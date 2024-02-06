@@ -45,6 +45,9 @@ class ResourceHandle;
 class ResourceHandleClient;
 class ResourceRequest;
 class ThreadSafeDataBuffer;
+#if PLATFORM(JAVA)
+class WebBlobRegistry;
+#endif
 struct PolicyContainer;
 
 // BlobRegistryImpl is not thread-safe. It should only be called from main thread.
@@ -56,19 +59,18 @@ public:
     BlobData* getBlobDataFromURL(const URL&) const;
 
     Ref<ResourceHandle> createResourceHandle(const ResourceRequest&, ResourceHandleClient*);
-    void writeBlobToFilePath(const URL& blobURL, const String& path, Function<void(bool success)>&& completionHandler);
 
     void appendStorageItems(BlobData*, const BlobDataItemList&, long long offset, long long length);
 
-    void registerFileBlobURL(const URL&, Ref<BlobDataFileReference>&&, const String& contentType);
-    void registerBlobURL(const URL&, Vector<BlobPart>&&, const String& contentType);
-    void registerBlobURL(const URL&, const URL& srcURL, const PolicyContainer&);
-    void registerBlobURLOptionallyFileBacked(const URL&, const URL& srcURL, RefPtr<BlobDataFileReference>&&, const String& contentType, const PolicyContainer&);
-    void registerBlobURLForSlice(const URL&, const URL& srcURL, long long start, long long end, const String& contentType);
-    void unregisterBlobURL(const URL&);
+    void registerInternalFileBlobURL(const URL&, Ref<BlobDataFileReference>&&, const String& contentType);
+    void registerInternalBlobURL(const URL&, Vector<BlobPart>&&, const String& contentType);
+    void registerBlobURL(const URL&, const URL& srcURL, const PolicyContainer&, const std::optional<SecurityOriginData>& topOrigin);
+    void registerInternalBlobURLOptionallyFileBacked(const URL&, const URL& srcURL, RefPtr<BlobDataFileReference>&&, const String& contentType, const PolicyContainer&);
+    void registerInternalBlobURLForSlice(const URL&, const URL& srcURL, long long start, long long end, const String& contentType);
+    void unregisterBlobURL(const URL&, const std::optional<WebCore::SecurityOriginData>& topOrigin);
 
-    void registerBlobURLHandle(const URL&);
-    void unregisterBlobURLHandle(const URL&);
+    void registerBlobURLHandle(const URL&, const std::optional<WebCore::SecurityOriginData>& topOrigin);
+    void unregisterBlobURLHandle(const URL&, const std::optional<WebCore::SecurityOriginData>& topOrigin);
 
     unsigned long long blobSize(const URL&);
 
@@ -83,14 +85,20 @@ public:
     Vector<RefPtr<BlobDataFileReference>> filesInBlob(const URL&) const;
 
     void setFileDirectory(String&&);
+    void setPartitioningEnabled(bool enabled) { m_isPartitioningEnabled = enabled; }
 
 private:
+    void registerBlobURLOptionallyFileBacked(const URL&, const URL& srcURL, RefPtr<BlobDataFileReference>&&, const String& contentType, const PolicyContainer&);
     void addBlobData(const String& url, RefPtr<BlobData>&&);
     Ref<DataSegment> createDataSegment(Vector<uint8_t>&&, BlobData&);
 
     HashCountedSet<String> m_blobReferences;
     MemoryCompactRobinHoodHashMap<String, RefPtr<BlobData>> m_blobs;
     String m_fileDirectory;
+    bool m_isPartitioningEnabled { false };
+#if PLATFORM(JAVA)
+    friend class WebBlobRegistry;
+#endif
 };
 
 inline void BlobRegistryImpl::setFileDirectory(String&& filePath)

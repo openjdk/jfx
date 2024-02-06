@@ -52,7 +52,7 @@
 #include "gstalsasink.h"
 
 #include <gst/audio/gstaudioiec61937.h>
-#include <gst/gst-i18n-plugin.h>
+#include <glib/gi18n-lib.h>
 
 #ifndef ESTRPIPE
 #define ESTRPIPE EPIPE
@@ -572,7 +572,14 @@ success:
       alsa->period_size);
 
   /* Check if hardware supports pause */
+#ifdef GSTREAMER_LITE
+  // See JDK-8308955. For some reason after stop we will skip ~500 ms of
+  // audio if we use hardware pause. So, for workaround we will never use
+  // hardware pause even if supported.
+  alsa->hw_support_pause = FALSE;
+#else // GSTREAMER_LITE
   alsa->hw_support_pause = snd_pcm_hw_params_can_pause (params);
+#endif // GSTREAMER_LITE
   GST_DEBUG_OBJECT (alsa, "Hw support pause: %s",
       alsa->hw_support_pause ? "yes" : "no");
 
@@ -1181,6 +1188,7 @@ pause_error:
     GST_ERROR_OBJECT (alsa, "alsa-pause: pcm pause error: %s",
         snd_strerror (err));
     GST_ALSA_SINK_UNLOCK (asink);
+    gst_alsasink_stop (asink);
     return;
   }
 }

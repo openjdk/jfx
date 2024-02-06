@@ -97,6 +97,8 @@ void ResourceRequestBase::setAsIsolatedCopy(const ResourceRequest& other)
         setHTTPBody(other.m_httpBody->isolatedCopy());
     setAllowCookies(other.m_requestData.m_allowCookies);
     setIsAppInitiated(other.isAppInitiated());
+    setPrivacyProxyFailClosedForUnreachableNonMainHosts(other.privacyProxyFailClosedForUnreachableNonMainHosts());
+    setUseAdvancedPrivacyProtections(other.useAdvancedPrivacyProtections());
 }
 
 bool ResourceRequestBase::isEmpty() const
@@ -152,7 +154,7 @@ void ResourceRequestBase::redirectAsGETIfNeeded(const ResourceRequestBase &redir
     }
 }
 
-ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& redirectResponse, bool shouldClearReferrerOnHTTPSToHTTPRedirect) const
+ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& redirectResponse, bool shouldClearReferrerOnHTTPSToHTTPRedirect, ShouldSetHash shouldSetHash) const
 {
     ASSERT(redirectResponse.isRedirection());
     // This method is based on https://fetch.spec.whatwg.org/#http-redirect-fetch.
@@ -161,7 +163,12 @@ ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& r
     auto request = asResourceRequest();
     auto location = redirectResponse.httpHeaderField(HTTPHeaderName::Location);
 
-    request.setURL(location.isEmpty() ? URL { } : URL { redirectResponse.url(), location });
+    // https://fetch.spec.whatwg.org/#concept-response-location-url
+    auto url = location.isEmpty() ? URL { } : URL { redirectResponse.url(), location };
+    if (shouldSetHash == ShouldSetHash::Yes && url.fragmentIdentifier().isEmpty() && !redirectResponse.url().fragmentIdentifier().isEmpty())
+        url.setFragmentIdentifier(redirectResponse.url().fragmentIdentifier());
+
+    request.setURL(WTFMove(url));
 
     request.redirectAsGETIfNeeded(*this, redirectResponse);
 
@@ -630,26 +637,31 @@ void ResourceRequestBase::setIsAppInitiated(bool isAppInitiated)
     m_requestData.m_isAppInitiated = isAppInitiated;
 
     m_platformRequestUpdated = false;
-};
-
-#if USE(SYSTEM_PREVIEW)
-
-bool ResourceRequestBase::isSystemPreview() const
-{
-    return m_systemPreviewInfo.has_value();
 }
 
-std::optional<SystemPreviewInfo> ResourceRequestBase::systemPreviewInfo() const
+void ResourceRequestBase::setPrivacyProxyFailClosedForUnreachableNonMainHosts(bool privacyProxyFailClosedForUnreachableNonMainHosts)
 {
-    return m_systemPreviewInfo;
+    updateResourceRequest();
+
+    if (m_requestData.m_privacyProxyFailClosedForUnreachableNonMainHosts == privacyProxyFailClosedForUnreachableNonMainHosts)
+        return;
+
+    m_requestData.m_privacyProxyFailClosedForUnreachableNonMainHosts = privacyProxyFailClosedForUnreachableNonMainHosts;
+
+    m_platformRequestUpdated = false;
 }
 
-void ResourceRequestBase::setSystemPreviewInfo(const SystemPreviewInfo& info)
+void ResourceRequestBase::setUseAdvancedPrivacyProtections(bool useAdvancedPrivacyProtections)
 {
-    m_systemPreviewInfo = info;
-}
+    updateResourceRequest();
 
-#endif
+    if (m_requestData.m_useAdvancedPrivacyProtections == useAdvancedPrivacyProtections)
+        return;
+
+    m_requestData.m_useAdvancedPrivacyProtections = useAdvancedPrivacyProtections;
+
+    m_platformRequestUpdated = false;
+}
 
 bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceRequestBase& b)
 {
@@ -763,6 +775,18 @@ void ResourceRequestBase::updateResourceRequest(HTTPBodyUpdatePolicy bodyPolicy)
         const_cast<ResourceRequest&>(asResourceRequest()).doUpdateResourceHTTPBody();
         m_resourceRequestBodyUpdated = true;
     }
+}
+
+void ResourceRequestBase::upgradeToHTTPS()
+{
+    const URL& originalURL = url();
+    ASSERT(originalURL.protocolIs("http"_s));
+
+    URL newURL = originalURL;
+    newURL.setProtocol("https"_s);
+    if (originalURL.port() && WTF::isDefaultPortForProtocol(originalURL.port().value(), originalURL.protocol()))
+        newURL.setPort(std::nullopt);
+    setURL(newURL);
 }
 
 #if !PLATFORM(COCOA) && !USE(SOUP)

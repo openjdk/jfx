@@ -145,6 +145,7 @@ public:
     WEBCORE_EXPORT bool isSearchField() const;
     bool isInputTypeHidden() const;
     WEBCORE_EXPORT bool isPasswordField() const;
+    bool isSecureField() const { return isPasswordField() || isAutoFilledAndObscured(); }
     bool isCheckbox() const;
     bool isRangeControl() const;
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -336,6 +337,9 @@ public:
     String resultForDialogSubmit() const final;
 
     bool isInnerTextElementEditable() const final { return !hasAutoFillStrongPasswordButton() && HTMLTextFormControlElement::isInnerTextElementEditable(); }
+    void finishParsingChildren() final;
+
+    bool hasEverBeenPasswordField() const { return m_hasEverBeenPasswordField; }
 
 protected:
     HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
@@ -379,10 +383,9 @@ private:
 
     bool accessKeyAction(bool sendMouseEvents) final;
 
-    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = AttributeModificationReason::Directly) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
-    void finishParsingChildren() final;
     void parserDidSetAttributes() final;
 
     void copyNonAttributePropertiesFromElement(const Element&) final;
@@ -427,7 +430,7 @@ private:
     void requiredStateChanged() final;
 
     void initializeInputType();
-    void updateType();
+    void updateType(const AtomString& typeAttributeValue);
     void runPostTypeUpdateTasks();
 
     void subtreeHasChanged() final;
@@ -478,6 +481,7 @@ private:
 #endif
     bool m_isSpellcheckDisabledExceptTextReplacement : 1 { false };
     bool m_hasPendingUserAgentShadowTreeUpdate : 1 { false };
+    bool m_hasEverBeenPasswordField : 1 { false };
     RefPtr<InputType> m_inputType;
     // The ImageLoader must be owned by this element because the loader code assumes
     // that it lives as long as its owning element lives. If we move the loader into

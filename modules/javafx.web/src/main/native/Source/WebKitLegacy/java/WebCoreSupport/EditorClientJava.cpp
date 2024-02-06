@@ -295,11 +295,12 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
         return false;
 
     Frame* frame = downcast<Node>(evt->target())->document().frame();
-    if (!frame)
+    auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    if (!frame || !localFrame)
         return false;
 
     String commandName = String::fromLatin1(interpretKeyEvent(evt));
-    Editor::Command command = frame->editor().command(commandName);
+    Editor::Command command = localFrame->editor().command(commandName);
 
     if (keyEvent->type() == PlatformEvent::Type::RawKeyDown) {
         // WebKit doesn't have enough information about mode to decide how
@@ -354,10 +355,10 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
 #endif
     }
 
-    if (!frame->editor().canEdit())
+    if (!localFrame->editor().canEdit())
         return false;
 
-    return frame->editor().insertText(evt->underlyingPlatformEvent()->text(), evt);
+    return localFrame->editor().insertText(evt->underlyingPlatformEvent()->text(), evt);
 }
 
 void EditorClientJava::handleKeyboardEvent(KeyboardEvent& evt)
@@ -446,7 +447,7 @@ void EditorClientJava::respondToChangedContents()
     notImplemented();
 }
 
-void EditorClientJava::respondToChangedSelection(Frame *frame)
+void EditorClientJava::respondToChangedSelection(LocalFrame *frame)
 {
     if (!frame || !frame->editor().hasComposition()
         || frame->editor().ignoreSelectionChanges()) {
@@ -628,17 +629,17 @@ void EditorClientJava::willSetInputMethodState()
     notImplemented();
 }
 
-bool EditorClientJava::canCopyCut(Frame*, bool defaultValue) const
+bool EditorClientJava::canCopyCut(LocalFrame*, bool defaultValue) const
 {
     return defaultValue;
 }
 
-bool EditorClientJava::canPaste(Frame*, bool defaultValue) const
+bool EditorClientJava::canPaste(LocalFrame*, bool defaultValue) const
 {
     return defaultValue;
 }
 
-void EditorClientJava::discardedComposition(Frame*)
+void EditorClientJava::discardedComposition(const Document&)
 {
 }
 

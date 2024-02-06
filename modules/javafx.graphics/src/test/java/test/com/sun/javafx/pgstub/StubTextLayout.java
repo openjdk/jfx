@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -158,7 +158,7 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
-    public Hit getHitInfo(float x, float y) {
+    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart) {
         // TODO this probably needs to be entirely rewritten...
         if (getText() == null) {
             return new Hit(0, -1, true);

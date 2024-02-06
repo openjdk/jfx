@@ -29,8 +29,9 @@ namespace Style {
 
 class RuleSetBuilder {
 public:
-    enum class ShrinkToFit { Enable, Disable };
-    RuleSetBuilder(RuleSet&, const MQ::MediaQueryEvaluator&, Resolver* = nullptr, ShrinkToFit = ShrinkToFit::Enable);
+    enum class ShrinkToFit : bool { Enable, Disable };
+    enum class ShouldResolveNesting : bool { No, Yes };
+    RuleSetBuilder(RuleSet&, const MQ::MediaQueryEvaluator&, Resolver* = nullptr, ShrinkToFit = ShrinkToFit::Enable, ShouldResolveNesting = ShouldResolveNesting::No);
     ~RuleSetBuilder();
 
     void addRulesFromSheet(const StyleSheetContents&, const MQ::MediaQueryList& sheetQuery = { });
@@ -39,10 +40,10 @@ public:
 private:
     RuleSetBuilder(const MQ::MediaQueryEvaluator&);
 
-    void addStyleRule(const StyleRuleWithNesting&);
+    void addStyleRule(StyleRuleWithNesting&);
     void addRulesFromSheetContents(const StyleSheetContents&);
-    void addChildRules(const Vector<RefPtr<StyleRuleBase>>&);
-    void addChildRule(RefPtr<StyleRuleBase>);
+    void addChildRules(const Vector<Ref<StyleRuleBase>>&);
+    void addChildRule(Ref<StyleRuleBase>);
     void disallowDynamicMediaQueryEvaluationIfNeeded();
     void addStyleRuleWithSelectorList(const CSSSelectorList&, const StyleRule&);
 
@@ -53,7 +54,7 @@ private:
 
     void addMutatingRulesToResolver();
     void updateDynamicMediaQueries();
-    void populateStyleRuleResolvedSelectorList(const StyleRuleWithNesting&);
+    void resolveSelectorListWithNesting(StyleRuleWithNesting&);
 
     struct MediaQueryCollector {
         ~MediaQueryCollector();
@@ -85,6 +86,7 @@ private:
     HashMap<CascadeLayerName, RuleSet::CascadeLayerIdentifier> m_cascadeLayerIdentifierMap;
     RuleSet::CascadeLayerIdentifier m_currentCascadeLayerIdentifier { 0 };
     Vector<const CSSSelectorList*> m_styleRuleStack;
+    const ShouldResolveNesting m_shouldResolveNesting { ShouldResolveNesting::No };
 
     RuleSet::ContainerQueryIdentifier m_currentContainerQueryIdentifier { 0 };
 

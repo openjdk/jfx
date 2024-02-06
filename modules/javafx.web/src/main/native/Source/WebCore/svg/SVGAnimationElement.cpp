@@ -6,7 +6,7 @@
  * Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
  * Copyright (C) 2014 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,7 +32,7 @@
 #include "CSSPropertyParser.h"
 #include "Document.h"
 #include "FloatConversion.h"
-#include "HTMLParserIdioms.h"
+#include "NodeName.h"
 #include "RenderObject.h"
 #include "SVGAnimateColorElement.h"
 #include "SVGAnimateElement.h"
@@ -64,7 +64,7 @@ static Vector<float> parseKeyTimes(StringView value, bool verifyOrder)
     Vector<float> result;
 
     for (auto keyTime : keyTimes) {
-        keyTime = keyTime.stripWhiteSpace();
+        keyTime = keyTime.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
 
         bool ok;
         float time = keyTime.toFloat(ok);
@@ -151,11 +151,11 @@ bool SVGAnimationElement::isSupportedAttribute(const QualifiedName& attrName)
 bool SVGAnimationElement::attributeContainsJavaScriptURL(const Attribute& attribute) const
 {
     if (attribute.name() == SVGNames::fromAttr || attribute.name() == SVGNames::toAttr)
-        return WTF::protocolIsJavaScript(stripLeadingAndTrailingHTMLSpaces(attribute.value()));
+        return WTF::protocolIsJavaScript(attribute.value());
 
     if (attribute.name() == SVGNames::valuesAttr) {
         for (auto innerValue : StringView(attribute.value()).split(';')) {
-            if (WTF::protocolIsJavaScript(innerValue.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>)))
+            if (WTF::protocolIsJavaScript(innerValue))
                 return true;
         }
         return false;
@@ -163,60 +163,52 @@ bool SVGAnimationElement::attributeContainsJavaScriptURL(const Attribute& attrib
     return Element::attributeContainsJavaScriptURL(attribute);
 }
 
-void SVGAnimationElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGAnimationElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::valuesAttr) {
+    switch (name.nodeName()) {
+    case AttributeNames::valuesAttr:
         // Per the SMIL specification, leading and trailing white space,
         // and white space before and after semicolon separators, is allowed and will be ignored.
         // http://www.w3.org/TR/SVG11/animate.html#ValuesAttribute
         m_values.clear();
-        value.string().split(';', [this](StringView innerValue) {
-            m_values.append(innerValue.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>).toString());
+        newValue.string().split(';', [this](StringView innerValue) {
+            m_values.append(innerValue.trim(isASCIIWhitespace<UChar>).toString());
         });
-
         updateAnimationMode();
-        return;
-    }
-
-    if (name == SVGNames::keyTimesAttr) {
-        m_keyTimesFromAttribute = parseKeyTimes(value, true);
-        return;
-    }
-
-    if (name == SVGNames::keyPointsAttr) {
+        break;
+    case AttributeNames::keyTimesAttr:
+        m_keyTimesFromAttribute = parseKeyTimes(newValue, true);
+        break;
+    case AttributeNames::keyPointsAttr:
         if (hasTagName(SVGNames::animateMotionTag)) {
             // This is specified to be an animateMotion attribute only but it is simpler to put it here
             // where the other timing calculatations are.
-            m_keyPoints = parseKeyTimes(value, false);
-        }
-        return;
+            m_keyPoints = parseKeyTimes(newValue, false);
     }
-
-    if (name == SVGNames::keySplinesAttr) {
-        if (auto keySplines = parseKeySplines(value))
+        break;
+    case AttributeNames::keySplinesAttr:
+        if (auto keySplines = parseKeySplines(newValue))
             m_keySplines = WTFMove(*keySplines);
         else
             m_keySplines.clear();
-        return;
-    }
-
-    if (name == SVGNames::attributeTypeAttr) {
-        setAttributeType(value);
-        return;
-    }
-
-    if (name == SVGNames::calcModeAttr) {
-        setCalcMode(value);
-        return;
-    }
-
-    if (name == SVGNames::fromAttr || name == SVGNames::toAttr || name == SVGNames::byAttr) {
+        break;
+    case AttributeNames::attributeTypeAttr:
+        setAttributeType(newValue);
+        break;
+    case AttributeNames::calcModeAttr:
+        setCalcMode(newValue);
+        break;
+    case AttributeNames::fromAttr:
+    case AttributeNames::toAttr:
+    case AttributeNames::byAttr:
         updateAnimationMode();
-        return;
+        break;
+    default:
+        break;
     }
 
-    SVGSMILElement::parseAttribute(name, value);
-    SVGTests::parseAttribute(name, value);
+    SVGTests::parseAttribute(name, newValue);
+    SVGSMILElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGAnimationElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -258,7 +250,7 @@ void SVGAnimationElement::beginElement()
 
 void SVGAnimationElement::beginElementAt(float offset)
 {
-    if (std::isnan(offset))
+    if (!std::isfinite(offset))
         return;
     SMILTime elapsed = this->elapsed();
     addBeginTime(elapsed, elapsed + offset, SMILTimeWithOrigin::ScriptOrigin);
@@ -271,7 +263,7 @@ void SVGAnimationElement::endElement()
 
 void SVGAnimationElement::endElementAt(float offset)
 {
-    if (std::isnan(offset))
+    if (!std::isfinite(offset))
         return;
     SMILTime elapsed = this->elapsed();
     addEndTime(elapsed, elapsed + offset, SMILTimeWithOrigin::ScriptOrigin);
