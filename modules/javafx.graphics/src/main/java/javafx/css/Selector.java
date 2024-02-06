@@ -92,8 +92,7 @@ abstract public class Selector {
     }
 
     /**
-     * Gets the set of style class names of this Selector. The returned set
-     * is guaranteed to be immutable.
+     * Gets the immutable set of style class names of this Selector.
      *
      * @return an immutable set with style class names, never {@code null},
      *     or contains {@code nulls}, but can be empty
