@@ -60,7 +60,6 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.HitInfo;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
-import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
 /**

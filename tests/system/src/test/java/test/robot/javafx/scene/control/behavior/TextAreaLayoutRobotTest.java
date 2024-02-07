@@ -25,10 +25,7 @@
 
 package test.robot.javafx.scene.control.behavior;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.control.Skin;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.skin.TextAreaSkin;
 import javafx.scene.text.Font;
@@ -65,63 +62,34 @@ public class TextAreaLayoutRobotTest extends TextInputBehaviorRobotTest<TextArea
         });
 
         waitForIdle();
-        
+
         Util.runAndWait(() -> {
             int len = TEXT.length() - 1;
             double y0 = getCharPositionY(0);
             double y1 = getCharPositionY(len);
-            System.out.println("y0=" + y0 + " y1=" + y1);
-            sleep(10_000); // FIX
-            Assertions.assertEquals(y0, y1, EPSILON, snapshot());
+            Assertions.assertEquals(y0, y1, EPSILON);
         });
-        
+
         waitForIdle();
-        
+
         Util.runAndWait(() -> {
             control.setFont(Font.font("Dialog", 24));
         });
-        
+
         waitForIdle();
-        
+
         Util.runAndWait(() -> {
             int len = TEXT.length() - 1;
             double y0 = getCharPositionY(0);
             double y1 = getCharPositionY(len);
-            System.out.println("y0=" + y0 + " y1=" + y1);
-            sleep(10_000); // FIX
 
-            Assertions.assertEquals(y0, y1, EPSILON, snapshot());
+            Assertions.assertEquals(y0, y1, EPSILON);
         });
-        
-        sleep(10000000);
     }
 
     private double getCharPositionY(int ix) {
         TextAreaSkin skin = (TextAreaSkin)control.getSkin();
         Rectangle2D r = skin.getCharacterBounds(ix);
-        System.out.println("r=" + r);
         return r.getMinY();
-    }
-
-//    private void whenSkinAvailable(Runnable r) {
-//        TextAreaSkin skin = (TextAreaSkin)control.getSkin();
-//        if (skin == null) {
-//            control.skinProperty().addListener(new ChangeListener<Skin>() {
-//                @Override
-//                public void changed(ObservableValue<? extends Skin> src, Skin old, Skin value) {
-//                    if (value != null) {
-//                        control.skinProperty().removeListener(this);
-//                        r.run();
-//                    }
-//                }
-//            });
-//        } else {
-//            r.run();
-//        }
-//    }
-
-    // could take a snapshot of the scene and return a PNG in base64
-    private String snapshot() {
-        return "error";
     }
 }
