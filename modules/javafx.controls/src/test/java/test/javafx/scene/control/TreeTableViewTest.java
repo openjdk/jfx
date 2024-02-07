@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1741,6 +1741,8 @@ public class TreeTableViewTest {
         TreeItem<RT_22463_Person> root = new TreeItem<>(rootPerson);
         root.setExpanded(true);
 
+        stageLoader = new StageLoader(table);
+
         table.setRoot(root);
 
         // before the change things display fine
@@ -1768,6 +1770,49 @@ public class TreeTableViewTest {
         root.getChildren().setAll(
                 new TreeItem<>(new_p1),
                 new TreeItem<>(new_p2));
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "updated name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "updated name2");
+    }
+
+    @Test public void testSetChildrenShouldUpdateTheCells() {
+        final TreeTableView<RT_22463_Person> table = new TreeTableView<>();
+        TreeTableColumn<RT_22463_Person, ?> c1 = new TreeTableColumn<>("Id");
+        TreeTableColumn<RT_22463_Person, ?> c2 = new TreeTableColumn<>("Name");
+        c1.setCellValueFactory(new TreeItemPropertyValueFactory<>("id"));
+        c2.setCellValueFactory(new TreeItemPropertyValueFactory<>("name"));
+        table.getColumns().addAll(c1, c2);
+
+        RT_22463_Person rootPerson = new RT_22463_Person();
+        rootPerson.setName("Root");
+        TreeItem<RT_22463_Person> root = new TreeItem<>(rootPerson);
+        root.setExpanded(true);
+
+        stageLoader = new StageLoader(table);
+
+        table.setRoot(root);
+
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1L);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2L);
+        p2.setName("name2");
+        root.getChildren().addAll(
+                new TreeItem<>(p1),
+                new TreeItem<>(p2));
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "name2");
+
+        // Replace all TreeItems by the new ones. Cells should get updated.
+        RT_22463_Person newP1 = new RT_22463_Person();
+        newP1.setId(1L);
+        newP1.setName("updated name1");
+        RT_22463_Person newP2 = new RT_22463_Person();
+        newP2.setId(2L);
+        newP2.setName("updated name2");
+        root.getChildren().setAll(
+                new TreeItem<>(newP1),
+                new TreeItem<>(newP2));
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "updated name2");
     }
@@ -2591,14 +2636,14 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(22, rt_31200_count);
+        assertEquals(18, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(22, rt_31200_count);
+        assertEquals(18, rt_31200_count);
 
         sl.dispose();
     }

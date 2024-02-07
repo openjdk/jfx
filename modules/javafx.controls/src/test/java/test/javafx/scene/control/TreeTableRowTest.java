@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import static org.junit.Assert.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
@@ -46,6 +47,9 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TreeTableRowTest {
     private TreeTableRow<String> cell;
@@ -938,5 +942,57 @@ public class TreeTableRowTest {
         assertFalse(c1.isSelected());
         assertTrue(c2.isSelected());
         assertFalse(row.isSelected()); // JDK-8292353 failure
+    }
+
+    /**
+     * Same index and underlying item should not cause the updateItem(..) method to be called.
+     */
+    @Test
+    public void testSameIndexAndItemShouldNotUpdateItem() {
+        AtomicInteger counter = new AtomicInteger();
+
+        TreeTableView<String> tree = ControlUtils.createTreeTableView();
+        tree.setRowFactory(view -> new TreeTableRow<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                counter.incrementAndGet();
+            }
+        });
+
+        stageLoader = new StageLoader(tree);
+
+        counter.set(0);
+        TreeTableRow<String> row = ControlUtils.getTreeTableRow(tree, 0);
+        row.updateIndex(0);
+
+        assertEquals(0, counter.get());
+    }
+
+    /**
+     * The contract of a {@link TreeTableRow} is that isItemChanged(..)
+     * is called when the index is 'changed' to the same number as the old one, to evaluate if we need to call
+     * updateItem(..).
+     */
+    @Test
+    public void testSameIndexIsItemsChangedShouldBeCalled() {
+        AtomicBoolean isItemChangedCalled = new AtomicBoolean();
+
+        TreeTableView<String> tree = ControlUtils.createTreeTableView();
+        tree.setRowFactory(view -> new TreeTableRow<>() {
+            @Override
+            protected boolean isItemChanged(String oldItem, String newItem) {
+                isItemChangedCalled.set(true);
+                return super.isItemChanged(oldItem, newItem);
+            }
+        });
+
+        stageLoader = new StageLoader(tree);
+
+        TreeTableRow<String> row = ControlUtils.getTreeTableRow(tree, 0);
+        row.updateIndex(0);
+
+        assertTrue(isItemChangedCalled.get());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1080,6 +1080,9 @@ public class TableViewTest {
         RT_22463_Person p2 = new RT_22463_Person();
         p2.setId(2l);
         p2.setName("name2");
+
+        stageLoader = new StageLoader(table);
+
         table.setItems(FXCollections.observableArrayList(p1, p2));
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "1", "name1");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "name2");
@@ -1094,6 +1097,41 @@ public class TableViewTest {
         new_p2.setName("updated name2");
         table.getItems().clear();
         table.setItems(FXCollections.observableArrayList(new_p1, new_p2));
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "1", "updated name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "updated name2");
+    }
+
+    @Test public void testSetItemsShouldUpdateTheCells() {
+        final TableView<RT_22463_Person> table = new TableView<>();
+        TableColumn<RT_22463_Person, ?> c1 = new TableColumn<>("Id");
+        TableColumn<RT_22463_Person, ?> c2 = new TableColumn<>("Name");
+        c1.setCellValueFactory(new PropertyValueFactory<>("id"));
+        c2.setCellValueFactory(new PropertyValueFactory<>("name"));
+        table.getColumns().addAll(c1, c2);
+
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1L);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2L);
+        p2.setName("name2");
+
+        stageLoader = new StageLoader(table);
+
+        table.setItems(FXCollections.observableArrayList(p1, p2));
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "1", "name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "name2");
+
+        // Replace all Items by the new ones. Cells should get updated.
+        RT_22463_Person newP1 = new RT_22463_Person();
+        newP1.setId(1L);
+        newP1.setName("updated name1");
+        RT_22463_Person newP2 = new RT_22463_Person();
+        newP2.setId(2L);
+        newP2.setName("updated name2");
+
+        table.setItems(FXCollections.observableArrayList(newP1, newP2));
+
         VirtualFlowTestUtils.assertCellTextEquals(table, 0, "1", "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "updated name2");
     }
