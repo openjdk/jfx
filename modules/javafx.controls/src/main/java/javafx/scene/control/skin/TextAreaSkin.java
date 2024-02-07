@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,9 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
+import static com.sun.javafx.PlatformUtil.isMac;
+import static com.sun.javafx.PlatformUtil.isWindows;
+import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -56,14 +57,12 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.Text;
 import javafx.scene.text.HitInfo;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
-
-import java.util.List;
-
-import static com.sun.javafx.PlatformUtil.isMac;
-import static com.sun.javafx.PlatformUtil.isWindows;
+import com.sun.javafx.scene.LayoutFlags;
+import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 /**
  * Default skin implementation for the {@link TextArea} control.
  *
@@ -1315,8 +1314,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             final double topPadding = snappedTopInset();
             final double leftPadding = snappedLeftInset();
 
-            double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
-
+            double wrappingWidth = textArea.isWrapText() ? Math.max(width - (leftPadding + snappedRightInset()), 0) : 0;
             double y = topPadding;
 
             final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
@@ -1476,7 +1474,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
                 }
             }
 
-            // RT-36454: Fit to width/height only if smaller than viewport.
+            // RT-36454 (JDK-8097060): Fit to width/height only if smaller than viewport.
             // That is, grow to fit but don't shrink to fit.
             Bounds viewportBounds = scrollPane.getViewportBounds();
             boolean wasFitToWidth = scrollPane.isFitToWidth();
@@ -1484,11 +1482,16 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             boolean setFitToWidth = textArea.isWrapText() || computePrefWidth(-1) <= viewportBounds.getWidth();
             boolean setFitToHeight = computePrefHeight(width) <= viewportBounds.getHeight();
             if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
-                Platform.runLater(() -> {
-                    scrollPane.setFitToWidth(setFitToWidth);
-                    scrollPane.setFitToHeight(setFitToHeight);
-                });
+                scrollPane.setFitToWidth(setFitToWidth);
+                scrollPane.setFitToHeight(setFitToHeight);
                 getParent().requestLayout();
+
+                // if only there was a way to force a layout from within the layout!
+                // runlater causes flicker
+                Platform.runLater(() -> {
+                    scrollPane.layout();
+                    scrollCaretToVisible();
+                });
             }
         }
     }
