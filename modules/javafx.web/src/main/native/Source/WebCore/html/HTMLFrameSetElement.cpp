@@ -146,17 +146,11 @@ void HTMLFrameSetElement::attributeChanged(const QualifiedName& name, const Atom
     }
 }
 
-bool HTMLFrameSetElement::rendererIsNeeded(const RenderStyle&)
-{
-    // For compatibility, frames render even when display: none is set.
-    return true;
-}
-
 RenderPtr<RenderElement> HTMLFrameSetElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (style.hasContent())
         return RenderElement::createFor(*this, WTFMove(style));
-
+    
     return createRenderer<RenderFrameSet>(*this, WTFMove(style));
 }
 

@@ -22,7 +22,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #include "config.h"
@@ -547,7 +547,7 @@ void HTMLCanvasElement::didDraw(const std::optional<FloatRect>& rect, ShouldAppl
     CanvasBase::didDraw(rect, shouldApplyPostProcessingToDirtyRect);
 
     clearCopiedImage();
-
+    
     if (!rect) {
         notifyObserversCanvasChanged(std::nullopt);
         return;
@@ -722,9 +722,11 @@ ExceptionOr<UncachedString> HTMLCanvasElement::toDataURL(const String& mimeType,
         return UncachedString { dataURL(imageData->pixelBuffer(), encodingMIMEType, quality) };
 #endif
 
-    if (document().quirks().shouldEnableCanvas2DAdvancedPrivacyProtectionQuirk()) {
-        if (auto url = document().quirks().advancedPrivacyProtectionSubstituteDataURLForText(lastFillText()); !url.isNull())
-            return UncachedString { url };
+    if (auto url = document().quirks().advancedPrivacyProtectionSubstituteDataURLForScriptWithFeatures(lastFillText(), width(), height()); !url.isNull()) {
+        RELEASE_LOG(FingerprintingMitigation, "HTMLCanvasElement::toDataURL: Quirking returned URL for identified fingerprinting script");
+        auto consoleMessage = "Detected fingerprinting script. Quirking value returned from HTMLCanvasElement.toDataURL()"_s;
+        canvasBaseScriptExecutionContext()->addConsoleMessage(MessageSource::Rendering, MessageLevel::Info, consoleMessage);
+        return UncachedString { url };
     }
 
     makeRenderingResultsAvailable();
