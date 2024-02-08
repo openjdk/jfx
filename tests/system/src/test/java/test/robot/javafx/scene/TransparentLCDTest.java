@@ -195,6 +195,7 @@ public class TransparentLCDTest {
 
         Font font = Font.font("System", FontWeight.BOLD, 36);
 
+        CountDownLatch latch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             testStage = createStage();
 
@@ -209,12 +210,15 @@ public class TransparentLCDTest {
             text.setLayoutY(TEXT_Y_BOTTOM);
             root.getChildren().add(text);
 
+            testStage.setOnShowing(e -> Platform.runLater(latch::countDown));
             testStage.setScene(testScene);
             testStage.show();
         });
 
+        // Wait until stage is showing and scene is rendered
+        Util.waitForLatch(latch, 5, "Timeout showing stage");
         Util.waitForIdle(testScene);
-        Util.sleep(1000);
+        Util.sleep(500);
 
         Util.runAndWait(() -> {
             if (DEBUG) {
