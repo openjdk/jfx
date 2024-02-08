@@ -47,6 +47,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.util.Util;
 
 import static org.junit.jupiter.api.Assertions.fail;
@@ -55,10 +56,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import org.junit.jupiter.api.Timeout;
 
 /**
- * Basic visual tests using glass Robot to sample pixels.
+ * Test that renders transparent text with LDC rendering selected.
+ * Prior to the fix for JDK-8311492 the color of the text was wrong.
+ * This test verifies that the color is correct and that we fall back to
+ * gray scale AA.
+ *
+ * @test
+ * @bug 8311492
  */
 public class TransparentLCDTest {
 
@@ -68,9 +74,10 @@ public class TransparentLCDTest {
     private static final int HEIGHT = 300;
 
     // We use a very tight color tolerance, which requires some extra care.
-    // We force a screen scale of 1, stay away from the edes of the window,
-    // and only sample where we expect to read the background color or in
-    // the middle of the text fill area.
+    // We force a screen scale of 1, stay away from the edges of the window,
+    // and only sample outside the text, where we expect to read the background
+    // color, or in the middle of the text fill area, where we expect to find
+    // the unadjusted text color.
     private static final double TOLERANCE = 2.0 / 255.0;
 
     private static final int TEXT_X_LEFT = 5;
@@ -92,6 +99,14 @@ public class TransparentLCDTest {
     private Stage testStage;
     private Scene testScene;
 
+    /**
+     * Derive an opaque color from the given transparent color. The opaque
+     * color will be the same color as the transparent color is when rendered
+     * on a pure white background.
+     *
+     * @param c the transparent color
+     * @return  the equivalent opaque color
+     */
     private static Color makeOpaque(Color c) {
         double a = c.getOpacity();
         double r = c.getRed() * a + (1.0 - a);
@@ -107,14 +122,14 @@ public class TransparentLCDTest {
         return nonGrayCount == 0;
     }
 
-   protected void assertColorEquals(Color expected, Color actual) {
+   private void assertColorEquals(Color expected, Color actual) {
         if (!testColorEquals(expected, actual, TOLERANCE)) {
             fail("expected:" + colorToString(expected) +
                     " but was:" + colorToString(actual));
         }
     }
 
-    protected boolean testColorEquals(Color expected, Color actual, double delta) {
+    private boolean testColorEquals(Color expected, Color actual, double delta) {
         double deltaRed = Math.abs(expected.getRed() - actual.getRed());
         double deltaGreen = Math.abs(expected.getGreen() - actual.getGreen());
         double deltaBlue = Math.abs(expected.getBlue() - actual.getBlue());
@@ -122,7 +137,7 @@ public class TransparentLCDTest {
         return (deltaRed <= delta && deltaGreen <= delta && deltaBlue <= delta && deltaOpacity <= delta);
     }
 
-    protected static String colorToString(Color c) {
+    private static String colorToString(Color c) {
         int r = (int)(c.getRed() * 255.0);
         int g = (int)(c.getGreen() * 255.0);
         int b = (int)(c.getBlue() * 255.0);
@@ -189,7 +204,7 @@ public class TransparentLCDTest {
     }
 
     // Called by the test methods to run the test either using an opaque color,
-    // which should use LCD, and a transparent color, which should not.
+    // which should use LCD, or a transparent color, which should not.
     private void runTest(boolean opaque) {
         final Color textColor = opaque ? opaqueColor : transpColor;
 
@@ -221,14 +236,12 @@ public class TransparentLCDTest {
         Util.sleep(500);
 
         Util.runAndWait(() -> {
+            List<Color> colors = getColors(testScene, SAMPLE_X_START, SAMPLE_Y, TEST_WIDTH);
+
             if (DEBUG) {
                 System.err.println("transpColor = " + colorToString(transpColor));
                 System.err.println("opaqueColor = " + colorToString(opaqueColor));
                 System.err.println("");
-            }
-            List<Color> colors = getColors(testScene, SAMPLE_X_START, SAMPLE_Y, TEST_WIDTH);
-
-            if (DEBUG) {
                 colors.stream()
                         .map(TransparentLCDTest::colorToString)
                         .forEach(System.err::println);
