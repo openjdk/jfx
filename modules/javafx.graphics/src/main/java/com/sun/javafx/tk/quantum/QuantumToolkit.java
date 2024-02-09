@@ -359,14 +359,20 @@ public final class QuantumToolkit extends Toolkit {
             };
             pulseTimer = Application.GetApplication().createTimer(timerRunnable);
 
+            // Initialize the platform preferences
+            PlatformImpl.initPreferences(
+                Application.GetApplication().getPlatformKeys(),
+                Application.GetApplication().getPlatformKeyMappings(),
+                Application.GetApplication().getPlatformPreferences());
+
             Application.GetApplication().setEventHandler(new Application.EventHandler() {
                 @Override public void handleQuitAction(Application app, long time) {
                     GlassStage.requestClosingAllWindows();
                 }
 
-                @Override public boolean handleThemeChanged(String themeName) {
-                    String highContrastSchemeName = Application.GetApplication().getHighContrastScheme(themeName);
-                    return PlatformImpl.setAccessibilityTheme(highContrastSchemeName);
+                @Override
+                public void handlePreferencesChanged(Map<String, Object> preferences) {
+                    PlatformImpl.updatePreferences(preferences);
                 }
             });
         }
@@ -1805,11 +1811,6 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public int getMultiClickMaxY() {
         return View.getMultiClickMaxY();
-    }
-
-    @Override
-    public String getThemeName() {
-        return Application.GetApplication().getHighContrastTheme();
     }
 
     @Override

@@ -104,12 +104,14 @@ void StyleCrossfadeImage::load(CachedResourceLoader& loader, const ResourceLoade
     auto oldCachedToImage = m_cachedToImage;
 
     if (m_from) {
+        if (m_from->isPending())
         m_from->load(loader, options);
         m_cachedFromImage = m_from->cachedImage();
     } else
         m_cachedFromImage = nullptr;
 
     if (m_to) {
+        if (m_to->isPending())
         m_to->load(loader, options);
         m_cachedToImage = m_to->cachedImage();
     } else
@@ -184,8 +186,10 @@ void StyleCrossfadeImage::imageChanged(CachedImage*, const IntRect*)
 {
     if (!m_inputImagesAreReady)
         return;
-    for (auto& client : clients().values())
-        client->imageChanged(this);
+    for (auto entry : clients()) {
+        auto& client = entry.key;
+        client.imageChanged(static_cast<WrappedImagePtr>(this));
+    }
 }
 
 } // namespace WebCore

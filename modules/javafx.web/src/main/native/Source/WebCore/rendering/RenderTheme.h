@@ -32,6 +32,8 @@
 
 namespace WebCore {
 
+enum class DocumentMarkerLineStyleMode : uint8_t;
+
 struct AttachmentLayout;
 class BorderData;
 class Element;
@@ -73,6 +75,8 @@ public:
     virtual bool canCreateControlPartForBorderOnly(const RenderObject&) const { return false; }
     virtual bool canCreateControlPartForDecorations(const RenderObject&) const { return false; }
     RefPtr<ControlPart> createControlPart(const RenderObject&) const;
+
+    void updateControlPartForRenderer(ControlPart&, const RenderObject&) const;
 
     OptionSet<ControlStyle::State> extractControlStyleStatesForRenderer(const RenderObject&) const;
     ControlStyle extractControlStyleForRenderer(const RenderBox&) const;
@@ -182,6 +186,8 @@ public:
 
     Color datePlaceholderTextColor(const Color& textColor, const Color& backgroundColor) const;
 
+    Color documentMarkerLineColor(const RenderText&, DocumentMarkerLineStyleMode) const;
+
     WEBCORE_EXPORT Color focusRingColor(OptionSet<StyleColorOptions>) const;
     virtual Color platformFocusRingColor(OptionSet<StyleColorOptions>) const { return Color::black; }
     static void setCustomFocusRingColor(const Color&);
@@ -206,7 +212,7 @@ public:
     virtual bool popupOptionSupportsTextIndent() const { return false; }
     virtual PopupMenuStyle::PopupMenuSize popupMenuSize(const RenderStyle&, IntRect&) const { return PopupMenuStyle::PopupMenuSizeNormal; }
 
-    virtual ScrollbarControlSize scrollbarControlSizeForPart(StyleAppearance) { return ScrollbarControlSize::Regular; }
+    virtual ScrollbarWidth scrollbarWidthStyleForPart(StyleAppearance) { return ScrollbarWidth::Auto; }
 
     // Returns the repeat interval of the animation for the progress bar.
     virtual Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const;
@@ -277,6 +283,11 @@ protected:
     virtual Color platformAnnotationHighlightColor(OptionSet<StyleColorOptions>) const;
 
     virtual Color platformDefaultButtonTextColor(OptionSet<StyleColorOptions>) const;
+
+    virtual Color platformSpellingMarkerColor(OptionSet<StyleColorOptions>) const;
+    virtual Color platformDictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const;
+    virtual Color platformAutocorrectionReplacementMarkerColor(OptionSet<StyleColorOptions>) const;
+    virtual Color platformGrammarMarkerColor(OptionSet<StyleColorOptions>) const;
 
     virtual bool supportsSelectionForegroundColors(OptionSet<StyleColorOptions>) const { return true; }
     virtual bool supportsListBoxSelectionForegroundColors(OptionSet<StyleColorOptions>) const { return true; }
@@ -430,13 +441,24 @@ protected:
         Color annotationHighlightColor;
 
         Color defaultButtonTextColor;
+
+        Color spellingMarkerColor;
+        Color dictationAlternativesMarkerColor;
+        Color autocorrectionReplacementMarkerColor;
+        Color grammarMarkerColor;
     };
 
     virtual ColorCache& colorCache(OptionSet<StyleColorOptions>) const;
 
+    virtual Color autocorrectionReplacementMarkerColor(const RenderText&) const;
+
 private:
     StyleAppearance autoAppearanceForElement(RenderStyle&, const Element*) const;
     StyleAppearance adjustAppearanceForElement(RenderStyle&, const Element*, StyleAppearance) const;
+
+    Color spellingMarkerColor(OptionSet<StyleColorOptions>) const;
+    Color dictationAlternativesMarkerColor(OptionSet<StyleColorOptions>) const;
+    Color grammarMarkerColor(OptionSet<StyleColorOptions>) const;
 
     mutable HashMap<uint8_t, ColorCache, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>> m_colorCacheMap;
 };

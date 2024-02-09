@@ -98,6 +98,7 @@ final public class SimpleSelector extends Selector {
      * styleClasses converted to a set of bit masks
      */
     private final Set<StyleClass> styleClassSet;
+    private final Set<StyleClass> unwrappedStyleClassSet;
 
     private final String id;
 
@@ -148,7 +149,7 @@ final public class SimpleSelector extends Selector {
         // then match needs to check name
         this.matchOnName = (name != null && !("".equals(name)) && !("*".equals(name)));
 
-        Set<StyleClass> scs = new StyleClassSet();
+        this.unwrappedStyleClassSet = new StyleClassSet();
 
         if (styleClasses != null) {
             for (int n = 0; n < styleClasses.size(); n++) {
@@ -156,11 +157,11 @@ final public class SimpleSelector extends Selector {
                 final String styleClassName = styleClasses.get(n);
                 if (styleClassName == null || styleClassName.isEmpty()) continue;
 
-                scs.add(StyleClassSet.getStyleClass(styleClassName));
+                unwrappedStyleClassSet.add(StyleClassSet.getStyleClass(styleClassName));
             }
         }
 
-        this.styleClassSet = Collections.unmodifiableSet(scs);
+        this.styleClassSet = Collections.unmodifiableSet(unwrappedStyleClassSet);
         this.matchOnStyleClass = (this.styleClassSet.size() > 0);
 
         PseudoClassState pcs = new PseudoClassState();
@@ -289,7 +290,8 @@ final public class SimpleSelector extends Selector {
     // This selector matches when class="pastoral blue aqua marine" but does not
     // match for class="pastoral blue".
     private boolean matchStyleClasses(StyleClassSet otherStyleClasses) {
-        return otherStyleClasses.containsAll(styleClassSet);
+        // checks against unwrapped version so BitSet can do its special casing for performance
+        return otherStyleClasses.containsAll(unwrappedStyleClassSet);
     }
 
     @Override public boolean equals(Object obj) {

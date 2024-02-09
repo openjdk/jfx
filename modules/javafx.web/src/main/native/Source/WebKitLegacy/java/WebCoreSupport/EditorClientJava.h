@@ -64,7 +64,7 @@ public:
 
     void didBeginEditing() override;
     void respondToChangedContents() override;
-    void respondToChangedSelection(Frame*) override;
+    void respondToChangedSelection(LocalFrame*) override;
     void didEndUserTriggeredSelectionChanges() override { }
     void updateEditorStateAfterLayoutIfEditabilityChanged() override;
     void didEndEditing() override;
@@ -74,15 +74,15 @@ public:
     void didUpdateComposition() override { }
 
     DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
-    void discardedComposition(Frame*) override;
+    void discardedComposition(const Document&) override;
     void canceledComposition() override;
 
     void registerUndoStep(UndoStep&) override;
     void registerRedoStep(UndoStep&) override;
     void clearUndoRedoOperations() override;
 
-    bool canCopyCut(Frame*, bool defaultValue) const override;
-    bool canPaste(Frame*, bool defaultValue) const override;
+    bool canCopyCut(LocalFrame*, bool defaultValue) const override;
+    bool canPaste(LocalFrame*, bool defaultValue) const override;
     bool canUndo() const override;
     bool canRedo() const override;
 

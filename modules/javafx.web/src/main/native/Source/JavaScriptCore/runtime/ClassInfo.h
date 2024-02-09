@@ -208,8 +208,7 @@ struct CLASS_INFO_ALIGNMENT ClassInfo {
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
 
-    JS_EXPORT_PRIVATE bool hasStaticSetterOrReadonlyProperties() const;
-    JS_EXPORT_PRIVATE bool hasStaticReadOnlyOrGetterSetterProperty(UniquedStringImpl*) const;
+    JS_EXPORT_PRIVATE bool hasStaticPropertyWithAnyOfAttributes(uint8_t attributes) const;
 };
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1712,6 +1712,16 @@ public:
         insn(0b01101110001000001111110000000000 | (sizeForFloatingPointSIMDOp(lane) << 22) | (vm << 16) | (vn << 5) | vd);
     }
 
+    ALWAYS_INLINE void vectorFmla(FPRegisterID vd, FPRegisterID vn, FPRegisterID vm, SIMDLane lane)
+    {
+        insn(0b01001110001000001100110000000000 | (sizeForFloatingPointSIMDOp(lane) << 22) | (vm << 16) | (vn << 5) | vd);
+    }
+
+    ALWAYS_INLINE void vectorFmls(FPRegisterID vd, FPRegisterID vn, FPRegisterID vm, SIMDLane lane)
+    {
+        insn(0b01001110101000001100110000000000 | (sizeForFloatingPointSIMDOp(lane) << 22) | (vm << 16) | (vn << 5) | vd);
+    }
+
     static uint32_t encodeLaneAndIndexToHLM(SIMDLane lane, uint32_t laneIndex)
     {
         switch (elementByteSize(lane)) {
@@ -2164,6 +2174,13 @@ public:
     ALWAYS_INLINE void movi(RegisterID rd, LogicalImmediate imm)
     {
         orr<datasize>(rd, ARM64Registers::zr, imm);
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void movi(FPRegisterID rd, uint8_t imm)
+    {
+        CHECK_DATASIZE_SIMD();
+        insn(simdMoveImmediate(datasize == 128, true, 0b1110, imm, rd));
     }
 
     template<int datasize>
@@ -3466,80 +3483,6 @@ public:
         return 4;
     }
 
-    static void replaceWithLoad(void* where)
-    {
-        Datasize sf;
-        AddOp op;
-        SetFlags S;
-        int shift;
-        int imm12;
-        RegisterID rn;
-        RegisterID rd;
-        if (disassembleAddSubtractImmediate(where, sf, op, S, shift, imm12, rn, rd)) {
-            ASSERT(sf == Datasize_64);
-            ASSERT(op == AddOp_ADD);
-            ASSERT(!S);
-            ASSERT(!shift);
-            ASSERT(!(imm12 & ~0xff8));
-            int insn = loadStoreRegisterUnsignedImmediate(MemOpSize_64, false, MemOp_LOAD, encodePositiveImmediate<64>(imm12), rn, rd);
-            RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(where) == where);
-            performJITMemcpy(where, &insn, sizeof(int));
-            cacheFlush(where, sizeof(int));
-        }
-#if ASSERT_ENABLED
-        else {
-            MemOpSize size;
-            bool V;
-            MemOp opc;
-            int imm12;
-            RegisterID rn;
-            RegisterID rt;
-            ASSERT(disassembleLoadStoreRegisterUnsignedImmediate(where, size, V, opc, imm12, rn, rt));
-            ASSERT(size == MemOpSize_64);
-            ASSERT(!V);
-            ASSERT(opc == MemOp_LOAD);
-            ASSERT(!(imm12 & ~0x1ff));
-        }
-#endif // ASSERT_ENABLED
-    }
-
-    static void replaceWithAddressComputation(void* where)
-    {
-        MemOpSize size;
-        bool V;
-        MemOp opc;
-        int imm12;
-        RegisterID rn;
-        RegisterID rt;
-        if (disassembleLoadStoreRegisterUnsignedImmediate(where, size, V, opc, imm12, rn, rt)) {
-            ASSERT(size == MemOpSize_64);
-            ASSERT(!V);
-            ASSERT(opc == MemOp_LOAD);
-            ASSERT(!(imm12 & ~0x1ff));
-            int insn = addSubtractImmediate(Datasize_64, AddOp_ADD, DontSetFlags, 0, imm12 * sizeof(void*), rn, rt);
-            RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(where) == where);
-            performJITMemcpy(where, &insn, sizeof(int));
-            cacheFlush(where, sizeof(int));
-        }
-#if ASSERT_ENABLED
-        else {
-            Datasize sf;
-            AddOp op;
-            SetFlags S;
-            int shift;
-            int imm12;
-            RegisterID rn;
-            RegisterID rd;
-            ASSERT(disassembleAddSubtractImmediate(where, sf, op, S, shift, imm12, rn, rd));
-            ASSERT(sf == Datasize_64);
-            ASSERT(op == AddOp_ADD);
-            ASSERT(!S);
-            ASSERT(!shift);
-            ASSERT(!(imm12 & ~0xff8));
-        }
-#endif // ASSERT_ENABLED
-    }
-
     static void repatchPointer(void* where, void* valuePtr)
     {
         linkPointer(static_cast<int*>(where), valuePtr, true);
@@ -3548,42 +3491,18 @@ public:
     static void setPointer(int* address, void* valuePtr, RegisterID rd, bool flush)
     {
         uintptr_t value = reinterpret_cast<uintptr_t>(valuePtr);
-        int buffer[3];
+        int buffer[NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS];
         buffer[0] = moveWideImediate(Datasize_64, MoveWideOp_Z, 0, getHalfword(value, 0), rd);
         buffer[1] = moveWideImediate(Datasize_64, MoveWideOp_K, 1, getHalfword(value, 1), rd);
+        if constexpr (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 2)
         buffer[2] = moveWideImediate(Datasize_64, MoveWideOp_K, 2, getHalfword(value, 2), rd);
+        if constexpr (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 3)
+            buffer[3] = moveWideImediate(Datasize_64, MoveWideOp_K, 3, getHalfword(value, 3), rd);
         RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(address) == address);
-        performJITMemcpy(address, buffer, sizeof(int) * 3);
+        performJITMemcpy(address, buffer, sizeof(int) * NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS);
 
         if (flush)
-            cacheFlush(address, sizeof(int) * 3);
-    }
-
-    static void repatchInt32(void* where, int32_t value)
-    {
-        int* address = static_cast<int*>(where);
-
-        Datasize sf;
-        MoveWideOp opc;
-        int hw;
-        uint16_t imm16;
-        RegisterID rd;
-        bool expected = disassembleMoveWideImediate(address, sf, opc, hw, imm16, rd);
-        ASSERT_UNUSED(expected, expected && !sf && (opc == MoveWideOp_Z || opc == MoveWideOp_N) && !hw);
-        ASSERT(checkMovk<Datasize_32>(address[1], 1, rd));
-
-        int buffer[2];
-        if (value >= 0) {
-            buffer[0] = moveWideImediate(Datasize_32, MoveWideOp_Z, 0, getHalfword(value, 0), rd);
-            buffer[1] = moveWideImediate(Datasize_32, MoveWideOp_K, 1, getHalfword(value, 1), rd);
-        } else {
-            buffer[0] = moveWideImediate(Datasize_32, MoveWideOp_N, 0, ~getHalfword(value, 0), rd);
-            buffer[1] = moveWideImediate(Datasize_32, MoveWideOp_K, 1, getHalfword(value, 1), rd);
-        }
-        RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(where) == where);
-        performJITMemcpy(where, &buffer, sizeof(int) * 2);
-
-        cacheFlush(where, sizeof(int) * 2);
+            cacheFlush(address, sizeof(int) * NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS);
     }
 
     static void* readPointer(void* where)
@@ -3604,18 +3523,25 @@ public:
         ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_K && hw == 1 && rd == rdFirst);
         result |= static_cast<uintptr_t>(imm16) << 16;
 
-#if CPU(ADDRESS64)
+        if constexpr (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 2) {
         expected = disassembleMoveWideImediate(address + 2, sf, opc, hw, imm16, rd);
         ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_K && hw == 2 && rd == rdFirst);
         result |= static_cast<uintptr_t>(imm16) << 32;
-#endif
+        }
+
+        if constexpr (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 3) {
+            expected = disassembleMoveWideImediate(address + 3, sf, opc, hw, imm16, rd);
+            ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_K && hw == 3 && rd == rdFirst);
+            result |= static_cast<uintptr_t>(imm16) << 48;
+        }
 
         return reinterpret_cast<void*>(result);
     }
 
     static void* readCallTarget(void* from)
     {
-        return readPointer(reinterpret_cast<int*>(from) - (isAddress64Bit() ? 4 : 3));
+        constexpr ptrdiff_t callInstruction = 1;
+        return readPointer(reinterpret_cast<int*>(from) - callInstruction - NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS);
     }
 
     // The static relink, repatch, and replace methods can use can
@@ -3671,7 +3597,7 @@ public:
     static void cacheFlush(void* code, size_t size)
     {
 #if OS(DARWIN)
-        sys_cache_control(kCacheFunctionPrepareForExecution, code, size);
+        sys_icache_invalidate(code, size);
 #elif OS(FUCHSIA)
         zx_cache_flush(code, size, ZX_CACHE_FLUSH_INSN);
 #elif OS(LINUX)
@@ -3699,11 +3625,6 @@ public:
     // Assembler admin methods:
 
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return JUMP_ENUM_SIZE(jumpType) - JUMP_ENUM_SIZE(jumpLinkType); }
-
-    static ALWAYS_INLINE bool linkRecordSourceComparator(const LinkRecord& a, const LinkRecord& b)
-    {
-        return a.from() < b.from();
-    }
 
     static bool canCompact(JumpType jumpType)
     {
@@ -3772,7 +3693,9 @@ public:
 
     Vector<LinkRecord, 0, UnsafeVectorOverflow>& jumpsToLink()
     {
-        std::sort(m_jumpsToLink.begin(), m_jumpsToLink.end(), linkRecordSourceComparator);
+        std::sort(m_jumpsToLink.begin(), m_jumpsToLink.end(), [](auto& a, auto& b) {
+            return a.from() < b.from();
+        });
         return m_jumpsToLink;
     }
 
@@ -3842,7 +3765,10 @@ protected:
         bool expected = disassembleMoveWideImediate(address, sf, opc, hw, imm16, rd);
         ASSERT_UNUSED(expected, expected && sf && opc == MoveWideOp_Z && !hw);
         ASSERT(checkMovk<Datasize_64>(address[1], 1, rd));
+        if constexpr (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 2)
         ASSERT(checkMovk<Datasize_64>(address[2], 2, rd));
+        if constexpr (NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 3)
+            ASSERT(checkMovk<Datasize_64>(address[3], 3, rd));
 
         setPointer(address, valuePtr, rd, flush);
     }
@@ -4584,13 +4510,26 @@ protected:
         return insn;
     }
 
+    ALWAYS_INLINE static int simdMoveImmediate(bool Q, bool op, uint8_t cmode, uint8_t imm, FPRegisterID rd)
+    {
+        return 0b0'0'0'0111100000'000'0000'01'00000'00000 | (Q << 30) | (op << 29) | (static_cast<unsigned>(imm >> 5) << 16) | (static_cast<unsigned>(cmode) << 12) | (static_cast<unsigned>(imm & 0b11111) << 5) | rd;
+    }
+
     Vector<LinkRecord, 0, UnsafeVectorOverflow> m_jumpsToLink;
     int m_indexOfLastWatchpoint;
     int m_indexOfTailOfLastWatchpoint;
     AssemblerBuffer m_buffer;
 
 public:
+#if CPU(ARM64E)
+    static constexpr ptrdiff_t MAX_POINTER_BITS = 64;
+#elif CPU(ADDRESS64)
     static constexpr ptrdiff_t MAX_POINTER_BITS = 48;
+#else
+    static constexpr ptrdiff_t MAX_POINTER_BITS = 32;
+#endif
+    // Each movz/k instruction can only encode 16 bits.
+    static constexpr ptrdiff_t NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS = MAX_POINTER_BITS / 16;
 };
 
 } // namespace JSC

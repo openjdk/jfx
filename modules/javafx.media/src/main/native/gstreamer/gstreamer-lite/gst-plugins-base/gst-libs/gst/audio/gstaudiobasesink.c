@@ -2280,7 +2280,7 @@ sync_latency_failed:
  * call the ::create_ringbuffer vmethod and will set @sink as the parent of
  * the returned buffer (see gst_object_set_parent()).
  *
- * Returns: (transfer none): The new ringbuffer of @sink.
+ * Returns: (transfer none) (nullable): The new ringbuffer of @sink.
  */
 GstAudioRingBuffer *
 gst_audio_base_sink_create_ringbuffer (GstAudioBaseSink * sink)

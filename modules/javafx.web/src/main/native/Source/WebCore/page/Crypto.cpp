@@ -60,7 +60,7 @@ ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
         return Exception { TypeMismatchError };
     if (array.byteLength() > 65536)
         return Exception { QuotaExceededError };
-#if OS(DARWIN) && ENABLE(SUBTLE_CRYPTO)
+#if OS(DARWIN)
     auto rc = CCRandomGenerateBytes(array.baseAddress(), array.byteLength());
     RELEASE_ASSERT(rc == kCCSuccess);
 #else

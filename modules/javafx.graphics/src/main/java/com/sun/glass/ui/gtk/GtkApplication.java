@@ -40,6 +40,7 @@ import com.sun.javafx.util.Logging;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.logging.PlatformLogger;
+import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -467,4 +468,40 @@ final class GtkApplication extends Application implements
     @Override
     protected native int _isKeyLocked(int keyCode);
 
+    @Override
+    public native Map<String, Object> getPlatformPreferences();
+
+    @Override
+    public Map<String, String> getPlatformKeyMappings() {
+        return Map.of(
+            "GTK.theme_fg_color", "foregroundColor",
+            "GTK.theme_bg_color", "backgroundColor"
+        );
+    }
+
+    // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for GTK.
+    @Override
+    public Map<String, Class<?>> getPlatformKeys() {
+        return Map.ofEntries(
+            Map.entry("GTK.theme_name", String.class),
+            Map.entry("GTK.theme_fg_color", Color.class),
+            Map.entry("GTK.theme_bg_color", Color.class),
+            Map.entry("GTK.theme_base_color", Color.class),
+            Map.entry("GTK.theme_selected_bg_color", Color.class),
+            Map.entry("GTK.theme_selected_fg_color", Color.class),
+            Map.entry("GTK.theme_unfocused_fg_color", Color.class),
+            Map.entry("GTK.theme_unfocused_bg_color", Color.class),
+            Map.entry("GTK.theme_unfocused_base_color", Color.class),
+            Map.entry("GTK.theme_unfocused_selected_bg_color", Color.class),
+            Map.entry("GTK.theme_unfocused_selected_fg_color", Color.class),
+            Map.entry("GTK.insensitive_bg_color", Color.class),
+            Map.entry("GTK.insensitive_fg_color", Color.class),
+            Map.entry("GTK.insensitive_base_color", Color.class),
+            Map.entry("GTK.borders", Color.class),
+            Map.entry("GTK.unfocused_borders", Color.class),
+            Map.entry("GTK.warning_color", Color.class),
+            Map.entry("GTK.error_color", Color.class),
+            Map.entry("GTK.success_color", Color.class)
+        );
+    }
 }

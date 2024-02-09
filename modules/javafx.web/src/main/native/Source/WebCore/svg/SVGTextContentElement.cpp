@@ -2,6 +2,7 @@
  * Copyright (C) 2004, 2005, 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Rob Buis <buis@kde.org>
  * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,8 +26,8 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "DOMPoint.h"
-#include "Frame.h"
 #include "FrameSelection.h"
+#include "LocalFrame.h"
 #include "RenderObject.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGText.h"
@@ -77,7 +78,7 @@ ExceptionOr<float> SVGTextContentElement::getSubStringLength(unsigned charnum, u
 
 ExceptionOr<Ref<SVGPoint>> SVGTextContentElement::getStartPositionOfChar(unsigned charnum)
 {
-    if (charnum > getNumberOfChars())
+    if (charnum >= getNumberOfChars())
         return Exception { IndexSizeError };
 
     return SVGPoint::create(SVGTextQuery(renderer()).startPositionOfCharacter(charnum));
@@ -85,7 +86,7 @@ ExceptionOr<Ref<SVGPoint>> SVGTextContentElement::getStartPositionOfChar(unsigne
 
 ExceptionOr<Ref<SVGPoint>> SVGTextContentElement::getEndPositionOfChar(unsigned charnum)
 {
-    if (charnum > getNumberOfChars())
+    if (charnum >= getNumberOfChars())
         return Exception { IndexSizeError };
 
     return SVGPoint::create(SVGTextQuery(renderer()).endPositionOfCharacter(charnum));
@@ -93,7 +94,7 @@ ExceptionOr<Ref<SVGPoint>> SVGTextContentElement::getEndPositionOfChar(unsigned 
 
 ExceptionOr<Ref<SVGRect>> SVGTextContentElement::getExtentOfChar(unsigned charnum)
 {
-    if (charnum > getNumberOfChars())
+    if (charnum >= getNumberOfChars())
         return Exception { IndexSizeError };
 
     return SVGRect::create(SVGTextQuery(renderer()).extentOfCharacter(charnum));
@@ -101,7 +102,7 @@ ExceptionOr<Ref<SVGRect>> SVGTextContentElement::getExtentOfChar(unsigned charnu
 
 ExceptionOr<float> SVGTextContentElement::getRotationOfChar(unsigned charnum)
 {
-    if (charnum > getNumberOfChars())
+    if (charnum >= getNumberOfChars())
         return Exception { IndexSizeError };
 
     return SVGTextQuery(renderer()).rotationOfCharacter(charnum);
@@ -152,29 +153,30 @@ void SVGTextContentElement::collectPresentationalHintsForAttribute(const Qualifi
 {
     if (name.matches(XMLNames::spaceAttr)) {
         if (value == "preserve"_s)
-            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValuePre);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValuePreserve);
         else
-            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValueNowrap);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpaceCollapse, CSSValueCollapse);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyTextWrap, CSSValueNowrap);
         return;
     }
 
     SVGGraphicsElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
-void SVGTextContentElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGTextContentElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
     if (name == SVGNames::lengthAdjustAttr) {
-        auto propertyValue = SVGPropertyTraits<SVGLengthAdjustType>::fromString(value);
+        auto propertyValue = SVGPropertyTraits<SVGLengthAdjustType>::fromString(newValue);
         if (propertyValue > 0)
             m_lengthAdjust->setBaseValInternal<SVGLengthAdjustType>(propertyValue);
     } else if (name == SVGNames::textLengthAttr)
-        m_textLength->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, value, parseError, SVGLengthNegativeValuesMode::Forbid));
+        m_textLength->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
 
-    reportAttributeParsingError(parseError, name, value);
+    reportAttributeParsingError(parseError, name, newValue);
 
-    SVGGraphicsElement::parseAttribute(name, value);
+    SVGGraphicsElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGTextContentElement::svgAttributeChanged(const QualifiedName& attrName)

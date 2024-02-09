@@ -1827,7 +1827,7 @@ static void tupleNestedLoop(int32_t first, double second)
         patchpoint->setGenerator([&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
             jit.move(params[3].gpr(), params[0].gpr());
             jit.move(params[0].gpr(), params[2].gpr());
-            jit.move(params[4].fpr(), params[1].fpr());
+            jit.moveDouble(params[4].fpr(), params[1].fpr());
         });
         root->appendNew<VariableValue>(proc, Set, Origin(), varOuter, patchpoint);
         root->appendNew<VariableValue>(proc, Set, Origin(), tookInner, root->appendIntConstant(proc, Origin(), Int32, 0));
@@ -1849,7 +1849,7 @@ static void tupleNestedLoop(int32_t first, double second)
             AllowMacroScratchRegisterUsage allowScratch(jit);
             jit.move(params[3].gpr(), params[0].gpr());
             jit.moveConditionally32(CCallHelpers::Equal, params[5].gpr(), CCallHelpers::TrustedImm32(0), params[0].gpr(), params[5].gpr(), params[2].gpr());
-            jit.move(params[4].fpr(), params[1].fpr());
+            jit.moveDouble(params[4].fpr(), params[1].fpr());
         });
         outerLoop->appendNew<VariableValue>(proc, Set, Origin(), varOuter, patchpoint);
         outerLoop->appendNew<VariableValue>(proc, Set, Origin(), varInner, patchpoint);
@@ -1870,7 +1870,7 @@ static void tupleNestedLoop(int32_t first, double second)
             AllowMacroScratchRegisterUsage allowScratch(jit);
             jit.move(params[3].gpr(), params[0].gpr());
             jit.move(CCallHelpers::TrustedImm32(0), params[2].gpr());
-            jit.move(params[4].fpr(), params[1].fpr());
+            jit.moveDouble(params[4].fpr(), params[1].fpr());
         });
         innerLoop->appendNew<VariableValue>(proc, Set, Origin(), varOuter, patchpoint);
         innerLoop->appendNew<VariableValue>(proc, Set, Origin(), varInner, patchpoint);
@@ -1894,7 +1894,7 @@ static void tupleNestedLoop(int32_t first, double second)
     CHECK_EQ(compileAndRun<double>(proc, first, second), first + second);
 }
 
-void addTupleTests(const char* filter, Deque<RefPtr<SharedTask<void()>>>& tasks)
+void addTupleTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN_BINARY(testSimpleTuplePair, int32Operands(), int64Operands());
     RUN_BINARY(testSimpleTuplePairUnused, int32Operands(), int64Operands());
@@ -2468,6 +2468,66 @@ void testVectorFmulByElementDouble()
                 }
             }
         }
+    }
+}
+
+void testVectorExtractLane0Float()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+
+    Value* address0 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* input0 = root->appendNew<MemoryValue>(proc, Load, V128, Origin(), address0);
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<SIMDValue>(proc, Origin(), VectorExtractLane, B3::Float, SIMDLane::f32x4, SIMDSignMode::None, static_cast<uint8_t>(0), input0));
+
+    auto code = compileProc(proc);
+
+    auto checkFloat = [&](float a, float b) {
+        if (std::isnan(a))
+            CHECK(std::isnan(b));
+        else
+            CHECK(a == b);
+    };
+
+    for (auto& operand0 : floatingPointOperands<float>()) {
+        alignas(16) v128_t vector0;
+
+        vector0.f32x4[0] = operand0.value;
+        vector0.f32x4[1] = 1;
+        vector0.f32x4[2] = 2;
+        vector0.f32x4[3] = 3;
+
+        float result = invoke<float>(*code, &vector0);
+        checkFloat(result, operand0.value);
+    }
+}
+
+void testVectorExtractLane0Double()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+
+    Value* address0 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* input0 = root->appendNew<MemoryValue>(proc, Load, V128, Origin(), address0);
+    root->appendNewControlValue(proc, Return, Origin(), root->appendNew<SIMDValue>(proc, Origin(), VectorExtractLane, B3::Double, SIMDLane::f64x2, SIMDSignMode::None, static_cast<uint8_t>(0), input0));
+
+    auto code = compileProc(proc);
+
+    auto checkDouble = [&](double a, double b) {
+        if (std::isnan(a))
+            CHECK(std::isnan(b));
+        else
+            CHECK(a == b);
+    };
+
+    for (auto& operand0 : floatingPointOperands<double>()) {
+        alignas(16) v128_t vector0;
+
+        vector0.f64x2[0] = operand0.value;
+        vector0.f64x2[1] = 32;
+
+        double result = invoke<double>(*code, &vector0);
+        checkDouble(result, operand0.value);
     }
 }
 

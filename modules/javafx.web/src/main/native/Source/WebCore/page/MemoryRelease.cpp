@@ -36,7 +36,6 @@
 #include "CookieJar.h"
 #include "Document.h"
 #include "FontCache.h"
-#include "Frame.h"
 #include "GCController.h"
 #include "HRTFElevation.h"
 #include "HTMLMediaElement.h"
@@ -44,12 +43,14 @@
 #include "InlineStyleSheetOwner.h"
 #include "InspectorInstrumentation.h"
 #include "LayoutIntegrationLineLayout.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MemoryCache.h"
 #include "Page.h"
 #include "PerformanceLogging.h"
 #include "RenderTheme.h"
 #include "ScrollingThread.h"
+#include "SelectorQuery.h"
 #include "StyleScope.h"
 #include "StyledElement.h"
 #include "TextPainter.h"
@@ -74,10 +75,9 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     FontCache::releaseNoncriticalMemoryInAllFontCaches();
 
     GlyphDisplayListCache::singleton().clear();
+    SelectorQueryCache::singleton().clear();
 
     for (auto* document : Document::allDocuments()) {
-        document->clearSelectorQueryCache();
-
         if (auto* renderView = document->renderView())
             LayoutIntegration::LineLayout::releaseCaches(*renderView);
     }
@@ -106,6 +106,7 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCa
 #if ENABLE(WEB_AUDIO)
     HRTFElevation::clearCache();
 #endif
+
     Page::forEachPage([](auto& page) {
         page.cookieJar().clearCache();
     });
@@ -122,10 +123,8 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCa
     GCController::singleton().deleteAllCode(JSC::DeleteAllCodeIfNotCollecting);
 
 #if ENABLE(VIDEO)
-    for (auto* mediaElement : HTMLMediaElement::allMediaElements()) {
-        if (mediaElement->paused())
+    for (auto* mediaElement : HTMLMediaElement::allMediaElements())
             mediaElement->purgeBufferedDataIfPossible();
-    }
 #endif
 
     if (synchronous == Synchronous::Yes) {

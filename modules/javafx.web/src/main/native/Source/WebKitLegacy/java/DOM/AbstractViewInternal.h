@@ -28,6 +28,7 @@
 #include <jni.h>
 
 #include <WebCore/DOMWindow.h>
+#include <WebCore/LocalDOMWindow.h>
 #include <WebCore/WindowProxy.h>
 
 namespace WebCore {
@@ -36,14 +37,15 @@ inline DOMWindow* toDOMWindow(WindowProxy* windowProxy)
 {
     if (!windowProxy || !is<DOMWindow>(windowProxy->window()))
         return nullptr;
-    return downcast<DOMWindow>(windowProxy->window());
+    return windowProxy->window();
 }
 
 inline WindowProxy* toWindowProxy(DOMWindow* window)
 {
-    if (!window || !window->frame())
+    auto* localDOMWindow = dynamicDowncast< LocalDOMWindow >(window);
+    if (!window || !localDOMWindow->frame())
         return nullptr;
 
-    return &window->frame()->windowProxy();
+    return &localDOMWindow->frame()->windowProxy();
 }
 }

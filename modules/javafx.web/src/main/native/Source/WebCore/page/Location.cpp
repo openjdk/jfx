@@ -29,10 +29,10 @@
 #include "config.h"
 #include "Location.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameLoader.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "NavigationScheduler.h"
 #include "SecurityOrigin.h"
 #include <wtf/IsoMallocInlines.h>
@@ -46,8 +46,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Location);
 
-Location::Location(DOMWindow& window)
-    : DOMWindowProperty(&window)
+Location::Location(LocalDOMWindow& window)
+    : LocalDOMWindowProperty(&window)
 {
 }
 
@@ -127,14 +127,14 @@ String Location::hash() const
     return url().fragmentIdentifier().isEmpty() ? emptyString() : url().fragmentIdentifierWithLeadingNumberSign().toString();
 }
 
-ExceptionOr<void> Location::setHref(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& url)
+ExceptionOr<void> Location::setHref(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& url)
 {
     if (!frame())
         return { };
     return setLocation(incumbentWindow, firstWindow, url);
 }
 
-ExceptionOr<void> Location::setProtocol(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& protocol)
+ExceptionOr<void> Location::setProtocol(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& protocol)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -145,7 +145,7 @@ ExceptionOr<void> Location::setProtocol(DOMWindow& incumbentWindow, DOMWindow& f
     return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setHost(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& host)
+ExceptionOr<void> Location::setHost(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& host)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -155,7 +155,7 @@ ExceptionOr<void> Location::setHost(DOMWindow& incumbentWindow, DOMWindow& first
     return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setHostname(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& hostname)
+ExceptionOr<void> Location::setHostname(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& hostname)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -165,7 +165,7 @@ ExceptionOr<void> Location::setHostname(DOMWindow& incumbentWindow, DOMWindow& f
     return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setPort(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& portString)
+ExceptionOr<void> Location::setPort(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& portString)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -175,7 +175,7 @@ ExceptionOr<void> Location::setPort(DOMWindow& incumbentWindow, DOMWindow& first
     return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setPathname(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& pathname)
+ExceptionOr<void> Location::setPathname(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& pathname)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -185,7 +185,7 @@ ExceptionOr<void> Location::setPathname(DOMWindow& incumbentWindow, DOMWindow& f
     return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setSearch(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& search)
+ExceptionOr<void> Location::setSearch(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& search)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -195,7 +195,7 @@ ExceptionOr<void> Location::setSearch(DOMWindow& incumbentWindow, DOMWindow& fir
     return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::setHash(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& hash)
+ExceptionOr<void> Location::setHash(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& hash)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -215,7 +215,7 @@ ExceptionOr<void> Location::setHash(DOMWindow& incumbentWindow, DOMWindow& first
     return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
-ExceptionOr<void> Location::assign(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& url)
+ExceptionOr<void> Location::assign(LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, const String& url)
 {
     if (!frame())
         return { };
@@ -229,7 +229,7 @@ bool startsWith(const std::string &str, const std::string &prefix)
 }
 #endif
 
-ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString)
+ExceptionOr<void> Location::replace(LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, const String& urlString)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -237,7 +237,7 @@ ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWin
     ASSERT(frame->document());
     ASSERT(frame->document()->domWindow());
 
-    Frame* firstFrame = firstWindow.frame();
+    auto* firstFrame = firstWindow.frame();
     if (!firstFrame || !firstFrame->document())
         return { };
 
@@ -259,12 +259,12 @@ ExceptionOr<void> Location::replace(DOMWindow& activeWindow, DOMWindow& firstWin
     }
 #endif
 
-    // We call DOMWindow::setLocation directly here because replace() always operates on the current frame.
+    // We call LocalDOMWindow::setLocation directly here because replace() always operates on the current frame.
     frame->document()->domWindow()->setLocation(activeWindow, completedURL, LockHistoryAndBackForwardList);
     return { };
 }
 
-void Location::reload(DOMWindow& activeWindow)
+void Location::reload(LocalDOMWindow& activeWindow)
 {
     auto* frame = this->frame();
     if (!frame)
@@ -292,19 +292,19 @@ void Location::reload(DOMWindow& activeWindow)
     frame->navigationScheduler().scheduleRefresh(activeDocument);
 }
 
-ExceptionOr<void> Location::setLocation(DOMWindow& incumbentWindow, DOMWindow& firstWindow, const String& urlString)
+ExceptionOr<void> Location::setLocation(LocalDOMWindow& incumbentWindow, LocalDOMWindow& firstWindow, const String& urlString)
 {
     auto* frame = this->frame();
     ASSERT(frame);
 
-    Frame* firstFrame = firstWindow.frame();
+    auto* firstFrame = firstWindow.frame();
     if (!firstFrame || !firstFrame->document())
         return { };
 
     URL completedURL = firstFrame->document()->completeURL(urlString);
 
     if (!completedURL.isValid())
-        return Exception { TypeError, "Invalid URL"_s };
+        return Exception { SyntaxError, "Invalid URL"_s };
 
     if (!incumbentWindow.document()->canNavigate(frame, completedURL))
         return Exception { SecurityError };

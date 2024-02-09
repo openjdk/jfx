@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -620,6 +620,13 @@ public:
         rareData.m_privateNames.add(key, value);
     }
 
+    bool hasPrivateName(const RefPtr<UniquedStringImpl>& key) const
+    {
+        if (auto* rareData = m_rareData.get())
+            return rareData->m_privateNames.contains(key);
+        return false;
+    }
+
     template<typename Entry>
     void set(const ConcurrentJSLocker&, UniquedStringImpl* key, Entry&& entry)
     {
@@ -673,6 +680,7 @@ public:
                 return false;
             m_arguments.set(vm, this, table);
         }
+
         return true;
     }
 
@@ -684,12 +692,22 @@ public:
 
     bool trySetArgumentOffset(VM& vm, uint32_t i, ScopeOffset offset)
     {
-        ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
         auto* maybeCloned = m_arguments->trySet(vm, i, offset);
         if (!maybeCloned)
             return false;
         m_arguments.set(vm, this, maybeCloned);
         return true;
+    }
+
+    void prepareToWatchScopedArgument(SymbolTableEntry& entry, uint32_t i)
+    {
+        entry.prepareToWatch();
+        if (!m_arguments)
+            return;
+
+        WatchpointSet* watchpoints = entry.watchpointSet();
+        m_arguments->trySetWatchpointSet(i, watchpoints);
     }
 
     ScopedArgumentsTable* arguments() const
@@ -708,8 +726,8 @@ public:
     RefPtr<TypeSet> globalTypeSetForOffset(const ConcurrentJSLocker&, VarOffset, VM&);
     RefPtr<TypeSet> globalTypeSetForVariable(const ConcurrentJSLocker&, UniquedStringImpl* key, VM&);
 
-    bool usesNonStrictEval() const { return m_usesNonStrictEval; }
-    void setUsesNonStrictEval(bool usesNonStrictEval) { m_usesNonStrictEval = usesNonStrictEval; }
+    bool usesSloppyEval() const { return m_usesSloppyEval; }
+    void setUsesSloppyEval(bool usesSloppyEval) { m_usesSloppyEval = usesSloppyEval; }
 
     bool isNestedLexicalScope() const { return m_nestedLexicalScope; }
     void markIsNestedLexicalScope() { ASSERT(scopeType() == LexicalScope); m_nestedLexicalScope = true; }
@@ -719,6 +737,7 @@ public:
         GlobalLexicalScope,
         LexicalScope,
         CatchScope,
+        CatchScopeWithSimpleParameter,
         FunctionNameScope
     };
     void setScopeType(ScopeType type) { m_scopeType = type; }
@@ -742,7 +761,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    void finalizeUnconditionally(VM&);
+    void finalizeUnconditionally(VM&, CollectionScope);
     void dump(PrintStream&) const;
 
     struct SymbolTableRareData {
@@ -764,7 +783,7 @@ private:
         return ensureRareDataSlow();
     }
 
-    JS_EXPORT_PRIVATE void finishCreation(VM&);
+    DECLARE_DEFAULT_FINISH_CREATION;
     JS_EXPORT_PRIVATE SymbolTableRareData& ensureRareDataSlow();
 
     Map m_map;
@@ -773,7 +792,7 @@ public:
     mutable ConcurrentJSLock m_lock;
 
 private:
-    unsigned m_usesNonStrictEval : 1;
+    unsigned m_usesSloppyEval : 1;
     unsigned m_nestedLexicalScope : 1; // Non-function LexicalScope.
     unsigned m_scopeType : 3; // ScopeType
 

@@ -33,15 +33,17 @@
 #include "CrossOriginAccessControl.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
+#include "DiagnosticLoggingResultType.h"
 #include "Document.h"
 #include "DocumentLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "HTTPParsers.h"
 #include "InspectorNetworkAgent.h"
 #include "LinkLoader.h"
+#include "LocalFrame.h"
 #include "Logging.h"
 #include "MemoryCache.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "ResourceLoadObserver.h"
 #include "ResourceTiming.h"
@@ -108,7 +110,7 @@ SubresourceLoader::RequestCountTracker::~RequestCountTracker()
         m_cachedResourceLoader->decrementRequestCount(*m_resource);
 }
 
-SubresourceLoader::SubresourceLoader(Frame& frame, CachedResource& resource, const ResourceLoaderOptions& options)
+SubresourceLoader::SubresourceLoader(LocalFrame& frame, CachedResource& resource, const ResourceLoaderOptions& options)
     : ResourceLoader(frame, options)
     , m_resource(&resource)
     , m_state(Uninitialized)
@@ -133,7 +135,7 @@ SubresourceLoader::~SubresourceLoader()
 #endif
 }
 
-void SubresourceLoader::create(Frame& frame, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&& completionHandler)
+void SubresourceLoader::create(LocalFrame& frame, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&& completionHandler)
 {
     auto subloader(adoptRef(*new SubresourceLoader(frame, resource, options)));
 #if PLATFORM(IOS_FAMILY)
@@ -572,7 +574,7 @@ bool SubresourceLoader::responseHasHTTPStatusCodeError() const
     return true;
 }
 
-static void logResourceLoaded(Frame* frame, CachedResource::Type type)
+static void logResourceLoaded(LocalFrame* frame, CachedResource::Type type)
 {
     if (!frame || !frame->page())
         return;
@@ -648,7 +650,7 @@ Expected<void, String> SubresourceLoader::checkResponseCrossOriginAccessControl(
 Expected<void, String> SubresourceLoader::checkRedirectionCrossOriginAccessControl(const ResourceRequest& previousRequest, const ResourceResponse& redirectResponse, ResourceRequest& newRequest)
 {
     bool crossOriginFlag = m_resource->isCrossOrigin();
-    bool isNextRequestCrossOrigin = m_origin && !m_origin->canRequest(newRequest.url());
+    bool isNextRequestCrossOrigin = m_origin && !m_origin->canRequest(newRequest.url(), OriginAccessPatternsForWebProcess::singleton());
 
     if (isNextRequestCrossOrigin)
         m_resource->setCrossOrigin();
@@ -694,7 +696,7 @@ Expected<void, String> SubresourceLoader::checkRedirectionCrossOriginAccessContr
         updateRequestForAccessControl(newRequest, *m_origin, options().storedCredentialsPolicy);
     }
 
-    updateRequestReferrer(newRequest, referrerPolicy(), previousRequest.httpReferrer());
+    updateRequestReferrer(newRequest, referrerPolicy(), previousRequest.httpReferrer(), OriginAccessPatternsForWebProcess::singleton());
 
     FrameLoader::addHTTPOriginIfNeeded(newRequest, m_origin ? m_origin->toString() : String());
 
@@ -722,15 +724,19 @@ void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMe
 
     if (m_state != Initialized)
         return;
-    ASSERT(!reachedTerminalState());
-    ASSERT(!m_resource->resourceToRevalidate());
-    // FIXME (129394): We should cancel the load when a decode error occurs instead of continuing the load to completion.
-    ASSERT(!m_resource->errorOccurred() || m_resource->status() == CachedResource::DecodeError || !m_resource->isLoading());
-    LOG(ResourceLoading, "Received '%s'.", m_resource->url().string().latin1().data());
-    logResourceLoaded(m_frame.get(), m_resource->type());
 
-    Ref<SubresourceLoader> protectedThis(*this);
-    CachedResourceHandle<CachedResource> protectResource(m_resource.get());
+    Ref protectedThis { *this };
+
+    ASSERT(!reachedTerminalState());
+    CachedResourceHandle resource = m_resource.get();
+    if (!resource)
+        return;
+
+    ASSERT(!resource->resourceToRevalidate());
+    // FIXME (129394): We should cancel the load when a decode error occurs instead of continuing the load to completion.
+    ASSERT(!resource->errorOccurred() || resource->status() == CachedResource::DecodeError || !resource->isLoading());
+    LOG(ResourceLoading, "Received '%s'.", resource->url().string().latin1().data());
+    logResourceLoaded(m_frame.get(), resource->type());
 
     m_loadTiming.markEndTime();
 
@@ -740,22 +746,22 @@ void SubresourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMe
         // This is the legacy path for platforms (and ResourceHandle paths) that do not provide
         // complete load metrics in didFinishLoad. In those cases, fall back to the possibility
         // that they populated partial load timing information on the ResourceResponse.
-        const auto* timing = m_resource->response().deprecatedNetworkLoadMetricsOrNull();
+        const auto* timing = resource->response().deprecatedNetworkLoadMetricsOrNull();
         reportResourceTiming(timing ? *timing : NetworkLoadMetrics::emptyMetrics());
     }
 
-    if (m_resource->type() != CachedResource::Type::MainResource)
+    if (resource->type() != CachedResource::Type::MainResource)
         tracePoint(SubresourceLoadDidEnd, identifier().toUInt64());
 
     m_state = Finishing;
-    m_resource->finishLoading(resourceData(), networkLoadMetrics);
+    resource->finishLoading(resourceData(), networkLoadMetrics);
 
     if (wasCancelled()) {
         SUBRESOURCELOADER_RELEASE_LOG("didFinishLoading: was canceled");
         return;
     }
 
-    m_resource->finish();
+    resource->finish();
     ASSERT(!reachedTerminalState());
     didFinishLoadingOnePart(networkLoadMetrics);
     notifyDone(LoadCompletionType::Finish);
@@ -781,6 +787,7 @@ void SubresourceLoader::didFail(const ResourceError& error)
         return;
 
     ASSERT(!reachedTerminalState());
+    CachedResourceHandle protectedResource { m_resource.get() };
     LOG(ResourceLoading, "Failed to load '%s'.\n", m_resource->url().string().latin1().data());
 
     if (m_frame->document() && error.isAccessControl() && error.domain() != InspectorNetworkAgent::errorDomain() && m_resource->type() != CachedResource::Type::Ping)

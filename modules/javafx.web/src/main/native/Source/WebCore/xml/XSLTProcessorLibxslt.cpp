@@ -28,9 +28,10 @@
 
 #include "CachedResourceLoader.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
+#include "LocalFrame.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include "ResourceError.h"
@@ -51,10 +52,6 @@
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
 
-#if OS(DARWIN) && !PLATFORM(GTK)
-#include "SoftLinkLibxslt.h"
-#endif
-
 namespace WebCore {
 
 void XSLTProcessor::genericErrorFunc(void*, const char*, ...)
@@ -62,7 +59,11 @@ void XSLTProcessor::genericErrorFunc(void*, const char*, ...)
     // It would be nice to do something with this error message.
 }
 
+#if LIBXML_VERSION >= 21200
+void XSLTProcessor::parseErrorFunc(void* userData, const xmlError* error)
+#else
 void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
+#endif
 {
     PageConsoleClient* console = static_cast<PageConsoleClient*>(userData);
     if (!console)
@@ -110,14 +111,14 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
 
         RefPtr<SharedBuffer> data;
 
-        bool requestAllowed = globalCachedResourceLoader->frame() && globalCachedResourceLoader->document()->securityOrigin().canRequest(url);
+        bool requestAllowed = globalCachedResourceLoader->frame() && globalCachedResourceLoader->document()->securityOrigin().canRequest(url, OriginAccessPatternsForWebProcess::singleton());
         if (requestAllowed) {
             FetchOptions options;
             options.mode = FetchOptions::Mode::SameOrigin;
             options.credentials = FetchOptions::Credentials::Include;
             globalCachedResourceLoader->frame()->loader().loadResourceSynchronously(url, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
             if (error.isNull())
-                requestAllowed = globalCachedResourceLoader->document()->securityOrigin().canRequest(response.url());
+                requestAllowed = globalCachedResourceLoader->document()->securityOrigin().canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton());
             else if (data)
                 data = nullptr;
         }
@@ -128,7 +129,7 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         }
 
         PageConsoleClient* console = nullptr;
-        Frame* frame = globalProcessor->xslStylesheet()->ownerDocument()->frame();
+        auto* frame = globalProcessor->xslStylesheet()->ownerDocument()->frame();
         if (frame && frame->page())
             console = &frame->page()->console();
         xmlSetStructuredErrorFunc(console, XSLTProcessor::parseErrorFunc);
@@ -321,13 +322,8 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
     }
     m_stylesheet->clearDocuments();
 
-#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(JAVA)
-    int origXsltMaxDepth = *xsltMaxDepth;
-    *xsltMaxDepth = 1000;
-#else
     int origXsltMaxDepth = xsltMaxDepth;
     xsltMaxDepth = 1000;
-#endif
 
     xmlChar* origMethod = sheet->method;
     if (!origMethod && mimeType == "text/html"_s)
@@ -381,11 +377,7 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
     }
 
     sheet->method = origMethod;
-#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(JAVA)
-    *xsltMaxDepth = origXsltMaxDepth;
-#else
     xsltMaxDepth = origXsltMaxDepth;
-#endif
     setXSLTLoadCallBack(0, 0, 0);
     xsltFreeStylesheet(sheet);
     m_stylesheet = nullptr;

@@ -44,10 +44,9 @@ import com.sun.marlin.ArrayCacheConst.BucketStats;
 import com.sun.marlin.ArrayCacheConst.CacheStats;
 
 /*
- * Note that the ArrayCache[BYTE/INT/FLOAT/DOUBLE] files are nearly identical except
- * for a few type and name differences. Typically, the [BYTE]ArrayCache.java file
- * is edited manually and then [INT/FLOAT/DOUBLE]ArrayCache.java
- * files are generated with the following command lines:
+ * Note that the ArrayCache[Int/IntClean] files are nearly identical except
+ * for their array type [byte/double/int] and class name differences.
+ * ArrayCache[Int]Clean class deals with zero-filled arrays.
  */
 
 public final class ArrayCacheIntClean {
@@ -169,7 +168,7 @@ public final class ArrayCacheIntClean {
             if (array.length <= MAX_ARRAY_SIZE) {
                 if (toIndex != 0) {
                     // clean-up array of dirty part[fromIndex; toIndex[
-                    fill(array, fromIndex, toIndex, 0);
+                    fill(array, fromIndex, toIndex, /*(int)*/ 0);
                 }
                 // ensure to never store initial arrays in cache:
                 if (array != initial) {

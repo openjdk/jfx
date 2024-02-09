@@ -313,6 +313,12 @@ void                 gst_video_converter_frame          (GstVideoConverter * con
 GST_VIDEO_API
 void                 gst_video_converter_frame_finish   (GstVideoConverter * convert);
 
+GST_VIDEO_API
+const GstVideoInfo * gst_video_converter_get_in_info    (GstVideoConverter * convert);
+
+GST_VIDEO_API
+const GstVideoInfo * gst_video_converter_get_out_info   (GstVideoConverter * convert);
+
 G_END_DECLS
 
 #endif /* __GST_VIDEO_CONVERTER_H__ */
