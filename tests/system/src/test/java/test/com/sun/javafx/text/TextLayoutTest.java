@@ -387,7 +387,7 @@ public class TextLayoutTest {
         /**
          * Checks that leading white spaces are NOT stripped even when
          * some lines are soft wrapped. This soft wraps after "fox"
-         * and has 4 trailing spaces on the 2nd line where no soft
+         * and has 4 leading spaces on the 1st line where no soft
          * wrap occurs, and so they should be kept intact.
          */
         SOFT_WRAP_WITH_LEADING_SPACE(new Parameters(
