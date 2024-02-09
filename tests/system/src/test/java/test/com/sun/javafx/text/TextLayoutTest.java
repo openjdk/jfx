@@ -561,4 +561,12 @@ public class TextLayoutTest {
             }
         }
     }
+
+    @Test
+    void fail() {
+        String fontDescription1 = "[" + font.getFullName() + ", " + font.getFamilyName() + ", " + font.getStyleName() + ", " + font.getName() + ", " + font.getSize() + "]";
+        String fontDescription2 = "[" + font2.getFullName() + ", " + font2.getFamilyName() + ", " + font2.getStyleName() + ", " + font2.getName() + ", " + font2.getSize() + "]";
+
+        assertTrue(false, "Check if this system test actually runs on the build environment; font loaded was " + fontDescription1 + " and " + fontDescription2);
+    }
 }
