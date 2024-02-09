@@ -991,7 +991,7 @@ public class PrismTextLayout implements TextLayout {
         }
     }
 
-    private TextLine createLine(int start, int end, int startOffset) {
+    private TextLine createLine(int start, int end, int startOffset, float collapsedSpaceWidth) {
         int count = end - start + 1;
 
         assert count > 0 : "number of TextRuns in a TextLine cannot be less than one: " + count;
@@ -1013,28 +1013,20 @@ public class PrismTextLayout implements TextLayout {
             length += run.getLength();
         }
 
-        /*
-         * Calculate the width of trailing spaces for the new TextLine so they
-         * can be excluded when doing later alignment calculations:
-         */
-        float trailingSpaceWidth = computeTrailingSpaceWidth(lineRuns);
+        width -= collapsedSpaceWidth;
 
         if (width > layoutWidth) layoutWidth = width;
         return new TextLine(startOffset, length, lineRuns,
-                            width, ascent, descent, leading, trailingSpaceWidth);
+                            width, ascent, descent, leading);
     }
 
     /**
-     * Computes the size of the white space trailing a given line defined by the start offset and length.
+     * Computes the size of the white space trailing a given run.
      *
-     * <p>Note: textRuns is split in such a way that it matches the line, so the last text run's last
-     * character is the point of a line break.
-     *
-     * @param textRuns the text runs the line consists off
-     * @return the X size of the white space trailing the line
+     * @param run the run to compute trailing space width for, cannot be {@code null}
+     * @return the X size of the white space trailing the run
      */
-    private float computeTrailingSpaceWidth(TextRun[] textRuns) {
-        TextRun textRun = textRuns[textRuns.length - 1];
+    private float computeTrailingSpaceWidth(TextRun run) {
         float trailingSpaceWidth = 0;
         char[] chars = getText();
 
@@ -1044,14 +1036,14 @@ public class PrismTextLayout implements TextLayout {
          * space is always represented with only a single glyph:
          */
 
-        for (int i = textRun.getGlyphCount() - 1; i >= 0; i--) {
-            int textOffset = textRun.getStart() + textRun.getCharOffset(i);
+        for (int i = run.getGlyphCount() - 1; i >= 0; i--) {
+            int textOffset = run.getStart() + run.getCharOffset(i);
 
             if (!Character.isWhitespace(chars[textOffset])) {
                 break;
             }
 
-            trailingSpaceWidth += textRun.getAdvance(i);
+            trailingSpaceWidth += run.getAdvance(i);
         }
 
         return trailingSpaceWidth;
@@ -1335,7 +1327,7 @@ public class PrismTextLayout implements TextLayout {
 
             lineWidth += runWidth;
             if (run.isBreak()) {
-                TextLine line = createLine(startIndex, i, startOffset);
+                TextLine line = createLine(startIndex, i, startOffset, computeTrailingSpaceWidth(runs[i]));
                 linesList.add(line);
                 startIndex = i + 1;
                 startOffset += line.getLength();
@@ -1344,7 +1336,7 @@ public class PrismTextLayout implements TextLayout {
         }
         if (layout != null) layout.dispose();
 
-        linesList.add(createLine(startIndex, runCount - 1, startOffset));
+        linesList.add(createLine(startIndex, runCount - 1, startOffset, 0));
         lines = new TextLine[linesList.size()];
         linesList.toArray(lines);
 
@@ -1365,7 +1357,7 @@ public class PrismTextLayout implements TextLayout {
             RectBounds bounds = line.getBounds();
 
             /* Center and right alignment */
-            float unusedWidth = fullWidth - bounds.getWidth() + (wrapWidth > 0 ? line.getTrailingSpaceWidth() : 0);
+            float unusedWidth = fullWidth - bounds.getWidth();
             float lineX = unusedWidth * align;
             line.setAlignment(lineX);
 

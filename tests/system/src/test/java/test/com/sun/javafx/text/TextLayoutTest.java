@@ -323,7 +323,7 @@ public class TextLayoutTest {
         NO_WRAP(new Parameters(
             "The quick brown fox jumps over the lazy dog",
             Font.font("Monaco", 12),
-            0.0f, List.of(309.6504f), List.of(0.0f),
+            0.0f, List.of(309.6504f),
             12.0f, 4.001953f
         )),
 
@@ -336,7 +336,7 @@ public class TextLayoutTest {
         HARD_WRAP(new Parameters(
             "The quick brown fox jumps\nover the lazy dog",
             Font.font("Monaco", 12),
-            0.0f, List.of(180.0293f, 122.41992f), List.of(0.0f, 0.0f),
+            0.0f, List.of(180.0293f, 122.41992f),
             12.0f, 4.001953f
         )),
 
@@ -347,51 +347,68 @@ public class TextLayoutTest {
         HARD_WRAP_WITH_EXTRA_TRAILING_SPACE(new Parameters(
             "The quick brown fox jumps           \nover the lazy dog           ",
             Font.font("Monaco", 12),
-            0.0f, List.of(180.0293f + 79.2129f, 122.41992f + 79.2129f), List.of(0.0f, 0.0f),
+            0.0f, List.of(180.0293f + 79.2129f, 122.41992f + 79.2129f),
             12.0f, 4.001953f
         )),
 
         /**
-         * Checks that single trailing white spaces are ignored for alignment
-         * purposes when wrapping is enabled in simple text.
+         * Checks that single white spaces are ignored for alignment
+         * purposes when wrapping is enabled in simple text. This soft
+         * wraps after "jumps".
          */
-        SIMPLE(new Parameters(
+        SOFT_WRAP(new Parameters(
             "The quick brown fox jumps over the lazy dog",
             Font.font("Monaco", 12),
-            200.0f, List.of(180.0293f, 122.41992f), List.of(7.20117f, 0.0f),
+            200.0f, List.of(180.0293f, 122.41992f),
             12.0f, 4.001953f
         )),
 
         /**
-         * Checks that multiple trailing white spaces are ignored for alignment
-         * purposes when wrapping is enabled in simple text.
+         * Checks that trailing white spaces are NOT stripped even when
+         * some lines are soft wrapped. This soft wraps after "jumps"
+         * and has 4 trailing spaces on the 2nd line where no soft
+         * wrap occurs, and so they should be kept intact.
          */
-        SIMPLE_WITH_EXTRA_TRAILING_SPACE(new Parameters(
+        SOFT_WRAP_WITH_TRAILING_SPACE(new Parameters(
+            "The quick brown fox jumps over the lazy dog    ",
+            Font.font("Monaco", 12),
+            200.0f, List.of(180.0293f, 122.41992f + 28.80469f),
+            12.0f, 4.001953f
+        )),
+
+        /**
+         * Checks that multiple white spaces are ignored for alignment
+         * purposes when wrapping is enabled in simple text. This soft
+         * wraps after "jumps".
+         */
+        SOFT_WRAP_WITH_EXTRA_SPACE(new Parameters(
             "The quick brown fox jumps           over the lazy dog",
             Font.font("Monaco", 12),
-            200.0f, List.of(180.0293f, 122.41992f), List.of(79.2129f, 0.0f),
+            200.0f, List.of(180.0293f, 122.41992f),
             12.0f, 4.001953f
         )),
 
         /**
-         * Checks that single trailing white spaces are ignored for alignment
-         * purposes when wrapping is enabled in complex text.
+         * Checks that single white spaces are ignored for alignment
+         * purposes when wrapping is enabled in complex text. This soft
+         * wraps after "jumps".
          */
-        COMPLEX(new Parameters(
+        SOFT_WRAP_WITH_COMPLEX_TEXT(new Parameters(
             "The quick brown लोमड़ी jumps over the lazy कुत्ता",
             Font.font("Monaco", 12),
-            200.0f, List.of(189.89649f, 122.583984f), List.of(7.20117f, 0.0f),
+            200.0f, List.of(189.89649f, 122.583984f),
             12.0f, 4.001953f
         )),
 
         /**
-         * Checks that multiple trailing white spaces are ignored for alignment
-         * purposes when wrapping is enabled in complex text.
+         * Checks that multiple white spaces are ignored for alignment
+         * purposes when wrapping is enabled in complex text. This soft
+         * wraps after "jumps".
          */
-        COMPLEX_WITH_EXTRA_TRAILING_SPACE(new Parameters(
+        SOFT_WRAP_WITH_COMPLEX_TEXT_AND_EXTRA_TRAILING_SPACE(new Parameters(
             "The quick brown लोमड़ी jumps           over the lazy कुत्ता",
             Font.font("Monaco", 12),
-            200.0f, List.of(189.89649f, 122.583984f), List.of(79.2129f, 0.0f),
+            200.0f, List.of(189.89649f, 122.583984f),
             12.0f, 4.001953f
         ));
 
@@ -401,17 +418,15 @@ public class TextLayoutTest {
             this.parameters = parameters;
         }
 
-        record Parameters(String text, Font font, float wrapWidth, List<Float> lineWidths, List<Float> trailingWhiteSpaceWidths, float ascent, float descent) {
+        record Parameters(String text, Font font, float wrapWidth, List<Float> lineWidths, float ascent, float descent) {
             Parameters {
                 assert text != null;
                 assert font != null;
                 assert wrapWidth >= 0;
                 assert lineWidths != null;
-                assert trailingWhiteSpaceWidths != null;
                 assert ascent > 0;
                 assert descent > 0;
                 assert lineWidths.size() > 0;
-                assert lineWidths.size() == trailingWhiteSpaceWidths.size();
             }
 
             int lineCount() {
@@ -447,7 +462,7 @@ public class TextLayoutTest {
         for (int i = 0; i < p.lineCount(); i++) {
             TextLine[] lines = layout.getLines();
             String description = "left aligned: line " + i + " for " + c.parameters;
-            RectBounds expectedBounds = new RectBounds(0, -ASCENT, p.lineWidths.get(i) + p.trailingWhiteSpaceWidths.get(i), DESCENT);
+            RectBounds expectedBounds = new RectBounds(0, -ASCENT, p.lineWidths.get(i), DESCENT);
             Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
 
             assertEquals(expectedBounds, lines[i].getBounds(), description);
@@ -463,7 +478,7 @@ public class TextLayoutTest {
         for (int i = 0; i < p.lineCount(); i++) {
             TextLine[] lines = layout.getLines();
             String description = "centered: line " + i + " for " + p;
-            RectBounds expectedBounds = new RectBounds(CENTER - 0.5f * p.lineWidths.get(i), -ASCENT, CENTER + 0.5f * p.lineWidths.get(i) + p.trailingWhiteSpaceWidths.get(i), DESCENT);
+            RectBounds expectedBounds = new RectBounds(CENTER - 0.5f * p.lineWidths.get(i), -ASCENT, CENTER + 0.5f * p.lineWidths.get(i), DESCENT);
             Point2D expectedLocation = new Point2D(CENTER - 0.5f * p.lineWidths.get(i), i * (ASCENT + DESCENT));
 
             assertEquals(expectedBounds, lines[i].getBounds(), description);
@@ -479,7 +494,7 @@ public class TextLayoutTest {
         for (int i = 0; i < p.lineCount(); i++) {
             TextLine[] lines = layout.getLines();
             String description = "right aligned: line " + i + " for " + p;
-            RectBounds expectedBounds = new RectBounds(WRAP - p.lineWidths.get(i), -ASCENT, WRAP + p.trailingWhiteSpaceWidths.get(i), DESCENT);
+            RectBounds expectedBounds = new RectBounds(WRAP - p.lineWidths.get(i), -ASCENT, WRAP, DESCENT);
             Point2D expectedLocation = new Point2D(WRAP - p.lineWidths.get(i), i * (ASCENT + DESCENT));
 
             assertEquals(expectedBounds, lines[i].getBounds(), description);
