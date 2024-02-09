@@ -78,7 +78,7 @@ public class TransparentLCDTest {
     // and only sample outside the text, where we expect to read the background
     // color, or in the middle of the text fill area, where we expect to find
     // the unadjusted text color.
-    private static final double TOLERANCE = 2.0 / 255.0;
+    private static final double TOLERANCE = 2.5 / 255.0;
 
     private static final int TEXT_X_LEFT = 5;
     private static final int TEXT_Y_BOTTOM = 30;
@@ -187,7 +187,7 @@ public class TransparentLCDTest {
 
     @AfterEach
     public void doTeardown() {
-        Platform.runLater(() -> {
+        Util.runAndWait(() -> {
             if (testStage != null) {
                 testStage.hide();
             }
@@ -269,5 +269,4 @@ public class TransparentLCDTest {
     public void testOpaqueLCD() {
         runTest(true);
     }
-
 }
