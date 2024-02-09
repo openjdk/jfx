@@ -27,9 +27,12 @@ package com.sun.javafx.scene.text;
 
 import com.sun.javafx.geom.RectBounds;
 
+/**
+ * Represents a full line of text that is all rendered on a single line.
+ */
 public interface TextLine {
     /**
-     * Returns the list of GlyphList in the line. The list is visually orderded.
+     * Returns the list of GlyphList in the line. The list is visually ordered.
      */
     public GlyphList[] getRuns();
 

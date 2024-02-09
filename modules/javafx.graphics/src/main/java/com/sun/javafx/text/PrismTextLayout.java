@@ -1155,6 +1155,94 @@ public class PrismTextLayout implements TextLayout {
         return tabSize * spaceAdvance;
     }
 
+    /*
+     * The way JavaFX lays out text:
+     *
+     * JavaFX distinguishes between soft wraps and hard wraps. Soft wraps
+     * occur when a wrap width has been set and the text requires wrapping
+     * to stay within the set wrap width. Hard wraps are explicitly part of
+     * the text in the form of line feeds (LF) and carriage returns (CR).
+     * Hard wrapping considers a singular LF or CR, or the combination of
+     * CR+LF (or LF+CR) as a single wrap location. Hard wrapping also occurs
+     * between TextSpans when multiple TextSpans were supplied (for wrapping
+     * purposes, there is no difference between two TextSpans and a single
+     * TextSpan where the text was concatenated with a line break in between).
+     *
+     * Soft wrapping occurs when a wrap width has been set. This occurs at
+     * the first character that does not fit.
+     *
+     * - If that character is not a white space, the break is set immediately
+     *   after the first white space encountered before that character
+     *   - If there is no white space before the preferred break character, the
+     *     break is done at the first character that does not fit (the wrap
+     *     then occurs in the middle of a (long) word)
+     * - If the preferred break character is white space, and it is followed by
+     *   more white space, the break is moved to the end of the white space (thus
+     *   a break in white space always occurs at first non white space character
+     *   following a white space sequence)
+     *
+     * White space collapsing:
+     *
+     * Only white space that is present at soft wrapped locations is collapsed to
+     * zero. Any other white space is preserved. This includes white space between
+     * words, leading and trailing white space, and white space around hard wrapped
+     * locations.
+     *
+     * Alignment:
+     *
+     * The alignment calculation only looks at the width of all the significant
+     * characters in each line. Significant characters are any non white space
+     * characters and any white space that has been preserved (white space that wasn't
+     * collapsed due to soft wrapping).
+     *
+     * Alignment does not take text effects, such as strike through and underline, into
+     * account. This means that such effects can appear unaligned. Trailing spaces at a
+     * soft wrap location (that are underlined for example), may show the underline go
+     * outside the logical bounds of the text.
+     *
+     * Example, where <SW> indicates a soft wrap location, and <LF> is a line feed:
+     *
+     *     "   The   quick <SW>brown fox jumps <SW> over the <LF> lazy dog   "
+     *
+     * Would be rendered as (left aligned):
+     *
+     *     "   The   quick"
+     *     "brown fox jumps"
+     *     "over the "
+     *     " lazy dog   "
+     *
+     * The alignment calculation uses the above bounds indicated by the double
+     * quotes, and so right aligned text would look like:
+     *
+     *      "   The   quick"
+     *     "brown fox jumps"
+     *           "over the "
+     *        " lazy dog   "
+     *
+     * Note that only the white space at the soft wrap locations is collapsed.
+     * In all other locations the space was preserved (the space between words
+     * where no soft wrap occurred, the leading and trailing space, and the
+     * space around the hard wrapped location).
+     *
+     * Text effects have no effect on the alignment, and so with underlining on
+     * the right right aligned text would look like:
+     *
+     *      "___The___quick_"     (one collapsed space becomes visible here)
+     *     "brown_fox_jumps__"    (two collapsed spaces become visible here)
+     *           "over_the_"
+     *        "_lazy_dog___"
+     *
+     * Note that text alignment has not changed at all, but the bounds are exceeded
+     * in some locations to allow for the underline. Controls displaying such texts
+     * will likely clip the underlined parts exceeding the bounds.
+     *
+     * Users wishing to mitigate some of these perhaps surprising results can ensure
+     * they use trimmed texts, and avoid the use of line breaks, or at least ensure
+     * that line breaks are not preceded or succeeded by white space (activating
+     * line wrapping is not equivalent to collapsing any consecutive white space
+     * no matter where it occurs).
+     */
+
     private void layout() {
         /* Try the cache */
         initCache();
@@ -1222,13 +1310,20 @@ public class PrismTextLayout implements TextLayout {
                 /* Find offset of the first character that does not fit on the line */
                 int hitOffset = run.getStart() + run.getWrapIndex(wrapWidth - lineWidth);
 
-                /* Only keep whitespaces (not tabs) in the current run to avoid
+                /*
+                 * Only keep white spaces (not tabs) in the current run to avoid
                  * dealing with unshaped runs.
+                 *
+                 * If the run is a tab, the run will be always of length 1 (see
+                 * buildRuns()). As there is no "next" character that can be selected
+                 * as the wrap index in this run, the white space skipping logic
+                 * below won't skip tabs.
                  */
+
                 int offset = hitOffset;
                 int runEnd = run.getEnd();
 
-                // Don't take spaces into account at the preferred wrap index:
+                // Don't take white space into account at the preferred wrap index:
                 while (offset + 1 < runEnd && Character.isWhitespace(chars[offset])) {
                     offset++;
                 }
