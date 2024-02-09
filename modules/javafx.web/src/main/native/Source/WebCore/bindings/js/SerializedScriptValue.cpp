@@ -2101,7 +2101,7 @@ private:
     {
         writeConstantPoolIndex(m_imageDataPool, i);
     }
-    
+
     void writeObjectIndex(unsigned i)
     {
         writeConstantPoolIndex(m_objectPoolMap, i);

@@ -150,7 +150,7 @@ RenderPtr<RenderElement> HTMLFrameSetElement::createElementRenderer(RenderStyle&
 {
     if (style.hasContent())
         return RenderElement::createFor(*this, WTFMove(style));
-    
+
     return createRenderer<RenderFrameSet>(*this, WTFMove(style));
 }
 
