@@ -57,20 +57,19 @@ public class TextLayoutTest {
     private final PGFont font = (PGFont) FontHelper.getNativeFont(Font.font("Monaco", 12));
     private final PGFont font2 = (PGFont) FontHelper.getNativeFont(Font.font("Tahoma", 12));
 
-    class TestSpan implements TextSpan {
-        String text;
-        Object font;
-        TestSpan(Object text, Object font) {
-            this.text = (String)text;
-            this.font = font;
-        }
-        @Override public String getText() {
+    record TestSpan(String text, Object font) implements TextSpan {
+        @Override
+        public String getText() {
             return text;
         }
-        @Override public Object getFont() {
+
+        @Override
+        public Object getFont() {
             return font;
         }
-        @Override public RectBounds getBounds() {
+
+        @Override
+        public RectBounds getBounds() {
             return null;
         }
     }
@@ -80,7 +79,7 @@ public class TextLayoutTest {
         TextSpan[] spans = new TextSpan[count];
         int i = 0;
         while (i < content.length) {
-            spans[i>>1] = new TestSpan(content[i++], content[i++]);
+            spans[i>>1] = new TestSpan((String) content[i++], content[i++]);
         }
         layout.setContent(spans);
     }
