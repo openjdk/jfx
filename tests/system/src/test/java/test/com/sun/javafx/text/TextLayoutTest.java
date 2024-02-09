@@ -45,6 +45,7 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.text.PrismTextLayout;
+import com.sun.javafx.text.TextRun;
 
 import javafx.scene.text.Font;
 
@@ -351,6 +352,27 @@ public class TextLayoutTest {
         )),
 
         /**
+         * Checks that a character after tabs align, even if there were
+         * some preceding characters (that don't exceed the tab advance width)
+         */
+        HARD_WRAP_WITH_TABS(new Parameters(
+            "\tA A\n" + "x\tA A\n" + "xx\tA A",  // expect same width for all three, as the "x" character falls within tab advance width
+            Font.font("Monaco", 12),
+            0.0f, List.of(79.21289f, 79.21289f, 79.21289f),
+            12.0f, 4.001953f
+        )),
+
+        /**
+         * Checks that tabs are a multiple of the tab advance.
+         */
+        HARD_WRAP_WITH_MULTIPLE_TABS(new Parameters(
+            "\t\n" + "\t\t\n" + "\t\t\t",  // expect width ratio 1:2:3
+            Font.font("Monaco", 12),
+            0.0f, List.of(57.609375f, 57.609375f * 2, 57.609375f * 3),
+            12.0f, 4.001953f
+        )),
+
+        /**
          * Checks that single white spaces are ignored for alignment
          * purposes when wrapping is enabled in simple text. This soft
          * wraps after "jumps".
@@ -359,6 +381,19 @@ public class TextLayoutTest {
             "The quick brown fox jumps over the lazy dog",
             Font.font("Monaco", 12),
             200.0f, List.of(180.0293f, 122.41992f),
+            12.0f, 4.001953f
+        )),
+
+        /**
+         * Checks that leading white spaces are NOT stripped even when
+         * some lines are soft wrapped. This soft wraps after "fox"
+         * and has 4 trailing spaces on the 2nd line where no soft
+         * wrap occurs, and so they should be kept intact.
+         */
+        SOFT_WRAP_WITH_LEADING_SPACE(new Parameters(
+            "    The quick brown fox jumps over the lazy dog",
+            Font.font("Monaco", 12),
+            200.0f, List.of(136.82226f + 28.80469f, 165.62695f),
             12.0f, 4.001953f
         )),
 
@@ -448,73 +483,82 @@ public class TextLayoutTest {
         final float WRAP = p.wrapWidth == 0 ? p.maxWidth() : p.wrapWidth;
         final float CENTER = 0.5f * WRAP;
 
-        // split content on line feeds (without removing the line feeds):
-        layout.setContent(Arrays.stream(p.text.split("(?<=\n)")).map(text -> new TestSpan(text, FontHelper.getNativeFont(p.font))).toArray(TextSpan[]::new));
-        layout.setWrapWidth(p.wrapWidth);
+        for (String contentType : new String[] {"rich text (spans)", "plain text"}) {
+            if (contentType.equals("plain text")) {
+                layout.setContent(p.text, FontHelper.getNativeFont(p.font));
+            }
+            else {
+                // split content on line feeds (without removing the line feeds):
+                layout.setContent(Arrays.stream(p.text.split("(?<=\n)")).map(text -> new TestSpan(text, FontHelper.getNativeFont(p.font))).toArray(TextSpan[]::new));
+            }
 
-        // LEFT ALIGNMENT
+            layout.setWrapWidth(p.wrapWidth);
 
-        layout.setAlignment(0);  // 0 == left
+            // LEFT ALIGNMENT
 
-        assertLineCount(p.lineCount());
+            layout.setAlignment(0);  // 0 == left
 
-        for (int i = 0; i < p.lineCount(); i++) {
-            TextLine[] lines = layout.getLines();
-            String description = "left aligned: line " + i + " for " + c.parameters;
-            RectBounds expectedBounds = new RectBounds(0, -ASCENT, p.lineWidths.get(i), DESCENT);
-            Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
+            assertLineCount(p.lineCount());
 
-            assertEquals(expectedBounds, lines[i].getBounds(), description);
-            assertEquals(expectedLocation, lines[i].getRuns()[0].getLocation(), description);
-        }
+            for (int i = 0; i < p.lineCount(); i++) {
+                TextLine line = layout.getLines()[i];
+                String description = "left aligned " + contentType + ": line " + i + " for " + c.parameters;
+                RectBounds expectedBounds = new RectBounds(0, -ASCENT, p.lineWidths.get(i), DESCENT);
+                Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
 
-        // CENTER ALIGNMENT
+                assertEquals(expectedBounds, line.getBounds(), description);
+                assertEquals(expectedLocation, line.getRuns()[0].getLocation(), description);
+            }
 
-        layout.setAlignment(1);  // 1 == center
+            // CENTER ALIGNMENT
 
-        assertLineCount(p.lineCount());
+            layout.setAlignment(1);  // 1 == center
 
-        for (int i = 0; i < p.lineCount(); i++) {
-            TextLine[] lines = layout.getLines();
-            String description = "centered: line " + i + " for " + p;
-            RectBounds expectedBounds = new RectBounds(CENTER - 0.5f * p.lineWidths.get(i), -ASCENT, CENTER + 0.5f * p.lineWidths.get(i), DESCENT);
-            Point2D expectedLocation = new Point2D(CENTER - 0.5f * p.lineWidths.get(i), i * (ASCENT + DESCENT));
+            assertLineCount(p.lineCount());
 
-            assertEquals(expectedBounds, lines[i].getBounds(), description);
-            assertEquals(expectedLocation, lines[i].getRuns()[0].getLocation(), description);
-        }
+            for (int i = 0; i < p.lineCount(); i++) {
+                TextLine line = layout.getLines()[i];
+                String description = "centered " + contentType + ": line " + i + " for " + p;
+                RectBounds expectedBounds = new RectBounds(CENTER - 0.5f * p.lineWidths.get(i), -ASCENT, CENTER + 0.5f * p.lineWidths.get(i), DESCENT);
+                Point2D expectedLocation = new Point2D(CENTER - 0.5f * p.lineWidths.get(i), i * (ASCENT + DESCENT));
 
-        // RIGHT ALIGNMENT
+                assertEquals(expectedBounds, line.getBounds(), description);
+                assertEquals(expectedLocation, line.getRuns()[0].getLocation(), description);
+            }
 
-        layout.setAlignment(2);  // 2 == right
+            // RIGHT ALIGNMENT
 
-        assertLineCount(p.lineCount());
+            layout.setAlignment(2);  // 2 == right
 
-        for (int i = 0; i < p.lineCount(); i++) {
-            TextLine[] lines = layout.getLines();
-            String description = "right aligned: line " + i + " for " + p;
-            RectBounds expectedBounds = new RectBounds(WRAP - p.lineWidths.get(i), -ASCENT, WRAP, DESCENT);
-            Point2D expectedLocation = new Point2D(WRAP - p.lineWidths.get(i), i * (ASCENT + DESCENT));
+            assertLineCount(p.lineCount());
 
-            assertEquals(expectedBounds, lines[i].getBounds(), description);
-            assertEquals(expectedLocation, lines[i].getRuns()[0].getLocation(), description);
-        }
+            for (int i = 0; i < p.lineCount(); i++) {
+                TextLine line = layout.getLines()[i];
+                String description = "right aligned " + contentType + ": line " + i + " for " + p;
+                RectBounds expectedBounds = new RectBounds(WRAP - p.lineWidths.get(i), -ASCENT, WRAP, DESCENT);
+                Point2D expectedLocation = new Point2D(WRAP - p.lineWidths.get(i), i * (ASCENT + DESCENT));
 
-        // JUSTIFIED ALIGNMENT
+                assertEquals(expectedBounds, line.getBounds(), description);
+                assertEquals(expectedLocation, line.getRuns()[0].getLocation(), description);
+            }
 
-        layout.setAlignment(3);  // 3 == justified
+            // JUSTIFIED ALIGNMENT
 
-        assertLineCount(p.lineCount());
+            layout.setAlignment(3);  // 3 == justified
 
-        for (int i = 0; i < p.lineCount(); i++) {
-            TextLine[] lines = layout.getLines();
-            String description = "justified: line " + i + " for " + p;
-            boolean lastLine = i == p.lineCount() - 1;
-            RectBounds expectedBounds = new RectBounds(0, -ASCENT, lastLine ? p.lineWidths.get(i) : WRAP, DESCENT);
-            Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
+            assertLineCount(p.lineCount());
 
-            assertEquals(expectedBounds, lines[i].getBounds(), description);
-            assertEquals(expectedLocation, lines[i].getRuns()[0].getLocation(), description);
+            for (int i = 0; i < p.lineCount(); i++) {
+                TextLine line = layout.getLines()[i];
+                String description = "justified " + contentType + ": line " + i + " for " + p;
+                GlyphList[] runs = line.getRuns();
+                boolean lastLine = i == p.lineCount() - 1 || (runs[runs.length - 1] instanceof TextRun tr && tr.isLinebreak());
+                RectBounds expectedBounds = new RectBounds(0, -ASCENT, lastLine ? p.lineWidths.get(i) : WRAP, DESCENT);
+                Point2D expectedLocation = new Point2D(0, i * (ASCENT + DESCENT));
+
+                assertEquals(expectedBounds, line.getBounds(), description);
+                assertEquals(expectedLocation, line.getRuns()[0].getLocation(), description);
+            }
         }
     }
 }
