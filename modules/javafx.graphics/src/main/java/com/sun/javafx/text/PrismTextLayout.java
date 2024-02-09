@@ -456,7 +456,7 @@ public class PrismTextLayout implements TextLayout {
                             runIndex = i;
                             break;
                         }
-                        if (i - 1 >= 0) {
+                        if (i > 0) {
                             if (runs[i - 1].isLinebreak()) {
                                 break;
                             }
@@ -485,7 +485,8 @@ public class PrismTextLayout implements TextLayout {
                 // This code branch is used to calculate hit info of Text node embedded in TextFlow.
                 for (int i = 0; i < lineIndex; i++) {
                     for (TextRun r: lines[i].runs) {
-                        if (r.getTextSpan() != null && r.getStart() >= textRunStart && r.getTextSpan().getText().equals(text)) {
+                        if (r.getTextSpan() != null && r.getStart() >= textRunStart
+                                && r.getTextSpan().getText().equals(text)) {
                             textWidthPrevLine += r.getLength();
                         }
                     }
@@ -505,14 +506,14 @@ public class PrismTextLayout implements TextLayout {
                     boolean textFound = false;
                     for (int i = 0; i <= runIdx; i++) {
                         TextRun r = runs[i];
-                        if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text)
-                                && x > r.getWidth() && textWidthPrevLine == 0) {
+                        if (r.getStart() != curRunStart && x > r.getWidth() && textWidthPrevLine == 0
+                                && r.getTextSpan().getText().equals(text)) {
                             x -= r.getWidth();
                             textFound = true;
                             continue;
                         }
-                        if (r.getTextSpan() != null && r.getTextSpan().getText().equals(text)
-                                && r.getStart() == curRunStart) {
+                        if (r.getTextSpan() != null && r.getStart() == curRunStart
+                                && r.getTextSpan().getText().equals(text)) {
                             if (x > r.getWidth() || textWidthPrevLine > 0) {
                                 getBounds(r.getTextSpan(), textBounds);
                                 x -= (run.getLocation().x - textBounds.getMinX());
@@ -521,16 +522,16 @@ public class PrismTextLayout implements TextLayout {
                         }
                         /* This condition handles LTR Text nodes present between
                            a Text node containing both LTR and RTL text. */
-                        if (!r.getTextSpan().getText().equals(text) && textFound
-                                && x > r.getWidth() && r.getStart() < curRunStart) {
+                        if (textFound && x > r.getWidth() && r.getStart() < curRunStart
+                                && !r.getTextSpan().getText().equals(text)) {
                             x -= r.getWidth();
                         }
                     }
                     for (int i = runs.length - 1; i > runIdx; i--) {
                         TextRun r = runs[i];
                         boolean addLtrIdx = run.getTextSpan().getText().length() != run.length;
-                        if (r.getStart() != curRunStart && r.getTextSpan().getText().equals(text)
-                                && !r.isLinebreak() && addLtrIdx) {
+                        if (r.getStart() != curRunStart && !r.isLinebreak() && addLtrIdx
+                                && r.getTextSpan().getText().equals(text)) {
                             ltrIndex += r.getLength();
                         }
                     }
