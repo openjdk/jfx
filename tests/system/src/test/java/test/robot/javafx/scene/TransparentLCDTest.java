@@ -92,8 +92,8 @@ public class TransparentLCDTest {
     private static final int TEST_X_RIGHT = TEST_WIDTH - 1;
     private static final int TEST_X_MID = TEST_WIDTH / 2;
 
-    private static final Color transpColor = Color.color(0.5, 0.5, 0.5, 0.6);
-    private static final Color opaqueColor = makeOpaque(transpColor);
+    private static final Color TRANSP_COLOR = Color.color(0.5, 0.5, 0.5, 0.6);
+    private static final Color OPAQUE_COLOR = makeOpaque(TRANSP_COLOR);
 
     private Robot robot;
     private Stage testStage;
@@ -124,8 +124,7 @@ public class TransparentLCDTest {
 
    private void assertColorEquals(Color expected, Color actual) {
         if (!testColorEquals(expected, actual, TOLERANCE)) {
-            fail("expected:" + colorToString(expected) +
-                    " but was:" + colorToString(actual));
+            fail("expected:" + expected + " but was:" + actual);
         }
     }
 
@@ -135,14 +134,6 @@ public class TransparentLCDTest {
         double deltaBlue = Math.abs(expected.getBlue() - actual.getBlue());
         double deltaOpacity = Math.abs(expected.getOpacity() - actual.getOpacity());
         return (deltaRed <= delta && deltaGreen <= delta && deltaBlue <= delta && deltaOpacity <= delta);
-    }
-
-    private static String colorToString(Color c) {
-        int r = (int)(c.getRed() * 255.0);
-        int g = (int)(c.getGreen() * 255.0);
-        int b = (int)(c.getBlue() * 255.0);
-        int a = (int)(c.getOpacity() * 255.0);
-        return "rgba(" + r + "," + g + "," + b + "," + a + ")";
     }
 
     private List<Color> getColors(Scene scene, int x, int y, int width) {
@@ -206,7 +197,7 @@ public class TransparentLCDTest {
     // Called by the test methods to run the test either using an opaque color,
     // which should use LCD, or a transparent color, which should not.
     private void runTest(boolean opaque) {
-        final Color textColor = opaque ? opaqueColor : transpColor;
+        final Color textColor = opaque ? OPAQUE_COLOR : TRANSP_COLOR;
 
         Font font = Font.font("System", FontWeight.BOLD, 36);
 
@@ -239,11 +230,11 @@ public class TransparentLCDTest {
             List<Color> colors = getColors(testScene, SAMPLE_X_START, SAMPLE_Y, TEST_WIDTH);
 
             if (DEBUG) {
-                System.err.println("transpColor = " + colorToString(transpColor));
-                System.err.println("opaqueColor = " + colorToString(opaqueColor));
+                System.err.println("TRANSP_COLOR = " + TRANSP_COLOR);
+                System.err.println("OPAQUE_COLOR = " + OPAQUE_COLOR);
                 System.err.println("");
                 colors.stream()
-                        .map(TransparentLCDTest::colorToString)
+                        .map(Color::toString)
                         .forEach(System.err::println);
             }
 
@@ -254,7 +245,7 @@ public class TransparentLCDTest {
 
             assertColorEquals(Color.WHITE, cLeft);
             assertColorEquals(Color.WHITE, cRight);
-            assertColorEquals(opaqueColor, cMid);
+            assertColorEquals(OPAQUE_COLOR, cMid);
 
             // Check whether LCD or GRAY scale AA is used
             boolean isGray = isGrayScale(colors);
