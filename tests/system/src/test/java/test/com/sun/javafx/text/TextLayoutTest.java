@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.text;
 
+import static org.junit.Assume.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,8 +56,8 @@ public class TextLayoutTest {
     private static final String T = "\u0E34";  // Thai complex
 
     private final PrismTextLayout layout = new PrismTextLayout();
-    private final PGFont font = (PGFont) FontHelper.getNativeFont(Font.font("Monaco", 12));
-    private final PGFont font2 = (PGFont) FontHelper.getNativeFont(Font.font("Tahoma", 12));
+    private final PGFont arialFont = (PGFont) FontHelper.getNativeFont(Font.font("Arial", 12));
+    private final PGFont tahomaFont = (PGFont) FontHelper.getNativeFont(Font.font("Tahoma", 12));
 
     record TestSpan(String text, Object font) implements TextSpan {
         @Override
@@ -132,44 +133,44 @@ public class TextLayoutTest {
     @Disabled("JDK-8087615")
     @Test
     void complexTestsThatAreBrokenSince2013() {
-        layout.setContent("aa" + J + J, font);
+        layout.setContent("aa" + J + J, arialFont);
         verifyLayout(1, 1, 4);  // no complex (english to japanese)
         verifyComplex(false);
 
-        layout.setContent(D, font);
+        layout.setContent(D, arialFont);
         verifyLayout(1, 1, 1);  // complex (english to devanagari)
         verifyComplex(true);
 
-        layout.setContent("aa" + D + D, font);
+        layout.setContent("aa" + D + D, arialFont);
         verifyLayout(1, 2, 2, 2);  // complex (english to devanagari)
         verifyComplex(false, true);
 
-        layout.setContent(D + D + "aa", font);
+        layout.setContent(D + D + "aa", arialFont);
         verifyLayout(1, 2, 2, 2);  // complex (devanagari to english)
         verifyComplex(true, false);
 
-        layout.setContent("aa" + D + D + J + J, font);
+        layout.setContent("aa" + D + D + J + J, arialFont);
         verifyLayout(1, 3, 2, 2, 2);  // complex (english to devanagari to japanese)
         verifyComplex(false, true, false);
 
         // Tahoma has Thai but no Hindi, font slot break expected
-        layout.setContent(D + D + T + T, font2);
+        layout.setContent(D + D + T + T, tahomaFont);
         verifyLayout(1, 2, 2, 2);  // complex (devanagari to thai)
         verifyComplex(true, true);
 
-        layout.setContent(T + T + D + D + T + T, font2);
+        layout.setContent(T + T + D + D + T + T, tahomaFont);
         verifyLayout(1, 3, 2, 2, 2);
         verifyComplex(true, true, true);
 
-        layout.setContent(T + T + D + D + "aa", font2);
+        layout.setContent(T + T + D + D + "aa", tahomaFont);
         verifyLayout(1, 3, 2, 2, 2);
         verifyComplex(true, true, false);
 
-        layout.setContent(T + T + "aa" + T + T, font2);
+        layout.setContent(T + T + "aa" + T + T, tahomaFont);
         verifyLayout(1, 3, 2, 2, 2);
         verifyComplex(true, false, true);
 
-        layout.setContent("aa" + D + D + T + T, font2);
+        layout.setContent("aa" + D + D + T + T, tahomaFont);
         verifyLayout(1, 3, 2, 2, 2);
         verifyComplex(false, true, true);
     }
@@ -180,108 +181,115 @@ public class TextLayoutTest {
      */
     @Test
     void fixedComplexTestsToEnsureNoFurtherRegressions() {
-        layout.setContent("aa" + J + J, font);
+        assumeArialFontAvailable();
+        assumeTahomaFontAvailable();
+
+        layout.setContent("aa" + J + J, arialFont);
         verifyLayout(1, 1, 4);  // no complex (english to japanese)
         verifyComplex(false);
 
-        layout.setContent(D, font);
+        layout.setContent(D, arialFont);
         verifyLayout(1, 1, 1);  // complex (english to devanagari)
         verifyComplex(true);
 
-        layout.setContent("aa" + D + D, font);
+        layout.setContent("aa" + D + D, arialFont);
         verifyLayout(1, 2, 2, 2);  // complex (english to devanagari)
         verifyComplex(true, true);
 
-        layout.setContent(D + D + "aa", font);
+        layout.setContent(D + D + "aa", arialFont);
         verifyLayout(1, 2, 2, 2);  // complex (devanagari to english)
         verifyComplex(true, true);
 
-        layout.setContent("aa" + D + D + J + J, font);
+        layout.setContent("aa" + D + D + J + J, arialFont);
         verifyLayout(1, 3, 2, 2, 2);  // complex (english to devanagari to japanese)
         verifyComplex(true, true, true);
 
         // Tahoma has Thai but no Hindi, font slot break expected
-        layout.setContent(D + D + T + T, font2);
+        layout.setContent(D + D + T + T, tahomaFont);
         verifyLayout(1, 2, 2, 4);  // complex (devanagari to thai)
         verifyComplex(true, true);
 
-        layout.setContent(T + T + D + D + T + T, font2);
+        layout.setContent(T + T + D + D + T + T, tahomaFont);
         verifyLayout(1, 3, 4, 2, 4);
         verifyComplex(true, true, true);
 
-        layout.setContent(T + T + D + D + "aa", font2);
+        layout.setContent(T + T + D + D + "aa", tahomaFont);
         verifyLayout(1, 3, 4, 2, 2);
         verifyComplex(true, true, true);
 
-        layout.setContent(T + T + "aa" + T + T, font2);
+        layout.setContent(T + T + "aa" + T + T, tahomaFont);
         verifyLayout(1, 3, 4, 2, 4);
         verifyComplex(true, true, true);
 
-        layout.setContent("aa" + D + D + T + T, font2);
+        layout.setContent("aa" + D + D + T + T, tahomaFont);
         verifyLayout(1, 3, 2, 2, 4);
         verifyComplex(true, true, true);
     }
 
     @Test
     void basicTest() {
+        assumeArialFontAvailable();
+
         // simple case
-        layout.setContent("hello", font);
+        layout.setContent("hello", arialFont);
         verifyLayout(1, 1, 5);
 
         // simple case, two words
-        layout.setContent("hello world", font);
+        layout.setContent("hello world", arialFont);
         verifyLayout(1, 1, 11);
 
         // empty string
-        layout.setContent("", font);
+        layout.setContent("", arialFont);
         verifyLayout(1, 1, 0);
 
         // line break
-        layout.setContent("\n", font);  // first line has the line break (glyphCount=0)
+        layout.setContent("\n", arialFont);  // first line has the line break (glyphCount=0)
         verifyLayout(2, 2, 0, 0);
-        layout.setContent("\r", font);
+        layout.setContent("\r", arialFont);
         verifyLayout(2, 2, 0, 0);
-        layout.setContent("\r\n", font);
+        layout.setContent("\r\n", arialFont);
         verifyLayout(2, 2, 0, 0);
-        layout.setContent("a\nb", font);
+        layout.setContent("a\nb", arialFont);
         verifyLayout(2, 3, 1, 0, 1);
-        layout.setContent("\n\n\r\r\n", font);
+        layout.setContent("\n\n\r\r\n", arialFont);
         verifyLayout(5, 5, 0, 0, 0, 0, 0);
 
         // tabs
-        layout.setContent("\t", font);
+        layout.setContent("\t", arialFont);
         verifyLayout(1, 1, 0);
-        layout.setContent("\t\t", font);
+        layout.setContent("\t\t", arialFont);
         verifyLayout(1, 2, 0, 0);
-        layout.setContent("a\tb", font);
+        layout.setContent("a\tb", arialFont);
         verifyLayout(1, 3, 1, 0, 1);
     }
 
     @Test
     void richTextTest() {
-        setContent(layout, "hello ", font, "world", font);
+        assumeArialFontAvailable();
+
+        setContent(layout, "hello ", arialFont, "world", arialFont);
         verifyLayout(1, 2, 6, 5);
         verifyComplex(false, false);
 
-        setContent(layout, "aaa", font, J + J + J, font);
+        setContent(layout, "aaa", arialFont, J + J + J, arialFont);
         verifyLayout(1, 2, 3, 3);
         verifyComplex(false, false);
 
-        setContent(layout, "aaa", font, D + D + D, font);
+        setContent(layout, "aaa", arialFont, D + D + D, arialFont);
         verifyLayout(1, 2, 3, 3);
         verifyComplex(false, true);
 
         // can't merge \r\n in different spans
-        setContent(layout, "aa\r", font, "\nbb", font);
+        setContent(layout, "aa\r", arialFont, "\nbb", arialFont);
         verifyLayout(3, 4, 2, 0, 0, 2);
         verifyComplex(false, false, false, false);
 
-        setContent(layout, "aa\r\n", font, "bb", font);
+        setContent(layout, "aa\r\n", arialFont, "bb", arialFont);
         verifyLayout(2, 3, 2, 0, 2);
         verifyComplex(false, false, false);
 
         // can't merge surrogate pairs in different spans
-        setContent(layout, "\uD840\uDC0B", font, "\uD840\uDC89\uD840\uDCA2", font);
+        setContent(layout, "\uD840\uDC0B", arialFont, "\uD840\uDC89\uD840\uDCA2", arialFont);
         verifyLayout(1, 2, 2, 4);
         GlyphList[] runs = layout.getRuns();
         assertTrue(runs[0].getGlyphCode(0) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);
@@ -292,7 +300,7 @@ public class TextLayoutTest {
         assertTrue(runs[1].getGlyphCode(3) == CharToGlyphMapper.INVISIBLE_GLYPH_ID);
 
         // Split surrogate pair
-        setContent(layout, "\uD840\uDC0B\uD840", font, "\uDC89\uD840\uDCA2", font);
+        setContent(layout, "\uD840\uDC0B\uD840", arialFont, "\uDC89\uD840\uDCA2", arialFont);
         verifyLayout(1, 2, 3, 3);
         runs = layout.getRuns();
         assertTrue(runs[0].getGlyphCode(0) != CharToGlyphMapper.INVISIBLE_GLYPH_ID);
@@ -303,15 +311,22 @@ public class TextLayoutTest {
         assertTrue(runs[1].getGlyphCode(2) == CharToGlyphMapper.INVISIBLE_GLYPH_ID);
     }
 
+    private static final float ARIAL_ASCENT = -10.863281f;
+    private static final float ARIAL_DESCENT = 2.9355469f;
+    private static final float ARIAL_SPACE_ADVANCE = 3.333984375f;
+    private static final float ARIAL_TAB_ADVANCE = ARIAL_SPACE_ADVANCE * 8;
+
     @Test
     void shouldIgnoreAlignmentWhenWrappingIsDisabled() {
-        layout.setContent("The quick brown fox jumps over the lazy dog", font);
+        assumeArialFontAvailable();
+
+        layout.setContent("The quick brown fox jumps over the lazy dog", arialFont);
 
         for (int i = 0; i < 3; i++) {
             layout.setAlignment(i);
 
             assertLineCount(1);
-            assertLineBounds(new RectBounds(0, -12, 309.6504f, 4.001953f));
+            assertLineBounds(new RectBounds(0, ARIAL_ASCENT, 237.45117f, ARIAL_DESCENT));
         }
     }
 
@@ -322,9 +337,7 @@ public class TextLayoutTest {
          */
         NO_WRAP(new Parameters(
             "The quick brown fox jumps over the lazy dog",
-            Font.font("Monaco", 12),
-            0.0f, List.of(309.6504f),
-            12.0f, 4.001953f
+            0.0f, List.of(237.45117f)
         )),
 
         /**
@@ -335,9 +348,7 @@ public class TextLayoutTest {
          */
         HARD_WRAP(new Parameters(
             "The quick brown fox jumps\nover the lazy dog",
-            Font.font("Monaco", 12),
-            0.0f, List.of(180.0293f, 122.41992f),
-            12.0f, 4.001953f
+            0.0f, List.of(142.72852f, 91.38867f)
         )),
 
         /**
@@ -346,9 +357,7 @@ public class TextLayoutTest {
          */
         HARD_WRAP_WITH_EXTRA_TRAILING_SPACE(new Parameters(
             "The quick brown fox jumps           \nover the lazy dog           ",
-            Font.font("Monaco", 12),
-            0.0f, List.of(180.0293f + 79.2129f, 122.41992f + 79.2129f),
-            12.0f, 4.001953f
+            0.0f, List.of(142.72852f + 11 * ARIAL_SPACE_ADVANCE, 91.38867f + 11 * ARIAL_SPACE_ADVANCE)
         )),
 
         /**
@@ -357,9 +366,7 @@ public class TextLayoutTest {
          */
         HARD_WRAP_WITH_TABS(new Parameters(
             "\tA A\n" + "x\tA A\n" + "xx\tA A",  // expect same width for all three, as the "x" character falls within tab advance width
-            Font.font("Monaco", 12),
-            0.0f, List.of(79.21289f, 79.21289f, 79.21289f),
-            12.0f, 4.001953f
+            0.0f, List.of(46.01367f, 46.01367f, 46.01367f)
         )),
 
         /**
@@ -367,9 +374,7 @@ public class TextLayoutTest {
          */
         HARD_WRAP_WITH_MULTIPLE_TABS(new Parameters(
             "\t\n" + "\t\t\n" + "\t\t\t",  // expect width ratio 1:2:3
-            Font.font("Monaco", 12),
-            0.0f, List.of(57.609375f, 57.609375f * 2, 57.609375f * 3),
-            12.0f, 4.001953f
+            0.0f, List.of(ARIAL_TAB_ADVANCE, ARIAL_TAB_ADVANCE * 2, ARIAL_TAB_ADVANCE * 3)
         )),
 
         /**
@@ -379,9 +384,7 @@ public class TextLayoutTest {
          */
         SOFT_WRAP(new Parameters(
             "The quick brown fox jumps over the lazy dog",
-            Font.font("Monaco", 12),
-            200.0f, List.of(180.0293f, 122.41992f),
-            12.0f, 4.001953f
+            145.0f, List.of(142.72852f, 91.38867f)
         )),
 
         /**
@@ -392,9 +395,7 @@ public class TextLayoutTest {
          */
         SOFT_WRAP_WITH_LEADING_SPACE(new Parameters(
             "    The quick brown fox jumps over the lazy dog",
-            Font.font("Monaco", 12),
-            200.0f, List.of(136.82226f + 28.80469f, 165.62695f),
-            12.0f, 4.001953f
+            145.0f, List.of(107.384762f + 4 * ARIAL_SPACE_ADVANCE, 126.73242f)
         )),
 
         /**
@@ -405,9 +406,7 @@ public class TextLayoutTest {
          */
         SOFT_WRAP_WITH_TRAILING_SPACE(new Parameters(
             "The quick brown fox jumps over the lazy dog    ",
-            Font.font("Monaco", 12),
-            200.0f, List.of(180.0293f, 122.41992f + 28.80469f),
-            12.0f, 4.001953f
+            145.0f, List.of(142.72852f, 91.38867f + 4 * ARIAL_SPACE_ADVANCE)
         )),
 
         /**
@@ -417,9 +416,7 @@ public class TextLayoutTest {
          */
         SOFT_WRAP_WITH_EXTRA_SPACE(new Parameters(
             "The quick brown fox jumps           over the lazy dog",
-            Font.font("Monaco", 12),
-            200.0f, List.of(180.0293f, 122.41992f),
-            12.0f, 4.001953f
+            145.0f, List.of(142.72852f, 91.38867f)
         )),
 
         /**
@@ -429,9 +426,7 @@ public class TextLayoutTest {
          */
         SOFT_WRAP_WITH_COMPLEX_TEXT(new Parameters(
             "The quick brown लोमड़ी jumps over the lazy कुत्ता",
-            Font.font("Monaco", 12),
-            200.0f, List.of(189.89649f, 122.583984f),
-            12.0f, 4.001953f
+            160.0f, List.of(158.1914f, 93.134766f)
         )),
 
         /**
@@ -439,11 +434,9 @@ public class TextLayoutTest {
          * purposes when wrapping is enabled in complex text. This soft
          * wraps after "jumps".
          */
-        SOFT_WRAP_WITH_COMPLEX_TEXT_AND_EXTRA_TRAILING_SPACE(new Parameters(
+        SOFT_WRAP_WITH_COMPLEX_TEXT_AND_EXTRA_SPACE(new Parameters(
             "The quick brown लोमड़ी jumps           over the lazy कुत्ता",
-            Font.font("Monaco", 12),
-            200.0f, List.of(189.89649f, 122.583984f),
-            12.0f, 4.001953f
+            160.0f, List.of(158.1914f, 93.134766f)
         ));
 
         Parameters parameters;
@@ -452,14 +445,11 @@ public class TextLayoutTest {
             this.parameters = parameters;
         }
 
-        record Parameters(String text, Font font, float wrapWidth, List<Float> lineWidths, float ascent, float descent) {
+        record Parameters(String text, float wrapWidth, List<Float> lineWidths) {
             Parameters {
                 assert text != null;
-                assert font != null;
                 assert wrapWidth >= 0;
                 assert lineWidths != null;
-                assert ascent > 0;
-                assert descent > 0;
                 assert lineWidths.size() > 0;
             }
 
@@ -476,20 +466,22 @@ public class TextLayoutTest {
     @ParameterizedTest
     @EnumSource(Case.class)
     void caseTest(Case c) {
+        assumeArialFontAvailable();
+
         Case.Parameters p = c.parameters;
 
-        final float ASCENT = p.ascent;
-        final float DESCENT = p.descent;
+        final float ASCENT = -ARIAL_ASCENT;
+        final float DESCENT = ARIAL_DESCENT;
         final float WRAP = p.wrapWidth == 0 ? p.maxWidth() : p.wrapWidth;
         final float CENTER = 0.5f * WRAP;
 
         for (String contentType : new String[] {"rich text (spans)", "plain text"}) {
             if (contentType.equals("plain text")) {
-                layout.setContent(p.text, FontHelper.getNativeFont(p.font));
+                layout.setContent(p.text, arialFont);
             }
             else {
                 // split content on line feeds (without removing the line feeds):
-                layout.setContent(Arrays.stream(p.text.split("(?<=\n)")).map(text -> new TestSpan(text, FontHelper.getNativeFont(p.font))).toArray(TextSpan[]::new));
+                layout.setContent(Arrays.stream(p.text.split("(?<=\n)")).map(text -> new TestSpan(text, arialFont)).toArray(TextSpan[]::new));
             }
 
             layout.setWrapWidth(p.wrapWidth);
@@ -562,11 +554,11 @@ public class TextLayoutTest {
         }
     }
 
-    @Test
-    void fail() {
-        String fontDescription1 = "[" + font.getFullName() + ", " + font.getFamilyName() + ", " + font.getStyleName() + ", " + font.getName() + ", " + font.getSize() + "]";
-        String fontDescription2 = "[" + font2.getFullName() + ", " + font2.getFamilyName() + ", " + font2.getStyleName() + ", " + font2.getName() + ", " + font2.getSize() + "]";
+    private void assumeArialFontAvailable() {
+        assumeTrue("Arial font missing", arialFont.getName().equals("Arial"));
+    }
 
-        assertTrue(false, "Check if this system test actually runs on the build environment; font loaded was " + fontDescription1 + " and " + fontDescription2);
+    private void assumeTahomaFontAvailable() {
+        assumeTrue("Tahoma font missing", arialFont.getName().equals("Tahoma"));
     }
 }
