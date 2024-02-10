@@ -196,7 +196,7 @@ final public class SimpleSelector extends Selector {
     }
 
     @Override
-    public Set<String> getClasses() {
+    public Set<String> getStyleClassNames() {
         return styleClassSet.stream()
             .map(StyleClass::getStyleClassName)
             .collect(Collectors.toUnmodifiableSet());

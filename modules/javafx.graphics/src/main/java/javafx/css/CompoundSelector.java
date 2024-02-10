@@ -102,9 +102,9 @@ final public class CompoundSelector extends Selector {
     }
 
     @Override
-    public Set<String> getClasses() {
+    public Set<String> getStyleClassNames() {
         return selectors.stream()
-            .map(Selector::getClasses)
+            .map(Selector::getStyleClassNames)
             .flatMap(Collection::stream)
             .collect(Collectors.toUnmodifiableSet());
     }
