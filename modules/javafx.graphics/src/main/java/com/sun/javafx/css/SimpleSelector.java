@@ -23,8 +23,13 @@
  * questions.
  */
 
-package javafx.css;
+package com.sun.javafx.css;
 
+import javafx.css.PseudoClass;
+import javafx.css.Selector;
+import javafx.css.StyleClass;
+import javafx.css.StyleConverter;
+import javafx.css.Styleable;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 
@@ -36,10 +41,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import com.sun.javafx.css.ImmutablePseudoClassSetsCache;
-import com.sun.javafx.css.PseudoClassState;
-import com.sun.javafx.css.StyleClassSet;
 
 import static javafx.geometry.NodeOrientation.INHERIT;
 import static javafx.geometry.NodeOrientation.LEFT_TO_RIGHT;
@@ -114,7 +115,7 @@ final public class SimpleSelector extends Selector {
     private final Set<PseudoClass> pseudoClassState;
 
     // for test purposes
-    Set<PseudoClass> getPseudoClassStates() {
+    public Set<PseudoClass> getPseudoClassStates() {
         return pseudoClassState;
     }
 
@@ -141,7 +142,7 @@ final public class SimpleSelector extends Selector {
     }
 
     // TODO: The parser passes styleClasses as a List. Should be array?
-    SimpleSelector(final String name, final List<String> styleClasses,
+    public SimpleSelector(final String name, final List<String> styleClasses,
             final List<String> pseudoClasses, final String id)
     {
         this.name = name == null ? "*" : name;
@@ -190,12 +191,6 @@ final public class SimpleSelector extends Selector {
         // if id is not null and not empty, then match needs to check id
         this.matchOnId = (id != null && !("".equals(id)));
 
-    }
-
-    @Override public Match createMatch() {
-        final int idCount = (matchOnId) ? 1 : 0;
-        int styleClassCount = styleClassSet.size();
-        return new Match(this, pseudoClassState, idCount, styleClassCount);
     }
 
     @Override public boolean applies(Styleable styleable) {
@@ -381,7 +376,7 @@ final public class SimpleSelector extends Selector {
         }
     }
 
-    static SimpleSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
+    public static SimpleSelector readBinary(int bssVersion, final DataInputStream is, final String[] strings)
         throws IOException
     {
         final String name = strings[is.readShort()];

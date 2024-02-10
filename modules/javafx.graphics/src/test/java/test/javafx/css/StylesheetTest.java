@@ -25,6 +25,7 @@
 
 package test.javafx.css;
 
+import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.StyleConverter.StringStore;
 import javafx.css.converter.EnumConverter;
@@ -49,7 +50,6 @@ import javafx.css.ParsedValue;
 import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.Selector;
-import javafx.css.SimpleSelector;
 import javafx.css.StyleConverter;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
