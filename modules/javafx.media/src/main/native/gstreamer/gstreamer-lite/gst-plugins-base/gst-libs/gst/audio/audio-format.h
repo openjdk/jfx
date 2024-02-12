@@ -256,6 +256,18 @@ struct _GstAudioFormatInfo {
 GST_AUDIO_API
 GType gst_audio_format_info_get_type (void);
 
+/**
+ * GST_AUDIO_FORMAT_INFO_IS_VALID_RAW:
+ *
+ * Tests that the given #GstAudioFormatInfo represents a valid un-encoded
+ * format.
+ *
+ * Since: 1.22
+ */
+#define GST_AUDIO_FORMAT_INFO_IS_VALID_RAW(info)                        \
+  (info != NULL && (info)->format > GST_AUDIO_FORMAT_ENCODED &&         \
+   (info)->width > 0 && (info)->depth > 0)
+
 #define GST_AUDIO_FORMAT_INFO_FORMAT(info)           ((info)->format)
 #define GST_AUDIO_FORMAT_INFO_NAME(info)             ((info)->name)
 #define GST_AUDIO_FORMAT_INFO_FLAGS(info)            ((info)->flags)

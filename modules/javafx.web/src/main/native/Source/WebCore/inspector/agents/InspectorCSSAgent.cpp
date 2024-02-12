@@ -40,16 +40,14 @@
 #include "CommonAtomStrings.h"
 #include "ContainerNode.h"
 #include "ContentSecurityPolicy.h"
-#include "DOMWindow.h"
-#include "ElementAncestorIterator.h"
-#include "ElementChildIterator.h"
+#include "ElementAncestorIteratorInlines.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventTarget.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontPlatformData.h"
-#include "Frame.h"
 #include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLStyleElement.h"
@@ -57,6 +55,8 @@
 #include "InspectorHistory.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "Node.h"
 #include "NodeList.h"
 #include "PseudoElement.h"
@@ -165,12 +165,12 @@ public:
 
     ExceptionOr<void> undo() override
     {
-        return m_styleSheet->setStyleText(m_cssId, m_oldText, nullptr);
+        return m_styleSheet->setRuleStyleText(m_cssId, m_oldText, nullptr, InspectorStyleSheet::IsUndo::Yes);
     }
 
     ExceptionOr<void> redo() override
     {
-        return m_styleSheet->setStyleText(m_cssId, m_text, &m_oldText);
+        return m_styleSheet->setRuleStyleText(m_cssId, m_text, &m_oldText);
     }
 
     String mergeId() override
@@ -579,7 +579,6 @@ Protocol::ErrorStringOr<Ref<Protocol::CSS::Font>> InspectorCSSAgent::getFontData
         return makeUnexpected("No computed style for node."_s);
 
     return buildObjectForFont(computedStyle->fontCascade().primaryFont());
-    return makeUnexpected(errorString);
 }
 
 Protocol::ErrorStringOr<Ref<JSON::ArrayOf<Protocol::CSS::CSSStyleSheetHeader>>> InspectorCSSAgent::getAllStyleSheets()
@@ -925,31 +924,31 @@ Protocol::ErrorStringOr<void> InspectorCSSAgent::forcePseudoState(Protocol::DOM:
 
         switch (*pseudoClass) {
         case Protocol::CSS::ForceablePseudoClass::Active:
-            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassActive);
+            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassType::Active);
             break;
 
         case Protocol::CSS::ForceablePseudoClass::Hover:
-            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassHover);
+            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassType::Hover);
             break;
 
         case Protocol::CSS::ForceablePseudoClass::Focus:
-            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassFocus);
+            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassType::Focus);
             break;
 
         case Protocol::CSS::ForceablePseudoClass::FocusVisible:
-            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassFocusVisible);
+            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassType::FocusVisible);
             break;
 
         case Protocol::CSS::ForceablePseudoClass::FocusWithin:
-            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassFocusWithin);
+            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassType::FocusWithin);
             break;
 
         case Protocol::CSS::ForceablePseudoClass::Target:
-            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassTarget);
+            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassType::Target);
             break;
 
         case Protocol::CSS::ForceablePseudoClass::Visited:
-            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassVisited);
+            forcedPseudoClassesToSet.add(CSSSelector::PseudoClassType::Visited);
             break;
         }
     }
@@ -1276,7 +1275,7 @@ Ref<JSON::ArrayOf<Protocol::CSS::RuleMatch>> InspectorCSSAgent::buildArrayForMat
             continue;
 
         auto matchingSelectors = JSON::ArrayOf<int>::create();
-        const CSSSelectorList& selectorList = matchedRule->resolvedSelectorList();
+        const CSSSelectorList& selectorList = matchedRule->selectorList();
         int index = 0;
         for (const CSSSelector* selector = selectorList.first(); selector; selector = CSSSelectorList::next(selector)) {
             bool matched = selectorChecker.match(*selector, element, context);

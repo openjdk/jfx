@@ -1,6 +1,8 @@
 /* glib-private.h - GLib-internal private API, shared between glib, gobject, gio
  * Copyright (C) 2011 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -119,6 +121,27 @@ GMainContext *          g_get_worker_context            (void);
 gboolean                g_check_setuid                  (void);
 GMainContext *          g_main_context_new_with_next_id (guint next_id);
 
+#if (defined (HAVE__SET_THREAD_LOCAL_INVALID_PARAMETER_HANDLER) || \
+     defined (HAVE__SET_INVALID_PARAMETER_HANDLER)) && \
+    defined (HAVE__CRT_SET_REPORT_MODE)
+# define USE_INVALID_PARAMETER_HANDLER
+#endif
+
+#ifdef USE_INVALID_PARAMETER_HANDLER
+struct _GWin32InvalidParameterHandler
+{
+  _invalid_parameter_handler old_handler;
+  _invalid_parameter_handler pushed_handler;
+  int prev_report_mode;
+  int pushed_report_mode;
+};
+#else
+struct _GWin32InvalidParameterHandler
+{
+  int unused_really;
+};
+#endif
+
 #ifdef G_OS_WIN32
 GLIB_AVAILABLE_IN_ALL
 gchar *_glib_get_locale_dir    (void);
@@ -127,7 +150,18 @@ gchar *_glib_get_locale_dir    (void);
 GDir * g_dir_open_with_errno (const gchar *path, guint flags);
 GDir * g_dir_new_from_dirp (gpointer dirp);
 
+typedef struct _GWin32InvalidParameterHandler GWin32InvalidParameterHandler;
+void g_win32_push_empty_invalid_parameter_handler (GWin32InvalidParameterHandler *items);
+void g_win32_pop_invalid_parameter_handler (GWin32InvalidParameterHandler *items);
+
+char *g_find_program_for_path (const char *program,
+                               const char *path,
+                               const char *working_dir);
+
+int g_uri_get_default_scheme_port (const char *scheme);
+
 #define GLIB_PRIVATE_CALL(symbol) (glib__private__()->symbol)
+
 
 typedef struct {
   /* See gwakeup.c */
@@ -171,8 +205,27 @@ typedef struct {
   /* See gwin32.c */
   gchar *(*g_win32_find_helper_executable_path) (const gchar *process_name,
                                                  void *dll_handle);
+
+  int                   (* g_win32_reopen_noninherited) (int      fd,
+                                                         int      mode,
+                                                         GError **err);
+
+  gboolean              (* g_win32_handle_is_socket)    (void *handle);
+
 #endif
 
+  /* See glib-private.c */
+  void (* g_win32_push_empty_invalid_parameter_handler) (GWin32InvalidParameterHandler *items);
+
+  void (* g_win32_pop_invalid_parameter_handler)        (GWin32InvalidParameterHandler *items);
+
+  /* See gutils.c */
+  char *(* g_find_program_for_path) (const char *program,
+                                     const char *path,
+                                     const char *working_dir);
+
+  /* See guri.c */
+  int (* g_uri_get_default_scheme_port) (const char *scheme);
 
   /* Add other private functions here, initialize them in glib-private.c */
 } GLibPrivateVTable;

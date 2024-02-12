@@ -29,6 +29,22 @@
 
 namespace JSC {
 
+ALWAYS_INLINE bool canPerformFastPropertyNameEnumerationForJSONStringifyWithSideEffect(Structure* structure)
+{
+    // We do not check GetterSetter, CustomGetterSetter. GetterSetter and CustomGetterSetter will be invoked, and we fall back to the a bit more generic mode when we detect structure transition.
+    if (structure->typeInfo().overridesGetOwnPropertySlot())
+        return false;
+    if (structure->typeInfo().overridesAnyFormOfGetOwnPropertyNames())
+        return false;
+    if (hasIndexedProperties(structure->indexingType()))
+        return false;
+    if (structure->isUncacheableDictionary())
+        return false;
+    if (structure->hasNonReifiedStaticProperties())
+        return false;
+    return true;
+}
+
 ALWAYS_INLINE bool objectAssignFast(VM& vm, JSObject* target, JSObject* source, Vector<RefPtr<UniquedStringImpl>, 8>& properties, MarkedArgumentBuffer& values)
 {
     // |source| Structure does not have any getters. And target can perform fast put.
@@ -63,12 +79,9 @@ ALWAYS_INLINE bool objectAssignFast(VM& vm, JSObject* target, JSObject* source, 
     if (!canUseFastPath)
         return false;
 
-    for (size_t i = 0; i < properties.size(); ++i) {
-        // FIXME: We could put properties in a batching manner to accelerate Object.assign more.
-        // https://bugs.webkit.org/show_bug.cgi?id=185358
-        PutPropertySlot putPropertySlot(target, true);
-        target->putOwnDataProperty(vm, properties[i].get(), values.at(i), putPropertySlot);
-    }
+    // Actually, assigning with empty object (option for example) is common. (`Object.assign(defaultOptions, passedOptions)` where `passedOptions` is empty object.)
+    if (properties.size())
+        target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
     return true;
 }
 

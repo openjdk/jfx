@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "CachedSVGFont.h"
 
+#include "ElementChildIteratorInlines.h"
 #include "FontCreationContext.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
@@ -39,7 +40,7 @@
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 
 namespace WebCore {
 
@@ -64,7 +65,7 @@ RefPtr<Font> CachedSVGFont::createFont(const FontDescription& fontDescription, b
 FontPlatformData CachedSVGFont::platformDataFromCustomData(const FontDescription& fontDescription, bool bold, bool italic, const FontCreationContext& fontCreationContext)
 {
     if (m_externalSVGDocument)
-        return FontPlatformData(fontDescription.computedPixelSize(), bold, italic); // FIXME: This doesn't seem right.
+        return FontPlatformData(fontDescription.computedSize(), bold, italic); // FIXME: Why are we creating a bogus font here?
     return CachedFont::platformDataFromCustomData(fontDescription, bold, italic, fontCreationContext);
 }
 

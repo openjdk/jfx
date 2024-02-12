@@ -26,6 +26,7 @@
 #include "config.h"
 #include "LLIntThunks.h"
 
+#include "InPlaceInterpreter.h"
 #include "JSCJSValueInlines.h"
 #include "JSInterfaceJIT.h"
 #include "LLIntCLoop.h"
@@ -215,6 +216,41 @@ MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD()
     static std::once_flag onceKey;
     std::call_once(onceKey, [&] {
         codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue_simd, "function for wasm SIMD call"));
+    });
+    return codeRef;
+}
+
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
+{
+    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        JSInterfaceJIT jit;
+        void* ptr = reinterpret_cast<void*>(ipint_entry);
+        void* untagged = CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr();
+        void* retagged = nullptr;
+#if ENABLE(JIT_CAGE)
+        if (Options::useJITCage())
+#else
+        if (false)
+#endif
+            retagged = tagCodePtr<OperationPtrTag>(untagged);
+        else
+            retagged = WTF::tagNativeCodePtrImpl<OperationPtrTag>(untagged);
+
+        assertIsTaggedWith<OperationPtrTag>(retagged);
+
+#if ENABLE(WEBASSEMBLY)
+        CCallHelpers::RegisterID scratch = Wasm::wasmCallingConvention().prologueScratchGPRs[0];
+#else
+        CCallHelpers::RegisterID scratch = JSInterfaceJIT::regT0;
+#endif
+        jit.tagReturnAddress();
+        jit.move(JSInterfaceJIT::TrustedImmPtr(retagged), scratch);
+        jit.farJump(scratch, OperationPtrTag);
+
+        LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::LLIntThunk);
+        codeRef.construct(FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "LLInt %s jump to prologue thunk", "function for wasm in place interpreter"));
     });
     return codeRef;
 }
@@ -655,6 +691,7 @@ MacroAssemblerCodeRef<JSEntryPtrTag> returnLocationThunk(OpcodeID opcodeID, Opco
 
     switch (opcodeID) {
     LLINT_RETURN_LOCATION(op_call)
+    LLINT_RETURN_LOCATION(op_call_ignore_result)
     LLINT_RETURN_LOCATION(op_iterator_open)
     LLINT_RETURN_LOCATION(op_iterator_next)
     LLINT_RETURN_LOCATION(op_construct)

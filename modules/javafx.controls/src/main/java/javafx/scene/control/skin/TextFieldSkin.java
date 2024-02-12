@@ -235,8 +235,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         caretPath.layoutXProperty().bind(textTranslateX);
         textNode.caretShapeProperty().addListener(observable -> {
             caretPath.getElements().setAll(textNode.caretShapeProperty().get());
-            if (caretPath.getElements().size() == 0) {
-                // The caret pos is invalid.
+            if (caretPath.getElements().size() != 4) {
+                /* On replacing same text using keyboard shortcut,
+                 * caret position is not updated.
+                 * The caret pos is invalid in this case,
+                 * hence it should be updated when caret path size is not 4 */
                 updateTextNodeCaretPos(control.getCaretPosition());
             } else if (caretPath.getElements().size() == 4) {
                 // The caret is split. Ignore and keep the previous width value.

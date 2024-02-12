@@ -27,6 +27,8 @@
 #include "config.h"
 #include "OpenTypeMathData.h"
 
+#if ENABLE(MATHML)
+
 #include "Font.h"
 #include "FontPlatformData.h"
 #if ENABLE(OPENTYPE_MATH)
@@ -264,10 +266,6 @@ OpenTypeMathData::OpenTypeMathData(const FontPlatformData&)
 {
     //TODO-java: Get font table data from prism
 }
-#elif USE(DIRECT2D)
-OpenTypeMathData::OpenTypeMathData(const FontPlatformData& font)
-{
-}
 #else
 OpenTypeMathData::OpenTypeMathData(const FontPlatformData&) = default;
 #endif
@@ -396,3 +394,5 @@ void OpenTypeMathData::getMathVariants(Glyph, bool, Vector<Glyph>&, Vector<Assem
 }
 
 } // namespace WebCore
+
+#endif // ENABLE(MATHML)

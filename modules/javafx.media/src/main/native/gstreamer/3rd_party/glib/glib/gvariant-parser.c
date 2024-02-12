@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2009, 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -29,6 +31,7 @@
 #include "gstrfuncs.h"
 #include "gtestutils.h"
 #include "gvariant.h"
+#include "glib/gvariant-core.h"
 #include "gvariant-internal.h"
 #include "gvarianttype.h"
 #include "gslice.h"
@@ -867,23 +870,86 @@ maybe_wrapper (AST                 *ast,
                const GVariantType  *type,
                GError             **error)
 {
-  const GVariantType *t;
-  GVariant *value;
-  int depth;
+  const GVariantType *base_type;
+  GVariant *base_value;
+  GVariant *value = NULL;
+  unsigned int depth;
+  gboolean trusted;
+  GVariantTypeInfo *base_type_info = NULL;
+  gsize base_serialised_fixed_size, base_serialised_size, serialised_size, n_suffix_zeros;
+  guint8 *serialised = NULL;
+  GBytes *bytes = NULL;
+  gsize i;
 
-  for (depth = 0, t = type;
-       g_variant_type_is_maybe (t);
-       depth++, t = g_variant_type_element (t));
+  for (depth = 0, base_type = type;
+       g_variant_type_is_maybe (base_type);
+       depth++, base_type = g_variant_type_element (base_type));
 
-  value = ast->class->get_base_value (ast, t, error);
+  base_value = ast->class->get_base_value (ast, base_type, error);
 
-  if (value == NULL)
-    return NULL;
+  if (base_value == NULL || depth == 0)
+    return g_steal_pointer (&base_value);
 
-  while (depth--)
-    value = g_variant_new_maybe (NULL, value);
+  /* This is the equivalent of calling g_variant_new_maybe() in a loop enough
+   * times to match the number of nested maybe types in @type. It does the same
+   * in a single `GVariant` allocation, though.
+   *
+   * This avoids maybe_wrapper() becoming an attack vector where a malicious
+   * text-form variant can create a long array, and insert a typedecl for a
+   * deeply nested maybe type on one of its elements. This is achievable with a
+   * relatively short text form, but results in O(array length × typedecl depth)
+   * allocations. This is a denial of service attack.
+   *
+   * Instead of constructing a tree of `GVariant`s in tree-form to match the
+   * @ast, construct a single `GVariant` containing the serialised form of the
+   * maybe-wrappers and the base value that they contain. This is relatively
+   * straightforward: serialise the base value, and then append the correct
+   * number of zero bytes for the maybe-wrappers.
+   *
+   * This is a bit of a layering violation, unfortunately.
+   *
+   * By doing this, the typedecl depth variable is reduced to O(1).
+   */
+  trusted = g_variant_is_trusted (base_value);
 
-  return value;
+  /* See https://developer.gnome.org/documentation/specifications/gvariant-specification-1.0.html#maybes
+   *
+   * The serialised form of a `Just x` is the serialised form of `x` if `x` is
+   * fixed-size, and the serialised form of `x` plus a trailing zero byte if `x`
+   * is variable-size. A `Maybe` variant is always variable-size, even if its
+   * child element is fixed-size, because it might be `Nothing`. This means that
+   * all the maybe-wrappers which are not the innermost are always serialised
+   * with one trailing zero byte each.
+   *
+   * The serialised form of a `Nothing` is an empty byte sequence, but that’s
+   * already handled above in the `base_value == NULL` case.
+   */
+  base_type_info = g_variant_type_info_get (base_type);
+  g_variant_type_info_query (base_type_info, NULL, &base_serialised_fixed_size);
+  g_variant_type_info_unref (base_type_info);
+
+  base_serialised_size = g_variant_get_size (base_value);
+  n_suffix_zeros = (base_serialised_fixed_size > 0) ? depth - 1 : depth;
+  g_assert (base_serialised_size <= G_MAXSIZE - n_suffix_zeros);
+  serialised_size = base_serialised_size + n_suffix_zeros;
+
+  g_assert (serialised_size >= base_serialised_size);
+
+  /* Serialise the base value. */
+  serialised = g_malloc (serialised_size);
+  g_variant_store (base_value, serialised);
+
+  /* Zero-out the suffix zeros to complete the serialisation of the maybe wrappers. */
+  for (i = base_serialised_size; i < serialised_size; i++)
+    serialised[i] = 0;
+
+  bytes = g_bytes_new_take (g_steal_pointer (&serialised), serialised_size);
+  value = g_variant_new_from_bytes (type, bytes, trusted);
+  g_bytes_unref (bytes);
+
+  g_variant_unref (base_value);
+
+  return g_steal_pointer (&value);
 }
 
 typedef struct
@@ -2224,6 +2290,16 @@ typedecl_parse (TokenStream  *stream,
           token_stream_set_error (stream, error, TRUE,
                                   G_VARIANT_PARSE_ERROR_INVALID_TYPE_STRING,
                                   "invalid type declaration");
+          g_free (token);
+
+          return NULL;
+        }
+
+      if (g_variant_type_string_get_depth_ (token + 1) > max_depth)
+        {
+          token_stream_set_error (stream, error, TRUE,
+                                  G_VARIANT_PARSE_ERROR_RECURSION,
+                                  "type declaration recurses too deeply");
           g_free (token);
 
           return NULL;

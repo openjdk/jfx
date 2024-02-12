@@ -54,7 +54,9 @@ struct InlineCallFrame {
         GetterCall,
         SetterCall,
         ProxyObjectLoadCall,
+        ProxyObjectStoreCall,
         BoundFunctionCall,
+        BoundFunctionTailCall,
     };
     static constexpr unsigned bitWidthOfKind = 4;
 
@@ -66,10 +68,12 @@ struct InlineCallFrame {
         case GetterCall:
         case SetterCall:
         case ProxyObjectLoadCall:
+        case ProxyObjectStoreCall:
         case BoundFunctionCall:
             return CallMode::Regular;
         case TailCall:
         case TailCallVarargs:
+        case BoundFunctionTailCall:
             return CallMode::Tail;
         case Construct:
         case ConstructVarargs:
@@ -114,7 +118,9 @@ struct InlineCallFrame {
         case GetterCall:
         case SetterCall:
         case ProxyObjectLoadCall:
+        case ProxyObjectStoreCall:
         case BoundFunctionCall:
+        case BoundFunctionTailCall:
             return CodeForCall;
         case Construct:
         case ConstructVarargs:
@@ -140,6 +146,7 @@ struct InlineCallFrame {
         switch (kind) {
         case TailCall:
         case TailCallVarargs:
+        case BoundFunctionTailCall:
             return true;
         default:
             return false;
@@ -302,6 +309,20 @@ ALWAYS_INLINE Operand unmapOperand(InlineCallFrame* inlineCallFrame, Operand ope
 ALWAYS_INLINE Operand unmapOperand(InlineCallFrame* inlineCallFrame, VirtualRegister reg)
 {
     return unmapOperand(inlineCallFrame, Operand(reg));
+}
+
+inline bool isSameStyledCodeOrigin(CodeOrigin lhs, CodeOrigin rhs)
+{
+    while (true) {
+        if (lhs.bytecodeIndex() != rhs.bytecodeIndex())
+            return false;
+        if (!!lhs.inlineCallFrame() != !!rhs.inlineCallFrame())
+            return false;
+        if (!lhs.inlineCallFrame())
+            return true;
+        lhs = lhs.inlineCallFrame()->directCaller;
+        rhs = rhs.inlineCallFrame()->directCaller;
+    }
 }
 
 } // namespace JSC

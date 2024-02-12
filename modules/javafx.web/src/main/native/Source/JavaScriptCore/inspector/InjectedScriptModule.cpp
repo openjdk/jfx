@@ -61,7 +61,7 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
 
     // FIXME: Make the InjectedScript a module itself.
     JSC::JSLockHolder locker(injectedScript.globalObject());
-    Deprecated::ScriptFunctionCall function(injectedScript.injectedScriptObject(), "hasInjectedModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
+    ScriptFunctionCall function(injectedScript.globalObject(), injectedScript.injectedScriptObject(), "hasInjectedModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
     function.appendArgument(name());
     auto hasInjectedModuleResult = injectedScript.callFunctionWithEvalEnabled(function);
     ASSERT(hasInjectedModuleResult);
@@ -76,8 +76,12 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
         WTFLogAlways("Error when calling 'hasInjectedModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), line, column);
         RELEASE_ASSERT_NOT_REACHED();
     }
+    if (!hasInjectedModuleResult.value()) {
+        WTFLogAlways("VM is terminated when calling 'injectModule' for '%s'\n", name().utf8().data());
+        RELEASE_ASSERT_NOT_REACHED();
+    }
     if (!hasInjectedModuleResult.value().isBoolean() || !hasInjectedModuleResult.value().asBoolean()) {
-        Deprecated::ScriptFunctionCall function(injectedScript.injectedScriptObject(), "injectModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
+        ScriptFunctionCall function(injectedScript.globalObject(), injectedScript.injectedScriptObject(), "injectModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
         function.appendArgument(name());
         function.appendArgument(JSC::JSValue(injectModuleFunction(injectedScript.globalObject())));
         function.appendArgument(host(injectedScriptManager, injectedScript.globalObject()));

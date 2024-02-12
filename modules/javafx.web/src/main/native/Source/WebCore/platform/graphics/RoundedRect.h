@@ -26,22 +26,18 @@
 
 #pragma once
 
-#include "FloatQuad.h"
 #include "LayoutRect.h"
-#include "LayoutSize.h"
 
 namespace WebCore {
 
+class FloatQuad;
 class FloatRoundedRect;
-class LayoutUnit;
 class Region;
 
-class RoundedRect {
+class RoundedRectRadii {
 public:
-    class Radii {
-    public:
-        Radii() {}
-        Radii(const LayoutSize& topLeft, const LayoutSize& topRight, const LayoutSize& bottomLeft, const LayoutSize& bottomRight)
+    RoundedRectRadii() = default;
+    RoundedRectRadii(const LayoutSize& topLeft, const LayoutSize& topRight, const LayoutSize& bottomLeft, const LayoutSize& bottomRight)
             : m_topLeft(topLeft)
             , m_topRight(topRight)
             , m_bottomLeft(bottomLeft)
@@ -60,7 +56,7 @@ public:
 
         bool isZero() const;
 
-        void includeLogicalEdges(const Radii& edges, bool isHorizontal, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
+    void includeLogicalEdges(const RoundedRectRadii& edges, bool isHorizontal, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
         void excludeLogicalEdges(bool isHorizontal, bool excludeLogicalLeftEdge, bool excludeLogicalRightEdge);
 
         void scale(float factor);
@@ -69,16 +65,21 @@ public:
         void shrink(const LayoutUnit& topWidth, const LayoutUnit& bottomWidth, const LayoutUnit& leftWidth, const LayoutUnit& rightWidth) { expand(-topWidth, -bottomWidth, -leftWidth, -rightWidth); }
         void shrink(const LayoutUnit& size) { shrink(size, size, size, size); }
 
-        Radii transposedRadii() const { return Radii(m_topLeft.transposedSize(), m_topRight.transposedSize(), m_bottomLeft.transposedSize(), m_bottomRight.transposedSize()); }
+    RoundedRectRadii transposedRadii() const { return { m_topLeft.transposedSize(), m_topRight.transposedSize(), m_bottomLeft.transposedSize(), m_bottomRight.transposedSize() }; }
 
         LayoutUnit minimumRadius() const { return std::min({ m_topLeft.minDimension(), m_topRight.minDimension(), m_bottomLeft.minDimension(), m_bottomRight.minDimension() }); }
+    LayoutUnit maximumRadius() const { return std::max({ m_topLeft.minDimension(), m_topRight.minDimension(), m_bottomLeft.minDimension(), m_bottomRight.minDimension() }); }
 
-    private:
+private:
         LayoutSize m_topLeft;
         LayoutSize m_topRight;
         LayoutSize m_bottomLeft;
         LayoutSize m_bottomRight;
-    };
+};
+
+class RoundedRect {
+public:
+    using Radii = RoundedRectRadii;
 
     WEBCORE_EXPORT explicit RoundedRect(const LayoutRect&, const Radii& = Radii());
     RoundedRect(const LayoutUnit&, const LayoutUnit&, const LayoutUnit& width, const LayoutUnit& height);
@@ -122,11 +123,6 @@ private:
 inline bool operator==(const RoundedRect::Radii& a, const RoundedRect::Radii& b)
 {
     return a.topLeft() == b.topLeft() && a.topRight() == b.topRight() && a.bottomLeft() == b.bottomLeft() && a.bottomRight() == b.bottomRight();
-}
-
-inline bool operator!=(const RoundedRect::Radii& a, const RoundedRect::Radii& b)
-{
-    return !(a == b);
 }
 
 inline bool operator==(const RoundedRect& a, const RoundedRect& b)

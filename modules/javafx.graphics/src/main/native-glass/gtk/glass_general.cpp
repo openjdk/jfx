@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,9 +88,14 @@ jmethodID jClipboardContentChanged;
 
 jmethodID jSizeInit;
 
+jclass jMapCls;
 jmethodID jMapGet;
+jmethodID jMapPut;
 jmethodID jMapKeySet;
 jmethodID jMapContainsKey;
+
+jclass jHashMapCls;
+jmethodID jHashMapInit;
 
 jclass jHashSetCls;
 jmethodID jHashSetInit;
@@ -110,6 +115,20 @@ jfieldID jApplicationVisualID;
 jmethodID jApplicationReportException;
 jmethodID jApplicationGetApplication;
 jmethodID jApplicationGetName;
+jmethodID jApplicationNotifyPreferencesChanged;
+
+jclass jObjectCls;
+jmethodID jObjectEquals;
+
+jclass jBooleanCls;
+jfieldID jBooleanTRUE;
+jfieldID jBooleanFALSE;
+
+jclass jCollectionsCls;
+jmethodID jCollectionsUnmodifiableMap;
+
+jclass jColorCls;
+jmethodID jColorRgb;
 
 static jboolean displayValid = JNI_FALSE;
 
@@ -276,11 +295,20 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 
     clazz = env->FindClass("java/util/Map");
     if (env->ExceptionCheck()) return JNI_ERR;
+    jMapCls = (jclass)env->NewGlobalRef(clazz);
     jMapGet = env->GetMethodID(clazz, "get", "(Ljava/lang/Object;)Ljava/lang/Object;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jMapPut = env->GetMethodID(clazz, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
     if (env->ExceptionCheck()) return JNI_ERR;
     jMapKeySet = env->GetMethodID(clazz, "keySet", "()Ljava/util/Set;");
     if (env->ExceptionCheck()) return JNI_ERR;
     jMapContainsKey = env->GetMethodID(clazz, "containsKey", "(Ljava/lang/Object;)Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("java/util/HashMap");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jHashMapCls = (jclass) env->NewGlobalRef(clazz);
+    jHashMapInit = env->GetMethodID(jHashMapCls, "<init>", "()V");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("java/util/HashSet");
@@ -326,6 +354,34 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
         jApplicationCls, "GetApplication", "()Lcom/sun/glass/ui/Application;");
     if (env->ExceptionCheck()) return JNI_ERR;
     jApplicationGetName = env->GetMethodID(jApplicationCls, "getName", "()Ljava/lang/String;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jApplicationNotifyPreferencesChanged = env->GetMethodID(jApplicationCls, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("java/lang/Object");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jObjectCls = (jclass)env->NewGlobalRef(clazz);
+    jObjectEquals = env->GetMethodID(jObjectCls, "equals", "(Ljava/lang/Object;)Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("java/lang/Boolean");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jBooleanCls = (jclass)env->NewGlobalRef(clazz);
+    jBooleanTRUE = env->GetStaticFieldID(jBooleanCls, "TRUE", "Ljava/lang/Boolean;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jBooleanFALSE = env->GetStaticFieldID(jBooleanCls, "FALSE", "Ljava/lang/Boolean;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("java/util/Collections");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jCollectionsCls = (jclass)env->NewGlobalRef(clazz);
+    jCollectionsUnmodifiableMap = env->GetStaticMethodID(jCollectionsCls, "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    clazz = env->FindClass("javafx/scene/paint/Color");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jColorCls = (jclass)env->NewGlobalRef(clazz);
+    jColorRgb = env->GetStaticMethodID(jColorCls, "rgb", "(IIID)Ljavafx/scene/paint/Color;");
     if (env->ExceptionCheck()) return JNI_ERR;
 
     return JNI_VERSION_1_6;

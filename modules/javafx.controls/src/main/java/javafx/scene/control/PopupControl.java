@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -212,18 +212,6 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         // only needed because invalidated() does not currently take
         // a reference to the old value.
         private Skin<?> oldValue;
-
-        @Override
-        public void set(Skin<?> v) {
-
-            if (v == null
-                    ? oldValue == null
-                    : oldValue != null && v.getClass().equals(oldValue.getClass()))
-                return;
-
-            super.set(v);
-
-        }
 
         @Override protected void invalidated() {
             Skin<?> skin = get();

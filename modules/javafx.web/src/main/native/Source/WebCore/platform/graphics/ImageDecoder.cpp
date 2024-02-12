@@ -25,17 +25,15 @@
 
 #include "config.h"
 #include "ImageDecoder.h"
-
+#if !PLATFORM(JAVA) && (!USE(CG) || USE(AVIF))
+#include "ScalableImageDecoder.h"
+#endif
 #include <wtf/NeverDestroyed.h>
 
 #if USE(CG)
 #include "ImageDecoderCG.h"
 #elif PLATFORM(JAVA)
 #include "ImageDecoderJava.h"
-#endif
-
-#if !PLATFORM(JAVA) && (!USE(CG) || USE(AVIF))
-#include "ScalableImageDecoder.h"
 #endif
 
 #if HAVE(AVASSETREADER)

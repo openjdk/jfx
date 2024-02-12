@@ -1168,7 +1168,8 @@ gst_audio_visualizer_chain (GstPad * pad, GstObject * parent,
     if (!(adata = (gpointer) gst_adapter_map (scope->priv->adapter, sbpf)))
       break;
 
-    gst_video_frame_map (&outframe, &scope->vinfo, outbuf, GST_MAP_READWRITE);
+    gst_video_frame_map (&outframe, &scope->vinfo, outbuf,
+        GST_MAP_READWRITE | GST_VIDEO_FRAME_MAP_FLAG_NO_REF);
 
     if (scope->priv->shader) {
       gst_video_frame_copy (&outframe, &scope->priv->tempframe);

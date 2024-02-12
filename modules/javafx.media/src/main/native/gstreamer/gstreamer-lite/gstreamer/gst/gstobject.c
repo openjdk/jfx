@@ -324,7 +324,7 @@ gst_clear_object (GstObject ** object_ptr)
  * gst_object_replace:
  * @oldobj: (inout) (transfer full) (nullable): pointer to a place of
  *     a #GstObject to replace
- * @newobj: (transfer none) (allow-none): a new #GstObject
+ * @newobj: (transfer none) (nullable): a new #GstObject
  *
  * Atomically modifies a pointer to point to a new object.
  * The reference count of @oldobj is decreased and the reference count of
@@ -630,7 +630,7 @@ had_parent:
 /**
  * gst_object_set_name:
  * @object: a #GstObject
- * @name: (allow-none): new name of object
+ * @name: (nullable): new name of object
  *
  * Sets the name of @object, or gives @object a guaranteed unique
  * name (if @name is %NULL).
@@ -1342,7 +1342,7 @@ gst_object_remove_control_binding (GstObject * object,
  *
  * Gets the value for the given controlled property at the requested time.
  *
- * Returns: (nullable): the GValue of the property at the given time,
+ * Returns: (transfer full) (nullable): the GValue of the property at the given time,
  * or %NULL if the property isn't controlled.
  */
 GValue *
@@ -1372,7 +1372,7 @@ gst_object_get_value (GstObject * object, const gchar * property_name,
  * @timestamp: the time that should be processed
  * @interval: the time spacing between subsequent values
  * @n_values: the number of values
- * @values: array to put control-values in
+ * @values: (array length=n_values): array to put control-values in
  *
  * Gets a number of values for the given controlled property starting at the
  * requested time. The array @values need to hold enough space for @n_values of

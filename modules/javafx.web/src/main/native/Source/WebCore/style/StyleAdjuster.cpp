@@ -2,13 +2,13 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2012, 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Google Inc. All rights reserved.
  * Copyright (C) 2014, 2020, 2022 Igalia S.L.
  *
  * This library is free software; you can redistribute it and/or
@@ -32,11 +32,8 @@
 
 #include "CSSFontSelector.h"
 #include "DOMTokenList.h"
-#include "DOMWindow.h"
 #include "ElementInlines.h"
-#include "ElementName.h"
 #include "EventNames.h"
-#include "FrameView.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDialogElement.h"
 #include "HTMLDivElement.h"
@@ -47,12 +44,14 @@
 #include "HTMLTableElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrameView.h"
 #include "MathMLElement.h"
-#include "ModalContainerObserver.h"
+#include "NodeName.h"
 #include "Page.h"
 #include "Quirks.h"
 #include "RenderBox.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "SVGElement.h"
@@ -62,8 +61,10 @@
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "StyleSelfAlignmentData.h"
 #include "StyleUpdate.h"
 #include "Text.h"
+#include "TouchAction.h"
 #include "WebAnimationTypes.h"
 #include <wtf/RobinHoodHashSet.h>
 
@@ -154,26 +155,42 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style)
     return DisplayType::Block;
 }
 
+static bool isOutermostSVGElement(const Element* element)
+{
+    return element && element->isSVGElement() && downcast<SVGElement>(*element).isOutermostSVGSVGElement();
+}
+
 static bool shouldInheritTextDecorationsInEffect(const RenderStyle& style, const Element* element)
 {
     if (style.isFloating() || style.hasOutOfFlowPosition())
         return false;
 
-    auto isAtUserAgentShadowBoundary = [&] {
+    // Media elements have a special rendering where the media controls do not use a proper containing
+    // block model which means we need to manually stop text-decorations to apply to text inside media controls.
+    auto isAtMediaUAShadowBoundary = [&] {
         if (!element)
             return false;
+#if ENABLE(VIDEO)
         auto* parentNode = element->parentNode();
-        return parentNode && parentNode->isUserAgentShadowRoot();
+        return parentNode && parentNode->isUserAgentShadowRoot() && parentNode->parentOrShadowHostElement()->isMediaElement();
+#else
+        return false;
+#endif
     }();
 
+    // Outermost <svg> roots are considered to be atomic inline-level.
+    if (isOutermostSVGElement(element))
+        return false;
+
     // There is no other good way to prevent decorations from affecting user agent shadow trees.
-    if (isAtUserAgentShadowBoundary)
+    if (isAtMediaUAShadowBoundary)
         return false;
 
     switch (style.display()) {
-    case DisplayType::Table:
     case DisplayType::InlineTable:
     case DisplayType::InlineBlock:
+    case DisplayType::InlineGrid:
+    case DisplayType::InlineFlex:
     case DisplayType::InlineBox:
         return false;
     default:
@@ -219,13 +236,15 @@ static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& st
     return sharedTouchActions;
 }
 
-void Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
+bool Adjuster::adjustEventListenerRegionTypesForRootStyle(RenderStyle& rootStyle, const Document& document)
 {
     auto regionTypes = computeEventListenerRegionTypes(document, rootStyle, document, { });
     if (auto* window = document.domWindow())
         regionTypes.add(computeEventListenerRegionTypes(document, rootStyle, *window, { }));
 
+    bool changed = regionTypes != rootStyle.eventListenerRegionTypes();
     rootStyle.setEventListenerRegionTypes(regionTypes);
+    return changed;
 }
 
 OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(const Document& document, const RenderStyle& style, const EventTarget& eventTarget, OptionSet<EventListenerRegionType> parentTypes)
@@ -276,23 +295,27 @@ OptionSet<EventListenerRegionType> Adjuster::computeEventListenerRegionTypes(con
     return types;
 }
 
+static bool isOverflowClipOrVisible(Overflow overflow)
+{
+    return overflow == Overflow::Clip || overflow == Overflow::Visible;
+}
+
 void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearanceStyle) const
 {
     if (style.display() == DisplayType::Contents)
         adjustDisplayContentsStyle(style);
+
+    if (m_element && (m_element->hasTagName(frameTag) || m_element->hasTagName(framesetTag))) {
+        // Framesets ignore display and position properties.
+        style.setPosition(PositionType::Static);
+        style.setEffectiveDisplay(DisplayType::Block);
+    }
 
     if (style.display() != DisplayType::None && style.display() != DisplayType::Contents) {
         if (m_element) {
             // Tables never support the -webkit-* values for text-align and will reset back to the default.
             if (is<HTMLTableElement>(*m_element) && (style.textAlign() == TextAlignMode::WebKitLeft || style.textAlign() == TextAlignMode::WebKitCenter || style.textAlign() == TextAlignMode::WebKitRight))
                 style.setTextAlign(TextAlignMode::Start);
-
-            // Frames and framesets never honor position:relative or position:absolute. This is necessary to
-            // fix a crash where a site tries to position these objects. They also never honor display.
-            if (m_element->hasTagName(frameTag) || m_element->hasTagName(framesetTag)) {
-                style.setPosition(PositionType::Static);
-                style.setEffectiveDisplay(DisplayType::Block);
-            }
 
             // Ruby text does not support float or position. This might change with evolution of the specification.
             if (m_element->hasTagName(rtTag)) {
@@ -406,9 +429,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.clipPath()
             || style.boxReflect()
             || style.hasFilter()
-#if ENABLE(FILTERS_LEVEL_2)
             || style.hasBackdropFilter()
-#endif
             || style.hasBlendMode()
             || style.hasIsolation()
             || style.position() == PositionType::Sticky
@@ -440,7 +461,8 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             bool isVertical = style.marqueeDirection() == MarqueeDirection::Up || style.marqueeDirection() == MarqueeDirection::Down;
             // Make horizontal marquees not wrap.
             if (!isVertical) {
-                style.setWhiteSpace(WhiteSpace::NoWrap);
+                style.setWhiteSpaceCollapse(WhiteSpaceCollapse::Collapse);
+                style.setTextWrap(TextWrap::NoWrap);
                 style.setTextAlign(TextAlignMode::Start);
             }
             // Apparently this is the expected legacy behavior.
@@ -454,41 +476,48 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     else
         style.setTextDecorationsInEffect(style.textDecorationLine());
 
-    auto overflowReplacement = [] (Overflow overflow, Overflow overflowInOtherDimension) -> std::optional<Overflow> {
-        if (overflow != Overflow::Visible && overflow != Overflow::Clip) {
-            if (overflowInOtherDimension == Overflow::Visible)
-                return Overflow::Auto;
-            if (overflowInOtherDimension == Overflow::Clip)
-                return Overflow::Hidden;
-        }
-        return std::nullopt;
-    };
+    bool overflowIsClipOrVisible = isOverflowClipOrVisible(style.overflowX()) && isOverflowClipOrVisible(style.overflowX());
 
-    // If either overflow value is not visible, change to auto. Similarly if either overflow
-    // value is not clip, change to hidden.
+    if (!overflowIsClipOrVisible && (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable)) {
+        // Tables only support overflow:hidden and overflow:visible and ignore anything else,
+        // see https://drafts.csswg.org/css2/#overflow. As a table is not a block
+        // container box the rules for resolving conflicting x and y values in CSS Overflow Module
+        // Level 3 do not apply. Arguably overflow-x and overflow-y aren't allowed on tables but
+        // all UAs allow it.
+        if (style.overflowX() != Overflow::Hidden)
+            style.setOverflowX(Overflow::Visible);
+        if (style.overflowY() != Overflow::Hidden)
+            style.setOverflowY(Overflow::Visible);
+        // If we are left with conflicting overflow values for the x and y axes on a table then resolve
+        // both to Overflow::Visible. This is interoperable behaviour but is not specced anywhere.
+        if (style.overflowX() == Overflow::Visible)
+            style.setOverflowY(Overflow::Visible);
+        else if (style.overflowY() == Overflow::Visible)
+            style.setOverflowX(Overflow::Visible);
+    } else if (!isOverflowClipOrVisible(style.overflowY())) {
     // FIXME: Once we implement pagination controls, overflow-x should default to hidden
     // if overflow-y is set to -webkit-paged-x or -webkit-page-y. For now, we'll let it
     // default to auto so we can at least scroll through the pages.
-    if (auto replacement = overflowReplacement(style.overflowY(), style.overflowX()))
-        style.setOverflowX(*replacement);
-    else if (auto replacement = overflowReplacement(style.overflowX(), style.overflowY()))
-        style.setOverflowY(*replacement);
+        // Values of 'clip' and 'visible' can only be used with 'clip' and 'visible'.
+        // If they aren't, 'clip' and 'visible' is reset.
+        if (style.overflowX() == Overflow::Visible)
+            style.setOverflowX(Overflow::Auto);
+        else if (style.overflowX() == Overflow::Clip)
+            style.setOverflowX(Overflow::Hidden);
+    } else if (!isOverflowClipOrVisible(style.overflowX())) {
+        // Values of 'clip' and 'visible' can only be used with 'clip' and 'visible'.
+        // If they aren't, 'clip' and 'visible' is reset.
+        if (style.overflowY() == Overflow::Visible)
+            style.setOverflowY(Overflow::Auto);
+        else if (style.overflowY() == Overflow::Clip)
+            style.setOverflowY(Overflow::Hidden);
+    }
 
     // Call setStylesForPaginationMode() if a pagination mode is set for any non-root elements. If these
     // styles are specified on a root element, then they will be incorporated in
     // Style::createForm_document.
     if ((style.overflowY() == Overflow::PagedX || style.overflowY() == Overflow::PagedY) && !(m_element && (m_element->hasTagName(htmlTag) || m_element->hasTagName(bodyTag))))
         style.setColumnStylesFromPaginationMode(WebCore::paginationModeForRenderStyle(style));
-
-    // Table rows, sections and the table itself will support overflow:hidden and will ignore scroll/auto.
-    // FIXME: Eventually table sections will support auto and scroll.
-    if (style.display() == DisplayType::Table || style.display() == DisplayType::InlineTable
-        || style.display() == DisplayType::TableRowGroup || style.display() == DisplayType::TableRow) {
-        if (style.overflowX() != Overflow::Visible && style.overflowX() != Overflow::Hidden)
-            style.setOverflowX(Overflow::Visible);
-        if (style.overflowY() != Overflow::Visible && style.overflowY() != Overflow::Hidden)
-            style.setOverflowY(Overflow::Visible);
-    }
 
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     // Touch overflow scrolling creates a stacking context.
@@ -508,7 +537,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
     if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::DoesNotAddIntrinsicMarginsToFormControls)) {
     // Important: Intrinsic margins get added to controls before the theme has adjusted the style, since the theme will
     // alter fonts and heights/widths.
-    if (is<HTMLFormControlElement>(m_element) && style.computedFontPixelSize() >= 11) {
+        if (is<HTMLFormControlElement>(m_element) && style.computedFontSize() >= 11) {
         // Don't apply intrinsic margins to image buttons. The designer knows how big the images are,
         // so we have to treat all image buttons as though they were explicitly sized.
         if (!is<HTMLInputElement>(*m_element) || !downcast<HTMLInputElement>(*m_element).isImageButton())
@@ -534,9 +563,7 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
             || style.hasFilter()
             || style.hasIsolation()
             || style.hasMask()
-#if ENABLE(FILTERS_LEVEL_2)
             || style.hasBackdropFilter()
-#endif
             || style.hasBlendMode();
         style.setTransformStyleForcedToFlat(forceToFlat);
     }
@@ -581,21 +608,20 @@ void Adjuster::adjust(RenderStyle& style, const RenderStyle* userAgentAppearance
 
         style.setEventListenerRegionTypes(computeEventListenerRegionTypes(m_document, style, *m_element, m_parentStyle.eventListenerRegionTypes()));
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+        // Every element will automatically get an interaction region which is not useful, ignoring the `cursor: pointer;` on the body.
+        if (is<HTMLBodyElement>(*m_element) && style.cursor() == CursorType::Pointer && style.eventListenerRegionTypes().contains(EventListenerRegionType::MouseClick))
+            style.setCursor(CursorType::Auto);
+#endif
+
 #if ENABLE(TEXT_AUTOSIZING)
         if (m_document.settings().textAutosizingUsesIdempotentMode())
             adjustForTextAutosizing(style, *m_element);
 #endif
-
-        if (auto observer = m_element->document().modalContainerObserverIfExists()) {
-            if (observer->shouldHide(*m_element))
-                style.setDisplay(DisplayType::None);
-            if (observer->shouldMakeVerticallyScrollable(*m_element))
-                style.setOverflowY(Overflow::Auto);
-        }
     }
 
-    if (style.contentVisibility() == ContentVisibility::Hidden)
-        style.setEffectiveSkipsContent(true);
+    if (isSkippedContentRoot(style, m_element))
+        style.setEffectiveSkippedContent(true);
 
     adjustForSiteSpecificQuirks(style);
 }
@@ -617,7 +643,7 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
         return false;
 
     // https://drafts.csswg.org/css-display-3/#unbox-html
-    switch (element.tagQName().elementName()) {
+    switch (element.elementName()) {
     case HTML::br:
     case HTML::wbr:
     case HTML::meter:
@@ -853,7 +879,7 @@ void Adjuster::propagateToDocumentElementAndInitialContainingBlock(Update& updat
         }
         documentElementUpdate->style->setWritingMode(writingMode);
         documentElementUpdate->style->setDirection(direction);
-        documentElementUpdate->change = determineChange(*documentElementStyle, *documentElementUpdate->style);
+        documentElementUpdate->change = std::max(documentElementUpdate->change, Change::Inherited);
     }
 }
 

@@ -132,16 +132,13 @@ private:
     UniqueRef<rtc::BasicPacketSocketFactory> m_socketFactory;
 };
 
-struct PeerConnectionFactoryAndThreads : public rtc::MessageHandler {
+struct PeerConnectionFactoryAndThreads {
     std::unique_ptr<rtc::Thread> networkThread;
     std::unique_ptr<rtc::Thread> signalingThread;
     bool networkThreadWithSocketServer { false };
     std::unique_ptr<rtc::NetworkManager> networkManager;
     std::unique_ptr<BasicPacketSocketFactory> packetSocketFactory;
     std::unique_ptr<rtc::RTCCertificateGenerator> certificateGenerator;
-
-private:
-    void OnMessage(rtc::Message*);
 };
 
 static void doReleaseLogging(rtc::LoggingSeverity severity, const char* message)
@@ -220,21 +217,6 @@ PeerConnectionFactoryAndThreads& LibWebRTCProvider::getStaticFactoryAndThreads(b
     return factoryAndThreads;
 }
 
-struct ThreadMessageData : public rtc::MessageData {
-    ThreadMessageData(Function<void()>&& callback)
-        : callback(WTFMove(callback))
-    { }
-    Function<void()> callback;
-};
-
-void PeerConnectionFactoryAndThreads::OnMessage(rtc::Message* message)
-{
-    ASSERT(message->message_id == 1);
-    auto* data = static_cast<ThreadMessageData*>(message->pdata);
-    data->callback();
-    delete data;
-}
-
 bool LibWebRTCProvider::hasWebRTCThreads()
 {
     return !!staticFactoryAndThreads().networkThread;
@@ -243,13 +225,13 @@ bool LibWebRTCProvider::hasWebRTCThreads()
 void LibWebRTCProvider::callOnWebRTCNetworkThread(Function<void()>&& callback)
 {
     PeerConnectionFactoryAndThreads& threads = staticFactoryAndThreads();
-    threads.networkThread->Post(RTC_FROM_HERE, &threads, 1, new ThreadMessageData(WTFMove(callback)));
+    threads.networkThread->PostTask(WTFMove(callback));
 }
 
 void LibWebRTCProvider::callOnWebRTCSignalingThread(Function<void()>&& callback)
 {
     PeerConnectionFactoryAndThreads& threads = staticFactoryAndThreads();
-    threads.signalingThread->Post(RTC_FROM_HERE, &threads, 1, new ThreadMessageData(WTFMove(callback)));
+    threads.signalingThread->PostTask(WTFMove(callback));
 }
 
 rtc::Thread& LibWebRTCProvider::signalingThread()
@@ -291,12 +273,17 @@ void LibWebRTCProvider::enableEnumeratingAllNetworkInterfaces()
     m_enableEnumeratingAllNetworkInterfaces = true;
 }
 
+void LibWebRTCProvider::enableEnumeratingVisibleNetworkInterfaces()
+{
+    m_enableEnumeratingVisibleNetworkInterfaces = true;
+}
+
 void LibWebRTCProvider::disableNonLocalhostConnections()
 {
     m_disableNonLocalhostConnections = true;
 }
 
-std::unique_ptr<LibWebRTCProvider::SuspendableSocketFactory> LibWebRTCProvider::createSocketFactory(String&& /* userAgent */, bool /* isFirstParty */, RegistrableDomain&&)
+std::unique_ptr<LibWebRTCProvider::SuspendableSocketFactory> LibWebRTCProvider::createSocketFactory(String&& /* userAgent */, ScriptExecutionContextIdentifier, bool /* isFirstParty */, RegistrableDomain&&)
 {
     return nullptr;
 }
@@ -358,6 +345,7 @@ void LibWebRTCProvider::setPeerConnectionFactory(rtc::scoped_refptr<webrtc::Peer
 {
     auto* thread = getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer).signalingThread.get();
     m_factory = webrtc::PeerConnectionFactoryProxy::Create(thread, thread, WTFMove(factory));
+}
 rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPeerConnection(ScriptExecutionContextIdentifier, webrtc::PeerConnectionObserver& observer, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&& configuration)
 {
     // Default WK1 implementation.
@@ -404,7 +392,7 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPee
     auto& factoryAndThreads = getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer);
 
     std::unique_ptr<cricket::BasicPortAllocator> portAllocator;
-    factoryAndThreads.signalingThread->Invoke<void>(RTC_FROM_HERE, [&]() {
+    factoryAndThreads.signalingThread->BlockingCall([&]() {
         auto basicPortAllocator = makeUniqueWithoutFastMallocCheck<cricket::BasicPortAllocator>(&networkManager, &packetSocketFactory);
 
         basicPortAllocator->set_allow_tcp_listen(false);
@@ -436,6 +424,7 @@ void LibWebRTCProvider::prepareCertificateGenerator(Function<void(rtc::RTCCertif
     callOnWebRTCSignalingThread([&generator, callback = WTFMove(callback)]() mutable {
         callback(generator);
     });
+}
 static inline std::optional<cricket::MediaType> typeFromKind(const String& kind)
 {
     if (kind == "audio"_s)

@@ -28,12 +28,11 @@
 #include "CacheableIdentifier.h"
 #include "CodeBlock.h"
 #include "CodeOrigin.h"
+#include "InlineCacheCompiler.h"
 #include "Instruction.h"
 #include "JITStubRoutine.h"
 #include "MacroAssembler.h"
 #include "Options.h"
-#include "PolymorphicAccess.h"
-#include "PutKind.h"
 #include "RegisterSet.h"
 #include "Structure.h"
 #include "StructureSet.h"
@@ -61,9 +60,18 @@ enum class AccessType : int8_t {
     TryGetById,
     GetByVal,
     GetByValWithThis,
-    PutById,
-    PutByVal,
-    PutPrivateName,
+    PutByIdStrict,
+    PutByIdSloppy,
+    PutByIdDirectStrict,
+    PutByIdDirectSloppy,
+    PutByValStrict,
+    PutByValSloppy,
+    PutByValDirectStrict,
+    PutByValDirectSloppy,
+    DefinePrivateNameByVal,
+    DefinePrivateNameById,
+    SetPrivateNameByVal,
+    SetPrivateNameById,
     InById,
     InByVal,
     HasPrivateName,
@@ -98,14 +106,6 @@ public:
         : codeOrigin(codeOrigin)
         , accessType(accessType)
         , bufferingCountdown(Options::initialRepatchBufferingCountdown())
-#if PLATFORM(JAVA)
-        , resetByGC(false), tookSlowPath(false)
-        , everConsidered(false), prototypeIsKnownObject(false) // Only relevant for InstanceOf.
-        , sawNonCell(false), hasConstantIdentifier(true)
-        , propertyIsString(false), propertyIsInt32(false)
-        , propertyIsSymbol(false), useDataIC(false)
-#else
-#endif
     {
     }
 
@@ -210,14 +210,29 @@ public:
     CacheType cacheType() const { return m_cacheType; }
 
     // Not ByVal and ById case: e.g. instanceof, by-index etc.
-    ALWAYS_INLINE bool considerCachingGeneric(VM& vm, CodeBlock* codeBlock, Structure* structure)
+    ALWAYS_INLINE bool considerRepatchingCacheGeneric(VM& vm, CodeBlock* codeBlock, Structure* structure)
     {
-        return considerCaching(vm, codeBlock, structure, CacheableIdentifier());
+        // We never cache non-cells.
+        if (!structure) {
+            sawNonCell = true;
+            return false;
+        }
+        return considerRepatchingCacheImpl(vm, codeBlock, structure, CacheableIdentifier());
     }
 
-    ALWAYS_INLINE bool considerCachingBy(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
+    ALWAYS_INLINE bool considerRepatchingCacheBy(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
     {
-        return considerCaching(vm, codeBlock, structure, impl);
+        // We never cache non-cells.
+        if (!structure) {
+            sawNonCell = true;
+            return false;
+        }
+        return considerRepatchingCacheImpl(vm, codeBlock, structure, impl);
+    }
+
+    ALWAYS_INLINE bool considerRepatchingCacheMegamorphic(VM& vm)
+    {
+        return considerRepatchingCacheImpl(vm, nullptr, nullptr, CacheableIdentifier());
     }
 
     Structure* inlineAccessBaseStructure() const
@@ -225,15 +240,10 @@ public:
         return m_inlineAccessBaseStructureID.get();
     }
 private:
-    ALWAYS_INLINE bool considerCaching(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
+    ALWAYS_INLINE bool considerRepatchingCacheImpl(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
     {
         DisallowGC disallowGC;
 
-        // We never cache non-cells.
-        if (!structure) {
-            sawNonCell = true;
-            return false;
-        }
 
         // This method is called from the Optimize variants of IC slow paths. The first part of this
         // method tries to determine if the Optimize variant should really behave like the
@@ -276,6 +286,9 @@ private:
             }
 
             bufferingCountdown--;
+
+            if (!structure)
+                return true;
 
             // Now protect the IC buffering. We want to proceed only if this is a structure that
             // we don't already have a case buffered for. Note that if this returns true but the
@@ -332,11 +345,6 @@ private:
         friend bool operator==(const BufferedStructure& a, const BufferedStructure& b)
         {
             return a.m_structure == b.m_structure && a.m_byValId == b.m_byValId;
-        }
-
-        friend bool operator!=(const BufferedStructure& a, const BufferedStructure& b)
-        {
-            return !(a == b);
         }
 
         struct Hash {
@@ -456,18 +464,6 @@ public:
 private:
     Lock m_bufferedStructuresLock;
 public:
-#if PLATFORM(JAVA)
-    bool resetByGC : 1;
-    bool tookSlowPath : 1;
-    bool everConsidered : 1;
-    bool prototypeIsKnownObject : 1; // Only relevant for InstanceOf.
-    bool sawNonCell : 1;
-    bool hasConstantIdentifier : 1;
-    bool propertyIsString : 1;
-    bool propertyIsInt32 : 1;
-    bool propertyIsSymbol : 1;
-    bool useDataIC : 1;
-#else
     bool resetByGC : 1 { false };
     bool tookSlowPath : 1 { false };
     bool everConsidered : 1 { false };
@@ -477,8 +473,9 @@ public:
     bool propertyIsString : 1 { false };
     bool propertyIsInt32 : 1 { false };
     bool propertyIsSymbol : 1 { false };
+    bool canBeMegamorphic : 1 { false };
+    bool isEnumerator : 1 { false };
     bool useDataIC : 1 { false };
-#endif
 };
 
 inline CodeOrigin getStructureStubInfoCodeOrigin(StructureStubInfo& structureStubInfo)
@@ -523,33 +520,15 @@ inline auto appropriateGenericGetByIdFunction(AccessType type) -> decltype(&oper
 }
 
 struct UnlinkedStructureStubInfo {
-#if PLATFORM(JAVA)
-    UnlinkedStructureStubInfo() : propertyIsInt32(false)
-                                , propertyIsString(false)
-                                , propertyIsSymbol(false)
-                                , prototypeIsKnownObject(false)
-                                , tookSlowPath(false)
-#else
-#endif
-    {}
 
     AccessType accessType;
-    PutKind putKind { PutKind::Direct };
-    PrivateFieldPutKind privateFieldPutKind { PrivateFieldPutKind::none() };
     ECMAMode ecmaMode { ECMAMode::sloppy() };
-#if PLATFORM(JAVA)
-    bool propertyIsInt32 : 1;
-    bool propertyIsString : 1;
-    bool propertyIsSymbol : 1;
-    bool prototypeIsKnownObject : 1;
-    bool tookSlowPath : 1;
-#else
     bool propertyIsInt32 : 1 { false };
     bool propertyIsString : 1 { false };
     bool propertyIsSymbol : 1 { false };
     bool prototypeIsKnownObject : 1 { false };
-    bool tookSlowPath : 1 { false };
-#endif
+    bool canBeMegamorphic : 1 { false };
+    bool isEnumerator : 1 { false };
     CodeLocationLabel<JSInternalPtrTag> doneLocation;
     CodeLocationLabel<JITStubRoutinePtrTag> slowPathStartLocation;
 };

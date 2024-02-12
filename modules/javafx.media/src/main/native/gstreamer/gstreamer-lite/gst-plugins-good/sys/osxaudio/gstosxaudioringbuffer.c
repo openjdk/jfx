@@ -48,7 +48,7 @@
 #endif
 
 #include <gst/gst.h>
-#include <gst/gst-i18n-plugin.h>
+#include <glib/gi18n-lib.h>
 #include <gst/audio/audio-channels.h>
 #include "gstosxaudioringbuffer.h"
 #include "gstosxaudiosink.h"
