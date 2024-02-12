@@ -4014,7 +4014,6 @@ const RenderStyle* Element::resolveComputedStyle(ResolveComputedStyleMode mode)
     if (!rootmostInvalidElement) {
     if (isInDisplayNoneTree)
         return nullptr;
-
         return existingComputedStyle();
     }
 
