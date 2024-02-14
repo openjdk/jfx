@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -391,6 +391,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected native int _isKeyLocked(int keyCode);
 
+    private native String _getApplicationClassName();
+
     @Override
     public native Map<String, Object> getPlatformPreferences();
 
@@ -454,5 +456,24 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("macOS.NSColor.systemTealColor", Color.class),
             Map.entry("macOS.NSColor.systemYellowColor", Color.class)
         );
+    }
+
+    private static final String SUPPRESS_AWT_WARNING_PROPERTY = "javafx.preferences.suppressAppleAwtWarning";
+    private static final String AWT_APPEARANCE_PROPERTY = "apple.awt.application.appearance";
+    private boolean checkSystemAppearance = !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY);
+
+    @Override
+    public void checkPlatformPreferencesSupport() {
+        if (checkSystemAppearance && "NSApplicationAWT".equals(_getApplicationClassName())) {
+            checkSystemAppearance = false;
+
+            if (!"system".equals(System.getProperty(AWT_APPEARANCE_PROPERTY))) {
+                Logging.getJavaFXLogger().warning(String.format(
+                    "Reported preferences may not reflect macOS system preferences unless the system property " +
+                    "%s=system is set. This warning can be disabled by setting %s=true.",
+                    AWT_APPEARANCE_PROPERTY,
+                    SUPPRESS_AWT_WARNING_PROPERTY));
+            }
+        }
     }
 }

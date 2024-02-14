@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -451,6 +451,15 @@ public final class Platform {
      * @since 22
      */
     public static Preferences getPreferences() {
+        // Emits a one-time warning on macOS if we're running with AWT and the
+        // "apple.awt.application.appearance=system" property is not set (see also: JDK-8235363).
+        var application = com.sun.glass.ui.Application.GetApplication();
+        if (application != null) {
+            application.checkPlatformPreferencesSupport();
+        }
+
+        // If "application" is null, PlatformImpl.getPlatformPreferences() will
+        // fail by throwing an exception.
         return PlatformImpl.getPlatformPreferences();
     }
 
