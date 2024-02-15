@@ -451,15 +451,7 @@ public final class Platform {
      * @since 22
      */
     public static Preferences getPreferences() {
-        // Emits a one-time warning on macOS if we're running with AWT and the
-        // "apple.awt.application.appearance=system" property is not set (see also: JDK-8235363).
-        var application = com.sun.glass.ui.Application.GetApplication();
-        if (application != null) {
-            application.checkPlatformPreferencesSupport();
-        }
-
-        // If "application" is null, PlatformImpl.getPlatformPreferences() will
-        // fail by throwing an exception.
+        PlatformImpl.checkPreferencesSupport();
         return PlatformImpl.getPlatformPreferences();
     }
 

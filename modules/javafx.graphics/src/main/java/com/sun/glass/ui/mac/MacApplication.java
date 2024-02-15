@@ -59,6 +59,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     native static int _getMacKey(int code);
 
+    private String applicationClassName;
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
@@ -90,6 +91,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             if (isTriggerReactivation()) {
                 waitForReactivation();
             }
+
+            applicationClassName = _getApplicationClassName();
             launchable.run();
         };
 
@@ -464,7 +467,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     public void checkPlatformPreferencesSupport() {
-        if (checkSystemAppearance && "NSApplicationAWT".equals(_getApplicationClassName())) {
+        if (checkSystemAppearance && "NSApplicationAWT".equals(applicationClassName)) {
             checkSystemAppearance = false;
 
             if (!"system".equals(System.getProperty(AWT_APPEARANCE_PROPERTY))) {
