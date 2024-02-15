@@ -153,7 +153,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 //        control.setInputMap(behavior.getInputMap());
 
         registerChangeListener(control.caretPositionProperty(), e -> {
-            setCaretAnimating(false);
             if (control.getWidth() > 0) {
                 updateTextNodeCaretPos(control.getCaretPosition());
                 if (!isForwardBias()) {
@@ -161,6 +160,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                 }
                 updateCaretOff();
             }
+            // restart caret blinking animation
+            setCaretAnimating(false);
             setCaretAnimating(true);
         });
 

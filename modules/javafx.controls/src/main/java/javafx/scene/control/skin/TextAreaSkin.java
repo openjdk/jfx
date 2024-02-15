@@ -175,11 +175,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
             }
         };
         caretPosition.addListener((observable, oldValue, newValue) -> {
-            setCaretAnimating(false);
             targetCaretX = -1;
             if (control.getWidth() > 0) {
                 setForwardBias(true);
             }
+            // restart caret blinking animation
+            setCaretAnimating(false);
             setCaretAnimating(true);
         });
 
