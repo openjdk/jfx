@@ -570,7 +570,6 @@
 - (void)draggingEnded:(id <NSDraggingInfo>)sender
 {
     DNDLOG("draggingEnded");
-    [self->_delegate draggingEnded];
 }
 
 - (void)draggingExited:(id <NSDraggingInfo>)sender
