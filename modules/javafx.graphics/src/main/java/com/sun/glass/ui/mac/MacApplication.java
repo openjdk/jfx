@@ -463,18 +463,28 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private static final String SUPPRESS_AWT_WARNING_PROPERTY = "javafx.preferences.suppressAppleAwtWarning";
     private static final String AWT_APPEARANCE_PROPERTY = "apple.awt.application.appearance";
-    private boolean checkSystemAppearance = !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY);
+    private static final String AWT_APPLICATION_CLASS = "NSApplicationAWT";
+    private static final String AWT_SYSTEM_APPEARANCE = "system";
+
+    @SuppressWarnings("removal")
+    private boolean checkSystemAppearance = AccessController.doPrivileged(
+            (PrivilegedAction<Boolean>) () -> !Boolean.getBoolean(SUPPRESS_AWT_WARNING_PROPERTY));
 
     @Override
     public void checkPlatformPreferencesSupport() {
-        if (checkSystemAppearance && "NSApplicationAWT".equals(applicationClassName)) {
+        if (checkSystemAppearance && AWT_APPLICATION_CLASS.equals(applicationClassName)) {
             checkSystemAppearance = false;
 
-            if (!"system".equals(System.getProperty(AWT_APPEARANCE_PROPERTY))) {
+            @SuppressWarnings("removal")
+            String awtAppearanceProperty = AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> System.getProperty(AWT_APPEARANCE_PROPERTY));
+
+            if (!AWT_SYSTEM_APPEARANCE.equals(awtAppearanceProperty)) {
                 Logging.getJavaFXLogger().warning(String.format(
                     "Reported preferences may not reflect macOS system preferences unless the system property " +
-                    "%s=system is set. This warning can be disabled by setting %s=true.",
+                    "%s=%s is set. This warning can be disabled by setting %s=true.",
                     AWT_APPEARANCE_PROPERTY,
+                    AWT_SYSTEM_APPEARANCE,
                     SUPPRESS_AWT_WARNING_PROPERTY));
             }
         }

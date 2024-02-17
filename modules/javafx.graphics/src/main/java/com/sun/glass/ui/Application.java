@@ -803,7 +803,7 @@ public abstract class Application {
 
     /**
      * Checks whether there are any problems with platform preferences detection,
-     * and emits a warning otherwise.
+     * and if so, emits a warning.
      */
     public void checkPlatformPreferencesSupport() {}
 }
