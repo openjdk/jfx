@@ -27,6 +27,7 @@
 #pragma once
 
 #include "DocumentMarker.h"
+#include "Timer.h"
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
@@ -58,7 +59,7 @@ public:
 
     void copyMarkers(Node& source, OffsetRange, Node& destination);
     bool hasMarkers() const;
-    bool hasMarkers(const SimpleRange&, OptionSet<DocumentMarker::MarkerType> = DocumentMarker::allMarkers());
+    WEBCORE_EXPORT bool hasMarkers(const SimpleRange&, OptionSet<DocumentMarker::MarkerType> = DocumentMarker::allMarkers());
 
     // When a marker partially overlaps with range, if removePartiallyOverlappingMarkers is true, we completely
     // remove the marker. If the argument is false, we will adjust the span of the marker so that it retains
@@ -73,8 +74,11 @@ public:
     void repaintMarkers(OptionSet<DocumentMarker::MarkerType> = DocumentMarker::allMarkers());
     void shiftMarkers(Node&, unsigned startOffset, int delta);
 
+    void dismissMarkers(OptionSet<DocumentMarker::MarkerType> = DocumentMarker::allMarkers());
+
     WEBCORE_EXPORT Vector<RenderedDocumentMarker*> markersFor(Node&, OptionSet<DocumentMarker::MarkerType> = DocumentMarker::allMarkers());
     WEBCORE_EXPORT Vector<RenderedDocumentMarker*> markersInRange(const SimpleRange&, OptionSet<DocumentMarker::MarkerType>);
+    WEBCORE_EXPORT Vector<SimpleRange> rangesForMarkersInRange(const SimpleRange&, OptionSet<DocumentMarker::MarkerType>);
     void clearDescriptionOnMarkersIntersectingRange(const SimpleRange&, OptionSet<DocumentMarker::MarkerType>);
 
     WEBCORE_EXPORT void updateRectsForInvalidatedMarkersOfType(DocumentMarker::MarkerType);
@@ -98,20 +102,26 @@ private:
     };
     Vector<TextRange> collectTextRanges(const SimpleRange&);
 
-    void forEach(const SimpleRange&, OptionSet<DocumentMarker::MarkerType>, const Function<bool(RenderedDocumentMarker&)>);
+    void forEach(const SimpleRange&, OptionSet<DocumentMarker::MarkerType>, const Function<bool(Node&, RenderedDocumentMarker&)>);
+    void forEachOfTypes(OptionSet<DocumentMarker::MarkerType>, const Function<bool(Node&, RenderedDocumentMarker&)>);
 
     using MarkerMap = HashMap<RefPtr<Node>, std::unique_ptr<Vector<RenderedDocumentMarker>>>;
 
     bool possiblyHasMarkers(OptionSet<DocumentMarker::MarkerType>);
-    void removeMarkersFromList(MarkerMap::iterator, OptionSet<DocumentMarker::MarkerType>);
+    void removeMarkers(OptionSet<DocumentMarker::MarkerType>, const Function<FilterMarkerResult(const RenderedDocumentMarker&)>& filterFunction);
+    OptionSet<DocumentMarker::MarkerType> removeMarkersFromList(MarkerMap::iterator, OptionSet<DocumentMarker::MarkerType>, const Function<FilterMarkerResult(const RenderedDocumentMarker&)>& filterFunction = nullptr);
+
+    void fadeAnimationTimerFired();
 
     MarkerMap m_markers;
     // Provide a quick way to determine whether a particular marker type is absent without going through the map.
     OptionSet<DocumentMarker::MarkerType> m_possiblyExistingMarkerTypes;
     Document& m_document;
+
+    Timer m_fadeAnimationTimer;
 };
 
-void addMarker(const SimpleRange&, DocumentMarker::MarkerType, const DocumentMarker::Data& = { });
+WEBCORE_EXPORT void addMarker(const SimpleRange&, DocumentMarker::MarkerType, const DocumentMarker::Data& = { });
 void addMarker(Text&, unsigned startOffset, unsigned length, DocumentMarker::MarkerType, DocumentMarker::Data&& = { });
 void removeMarkers(const SimpleRange&, OptionSet<DocumentMarker::MarkerType> = DocumentMarker::allMarkers(), RemovePartiallyOverlappingMarker = RemovePartiallyOverlappingMarker::No);
 

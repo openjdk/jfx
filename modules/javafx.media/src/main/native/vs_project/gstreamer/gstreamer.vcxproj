@@ -143,8 +143,6 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalance.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalancechannel.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\convertframe.c" />
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideodecoder.c" />
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideoencoder.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideofilter.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideometa.c" />
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideopool.c" />
@@ -495,8 +493,6 @@
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\streamvolume.h" />
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalance.h" />
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalancechannel.h" />
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideodecoder.h" />
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideoencoder.h" />
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideofilter.h" />
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideometa.h" />
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideopool.h" />

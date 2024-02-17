@@ -101,12 +101,12 @@
 #include "gstquark.h"
 #include "gsttracerutils.h"
 #include "gstvalue.h"
-#include "gst-i18n-lib.h"
+#include <glib/gi18n-lib.h>
 #include "glib-compat-private.h"
 
-#ifndef GST_DISABLE_GST_DEBUG
+#ifndef GSTREAMER_LITE
 #include "printf/printf.h"
-#endif
+#endif // GSTREAMER_LITE
 
 /* Element signals and args */
 enum
@@ -419,7 +419,7 @@ gst_element_set_clock_func (GstElement * element, GstClock * clock)
 /**
  * gst_element_set_clock:
  * @element: a #GstElement to set the clock for.
- * @clock: (transfer none) (allow-none): the #GstClock to set for the element.
+ * @clock: (transfer none) (nullable): the #GstClock to set for the element.
  *
  * Sets the clock for the element. This function increases the
  * refcount on the clock. Any previously set clock on the object
@@ -749,6 +749,7 @@ gst_element_add_pad (GstElement * element, GstPad * pad)
 {
   gchar *pad_name;
   gboolean active;
+  gboolean should_activate;
 
   g_return_val_if_fail (GST_IS_ELEMENT (element), FALSE);
   g_return_val_if_fail (GST_IS_PAD (pad), FALSE);
@@ -773,10 +774,8 @@ gst_element_add_pad (GstElement * element, GstPad * pad)
     goto had_parent;
 
   /* check for active pads */
-  if (!active && (GST_STATE (element) > GST_STATE_READY ||
-          GST_STATE_NEXT (element) == GST_STATE_PAUSED)) {
-    gst_pad_set_active (pad, TRUE);
-  }
+  should_activate = !active && (GST_STATE (element) > GST_STATE_READY ||
+      GST_STATE_NEXT (element) == GST_STATE_PAUSED);
 
   g_free (pad_name);
 
@@ -797,6 +796,9 @@ gst_element_add_pad (GstElement * element, GstPad * pad)
   element->numpads++;
   element->pads_cookie++;
   GST_OBJECT_UNLOCK (element);
+
+  if (should_activate)
+    gst_pad_set_active (pad, TRUE);
 
   /* emit the PAD_ADDED signal */
   g_signal_emit (element, gst_element_signals[PAD_ADDED], 0, pad);
@@ -1052,7 +1054,7 @@ gst_element_is_valid_request_template_name (const gchar * templ_name,
     /* %s is not allowed for multiple specifiers, just a single specifier can be
      * accepted in gst_pad_template_new() and can not be mixed with other
      * specifier '%u' and '%d' */
-    if (*(templ_name_ptr + 1) == 's' && g_strcmp0 (templ_name, name) == 0) {
+    if (*(templ_name_ptr + 1) == 's') {
       return TRUE;
     }
 
@@ -1161,6 +1163,16 @@ _gst_element_request_pad (GstElement * element, GstPadTemplate * templ,
       g_critical ("Element %s already has a pad named %s, the behaviour of "
           " gst_element_get_request_pad() for existing pads is undefined!",
           GST_ELEMENT_NAME (element), name);
+    }
+  }
+#endif
+
+#ifdef GST_ENABLE_EXTRA_CHECKS
+  {
+    if (!g_list_find (oclass->padtemplates, templ)) {
+      /* FIXME 2.0: Change this to g_return_val_if_fail() */
+      g_critical ("Element type %s does not have a pad template %s (%p)",
+          g_type_name (G_OBJECT_TYPE (element)), templ->name_template, templ);
     }
   }
 #endif
@@ -1751,9 +1763,9 @@ gst_element_get_metadata (GstElement * element, const gchar * key)
  *
  * Retrieves a list of the pad templates associated with @element_class. The
  * list must not be modified by the calling code.
- * > If you use this function in the #GInstanceInitFunc of an object class
+ * > If you use this function in the GInstanceInitFunc of an object class
  * > that has subclasses, make sure to pass the g_class parameter of the
- * > #GInstanceInitFunc here.
+ * > GInstanceInitFunc here.
  *
  * Returns: (transfer none) (element-type Gst.PadTemplate): the #GList of
  *     pad templates.
@@ -1793,9 +1805,9 @@ gst_element_get_pad_template_list (GstElement * element)
  * @name: the name of the #GstPadTemplate to get.
  *
  * Retrieves a padtemplate from @element_class with the given name.
- * > If you use this function in the #GInstanceInitFunc of an object class
+ * > If you use this function in the GInstanceInitFunc of an object class
  * > that has subclasses, make sure to pass the g_class parameter of the
- * > #GInstanceInitFunc here.
+ * > GInstanceInitFunc here.
  *
  * Returns: (transfer none) (nullable): the #GstPadTemplate with the
  *     given name, or %NULL if none was found. No unreferencing is

@@ -48,6 +48,10 @@
 #include "RenderLayerBacking.h"
 #include "WebAnimationTypes.h"
 
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#include "AcceleratedTimeline.h"
+#endif
+
 namespace WebCore {
 
 Ref<DocumentTimeline> DocumentTimeline::create(Document& document)
@@ -61,19 +65,11 @@ Ref<DocumentTimeline> DocumentTimeline::create(Document& document, DocumentTimel
 }
 
 DocumentTimeline::DocumentTimeline(Document& document, Seconds originTime)
-    : AnimationTimeline()
-    , m_tickScheduleTimer(*this, &DocumentTimeline::scheduleAnimationResolution)
+    : m_tickScheduleTimer(*this, &DocumentTimeline::scheduleAnimationResolution)
     , m_document(document)
     , m_originTime(originTime)
 {
-    if (auto* controller = this->controller())
-        controller->addTimeline(*this);
-}
-
-DocumentTimeline::~DocumentTimeline()
-{
-    if (auto* controller = this->controller())
-        controller->removeTimeline(*this);
+    document.ensureTimelinesController().addTimeline(*this);
 }
 
 DocumentTimelinesController* DocumentTimeline::controller() const
@@ -288,12 +284,14 @@ IGNORE_GCC_WARNINGS_END
 void DocumentTimeline::removeReplacedAnimations()
 {
     // https://drafts.csswg.org/web-animations/#removing-replaced-animations
-
-    Vector<RefPtr<WebAnimation>> animationsToRemove;
+    auto& eventNames = WebCore::eventNames();
+    Vector<Ref<WebAnimation>> animationsToRemove;
 
     // When asked to remove replaced animations for a Document, doc, then for every animation, animation
-    for (auto& animation : m_allAnimations) {
-        if (animation && animationCanBeRemoved(*animation)) {
+    for (auto& animation : m_animations) {
+        if (!animationCanBeRemoved(animation))
+            continue;
+
             // perform the following steps:
             // 1. Set animation's replace state to removed.
             animation->setReplaceState(WebAnimation::ReplaceState::Removed);
@@ -305,6 +303,7 @@ void DocumentTimeline::removeReplacedAnimations()
             //    event queue along with its target, animation. For the scheduled event time, use the result of applying the procedure
             //    to convert timeline time to origin-relative time to the current time of the timeline with which animation is associated.
             //    Otherwise, queue a task to dispatch removeEvent at animation. The task source for this task is the DOM manipulation task source.
+        if (animation->hasEventListeners(eventNames.removeEvent)) {
             auto scheduledTime = [&]() -> std::optional<Seconds> {
                 if (auto* documentTimeline = dynamicDowncast<DocumentTimeline>(animation->timeline())) {
                     if (auto currentTime = documentTimeline->currentTime())
@@ -312,15 +311,15 @@ void DocumentTimeline::removeReplacedAnimations()
                 }
                 return std::nullopt;
             }();
-            animation->enqueueAnimationPlaybackEvent(eventNames().removeEvent, animation->currentTime(), scheduledTime);
+            animation->enqueueAnimationPlaybackEvent(eventNames.removeEvent, animation->currentTime(), scheduledTime);
+        }
 
             animationsToRemove.append(animation.get());
         }
-    }
 
     for (auto& animation : animationsToRemove) {
         if (auto* timeline = animation->timeline())
-            timeline->removeAnimation(*animation);
+            timeline->removeAnimation(animation);
     }
 }
 
@@ -409,10 +408,19 @@ void DocumentTimeline::animationAcceleratedRunningStateDidChange(WebAnimation& a
 
 void DocumentTimeline::applyPendingAcceleratedAnimations()
 {
-    auto acceleratedAnimationsPendingRunningStateChange = m_acceleratedAnimationsPendingRunningStateChange;
+#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+    if (m_document && m_document->settings().threadedAnimationResolutionEnabled()) {
     m_acceleratedAnimationsPendingRunningStateChange.clear();
+        if (auto* acceleratedTimeline = m_document->existingAcceleratedTimeline())
+            acceleratedTimeline->updateEffectStacks();
+        return;
+    }
+#endif
+
+    auto acceleratedAnimationsPendingRunningStateChange = std::exchange(m_acceleratedAnimationsPendingRunningStateChange, { });
 
     HashSet<KeyframeEffectStack*> keyframeEffectStacksToUpdate;
+
 
     bool hasForcedLayout = false;
     for (auto& animation : acceleratedAnimationsPendingRunningStateChange) {
@@ -455,11 +463,12 @@ AnimationEvents DocumentTimeline::prepareForPendingAnimationEventsDispatch()
 
 Vector<std::pair<String, double>> DocumentTimeline::acceleratedAnimationsForElement(Element& element) const
 {
+    ASSERT(m_document);
     auto* renderer = element.renderer();
     if (renderer && renderer->isComposited()) {
         auto* compositedRenderer = downcast<RenderBoxModelObject>(renderer);
         if (auto* graphicsLayer = compositedRenderer->layer()->backing()->graphicsLayer())
-            return graphicsLayer->acceleratedAnimationsForTesting();
+            return graphicsLayer->acceleratedAnimationsForTesting(m_document->settings());
     }
     return { };
 }
@@ -496,7 +505,7 @@ ExceptionOr<Ref<WebAnimation>> DocumentTimeline::animate(Ref<CustomEffectCallbac
         return customEffectResult.releaseException();
 
     auto animation = WebAnimation::create(*document(), &customEffectResult.returnValue().get());
-    animation->setId(id);
+    animation->setId(WTFMove(id));
     animation->setBindingsFrameRate(WTFMove(frameRate));
 
     auto animationPlayResult = animation->play();

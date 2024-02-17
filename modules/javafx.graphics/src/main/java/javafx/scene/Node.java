@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1950,9 +1950,15 @@ public abstract class Node implements EventTarget, Styleable {
      * into the branch until it finds a match. If more than one sub-node matches the
      * specified selector, this function returns the first of them.
      * <p>
-     *     For example, if a Node is given the id of "myId", then the lookup method can
-     *     be used to find this node as follows: <code>scene.lookup("#myId");</code>.
-     * </p>
+     * If the lookup selector does not specify a pseudo class, the lookup will ignore pseudo class states;
+     * it will return the first matching node whether or not it contains pseudo classes.
+     * <p>
+     * For example, if a Node is given the id of "myId", then the lookup method can
+     * be used to find this node as follows: {@code scene.lookup("#myId");}.
+     * <p>
+     * For example, if two nodes, NodeA and NodeB, have the same style class "myStyle" and NodeA has
+     * a pseudo state "myPseudo", then to find NodeA, the lookup method can be used as follows:
+     * {@code scene.lookup(".myStyle:myPseudo");} or {@code scene.lookup(":myPseudo");}.
      *
      * @param selector The css selector of the node to find
      * @return The first node, starting from this {@code Node}, which matches
@@ -1961,13 +1967,23 @@ public abstract class Node implements EventTarget, Styleable {
     public Node lookup(String selector) {
         if (selector == null) return null;
         Selector s = Selector.createSelector(selector);
-        return s != null && s.applies(this) ? this : null;
+        return selectorMatches(s) ? this : null;
     }
 
     /**
      * Finds all {@code Node}s, including this one and any children, which match
      * the given CSS selector. If no matches are found, an empty unmodifiable set is
      * returned. The set is explicitly unordered.
+     * <p>
+     * If the lookupAll selector does not specify a pseudo class, the lookupAll will ignore pseudo class states;
+     * it will return all matching nodes whether or not the nodes contain pseudo classes.
+     * <p>
+     * For example, if there are multiple nodes with same style class "myStyle", then the lookupAll method can
+     * be used to find all these nodes as follows: {@code scene.lookupAll(".myStyle");}.
+     * <p>
+     * For example, if multiple nodes have same style class "myStyle" and few nodes have
+     * a pseudo state "myPseudo", then to find all nodes with "myPseudo" state, the lookupAll method can be used as follows:
+     * {@code scene.lookupAll(".myStyle:myPseudo");} or {@code scene.lookupAll(":myPseudo");}.
      *
      * @param selector The css selector of the nodes to find
      * @return All nodes, starting from and including this {@code Node}, which match
@@ -1986,11 +2002,12 @@ public abstract class Node implements EventTarget, Styleable {
      * Used by Node and Parent for traversing the tree and adding all nodes which
      * match the given selector.
      *
-     * @param selector The Selector. This will never be null.
-     * @param results The results. This will never be null.
+     * @param selector the css selector of the nodes to find
+     * @param results the results
+     * @return list of matching nodes
      */
     List<Node> lookupAll(Selector selector, List<Node> results) {
-        if (selector.applies(this)) {
+        if (selectorMatches(selector)) {
             // Lazily create the set to reduce some trash.
             if (results == null) {
                 results = new LinkedList<>();
@@ -2022,6 +2039,19 @@ public abstract class Node implements EventTarget, Styleable {
         if (getParent() != null) {
             getParent().toFront(this);
         }
+    }
+
+    /**
+     * Checks whether the provided selector matches the node with both styles and pseudo states.
+     * @param s selector to match
+     * @return {@code true} if the selector matches
+     */
+    private boolean selectorMatches(Selector s) {
+        boolean matches = s != null && s.applies(this);
+        if (matches && !s.createMatch().getPseudoClasses().isEmpty()) {
+            matches = s.stateMatches(this, this.getPseudoClassStates());
+        }
+        return matches;
     }
 
     // TODO: need to verify whether this is OK to do starting from a node in
@@ -2116,7 +2146,7 @@ public abstract class Node implements EventTarget, Styleable {
             w = tempBounds.getWidth();
             h = tempBounds.getHeight();
         }
-        WritableImage result = Scene.doSnapshot(getScene(), x, y, w, h,
+        WritableImage result = Scene.doSnapshot(getScene(), getSubScene(), x, y, w, h,
                 this, transform, params.isDepthBufferInternal(),
                 params.getFill(), params.getEffectiveCamera(), img);
 

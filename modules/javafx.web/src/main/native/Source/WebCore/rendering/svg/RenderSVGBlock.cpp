@@ -22,6 +22,7 @@
 #include "config.h"
 #include "RenderSVGBlock.h"
 
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderSVGBlockInlines.h"
 #include "RenderSVGResource.h"
 #include "RenderView.h"
@@ -73,11 +74,11 @@ bool RenderSVGBlock::needsHasSVGTransformFlags() const
 }
 #endif
 
-void RenderSVGBlock::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderSVGBlock::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled()) {
-        rects.append(snappedIntRect(LayoutRect(accumulatedOffset, size())));
+        rects.append({ accumulatedOffset, size() });
         return;
     }
 #else

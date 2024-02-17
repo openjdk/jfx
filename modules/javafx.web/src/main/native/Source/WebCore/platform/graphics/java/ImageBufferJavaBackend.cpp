@@ -24,6 +24,7 @@
  */
 
 #include "config.h"
+#include <wtf/text/StringBuilder.h>
 #include "ImageBufferJavaBackend.h"
 
 #include "BufferImageJava.h"
@@ -188,41 +189,47 @@ IntSize ImageBufferJavaBackend::backendSize() const
     return m_backendSize;
 }
 
-RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy) const
+RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy)
 {
     return NativeImage::create((m_image.get()));
 }
 
-RefPtr<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, const ImageBufferAllocator& allocator) const
+RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImageForDrawing(GraphicsContext& destination)
 {
-    void *data = getData();
-    if (!data)
-        return nullptr;
-
-    return getPixelBuffer(outputFormat, srcRect, data,allocator);
+     return copyNativeImage(DontCopyBackingStore);   //REVISIT
 }
 
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
-    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat)
+void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination)
 {
     void *data = getData();
     if (!data)
         return;
+    return getPixelBuffer(srcRect, data, destination);
 
-    putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
-    update();
 }
 
-RefPtr<PixelBuffer> ImageBufferJavaBackend::getPixelBuffer(const PixelBufferFormat& outputFormat, const IntRect& srcRect, void* data, const ImageBufferAllocator& allocator) const
+void ImageBufferJavaBackend::getPixelBuffer(const IntRect& srcRect, void* data, PixelBuffer& destination)
 {
-    return ImageBufferBackend::getPixelBuffer(outputFormat, srcRect, data, allocator);
+
+    return ImageBufferBackend::getPixelBuffer(srcRect, data,destination);
+
 }
 
-void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer,
-    const IntRect& srcRect, const IntPoint& dstPoint, AlphaPremultiplication destFormat, void* data)
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, void* destination)
 {
-    ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, dstPoint, destFormat, data);
+    ImageBufferBackend::putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, destination);
     update();
+
+}
+
+void ImageBufferJavaBackend::putPixelBuffer(const PixelBuffer& sourcePixelBuffer, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+{
+    void *data = getData();
+    if (!data)
+        return;
+    putPixelBuffer(sourcePixelBuffer, srcRect, destPoint, destFormat, data);
+    update();
+
 }
 
 size_t ImageBufferJavaBackend::calculateMemoryCost(const Parameters& parameters)
@@ -241,6 +248,13 @@ unsigned ImageBufferJavaBackend::bytesPerRow() const
 {
     IntSize backendSize = calculateBackendSize(m_parameters);
     return calculateBytesPerRow(backendSize);
+}
+
+String ImageBufferJavaBackend::debugDescription() const
+{
+     StringBuilder builder;
+     builder.append("ImageBufferBackendJava");
+     return builder.toString();
 }
 
 } // namespace WebCore

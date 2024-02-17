@@ -363,16 +363,24 @@ final class WinAccessible extends Accessible {
                     WinVariant vn = new WinVariant();
                     vn.vt = WinVariant.VT_BSTR;
                     vn.bstrVal = value;
-                    if (getAttribute(ROLE) == AccessibleRole.SPINNER) {
-                        UiaRaiseAutomationPropertyChangedEvent(peer, UIA_NamePropertyId, vo, vn);
-                    } else {
-                        /* Combo and Text both implement IValueProvider */
-                        UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ValueValuePropertyId, vo, vn);
-                    }
+                    /* Combo and Text both implement IValueProvider */
+                    UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ValueValuePropertyId, vo, vn);
                 }
 
                 if (selectionRange != null || documentRange != null) {
                     UiaRaiseAutomationEvent(peer, UIA_Text_TextChangedEventId);
+                }
+                break;
+            case VALUE_STRING:
+                String val = (String)getAttribute(VALUE_STRING);
+                if (val != null) {
+                    WinVariant vo = new WinVariant();
+                    vo.vt = WinVariant.VT_BSTR;
+                    vo.bstrVal = "";
+                    WinVariant vn = new WinVariant();
+                    vn.vt = WinVariant.VT_BSTR;
+                    vn.bstrVal = val;
+                    UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ValueValuePropertyId, vo, vn);
                 }
                 break;
             case EXPANDED: {
@@ -685,6 +693,9 @@ final class WinAccessible extends Accessible {
             case COMBO_BOX:
                 impl = patternId == UIA_ExpandCollapsePatternId ||
                        patternId == UIA_ValuePatternId;
+                break;
+            case SPINNER:
+                impl = patternId == UIA_ValuePatternId;
                 break;
             case SCROLL_BAR:
             case SLIDER:
@@ -1319,6 +1330,7 @@ final class WinAccessible extends Accessible {
                 case SCROLL_BAR: return true;
                 case TEXT_FIELD:
                 case TEXT_AREA:
+                case SPINNER:
                 case COMBO_BOX: return Boolean.FALSE.equals(getAttribute(EDITABLE));
                 default:
             }
@@ -1367,6 +1379,14 @@ final class WinAccessible extends Accessible {
 
     private String get_ValueString() {
         if (isDisposed()) return null;
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role != null) {
+            switch (role) {
+                case SPINNER:
+                    return (String)getAttribute(VALUE_STRING);
+                default:
+            }
+        }
         return (String)getAttribute(TEXT);
     }
 

@@ -61,13 +61,13 @@ public:
 
 #ifdef __OBJC__
     WTF_EXPORT_PRIVATE operator NSUUID *() const;
-    WTF_EXPORT_PRIVATE UUID(NSUUID *);
+    WTF_EXPORT_PRIVATE static std::optional<UUID> fromNSUUID(NSUUID *);
 #endif
 
     WTF_EXPORT_PRIVATE static std::optional<UUID> parse(StringView);
     WTF_EXPORT_PRIVATE static std::optional<UUID> parseVersion4(StringView);
 
-    explicit UUID(Span<const uint8_t, 16> span)
+    explicit UUID(std::span<const uint8_t, 16> span)
     {
         memcpy(&m_data, span.data(), 16);
     }
@@ -77,9 +77,9 @@ public:
     {
     }
 
-    Span<const uint8_t, 16> toSpan() const
+    std::span<const uint8_t, 16> toSpan() const
     {
-        return Span<const uint8_t, 16> { reinterpret_cast<const uint8_t*>(&m_data), 16 };
+        return std::span<const uint8_t, 16> { reinterpret_cast<const uint8_t*>(&m_data), 16 };
     }
 
     bool operator==(const UUID& other) const { return m_data == other.m_data; }
@@ -101,6 +101,7 @@ public:
     WTF_EXPORT_PRIVATE String toString() const;
 
     operator bool() const { return !!m_data; }
+    bool isValid() const { return m_data != emptyValue && m_data != deletedValue; }
 
     UInt128 data() const { return m_data; }
 
@@ -228,6 +229,5 @@ private:
 
 }
 
-using WTF::UUID;
 using WTF::createVersion4UUIDString;
 using WTF::bootSessionUUIDString;

@@ -36,7 +36,7 @@ public:
     static void registerEncodingNames(EncodingNameRegistrar);
     static void registerCodecs(TextCodecRegistrar);
 
-    static Vector<uint8_t> encodeUTF8(StringView, UnencodableHandling);
+    static Vector<uint8_t> encodeUTF8(StringView);
 
 private:
     void stripByteOrderMark() final { m_shouldStripByteOrderMark = true; }

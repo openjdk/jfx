@@ -5,7 +5,8 @@
  * Copyright (C) 2011 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  * Copyright (C) 2012 University of Szeged
  * Copyright (C) 2012 Renata Hodovan <reni@webkit.org>
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,11 +29,12 @@
 
 #include "CachedResourceLoader.h"
 #include "CachedSVGDocument.h"
-#include "ElementIterator.h"
-#include "ElementName.h"
+#include "ElementAncestorIteratorInlines.h"
+#include "ElementChildIteratorInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "LegacyRenderSVGTransformableContainer.h"
+#include "NodeName.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGTransformableContainer.h"
 #include "SVGDocumentExtensions.h"
@@ -42,6 +44,7 @@
 #include "SVGSymbolElement.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "XLinkNames.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/RobinHoodHashSet.h>
@@ -78,28 +81,35 @@ SVGUseElement::~SVGUseElement()
         m_externalDocument->removeClient(*this);
 }
 
-void SVGUseElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGUseElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGParsingError parseError = NoError;
 
-    if (name == SVGNames::xAttr)
-        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
-    else if (name == SVGNames::yAttr)
-        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
-    else if (name == SVGNames::widthAttr)
-        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError, SVGLengthNegativeValuesMode::Forbid));
-    else if (name == SVGNames::heightAttr)
-        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError, SVGLengthNegativeValuesMode::Forbid));
+    switch (name.nodeName()) {
+    case AttributeNames::xAttr:
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError));
+        break;
+    case AttributeNames::yAttr:
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError));
+        break;
+    case AttributeNames::widthAttr:
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
+        break;
+    case AttributeNames::heightAttr:
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, newValue, parseError, SVGLengthNegativeValuesMode::Forbid));
+        break;
+    default:
+        break;
+    }
+    reportAttributeParsingError(parseError, name, newValue);
 
-    reportAttributeParsingError(parseError, name, value);
-
-    SVGGraphicsElement::parseAttribute(name, value);
-    SVGURIReference::parseAttribute(name, value);
+    SVGURIReference::parseAttribute(name, newValue);
+    SVGGraphicsElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 Node::InsertedIntoAncestorResult SVGUseElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGGraphicsElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGGraphicsElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument) {
         if (m_shadowTreeNeedsUpdate)
             document().addElementWithPendingUserAgentShadowTreeUpdate(*this);
@@ -107,11 +117,12 @@ Node::InsertedIntoAncestorResult SVGUseElement::insertedIntoAncestor(InsertionTy
         // FIXME: Move back the call to updateExternalDocument() here once notifyFinished is made always async.
         return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
     }
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGUseElement::didFinishInsertingNode()
 {
+    SVGGraphicsElement::didFinishInsertingNode();
     updateExternalDocument();
 }
 
@@ -137,23 +148,24 @@ inline Document* SVGUseElement::externalDocument() const
 
 void SVGUseElement::transferSizeAttributesToTargetClone(SVGElement& shadowElement) const
 {
-    // FIXME: The check for valueInSpecifiedUnits being non-zero below is a workaround for the fact
-    // that we currently have no good way to tell whether a particular animatable attribute is a value
-    // indicating it was unspecified, or specified but could not be parsed. Would be nice to fix that some day.
-    if (is<SVGSymbolElement>(shadowElement)) {
-        // Spec (<use> on <symbol>): This generated 'svg' will always have explicit values for attributes width and height.
-        // If attributes width and/or height are provided on the 'use' element, then these attributes
-        // will be transferred to the generated 'svg'. If attributes width and/or height are not specified,
-        // the generated 'svg' element will use values of 100% for these attributes.
-        shadowElement.setAttribute(SVGNames::widthAttr, width().valueInSpecifiedUnits() ? width().valueAsAtomString() : "100%"_s);
-        shadowElement.setAttribute(SVGNames::heightAttr, height().valueInSpecifiedUnits() ? height().valueAsAtomString() : "100%"_s);
-    } else if (is<SVGSVGElement>(shadowElement)) {
-        // Spec (<use> on <svg>): If attributes width and/or height are provided on the 'use' element, then these
-        // values will override the corresponding attributes on the 'svg' in the generated tree.
+    // Use |shadowElement| for checking the element type, because we will
+    // have replaced a <symbol> with an <svg> in the instance tree.
+    if (!is<SVGSymbolElement>(shadowElement) && !is<SVGSVGElement>(shadowElement))
+        return;
+
+    // "The width and height properties on the 'use' element override the values
+    // for the corresponding properties on a referenced 'svg' or 'symbol' element
+    // when determining the used value for that property on the instance root
+    // element. However, if the computed value for the property on the 'use'
+    // element is auto, then the property is computed as normal for the element
+    // instance. ... Because auto is the initial value, if dimensions are not
+    // explicitly set on the 'use' element, the values set on the 'svg' or
+    // 'symbol' will be used as defaults."
+    // https://svgwg.org/svg2-draft/struct.html#UseElement
+
         RefPtr correspondingElement = shadowElement.correspondingElement();
         shadowElement.setAttribute(SVGNames::widthAttr, width().valueInSpecifiedUnits() ? width().valueAsAtomString() : (correspondingElement ? correspondingElement->getAttribute(SVGNames::widthAttr) : nullAtom()));
         shadowElement.setAttribute(SVGNames::heightAttr, height().valueInSpecifiedUnits() ? height().valueAsAtomString() : (correspondingElement ? correspondingElement->getAttribute(SVGNames::heightAttr) : nullAtom()));
-    }
 }
 
 void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -188,7 +200,7 @@ static inline bool isDisallowedElement(const SVGElement& element)
     // (i.e., "instanced") in the SVG document via a 'use' element."
     // "Graphics Element" is defined as 'circle', 'ellipse', 'image', 'line', 'path', 'polygon', 'polyline', 'rect', 'text'
     // Excluded are anything that is used by reference or that only make sense to appear once in a document.
-    switch (element.tagQName().elementName()) {
+    switch (element.elementName()) {
     case SVG::a:
     case SVG::circle:
     case SVG::desc:
@@ -250,7 +262,7 @@ void SVGUseElement::updateUserAgentShadowTree()
     AtomString targetID;
     auto* target = findTarget(&targetID);
     if (!target) {
-        document().accessSVGExtensions().addPendingResource(targetID, *this);
+        treeScopeForSVGReferences().addPendingSVGResource(targetID, *this);
         return;
     }
 

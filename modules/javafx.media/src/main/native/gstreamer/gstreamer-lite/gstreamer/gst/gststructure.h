@@ -346,6 +346,13 @@ GST_API
 gboolean              gst_structure_get_list             (GstStructure        * structure,
                                                           const gchar         * fieldname,
                                                           GValueArray        ** array);
+
+GST_API
+gboolean              gst_structure_get_flags            (const GstStructure  * structure,
+                                                          const gchar         * fieldname,
+                                                          GType                 flags_type,
+                                                          guint               * value);
+
 GST_API
 gchar *               gst_structure_to_string            (const GstStructure * structure) G_GNUC_MALLOC;
 GST_API

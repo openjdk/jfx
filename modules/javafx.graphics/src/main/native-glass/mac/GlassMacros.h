@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -160,6 +160,23 @@ do {                                                                            
         (*ENV)->ExceptionClear(ENV);                                               \
     };                                                                             \
 } while (0)
+
+// assert there is no outstanding java exception pending, return otherwise
+#define GLASS_CHECK_EXCEPTION_RETURN(ENV)                                          \
+do {                                                                               \
+    jthrowable t = (*ENV)->ExceptionOccurred(ENV);                                 \
+    if (t) {                                                                       \
+        (*ENV)->ExceptionClear(ENV);                                               \
+        (*ENV)->CallStaticVoidMethod(                                              \
+            ENV, jApplicationClass, javaIDs.Application.reportException, t);       \
+        (*ENV)->ExceptionClear(ENV);                                               \
+        return;                                                                    \
+    };                                                                             \
+} while (0)
+
+#define GLASS_CHECK_NONNULL_EXCEPTION_RETURN(ENV, EXPR)                            \
+    GLASS_CHECK_EXCEPTION_RETURN(ENV);                                             \
+    if ((EXPR) == nil) return;
 
 // assert main Java thread is still attached
 #define GLASS_ASSERT_MAIN_JAVA_THREAD(env) \

@@ -59,6 +59,7 @@ public:
     Type type() const { return m_type; }
     BasicShape* shape() const { return m_shape.get(); }
     CSSBoxType cssBox() const { return m_cssBox; }
+    CSSBoxType effectiveCSSBox() const;
     StyleImage* image() const { return m_image.get(); }
     bool isImageValid() const;
 
@@ -72,10 +73,6 @@ public:
     Ref<ShapeValue> blend(const ShapeValue&, const BlendingContext&) const;
 
     bool operator==(const ShapeValue&) const;
-    bool operator!=(const ShapeValue& other) const
-    {
-        return !(*this == other);
-    }
 
 private:
     ShapeValue(Ref<BasicShape>&& shape, CSSBoxType cssBox)

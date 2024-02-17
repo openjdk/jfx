@@ -147,6 +147,7 @@ auto SearchInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBase
     if (key == "U+001B"_s) {
         Ref<HTMLInputElement> protectedInputElement(*element());
         protectedInputElement->setValue(emptyString(), DispatchChangeEvent);
+        if (protectedInputElement->document().settings().searchInputIncrementalAttributeAndSearchEventEnabled())
         protectedInputElement->onSearch();
         event.setDefaultHandled();
         return ShouldCallBaseEventHandler::Yes;
@@ -191,7 +192,8 @@ void SearchInputType::searchEventTimerFired()
 bool SearchInputType::searchEventsShouldBeDispatched() const
 {
     ASSERT(element());
-    return element()->hasAttributeWithoutSynchronization(incrementalAttr);
+    return element()->document().settings().searchInputIncrementalAttributeAndSearchEventEnabled()
+        && element()->hasAttributeWithoutSynchronization(incrementalAttr);
 }
 
 void SearchInputType::didSetValueByUserEdit()

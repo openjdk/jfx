@@ -3,6 +3,8 @@
  *
  * glib-unix.c: UNIX specific API wrappers and convenience functions
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -21,12 +23,8 @@
 
 #include "config.h"
 
-/* To make bionic export pipe2() */
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE 1
-#endif
-
 #include "glib-unix.h"
+#include "glib-unixprivate.h"
 #include "gmain-internal.h"
 
 #include <string.h>
@@ -38,6 +36,12 @@ G_STATIC_ASSERT (G_ALIGNOF (gssize) == G_ALIGNOF (ssize_t));
 
 G_STATIC_ASSERT (sizeof (GPid) == sizeof (pid_t));
 G_STATIC_ASSERT (G_ALIGNOF (GPid) == G_ALIGNOF (pid_t));
+
+/* If this assertion fails, then the ABI of g_unix_open_pipe() would be
+ * ambiguous on this platform.
+ * On Linux, usually O_NONBLOCK == 04000 and FD_CLOEXEC == 1, but the same
+ * might not be true everywhere. */
+G_STATIC_ASSERT (O_NONBLOCK != FD_CLOEXEC);
 
 /**
  * SECTION:gunix
@@ -70,18 +74,26 @@ g_unix_set_error_from_errno (GError **error,
 
 /**
  * g_unix_open_pipe:
- * @fds: Array of two integers
+ * @fds: (array fixed-size=2): Array of two integers
  * @flags: Bitfield of file descriptor flags, as for fcntl()
  * @error: a #GError
  *
  * Similar to the UNIX pipe() call, but on modern systems like Linux
  * uses the pipe2() system call, which atomically creates a pipe with
- * the configured flags. The only supported flag currently is
- * %FD_CLOEXEC. If for example you want to configure %O_NONBLOCK, that
- * must still be done separately with fcntl().
+ * the configured flags.
  *
- * This function does not take %O_CLOEXEC, it takes %FD_CLOEXEC as if
- * for fcntl(); these are different on Linux/glibc.
+ * As of GLib 2.78, the supported flags are `O_CLOEXEC`/`FD_CLOEXEC` (see below)
+ * and `O_NONBLOCK`. Prior to GLib 2.78, only `FD_CLOEXEC` was supported — if
+ * you wanted to configure `O_NONBLOCK` then that had to be done separately with
+ * `fcntl()`.
+ *
+ * It is a programmer error to call this function with unsupported flags, and a
+ * critical warning will be raised.
+ *
+ * As of GLib 2.78, it is preferred to pass `O_CLOEXEC` in, rather than
+ * `FD_CLOEXEC`, as that matches the underlying `pipe()` API more closely. Prior
+ * to 2.78, only `FD_CLOEXEC` was supported. Support for `FD_CLOEXEC` may be
+ * deprecated and removed in future.
  *
  * Returns: %TRUE on success, %FALSE if not (and errno will be set).
  *
@@ -92,48 +104,19 @@ g_unix_open_pipe (int     *fds,
                   int      flags,
                   GError **error)
 {
-  int ecode;
+  /* We only support O_CLOEXEC/FD_CLOEXEC and O_NONBLOCK */
+  g_return_val_if_fail ((flags & (O_CLOEXEC | FD_CLOEXEC | O_NONBLOCK)) == flags, FALSE);
 
-  /* We only support FD_CLOEXEC */
-  g_return_val_if_fail ((flags & (FD_CLOEXEC)) == flags, FALSE);
-
-#ifdef HAVE_PIPE2
-  {
-    int pipe2_flags = 0;
-    if (flags & FD_CLOEXEC)
-      pipe2_flags |= O_CLOEXEC;
-    /* Atomic */
-    ecode = pipe2 (fds, pipe2_flags);
-    if (ecode == -1 && errno != ENOSYS)
-      return g_unix_set_error_from_errno (error, errno);
-    else if (ecode == 0)
-      return TRUE;
-    /* Fall through on -ENOSYS, we must be running on an old kernel */
-  }
+#if O_CLOEXEC != FD_CLOEXEC && !defined(G_DISABLE_CHECKS)
+  if (flags & FD_CLOEXEC)
+    g_debug ("g_unix_open_pipe() called with FD_CLOEXEC; please migrate to using O_CLOEXEC instead");
 #endif
-  ecode = pipe (fds);
-  if (ecode == -1)
+
+  if (!g_unix_open_pipe_internal (fds,
+                                  (flags & (O_CLOEXEC | FD_CLOEXEC)) != 0,
+                                  (flags & O_NONBLOCK) != 0))
     return g_unix_set_error_from_errno (error, errno);
 
-  if (flags == 0)
-    return TRUE;
-
-  ecode = fcntl (fds[0], F_SETFD, flags);
-  if (ecode == -1)
-    {
-      int saved_errno = errno;
-      close (fds[0]);
-      close (fds[1]);
-      return g_unix_set_error_from_errno (error, saved_errno);
-    }
-  ecode = fcntl (fds[1], F_SETFD, flags);
-  if (ecode == -1)
-    {
-      int saved_errno = errno;
-      close (fds[0]);
-      close (fds[1]);
-      return g_unix_set_error_from_errno (error, saved_errno);
-    }
   return TRUE;
 }
 
@@ -164,21 +147,9 @@ g_unix_set_fd_nonblocking (gint       fd,
     return g_unix_set_error_from_errno (error, errno);
 
   if (nonblock)
-    {
-#ifdef O_NONBLOCK
-      fcntl_flags |= O_NONBLOCK;
-#else
-      fcntl_flags |= O_NDELAY;
-#endif
-    }
+    fcntl_flags |= O_NONBLOCK;
   else
-    {
-#ifdef O_NONBLOCK
-      fcntl_flags &= ~O_NONBLOCK;
-#else
-      fcntl_flags &= ~O_NDELAY;
-#endif
-    }
+    fcntl_flags &= ~O_NONBLOCK;
 
   if (fcntl (fd, F_SETFL, fcntl_flags) == -1)
     return g_unix_set_error_from_errno (error, errno);
@@ -203,11 +174,11 @@ g_unix_set_fd_nonblocking (gint       fd,
  *
  * For example, an effective use of this function is to handle `SIGTERM`
  * cleanly; flushing any outstanding files, and then calling
- * g_main_loop_quit ().  It is not safe to do any of this a regular
- * UNIX signal handler; your handler may be invoked while malloc() or
- * another library function is running, causing reentrancy if you
- * attempt to use it from the handler.  None of the GLib/GObject API
- * is safe against this kind of reentrancy.
+ * g_main_loop_quit().  It is not safe to do any of this from a regular
+ * UNIX signal handler; such a handler may be invoked while malloc() or
+ * another library function is running, causing reentrancy issues if the
+ * handler attempts to use those functions.  None of the GLib/GObject
+ * API is safe against this kind of reentrancy.
  *
  * The interaction of this source when combined with native UNIX
  * functions like sigprocmask() is not defined.
@@ -324,12 +295,15 @@ GSourceFuncs g_unix_fd_source_funcs = {
 /**
  * g_unix_fd_source_new:
  * @fd: a file descriptor
- * @condition: IO conditions to watch for on @fd
+ * @condition: I/O conditions to watch for on @fd
  *
- * Creates a #GSource to watch for a particular IO condition on a file
+ * Creates a #GSource to watch for a particular I/O condition on a file
  * descriptor.
  *
- * The source will never close the fd -- you must do it yourself.
+ * The source will never close the @fd — you must do it yourself.
+ *
+ * Any callback attached to the returned #GSource must have type
+ * #GUnixFDSourceFunc.
  *
  * Returns: the newly created #GSource
  *

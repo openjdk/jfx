@@ -9,6 +9,7 @@ SRCBASE_DIR = ../../../$(GLIB_BASE_DIR)
 
 DIRLIST = gnulib \
           libcharset \
+          dirent \
           .
 
 DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
@@ -16,94 +17,93 @@ DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 
 C_SOURCES = \
         garcbox.c \
-	garray.c \
-	gasyncqueue.c \
-	gatomic.c \
-	gbacktrace.c \
-	gbase64.c \
-	gbitlock.c \
-	gbookmarkfile.c \
-	gbytes.c \
-	gcharset.c \
-	gchecksum.c \
-	gconvert.c \
-	gdataset.c \
-	gdate.c \
-	gdatetime.c \
-	gdir.c \
-	genviron.c \
-	gerror.c \
-	gfileutils.c \
-	ggettext.c \
-	ghash.c \
-	ghmac.c \
-	ghook.c \
-	ghostutils.c \
-	giochannel.c \
-	giowin32.c \
-	gkeyfile.c \
-	glib-init.c \
-	glib-private.c \
-	glist.c \
-	gmain.c \
-	gmappedfile.c \
-	gmarkup.c \
-	gmem.c \
-	gmessages.c \
-	gnode.c \
-	gnulib/asnprintf.c \
-	gnulib/printf-args.c \
-	gnulib/printf-parse.c \
-	gnulib/printf.c \
-	gnulib/vasnprintf.c \
-	goption.c \
-	gpattern.c \
-	gpoll.c \
-	gprimes.c \
-	gprintf.c \
-	gqsort.c \
-	gquark.c \
-	gqueue.c \
-	grand.c \
+        garray.c \
+        gasyncqueue.c \
+        gatomic.c \
+        gbacktrace.c \
+        gbase64.c \
+        gbitlock.c \
+        gbytes.c \
+        gcharset.c \
+        gchecksum.c \
+        gconvert.c \
+        gdataset.c \
+        gdate.c \
+        gdatetime.c \
+        gdir.c \
+        genviron.c \
+        gerror.c \
+        gfileutils.c \
+        ggettext.c \
+        ghash.c \
+        ghmac.c \
+        ghook.c \
+        ghostutils.c \
+        giochannel.c \
+        giowin32.c \
+        gkeyfile.c \
+        glib-init.c \
+        glib-private.c \
+        glist.c \
+        gmain.c \
+        gmappedfile.c \
+        gmarkup.c \
+        gmem.c \
+        gmessages.c \
+        gnode.c \
+        gnulib/asnprintf.c \
+        gnulib/printf-args.c \
+        gnulib/printf-parse.c \
+        gnulib/printf.c \
+        gnulib/vasnprintf.c \
+        goption.c \
+        gpattern.c \
+        gpoll.c \
+        gprimes.c \
+        gprintf.c \
+        gqsort.c \
+        gquark.c \
+        gqueue.c \
+        grand.c \
         grcbox.c \
         grefcount.c \
-	gscanner.c \
-	gsequence.c \
-	gshell.c \
-	gslice.c \
-	gslist.c \
-	gspawn-win32-helper.c \
-	gspawn-win32.c \
-	gstdio.c \
-	gstrfuncs.c \
-	gstring.c \
-	gstringchunk.c \
-	gtestutils.c \
-	gthread.c \
-	gthread-win32.c \
-	gthreadpool.c \
-	gtimer.c \
-	gtimezone.c \
-	gtrashstack.c \
-	gtranslit.c \
-	gtree.c \
-	gunibreak.c \
-	gunicollate.c \
-	gunidecomp.c \
-	guniprop.c \
-	guri.c \
-	gutf8.c \
-	gutils.c \
-	gvariant-core.c \
-	gvariant-parser.c \
-	gvariant-serialiser.c \
-	gvariant.c \
-	gvarianttype.c \
-	gvarianttypeinfo.c \
-	gversion.c \
-	gwakeup.c \
-	gwin32.c \
-	libcharset/localcharset.c
+        gscanner.c \
+        gsequence.c \
+        gshell.c \
+        gslice.c \
+        gslist.c \
+        gspawn-win32-helper.c \
+        gspawn-win32.c \
+        gstdio.c \
+        gstrfuncs.c \
+        gstring.c \
+        gstringchunk.c \
+        gtestutils.c \
+        gthread.c \
+        gthread-win32.c \
+        gthreadpool.c \
+        gtimer.c \
+        gtimezone.c \
+        gtrashstack.c \
+        gtranslit.c \
+        gtree.c \
+        gunibreak.c \
+        gunicollate.c \
+        gunidecomp.c \
+        guniprop.c \
+        guri.c \
+        gutf8.c \
+        gutils.c \
+        gvariant-core.c \
+        gvariant-parser.c \
+        gvariant-serialiser.c \
+        gvariant.c \
+        gvarianttype.c \
+        gvarianttypeinfo.c \
+        gversion.c \
+        gwakeup.c \
+        gwin32.c \
+        libcharset/localcharset.c
 
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
                  -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue \
@@ -113,7 +113,6 @@ COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
 
 INCLUDES = $(addprefix -I$(SRCBASE_DIR)/glib/,$(DIRLIST)) \
            -I$(SRCBASE_DIR) \
-           -I$(SRCBASE_DIR)/build/win32 \
            -I$(SRCBASE_DIR)/build/win32/vs100
 
 CFLAGS =   -DWIN32 \
@@ -132,13 +131,13 @@ CFLAGS =   -DWIN32 \
            -DMATCH_LIMIT_RECURSION=10000000 \
            -DHAVE_LONG_LONG \
            -D_MBCS \
-	   -DLIBDIR \
-	   -DNVALGRIND \
-	   -DG_OS_WIN32 \
-	   -DFFI_BUILDING \
-	   -DG_DISABLE_DEPRECATED \
+           -DLIBDIR \
+           -DNVALGRIND \
+           -DG_OS_WIN32 \
+           -DFFI_BUILDING \
+           -DG_DISABLE_DEPRECATED \
            $(INCLUDES) \
-	   $(COMPILER_FLAGS)
+           $(COMPILER_FLAGS)
 
 
 LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo

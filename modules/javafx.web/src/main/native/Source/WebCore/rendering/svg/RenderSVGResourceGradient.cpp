@@ -27,6 +27,8 @@
 #include "GradientAttributes.h"
 #include "GraphicsContext.h"
 #include "RenderSVGText.h"
+#include "RenderStyleInlines.h"
+#include "SVGRenderStyle.h"
 #include "SVGRenderingContext.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -39,11 +41,11 @@ RenderSVGResourceGradient::RenderSVGResourceGradient(SVGGradientElement& node, R
 {
 }
 
-void RenderSVGResourceGradient::removeAllClientsFromCache(bool markForInvalidation)
+void RenderSVGResourceGradient::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers)
 {
     m_gradientMap.clear();
     m_shouldCollectGradientAttributes = true;
-    markAllClientsForInvalidation(markForInvalidation ? RepaintInvalidation : ParentOnlyInvalidation);
+    markAllClientsForInvalidationIfNeeded(markForInvalidation ? RepaintInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
 void RenderSVGResourceGradient::removeClientFromCache(RenderElement& client, bool markForInvalidation)

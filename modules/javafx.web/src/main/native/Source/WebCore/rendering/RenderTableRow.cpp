@@ -30,6 +30,9 @@
 #include "HTMLNames.h"
 #include "HitTestResult.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderLayoutState.h"
 #include "RenderTableCell.h"
 #include "RenderTreeBuilder.h"
@@ -244,6 +247,16 @@ RenderPtr<RenderTableRow> RenderTableRow::createTableRowWithStyle(Document& docu
 RenderPtr<RenderTableRow> RenderTableRow::createAnonymousWithParentRenderer(const RenderTableSection& parent)
 {
     return RenderTableRow::createTableRowWithStyle(parent.document(), parent.style());
+}
+
+bool RenderTableRow::requiresLayer() const
+{
+    return hasNonVisibleOverflow() || hasTransformRelatedProperty() || hasHiddenBackface() || hasClipPath() || createsGroup() || isStickilyPositioned();
+}
+
+RenderPtr<RenderBox> RenderTableRow::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
+{
+    return RenderTableRow::createTableRowWithStyle(renderer.document(), renderer.style());
 }
 
 } // namespace WebCore

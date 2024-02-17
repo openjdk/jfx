@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,23 +42,19 @@ extern "C" {
 #include <dispatch/dispatch.h>
 #include <mach/mach.h>
 #include <mach/thread_act.h>
-#include <mach/thread_status.h>
 #endif
 
 #if OS(DARWIN)
 #include <mach/vm_param.h>
 #endif
 
-#include <unistd.h>
 #include <wtf/Atomics.h>
 #include <wtf/DataLog.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PlatformRegisters.h>
-#include <wtf/Scope.h>
 #include <wtf/ThreadGroup.h>
 #include <wtf/Threading.h>
-#include <wtf/TranslatedProcess.h>
 #include <wtf/WTFConfig.h>
 
 namespace WTF {
@@ -88,6 +84,10 @@ void SignalHandlers::add(Signal signal, SignalHandler&& handler)
     // partially initialized handler.
     storeStoreFence();
     numberOfHandlers[signalIndex]++;
+#if HAVE(MACH_EXCEPTIONS)
+    RELEASE_ASSERT(initState >= InitState::InitializedHandlerThread);
+    initState = InitState::AddedHandlers;
+#endif
     loadLoadFence();
 }
 
@@ -111,13 +111,28 @@ inline void SignalHandlers::forEachHandler(Signal signal, const Func& func) cons
 
 static constexpr size_t maxMessageSize = 1 * KB;
 
-void startMachExceptionHandlerThread()
+void initMachExceptionHandlerThread(bool enable)
 {
     static std::once_flag once;
-    std::call_once(once, [] {
+    std::call_once(once, [=] {
+        RELEASE_ASSERT(g_wtfConfig.signalHandlers.initState == SignalHandlers::InitState::Uninitialized);
+        g_wtfConfig.signalHandlers.initState = SignalHandlers::InitState::InitializedHandlerThread;
+
+        if (!enable || !g_wtfConfig.signalHandlers.useMach)
+            return;
+
         Config::AssertNotFrozenScope assertScope;
         SignalHandlers& handlers = g_wtfConfig.signalHandlers;
-        kern_return_t kr = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &handlers.exceptionPort);
+
+        uint16_t flags = 0;
+#ifdef MPO_PROVISIONAL_ID_PROT_OPTOUT
+        flags |= MPO_PROVISIONAL_ID_PROT_OPTOUT;
+#endif
+        mach_port_options_t opts = {
+            .flags = flags
+        };
+
+        kern_return_t kr = mach_port_construct(mach_task_self(), &opts, 0, &handlers.exceptionPort);
         RELEASE_ASSERT(kr == KERN_SUCCESS);
         kr = mach_port_insert_right(mach_task_self(), handlers.exceptionPort, handlers.exceptionPort, MACH_MSG_TYPE_MAKE_SEND);
         RELEASE_ASSERT(kr == KERN_SUCCESS);
@@ -207,159 +222,6 @@ kern_return_t catch_mach_exception_raise_state_identity(mach_port_t, mach_port_t
     return KERN_FAILURE;
 }
 
-static kern_return_t runSignalHandlers(Signal &signal, PlatformRegisters& registers, bool &didHandle, mach_msg_type_number_t dataCount, mach_exception_data_t exceptionData)
-{
-    SigInfo info;
-    SignalHandlers& handlers = g_wtfConfig.signalHandlers;
-    if (signal == Signal::AccessFault) {
-        ASSERT_UNUSED(dataCount, dataCount == 2);
-        info.faultingAddress = reinterpret_cast<void*>(exceptionData[1]);
-#if CPU(ADDRESS64)
-        // If the faulting address is out of the range of any valid memory, we would
-        // not have any reason to handle it. Just let the default handler take care of it.
-        static constexpr unsigned validAddressBits = OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
-        static constexpr uintptr_t invalidAddressMask = ~((1ull << validAddressBits) - 1);
-        if (bitwise_cast<uintptr_t>(info.faultingAddress) & invalidAddressMask)
-            return KERN_FAILURE;
-#endif
-    }
-
-    handlers.forEachHandler(signal, [&] (const SignalHandler& handler) {
-        SignalAction handlerResult = handler(signal, info, registers);
-        didHandle |= handlerResult == SignalAction::Handled;
-    });
-    return KERN_SUCCESS;
-}
-
-#ifdef EXCEPTION_IDENTITY_PROTECTED
-
-static thread_act_t threadIDGetThreadPort(uint64_t threadID)
-{
-    mach_msg_type_number_t threadCount;
-    thread_act_array_t threads;
-    thread_act_t thread = THREAD_NULL;
-
-    task_threads(mach_task_self(), &threads, &threadCount);
-    for (mach_msg_type_number_t i = 0; i < threadCount; i++) {
-        if (thread != THREAD_NULL) {
-            // clean up all the remaining mach thread ports
-            ASSERT(thread != threads[i]);
-            mach_port_deallocate(mach_task_self(), threads[i]);
-            continue;
-        }
-
-        struct thread_identifier_info threadIdentifierInfo;
-        unsigned infoCount = THREAD_IDENTIFIER_INFO_COUNT;
-        kern_return_t kr = thread_info(threads[i], THREAD_IDENTIFIER_INFO,
-            reinterpret_cast<thread_info_t>(&threadIdentifierInfo), &infoCount);
-
-        if (kr == MACH_SEND_INVALID_DEST) {
-            // ignore threads that have been destroyed
-            continue;
-        }
-        if (kr != KERN_SUCCESS) {
-            dataLogLn("thread_info failed due to ", mach_error_string(kr));
-            continue;
-        }
-
-        if (threadIdentifierInfo.thread_id == threadID) {
-            // we found the thread we are looking for
-            thread = threads[i];
-            continue;
-        }
-        // clean up mach thread ports
-        mach_port_deallocate(mach_task_self(), threads[i]);
-    }
-    // clean up array
-    vm_deallocate(mach_task_self(), (vm_address_t)threads,
-        sizeof(threads[0]) * threadCount);
-    return thread;
-}
-
-kern_return_t catch_mach_exception_raise_identity_protected(
-    mach_port_t exceptionPort,
-    uint64_t threadID,
-    mach_port_t taskIDToken,
-    exception_type_t exceptionType,
-    mach_exception_data_t exceptionData,
-    mach_msg_type_number_t dataCount)
-{
-    UNUSED_PARAM(taskIDToken);
-
-    SignalHandlers& handlers = g_wtfConfig.signalHandlers;
-    RELEASE_ASSERT(exceptionPort == handlers.exceptionPort);
-    // If we wanted to distinguish between SIGBUS and SIGSEGV for EXC_BAD_ACCESS on Darwin we could do:
-    // if (exceptionData[0] == KERN_INVALID_ADDRESS)
-    //    signal = SIGSEGV;
-    // else
-    //    signal = SIGBUS;
-    Signal signal = fromMachException(exceptionType);
-    RELEASE_ASSERT(signal != Signal::Unknown);
-
-    thread_act_t thread = threadIDGetThreadPort(threadID);
-    auto clear = makeScopeExit([&] {
-        mach_port_deallocate(mach_task_self(), thread);
-    });
-
-
-    mach_msg_type_number_t stateCount = 0;
-
-#if CPU(X86_64) || CPU(X86)
-    x86_thread_state_t state;
-    int flavor = x86_THREAD_STATE;
-    stateCount = x86_THREAD_STATE_COUNT;
-#elif CPU(ARM64) || CPU(ARM)
-    arm_unified_thread_state state;
-    int flavor = ARM_THREAD_STATE;
-    stateCount = ARM_UNIFIED_THREAD_STATE_COUNT;
-#endif
-
-    kern_return_t kr = thread_get_state(thread, flavor, (thread_state_t)&state, &stateCount);
-    if (kr != KERN_SUCCESS) {
-        dataLogLn("thread_get_state failed due to ", mach_error_string(kr));
-        return kr;
-    }
-
-#if CPU(ARM64E) && OS(DARWIN)
-    ptrauth_generic_signature_t inStateHash = hashThreadState((thread_state_t)&state);
-#endif
-
-#if CPU(X86_64)
-    PlatformRegisters& registers = state.uts.ts64;
-    RELEASE_ASSERT(state.tsh.flavor == x86_THREAD_STATE64);
-#elif CPU(X86)
-    PlatformRegisters& registers = state.uts.ts32;
-    RELEASE_ASSERT(state.tsh.flavor == x86_THREAD_STATE32);
-#elif CPU(ARM64)
-    PlatformRegisters& registers = state.ts_64;
-    RELEASE_ASSERT(state.ash.flavor == ARM_THREAD_STATE64);
-#elif CPU(ARM)
-    PlatformRegisters& registers = state.ts_32;
-    RELEASE_ASSERT(state.ash.flavor == ARM_THREAD_STATE32);
-#endif
-
-    bool didHandle = false;
-    kr = runSignalHandlers(signal, registers, didHandle, dataCount, exceptionData);
-    if (kr != KERN_SUCCESS)
-        return kr;
-
-    if (didHandle) {
-#if CPU(ARM64E) && OS(DARWIN)
-        RELEASE_ASSERT(inStateHash == hashThreadState((thread_state_t)&state));
-#endif
-        kr = thread_set_state(thread, flavor, (thread_state_t)&state,
-            stateCount);
-
-        if (kr != KERN_SUCCESS)
-            dataLogLn("thread_set_state failed due to ", mach_error_string(kr));
-
-        return kr;
-    }
-    return KERN_FAILURE;
-}
-
-#endif // EXCEPTION_IDENTITY_PROTECTED
-
 kern_return_t catch_mach_exception_raise_state(
     mach_port_t port,
     exception_type_t exceptionType,
@@ -401,10 +263,25 @@ kern_return_t catch_mach_exception_raise_state(
     PlatformRegisters& registers = reinterpret_cast<arm_unified_thread_state*>(outState)->ts_32;
 #endif
 
+    SigInfo info;
+    if (signal == Signal::AccessFault) {
+        ASSERT_UNUSED(dataCount, dataCount == 2);
+        info.faultingAddress = reinterpret_cast<void*>(exceptionData[1]);
+#if CPU(ADDRESS64)
+        // If the faulting address is out of the range of any valid memory, we would
+        // not have any reason to handle it. Just let the default handler take care of it.
+        static constexpr unsigned validAddressBits = OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
+        static constexpr uintptr_t invalidAddressMask = ~((1ull << validAddressBits) - 1);
+        if (bitwise_cast<uintptr_t>(info.faultingAddress) & invalidAddressMask)
+            return KERN_FAILURE;
+#endif
+    }
+
     bool didHandle = false;
-    kern_return_t kr = runSignalHandlers(signal, registers, didHandle, dataCount, exceptionData);
-    if (kr != KERN_SUCCESS)
-        return kr;
+    handlers.forEachHandler(signal, [&] (const SignalHandler& handler) {
+        SignalAction handlerResult = handler(signal, info, registers);
+        didHandle |= handlerResult == SignalAction::Handled;
+    });
 
     if (didHandle) {
 #if CPU(ARM64E) && OS(DARWIN)
@@ -430,21 +307,7 @@ inline void setExceptionPorts(const AbstractLocker& threadGroupLocker, Thread& t
 {
     UNUSED_PARAM(threadGroupLocker);
     SignalHandlers& handlers = g_wtfConfig.signalHandlers;
-
-#ifdef EXCEPTION_IDENTITY_PROTECTED
-    exception_behavior_t newBehavior = MACH_EXCEPTION_CODES;
-    if (WTF::isX86BinaryRunningOnARM()) {
-        // If we are a translated process in rosetta, use the old exception style
-        newBehavior |= EXCEPTION_STATE;
-    } else {
-        // Otherwise use the new style
-        newBehavior |= EXCEPTION_IDENTITY_PROTECTED;
-    }
-#else
-    exception_behavior_t newBehavior = EXCEPTION_STATE | MACH_EXCEPTION_CODES;
-#endif // EXCEPTION_IDENTITY_PROTECTED
-
-    kern_return_t result = thread_set_exception_ports(thread.machThread(), handlers.addedExceptions &activeExceptions, handlers.exceptionPort, newBehavior, MACHINE_THREAD_STATE);
+    kern_return_t result = thread_set_exception_ports(thread.machThread(), handlers.addedExceptions &activeExceptions, handlers.exceptionPort, EXCEPTION_STATE | MACH_EXCEPTION_CODES, MACHINE_THREAD_STATE);
     if (result != KERN_SUCCESS) {
         dataLogLn("thread set port failed due to ", mach_error_string(result));
         CRASH();
@@ -464,12 +327,45 @@ static ThreadGroup& activeThreads()
 
 void registerThreadForMachExceptionHandling(Thread& thread)
 {
+    RELEASE_ASSERT(g_wtfConfig.signalHandlers.initState == SignalHandlers::InitState::AddedHandlers);
     Locker locker { activeThreads().getLock() };
     if (activeThreads().add(locker, thread) == ThreadGroupAddResult::NewlyAdded)
         setExceptionPorts(locker, thread);
 }
 
 #endif // HAVE(MACH_EXCEPTIONS)
+
+inline std::tuple<int, std::optional<int>> toSystemSignal(Signal signal)
+{
+    switch (signal) {
+    case Signal::AccessFault: return std::make_tuple(SIGSEGV, SIGBUS);
+    case Signal::IllegalInstruction: return std::make_tuple(SIGILL, std::nullopt);
+    case Signal::Usr: return std::make_tuple(SIGUSR2, std::nullopt);
+    case Signal::FloatingPoint: return std::make_tuple(SIGFPE, std::nullopt);
+    case Signal::Breakpoint: return std::make_tuple(SIGTRAP, std::nullopt);
+#if !OS(DARWIN)
+    case Signal::Abort: return std::make_tuple(SIGABRT, std::nullopt);
+#endif
+    default: break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+inline Signal fromSystemSignal(int signal)
+{
+    switch (signal) {
+    case SIGSEGV: return Signal::AccessFault;
+    case SIGBUS: return Signal::AccessFault;
+    case SIGFPE: return Signal::FloatingPoint;
+    case SIGTRAP: return Signal::Breakpoint;
+    case SIGILL: return Signal::IllegalInstruction;
+    case SIGUSR2: return Signal::Usr;
+#if !OS(DARWIN)
+    case SIGABRT: return Signal::Abort;
+#endif
+    default: return Signal::Unknown;
+    }
+}
 
 inline size_t offsetForSystemSignal(int sig)
 {
@@ -485,10 +381,8 @@ void addSignalHandler(Signal signal, SignalHandler&& handler)
     SignalHandlers& handlers = g_wtfConfig.signalHandlers;
     ASSERT(signal < Signal::Unknown);
     ASSERT(!handlers.useMach || signal != Signal::Usr);
-
 #if HAVE(MACH_EXCEPTIONS)
-    if (handlers.useMach)
-        startMachExceptionHandlerThread();
+    RELEASE_ASSERT(handlers.initState >= SignalHandlers::InitState::InitializedHandlerThread);
 #endif
 
     static std::once_flag initializeOnceFlags[static_cast<size_t>(Signal::NumberOfSignals)];
@@ -520,6 +414,7 @@ void activateSignalHandlersFor(Signal signal)
     UNUSED_PARAM(signal);
 #if HAVE(MACH_EXCEPTIONS)
     const SignalHandlers& handlers = g_wtfConfig.signalHandlers;
+    RELEASE_ASSERT(handlers.initState >= SignalHandlers::InitState::InitializedHandlerThread);
     ASSERT(signal < Signal::Unknown);
     ASSERT(!handlers.useMach || signal != Signal::Usr);
 

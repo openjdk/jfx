@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,17 @@
 #include "HeapInlines.h"
 #include "MarkedBlock.h"
 #include "VM.h"
+#include <wtf/SystemTracing.h>
+
+#if !USE(SYSTEM_MALLOC)
+#include <bmalloc/BPlatform.h>
+#if BUSE(LIBPAS)
+#include <bmalloc/pas_debug_spectrum.h>
+#include <bmalloc/pas_fd_stream.h>
+#include <bmalloc/pas_heap_lock.h>
+#include <bmalloc/pas_thread_local_cache.h>
+#endif
+#endif
 
 namespace JSC {
 
@@ -48,22 +59,40 @@ IncrementalSweeper::IncrementalSweeper(Heap* heap)
 {
 }
 
-void IncrementalSweeper::doWork(VM& vm)
+void IncrementalSweeper::doWorkUntil(VM& vm, MonotonicTime deadline)
 {
-    doSweep(vm, MonotonicTime::now());
+    if (!m_currentDirectory)
+        m_currentDirectory = vm.heap.objectSpace().firstDirectory();
+
+    if (m_currentDirectory)
+        doSweep(vm, deadline, SweepTrigger::OpportunisticTask);
 }
 
-void IncrementalSweeper::doSweep(VM& vm, MonotonicTime sweepBeginTime)
+void IncrementalSweeper::doWork(VM& vm)
 {
-    while (sweepNextBlock(vm)) {
-        Seconds elapsedTime = MonotonicTime::now() - sweepBeginTime;
-        if (elapsedTime < sweepTimeSlice)
+    doSweep(vm, MonotonicTime::now() + sweepTimeSlice, SweepTrigger::Timer);
+}
+
+void IncrementalSweeper::doSweep(VM& vm, MonotonicTime deadline, SweepTrigger trigger)
+{
+    std::optional<TraceScope> traceScope;
+    if (UNLIKELY(Options::useTracePoints()))
+        traceScope.emplace(IncrementalSweepStart, IncrementalSweepEnd, vm.heap.size(), vm.heap.capacity());
+
+    while (sweepNextBlock(vm, trigger)) {
+        if (MonotonicTime::now() < deadline)
             continue;
 
+        if (trigger == SweepTrigger::Timer)
         scheduleTimer();
         return;
     }
 
+#if !USE(SYSTEM_MALLOC)
+#if BUSE(LIBPAS)
+    pas_thread_local_cache_flush_deallocation_log(pas_thread_local_cache_try_get(), pas_lock_is_not_held);
+#endif
+#endif
     if (m_shouldFreeFastMallocMemoryAfterSweeping) {
         WTF::releaseFastMallocFreeMemory();
         m_shouldFreeFastMallocMemoryAfterSweeping = false;
@@ -71,7 +100,7 @@ void IncrementalSweeper::doSweep(VM& vm, MonotonicTime sweepBeginTime)
     cancelTimer();
 }
 
-bool IncrementalSweeper::sweepNextBlock(VM& vm)
+bool IncrementalSweeper::sweepNextBlock(VM& vm, SweepTrigger trigger)
 {
     vm.heap.stopIfNecessary();
 
@@ -86,6 +115,7 @@ bool IncrementalSweeper::sweepNextBlock(VM& vm)
     if (block) {
         DeferGCForAWhile deferGC(vm);
         block->sweep(nullptr);
+        if (trigger == SweepTrigger::Timer)
         vm.heap.objectSpace().freeOrShrinkBlock(block);
         return true;
     }

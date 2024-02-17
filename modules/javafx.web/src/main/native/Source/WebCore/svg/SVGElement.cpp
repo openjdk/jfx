@@ -30,17 +30,18 @@
 #include "CSSPropertyParser.h"
 #include "ComputedStyleExtractor.h"
 #include "Document.h"
-#include "ElementChildIterator.h"
-#include "ElementName.h"
+#include "ElementChildIteratorInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSEventListener.h"
+#include "NodeName.h"
 #include "RenderAncestorIterator.h"
 #include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceMasker.h"
+#include "ResolvedStyle.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElementRareData.h"
 #include "SVGElementTypeHelpers.h"
@@ -57,6 +58,7 @@
 #include "SVGUseElement.h"
 #include "ShadowRoot.h"
 #include "StyleAdjuster.h"
+#include "StyleResolver.h"
 #include "XMLNames.h"
 #include <wtf/HashMap.h>
 #include <wtf/IsoMallocInlines.h>
@@ -183,7 +185,7 @@ SVGElement::~SVGElement()
     document().accessSVGExtensions().removeElementToRebuild(*this);
 
     if (hasPendingResources()) {
-        document().accessSVGExtensions().removeElementFromPendingResources(*this);
+        treeScopeForSVGReferences().removeElementFromPendingSVGResources(*this);
         ASSERT(!hasPendingResources());
     }
 }
@@ -267,7 +269,7 @@ void SVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& old
     StyledElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 
     if (hasPendingResources())
-        document().accessSVGExtensions().removeElementFromPendingResources(*this);
+        treeScopeForSVGReferences().removeElementFromPendingSVGResources(*this);
 
     if (removalType.disconnectedFromDocument) {
         auto& extensions = document().accessSVGExtensions();
@@ -288,10 +290,10 @@ void SVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& old
 
 SVGSVGElement* SVGElement::ownerSVGElement() const
 {
-    ContainerNode* node = parentOrShadowHostNode();
+    auto* node = parentNode();
     while (node) {
-        if (is<SVGSVGElement>(*node))
-            return downcast<SVGSVGElement>(node);
+        if (auto* svg = dynamicDowncast<SVGSVGElement>(*node))
+            return svg;
 
         node = node->parentOrShadowHostNode();
     }
@@ -303,7 +305,7 @@ SVGElement* SVGElement::viewportElement() const
 {
     // This function needs shadow tree support - as RenderSVGContainer uses this function
     // to determine the "overflow" property. <use> on <symbol> wouldn't work otherwhise.
-    ContainerNode* node = parentOrShadowHostNode();
+    auto* node = parentNode();
     while (node) {
         if (is<SVGSVGElement>(*node) || is<SVGImageElement>(*node) || node->hasTagName(SVGNames::symbolTag))
             return downcast<SVGElement>(node);
@@ -409,28 +411,6 @@ void SVGElement::setCorrespondingElement(SVGElement* correspondingElement)
         ensureSVGRareData().setCorrespondingElement(correspondingElement);
     if (correspondingElement)
         correspondingElement->ensureSVGRareData().addInstance(*this);
-}
-
-void SVGElement::parseAttribute(const QualifiedName& name, const AtomString& value)
-{
-    if (name == HTMLNames::classAttr) {
-        m_className->setBaseValInternal(value);
-        return;
-    }
-
-    if (name == HTMLNames::tabindexAttr) {
-        if (value.isEmpty())
-            setTabIndexExplicitly(std::nullopt);
-        else if (auto optionalTabIndex = parseHTMLInteger(value))
-            setTabIndexExplicitly(optionalTabIndex.value());
-        return;
-    }
-
-    auto& eventName = HTMLElement::eventNameForEventHandlerAttribute(name);
-    if (!eventName.isNull()) {
-        setAttributeEventListener(eventName, name, value);
-        return;
-    }
 }
 
 bool SVGElement::haveLoadedRequiredResources()
@@ -556,7 +536,7 @@ static inline bool isSVGLayerAwareElement(const SVGElement& element)
 {
     using namespace ElementNames;
 
-    switch (element.tagQName().elementName()) {
+    switch (element.elementName()) {
     case SVG::a:
     case SVG::altGlyph:
     case SVG::circle:
@@ -600,7 +580,7 @@ bool SVGElement::childShouldCreateRenderer(const Node& child) const
         return false;
 #endif
 
-    switch (svgChild.tagQName().elementName()) {
+    switch (svgChild.elementName()) {
     case ElementNames::SVG::altGlyph:
     case ElementNames::SVG::textPath:
     case ElementNames::SVG::tref:
@@ -612,12 +592,28 @@ bool SVGElement::childShouldCreateRenderer(const Node& child) const
     return svgChild.isValid();
 }
 
-void SVGElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason)
+void SVGElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    StyledElement::attributeChanged(name, oldValue, newValue);
+    StyledElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
-    if (name == HTMLNames::idAttr)
+    switch (name.nodeName()) {
+    case AttributeNames::idAttr:
         document().accessSVGExtensions().rebuildAllElementReferencesForTarget(*this);
+        break;
+    case AttributeNames::classAttr:
+        m_className->setBaseValInternal(newValue);
+        break;
+    case AttributeNames::tabindexAttr:
+        if (newValue.isEmpty())
+            setTabIndexExplicitly(std::nullopt);
+        else if (auto optionalTabIndex = parseHTMLInteger(newValue))
+            setTabIndexExplicitly(optionalTabIndex.value());
+        break;
+    default:
+        if (auto& eventName = HTMLElement::eventNameForEventHandlerAttribute(name); !eventName.isNull())
+            setAttributeEventListener(eventName, name, newValue);
+        break;
+    }
 
     // Changes to the style attribute are processed lazily (see Element::getAttribute() and related methods),
     // so we don't want changes to the style attribute to result in extra work here except invalidateInstances().
@@ -739,6 +735,19 @@ void SVGElement::setUseOverrideComputedStyle(bool value)
         m_svgRareData->setUseOverrideComputedStyle(value);
 }
 
+inline const RenderStyle* SVGElementRareData::overrideComputedStyle(Element& element, const RenderStyle* parentStyle)
+{
+    if (!m_useOverrideComputedStyle)
+        return nullptr;
+    if (!m_overrideComputedStyle || m_needsOverrideComputedStyleUpdate) {
+        // The style computed here contains no CSS Animations/Transitions or SMIL induced rules - this is needed to compute the "base value" for the SMIL animation sandwhich model.
+        m_overrideComputedStyle = element.styleResolver().styleForElement(element, { parentStyle }, RuleMatchingBehavior::MatchAllRulesExcludingSMIL).style;
+        m_needsOverrideComputedStyleUpdate = false;
+    }
+    ASSERT(m_overrideComputedStyle);
+    return m_overrideComputedStyle.get();
+}
+
 const RenderStyle* SVGElement::computedStyle(PseudoId pseudoElementSpecifier)
 {
     if (!m_svgRareData || !m_svgRareData->useOverrideComputedStyle())
@@ -784,7 +793,6 @@ QualifiedName SVGElement::animatableAttributeForName(const AtomString& localName
             &SVGNames::edgeModeAttr,
             &SVGNames::elevationAttr,
             &SVGNames::exponentAttr,
-            &SVGNames::externalResourcesRequiredAttr,
             &SVGNames::filterUnitsAttr,
             &SVGNames::fxAttr,
             &SVGNames::fyAttr,
@@ -973,9 +981,7 @@ Node::InsertedIntoAncestorResult SVGElement::insertedIntoAncestor(InsertionType 
     updateRelativeLengthsInformation();
 
     if (needsPendingResourceHandling() && insertionType.connectedToDocument && !isInShadowTree()) {
-        SVGDocumentExtensions& extensions = document().accessSVGExtensions();
-        auto& resourceId = getIdAttribute();
-        if (extensions.isIdOfPendingResource(resourceId))
+        if (treeScopeForSVGReferences().isIdOfPendingSVGResource(getIdAttribute()))
             return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
     }
 
@@ -994,16 +1000,15 @@ void SVGElement::buildPendingResourcesIfNeeded()
     if (!needsPendingResourceHandling() || !isConnected() || isInShadowTree())
         return;
 
-    SVGDocumentExtensions& extensions = document().accessSVGExtensions();
+    auto& treeScope = treeScopeForSVGReferences();
     auto resourceId = getIdAttribute();
-    if (!extensions.isIdOfPendingResource(resourceId))
+    if (!treeScope.isIdOfPendingSVGResource(resourceId))
         return;
 
-    // Mark pending resources as pending for removal.
-    extensions.markPendingResourcesForRemoval(resourceId);
+    treeScope.markPendingSVGResourcesForRemoval(resourceId);
 
     // Rebuild pending resources for each client of a pending resource that is being removed.
-    while (auto clientElement = extensions.takeElementFromPendingResourcesForRemovalMap(resourceId)) {
+    while (auto clientElement = treeScope.takeElementFromPendingSVGResourcesForRemovalMap(resourceId)) {
         ASSERT(clientElement->hasPendingResources());
         if (clientElement->hasPendingResources()) {
             clientElement->buildPendingResource();
@@ -1011,7 +1016,7 @@ void SVGElement::buildPendingResourcesIfNeeded()
                 for (auto& ancestor : ancestorsOfType<RenderSVGResourceContainer>(*renderer))
                     ancestor.markAllClientsForRepaint();
             }
-            extensions.clearHasPendingResourcesIfPossible(*clientElement);
+            treeScope.clearHasPendingSVGResourcesIfPossible(*clientElement);
         }
     }
 }
@@ -1099,6 +1104,23 @@ SVGConditionalProcessingAttributes* SVGElement::conditionalProcessingAttributesI
     if (!m_svgRareData)
         return nullptr;
     return m_svgRareData->conditionalProcessingAttributesIfExists();
+}
+
+bool SVGElement::hasAssociatedSVGLayoutBox() const
+{
+    if (!renderer())
+        return false;
+
+    // Legacy SVG engine specific condition.
+    if (renderer()->isLegacySVGRoot())
+        return false;
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    // LBSE specific condition.
+    if (document().settings().layerBasedSVGEngineEnabled())
+        return false;
+#endif
+    return true;
 }
 
 }

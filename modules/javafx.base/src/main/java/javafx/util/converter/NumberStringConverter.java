@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -141,7 +141,9 @@ public class NumberStringConverter extends StringConverter<Number> {
      *
      * @return a {@code NumberFormat} instance for formatting and parsing in this
      * {@code StringConverter}
+     * @deprecated This method was exposed erroneously and will be removed in a future version.
      */
+    @Deprecated(forRemoval = true, since = "22")
     protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;
 

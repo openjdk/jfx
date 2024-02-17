@@ -34,7 +34,6 @@ public:
     virtual ~RenderTextControlSingleLine();
 
 protected:
-    void centerRenderer(RenderBox& renderer) const;
     HTMLElement* containerElement() const;
     HTMLElement* innerBlockElement() const;
     HTMLInputElement& inputElement() const;
@@ -87,10 +86,7 @@ inline HTMLElement* RenderTextControlSingleLine::innerBlockElement() const
 class RenderTextControlInnerBlock final : public RenderBlockFlow {
     WTF_MAKE_ISO_ALLOCATED(RenderTextControlInnerBlock);
 public:
-    RenderTextControlInnerBlock(Element& element, RenderStyle&& style)
-        : RenderBlockFlow(element, WTFMove(style))
-    {
-    }
+    RenderTextControlInnerBlock(Element&, RenderStyle&&);
 
 private:
     bool hasLineIfEmpty() const override { return true; }

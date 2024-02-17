@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,8 +77,6 @@ public class MaximizeUndecorated {
 
     @Test
     public void testMaximize() throws Exception {
-        // temporary until JDK-8255835 is fixed
-        assumeTrue(!PlatformUtil.isMac());
         Util.sleep(200);
 
         boolean movedToTopCorner = stage.getY() != POS && stage.getX() != POS;

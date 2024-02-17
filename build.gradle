@@ -413,7 +413,7 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/17/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/21/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
@@ -497,11 +497,11 @@ defineProperty("BUILD_TOOLS_DOWNLOAD_SCRIPT", "")
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
-ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.105.3.v20170228-0512" :
-    IS_WINDOWS && IS_64 ? "org.eclipse.swt.win32.win32.x86_64_3.105.3.v20170228-0512" :
-    IS_WINDOWS && !IS_64 ? "org.eclipse.swt.win32.win32.x86_3.105.3.v20170228-0512" :
-    IS_LINUX && IS_64 ? "org.eclipse.swt.gtk.linux.x86_64_3.105.3.v20170228-0512" :
-    IS_LINUX && !IS_64 ? "org.eclipse.swt.gtk.linux.x86_3.105.3.v20170228-0512" : ""
+ext.SWT_FILE_NAME =
+    IS_MAC && IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.aarch64_3.124.200.v20231113-1355" :
+    IS_MAC && !IS_AARCH64 ? "org.eclipse.swt.cocoa.macosx.x86_64_3.124.200.v20231113-1355" :
+    IS_WINDOWS ? "org.eclipse.swt.win32.win32.x86_64_3.124.200.v20231113-1355" :
+    IS_LINUX ? "org.eclipse.swt.gtk.linux.x86_64_3.124.200.v20231113-1355" : ""
 
 // Specifies whether to run full tests (true) or smoke tests (false)
 defineProperty("FULL_TEST", "false")
@@ -638,19 +638,20 @@ if (sourceDateEpoch != null) {
     def epochSeconds = Long.parseLong(sourceDateEpoch)
     buildInstant = Instant.ofEpochSecond(epochSeconds)
 }
-// Creates the timestamp in UTC using the ISO 8601 extended format
-def buildTimestamp = buildInstant.toString()
+// Creates the timestamp in UTC using the ISO 8601 extended format.
+def extendedTimestamp = buildInstant.toString()
+// Creates the timestamp in UTC using the historical ad hoc format, which is
+// valid for the OPT field of the version string. An alternative to the ad hoc
+// format is the ISO 8601 basic format with the pattern "yyyyMMdd'T'HHmmssX".
+def zonedTime = ZonedDateTime.ofInstant(buildInstant, ZoneOffset.UTC)
+def formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
+def buildTimestamp = zonedTime.format(formatter)
 defineProperty("BUILD_TIMESTAMP", buildTimestamp)
 def relSuffix = ""
 def relOpt = ""
 if (HUDSON_JOB_NAME == "not_hudson") {
-    // The version OPT field matches the regular expression "([-a-zA-Z0-9.]+)".
-    // For the ISO 8601 basic format, use the pattern "yyyyMMdd'T'HHmmssX".
-    def zonedTime = ZonedDateTime.ofInstant(buildInstant, ZoneOffset.UTC)
-    def formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
-    String versionTimestamp = zonedTime.format(formatter)
     relSuffix = "-internal"
-    relOpt = "-${versionTimestamp}"
+    relOpt = "-${buildTimestamp}"
 } else {
     relSuffix = IS_MILESTONE_FCS ? "" : jfxReleaseSuffix
 }
@@ -1995,7 +1996,7 @@ allprojects {
         repositories {
             mavenCentral()
             ivy {
-                url "https://download.eclipse.org/eclipse/updates/4.6/R-4.6.3-201703010400/plugins/"
+                url "https://download.eclipse.org/eclipse/updates/4.30/R-4.30-202312010110/plugins/"
                 metadataSources {
                     artifact()
                 }
@@ -2187,10 +2188,9 @@ project(":base") {
         "BUILD_TIMESTAMP": BUILD_TIMESTAMP,
         "HUDSON_JOB_NAME": HUDSON_JOB_NAME,
         "HUDSON_BUILD_NUMBER": HUDSON_BUILD_NUMBER,
-        "PROMOTED_BUILD_NUMBER": PROMOTED_BUILD_NUMBER,
-        "PRODUCT_NAME": PRODUCT_NAME,
-        "RELEASE_VERSION": RELEASE_VERSION,
-        "RELEASE_SUFFIX": RELEASE_SUFFIX];
+        "RELEASE_SUFFIX": RELEASE_SUFFIX,
+        "RELEASE_VERSION_SHORT": RELEASE_VERSION_SHORT,
+        "RELEASE_VERSION_LONG": RELEASE_VERSION_LONG];
     task processVersionInfo(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
         doFirst { mkdir "$buildDir/gensrc/java" }
         from "src/main/version-info"
@@ -2945,6 +2945,7 @@ project(":media") {
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
             media name: "ffmpeg-4.0.2", ext: "tar.gz"
             media name: "ffmpeg-5.1.2", ext: "tar.gz"
+            media name: "ffmpeg-6.0", ext: "tar.gz"
         }
         implementation project(":base")
         implementation project(":graphics")
@@ -3087,7 +3088,7 @@ project(":media") {
             if (t.name == "linux") {
                 // Pre-defined command line arguments
                 def cfgCMDArgs = ["sh", "configure"]
-                def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-yasm", "--disable-doc", "--disable-programs", "--disable-everything"]
+                def commonCfgArgs = ["--enable-shared", "--disable-debug", "--disable-static", "--disable-asm", "--disable-doc", "--disable-programs", "--disable-everything"]
                 def codecsCfgArgs = ["--enable-decoder=aac,mp3,mp3float,h264,hevc", "--enable-parser=aac,h264,hevc", "--enable-demuxer=aac,h264,hevc,mpegts,mpegtsraw"]
 
                 def copyLibAVStubs = {String fromDir, String toDir ->
@@ -3291,8 +3292,8 @@ project(":media") {
                     doLast {
                         project.ext.libav = [:]
                         project.ext.libav.basedir = "${buildDir}/native/linux/ffmpeg"
-                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2" ]
-                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59" ]
+                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2", "6.0" ]
+                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59", "6.0" : "60" ]
 
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/ffmpeg-${version}"
@@ -3372,7 +3373,7 @@ project(":media") {
                             project.ext.libav.libavffmpeg.versions = [ "56" ]
                             project.ext.libav.ffmpeg = [:]
                             project.ext.libav.ffmpeg.basedir = "${buildDir}/native/linux/ffmpeg/ffmpeg"
-                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59" ]
+                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59", "60" ]
 
                             project.ext.libav.versions.each { version ->
                                 def libavDir = "${project.ext.libav.basedir}-${version}"
@@ -3792,6 +3793,8 @@ project(":web") {
     }
 
     if (IS_COMPILE_WEBKIT) {
+        drtJar.dependsOn compileJavaDOMBinding, processResources
+        compileShimsJava.dependsOn compileJavaDOMBinding
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
 
@@ -5667,7 +5670,7 @@ compileTargets { t ->
                         // https://bugs.openjdk.org/browse/JDK-8278766
                         def status = compareJdkVersion(jdkVersion, "19")
                         if (sourceDateEpoch != null && status >= 0) {
-                            args("--date", buildTimestamp)
+                            args("--date", extendedTimestamp)
                         }
                         args(jmodFile)
                     }

@@ -187,6 +187,8 @@ public:
 
 #if CPU(ARM64) || CPU(X86_64) || CPU(RISCV64)
     using MacroAssemblerBase::and64;
+    using MacroAssemblerBase::or64;
+    using MacroAssemblerBase::xor64;
     using MacroAssemblerBase::convertInt32ToDouble;
     using MacroAssemblerBase::store64;
 #endif
@@ -574,12 +576,6 @@ public:
     {
         loadFloat(src, scratch);
         storeFloat(scratch, dest);
-    }
-
-    // Overload mostly for use in templates.
-    void move(FPRegisterID src, FPRegisterID dest)
-    {
-        moveDouble(src, dest);
     }
 
     void moveDouble(Address src, Address dest, FPRegisterID scratch)
@@ -1424,7 +1420,7 @@ public:
         if (bitwise_cast<uint64_t>(value * 1.0) != bitwise_cast<uint64_t>(value))
             return shouldConsiderBlinding();
 
-        value = fabs(value);
+        value = std::abs(value);
         // Only allow a limited set of fractional components
         double scaledValue = value * 8;
         if (scaledValue / 8 != value)
@@ -1633,6 +1629,15 @@ public:
             and64(imm.asTrustedImm32(), dest);
     }
 
+    void and64(Imm32 imm, RegisterID src, RegisterID dest)
+    {
+        if (shouldBlind(imm)) {
+            move(src, dest);
+            and64(imm, dest);
+        } else
+            and64(imm.asTrustedImm32(), src, dest);
+    }
+
 #endif // USE(JSVALUE64)
 
 #if CPU(X86_64) || CPU(RISCV64)
@@ -1672,6 +1677,14 @@ public:
         Jump falseCase = branchDouble(invert(cond), left, right);
         move(TrustedImm32(1), dest);
         falseCase.link(this);
+    }
+
+    void compareDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID dest)
+    {
+        UNUSED_PARAM(cond);
+        UNUSED_PARAM(left);
+        UNUSED_PARAM(dest);
+        UNREACHABLE_FOR_PLATFORM();
     }
 #endif
 

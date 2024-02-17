@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,13 +30,17 @@
 #include "FrameSelection.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorInlineBox.h"
 #include "InlineIteratorLineBox.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LegacyInlineElementBox.h"
+#include "LegacyInlineFlowBoxInlines.h"
 #include "LegacyInlineTextBox.h"
 #include "RenderBlock.h"
+#include "RenderBoxInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderElementInlines.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderGeometryMap.h"
 #include "RenderIterator.h"
@@ -51,6 +56,7 @@
 #include "StyleInheritedData.h"
 #include "TransformState.h"
 #include "VisiblePosition.h"
+#include "WillChangeData.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 
@@ -270,20 +276,17 @@ private:
     const LayoutPoint& m_accumulatedOffset;
 };
 
-void RenderInline::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
+void RenderInline::boundingRects(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
-    Vector<LayoutRect> lineboxRects;
-    AbsoluteRectsGeneratorContext context(lineboxRects, accumulatedOffset);
+    AbsoluteRectsGeneratorContext context(rects, accumulatedOffset);
     generateLineBoxRects(context);
-    for (const auto& rect : lineboxRects)
-        rects.append(snappedIntRect(rect));
 
-    if (RenderBoxModelObject* continuation = this->continuation()) {
+    if (auto* continuation = this->continuation()) {
         if (is<RenderBox>(*continuation)) {
             auto& box = downcast<RenderBox>(*continuation);
-            continuation->absoluteRects(rects, toLayoutPoint(accumulatedOffset - containingBlock()->location() + box.locationOffset()));
+            continuation->boundingRects(rects, toLayoutPoint(accumulatedOffset - containingBlock()->location() + box.locationOffset()));
         } else
-            continuation->absoluteRects(rects, toLayoutPoint(accumulatedOffset - containingBlock()->location()));
+            continuation->boundingRects(rects, toLayoutPoint(accumulatedOffset - containingBlock()->location()));
     }
 }
 
@@ -528,8 +531,14 @@ IntRect RenderInline::linesBoundingBox() const
 
 LayoutRect RenderInline::linesVisualOverflowBoundingBox() const
 {
-    if (auto* layout = LayoutIntegration::LineLayout::containing(*this))
+    if (auto* layout = LayoutIntegration::LineLayout::containing(*this)) {
+        if (!layoutBox()) {
+            // Repaint may be issued on subtrees during content mutation with newly inserted renderers.
+            ASSERT(needsLayout());
+            return { };
+        }
         return layout->visualOverflowBoundingBoxRectFor(*this);
+    }
 
     if (!firstLineBox() || !lastLineBox())
         return LayoutRect();
@@ -914,9 +923,23 @@ void RenderInline::imageChanged(WrappedImagePtr, const IntRect*)
     repaint();
 }
 
+namespace {
+    class AbsoluteRectsIgnoringEmptyGeneratorContext : public AbsoluteRectsGeneratorContext {
+        public:
+            AbsoluteRectsIgnoringEmptyGeneratorContext(Vector<LayoutRect>& rects, const LayoutPoint& accumulatedOffset)
+                : AbsoluteRectsGeneratorContext(rects, accumulatedOffset) { }
+
+                void addRect(const FloatRect& rect)
+                {
+                    if (!rect.isEmpty())
+                        AbsoluteRectsGeneratorContext::addRect(rect);
+                }
+    };
+} // unnamed namespace
+
 void RenderInline::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer) const
 {
-    AbsoluteRectsGeneratorContext context(rects, additionalOffset);
+    AbsoluteRectsIgnoringEmptyGeneratorContext context(rects, additionalOffset);
     generateLineBoxRects(context);
 
     for (auto& child : childrenOfType<RenderElement>(*this)) {
@@ -979,7 +1002,7 @@ bool isEmptyInline(const RenderInline& renderer)
         if (current.isFloatingOrOutOfFlowPositioned())
             continue;
         if (is<RenderText>(current)) {
-            if (!downcast<RenderText>(current).isAllCollapsibleWhitespace())
+            if (!downcast<RenderText>(current).containsOnlyCollapsibleWhitespace())
                 return false;
             continue;
         }
@@ -987,6 +1010,16 @@ bool isEmptyInline(const RenderInline& renderer)
             return false;
     }
     return true;
+}
+
+inline bool RenderInline::willChangeCreatesStackingContext() const
+{
+    return style().willChange() && style().willChange()->canCreateStackingContext();
+}
+
+bool RenderInline::requiresLayer() const
+{
+    return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations();
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -118,6 +118,13 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSELinearConvolveShadowPeer_filterHV
      jintArray srcPixels_arr, jint srccols, jint srcrows, jint scolinc, jint srowinc,
      jfloatArray kvals_arr, jfloatArray shadowColor_arr)
 {
+    if ((checkRange(env,
+                    dstPixels_arr, dstcols, dstrows,
+                    srcPixels_arr, srccols, srcrows)) ||
+        dstrows > srcrows) { // We should not move out of source vertical bounds
+        return;
+    }
+
     jint kernelSize = env->GetArrayLength(kvals_arr) / 2;
     if (kernelSize > 128) return;
     jfloat kvals[256];

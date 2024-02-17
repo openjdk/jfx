@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,12 +77,11 @@ public final class Paper {
      * Translate the internally stored dimension into points.
      */
     private double getSizeInPoints(double dim) {
-        switch (units) {
-        case POINT : return (int)(dim+0.5);
-        case INCH  : return (int)((dim * 72) + 0.5);
-        case MM    : return (int)(((dim * 72) / 25.4) + 0.5);
-        }
-        return dim;
+        return switch (units) {
+            case POINT -> dim;
+            case INCH -> dim * 72;
+            case MM -> (dim * 72) / 25.4;
+        };
     }
 
     /**

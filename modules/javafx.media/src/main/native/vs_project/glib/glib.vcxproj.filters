@@ -7,7 +7,6 @@
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbacktrace.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbase64.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbitlock.c" />
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbookmarkfile.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gchecksum.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gconvert.c" />
     <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdataset.c" />

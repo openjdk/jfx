@@ -107,6 +107,17 @@ typedef struct _GstAudioConverter GstAudioConverter;
 #define GST_AUDIO_CONVERTER_OPT_MIX_MATRIX   "GstAudioConverter.mix-matrix"
 
 /**
+ * GST_AUDIO_CONVERTER_OPT_DITHER_THRESHOLD:
+ *
+ * Threshold for the output bit depth at/below which to apply dithering.
+ *
+ * Default is 20 bit.
+ *
+ * Since: 1.22
+ */
+#define GST_AUDIO_CONVERTER_OPT_DITHER_THRESHOLD   "GstAudioConverter.dither-threshold"
+
+/**
  * GstAudioConverterFlags:
  * @GST_AUDIO_CONVERTER_FLAG_NONE: no flag
  * @GST_AUDIO_CONVERTER_FLAG_IN_WRITABLE: the input sample arrays are writable and can be

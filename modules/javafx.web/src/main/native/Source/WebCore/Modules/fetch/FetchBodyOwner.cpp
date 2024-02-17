@@ -42,6 +42,8 @@
 
 namespace WebCore {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FetchBodyOwner);
+
 FetchBodyOwner::FetchBodyOwner(ScriptExecutionContext* context, std::optional<FetchBody>&& body, Ref<FetchHeaders>&& headers)
     : ActiveDOMObject(context)
     , m_body(WTFMove(body))
@@ -125,9 +127,8 @@ void FetchBodyOwner::blob(Ref<DeferredPromise>&& promise)
     }
 
     if (isBodyNullOrOpaque()) {
-        auto* context = promise->scriptExecutionContext();
-        promise->resolveCallbackValueWithNewlyCreated<IDLInterface<Blob>>([this, context](auto&) {
-            return Blob::create(context, Vector<uint8_t> { }, Blob::normalizedContentType(extractMIMETypeFromMediaType(m_contentType)));
+        promise->resolveCallbackValueWithNewlyCreated<IDLInterface<Blob>>([this](auto& context) {
+            return Blob::create(&context, Vector<uint8_t> { }, Blob::normalizedContentType(extractMIMETypeFromMediaType(contentType())));
         });
         return;
     }
@@ -136,14 +137,12 @@ void FetchBodyOwner::blob(Ref<DeferredPromise>&& promise)
         return;
     }
     m_isDisturbed = true;
-    m_body->blob(*this, WTFMove(promise), m_contentType);
+    m_body->blob(*this, WTFMove(promise));
 }
 
 void FetchBodyOwner::cloneBody(FetchBodyOwner& owner)
 {
     m_loadingError = owner.m_loadingError;
-
-    m_contentType = owner.m_contentType;
     if (owner.isBodyNull())
         return;
     m_body = owner.m_body->clone();
@@ -151,22 +150,18 @@ void FetchBodyOwner::cloneBody(FetchBodyOwner& owner)
 
 ExceptionOr<void> FetchBodyOwner::extractBody(FetchBody::Init&& value)
 {
-    auto result = FetchBody::extract(WTFMove(value), m_contentType);
+    auto currentContentType = contentType();
+    bool isContentTypeSet = !currentContentType.isNull();
+    auto result = FetchBody::extract(WTFMove(value), currentContentType);
+
+    // Initialize the Content-Type header if it didn't exist.
+    if (!isContentTypeSet && !currentContentType.isNull())
+        m_headers->fastSet(HTTPHeaderName::ContentType, currentContentType);
+
     if (result.hasException())
         return result.releaseException();
     m_body = result.releaseReturnValue();
     return { };
-}
-
-void FetchBodyOwner::updateContentType()
-{
-    String contentType = m_headers->fastGet(HTTPHeaderName::ContentType);
-    if (!contentType.isNull()) {
-        m_contentType = WTFMove(contentType);
-        return;
-    }
-    if (!m_contentType.isNull())
-        m_headers->fastSet(HTTPHeaderName::ContentType, m_contentType);
 }
 
 void FetchBodyOwner::consumeOnceLoadingFinished(FetchBodyConsumer::Type type, Ref<DeferredPromise>&& promise)
@@ -176,7 +171,7 @@ void FetchBodyOwner::consumeOnceLoadingFinished(FetchBodyConsumer::Type type, Re
         return;
     }
     m_isDisturbed = true;
-    m_body->consumeOnceLoadingFinished(type, WTFMove(promise), m_contentType);
+    m_body->consumeOnceLoadingFinished(type, WTFMove(promise));
 }
 
 void FetchBodyOwner::formData(Ref<DeferredPromise>&& promise)
@@ -194,7 +189,7 @@ void FetchBodyOwner::formData(Ref<DeferredPromise>&& promise)
     if (isBodyNullOrOpaque()) {
         if (isBodyNull()) {
             // If the content-type is 'application/x-www-form-urlencoded', a body is not required and we should package an empty byte sequence as per the specification.
-            if (auto formData = FetchBodyConsumer::packageFormData(promise->scriptExecutionContext(), m_contentType, nullptr, 0)) {
+            if (auto formData = FetchBodyConsumer::packageFormData(promise->scriptExecutionContext(), contentType(), nullptr, 0)) {
                 promise->resolve<IDLInterface<DOMFormData>>(*formData);
                 return;
             }
@@ -342,7 +337,7 @@ ExceptionOr<void> FetchBodyOwner::createReadableStream(JSC::JSGlobalObject& stat
 {
     ASSERT(!m_readableStreamSource);
     if (isDisturbed()) {
-        auto streamOrException = ReadableStream::create(state, nullptr);
+        auto streamOrException = ReadableStream::create(state, { }, { });
         if (UNLIKELY(streamOrException.hasException()))
             return streamOrException.releaseException();
         m_body->setReadableStream(streamOrException.releaseReturnValue());
@@ -351,7 +346,7 @@ ExceptionOr<void> FetchBodyOwner::createReadableStream(JSC::JSGlobalObject& stat
     }
 
     m_readableStreamSource = adoptRef(*new FetchBodySource(*this));
-    auto streamOrException = ReadableStream::create(state, m_readableStreamSource);
+    auto streamOrException = ReadableStream::create(*JSC::jsCast<JSDOMGlobalObject*>(&state), *m_readableStreamSource);
     if (UNLIKELY(streamOrException.hasException())) {
         m_readableStreamSource = nullptr;
         return streamOrException.releaseException();

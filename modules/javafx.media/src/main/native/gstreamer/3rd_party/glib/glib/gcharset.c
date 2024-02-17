@@ -2,6 +2,8 @@
  *
  * Copyright (C) 2011 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -186,7 +188,8 @@ charset_cache_free (gpointer data)
  *
  * On Linux, the character set is found by consulting nl_langinfo() if
  * available. If not, the environment variables `LC_ALL`, `LC_CTYPE`, `LANG`
- * and `CHARSET` are queried in order.
+ * and `CHARSET` are queried in order. nl_langinfo() returns the C locale if
+ * no locale has been loaded by setlocale().
  *
  * The return value is %TRUE if the locale's encoding is UTF-8, in that
  * case you can perhaps avoid calling g_convert().
@@ -443,7 +446,7 @@ read_aliases (const gchar *file,
   FILE *fp;
   char buf[256];
 
-  fp = fopen (file,"r");
+  fp = fopen (file, "re");
   if (!fp)
     return;
   while (fgets (buf, 256, fp))

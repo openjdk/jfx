@@ -32,10 +32,13 @@
 #include "WasmCompilationMode.h"
 #include "WasmFormat.h"
 #include "WasmFunctionCodeBlockGenerator.h"
+#include "WasmFunctionIPIntMetadataGenerator.h"
 #include "WasmHandlerInfo.h"
+#include "WasmIPIntGenerator.h"
 #include "WasmIndexOrName.h"
 #include "WasmLLIntTierUpCounter.h"
 #include "WasmTierUpCount.h"
+#include <wtf/EmbeddedFixedVector.h>
 #include <wtf/FixedVector.h>
 #include <wtf/RefCountedFixedVector.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -51,6 +54,7 @@ class Callee : public ThreadSafeRefCounted<Callee> {
 public:
     IndexOrName indexOrName() const { return m_indexOrName; }
     CompilationMode compilationMode() const { return m_compilationMode; }
+    ImplementationVisibility implementationVisibility() const { return m_implementationVisibility; }
 
     CodePtr<WasmEntryPtrTag> entrypoint() const;
     RegisterAtOffsetList* calleeSaveRegisters();
@@ -74,8 +78,9 @@ protected:
     void runWithDowncast(const Func&) const;
 
 private:
-    CompilationMode m_compilationMode;
-    IndexOrName m_indexOrName;
+    const CompilationMode m_compilationMode;
+    ImplementationVisibility m_implementationVisibility { ImplementationVisibility::Public };
+    const IndexOrName m_indexOrName;
 
 protected:
     FixedVector<HandlerInfo> m_exceptionHandlers;
@@ -164,9 +169,20 @@ private:
 
 
 #if ENABLE(WEBASSEMBLY_B3JIT)
+
+struct WasmCodeOrigin {
+    unsigned firstInlineCSI;
+    unsigned lastInlineCSI;
+    unsigned functionIndex;
+    unsigned moduleIndex;
+};
+
 class OptimizingJITCallee : public JITCallee {
 public:
     const StackMap& stackmap(CallSiteIndex) const;
+
+    void addCodeOrigin(unsigned firstInlineCSI, unsigned lastInlineCSI, const Wasm::ModuleInformation&, uint32_t functionIndex);
+    IndexOrName getOrigin(unsigned csi, unsigned depth, bool& isInlined) const;
 
 protected:
     OptimizingJITCallee(Wasm::CompilationMode mode, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
@@ -187,6 +203,8 @@ private:
     void linkExceptionHandlers(Vector<UnlinkedHandlerInfo>, Vector<CodeLocationLabel<ExceptionHandlerPtrTag>>);
 
     StackMaps m_stackmaps;
+    Vector<WasmCodeOrigin, 0> codeOrigins;
+    Vector<Ref<NameSection>, 0> nameSections;
 };
 
 class OMGCallee final : public OptimizingJITCallee {
@@ -235,6 +253,8 @@ private:
 
 class BBQCallee final : public OptimizingJITCallee {
 public:
+    static constexpr unsigned extraOSRValuesForLoopIndex = 1;
+
     static Ref<BBQCallee> create(size_t index, std::pair<const Name*,
         RefPtr<NameSection>>&& name, std::unique_ptr<TierUpCount>&& tierUpCount, SavedFPWidth savedFPWidth)
     {
@@ -258,16 +278,25 @@ public:
 
     TierUpCount* tierUpCount() { return m_tierUpCount.get(); }
 
+    std::optional<CodeLocationLabel<WasmEntryPtrTag>> sharedLoopEntrypoint() { return m_sharedLoopEntrypoint; }
     const Vector<CodeLocationLabel<WasmEntryPtrTag>>& loopEntrypoints() { return m_loopEntrypoints; }
 
     unsigned osrEntryScratchBufferSize() const { return m_osrEntryScratchBufferSize; }
     SavedFPWidth savedFPWidth() const { return m_savedFPWidth; }
 
-    void setEntrypoint(Wasm::Entrypoint&& entrypoint, Vector<UnlinkedWasmToWasmCall>&& unlinkedCalls, StackMaps&& stackmaps, Vector<UnlinkedHandlerInfo>&& exceptionHandlers, Vector<CodeLocationLabel<ExceptionHandlerPtrTag>>&& exceptionHandlerLocations, Vector<CodeLocationLabel<WasmEntryPtrTag>>&& loopEntrypoints, unsigned osrEntryScratchBufferSize)
+    void setEntrypoint(Wasm::Entrypoint&& entrypoint, Vector<UnlinkedWasmToWasmCall>&& unlinkedCalls, StackMaps&& stackmaps, Vector<UnlinkedHandlerInfo>&& exceptionHandlers, Vector<CodeLocationLabel<ExceptionHandlerPtrTag>>&& exceptionHandlerLocations, Vector<CodeLocationLabel<WasmEntryPtrTag>>&& loopEntrypoints, std::optional<CodeLocationLabel<WasmEntryPtrTag>> sharedLoopEntrypoint, unsigned osrEntryScratchBufferSize)
     {
+        m_sharedLoopEntrypoint = sharedLoopEntrypoint;
         m_loopEntrypoints = WTFMove(loopEntrypoints);
         m_osrEntryScratchBufferSize = osrEntryScratchBufferSize;
         OptimizingJITCallee::setEntrypoint(WTFMove(entrypoint), WTFMove(unlinkedCalls), WTFMove(stackmaps), WTFMove(exceptionHandlers), WTFMove(exceptionHandlerLocations));
+        m_switchJumpTables.shrinkToFit();
+    }
+
+    EmbeddedFixedVector<CodeLocationLabel<JSSwitchPtrTag>>* addJumpTable(unsigned size)
+    {
+        m_switchJumpTables.append(EmbeddedFixedVector<CodeLocationLabel<JSSwitchPtrTag>>::create(size));
+        return m_switchJumpTables.last().ptr();
     }
 
 private:
@@ -281,12 +310,62 @@ private:
     RefPtr<OSREntryCallee> m_osrEntryCallee;
     RefPtr<OMGCallee> m_replacement;
     std::unique_ptr<TierUpCount> m_tierUpCount;
+    std::optional<CodeLocationLabel<WasmEntryPtrTag>> m_sharedLoopEntrypoint;
     Vector<CodeLocationLabel<WasmEntryPtrTag>> m_loopEntrypoints;
     unsigned m_osrEntryScratchBufferSize { 0 };
     bool m_didStartCompilingOSREntryCallee { false };
     SavedFPWidth m_savedFPWidth { SavedFPWidth::DontSaveVectors };
+    Vector<UniqueRef<EmbeddedFixedVector<CodeLocationLabel<JSSwitchPtrTag>>>> m_switchJumpTables;
 };
 #endif
+
+
+class IPIntCallee final : public Callee {
+    friend class LLIntOffsetsExtractor;
+    friend class Callee;
+public:
+    static Ref<IPIntCallee> create(FunctionIPIntMetadataGenerator& generator, size_t index, std::pair<const Name*, RefPtr<NameSection>>&& name)
+    {
+        return adoptRef(*new IPIntCallee(generator, index, WTFMove(name)));
+    }
+
+    void setEntrypoint(CodePtr<WasmEntryPtrTag>);
+    const uint8_t* getBytecode() const { return m_bytecode; }
+    const uint8_t* getMetadata() const { return m_metadata; }
+
+    const TypeDefinition& signature(unsigned index) const
+    {
+        return *m_signatures[index];
+    }
+
+    using OutOfLineJumpTargets = HashMap<WasmInstructionStream::Offset, int>;
+
+private:
+    IPIntCallee(FunctionIPIntMetadataGenerator&, size_t index, std::pair<const Name*, RefPtr<NameSection>>&&);
+
+    CodePtr<WasmEntryPtrTag> entrypointImpl() const { return m_entrypoint; }
+    std::tuple<void*, void*> rangeImpl() const { return { nullptr, nullptr }; };
+    JS_EXPORT_PRIVATE RegisterAtOffsetList* calleeSaveRegistersImpl();
+
+#if ENABLE(WEBASSEMBLY_B3JIT)
+    RefPtr<OptimizingJITCallee> m_replacements[numberOfMemoryModes];
+    RefPtr<OSREntryCallee> m_osrEntryCallees[numberOfMemoryModes];
+#endif
+    CodePtr<WasmEntryPtrTag> m_entrypoint;
+    FixedVector<const TypeDefinition*> m_signatures;
+public:
+    // I couldn't figure out how to stop LLIntOffsetsExtractor.cpp from yelling at me.
+    // So just making these public.
+    const uint8_t* m_bytecode;
+    const uint32_t m_bytecodeLength;
+    Vector<uint8_t> m_metadataVector;
+    const uint8_t* m_metadata;
+    const uint32_t m_returnMetadata;
+
+    unsigned m_localSizeToAlloc;
+    unsigned m_numLocals;
+    unsigned m_numArgumentsOnStack;
+};
 
 class LLIntCallee final : public Callee {
     friend LLIntOffsetsExtractor;
@@ -390,6 +469,7 @@ private:
 };
 
 using LLIntCallees = ThreadSafeRefCountedFixedVector<Ref<LLIntCallee>>;
+using IPIntCallees = ThreadSafeRefCountedFixedVector<Ref<IPIntCallee>>;
 
 } } // namespace JSC::Wasm
 

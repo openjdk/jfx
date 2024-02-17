@@ -26,9 +26,7 @@
 #include "config.h"
 #include "DisplayStyle.h"
 
-#include "BorderData.h"
-#include "FillLayer.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "ShadowData.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -64,7 +62,7 @@ static std::unique_ptr<ShadowData> deepCopy(const ShadowData* shadow, const Rend
 
     for (auto* currShadow = shadow; currShadow; currShadow = currShadow->next()) {
         auto shadowCopy = makeUnique<ShadowData>(*currShadow);
-        shadowCopy->setColor(style.colorByApplyingColorFilter(shadowCopy->color()));
+        shadowCopy->setColor(style.colorWithColorFilter(shadowCopy->color()));
 
         if (!firstShadow) {
             currCopiedShadow = shadowCopy.get();
@@ -84,19 +82,19 @@ Style::Style(const RenderStyle& style)
 }
 
 Style::Style(const RenderStyle& style, const RenderStyle* styleForBackground)
-    : m_overflowX(style.overflowX())
+    : m_color(style.visitedDependentColorWithColorFilter(CSSPropertyColor)) // FIXME: Is currentColor resolved here?
+    , m_overflowX(style.overflowX())
     , m_overflowY(style.overflowY())
     , m_fontCascade(style.fontCascade())
     , m_whiteSpace(style.whiteSpace())
     , m_tabSize(style.tabSize())
     , m_opacity(style.opacity())
 {
-    // FIXME: Is currentColor resolved here?
-    m_color = style.visitedDependentColorWithColorFilter(CSSPropertyColor);
-
     if (styleForBackground)
         setupBackground(*styleForBackground);
 
+    // FIXME: m_boxShadow should use a custom data structure with a resolved color (aka Color).
+    // https://bugs.webkit.org/show_bug.cgi?id=248467
     m_boxShadow = deepCopy(style.boxShadow(), style);
 
     if (!style.hasAutoUsedZIndex())

@@ -32,23 +32,22 @@
 #include "FrameLoadRequest.h"
 
 #include "Document.h"
-#include "Frame.h"
+#include "LocalFrame.h"
 #include "SecurityOrigin.h"
 
 namespace WebCore {
 
-FrameLoadRequest::FrameLoadRequest(Document& requester, SecurityOrigin& requesterSecurityOrigin, ResourceRequest&& resourceRequest, const AtomString& frameName, InitiatedByMainFrame initiatedByMainFrame, const AtomString& downloadAttribute, const SystemPreviewInfo& systemPreviewInfo)
+FrameLoadRequest::FrameLoadRequest(Document& requester, SecurityOrigin& requesterSecurityOrigin, ResourceRequest&& resourceRequest, const AtomString& frameName, InitiatedByMainFrame initiatedByMainFrame, const AtomString& downloadAttribute)
     : m_requester { requester }
     , m_requesterSecurityOrigin { requesterSecurityOrigin }
     , m_resourceRequest { WTFMove(resourceRequest) }
     , m_frameName { frameName }
     , m_downloadAttribute { downloadAttribute }
     , m_initiatedByMainFrame { initiatedByMainFrame }
-    , m_systemPreviewInfo { systemPreviewInfo }
 {
 }
 
-FrameLoadRequest::FrameLoadRequest(Frame& frame, const ResourceRequest& resourceRequest, const SubstituteData& substituteData)
+FrameLoadRequest::FrameLoadRequest(LocalFrame& frame, const ResourceRequest& resourceRequest, const SubstituteData& substituteData)
     : m_requester { *frame.document() }
     , m_requesterSecurityOrigin { frame.document()->securityOrigin() }
     , m_resourceRequest { resourceRequest }

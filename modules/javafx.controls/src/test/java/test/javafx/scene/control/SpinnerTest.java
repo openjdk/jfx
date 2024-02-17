@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ import static junit.framework.Assert.*;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.layout.HBox;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -59,6 +60,7 @@ import javafx.util.StringConverter;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 import static javafx.scene.control.SpinnerValueFactoryShim.*;
 
@@ -1580,5 +1582,38 @@ public class SpinnerTest {
         });
 
         assertEquals("50%", intSpinner.getEditor().getText());
+    }
+
+    /**
+     * When Spinner looses focus with misformatted text in the editor,
+     * checks that the value is not changed, and the text is reverted to the value
+     */
+    @Test
+    public void testFocusLostWithTypo() {
+        Button button = new Button();
+        Spinner<Integer> spinner = new Spinner<>(new IntegerSpinnerValueFactory(0, 10, 0));
+        spinner.setEditable(true);
+
+        StageLoader stageLoader = new StageLoader(new HBox(spinner, button));
+
+        // initial value
+        spinner.getValueFactory().setValue(1);
+        int value = spinner.getValue();
+        assertEquals(1, value);
+        assertEquals("1", spinner.getEditor().getText());
+
+        // set misformatted text
+        spinner.requestFocus();
+        spinner.getEditor().setText("2abc");
+
+        // loosing focus triggers cancelEdit() because the text cannot be parsed
+        button.requestFocus();
+
+        // check that value remains unchanged, and text is reverted
+        value = spinner.getValue();
+        assertEquals(1, value);
+        assertEquals("1", spinner.getEditor().getText());
+
+        stageLoader.dispose();
     }
 }

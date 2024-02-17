@@ -26,10 +26,11 @@
 #include "config.h"
 #include "ImageQualityController.h"
 
-#include "Frame.h"
 #include "GraphicsContext.h"
+#include "LocalFrame.h"
 #include "Page.h"
 #include "RenderBoxModelObject.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 
 namespace WebCore {
@@ -140,7 +141,7 @@ InterpolationQuality ImageQualityController::chooseInterpolationQuality(Graphics
     }
 
     // If the containing FrameView is being resized, paint at low quality until resizing is finished.
-    if (Frame* frame = object->document().frame()) {
+    if (auto* frame = object->document().frame()) {
         bool frameViewIsCurrentlyInLiveResize = frame->view() && frame->view()->inLiveResize();
         if (frameViewIsCurrentlyInLiveResize) {
             set(object, innerMap, layer, size);
