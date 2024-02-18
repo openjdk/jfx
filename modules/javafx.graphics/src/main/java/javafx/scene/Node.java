@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2146,7 +2146,7 @@ public abstract class Node implements EventTarget, Styleable {
             w = tempBounds.getWidth();
             h = tempBounds.getHeight();
         }
-        WritableImage result = Scene.doSnapshot(getScene(), x, y, w, h,
+        WritableImage result = Scene.doSnapshot(getScene(), getSubScene(), x, y, w, h,
                 this, transform, params.isDepthBufferInternal(),
                 params.getFill(), params.getEffectiveCamera(), img);
 

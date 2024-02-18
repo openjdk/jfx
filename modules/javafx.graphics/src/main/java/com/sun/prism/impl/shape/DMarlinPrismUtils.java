@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,6 +105,20 @@ public final class DMarlinPrismUtils {
             final double b = tx.getMxy();
             final double c = tx.getMyx();
             final double d = tx.getMyy();
+            final double det = a * d - c * b;
+
+            if (Math.abs(det) <= (2.0d * Double.MIN_VALUE)) {
+                // This rendering engine takes one dimensional curves and turns
+                // them into 2D shapes by giving them width.
+                // However, if everything is to be passed through a singular
+                // transformation, these 2D shapes will be squashed down to 1D
+                // again so, nothing can be drawn.
+
+                // Every path needs an initial moveTo and a pathDone.
+                out.moveTo(0.0d, 0.0d);
+                out.pathDone();
+                return null;
+            }
 
             // If the transform is a constant multiple of an orthogonal transformation
             // then every length is just multiplied by a constant, so we just
@@ -307,11 +321,15 @@ public final class DMarlinPrismUtils {
         if (shape instanceof Path2D) {
             final Path2D p2d = (Path2D)shape;
             final DPathConsumer2D pc2d = initRenderer(rdrCtx, stroke, tf, rclip, p2d.getWindingRule(), r);
-            feedConsumer(rdrCtx, p2d, tf, pc2d);
+            if (pc2d != null) {
+                feedConsumer(rdrCtx, p2d, tf, pc2d);
+            }
         } else {
             final PathIterator pi = shape.getPathIterator(tf);
             final DPathConsumer2D pc2d = initRenderer(rdrCtx, stroke, tf, rclip, pi.getWindingRule(), r);
-            feedConsumer(rdrCtx, pi, pc2d);
+            if (pc2d != null) {
+                feedConsumer(rdrCtx, pi, pc2d);
+            }
         }
         return r;
     }
@@ -324,11 +342,12 @@ public final class DMarlinPrismUtils {
             final DPathConsumer2D out)
     {
         final DPathConsumer2D pc2d = initStroker(rdrCtx, stroke, lineWidth, null, out);
-
-        if (shape instanceof Path2D) {
-            feedConsumer(rdrCtx, (Path2D)shape, null, pc2d);
-        } else {
-            feedConsumer(rdrCtx, shape.getPathIterator(null), pc2d);
+        if (pc2d != null) {
+            if (shape instanceof Path2D) {
+                feedConsumer(rdrCtx, (Path2D)shape, null, pc2d);
+            } else {
+                feedConsumer(rdrCtx, shape.getPathIterator(null), pc2d);
+            }
         }
     }
 

@@ -118,7 +118,7 @@ PathJava::PathJava(RefPtr<RQRef>&& platformPath, std::unique_ptr<PathStream>&& e
 
 UniqueRef<PathImpl> PathJava::clone() const
 {
-    auto platformPathCopy = createEmptyPath();
+    RefPtr<RQRef> platformPathCopy(copyPath(platformPath()));
 
     auto elementsStream = m_elementsStream ? m_elementsStream->clone().moveToUniquePtr() : nullptr;
 

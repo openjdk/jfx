@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,9 +52,12 @@ import test.util.Util;
 public abstract class BehaviorRobotTestBase<C extends Control> {
 
     private static CountDownLatch startupLatch;
-    private static Scene scene;
-    private static Stage stage;
+    /** Scene valid only during test */
+    protected static Scene scene;
+    /** Stage valid only during test */
+    protected static Stage stage;
     private static BorderPane content;
+    /** The Robot instance */
     protected static Robot robot;
     private int step;
     private static HashMap<Character,KeyCode> keyCodes;
@@ -337,5 +340,12 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
         return () -> {
             control.addEventFilter(KeyEvent.ANY, keyListener);
         };
+    }
+
+    /**
+     * Triggers and waits for 10 pulses to complete in this test's scene.
+     */
+    protected void waitForIdle() {
+        Util.waitForIdle(scene);
     }
 }

@@ -26,6 +26,8 @@
 package com.sun.javafx.util;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
+
+import javafx.application.Platform;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -996,5 +998,18 @@ public class Utils {
             }
             return null;
         });
+    }
+
+    /**
+     * Ensures that a code segment is run on the FX thread.
+     *
+     * @param runnable a {@code Runnable} encapsulating the code
+     */
+    public static void runOnFxThread(Runnable runnable) {
+        if (Platform.isFxApplicationThread()) {
+            runnable.run();
+        } else {
+            Platform.runLater(runnable);
+        }
     }
 }

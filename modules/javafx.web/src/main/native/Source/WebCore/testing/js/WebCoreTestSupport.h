@@ -27,6 +27,7 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/OptionSet.h>
 
 typedef const struct OpaqueJSContext* JSContextRef;
 typedef struct OpaqueJSString* JSStringRef;
@@ -40,6 +41,7 @@ typedef struct OpaqueJSValue* JSObjectRef;
 
 namespace WebCore {
 class LocalFrame;
+enum class ParserContentPolicy : uint8_t;
 }
 
 namespace WebCoreTestSupport {
@@ -121,4 +123,9 @@ inline void populateJITOperations() { populateDisassemblyLabels(); }
 inline void populateJITOperations() { }
 #endif // ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY)
 
+#if !PLATFORM(JAVA)
+bool testDocumentFragmentParseXML(const String&, OptionSet<WebCore::ParserContentPolicy>) TEST_SUPPORT_EXPORT;
+#else
+TEST_SUPPORT_EXPORT bool testDocumentFragmentParseXML(const String&, OptionSet<WebCore::ParserContentPolicy>);
+#endif
 } // namespace WebCoreTestSupport
