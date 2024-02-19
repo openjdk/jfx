@@ -660,11 +660,11 @@ public class TableColumnHeader extends Region {
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
+        cell.updateTableColumn(tc);
+        cell.updateTableView(tv);
         for (int row = 0; row < rows; row++) {
             tableRow.updateIndex(row);
 
-            cell.updateTableColumn(tc);
-            cell.updateTableView(tv);
             cell.updateTableRow(tableRow);
             cell.updateIndex(row);
 
@@ -754,12 +754,12 @@ public class TableColumnHeader extends Region {
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
+        cell.updateTableColumn(tc);
+        cell.updateTreeTableView(ttv);
         for (int row = 0; row < rows; row++) {
             treeTableRow.updateIndex(row);
             treeTableRow.updateTreeItem(ttv.getTreeItem(row));
 
-            cell.updateTableColumn(tc);
-            cell.updateTreeTableView(ttv);
             cell.updateTableRow(treeTableRow);
             cell.updateIndex(row);
 

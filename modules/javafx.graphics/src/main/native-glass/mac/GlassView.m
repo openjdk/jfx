@@ -712,3 +712,24 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1enableInputMethodEven
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
 }
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacView
+ * Method:    _finishInputMethodComposition
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1finishInputMethodComposition
+(JNIEnv *env, jobject jView, jlong ptr)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacView__1finishInputMethodComposition");
+    if (!ptr) return;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        NSView<GlassView> *view = getGlassView(env, ptr);
+        [view finishInputMethodComposition];
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+}

@@ -717,9 +717,22 @@
     self->imEnabled = enabled;
 }
 
+- (void)finishInputMethodComposition
+{
+    IMLOG("finishInputMethodComposition called");
+    [self unmarkText];
+    [self.inputContext discardMarkedText];
+}
+
 /*
  NSTextInputClient protocol implementation follows here.
  */
+
+// Utility function, not part of protocol
+- (void)commitString:(NSString*)aString
+{
+    [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
+}
 
 - (void)doCommandBySelector:(SEL)aSelector
 {
@@ -733,7 +746,7 @@
 {
     IMLOG("insertText called with string: %s", [aString UTF8String]);
     if ([self->nsAttrBuffer length] > 0 || [aString length] > 1) {
-        [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
+        [self commitString: aString];
         self->shouldProcessKeyEvent = NO;
     } else {
         self->shouldProcessKeyEvent = YES;
@@ -760,9 +773,9 @@
 - (void) unmarkText
 {
     IMLOG("unmarkText called\n");
-    if (self->nsAttrBuffer != nil && self->nsAttrBuffer.length != 0) {
-        self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
-        [self->_delegate notifyInputMethod:@"" attr:4 length:0 cursor:0 selectedRange: NSMakeRange(NSNotFound, 0)];
+    if (nsAttrBuffer.length != 0) {
+        [self commitString: nsAttrBuffer.string];
+        nsAttrBuffer = [nsAttrBuffer initWithString:@""];
     }
     self->shouldProcessKeyEvent = YES;
 }

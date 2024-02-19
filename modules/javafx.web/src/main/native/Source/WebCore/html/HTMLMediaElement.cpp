@@ -1155,15 +1155,6 @@ String HTMLMediaElement::canPlayType(const String& mimeType) const
     MediaEngineSupportParameters parameters;
     ContentType contentType(mimeType);
 
-#if PLATFORM(COCOA)
-    if (document().quirks().shouldAdvertiseSupportForHLSSubtitleTypes()
-        && contentType.containerType() == "application/vnd.apple.mpegurl"_s
-        && (contentType.codecs().contains("stpp.ttml.im1t"_s) || contentType.codecs().contains("wvtt"_s))) {
-        ALWAYS_LOG(LOGIDENTIFIER, "Quirk, ", mimeType, ": probably");
-        return "probably"_s;
-    }
-#endif
-
     parameters.type = contentType;
     parameters.contentTypesRequiringHardwareSupport = mediaContentTypesRequiringHardwareSupport();
     parameters.allowedMediaContainerTypes = allowedMediaContainerTypes();
@@ -6747,6 +6738,10 @@ void HTMLMediaElement::enterFullscreen(VideoFullscreenMode mode)
 {
     ALWAYS_LOG(LOGIDENTIFIER, ", m_videoFullscreenMode = ", m_videoFullscreenMode, ", mode = ", mode);
     ASSERT(mode != VideoFullscreenModeNone);
+
+    auto* page = document().page();
+    if (!page || page->mediaPlaybackIsSuspended())
+        return;
 
     auto* window = document().domWindow();
     if (!window)
