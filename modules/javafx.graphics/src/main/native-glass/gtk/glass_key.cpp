@@ -42,13 +42,14 @@ static GHashTable *keymap;
 // keymap. That can produce unpredictable results when a Robot tries to work
 // backward from KeyCode to keyvalue. This map is consulted first to resolve
 // the ambiguity.
-static std::map<jint, guint32> robotJavaCodeToKeyval;
+static std::map<jint, guint32> robot_java_to_keyval;
 
-// As the user types we build a map from character to Java KeyCode for
-// getKeyCodeForChar. This ensures we only reference keys that are on the
-// user's keyboard (GDK calls that query the GdkKeymap in this direction are
-// slow and can target keys not actually present on the keyboard).
-static std::map<guint32, jint> charToJavaKeyCode;
+// As the user types we build a map from character to Java KeyCode. We use
+// this map in getKeyCodeForChar which ensures we only reference keys that
+// are on the user's keyboard. GDK calls that query the GdkKeymap are slow
+// (they scan all the maps each time) and can target keys not present on the
+// keyboard.
+static std::map<guint32, jint> char_to_java_code;
 
 static void glass_g_hash_table_insert_int(GHashTable *table, gint key, gint value)
 {
@@ -244,23 +245,23 @@ static void initialize_key()
     // Used by ISO keyboards
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(ISO_Level3_Shift), com_sun_glass_events_KeyEvent_VK_ALT_GRAPH);
 
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_ENTER]   = GLASS_GDK_KEY_CONSTANT(Return);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_CLEAR]   = GLASS_GDK_KEY_CONSTANT(Clear);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_PAGE_UP] = GLASS_GDK_KEY_CONSTANT(Page_Up);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_END]     = GLASS_GDK_KEY_CONSTANT(End);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_HOME]    = GLASS_GDK_KEY_CONSTANT(Home);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_LEFT]    = GLASS_GDK_KEY_CONSTANT(Left);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_UP]      = GLASS_GDK_KEY_CONSTANT(Up);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_RIGHT]   = GLASS_GDK_KEY_CONSTANT(Right);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_DOWN]    = GLASS_GDK_KEY_CONSTANT(Down);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_DELETE]  = GLASS_GDK_KEY_CONSTANT(Delete);
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_BACK_SLASH] = GLASS_GDK_KEY_CONSTANT(backslash);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_ENTER]   = GLASS_GDK_KEY_CONSTANT(Return);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_CLEAR]   = GLASS_GDK_KEY_CONSTANT(Clear);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_PAGE_UP] = GLASS_GDK_KEY_CONSTANT(Page_Up);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_END]     = GLASS_GDK_KEY_CONSTANT(End);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_HOME]    = GLASS_GDK_KEY_CONSTANT(Home);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_LEFT]    = GLASS_GDK_KEY_CONSTANT(Left);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_UP]      = GLASS_GDK_KEY_CONSTANT(Up);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_RIGHT]   = GLASS_GDK_KEY_CONSTANT(Right);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_DOWN]    = GLASS_GDK_KEY_CONSTANT(Down);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_DELETE]  = GLASS_GDK_KEY_CONSTANT(Delete);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_BACK_SLASH] = GLASS_GDK_KEY_CONSTANT(backslash);
     // This works on all keyboards, both ISO and ANSI.
-    robotJavaCodeToKeyval[com_sun_glass_events_KeyEvent_VK_ALT_GRAPH]  = GLASS_GDK_KEY_CONSTANT(ISO_Level3_Shift);
+    robot_java_to_keyval[com_sun_glass_events_KeyEvent_VK_ALT_GRAPH]  = GLASS_GDK_KEY_CONSTANT(ISO_Level3_Shift);
 }
 
 static void keys_changed_signal(GdkKeymap* k, gpointer data) {
-    charToJavaKeyCode.clear();
+    char_to_java_code.clear();
 }
 
 static void init_keymap() {
@@ -295,7 +296,7 @@ static void record_character(GdkKeymap *keymap, GdkEventKey *e, guint state, jin
                                             &keyValue, NULL, NULL, NULL)) {
         guint32 ucs = gdk_keyval_to_unicode(keyValue);
         if (ucs) {
-            charToJavaKeyCode[ucs] = javaKeyCode;
+            char_to_java_code[ucs] = javaKeyCode;
         }
     };
 }
@@ -345,8 +346,8 @@ jint get_glass_key(GdkEventKey* e) {
 gint find_gdk_keyval_for_glass_keycode(jint code) {
     gint result = -1;
 
-    auto i = robotJavaCodeToKeyval.find(code);
-    if (i != robotJavaCodeToKeyval.end()) {
+    auto i = robot_java_to_keyval.find(code);
+    if (i != robot_java_to_keyval.end()) {
         return i->second;
     }
 
@@ -510,8 +511,8 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     }
 
-    auto i = charToJavaKeyCode.find(*ucs_char);
-    if (i != charToJavaKeyCode.end()) {
+    auto i = char_to_java_code.find(*ucs_char);
+    if (i != char_to_java_code.end()) {
         g_free(ucs_char);
         return i->second;
     }
