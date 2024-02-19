@@ -1032,7 +1032,7 @@ public class Text extends Shape {
             textRunStart = findFirstRunStart(x, y, runs);
             curRunStart = ((TextRun) runs[runIndex]).getStart();
         }
-        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getText(), textRunStart, curRunStart, false);
+        TextLayout.Hit h = layout.getHitInfo((float)x, (float)y, getTextInternal(), textRunStart, curRunStart);
         return new HitInfo(h.getCharIndex(), h.getInsertionIndex(), h.isLeading());
     }
 
@@ -1047,50 +1047,50 @@ public class Text extends Shape {
     }
 
     private int findRunIndex(double x, double y, GlyphList[] runs) {
-        int ix = 0;
+        int runIdx = 0;
         int lastIndex = runs.length - 1;
 
         if (runs.length == 0) {
-            return ix;
+            return runIdx;
         }
 
         if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-            if (runs[ix].getTextSpan() == null) {
-                while (ix < lastIndex) {
-                    GlyphList r = runs[ix];
-                    GlyphList nr = runs[ix + 1];
-                    if ((x > r.getLocation().x &&
-                            (x < nr.getLocation().x || r.getLocation().y < nr.getLocation().y))
-                                && y < r.getHeight()) {
+            if (runs[runIdx].getTextSpan() == null) {
+                while (runIdx < lastIndex) {
+                    GlyphList run = runs[runIdx];
+                    GlyphList nextRun = runs[runIdx + 1];
+                    if ((x > run.getLocation().x &&
+                            (x < nextRun.getLocation().x || run.getLocation().y < nextRun.getLocation().y))
+                                && y < run.getHeight()) {
                         break;
                     }
-                    ix++;
-                    y = updateY(y, ix, runs);
+                    runIdx++;
+                    y = updateY(y, runIdx, runs);
                 }
             } else {
                 Point2D ptInParent = localToParent(x, y);
                 double ptX = ptInParent.getX();
                 double ptY = ptInParent.getY();
-                while (ix < lastIndex) {
-                    GlyphList r = runs[ix];
-                    if (ptX > r.getLocation().x && ptX < (r.getLocation().x + r.getWidth()) && ptY >= r.getLocation().y
-                            && y < r.getHeight()) {
+                while (runIdx < lastIndex) {
+                    GlyphList run = runs[runIdx];
+                    if (ptX > run.getLocation().x && ptX < (run.getLocation().x + run.getWidth()) && ptY >= run.getLocation().y
+                            && y < run.getHeight()) {
                         break;
                     }
-                    ix++;
-                    y = updateY(y, ix, runs);
+                    runIdx++;
+                    y = updateY(y, runIdx, runs);
                 }
             }
         } else {
             double ptY = localToParent(x, y).getY();
-            while (ix < lastIndex) {
-                if (ptY > runs[ix].getLocation().y && ptY < runs[ix + 1].getLocation().y) {
+            while (runIdx < lastIndex) {
+                if (ptY > runs[runIdx].getLocation().y && ptY < runs[runIdx + 1].getLocation().y) {
                     break;
                 }
-                ix++;
+                runIdx++;
             }
         }
-        return ix;
+        return runIdx;
     }
 
     private double updateY(double y, int ix, GlyphList[] runs) {

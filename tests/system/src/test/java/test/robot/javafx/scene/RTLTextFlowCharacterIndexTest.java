@@ -116,8 +116,8 @@ public class RTLTextFlowCharacterIndexTest {
     static final int WIDTH = 500;
     static final int HEIGHT = 200;
 
-    final int Y_OFFSET = 30;
-    final int X_LEADING_OFFSET = 10;
+    static final int Y_OFFSET = 30;
+    static final int X_LEADING_OFFSET = 10;
 
     boolean isLeading;
     boolean textFlowIsLeading;

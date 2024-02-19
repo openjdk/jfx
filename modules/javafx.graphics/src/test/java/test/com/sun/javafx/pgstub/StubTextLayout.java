@@ -158,7 +158,7 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
-    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart, boolean forTextFlow) {
+    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart) {
         // TODO this probably needs to be entirely rewritten...
         if (getText() == null) {
             return new Hit(0, -1, true);
