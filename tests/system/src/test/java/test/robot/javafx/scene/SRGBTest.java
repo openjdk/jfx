@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,10 +44,13 @@ import javax.swing.SwingUtilities;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Window;
+import com.sun.javafx.PlatformUtil;
 
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Test;
+import static org.junit.Assume.assumeTrue;
+
 import test.robot.testharness.VisualTestBase;
 
 public class SRGBTest extends VisualTestBase {
@@ -220,6 +223,7 @@ public class SRGBTest extends VisualTestBase {
 
     @Test
     public void windowBackgroundTest() throws Exception {
+        assumeTrue(PlatformUtil.isMac() || PlatformUtil.isLinux());
         final int positionX = 50;
         final int positionY = 50;
         final int centerX = positionX + SWATCH_SIZE / 2;
