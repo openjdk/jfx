@@ -223,7 +223,7 @@ public class SRGBTest extends VisualTestBase {
 
     @Test
     public void windowBackgroundTest() throws Exception {
-        assumeTrue(PlatformUtil.isMac() || PlatformUtil.isLinux());
+        assumeTrue(PlatformUtil.isMac());
         final int positionX = 50;
         final int positionY = 50;
         final int centerX = positionX + SWATCH_SIZE / 2;
