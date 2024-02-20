@@ -16,4 +16,4 @@
 --add-exports javafx.controls/com.sun.javafx.scene.control.skin=ALL-UNNAMED
 --add-exports javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED
 #
---add-exports javafx.incubator.controls/com.sun.javafx.incubator.scene.control=ALL-UNNAMED
+--add-exports javafx.incubator.myfeature/com.sun.javafx.incubator.scene.control=ALL-UNNAMED

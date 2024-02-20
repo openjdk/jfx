@@ -47,7 +47,7 @@ module javafx.base {
 
     exports com.sun.javafx to
         javafx.controls,
-        javafx.incubator.controls,
+        javafx.incubator.myfeature,
         javafx.graphics,
         javafx.fxml,
         javafx.media,

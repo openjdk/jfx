@@ -2749,11 +2749,12 @@ project(":controls") {
     addValidateSourceSets(project, sourceSets)
 }
 
-project(":incubator.controls") {
+// Replace "myfeature" with the name of your feature
+project(":incubator.myfeature") {
     project.ext.buildModule = true
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.incubator.controls"
+    project.ext.moduleName = "javafx.incubator.myfeature"
     project.ext.incubating = true
 
     sourceSets {
@@ -2775,7 +2776,7 @@ project(":incubator.controls") {
     project.ext.moduleSourcePath = defaultModuleSourcePath
     project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
 
-    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'incubator.controls' ])
+    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'incubator.myfeature' ])
 
     dependencies {
         testImplementation project(":base").sourceSets.test.output
@@ -4321,7 +4322,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"), project(":incubator.controls"), project(":media"),
+            project(":base"), project(":graphics"), project(":controls"), project(":incubator.myfeature"), project(":media"),
             project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
