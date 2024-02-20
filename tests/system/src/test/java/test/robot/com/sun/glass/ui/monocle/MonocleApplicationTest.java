@@ -140,7 +140,7 @@ public class MonocleApplicationTest {
             for (int i = 0; i < TEST_CASES.length; i++) {
                 char ch = (char) TEST_CASES[i][0];
                 int expectedCode = TEST_CASES[i][1];
-                int code = MonocleApplicationShim._getKeyCodeForChar(ch);
+                int code = MonocleApplicationShim._getKeyCodeForChar(ch, KeyEvent.VK_UNDEFINED);
                 Assert.assertEquals("Code for character "
                                     + ((int) ch) + " ('" + ch + "')",
                                     expectedCode, code);

@@ -606,7 +606,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public int getKeyCodeForChar(String character) {
+    public int getKeyCodeForChar(String character, int hint) {
         if (charToKeyCodeMap != null) {
             final KeyCode keyCode = charToKeyCodeMap.get(character);
             if (keyCode != null) {

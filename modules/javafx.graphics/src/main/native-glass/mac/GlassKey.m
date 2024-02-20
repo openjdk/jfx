@@ -624,10 +624,10 @@ NSString* GetStringForMacKey(unsigned short keyCode, bool shifted)
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * Signature: (CI)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForChar
-(JNIEnv * env, jobject jApplication, jchar c)
+(JNIEnv * env, jobject jApplication, jchar c, jint hint)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForChar");
 
