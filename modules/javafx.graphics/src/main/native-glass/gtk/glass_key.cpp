@@ -47,7 +47,7 @@ static std::map<jint, guint32> robot_java_to_keyval;
 // As the user types we build a map from character to Java KeyCode. We use
 // this map in getKeyCodeForChar which ensures we only reference keys that
 // are on the user's keyboard. GDK calls that query the GdkKeymap are slow
-// (they scan all the maps each time) and can target keys not present on the
+// (they scan all the maps each time) and can return keys not present on the
 // keyboard.
 static std::map<guint32, jint> char_to_java_code;
 
@@ -519,7 +519,8 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
 
     // If we don't find the character in the map fall back to the old logic
     // for compatibility. It is incorrect because it ignores the keyboard
-    // layout but it can handle characters like tab and space.
+    // layout but it can handle characters like space and A-Z on Latin
+    // layouts.
     guint keyval = gdk_unicode_to_keyval(*ucs_char);
 
     if (keyval == (*ucs_char | 0x01000000)) {
