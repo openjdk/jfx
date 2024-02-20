@@ -60,11 +60,11 @@ ProgressTrackerClientJava::ProgressTrackerClientJava(const JLObject& webPage)
 {
 }
 
-void ProgressTrackerClientJava::progressStarted(Frame&)
+void ProgressTrackerClientJava::progressStarted(LocalFrame&)
 {
 }
 
-void ProgressTrackerClientJava::progressEstimateChanged(Frame& originatingProgressFrame)
+void ProgressTrackerClientJava::progressEstimateChanged(LocalFrame& originatingProgressFrame)
 {
     using namespace ProgressTrackerClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -93,7 +93,7 @@ void ProgressTrackerClientJava::progressEstimateChanged(Frame& originatingProgre
     }
 }
 
-void ProgressTrackerClientJava::progressFinished(Frame&)
+void ProgressTrackerClientJava::progressFinished(LocalFrame&)
 {
     // shouldn't post PROGRESS_CHANGED after PAGE_FINISHED
 }

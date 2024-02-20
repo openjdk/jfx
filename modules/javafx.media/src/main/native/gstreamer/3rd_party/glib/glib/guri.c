@@ -1,6 +1,8 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright © 2020 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -23,6 +25,7 @@
 
 #include "glib.h"
 #include "glibintl.h"
+#include "glib-private.h"
 #include "guriprivate.h"
 
 /**
@@ -806,8 +809,8 @@ normalize_port (const char *scheme,
   return port;
 }
 
-static int
-default_scheme_port (const char *scheme)
+int
+g_uri_get_default_scheme_port (const char *scheme)
 {
   if (strcmp (scheme, "http") == 0 || strcmp (scheme, "ws") == 0)
     return 80;
@@ -817,6 +820,9 @@ default_scheme_port (const char *scheme)
 
   if (strcmp (scheme, "ftp") == 0)
     return 21;
+
+  if (strstr (scheme, "socks") == scheme)
+    return 1080;
 
   return -1;
 }
@@ -1017,7 +1023,7 @@ g_uri_split_internal (const gchar  *uri_string,
         }
 
       if (port && *port == -1)
-        *port = default_scheme_port (scheme_str);
+        *port = g_uri_get_default_scheme_port (scheme_str);
     }
 
   g_free (normalized_scheme);
@@ -1633,9 +1639,17 @@ g_uri_join_internal (GUriFlags    flags,
   g_return_val_if_fail (host == NULL || (path[0] == '\0' || path[0] == '/'), NULL);
   g_return_val_if_fail (host != NULL || (path[0] != '/' || path[1] != '/'), NULL);
 
-  str = g_string_new (scheme);
+  /* Arbitrarily chosen default size which should handle most average length
+   * URIs. This should avoid a few reallocations of the buffer in most cases.
+   * It’s 1B shorter than a power of two, since GString will add a
+   * nul-terminator byte. */
+  str = g_string_sized_new (127);
+
   if (scheme)
-    g_string_append_c (str, ':');
+    {
+      g_string_append (str, scheme);
+      g_string_append_c (str, ':');
+    }
 
   if (flags & G_URI_FLAGS_SCHEME_NORMALIZE && scheme && ((host && port != -1) || path[0] == '\0'))
     normalized_scheme = g_ascii_strdown (scheme, -1);
@@ -1750,7 +1764,7 @@ g_uri_join_internal (GUriFlags    flags,
  *
  * When @host is present, @path must either be empty or begin with a slash (`/`)
  * character. When @host is not present, @path cannot begin with two slash
-   characters (`//`). See
+ * characters (`//`). See
  * [RFC 3986, section 3](https://tools.ietf.org/html/rfc3986#section-3).
  *
  * See also g_uri_join_with_user(), which allows specifying the
@@ -2497,7 +2511,7 @@ g_uri_get_port (GUri *uri)
   g_return_val_if_fail (uri != NULL, -1);
 
   if (uri->port == -1 && uri->flags & G_URI_FLAGS_SCHEME_NORMALIZE)
-    return default_scheme_port (uri->scheme);
+    return g_uri_get_default_scheme_port (uri->scheme);
 
   return uri->port;
 }

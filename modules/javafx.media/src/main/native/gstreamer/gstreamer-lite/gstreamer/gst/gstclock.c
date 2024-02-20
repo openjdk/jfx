@@ -165,11 +165,20 @@ struct _GstClockPrivate
   gint post_count;
 
   gboolean synced;
+
+  // g_atomic_rc_box_* -> g_weak_ref_init(), g_weak_ref_clear() due to GLib 2.60 requirements
+#if !defined(GSTREAMER_LITE) || !defined(LINUX)
+  GWeakRef *clock_weakref;
+#endif // GSTREAMER_LITE
 };
 
 typedef struct _GstClockEntryImpl GstClockEntryImpl;
 
+#if defined (GSTREAMER_LITE) && defined(LINUX)
 #define GST_CLOCK_ENTRY_CLOCK_WEAK_REF(entry) (&((GstClockEntryImpl *)(entry))->clock)
+#else // GSTREAMER_LITE
+#define GST_CLOCK_ENTRY_CLOCK_WEAK_REF(entry) (((GstClockEntryImpl *)(entry))->clock)
+#endif // GSTREAMER_LITE
 
 /* seqlocks */
 #define read_seqbegin(clock)                                   \
@@ -260,7 +269,13 @@ gst_clock_entry_new (GstClock * clock, GstClockTime time,
   entry->_clock = clock;
 #endif
 #endif
+
+#if defined (GSTREAMER_LITE) && defined(LINUX)
   g_weak_ref_init (GST_CLOCK_ENTRY_CLOCK_WEAK_REF (entry), clock);
+#else // GSTREAMER_LITE
+  GST_CLOCK_ENTRY_CLOCK_WEAK_REF (entry) =
+      g_atomic_rc_box_acquire (clock->priv->clock_weakref);
+#endif // GSTREAMER_LITE
   entry->type = type;
   entry->time = time;
   entry->interval = interval;
@@ -374,7 +389,12 @@ _gst_clock_id_free (GstClockID id)
   if (entry_impl->destroy_entry)
     entry_impl->destroy_entry (entry_impl);
 
+#if defined (GSTREAMER_LITE) && defined(LINUX)
   g_weak_ref_clear (GST_CLOCK_ENTRY_CLOCK_WEAK_REF (entry));
+#else // GSTREAMER_LITE
+  g_atomic_rc_box_release_full (GST_CLOCK_ENTRY_CLOCK_WEAK_REF (entry),
+      (GDestroyNotify) g_weak_ref_clear);
+#endif // GSTREAMER_LITE
 
   /* FIXME: add tracer hook for struct allocations such as clock entries */
 
@@ -769,6 +789,19 @@ gst_clock_init (GstClock * clock)
   priv->timeout = DEFAULT_TIMEOUT;
   priv->times = g_new0 (GstClockTime, 4 * priv->window_size);
   priv->times_temp = priv->times + 2 * priv->window_size;
+#if !defined(GSTREAMER_LITE) || !defined(LINUX)
+  /*
+   * An atomically ref-counted wrapper around a GWeakRef for this GstClock,
+   * created by the clock and shared with all its clock entries.
+   *
+   * This exists because g_weak_ref_ operations are quite expensive and operate
+   * with a global GRWLock. _get takes a reader lock, _init and _clear take
+   * a writer lock. We want to avoid having to instantiate a new GWeakRef for
+   * every clock entry.
+   */
+  priv->clock_weakref = g_atomic_rc_box_new (GWeakRef);
+  g_weak_ref_init (priv->clock_weakref, clock);
+#endif // GSTREAMER_LITE
 }
 
 static void
@@ -801,6 +834,10 @@ gst_clock_finalize (GObject * object)
   clock->priv->times_temp = NULL;
   GST_CLOCK_SLAVE_UNLOCK (clock);
 
+#if !defined(GSTREAMER_LITE) || !defined(LINUX)
+  g_atomic_rc_box_release_full (clock->priv->clock_weakref,
+      (GDestroyNotify) g_weak_ref_clear);
+#endif // GSTREAMER_LITE
   g_mutex_clear (&clock->priv->slave_lock);
   g_cond_clear (&clock->priv->sync_cond);
 

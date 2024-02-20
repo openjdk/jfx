@@ -33,13 +33,13 @@
 #include "Document.h"
 #include "Editing.h"
 #include "Editor.h"
-#include "ElementIterator.h"
-#include "Frame.h"
+#include "ElementChildIteratorInlines.h"
 #include "HTMLFontElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLInterchange.h"
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
+#include "LocalFrame.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
 #include "RenderObject.h"
@@ -58,11 +58,6 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-
-static int toIdentifier(RefPtr<CSSValue>&& value)
-{
-    return is<CSSPrimitiveValue>(value) ? downcast<CSSPrimitiveValue>(*value).valueID() : 0;
-}
 
 static String& styleSpanClassString()
 {
@@ -368,7 +363,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
     // is performed in the following loops below.
     if (beyondEnd) {
         auto treeOrderPos = treeOrder(*startNode, *beyondEnd);
-        if (is_gt(treeOrderPos) || is_eq(treeOrderPos))
+        if (is_gteq(treeOrderPos))
             return;
     }
 
@@ -410,7 +405,7 @@ void ApplyStyleCommand::applyRelativeFontStyleChange(EditingStyle* style)
             auto span = createStyleSpanElement(document());
             if (!surroundNodeRangeWithElement(*node, *node, span))
                 continue;
-            reachedEnd = node->isDescendantOf(beyondEnd.get());
+            reachedEnd = node->isDescendantOf(beyondEnd.get()) || !node->parentElement();
             element = WTFMove(span);
         }  else {
             // Only handle HTML elements and text nodes.
@@ -481,7 +476,7 @@ RefPtr<HTMLElement> ApplyStyleCommand::splitAncestorsWithUnicodeBidi(Node* node,
     RefPtr<Node> nextHighestAncestorWithUnicodeBidi;
     int highestAncestorUnicodeBidi = 0;
     for (auto ancestor = RefPtr { node->parentNode() }; ancestor != block; ancestor = ancestor->parentNode()) {
-        int unicodeBidi = toIdentifier(ComputedStyleExtractor(ancestor.get()).propertyValue(CSSPropertyUnicodeBidi));
+        int unicodeBidi = valueID(ComputedStyleExtractor(ancestor.get()).propertyValue(CSSPropertyUnicodeBidi).get());
         if (unicodeBidi && unicodeBidi != CSSValueNormal) {
             highestAncestorUnicodeBidi = unicodeBidi;
             nextHighestAncestorWithUnicodeBidi = highestAncestorWithUnicodeBidi;
@@ -531,7 +526,7 @@ void ApplyStyleCommand::removeEmbeddingUpToEnclosingBlock(Node* node, Node* unsp
             continue;
 
         StyledElement& element = downcast<StyledElement>(*ancestor);
-        int unicodeBidi = toIdentifier(ComputedStyleExtractor(&element).propertyValue(CSSPropertyUnicodeBidi));
+        int unicodeBidi = valueID(ComputedStyleExtractor(&element).propertyValue(CSSPropertyUnicodeBidi).get());
         if (!unicodeBidi || unicodeBidi == CSSValueNormal)
             continue;
 
@@ -557,7 +552,7 @@ void ApplyStyleCommand::removeEmbeddingUpToEnclosingBlock(Node* node, Node* unsp
 static RefPtr<Node> highestEmbeddingAncestor(Node* startNode, Node* enclosingNode)
 {
     for (RefPtr currentNode = startNode; currentNode && currentNode != enclosingNode; currentNode = currentNode->parentNode()) {
-        if (currentNode->isHTMLElement() && toIdentifier(ComputedStyleExtractor(currentNode.get()).propertyValue(CSSPropertyUnicodeBidi)) == CSSValueEmbed)
+        if (currentNode->isHTMLElement() && valueID(ComputedStyleExtractor(currentNode.get()).propertyValue(CSSPropertyUnicodeBidi).get()) == CSSValueEmbed)
             return currentNode;
     }
 
@@ -1027,7 +1022,7 @@ void ApplyStyleCommand::applyInlineStyleToPushDown(Node& node, EditingStyle* sty
     {
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-        if (node.renderer()->isText() && static_cast<RenderText*>(node.renderer())->isAllCollapsibleWhitespace())
+        if (node.renderer()->isText() && static_cast<RenderText*>(node.renderer())->containsOnlyCollapsibleWhitespace())
             return;
         if (node.renderer()->isBR() && !node.renderer()->style().preserveNewline())
             return;

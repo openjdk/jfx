@@ -76,10 +76,14 @@
 #define GST_SYSTEM_CLOCK_WAIT(clock)            g_cond_wait(GST_SYSTEM_CLOCK_GET_COND(clock),GST_SYSTEM_CLOCK_GET_LOCK(clock))
 #define GST_SYSTEM_CLOCK_BROADCAST(clock)       g_cond_broadcast(GST_SYSTEM_CLOCK_GET_COND(clock))
 
-#if defined(HAVE_FUTEX)
+#if defined(HAVE_FUTEX) || defined(HAVE_FUTEX_TIME64)
 #include <unistd.h>
 #include <linux/futex.h>
 #include <sys/syscall.h>
+
+#if !defined(__NR_futex) && !defined(__NR_futex_time64)
+#error "Neither __NR_futex nor __NR_futex_time64 are defined but were found by meson"
+#endif
 
 #ifndef FUTEX_WAIT_BITSET_PRIVATE
 #define FUTEX_WAIT_BITSET_PRIVATE FUTEX_WAIT_BITSET
@@ -129,14 +133,35 @@ gst_futex_cond_broadcast (guint * cond_val)
 {
   g_atomic_int_inc (cond_val);
 
+#if defined(__NR_futex_time64)
+  {
+    int res;
+    res = syscall (__NR_futex_time64, cond_val, (gsize) FUTEX_WAKE_PRIVATE,
+        (gsize) INT_MAX, NULL);
+
+    /* If the syscall does not exist (`ENOSYS`), we retry again below with the
+     * normal `futex` syscall. This can happen if newer kernel headers are
+     * used than the kernel that is actually running.
+     */
+#ifdef __NR_futex
+    if (res >= 0 || errno != ENOSYS) {
+#else
+    {
+#endif
+      return;
+    }
+  }
+#endif
+
+#if defined(__NR_futex)
   syscall (__NR_futex, cond_val, (gsize) FUTEX_WAKE_PRIVATE, (gsize) INT_MAX,
       NULL);
+#endif
 }
 
 static gboolean
 gst_futex_cond_wait_until (guint * cond_val, GMutex * mutex, gint64 end_time)
 {
-  struct timespec end;
   guint sampled;
   int res;
   gboolean success;
@@ -144,20 +169,92 @@ gst_futex_cond_wait_until (guint * cond_val, GMutex * mutex, gint64 end_time)
   if (end_time < 0)
     return FALSE;
 
-  end.tv_sec = end_time / 1000000000;
-  end.tv_nsec = end_time % 1000000000;
-
   sampled = *cond_val;
   g_mutex_unlock (mutex);
-  /* we use FUTEX_WAIT_BITSET_PRIVATE rather than FUTEX_WAIT_PRIVATE to be
-   * able to use absolute time */
-  res =
-      syscall (__NR_futex, cond_val, (gsize) FUTEX_WAIT_BITSET_PRIVATE,
-      (gsize) sampled, &end, NULL, FUTEX_BITSET_MATCH_ANY);
-  success = (res < 0 && errno == ETIMEDOUT) ? FALSE : TRUE;
-  g_mutex_lock (mutex);
 
-  return success;
+  /* `struct timespec` as defined by the libc headers does not necessarily
+   * have any relation to the one used by the kernel for the `futex` syscall.
+   *
+   * Specifically, the libc headers might use 64-bit `time_t` while the kernel
+   * headers use 32-bit `__kernel_old_time_t` on certain systems.
+   *
+   * To get around this problem we
+   *   a) check if `futex_time64` is available, which only exists on 32-bit
+   *      platforms and always uses 64-bit `time_t`.
+   *   b) otherwise (or if that returns `ENOSYS`), we call the normal `futex`
+   *      syscall with the `struct timespec_t` used by the kernel, which uses
+   *      `__kernel_long_t` for both its fields. We use that instead of
+   *      `__kernel_old_time_t` because it is equivalent and available in the
+   *      kernel headers for a longer time.
+   *
+   * Also some 32-bit systems do not define `__NR_futex` at all and only
+   * define `__NR_futex_time64`.
+   */
+
+#ifdef __NR_futex_time64
+  {
+    struct
+    {
+      gint64 tv_sec;
+      gint64 tv_nsec;
+    } end;
+
+    end.tv_sec = end_time / 1000000000;
+    end.tv_nsec = end_time % 1000000000;
+
+    /* we use FUTEX_WAIT_BITSET_PRIVATE rather than FUTEX_WAIT_PRIVATE to be
+     * able to use absolute time */
+    res =
+        syscall (__NR_futex_time64, cond_val, (gsize) FUTEX_WAIT_BITSET_PRIVATE,
+        (gsize) sampled, &end, NULL, FUTEX_BITSET_MATCH_ANY);
+
+    /* If the syscall does not exist (`ENOSYS`), we retry again below with the
+     * normal `futex` syscall. This can happen if newer kernel headers are
+     * used than the kernel that is actually running.
+     */
+#ifdef __NR_futex
+    if (res >= 0 || errno != ENOSYS) {
+#else
+    {
+#endif
+      success = (res < 0 && errno == ETIMEDOUT) ? FALSE : TRUE;
+      g_mutex_lock (mutex);
+
+      return success;
+    }
+  }
+#endif
+
+#ifdef __NR_futex
+  {
+    struct
+    {
+      __kernel_long_t tv_sec;
+      __kernel_long_t tv_nsec;
+    } end;
+
+    /* Make sure to only ever call this if the end time actually fits into the
+     * target type */
+    g_assert (sizeof (__kernel_long_t) >= 8
+        || end_time / 1000000000 <= G_MAXINT32);
+
+    end.tv_sec = end_time / 1000000000;
+    end.tv_nsec = end_time % 1000000000;
+
+    /* we use FUTEX_WAIT_BITSET_PRIVATE rather than FUTEX_WAIT_PRIVATE to be
+     * able to use absolute time */
+    res =
+        syscall (__NR_futex, cond_val, (gsize) FUTEX_WAIT_BITSET_PRIVATE,
+        (gsize) sampled, &end, NULL, FUTEX_BITSET_MATCH_ANY);
+    success = (res < 0 && errno == ETIMEDOUT) ? FALSE : TRUE;
+    g_mutex_lock (mutex);
+
+    return success;
+  }
+#endif
+
+  /* We can't end up here because of the checks above */
+  g_assert_not_reached ();
 }
 
 #elif defined (G_OS_UNIX)

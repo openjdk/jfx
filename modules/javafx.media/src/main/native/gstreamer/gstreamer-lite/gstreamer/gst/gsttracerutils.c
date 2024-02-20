@@ -54,7 +54,9 @@ static const gchar *_quark_strings[] = {
   "element-change-state-pre", "element-change-state-post",
   "mini-object-created", "mini-object-destroyed", "object-created",
   "object-destroyed", "mini-object-reffed", "mini-object-unreffed",
-  "object-reffed", "object-unreffed", "plugin-feature-loaded"
+  "object-reffed", "object-unreffed", "plugin-feature-loaded",
+  "pad-chain-pre", "pad-chain-post", "pad-chain-list-pre",
+  "pad-chain-list-post",
 };
 
 GQuark _priv_gst_tracer_quark_table[GST_TRACER_QUARK_MAX];
@@ -98,7 +100,21 @@ _priv_gst_tracing_init (void)
     while (t[i]) {
       // check t[i] for params
       if ((params = strchr (t[i], '('))) {
-        gchar *end = strchr (&params[1], ')');
+        // params can contain multiple '(' when using this kind of parameter: 'max-buffer-size=(uint)5'
+        guint n_par = 1, j;
+        gchar *end = NULL;
+
+        for (j = 1; params[j] != '\0'; j++) {
+          if (params[j] == '(')
+            n_par++;
+          else if (params[j] == ')') {
+            n_par--;
+            if (n_par == 0) {
+              end = &params[j];
+              break;
+            }
+          }
+        }
         *params = '\0';
         params++;
         if (end)

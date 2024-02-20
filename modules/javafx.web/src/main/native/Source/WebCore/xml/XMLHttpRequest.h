@@ -27,12 +27,14 @@
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
 #include "ThreadableLoaderClient.h"
+#include "Timer.h"
 #include "URLKeepingBlobAlive.h"
 #include "UserGestureIndicator.h"
 #include <wtf/URL.h>
 #include "XMLHttpRequestEventTarget.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
 #include <variant>
+#include <wtf/CancellableTask.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
@@ -77,7 +79,7 @@ public:
     const URL& url() const { return m_url; }
     String statusText() const;
     int status() const;
-    State readyState() const;
+    State readyState() const { return static_cast<State>(m_readyState); }
     bool withCredentials() const { return m_includeCredentials; }
     ExceptionOr<void> setWithCredentials(bool);
     ExceptionOr<void> open(const String& method, const String& url);
@@ -92,7 +94,7 @@ public:
     String getResponseHeader(const String& name) const;
     ExceptionOr<OwnedString> responseText();
     String responseTextIgnoringResponseType() const { return m_responseBuilder.toStringPreserveCapacity(); }
-    enum class FinalMIMEType { Yes, No };
+    enum class FinalMIMEType : bool { No, Yes };
     String responseMIMEType(FinalMIMEType = FinalMIMEType::No) const;
 
     Document* optionalResponseXML() const { return m_responseDocument.get(); }
@@ -117,7 +119,7 @@ public:
         Text = 5,
     };
     ExceptionOr<void> setResponseType(ResponseType);
-    ResponseType responseType() const;
+    ResponseType responseType() const { return static_cast<ResponseType>(m_responseType); }
 
     String responseURL() const;
 
@@ -139,6 +141,7 @@ private:
     explicit XMLHttpRequest(ScriptExecutionContext&);
 
     void updateHasRelevantEventListener();
+    void handleCancellation();
 
     // EventTarget.
     void eventListenersDidChange() final;
@@ -207,7 +210,6 @@ private:
     unsigned m_error : 1;
     unsigned m_uploadListenerFlag : 1;
     unsigned m_uploadComplete : 1;
-    unsigned m_wasAbortedByClient : 1;
     unsigned m_responseCacheIsValid : 1;
     unsigned m_readyState : 3; // State
     unsigned m_responseType : 3; // ResponseType
@@ -254,17 +256,8 @@ private:
     std::optional<ExceptionCode> m_exceptionCode;
     RefPtr<UserGestureToken> m_userGestureToken;
     std::atomic<bool> m_hasRelevantEventListener;
+    TaskCancellationGroup m_abortErrorGroup;
     bool m_wasDidSendDataCalledForTotalBytes { false };
 };
-
-inline auto XMLHttpRequest::responseType() const -> ResponseType
-{
-    return static_cast<ResponseType>(m_responseType);
-}
-
-inline auto XMLHttpRequest::readyState() const -> State
-{
-    return static_cast<State>(m_readyState);
-}
 
 } // namespace WebCore

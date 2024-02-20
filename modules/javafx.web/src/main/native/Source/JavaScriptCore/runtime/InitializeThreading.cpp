@@ -31,12 +31,12 @@
 
 #include "AssemblyComments.h"
 #include "ExecutableAllocator.h"
+#include "InPlaceInterpreter.h"
 #include "JITOperationList.h"
 #include "JSCConfig.h"
 #include "JSCPtrTag.h"
 #include "LLIntData.h"
 #include "Options.h"
-#include "SigillCrashAnalyzer.h"
 #include "StructureAlignedMemoryAllocator.h"
 #include "SuperSampler.h"
 #include "VMTraps.h"
@@ -102,10 +102,11 @@ void initialize()
 
         JITOperationList::populatePointersInJavaScriptCore();
 
-        if (Options::useSigillCrashAnalyzer())
-            enableSigillCrashAnalyzer();
-
         AssemblyCommentRegistry::initialize();
+#if ENABLE(WEBASSEMBLY)
+        if (Options::useWasmIPInt())
+            IPInt::initialize();
+#endif
         LLInt::initialize();
         DisallowGC::initialize();
 
@@ -123,14 +124,16 @@ void initialize()
         if (VM::isInMiniMode())
             WTF::fastEnableMiniMode();
 
-#if HAVE(MACH_EXCEPTIONS)
+        if (Wasm::isSupported() || !Options::usePollingTraps()) {
         // JSLock::lock() can call registerThreadForMachExceptionHandling() which crashes if this has not been called first.
-        WTF::startMachExceptionHandlerThread();
-#endif
+            initializeSignalHandling();
+
+            if (!Options::usePollingTraps())
         VMTraps::initializeSignals();
-#if ENABLE(WEBASSEMBLY)
+            if (Wasm::isSupported())
         Wasm::prepareSignalingMemory();
-#endif
+        } else
+            disableSignalHandling();
 
         WTF::compilerFence();
         RELEASE_ASSERT(!g_jscConfig.initializeHasBeenCalled);

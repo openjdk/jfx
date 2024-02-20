@@ -51,6 +51,8 @@ import com.sun.javafx.PlatformUtil;
 
 import test.util.Util;
 
+import static org.junit.Assume.assumeTrue;
+
 /*
  * Test for verifying context menu NPE error
  *
@@ -107,6 +109,10 @@ public class ContextMenuNPETest {
 
     @Test
     public void testContextMenuNPE() throws Throwable {
+        if (PlatformUtil.isLinux()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8321625
+        }
+
         showMenuButtonContextMenu();
         selectSubmenuItem();
 

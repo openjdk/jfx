@@ -28,7 +28,7 @@
 
 #if USE(WPE_RENDERER)
 
-#include "GLContextEGL.h"
+#include "GLContext.h"
 
 #if USE(LIBEPOXY)
 // FIXME: For now default to the GBM EGL platform, but this should really be
@@ -103,11 +103,18 @@ bool PlatformDisplayLibWPE::initialize(int hostFd)
     if (m_eglDisplay == EGL_NO_DISPLAY)
         m_eglDisplay = eglGetDisplay(eglNativeDisplay);
     if (m_eglDisplay == EGL_NO_DISPLAY) {
-        WTFLogAlways("PlatformDisplayLibWPE: could not create the EGL display: %s.", GLContextEGL::lastErrorString());
+        WTFLogAlways("PlatformDisplayLibWPE: could not create the EGL display: %s.", GLContext::lastErrorString());
         return false;
     }
 
     PlatformDisplay::initializeEGLDisplay();
+
+#if ENABLE(WEBGL)
+    if (m_eglDisplay != EGL_NO_DISPLAY) {
+        m_anglePlatform = eglPlatform;
+        m_angleNativeDisplay = eglNativeDisplay;
+    }
+#endif
     return m_eglDisplay != EGL_NO_DISPLAY;
 }
 

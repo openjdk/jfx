@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,15 +47,15 @@ class ShaderModule;
 struct SuccessfulCheck {
     SuccessfulCheck() = delete;
     SuccessfulCheck(SuccessfulCheck&&);
-    SuccessfulCheck(WTF::Vector<Warning>&&, UniqueRef<ShaderModule>&&);
+    SuccessfulCheck(Vector<Warning>&&, UniqueRef<ShaderModule>&&);
     ~SuccessfulCheck();
-    WTF::Vector<Warning> warnings;
+    Vector<Warning> warnings;
     UniqueRef<ShaderModule> ast;
 };
 
 struct FailedCheck {
-    WTF::Vector<Error> errors;
-    WTF::Vector<Warning> warnings;
+    Vector<Error> errors;
+    Vector<Warning> warnings;
 };
 
 struct SourceMap {
@@ -141,17 +141,18 @@ enum class ShaderStage : uint8_t {
 struct BindGroupLayoutEntry {
     uint32_t binding;
     OptionSet<ShaderStage> visibility;
-    std::variant<BufferBindingLayout, SamplerBindingLayout, TextureBindingLayout, StorageTextureBindingLayout, ExternalTextureBindingLayout> bindingMember;
+    using BindingMember = std::variant<BufferBindingLayout, SamplerBindingLayout, TextureBindingLayout, StorageTextureBindingLayout, ExternalTextureBindingLayout>;
+    BindingMember bindingMember;
 };
 
 struct BindGroupLayout {
     // Metal's [[id(n)]] indices are equal to the index into this vector.
-    WTF::Vector<BindGroupLayoutEntry> entries;
+    Vector<BindGroupLayoutEntry> entries;
 };
 
 struct PipelineLayout {
     // Metal's [[buffer(n)]] indices are equal to the index into this vector.
-    WTF::Vector<BindGroupLayout> bindGroupLayouts;
+    Vector<BindGroupLayout> bindGroupLayouts;
 };
 
 namespace Reflection {
@@ -192,8 +193,7 @@ struct EntryPointInformation {
     String mangledName;
     std::optional<PipelineLayout> defaultLayout; // If the input PipelineLayout is nullopt, the compiler computes a layout and returns it. https://gpuweb.github.io/gpuweb/#default-pipeline-layout
     HashMap<std::pair<size_t, size_t>, size_t> bufferLengthLocations; // Metal buffer identity -> offset within helper buffer where its size needs to lie
-    HashMap<size_t, SpecializationConstant> specializationConstants;
-    HashMap<String, size_t> specializationConstantIndices; // Points into specializationConstantsByIndex
+    HashMap<String, SpecializationConstant> specializationConstants;
     std::variant<Vertex, Fragment, Compute> typedEntryPoint;
 };
 
@@ -206,7 +206,7 @@ struct PrepareResult {
 
 // These are not allowed to fail.
 // All failures must have already been caught in check().
-PrepareResult prepare(ShaderModule&, const HashMap<String, PipelineLayout>&);
+PrepareResult prepare(ShaderModule&, const HashMap<String, std::optional<PipelineLayout>>&);
 PrepareResult prepare(ShaderModule&, const String& entryPointName, const std::optional<PipelineLayout>&);
 
 } // namespace WGSL

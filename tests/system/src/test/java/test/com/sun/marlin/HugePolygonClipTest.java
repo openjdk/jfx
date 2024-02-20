@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,10 +87,7 @@ public class HugePolygonClipTest {
 
     static {
         Locale.setDefault(Locale.US);
-        /*
-            System.out.println("BLUE_PIXEL: " + BLUE_PIXEL);
-            System.out.println("RED_PIXEL:  " + RED_PIXEL);
-         */
+
         // enable Marlin logging:
         System.setProperty("prism.marlin.log", "true");
 

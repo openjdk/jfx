@@ -12,16 +12,18 @@
 #include <float.h>
 #define GLIB_HAVE_ALLOCA_H
 
+/* #undef GLIB_STATIC_COMPILATION */
+/* #undef GOBJECT_STATIC_COMPILATION */
+/* #undef GIO_STATIC_COMPILATION */
+/* #undef GMODULE_STATIC_COMPILATION */
+/* #undef G_INTL_STATIC_COMPILATION */
+/* #undef FFI_STATIC_BUILD */
+
 /* Specifies that GLib's g_print*() functions wrap the
  * system printf functions.  This is useful to know, for example,
  * when using glibc's register_printf_function().
  */
 #define GLIB_USING_SYSTEM_PRINTF
-
-/* #undef GLIB_STATIC_COMPILATION */
-/* #undef GOBJECT_STATIC_COMPILATION */
-/* #undef G_INTL_STATIC_COMPILATION */
-/* #undef FFI_STATIC_BUILD */
 
 G_BEGIN_DECLS
 
@@ -111,8 +113,8 @@ typedef unsigned long guintptr;
 #define G_GUINTPTR_FORMAT       "lu"
 
 #define GLIB_MAJOR_VERSION 2
-#define GLIB_MINOR_VERSION 72
-#define GLIB_MICRO_VERSION 0
+#define GLIB_MINOR_VERSION 78
+#define GLIB_MICRO_VERSION 1
 
 #define G_OS_UNIX
 
@@ -185,6 +187,7 @@ typedef unsigned long guintptr;
 #define GSSIZE_TO_LE(val)       ((gssize) GINT64_TO_LE (val))
 #define GSIZE_TO_BE(val)        ((gsize) GUINT64_TO_BE (val))
 #define GSSIZE_TO_BE(val)       ((gssize) GINT64_TO_BE (val))
+
 #define G_BYTE_ORDER G_LITTLE_ENDIAN
 
 #define GLIB_SYSDEF_POLLIN =1
@@ -211,6 +214,8 @@ typedef int GPid;
 #define G_DIR_SEPARATOR_S "/"
 #define G_SEARCHPATH_SEPARATOR ':'
 #define G_SEARCHPATH_SEPARATOR_S ":"
+
+#undef G_HAVE_FREE_SIZED
 
 G_END_DECLS
 

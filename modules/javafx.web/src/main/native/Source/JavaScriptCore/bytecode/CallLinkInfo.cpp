@@ -48,6 +48,7 @@ CallLinkInfo::CallType CallLinkInfo::callTypeFor(OpcodeID opcodeID)
         return TailCallVarargs;
 
     case op_call:
+    case op_call_ignore_result:
     case op_call_direct_eval:
     case op_iterator_open:
     case op_iterator_next:
@@ -515,7 +516,7 @@ void OptimizingCallLinkInfo::emitDirectFastPath(CCallHelpers& jit)
 
     auto codeBlockStore = jit.storePtrWithPatch(CCallHelpers::TrustedImmPtr(nullptr), CCallHelpers::calleeFrameCodeBlockBeforeCall());
     auto call = jit.nearCall();
-    jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+    jit.addLinkTask([=, this] (LinkBuffer& linkBuffer) {
         m_callLocation = linkBuffer.locationOfNearCall<JSInternalPtrTag>(call);
         u.codeIC.m_codeBlockLocation = linkBuffer.locationOf<JSInternalPtrTag>(codeBlockStore);
     });
@@ -531,7 +532,7 @@ void OptimizingCallLinkInfo::emitDirectTailCallFastPath(CCallHelpers& jit, Scope
     ASSERT(UseDataIC::No == this->useDataIC());
 
     auto fastPathStart = jit.label();
-    jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+    jit.addLinkTask([=, this] (LinkBuffer& linkBuffer) {
         m_fastPathStart = linkBuffer.locationOf<JSInternalPtrTag>(fastPathStart);
     });
 
@@ -542,7 +543,7 @@ void OptimizingCallLinkInfo::emitDirectTailCallFastPath(CCallHelpers& jit, Scope
     prepareForTailCall();
     auto codeBlockStore = jit.storePtrWithPatch(CCallHelpers::TrustedImmPtr(nullptr), CCallHelpers::calleeFrameCodeBlockBeforeTailCall());
     auto call = jit.nearTailCall();
-    jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+    jit.addLinkTask([=, this] (LinkBuffer& linkBuffer) {
         m_callLocation = linkBuffer.locationOfNearCall<JSInternalPtrTag>(call);
         u.codeIC.m_codeBlockLocation = linkBuffer.locationOf<JSInternalPtrTag>(codeBlockStore);
     });
@@ -560,7 +561,7 @@ void OptimizingCallLinkInfo::initializeDirectCall()
         RELEASE_ASSERT(fastPathStart());
         CCallHelpers::emitJITCodeOver(fastPathStart(), scopedLambda<void(CCallHelpers&)>([&](CCallHelpers& jit) {
             auto jump = jit.jump();
-            jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+            jit.addLinkTask([=, this] (LinkBuffer& linkBuffer) {
                 linkBuffer.link(jump, slowPathStart());
             });
         }), "initialize direct call");

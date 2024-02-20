@@ -26,13 +26,18 @@
 #pragma once
 
 #include "ASTAttribute.h"
+#include "ASTAttribute.h"
 #include "ASTDeclaration.h"
 #include "ASTExpression.h"
 #include "ASTIdentifier.h"
 #include "ASTTypeName.h"
 #include "ASTVariableQualifier.h"
 
-namespace WGSL::AST {
+namespace WGSL {
+class TypeChecker;
+struct Type;
+
+namespace AST {
 
 enum class VariableFlavor : uint8_t {
     Const,
@@ -42,36 +47,45 @@ enum class VariableFlavor : uint8_t {
 };
 
 class Variable final : public Declaration {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(Variable);
+    friend TypeChecker;
 public:
-    using Ref = UniqueRef<Variable>;
-    using List = UniqueRefVector<Variable>;
+    using Ref = std::reference_wrapper<Variable>;
+    using List = ReferenceWrapperVector<Variable>;
 
-    Variable(SourceSpan span, VariableFlavor flavor, Identifier&& name, TypeName::Ptr&& type, Expression::Ptr&& initializer)
-        : Variable(span, flavor, WTFMove(name), { }, WTFMove(type), WTFMove(initializer), { })
+    NodeKind kind() const override;
+    VariableFlavor flavor() const { return m_flavor; };
+    VariableFlavor& flavor() { return m_flavor; };
+    Identifier& name() { return m_name; }
+    Attribute::List& attributes() { return m_attributes; }
+    VariableQualifier* maybeQualifier() { return m_qualifier; }
+    TypeName* maybeTypeName() { return m_type; }
+    Expression* maybeInitializer() { return m_initializer; }
+    TypeName* maybeReferenceType() { return m_referenceType; }
+    const Type* storeType() const
+    {
+        if (m_type)
+            return m_type->resolvedType();
+        return m_initializer->inferredType();
+    }
+
+private:
+    Variable(SourceSpan span, VariableFlavor flavor, Identifier&& name, TypeName::Ptr type, Expression::Ptr initializer)
+        : Variable(span, flavor, WTFMove(name), { }, type, initializer, { })
     { }
 
-    Variable(SourceSpan span, VariableFlavor flavor, Identifier&& name, VariableQualifier::Ptr&& qualifier, TypeName::Ptr&& type, Expression::Ptr&& initializer, Attribute::List&& attributes)
+    Variable(SourceSpan span, VariableFlavor flavor, Identifier&& name, VariableQualifier::Ptr qualifier, TypeName::Ptr type, Expression::Ptr initializer, Attribute::List&& attributes)
         : Declaration(span)
         , m_name(WTFMove(name))
         , m_attributes(WTFMove(attributes))
-        , m_qualifier(WTFMove(qualifier))
-        , m_type(WTFMove(type))
-        , m_initializer(WTFMove(initializer))
+        , m_qualifier(qualifier)
+        , m_type(type)
+        , m_initializer(initializer)
         , m_flavor(flavor)
     {
         ASSERT(m_type || m_initializer);
     }
 
-    NodeKind kind() const override;
-    VariableFlavor flavor() const { return m_flavor; };
-    Identifier& name() { return m_name; }
-    Attribute::List& attributes() { return m_attributes; }
-    VariableQualifier* maybeQualifier() { return m_qualifier.get(); }
-    TypeName* maybeTypeName() { return m_type.get(); }
-    Expression* maybeInitializer() { return m_initializer.get(); }
-
-private:
     Identifier m_name;
     Attribute::List m_attributes;
     // Each of the following may be null
@@ -80,8 +94,10 @@ private:
     TypeName::Ptr m_type;
     Expression::Ptr m_initializer;
     VariableFlavor m_flavor;
+    TypeName::Ptr m_referenceType { nullptr };
 };
 
-} // namespace WGSL::AST
+} // namespace AST
+} // namespace WGSL
 
 SPECIALIZE_TYPE_TRAITS_WGSL_AST(Variable)

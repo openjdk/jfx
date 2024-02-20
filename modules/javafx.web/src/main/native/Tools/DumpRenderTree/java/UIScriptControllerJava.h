@@ -35,6 +35,7 @@ public:
         : UIScriptController(context)
     {
     }
+    unsigned long countOfUpdatesWithLayerChanges() const override;
 };
 
 }

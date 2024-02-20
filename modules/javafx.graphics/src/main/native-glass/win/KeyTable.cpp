@@ -342,13 +342,36 @@ BOOL IsExtendedKey(UINT vkey) {
     }
 }
 
+BOOL IsNumericKeypadCode(int javaCode) {
+    switch (javaCode) {
+        case com_sun_glass_events_KeyEvent_VK_DIVIDE:
+        case com_sun_glass_events_KeyEvent_VK_MULTIPLY:
+        case com_sun_glass_events_KeyEvent_VK_SUBTRACT:
+        case com_sun_glass_events_KeyEvent_VK_ADD:
+        case com_sun_glass_events_KeyEvent_VK_DECIMAL:
+        case com_sun_glass_events_KeyEvent_VK_SEPARATOR:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD0:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD1:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD2:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD3:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD4:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD5:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD6:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD7:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD8:
+        case com_sun_glass_events_KeyEvent_VK_NUMPAD9:
+            return true;
+    }
+    return false;
+}
+
 /*
  * Class:     Java_com_sun_glass_ui_win_WinApplication
  * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * Signature: (CI)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForChar
-  (JNIEnv * env, jobject jApplication, jchar c)
+  (JNIEnv * env, jobject jApplication, jchar c, jint hint)
 {
     // The Delete key doesn't generate a character so ViewContainer::HandleViewKeyEvent
     // synthesizes one. Here we reverse that process.
@@ -357,6 +380,20 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForC
     }
 
     HKL layout = ::GetKeyboardLayout(GlassApplication::GetMainThreadId());
+
+    // If the system is trying to match against the numeric keypad verify that
+    // the key generates the expected character.
+    if (IsNumericKeypadCode(hint)) {
+        UINT vkey = 0, modifiers = 0;
+        JavaKeyToWindowsKey(hint, vkey, modifiers);
+        if (vkey != 0) {
+            UINT mapped = ::MapVirtualKeyEx(vkey, MAPVK_VK_TO_CHAR, layout);
+            if (mapped != 0 && mapped == c) {
+                return hint;
+            }
+        }
+    }
+
     BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)c, layout);
 
     if (!vkey || vkey == 0xFF) {

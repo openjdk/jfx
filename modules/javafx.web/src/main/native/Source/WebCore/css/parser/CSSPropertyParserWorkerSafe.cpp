@@ -44,6 +44,7 @@
 #include "CSSTokenizer.h"
 #include "CSSUnicodeRangeValue.h"
 #include "Document.h"
+#include "FontCustomPlatformData.h"
 #include "ParsingUtilities.h"
 #include "ScriptExecutionContext.h"
 #include "StyleSheetContents.h"
@@ -207,33 +208,47 @@ RefPtr<CSSPrimitiveValue> CSSPropertyParserWorkerSafe::parseFontFaceDisplay(cons
     return parsedValue;
 }
 
+RefPtr<CSSValue> CSSPropertyParserWorkerSafe::parseFontFaceSizeAdjust(const String& string, ScriptExecutionContext& context)
+{
+    CSSParserContext parserContext(parserMode(context));
+    CSSParserImpl parser(parserContext, string);
+    CSSParserTokenRange range = parser.tokenizer()->tokenRange();
+    range.consumeWhitespace();
+    if (range.atEnd())
+        return nullptr;
+    auto parsedValue = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
+    if (!parsedValue || !range.atEnd())
+        return nullptr;
+
+    return parsedValue;
+}
+
 namespace CSSPropertyParserHelpersWorkerSafe {
 
 static RefPtr<CSSFontFaceSrcResourceValue> consumeFontFaceSrcURI(CSSParserTokenRange& range, const CSSParserContext& context)
 {
-    auto location = context.completeURL(CSSPropertyParserHelpers::consumeURLRaw(range).toString());
+    StringView parsedURL = CSSPropertyParserHelpers::consumeURLRaw(range);
+    String urlString = !parsedURL.is8Bit() && parsedURL.containsOnlyASCII() ? String::make8Bit(parsedURL.characters16(), parsedURL.length()) : parsedURL.toString();
+    auto location = context.completeURL(urlString);
     if (location.resolvedURL.isNull())
         return nullptr;
 
     String format;
+    Vector<FontTechnology> technologies;
     if (range.peek().functionId() == CSSValueFormat) {
-        // https://drafts.csswg.org/css-fonts/#descdef-font-face-src
-        // FIXME: We allow any identifier here and convert to strings; specification calls for certain keywords and legacy compatibility strings.
-        auto args = CSSPropertyParserHelpers::consumeFunction(range);
-        auto& arg = args.consumeIncludingWhitespace();
-        if (!args.atEnd())
+        format = CSSPropertyParserHelpers::consumeFontFormat(range);
+        if (format.isNull())
             return nullptr;
-        if (arg.type() == IdentToken) {
-            if (!CSSPropertyParserHelpers::identMatches<CSSValueCollection, CSSValueEmbeddedOpentype, CSSValueOpentype, CSSValueSvg, CSSValueTruetype, CSSValueWoff, CSSValueWoff2>(arg.id()))
-                return nullptr;
-        } else if (arg.type() != StringToken)
+    }
+    if (range.peek().functionId() == CSSValueTech) {
+        technologies = CSSPropertyParserHelpers::consumeFontTech(range);
+        if (technologies.isEmpty())
             return nullptr;
-        format = arg.value().toString();
     }
     if (!range.atEnd())
         return nullptr;
 
-    return CSSFontFaceSrcResourceValue::create(WTFMove(location), WTFMove(format), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
+    return CSSFontFaceSrcResourceValue::create(WTFMove(location), WTFMove(format), WTFMove(technologies), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
 }
 
 static RefPtr<CSSValue> consumeFontFaceSrcLocal(CSSParserTokenRange& range)
@@ -256,8 +271,7 @@ static RefPtr<CSSValue> consumeFontFaceSrcLocal(CSSParserTokenRange& range)
 
 RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, const CSSParserContext& context)
 {
-    RefPtr<CSSValueList> values = CSSValueList::createCommaSeparated();
-
+    CSSValueListBuilder values;
     auto consumeSrcListComponent = [&](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
         const CSSParserToken& token = range.peek();
         if (token.type() == CSSParserTokenType::UrlToken || token.functionId() == CSSValueUrl)
@@ -270,15 +284,15 @@ RefPtr<CSSValueList> consumeFontFaceSrc(CSSParserTokenRange& range, const CSSPar
         auto begin = range.begin();
         while (!range.atEnd() && range.peek().type() != CSSParserTokenType::CommaToken)
             range.consumeComponentValue();
-
         auto subrange = range.makeSubRange(begin, &range.peek());
         if (auto parsedValue = consumeSrcListComponent(subrange))
-        values->append(parsedValue.releaseNonNull());
-
+            values.append(parsedValue.releaseNonNull());
         if (!range.atEnd())
             range.consumeIncludingWhitespace();
         }
-    return values->size() ? values : nullptr;
+    if (values.isEmpty())
+        return nullptr;
+    return CSSValueList::createCommaSeparated(WTFMove(values));
 }
 
 #if ENABLE(VARIATION_FONTS)
@@ -309,18 +323,18 @@ RefPtr<CSSValue> consumeFontStyleRange(CSSParserTokenRange& range, CSSParserMode
     if (!firstAngle)
             return nullptr;
 
-            auto result = CSSValueList::createSpaceSeparated();
-            result->append(firstAngle.releaseNonNull());
-
-    if (!rangeAfterAngles.atEnd()) {
+    RefPtr<CSSValueList> angleList;
+    if (rangeAfterAngles.atEnd())
+        angleList = CSSValueList::createSpaceSeparated(firstAngle.releaseNonNull());
+    else {
         auto secondAngle = consumeFontStyleAngle(rangeAfterAngles, mode);
         if (!secondAngle)
             return nullptr;
-        result->append(secondAngle.releaseNonNull());
+        angleList = CSSValueList::createSpaceSeparated(firstAngle.releaseNonNull(), secondAngle.releaseNonNull());
     }
 
     range = rangeAfterAngles;
-    return CSSFontStyleRangeValue::create(keyword.releaseNonNull(), WTFMove(result));
+    return CSSFontStyleRangeValue::create(keyword.releaseNonNull(), angleList.releaseNonNull());
 }
 
 #endif
@@ -349,6 +363,7 @@ static RefPtr<CSSPrimitiveValue> consumeFontWeightAbsoluteKeywordValue(CSSParser
 }
 
 #if ENABLE(VARIATION_FONTS)
+
 RefPtr<CSSValue> consumeFontWeightAbsoluteRange(CSSParserTokenRange& range)
 {
     if (auto result = consumeFontWeightAbsoluteKeywordValue(range))
@@ -361,18 +376,18 @@ RefPtr<CSSValue> consumeFontWeightAbsoluteRange(CSSParserTokenRange& range)
     auto secondNumber = CSSPropertyParserHelpers::consumeFontWeightNumber(range);
     if (!secondNumber)
         return nullptr;
-    auto result = CSSValueList::createSpaceSeparated();
-    result->append(firstNumber.releaseNonNull());
-    result->append(secondNumber.releaseNonNull());
-    return RefPtr<CSSValue>(WTFMove(result));
+    return CSSValueList::createSpaceSeparated(firstNumber.releaseNonNull(), secondNumber.releaseNonNull());
 }
+
 #else
+
 RefPtr<CSSPrimitiveValue> consumeFontWeightAbsolute(CSSParserTokenRange& range)
 {
     if (auto result = consumeFontWeightAbsoluteKeywordValue(range))
         return result;
     return CSSPropertyParserHelpers::consumeFontWeightNumber(range);
 }
+
 #endif
 
 RefPtr<CSSPrimitiveValue> consumeFontStretchKeywordValue(CSSParserTokenRange& range)
@@ -382,42 +397,34 @@ RefPtr<CSSPrimitiveValue> consumeFontStretchKeywordValue(CSSParserTokenRange& ra
     return nullptr;
 }
 
-#if ENABLE(VARIATION_FONTS)
-static bool fontStretchIsWithinRange(float stretch)
-{
-    return stretch >= 0;
-}
-#endif
-
 RefPtr<CSSPrimitiveValue> consumeFontStretch(CSSParserTokenRange& range)
 {
     if (auto result = consumeFontStretchKeywordValue(range))
         return result;
 #if ENABLE(VARIATION_FONTS)
     if (auto percent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative))
-        return fontStretchIsWithinRange(percent->value<float>()) ? percent : nullptr;
+        return percent;
 #endif
     return nullptr;
 }
 
 #if ENABLE(VARIATION_FONTS)
+
 RefPtr<CSSValue> consumeFontStretchRange(CSSParserTokenRange& range)
 {
     if (auto result = consumeFontStretchKeywordValue(range))
         return result;
     auto firstPercent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
-    if (!firstPercent || !fontStretchIsWithinRange(firstPercent->value<float>()))
+    if (!firstPercent)
         return nullptr;
     if (range.atEnd())
         return firstPercent;
     auto secondPercent = CSSPropertyParserHelpers::consumePercent(range, ValueRange::NonNegative);
-    if (!secondPercent || !fontStretchIsWithinRange(secondPercent->value<float>()))
+    if (!secondPercent)
         return nullptr;
-    auto result = CSSValueList::createSpaceSeparated();
-    result->append(firstPercent.releaseNonNull());
-    result->append(secondPercent.releaseNonNull());
-    return RefPtr<CSSValue>(WTFMove(result));
+    return CSSValueList::createSpaceSeparated(firstPercent.releaseNonNull(), secondPercent.releaseNonNull());
 }
+
 #endif
 
 static bool consumeOptionalDelimiter(CSSParserTokenRange& range, UChar value)
@@ -531,15 +538,15 @@ static std::optional<UnicodeRange> consumeUnicodeRange(CSSParserTokenRange& rang
 
 RefPtr<CSSValueList> consumeFontFaceUnicodeRange(CSSParserTokenRange& range)
 {
-    auto values = CSSValueList::createCommaSeparated();
+    CSSValueListBuilder values;
     do {
         auto unicodeRange = consumeUnicodeRange(range);
         range.consumeWhitespace();
         if (!unicodeRange || unicodeRange->end > UCHAR_MAX_VALUE || unicodeRange->start > unicodeRange->end)
             return nullptr;
-        values->append(CSSUnicodeRangeValue::create(unicodeRange->start, unicodeRange->end));
+        values.append(CSSUnicodeRangeValue::create(unicodeRange->start, unicodeRange->end));
     } while (CSSPropertyParserHelpers::consumeCommaIncludingWhitespace(range));
-    return values;
+    return CSSValueList::createCommaSeparated(WTFMove(values));
 }
 
 static std::optional<FontTag> consumeFontTag(CSSParserTokenRange& range)

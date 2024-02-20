@@ -516,7 +516,6 @@ std::optional<uint64_t> fileSize(PlatformFileHandle handle)
 
 std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
 {
-    fprintf(stderr, "fileID(PlatformFileHandle) NOT IMPLEMENTED\n");
     UNUSED_PARAM(fileHandle);
     return std::nullopt;
 }

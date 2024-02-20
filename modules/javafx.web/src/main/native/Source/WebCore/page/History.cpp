@@ -28,14 +28,16 @@
 
 #include "BackForwardController.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "NavigationScheduler.h"
+#include "OriginAccessPatterns.h"
 #include "Page.h"
+#include "Quirks.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include <wtf/CheckedArithmetic.h>
@@ -51,8 +53,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(History);
 
-History::History(DOMWindow& window)
-    : DOMWindowProperty(&window)
+History::History(LocalDOMWindow& window)
+    : LocalDOMWindowProperty(&window)
 {
 }
 
@@ -188,7 +190,7 @@ ExceptionOr<void> History::stateObjectAdded(RefPtr<SerializedScriptValue>&& data
 
     // Each unique main-frame document is only allowed to send 64MB of state object payload to the UI client/process.
     static uint32_t totalStateObjectPayloadLimit = 0x4000000;
-    static Seconds stateObjectTimeSpan { 30_s };
+    static Seconds stateObjectTimeSpan { 10_s };
     static unsigned perStateObjectTimeSpanLimit = 100;
 
     auto* frame = this->frame();
@@ -208,10 +210,11 @@ ExceptionOr<void> History::stateObjectAdded(RefPtr<SerializedScriptValue>&& data
     if (!protocolHostAndPortAreEqual(fullURL, documentURL) || fullURL.user() != documentURL.user() || fullURL.password() != documentURL.password())
         return createBlockedURLSecurityErrorWithMessageSuffix("Protocols, domains, ports, usernames, and passwords must match.");
 #if !PLATFORM(JAVA)
-    if (fullURL.isLocalFile()
+    if (fullURL.protocolIsFile()
 #if PLATFORM(COCOA)
         && linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::PushStateFilePathRestriction)
 #endif
+        && !frame->document()->quirks().shouldDisablePushStateFilePathRestrictions()
         && fullURL.fileSystemPath() != documentURL.fileSystemPath()) {
         return createBlockedURLSecurityErrorWithMessageSuffix("Only differences in query and fragment are allowed for file: URLs.");
     }
@@ -223,10 +226,11 @@ ExceptionOr<void> History::stateObjectAdded(RefPtr<SerializedScriptValue>&& data
     bool allowSandboxException = (documentSecurityOrigin.isLocal() || documentSecurityOrigin.isOpaque())
         && documentURL.viewWithoutQueryOrFragmentIdentifier() == fullURL.viewWithoutQueryOrFragmentIdentifier();
 
-    if (!allowSandboxException && !documentSecurityOrigin.canRequest(fullURL) && (fullURL.path() != documentURL.path() || fullURL.query() != documentURL.query()))
+    if (!allowSandboxException && !documentSecurityOrigin.canRequest(fullURL, OriginAccessPatternsForWebProcess::singleton()) && (fullURL.path() != documentURL.path() || fullURL.query() != documentURL.query()))
         return createBlockedURLSecurityErrorWithMessageSuffix("Paths and fragments must match for a sandboxed document.");
 
-    auto* mainWindow = frame->page()->mainFrame().window();
+    auto* localMainFrame = dynamicDowncast<LocalFrame>(frame->page()->mainFrame());
+    auto* mainWindow = localMainFrame ? localMainFrame->window() : nullptr;
     if (!mainWindow)
         return { };
 

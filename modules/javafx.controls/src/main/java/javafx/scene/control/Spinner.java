@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -166,7 +166,11 @@ public class Spinner<T> extends Control {
 
         focusedProperty().addListener(o -> {
             if (!isFocused()) {
-                commitValue();
+                try {
+                    commitValue();
+                } catch (Exception e) {
+                    cancelEdit();
+                }
             }
         });
     }
@@ -769,7 +773,7 @@ public class Spinner<T> extends Control {
             }
         }
 
-        notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.VALUE_STRING);
         if (text == null) {
             if (value == null) {
                 getEditor().clear();
@@ -834,7 +838,7 @@ public class Spinner<T> extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TEXT: {
+            case VALUE_STRING: {
                 T value = getValue();
                 SpinnerValueFactory<T> factory = getValueFactory();
                 if (factory != null) {
@@ -845,6 +849,15 @@ public class Spinner<T> extends Control {
                 }
                 return value != null ? value.toString() : "";
             }
+
+            case TEXT: {
+                String accText = getAccessibleText();
+                return (accText != null) ? accText : "";
+            }
+
+            case EDITABLE:
+                return isEditable();
+
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

@@ -248,9 +248,26 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinPixels__1fillDirectByteBuffe
 {
     Pixels pixels(env, jPixels);
 
-    memcpy(env->GetDirectBufferAddress(bb), pixels.GetBits(),
-            pixels.GetWidth() * pixels.GetHeight() * 4);
+    if (bb == NULL) {
+        return;
+    }
+
+    const int width = pixels.GetWidth();
+    const int height = pixels.GetHeight();
+    if (width <= 0 || height <= 0 || width > ((INT_MAX / 4) / height)) {
+        return;
+    }
+    const int size = width * height * 4;
+    const int bbCapacity = env->GetDirectBufferCapacity(bb);
+    if (bbCapacity < size) {
+        return;
+    }
+
+    void *bbAddr = env->GetDirectBufferAddress(bb);
+    if (bbAddr == NULL) {
+        return;
+    }
+    memcpy(bbAddr, pixels.GetBits(), size);
 }
 
 } // extern "C"
-

@@ -28,6 +28,7 @@
 #include "CSSParserContext.h"
 #include "CSSStyleDeclaration.h"
 #include "DeprecatedCSSOMValue.h"
+#include "StyledElement.h"
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
@@ -48,8 +49,6 @@ public:
     explicit PropertySetCSSStyleDeclaration(MutableStyleProperties& propertySet)
         : m_propertySet(&propertySet)
     { }
-
-    virtual void clearParentElement() { ASSERT_NOT_REACHED(); }
 
     StyleSheetContents* contextStyleSheet() const;
 
@@ -91,7 +90,7 @@ private:
     virtual void didMutate(MutationType) { }
 };
 
-class StyleRuleCSSStyleDeclaration final : public PropertySetCSSStyleDeclaration {
+class StyleRuleCSSStyleDeclaration final : public PropertySetCSSStyleDeclaration, public RefCounted<StyleRuleCSSStyleDeclaration> {
     WTF_MAKE_ISO_ALLOCATED(StyleRuleCSSStyleDeclaration);
 public:
     static Ref<StyleRuleCSSStyleDeclaration> create(MutableStyleProperties& propertySet, CSSRule& parentRule)
@@ -102,8 +101,8 @@ public:
 
     void clearParentRule() { m_parentRule = nullptr; }
 
-    void ref() final;
-    void deref() final;
+    void ref() final { RefCounted::ref(); }
+    void deref() final { RefCounted::deref(); }
 
     void reattach(MutableStyleProperties&);
 
@@ -118,7 +117,6 @@ private:
     void didMutate(MutationType) final;
     CSSParserContext cssParserContext() const final;
 
-    unsigned m_refCount;
     StyleRuleType m_parentRuleType;
     CSSRule* m_parentRule;
 };
@@ -128,20 +126,19 @@ class InlineCSSStyleDeclaration final : public PropertySetCSSStyleDeclaration {
 public:
     InlineCSSStyleDeclaration(MutableStyleProperties& propertySet, StyledElement& parentElement)
         : PropertySetCSSStyleDeclaration(propertySet)
-        , m_parentElement(&parentElement)
+        , m_parentElement(parentElement)
     {
     }
 
 private:
     CSSStyleSheet* parentStyleSheet() const final;
-    StyledElement* parentElement() const final { return m_parentElement; }
-    void clearParentElement() final { m_parentElement = nullptr; }
+    StyledElement* parentElement() const final { return m_parentElement.get(); }
 
     bool willMutate() final WARN_UNUSED_RETURN;
     void didMutate(MutationType) final;
     CSSParserContext cssParserContext() const final;
 
-    StyledElement* m_parentElement;
+    WeakPtr<StyledElement, WeakPtrImplWithEventTargetData> m_parentElement;
 };
 
 } // namespace WebCore

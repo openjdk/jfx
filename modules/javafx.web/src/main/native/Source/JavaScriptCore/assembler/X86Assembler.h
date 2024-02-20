@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1845,7 +1845,7 @@ private:
             m_formatter.oneByteOp(OP_GROUP2_Ev1, op, dst);
         else {
             m_formatter.oneByteOp(OP_GROUP2_EvIb, op, dst);
-            m_formatter.immediate8(imm);
+            m_formatter.immediate8(imm & 31);
         }
     }
 
@@ -1926,7 +1926,7 @@ private:
             m_formatter.oneByteOp64(OP_GROUP2_Ev1, op, dst);
         else {
             m_formatter.oneByteOp64(OP_GROUP2_EvIb, op, dst);
-            m_formatter.immediate8(imm);
+            m_formatter.immediate8(imm & 63);
         }
     }
 public:
@@ -3359,6 +3359,11 @@ public:
         m_formatter.twoByteOp8(OP2_MOVSX_GvEb, dst, src);
     }
 
+    void movsbq_rr(RegisterID src, RegisterID dst)
+    {
+        m_formatter.twoByteOp64(OP2_MOVSX_GvEb, dst, src);
+    }
+
     void movzwl_rr(RegisterID src, RegisterID dst)
     {
         m_formatter.twoByteOp8(OP2_MOVZX_GvEw, dst, src);
@@ -3367,6 +3372,11 @@ public:
     void movswl_rr(RegisterID src, RegisterID dst)
     {
         m_formatter.twoByteOp8(OP2_MOVSX_GvEw, dst, src);
+    }
+
+    void movswq_rr(RegisterID src, RegisterID dst)
+    {
+        m_formatter.twoByteOp64(OP2_MOVSX_GvEw, dst, src);
     }
 
     void cmovl_rr(Condition cond, RegisterID src, RegisterID dst)
@@ -6357,11 +6367,6 @@ public:
         relinkJump(from, to);
     }
 
-    static void repatchInt32(void* where, int32_t value)
-    {
-        setInt32(where, value);
-    }
-
     static void repatchPointer(void* where, void* value)
     {
         setPointer(where, value);
@@ -6471,42 +6476,6 @@ public:
         u.asWord = imm;
         for (unsigned i = opcodeBytes + modRMBytes; i < static_cast<unsigned>(maxJumpReplacementSize()); ++i)
             ptr[i] = u.asBytes[i - opcodeBytes - modRMBytes];
-    }
-
-    static void replaceWithLoad(void* instructionStart)
-    {
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(instructionStart);
-#if CPU(X86_64)
-        if ((*ptr & ~15) == PRE_REX)
-            ptr++;
-#endif
-        switch (*ptr) {
-        case OP_MOV_GvEv:
-            break;
-        case OP_LEA:
-            *ptr = OP_MOV_GvEv;
-            break;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
-    }
-
-    static void replaceWithAddressComputation(void* instructionStart)
-    {
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(instructionStart);
-#if CPU(X86_64)
-        if ((*ptr & ~15) == PRE_REX)
-            ptr++;
-#endif
-        switch (*ptr) {
-        case OP_MOV_GvEv:
-            *ptr = OP_LEA;
-            break;
-        case OP_LEA:
-            break;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
     }
 
     static unsigned getCallReturnOffset(AssemblerLabel call)

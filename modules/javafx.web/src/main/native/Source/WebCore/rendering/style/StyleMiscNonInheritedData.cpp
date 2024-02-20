@@ -29,12 +29,15 @@
 #include "AnimationList.h"
 #include "ContentData.h"
 #include "FillLayer.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
+#include "ShadowData.h"
 #include "StyleDeprecatedFlexibleBoxData.h"
 #include "StyleFilterData.h"
 #include "StyleFlexibleBoxData.h"
 #include "StyleMultiColData.h"
 #include "StyleTransformData.h"
+#include "StyleVisitedLinkColorData.h"
+#include <wtf/PointerComparison.h>
 
 namespace WebCore {
 
@@ -49,11 +52,6 @@ StyleMiscNonInheritedData::StyleMiscNonInheritedData()
     , transform(StyleTransformData::create())
     , mask(FillLayer::create(FillLayerType::Mask))
     , visitedLinkColor(StyleVisitedLinkColorData::create())
-    // animations
-    // transitions
-    // content
-    // boxShadow
-    // altText
     , aspectRatioWidth(RenderStyle::initialAspectRatioWidth())
     , aspectRatioHeight(RenderStyle::initialAspectRatioHeight())
     , alignContent(RenderStyle::initialContentAlignment())
@@ -64,13 +62,11 @@ StyleMiscNonInheritedData::StyleMiscNonInheritedData()
     , justifySelf(RenderStyle::initialSelfAlignment())
     , objectPosition(RenderStyle::initialObjectPosition())
     , order(RenderStyle::initialOrder())
-    , hasAttrContent(false)
     , aspectRatioType(static_cast<unsigned>(RenderStyle::initialAspectRatioType()))
     , appearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
     , effectiveAppearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
     , textOverflow(static_cast<unsigned>(RenderStyle::initialTextOverflow()))
     , userDrag(static_cast<unsigned>(RenderStyle::initialUserDrag()))
-    , isNotFinal(false)
     , objectFit(static_cast<unsigned>(RenderStyle::initialObjectFit()))
     , resize(static_cast<unsigned>(RenderStyle::initialResize()))
 {
@@ -107,7 +103,6 @@ StyleMiscNonInheritedData::StyleMiscNonInheritedData(const StyleMiscNonInherited
     , effectiveAppearance(o.effectiveAppearance)
     , textOverflow(o.textOverflow)
     , userDrag(o.userDrag)
-    , isNotFinal(o.isNotFinal)
     , objectFit(o.objectFit)
     , resize(o.resize)
 {
@@ -151,7 +146,6 @@ bool StyleMiscNonInheritedData::operator==(const StyleMiscNonInheritedData& o) c
         && effectiveAppearance == o.effectiveAppearance
         && textOverflow == o.textOverflow
         && userDrag == o.userDrag
-        && isNotFinal == o.isNotFinal
         && objectFit == o.objectFit
         && resize == o.resize;
 }

@@ -67,7 +67,6 @@ if (USE_COORDINATED_GRAPHICS)
     )
     list(APPEND WebCore_SOURCES
         platform/graphics/texmap/TextureMapperPlatformLayerBuffer.cpp
-        platform/graphics/texmap/TextureMapperPlatformLayerDmabuf.cpp
         platform/graphics/texmap/TextureMapperPlatformLayerProxy.cpp
         platform/graphics/texmap/TextureMapperPlatformLayerProxyGL.cpp
 
@@ -137,6 +136,8 @@ endif ()
 if (ENABLE_WEBGL)
     list(APPEND WebCore_SOURCES
         platform/graphics/nicosia/texmap/NicosiaGCGLANGLELayer.cpp
+
+        platform/graphics/texmap/GraphicsContextGLTextureMapperANGLENicosia.cpp
     )
 endif ()
 
@@ -160,8 +161,6 @@ if (USE_GBM)
         platform/graphics/gbm/DMABufReleaseFlag.h
         platform/graphics/gbm/GBMBufferSwapchain.h
         platform/graphics/gbm/GBMDevice.h
-        platform/graphics/gbm/GraphicsContextGLFallback.h
         platform/graphics/gbm/GraphicsContextGLGBM.h
-        platform/graphics/gbm/GraphicsContextGLGBMTextureMapper.h
     )
 endif ()

@@ -15,7 +15,7 @@ COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
                  -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue \
                  -wd"4005" -wd"4018" -wd"4028" -wd"4090" -wd"4113" -wd"4267" -wd"4715" \
                  -wd"4146" -wd"4311" -wd"4312" -wd"4133" -wd"4146" -wd"4334" \
-                 -FI"msvc_recommended_pragmas.h" 
+                 -FI"msvc_recommended_pragmas.h"
 
 INCLUDES = -I$(SRCBASE_DIR) \
            -I$(SRCBASE_DIR)/glib \
@@ -29,10 +29,10 @@ CFLAGS =   -DWIN32 \
            -DHAVE_CONFIG_H \
            -DG_LOG_DOMAIN=\"GThread\" \
            -D_MBCS \
-	   -DG_OS_WIN32 \
-	   -DFFI_BUILDING \
+           -DG_OS_WIN32 \
+           -DFFI_BUILDING \
            -DG_DISABLE_DEPRECATED \
-	   $(INCLUDES) \
+           $(INCLUDES) \
            $(COMPILER_FLAGS)
 
 
@@ -58,8 +58,8 @@ OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
 
 default: $(TARGET)
 
-$(TARGET): $(OBJECTS) 
-	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) 
+$(TARGET): $(OBJECTS)
+	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
 
 $(OBJECTS): | $(DEP_DIRS)
 

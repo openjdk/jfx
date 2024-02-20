@@ -24,6 +24,9 @@
 
 #include "HTMLTextFormControlElement.h"
 #include "HitTestResult.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderText.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
@@ -80,28 +83,10 @@ void RenderTextControl::styleDidChange(StyleDifference diff, const RenderStyle* 
     textFormControlElement().updatePlaceholderVisibility();
 }
 
-int RenderTextControl::textBlockLogicalHeight() const
-{
-    return logicalHeight() - borderAndPaddingLogicalHeight();
-}
-
-int RenderTextControl::textBlockLogicalWidth() const
-{
-    auto innerText = innerTextElement();
-    if (!innerText)
-        return 0;
-
-    LayoutUnit unitWidth = logicalWidth() - borderAndPaddingLogicalWidth();
-    if (innerText->renderer())
-        unitWidth -= innerText->renderBox()->paddingStart() + innerText->renderBox()->paddingEnd();
-
-    return unitWidth;
-}
-
 int RenderTextControl::scrollbarThickness() const
 {
     // FIXME: We should get the size of the scrollbar from the RenderTheme instead.
-    return ScrollbarTheme::theme().scrollbarThickness();
+    return ScrollbarTheme::theme().scrollbarThickness(this->style().scrollbarWidth());
 }
 
 RenderBox::LogicalExtentComputedValues RenderTextControl::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const
@@ -115,8 +100,12 @@ RenderBox::LogicalExtentComputedValues RenderTextControl::computeLogicalHeight(L
         logicalHeight = computeControlLogicalHeight(innerTextBox->lineHeight(true, HorizontalLine, PositionOfInteriorLineBoxes), nonContentHeight);
 
         // We are able to have a horizontal scrollbar if the overflow style is scroll, or if its auto and there's no word wrap.
-        if ((isHorizontalWritingMode() && (style().overflowX() == Overflow::Scroll ||  (style().overflowX() == Overflow::Auto && innerText->renderer()->style().overflowWrap() == OverflowWrap::Normal)))
-            || (!isHorizontalWritingMode() && (style().overflowY() == Overflow::Scroll ||  (style().overflowY() == Overflow::Auto && innerText->renderer()->style().overflowWrap() == OverflowWrap::Normal))))
+        auto shouldIncludeScrollbarHeight = [&] {
+            auto& style = this->style();
+            auto isHorizontalWritingMode = this->isHorizontalWritingMode();
+            return (isHorizontalWritingMode && style.overflowX() == Overflow::Scroll) || (!isHorizontalWritingMode && style.overflowY() == Overflow::Scroll);
+        };
+        if (shouldIncludeScrollbarHeight())
             logicalHeight += scrollbarThickness();
 
         // FIXME: The logical height of the inner text box should have been added
@@ -164,7 +153,7 @@ float RenderTextControl::scaleEmToUnits(int x) const
 
 void RenderTextControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    if (shouldApplySizeContainment()) {
+    if (shouldApplySizeOrInlineSizeContainment()) {
         if (auto width = explicitIntrinsicInnerLogicalWidth()) {
             minLogicalWidth = width.value();
             maxLogicalWidth = width.value();
@@ -235,5 +224,11 @@ int RenderTextControl::innerLineHeight() const
     return style().computedLineHeight();
 }
 #endif
+
+RenderTextControlInnerContainer::RenderTextControlInnerContainer(Element& element, RenderStyle&& style)
+    : RenderFlexibleBox(element, WTFMove(style))
+{
+
+}
 
 } // namespace WebCore

@@ -115,6 +115,8 @@ void MemoryBackingStoreTransaction::objectStoreDeleted(Ref<MemoryObjectStore>&& 
 {
     ASSERT(m_objectStores.contains(&objectStore.get()));
     m_objectStores.remove(&objectStore.get());
+    if (m_originalObjectStoreNames.contains(&objectStore.get()))
+        m_originalObjectStoreNames.remove(&objectStore.get());
     objectStore->deleteAllIndexes(*this);
 
     // If the store removed is previously added in this transaction, we don't need to
@@ -122,7 +124,7 @@ void MemoryBackingStoreTransaction::objectStoreDeleted(Ref<MemoryObjectStore>&& 
     if (auto addedObjectStore = m_versionChangeAddedObjectStores.take(&objectStore.get())) {
         // We don't need to track its indexes either.
         m_deletedIndexes.removeIf([identifier = objectStore->info().identifier()](auto& entry) {
-            return entry.value->objectStore().info().identifier() == identifier;
+            return entry.value->objectStore()->info().identifier() == identifier;
         });
         return;
     }
@@ -160,7 +162,7 @@ void MemoryBackingStoreTransaction::objectStoreRenamed(MemoryObjectStore& object
 
 void MemoryBackingStoreTransaction::indexRenamed(MemoryIndex& index, const String& oldName)
 {
-    ASSERT(m_objectStores.contains(&index.objectStore()));
+    ASSERT(!index.objectStore() || m_objectStores.contains(index.objectStore().get()));
     ASSERT(m_info.mode() == IDBTransactionMode::Versionchange);
 
     // We only care about the first rename in a given transaction, because if the transaction is aborted we want
@@ -208,11 +210,32 @@ void MemoryBackingStoreTransaction::recordValueChanged(MemoryObjectStore& object
 void MemoryBackingStoreTransaction::abort()
 {
     LOG(IndexedDB, "MemoryBackingStoreTransaction::abort()");
-
     SetForScope change(m_isAborting, true);
 
-    for (const auto& iterator : m_originalIndexNames)
-        iterator.key->rename(iterator.value);
+    for (const auto& iterator : m_originalIndexNames) {
+        auto* index = iterator.key;
+        auto originalName = iterator.value;
+        auto identifier = index->info().identifier();
+
+        // If a new index was added with the original name of an index being renamed in this transaction, we need to delete it.
+        RefPtr<MemoryIndex> indexToDelete;
+        for (auto addedIndex : m_indexes) {
+            if (addedIndex->info().name() == originalName && addedIndex->info().identifier() != identifier) {
+                indexToDelete = addedIndex;
+                break;
+            }
+        }
+        if (indexToDelete && indexToDelete->objectStore())
+            indexToDelete->objectStore()->deleteIndex(*this, indexToDelete->info().identifier());
+
+        if (auto objectStore = index->objectStore()) {
+            auto indexToReRegister = objectStore->takeIndexByIdentifier(identifier).releaseNonNull();
+            objectStore->info().deleteIndex(identifier);
+        index->rename(originalName);
+            objectStore->info().addExistingIndex(index->info());
+            objectStore->registerIndex(WTFMove(indexToReRegister));
+        }
+    }
     m_originalIndexNames.clear();
 
     for (const auto& iterator : m_originalObjectStoreNames)
@@ -222,7 +245,7 @@ void MemoryBackingStoreTransaction::abort()
     for (const auto& objectStore : m_versionChangeAddedObjectStores)
         m_backingStore.removeObjectStoreForVersionChangeAbort(*objectStore);
     m_deletedIndexes.removeIf([&](auto& entry) {
-        return m_versionChangeAddedObjectStores.contains(&entry.value->objectStore());
+        return m_versionChangeAddedObjectStores.contains(entry.value->objectStore().get());
     });
     m_versionChangeAddedObjectStores.clear();
 
@@ -266,7 +289,7 @@ void MemoryBackingStoreTransaction::abort()
 
     for (auto& index : m_deletedIndexes.values()) {
         RELEASE_ASSERT(m_backingStore.hasObjectStore(index->info().objectStoreIdentifier()));
-        index->objectStore().maybeRestoreDeletedIndex(*index);
+        index->objectStore()->maybeRestoreDeletedIndex(*index);
     }
     m_deletedIndexes.clear();
 
