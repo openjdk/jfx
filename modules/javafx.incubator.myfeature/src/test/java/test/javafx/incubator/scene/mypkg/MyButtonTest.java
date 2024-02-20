@@ -23,11 +23,11 @@
  * questions.
  */
 
-package test.javafx.incubator.scene.control;
+package test.javafx.incubator.scene.mypkg;
 
-import com.sun.javafx.incubator.scene.control.MyImpl;
-import javafx.incubator.scene.control.MyButton;
-import javafx.incubator.scene.control.MyButtonShim;
+import com.sun.javafx.incubator.scene.mypkg.MyImpl;
+import javafx.incubator.scene.mypkg.MyButton;
+import javafx.incubator.scene.mypkg.MyButtonShim;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

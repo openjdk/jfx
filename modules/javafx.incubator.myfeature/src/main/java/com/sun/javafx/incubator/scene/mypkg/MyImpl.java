@@ -23,10 +23,20 @@
  * questions.
  */
 
-package javafx.incubator.scene.control;
+package com.sun.javafx.incubator.scene.mypkg;
 
-public class MyButtonShim {
-    public static int getMyField(MyButton myButton) {
-        return myButton.getMyField();
+import javafx.incubator.scene.mypkg.MyButton;
+import com.sun.javafx.PlatformUtil;
+
+/**
+ *
+ * @author kcr
+ */
+public class MyImpl {
+    private MyImpl() {}
+
+    public static void print(MyButton button) {
+        System.out.println("isMac: " + PlatformUtil.isMac());
+        System.out.println("button: " + button);
     }
 }
