@@ -393,37 +393,53 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor");
 
     jint color = 0;
+    CGColorRef origColor = NULL;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-
-    static CGContextRef sRGBImageContext = NULL;
-    static jint sRGBPixelData;
-
-    if (sRGBImageContext == NULL) {
-        CGColorSpaceRef sRGBColorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-        sRGBImageContext = CGBitmapContextCreate(
-            &sRGBPixelData, 1, 1,     // pixels, width, height
-            8, sizeof(sRGBPixelData), // bits per component, bytes per row
-            sRGBColorSpace,
-            kCGBitmapByteOrder32Host |
-            kCGImageAlphaPremultipliedFirst);
-        // Retained by context
-        CGColorSpaceRelease(sRGBColorSpace);
-    }
-
     GLASS_POOL_ENTER
     {
         CGRect bounds = CGRectMake((CGFloat)x, (CGFloat)y, 1.0f, 1.0f);
         CGImageRef screenImage = CGWindowListCreateImage(bounds, kCGWindowListOptionOnScreenOnly, kCGNullWindowID, kCGWindowImageDefault);
         if (screenImage != NULL)
         {
-            CGRect zeroBounds = { { 0, 0 }, { 1, 1 } };
-            CGContextDrawImage(sRGBImageContext, zeroBounds, screenImage);
-            CGContextFlush(sRGBImageContext);
-            color = sRGBPixelData;
+            //DumpImage(screenImage);
+            CGDataProviderRef provider = CGImageGetDataProvider(screenImage);
+            if (provider != NULL)
+            {
+                CFDataRef data = CGDataProviderCopyData(provider);
+                if (data != NULL)
+                {
+                    jint *pixels = (jint*)CFDataGetBytePtr(data);
+                    if (pixels != NULL)
+                    {
+                        color = *pixels;
+                        CGFloat components[4];
+                        components[0] = (CGFloat)((color & 0x00FF0000) >> 16) / 255.0;
+                        components[1] = (CGFloat)((color & 0x0000FF00) >> 8) / 255.0;
+                        components[2] = (CGFloat)((color & 0x000000FF)) / 255.0;
+                        components[3] = (CGFloat)((color & 0xFF000000) >> 24) / 255.0;
+                        origColor = CGColorCreate(CGImageGetColorSpace(screenImage), components);
+                    }
+                }
+                CFRelease(data);
+            }
+            CGImageRelease(screenImage);
         }
     }
     GLASS_POOL_EXIT;
+
+    if (origColor != NULL) {
+        CGColorSpaceRef sRGBSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+        CGColorRef correctedColor = CGColorCreateCopyByMatchingToColorSpace(sRGBSpace, kCGRenderingIntentAbsoluteColorimetric, origColor, NULL);
+        const CGFloat* components = CGColorGetComponents(correctedColor);
+        color  = ((jint)(components[3] * 255) & 0xFF) << 24;
+        color |= ((jint)(components[0] * 255) & 0xFF) << 16;
+        color |= ((jint)(components[1] * 255) & 0xFF) << 8;
+        color |= ((jint)(components[2] * 255) & 0xFF);
+        CGColorSpaceRelease(sRGBSpace);
+        CGColorRelease(correctedColor);
+        CGColorRelease(origColor);
+    }
 
     return color;
 }
