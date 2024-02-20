@@ -596,14 +596,8 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
     if (disableGrab) {
         return TRUE;
     }
-    GdkGrabStatus status;
-    if (!wrapped_gdk_seat_grab(gdkWindow,
-            1 << 0 | 1 << 1 | 1 << 2 /* GDK_SEAT_CAPABILITY_ALL_POINTING */,
-            owner_events, cursor, NULL,
-            NULL /* GdkSeatGrabPrepareFunc */,
-            NULL,
-            &status)) {
-        status = gdk_pointer_grab(gdkWindow, owner_events, (GdkEventMask)
+
+    GdkGrabStatus status = gdk_pointer_grab(gdkWindow, owner_events, (GdkEventMask)
                                             (GDK_POINTER_MOTION_MASK
                                                 | GDK_POINTER_MOTION_HINT_MASK
                                                 | GDK_BUTTON_MOTION_MASK
@@ -611,17 +605,16 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
                                                 | GDK_BUTTON2_MOTION_MASK
                                                 | GDK_BUTTON3_MOTION_MASK
                                                 | GDK_BUTTON_PRESS_MASK
-                                                | GDK_BUTTON_RELEASE_MASK),
+                                                | GDK_BUTTON_RELEASE_MASK
+                                                | GDK_TOUCH_MASK),
                                             NULL, cursor, GDK_CURRENT_TIME);
-    }
+
     return (status == GDK_GRAB_SUCCESS) ? TRUE : FALSE;
 }
 
 void
-glass_gdk_mouse_devices_ungrab(GdkWindow *gdkWindow) {
-    if (!wrapped_gdk_seat_ungrab(gdkWindow)) {
-        gdk_pointer_ungrab(GDK_CURRENT_TIME);
-    }
+glass_gdk_mouse_devices_ungrab() {
+    gdk_pointer_ungrab(GDK_CURRENT_TIME);
 }
 
 void

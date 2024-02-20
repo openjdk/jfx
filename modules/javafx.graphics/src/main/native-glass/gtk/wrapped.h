@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,15 +42,6 @@ gboolean wrapped_g_settings_schema_has_key (GSettingsSchema *schema, const gchar
 void wrapped_g_settings_schema_unref (GSettingsSchema *schema);
 
 void wrapped_gdk_x11_display_set_window_scale (GdkDisplay *display, gint scale);
-
-gboolean wrapped_gdk_seat_grab(GdkWindow* window,
-                            int capabilities /* GdkSeatCapabilities capabilities */,
-                            gboolean owner_events, GdkCursor* cursor, const GdkEvent* event,
-                            void * prepare_func /* GdkSeatGrabPrepareFunc prepare_func */,
-                            gpointer prepare_func_data,
-                            GdkGrabStatus* status);
-
-gboolean wrapped_gdk_seat_ungrab(GdkWindow* window);
 
 #ifdef __cplusplus
 }

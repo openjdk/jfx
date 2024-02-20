@@ -317,7 +317,7 @@ gboolean
 glass_gdk_mouse_devices_grab_with_cursor(GdkWindow * gdkWindow, GdkCursor *cursor, gboolean owner_events);
 
 void
-glass_gdk_mouse_devices_ungrab(GdkWindow *gdkWindow);
+glass_gdk_mouse_devices_ungrab();
 
 void
 glass_gdk_master_pointer_grab(GdkEvent *event, GdkWindow *window, GdkCursor *cursor);
