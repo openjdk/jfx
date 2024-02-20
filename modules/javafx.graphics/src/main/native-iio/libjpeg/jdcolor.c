@@ -96,7 +96,7 @@ typedef my_color_deconverter * my_cconvert_ptr;
  * since we must add them together before rounding.
  */
 
-#define SCALEBITS	   16    /* speediest right-shift on some machines */
+#define SCALEBITS    16    /* speediest right-shift on some machines */
 #define ONE_HALF    ((INT32) 1 << (SCALEBITS-1))
 #define FIX(x)        ((INT32) ((x) * (1L<<SCALEBITS) + 0.5))
 

@@ -588,7 +588,7 @@ encode_mcu_DC_first (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 
     /* Find the number of bits needed for the magnitude of the coefficient */
     nbits = 0;
-    do nbits++;	       /* there must be at least one 1 bit */
+    do nbits++;    /* there must be at least one 1 bit */
     while ((temp >>= 1));
     /* Check for out-of-range coefficient values */
     if (nbits > max_coef_bits)
@@ -666,7 +666,7 @@ encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
      * interwoven with finding the abs value (temp) and output bits (temp2).
      */
     if (temp < 0) {
-      temp = -temp;	   /* temp is abs value of input */
+      temp = -temp;    /* temp is abs value of input */
       /* Apply the point transform, and watch out for case */
       /* that nonzero coef is zero after point transform. */
       if ((temp >>= Al) == 0) {
@@ -696,7 +696,7 @@ encode_mcu_AC_first (j_compress_ptr cinfo, JBLOCKARRAY MCU_data)
 
     /* Find the number of bits needed for the magnitude of the coefficient */
     nbits = 0;
-    do nbits++;	       /* there must be at least one 1 bit */
+    do nbits++;    /* there must be at least one 1 bit */
     while ((temp >>= 1));
     /* Check for out-of-range coefficient values */
     if (nbits > max_coef_bits)
@@ -935,7 +935,7 @@ encode_one_block (working_state * state, JCOEFPTR block, int last_dc_val,
       return FALSE;
   } else {
     if ((temp2 = temp) < 0) {
-      temp = -temp;	   /* temp is abs value of input */
+      temp = -temp;    /* temp is abs value of input */
       /* For a negative input, want temp2 = bitwise complement of abs(input) */
       /* This code assumes we are on a two's complement machine */
       temp2--;
@@ -943,7 +943,7 @@ encode_one_block (working_state * state, JCOEFPTR block, int last_dc_val,
 
     /* Find the number of bits needed for the magnitude of the coefficient */
     nbits = 0;
-    do nbits++;	       /* there must be at least one 1 bit */
+    do nbits++;    /* there must be at least one 1 bit */
     while ((temp >>= 1));
     /* Check for out-of-range coefficient values.
      * Since we're encoding a difference, the range limit is twice as much.
@@ -1146,7 +1146,7 @@ htest_one_block (j_compress_ptr cinfo, JCOEFPTR block, int last_dc_val,
     dc_counts[0]++;
   } else {
     if (temp < 0)
-      temp = -temp;	   /* temp is abs value of input */
+      temp = -temp;    /* temp is abs value of input */
 
     /* Find the number of bits needed for the magnitude of the coefficient */
     nbits = 0;
@@ -1656,5 +1656,5 @@ jinit_huff_encoder (j_compress_ptr cinfo)
   }
 
   if (cinfo->progressive_mode)
-    entropy->bit_buffer = NULL;	   /* needed only in AC refinement scan */
+    entropy->bit_buffer = NULL;    /* needed only in AC refinement scan */
 }
