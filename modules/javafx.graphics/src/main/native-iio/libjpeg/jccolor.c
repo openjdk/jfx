@@ -39,15 +39,15 @@ typedef my_color_converter * my_cconvert_ptr;
  * are defined per IEC 61966-2-1:1999 Amendment A1:2003 Annex G.
  * Note that the derived conversion coefficients given in some of these
  * documents are imprecise.  The general conversion equations are
- *	Y  = Kr * R + (1 - Kr - Kb) * G + Kb * B
- *	Cb = (B - Y) / (1 - Kb) / K
- *	Cr = (R - Y) / (1 - Kr) / K
+ *    Y  = Kr * R + (1 - Kr - Kb) * G + Kb * B
+ *    Cb = (B - Y) / (1 - Kb) / K
+ *    Cr = (R - Y) / (1 - Kr) / K
  * With Kr = 0.299 and Kb = 0.114 (derived according to SMPTE RP 177-1993
  * from the 1953 FCC NTSC primaries and CIE Illuminant C), K = 2 for sYCC,
  * the conversion equations to be implemented are therefore
- *	Y  =  0.299 * R + 0.587 * G + 0.114 * B
- *	Cb = -0.168735892 * R - 0.331264108 * G + 0.5 * B + CENTERJSAMPLE
- *	Cr =  0.5 * R - 0.418687589 * G - 0.081312411 * B + CENTERJSAMPLE
+ *    Y  =  0.299 * R + 0.587 * G + 0.114 * B
+ *    Cb = -0.168735892 * R - 0.331264108 * G + 0.5 * B + CENTERJSAMPLE
+ *    Cr =  0.5 * R - 0.418687589 * G - 0.081312411 * B + CENTERJSAMPLE
  * Note: older versions of the IJG code used a zero offset of MAXJSAMPLE/2,
  * rather than CENTERJSAMPLE, for Cb and Cr.  This gave equal positive and
  * negative swings for Cb/Cr, but meant that grayscale values (Cb=Cr=0)

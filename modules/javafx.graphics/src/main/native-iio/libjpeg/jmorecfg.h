@@ -399,13 +399,13 @@ typedef enum { FALSE = 0, TRUE = 1 } boolean;
 
 #ifndef JPEG_HAVE_RGB_CUSTOM
 #ifdef JPEG_USE_RGB_CUSTOM
-#define RGB_RED	     2    /* Offset of Red in an RGB scanline element */
+#define RGB_RED    2    /* Offset of Red in an RGB scanline element */
 #define RGB_GREEN    1    /* Offset of Green */
-#define RGB_BLUE     0    /* Offset of Blue */
+#define RGB_BLUE    0    /* Offset of Blue */
 #else
-#define RGB_RED	     0    /* Offset of Red in an RGB scanline element */
+#define RGB_RED    0    /* Offset of Red in an RGB scanline element */
 #define RGB_GREEN    1    /* Offset of Green */
-#define RGB_BLUE     2    /* Offset of Blue */
+#define RGB_BLUE    2    /* Offset of Blue */
 #endif
 #define RGB_PIXELSIZE    3    /* JSAMPLEs per RGB scanline element */
 #endif

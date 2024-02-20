@@ -96,7 +96,7 @@ typedef my_color_deconverter * my_cconvert_ptr;
  * since we must add them together before rounding.
  */
 
-#define SCALEBITS	16    /* speediest right-shift on some machines */
+#define SCALEBITS	   16    /* speediest right-shift on some machines */
 #define ONE_HALF    ((INT32) 1 << (SCALEBITS-1))
 #define FIX(x)        ((INT32) ((x) * (1L<<SCALEBITS) + 0.5))
 
@@ -691,7 +691,7 @@ cmyk_yk_convert (j_decompress_ptr cinfo,
       y += Bytab[MAXJSAMPLE - GETJSAMPLE(inptr2[col])];
       outptr[0] = (JSAMPLE) (y >> SCALEBITS);
       /* K passes through unchanged */
-      outptr[1] = inptr3[col];	/* don't need GETJSAMPLE here */
+      outptr[1] = inptr3[col];    /* don't need GETJSAMPLE here */
       outptr += 2;
     }
   }
@@ -855,7 +855,7 @@ jinit_color_deconverter (j_decompress_ptr cinfo)
 
   case JCS_YCCK:
     if (cinfo->jpeg_color_space != JCS_CMYK ||
-	/* Support only YK part of YCCK for colorless output */
+    /* Support only YK part of YCCK for colorless output */
     ! cinfo->comp_info[0].component_needed ||
       cinfo->comp_info[1].component_needed ||
       cinfo->comp_info[2].component_needed ||
