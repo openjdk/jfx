@@ -432,10 +432,10 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
         CGColorSpaceRef sRGBSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
         CGColorRef correctedColor = CGColorCreateCopyByMatchingToColorSpace(sRGBSpace, kCGRenderingIntentAbsoluteColorimetric, origColor, NULL);
         const CGFloat* components = CGColorGetComponents(correctedColor);
-        color  = ((jint)(components[3] * 255) & 0xFF) << 24;
-        color |= ((jint)(components[0] * 255) & 0xFF) << 16;
-        color |= ((jint)(components[1] * 255) & 0xFF) << 8;
-        color |= ((jint)(components[2] * 255) & 0xFF);
+        color  = ((jint)(round(components[3] * 255)) & 0xFF) << 24;
+        color |= ((jint)(round(components[0] * 255)) & 0xFF) << 16;
+        color |= ((jint)(round(components[1] * 255)) & 0xFF) << 8;
+        color |= ((jint)(round(components[2] * 255)) & 0xFF);
         CGColorSpaceRelease(sRGBSpace);
         CGColorRelease(correctedColor);
         CGColorRelease(origColor);
