@@ -702,7 +702,7 @@ public abstract class Toolkit {
                            float[] dashArray,
                            float dashOffset);
 
-    public abstract int getKeyCodeForChar(String character);
+    public abstract int getKeyCodeForChar(String character, int hint);
     public abstract Dimension2D getBestCursorSize(int preferredWidth, int preferredHeight);
     public abstract int getMaximumCursorColors();
     public abstract PathElement[] convertShapeToFXPath(Object shape);

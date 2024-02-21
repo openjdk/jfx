@@ -413,7 +413,7 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/17/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/21/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))

@@ -321,10 +321,10 @@ extern "C" {
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * Signature: (CI)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar
-  (JNIEnv *env, jobject jApplication, jchar character)
+  (JNIEnv *env, jobject jApplication, jchar character, jint hint)
 {
     (void)env;
     (void)jApplication;
