@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,21 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "incubator.controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+package com.sun.javafx.incubator.scene.control.rich;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.controls").projectDir = file("modules/javafx.incubator.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
+/**
+ * View origin: model index of the top paragraph index + offset in pixels from the upper edge of the top cell to
+ * the upper edge of the view area.
+ *
+ * @param index the model index of a paragraph at the top of visible area
+ * @param offset the distance in pixels from the top of the visible area to the top of the topmost paragraph
+ */
+public record Origin(int index, double offset) {
+    /** beginning of the document */
+    public static final Origin ZERO = new Origin(0, 0.0);
 
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
-
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+    @Override
+    public String toString() {
+        return "Origin{index=" + index + ", offset=" + offset + "}";
+    }
 }
-
-include 'apps'
-

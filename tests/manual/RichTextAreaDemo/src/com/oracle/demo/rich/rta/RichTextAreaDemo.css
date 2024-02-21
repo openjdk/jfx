@@ -1,0 +1,54 @@
+.red {
+    -fx-fill:red;
+}
+
+.green {
+    -fx-fill:#3e8c25;
+}
+
+.gray {
+    -fx-fill:gray;
+}
+
+.code {
+    -fx-font-family:Monospace;
+}
+
+.underline {
+    -fx-underline:true;
+}
+
+.monospaced {
+    -fx-font-family:Monospaced;
+}
+
+.bold {
+    -fx-font-weight: bold;
+}
+
+.italic {
+    -fx-font-family: serif;
+    -fx-font-style: italic;
+}
+
+.strikethrough {
+    -fx-strikethrough: true;
+}
+
+.arabic {
+    -fx-font-family:Tahoma;
+    -fx-font-size:200%;
+}
+
+.large {
+    -fx-font-size:200%;
+}
+
+.equation {
+    -fx-font-family:serif;
+}
+
+.sub {
+    -fx-text-origin:bottom;
+    -fx-font-size:70%;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,27 +22,40 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.demo.rich.rta;
 
-include "base", "graphics", "controls", "incubator.controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.controls").projectDir = file("modules/javafx.incubator.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
+/**
+ *
+ */
+public class ROptionPane extends GridPane {
+    private int row;
+    private int column;
+    private static final Insets MARGIN = new Insets(2, 4, 2, 4);
 
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
+    public ROptionPane() {
+        // no such thing
+        // https://stackoverflow.com/questions/20454021/how-to-set-padding-between-columns-of-a-javafx-gridpane
+        // setVGap(2);
+    }
 
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+    public void label(String text) {
+        add(new Label(text));
+    }
+
+    public void option(Node n) {
+        add(n);
+    }
+
+    public void add(Node n) {
+        add(n, column, row++);
+        setMargin(n, MARGIN);
+        setFillHeight(n, Boolean.TRUE);
+        setFillWidth(n, Boolean.TRUE);
+    }
 }
-
-include 'apps'
-

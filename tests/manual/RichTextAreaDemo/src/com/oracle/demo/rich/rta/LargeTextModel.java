@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,27 +22,39 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.demo.rich.rta;
 
-include "base", "graphics", "controls", "incubator.controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+import java.util.Random;
+import javafx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.controls").projectDir = file("modules/javafx.incubator.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
+public class LargeTextModel extends SimpleViewOnlyStyledModel {
+    private final String STYLE = "-fx-font-size:500%";
+    private final Random random = new Random();
 
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
+    public LargeTextModel(int lineCount) {
+        for (int i = 0; i < lineCount; i++) {
+            addLine(i);
+        }
+    }
 
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+    private void addLine(int n) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("L").append(n).append(' ');
+        int ct;
+        if (random.nextFloat() < 0.01f) {
+            ct = 200;
+        } else {
+            ct = random.nextInt(10);
+        }
+
+        for (int i = 0; i < ct; i++) {
+            sb.append(" ").append(i);
+            int len = random.nextInt(10) + 1;
+            for (int j = 0; j < len; j++) {
+                sb.append('*');
+            }
+        }
+        addSegment(sb.toString(), STYLE);
+        nl();
+    }
 }
-
-include 'apps'
-

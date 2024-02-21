@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,27 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.oracle.demo.rich.rta;
 
-include "base", "graphics", "controls", "incubator.controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+import javafx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.controls").projectDir = file("modules/javafx.incubator.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
-
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
-
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+public class NoLastNewlineModel extends SimpleViewOnlyStyledModel {
+    public NoLastNewlineModel(int lineCount) {
+        for(int i=0; i<lineCount; i++) {
+            addSegment("L." + i);
+            if(i != (lineCount - 1)) {
+                nl();
+            }
+        }
+    }
 }
-
-include 'apps'
-

@@ -1,0 +1,158 @@
+/*
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.oracle.demo.rich.codearea;
+
+import java.util.ArrayList;
+import java.util.List;
+import javafx.incubator.scene.control.rich.CodeTextModel;
+import javafx.incubator.scene.control.rich.SyntaxDecorator;
+import javafx.incubator.scene.control.rich.TextPos;
+import javafx.incubator.scene.control.rich.model.RichParagraph;
+import javafx.incubator.scene.control.rich.model.StyleAttrs;
+import javafx.incubator.scene.control.rich.model.StyledTextModel;
+import javafx.scene.paint.Color;
+
+/**
+ * A simple {@code SyntaxDecorator} for Java source files.
+ *
+ * This is just a demo, as it has no link to the real compiler, does not understand Java language
+ * and does not take into account version-specific language features.
+ */
+public class JavaSyntaxDecorator implements SyntaxDecorator, StyledTextModel.ChangeListener {
+    private static final StyleAttrs CHARACTER = mkStyle(Color.BLUE);
+    private static final StyleAttrs COMMENT = mkStyle(Color.RED);
+    private static final StyleAttrs KEYWORD = mkStyle(Color.GREEN);
+    private static final StyleAttrs NUMBER = mkStyle(Color.BLUE);
+    private static final StyleAttrs OTHER = mkStyle(Color.BLACK);
+    private static final StyleAttrs STRING = mkStyle(Color.BLUE);
+    private CodeTextModel model;
+    private ArrayList<RichParagraph> paragraphs;
+
+    public JavaSyntaxDecorator() {
+    }
+
+    @Override
+    public String toString() {
+        return "JavaSyntaxDecorator";
+    }
+
+    @Override
+    public void attach(CodeTextModel m) {
+        this.model = m;
+        m.addChangeListener(this);
+        reload();
+    }
+
+    @Override
+    public void detach(CodeTextModel m) {
+        m.removeChangeListener(this);
+        this.model = null;
+    }
+
+    @Override
+    public void eventTextUpdated(TextPos start, TextPos end, int charsAddedTop, int linesAdded, int charsAddedBottom) {
+        // in theory, it may reuse the portions that haven't changed
+        // but java files are short enough to re-analyze in full each time
+        reload();
+    }
+
+    @Override
+    public void eventStyleUpdated(TextPos start, TextPos end) {
+    }
+
+    @Override
+    public RichParagraph createRichParagraph(CodeTextModel model, int index) {
+        if (index >= paragraphs.size()) {
+            return RichParagraph.builder().build();
+        }
+        return paragraphs.get(index);
+    }
+
+    private static StyleAttrs mkStyle(Color c) {
+        return StyleAttrs.builder().setTextColor(c).build();
+    }
+
+    private void reload() {
+        String text = getPlainText();
+        JavaSyntaxAnalyzer a = new JavaSyntaxAnalyzer(text);
+        List<JavaSyntaxAnalyzer.Line> res = a.analyze();
+        paragraphs = translate(res);
+    }
+
+    private String getPlainText() {
+        StringBuilder sb = new StringBuilder(65536);
+        int sz = model.size();
+        boolean nl = false;
+        for (int i = 0; i < sz; i++) {
+            if (nl) {
+                sb.append('\n');
+            } else {
+                nl = true;
+            }
+            String s = model.getPlainText(i);
+            if (s != null) {
+                sb.append(s);
+            }
+        }
+        return sb.toString();
+    }
+
+    private ArrayList<RichParagraph> translate(List<JavaSyntaxAnalyzer.Line> lines) {
+        ArrayList<RichParagraph> res = new ArrayList<>(lines.size());
+        for (JavaSyntaxAnalyzer.Line line : lines) {
+            RichParagraph p = createParagraph(line);
+            res.add(p);
+        }
+        return res;
+    }
+
+    private RichParagraph createParagraph(JavaSyntaxAnalyzer.Line line) {
+        RichParagraph.Builder b = RichParagraph.builder();
+        for (JavaSyntaxAnalyzer.Segment seg : line.getSegments()) {
+            JavaSyntaxAnalyzer.Type t = seg.getType();
+            String text = seg.getText();
+            StyleAttrs a = getStyleAttrs(t);
+            b.addSegment(text, a);
+        }
+        return b.build();
+    }
+
+    private StyleAttrs getStyleAttrs(JavaSyntaxAnalyzer.Type t) {
+        switch(t) {
+        case CHARACTER:
+            return CHARACTER;
+        case COMMENT:
+            return COMMENT;
+        case KEYWORD:
+            return KEYWORD;
+        case NUMBER:
+            return NUMBER;
+        case STRING:
+            return STRING;
+        }
+        return OTHER;
+    }
+}

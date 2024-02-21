@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,15 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "incubator.controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+package com.sun.javafx.incubator.scene.control.rich;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.controls").projectDir = file("modules/javafx.incubator.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
+import javafx.incubator.scene.control.rich.model.StyleAttribute;
 
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
-
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+/**
+ * Attribute represents CSS styles: a combination of a direct style (-fx-...)
+ * and a number of style names.
+ */
+public final record CssStyles(String style, String[] names) {
+    /** This special attribute contains CSS direct style and style names for text segments only */
+    public static final StyleAttribute<CssStyles> CSS = new StyleAttribute<>("CSS", CssStyles.class, false);
 }
-
-include 'apps'
-

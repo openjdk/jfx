@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,30 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "incubator.controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+/**
+<p>Provides classes that represent {@code RichTextArea} Control.</p>
+<h2>Examples</h2>
+<p>Creating a RichTextArea with a simple editable rich text model:</p>
+<pre>
+<code>
+    RichTextArea textArea = new RichTextArea();
+</code>
+</pre>
+<p>Creating a read-only RichTextArea with rich text content:</p>
+<pre>
+<code>
+    SimpleReadOnlyStyledModel m = new SimpleReadOnlyStyledModel();
+    // add text segment using CSS style name (requires a style sheet)
+    m.addSegment("RichTextArea ", null, "HEADER");
+    // add text segment using direct style
+    m.addSegment("Demo", "-fx-font-size:200%;", null);
+    // newline
+    m.nl();
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.controls").projectDir = file("modules/javafx.incubator.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
-
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
-
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
-}
-
-include 'apps'
-
+    RichTextArea t = new RichTextArea(m);
+</code>
+</pre>
+ * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * Will be removed in a future release.</b>
+ */
+package javafx.incubator.scene.control.rich;

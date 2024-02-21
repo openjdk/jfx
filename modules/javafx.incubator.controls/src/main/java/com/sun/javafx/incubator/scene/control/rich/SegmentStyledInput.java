@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,35 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "incubator.controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+package com.sun.javafx.incubator.scene.control.rich;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.controls").projectDir = file("modules/javafx.incubator.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
+import java.io.IOException;
+import java.util.List;
+import javafx.incubator.scene.control.rich.model.StyledInput;
+import javafx.incubator.scene.control.rich.model.StyledSegment;
 
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
+public class SegmentStyledInput implements StyledInput {
+    private final StyledSegment[] segments;
+    private int index;
 
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+    public SegmentStyledInput(StyledSegment[] segments) {
+        this.segments = segments;
+    }
+
+    @Override
+    public StyledSegment nextSegment() {
+        if (index < segments.length) {
+            return segments[index++];
+        }
+        return null;
+    }
+
+    public static SegmentStyledInput of(List<StyledSegment> segments) {
+        StyledSegment[] ss = segments.toArray(new StyledSegment[segments.size()]);
+        return new SegmentStyledInput(ss);
+    }
+
+    @Override
+    public void close() throws IOException {
+    }
 }
-
-include 'apps'
-

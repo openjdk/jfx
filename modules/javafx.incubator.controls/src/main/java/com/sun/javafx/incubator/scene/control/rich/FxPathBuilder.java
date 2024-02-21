@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,27 +22,45 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+// This code borrows heavily from the following project, with permission from the author:
+// https://github.com/andy-goryachev/FxEditor
 
-include "base", "graphics", "controls", "incubator.controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+package com.sun.javafx.incubator.scene.control.rich;
 
-project(":base").projectDir = file("modules/javafx.base")
-project(":graphics").projectDir = file("modules/javafx.graphics")
-project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.controls").projectDir = file("modules/javafx.incubator.controls")
-project(":swing").projectDir = file("modules/javafx.swing")
-project(":swt").projectDir = file("modules/javafx.swt")
-project(":fxml").projectDir = file("modules/javafx.fxml")
-project(":web").projectDir = file("modules/javafx.web")
-project(":media").projectDir = file("modules/javafx.media")
-project(":systemTests").projectDir = file("tests/system")
+import java.util.ArrayList;
+import java.util.List;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.PathElement;
 
-def closedDir = file("../rt-closed")
-def buildClosed = closedDir.isDirectory()
+/**
+ * Conventient utility for building javafx {@link Path}
+ */
+public class FxPathBuilder {
+    private final ArrayList<PathElement> elements = new ArrayList<>();
 
-if (buildClosed) {
-    File supplementalSettingsFile = new File("../rt-closed/closed-settings.gradle");
-    apply from: supplementalSettingsFile
+    public FxPathBuilder() {
+    }
+
+    public void add(PathElement em) {
+        elements.add(em);
+    }
+
+    public void addAll(PathElement... es) {
+        for (PathElement em : es) {
+            elements.add(em);
+        }
+    }
+
+    public void moveto(double x, double y) {
+        add(new MoveTo(x, y));
+    }
+
+    public void lineto(double x, double y) {
+        add(new LineTo(x, y));
+    }
+
+    public List<PathElement> getPathElements() {
+        return elements;
+    }
 }
-
-include 'apps'
-

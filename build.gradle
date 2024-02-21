@@ -2749,6 +2749,87 @@ project(":controls") {
     addValidateSourceSets(project, sourceSets)
 }
 
+project(":incubator.controls") {
+    project.ext.buildModule = true
+    project.ext.includeSources = true
+    project.ext.moduleRuntime = true
+    project.ext.moduleName = "javafx.incubator.controls"
+    project.ext.incubating = true
+
+    sourceSets {
+        main
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
+    }
+
+    project.ext.moduleSourcePath = defaultModuleSourcePath
+    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
+
+    commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'incubator.controls' ])
+
+    dependencies {
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
+    }
+
+    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
+    // FIXME: KCR
+//    processResources {
+//      doLast {
+//        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
+//        cssFiles.include "**/*.css"
+//        cssFiles.each { css ->
+//            logger.info("converting CSS to BSS ${css}");
+//
+//            javaexec {
+//                executable = JAVA
+//                workingDir = project.projectDir
+//                jvmArgs += patchModuleArgs
+//                jvmArgs += "--module-path=$modulePath"
+//                jvmArgs += "--add-modules=javafx.graphics"
+//                mainClass = "com.sun.javafx.css.parser.Css2Bin"
+//                args css
+//            }
+//        }
+//      }
+//    }
+//
+//    def copyShimBssTask = project.task("copyShimBss", type: Copy,
+//                            dependsOn: [project.tasks.getByName("compileJava"),
+//                                        project.tasks.getByName("processResources")]) {
+//        from project.moduleDir
+//        into project.moduleShimsDir
+//        include "**/*.bss"
+//    }
+//    processShimsResources.dependsOn(copyShimBssTask)
+
+    addMavenPublication(project, [ 'graphics' , 'controls'])
+
+    addValidateSourceSets(project, sourceSets)
+}
+
 project(":swing") {
 
     // We need to skip setting compiler.options.release for this module,
@@ -4240,7 +4321,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"), project(":media"),
+            project(":base"), project(":graphics"), project(":controls"), project(":incubator.controls"), project(":media"),
             project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
@@ -5563,6 +5644,7 @@ compileTargets { t ->
                 def modnames = []
                 moduleProjList.each { project ->
                     if (project.hasProperty("moduleName") && project.buildModule) {
+                        def incubating = project.hasProperty("incubating") && project.ext.incubating
                         modnames << project.ext.moduleName
                         File dir;
                         if (project.sourceSets.hasProperty('shims')) {
@@ -5574,16 +5656,18 @@ compileTargets { t ->
                         def dstModuleDir = cygpath(dir.path)
                         modpath << "${dstModuleDir}"
 
-                        String themod = dir.toURI()
-                        testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
+                        if (!incubating) {
+                            String themod = dir.toURI()
+                            testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
+                            "    permission java.security.AllPermission;\n" +
+                            "};\n"
 
-                        dir = new File(rootProject.buildDir, "sdk/lib/${project.ext.moduleName}.jar")
-                        themod = dir.toURI()
-                        runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                        "    permission java.security.AllPermission;\n" +
-                        "};\n"
+                            dir = new File(rootProject.buildDir, "sdk/lib/${project.ext.moduleName}.jar")
+                            themod = dir.toURI()
+                            runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
+                            "    permission java.security.AllPermission;\n" +
+                            "};\n"
+                        }
                     }
                 }
 
@@ -5629,6 +5713,8 @@ compileTargets { t ->
             def jmodName = "${moduleName}.jmod"
             def jmodFile = "${jmodsDir}/${jmodName}"
 
+            def incubating = project.hasProperty("incubating") && project.ext.incubating
+
             // On Windows, copy the native libraries in the jmod image
             // to a "javafx" subdir to avoid conflicting with the Microsoft
             // DLLs that are shipped with the JDK
@@ -5671,6 +5757,10 @@ compileTargets { t ->
                         def status = compareJdkVersion(jdkVersion, "19")
                         if (sourceDateEpoch != null && status >= 0) {
                             args("--date", extendedTimestamp)
+                        }
+                        if (incubating) {
+                            args("--do-not-resolve-by-default")
+                            args("--warn-if-resolved=incubating")
                         }
                         args(jmodFile)
                     }
