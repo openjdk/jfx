@@ -18,11 +18,11 @@ JavaFX incubator modules have a few differences from JDK incubator modules:
 
 - A JavaFX incubator module is identified by the `javafx.incubator.` prefix in its module name.
 - A JavaFX incubating API is identified by the `javafx.incubator.` prefix in its exported package names. An incubating API is exported only by an incubator module.
-- A warning must be issued when first loading a class from a publicly exported package in a JavaFX incubator module, even if the module is not jlinked into the JDK. We will provide a utility method in `javafx.base` to faciliate this.
-- By default, a JavaFX feature that is delivered in an incubator module will re-incubate in subsequent versions (the default in the JDK is to drop the feature). If any changes are needed to the API, they will be done with new JBS enhancement along with an associated CSR. However, this is not intended to suggest the possibility of a permantently incubating feature. As with incubating features in the JDK, if an incubating API is not promoted to final status after a reaonably small number of JavaFX feature releases, then it will be dropped: its packages and incubator module will be removed.
+- A warning must be issued when first loading a class from a publicly exported package in a JavaFX incubator module, even if the module is not jlinked into the JDK. We will provide a utility method in `javafx.base` to facilitate this.
+- By default, a JavaFX feature that is delivered in an incubator module will re-incubate in subsequent versions (the default in the JDK is to drop the feature). If any changes are needed to the API, they will be done with new JBS enhancement along with an associated CSR. However, this is not intended to suggest the possibility of a permanently incubating feature. As with incubating features in the JDK, if an incubating API is not promoted to final status after a reasonably small number of JavaFX feature releases, then it will be dropped: its packages and incubator module will be removed.
 
 ## How to add a new incubator modules
 
-In addition to creating the new modules under `modules/javafx.incubator.myfeature`, you need to udpate `build.gradle` and `settings.gradle` to add the new module.
+In addition to creating the new modules under `modules/javafx.incubator.myfeature`, you need to update `build.gradle` and `settings.gradle` to add the new module.
 
 FIXME: finish this
