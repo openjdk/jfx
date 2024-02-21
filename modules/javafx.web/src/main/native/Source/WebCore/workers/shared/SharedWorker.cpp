@@ -29,10 +29,12 @@
 #include "ClientOrigin.h"
 #include "ContentSecurityPolicy.h"
 #include "Document.h"
+#include "DocumentInlines.h"
 #include "EventNames.h"
 #include "Logging.h"
 #include "MessageChannel.h"
 #include "MessagePort.h"
+#include "OriginAccessPatterns.h"
 #include "ResourceError.h"
 #include "SecurityOrigin.h"
 #include "SharedWorkerObjectConnection.h"
@@ -70,6 +72,9 @@ ExceptionOr<Ref<SharedWorker>> SharedWorker::create(Document& document, String&&
     if (!mainThreadConnection())
         return Exception { NotSupportedError, "Shared workers are not supported"_s };
 
+    if (!document.hasBrowsingContext())
+        return Exception { InvalidStateError, "No browsing context"_s };
+
     auto url = document.completeURL(scriptURLString);
     if (!url.isValid())
         return Exception { SyntaxError, "Invalid script URL"_s };
@@ -79,7 +84,7 @@ ExceptionOr<Ref<SharedWorker>> SharedWorker::create(Document& document, String&&
         contentSecurityPolicy->upgradeInsecureRequestIfNeeded(url, ContentSecurityPolicy::InsecureRequestType::Load);
 
     // Per the specification, any same-origin URL (including blob: URLs) can be used. data: URLs can also be used, but they create a worker with an opaque origin.
-    if (!document.securityOrigin().canRequest(url) && !url.protocolIsData())
+    if (!document.securityOrigin().canRequest(url, OriginAccessPatternsForWebProcess::singleton()) && !url.protocolIsData())
         return Exception { SecurityError, "URL of the shared worker is cross-origin"_s };
 
     if (contentSecurityPolicy && !contentSecurityPolicy->allowWorkerFromSource(url))

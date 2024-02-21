@@ -77,8 +77,6 @@ public:
 
     bool operator==(const TypeKind& otherKind) const { return kind() == otherKind; }
     bool operator==(const Type& type) const { return m_kind == type.m_kind; }
-    bool operator!=(const TypeKind& otherKind) const { return !(*this == otherKind); }
-    bool operator!=(const Type& type) const { return !(*this == type); }
 
 private:
     TypeKind m_kind { Void };
@@ -135,11 +133,18 @@ inline bool Type::isVector() const
     return kind() == V128;
 }
 
-inline Type pointerType()
+constexpr Type pointerType()
 {
     if (is32Bit())
         return Int32;
     return Int64;
+}
+
+constexpr Type registerType()
+{
+    if (isRegister64Bit())
+        return Int64;
+    return Int32;
 }
 
 inline size_t sizeofType(Type type)

@@ -25,12 +25,13 @@
 
 #pragma once
 
-#if ENABLE(ASSEMBLER)
+#if ENABLE(ASSEMBLER) && CPU(ARM64)
 
 #include "ARM64Assembler.h"
 #include "AbstractMacroAssembler.h"
 #include "JITOperationValidation.h"
 #include <wtf/MathExtras.h>
+#include <wtf/StdLibExtras.h>
 
 namespace JSC {
 
@@ -66,7 +67,7 @@ protected:
     static constexpr size_t INSTRUCTION_SIZE = 4;
 
     // N instructions to load the pointer + 1 call instruction.
-    static constexpr ptrdiff_t REPATCH_OFFSET_CALL_TO_POINTER = -((Assembler::MAX_POINTER_BITS / 16 + 1) * INSTRUCTION_SIZE);
+    static constexpr ptrdiff_t REPATCH_OFFSET_CALL_TO_POINTER = -((Assembler::NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS + 1) * INSTRUCTION_SIZE);
 
 public:
     MacroAssemblerARM64()
@@ -175,11 +176,17 @@ public:
 
     void add32(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
-        if (isUInt12(imm.m_value))
-            m_assembler.add<32>(dest, src, UInt12(imm.m_value));
-        else if (isUInt12(-imm.m_value))
-            m_assembler.sub<32>(dest, src, UInt12(-imm.m_value));
-        else if (src != dest) {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<32>(dest, src, u12, shift);
+            else
+                m_assembler.sub<32>(dest, src, u12, shift);
+            return;
+        }
+
+        if (src != dest) {
             move(imm, dest);
             add32(src, dest);
         } else {
@@ -192,15 +199,17 @@ public:
     {
         load32(address, getCachedDataTempRegisterIDAndInvalidate());
 
-        if (isUInt12(imm.m_value))
-            m_assembler.add<32>(dataTempRegister, dataTempRegister, UInt12(imm.m_value));
-        else if (isUInt12(-imm.m_value))
-            m_assembler.sub<32>(dataTempRegister, dataTempRegister, UInt12(-imm.m_value));
-        else {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<32>(dataTempRegister, dataTempRegister, u12, shift);
+            else
+                m_assembler.sub<32>(dataTempRegister, dataTempRegister, u12, shift);
+        } else {
             move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
             m_assembler.add<32>(dataTempRegister, dataTempRegister, memoryTempRegister);
         }
-
         store32(dataTempRegister, address);
     }
 
@@ -208,20 +217,17 @@ public:
     {
         load32(address.m_ptr, getCachedDataTempRegisterIDAndInvalidate());
 
-        if (isUInt12(imm.m_value)) {
-            m_assembler.add<32>(dataTempRegister, dataTempRegister, UInt12(imm.m_value));
-            store32(dataTempRegister, address.m_ptr);
-            return;
-        }
-
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.sub<32>(dataTempRegister, dataTempRegister, UInt12(-imm.m_value));
-            store32(dataTempRegister, address.m_ptr);
-            return;
-        }
-
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<32>(dataTempRegister, dataTempRegister, u12, shift);
+            else
+                m_assembler.sub<32>(dataTempRegister, dataTempRegister, u12, shift);
+        } else {
         move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
         m_assembler.add<32>(dataTempRegister, dataTempRegister, memoryTempRegister);
+        }
         store32(dataTempRegister, address.m_ptr);
     }
 
@@ -255,64 +261,59 @@ public:
 
     void add64(TrustedImm32 imm, RegisterID dest)
     {
-        if (isUInt12(imm.m_value)) {
-            m_assembler.add<64>(dest, dest, UInt12(imm.m_value));
-            return;
-        }
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.sub<64>(dest, dest, UInt12(-imm.m_value));
-            return;
-        }
-
-        signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
-        m_assembler.add<64>(dest, dest, dataTempRegister);
+        add64(imm, dest, dest);
     }
 
     void add64(TrustedImm64 imm, RegisterID dest)
     {
-        intptr_t immediate = imm.m_value;
-
-        if (isUInt12(immediate)) {
-            m_assembler.add<64>(dest, dest, UInt12(static_cast<int32_t>(immediate)));
-            return;
-        }
-        if (isUInt12(-immediate)) {
-            m_assembler.sub<64>(dest, dest, UInt12(static_cast<int32_t>(-immediate)));
-            return;
-        }
-
-        move(imm, getCachedDataTempRegisterIDAndInvalidate());
-        m_assembler.add<64>(dest, dest, dataTempRegister);
+        add64(imm, dest, dest);
     }
 
     void add64(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
-        if (isUInt12(imm.m_value)) {
-            m_assembler.add<64>(dest, src, UInt12(imm.m_value));
-            return;
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<64>(dest, src, u12, shift);
+            else
+                m_assembler.sub<64>(dest, src, u12, shift);
+        } else {
+            signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
+            m_assembler.add<64>(dest, src, dataTempRegister);
         }
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.sub<64>(dest, src, UInt12(-imm.m_value));
-            return;
         }
 
-        signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
+    void add64(TrustedImm64 imm, RegisterID src, RegisterID dest)
+    {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<64>(dest, src, u12, shift);
+            else
+                m_assembler.sub<64>(dest, src, u12, shift);
+        } else {
+            move(imm, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.add<64>(dest, src, dataTempRegister);
+    }
     }
 
     void add64(TrustedImm32 imm, Address address)
     {
         load64(address, getCachedDataTempRegisterIDAndInvalidate());
 
-        if (isUInt12(imm.m_value))
-            m_assembler.add<64>(dataTempRegister, dataTempRegister, UInt12(imm.m_value));
-        else if (isUInt12(-imm.m_value))
-            m_assembler.sub<64>(dataTempRegister, dataTempRegister, UInt12(-imm.m_value));
-        else {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<64>(dataTempRegister, dataTempRegister, u12, shift);
+            else
+                m_assembler.sub<64>(dataTempRegister, dataTempRegister, u12, shift);
+        } else {
             signExtend32ToPtr(imm, getCachedMemoryTempRegisterIDAndInvalidate());
             m_assembler.add<64>(dataTempRegister, dataTempRegister, memoryTempRegister);
         }
-
         store64(dataTempRegister, address);
     }
 
@@ -320,20 +321,17 @@ public:
     {
         load64(address.m_ptr, getCachedDataTempRegisterIDAndInvalidate());
 
-        if (isUInt12(imm.m_value)) {
-            m_assembler.add<64>(dataTempRegister, dataTempRegister, UInt12(imm.m_value));
-            store64(dataTempRegister, address.m_ptr);
-            return;
-        }
-
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.sub<64>(dataTempRegister, dataTempRegister, UInt12(-imm.m_value));
-            store64(dataTempRegister, address.m_ptr);
-            return;
-        }
-
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<64>(dataTempRegister, dataTempRegister, u12, shift);
+            else
+                m_assembler.sub<64>(dataTempRegister, dataTempRegister, u12, shift);
+        } else {
         signExtend32ToPtr(imm, getCachedMemoryTempRegisterIDAndInvalidate());
         m_assembler.add<64>(dataTempRegister, dataTempRegister, memoryTempRegister);
+        }
         store64(dataTempRegister, address.m_ptr);
     }
 
@@ -358,6 +356,13 @@ public:
     {
         load64(src, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.add<64>(dest, dest, dataTempRegister);
+    }
+
+    void add64(RegisterID src, Address dest)
+    {
+        load64(dest, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.add<64>(src, dataTempRegister, dataTempRegister);
+        store64(dataTempRegister, dest);
     }
 
     void add64(AbsoluteAddress src, RegisterID dest)
@@ -436,17 +441,22 @@ public:
         m_assembler.and_<64>(dest, dest, src);
     }
 
-    void and64(TrustedImm32 imm, RegisterID dest)
+    void and64(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
         LogicalImmediate logicalImm = LogicalImmediate::create64(static_cast<intptr_t>(static_cast<int64_t>(imm.m_value)));
 
         if (logicalImm.isValid()) {
-            m_assembler.and_<64>(dest, dest, logicalImm);
+            m_assembler.and_<64>(dest, src, logicalImm);
             return;
         }
 
         signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
-        m_assembler.and_<64>(dest, dest, dataTempRegister);
+        m_assembler.and_<64>(dest, src, dataTempRegister);
+    }
+
+    void and64(TrustedImm32 imm, RegisterID dest)
+    {
+        and64(imm, dest, dest);
     }
 
     void and64(TrustedImmPtr imm, RegisterID dest)
@@ -845,6 +855,22 @@ public:
         m_assembler.illegalInstruction();
     }
 
+    void countPopulation32(RegisterID src, RegisterID dst, FPRegisterID temp)
+    {
+        move32ToFloat(src, temp);
+        m_assembler.vectorCnt(temp, temp, SIMDLane::i8x16);
+        m_assembler.addv(temp, temp, SIMDLane::i8x16);
+        moveFloatTo32(temp, dst);
+    }
+
+    void countPopulation64(RegisterID src, RegisterID dst, FPRegisterID temp)
+    {
+        move64ToDouble(src, temp);
+        m_assembler.vectorCnt(temp, temp, SIMDLane::i8x16);
+        m_assembler.addv(temp, temp, SIMDLane::i8x16);
+        moveDoubleTo64(temp, dst);
+    }
+
     void lshift32(RegisterID src, RegisterID shiftAmount, RegisterID dest)
     {
         m_assembler.lsl<32>(dest, src, shiftAmount);
@@ -1045,6 +1071,13 @@ public:
             or32(imm, memoryTempRegister, getCachedDataTempRegisterIDAndInvalidate());
             store16(dataTempRegister, address.m_ptr);
         }
+    }
+
+    void or16(RegisterID mask, AbsoluteAddress address)
+    {
+        load16(address.m_ptr, getCachedDataTempRegisterIDAndInvalidate());
+        m_assembler.orr<32>(dataTempRegister, dataTempRegister, mask);
+        store16(dataTempRegister, address.m_ptr);
     }
 
     void or32(RegisterID src, RegisterID dest)
@@ -1266,34 +1299,34 @@ public:
 
     void sub32(RegisterID left, TrustedImm32 imm, RegisterID dest)
     {
-        intptr_t immediate = imm.m_value;
-
-        if (isUInt12(immediate)) {
-            m_assembler.sub<32>(dest, left, UInt12(immediate));
-            return;
-        }
-        if (isUInt12(-immediate)) {
-            m_assembler.add<32>(dest, left, UInt12(-immediate));
-            return;
-        }
-
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.sub<32>(dest, left, u12, shift);
+            else
+                m_assembler.add<32>(dest, left, u12, shift);
+        } else {
         move(imm, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.sub<32>(dest, left, dataTempRegister);
+    }
     }
 
     void sub32(TrustedImm32 imm, Address address)
     {
         load32(address, getCachedDataTempRegisterIDAndInvalidate());
 
-        if (isUInt12(imm.m_value))
-            m_assembler.sub<32>(dataTempRegister, dataTempRegister, UInt12(imm.m_value));
-        else if (isUInt12(-imm.m_value))
-            m_assembler.add<32>(dataTempRegister, dataTempRegister, UInt12(-imm.m_value));
-        else {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.sub<32>(dataTempRegister, dataTempRegister, u12, shift);
+            else
+                m_assembler.add<32>(dataTempRegister, dataTempRegister, u12, shift);
+        } else {
             move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
             m_assembler.sub<32>(dataTempRegister, dataTempRegister, memoryTempRegister);
         }
-
         store32(dataTempRegister, address);
     }
 
@@ -1301,20 +1334,17 @@ public:
     {
         load32(address.m_ptr, getCachedDataTempRegisterIDAndInvalidate());
 
-        if (isUInt12(imm.m_value)) {
-            m_assembler.sub<32>(dataTempRegister, dataTempRegister, UInt12(imm.m_value));
-            store32(dataTempRegister, address.m_ptr);
-            return;
-        }
-
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.add<32>(dataTempRegister, dataTempRegister, UInt12(-imm.m_value));
-            store32(dataTempRegister, address.m_ptr);
-            return;
-        }
-
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.sub<32>(dataTempRegister, dataTempRegister, u12, shift);
+            else
+                m_assembler.add<32>(dataTempRegister, dataTempRegister, u12, shift);
+        } else {
         move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
         m_assembler.sub<32>(dataTempRegister, dataTempRegister, memoryTempRegister);
+        }
         store32(dataTempRegister, address.m_ptr);
     }
 
@@ -1341,19 +1371,17 @@ public:
 
     void sub64(RegisterID left, TrustedImm32 imm, RegisterID dest)
     {
-        intptr_t immediate = imm.m_value;
-
-        if (isUInt12(immediate)) {
-            m_assembler.sub<64>(dest, left, UInt12(immediate));
-            return;
-        }
-        if (isUInt12(-immediate)) {
-            m_assembler.add<64>(dest, left, UInt12(-immediate));
-            return;
-        }
-
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.sub<64>(dest, left, u12, shift);
+            else
+                m_assembler.add<64>(dest, left, u12, shift);
+        } else {
         signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.sub<64>(dest, left, dataTempRegister);
+    }
     }
 
     void sub64(TrustedImm64 imm, RegisterID dest)
@@ -1363,19 +1391,17 @@ public:
 
     void sub64(RegisterID left, TrustedImm64 imm, RegisterID dest)
     {
-        intptr_t immediate = imm.m_value;
-
-        if (isUInt12(immediate)) {
-            m_assembler.sub<64>(dest, left, UInt12(static_cast<int32_t>(immediate)));
-            return;
-        }
-        if (isUInt12(-immediate)) {
-            m_assembler.add<64>(dest, left, UInt12(static_cast<int32_t>(-immediate)));
-            return;
-        }
-
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.sub<64>(dest, left, u12, shift);
+            else
+                m_assembler.add<64>(dest, left, u12, shift);
+        } else {
         move(imm, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.sub<64>(dest, left, dataTempRegister);
+    }
     }
 
     void urshift32(RegisterID src, RegisterID shiftAmount, RegisterID dest)
@@ -1642,6 +1668,27 @@ public:
         m_assembler.ldp<32>(dest1, dest2, src.base, PairPostIndex(src.index));
     }
 
+    void loadPair32(Address address, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(address.base, TrustedImm32(address.offset), dest1, dest2);
+    }
+
+    void loadPair32(RegisterID src, TrustedImm32 offset, FPRegisterID dest1, FPRegisterID dest2)
+    {
+        ASSERT(dest1 != dest2); // If it is the same, ldp becomes illegal instruction.
+        if (ARM64Assembler::isValidLDPFPImm<32>(offset.m_value)) {
+            m_assembler.ldp<32>(dest1, dest2, src, offset.m_value);
+            return;
+        }
+        loadFloat(Address(src, offset.m_value), dest1);
+        loadFloat(Address(src, offset.m_value + 8), dest2);
+    }
+
+    void loadPairFloat(Address src, FPRegisterID dest1, FPRegisterID dest2)
+    {
+        loadPair32(src.base, TrustedImm32(src.offset), dest1, dest2);
+    }
+
     void loadPair64(RegisterID src, RegisterID dest1, RegisterID dest2)
     {
         loadPair64(src, TrustedImm32(0), dest1, dest2);
@@ -1671,6 +1718,11 @@ public:
     void loadPair64(PostIndexAddress src, RegisterID dest1, RegisterID dest2)
     {
         m_assembler.ldp<64>(dest1, dest2, src.base, PairPostIndex(src.index));
+    }
+
+    void loadPair64(Address address, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair64(address.base, TrustedImm32(address.offset), dest1, dest2);
     }
 
     void loadPair64WithNonTemporalAccess(RegisterID src, RegisterID dest1, RegisterID dest2)
@@ -1708,6 +1760,11 @@ public:
         }
         loadDouble(Address(src, offset.m_value), dest1);
         loadDouble(Address(src, offset.m_value + 8), dest2);
+    }
+
+    void loadPairDouble(Address src, FPRegisterID dest1, FPRegisterID dest2)
+    {
+        loadPair64(src.base, TrustedImm32(src.offset), dest1, dest2);
     }
 
     void abortWithReason(AbortReason reason)
@@ -1854,12 +1911,22 @@ public:
 
     void zeroExtend16To32(RegisterID src, RegisterID dest)
     {
-        m_assembler.uxth<32>(dest, src);
+        and32(TrustedImm32(0xffff), src, dest);
     }
 
     void signExtend16To32(RegisterID src, RegisterID dest)
     {
         m_assembler.sxth<32>(dest, src);
+    }
+
+    void zeroExtend16To64(RegisterID src, RegisterID dest)
+    {
+        and64(TrustedImm64(0xffff), src, dest);
+    }
+
+    void signExtend16To64(RegisterID src, RegisterID dest)
+    {
+        m_assembler.sxth<64>(dest, src);
     }
 
     void load8(Address address, RegisterID dest)
@@ -1931,12 +1998,22 @@ public:
 
     void zeroExtend8To32(RegisterID src, RegisterID dest)
     {
-        m_assembler.uxtb<32>(dest, src);
+        and32(TrustedImm32(0xff), src, dest);
     }
 
     void signExtend8To32(RegisterID src, RegisterID dest)
     {
         m_assembler.sxtb<32>(dest, src);
+    }
+
+    void zeroExtend8To64(RegisterID src, RegisterID dest)
+    {
+        and64(TrustedImm64(0xff), src, dest);
+    }
+
+    void signExtend8To64(RegisterID src, RegisterID dest)
+    {
+        m_assembler.sxtb<64>(dest, src);
     }
 
     void store64(RegisterID src, Address address)
@@ -2076,6 +2153,26 @@ public:
         m_assembler.stp<32>(src1, src2, dest.base, PairPostIndex(dest.index));
     }
 
+    void storePair32(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair32(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
+    void storePair32(FPRegisterID src1, FPRegisterID src2, RegisterID dest, TrustedImm32 offset)
+    {
+        if (ARM64Assembler::isValidSTPFPImm<32>(offset.m_value)) {
+            m_assembler.stp<32>(src1, src2, dest, offset.m_value);
+            return;
+        }
+        storeFloat(src1, Address(dest, offset.m_value));
+        storeFloat(src2, Address(dest, offset.m_value + 8));
+    }
+
+    void storePairFloat(FPRegisterID src1, FPRegisterID src2, Address dest)
+    {
+        storePair32(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
     void storePair64(RegisterID src1, RegisterID src2, RegisterID dest)
     {
         storePair64(src1, src2, dest, TrustedImm32(0));
@@ -2116,6 +2213,11 @@ public:
         store64(src2, Address(dest, offset.m_value + 8));
     }
 
+    void storePair64(RegisterID src1, RegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest.base, TrustedImm32(dest.offset));
+    }
+
     void storePair64(FPRegisterID src1, FPRegisterID src2, RegisterID dest)
     {
         storePair64(src1, src2, dest, TrustedImm32(0));
@@ -2129,6 +2231,11 @@ public:
         }
         storeDouble(src1, Address(dest, offset.m_value));
         storeDouble(src2, Address(dest, offset.m_value + 8));
+    }
+
+    void storePairDouble(FPRegisterID src1, FPRegisterID src2, Address dest)
+    {
+        storePair64(src1, src2, dest.base, TrustedImm32(dest.offset));
     }
 
     void store32(RegisterID src, Address address)
@@ -2241,6 +2348,30 @@ public:
         store16(dataTempRegister, address);
     }
 
+    void store16(TrustedImm32 imm, Address address)
+    {
+        TrustedImm32 imm16(static_cast<int16_t>(imm.m_value));
+        if (!imm16.m_value) {
+            store16(ARM64Registers::zr, address);
+            return;
+        }
+
+        move(imm16, getCachedDataTempRegisterIDAndInvalidate());
+        store16(dataTempRegister, address);
+    }
+
+    void store16(TrustedImm32 imm, BaseIndex address)
+    {
+        TrustedImm32 imm16(static_cast<int16_t>(imm.m_value));
+        if (!imm16.m_value) {
+            store16(ARM64Registers::zr, address);
+            return;
+        }
+
+        move(imm16, getCachedDataTempRegisterIDAndInvalidate());
+        store16(dataTempRegister, address);
+    }
+
     void store8(RegisterID src, BaseIndex address)
     {
         if (address.scale == TimesOne) {
@@ -2294,6 +2425,18 @@ public:
         store8(dataTempRegister, address);
     }
 
+    void store8(TrustedImm32 imm, BaseIndex address)
+    {
+        TrustedImm32 imm8(static_cast<int8_t>(imm.m_value));
+        if (!imm8.m_value) {
+            store8(ARM64Registers::zr, address);
+            return;
+        }
+
+        move(imm8, getCachedDataTempRegisterIDAndInvalidate());
+        store8(dataTempRegister, address);
+    }
+
     void store8(RegisterID src, RegisterID dest, PostIndex simm)
     {
         m_assembler.strb(src, dest, simm);
@@ -2313,7 +2456,7 @@ public:
     static bool supportsFloatingPointSqrt() { return true; }
     static bool supportsFloatingPointAbs() { return true; }
     static bool supportsFloatingPointRounding() { return true; }
-    static bool supportsCountPopulation() { return false; }
+    static bool supportsCountPopulation() { return true; }
 
     enum BranchTruncateType { BranchIfTruncateFailed, BranchIfTruncateSuccessful };
 
@@ -2429,17 +2572,43 @@ public:
         return jumpAfterFloatingPointCompare(cond);
     }
 
+    Jump branchDoubleWithZero(DoubleCondition cond, FPRegisterID left)
+    {
+        m_assembler.fcmp_0<64>(left);
+        return jumpAfterFloatingPointCompare(cond);
+    }
+
+    Jump branchFloatWithZero(DoubleCondition cond, FPRegisterID left)
+    {
+        m_assembler.fcmp_0<32>(left);
+        return jumpAfterFloatingPointCompare(cond);
+    }
+
     void compareDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
     {
-        floatingPointCompare(cond, left, right, dest, [this] (FPRegisterID arg1, FPRegisterID arg2) {
-            m_assembler.fcmp<64>(arg1, arg2);
+        floatingPointCompare(cond, dest, [&]() {
+            m_assembler.fcmp<64>(left, right);
         });
     }
 
     void compareFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
     {
-        floatingPointCompare(cond, left, right, dest, [this] (FPRegisterID arg1, FPRegisterID arg2) {
-            m_assembler.fcmp<32>(arg1, arg2);
+        floatingPointCompare(cond, dest, [&]() {
+            m_assembler.fcmp<32>(left, right);
+        });
+    }
+
+    void compareDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID dest)
+    {
+        floatingPointCompare(cond, dest, [&]() {
+            m_assembler.fcmp_0<64>(left);
+        });
+    }
+
+    void compareFloatWithZero(DoubleCondition cond, FPRegisterID left, RegisterID dest)
+    {
+        floatingPointCompare(cond, dest, [&]() {
+            m_assembler.fcmp_0<32>(left);
         });
     }
 
@@ -2646,20 +2815,26 @@ public:
 
     void materializeVector(v128_t value, FPRegisterID dest)
     {
+        if (bitEquals(value, vectorAllZeros())) {
+            moveZeroToVector(dest);
+            return;
+        }
         move(TrustedImm64(value.u64x2[0]), scratchRegister());
-        vectorReplaceLaneInt64(TrustedImm32(0), scratchRegister(), dest);
+        vectorSplatInt64(scratchRegister(), dest);
         move(TrustedImm64(value.u64x2[1]), scratchRegister());
         vectorReplaceLaneInt64(TrustedImm32(1), scratchRegister(), dest);
     }
 
     void moveZeroToDouble(FPRegisterID reg)
     {
-        m_assembler.fmov<64>(reg, ARM64Registers::zr);
+        // Intentionally use 128bit width here to clear all part of this register with zero.
+        m_assembler.movi<128>(reg, 0);
     }
 
     void moveZeroToFloat(FPRegisterID reg)
     {
-        m_assembler.fmov<32>(reg, ARM64Registers::zr);
+        // Intentionally use 128bit width here to clear all part of this register with zero.
+        m_assembler.movi<128>(reg, 0);
     }
 
     void moveDoubleTo64(FPRegisterID src, RegisterID dest)
@@ -2706,6 +2881,18 @@ public:
         moveConditionallyAfterFloatingPointCompare<64>(cond, thenCase, elseCase, dest);
     }
 
+    void moveConditionallyDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID src, RegisterID dest)
+    {
+        m_assembler.fcmp_0<64>(left);
+        moveConditionallyAfterFloatingPointCompare<64>(cond, src, dest);
+    }
+
+    void moveConditionallyDoubleWithZero(DoubleCondition cond, FPRegisterID left, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
+    {
+        m_assembler.fcmp_0<64>(left);
+        moveConditionallyAfterFloatingPointCompare<64>(cond, thenCase, elseCase, dest);
+    }
+
     void moveConditionallyFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID src, RegisterID dest)
     {
         m_assembler.fcmp<32>(left, right);
@@ -2715,6 +2902,18 @@ public:
     void moveConditionallyFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
     {
         m_assembler.fcmp<32>(left, right);
+        moveConditionallyAfterFloatingPointCompare<64>(cond, thenCase, elseCase, dest);
+    }
+
+    void moveConditionallyFloatWithZero(DoubleCondition cond, FPRegisterID left, RegisterID src, RegisterID dest)
+    {
+        m_assembler.fcmp_0<32>(left);
+        moveConditionallyAfterFloatingPointCompare<64>(cond, src, dest);
+    }
+
+    void moveConditionallyFloatWithZero(DoubleCondition cond, FPRegisterID left, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
+    {
+        m_assembler.fcmp_0<32>(left);
         moveConditionallyAfterFloatingPointCompare<64>(cond, thenCase, elseCase, dest);
     }
 
@@ -2821,9 +3020,21 @@ public:
         moveDoubleConditionallyAfterFloatingPointCompare<64>(cond, thenCase, elseCase, dest);
     }
 
+    void moveDoubleConditionallyDoubleWithZero(DoubleCondition cond, FPRegisterID left, FPRegisterID thenCase, FPRegisterID elseCase, FPRegisterID dest)
+    {
+        m_assembler.fcmp_0<64>(left);
+        moveDoubleConditionallyAfterFloatingPointCompare<64>(cond, thenCase, elseCase, dest);
+    }
+
     void moveDoubleConditionallyFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right, FPRegisterID thenCase, FPRegisterID elseCase, FPRegisterID dest)
     {
         m_assembler.fcmp<32>(left, right);
+        moveDoubleConditionallyAfterFloatingPointCompare<64>(cond, thenCase, elseCase, dest);
+    }
+
+    void moveDoubleConditionallyFloatWithZero(DoubleCondition cond, FPRegisterID left, FPRegisterID thenCase, FPRegisterID elseCase, FPRegisterID dest)
+    {
+        m_assembler.fcmp_0<32>(left);
         moveDoubleConditionallyAfterFloatingPointCompare<64>(cond, thenCase, elseCase, dest);
     }
 
@@ -3160,8 +3371,12 @@ public:
 
     void move(RegisterID src, RegisterID dest)
     {
-        if (src != dest)
+        if (src != dest) {
+            if (src == ARM64Registers::zr && dest != ARM64Registers::sp)
+                m_assembler.movz<64>(dest, 0);
+            else
             m_assembler.mov<64>(dest, src);
+    }
     }
 
     void move(TrustedImm32 imm, RegisterID dest)
@@ -3181,37 +3396,52 @@ public:
 
     void swap(RegisterID reg1, RegisterID reg2)
     {
+        if (reg1 == reg2)
+            return;
         move(reg1, getCachedDataTempRegisterIDAndInvalidate());
         move(reg2, reg1);
         move(dataTempRegister, reg2);
     }
 
-    void swap(FPRegisterID reg1, FPRegisterID reg2)
+    void swapDouble(FPRegisterID reg1, FPRegisterID reg2)
     {
+        if (reg1 == reg2)
+            return;
         moveDouble(reg1, fpTempRegister);
         moveDouble(reg2, reg1);
         moveDouble(fpTempRegister, reg2);
     }
 
-    void signExtend32ToPtr(TrustedImm32 imm, RegisterID dest)
+    void signExtend32To64(TrustedImm32 imm, RegisterID dest)
     {
         move(TrustedImm64(imm.m_value), dest);
     }
 
-    void signExtend32ToPtr(RegisterID src, RegisterID dest)
+    void signExtend32To64(RegisterID src, RegisterID dest)
     {
         m_assembler.sxtw(dest, src);
     }
 
+    void signExtend32ToPtr(TrustedImm32 imm, RegisterID dest)
+    {
+        signExtend32To64(imm, dest);
+    }
+
+    void signExtend32ToPtr(RegisterID src, RegisterID dest)
+    {
+        signExtend32To64(src, dest);
+    }
+
     void zeroExtend32ToWord(RegisterID src, RegisterID dest)
     {
-        m_assembler.uxtw(dest, src);
+        and64(TrustedImm64(0xffffffffU), src, dest);
     }
 
     void zeroExtend48ToWord(RegisterID src, RegisterID dest)
     {
         m_assembler.ubfx<64>(dest, src, 0, 48);
     }
+
 
     void moveConditionally32(RelationalCondition cond, RegisterID left, RegisterID right, RegisterID src, RegisterID dest)
     {
@@ -3227,18 +3457,21 @@ public:
 
     void moveConditionally32(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
     {
-        if (!right.m_value) {
+        auto immediate = right.m_value;
+        if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond)) {
                 moveConditionallyTest32(*resultCondition, left, left, thenCase, elseCase, dest);
                 return;
             }
         }
 
-        if (isUInt12(right.m_value))
-            m_assembler.cmp<32>(left, UInt12(right.m_value));
-        else if (isUInt12(-right.m_value))
-            m_assembler.cmn<32>(left, UInt12(-right.m_value));
-        else {
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<32>(left, u12, shift);
+            else
+                m_assembler.cmn<32>(left, u12, shift);
+        } else {
             moveToCachedReg(right, dataMemoryTempRegister());
             m_assembler.cmp<32>(left, dataTempRegister);
         }
@@ -3259,18 +3492,44 @@ public:
 
     void moveConditionally64(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
     {
-        if (!right.m_value) {
+        auto immediate = right.m_value;
+        if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond)) {
                 moveConditionallyTest64(*resultCondition, left, left, thenCase, elseCase, dest);
                 return;
             }
         }
 
-        if (isUInt12(right.m_value))
-            m_assembler.cmp<64>(left, UInt12(right.m_value));
-        else if (isUInt12(-right.m_value))
-            m_assembler.cmn<64>(left, UInt12(-right.m_value));
-        else {
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<64>(left, u12, shift);
+            else
+                m_assembler.cmn<64>(left, u12, shift);
+        } else {
+            moveToCachedReg(right, dataMemoryTempRegister());
+            m_assembler.cmp<64>(left, dataTempRegister);
+        }
+        m_assembler.csel<64>(dest, thenCase, elseCase, ARM64Condition(cond));
+    }
+
+    void moveConditionally64(RelationalCondition cond, RegisterID left, TrustedImm64 right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
+    {
+        auto immediate = right.m_value;
+        if (!immediate) {
+            if (auto resultCondition = commuteCompareToZeroIntoTest(cond)) {
+                moveConditionallyTest64(*resultCondition, left, left, thenCase, elseCase, dest);
+                return;
+            }
+        }
+
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<64>(left, u12, shift);
+            else
+                m_assembler.cmn<64>(left, u12, shift);
+        } else {
             moveToCachedReg(right, dataMemoryTempRegister());
             m_assembler.cmp<64>(left, dataTempRegister);
         }
@@ -3315,18 +3574,21 @@ public:
 
     void moveDoubleConditionally32(RelationalCondition cond, RegisterID left, TrustedImm32 right, FPRegisterID thenCase, FPRegisterID elseCase, FPRegisterID dest)
     {
-        if (!right.m_value) {
+        auto immediate = right.m_value;
+        if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond)) {
                 moveDoubleConditionallyTest32(*resultCondition, left, left, thenCase, elseCase, dest);
                 return;
             }
         }
 
-        if (isUInt12(right.m_value))
-            m_assembler.cmp<32>(left, UInt12(right.m_value));
-        else if (isUInt12(-right.m_value))
-            m_assembler.cmn<32>(left, UInt12(-right.m_value));
-        else {
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<32>(left, u12, shift);
+            else
+                m_assembler.cmn<32>(left, u12, shift);
+        } else {
             moveToCachedReg(right, dataMemoryTempRegister());
             m_assembler.cmp<32>(left, dataTempRegister);
         }
@@ -3341,18 +3603,21 @@ public:
 
     void moveDoubleConditionally64(RelationalCondition cond, RegisterID left, TrustedImm32 right, FPRegisterID thenCase, FPRegisterID elseCase, FPRegisterID dest)
     {
-        if (!right.m_value) {
+        auto immediate = right.m_value;
+        if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond)) {
                 moveDoubleConditionallyTest64(*resultCondition, left, left, thenCase, elseCase, dest);
                 return;
             }
         }
 
-        if (isUInt12(right.m_value))
-            m_assembler.cmp<64>(left, UInt12(right.m_value));
-        else if (isUInt12(-right.m_value))
-            m_assembler.cmn<64>(left, UInt12(-right.m_value));
-        else {
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<64>(left, u12, shift);
+            else
+                m_assembler.cmn<64>(left, u12, shift);
+        } else {
             moveToCachedReg(right, dataMemoryTempRegister());
             m_assembler.cmp<64>(left, dataTempRegister);
         }
@@ -3403,16 +3668,19 @@ public:
 
     Jump branch32(RelationalCondition cond, RegisterID left, TrustedImm32 right)
     {
-        if (!right.m_value) {
+        auto immediate = right.m_value;
+        if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond))
                 return branchTest32(*resultCondition, left, left);
         }
 
-        if (isUInt12(right.m_value))
-            m_assembler.cmp<32>(left, UInt12(right.m_value));
-        else if (isUInt12(-right.m_value))
-            m_assembler.cmn<32>(left, UInt12(-right.m_value));
-        else {
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<32>(left, u12, shift);
+            else
+                m_assembler.cmn<32>(left, u12, shift);
+        } else {
             moveToCachedReg(right, dataMemoryTempRegister());
             m_assembler.cmp<32>(left, dataTempRegister);
         }
@@ -3473,16 +3741,19 @@ public:
 
     Jump branch64(RelationalCondition cond, RegisterID left, TrustedImm32 right)
     {
-        if (!right.m_value) {
+        auto immediate = right.m_value;
+        if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond))
                 return branchTest64(*resultCondition, left, left);
         }
 
-        if (isUInt12(right.m_value))
-            m_assembler.cmp<64>(left, UInt12(right.m_value));
-        else if (isUInt12(-right.m_value))
-            m_assembler.cmn<64>(left, UInt12(-right.m_value));
-        else {
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<64>(left, u12, shift);
+            else
+                m_assembler.cmn<64>(left, u12, shift);
+        } else {
             moveToCachedReg(right, dataMemoryTempRegister());
             m_assembler.cmp<64>(left, dataTempRegister);
         }
@@ -3491,17 +3762,19 @@ public:
 
     Jump branch64(RelationalCondition cond, RegisterID left, TrustedImm64 right)
     {
-        intptr_t immediate = right.m_value;
+        auto immediate = right.m_value;
         if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond))
                 return branchTest64(*resultCondition, left, left);
         }
 
-        if (isUInt12(immediate))
-            m_assembler.cmp<64>(left, UInt12(static_cast<int32_t>(immediate)));
-        else if (isUInt12(-immediate))
-            m_assembler.cmn<64>(left, UInt12(static_cast<int32_t>(-immediate)));
-        else {
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<64>(left, u12, shift);
+            else
+                m_assembler.cmn<64>(left, u12, shift);
+        } else {
             moveToCachedReg(right, dataMemoryTempRegister());
             m_assembler.cmp<64>(left, dataTempRegister);
         }
@@ -3820,15 +4093,15 @@ public:
 
     Jump branchAdd32(ResultCondition cond, RegisterID op1, TrustedImm32 imm, RegisterID dest)
     {
-        if (isUInt12(imm.m_value)) {
-            m_assembler.add<32, S>(dest, op1, UInt12(imm.m_value));
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<32, S>(dest, op1, u12, shift);
+            else
+                m_assembler.sub<32, S>(dest, op1, u12, shift);
             return Jump(makeBranch(cond));
         }
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.sub<32, S>(dest, op1, UInt12(-imm.m_value));
-            return Jump(makeBranch(cond));
-        }
-
         signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
         return branchAdd32(cond, op1, dataTempRegister, dest);
     }
@@ -3853,18 +4126,18 @@ public:
     {
         load32(address.m_ptr, getCachedDataTempRegisterIDAndInvalidate());
 
-        if (isUInt12(imm.m_value)) {
-            m_assembler.add<32, S>(dataTempRegister, dataTempRegister, UInt12(imm.m_value));
-            store32(dataTempRegister, address.m_ptr);
-        } else if (isUInt12(-imm.m_value)) {
-            m_assembler.sub<32, S>(dataTempRegister, dataTempRegister, UInt12(-imm.m_value));
-            store32(dataTempRegister, address.m_ptr);
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<32, S>(dataTempRegister, dataTempRegister, u12, shift);
+            else
+                m_assembler.sub<32, S>(dataTempRegister, dataTempRegister, u12, shift);
         } else {
             move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
             m_assembler.add<32, S>(dataTempRegister, dataTempRegister, memoryTempRegister);
-            store32(dataTempRegister, address.m_ptr);
         }
-
+        store32(dataTempRegister, address.m_ptr);
         return Jump(makeBranch(cond));
     }
 
@@ -3872,15 +4145,17 @@ public:
     {
         load32(address, getCachedDataTempRegisterIDAndInvalidate());
 
-        if (isUInt12(imm.m_value))
-            m_assembler.add<32, S>(dataTempRegister, dataTempRegister, UInt12(imm.m_value));
-        else if (isUInt12(-imm.m_value))
-            m_assembler.sub<32, S>(dataTempRegister, dataTempRegister, UInt12(-imm.m_value));
-        else {
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<32, S>(dataTempRegister, dataTempRegister, u12, shift);
+            else
+                m_assembler.sub<32, S>(dataTempRegister, dataTempRegister, u12, shift);
+        } else {
             move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
             m_assembler.add<32, S>(dataTempRegister, dataTempRegister, memoryTempRegister);
         }
-
         store32(dataTempRegister, address);
         return Jump(makeBranch(cond));
     }
@@ -3893,12 +4168,13 @@ public:
 
     Jump branchAdd64(ResultCondition cond, RegisterID op1, TrustedImm32 imm, RegisterID dest)
     {
-        if (isUInt12(imm.m_value)) {
-            m_assembler.add<64, S>(dest, op1, UInt12(imm.m_value));
-            return Jump(makeBranch(cond));
-        }
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.sub<64, S>(dest, op1, UInt12(-imm.m_value));
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<64, S>(dest, op1, u12, shift);
+            else
+                m_assembler.sub<64, S>(dest, op1, u12, shift);
             return Jump(makeBranch(cond));
         }
 
@@ -3918,12 +4194,13 @@ public:
 
     Jump branchAdd64(RelationalCondition cond, TrustedImm32 imm, RegisterID dest)
     {
+        // This is not supporting -imm.m_value UInt12. Thus we are not listing BranchAdd64 RelCond, Imm, Tmp in AirOpcode.opcodes.
         ASSERT(isUInt12(imm.m_value));
         m_assembler.add<64, S>(dest, dest, UInt12(imm.m_value));
         return Jump(makeBranch(cond));
     }
 
-    Jump branchMul32(ResultCondition cond, RegisterID src1, RegisterID src2, RegisterID scratch1, RegisterID scratch2, RegisterID dest)
+    Jump branchMul32(ResultCondition cond, RegisterID src1, RegisterID src2, RegisterID dest)
     {
         ASSERT(cond != Signed);
 
@@ -3934,19 +4211,9 @@ public:
 
         // This is a signed multiple of two 32-bit values, producing a 64-bit result.
         m_assembler.smull(dest, src1, src2);
-        // Copy bits 63..32 of the result to bits 31..0 of scratch1.
-        m_assembler.asr<64>(scratch1, dest, 32);
-        // Splat bit 31 of the result to bits 31..0 of scratch2.
-        m_assembler.asr<32>(scratch2, dest, 31);
-        // After a mul32 the top 32 bits of the register should be clear.
+        m_assembler.cmp<64>(dest, dest, Assembler::SXTW, 0);
         zeroExtend32ToWord(dest, dest);
-        // Check that bits 31..63 of the original result were all equal.
-        return branch32(NotEqual, scratch2, scratch1);
-    }
-
-    Jump branchMul32(ResultCondition cond, RegisterID src1, RegisterID src2, RegisterID dest)
-    {
-        return branchMul32(cond, src1, src2, getCachedDataTempRegisterIDAndInvalidate(), getCachedMemoryTempRegisterIDAndInvalidate(), dest);
+        return Jump(makeBranch(NotEqual));
     }
 
     Jump branchMul32(ResultCondition cond, RegisterID src, RegisterID dest)
@@ -3960,32 +4227,33 @@ public:
         return branchMul32(cond, dataTempRegister, src, dest);
     }
 
-    Jump branchMul64(ResultCondition cond, RegisterID src1, RegisterID src2, RegisterID scratch1, RegisterID scratch2, RegisterID dest)
+    Jump branchMul64(ResultCondition cond, RegisterID src1, RegisterID src2, RegisterID scratch1, RegisterID dest)
     {
         ASSERT(cond != Signed);
+        ASSERT(src1 != scratch1);
+        ASSERT(src2 != scratch1);
 
-        // This is a signed multiple of two 64-bit values, producing a 64-bit result.
+        // mul<64> does a signed multiple of two 64-bit values, producing a 64-bit result.
+        if (cond != Overflow) {
         m_assembler.mul<64>(dest, src1, src2);
-
-        if (cond != Overflow)
             return branchTest64(cond, dest);
+        }
 
         // Compute bits 127..64 of the result into scratch1.
         m_assembler.smulh(scratch1, src1, src2);
-        // Splat bit 63 of the result to bits 63..0 of scratch2.
-        m_assembler.asr<64>(scratch2, dest, 63);
+        // dest may equal src1 or src2. So, we should always compute dest after we've
+        // computed the smulh result in scratch1 so as not to corrupt src1 and src2.
+        m_assembler.mul<64>(dest, src1, src2);
+
+        // Splat bit 63 of the result to bits 63..0 of scratch1.
+        m_assembler.cmp<64>(scratch1, dest, Assembler::ASR, 63);
         // Check that bits 31..63 of the original result were all equal.
-        return branch64(NotEqual, scratch2, scratch1);
+        return Jump(makeBranch(NotEqual));
     }
 
     Jump branchMul64(ResultCondition cond, RegisterID src1, RegisterID src2, RegisterID dest)
     {
-        return branchMul64(cond, src1, src2, getCachedDataTempRegisterIDAndInvalidate(), getCachedMemoryTempRegisterIDAndInvalidate(), dest);
-    }
-
-    Jump branchMul64(ResultCondition cond, RegisterID src, RegisterID dest)
-    {
-        return branchMul64(cond, dest, src, dest);
+        return branchMul64(cond, src1, src2, getCachedDataTempRegisterIDAndInvalidate(), dest);
     }
 
     Jump branchNeg32(ResultCondition cond, RegisterID dest)
@@ -4014,12 +4282,13 @@ public:
 
     Jump branchSub32(ResultCondition cond, RegisterID op1, TrustedImm32 imm, RegisterID dest)
     {
-        if (isUInt12(imm.m_value)) {
-            m_assembler.sub<32, S>(dest, op1, UInt12(imm.m_value));
-            return Jump(makeBranch(cond));
-        }
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.add<32, S>(dest, op1, UInt12(-imm.m_value));
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.sub<32, S>(dest, op1, u12, shift);
+            else
+                m_assembler.add<32, S>(dest, op1, u12, shift);
             return Jump(makeBranch(cond));
         }
 
@@ -4045,12 +4314,13 @@ public:
 
     Jump branchSub64(ResultCondition cond, RegisterID op1, TrustedImm32 imm, RegisterID dest)
     {
-        if (isUInt12(imm.m_value)) {
-            m_assembler.sub<64, S>(dest, op1, UInt12(imm.m_value));
-            return Jump(makeBranch(cond));
-        }
-        if (isUInt12(-imm.m_value)) {
-            m_assembler.add<64, S>(dest, op1, UInt12(-imm.m_value));
+        auto immediate = imm.m_value;
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.sub<64, S>(dest, op1, u12, shift);
+            else
+                m_assembler.add<64, S>(dest, op1, u12, shift);
             return Jump(makeBranch(cond));
         }
 
@@ -4070,11 +4340,11 @@ public:
 
     Jump branchSub64(RelationalCondition cond, TrustedImm32 imm, RegisterID dest)
     {
+        // This is not supporting -imm.m_value UInt12. Thus we are not listing BranchSub64 RelCond, Imm, Tmp in AirOpcode.opcodes.
         ASSERT(isUInt12(imm.m_value));
         m_assembler.sub<64, S>(dest, dest, UInt12(imm.m_value));
         return Jump(makeBranch(cond));
     }
-
 
     // Jumps, calls, returns
 
@@ -4217,18 +4487,21 @@ public:
 
     void compare32(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID dest)
     {
-        if (!right.m_value) {
+        auto immediate = right.m_value;
+        if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond)) {
                 test32(*resultCondition, left, left, dest);
                 return;
             }
         }
 
-        if (isUInt12(right.m_value))
-            m_assembler.cmp<32>(left, UInt12(right.m_value));
-        else if (isUInt12(-right.m_value))
-            m_assembler.cmn<32>(left, UInt12(-right.m_value));
-        else {
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<32>(left, u12, shift);
+            else
+                m_assembler.cmn<32>(left, u12, shift);
+        } else {
             move(right, getCachedDataTempRegisterIDAndInvalidate());
             m_assembler.cmp<32>(left, dataTempRegister);
         }
@@ -4243,15 +4516,47 @@ public:
 
     void compare64(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID dest)
     {
-        if (!right.m_value) {
+        auto immediate = right.m_value;
+        if (!immediate) {
             if (auto resultCondition = commuteCompareToZeroIntoTest(cond)) {
                 test64(*resultCondition, left, left, dest);
                 return;
             }
         }
 
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<64>(left, u12, shift);
+            else
+                m_assembler.cmn<64>(left, u12, shift);
+        } else {
         signExtend32ToPtr(right, getCachedDataTempRegisterIDAndInvalidate());
         m_assembler.cmp<64>(left, dataTempRegister);
+        }
+        m_assembler.cset<32>(dest, ARM64Condition(cond));
+    }
+
+    void compare64(RelationalCondition cond, RegisterID left, TrustedImm64 right, RegisterID dest)
+    {
+        auto immediate = right.m_value;
+        if (!immediate) {
+            if (auto resultCondition = commuteCompareToZeroIntoTest(cond)) {
+                test64(*resultCondition, left, left, dest);
+                return;
+            }
+        }
+
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.cmp<64>(left, u12, shift);
+            else
+                m_assembler.cmn<64>(left, u12, shift);
+        } else {
+            move(right, getCachedDataTempRegisterIDAndInvalidate());
+            m_assembler.cmp<64>(left, dataTempRegister);
+        }
         m_assembler.cset<32>(dest, ARM64Condition(cond));
     }
 
@@ -4979,6 +5284,11 @@ public:
 
     void vectorExtractLane(SIMDLane simdLane, TrustedImm32 lane, FPRegisterID src, FPRegisterID dest)
     {
+        if (!lane.m_value) {
+            if (src != dest)
+                moveDouble(src, dest);
+            return;
+        }
         m_assembler.dupElement(dest, src, simdLane, lane.m_value);
     }
 
@@ -5118,6 +5428,22 @@ public:
         m_assembler.vectorFmulByElement(dest, left, right, SIMDLane::f64x2, lane.m_value);
     }
 
+    void vectorFusedMulAdd(SIMDInfo simdInfo, FPRegisterID mul1, FPRegisterID mul2, FPRegisterID addend, FPRegisterID dest, FPRegisterID scratch)
+    {
+        ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
+        moveVector(addend, scratch);
+        m_assembler.vectorFmla(scratch, mul1, mul2, simdInfo.lane);
+        moveVector(scratch, dest);
+    }
+
+    void vectorFusedNegMulAdd(SIMDInfo simdInfo, FPRegisterID mul1, FPRegisterID mul2, FPRegisterID addend, FPRegisterID dest, FPRegisterID scratch)
+    {
+        ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
+        moveVector(addend, scratch);
+        m_assembler.vectorFmls(scratch, mul1, mul2, simdInfo.lane);
+        moveVector(scratch, dest);
+    }
+
     void vectorDiv(SIMDInfo simdInfo, FPRegisterID left, FPRegisterID right, FPRegisterID dest)
     {
         ASSERT(scalarTypeIsFloatingPoint(simdInfo.lane));
@@ -5214,7 +5540,7 @@ public:
 
     void moveZeroToVector(FPRegisterID dest)
     {
-        vectorXor({ SIMDLane::v128, SIMDSignMode::None }, dest, dest, dest);
+        m_assembler.movi<128>(dest, 0);
     }
 
     void vectorAbs(SIMDInfo simdInfo, FPRegisterID input, FPRegisterID dest)
@@ -5551,9 +5877,12 @@ public:
 
     void vectorDotProduct(FPRegisterID a, FPRegisterID b, FPRegisterID dest, FPRegisterID scratch)
     {
+        ASSERT(scratch != dest);
+        ASSERT(scratch != a);
+        ASSERT(scratch != b);
         m_assembler.smullv(scratch, a, b, SIMDLane::i16x8);
         m_assembler.smull2v(dest, a, b, SIMDLane::i16x8);
-        m_assembler.addpv(dest, dest, scratch, SIMDLane::i32x4);
+        m_assembler.addpv(dest, scratch, dest, SIMDLane::i32x4);
     }
     void vectorSwizzle(FPRegisterID a, FPRegisterID control, FPRegisterID dest) { m_assembler.tbl(dest, a, control); }
     void vectorSwizzle2(FPRegisterID a, FPRegisterID b, FPRegisterID control, FPRegisterID dest)
@@ -5864,8 +6193,9 @@ protected:
         intptr_t value = reinterpret_cast<intptr_t>(imm.m_value);
         m_assembler.movz<64>(dest, getHalfword(value, 0));
         m_assembler.movk<64>(dest, getHalfword(value, 1), 16);
+        if constexpr (Assembler::NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 2)
         m_assembler.movk<64>(dest, getHalfword(value, 2), 32);
-        if (Assembler::MAX_POINTER_BITS > 48)
+        if constexpr (Assembler::NUMBER_OF_ADDRESS_ENCODING_INSTRUCTIONS > 3)
             m_assembler.movk<64>(dest, getHalfword(value, 3), 48);
     }
 
@@ -6095,16 +6425,42 @@ protected:
 
     std::optional<RegisterID> tryFoldBaseAndOffsetPart(BaseIndex address)
     {
-        if (!address.offset)
+        auto immediate = address.offset;
+        if (!immediate)
             return address.base;
-        if (isUInt12(address.offset)) {
-            m_assembler.add<64>(getCachedMemoryTempRegisterIDAndInvalidate(), address.base, UInt12(address.offset));
+
+        if (auto tuple = tryExtractShiftedImm(immediate)) {
+            auto [u12, shift, inverted] = tuple.value();
+            if (!inverted)
+                m_assembler.add<64>(getCachedMemoryTempRegisterIDAndInvalidate(), address.base, u12, shift);
+            else
+                m_assembler.sub<64>(getCachedMemoryTempRegisterIDAndInvalidate(), address.base, u12, shift);
             return memoryTempRegister;
         }
-        if (isUInt12(-address.offset)) {
-            m_assembler.sub<64>(getCachedMemoryTempRegisterIDAndInvalidate(), address.base, UInt12(-address.offset));
-            return memoryTempRegister;
+
+        return std::nullopt;
         }
+
+    template<typename IntType>
+    std::optional<std::tuple<UInt12, int32_t, bool>> tryExtractShiftedImm(IntType immediate)
+    {
+        if (isUInt12(immediate))
+            return std::tuple { UInt12(immediate), 0, false };
+
+        auto negatedImmediate = toTwosComplement(immediate);
+        if (isUInt12(negatedImmediate))
+            return std::tuple { UInt12(negatedImmediate), 0, true };
+
+        auto shifted = immediate >> 12;
+        if ((shifted << 12) == immediate) {
+            if (isUInt12(shifted))
+                return std::tuple { UInt12(shifted), 12, false };
+
+            auto negatedShifted = toTwosComplement(shifted);
+            if (isUInt12(negatedShifted))
+                return std::tuple { UInt12(negatedShifted), 12, true };
+        }
+
         return std::nullopt;
     }
 
@@ -6318,12 +6674,12 @@ protected:
     }
 
     template<typename Function>
-    void floatingPointCompare(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest, Function compare)
+    void floatingPointCompare(DoubleCondition cond, RegisterID dest, Function compare)
     {
         if (cond == DoubleNotEqualAndOrdered) {
             // ConditionNE sets 1 if NotEqual *or* unordered - force the unordered cases not to set 1.
             move(TrustedImm32(0), dest);
-            compare(left, right);
+            compare();
             Jump unordered = makeBranch(Assembler::ConditionVS);
             m_assembler.cset<32>(dest, Assembler::ConditionNE);
             unordered.link(this);
@@ -6332,13 +6688,13 @@ protected:
         if (cond == DoubleEqualOrUnordered) {
             // ConditionEQ sets 1 only if Equal - force the unordered cases to set 1 too.
             move(TrustedImm32(1), dest);
-            compare(left, right);
+            compare();
             Jump unordered = makeBranch(Assembler::ConditionVS);
             m_assembler.cset<32>(dest, Assembler::ConditionEQ);
             unordered.link(this);
             return;
         }
-        compare(left, right);
+        compare();
         m_assembler.cset<32>(dest, ARM64Condition(cond));
     }
 
@@ -6446,4 +6802,4 @@ inline MacroAssemblerARM64::Jump MacroAssemblerARM64::branch<64>(RelationalCondi
 
 } // namespace JSC
 
-#endif // ENABLE(ASSEMBLER)
+#endif // ENABLE(ASSEMBLER) && CPU(ARM64)

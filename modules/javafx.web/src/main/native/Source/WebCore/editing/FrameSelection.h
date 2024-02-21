@@ -35,25 +35,24 @@
 #include "Range.h"
 #include "ScrollAlignment.h"
 #include "ScrollBehavior.h"
-#include "Timer.h"
 #include "VisibleSelection.h"
 #include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
 class CharacterData;
-class Frame;
 class GraphicsContext;
 class HTMLFormElement;
+class LocalFrame;
 class MutableStyleProperties;
 class RenderBlock;
 class RenderObject;
 class RenderView;
 class VisiblePosition;
 
-enum EUserTriggered : bool { NotUserTriggered, UserTriggered };
-enum RevealExtentOption : bool { RevealExtent, DoNotRevealExtent };
-enum ForceCenterScrollOption : bool { DoNotForceCenterScroll, ForceCenterScroll };
+enum class UserTriggered : bool { No, Yes };
+enum class RevealExtentOption : bool { RevealExtent, DoNotRevealExtent };
+enum class ForceCenterScroll : bool { No, Yes };
 
 class CaretBase {
     WTF_MAKE_NONCOPYABLE(CaretBase);
@@ -61,14 +60,14 @@ class CaretBase {
 public:
     WEBCORE_EXPORT static Color computeCaretColor(const RenderStyle& elementStyle, const Node*);
 protected:
-    enum CaretVisibility { Visible, Hidden };
-    explicit CaretBase(CaretVisibility = Hidden);
+    enum class CaretVisibility : bool { Visible, Hidden };
+    explicit CaretBase(CaretVisibility = CaretVisibility::Hidden);
 
-    void invalidateCaretRect(Node*, bool caretRectChanged = false);
+    void invalidateCaretRect(Node*, bool caretRectChanged = false, CaretAnimator* = nullptr);
     void clearCaretRect();
     bool updateCaretRect(Document&, const VisiblePosition& caretPosition);
     bool shouldRepaintCaret(const RenderView*, bool isContentEditable) const;
-    void paintCaret(const Node&, GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect, const CaretAnimator::PresentationProperties&) const;
+    void paintCaret(const Node&, GraphicsContext&, const LayoutPoint&, CaretAnimator*) const;
 
     const LayoutRect& localCaretRectWithoutUpdate() const { return m_caretLocalRect; }
 
@@ -76,7 +75,7 @@ protected:
     void setCaretRectNeedsUpdate() { m_caretRectNeedsUpdate = true; }
 
     void setCaretVisibility(CaretVisibility visibility) { m_caretVisibility = visibility; }
-    bool caretIsVisible() const { return m_caretVisibility == Visible; }
+    bool caretIsVisible() const { return m_caretVisibility == CaretVisibility::Visible; }
     CaretVisibility caretVisibility() const { return m_caretVisibility; }
 
 private:
@@ -92,7 +91,7 @@ public:
     DragCaretController();
 
     RenderBlock* caretRenderer() const;
-    void paintDragCaret(Frame*, GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect) const;
+    void paintDragCaret(LocalFrame*, GraphicsContext&, const LayoutPoint&) const;
 
     bool isContentEditable() const { return m_position.rootEditableElement(); }
     WEBCORE_EXPORT bool isContentRichlyEditable() const;
@@ -116,9 +115,9 @@ class FrameSelection final : private CaretBase, public CaretAnimationClient {
     WTF_MAKE_NONCOPYABLE(FrameSelection);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    enum EAlteration { AlterationMove, AlterationExtend };
-    enum CursorAlignOnScroll { AlignCursorOnScrollIfNeeded, AlignCursorOnScrollAlways };
-    enum SetSelectionOption {
+    enum class Alteration : bool { Move, Extend };
+    enum class CursorAlignOnScroll : bool { IfNeeded, Always };
+    enum class SetSelectionOption : uint16_t {
         FireSelectEvent = 1 << 0,
         CloseTyping = 1 << 1,
         ClearTypingStyle = 1 << 2,
@@ -133,7 +132,7 @@ public:
         RevealSelectionBounds = 1 << 11,
         ForceCenterScroll = 1 << 12,
     };
-    static constexpr OptionSet<SetSelectionOption> defaultSetSelectionOptions(EUserTriggered = NotUserTriggered);
+    static constexpr OptionSet<SetSelectionOption> defaultSetSelectionOptions(UserTriggered = UserTriggered::No);
 
     WEBCORE_EXPORT explicit FrameSelection(Document* = nullptr);
 
@@ -141,42 +140,42 @@ public:
 
     WEBCORE_EXPORT Element* rootEditableElementOrDocumentElement() const;
 
-    WEBCORE_EXPORT void moveTo(const VisiblePosition&, EUserTriggered = NotUserTriggered, CursorAlignOnScroll = AlignCursorOnScrollIfNeeded);
-    WEBCORE_EXPORT void moveTo(const VisiblePosition&, const VisiblePosition&, EUserTriggered = NotUserTriggered);
-    void moveTo(const Position&, Affinity, EUserTriggered = NotUserTriggered);
-    void moveTo(const Position&, const Position&, Affinity, EUserTriggered = NotUserTriggered);
+    WEBCORE_EXPORT void moveTo(const VisiblePosition&, UserTriggered = UserTriggered::No, CursorAlignOnScroll = CursorAlignOnScroll::IfNeeded);
+    WEBCORE_EXPORT void moveTo(const VisiblePosition&, const VisiblePosition&, UserTriggered = UserTriggered::No);
+    void moveTo(const Position&, Affinity, UserTriggered = UserTriggered::No);
+    void moveTo(const Position&, const Position&, Affinity, UserTriggered = UserTriggered::No);
     void moveWithoutValidationTo(const Position&, const Position&, bool selectionHasDirection, bool shouldSetFocus, SelectionRevealMode, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
 
     const VisibleSelection& selection() const { return m_selection; }
-    WEBCORE_EXPORT void setSelection(const VisibleSelection&, OptionSet<SetSelectionOption> = defaultSetSelectionOptions(), AXTextStateChangeIntent = AXTextStateChangeIntent(), CursorAlignOnScroll = AlignCursorOnScrollIfNeeded, TextGranularity = TextGranularity::CharacterGranularity);
+    WEBCORE_EXPORT void setSelection(const VisibleSelection&, OptionSet<SetSelectionOption> = defaultSetSelectionOptions(), AXTextStateChangeIntent = AXTextStateChangeIntent(), CursorAlignOnScroll = CursorAlignOnScroll::IfNeeded, TextGranularity = TextGranularity::CharacterGranularity);
 
     enum class ShouldCloseTyping : bool { No, Yes };
-    WEBCORE_EXPORT bool setSelectedRange(const std::optional<SimpleRange>&, Affinity, ShouldCloseTyping, EUserTriggered = NotUserTriggered);
+    WEBCORE_EXPORT bool setSelectedRange(const std::optional<SimpleRange>&, Affinity, ShouldCloseTyping, UserTriggered = UserTriggered::No);
     WEBCORE_EXPORT void selectAll();
     WEBCORE_EXPORT void clear();
     void willBeRemovedFromFrame();
 
-    void updateAppearanceAfterLayout();
+    void updateAppearanceAfterUpdatingRendering();
     void scheduleAppearanceUpdateAfterStyleChange();
 
     enum class RevealSelectionAfterUpdate : bool { NotForced, Forced };
     void setNeedsSelectionUpdate(RevealSelectionAfterUpdate = RevealSelectionAfterUpdate::NotForced);
 
-    bool contains(const LayoutPoint&) const;
+    WEBCORE_EXPORT bool contains(const LayoutPoint&) const;
 
-    WEBCORE_EXPORT bool modify(EAlteration, SelectionDirection, TextGranularity, EUserTriggered = NotUserTriggered);
-    enum VerticalDirection { DirectionUp, DirectionDown };
-    bool modify(EAlteration, unsigned verticalDistance, VerticalDirection, EUserTriggered = NotUserTriggered, CursorAlignOnScroll = AlignCursorOnScrollIfNeeded);
+    WEBCORE_EXPORT bool modify(Alteration, SelectionDirection, TextGranularity, UserTriggered = UserTriggered::No);
+    enum class VerticalDirection : bool { Up, Down };
+    bool modify(Alteration, unsigned verticalDistance, VerticalDirection, UserTriggered = UserTriggered::No, CursorAlignOnScroll = CursorAlignOnScroll::IfNeeded);
 
     TextGranularity granularity() const { return m_granularity; }
 
-    void setStart(const VisiblePosition&, EUserTriggered = NotUserTriggered);
-    void setEnd(const VisiblePosition&, EUserTriggered = NotUserTriggered);
+    void setStart(const VisiblePosition&, UserTriggered = UserTriggered::No);
+    void setEnd(const VisiblePosition&, UserTriggered = UserTriggered::No);
 
-    WEBCORE_EXPORT void setBase(const VisiblePosition&, EUserTriggered = NotUserTriggered);
-    WEBCORE_EXPORT void setBase(const Position&, Affinity, EUserTriggered = NotUserTriggered);
-    void setExtent(const VisiblePosition&, EUserTriggered = NotUserTriggered);
-    void setExtent(const Position&, Affinity, EUserTriggered = NotUserTriggered);
+    WEBCORE_EXPORT void setBase(const VisiblePosition&, UserTriggered = UserTriggered::No);
+    WEBCORE_EXPORT void setBase(const Position&, Affinity, UserTriggered = UserTriggered::No);
+    void setExtent(const VisiblePosition&, UserTriggered = UserTriggered::No);
+    void setExtent(const Position&, Affinity, UserTriggered = UserTriggered::No);
 
     // Return the renderer that is responsible for painting the caret (in the selection start node).
     RenderBlock* caretRendererWithoutUpdatingLayout() const;
@@ -185,7 +184,7 @@ public:
     WEBCORE_EXPORT IntRect absoluteCaretBounds(bool* insideFixed = nullptr);
     void setCaretRectNeedsUpdate() { CaretBase::setCaretRectNeedsUpdate(); }
 
-    void willBeModified(EAlteration, SelectionDirection);
+    void willBeModified(Alteration, SelectionDirection);
 
     bool isNone() const { return m_selection.isNone(); }
     bool isCaret() const { return m_selection.isCaret(); }
@@ -196,8 +195,8 @@ public:
     void nodeWillBeRemoved(Node&);
     void textWasReplaced(CharacterData&, unsigned offset, unsigned oldLength, unsigned newLength);
 
-    void setCaretVisible(bool caretIsVisible) { setCaretVisibility(caretIsVisible ? Visible : Hidden, ShouldUpdateAppearance::Yes); }
-    void paintCaret(GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect);
+    void setCaretVisible(bool caretIsVisible) { setCaretVisibility(caretIsVisible ? CaretVisibility::Visible : CaretVisibility::Hidden, ShouldUpdateAppearance::Yes); }
+    void paintCaret(GraphicsContext&, const LayoutPoint&);
 
     // Used to suspend caret blinking while the mouse is down.
     WEBCORE_EXPORT void setCaretBlinkingSuspended(bool);
@@ -246,15 +245,15 @@ public:
     void setTypingStyle(RefPtr<EditingStyle>&& style) { m_typingStyle = WTFMove(style); }
     void clearTypingStyle();
 
-    enum class ClipToVisibleContent : uint8_t { No, Yes };
+    enum class ClipToVisibleContent : bool { No, Yes };
     WEBCORE_EXPORT FloatRect selectionBounds(ClipToVisibleContent = ClipToVisibleContent::Yes);
 
-    enum class TextRectangleHeight { TextHeight, SelectionHeight };
+    enum class TextRectangleHeight : bool { TextHeight, SelectionHeight };
     WEBCORE_EXPORT void getClippedVisibleTextRectangles(Vector<FloatRect>&, TextRectangleHeight = TextRectangleHeight::SelectionHeight) const;
 
     WEBCORE_EXPORT HTMLFormElement* currentForm() const;
 
-    WEBCORE_EXPORT void revealSelection(SelectionRevealMode = SelectionRevealMode::Reveal, const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = DoNotRevealExtent, ScrollBehavior = ScrollBehavior::Instant);
+    WEBCORE_EXPORT void revealSelection(SelectionRevealMode = SelectionRevealMode::Reveal, const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = RevealExtentOption::DoNotRevealExtent, ScrollBehavior = ScrollBehavior::Instant);
     WEBCORE_EXPORT void setSelectionFromNone();
 
     bool shouldShowBlockCursor() const { return m_shouldShowBlockCursor; }
@@ -271,10 +270,12 @@ public:
     CaretAnimator& caretAnimator() { return m_caretAnimator.get(); }
 
     const CaretAnimator& caretAnimator() const { return m_caretAnimator.get(); }
-
+#if PLATFORM(MAC)
+    WEBCORE_EXPORT void caretAnimatorInvalidated(CaretAnimatorType);
+#endif
 private:
     void updateSelectionAppearanceNow();
-    void updateAndRevealSelection(const AXTextStateChangeIntent&, ScrollBehavior = ScrollBehavior::Instant, RevealExtentOption = RevealExtentOption::RevealExtent, ForceCenterScrollOption = ForceCenterScrollOption::DoNotForceCenterScroll);
+    void updateAndRevealSelection(const AXTextStateChangeIntent&, ScrollBehavior = ScrollBehavior::Instant, RevealExtentOption = RevealExtentOption::RevealExtent, ForceCenterScroll = ForceCenterScroll::No);
     void updateDataDetectorsForSelection();
 
     bool setSelectionWithoutUpdatingAppearance(const VisibleSelection&, OptionSet<SetSelectionOption>, CursorAlignOnScroll, TextGranularity);
@@ -297,21 +298,18 @@ private:
     VisiblePosition modifyMovingLeft(TextGranularity, bool* reachedBoundary = nullptr);
     VisiblePosition modifyMovingBackward(TextGranularity, bool* reachedBoundary = nullptr);
 
-    enum PositionType : uint8_t { Start, End, Extent };
+    enum class PositionType : uint8_t { Start, End, Extent };
     LayoutUnit lineDirectionPointForBlockDirectionNavigation(PositionType);
 
-    AXTextStateChangeIntent textSelectionIntent(EAlteration, SelectionDirection, TextGranularity);
+    AXTextStateChangeIntent textSelectionIntent(Alteration, SelectionDirection, TextGranularity);
     void notifyAccessibilityForSelectionChange(const AXTextStateChangeIntent&);
 
-    void updateSelectionCachesIfSelectionIsInsideTextFormControl(EUserTriggered);
+    void updateSelectionCachesIfSelectionIsInsideTextFormControl(UserTriggered);
 
     void selectFrameElementInParentIfFullySelected();
 
     void setFocusedElementIfNeeded();
     void focusedOrActiveStateChanged();
-
-    void updateAppearanceAfterLayoutOrStyleChange();
-    void appearanceUpdateTimerFired();
 
     enum class ShouldUpdateAppearance : bool { No, Yes };
     WEBCORE_EXPORT void setCaretVisibility(CaretVisibility, ShouldUpdateAppearance);
@@ -323,13 +321,16 @@ private:
 
     Document* document() final;
 
+    Node* caretNode() final;
+
     bool dispatchSelectStart();
 
 #if PLATFORM(IOS_FAMILY)
-    std::optional<SimpleRange> rangeByAlteringCurrentSelection(EAlteration, int amount) const;
+    std::optional<SimpleRange> rangeByAlteringCurrentSelection(Alteration, int amount) const;
 #endif
 
     void updateAssociatedLiveRange();
+    LayoutRect localCaretRect() const final { return localCaretRectWithoutUpdate(); }
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     RefPtr<Range> m_associatedLiveRange;
@@ -341,7 +342,6 @@ private:
     RefPtr<Node> m_previousCaretNode; // The last node which painted the caret. Retained for clearing the old caret when it moves.
 
     RefPtr<EditingStyle> m_typingStyle;
-    Timer m_appearanceUpdateTimer;
     // The painted bounds of the caret in absolute coordinates
     IntRect m_absCaretBounds;
 
@@ -365,11 +365,11 @@ private:
 #endif
 };
 
-constexpr auto FrameSelection::defaultSetSelectionOptions(EUserTriggered userTriggered) -> OptionSet<SetSelectionOption>
+constexpr auto FrameSelection::defaultSetSelectionOptions(UserTriggered userTriggered) -> OptionSet<SetSelectionOption>
 {
-    OptionSet<SetSelectionOption> options { CloseTyping, ClearTypingStyle };
-    if (userTriggered == UserTriggered)
-        options.add({ RevealSelection, FireSelectEvent, IsUserTriggered });
+    OptionSet<SetSelectionOption> options { SetSelectionOption::CloseTyping, SetSelectionOption::ClearTypingStyle };
+    if (userTriggered == UserTriggered::Yes)
+        options.add({ SetSelectionOption::RevealSelection, SetSelectionOption::FireSelectEvent, SetSelectionOption::IsUserTriggered });
     return options;
 }
 

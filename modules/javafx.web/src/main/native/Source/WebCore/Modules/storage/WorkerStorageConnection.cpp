@@ -27,6 +27,7 @@
 #include "WorkerStorageConnection.h"
 
 #include "ClientOrigin.h"
+#include "Document.h"
 #include "StorageEstimate.h"
 #include "WorkerFileSystemStorageConnection.h"
 #include "WorkerGlobalScope.h"
@@ -63,15 +64,22 @@ void WorkerStorageConnection::getPersisted(ClientOrigin&& origin, StorageConnect
 {
     ASSERT(m_scope);
 
+    auto* workerLoaderProxy = m_scope->thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return completionHandler(false);
+
     auto callbackIdentifier = ++m_lastCallbackIdentifier;
     m_getPersistedCallbacks.add(callbackIdentifier, WTFMove(completionHandler));
 
-    callOnMainThread([callbackIdentifier, workerThread = Ref { m_scope->thread() }, origin = WTFMove(origin).isolatedCopy()]() mutable {
-        auto mainThreadConnection = workerThread->workerLoaderProxy().storageConnection();
-        auto mainThreadCallback = [callbackIdentifier, workerThread = WTFMove(workerThread)](bool result) mutable {
-            workerThread->runLoop().postTaskForMode([callbackIdentifier, result] (auto& scope) mutable {
+    workerLoaderProxy->postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
+        ASSERT(isMainThread());
+
+        auto& document = downcast<Document>(context);
+        auto mainThreadConnection = document.storageConnection();
+        auto mainThreadCallback = [callbackIdentifier, contextIdentifier](bool result) mutable {
+            ScriptExecutionContext::postTaskTo(contextIdentifier, [callbackIdentifier, result] (auto& scope) mutable {
                 downcast<WorkerGlobalScope>(scope).storageConnection().didGetPersisted(callbackIdentifier, result);
-            }, WorkerRunLoop::defaultMode());
+            });
         };
         if (!mainThreadConnection)
             return mainThreadCallback(false);
@@ -90,15 +98,22 @@ void WorkerStorageConnection::getEstimate(ClientOrigin&& origin, StorageConnecti
 {
     ASSERT(m_scope);
 
+    auto* workerLoaderProxy = m_scope->thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return completionHandler(Exception { InvalidStateError });
+
     auto callbackIdentifier = ++m_lastCallbackIdentifier;
     m_getEstimateCallbacks.add(callbackIdentifier, WTFMove(completionHandler));
 
-    callOnMainThread([callbackIdentifier, workerThread = Ref { m_scope->thread() }, origin = WTFMove(origin).isolatedCopy()]() mutable {
-        auto mainThreadConnection = workerThread->workerLoaderProxy().storageConnection();
-        auto mainThreadCallback = [callbackIdentifier, workerThread = WTFMove(workerThread)](auto&& result) mutable {
-            workerThread->runLoop().postTaskForMode([callbackIdentifier, result = crossThreadCopy(WTFMove(result))] (auto& scope) mutable {
+    workerLoaderProxy->postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
+        ASSERT(isMainThread());
+
+        auto& document = downcast<Document>(context);
+        auto mainThreadConnection = document.storageConnection();
+        auto mainThreadCallback = [callbackIdentifier, contextIdentifier](auto&& result) mutable {
+            ScriptExecutionContext::postTaskTo(contextIdentifier, [callbackIdentifier, result = crossThreadCopy(WTFMove(result))] (auto& scope) mutable {
                 downcast<WorkerGlobalScope>(scope).storageConnection().didGetEstimate(callbackIdentifier, WTFMove(result));
-            }, WorkerRunLoop::defaultMode());
+            });
         };
         if (!mainThreadConnection)
             return mainThreadCallback(Exception { InvalidStateError });
@@ -117,15 +132,22 @@ void WorkerStorageConnection::fileSystemGetDirectory(ClientOrigin&& origin, Stor
 {
     ASSERT(m_scope);
 
+    auto* workerLoaderProxy = m_scope->thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return completionHandler(Exception { InvalidStateError });
+
     auto callbackIdentifier = ++m_lastCallbackIdentifier;
     m_getDirectoryCallbacks.add(callbackIdentifier, WTFMove(completionHandler));
 
-    callOnMainThread([callbackIdentifier, workerThread = Ref { m_scope->thread() }, origin = WTFMove(origin).isolatedCopy()]() mutable {
-        auto mainThreadConnection = workerThread->workerLoaderProxy().storageConnection();
-        auto mainThreadCallback = [callbackIdentifier, workerThread = WTFMove(workerThread)](auto&& result) mutable {
-            workerThread->runLoop().postTaskForMode([callbackIdentifier, result = crossThreadCopy(WTFMove(result))] (auto& scope) mutable {
+    workerLoaderProxy->postTaskToLoader([callbackIdentifier, contextIdentifier = m_scope->identifier(), origin = WTFMove(origin).isolatedCopy()](auto& context) mutable {
+        ASSERT(isMainThread());
+
+        auto& document = downcast<Document>(context);
+        auto mainThreadConnection = document.storageConnection();
+        auto mainThreadCallback = [callbackIdentifier, contextIdentifier](auto&& result) mutable {
+            ScriptExecutionContext::postTaskTo(contextIdentifier, [callbackIdentifier, result = crossThreadCopy(WTFMove(result))] (auto& scope) mutable {
                 downcast<WorkerGlobalScope>(scope).storageConnection().didGetDirectory(callbackIdentifier, WTFMove(result));
-            }, WorkerRunLoop::defaultMode());
+            });
         };
         if (!mainThreadConnection)
             return mainThreadCallback(Exception { InvalidStateError });

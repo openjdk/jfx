@@ -704,7 +704,8 @@ let InjectedScript = class InjectedScript extends PrototypelessObjectBase
 
     _forEachPropertyDescriptor(object, collectionMode, callback, {nativeGettersAsValues, includeProto})
     {
-        if (InjectedScriptHost.subtype(object) === "proxy")
+        let subtype = RemoteObject.subtype(object);
+        if (subtype === "proxy" || subtype === "weakref")
             return;
 
         let nameProcessed = new @Set;
@@ -768,7 +769,7 @@ let InjectedScript = class InjectedScript extends PrototypelessObjectBase
             }
         }
 
-        function processProperty(o, propertyName, isOwnProperty)
+        function processProperty(o, propertyName, isOwnProperty, privateDescriptor)
         {
             if (nameProcessed.@has(propertyName))
                 return InjectedScript.PropertyFetchAction.Continue;
@@ -778,7 +779,7 @@ let InjectedScript = class InjectedScript extends PrototypelessObjectBase
             let name = toString(propertyName);
             let symbol = isSymbol(propertyName) ? propertyName : null;
 
-            let descriptor = @Object.@getOwnPropertyDescriptor(o, propertyName);
+            let descriptor = privateDescriptor || @Object.@getOwnPropertyDescriptor(o, propertyName);
             if (!descriptor) {
                 // FIXME: Bad descriptor. Can we get here?
                 // Fall back to very restrictive settings.
@@ -800,17 +801,32 @@ let InjectedScript = class InjectedScript extends PrototypelessObjectBase
                 descriptor.isOwn = true;
             if (symbol)
                 descriptor.symbol = symbol;
+            if (privateDescriptor)
+                descriptor.isPrivate = true;
             return processDescriptor(descriptor, isOwnProperty);
         }
 
         let isArrayLike = false;
         try {
-            isArrayLike = RemoteObject.subtype(object) === "array" && @isFinite(object.length) && object.length > 0;
+            isArrayLike = subtype === "array" && @isFinite(object.length) && object.length > 0;
         } catch { }
 
         for (let o = object; isDefined(o); o = @Object.@getPrototypeOf(o)) {
             let isOwnProperty = o === object;
             let shouldBreak = false;
+
+            let privatePropertyDescriptors = InjectedScriptHost.getOwnPrivatePropertyDescriptors(o);
+            let privatePropertyNames = @Object.@getOwnPropertyNames(privatePropertyDescriptors);
+            for (let i = 0; i < privatePropertyNames.length; ++i) {
+                let privatePropertyName = privatePropertyNames[i];
+                let result = processProperty(o, privatePropertyName, isOwnProperty, privatePropertyDescriptors[privatePropertyName]);
+                shouldBreak = result === InjectedScript.PropertyFetchAction.Stop;
+                if (shouldBreak)
+                    break;
+            }
+
+            if (shouldBreak)
+                break;
 
             // FIXME: <https://webkit.org/b/201861> Web Inspector: show autocomplete entries for non-index properties on arrays
             if (isArrayLike && isOwnProperty) {
@@ -1028,6 +1044,9 @@ let RemoteObject = class RemoteObject extends PrototypelessObjectBase
             if (subtype === "proxy") {
                 this.preview = this._generatePreview(InjectedScriptHost.proxyTargetValue(object));
                 this.preview.lossless = false;
+            } else if (subtype === "weakref") {
+                this.preview = this._generatePreview(InjectedScriptHost.weakRefTargetValue(object));
+                this.preview.lossless = false;
             } else
                 this.preview = this._generatePreview(object, @undefined, columnNames);
         }
@@ -1109,6 +1128,9 @@ let RemoteObject = class RemoteObject extends PrototypelessObjectBase
 
         if (subtype === "proxy")
             return "Proxy";
+
+        if (subtype === "weakref")
+            return "WeakRef";
 
         if (subtype === "node")
             return RemoteObject.nodePreview(value);
@@ -1294,6 +1316,9 @@ let RemoteObject = class RemoteObject extends PrototypelessObjectBase
                 preview.lossless = false;
                 return InjectedScript.PropertyFetchAction.Stop;
             }
+
+            if (descriptor.isPrivate)
+                property.isPrivate = true;
 
             if (internal)
                 property.internal = true;

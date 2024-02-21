@@ -68,7 +68,7 @@ OptionSet<DragSourceAction> DragClientJava::dragSourceActionMaskForPoint(const I
     return WebCore::anyDragSourceAction();
 }
 
-void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&)
+void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, LocalFrame& localFrame)
 {
     auto& dragImage = item.image;
     auto dragImageOrigin = item.dragLocationInContentCoordinates;
@@ -101,7 +101,7 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
     JLObjectArray jvalues(env->NewObjectArray(mimeTypes.size(), clsObject, NULL));
     WTF::CheckAndClearException(env); // OOME
 
-    auto document = WebPage::pageFromJObject(m_webPage)->mainFrame().document();
+    auto document = (dynamicDowncast<LocalFrame>(WebPage::pageFromJObject(m_webPage)->mainFrame()))->document();
     if (document) {
         int index = 0;
         for(const auto& mime : mimeTypes) {

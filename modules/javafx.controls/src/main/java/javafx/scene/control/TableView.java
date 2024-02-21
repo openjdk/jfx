@@ -1919,7 +1919,7 @@ public class TableView<S> extends Control {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case COLUMN_COUNT: return getVisibleLeafColumns().size();
-            case ROW_COUNT: return getItems().size();
+            case ROW_COUNT: return getItems() != null ? getItems().size() : 0;
             case SELECTED_ITEMS: {
                 // TableViewSkin returns TableRows back to TableView.
                 // TableRowSkin returns TableCells back to TableRow.

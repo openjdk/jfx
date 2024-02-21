@@ -31,7 +31,7 @@
 
 #include "CaptureDevice.h"
 #include "RealtimeMediaSource.h"
-#include "RealtimeVideoSource.h"
+#include "VideoPreset.h"
 
 namespace WebCore {
 
@@ -101,7 +101,7 @@ struct MockCameraProperties {
         if (!defaultFrameRate)
             return std::nullopt;
 
-        std::optional<RealtimeMediaSourceSettings::VideoFacingMode> facingMode;
+        std::optional<VideoFacingMode> facingMode;
         decoder >> facingMode;
         if (!facingMode)
             return std::nullopt;
@@ -120,8 +120,8 @@ struct MockCameraProperties {
     }
 
     double defaultFrameRate { 30 };
-    RealtimeMediaSourceSettings::VideoFacingMode facingMode { RealtimeMediaSourceSettings::VideoFacingMode::User };
-    Vector<VideoPresetData> presets { { { 640, 480 }, { { 30, 30}, { 15, 15 } } } };
+    VideoFacingMode facingMode { VideoFacingMode::User };
+    Vector<VideoPresetData> presets { { { 640, 480 }, { { 30, 30}, { 15, 15 } }, 1, 2 } };
     Color fillColor { Color::black };
 };
 
@@ -165,19 +165,25 @@ struct MockMediaDevice {
     bool isCamera() const { return std::holds_alternative<MockCameraProperties>(properties); }
     bool isDisplay() const { return std::holds_alternative<MockDisplayProperties>(properties); }
 
+    enum Flag : uint8_t {
+        Ephemeral   = 1 << 0,
+        Invalid     = 1 << 1,
+    };
+    using Flags = OptionSet<Flag>;
+
     CaptureDevice captureDevice() const
     {
         if (isMicrophone())
-            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Microphone, label, persistentId, true, false, true, isEphemeral };
+            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Microphone, label, persistentId, true, false, true, flags.contains(Ephemeral) };
 
         if (isSpeaker())
-            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Speaker, label, speakerProperties()->relatedMicrophoneId, true, false, true, isEphemeral };
+            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Speaker, label, speakerProperties()->relatedMicrophoneId, true, false, true, flags.contains(Ephemeral) };
 
         if (isCamera())
-            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Camera, label, persistentId, true, false, true, isEphemeral };
+            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Camera, label, persistentId, true, false, true, flags.contains(Ephemeral) };
 
         ASSERT(isDisplay());
-        return CaptureDevice { persistentId, std::get<MockDisplayProperties>(properties).type, label, emptyString(), true, false, true, isEphemeral };
+        return CaptureDevice { persistentId, std::get<MockDisplayProperties>(properties).type, label, emptyString(), true, false, true, flags.contains(Ephemeral) };
     }
 
     CaptureDevice::DeviceType type() const
@@ -198,12 +204,17 @@ struct MockMediaDevice {
         return isSpeaker() ? &std::get<MockSpeakerProperties>(properties) : nullptr;
     }
 
+    const MockCameraProperties* cameraProperties() const
+    {
+        return isCamera() ? &std::get<MockCameraProperties>(properties) : nullptr;
+    }
+
     template<class Encoder>
     void encode(Encoder& encoder) const
     {
         encoder << persistentId;
         encoder << label;
-        encoder << isEphemeral;
+        encoder << flags;
         WTF::switchOn(properties, [&](const MockMicrophoneProperties& properties) {
             encoder << (uint8_t)1;
             encoder << properties;
@@ -220,13 +231,13 @@ struct MockMediaDevice {
     }
 
     template <typename Properties, typename Decoder>
-    static std::optional<MockMediaDevice> decodeMockMediaDevice(Decoder& decoder, String&& persistentId, String&& label, bool isEphemeral)
+    static std::optional<MockMediaDevice> decodeMockMediaDevice(Decoder& decoder, String&& persistentId, String&& label, Flags flags)
     {
         std::optional<Properties> properties;
         decoder >> properties;
         if (!properties)
             return std::nullopt;
-        return MockMediaDevice { WTFMove(persistentId), WTFMove(label), isEphemeral, WTFMove(*properties) };
+        return MockMediaDevice { WTFMove(persistentId), WTFMove(label), flags, WTFMove(*properties) };
     }
 
     template <class Decoder>
@@ -242,9 +253,9 @@ struct MockMediaDevice {
         if (!label)
             return std::nullopt;
 
-        std::optional<bool> isEphemeral;
-        decoder >> isEphemeral;
-        if (!isEphemeral)
+        std::optional<Flags> flags;
+        decoder >> flags;
+        if (!flags)
             return std::nullopt;
 
         std::optional<uint8_t> index;
@@ -254,23 +265,35 @@ struct MockMediaDevice {
 
         switch (*index) {
         case 1:
-            return decodeMockMediaDevice<MockMicrophoneProperties>(decoder, WTFMove(*persistentId), WTFMove(*label), *isEphemeral);
+            return decodeMockMediaDevice<MockMicrophoneProperties>(decoder, WTFMove(*persistentId), WTFMove(*label), *flags);
         case 2:
-            return decodeMockMediaDevice<MockSpeakerProperties>(decoder, WTFMove(*persistentId), WTFMove(*label), *isEphemeral);
+            return decodeMockMediaDevice<MockSpeakerProperties>(decoder, WTFMove(*persistentId), WTFMove(*label), *flags);
         case 3:
-            return decodeMockMediaDevice<MockCameraProperties>(decoder, WTFMove(*persistentId), WTFMove(*label), *isEphemeral);
+            return decodeMockMediaDevice<MockCameraProperties>(decoder, WTFMove(*persistentId), WTFMove(*label), *flags);
         case 4:
-            return decodeMockMediaDevice<MockDisplayProperties>(decoder, WTFMove(*persistentId), WTFMove(*label), *isEphemeral);
+            return decodeMockMediaDevice<MockDisplayProperties>(decoder, WTFMove(*persistentId), WTFMove(*label), *flags);
         }
         return std::nullopt;
     }
 
     String persistentId;
     String label;
-    bool isEphemeral;
+    Flags flags;
     std::variant<MockMicrophoneProperties, MockSpeakerProperties, MockCameraProperties, MockDisplayProperties> properties;
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::MockMediaDevice::Flag> {
+    using values = EnumValues<
+    WebCore::MockMediaDevice::Flag,
+    WebCore::MockMediaDevice::Flag::Ephemeral,
+    WebCore::MockMediaDevice::Flag::Invalid
+    >;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(MEDIA_STREAM)

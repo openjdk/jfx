@@ -84,7 +84,7 @@ static String getCookies(const URL& url, bool includeHttpOnlyCookies)
 }
 }
 
-NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID)
+NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID, const String& alternativeServicesDirectory)
     : m_sessionID(sessionID)
 {
 }

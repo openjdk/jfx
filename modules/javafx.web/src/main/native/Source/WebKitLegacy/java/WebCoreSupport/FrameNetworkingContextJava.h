@@ -37,7 +37,7 @@ namespace WebCore {
 
 class FrameNetworkingContextJava final : public FrameNetworkingContext {
 public:
-    static Ref<FrameNetworkingContextJava> create(Frame* frame)
+    static Ref<FrameNetworkingContextJava> create(LocalFrame* frame)
     {
         return adoptRef(*new FrameNetworkingContextJava(frame));
     }
@@ -53,7 +53,7 @@ public:
     }
 
 private:
-    FrameNetworkingContextJava(Frame* frame)
+    FrameNetworkingContextJava(LocalFrame* frame)
         : FrameNetworkingContext(frame)
     {
     }

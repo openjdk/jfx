@@ -47,6 +47,11 @@ public:
 
     void createValueForNode(NodeFlowProjection) { }
 
+    ALWAYS_INLINE bool hasClearedAbstractState(NodeFlowProjection node)
+    {
+        return !m_abstractValues.at(node);
+    }
+
     ALWAYS_INLINE AbstractValue& fastForward(AbstractValue& value)
     {
         value.fastForwardTo(m_effectEpoch);
@@ -60,16 +65,19 @@ public:
 
     ALWAYS_INLINE AbstractValue& forNodeWithoutFastForward(NodeFlowProjection node)
     {
+        ASSERT(!node->isTuple());
         return m_abstractValues.at(node);
     }
 
     ALWAYS_INLINE AbstractValue& forNodeWithoutFastForward(Edge edge)
     {
+        ASSERT(!edge.node()->isTuple());
         return forNodeWithoutFastForward(edge.node());
     }
 
     ALWAYS_INLINE AbstractValue& forNode(NodeFlowProjection node)
     {
+        ASSERT(!node->isTuple());
         return fastForward(m_abstractValues.at(node));
     }
 
@@ -93,6 +101,7 @@ public:
     template<typename... Arguments>
     ALWAYS_INLINE void setForNode(NodeFlowProjection node, Arguments&&... arguments)
     {
+        ASSERT(!node->isTuple());
         AbstractValue& value = m_abstractValues.at(node);
         value.set(m_graph, std::forward<Arguments>(arguments)...);
         value.m_effectEpoch = m_effectEpoch;
@@ -107,6 +116,7 @@ public:
     template<typename... Arguments>
     ALWAYS_INLINE void setTypeForNode(NodeFlowProjection node, Arguments&&... arguments)
     {
+        ASSERT(!node->isTuple());
         AbstractValue& value = m_abstractValues.at(node);
         value.setType(m_graph, std::forward<Arguments>(arguments)...);
         value.m_effectEpoch = m_effectEpoch;
@@ -121,6 +131,7 @@ public:
     template<typename... Arguments>
     ALWAYS_INLINE void setNonCellTypeForNode(NodeFlowProjection node, Arguments&&... arguments)
     {
+        ASSERT(!node->isTuple());
         AbstractValue& value = m_abstractValues.at(node);
         value.setNonCellType(std::forward<Arguments>(arguments)...);
         value.m_effectEpoch = m_effectEpoch;
@@ -134,6 +145,7 @@ public:
 
     ALWAYS_INLINE void makeBytecodeTopForNode(NodeFlowProjection node)
     {
+        ASSERT(!node->isTuple());
         AbstractValue& value = m_abstractValues.at(node);
         value.makeBytecodeTop();
         value.m_effectEpoch = m_effectEpoch;
@@ -146,6 +158,7 @@ public:
 
     ALWAYS_INLINE void makeHeapTopForNode(NodeFlowProjection node)
     {
+        ASSERT(!node->isTuple());
         AbstractValue& value = m_abstractValues.at(node);
         value.makeHeapTop();
         value.m_effectEpoch = m_effectEpoch;
@@ -154,6 +167,108 @@ public:
     ALWAYS_INLINE void makeHeapTopForNode(Edge edge)
     {
         makeHeapTopForNode(edge.node());
+    }
+
+    ALWAYS_INLINE AbstractValue& forTupleNodeWithoutFastForward(NodeFlowProjection node, unsigned index)
+    {
+        ASSERT(node->isTuple());
+        ASSERT(index < node->tupleSize());
+        return m_tupleAbstractValues.at(node->tupleOffset() + index);
+    }
+
+    ALWAYS_INLINE AbstractValue& forTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        ASSERT(index < node->tupleSize());
+        return fastForward(m_tupleAbstractValues.at(node->tupleOffset() + index));
+    }
+
+    ALWAYS_INLINE AbstractValue& forTupleNode(Edge edge, unsigned index)
+    {
+        return forTupleNode(edge.node(), index);
+    }
+
+    ALWAYS_INLINE void clearForTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        ASSERT(index < node->tupleSize());
+        AbstractValue& value = m_tupleAbstractValues.at(node->tupleOffset() + index);
+        value.clear();
+        value.m_effectEpoch = m_effectEpoch;
+    }
+
+    ALWAYS_INLINE void clearForTupleNode(Edge edge, unsigned index)
+    {
+        clearForTupleNode(edge.node(), index);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setForTupleNode(NodeFlowProjection node, unsigned index, Arguments&&... arguments)
+    {
+        ASSERT(index < node->tupleSize());
+        AbstractValue& value = m_tupleAbstractValues.at(node->tupleOffset() + index);
+        value.set(m_graph, std::forward<Arguments>(arguments)...);
+        value.m_effectEpoch = m_effectEpoch;
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setForTupleNode(Edge edge, unsigned index, Arguments&&... arguments)
+    {
+        setForTupleNode(edge.node(), index, std::forward<Arguments>(arguments)...);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setTypeForTupleNode(NodeFlowProjection node, unsigned index, Arguments&&... arguments)
+    {
+        ASSERT(index < node->tupleSize());
+        AbstractValue& value = m_tupleAbstractValues.at(node->tupleOffset() + index);
+        value.setType(m_graph, std::forward<Arguments>(arguments)...);
+        value.m_effectEpoch = m_effectEpoch;
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setTypeForTupleNode(Edge edge, unsigned index, Arguments&&... arguments)
+    {
+        setTypeForTupleNode(edge.node(), index, std::forward<Arguments>(arguments)...);
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setNonCellTypeForTupleNode(NodeFlowProjection node, unsigned index, Arguments&&... arguments)
+    {
+        ASSERT(index < node->tupleSize());
+        AbstractValue& value = m_tupleAbstractValues.at(node->tupleOffset() + index);
+        value.setNonCellType(std::forward<Arguments>(arguments)...);
+        value.m_effectEpoch = m_effectEpoch;
+    }
+
+    template<typename... Arguments>
+    ALWAYS_INLINE void setNonCellTypeForTupleNode(Edge edge, unsigned index, Arguments&&... arguments)
+    {
+        setNonCellTypeForTupleNode(edge.node(), index, std::forward<Arguments>(arguments)...);
+    }
+
+    ALWAYS_INLINE void makeBytecodeTopForTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        ASSERT(index < node->tupleSize());
+        AbstractValue& value = m_tupleAbstractValues.at(node->tupleOffset() + index);
+        value.makeBytecodeTop();
+        value.m_effectEpoch = m_effectEpoch;
+    }
+
+    ALWAYS_INLINE void makeBytecodeTopForTupleNode(Edge edge, unsigned index)
+    {
+        makeBytecodeTopForTupleNode(edge.node(), index);
+    }
+
+    ALWAYS_INLINE void makeHeapTopForTupleNode(NodeFlowProjection node, unsigned index)
+    {
+        ASSERT(index < node->tupleSize());
+        AbstractValue& value = m_tupleAbstractValues.at(node->tupleOffset() + index);
+        value.makeHeapTop();
+        value.m_effectEpoch = m_effectEpoch;
+    }
+
+    ALWAYS_INLINE void makeHeapTopForTupleNode(Edge edge, unsigned index)
+    {
+        makeHeapTopForTupleNode(edge.node(), index);
     }
 
     Operands<AbstractValue>& variablesForDebugging();
@@ -280,6 +395,7 @@ private:
 
     FlowMap<AbstractValue>& m_abstractValues;
     Operands<AbstractValue> m_variables;
+    Vector<AbstractValue> m_tupleAbstractValues;
     FastBitVector m_activeVariables;
     BasicBlock* m_block;
 

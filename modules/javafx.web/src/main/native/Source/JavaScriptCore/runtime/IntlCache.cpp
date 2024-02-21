@@ -26,7 +26,6 @@
 #include "config.h"
 #include "IntlCache.h"
 
-#include "IntlDisplayNames.h"
 #include <wtf/Vector.h>
 
 namespace JSC {

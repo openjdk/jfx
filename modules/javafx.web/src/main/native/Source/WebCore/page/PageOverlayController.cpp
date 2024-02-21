@@ -28,10 +28,10 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "PageOverlay.h"
 #include "ScrollingCoordinator.h"
@@ -72,8 +72,10 @@ void PageOverlayController::installedPageOverlaysChanged()
     else
         detachViewOverlayLayers();
 
-    if (auto* frameView = m_page.mainFrame().view())
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame())) {
+        if (auto* frameView = localMainFrame->view())
         frameView->setNeedsCompositingConfigurationUpdate();
+    }
 
     updateForceSynchronousScrollLayerPositionUpdates();
 }
@@ -207,8 +209,10 @@ void PageOverlayController::installPageOverlay(PageOverlay& overlay, PageOverlay
 
     overlay.setPage(&m_page);
 
-    if (FrameView* frameView = m_page.mainFrame().view())
+    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame())) {
+        if (auto* frameView = localMainFrame->view())
         frameView->enterCompositingMode();
+    }
 
     updateOverlayGeometry(overlay, rawLayer);
 
@@ -322,7 +326,7 @@ void PageOverlayController::didChangeViewExposedRect()
     m_page.scheduleRenderingUpdate(RenderingUpdateStep::LayerFlush);
 }
 
-void PageOverlayController::didScrollFrame(Frame& frame)
+void PageOverlayController::didScrollFrame(LocalFrame& frame)
 {
     for (auto& overlayAndLayer : m_overlayGraphicsLayers) {
         if (overlayAndLayer.key->overlayType() == PageOverlay::OverlayType::View || !frame.isMainFrame())
@@ -392,7 +396,7 @@ Vector<String> PageOverlayController::copyAccessibilityAttributesNames(bool para
     return { };
 }
 
-void PageOverlayController::paintContents(const GraphicsLayer* graphicsLayer, GraphicsContext& graphicsContext, const FloatRect& clipRect, GraphicsLayerPaintBehavior)
+void PageOverlayController::paintContents(const GraphicsLayer* graphicsLayer, GraphicsContext& graphicsContext, const FloatRect& clipRect, OptionSet<GraphicsLayerPaintBehavior>)
 {
     for (auto& overlayAndGraphicsLayer : m_overlayGraphicsLayers) {
         if (overlayAndGraphicsLayer.value.ptr() != graphicsLayer)

@@ -22,9 +22,9 @@
 #include "config.h"
 #include "HTMLFrameOwnerElement.h"
 
-#include "DOMWindow.h"
-#include "Frame.h"
 #include "FrameLoader.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "RemoteFrame.h"
 #include "RemoteFrameClient.h"
 #include "RenderWidget.h"
@@ -40,8 +40,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameOwnerElement);
 
-HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document)
-    : HTMLElement(tagName, document)
+HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+    : HTMLElement(tagName, document, constructionType)
 {
 }
 
@@ -54,7 +54,7 @@ RenderWidget* HTMLFrameOwnerElement::renderWidget() const
     return downcast<RenderWidget>(renderer());
 }
 
-void HTMLFrameOwnerElement::setContentFrame(AbstractFrame& frame)
+void HTMLFrameOwnerElement::setContentFrame(Frame& frame)
 {
     // Make sure we will not end up with two frames referencing the same owner element.
     ASSERT(!m_contentFrame || m_contentFrame->ownerElement() != this);
@@ -80,6 +80,8 @@ void HTMLFrameOwnerElement::clearContentFrame()
 void HTMLFrameOwnerElement::disconnectContentFrame()
 {
     if (RefPtr frame = m_contentFrame.get()) {
+        if (frame->settings().siteIsolationEnabled())
+            frame->broadcastFrameRemovalToOtherProcesses();
         frame->frameDetached();
         frame->disconnectOwnerElement();
     }
@@ -136,7 +138,7 @@ bool HTMLFrameOwnerElement::isProhibitedSelfReference(const URL& completeURL) co
 {
     // We allow one level of self-reference because some websites depend on that, but we don't allow more than one.
     bool foundOneSelfReference = false;
-    for (AbstractFrame* frame = document().frame(); frame; frame = frame->tree().parent()) {
+    for (Frame* frame = document().frame(); frame; frame = frame->tree().parent()) {
         auto* localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;

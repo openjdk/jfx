@@ -108,9 +108,30 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     bool isDeclaredException(uint32_t index) const { return m_declaredExceptions.contains(index); }
     void addDeclaredException(uint32_t index) { m_declaredExceptions.set(index); }
 
-    bool isSIMDFunction(uint32_t index) const
+    size_t functionWasmSizeImportSpace(uint32_t index) const
     {
-        ASSERT(index <= internalFunctionCount());
+        ASSERT(index >= importFunctionCount());
+        return functionWasmSize(index - importFunctionCount());
+    }
+
+    size_t functionWasmSize(uint32_t index) const
+    {
+        ASSERT(index < internalFunctionCount());
+        ASSERT(functions[index].finishedValidating);
+        auto size = functions[index].end - functions[index].start + 1;
+        RELEASE_ASSERT(size > 1);
+        return size;
+    }
+
+    bool usesSIMDImportSpace(uint32_t index) const
+    {
+        ASSERT(index >= importFunctionCount());
+        return usesSIMD(index - importFunctionCount());
+    }
+
+    bool usesSIMD(uint32_t index) const
+    {
+        ASSERT(index < internalFunctionCount());
         ASSERT(functions[index].finishedValidating);
 
         // See also: B3Procedure::usesSIMD().
@@ -121,10 +142,16 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
         // The LLInt discovers this value.
         ASSERT(Options::useWasmLLInt());
 
-        return functions[index].isSIMDFunction;
+        return functions[index].usesSIMD;
     }
-    void addSIMDFunction(uint32_t index) { ASSERT(index <= internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].isSIMDFunction = true; }
-    void doneSeeingFunction(uint32_t index) { ASSERT(!functions[index].finishedValidating); functions[index].finishedValidating = true; }
+    void markUsesSIMD(uint32_t index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesSIMD = true; }
+
+    bool usesExceptions(uint32_t index) const { ASSERT(index < internalFunctionCount()); ASSERT(functions[index].finishedValidating); return functions[index].usesExceptions; }
+    void markUsesExceptions(uint32_t index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesExceptions = true; }
+    bool usesAtomics(uint32_t index) const { ASSERT(index < internalFunctionCount()); ASSERT(functions[index].finishedValidating); return functions[index].usesAtomics; }
+    void markUsesAtomics(uint32_t index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesAtomics = true; }
+
+    void doneSeeingFunction(uint32_t index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].finishedValidating = true; }
 
     uint32_t typeCount() const { return typeSignatures.size(); }
 
@@ -165,6 +192,7 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     Ref<NameSection> nameSection;
     BranchHints branchHints;
     std::optional<uint32_t> numberOfDataSegments;
+    Vector<RefPtr<const RTT>> rtts;
 
     BitVector m_declaredFunctions;
     BitVector m_declaredExceptions;

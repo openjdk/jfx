@@ -26,22 +26,24 @@
 #pragma once
 
 #include "ASTAttribute.h"
+#include "ASTBuilder.h"
+#include "ASTExpression.h"
 
 namespace WGSL::AST {
 
 class BindingAttribute final : public Attribute {
-    WTF_MAKE_FAST_ALLOCATED;
+    WGSL_AST_BUILDER_NODE(BindingAttribute);
 public:
-    BindingAttribute(SourceSpan span, unsigned binding)
+    NodeKind kind() const override;
+    Expression& binding() const { return m_value; }
+
+private:
+    BindingAttribute(SourceSpan span, Expression::Ref&& binding)
         : Attribute(span)
         , m_value(binding)
     { }
 
-    NodeKind kind() const override;
-    unsigned binding() const { return m_value; }
-
-private:
-    unsigned m_value;
+    Expression::Ref m_value;
 };
 
 } // namespace WGSL::AST

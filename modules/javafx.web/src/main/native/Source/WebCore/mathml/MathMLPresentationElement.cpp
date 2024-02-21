@@ -31,15 +31,14 @@
 #if ENABLE(MATHML)
 
 #include "CommonAtomStrings.h"
-#include "ElementIterator.h"
+#include "ElementAncestorIteratorInlines.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLMapElement.h"
 #include "HTMLNames.h"
-#include "HTMLParserIdioms.h"
 #include "HTTPParsers.h"
 #include "MathMLMathElement.h"
 #include "MathMLNames.h"
-#include "RenderMathMLBlock.h"
+#include "RenderMathMLBlockInlines.h"
 #include "RenderTableCell.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
@@ -52,8 +51,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLPresentationElement);
 
 using namespace MathMLNames;
 
-MathMLPresentationElement::MathMLPresentationElement(const QualifiedName& tagName, Document& document)
-    : MathMLElement(tagName, document)
+MathMLPresentationElement::MathMLPresentationElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+    : MathMLElement(tagName, document, constructionType)
 {
 }
 
@@ -68,124 +67,6 @@ RenderPtr<RenderElement> MathMLPresentationElement::createElementRenderer(Render
         return createRenderer<RenderMathMLTable>(*this, WTFMove(style));
 
     return MathMLElement::createElementRenderer(WTFMove(style), insertionPosition);
-}
-
-bool MathMLPresentationElement::isPhrasingContent(const Node& node)
-{
-    // Phrasing content is described in the HTML 5 specification:
-    // http://www.w3.org/TR/html5/dom.html#phrasing-content.
-
-    if (!node.isElementNode())
-        return node.isTextNode();
-
-    if (is<MathMLElement>(node)) {
-        auto& mathmlElement = downcast<MathMLElement>(node);
-        return is<MathMLMathElement>(mathmlElement);
-    }
-
-    if (is<SVGElement>(node)) {
-        auto& svgElement = downcast<SVGElement>(node);
-        return is<SVGSVGElement>(svgElement);
-    }
-
-    if (is<HTMLElement>(node)) {
-        auto& htmlElement = downcast<HTMLElement>(node);
-        return htmlElement.hasTagName(HTMLNames::aTag)
-            || htmlElement.hasTagName(HTMLNames::abbrTag)
-            || (htmlElement.hasTagName(HTMLNames::areaTag) && ancestorsOfType<HTMLMapElement>(htmlElement).first())
-            || htmlElement.hasTagName(HTMLNames::audioTag)
-            || htmlElement.hasTagName(HTMLNames::bTag)
-            || htmlElement.hasTagName(HTMLNames::bdiTag)
-            || htmlElement.hasTagName(HTMLNames::bdoTag)
-            || htmlElement.hasTagName(HTMLNames::brTag)
-            || htmlElement.hasTagName(HTMLNames::buttonTag)
-            || htmlElement.hasTagName(HTMLNames::canvasTag)
-            || htmlElement.hasTagName(HTMLNames::citeTag)
-            || htmlElement.hasTagName(HTMLNames::codeTag)
-            || htmlElement.hasTagName(HTMLNames::datalistTag)
-            || htmlElement.hasTagName(HTMLNames::dataTag)
-            || htmlElement.hasTagName(HTMLNames::delTag)
-            || htmlElement.hasTagName(HTMLNames::dfnTag)
-            || htmlElement.hasTagName(HTMLNames::emTag)
-            || htmlElement.hasTagName(HTMLNames::embedTag)
-            || htmlElement.hasTagName(HTMLNames::iTag)
-            || htmlElement.hasTagName(HTMLNames::iframeTag)
-            || htmlElement.hasTagName(HTMLNames::imgTag)
-            || htmlElement.hasTagName(HTMLNames::inputTag)
-            || htmlElement.hasTagName(HTMLNames::insTag)
-            || htmlElement.hasTagName(HTMLNames::kbdTag)
-            || htmlElement.hasTagName(HTMLNames::labelTag)
-            || htmlElement.hasTagName(HTMLNames::mapTag)
-            || htmlElement.hasTagName(HTMLNames::markTag)
-            || htmlElement.hasTagName(HTMLNames::meterTag)
-            || htmlElement.hasTagName(HTMLNames::noscriptTag)
-            || htmlElement.hasTagName(HTMLNames::objectTag)
-            || htmlElement.hasTagName(HTMLNames::outputTag)
-            || htmlElement.hasTagName(HTMLNames::progressTag)
-            || htmlElement.hasTagName(HTMLNames::qTag)
-            || htmlElement.hasTagName(HTMLNames::rubyTag)
-            || htmlElement.hasTagName(HTMLNames::sTag)
-            || htmlElement.hasTagName(HTMLNames::sampTag)
-            || htmlElement.hasTagName(HTMLNames::scriptTag)
-            || htmlElement.hasTagName(HTMLNames::selectTag)
-            || htmlElement.hasTagName(HTMLNames::smallTag)
-            || htmlElement.hasTagName(HTMLNames::spanTag)
-            || htmlElement.hasTagName(HTMLNames::strongTag)
-            || htmlElement.hasTagName(HTMLNames::subTag)
-            || htmlElement.hasTagName(HTMLNames::supTag)
-            || htmlElement.hasTagName(HTMLNames::templateTag)
-            || htmlElement.hasTagName(HTMLNames::textareaTag)
-            || htmlElement.hasTagName(HTMLNames::timeTag)
-            || htmlElement.hasTagName(HTMLNames::uTag)
-            || htmlElement.hasTagName(HTMLNames::varTag)
-            || htmlElement.hasTagName(HTMLNames::videoTag)
-            || htmlElement.hasTagName(HTMLNames::wbrTag);
-    }
-
-    return false;
-}
-
-bool MathMLPresentationElement::isFlowContent(const Node& node)
-{
-    // Flow content is described in the HTML 5 specification:
-    // http://www.w3.org/TR/html5/dom.html#flow-content
-
-    if (isPhrasingContent(node))
-        return true;
-
-    if (!is<HTMLElement>(node))
-        return false;
-
-    auto& htmlElement = downcast<HTMLElement>(node);
-    return htmlElement.hasTagName(HTMLNames::addressTag)
-        || htmlElement.hasTagName(HTMLNames::articleTag)
-        || htmlElement.hasTagName(HTMLNames::asideTag)
-        || htmlElement.hasTagName(HTMLNames::blockquoteTag)
-        || htmlElement.hasTagName(HTMLNames::detailsTag)
-        || htmlElement.hasTagName(HTMLNames::dialogTag)
-        || htmlElement.hasTagName(HTMLNames::divTag)
-        || htmlElement.hasTagName(HTMLNames::dlTag)
-        || htmlElement.hasTagName(HTMLNames::fieldsetTag)
-        || htmlElement.hasTagName(HTMLNames::figureTag)
-        || htmlElement.hasTagName(HTMLNames::footerTag)
-        || htmlElement.hasTagName(HTMLNames::formTag)
-        || htmlElement.hasTagName(HTMLNames::h1Tag)
-        || htmlElement.hasTagName(HTMLNames::h2Tag)
-        || htmlElement.hasTagName(HTMLNames::h3Tag)
-        || htmlElement.hasTagName(HTMLNames::h4Tag)
-        || htmlElement.hasTagName(HTMLNames::h5Tag)
-        || htmlElement.hasTagName(HTMLNames::h6Tag)
-        || htmlElement.hasTagName(HTMLNames::headerTag)
-        || htmlElement.hasTagName(HTMLNames::hrTag)
-        || htmlElement.hasTagName(HTMLNames::mainTag)
-        || htmlElement.hasTagName(HTMLNames::navTag)
-        || htmlElement.hasTagName(HTMLNames::olTag)
-        || htmlElement.hasTagName(HTMLNames::pTag)
-        || htmlElement.hasTagName(HTMLNames::preTag)
-        || htmlElement.hasTagName(HTMLNames::sectionTag)
-        || (htmlElement.hasTagName(HTMLNames::styleTag) && htmlElement.hasAttribute(HTMLNames::scopedAttr))
-        || htmlElement.hasTagName(HTMLNames::tableTag)
-        || htmlElement.hasTagName(HTMLNames::ulTag);
 }
 
 const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttribute(const QualifiedName& name, std::optional<BooleanValue>& attribute)
@@ -298,24 +179,24 @@ MathMLElement::Length MathMLPresentationElement::parseMathMLLength(const String&
     //   pattern = '\s*((-?[0-9]*([0-9]\.?|\.[0-9])[0-9]*(e[mx]|in|cm|mm|p[xtc]|%)?)|(negative)?((very){0,2}thi(n|ck)|medium)mathspace)\s*'
     //
     // We do not perform a strict verification of the syntax of whitespaces and number.
-    // Instead, we just use isHTMLSpace and toFloat to parse these parts.
+    // Instead, we just use isASCIIWhitespace and toFloat to parse these parts.
 
     // We first skip whitespace from both ends of the string.
     StringView stringView = string;
-    StringView strippedLength = stripLeadingAndTrailingHTTPSpaces(stringView);
+    StringView trimmedLength = stringView.trim(isASCIIWhitespaceWithoutFF<UChar>);
 
-    if (strippedLength.isEmpty())
+    if (trimmedLength.isEmpty())
         return Length();
 
     // We consider the most typical case: a number followed by an optional unit.
-    UChar firstChar = strippedLength[0];
+    UChar firstChar = trimmedLength[0];
     if (isASCIIDigit(firstChar) || firstChar == '-' || firstChar == '.')
-        return parseNumberAndUnit(strippedLength, acceptLegacyMathMLLengths);
+        return parseNumberAndUnit(trimmedLength, acceptLegacyMathMLLengths);
 
     // Otherwise, we try and parse a named space.
     if (!acceptLegacyMathMLLengths)
         return Length();
-    return parseNamedSpace(strippedLength);
+    return parseNamedSpace(trimmedLength);
 }
 
 const MathMLElement::Length& MathMLPresentationElement::cachedMathMLLength(const QualifiedName& name, std::optional<Length>& length)
@@ -362,15 +243,15 @@ std::optional<MathMLElement::MathVariant> MathMLPresentationElement::specifiedMa
     return m_mathVariant.value() == MathVariant::None ? std::nullopt : m_mathVariant;
 }
 
-void MathMLPresentationElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void MathMLPresentationElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    bool mathVariantAttribute = name == mathvariantAttr && acceptsMathVariantAttribute();
-    if (mathVariantAttribute)
+    if (name == mathvariantAttr && acceptsMathVariantAttribute()) {
         m_mathVariant = std::nullopt;
-    if ((mathVariantAttribute) && renderer())
+        if (renderer())
         MathMLStyle::resolveMathMLStyleTree(renderer());
+    }
 
-    MathMLElement::parseAttribute(name, value);
+    MathMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 }

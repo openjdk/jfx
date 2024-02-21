@@ -29,11 +29,11 @@
 #include "CachedResourceClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceLoader.h"
-#include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "FrameLoaderTypes.h"
-#include "FrameView.h"
+#include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "RenderElement.h"
@@ -88,7 +88,7 @@ CachedImage::CachedImage(const URL& url, Image* image, PAL::SessionID sessionID,
 
     // Use the incoming URL in the response field. This ensures that code using the response directly,
     // such as origin checks for security, actually see something.
-    m_response.setURL(url);
+    mutableResponse().setURL(url);
 }
 
 CachedImage::~CachedImage()
@@ -358,12 +358,12 @@ void CachedImage::checkShouldPaintBrokenImage()
 
 bool CachedImage::isPDFResource() const
 {
-    return Image::isPDFResource(m_response.mimeType(), url());
+    return Image::isPDFResource(response().mimeType(), url());
 }
 
 bool CachedImage::isPostScriptResource() const
 {
-    return Image::isPostScriptResource(m_response.mimeType(), url());
+    return Image::isPostScriptResource(response().mimeType(), url());
 }
 
 void CachedImage::clear()
@@ -483,6 +483,7 @@ inline void CachedImage::clearImage()
 
 void CachedImage::updateBufferInternal(const FragmentedSharedBuffer& data)
 {
+    CachedResourceHandle protectedThis { *this };
     m_data = const_cast<FragmentedSharedBuffer*>(&data);
     setEncodedSize(m_data->size());
     createImage();
@@ -613,11 +614,11 @@ void CachedImage::error(CachedResource::Status status)
     notifyObservers();
 }
 
-void CachedImage::responseReceived(const ResourceResponse& response)
+void CachedImage::responseReceived(const ResourceResponse& newResponse)
 {
-    if (!m_response.isNull())
+    if (!response().isNull())
         clear();
-    CachedResource::responseReceived(response);
+    CachedResource::responseReceived(newResponse);
 }
 
 void CachedImage::destroyDecodedData()
@@ -652,7 +653,7 @@ void CachedImage::didDraw(const Image& image)
     if (&image != m_image)
         return;
 
-    MonotonicTime timeStamp = FrameView::currentPaintTimeStamp();
+    MonotonicTime timeStamp = LocalFrameView::currentPaintTimeStamp();
     if (!timeStamp) // If didDraw is called outside of a Frame paint.
         timeStamp = MonotonicTime::now();
 

@@ -30,6 +30,7 @@
 #include <WebCore/Attr.h>
 #include <WebCore/CSSStyleDeclaration.h>
 #include <WebCore/Element.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/EventListener.h>
 #include <WebCore/EventNames.h>
 #include <WebCore/HTMLCollection.h>

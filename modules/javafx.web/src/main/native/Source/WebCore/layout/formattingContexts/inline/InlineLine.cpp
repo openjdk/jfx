@@ -30,12 +30,18 @@
 #include "InlineFormattingContext.h"
 #include "InlineSoftLineBreakItem.h"
 #include "LayoutBoxGeometry.h"
+#include "RenderStyleInlines.h"
 #include "TextFlags.h"
 #include "TextUtil.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
+
+inline bool Line::Run::hasTextCombine() const
+{
+    return m_style.hasTextCombine();
+}
 
 Line::Line(const InlineFormattingContext& inlineFormattingContext)
     : m_inlineFormattingContext(inlineFormattingContext)
@@ -457,6 +463,7 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
     }();
     auto oldContentLogicalWidth = contentLogicalWidth();
     auto runHasHangablePunctuationStart = isFirstFormattedLine() && TextUtil::hasHangablePunctuationStart(inlineTextItem, style) && !lineHasVisuallyNonEmptyContent();
+    auto contentLogicalRight = InlineLayoutUnit { };
     if (needsNewRun) {
         // Note, negative word spacing may cause glyph overlap.
         auto runLogicalLeft = [&] {
@@ -466,19 +473,16 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
         }();
         m_runs.append({ inlineTextItem, style, runLogicalLeft, logicalWidth });
         // Note that the _content_ logical right may be larger than the _run_ logical right.
-        auto contentLogicalRight = runLogicalLeft + logicalWidth + m_clonedEndDecorationWidthForInlineBoxRuns;
-        m_contentLogicalWidth = std::max(oldContentLogicalWidth, contentLogicalRight);
-    } else if (style.letterSpacing() >= 0) {
-        auto& lastRun = m_runs.last();
-        lastRun.expand(inlineTextItem, logicalWidth);
-        // Ensure that property values that act like negative margin are not making the line wider.
-        m_contentLogicalWidth = std::max(oldContentLogicalWidth, lastRun.logicalRight());
+        contentLogicalRight = runLogicalLeft + logicalWidth;
     } else {
         auto& lastRun = m_runs.last();
         ASSERT(lastRun.isText());
-        // Negative letter spacing should only shorten the content to the boundary of the previous run.
-        // FIXME: We may need to traverse all the way to the previous non-text run (or even across inline boxes).
+        if (style.letterSpacing() >= 0) {
+            lastRun.expand(inlineTextItem, logicalWidth);
+            contentLogicalRight = lastRun.logicalRight();
+        } else {
         auto contentWidthWithoutLastTextRun = [&] {
+                // FIXME: We may need to traverse all the way to the previous non-text run (or even across inline boxes).
             if (style.fontCascade().wordSpacing() >= 0)
                 return m_contentLogicalWidth - std::max(0.f, lastRun.logicalWidth());
             // FIXME: Let's see if we need to optimize for this is the rare case of both letter and word spacing being negative.
@@ -489,8 +493,12 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
         }();
         auto lastRunLogicalRight = lastRun.logicalRight();
         lastRun.expand(inlineTextItem, logicalWidth);
-        m_contentLogicalWidth = std::max(contentWidthWithoutLastTextRun, lastRunLogicalRight + logicalWidth);
+            // Negative letter spacing should only shorten the content to the boundary of the previous run.
+            contentLogicalRight = std::max(contentWidthWithoutLastTextRun, lastRunLogicalRight + logicalWidth);
     }
+    }
+    // Ensure that property values that act like negative margin are not making the line wider.
+    m_contentLogicalWidth = std::max(oldContentLogicalWidth, contentLogicalRight + m_clonedEndDecorationWidthForInlineBoxRuns);
 
     auto lastRunIndex = m_runs.size() - 1;
     m_trailingSoftHyphenWidth = { };
@@ -502,12 +510,6 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
             m_trimmableTrailingContent.addFullyTrimmableContent(lastRunIndex, trimmableContentOffset, trimmableWidth);
             return true;
         }
-        // FIXME: Move it to InlineTextItem after removing the integration codepath check.
-        auto isPartiallyTrimmable = !inlineTextItem.isWhitespace() && style.letterSpacing() > 0 && !formattingContext().layoutState().shouldIgnoreTrailingLetterSpacing();
-        if (isPartiallyTrimmable) {
-            m_trimmableTrailingContent.addPartiallyTrimmableContent(lastRunIndex, style.letterSpacing());
-            return true;
-        }
         m_trimmableTrailingContent.reset();
         return false;
     };
@@ -517,7 +519,7 @@ void Line::appendTextContent(const InlineTextItem& inlineTextItem, const RenderS
         if (runHasHangablePunctuationStart)
             m_hangingContent.setLeadingPunctuation(TextUtil::hangablePunctuationStartWidth(inlineTextItem, style));
 
-        auto runHasHangableWhitespaceEnd = inlineTextItem.isWhitespace() && !isTrimmable && m_runs[lastRunIndex].shouldTrailingWhitespaceHang();
+        auto runHasHangableWhitespaceEnd = !isTrimmable && inlineTextItem.isWhitespace() && TextUtil::shouldTrailingWhitespaceHang(m_runs[lastRunIndex].style());
         if (runHasHangableWhitespaceEnd) {
             m_hangingContent.setTrailingWhitespace(inlineTextItem.length(), logicalWidth);
             return;
@@ -718,7 +720,9 @@ inline static Line::Run::Type toLineRunType(const InlineItem& inlineItem)
     case InlineItem::Type::WordBreakOpportunity:
         return Line::Run::Type::WordBreakOpportunity;
     case InlineItem::Type::Box:
-        return inlineItem.layoutBox().isListMarkerBox() ? Line::Run::Type::ListMarker : Line::Run::Type::GenericInlineLevelBox;
+        if (inlineItem.layoutBox().isListMarkerBox())
+            return downcast<ElementBox>(inlineItem.layoutBox()).isListMarkerOutside() ? Line::Run::Type::ListMarkerOutside : Line::Run::Type::ListMarkerInside;
+        return Line::Run::Type::GenericInlineLevelBox;
     case InlineItem::Type::InlineBoxStart:
         return Line::Run::Type::InlineBoxStart;
     case InlineItem::Type::InlineBoxEnd:

@@ -28,6 +28,7 @@
 #include <WebKitAdditions/TouchListIOS.h>
 #elif ENABLE(TOUCH_EVENTS)
 
+#include "Node.h"
 #include "Touch.h"
 #include <wtf/FixedVector.h>
 #include <wtf/Ref.h>
@@ -49,6 +50,7 @@ public:
 
     unsigned length() const { return m_values.size(); }
 
+    bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     Touch* item(unsigned);
     const Touch* item(unsigned) const;
 

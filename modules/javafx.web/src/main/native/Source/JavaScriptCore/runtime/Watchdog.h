@@ -79,7 +79,7 @@ private:
     ShouldTerminateCallback m_callback;
     void* m_callbackData1;
     void* m_callbackData2;
-    friend class Watchdog::Scope;
+
     Ref<WorkQueue> m_timerQueue;
 
     friend class LLIntOffsetsExtractor;
