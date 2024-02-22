@@ -241,7 +241,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1invalidateParen
 (JNIEnv *env, jobject jAccessible, long macAccessible)
 {
     NSObject* accessible = (NSObject*)jlong_to_ptr(macAccessible);
-    if ([accessible respondsToSelector:@selector(clearParent)]) {
-        [accessible clearParent];
+    if ([accessible isKindOfClass: [AccessibleBase class]]) {
+        [((AccessibleBase*) accessible) clearParent];
     }
 }

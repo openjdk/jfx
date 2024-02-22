@@ -41,6 +41,8 @@
 #import "GlassLayer3D.h"
 #import "GlassHelper.h"
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 //#include <stdio.h>
 //#include <stdarg.h>
 //
@@ -193,6 +195,8 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
             [button setAcceptsTouchEvents:NO];                                          \
             [button setAction:nil];                                                     \
             [button setEnabled:NO];                                                     \
+            break;                                                                      \
+        default:                                                                        \
             break;                                                                      \
     }                                                                                   \
     return button;                                                                      \

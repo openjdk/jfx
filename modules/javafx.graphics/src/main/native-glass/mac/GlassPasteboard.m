@@ -31,6 +31,8 @@
 #import "GlassPasteboard.h"
 #import "GlassDragSource.h"
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 // UTF-16 code points for surrogate pairs
 #define HIGH_SURROGATE_START 0xD800
 #define HIGH_SURROGATE_END 0xDBFF
