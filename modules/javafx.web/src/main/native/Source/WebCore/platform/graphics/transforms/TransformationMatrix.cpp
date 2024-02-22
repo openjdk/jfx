@@ -33,6 +33,7 @@
 #include "IntRect.h"
 #include "LayoutRect.h"
 #include <cmath>
+#include <float.h>
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/TextStream.h>
@@ -160,7 +161,7 @@ static double determinant4x4(const TransformationMatrix::Matrix4& m)
 //  The matrix B = (b  ) is the adjoint of A
 //                   ij
 
-static inline void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
+static void adjoint(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
 {
     // Assign to individual variable names to aid
     // selecting correct values
@@ -209,137 +210,23 @@ static inline void adjoint(const TransformationMatrix::Matrix4& matrix, Transfor
 // Returns false if the matrix is not invertible
 static bool inverse(const TransformationMatrix::Matrix4& matrix, TransformationMatrix::Matrix4& result)
 {
+    // Calculate the adjoint matrix
+    adjoint(matrix, result);
+
     // Calculate the 4x4 determinant
     // If the determinant is zero,
     // then the inverse matrix is not unique.
     double det = determinant4x4(matrix);
 
-    if (fabs(det) < SMALL_NUMBER)
+    if (std::abs(det) < SMALL_NUMBER)
         return false;
 
-#if CPU(ARM64) && CPU(ADDRESS64)
-    double rdet = 1 / det;
-    const double* mat = &(matrix[0][0]);
-    double* pr = &(result[0][0]);
-    asm volatile(
-        // mat: v16 - v23
-        // m11, m12, m13, m14
-        // m21, m22, m23, m24
-        // m31, m32, m33, m34
-        // m41, m42, m43, m44
-        "ld1 {v16.2d - v19.2d}, [%[mat]], 64  \n\t"
-        "ld1 {v20.2d - v23.2d}, [%[mat]]      \n\t"
-        "ins v30.d[0], %[rdet]         \n\t"
-        // Determinant: right mat2x2
-        "trn1 v0.2d, v17.2d, v21.2d    \n\t"
-        "trn2 v1.2d, v19.2d, v23.2d    \n\t"
-        "trn2 v2.2d, v17.2d, v21.2d    \n\t"
-        "trn1 v3.2d, v19.2d, v23.2d    \n\t"
-        "trn2 v5.2d, v21.2d, v23.2d    \n\t"
-        "trn1 v4.2d, v17.2d, v19.2d    \n\t"
-        "trn2 v6.2d, v17.2d, v19.2d    \n\t"
-        "trn1 v7.2d, v21.2d, v23.2d    \n\t"
-        "trn2 v25.2d, v23.2d, v21.2d   \n\t"
-        "trn1 v27.2d, v23.2d, v21.2d   \n\t"
-        "fmul v0.2d, v0.2d, v1.2d      \n\t"
-        "fmul v1.2d, v4.2d, v5.2d      \n\t"
-        "fmls v0.2d, v2.2d, v3.2d      \n\t"
-        "fmul v2.2d, v4.2d, v25.2d     \n\t"
-        "fmls v1.2d, v6.2d, v7.2d      \n\t"
-        "fmls v2.2d, v6.2d, v27.2d     \n\t"
-        // Adjoint:
-        // v24: A11A12, v25: A13A14
-        // v26: A21A22, v27: A23A24
-        "fmul v3.2d, v18.2d, v0.d[1]   \n\t"
-        "fmul v4.2d, v16.2d, v0.d[1]   \n\t"
-        "fmul v5.2d, v16.2d, v1.d[1]   \n\t"
-        "fmul v6.2d, v16.2d, v2.d[1]   \n\t"
-        "fmls v3.2d, v20.2d, v1.d[1]   \n\t"
-        "fmls v4.2d, v20.2d, v2.d[0]   \n\t"
-        "fmls v5.2d, v18.2d, v2.d[0]   \n\t"
-        "fmls v6.2d, v18.2d, v1.d[0]   \n\t"
-        "fmla v3.2d, v22.2d, v2.d[1]   \n\t"
-        "fmla v4.2d, v22.2d, v1.d[0]   \n\t"
-        "fmla v5.2d, v22.2d, v0.d[0]   \n\t"
-        "fmla v6.2d, v20.2d, v0.d[0]   \n\t"
-        "fneg v3.2d, v3.2d             \n\t"
-        "fneg v5.2d, v5.2d             \n\t"
-        "trn1 v26.2d, v3.2d, v4.2d     \n\t"
-        "trn1 v27.2d, v5.2d, v6.2d     \n\t"
-        "trn2 v24.2d, v3.2d, v4.2d     \n\t"
-        "trn2 v25.2d, v5.2d, v6.2d     \n\t"
-        "fneg v24.2d, v24.2d           \n\t"
-        "fneg v25.2d, v25.2d           \n\t"
-        // Inverse
-        // v24: I11I12, v25: I13I14
-        // v26: I21I22, v27: I23I24
-        "fmul v24.2d, v24.2d, v30.d[0] \n\t"
-        "fmul v25.2d, v25.2d, v30.d[0] \n\t"
-        "fmul v26.2d, v26.2d, v30.d[0] \n\t"
-        "fmul v27.2d, v27.2d, v30.d[0] \n\t"
-        "st1 {v24.2d - v27.2d}, [%[pr]], 64 \n\t"
-        // Determinant: left mat2x2
-        "trn1 v0.2d, v16.2d, v20.2d    \n\t"
-        "trn2 v1.2d, v18.2d, v22.2d    \n\t"
-        "trn2 v2.2d, v16.2d, v20.2d    \n\t"
-        "trn1 v3.2d, v18.2d, v22.2d    \n\t"
-        "trn2 v5.2d, v20.2d, v22.2d    \n\t"
-        "trn1 v4.2d, v16.2d, v18.2d    \n\t"
-        "trn2 v6.2d, v16.2d, v18.2d    \n\t"
-        "trn1 v7.2d, v20.2d, v22.2d    \n\t"
-        "trn2 v25.2d, v22.2d, v20.2d   \n\t"
-        "trn1 v27.2d, v22.2d, v20.2d   \n\t"
-        "fmul v0.2d, v0.2d, v1.2d      \n\t"
-        "fmul v1.2d, v4.2d, v5.2d      \n\t"
-        "fmls v0.2d, v2.2d, v3.2d      \n\t"
-        "fmul v2.2d, v4.2d, v25.2d     \n\t"
-        "fmls v1.2d, v6.2d, v7.2d      \n\t"
-        "fmls v2.2d, v6.2d, v27.2d     \n\t"
-        // Adjoint:
-        // v24: A31A32, v25: A33A34
-        // v26: A41A42, v27: A43A44
-        "fmul v3.2d, v19.2d, v0.d[1]   \n\t"
-        "fmul v4.2d, v17.2d, v0.d[1]   \n\t"
-        "fmul v5.2d, v17.2d, v1.d[1]   \n\t"
-        "fmul v6.2d, v17.2d, v2.d[1]   \n\t"
-        "fmls v3.2d, v21.2d, v1.d[1]   \n\t"
-        "fmls v4.2d, v21.2d, v2.d[0]   \n\t"
-        "fmls v5.2d, v19.2d, v2.d[0]   \n\t"
-        "fmls v6.2d, v19.2d, v1.d[0]   \n\t"
-        "fmla v3.2d, v23.2d, v2.d[1]   \n\t"
-        "fmla v4.2d, v23.2d, v1.d[0]   \n\t"
-        "fmla v5.2d, v23.2d, v0.d[0]   \n\t"
-        "fmla v6.2d, v21.2d, v0.d[0]   \n\t"
-        "fneg v3.2d, v3.2d             \n\t"
-        "fneg v5.2d, v5.2d             \n\t"
-        "trn1 v26.2d, v3.2d, v4.2d     \n\t"
-        "trn1 v27.2d, v5.2d, v6.2d     \n\t"
-        "trn2 v24.2d, v3.2d, v4.2d     \n\t"
-        "trn2 v25.2d, v5.2d, v6.2d     \n\t"
-        "fneg v24.2d, v24.2d           \n\t"
-        "fneg v25.2d, v25.2d           \n\t"
-        // Inverse
-        // v24: I31I32, v25: I33I34
-        // v26: I41I42, v27: I43I44
-        "fmul v24.2d, v24.2d, v30.d[0] \n\t"
-        "fmul v25.2d, v25.2d, v30.d[0] \n\t"
-        "fmul v26.2d, v26.2d, v30.d[0] \n\t"
-        "fmul v27.2d, v27.2d, v30.d[0] \n\t"
-        "st1 {v24.2d - v27.2d}, [%[pr]] \n\t"
-        : [mat]"+r"(mat), [pr]"+r"(pr)
-        : [rdet]"r"(rdet)
-        : "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v16", "v17", "v18",
-        "v19", "v20", "v21", "v22", "v23", "24", "25", "v26", "v27", "v28", "v29", "v30"
-    );
-#else
-    // Calculate the adjoint matrix
-    adjoint(matrix, result);
-
     // Scale the adjoint matrix to get the inverse
+
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
             result[i][j] = result[i][j] / det;
-#endif
+
     return true;
 }
 
@@ -702,7 +589,6 @@ TransformationMatrix::TransformationMatrix(const AffineTransform& t)
     setMatrix(t.a(), t.b(), t.c(), t.d(), t.e(), t.f());
 }
 
-
 // FIXME: Once https://bugs.webkit.org/show_bug.cgi?id=220856 is addressed we can reuse this function in TransformationMatrix::recompose4().
 TransformationMatrix TransformationMatrix::fromQuaternion(double qx, double qy, double qz, double qw)
 {
@@ -757,7 +643,7 @@ TransformationMatrix& TransformationMatrix::scale(double s)
 
 TransformationMatrix& TransformationMatrix::rotateFromVector(double x, double y)
 {
-    return rotate(rad2deg(atan2(y, x)));
+    return rotateRadians(atan2(y, x));
 }
 
 TransformationMatrix& TransformationMatrix::flipX()
@@ -1030,7 +916,14 @@ TransformationMatrix& TransformationMatrix::scale3d(double sx, double sy, double
     return *this;
 }
 
-TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double z, double angle)
+static double roundEpsilonToZero(double val)
+{
+    if (-DBL_EPSILON < val && val < DBL_EPSILON)
+        return 0.0f;
+    return val;
+}
+
+TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double z, double angle, RotationSnapping snapping)
 {
     // Normalize the axis of rotation
 #if PLATFORM(JAVA)
@@ -1050,8 +943,8 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
     // Angles are in degrees. Switch to radians.
     angle = deg2rad(angle);
 
-    double sinTheta = sin(angle);
-    double cosTheta = cos(angle);
+    double sinTheta = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(sin(angle)) : sin(angle);
+    double cosTheta = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(cos(angle)) : cos(angle);
 
     TransformationMatrix mat;
 
@@ -1121,19 +1014,23 @@ TransformationMatrix& TransformationMatrix::rotate3d(double x, double y, double 
     return *this;
 }
 
-TransformationMatrix& TransformationMatrix::rotate(double angle)
+TransformationMatrix& TransformationMatrix::rotate(double angle, RotationSnapping snapping)
 {
     if (!std::fmod(angle, 360))
         return *this;
 
-    angle = deg2rad(angle);
-    double sinZ = sin(angle);
-    double cosZ = cos(angle);
+    return rotateRadians(deg2rad(angle), snapping);
+}
+
+TransformationMatrix& TransformationMatrix::rotateRadians(double angle, RotationSnapping snapping)
+{
+    double sinZ = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(sin(angle)) : sin(angle);
+    double cosZ = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(cos(angle)) : cos(angle);
     multiply({ cosZ, sinZ, -sinZ, cosZ, 0, 0 });
     return *this;
 }
 
-TransformationMatrix& TransformationMatrix::rotate3d(double rx, double ry, double rz)
+TransformationMatrix& TransformationMatrix::rotate3d(double rx, double ry, double rz, RotationSnapping snapping)
 {
     // Angles are in degrees. Switch to radians.
     rx = deg2rad(rx);
@@ -1142,8 +1039,8 @@ TransformationMatrix& TransformationMatrix::rotate3d(double rx, double ry, doubl
 
     TransformationMatrix mat;
 
-    double sinTheta = sin(rz);
-    double cosTheta = cos(rz);
+    double sinTheta = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(sin(rz)) : sin(rz);
+    double cosTheta = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(cos(rz)) : cos(rz);
 
     mat.m_matrix[0][0] = cosTheta;
     mat.m_matrix[0][1] = sinTheta;
@@ -1160,8 +1057,8 @@ TransformationMatrix& TransformationMatrix::rotate3d(double rx, double ry, doubl
 
     TransformationMatrix rmat(mat);
 
-    sinTheta = sin(ry);
-    cosTheta = cos(ry);
+    sinTheta = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(sin(ry)) : sin(ry);
+    cosTheta = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(cos(ry)) : cos(ry);
 
     mat.m_matrix[0][0] = cosTheta;
     mat.m_matrix[0][1] = 0.0;
@@ -1178,8 +1075,8 @@ TransformationMatrix& TransformationMatrix::rotate3d(double rx, double ry, doubl
 
     rmat.multiply(mat);
 
-    sinTheta = sin(rx);
-    cosTheta = cos(rx);
+    sinTheta = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(sin(rx)) : sin(rx);
+    cosTheta = snapping == RotationSnapping::Snap90degRotations ? roundEpsilonToZero(cos(rx)) : cos(rx);
 
     mat.m_matrix[0][0] = 1.0;
     mat.m_matrix[0][1] = 0.0;
@@ -1298,7 +1195,7 @@ TransformationMatrix& TransformationMatrix::zoom(double zoomFactor)
 // this = mat * this.
 TransformationMatrix& TransformationMatrix::multiply(const TransformationMatrix& mat)
 {
-#if CPU(ARM64) && CPU(ADDRESS64)
+#if CPU(ARM64) && defined(_LP64)
     double* leftMatrix = &(m_matrix[0][0]);
     const double* rightMatrix = &(mat.m_matrix[0][0]);
     asm volatile (
@@ -1712,7 +1609,7 @@ bool TransformationMatrix::isInvertible() const
     if (type == Type::IdentityOrTranslation)
         return true;
 
-    return fabs(type == Type::Affine ? (m11() * m22() - m12() * m21()) : WebCore::determinant4x4(m_matrix)) >= SMALL_NUMBER;
+    return std::abs(type == Type::Affine ? (m11() * m22() - m12() * m21()) : WebCore::determinant4x4(m_matrix)) >= SMALL_NUMBER;
 }
 
 std::optional<TransformationMatrix> TransformationMatrix::inverse() const
@@ -1738,7 +1635,7 @@ std::optional<TransformationMatrix> TransformationMatrix::inverse() const
         double e = m41();
         double f = m42();
         double determinant = a * d - b * c;
-        if (fabs(determinant) < SMALL_NUMBER)
+        if (std::abs(determinant) < SMALL_NUMBER)
             return std::nullopt;
 
         double inverseDeterminant = 1 / determinant;
@@ -1824,7 +1721,7 @@ void TransformationMatrix::blend2(const TransformationMatrix& from, double progr
     if (!toDecomp.angle)
         toDecomp.angle = 360;
 
-    if (fabs(fromDecomp.angle - toDecomp.angle) > 180) {
+    if (std::abs(fromDecomp.angle - toDecomp.angle) > 180) {
         if (fromDecomp.angle > toDecomp.angle)
             fromDecomp.angle -= 360;
         else
@@ -2079,7 +1976,7 @@ bool TransformationMatrix::isBackFaceVisible() const
     double determinant = WebCore::determinant4x4(m_matrix);
 
     // If the matrix is not invertible, then we assume its backface is not visible.
-    if (fabs(determinant) < SMALL_NUMBER)
+    if (std::abs(determinant) < SMALL_NUMBER)
         return false;
 
     double cofactor33 = determinant3x3(m11(), m12(), m14(), m21(), m22(), m24(), m41(), m42(), m44());

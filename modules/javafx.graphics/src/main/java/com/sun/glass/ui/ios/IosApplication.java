@@ -283,5 +283,5 @@ public final class IosApplication extends Application {
     }
 
     @Override
-    protected native int _getKeyCodeForChar(char c);
+    protected native int _getKeyCodeForChar(char c, int hint);
 }

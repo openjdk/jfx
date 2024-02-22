@@ -50,7 +50,7 @@ public:
     // see http://www.whatwg.org/specs/web-apps/current-work/ Section 6.3.5.3
     static String normalizeMIMEType(const String& type)
     {
-        String qType = type.stripWhiteSpace().convertToLowercaseWithoutLocale();
+        String qType = type.convertToLowercaseWithoutLocale();
         // two special cases for IE compatibility
         if (qType == "text"_s || qType.startsWith("text/plain;"_s))
             return mimePlainText();

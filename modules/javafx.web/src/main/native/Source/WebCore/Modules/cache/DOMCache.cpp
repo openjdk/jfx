@@ -174,7 +174,7 @@ static inline bool hasResponseVaryStarHeaderValue(const FetchResponse& response)
     auto varyValue = response.headers().internalHeaders().get(WebCore::HTTPHeaderName::Vary);
     bool hasStar = false;
     varyValue.split(',', [&](StringView view) {
-        if (!hasStar && stripLeadingAndTrailingHTTPSpaces(view) == "*"_s)
+        if (!hasStar && view.trim(isASCIIWhitespaceWithoutFF<UChar>) == "*"_s)
             hasStar = true;
     });
     return hasStar;
@@ -498,7 +498,10 @@ void DOMCache::queryCache(ResourceRequest&& request, const CacheQueryOptions& op
             return;
         }
 
-        callback(WTFMove(result.value()));
+        auto records = WTF::map(result.value(), [](auto&& record) {
+            return fromCrossThreadRecord(WTFMove(record));
+        });
+        callback(WTFMove(records));
     });
 
 }
@@ -548,7 +551,10 @@ void DOMCache::batchPutOperation(const FetchRequest& request, FetchResponse& res
 
 void DOMCache::batchPutOperation(Vector<Record>&& records, CompletionHandler<void(ExceptionOr<void>&&)>&& callback)
 {
-    m_connection->batchPutOperation(m_identifier, WTFMove(records), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](auto&& result) mutable {
+    auto crossThreadRecords = WTF::map(records, [](auto&& record) {
+        return toCrossThreadRecord(WTFMove(record));
+    });
+    m_connection->batchPutOperation(m_identifier, WTFMove(crossThreadRecords), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](auto&& result) mutable {
         if (m_isStopped) {
             callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
             return;

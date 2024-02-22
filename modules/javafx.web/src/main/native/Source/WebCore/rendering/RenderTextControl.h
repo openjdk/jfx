@@ -55,9 +55,6 @@ protected:
 
     void hitInnerTextElement(HitTestResult&, const LayoutPoint& pointInContainer, const LayoutPoint& accumulatedOffset);
 
-    int textBlockLogicalWidth() const;
-    int textBlockLogicalHeight() const;
-
     float scaleEmToUnits(int x) const;
 
     virtual float getAverageCharWidth();
@@ -89,9 +86,7 @@ private:
 class RenderTextControlInnerContainer final : public RenderFlexibleBox {
     WTF_MAKE_ISO_ALLOCATED(RenderTextControlInnerContainer);
 public:
-    explicit RenderTextControlInnerContainer(Element& element, RenderStyle&& style)
-        : RenderFlexibleBox(element, WTFMove(style))
-    { }
+    RenderTextControlInnerContainer(Element&, RenderStyle&&);
     virtual ~RenderTextControlInnerContainer() = default;
 
     LayoutUnit baselinePosition(FontBaseline baseline, bool firstLine, LineDirectionMode direction, LinePositionMode position) const override

@@ -627,6 +627,12 @@ String validationMessagePatternMismatchText()
     return getLocalizedProperty("validationMessagePatternMismatchText"_s);
 }
 
+String validationMessagePatternMismatchText(const String& title)
+{
+    UNUSED_PARAM(title);
+    return validationMessagePatternMismatchText();
+}
+
 String validationMessageTooShortText(int, int)
 {
     notImplemented();
@@ -744,19 +750,6 @@ String pluginTooSmallText()
     return String::fromUTF8("Plug-In too small");
 }
 
-#if USE(CF) && !PLATFORM(WIN)
-String localizedString(CFStringRef key)
-{
-     UNUSED_PARAM(key);
-         notImplemented();
-     return String::fromUTF8("localizedString(CFStringRef key)"); //Need to add implementation
-}
-#else
-String localizedString(const char* key)
-{
-    return String::fromUTF8(key, strlen(key));
-}
-#endif
 
 String pdfDocumentTypeDescription()
 {
@@ -767,5 +760,19 @@ String contextMenuItemTagShowMediaStats()
 {
     return WEB_UI_STRING("Show Media Stats", "Media stats context menu item");
 }
+
+#if USE(CF) && !PLATFORM(JAVA)
+String localizedString(CFStringRef key)
+{
+     UNUSED_PARAM(key);
+     notImplemented();
+     return String::fromUTF8("localizedString(CFStringRef key)"); //Need to add implementation
+}
+#else
+String localizedString(const char* key)
+{
+    return String::fromUTF8(key, strlen(key));
+}
+#endif
 
 } // namespace WebCore

@@ -37,9 +37,9 @@ public:
     ProgressTrackerClientJava(const JLObject &webPage);
 
     // ProgressTrackerClient methods
-    void progressStarted(Frame& originatingProgressFrame) override;
-    void progressEstimateChanged(Frame& originatingProgressFrame) override;
-    void progressFinished(Frame& originatingProgressFrame) override;
+    void progressStarted(LocalFrame& originatingProgressFrame) override;
+    void progressEstimateChanged(LocalFrame& originatingProgressFrame) override;
+    void progressFinished(LocalFrame& originatingProgressFrame) override;
 
 private:
     JGObject m_webPage;

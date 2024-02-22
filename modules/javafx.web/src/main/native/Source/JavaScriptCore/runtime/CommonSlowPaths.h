@@ -146,8 +146,8 @@ inline bool canAccessArgumentIndexQuickly(JSObject& object, uint32_t index)
 
 ALWAYS_INLINE Structure* originalStructureBeforePut(JSCell* cell)
 {
-    if (cell->type() == PureForwardingProxyType)
-        return jsCast<JSProxy*>(cell)->target()->structure();
+    if (cell->type() == GlobalProxyType)
+        return jsCast<JSGlobalProxy*>(cell)->target()->structure();
     return cell->structure();
 }
 
@@ -247,15 +247,14 @@ inline JSArray* allocateNewArrayBuffer(VM& vm, Structure* structure, JSImmutable
 class CallFrame;
 
 #define JSC_DECLARE_COMMON_SLOW_PATH(name) \
-    JSC_DECLARE_JIT_OPERATION(name, SlowPathReturnType, (CallFrame*, const JSInstruction*))
+    JSC_DECLARE_JIT_OPERATION(name, UGPRPair, (CallFrame*, const JSInstruction*))
 
 #define JSC_DEFINE_COMMON_SLOW_PATH(name) \
-    JSC_DEFINE_JIT_OPERATION(name, SlowPathReturnType, (CallFrame* callFrame, const JSInstruction* pc))
+    JSC_DEFINE_JIT_OPERATION(name, UGPRPair, (CallFrame* callFrame, const JSInstruction* pc))
 
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_direct_arguments);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_scoped_arguments);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_cloned_arguments);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_arguments_butterfly_excluding_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enter);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_this);
@@ -300,6 +299,7 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_property_enumerator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_next);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_get_by_val);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_in_by_val);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_put_by_val);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_has_own_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_profile_type_clear_log);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_unreachable);

@@ -26,6 +26,7 @@
 #include "RenderBlock.h"
 #include "RenderIterator.h"
 #include "RenderMultiColumnFlow.h"
+#include "RenderStyleInlines.h"
 #include "RenderTreeBuilder.h"
 #include "Text.h"
 #include <wtf/IsoMallocInlines.h>
@@ -69,9 +70,10 @@ bool RenderTextFragment::canBeSelectionLeaf() const
     return textNode() && textNode()->hasEditableStyle();
 }
 
-void RenderTextFragment::setText(const String& newText, bool force)
+void RenderTextFragment::setTextInternal(const String& newText, bool force)
 {
-    RenderText::setText(newText, force);
+    RenderText::setTextInternal(newText, force);
+
     m_start = 0;
     m_end = text().length();
     if (!m_firstLetter)

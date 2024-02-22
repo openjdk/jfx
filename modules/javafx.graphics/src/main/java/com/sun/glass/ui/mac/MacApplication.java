@@ -384,7 +384,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    protected native int _getKeyCodeForChar(char c);
+    protected native int _getKeyCodeForChar(char c, int hint);
 
     @Override
     protected native int _isKeyLocked(int keyCode);

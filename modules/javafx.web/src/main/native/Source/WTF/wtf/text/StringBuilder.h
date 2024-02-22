@@ -93,7 +93,7 @@ public:
     template<typename CharacterType> const CharacterType* characters() const;
     const LChar* characters8() const { return characters<LChar>(); }
     const UChar* characters16() const { return characters<UChar>(); }
-    template<typename CharacterType> Span<const CharacterType> span() const { return Span { characters<CharacterType>(), length() }; }
+    template<typename CharacterType> std::span<const CharacterType> span() const { return std::span(characters<CharacterType>(), length()); }
 
     unsigned capacity() const;
     WTF_EXPORT_PRIVATE void reserveCapacity(unsigned newCapacity);
@@ -102,7 +102,7 @@ public:
     WTF_EXPORT_PRIVATE bool shouldShrinkToFit() const;
     WTF_EXPORT_PRIVATE void shrinkToFit();
 
-    WTF_EXPORT_PRIVATE bool isAllASCII() const;
+    WTF_EXPORT_PRIVATE bool containsOnlyASCII() const;
 
 private:
     static unsigned expandedCapacity(unsigned capacity, unsigned requiredCapacity);

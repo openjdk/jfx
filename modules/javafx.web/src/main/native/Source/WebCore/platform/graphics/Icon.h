@@ -18,6 +18,8 @@
  *
  */
 
+ #pragma once
+
 #ifndef Icon_h
 #define Icon_h
 

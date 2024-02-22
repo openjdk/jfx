@@ -39,7 +39,7 @@
 #include "SharedBuffer.h"
 #include "SubresourceLoader.h"
 #include "TextResourceDecoder.h"
-#include "TypedElementDescendantIterator.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include "WOFFFileFormat.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/Vector.h>
@@ -98,6 +98,7 @@ void CachedFont::finishLoading(const FragmentedSharedBuffer* data, const Network
 
 void CachedFont::setErrorAndDeleteData()
 {
+    CachedResourceHandle protectedThis { *this };
     setEncodedSize(0);
     error(Status::DecodeError);
     if (inCache())
@@ -141,7 +142,7 @@ bool CachedFont::ensureCustomFontData(SharedBuffer* data)
     return m_fontCustomPlatformData.get();
 }
 
-std::unique_ptr<FontCustomPlatformData> CachedFont::createCustomFontData(SharedBuffer& bytes, const String& itemInCollection, bool& wrapping)
+RefPtr<FontCustomPlatformData> CachedFont::createCustomFontData(SharedBuffer& bytes, const String& itemInCollection, bool& wrapping)
 {
     RefPtr buffer = { &bytes };
 #if PLATFORM(JAVA)

@@ -39,7 +39,7 @@ namespace LayoutIntegration {
 class LineLayout;
 
 enum class AvoidanceReason : uint64_t {
-    FlowIsInsideANonMultiColumnThread            = 1LLU  << 0,
+    FlowHasMarginTrim                            = 1LLU  << 0,
     // Unused                                    = 1LLU  << 1,
     // Unused                                    = 1LLU  << 2,
     ContentIsRuby                                = 1LLU  << 3,
@@ -49,7 +49,7 @@ enum class AvoidanceReason : uint64_t {
     // Unused                                    = 1LLU  << 7,
     // Unused                                    = 1LLU  << 8,
     FlowHasNonSupportedChild                     = 1LLU  << 9,
-    FloatIsShapeOutside                          = 1LLU  << 10,
+    // Unused                                    = 1LLU  << 10,
     // Unused                                    = 1LLU  << 11,
     // Unused                                    = 1LLU  << 12,
     // Unused                                    = 1LLU  << 13,
@@ -81,14 +81,14 @@ enum class AvoidanceReason : uint64_t {
     FlowTextIsSVGInlineText                      = 1LLU  << 39,
     // Unused                                    = 1LLU  << 40,
     FeatureIsDisabled                            = 1LLU  << 41,
-    FlowDoesNotEstablishInlineFormattingContext  = 1LLU  << 42,
+    // Unused                                    = 1LLU  << 42,
     // Unused                                    = 1LLU  << 43,
     // Unused                                    = 1LLU  << 44,
     // Unused                                    = 1LLU  << 45,
     // Unused                                    = 1LLU  << 46,
-    MultiColumnFlowIsNotTopLevel                 = 1LLU  << 47,
-    MultiColumnFlowHasColumnSpanner              = 1LLU  << 48,
-    MultiColumnFlowVerticalAlign                 = 1LLU  << 49,
+    MultiColumnFlowHasVerticalWritingMode        = 1LLU  << 47,
+    // Unused                                    = 1LLU  << 48,
+    // Unused                                    = 1LLU  << 49,
     MultiColumnFlowIsFloating                    = 1LLU  << 50,
     // Unused                                    = 1LLU  << 51,
     // Unused                                    = 1LLU  << 52,
@@ -107,7 +107,13 @@ enum class AvoidanceReason : uint64_t {
 bool canUseForLineLayout(const RenderBlockFlow&);
 bool canUseForLineLayoutAfterStyleChange(const RenderBlockFlow&, StyleDifference);
 bool canUseForLineLayoutAfterInlineBoxStyleChange(const RenderInline&, StyleDifference);
-bool shouldInvalidateLineLayoutPathAfterContentChangeFor(const RenderBlockFlow&, const RenderObject& newChild, const LineLayout&);
+bool canUseForPreferredWidthComputation(const RenderBlockFlow&);
+enum class TypeOfChangeForInvalidation : uint8_t {
+    NodeInsertion,
+    NodeRemoval,
+    NodeMutation
+};
+bool shouldInvalidateLineLayoutPathAfterChangeFor(const RenderBlockFlow& rootBlockContainer, const RenderObject& renderer, const LineLayout&, TypeOfChangeForInvalidation);
 
 bool canUseForFlexLayout(const RenderFlexibleBox&);
 

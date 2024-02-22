@@ -32,9 +32,11 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -60,7 +62,9 @@ import java.util.Set;
  * <code>Combinator.DESCENDANT</code>.
  *
  * @since 9
+ * @deprecated This class was exposed erroneously and will be removed in a future version
  */
+@Deprecated(since = "23", forRemoval = true)
 final public class CompoundSelector extends Selector {
 
     private final List<SimpleSelector> selectors;
@@ -95,6 +99,14 @@ final public class CompoundSelector extends Selector {
             (relationships != null)
                 ? Collections.unmodifiableList(relationships)
                 : Collections.EMPTY_LIST;
+    }
+
+    @Override
+    public Set<String> getStyleClassNames() {
+        return selectors.stream()
+            .map(Selector::getStyleClassNames)
+            .flatMap(Collection::stream)
+            .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override public Match createMatch() {

@@ -138,4 +138,10 @@ String FontPlatformData::description() const
 }
 #endif //NDEBUG
 
+String FontPlatformData::familyName() const
+{
+    // FIXME: Not implemented yet.
+    return { };
+}
+
 }

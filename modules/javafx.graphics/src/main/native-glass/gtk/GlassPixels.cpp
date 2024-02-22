@@ -42,25 +42,6 @@ extern "C" {
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkPixels
- * Method:    _copyPixels
- * Signature: (Ljava/nio/Buffer;Ljava/nio/Buffer;I)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1copyPixels
-  (JNIEnv *env, jobject obj, jobject jDst, jobject jSrc, jint jSize)
-{
-    (void)obj;
-
-    //Taken from MacPixels (and fixed)
-    void *src = env->GetDirectBufferAddress(jSrc);
-    void *dst = env->GetDirectBufferAddress(jDst);
-    if ((src != NULL) && (dst != NULL) && (jSize > 0))
-    {
-        memcpy(dst, src, jSize * 4);
-    }
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkPixels
  * Method:    _attachInt
  * Signature: (JIILjava/nio/IntBuffer;[II)V
  */
@@ -69,15 +50,35 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachInt
 {
     (void)obj;
 
+    if (!ptr) return;
+    if (!array && !ints) return;
+    if (offset < 0) return;
+    if (w <= 0 || h <= 0) return;
+
+    if (w > (((INT_MAX - offset) / 4) / h))
+    {
+        return;
+    }
+
     jint *data;
     GdkPixbuf **pixbuf;
     guint8 *dataRGBA;
 
+    jsize numElem;
+    if (array == NULL) {
+        numElem = env->GetDirectBufferCapacity(ints);
+    } else {
+        numElem = env->GetArrayLength(array);
+    }
+
+    if ((w * h + offset) > numElem)
+    {
+        return;
+    }
+
     if (array == NULL) {
         data = (jint*) env->GetDirectBufferAddress(ints);
-        assert((w*h*4 + offset * 4) == env->GetDirectBufferCapacity(ints));
     } else {
-        assert((w*h + offset) == env->GetArrayLength(array));
         data = (jint*) env->GetPrimitiveArrayCritical(array, 0);
     }
 
@@ -101,15 +102,35 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachByte
 {
     (void)obj;
 
+    if (!ptr) return;
+    if (!array && !bytes) return;
+    if (offset < 0) return;
+    if (w <= 0 || h <= 0) return;
+
+    if (w > (((INT_MAX - offset) / 4) / h))
+    {
+        return;
+    }
+
     jbyte *data;
     GdkPixbuf **pixbuf;
     guint8 *dataRGBA;
 
+    jsize numElem;
+    if (array == NULL) {
+        numElem = env->GetDirectBufferCapacity(bytes);
+    } else {
+        numElem = env->GetArrayLength(array);
+    }
+
+    if ((w * h * 4 + offset) > numElem)
+    {
+        return;
+    }
+
     if (array == NULL) {
         data = (jbyte*) env->GetDirectBufferAddress(bytes);
-        assert((w*h*4 + offset) == env->GetDirectBufferCapacity(bytes));
     } else {
-        assert((w*h*4 + offset) == env->GetArrayLength(array));
         data = (jbyte*) env->GetPrimitiveArrayCritical(array, 0);
     }
 

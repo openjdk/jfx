@@ -157,7 +157,7 @@ class SelectorNeedsNamespaceResolutionFunctor {
 public:
     bool operator()(const CSSSelector* selector)
     {
-        if (selector->match() == CSSSelector::Tag && !selector->tagQName().prefix().isEmpty() && selector->tagQName().prefix() != starAtom())
+        if (selector->match() == CSSSelector::Match::Tag && !selector->tagQName().prefix().isEmpty() && selector->tagQName().prefix() != starAtom())
             return true;
         if (selector->isAttributeSelector() && !selector->attribute().prefix().isEmpty() && selector->attribute().prefix() != starAtom())
             return true;
@@ -193,4 +193,22 @@ bool CSSSelectorList::hasExplicitNestingParent() const
 
     return forEachSelector(functor, this);
 }
+
+bool CSSSelectorList::hasOnlyNestingSelector() const
+{
+    if (componentCount() != 1)
+        return false;
+
+    auto singleSelector = first();
+
+    if (!singleSelector)
+        return false;
+
+    // Selector should be a single selector
+    if (singleSelector->tagHistory())
+        return false;
+
+    return singleSelector->match() == CSSSelector::Match::NestingParent;
+}
+
 } // namespace WebCore

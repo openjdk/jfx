@@ -22,8 +22,8 @@
 
 #include "Document.h"
 #include "EventNames.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryList.h"
@@ -31,6 +31,7 @@
 #include "MediaQueryParserContext.h"
 #include "NodeRenderStyle.h"
 #include "RenderElement.h"
+#include "ResolvedStyle.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include <wtf/text/TextStream.h>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -129,6 +129,8 @@ void PlatformSupport::queryHighContrastScheme(jobject properties) const
     HIGHCONTRAST contrastInfo;
     contrastInfo.cbSize = sizeof(HIGHCONTRAST);
     ::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0);
+
+    // Property names need to be kept in sync with WinApplication.java:
     if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
         putBoolean(properties, "Windows.SPI.HighContrast", true);
         putString(properties, "Windows.SPI.HighContrastColorScheme", contrastInfo.lpszDefaultScheme);
@@ -140,6 +142,7 @@ void PlatformSupport::queryHighContrastScheme(jobject properties) const
 
 void PlatformSupport::querySystemColors(jobject properties) const
 {
+    // Property names need to be kept in sync with WinApplication.java:
     putColor(properties, "Windows.SysColor.COLOR_3DFACE", GetSysColor(COLOR_3DFACE));
     putColor(properties, "Windows.SysColor.COLOR_BTNTEXT", GetSysColor(COLOR_BTNTEXT));
     putColor(properties, "Windows.SysColor.COLOR_GRAYTEXT", GetSysColor(COLOR_GRAYTEXT));
@@ -178,6 +181,7 @@ void PlatformSupport::queryUIColors(jobject properties) const
         settings3->GetColorValue(UIColorType::UIColorType_AccentLight2, &accentLight2);
         settings3->GetColorValue(UIColorType::UIColorType_AccentLight3, &accentLight3);
 
+        // Property names need to be kept in sync with WinApplication.java:
         putColor(properties, "Windows.UIColor.Background", background);
         putColor(properties, "Windows.UIColor.Foreground", foreground);
         putColor(properties, "Windows.UIColor.AccentDark3", accentDark3);

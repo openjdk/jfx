@@ -101,7 +101,7 @@ public:
     };
 
     using NodeListCacheMap = HashMap<std::pair<unsigned char, AtomString>, LiveNodeList*, NodeListCacheMapEntryHash>;
-    using CollectionCacheMap = HashMap<std::pair<unsigned char, AtomString>, HTMLCollection*, NodeListCacheMapEntryHash>;
+    using CollectionCacheMap = HashMap<std::pair<std::underlying_type_t<CollectionType>, AtomString>, HTMLCollection*, NodeListCacheMapEntryHash>;
     using TagCollectionNSCache = HashMap<QualifiedName, TagCollectionNS*>;
 
     template<typename T, typename ContainerType>
@@ -175,13 +175,7 @@ public:
         m_tagCollectionNSCache.remove(name);
     }
 
-    void removeCachedCollection(HTMLCollection* collection, const AtomString& name = starAtom())
-    {
-        ASSERT(collection == m_cachedCollections.get(namedCollectionKey(collection->type(), name)));
-        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(collection->ownerNode()))
-            return;
-        m_cachedCollections.remove(namedCollectionKey(collection->type(), name));
-    }
+    inline void removeCachedCollection(HTMLCollection*, const AtomString& = starAtom());
 
     void invalidateCaches();
     void invalidateCachesForAttribute(const QualifiedName& attrName);
@@ -191,29 +185,12 @@ public:
         invalidateCaches();
     }
 
-    void adoptDocument(Document& oldDocument, Document& newDocument)
-    {
-        if (&oldDocument == &newDocument) {
-            invalidateCaches();
-            return;
-        }
-
-        for (auto& cache : m_atomNameCaches.values())
-            cache->invalidateCacheForDocument(oldDocument);
-
-        for (auto& list : m_tagCollectionNSCache.values()) {
-            ASSERT(!list->isRootedAtTreeScope());
-            list->invalidateCacheForDocument(oldDocument);
-        }
-
-        for (auto& collection : m_cachedCollections.values())
-            collection->invalidateCacheForDocument(oldDocument);
-    }
+    inline void adoptDocument(Document& oldDocument, Document& newDocument);
 
 private:
-    std::pair<unsigned char, AtomString> namedCollectionKey(CollectionType type, const AtomString& name)
+    std::pair<std::underlying_type_t<CollectionType>, AtomString> namedCollectionKey(CollectionType type, const AtomString& name)
     {
-        return std::pair<unsigned char, AtomString>(type, name);
+        return std::pair<std::underlying_type_t<CollectionType>, AtomString>(static_cast<std::underlying_type_t<CollectionType>>(type), name);
     }
 
     template<typename NodeListType>
@@ -286,7 +263,7 @@ public:
     {
     }
 
-    bool isElementRareData() { return m_isElementRareData; }
+    bool isElementRareData() const { return m_isElementRareData; }
 
     void clearNodeLists() { m_nodeLists = nullptr; }
     NodeListsNodeData* nodeLists() const { return m_nodeLists.get(); }
@@ -309,14 +286,15 @@ public:
     HTMLSlotElement* manuallyAssignedSlot() { return m_manuallyAssignedSlot.get(); }
     void setManuallyAssignedSlot(HTMLSlotElement* slot) { m_manuallyAssignedSlot = slot; }
 
+    bool hasEverPaintedImages() const { return m_hasEverPaintedImages; }
+    void setHasEverPaintedImages(bool hasEverPaintedImages) { m_hasEverPaintedImages = hasEverPaintedImages; }
+
 #if DUMP_NODE_STATISTICS
     OptionSet<UseType> useTypes() const
     {
         OptionSet<UseType> result;
         if (m_unusualTabIndex)
             result.add(UseType::TabIndex);
-        if (m_childIndex)
-            result.add(UseType::ChildIndex);
         if (m_nodeLists)
             result.add(UseType::NodeList);
         if (m_mutationObserverData)
@@ -329,17 +307,12 @@ public:
 
     void operator delete(NodeRareData*, std::destroying_delete_t);
 
-protected:
-    // Used by ElementRareData. Defined here for better packing in 64-bit.
-    int m_unusualTabIndex { 0 };
-    unsigned short m_childIndex { 0 };
-
 private:
-    bool m_isElementRareData;
-
     std::unique_ptr<NodeListsNodeData> m_nodeLists;
     std::unique_ptr<NodeMutationObserverData> m_mutationObserverData;
     WeakPtr<HTMLSlotElement, WeakPtrImplWithEventTargetData> m_manuallyAssignedSlot;
+    bool m_isElementRareData;
+    bool m_hasEverPaintedImages { false }; // Keep last for better bit packing with ElementRareData.
 };
 
 template<> struct NodeListTypeIdentifier<NameNodeList> {

@@ -30,12 +30,12 @@
 #include "config.h"
 #include "Screen.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FloatRect.h"
-#include "Frame.h"
-#include "FrameView.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "Page.h"
 #include "PlatformScreen.h"
 #include "Quirks.h"
@@ -47,14 +47,14 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Screen);
 
-Screen::Screen(DOMWindow& window)
-    : DOMWindowProperty(&window)
+Screen::Screen(LocalDOMWindow& window)
+    : LocalDOMWindowProperty(&window)
 {
 }
 
 Screen::~Screen() = default;
 
-static bool isLoadingInHeadlessMode(const Frame& frame)
+static bool fingerprintingProtectionsEnabled(const LocalFrame& frame)
 {
     auto* localFrame = dynamicDowncast<LocalFrame>(frame.mainFrame());
     if (!localFrame)
@@ -65,7 +65,7 @@ static bool isLoadingInHeadlessMode(const Frame& frame)
         return false;
 
     RefPtr loader = mainDocument->loader();
-    return loader && loader->isLoadingInHeadlessMode();
+    return loader && loader->fingerprintingProtectionsEnabled();
 }
 
 int Screen::height() const
@@ -98,21 +98,6 @@ unsigned Screen::colorDepth() const
     return static_cast<unsigned>(screenDepth(frame->view()));
 }
 
-unsigned Screen::pixelDepth() const
-{
-    RefPtr frame = this->frame();
-    if (!frame)
-        return 0;
-    if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::PixelDepth);
-
-    auto* document = window()->document();
-    if (!document || !document->quirks().needsHDRPixelDepthQuirk() || !screenSupportsHighDynamicRange(frame->view()))
-        return static_cast<unsigned>(screenDepth(frame->view()));
-
-    return static_cast<unsigned>(screenDepth(frame->view())) + 1;
-}
-
 int Screen::availLeft() const
 {
     RefPtr frame = this->frame();
@@ -122,7 +107,7 @@ int Screen::availLeft() const
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailLeft);
 
-    if (isLoadingInHeadlessMode(*frame))
+    if (fingerprintingProtectionsEnabled(*frame))
         return 0;
 
     return static_cast<int>(screenAvailableRect(frame->view()).x());
@@ -137,7 +122,7 @@ int Screen::availTop() const
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailTop);
 
-    if (isLoadingInHeadlessMode(*frame))
+    if (fingerprintingProtectionsEnabled(*frame))
         return 0;
 
     return static_cast<int>(screenAvailableRect(frame->view()).y());
@@ -152,7 +137,7 @@ int Screen::availHeight() const
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailHeight);
 
-    if (isLoadingInHeadlessMode(*frame))
+    if (fingerprintingProtectionsEnabled(*frame))
         return static_cast<int>(frame->screenSize().height());
 
     return static_cast<int>(screenAvailableRect(frame->view()).height());
@@ -167,7 +152,7 @@ int Screen::availWidth() const
     if (frame->settings().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logScreenAPIAccessed(*frame->document(), ScreenAPIsAccessed::AvailWidth);
 
-    if (isLoadingInHeadlessMode(*frame))
+    if (fingerprintingProtectionsEnabled(*frame))
         return static_cast<int>(frame->screenSize().width());
 
     return static_cast<int>(screenAvailableRect(frame->view()).width());

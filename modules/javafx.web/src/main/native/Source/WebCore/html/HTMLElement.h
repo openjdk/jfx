@@ -23,10 +23,13 @@
 #pragma once
 
 #include "ColorTypes.h"
+#include "Document.h"
 #include "HTMLNames.h"
 #include "InputMode.h"
 #include "StyledElement.h"
+#if PLATFORM(JAVA)
 #include "ElementInlines.h"
+#endif
 
 #if ENABLE(AUTOCAPITALIZE)
 #include "Autocapitalize.h"
@@ -37,15 +40,18 @@ namespace WebCore {
 class ElementInternals;
 class FormListedElement;
 class FormAssociatedElement;
+class HTMLFormControlElement;
 class HTMLFormElement;
 class VisibleSelection;
 
 struct SimpleRange;
 struct TextRecognitionResult;
 
-enum class PageIsEditable : bool;
 enum class EnterKeyHint : uint8_t;
-
+enum class PageIsEditable : bool;
+enum class FireEvents : bool { No, Yes };
+enum class FocusPreviousElement : bool { No, Yes };
+enum class PopoverVisibilityState : bool;
 enum class PopoverState : uint8_t {
     None,
     Auto,
@@ -119,7 +125,7 @@ public:
 
     // Only some element types can be disabled: https://html.spec.whatwg.org/multipage/scripting.html#concept-element-disabled
     bool canBeActuallyDisabled() const;
-    bool isActuallyDisabled() const;
+    virtual bool isActuallyDisabled() const;
 
 #if ENABLE(AUTOCAPITALIZE)
     WEBCORE_EXPORT virtual AutocapitalizeType autocapitalizeType() const;
@@ -145,9 +151,11 @@ public:
 
     WEBCORE_EXPORT ExceptionOr<Ref<ElementInternals>> attachInternals();
 
-    ExceptionOr<void> showPopover();
+    void queuePopoverToggleEventTask(PopoverVisibilityState oldState, PopoverVisibilityState newState);
+    ExceptionOr<void> showPopover(const HTMLFormControlElement* = nullptr);
     ExceptionOr<void> hidePopover();
-    ExceptionOr<void> togglePopover(std::optional<bool> force);
+    ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
+    ExceptionOr<bool> togglePopover(std::optional<bool> force);
 
     PopoverState popoverState() const;
     const AtomString& popover() const;
@@ -178,7 +186,7 @@ protected:
     void applyBorderAttributeToStyle(const AtomString&, MutableStyleProperties&);
 
     bool matchesReadWritePseudoClass() const override;
-    void parseAttribute(const QualifiedName&, const AtomString&) override;
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType , ContainerNode& parentOfInsertedTree) override;
     void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) override;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
@@ -186,6 +194,7 @@ protected:
     unsigned parseBorderWidthAttribute(const AtomString&) const;
 
     void childrenChanged(const ChildChange&) override;
+    void updateTextDirectionalityAfterTelephoneInputTypeChange();
     void updateEffectiveDirectionalityOfDirAuto();
 
     using EventHandlerNameMap = HashMap<AtomStringImpl*, AtomString>;
@@ -194,14 +203,10 @@ protected:
 private:
     String nodeName() const final;
 
-    enum class FocusPreviousElement : bool { No, Yes };
-    enum class FireEvents : bool { No, Yes };
-    ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
-
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);
 
     void dirAttributeChanged(const AtomString&);
-    void updateEffectiveDirectionality(TextDirection);
+    void updateEffectiveDirectionality(std::optional<TextDirection>);
     void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
     void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
 
