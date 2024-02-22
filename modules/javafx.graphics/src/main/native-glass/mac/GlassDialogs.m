@@ -460,7 +460,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileO
             chosenFiles = (*env)->NewObject(env, jcls, javaIDs.ArrayList.init);
             GLASS_CHECK_EXCEPTION(env);
 
-            if (([dispatcher getButton] == NSFileHandlingPanelOKButton) && ([urls count] > 0))
+            if (([dispatcher getButton] == NSModalResponseOK) && ([urls count] > 0))
             {
                 for (NSUInteger i=0; i<[urls count]; i++)
                 {
@@ -536,7 +536,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
             GLASS_CHECK_EXCEPTION(env);
             chosenFile = (*env)->NewObject(env, jcls, javaIDs.ArrayList.init);
             GLASS_CHECK_EXCEPTION(env);
-            if (([dispatcher getButton] == NSFileHandlingPanelOKButton) && (url != nil))
+            if (([dispatcher getButton] == NSModalResponseOK) && (url != nil))
             {
                 (*env)->CallBooleanMethod(env, chosenFile, javaIDs.List.add, convertNSURLtoFile(env, url));
                 GLASS_CHECK_EXCEPTION(env);
@@ -598,7 +598,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFolde
         {
             [dispatcher performSelectorOnMainThread:@selector(runModally) withObject:panel waitUntilDone:YES];
             NSArray *urls = [panel URLs];
-            if (([dispatcher getButton] == NSFileHandlingPanelOKButton) && ([urls count] >= 1))
+            if (([dispatcher getButton] == NSModalResponseOK) && ([urls count] >= 1))
             {
                 chosen = convertNSURLtoFile(env, [urls objectAtIndex:0]);
             }
