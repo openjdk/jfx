@@ -508,11 +508,7 @@ public abstract class Application {
         checkEventThread();
 
         nestedEventLoopCounter++;
-        try {
-            GetApplication()._enterNestedEventLoop();
-        } finally {
-            nestedEventLoopCounter--;
-        }
+        GetApplication()._enterNestedEventLoop();
     }
 
     /**
@@ -538,6 +534,7 @@ public abstract class Application {
             throw new IllegalStateException("Not in a nested event loop");
         }
 
+        nestedEventLoopCounter--;
         GetApplication()._leaveNestedEventLoop();
     }
 
