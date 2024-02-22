@@ -1722,11 +1722,12 @@ public final class MediaPlayer {
 
     void removeView(MediaView view) {
         synchronized (viewRefs) {
-            for (WeakReference<MediaView> vref : viewRefs) {
-                MediaView v = vref.get();
-                if (v != null && v.equals(view)) {
-                    viewRefs.remove(vref);
-                }
+             Iterator<WeakReference<MediaView>> iter = viewRefs.iterator();
+             while (iter.hasNext()) {
+                 MediaView v = iter.next().get();
+                 if (v != null && v.equals(view)) {
+                     iter.remove();
+                 }
             }
         }
     }
