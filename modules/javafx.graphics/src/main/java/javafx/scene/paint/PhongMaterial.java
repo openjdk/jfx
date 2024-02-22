@@ -448,8 +448,8 @@ public class PhongMaterial extends Material {
     }
 
     /**
-     * Creates a new instance of {@code PhongMaterial} class using the specified color for its {@code diffuseColor}
-     * property.
+     * Creates a new instance of {@code PhongMaterial} class using the specified
+     * color for its {@code diffuseColor} property.
      *
      * @param diffuseColor the color of the diffuseColor property
      */
@@ -458,8 +458,8 @@ public class PhongMaterial extends Material {
     }
 
     /**
-     * Creates a new instance of {@code PhongMaterial} class using the specified colors and images for its
-     * {@code diffuseColor} properties.
+     * Creates a new instance of {@code PhongMaterial} class using the specified
+     * colors and images for its {@code diffuseColor} properties.
      *
      * @param diffuseColor the color of the diffuseColor property
      * @param diffuseMap the image of the diffuseMap property
@@ -467,8 +467,8 @@ public class PhongMaterial extends Material {
      * @param bumpMap the image of the bumpMap property
      * @param selfIlluminationMap the image of the selfIlluminationMap property
      */
-    public PhongMaterial(Color diffuseColor, Image diffuseMap, Image specularMap, Image bumpMap,
-            Image selfIlluminationMap) {
+    public PhongMaterial(Color diffuseColor, Image diffuseMap,
+            Image specularMap, Image bumpMap, Image selfIlluminationMap) {
         setDiffuseColor(diffuseColor);
         setDiffuseMap(diffuseMap);
         setSpecularMap(specularMap);
@@ -563,12 +563,14 @@ public class PhongMaterial extends Material {
     private final AbstractNotifyListener platformImageChangeListener = new AbstractNotifyListener() {
         @Override
         public void invalidated(Observable valueModel) {
-            if (oldDiffuseMap != null && valueModel == Toolkit.getImageAccessor().getImageProperty(oldDiffuseMap)) {
+            if (oldDiffuseMap != null
+                    && valueModel == Toolkit.getImageAccessor().getImageProperty(oldDiffuseMap)) {
                 diffuseMapDirty = true;
             } else if (oldSpecularMap != null
                     && valueModel == Toolkit.getImageAccessor().getImageProperty(oldSpecularMap)) {
                 specularMapDirty = true;
-            } else if (oldBumpMap != null && valueModel == Toolkit.getImageAccessor().getImageProperty(oldBumpMap)) {
+            } else if (oldBumpMap != null
+                    && valueModel == Toolkit.getImageAccessor().getImageProperty(oldBumpMap)) {
                 bumpMapDirty = true;
             } else if (oldSelfIlluminationMap != null
                     && valueModel == Toolkit.getImageAccessor().getImageProperty(oldSelfIlluminationMap)) {
@@ -607,16 +609,16 @@ public class PhongMaterial extends Material {
                     Image _image = get();
 
                     if (needsListeners) {
-                        Toolkit.getImageAccessor().getImageProperty(oldDiffuseMap)
-                                .removeListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(oldDiffuseMap).
+                                removeListener(platformImageChangeListener.getWeakListener());
                     }
 
-                    needsListeners = _image != null
-                            && (Toolkit.getImageAccessor().isAnimation(_image) || _image.getProgress() < 1);
+                    needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
+                            || _image.getProgress() < 1);
 
                     if (needsListeners) {
-                        Toolkit.getImageAccessor().getImageProperty(_image)
-                                .addListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
                     }
                     oldDiffuseMap = _image;
                     diffuseMapDirty = true;
@@ -656,16 +658,16 @@ public class PhongMaterial extends Material {
                     Image _image = get();
 
                     if (needsListeners) {
-                        Toolkit.getImageAccessor().getImageProperty(oldSpecularMap)
-                                .removeListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(oldSpecularMap).
+                                removeListener(platformImageChangeListener.getWeakListener());
                     }
 
-                    needsListeners = _image != null
-                            && (Toolkit.getImageAccessor().isAnimation(_image) || _image.getProgress() < 1);
+                    needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
+                            || _image.getProgress() < 1);
 
                     if (needsListeners) {
-                        Toolkit.getImageAccessor().getImageProperty(_image)
-                                .addListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
                     }
 
                     oldSpecularMap = _image;
@@ -706,16 +708,16 @@ public class PhongMaterial extends Material {
                     Image _image = get();
 
                     if (needsListeners) {
-                        Toolkit.getImageAccessor().getImageProperty(oldBumpMap)
-                                .removeListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(oldBumpMap).
+                                removeListener(platformImageChangeListener.getWeakListener());
                     }
 
-                    needsListeners = _image != null
-                            && (Toolkit.getImageAccessor().isAnimation(_image) || _image.getProgress() < 1);
+                    needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
+                            || _image.getProgress() < 1);
 
                     if (needsListeners) {
-                        Toolkit.getImageAccessor().getImageProperty(_image)
-                                .addListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
                     }
 
                     oldBumpMap = _image;
@@ -756,16 +758,16 @@ public class PhongMaterial extends Material {
                     Image _image = get();
 
                     if (needsListeners) {
-                        Toolkit.getImageAccessor().getImageProperty(oldSelfIlluminationMap)
-                                .removeListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(oldSelfIlluminationMap).
+                                removeListener(platformImageChangeListener.getWeakListener());
                     }
 
-                    needsListeners = _image != null
-                            && (Toolkit.getImageAccessor().isAnimation(_image) || _image.getProgress() < 1);
+                    needsListeners = _image != null && (Toolkit.getImageAccessor().isAnimation(_image)
+                            || _image.getProgress() < 1);
 
                     if (needsListeners) {
-                        Toolkit.getImageAccessor().getImageProperty(_image)
-                                .addListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
                     }
 
                     oldSelfIlluminationMap = _image;
@@ -810,42 +812,44 @@ public class PhongMaterial extends Material {
 
         final NGPhongMaterial pMaterial = MaterialHelper.getNGMaterial(this);
         if (diffuseColorDirty) {
-            pMaterial.setDiffuseColor(
-                    getDiffuseColor() == null ? null : Toolkit.getPaintAccessor().getPlatformPaint(getDiffuseColor()));
+            pMaterial.setDiffuseColor(getDiffuseColor() == null ? null
+                    : Toolkit.getPaintAccessor().getPlatformPaint(getDiffuseColor()));
         }
         if (specularColorDirty) {
             pMaterial.setSpecularColor(getSpecularColor() == null ? null
                     : Toolkit.getPaintAccessor().getPlatformPaint(getSpecularColor()));
         }
         if (specularPowerDirty) {
-            pMaterial.setSpecularPower((float) getSpecularPower());
+            pMaterial.setSpecularPower((float)getSpecularPower());
         }
         if (diffuseMapDirty) {
-            pMaterial.setDiffuseMap(
-                    getDiffuseMap() == null ? null : Toolkit.getImageAccessor().getPlatformImage(getDiffuseMap()));
+            pMaterial.setDiffuseMap(getDiffuseMap()
+                    == null ? null : Toolkit.getImageAccessor().getPlatformImage(getDiffuseMap()));
         }
         if (specularMapDirty) {
-            pMaterial.setSpecularMap(
-                    getSpecularMap() == null ? null : Toolkit.getImageAccessor().getPlatformImage(getSpecularMap()));
+            pMaterial.setSpecularMap(getSpecularMap()
+                    == null ? null : Toolkit.getImageAccessor().getPlatformImage(getSpecularMap()));
         }
         if (bumpMapDirty) {
-            pMaterial.setBumpMap(
-                    getBumpMap() == null ? null : Toolkit.getImageAccessor().getPlatformImage(getBumpMap()));
+            pMaterial.setBumpMap(getBumpMap()
+                    == null ? null : Toolkit.getImageAccessor().getPlatformImage(getBumpMap()));
         }
         if (selfIlluminationMapDirty) {
-            pMaterial.setSelfIllumMap(getSelfIlluminationMap() == null ? null
-                    : Toolkit.getImageAccessor().getPlatformImage(getSelfIlluminationMap()));
+            pMaterial.setSelfIllumMap(getSelfIlluminationMap()
+                    == null ? null : Toolkit.getImageAccessor().getPlatformImage(getSelfIlluminationMap()));
         }
 
         setDirty(false);
     }
 
-    @Override
-    public String toString() {
-        return "PhongMaterial[" + "diffuseColor=" + getDiffuseColor() + ", specularColor=" + getSpecularColor()
-                + ", specularPower=" + getSpecularPower() + ", diffuseMap=" + getDiffuseMap() + ", specularMap="
-                + getSpecularMap() + ", bumpMap=" + getBumpMap() + ", selfIlluminationMap=" + getSelfIlluminationMap()
-                + "]";
+    @Override public String toString() {
+        return "PhongMaterial[" + "diffuseColor=" + getDiffuseColor() +
+                ", specularColor=" + getSpecularColor() +
+                ", specularPower=" + getSpecularPower() +
+                ", diffuseMap=" + getDiffuseMap() +
+                ", specularMap=" + getSpecularMap() +
+                ", bumpMap=" + getBumpMap() +
+                ", selfIlluminationMap=" + getSelfIlluminationMap() + "]";
     }
 
 }
