@@ -70,7 +70,7 @@ import javafx.scene.shape.TriangleMesh;
  * While in the physical world each light ray goes through a single path of reflection, transmission, or absorption, in
  * the computational world a number of adjacent rays are averaged into a single one that can split into multiple paths.
  * This approximation simplifies the computation model greatly while still allowing realistic rendering. The validity of
- * this approximation depends on microscopic details of the material, but it holds well for the vast majority of cases. 
+ * this approximation depends on microscopic details of the material, but it holds well for the vast majority of cases.
  * When an averaged incident ray (blue) hits the surface, it can split into many rays depending on the values of the
  * components of the material: rays that are either transmitted through the material (green) or reflected in all
  * directions via scattering (purple) depend on the diffuse component; rays that are reflected (orange), which depend on
