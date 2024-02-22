@@ -56,7 +56,7 @@ CECalendar::CECalendar(const Locale& aLocale, UErrorCode& success)
     setTimeInMillis(getNow(), success);
 }
 
-CECalendar::CECalendar (const CECalendar& other)
+CECalendar::CECalendar (const CECalendar& other) 
 :   Calendar(other)
 {
 }

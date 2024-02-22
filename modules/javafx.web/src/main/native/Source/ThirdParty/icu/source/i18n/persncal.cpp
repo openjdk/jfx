@@ -71,7 +71,7 @@ static const int32_t PERSIAN_EPOCH = 1948320;
 // Constructors...
 //-------------------------------------------------------------------------
 
-const char *PersianCalendar::getType() const {
+const char *PersianCalendar::getType() const { 
     return "persian";
 }
 
@@ -114,7 +114,7 @@ UBool PersianCalendar::isLeapYear(int32_t year)
     ClockMath::floorDivide(25 * year + 11, 33, &remainder);
     return (remainder < 8);
 }
-
+    
 /**
  * Return the day # on which the given year starts.  Days are counted
  * from the Persian epoch, origin 0.
@@ -122,7 +122,7 @@ UBool PersianCalendar::isLeapYear(int32_t year)
 int32_t PersianCalendar::yearStart(int32_t year) {
     return handleComputeMonthStart(year,0,false);
 }
-
+    
 /**
  * Return the day # on which the given month starts.  Days are counted
  * from the Persian epoch, origin 0.
@@ -133,7 +133,7 @@ int32_t PersianCalendar::yearStart(int32_t year) {
 int32_t PersianCalendar::monthStart(int32_t year, int32_t month) const {
     return handleComputeMonthStart(year,month,true);
 }
-
+    
 //----------------------------------------------------------------------
 // Calendar framework
 //----------------------------------------------------------------------
@@ -160,7 +160,7 @@ int32_t PersianCalendar::handleGetMonthLength(int32_t extendedYear, int32_t mont
 int32_t PersianCalendar::handleGetYearLength(int32_t extendedYear) const {
     return isLeapYear(extendedYear) ? 366 : 365;
 }
-
+    
 //-------------------------------------------------------------------------
 // Functions for converting from field values to milliseconds....
 //-------------------------------------------------------------------------
@@ -206,7 +206,7 @@ int32_t PersianCalendar::handleGetExtendedYear() {
  * <li>DAY_OF_MONTH
  * <li>DAY_OF_YEAR
  * <li>EXTENDED_YEAR</ul>
- *
+ * 
  * The DAY_OF_WEEK and DOW_LOCAL fields are already set when this
  * method is called.
  */
@@ -233,7 +233,7 @@ void PersianCalendar::handleComputeFields(int32_t julianDay, UErrorCode &/*statu
     internalSet(UCAL_ORDINAL_MONTH, month);
     internalSet(UCAL_DAY_OF_MONTH, dayOfMonth);
     internalSet(UCAL_DAY_OF_YEAR, dayOfYear);
-}
+}    
 
 constexpr uint32_t kPersianRelatedYearDiff = 622;
 

@@ -127,7 +127,7 @@ class U_I18N_API FormattedNumber : public UMemory, public FormattedValue {
     template<typename StringClass>
     inline StringClass toDecimalNumber(UErrorCode& status) const;
 
-        /**
+	/**
      * Gets the resolved output unit.
      *
      * The output unit is dependent upon the localized preferences for the usage
@@ -140,18 +140,14 @@ class U_I18N_API FormattedNumber : public UMemory, public FormattedValue {
      */
     MeasureUnit getOutputUnit(UErrorCode& status) const;
 
-#ifndef U_HIDE_DRAFT_API
-
     /**
      * Gets the noun class of the formatted output. Returns `UNDEFINED` when the noun class
      * is not supported yet.
      *
      * @return UDisplayOptionsNounClass
-     * @draft ICU 72
+     * @stable ICU 72
      */
     UDisplayOptionsNounClass getNounClass(UErrorCode &status) const;
-
-#endif // U_HIDE_DRAFT_API
 
 #ifndef U_HIDE_INTERNAL_API
 

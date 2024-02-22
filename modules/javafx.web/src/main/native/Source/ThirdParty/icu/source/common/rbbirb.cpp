@@ -66,7 +66,6 @@ RBBIRuleBuilder::RBBIRuleBuilder(const UnicodeString   &rules,
     fForwardTable       = nullptr;
     fRuleStatusVals     = nullptr;
     fChainRules         = false;
-    fLBCMNoChain        = false;
     fLookAheadHardBreak = false;
     fUSetNodes          = nullptr;
     fRuleStatusVals     = nullptr;
@@ -268,7 +267,7 @@ RBBIRuleBuilder::createRuleBasedBreakIterator( const UnicodeString    &rules,
     if (U_FAILURE(status)) {
         delete This;
         This = nullptr;
-    }
+    } 
     else if(This == nullptr) { // test for nullptr
         status = U_MEMORY_ALLOCATION_ERROR;
     }

@@ -91,7 +91,7 @@ public:
     // A do-nothing inline function for non-debug builds.  Member funcs can't be empty
     //  or the call sites won't compile.
     int32_t fFakeField;
-    #define rbbiSymtablePrint() fFakeField=0;
+    #define rbbiSymtablePrint() fFakeField=0; 
 #endif
 
 private:
@@ -159,9 +159,6 @@ public:
     UBool                         fChainRules;       // True for chained Unicode TR style rules.
                                                      // False for traditional regexp rules.
 
-    UBool                         fLBCMNoChain;      // True:  suppress chaining of rules on
-                                                     //   chars with LineBreak property == CM.
-
     UBool                         fLookAheadHardBreak;  // True:  Look ahead matches cause an
                                                      // immediate break, no continuing for the
                                                      // longest match.
@@ -223,7 +220,7 @@ typedef std::pair<int32_t, int32_t> IntPair;
 #define RBBIDebugPrintf printf
 #define RBBIDebugPuts puts
 #else
-#undef RBBIDebugPrintf
+#undef RBBIDebugPrintf 
 #define RBBIDebugPuts(arg)
 #endif
 

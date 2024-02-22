@@ -24,6 +24,8 @@
 #include "unicode/putil.h"
 #include "unicode/uloc.h"
 #include "unicode/ures.h"
+#include "bytesinkutil.h"
+#include "charstr.h"
 #include "cstring.h"
 #include "ulocimp.h"
 #include "uresimp.h"
@@ -83,9 +85,9 @@ uloc_getTableStringWithFallback(const char *path, const char *locale,
             if(U_FAILURE(errorCode)){
                 *pErrorCode = errorCode;
             }
-
+            
             break;*/
-
+            
             ures_getByKeyWithFallback(table.getAlias(), subTableKey, table.getAlias(), &errorCode);
         }
         if(U_SUCCESS(errorCode)){
@@ -112,8 +114,8 @@ uloc_getTableStringWithFallback(const char *path, const char *locale,
                 break;
             }
         }
-
-        if(U_FAILURE(errorCode)){
+        
+        if(U_FAILURE(errorCode)){    
 
             /* still can't figure out ?.. try the fallback mechanism */
             int32_t len = 0;
@@ -126,9 +128,9 @@ uloc_getTableStringWithFallback(const char *path, const char *locale,
                *pErrorCode = errorCode;
                 break;
             }
-
+            
             u_UCharsToChars(fallbackLocale, explicitFallbackName, len);
-
+            
             /* guard against recursive fallback */
             if(uprv_strcmp(explicitFallbackName, locale)==0){
                 *pErrorCode = U_INTERNAL_PROGRAM_ERROR;
@@ -156,16 +158,18 @@ _uloc_getOrientationHelper(const char* localeId,
     ULayoutType result = ULOC_LAYOUT_UNKNOWN;
 
     if (!U_FAILURE(*status)) {
-        int32_t length = 0;
-        char localeBuffer[ULOC_FULLNAME_CAPACITY];
-
-        uloc_canonicalize(localeId, localeBuffer, sizeof(localeBuffer), status);
+        icu::CharString localeBuffer;
+        {
+            icu::CharStringByteSink sink(&localeBuffer);
+            ulocimp_canonicalize(localeId, sink, status);
+        }
 
         if (!U_FAILURE(*status)) {
+            int32_t length = 0;
             const char16_t* const value =
                 uloc_getTableStringWithFallback(
                     nullptr,
-                    localeBuffer,
+                    localeBuffer.data(),
                     "layout",
                     nullptr,
                     key,
@@ -207,7 +211,7 @@ uloc_getCharacterOrientation(const char* localeId,
 
 /**
  * Get the layout line orientation for the specified locale.
- *
+ * 
  * @param localeID locale name
  * @param status Error status
  * @return an enum indicating the layout orientation for lines.

@@ -269,7 +269,7 @@ class RuleCharacterIterator;
  *     </tr>
  *   </table>
  * \htmlonly</blockquote>\endhtmlonly
- *
+ * 
  * <p>Note:
  *  - Most UnicodeSet methods do not take a UErrorCode parameter because
  *   there are usually very few opportunities for failure other than a shortage
@@ -543,7 +543,7 @@ public:
      * @stable ICU 4.2
      */
     inline static const UnicodeSet *fromUSet(const USet *uset);
-
+    
     /**
      * Produce a USet * pointer for this UnicodeSet.
      * USet is the plain C type for UnicodeSet

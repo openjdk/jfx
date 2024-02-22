@@ -530,7 +530,7 @@ TimeZone::detectHostTimeZone()
 static UMutex gDefaultZoneMutex;
 
 /**
- * Initialize DEFAULT_ZONE from the system default time zone.
+ * Initialize DEFAULT_ZONE from the system default time zone.  
  * Upon return, DEFAULT_ZONE will not be nullptr, unless operator new()
  * returns nullptr.
  */
@@ -544,7 +544,7 @@ static void U_CALLCONV initDefault()
     if (DEFAULT_ZONE != nullptr) {
         return;
     }
-
+    
     // NOTE:  this code is safely single threaded, being only
     // run via umtx_initOnce().
     //
@@ -1124,7 +1124,7 @@ TimeZone::dereferOlsonLink(const UnicodeString& id) {
 
     // open the zone bundle by index
     ures_getByKey(rb, kZONES, rb, &ec);
-    ures_getByIndex(rb, idx, rb, &ec);
+    ures_getByIndex(rb, idx, rb, &ec); 
 
     if (U_SUCCESS(ec)) {
         if (ures_getType(rb) == URES_INT) {
@@ -1589,6 +1589,22 @@ TimeZone::getCanonicalID(const UnicodeString& id, UnicodeString& canonicalID, UB
         }
     }
     return canonicalID;
+}
+
+UnicodeString&
+TimeZone::getIanaID(const UnicodeString& id, UnicodeString& ianaID, UErrorCode& status)
+{
+    ianaID.remove();
+    if (U_FAILURE(status)) {
+        return ianaID;
+    }
+    if (id.compare(ConstChar16Ptr(UNKNOWN_ZONE_ID), UNKNOWN_ZONE_ID_LENGTH) == 0) {
+        status = U_ILLEGAL_ARGUMENT_ERROR;
+        ianaID.setToBogus();
+    } else {
+        ZoneMeta::getIanaID(id, ianaID, status);
+    }
+    return ianaID;
 }
 
 UnicodeString&

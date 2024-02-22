@@ -26,7 +26,7 @@ constexpr int32_t DEFAULT_CAPACITY = 8;
  */
 constexpr int8_t HINT_KEY_POINTER = 1;
 constexpr int8_t HINT_KEY_INTEGER = 0;
-
+ 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(UVector)
 
 UVector::UVector(UErrorCode &status) :
@@ -332,7 +332,7 @@ UBool UVector::ensureCapacity(int32_t minimumCapacity, UErrorCode &status) {
         return false;
     }
     if (capacity < minimumCapacity) {
-        if (capacity > (INT32_MAX - 1) / 2) {           // integer overflow check
+        if (capacity > (INT32_MAX - 1) / 2) {        	// integer overflow check
             status = U_ILLEGAL_ARGUMENT_ERROR;
             return false;
         }
@@ -340,7 +340,7 @@ UBool UVector::ensureCapacity(int32_t minimumCapacity, UErrorCode &status) {
         if (newCap < minimumCapacity) {
             newCap = minimumCapacity;
         }
-        if (newCap > (int32_t)(INT32_MAX / sizeof(UElement))) { // integer overflow check
+        if (newCap > (int32_t)(INT32_MAX / sizeof(UElement))) {	// integer overflow check
             // We keep the original memory contents on bad minimumCapacity.
             status = U_ILLEGAL_ARGUMENT_ERROR;
             return false;
@@ -491,7 +491,7 @@ void UVector::sortedInsert(UElement e, UElementComparator *compare, UErrorCode& 
   *
   *  The context pointer to this function is a pointer back
   *  (with some extra indirection) to the user supplied comparator.
-  *
+  *  
   */
 static int32_t U_CALLCONV
 sortComparator(const void *context, const void *left, const void *right) {

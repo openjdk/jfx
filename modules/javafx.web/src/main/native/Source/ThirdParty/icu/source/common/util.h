@@ -163,7 +163,7 @@ class U_COMMON_API ICU_Utility /* not : public UObject because all methods are s
      */
     static int32_t parsePattern(const UnicodeString& rule, int32_t pos, int32_t limit,
                                 const UnicodeString& pattern, int32_t* parsedInts);
-
+        
     /**
      * Parse a pattern string within the given Replaceable and a parsing
      * pattern.  Characters are matched literally and case-sensitively
@@ -244,7 +244,7 @@ class U_COMMON_API ICU_Utility /* not : public UObject because all methods are s
                              UBool isLiteral,
                              UBool escapeUnprintable,
                              UnicodeString& quoteBuf);
-
+    
     static void appendToRule(UnicodeString& rule,
                              const UnicodeString& text,
                              UBool isLiteral,

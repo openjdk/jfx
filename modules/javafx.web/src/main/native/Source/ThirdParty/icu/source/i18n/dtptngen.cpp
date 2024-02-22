@@ -29,6 +29,7 @@
 #include "unicode/ustring.h"
 #include "unicode/rep.h"
 #include "unicode/region.h"
+#include "bytesinkutil.h"
 #include "cpputils.h"
 #include "mutex.h"
 #include "umutex.h"
@@ -37,7 +38,9 @@
 #include "locbased.h"
 #include "hash.h"
 #include "uhash.h"
+#include "ulocimp.h"
 #include "uresimp.h"
+#include "ulocimp.h"
 #include "dtptngen_impl.h"
 #include "ucln_in.h"
 #include "charstr.h"
@@ -633,7 +636,7 @@ U_CFUNC void U_CALLCONV DateTimePatternGenerator::loadAllowedHourFormatsData(UEr
     // into the hashmap, store 6 single-value sub-arrays right at the beginning of the
     // vector (at index enum*2) for easy data sharing, copy sub-arrays into runtime
     // object. Remember to clean up the vector, too.
-    ures_getAllItemsWithFallback(rb.getAlias(), "timeData", sink, status);
+    ures_getAllItemsWithFallback(rb.getAlias(), "timeData", sink, status);    
 }
 
 static int32_t* getAllowedHourFormatsLangCountry(const char* language, const char* country, UErrorCode& status) {
@@ -655,18 +658,10 @@ void DateTimePatternGenerator::getAllowedHourFormats(const Locale &locale, UErro
     if (U_FAILURE(status)) { return; }
 
     const char *language = locale.getLanguage();
-    const char *country = locale.getCountry();
-
-    char regionOverride[8];
-    int32_t regionOverrideLength = locale.getKeywordValue("rg", regionOverride, sizeof(regionOverride), status);
-    if (U_SUCCESS(status) && regionOverrideLength > 0) {
-        country = regionOverride;
-        if (regionOverrideLength > 2) {
-            // chop off any subdivision codes that may have been included
-            regionOverride[2] = '\0';
-        }
-    }
-
+    char baseCountry[8];
+    ulocimp_getRegionForSupplementalData(locale.getName(), false, baseCountry, 8, &status);
+    const char* country = baseCountry;
+    
     Locale maxLocale;  // must be here for correct lifetime
     if (*language == '\0' || *country == '\0') {
         maxLocale = locale;
@@ -910,22 +905,19 @@ DateTimePatternGenerator::getCalendarTypeToUse(const Locale& locale, CharString&
             &localStatus);
         localeWithCalendarKey[ULOC_LOCALE_IDENTIFIER_CAPACITY-1] = 0; // ensure null termination
         // now get the calendar key value from that locale
-        char calendarType[ULOC_KEYWORDS_CAPACITY];
-        int32_t calendarTypeLen = uloc_getKeywordValue(
-            localeWithCalendarKey,
-            "calendar",
-            calendarType,
-            ULOC_KEYWORDS_CAPACITY,
-            &localStatus);
+        destination.clear();
+        {
+            CharStringByteSink sink(&destination);
+            ulocimp_getKeywordValue(
+                localeWithCalendarKey,
+                "calendar",
+                sink,
+                &localStatus);
+        }
         // If the input locale was invalid, don't fail with missing resource error, instead
         // continue with default of Gregorian.
         if (U_FAILURE(localStatus) && localStatus != U_MISSING_RESOURCE_ERROR) {
             err = localStatus;
-            return;
-        }
-        if (calendarTypeLen > 0 && calendarTypeLen < ULOC_KEYWORDS_CAPACITY) {
-            destination.clear().append(calendarType, -1, err);
-            if (U_FAILURE(err)) { return; }
         }
     }
 }
@@ -1031,7 +1023,7 @@ struct DateTimePatternGenerator::AvailableFormatsSink : public ResourceSink {
     AvailableFormatsSink(DateTimePatternGenerator& _dtpg) : dtpg(_dtpg) {}
     virtual ~AvailableFormatsSink();
 
-    virtual void put(const char *key, ResourceValue &value, UBool isRoot,
+    virtual void put(const char *key, ResourceValue &value, UBool /*isRoot*/,
             UErrorCode &errorCode) override {
         const UnicodeString formatKey(key, -1, US_INV);
         if (!dtpg.isAvailableFormatSet(formatKey) ) {
@@ -1040,7 +1032,7 @@ struct DateTimePatternGenerator::AvailableFormatsSink : public ResourceSink {
             // derived from std patterns, but not a previous availableFormats entry:
             const UnicodeString& formatValue = value.getUnicodeString(errorCode);
             conflictingPattern.remove();
-            dtpg.addPatternWithSkeleton(formatValue, &formatKey, !isRoot, conflictingPattern, errorCode);
+            dtpg.addPatternWithSkeleton(formatValue, &formatKey, true, conflictingPattern, errorCode);
         }
     }
 };
@@ -2884,7 +2876,7 @@ DTSkeletonEnumeration::DTSkeletonEnumeration(PatternMap& patternMap, dtStrEnum t
             }
             if ( !isCanonicalItem(s) ) {
                 LocalPointer<UnicodeString> newElem(s.clone(), status);
-                if (U_FAILURE(status)) {
+                if (U_FAILURE(status)) { 
                     return;
                 }
                 fSkeletons->addElement(newElem.getAlias(), status);
@@ -3009,7 +3001,7 @@ DTRedundantEnumeration::~DTRedundantEnumeration() {
                 delete s;
             }
         }
-    }
+    }    
 }
 
 U_NAMESPACE_END

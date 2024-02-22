@@ -410,7 +410,7 @@
 #endif
 
 /**
- * \def U_HAVE_DEBUG_LOCATION_NEW
+ * \def U_HAVE_DEBUG_LOCATION_NEW 
  * Define this to define the MFC debug version of the operator new.
  *
  * @stable ICU 3.4
@@ -801,7 +801,7 @@
 #elif defined(__GNUC__)
 #   define U_EXPORT __attribute__((visibility("default")))
 #elif (defined(__SUNPRO_CC) && __SUNPRO_CC >= 0x550) \
-   || (defined(__SUNPRO_C) && __SUNPRO_C >= 0x550)
+   || (defined(__SUNPRO_C) && __SUNPRO_C >= 0x550) 
 #   define U_EXPORT __global
 /*#elif defined(__HP_aCC) || defined(__HP_cc)
 #   define U_EXPORT __declspec(dllexport)*/
@@ -825,14 +825,14 @@
     /* Windows needs to export/import data. */
 #   define U_IMPORT __declspec(dllimport)
 #else
-#   define U_IMPORT
+#   define U_IMPORT 
 #endif
 
 /**
  * \def U_HIDDEN
  * This is used to mark internal structs declared within external classes,
  * to prevent the internal structs from having the same visibility as the
- * class within which they are declared.
+ * class within which they are declared. 
  * @internal
  */
 #ifdef U_HIDDEN
@@ -840,7 +840,7 @@
 #elif defined(__GNUC__)
 #   define U_HIDDEN __attribute__((visibility("hidden")))
 #else
-#   define U_HIDDEN
+#   define U_HIDDEN 
 #endif
 
 /**

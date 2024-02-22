@@ -64,18 +64,20 @@ enum URBNFRuleSetTag {
      * @stable ICU 2.2
      */
     URBNF_ORDINAL,
+#ifndef U_HIDE_DEPRECATED_API
     /**
      * Requests predefined ruleset for formatting a value as a duration in hours, minutes, and seconds.
-     * @stable ICU 2.2
+     * @deprecated ICU 74 Use MeasureFormat instead.
      */
     URBNF_DURATION,
+#endif // U_HIDE_DERECATED_API
     /**
      * Requests predefined ruleset for various non-place-value numbering systems.
      * WARNING: The same resource contains rule sets for a variety of different numbering systems.
      * You need to call setDefaultRuleSet() on the formatter to choose the actual numbering system.
      * @stable ICU 2.2
      */
-    URBNF_NUMBERING_SYSTEM,
+    URBNF_NUMBERING_SYSTEM = 3,
 #ifndef U_HIDE_DEPRECATED_API
     /**
      * One more than the highest normal URBNFRuleSetTag value.
@@ -1005,7 +1007,7 @@ public:
    * @param value The UDisplayContext value to set.
    * @param status Input/output status. If at entry this indicates a failure
    *               status, the function will do nothing; otherwise this will be
-   *               updated with any new status from the function.
+   *               updated with any new status from the function. 
    * @stable ICU 53
    */
   virtual void setContext(UDisplayContext value, UErrorCode& status) override;

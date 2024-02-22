@@ -24,8 +24,11 @@
 #include "unicode/locid.h"
 #include "unicode/ustring.h"
 
+#include "bytesinkutil.h"
+#include "charstr.h"
 #include "cmemory.h"
 #include "uassert.h"
+#include "ulocimp.h"
 #include "locmap.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -144,10 +147,13 @@ static void freeCurrencyFormat(CURRENCYFMTW *fmt)
 static UErrorCode GetEquivalentWindowsLocaleName(const Locale& locale, UnicodeString** buffer)
 {
     UErrorCode status = U_ZERO_ERROR;
-    char asciiBCP47Tag[LOCALE_NAME_MAX_LENGTH] = {};
 
     // Convert from names like "en_CA" and "de_DE@collation=phonebook" to "en-CA" and "de-DE-u-co-phonebk".
-    (void) uloc_toLanguageTag(locale.getName(), asciiBCP47Tag, UPRV_LENGTHOF(asciiBCP47Tag), false, &status);
+    CharString asciiBCP47Tag;
+    {
+        CharStringByteSink sink(&asciiBCP47Tag);
+        ulocimp_toLanguageTag(locale.getName(), sink, false, &status);
+    }
 
     if (U_SUCCESS(status))
     {
@@ -213,7 +219,7 @@ Win32NumberFormat::Win32NumberFormat(const Locale &locale, UBool currency, UErro
         // Note: In the previous code, it would look up the LCID for the locale, and if
         // the locale was not recognized then it would get an LCID of 0, which is a
         // synonym for LOCALE_USER_DEFAULT on Windows.
-        // If the above method fails, then fWindowsLocaleName will remain as nullptr, and
+        // If the above method fails, then fWindowsLocaleName will remain as nullptr, and 
         // then we will pass nullptr to API GetLocaleInfoEx, which is the same as passing
         // LOCALE_USER_DEFAULT.
 
@@ -276,7 +282,7 @@ Win32NumberFormat &Win32NumberFormat::operator=(const Win32NumberFormat &other)
     this->fLCID              = other.fLCID;
     this->fFractionDigitsSet = other.fFractionDigitsSet;
     this->fWindowsLocaleName = other.fWindowsLocaleName == nullptr ? nullptr : new UnicodeString(*other.fWindowsLocaleName);
-
+    
     const wchar_t *localeName = nullptr;
 
     if (fWindowsLocaleName != nullptr)

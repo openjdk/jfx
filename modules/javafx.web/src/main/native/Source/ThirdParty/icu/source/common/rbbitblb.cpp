@@ -90,11 +90,11 @@ void  RBBITableBuilder::buildForwardTable() {
 #endif
 
     //
-    // If the rules contained any references to {bof}
+    // If the rules contained any references to {bof} 
     //   add a {bof} <cat> <former root of tree> to the
-    //   tree.  Means that all matches must start out with the
+    //   tree.  Means that all matches must start out with the 
     //   {bof} fake character.
-    //
+    // 
     if (fRB->fSetBuilder->sawBOF()) {
         RBBINode *bofTop    = new RBBINode(RBBINode::opCat);
         RBBINode *bofLeaf   = new RBBINode(RBBINode::leafChar);
@@ -421,9 +421,9 @@ void RBBITableBuilder::calcChainedFollowPos(RBBINode *tree, RBBINode *endMarkNod
     }
 
     // Collect all leaf nodes that can start matches for rules
-    // with inbound chaining enabled, which is the union of the
+    // with inbound chaining enabled, which is the union of the 
     // firstPosition sets from each of the rule root nodes.
-
+    
     UVector ruleRootNodes(*fStatus);
     addRuleRootNodes(&ruleRootNodes, tree);
 
@@ -457,21 +457,6 @@ void RBBITableBuilder::calcChainedFollowPos(RBBINode *tree, RBBINode *endMarkNod
         }
 
         // We've got a node that can end a match.
-
-        // !!LBCMNoChain implementation:  If this node's val correspond to
-        // the Line Break $CM char class, don't chain from it.
-        // TODO:  Remove this. !!LBCMNoChain is deprecated, and is not used
-        //        by any of the standard ICU rules.
-        if (fRB->fLBCMNoChain) {
-            UChar32 c = this->fRB->fSetBuilder->getFirstChar(endNode->fVal);
-            if (c != -1) {
-                // c == -1 occurs with sets containing only the {eof} marker string.
-                ULineBreak cLBProp = (ULineBreak)u_getIntPropertyValue(c, UCHAR_LINE_BREAK);
-                if (cLBProp == U_LB_COMBINING_MARK) {
-                    continue;
-                }
-            }
-        }
 
         // Now iterate over the nodes that can start a match, looking for ones
         //   with the same char class as our ending node.
@@ -531,7 +516,7 @@ void RBBITableBuilder::bofFixup() {
     //  (excluding the fake bofNode)
     //  We want the nodes that can start a match in the
     //     part labeled "rest of tree"
-    //
+    // 
     UVector *matchStartNodes = fTree->fLeftChild->fRightChild->fFirstPosSet;
 
     RBBINode *startNode;
@@ -547,7 +532,7 @@ void RBBITableBuilder::bofFixup() {
             //    explicitly written into a rule.
             //  Add everything from the followPos set of this node to the
             //    followPos set of the fake bofNode at the start of the tree.
-            //
+            //  
             setAdd(bofNode->fFollowPos, startNode->fFollowPos);
         }
     }
@@ -645,8 +630,8 @@ void RBBITableBuilder::buildStateTable() {
                     if (U == nullptr) {
                         U = new UVector(*fStatus);
                         if (U == nullptr) {
-                                *fStatus = U_MEMORY_ALLOCATION_ERROR;
-                                goto ExitBuildSTdeleteall;
+                        	*fStatus = U_MEMORY_ALLOCATION_ERROR;
+                        	goto ExitBuildSTdeleteall;
                         }
                     }
                     setAdd(U, p->fFollowPos);
@@ -676,7 +661,7 @@ void RBBITableBuilder::buildStateTable() {
                 {
                     RBBIStateDescriptor *newState = new RBBIStateDescriptor(lastInputSymbol, fStatus);
                     if (newState == nullptr) {
-                        *fStatus = U_MEMORY_ALLOCATION_ERROR;
+                    	*fStatus = U_MEMORY_ALLOCATION_ERROR;
                     }
                     if (U_FAILURE(*fStatus)) {
                         goto ExitBuildSTdeleteall;

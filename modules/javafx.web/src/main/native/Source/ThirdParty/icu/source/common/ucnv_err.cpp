@@ -129,7 +129,7 @@ UCNV_TO_U_CALLBACK_STOP (
 }
 
 U_CAPI void    U_EXPORT2
-UCNV_FROM_U_CALLBACK_SKIP (
+UCNV_FROM_U_CALLBACK_SKIP (                  
                   const void *context,
                   UConverterFromUnicodeArgs *fromUArgs,
                   const char16_t* codeUnits,
@@ -217,7 +217,7 @@ UCNV_FROM_U_CALLBACK_ESCAPE (
 
   UConverterFromUCallback ignoredCallback = nullptr;
   const void *ignoredContext;
-
+  
   if (reason > UCNV_IRREGULAR)
   {
       return;
@@ -237,14 +237,14 @@ UCNV_FROM_U_CALLBACK_ESCAPE (
                      &original,
                      &originalContext,
                      &err2);
-
+  
   if (U_FAILURE (err2))
   {
     *err = err2;
     return;
-  }
+  } 
   if(context==nullptr)
-  {
+  { 
       while (i < length)
       {
         valueString[valueStringLength++] = (char16_t) UNICODE_PERCENT_SIGN_CODEPOINT;  /* adding % */
@@ -334,7 +334,7 @@ UCNV_FROM_U_CALLBACK_ESCAPE (
               valueStringLength += uprv_itou (valueString + valueStringLength, VALUE_STRING_LENGTH - valueStringLength, (uint16_t)codeUnits[i++], 16, 4);
           }
       }
-  }
+  }  
   myValueSource = valueString;
 
   /* reset the error */
@@ -427,7 +427,7 @@ UCNV_TO_U_CALLBACK_ESCAPE (
     }
 
     if(context==nullptr)
-    {
+    {    
         while (i < length)
         {
             uniValueString[valueStringLength++] = (char16_t) UNICODE_PERCENT_SIGN_CODEPOINT; /* adding % */

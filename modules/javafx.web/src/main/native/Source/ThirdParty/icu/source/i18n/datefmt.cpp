@@ -58,14 +58,14 @@ public:
 DateFmtBestPattern::~DateFmtBestPattern() {
 }
 
-template<>
+template<> 
 const DateFmtBestPattern *LocaleCacheKey<DateFmtBestPattern>::createObject(
         const void * /*creationContext*/, UErrorCode &status) const {
     status = U_UNSUPPORTED_ERROR;
     return nullptr;
 }
 
-class DateFmtBestPatternKey : public LocaleCacheKey<DateFmtBestPattern> {
+class DateFmtBestPatternKey : public LocaleCacheKey<DateFmtBestPattern> { 
 private:
     UnicodeString fSkeleton;
 protected:
@@ -103,7 +103,7 @@ public:
         if (U_FAILURE(status)) {
             return nullptr;
         }
-
+  
         LocalPointer<DateFmtBestPattern> pattern(
                 new DateFmtBestPattern(
                         dtpg->getBestPattern(fSkeleton, status)),
@@ -723,10 +723,10 @@ UDisplayContext DateFormat::getContext(UDisplayContextType type, UErrorCode& sta
 //----------------------------------------------------------------------
 
 
-DateFormat&
+DateFormat& 
 DateFormat::setBooleanAttribute(UDateFormatBooleanAttribute attr,
-                                                                        UBool newValue,
-                                                                        UErrorCode &status) {
+    									UBool newValue,
+    									UErrorCode &status) {
     if(!fBoolFlags.isValidValue(newValue)) {
         status = U_ILLEGAL_ARGUMENT_ERROR;
     } else {
@@ -738,7 +738,7 @@ DateFormat::setBooleanAttribute(UDateFormatBooleanAttribute attr,
 
 //----------------------------------------------------------------------
 
-UBool
+UBool 
 DateFormat::getBooleanAttribute(UDateFormatBooleanAttribute attr, UErrorCode &/*status*/) const {
 
     return static_cast<UBool>(fBoolFlags.get(attr));

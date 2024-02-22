@@ -90,7 +90,7 @@ class U_I18N_API SimpleNumber : public UMemory {
     /**
      * Pads the beginning of the number with zeros up to the given minimum number of integer digits.
      *
-     * This setting is applied upon formatting the number.
+     * This setting is applied upon formatting the number. 
      *
      * @draft ICU 73
      */
@@ -118,7 +118,7 @@ class U_I18N_API SimpleNumber : public UMemory {
 
     /**
      * Creates a new, empty SimpleNumber that does not contain a value.
-     *
+     * 
      * NOTE: This number will fail to format; use forInt64() to create a SimpleNumber with a value.
      *
      * @draft ICU 73
@@ -174,7 +174,7 @@ class U_I18N_API SimpleNumber : public UMemory {
 
 /**
  * A special NumberFormatter focused on smaller binary size and memory use.
- *
+ * 
  * SimpleNumberFormatter is capable of basic number formatting, including grouping separators,
  * sign display, and rounding. It is not capable of currencies, compact notation, or units.
  *

@@ -30,7 +30,10 @@
 #include "unicode/timezone.h"
 #include "unicode/utmscale.h"
 
+#include "bytesinkutil.h"
+#include "charstr.h"
 #include "cmemory.h"
+#include "ulocimp.h"
 #include "uresimp.h"
 #include "windtfmt.h"
 #include "wintzimpl.h"
@@ -99,10 +102,13 @@ UnicodeString* Win32DateFormat::getTimeDateFormat(const Calendar *cal, const Loc
 static UErrorCode GetEquivalentWindowsLocaleName(const Locale& locale, UnicodeString** buffer)
 {
     UErrorCode status = U_ZERO_ERROR;
-    char asciiBCP47Tag[LOCALE_NAME_MAX_LENGTH] = {};
 
     // Convert from names like "en_CA" and "de_DE@collation=phonebook" to "en-CA" and "de-DE-u-co-phonebk".
-    (void)uloc_toLanguageTag(locale.getName(), asciiBCP47Tag, UPRV_LENGTHOF(asciiBCP47Tag), false, &status);
+    CharString asciiBCP47Tag;
+    {
+        CharStringByteSink sink(&asciiBCP47Tag);
+        ulocimp_toLanguageTag(locale.getName(), sink, false, &status);
+    }
 
     if (U_SUCCESS(status))
     {
@@ -141,7 +147,7 @@ static UErrorCode GetEquivalentWindowsLocaleName(const Locale& locale, UnicodeSt
         // This means that it will fail for locales where ICU has a completely different
         // name (like ku vs ckb), and it will also not work for alternate sort locale
         // names like "de-DE-u-co-phonebk".
-
+        
         // TODO: We could add some sort of exception table for cases like ku vs ckb.
 
         int length = ResolveLocaleName(bcp47Tag, windowsLocaleName, UPRV_LENGTHOF(windowsLocaleName));
@@ -167,7 +173,7 @@ Win32DateFormat::Win32DateFormat(DateFormat::EStyle timeStyle, DateFormat::EStyl
         // Note: In the previous code, it would look up the LCID for the locale, and if
         // the locale was not recognized then it would get an LCID of 0, which is a
         // synonym for LOCALE_USER_DEFAULT on Windows.
-        // If the above method fails, then fWindowsLocaleName will remain as nullptr, and
+        // If the above method fails, then fWindowsLocaleName will remain as nullptr, and 
         // then we will pass nullptr to API GetLocaleInfoEx, which is the same as passing
         // LOCALE_USER_DEFAULT.
 

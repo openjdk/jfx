@@ -103,7 +103,25 @@ public:
     }
 
     virtual double transformNumber(double number) const override {
-        if (getRuleSet()) {
+        bool doFloor = getRuleSet() != nullptr;
+        if (!doFloor) {
+            // This is a HACK that partially addresses ICU-22313.  The original code wanted us to do
+            // floor() on the result if we were passing it to another rule set, but not if we were passing
+            // it to a DecimalFormat.  But the DurationRules rule set has multiplier substitutions where
+            // we DO want to do the floor() operation.  What we REALLY want is to do floor() any time
+            // the owning rule also has a ModulusSubsitution, but we don't have access to that information
+            // here, so instead we're doing a floor() any time the DecimalFormat has maxFracDigits equal to
+            // 0.  This seems to work with our existing rule sets, but could be a problem in the future,
+            // but the "real" fix for DurationRules isn't worth doing, since we're deprecating DurationRules
+            // anyway.  This is enough to keep it from being egregiously wrong, without obvious side
+            // effects.     --rtg 8/16/23
+            const DecimalFormat* decimalFormat = getNumberFormat();
+            if (decimalFormat == nullptr || decimalFormat->getMaximumFractionDigits() == 0) {
+                doFloor = true;
+            }
+        }
+        
+        if (doFloor) {
             return uprv_floor(number / divisor);
         } else {
             return number / divisor;
@@ -153,7 +171,7 @@ public:
     virtual int64_t transformNumber(int64_t number) const override { return number % divisor; }
     virtual double transformNumber(double number) const override { return uprv_fmod(number, static_cast<double>(divisor)); }
 
-    virtual UBool doParse(const UnicodeString& text,
+    virtual UBool doParse(const UnicodeString& text, 
         ParsePosition& parsePosition,
         double baseValue,
         double upperBound,
@@ -278,7 +296,7 @@ public:
         NFRuleSet* _ruleSet,
         const UnicodeString& description,
         UErrorCode& status)
-        : NFSubstitution(_pos, _ruleSet, fixdesc(description), status), denominator(_denominator)
+        : NFSubstitution(_pos, _ruleSet, fixdesc(description), status), denominator(_denominator) 
     {
         ldenominator = util64_fromDouble(denominator);
         withZeros = description.endsWith(LTLT, 2);
@@ -292,7 +310,7 @@ public:
 
     virtual void doSubstitution(int64_t /*number*/, UnicodeString& /*toInsertInto*/, int32_t /*_pos*/, int32_t /*recursionCount*/, UErrorCode& /*status*/) const override {}
     virtual void doSubstitution(double number, UnicodeString& toInsertInto, int32_t pos, int32_t recursionCount, UErrorCode& status) const override;
-    virtual UBool doParse(const UnicodeString& text,
+    virtual UBool doParse(const UnicodeString& text, 
         ParsePosition& parsePosition,
         double baseValue,
         double upperBound,
@@ -592,20 +610,20 @@ NFSubstitution::doSubstitution(int64_t number, UnicodeString& toInsertInto, int3
             UnicodeString temp;
             numberFormat->format(numberToFormat, temp, status);
             toInsertInto.insert(_pos + this->pos, temp);
-        }
-        else {
-            // We have gone beyond double precision. Something has to give.
-            // We're favoring accuracy of the large number over potential rules
-            // that round like a CompactDecimalFormat, which is not a common use case.
-            //
-            // Perform a transformation on the number that is dependent
-            // on the type of substitution this is, then just call its
-            // rule set's format() method to format the result
-            int64_t numberToFormat = transformNumber(number);
+        } 
+        else { 
+            // We have gone beyond double precision. Something has to give. 
+            // We're favoring accuracy of the large number over potential rules 
+            // that round like a CompactDecimalFormat, which is not a common use case. 
+            // 
+            // Perform a transformation on the number that is dependent 
+            // on the type of substitution this is, then just call its 
+            // rule set's format() method to format the result 
+            int64_t numberToFormat = transformNumber(number); 
             UnicodeString temp;
             numberFormat->format(numberToFormat, temp, status);
             toInsertInto.insert(_pos + this->pos, temp);
-        }
+        } 
     }
 }
 
@@ -982,7 +1000,7 @@ ModulusSubstitution::toString(UnicodeString& text) const
       text.append(tokenChar());
       text.append(tokenChar());
   } else { // Otherwise just use the super-class function.
-          NFSubstitution::toString(text);
+	  NFSubstitution::toString(text);
   }
 }
 //===================================================================
@@ -1075,7 +1093,7 @@ FractionalPartSubstitution::doSubstitution(double number, UnicodeString& toInser
     DecimalQuantity dl;
     dl.setToDouble(number);
     dl.roundToMagnitude(-20, UNUM_ROUND_HALFEVEN, status);     // round to 20 fraction digits.
-
+    
     UBool pad = false;
     for (int32_t didx = dl.getLowerDisplayMagnitude(); didx<0; didx++) {
       // Loop iterates over fraction digits, starting with the LSD.
@@ -1254,8 +1272,8 @@ NumeratorSubstitution::doSubstitution(double number, UnicodeString& toInsertInto
     }
 }
 
-UBool
-NumeratorSubstitution::doParse(const UnicodeString& text,
+UBool 
+NumeratorSubstitution::doParse(const UnicodeString& text, 
                                ParsePosition& parsePosition,
                                double baseValue,
                                double upperBound,
@@ -1335,7 +1353,7 @@ NumeratorSubstitution::operator==(const NFSubstitution& rhs) const
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(NumeratorSubstitution)
 
 const char16_t NumeratorSubstitution::LTLT[] = { 0x003c, 0x003c };
-
+        
 U_NAMESPACE_END
 
 /* U_HAVE_RBNF */

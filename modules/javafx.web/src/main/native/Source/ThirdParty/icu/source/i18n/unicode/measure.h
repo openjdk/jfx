@@ -18,10 +18,10 @@
 #if U_SHOW_CPLUSPLUS_API
 
 /**
- * \file
+ * \file 
  * \brief C++ API: MeasureUnit object.
  */
-
+ 
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/fmtable.h"
@@ -81,13 +81,23 @@ class U_I18N_API Measure: public UObject {
      * @stable ICU 3.0
      */
     virtual ~Measure();
-
+    
     /**
      * Equality operator.  Return true if this object is equal
      * to the given object.
      * @stable ICU 3.0
      */
     bool operator==(const UObject& other) const;
+
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * Inequality operator.  Returns true if this object is not equal to the other object.
+     * @param other the object to compare with
+     * @return true if the objects are not equal
+     * @draft ICU 74
+     */
+    inline bool operator!=(const UObject& other) const { return !operator==(other); }
+#endif  // U_HIDE_DRAFT_API
 
     /**
      * Return a reference to the numeric value of this object.  The

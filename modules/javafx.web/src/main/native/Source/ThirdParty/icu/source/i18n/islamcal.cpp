@@ -350,7 +350,7 @@ int32_t IslamicCalendar::trueMonthStart(int32_t month) const
 
     if (start==0) {
         // Make a guess at when the month started, using the average length
-        UDate origin = HIJRA_MILLIS
+        UDate origin = HIJRA_MILLIS 
             + uprv_floor(month * CalendarAstronomer::SYNODIC_MONTH) * kOneDay;
 
         // moonAge will fail due to memory allocation error
@@ -393,7 +393,7 @@ trueMonthStartEnd :
 /**
 * Return the "age" of the moon at the given time; this is the difference
 * in ecliptic latitude between the moon and the sun.  This method simply
-* calls CalendarAstronomer.moonAge, converts to degrees,
+* calls CalendarAstronomer.moonAge, converts to degrees, 
 * and adjusts the result to be in the range [-180, 180].
 *
 * @param time  The time at which the moon's age is desired,
@@ -504,7 +504,7 @@ int32_t IslamicCalendar::handleGetExtendedYear() {
 * <li>DAY_OF_MONTH
 * <li>DAY_OF_YEAR
 * <li>EXTENDED_YEAR</ul>
-*
+* 
 * The DAY_OF_WEEK and DOW_LOCAL fields are already set when this
 * method is called. The getGregorianXxx() methods return Gregorian
 * calendar equivalents for the given Julian day.
@@ -606,7 +606,7 @@ void IslamicCalendar::setRelatedYear(int32_t year)
 
 /**
  * The system maintains a static default century start date and Year.  They are
- * initialized the first time they are used.  Once the system default century date
+ * initialized the first time they are used.  Once the system default century date 
  * and year are set, they do not change.
  */
 static UDate           gSystemDefaultCenturyStart       = DBL_MIN;
@@ -740,7 +740,7 @@ int32_t IslamicCivilCalendar::handleGetYearLength(int32_t extendedYear) const {
 * <li>DAY_OF_MONTH
 * <li>DAY_OF_YEAR
 * <li>EXTENDED_YEAR</ul>
-*
+* 
 * The DAY_OF_WEEK and DOW_LOCAL fields are already set when this
 * method is called. The getGregorianXxx() methods return Gregorian
 * calendar equivalents for the given Julian day.
@@ -891,7 +891,7 @@ int32_t IslamicUmalquraCalendar::handleGetYearLength(int32_t extendedYear) const
 * <li>DAY_OF_MONTH
 * <li>DAY_OF_YEAR
 * <li>EXTENDED_YEAR</ul>
-*
+* 
 * The DAY_OF_WEEK and DOW_LOCAL fields are already set when this
 * method is called. The getGregorianXxx() methods return Gregorian
 * calendar equivalents for the given Julian day.

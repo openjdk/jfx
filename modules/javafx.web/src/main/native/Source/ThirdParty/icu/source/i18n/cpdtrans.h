@@ -192,7 +192,7 @@ private:
                            int32_t numAnonymousRBTs,
                            UParseError& parseError,
                            UErrorCode& status);
-
+    
     CompoundTransliterator(UVector& list,
                            UParseError& parseError,
                            UErrorCode& status);

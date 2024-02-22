@@ -12,6 +12,8 @@
 #include <math.h>
 #include <stdio.h>
 
+#include <utility>
+
 #include "unicode/utypes.h"
 #include "unicode/localpointer.h"
 #include "unicode/plurrule.h"
@@ -20,6 +22,7 @@
 #include "unicode/numfmt.h"
 #include "unicode/decimfmt.h"
 #include "unicode/numberrangeformatter.h"
+#include "bytesinkutil.h"
 #include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
@@ -40,6 +43,7 @@
 #include "util.h"
 #include "pluralranges.h"
 #include "numrange_impl.h"
+#include "ulocimp.h"
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -435,7 +439,7 @@ getSamplesFromString(const UnicodeString &samples, double *destDbl,
             int32_t incrementScale = lowerDispMag + exponent;
             incrementDq.adjustMagnitude(incrementScale);
             double incrementVal = incrementDq.toDouble();  // 10 ^ incrementScale
-
+            
 
             DecimalQuantity dq(rangeLo);
             double dblValue = dq.toDouble();
@@ -466,7 +470,7 @@ getSamplesFromString(const UnicodeString &samples, double *destDbl,
                 dblValue += incrementVal;
                 DecNum newDqDecNum;
                 newDqDecNum.setTo(dblValue, status);
-                DecimalQuantity newDq;
+                DecimalQuantity newDq;             
                 newDq.setToDecNum(newDqDecNum, status);
                 newDq.setMinFraction(-lowerDispMag);
                 newDq.roundToMagnitude(lowerDispMag, RoundingMode::UNUM_ROUND_HALFEVEN, status);
@@ -827,14 +831,19 @@ PluralRules::getRuleFromResource(const Locale& locale, UPluralType type, UErrorC
     if (s == nullptr) {
         // Check parent locales.
         UErrorCode status = U_ZERO_ERROR;
-        char parentLocaleName[ULOC_FULLNAME_CAPACITY];
         const char *curLocaleName2=locale.getBaseName();
-        uprv_strcpy(parentLocaleName, curLocaleName2);
+        CharString parentLocaleName(curLocaleName2, status);
 
-        while (uloc_getParent(parentLocaleName, parentLocaleName,
-                                       ULOC_FULLNAME_CAPACITY, &status) > 0) {
+        for (;;) {
+            {
+                CharString tmp;
+                CharStringByteSink sink(&tmp);
+                ulocimp_getParent(parentLocaleName.data(), sink, &status);
+                if (tmp.isEmpty()) break;
+                parentLocaleName = std::move(tmp);
+            }
             resLen=0;
-            s = ures_getStringByKey(locRes.getAlias(), parentLocaleName, &resLen, &status);
+            s = ures_getStringByKey(locRes.getAlias(), parentLocaleName.data(), &resLen, &status);
             if (s != nullptr) {
                 errCode = U_ZERO_ERROR;
                 break;
@@ -1047,7 +1056,7 @@ RuleChain::RuleChain(const RuleChain& other) :
         fIntegerSamples(other.fIntegerSamples), fDecimalSamplesUnbounded(other.fDecimalSamplesUnbounded),
         fIntegerSamplesUnbounded(other.fIntegerSamplesUnbounded), fInternalStatus(other.fInternalStatus) {
     if (U_FAILURE(this->fInternalStatus)) {
-        return; // stop early if the object we are copying from is invalid.
+        return; // stop early if the object we are copying from is invalid. 
     }
     if (other.ruleHeader != nullptr) {
         this->ruleHeader = new OrConstraint(*(other.ruleHeader));
@@ -1619,7 +1628,7 @@ FixedDecimal::FixedDecimal(double n, int32_t v, int64_t f, int32_t e, int32_t c)
 FixedDecimal::FixedDecimal(double n, int32_t v, int64_t f, int32_t e) {
     init(n, v, f, e);
     // check values. TODO make into unit test.
-    //
+    //            
     //            long visiblePower = (int) Math.pow(10.0, v);
     //            if (decimalDigits > visiblePower) {
     //                throw new IllegalArgumentException();
@@ -1829,7 +1838,7 @@ int32_t FixedDecimal::decimals(double n) {
 //    v is the number of visible fraction digits in the displayed form of the number.
 //       Example: n = 1001.234, v = 6, result = 234000
 //    TODO: need to think through how this is used in the plural rule context.
-//          This function can easily encounter integer overflow,
+//          This function can easily encounter integer overflow, 
 //          and can easily return noise digits when the precision of a double is exceeded.
 
 int64_t FixedDecimal::getFractionalDigits(double n, int32_t v) {

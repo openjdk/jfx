@@ -55,7 +55,7 @@ UChar32 CaseFoldingUTextIterator::next() {
     }
     return foldedC;
 }
-
+    
 
 UBool CaseFoldingUTextIterator::inExpansion() {
     return fFoldChars != nullptr;
@@ -103,7 +103,7 @@ UChar32 CaseFoldingUCharIterator::next() {
     }
     return foldedC;
 }
-
+    
 
 UBool CaseFoldingUCharIterator::inExpansion() {
     return fFoldChars != nullptr;

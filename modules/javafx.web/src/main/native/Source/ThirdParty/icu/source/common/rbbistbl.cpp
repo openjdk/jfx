@@ -45,7 +45,7 @@ RBBISymbolTable::RBBISymbolTable(RBBIRuleScanner *rs, const UnicodeString &rules
 {
     fHashTable       = nullptr;
     fCachedSetLookup = nullptr;
-
+    
     fHashTable = uhash_open(uhash_hashUnicodeString, uhash_compareUnicodeString, nullptr, &status);
     // uhash_open checks status
     if (U_FAILURE(status)) {

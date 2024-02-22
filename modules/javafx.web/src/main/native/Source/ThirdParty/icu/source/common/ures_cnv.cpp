@@ -28,7 +28,7 @@
 
 U_CAPI UResourceBundle * U_EXPORT2
 ures_openU(const char16_t *myPath,
-           const char *localeID,
+           const char *localeID, 
            UErrorCode *status)
 {
     char pathBuffer[1024];

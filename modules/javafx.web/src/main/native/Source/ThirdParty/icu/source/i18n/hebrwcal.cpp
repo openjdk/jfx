@@ -189,7 +189,7 @@ HebrewCalendar::HebrewCalendar(const HebrewCalendar& other) : Calendar(other) {
 /**
 * Add a signed amount to a specified field, using this calendar's rules.
 * For example, to add three days to the current date, you can call
-* <code>add(Calendar.DATE, 3)</code>.
+* <code>add(Calendar.DATE, 3)</code>. 
 * <p>
 * When adding to certain fields, the values of other fields may conflict and
 * need to be changed.  For example, when adding one to the {@link #MONTH MONTH} field
@@ -284,7 +284,7 @@ void HebrewCalendar::add(EDateFields field, int32_t amount, UErrorCode& status)
 * example, to roll the current date up by three days, you can call
 * <code>roll(Calendar.DATE, 3)</code>.  If the
 * field is rolled past its maximum allowable value, it will "wrap" back
-* to its minimum and continue rolling.
+* to its minimum and continue rolling.  
 * For example, calling <code>roll(Calendar.DATE, 10)</code>
 * on a Hebrew calendar set to "25 Av 5758" will result in the date "5 Av 5758".
 * <p>
@@ -559,7 +559,7 @@ void HebrewCalendar::validateField(UCalendarDateFields field, UErrorCode &status
 * <li>DAY_OF_MONTH
 * <li>DAY_OF_YEAR
 * <li>EXTENDED_YEAR</ul>
-*
+* 
 * Subclasses can refer to the DAY_OF_WEEK and DOW_LOCAL fields,
 * which will be set when this method is called.  Subclasses can
 * also call the getGregorianXxx() methods to obtain Gregorian
@@ -619,7 +619,7 @@ void HebrewCalendar::handleComputeFields(int32_t julianDay, UErrorCode &status) 
     internalSet(UCAL_ORDINAL_MONTH, ordinal_month);
     internalSet(UCAL_MONTH, month);
     internalSet(UCAL_DAY_OF_MONTH, dayOfMonth);
-    internalSet(UCAL_DAY_OF_YEAR, dayOfYear);
+    internalSet(UCAL_DAY_OF_YEAR, dayOfYear);       
 }
 
 //-------------------------------------------------------------------------
@@ -695,7 +695,7 @@ void HebrewCalendar::setRelatedYear(int32_t year)
 
 /**
  * The system maintains a static default century start date and Year.  They are
- * initialized the first time they are used.  Once the system default century date
+ * initialized the first time they are used.  Once the system default century date 
  * and year are set, they do not change.
  */
 static UDate           gSystemDefaultCenturyStart       = DBL_MIN;
@@ -777,7 +777,7 @@ int32_t HebrewCalendar::internalGetMonth() const {
         HebrewCalendar *nonConstThis = (HebrewCalendar*)this; // cast away const
 
         int32_t year = nonConstThis->handleGetExtendedYear();
-        return ordinalMonth + ((isLeapYear(year) && (ordinalMonth > ADAR_1)) ? 1: 0);
+        return ordinalMonth + (((!isLeapYear(year)) && (ordinalMonth > ADAR_1)) ? 1: 0);
     }
     return Calendar::internalGetMonth();
 }

@@ -27,7 +27,7 @@ U_NAMESPACE_BEGIN
  * <p><code>DangiCalendar</code> is a concrete subclass of {@link Calendar}
  * that implements a traditional Korean lunisolar calendar.</p>
  *
- * <p>DangiCalendar usually should be instantiated using
+ * <p>DangiCalendar usually should be instantiated using 
  * {@link com.ibm.icu.util.Calendar#getInstance(ULocale)} passing in a <code>ULocale</code>
  * with the tag <code>"@calendar=dangi"</code>.</p>
  *
@@ -91,7 +91,7 @@ class DangiCalendar : public ChineseCalendar {
   const TimeZone* getDangiCalZoneAstroCalc(UErrorCode &status) const;
 
   // UObject stuff
- public:
+ public: 
   /**
    * @return   The class ID for this object. All objects of a given class have the
    *           same class ID. Objects of other classes have different class IDs.
@@ -122,7 +122,7 @@ class DangiCalendar : public ChineseCalendar {
 
 
  private:
-
+ 
   DangiCalendar(); // default constructor not implemented
 };
 

@@ -239,7 +239,7 @@ static NumericDateFormatters *loadNumericDateFormatters(
     return result;
 }
 
-template<>
+template<> 
 const MeasureFormatCacheData *LocaleCacheKey<MeasureFormatCacheData>::createObject(
         const void * /*unused*/, UErrorCode &status) const {
     const char *localeId = fLoc.getName();
@@ -364,7 +364,7 @@ MeasureFormat::MeasureFormat(
         const Locale &locale,
         UMeasureFormatWidth w,
         NumberFormat *nfToAdopt,
-        UErrorCode &status)
+        UErrorCode &status) 
         : cache(nullptr),
           numberFormat(nullptr),
           pluralRules(nullptr),
@@ -649,7 +649,7 @@ UBool MeasureFormat::setMeasureFormatLocale(const Locale &locale, UErrorCode &st
     }
     initMeasureFormat(locale, fWidth, nullptr, status);
     return U_SUCCESS(status);
-}
+} 
 
 const NumberFormat &MeasureFormat::getNumberFormatInternal() const {
     return **numberFormat;

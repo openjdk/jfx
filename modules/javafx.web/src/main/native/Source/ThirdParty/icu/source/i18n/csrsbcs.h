@@ -22,16 +22,16 @@ class NGramParser : public UMemory
 {
 private:
     int32_t ngram;
-    const int32_t *ngramList;
+    const int32_t *ngramList;    
 
     int32_t ngramCount;
     int32_t hitCount;
 
 protected:
-        int32_t byteIndex;
+	int32_t byteIndex;
     const uint8_t *charMap;
 
-        void addByte(int32_t b);
+	void addByte(int32_t b);
 
 public:
     NGramParser(const int32_t *theNgramList, const uint8_t *theCharMap);
@@ -44,9 +44,9 @@ private:
     int32_t search(const int32_t *table, int32_t value);
 
     void lookup(int32_t thisNgram);
-
+    
     virtual int32_t nextByte(InputText *det);
-        virtual void parseCharacters(InputText *det);
+	virtual void parseCharacters(InputText *det);
 
 public:
     int32_t parse(InputText *det);
@@ -122,7 +122,7 @@ class CharsetRecog_8859_8 : public CharsetRecog_sbcs
 {
 public:
     virtual ~CharsetRecog_8859_8();
-
+	
     virtual const char *getName() const override;
 };
 
@@ -170,7 +170,7 @@ class CharsetRecog_8859_8_I_he : public CharsetRecog_8859_8
 {
 public:
     virtual ~CharsetRecog_8859_8_I_he();
-
+	
     const char *getName() const override;
 
     const char *getLanguage() const override;
@@ -247,17 +247,17 @@ public:
 class CharsetRecog_IBM424_he_rtl : public CharsetRecog_IBM424_he {
 public:
     virtual ~CharsetRecog_IBM424_he_rtl();
-
+    
     const char *getName() const override;
-
+    
     virtual UBool match(InputText *det, CharsetMatch *results) const override;
 };
 
 class CharsetRecog_IBM424_he_ltr : public CharsetRecog_IBM424_he {
     virtual ~CharsetRecog_IBM424_he_ltr();
-
+    
     const char *getName() const override;
-
+    
     virtual UBool match(InputText *det, CharsetMatch *results) const override;
 };
 
@@ -267,24 +267,24 @@ public:
     virtual ~CharsetRecog_IBM420_ar();
 
     const char *getLanguage() const override;
-        int32_t match_sbcs(InputText *det, const int32_t ngrams[], const uint8_t charMap[]) const override;
-
+	int32_t match_sbcs(InputText *det, const int32_t ngrams[], const uint8_t charMap[]) const override;
+    
 };
 
 class CharsetRecog_IBM420_ar_rtl : public CharsetRecog_IBM420_ar {
 public:
     virtual ~CharsetRecog_IBM420_ar_rtl();
-
+    
     const char *getName() const override;
-
+    
     virtual UBool match(InputText *det, CharsetMatch *results) const override;
 };
 
 class CharsetRecog_IBM420_ar_ltr : public CharsetRecog_IBM420_ar {
     virtual ~CharsetRecog_IBM420_ar_ltr();
-
+    
     const char *getName() const override;
-
+    
     virtual UBool match(InputText *det, CharsetMatch *results) const override;
 };
 #endif

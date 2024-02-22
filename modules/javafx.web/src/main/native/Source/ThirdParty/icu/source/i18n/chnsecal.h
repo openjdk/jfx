@@ -71,14 +71,10 @@ U_NAMESPACE_BEGIN
  * obtain a formatter for this calendar.
  *
  * <p>References:<ul>
- *
+ * 
  * <li>Dershowitz and Reingold, <i>Calendrical Calculations</i>,
  * Cambridge University Press, 1997</li>
- *
- * <li>Helmer Aslaksen's
- * <a href="http://www.math.nus.edu.sg/aslaksen/calendar/chinese.shtml">
- * Chinese Calendar page</a></li>
- *
+ * 
  * <li>The <a href="http://www.tondering.dk/claus/calendar.html">
  * Calendar FAQ</a></li>
  *
@@ -87,7 +83,7 @@ U_NAMESPACE_BEGIN
  * <p>
  * This class should only be subclassed to implement variants of the Chinese lunar calendar.</p>
  * <p>
- * ChineseCalendar usually should be instantiated using
+ * ChineseCalendar usually should be instantiated using 
  * {@link com.ibm.icu.util.Calendar#getInstance(ULocale)} passing in a <code>ULocale</code>
  * with the tag <code>"@calendar=chinese"</code>.</p>
  *
@@ -157,7 +153,7 @@ class U_I18N_API ChineseCalendar : public Calendar {
   virtual void setTemporalMonthCode(const char* code, UErrorCode& status) override;
 
  protected:
-
+ 
    /**
    * Constructs a ChineseCalendar based on the current time in the default time zone
    * with the given locale, using the specified epoch year and time zone for
@@ -194,7 +190,7 @@ class U_I18N_API ChineseCalendar : public Calendar {
   //-------------------------------------------------------------------------
   // Internal data....
   //-------------------------------------------------------------------------
-
+    
   // There is a leap month between the Winter Solstice before and after the
   // current date.This is different from leap year because in some year, such as
   // 1813 and 2033, the leap month is after the Winter Solstice of that year. So
@@ -256,11 +252,11 @@ class U_I18N_API ChineseCalendar : public Calendar {
   virtual void computeChineseFields(int32_t days, int32_t gyear,
                  int32_t gmonth, UBool setAllFields);
   virtual int32_t newYear(int32_t gyear) const;
-  virtual void offsetMonth(int32_t newMoon, int32_t dom, int32_t delta);
+  virtual void offsetMonth(int32_t newMoon, int32_t dom, int32_t delta, UErrorCode& status);
   const TimeZone* getChineseCalZoneAstroCalc() const;
 
   // UObject stuff
- public:
+ public: 
   /**
    * @return   The class ID for this object. All objects of a given class have the
    *           same class ID. Objects of other classes have different class IDs.
@@ -317,13 +313,13 @@ class U_I18N_API ChineseCalendar : public Calendar {
  private: // default century stuff.
 
   /**
-   * Returns the beginning date of the 100-year window that dates
+   * Returns the beginning date of the 100-year window that dates 
    * with 2-digit years are considered to fall within.
    */
   UDate         internalGetDefaultCenturyStart() const;
 
   /**
-   * Returns the first year of the 100-year window that dates with
+   * Returns the first year of the 100-year window that dates with 
    * 2-digit years are considered to fall within.
    */
   int32_t          internalGetDefaultCenturyStartYear() const;

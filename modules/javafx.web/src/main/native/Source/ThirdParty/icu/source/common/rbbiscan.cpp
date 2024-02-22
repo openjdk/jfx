@@ -96,7 +96,7 @@ RBBIRuleScanner::RBBIRuleScanner(RBBIRuleBuilder *rb)
     fLineNum            = 1;
     fCharNum            = 0;
     fLastChar           = 0;
-
+    
     fStateTable         = nullptr;
     fStack[0]           = 0;
     fStackPtr           = 0;
@@ -357,7 +357,7 @@ UBool RBBIRuleScanner::doParseActions(int32_t action)
         thisRule->fRuleRoot = true;
 
         // Flag if chaining into this rule is wanted.
-        //
+        //    
         if (fRB->fChainRules &&         // If rule chaining is enabled globally via !!chain
                 !fNoChainInRule) {      //     and no '^' chain-in inhibit was on this rule
             thisRule->fChainIn = true;
@@ -547,8 +547,6 @@ UBool RBBIRuleScanner::doParseActions(int32_t action)
             UnicodeString opt(fRB->fRules, fOptionStart, fScanIndex-fOptionStart);
             if (opt == UNICODE_STRING("chain", 5)) {
                 fRB->fChainRules = true;
-            } else if (opt == UNICODE_STRING("LBCMNoChain", 11)) {
-                fRB->fLBCMNoChain = true;
             } else if (opt == UNICODE_STRING("forward", 7)) {
                 fRB->fDefaultTree   = &fRB->fForwardTree;
             } else if (opt == UNICODE_STRING("reverse", 7)) {
@@ -1116,7 +1114,7 @@ void RBBIRuleScanner::parse() {
     if (U_FAILURE(*fRB->fStatus)) {
         return;
     }
-
+    
     // If there are no forward rules set an error.
     //
     if (fRB->fForwardTree == nullptr) {
