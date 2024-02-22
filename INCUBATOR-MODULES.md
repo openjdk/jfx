@@ -23,6 +23,7 @@ JavaFX incubator modules have a few differences from JDK incubator modules:
     - JavaFX non-incubator modules must not specify `requires transitive` dependences upon incubator modules, or otherwise expose types exported from incubator modules in their own exported APIs. In exceptional cases, it may be acceptable for non-incubator modules to specify `requires` dependences (as opposed to `requires transitive`) upon incubator modules.
     - JavaFX incubator modules can specify requires or requires transitive dependences upon other incubator modules.
 - A warning must be issued when first loading a class from a publicly exported package in a JavaFX incubator module, even if the module is not jlinked into the JDK. We will provide a utility method in `javafx.base` to facilitate this.
+- To either make a JavaFX incubating API final, or to remove it, a new JEP should be submitted, referencing the original incubator JEP.
 - By default, a JavaFX feature that is delivered in an incubator module will re-incubate in subsequent versions (the default in the JDK is to drop the feature). If any changes are needed to the API, they will be done with new JBS enhancement along with an associated CSR. However, this is not intended to suggest the possibility of a permanently incubating feature. As with incubating features in the JDK, if an incubating API is not promoted to final status after a reasonably small number of JavaFX feature releases, then it will be dropped: its packages and incubator module will be removed.
 
 ## How to add a new incubator modules
