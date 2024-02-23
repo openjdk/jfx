@@ -37,5 +37,5 @@ module jfx.incubator.myfeature {
     requires transitive javafx.graphics;
     requires transitive javafx.controls;
 
-    exports javafx.incubator.scene.mypkg;
+    exports jfx.incubator.scene.mypkg;
 }

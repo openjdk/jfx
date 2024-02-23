@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.incubator.scene.mypkg;
+package jfx.incubator.scene.mypkg;
 
 public class MyButtonShim {
     public static int getMyField(MyButton myButton) {

@@ -23,31 +23,10 @@
  * questions.
  */
 
-package javafx.incubator.scene.mypkg;
-
-import com.sun.javafx.incubator.scene.mypkg.MyImpl;
-import javafx.scene.control.Button;
-
 /**
- * My experimental control.
+ * Experimental JavaFX controls.
  *
  * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
  * Will be removed in a future release.</b>
  */
-public class MyButton extends Button {
-    private final int myField;
-
-    public MyButton(int myField, String name) {
-        super(name);
-        this.myField = myField;
-    }
-
-    void print() {
-        MyImpl.print(this);
-    }
-
-    // For testing
-    int getMyField() {
-        return myField;
-    }
-}
+package jfx.incubator.scene.mypkg;

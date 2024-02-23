@@ -23,22 +23,31 @@
  * questions.
  */
 
-package test.javafx.incubator.scene.mypkg;
+package jfx.incubator.scene.mypkg;
 
 import com.sun.javafx.incubator.scene.mypkg.MyImpl;
-import javafx.incubator.scene.mypkg.MyButton;
-import javafx.incubator.scene.mypkg.MyButtonShim;
-import org.junit.jupiter.api.Test;
+import javafx.scene.control.Button;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+/**
+ * My experimental control.
+ *
+ * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
+ * Will be removed in a future release.</b>
+ */
+public class MyButton extends Button {
+    private final int myField;
 
-public class MyButtonTest {
-    @Test
-    public void myTest() {
-        MyButton myButton = new MyButton(17, "Hello");
-        MyImpl.print(myButton);
+    public MyButton(int myField, String name) {
+        super(name);
+        this.myField = myField;
+    }
 
-        assertEquals("Hello", myButton.getText());
-        assertEquals(17, MyButtonShim.getMyField(myButton));
+    void print() {
+        MyImpl.print(this);
+    }
+
+    // For testing
+    int getMyField() {
+        return myField;
     }
 }

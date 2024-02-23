@@ -23,10 +23,22 @@
  * questions.
  */
 
-/**
- * Experimental JavaFX controls.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- */
-package javafx.incubator.scene.mypkg;
+package test.jfx.incubator.scene.mypkg;
+
+import com.sun.javafx.incubator.scene.mypkg.MyImpl;
+import jfx.incubator.scene.mypkg.MyButton;
+import jfx.incubator.scene.mypkg.MyButtonShim;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class MyButtonTest {
+    @Test
+    public void myTest() {
+        MyButton myButton = new MyButton(17, "Hello");
+        MyImpl.print(myButton);
+
+        assertEquals("Hello", myButton.getText());
+        assertEquals(17, MyButtonShim.getMyField(myButton));
+    }
+}
