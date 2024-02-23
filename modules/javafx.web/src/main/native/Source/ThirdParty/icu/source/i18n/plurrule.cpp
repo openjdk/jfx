@@ -439,7 +439,7 @@ getSamplesFromString(const UnicodeString &samples, double *destDbl,
             int32_t incrementScale = lowerDispMag + exponent;
             incrementDq.adjustMagnitude(incrementScale);
             double incrementVal = incrementDq.toDouble();  // 10 ^ incrementScale
-            
+
 
             DecimalQuantity dq(rangeLo);
             double dblValue = dq.toDouble();
@@ -470,7 +470,7 @@ getSamplesFromString(const UnicodeString &samples, double *destDbl,
                 dblValue += incrementVal;
                 DecNum newDqDecNum;
                 newDqDecNum.setTo(dblValue, status);
-                DecimalQuantity newDq;             
+                DecimalQuantity newDq;
                 newDq.setToDecNum(newDqDecNum, status);
                 newDq.setMinFraction(-lowerDispMag);
                 newDq.roundToMagnitude(lowerDispMag, RoundingMode::UNUM_ROUND_HALFEVEN, status);
@@ -1056,7 +1056,7 @@ RuleChain::RuleChain(const RuleChain& other) :
         fIntegerSamples(other.fIntegerSamples), fDecimalSamplesUnbounded(other.fDecimalSamplesUnbounded),
         fIntegerSamplesUnbounded(other.fIntegerSamplesUnbounded), fInternalStatus(other.fInternalStatus) {
     if (U_FAILURE(this->fInternalStatus)) {
-        return; // stop early if the object we are copying from is invalid. 
+        return; // stop early if the object we are copying from is invalid.
     }
     if (other.ruleHeader != nullptr) {
         this->ruleHeader = new OrConstraint(*(other.ruleHeader));
@@ -1628,7 +1628,7 @@ FixedDecimal::FixedDecimal(double n, int32_t v, int64_t f, int32_t e, int32_t c)
 FixedDecimal::FixedDecimal(double n, int32_t v, int64_t f, int32_t e) {
     init(n, v, f, e);
     // check values. TODO make into unit test.
-    //            
+    //
     //            long visiblePower = (int) Math.pow(10.0, v);
     //            if (decimalDigits > visiblePower) {
     //                throw new IllegalArgumentException();
@@ -1838,7 +1838,7 @@ int32_t FixedDecimal::decimals(double n) {
 //    v is the number of visible fraction digits in the displayed form of the number.
 //       Example: n = 1001.234, v = 6, result = 234000
 //    TODO: need to think through how this is used in the plural rule context.
-//          This function can easily encounter integer overflow, 
+//          This function can easily encounter integer overflow,
 //          and can easily return noise digits when the precision of a double is exceeded.
 
 int64_t FixedDecimal::getFractionalDigits(double n, int32_t v) {

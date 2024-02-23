@@ -47,9 +47,9 @@ class CharsetMatch : public UMemory
       * Default (nullptr) parameters for names will be filled by calling the
       *   corresponding getters on the recognizer.
       */
-    void set(InputText               *input, 
-             const CharsetRecognizer *cr, 
-             int32_t                  conf, 
+    void set(InputText               *input,
+             const CharsetRecognizer *cr,
+             int32_t                  conf,
              const char              *csName=nullptr,
              const char              *lang=nullptr);
 

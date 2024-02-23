@@ -28,10 +28,10 @@
 #if U_SHOW_CPLUSPLUS_API
 
 /**
- * \file 
- * \brief C++ API: Keys for comparing strings multiple times. 
+ * \file
+ * \brief C++ API: Keys for comparing strings multiple times.
  */
- 
+
 #if !UCONFIG_NO_COLLATION
 
 #include "unicode/uobject.h"
@@ -186,7 +186,7 @@ public:
     uint8_t*                toByteArray(int32_t& count) const;
 #endif
 
-#ifndef U_HIDE_DEPRECATED_API 
+#ifndef U_HIDE_DEPRECATED_API
     /**
     * Convenience method which does a string(bit-wise) comparison of the
     * two collation keys.

@@ -22,10 +22,10 @@
 #include "unicode/measunit.h"
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Currency Unit Information.
  */
- 
+
 U_NAMESPACE_BEGIN
 
 /**

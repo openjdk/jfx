@@ -17,10 +17,10 @@
 #include "unicode/chariter.h"
 
 /**
- * \file 
+ * \file
  * \brief C++ API: char16_t Character Iterator
  */
- 
+
 U_NAMESPACE_BEGIN
 
 /**

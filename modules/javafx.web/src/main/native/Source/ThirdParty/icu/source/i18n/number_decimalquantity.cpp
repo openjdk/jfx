@@ -998,7 +998,7 @@ UnicodeString DecimalQuantity::toPlainString() const {
     }
     if (lower > rReqPos) {
         lower = rReqPos;
-    }    
+    }
     int32_t p = upper;
     if (p < 0) {
         sb.append(u'0');
@@ -1030,7 +1030,7 @@ UnicodeString DecimalQuantity::toExponentString() const {
     }
     if (lower > rReqPos) {
         lower = rReqPos;
-    }    
+    }
     int32_t p = upper;
     if (p < 0) {
         sb.append(u'0');
@@ -1047,7 +1047,7 @@ UnicodeString DecimalQuantity::toExponentString() const {
 
     if (exponent != 0) {
         sb.append(u'c');
-        ICU_Utility::appendNumber(sb, exponent);        
+        ICU_Utility::appendNumber(sb, exponent);
     }
 
     return sb;

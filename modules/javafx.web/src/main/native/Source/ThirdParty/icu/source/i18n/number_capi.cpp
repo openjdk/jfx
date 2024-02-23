@@ -382,7 +382,7 @@ usnumf_formatInt64(
         return;
     }
     auto localResult = formatter->fFormatter.formatInt64(value, *ec);
-    result->setTo(std::move(localResult)); 
+    result->setTo(std::move(localResult));
 }
 
 U_CAPI void U_EXPORT2

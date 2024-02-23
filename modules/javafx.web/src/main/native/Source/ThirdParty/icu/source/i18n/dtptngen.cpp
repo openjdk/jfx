@@ -636,7 +636,7 @@ U_CFUNC void U_CALLCONV DateTimePatternGenerator::loadAllowedHourFormatsData(UEr
     // into the hashmap, store 6 single-value sub-arrays right at the beginning of the
     // vector (at index enum*2) for easy data sharing, copy sub-arrays into runtime
     // object. Remember to clean up the vector, too.
-    ures_getAllItemsWithFallback(rb.getAlias(), "timeData", sink, status);    
+    ures_getAllItemsWithFallback(rb.getAlias(), "timeData", sink, status);
 }
 
 static int32_t* getAllowedHourFormatsLangCountry(const char* language, const char* country, UErrorCode& status) {
@@ -661,7 +661,7 @@ void DateTimePatternGenerator::getAllowedHourFormats(const Locale &locale, UErro
     char baseCountry[8];
     ulocimp_getRegionForSupplementalData(locale.getName(), false, baseCountry, 8, &status);
     const char* country = baseCountry;
-    
+
     Locale maxLocale;  // must be here for correct lifetime
     if (*language == '\0' || *country == '\0') {
         maxLocale = locale;
@@ -2876,7 +2876,7 @@ DTSkeletonEnumeration::DTSkeletonEnumeration(PatternMap& patternMap, dtStrEnum t
             }
             if ( !isCanonicalItem(s) ) {
                 LocalPointer<UnicodeString> newElem(s.clone(), status);
-                if (U_FAILURE(status)) { 
+                if (U_FAILURE(status)) {
                     return;
                 }
                 fSkeletons->addElement(newElem.getAlias(), status);
@@ -3001,7 +3001,7 @@ DTRedundantEnumeration::~DTRedundantEnumeration() {
                 delete s;
             }
         }
-    }    
+    }
 }
 
 U_NAMESPACE_END

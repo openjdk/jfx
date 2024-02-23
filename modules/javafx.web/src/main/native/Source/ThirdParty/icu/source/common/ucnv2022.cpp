@@ -1232,7 +1232,7 @@ _2022FromGR94DBCS(uint32_t value) {
 /*
  * This method does the reverse of _2022FromGR94DBCS(). Given the 2022 code point, it returns the
  * 2 byte value that is in the range A1..FE for each byte. Otherwise it returns the 2022 code point
- * unchanged. 
+ * unchanged.
  */
 static inline uint32_t
 _2022ToGR94DBCS(uint32_t value) {

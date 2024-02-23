@@ -1075,7 +1075,7 @@ AlphabeticIndex & AlphabeticIndex::addRecord(const UnicodeString &name, const vo
     clearBuckets();
     //std::string ss;
     //std::string ss2;
-    //std::cout << "added record: name = \"" << r->name_.toUTF8String(ss) << "\"" << 
+    //std::cout << "added record: name = \"" << r->name_.toUTF8String(ss) << "\"" <<
     //             "   sortingName = \"" << r->sortingName_.toUTF8String(ss2) << "\"" << std::endl;
     return *this;
 }

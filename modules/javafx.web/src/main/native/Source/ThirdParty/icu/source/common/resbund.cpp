@@ -206,7 +206,7 @@ ResourceBundle::ResourceBundle(UResourceBundle *res, UErrorCode& err)
     }
 }
 
-ResourceBundle::ResourceBundle(const char* path, const Locale& locale, UErrorCode& err) 
+ResourceBundle::ResourceBundle(const char* path, const Locale& locale, UErrorCode& err)
                                :UObject(), fLocale(nullptr)
 {
     fResource = ures_open(path, locale.getName(), &err);

@@ -106,7 +106,7 @@ static const char16_t ALT_GMT_STRINGS[][4] = {
 };
 
 // Order of GMT offset pattern parsing, *_HMS must be evaluated first
-// because *_HM is most likely a substring of *_HMS 
+// because *_HM is most likely a substring of *_HMS
 static const int32_t PARSE_GMT_OFFSET_TYPES[] = {
     UTZFMT_PAT_POSITIVE_HMS,
     UTZFMT_PAT_NEGATIVE_HMS,
@@ -296,7 +296,7 @@ inline uint8_t
 GMTOffsetField::getWidth() const {
     return fWidth;
 }
- 
+
 inline const char16_t*
 GMTOffsetField::getPatternText() const {
     return fText;
@@ -316,7 +316,7 @@ U_CDECL_END
 // ------------------------------------------------------------------
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(TimeZoneFormat)
 
-TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status) 
+TimeZoneFormat::TimeZoneFormat(const Locale& locale, UErrorCode& status)
 : fLocale(locale), fTimeZoneNames(nullptr), fTimeZoneGenericNames(nullptr),
   fDefParseOptionFlags(0), fTZDBTimeZoneNames(nullptr) {
 
@@ -555,7 +555,7 @@ TimeZoneFormat::getDefaultParseOptions() const {
 }
 
 
-UnicodeString& 
+UnicodeString&
 TimeZoneFormat::getGMTPattern(UnicodeString& pattern) const {
     return pattern.setTo(fGMTPattern);
 }
@@ -828,7 +828,7 @@ TimeZoneFormat::parse(UTimeZoneFormatStyle style, const UnicodeString& text, Par
     int32_t offset;
 
     // Styles using localized GMT format as fallback
-    UBool fallbackLocalizedGMT = 
+    UBool fallbackLocalizedGMT =
         (style == UTZFMT_STYLE_SPECIFIC_LONG || style == UTZFMT_STYLE_GENERIC_LONG || style == UTZFMT_STYLE_GENERIC_LOCATION);
     UBool fallbackShortLocalizedGMT =
         (style == UTZFMT_STYLE_SPECIFIC_SHORT || style == UTZFMT_STYLE_GENERIC_SHORT);
@@ -2740,7 +2740,7 @@ private:
     const char16_t* fID;
 };
 
-ZoneIdMatchHandler::ZoneIdMatchHandler() 
+ZoneIdMatchHandler::ZoneIdMatchHandler()
 : fLen(0), fID(nullptr) {
 }
 
@@ -2808,7 +2808,7 @@ TimeZoneFormat::parseZoneID(const UnicodeString& text, ParsePosition& pos, Unico
 
     if (U_SUCCESS(status)) {
         LocalPointer<ZoneIdMatchHandler> handler(new ZoneIdMatchHandler());
-        gZoneIdTrie->search(text, start, handler.getAlias(), status); 
+        gZoneIdTrie->search(text, start, handler.getAlias(), status);
         len = handler->getMatchLen();
         if (len > 0) {
             tzID.setTo(handler->getID(), -1);
@@ -2858,7 +2858,7 @@ TimeZoneFormat::parseShortZoneID(const UnicodeString& text, ParsePosition& pos, 
 
     if (U_SUCCESS(status)) {
         LocalPointer<ZoneIdMatchHandler> handler(new ZoneIdMatchHandler());
-        gShortZoneIdTrie->search(text, start, handler.getAlias(), status); 
+        gShortZoneIdTrie->search(text, start, handler.getAlias(), status);
         len = handler->getMatchLen();
         if (len > 0) {
             tzID.setTo(handler->getID(), -1);

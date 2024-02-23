@@ -16,10 +16,10 @@
 #if U_SHOW_CPLUSPLUS_API
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Unicode Normalization
  */
- 
+
 #if !UCONFIG_NO_NORMALIZATION
 
 #include "unicode/chariter.h"

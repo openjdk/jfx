@@ -76,7 +76,7 @@ appendTag(
  * to be used when constructing the new tag.  If the alternateTags parameter is nullptr, or
  * it contains no language tag, the default tag for the unknown language is used.
  *
- * If the length of the new string exceeds the capacity of the output buffer, 
+ * If the length of the new string exceeds the capacity of the output buffer,
  * the function copies as many bytes to the output buffer as it can, and returns
  * the error U_BUFFER_OVERFLOW_ERROR.
  *
@@ -376,7 +376,7 @@ parseTagString(
          */
         if (_isIDSeparator(*position)) {
             ++position;
-        }    
+        }
     }
 
     subtagLength = ulocimp_getCountry(position, &position, *err).extract(region, *regionLength, *err);

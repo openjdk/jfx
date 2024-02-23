@@ -356,7 +356,7 @@ unumrf_resultGetIdentityResult(
  * Extracts the first formatted number as a decimal number. This endpoint
  * is useful for obtaining the exact number being printed after scaling
  * and rounding have been applied by the number range formatting pipeline.
- * 
+ *
  * The syntax of the unformatted number is a "numeric string"
  * as defined in the Decimal Arithmetic Specification, available at
  * http://speleotrove.com/decimal
@@ -383,7 +383,7 @@ unumrf_resultGetFirstDecimalNumber(
  * Extracts the second formatted number as a decimal number. This endpoint
  * is useful for obtaining the exact number being printed after scaling
  * and rounding have been applied by the number range formatting pipeline.
- * 
+ *
  * The syntax of the unformatted number is a "numeric string"
  * as defined in the Decimal Arithmetic Specification, available at
  * http://speleotrove.com/decimal

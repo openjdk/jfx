@@ -691,7 +691,7 @@ class DerivedComponents {
  * <deriveCompound feature="gender" structure="power" value="feminine"/>
  *
  * NOTE: If U_FAILURE(status), returns an empty string.
- */ 
+ */
 UnicodeString
 getDeriveCompoundRule(Locale locale, const char *feature, const char *structure, UErrorCode &status) {
     StackUResourceBundle derivationsBundle, stackBundle;

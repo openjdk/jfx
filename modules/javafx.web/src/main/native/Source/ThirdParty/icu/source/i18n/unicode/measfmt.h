@@ -23,7 +23,7 @@
 #include "unicode/udat.h"
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Compatibility APIs for measure formatting.
  */
 
@@ -40,10 +40,10 @@ enum UMeasureFormatWidth {
     // Wide, short, and narrow must be first and in this order.
     /**
      * Spell out measure units.
-     * @stable ICU 53 
+     * @stable ICU 53
      */
     UMEASFMT_WIDTH_WIDE,
- 
+
     /**
      * Abbreviate measure units.
      * @stable ICU 53
@@ -72,7 +72,7 @@ enum UMeasureFormatWidth {
 #endif  // U_HIDE_DEPRECATED_API
 };
 /** @stable ICU 53 */
-typedef enum UMeasureFormatWidth UMeasureFormatWidth; 
+typedef enum UMeasureFormatWidth UMeasureFormatWidth;
 
 U_NAMESPACE_BEGIN
 
@@ -295,7 +295,7 @@ class U_I18N_API MeasureFormat : public Format {
      */
     MeasureFormat();
 
-#ifndef U_HIDE_INTERNAL_API 
+#ifndef U_HIDE_INTERNAL_API
 
     /**
      * ICU use only.
@@ -360,7 +360,7 @@ class U_I18N_API MeasureFormat : public Format {
     const MeasureFormatCacheData *cache;
     const SharedNumberFormat *numberFormat;
     const SharedPluralRules *pluralRules;
-    UMeasureFormatWidth fWidth;    
+    UMeasureFormatWidth fWidth;
 
     // Declared outside of MeasureFormatSharedData because ListFormatter
     // objects are relatively cheap to copy; therefore, they don't need to be

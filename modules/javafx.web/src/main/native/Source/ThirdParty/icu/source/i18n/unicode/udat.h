@@ -1531,13 +1531,13 @@ typedef enum UDateFormatSymbolType {
      * @stable ICU 54
      */
     UDAT_ZODIAC_NAMES_NARROW,
-    
+
     /**
      * The narrow quarter names, for example 1
      * @stable ICU 70
      */
     UDAT_NARROW_QUARTERS,
-    
+
     /**
      * The narrow standalone quarter names, for example 1
      * @stable ICU 70

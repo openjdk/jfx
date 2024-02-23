@@ -344,7 +344,7 @@ U_CFUNC void RBBI_DEBUG_printUnicodeString(const UnicodeString &s, int minWidth)
 void RBBINode::printNodeHeader() {
     RBBIDebugPrintf(" Address   serial        type     LeftChild  RightChild   Parent   position value\n");
 }
-    
+
 void RBBINode::printTree(const RBBINode *node, UBool printHeading) {
     if (printHeading) {
         printNodeHeader();
@@ -357,7 +357,7 @@ void RBBINode::printTree(const RBBINode *node, UBool printHeading) {
             if (node->fLeftChild != nullptr) {
                 printTree(node->fLeftChild, false);
             }
-            
+
             if (node->fRightChild != nullptr) {
                 printTree(node->fRightChild, false);
             }

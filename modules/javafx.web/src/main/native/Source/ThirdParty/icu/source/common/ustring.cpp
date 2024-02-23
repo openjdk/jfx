@@ -642,7 +642,7 @@ u_strcat(char16_t  *dst,
 U_CAPI char16_t*  U_EXPORT2
 u_strncat(char16_t  *dst,
      const char16_t  *src,
-     int32_t     n ) 
+     int32_t     n )
 {
     if(n > 0) {
         char16_t *anchor = dst;            /* save a pointer to start of dst */
@@ -941,7 +941,7 @@ u_strcmpCodePointOrder(const char16_t *s1, const char16_t *s2) {
 U_CAPI int32_t   U_EXPORT2
 u_strncmp(const char16_t  *s1,
      const char16_t  *s2,
-     int32_t     n) 
+     int32_t     n)
 {
     if(n > 0) {
         int32_t rc;
@@ -978,7 +978,7 @@ u_strcpy(char16_t  *dst,
 U_CAPI char16_t*  U_EXPORT2
 u_strncpy(char16_t  *dst,
      const char16_t  *src,
-     int32_t     n) 
+     int32_t     n)
 {
     char16_t *anchor = dst;            /* save a pointer to start of dst */
 
@@ -1221,7 +1221,7 @@ u_unescapeAt(UNESCAPE_CHAR_AT charAt,
     int8_t n = 0;
     int8_t minDig = 0;
     int8_t maxDig = 0;
-    int8_t bitsPerDigit = 4; 
+    int8_t bitsPerDigit = 4;
     int32_t dig;
     UBool braces = false;
 

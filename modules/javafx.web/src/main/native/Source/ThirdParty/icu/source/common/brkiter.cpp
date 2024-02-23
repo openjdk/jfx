@@ -123,7 +123,7 @@ BreakIterator::buildInstance(const Locale& loc, const char *type, UErrorCode &st
     if (U_SUCCESS(status) && result != nullptr) {
         U_LOCALE_BASED(locBased, *(BreakIterator*)result);
 
-        locBased.setLocaleIDs(ures_getLocaleByType(b, ULOC_VALID_LOCALE, &status), 
+        locBased.setLocaleIDs(ures_getLocaleByType(b, ULOC_VALID_LOCALE, &status),
                               actualLocale.data());
         uprv_strncpy(result->requestLocale, loc.getName(), ULOC_FULLNAME_CAPACITY);
         result->requestLocale[ULOC_FULLNAME_CAPACITY-1] = 0; // always terminate
@@ -307,7 +307,7 @@ static UBool U_CALLCONV breakiterator_cleanup() {
 U_CDECL_END
 U_NAMESPACE_BEGIN
 
-static void U_CALLCONV 
+static void U_CALLCONV
 initService() {
     gService = new ICUBreakIteratorService();
     ucln_common_registerCleanup(UCLN_COMMON_BREAKITERATOR, breakiterator_cleanup);

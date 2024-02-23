@@ -673,7 +673,7 @@ UnicodeString::doEqualsSubstring( int32_t start,
   if(isBogus()) {
     return false;
   }
-  
+
   // pin indices to legal values
   pinIndices(start, length);
 
@@ -715,7 +715,7 @@ UnicodeString::doCompare( int32_t start,
   if(isBogus()) {
     return -1;
   }
-  
+
   // pin indices to legal values
   pinIndices(start, length);
 
@@ -763,7 +763,7 @@ UnicodeString::doCompare( int32_t start,
   if(minLength > 0 && chars != srcChars) {
     int32_t result;
 
-#   if U_IS_BIG_ENDIAN 
+#   if U_IS_BIG_ENDIAN
       // big-endian: byte comparison works
       result = uprv_memcmp(chars, srcChars, minLength * sizeof(char16_t));
       if(result != 0) {
@@ -995,7 +995,7 @@ UnicodeString::extract(int32_t start, int32_t len,
 // else see unistr_cnv.cpp
 #endif
 
-void 
+void
 UnicodeString::extractBetween(int32_t start,
                   int32_t limit,
                   UnicodeString& target) const {
@@ -1064,7 +1064,7 @@ UnicodeString::toUTF32(UChar32 *utf32, int32_t capacity, UErrorCode &errorCode) 
   return length32;
 }
 
-int32_t 
+int32_t
 UnicodeString::indexOf(const char16_t *srcChars,
                int32_t srcStart,
                int32_t srcLength,
@@ -1128,7 +1128,7 @@ UnicodeString::doIndexOf(UChar32 c,
   }
 }
 
-int32_t 
+int32_t
 UnicodeString::lastIndexOf(const char16_t *srcChars,
                int32_t srcStart,
                int32_t srcLength,
@@ -1200,7 +1200,7 @@ UnicodeString::doLastIndexOf(UChar32 c,
 // Write implementation
 //========================================
 
-UnicodeString& 
+UnicodeString&
 UnicodeString::findAndReplace(int32_t start,
                   int32_t length,
                   const UnicodeString& oldText,
@@ -1658,7 +1658,7 @@ UnicodeString::handleReplaceBetween(int32_t start,
 /**
  * Replaceable API
  */
-void 
+void
 UnicodeString::copy(int32_t start, int32_t limit, int32_t dest) {
     if (limit <= start) {
         return; // Nothing to do; avoid bogus malloc call
@@ -1667,7 +1667,7 @@ UnicodeString::copy(int32_t start, int32_t limit, int32_t dest) {
     // Check to make sure text is not null.
     if (text != nullptr) {
 	    extractBetween(start, limit, text, 0);
-	    insert(dest, text, 0, limit - start);    
+	    insert(dest, text, 0, limit - start);
 	    uprv_free(text);
     }
 }
@@ -1735,7 +1735,7 @@ UnicodeString::doReverse(int32_t start, int32_t length) {
   return *this;
 }
 
-UBool 
+UBool
 UnicodeString::padLeading(int32_t targetLength,
                           char16_t padChar)
 {
@@ -1757,7 +1757,7 @@ UnicodeString::padLeading(int32_t targetLength,
   }
 }
 
-UBool 
+UBool
 UnicodeString::padTrailing(int32_t targetLength,
                            char16_t padChar)
 {

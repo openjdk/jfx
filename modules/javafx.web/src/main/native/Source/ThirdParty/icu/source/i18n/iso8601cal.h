@@ -22,7 +22,7 @@ U_NAMESPACE_BEGIN
  * <p>
  * The ISO8601 calendar is identical to the Gregorian calendar in all respects
  * except for the first day of week and the minimal days in the first week
- * of a year. 
+ * of a year.
  * @internal
  */
 class ISO8601Calendar : public GregorianCalendar {
@@ -61,7 +61,7 @@ class ISO8601Calendar : public GregorianCalendar {
   virtual ISO8601Calendar* clone() const override;
 
   // UObject stuff
- public: 
+ public:
   /**
    * @return   The class ID for this object. All objects of a given class have the
    *           same class ID. Objects of other classes have different class IDs.
@@ -92,7 +92,7 @@ class ISO8601Calendar : public GregorianCalendar {
 
 
  private:
- 
+
   ISO8601Calendar(); // default constructor not implemented
 };
 

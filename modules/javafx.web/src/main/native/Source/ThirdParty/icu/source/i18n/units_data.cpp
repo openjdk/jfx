@@ -440,7 +440,7 @@ MaybeStackVector<UnitPreference>
     char regionBuf[8];
     ulocimp_getRegionForSupplementalData(locale.getName(), false, regionBuf, 8, &status);
     CharString region(regionBuf, status);
-        
+
     // Check the locale system tag, e.g `ms=metric`.
     UErrorCode internalMeasureTagStatus = U_ZERO_ERROR;
     CharString localeSystem = getKeyWordValue(locale, "measure", internalMeasureTagStatus);
@@ -457,7 +457,7 @@ MaybeStackVector<UnitPreference>
 
     U_ASSERT(idx >= 0); // Failures should have been taken care of by `status`.
     const UnitPreferenceMetadata *m = metadata_[idx];
-        
+
     if (isLocaleSystem) {
         // if the locale ID specifies a measurment system, check if ALL of the units we got back
         // are members of that system (or are "metric_adjacent", which we consider to match all
@@ -478,7 +478,7 @@ MaybeStackVector<UnitPreference>
                 }
             }
         }
-        
+
         // if any of the units we got back above don't match the mearurement system the locale ID asked for,
         // throw out the region and just load the units for the base region for the requested measurement system
         if (!unitsMatchSystem) {
@@ -494,11 +494,11 @@ MaybeStackVector<UnitPreference>
             if (U_FAILURE(status)) {
                 return result;
             }
-            
+
             m = metadata_[idx];
         }
     }
-        
+
     for (int32_t i = 0; i < m->prefsCount; i++) {
         result.emplaceBackAndCheckErrorCode(status, *(unitPrefs_[i + m->prefsOffset]));
     }

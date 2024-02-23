@@ -10,7 +10,7 @@
 #define TZRULE_H
 
 /**
- * \file 
+ * \file
  * \brief C++ API: Time zone rule classes
  */
 
@@ -30,7 +30,7 @@ U_NAMESPACE_BEGIN
  * <code>TimeZoneRule</code> is a class representing a rule for time zone.
  * <code>TimeZoneRule</code> has a set of time zone attributes, such as zone name,
  * raw offset (UTC offset for standard time) and daylight saving time offset.
- * 
+ *
  * @stable ICU 3.8
  */
 class U_I18N_API TimeZoneRule : public UObject {
@@ -360,7 +360,7 @@ public:
  * <code>AnnualTimeZoneRule</code> is a class used for representing a time zone
  * rule which takes effect annually.  The calendar system used for the rule is
  * is based on Gregorian calendar
- * 
+ *
  * @stable ICU 3.8
  */
 class U_I18N_API AnnualTimeZoneRule : public TimeZoneRule {
@@ -600,7 +600,7 @@ public:
 /**
  * <code>TimeArrayTimeZoneRule</code> represents a time zone rule whose start times are
  * defined by an array of milliseconds since the standard base time.
- * 
+ *
  * @stable ICU 3.8
  */
 class U_I18N_API TimeArrayTimeZoneRule : public TimeZoneRule {
@@ -675,7 +675,7 @@ public:
      * Gets the time type of the start times used by this rule.  The return value
      * is either <code>DateTimeRule::WALL_TIME</code> or <code>STANDARD_TIME</code>
      * or <code>UTC_TIME</code>.
-     * 
+     *
      * @return The time type used of the start times used by this rule.
      * @stable ICU 3.8
      */

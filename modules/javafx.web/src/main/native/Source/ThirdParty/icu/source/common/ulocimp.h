@@ -43,10 +43,10 @@ uloc_getTableStringWithFallback(
 /*returns true if a is an ID separator false otherwise*/
 #define _isIDSeparator(a) (a == '_' || a == '-')
 
-U_CFUNC const char* 
+U_CFUNC const char*
 uloc_getCurrentCountryID(const char* oldID);
 
-U_CFUNC const char* 
+U_CFUNC const char*
 uloc_getCurrentLanguageID(const char* oldID);
 
 U_CFUNC void
@@ -162,7 +162,7 @@ ulocimp_forLanguageTag(const char* langtag,
  * (3) if inferRegion is true, the region suggested by
  * getLikelySubtags on the localeID.
  * If no region is found, returns length 0.
- * 
+ *
  * @param localeID
  *     The complete locale ID (with keywords) from which
  *     to get the region to use for supplemental data.
@@ -171,7 +171,7 @@ ulocimp_forLanguageTag(const char* langtag,
  *     no other region is found.
  * @param region
  *     Buffer in which to put the region ID found; should
- *     have a capacity at least ULOC_COUNTRY_CAPACITY. 
+ *     have a capacity at least ULOC_COUNTRY_CAPACITY.
  * @param regionCapacity
  *     The actual capacity of the region buffer.
  * @param status

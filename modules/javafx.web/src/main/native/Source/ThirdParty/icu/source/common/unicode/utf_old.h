@@ -296,7 +296,7 @@ typedef int32_t UTextOffset;
 U_CAPI const uint8_t utf8_countTrailBytes[];
 #else
 U_CFUNC U_IMPORT const uint8_t utf8_countTrailBytes[];
-#endif 
+#endif
 
 /**
  * Count the trail bytes for a UTF-8 lead byte.

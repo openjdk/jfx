@@ -142,7 +142,7 @@ private:
     virtual int32_t handleGetExtendedYear() override;
     /**
      * Subclasses may override this method to compute several fields
-     * specific to each calendar system.  
+     * specific to each calendar system.
      * @internal
      */
     virtual void handleComputeFields(int32_t julianDay, UErrorCode& status) override;

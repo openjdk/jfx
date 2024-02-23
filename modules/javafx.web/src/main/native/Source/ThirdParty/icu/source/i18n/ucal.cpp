@@ -158,8 +158,8 @@ ucal_open(  const char16_t*  zoneID,
   if (U_FAILURE(*status)) {
       return nullptr;
   }
-  
-  LocalPointer<TimeZone> zone( (zoneID==nullptr) ? TimeZone::createDefault() 
+
+  LocalPointer<TimeZone> zone( (zoneID==nullptr) ? TimeZone::createDefault()
       : _createTimeZone(zoneID, len, status), *status);
 
   if (U_FAILURE(*status)) {
@@ -194,12 +194,12 @@ ucal_close(UCalendar *cal)
     }
 }
 
-U_CAPI UCalendar* U_EXPORT2 
+U_CAPI UCalendar* U_EXPORT2
 ucal_clone(const UCalendar* cal,
            UErrorCode*      status)
 {
   if(U_FAILURE(*status)) return 0;
-  
+
   Calendar* res = ((Calendar*)cal)->clone();
 
   if(res == 0) {
@@ -284,7 +284,7 @@ ucal_getTimeZoneDisplayName(const     UCalendar*                 cal,
 }
 
 U_CAPI UBool  U_EXPORT2
-ucal_inDaylightTime(    const    UCalendar*      cal, 
+ucal_inDaylightTime(    const    UCalendar*      cal,
                     UErrorCode*     status )
 {
 
@@ -585,7 +585,7 @@ ucal_getLimit(    const    UCalendar*              cal,
 }
 
 U_CAPI const char * U_EXPORT2
-ucal_getLocaleByType(const UCalendar *cal, ULocDataLocaleType type, UErrorCode* status) 
+ucal_getLocaleByType(const UCalendar *cal, ULocDataLocaleType type, UErrorCode* status)
 {
     if (cal == nullptr) {
         if (U_SUCCESS(*status)) {
@@ -692,7 +692,7 @@ static const UEnumeration defaultKeywordValues = {
     ulist_close_keyword_values_iterator,
     ulist_count_keyword_values,
     uenum_unextDefault,
-    ulist_next_keyword_value, 
+    ulist_next_keyword_value,
     ulist_reset_keyword_values_iterator
 };
 
@@ -723,7 +723,7 @@ ucal_getKeywordValuesForLocale(const char * /* key */, const char* locale, UBool
     // Resolve region
     char prefRegion[ULOC_COUNTRY_CAPACITY];
     (void)ulocimp_getRegionForSupplementalData(locale, true, prefRegion, sizeof(prefRegion), status);
-    
+
     // Read preferred calendar values from supplementalData calendarPreference
     UResourceBundle *rb = ures_openDirect(nullptr, "supplementalData", status);
     ures_getByKey(rb, "calendarPreferenceData", rb, status);
@@ -793,7 +793,7 @@ ucal_getKeywordValuesForLocale(const char * /* key */, const char* locale, UBool
     return en;
 }
 
-U_CAPI UBool U_EXPORT2 
+U_CAPI UBool U_EXPORT2
 ucal_getTimeZoneTransitionDate(const UCalendar* cal, UTimeZoneTransitionType type,
                                UDate* transition, UErrorCode* status)
 {

@@ -394,10 +394,10 @@ typedef enum UNumberDecimalSeparatorDisplay {
 
 /**
  * An enum declaring how to render trailing zeros.
- * 
+ *
  * - UNUM_TRAILING_ZERO_AUTO: 0.90, 1.00, 1.10
  * - UNUM_TRAILING_ZERO_HIDE_IF_WHOLE: 0.90, 1, 1.10
- * 
+ *
  * @stable ICU 69
  */
 typedef enum UNumberTrailingZeroDisplay {
