@@ -32,7 +32,7 @@
  * @moduleGraph
  * @since 999
  */
-module javafx.incubator.myfeature {
+module jfx.incubator.myfeature {
     requires transitive javafx.base;
     requires transitive javafx.graphics;
     requires transitive javafx.controls;

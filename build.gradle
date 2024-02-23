@@ -939,7 +939,11 @@ List<String> computeLibraryPath(boolean working) {
         def modulesLibsDir = "${bundledSdkDir}/modules_libs"
 
         modsWithNative.each() { m ->
-            lp << cygpath("${modulesLibsDir}/javafx.${m}")
+            // TODO: incubator dependency
+            if (m.hasProperty("moduleName")) {
+                def moduleName = m.ext.moduleName
+                lp << cygpath("${modulesLibsDir}/${moduleName}")
+            }
         }
     } else {
         def platformPrefix = ""
@@ -1673,6 +1677,16 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         return
     }
 
+    // TODO: incubator dependency
+    if (!m.hasProperty("moduleName")) {
+        fail("Project ${m} has no module name")
+    }
+    projectDependencies.each { dep ->
+        if (!dep.hasProperty("moduleName")) {
+            fail("Project ${m} dependency ${dep} has no module name")
+        }
+    }
+
     project.apply plugin: 'maven-publish'
 
     project.group = MAVEN_GROUP_ID
@@ -1723,7 +1737,9 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
         project.publishing {
             publications {
                 maven(MavenPublication) {
-                    artifactId = "javafx-${project.name}"
+                    // TODO: incubator dependency
+                    def artifactName = project.moduleName.replace('.', '-')
+                    artifactId = artifactName
 
                     afterEvaluate {
                         artifact project.tasks."moduleEmptyPublicationJar$t.capital"
@@ -1742,15 +1758,19 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
 
                         Node projectDependencyPlatform = dependencies.appendNode("dependency")
                         projectDependencyPlatform.appendNode("groupId", MAVEN_GROUP_ID)
-                        projectDependencyPlatform.appendNode("artifactId", "javafx-${project.name}")
+                        // TODO: incubator dependency
+                        projectDependencyPlatform.appendNode("artifactId", artifactName)
                         projectDependencyPlatform.appendNode("version", MAVEN_VERSION)
                         projectDependencyPlatform.appendNode("classifier", "\${javafx.platform}")
 
                         if (!projectDependencies.empty) {
                             projectDependencies.each { dep ->
+                                // TODO: incubator dependency
+                                def depName = dep.moduleName.replace('.', '-')
                                 Node projectDependency = dependencies.appendNode("dependency")
                                 projectDependency.appendNode("groupId", MAVEN_GROUP_ID)
-                                projectDependency.appendNode("artifactId", "javafx-$dep")
+                                // TODO: incubator dependency
+                                projectDependency.appendNode("artifactId", depName)
                                 projectDependency.appendNode("version", MAVEN_VERSION)
                            }
                         }
@@ -2749,12 +2769,13 @@ project(":controls") {
     addValidateSourceSets(project, sourceSets)
 }
 
+// TODO: incubator template
 // Replace "myfeature" with the name of your feature
 project(":incubator.myfeature") {
     project.ext.buildModule = true
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.incubator.myfeature"
+    project.ext.moduleName = "jfx.incubator.myfeature"
     project.ext.incubating = true
 
     sourceSets {
@@ -4321,9 +4342,19 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     group = "Basic"
     description = "Generates the JavaDoc for all the public API"
     executable = JAVADOC
+    // TODO: incubator dependency
     def projectsToDocument = [
-            project(":base"), project(":graphics"), project(":controls"), project(":incubator.myfeature"), project(":media"),
-            project(":swing"), /*project(":swt"),*/ project(":fxml"), project(":web")]
+        project(":base"),
+        project(":graphics"),
+        project(":controls"),
+        // TODO: incubator template
+        project(":incubator.myfeature"),
+        project(":media"),
+        project(":swing"),
+        /*project(":swt"),*/
+        project(":fxml"),
+        project(":web")
+    ]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java]
     }));
@@ -5645,6 +5676,7 @@ compileTargets { t ->
                 def modnames = []
                 moduleProjList.each { project ->
                     if (project.hasProperty("moduleName") && project.buildModule) {
+                        // TODO: incubator dependency
                         def incubating = project.hasProperty("incubating") && project.ext.incubating
                         modnames << project.ext.moduleName
                         File dir;
@@ -5657,6 +5689,7 @@ compileTargets { t ->
                         def dstModuleDir = cygpath(dir.path)
                         modpath << "${dstModuleDir}"
 
+                        // TODO: incubator dependency
                         if (!incubating) {
                             String themod = dir.toURI()
                             testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
@@ -5714,6 +5747,7 @@ compileTargets { t ->
             def jmodName = "${moduleName}.jmod"
             def jmodFile = "${jmodsDir}/${jmodName}"
 
+            // TODO: incubator dependency
             def incubating = project.hasProperty("incubating") && project.ext.incubating
 
             // On Windows, copy the native libraries in the jmod image
@@ -5757,6 +5791,7 @@ compileTargets { t ->
                         if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
                         }
+                        // TODO: incubator dependency
                         if (incubating) {
                             args("--do-not-resolve-by-default")
                             args("--warn-if-resolved=incubating")

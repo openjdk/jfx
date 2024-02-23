@@ -23,12 +23,24 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "incubator.myfeature", "swing", "swt", "fxml", "web", "media", "systemTests"
+// TODO: incubator dependency
+include "base",
+        "graphics",
+        "controls",
+        // TODO: incubator template
+        "incubator.myfeature",
+        "swing",
+        "swt",
+        "fxml",
+        "web",
+        "media",
+        "systemTests"
 
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.myfeature").projectDir = file("modules/javafx.incubator.myfeature")
+// TODO: incubator template
+project(":incubator.myfeature").projectDir = file("modules/jfx.incubator.myfeature")
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")
