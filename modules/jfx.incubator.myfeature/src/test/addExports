@@ -1,3 +1,7 @@
+#
+# This file contains needed exports for running tests. Add or remove
+# exports as needed.
+#
 --add-exports javafx.base/com.sun.javafx=ALL-UNNAMED
 #
 --add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
