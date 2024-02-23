@@ -5667,9 +5667,7 @@ compileTargets { t ->
                         }
                         args("--legal-notices")
                         args(srcLegalDir)
-                        // https://bugs.openjdk.org/browse/JDK-8278766
-                        def status = compareJdkVersion(jdkVersion, "19")
-                        if (sourceDateEpoch != null && status >= 0) {
+                        if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
                         }
                         args(jmodFile)
