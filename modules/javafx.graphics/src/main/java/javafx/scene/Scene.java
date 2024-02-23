@@ -6242,9 +6242,10 @@ public class Scene implements EventTarget {
      **************************************************************************/
 
     @SuppressWarnings("removal")
-    private static final NodeOrientation defaultNodeOrientation =
+    private static final NodeOrientation DEFAULT_NODE_ORIENTATION =
         AccessController.doPrivileged(
-                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
+                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL"))
+                    ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
 
 
 
@@ -6258,25 +6259,23 @@ public class Scene implements EventTarget {
     }
 
     public final NodeOrientation getNodeOrientation() {
-        return nodeOrientation == null ? defaultNodeOrientation : nodeOrientation.get();
+        return nodeOrientation == null ? DEFAULT_NODE_ORIENTATION : nodeOrientation.get();
     }
 
     /**
-     * Property holding NodeOrientation.
-     * <p>
      * Node orientation describes the flow of visual data within a node.
      * In the English speaking world, visual data normally flows from
      * left-to-right. In an Arabic or Hebrew world, visual data flows
-     * from right-to-left.  This is consistent with the reading order
-     * of text in both worlds.  The default value is left-to-right.
-     * </p>
+     * from right-to-left. This is consistent with the reading order
+     * of text in both worlds.
      *
-     * @return NodeOrientation
+     * @defaultValue if the system property {@code javafx.scene.nodeOrientation.RTL} is {@code true},
+     *     {@code NodeOrientation.RIGHT_TO_LEFT}, otherwise {@code NodeOrientation.INHERIT}
      * @since JavaFX 8.0
      */
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
-            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(defaultNodeOrientation) {
+            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(DEFAULT_NODE_ORIENTATION) {
                 @Override
                 protected void invalidated() {
                     sceneEffectiveOrientationInvalidated();
