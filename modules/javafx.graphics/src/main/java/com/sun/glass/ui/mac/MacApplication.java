@@ -473,20 +473,21 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     public void checkPlatformPreferencesSupport() {
         if (checkSystemAppearance && AWT_APPLICATION_CLASS.equals(applicationClassName)) {
-            checkSystemAppearance = false;
-
             @SuppressWarnings("removal")
             String awtAppearanceProperty = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () -> System.getProperty(AWT_APPEARANCE_PROPERTY));
 
             if (!AWT_SYSTEM_APPEARANCE.equals(awtAppearanceProperty)) {
                 Logging.getJavaFXLogger().warning(String.format(
-                    "Reported preferences may not reflect macOS system preferences unless the system property " +
-                    "%s=%s is set. This warning can be disabled by setting %s=true.",
+                    "Reported preferences may not reflect macOS system preferences unless the system%n" +
+                    "property %s=%s is set. This warning can be disabled by%n" +
+                    "setting %s=true.",
                     AWT_APPEARANCE_PROPERTY,
                     AWT_SYSTEM_APPEARANCE,
                     SUPPRESS_AWT_WARNING_PROPERTY));
             }
         }
+
+        checkSystemAppearance = false;
     }
 }
