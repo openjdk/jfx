@@ -6433,6 +6433,16 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
+    /**
+     * Node orientation describes the flow of visual data within a node.
+     * In the English speaking world, visual data normally flows from
+     * left-to-right. In an Arabic or Hebrew world, visual data flows
+     * from right-to-left. This is consistent with the reading order
+     * of text in both worlds.
+     *
+     * @defaultValue {@code NodeOrientation.INHERIT}
+     * @since JavaFX 8.0
+     */
     private ObjectProperty<NodeOrientation> nodeOrientation;
     private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
@@ -6446,28 +6456,17 @@ public abstract class Node implements EventTarget, Styleable {
     private byte resolvedNodeOrientation =
             EFFECTIVE_ORIENTATION_LTR | AUTOMATIC_ORIENTATION_LTR;
 
-    private static final NodeOrientation DEFAULT_NODE_ORIENTATION = NodeOrientation.INHERIT;
-
     public final void setNodeOrientation(NodeOrientation orientation) {
         nodeOrientationProperty().set(orientation);
     }
 
     public final NodeOrientation getNodeOrientation() {
-        return nodeOrientation == null ? DEFAULT_NODE_ORIENTATION : nodeOrientation.get();
+        return nodeOrientation == null ? NodeOrientation.INHERIT : nodeOrientation.get();
     }
-    /**
-     * Node orientation describes the flow of visual data within a node.
-     * In the English speaking world, visual data normally flows from
-     * left-to-right. In an Arabic or Hebrew world, visual data flows
-     * from right-to-left. This is consistent with the reading order
-     * of text in both worlds.
-     *
-     * @defaultValue {@code NodeOrientation.INHERIT}
-     * @since JavaFX 8.0
-     */
+
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
-            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(DEFAULT_NODE_ORIENTATION) {
+            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {
                 @Override
                 protected void invalidated() {
                     nodeResolvedOrientationInvalidated();
