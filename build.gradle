@@ -2770,7 +2770,12 @@ project(":controls") {
 }
 
 // TODO: incubator template
-// Replace "myfeature" with the name of your feature
+// To create an incubator module:
+// 1) apply the changes from this patch
+// 2) Look for "TODO: incubator template" comments, and replace "myfeature"
+//    with the name of your feature
+// 3) Refactor / rename the files under "modules/javafx.incubator.myfeature"
+//    to match the name of your feature.
 project(":incubator.myfeature") {
     project.ext.buildModule = true
     project.ext.includeSources = true
@@ -2817,7 +2822,12 @@ project(":incubator.myfeature") {
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
     modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
 
-    // FIXME: KCR
+// TODO: incubator template
+// The following block is used if and only if you have .css resource files
+// in your incubator module. If you do, uncomment the block and make the
+// appropriate changes for the location of your resource files. Otherwise,
+// delete the block.
+
 //    processResources {
 //      doLast {
 //        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
