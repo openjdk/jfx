@@ -401,7 +401,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         final boolean isEmpty = isEmpty();
 
         // Cause the cell to update itself
-        outer: if (valid) {
+        if (valid) {
             // update the TreeCell state.
             // get the new treeItem that is about to go in to the TreeCell
             final TreeItem<T> newTreeItem = tv.getTreeItem(newIndex);
@@ -421,7 +421,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                     // RT-37054:  we break out of the if/else code here and
                     // proceed with the code following this, so that we may
                     // still update references, listeners, etc as required.
-                    break outer;
+                    return;
                 }
             }
 
