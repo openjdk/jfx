@@ -106,13 +106,13 @@ import javafx.scene.shape.TriangleMesh;
  * Light that isn't transmitted undergoes <i>subsurface scattering</i> that causes it to be absorbed in the material or
  * be reflected back to the surface, exiting in (approximately) all directions (irrespective of the incident angle). The
  * RGB channels of the diffuse component controls which colors are absorbed and which are reflected, giving the material
- * its base color.
+ * its base color. The higher one of the RGB values is, the more that material reflects that color.
  * <p>
  * The diffuse component interacts with all lights - both those that have directionality and {@code AmbientLight}, which
  * simulates a light that comes from all directions.
  * <p>
  * <b>Important:</b> there is currently a bug that causes objects with 0 opacity to not render at all (despite having a
- * specular or a self-illumination component). Setting the opacity to 1 instead will give the desirable result.
+ * specular or a self-illumination component). Setting the opacity to 1/255 instead will give the desirable result.
  *
  * <h3>Specular</h3>
  * The specular component represents light that is reflected directly from the surface. For most materials, the color of
