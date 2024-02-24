@@ -25,6 +25,7 @@
 
 package jfx.incubator.scene.mypkg;
 
+import com.sun.javafx.ModuleUtil;
 import com.sun.javafx.incubator.scene.mypkg.MyImpl;
 import javafx.scene.control.Button;
 
@@ -35,6 +36,9 @@ import javafx.scene.control.Button;
  * Will be removed in a future release.</b>
  */
 public class MyButton extends Button {
+
+    static { ModuleUtil.incubatorWarning(); }
+
     private final int myField;
 
     public MyButton(int myField, String name) {
