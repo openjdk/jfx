@@ -6244,8 +6244,17 @@ public class Scene implements EventTarget {
         AccessController.doPrivileged(
                 (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
 
-
-
+    /**
+     * Node orientation describes the flow of visual data within a node.
+     * In the English speaking world, visual data normally flows from
+     * left-to-right. In an Arabic or Hebrew world, visual data flows
+     * from right-to-left. This is consistent with the reading order
+     * of text in both worlds.
+     *
+     * @defaultValue if the system property {@code javafx.scene.nodeOrientation.RTL} is {@code true},
+     *     {@code NodeOrientation.RIGHT_TO_LEFT}, otherwise {@code NodeOrientation.INHERIT}
+     * @since JavaFX 8.0
+     */
     private ObjectProperty<NodeOrientation> nodeOrientation;
     private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
@@ -6259,19 +6268,6 @@ public class Scene implements EventTarget {
         return nodeOrientation == null ? defaultNodeOrientation : nodeOrientation.get();
     }
 
-    /**
-     * Property holding NodeOrientation.
-     * <p>
-     * Node orientation describes the flow of visual data within a node.
-     * In the English speaking world, visual data normally flows from
-     * left-to-right. In an Arabic or Hebrew world, visual data flows
-     * from right-to-left.  This is consistent with the reading order
-     * of text in both worlds.  The default value is left-to-right.
-     * </p>
-     *
-     * @return NodeOrientation
-     * @since JavaFX 8.0
-     */
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(defaultNodeOrientation) {
