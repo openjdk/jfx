@@ -103,10 +103,6 @@ struct FormDataElement {
             return std::get<1>(data) == std::get<1>(other.data);
         return std::get<2>(data) == std::get<2>(other.data);
     }
-    bool operator!=(const FormDataElement& other) const
-    {
-        return !(*this == other);
-    }
 
     Data data;
 };
@@ -140,7 +136,7 @@ public:
     WEBCORE_EXPORT static Ref<FormData> create(const void*, size_t);
     WEBCORE_EXPORT static Ref<FormData> create(const CString&);
     WEBCORE_EXPORT static Ref<FormData> create(Vector<uint8_t>&&);
-    WEBCORE_EXPORT static Ref<FormData> create(bool alwaysStream, Vector<char>&& boundary, Vector<WebCore::FormDataElement>&& elements, int64_t identifier);
+    WEBCORE_EXPORT static Ref<FormData> create(Vector<WebCore::FormDataElement>&&, uint64_t identifier, bool alwaysStream, Vector<char>&& boundary);
     static Ref<FormData> create(const Vector<char>&);
     static Ref<FormData> create(const Vector<uint8_t>&);
     static Ref<FormData> create(const DOMFormData&, EncodingType = EncodingType::FormURLEncoded);
@@ -217,11 +213,6 @@ private:
 inline bool operator==(const FormData& a, const FormData& b)
 {
     return a.elements() == b.elements();
-}
-
-inline bool operator!=(const FormData& a, const FormData& b)
-{
-    return !(a == b);
 }
 
 } // namespace WebCore

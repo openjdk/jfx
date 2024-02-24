@@ -33,6 +33,7 @@
 #include "Document.h"
 #include "MediaList.h"
 #include "NodeRenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "RenderView.h"
 #include "StyleRule.h"
 #include "StyleScope.h"
@@ -77,7 +78,7 @@ auto ContainerQueryEvaluator::featureEvaluationContextForQuery(const CQ::Contain
 
     return MQ::FeatureEvaluationContext {
         m_element->document(),
-        CSSToLengthConversionData { renderer.style(), m_element->document().documentElement()->renderStyle(), nullptr, &renderer.view() },
+        CSSToLengthConversionData { renderer.style(), m_element->document().documentElement()->renderStyle(), nullptr, &renderer.view(), container },
         &renderer
     };
 }

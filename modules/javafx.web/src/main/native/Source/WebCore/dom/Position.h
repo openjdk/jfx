@@ -220,10 +220,9 @@ private:
 };
 
 bool operator==(const Position&, const Position&);
-bool operator!=(const Position&, const Position&);
 
-template<TreeType treeType> PartialOrdering treeOrder(const Position&, const Position&);
-WEBCORE_EXPORT PartialOrdering documentOrder(const Position&, const Position&);
+template<TreeType treeType> std::partial_ordering treeOrder(const Position&, const Position&);
+WEBCORE_EXPORT std::partial_ordering documentOrder(const Position&, const Position&);
 bool operator<(const Position&, const Position&);
 bool operator>(const Position&, const Position&);
 bool operator>=(const Position&, const Position&);
@@ -281,11 +280,6 @@ inline bool operator==(const Position& a, const Position& b)
     return a.anchorNode() == b.anchorNode() && a.deprecatedEditingOffset() == b.deprecatedEditingOffset() && a.anchorType() == b.anchorType();
 }
 
-inline bool operator!=(const Position& a, const Position& b)
-{
-    return !(a == b);
-}
-
 inline bool operator<(const Position& a, const Position& b)
 {
     return is_lt(documentOrder(a, b));
@@ -322,14 +316,14 @@ inline Position positionAfterNode(Node* anchorNode)
 // firstPositionInNode and lastPositionInNode return parent-anchored positions, lastPositionInNode construction is O(n) due to countChildNodes()
 inline Position firstPositionInNode(Node* anchorNode)
 {
-    if (anchorNode->isTextNode())
+    if (anchorNode->isCharacterData())
         return Position(anchorNode, 0, Position::PositionIsOffsetInAnchor);
     return Position(anchorNode, Position::PositionIsBeforeChildren);
 }
 
 inline Position lastPositionInNode(Node* anchorNode)
 {
-    if (anchorNode->isTextNode())
+    if (anchorNode->isCharacterData())
         return Position(anchorNode, anchorNode->length(), Position::PositionIsOffsetInAnchor);
     return Position(anchorNode, Position::PositionIsAfterChildren);
 }

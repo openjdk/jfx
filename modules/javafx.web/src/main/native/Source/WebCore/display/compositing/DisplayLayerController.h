@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GraphicsLayer.h"
+#include "GraphicsLayerClient.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
@@ -79,7 +79,7 @@ private:
     private:
         // GraphicsLayerClient implementation
         void notifyFlushRequired(const GraphicsLayer*) final;
-        void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, GraphicsLayerPaintBehavior) final;
+        void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, OptionSet<GraphicsLayerPaintBehavior>) final;
         float deviceScaleFactor() const final;
 
         LayerController& m_layerController;

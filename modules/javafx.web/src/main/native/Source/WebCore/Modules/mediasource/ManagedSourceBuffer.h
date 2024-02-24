@@ -31,6 +31,8 @@
 
 namespace WebCore {
 
+class ManagedMediaSource;
+
 class ManagedSourceBuffer final : public SourceBuffer {
     WTF_MAKE_ISO_ALLOCATED(ManagedSourceBuffer);
 public:

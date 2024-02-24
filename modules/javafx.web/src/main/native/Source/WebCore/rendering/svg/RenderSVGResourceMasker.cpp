@@ -22,11 +22,12 @@
 #include "RenderSVGResourceMasker.h"
 
 #include "Element.h"
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "FloatPoint.h"
 #include "Image.h"
 #include "IntRect.h"
 #include "RenderSVGResourceMaskerInlines.h"
+#include "SVGRenderStyle.h"
 #include "SVGRenderingContext.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -41,12 +42,12 @@ RenderSVGResourceMasker::RenderSVGResourceMasker(SVGMaskElement& element, Render
 
 RenderSVGResourceMasker::~RenderSVGResourceMasker() = default;
 
-void RenderSVGResourceMasker::removeAllClientsFromCache(bool markForInvalidation)
+void RenderSVGResourceMasker::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers)
 {
     m_maskContentBoundaries = FloatRect();
     m_masker.clear();
 
-    markAllClientsForInvalidation(markForInvalidation ? LayoutAndBoundariesInvalidation : ParentOnlyInvalidation);
+    markAllClientsForInvalidationIfNeeded(markForInvalidation ? LayoutAndBoundariesInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
 void RenderSVGResourceMasker::removeClientFromCache(RenderElement& client, bool markForInvalidation)

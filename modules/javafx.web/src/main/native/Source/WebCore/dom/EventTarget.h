@@ -83,8 +83,8 @@ class EventTarget : public ScriptWrappable, public CanMakeWeakPtr<EventTarget, W
 public:
     static Ref<EventTarget> create(ScriptExecutionContext&);
 
-    void ref() { refEventTarget(); }
-    void deref() { derefEventTarget(); }
+    inline void ref(); // Defined in Node.h.
+    inline void deref(); // Defined in Node.h.
 
     virtual EventTargetInterface eventTargetInterface() const = 0;
     virtual ScriptExecutionContext* scriptExecutionContext() const = 0;
@@ -165,10 +165,9 @@ protected:
         IsNode = 1 << 1,
         // Element bits
         HasDuplicateAttribute = 1 << 2,
-        DisplayContentsChanged = 1 << 3,
-        HasLangAttr = 1 << 4,
-        HasXMLLangAttr = 1 << 5,
-        EffectiveLangKnownToMatchDocumentElement = 1 << 6,
+        HasLangAttr = 1 << 3,
+        HasXMLLangAttr = 1 << 4,
+        EffectiveLangKnownToMatchDocumentElement = 1 << 5,
     };
 
     EventTargetData& ensureEventTargetData()

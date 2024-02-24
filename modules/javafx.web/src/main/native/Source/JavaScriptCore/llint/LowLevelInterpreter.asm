@@ -101,8 +101,7 @@
 #  - a3, t2, t3, t4 and t5 are never return registers; t0, t1, a0, a1 and a2
 #  can be return registers.
 #
-#  - t4 and t5 are never argument registers, t3 can only be a3, t1 can only be
-#  a1; but t0 and t2 can be either a0 or a2.
+#  - t3 can only be a3, t1 can only be a1; but t0 and t2 can be either a0 or a2.
 #
 #  - There are callee-save registers named csr0, csr1, ... csrN.
 #  The last three csr registers are used used to store the PC base and
@@ -281,6 +280,7 @@ const VMTrapsAsyncEvents = constexpr VMTraps::AsyncEvents
 # - We use a pair of registers to represent the PC: one register for the
 #   base of the bytecodes, and one register for the index.
 # - The PC base (or PB for short) must be stored in a callee-save register.
+# - The metadata (PM / pointer to metadata) must be stored in a callee-save register.
 # - C calls are still given the Instruction* rather than the PC index.
 #   This requires an add before the call, and a sub after.
 if JSVALUE64
@@ -716,6 +716,8 @@ if X86_64 or ARM64 or ARM64E or ARMv7
         push t0, t1
         push t2, t3
         push t4, t5
+        push t6, t7
+        push ws0, ws1
         if ARM64 or ARM64E
             push csr0, csr1
             push csr2, csr3
@@ -738,6 +740,8 @@ if X86_64 or ARM64 or ARM64E or ARMv7
         elsif ARMv7
             pop csr1, csr0
         end
+        pop ws1, ws0
+        pop t7, t6
         pop t5, t4
         pop t3, t2
         pop t1, t0
@@ -1160,7 +1164,7 @@ if ARM64E
     global _llint_function_for_construct_arity_checkTagGateAfter
 end
 
-macro callTargetFunction(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, callee, callPtrTag)
+macro callTargetFunction(opcodeName, size, opcodeStruct, dispatchAfterCall, valueProfileName, dstVirtualRegister, dispatch, callee, callPtrTag)
     if C_LOOP or C_LOOP_WIN
         cloopCallJSFunction callee
     elsif ARM64E
@@ -1228,7 +1232,11 @@ macro prepareForRegularCall(temp1, temp2, temp3, temp4, storeCodeBlock)
 end
 
 macro invokeForRegularCall(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, callee, maybeOldCFR, callPtrTag)
-    callTargetFunction(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, callee, callPtrTag)
+    callTargetFunction(opcodeName, size, opcodeStruct, dispatchAfterRegularCall, valueProfileName, dstVirtualRegister, dispatch, callee, callPtrTag)
+end
+
+macro invokeForRegularCallIgnoreResult(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, callee, maybeOldCFR, callPtrTag)
+    callTargetFunction(opcodeName, size, opcodeStruct, dispatchAfterRegularCallIgnoreResult, valueProfileName, dstVirtualRegister, dispatch, callee, callPtrTag)
 end
 
 # t5 is metadata
@@ -1339,7 +1347,7 @@ macro slowPathForCall(opcodeName, size, opcodeStruct, valueProfileName, dstVirtu
             move calleeFramePtr, sp
             prepareCall(t2, t3, t4, t1, macro(address) end)
         .dontUpdateSP:
-            callTargetFunction(%opcodeName%_slow, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, callee, JSEntrySlowPathPtrTag)
+            callTargetFunction(%opcodeName%_slow, size, opcodeStruct, dispatchAfterRegularCall, valueProfileName, dstVirtualRegister, dispatch, callee, JSEntrySlowPathPtrTag)
         end)
 end
 
@@ -1844,12 +1852,14 @@ if not (C_LOOP or C_LOOP_WIN)
 end
 
 if ARM64E
+    if JIT_CAGE
     # void* jitCagePtr(void* pointer, uintptr_t tag)
     emit ".globl _jitCagePtr"
     emit "_jitCagePtr:"
         tagReturnAddress sp
         leap _g_config, t2
         jmp JSCConfigGateMapOffset + (constexpr Gate::jitCagePtr) * PtrSize[t2], NativeToJITGatePtrTag
+    end
         global _jitCagePtrGateAfter
         _jitCagePtrGateAfter:
         ret
@@ -2125,7 +2135,6 @@ macro slowPathOp(opcodeName)
 end
 
 slowPathOp(create_cloned_arguments)
-slowPathOp(create_arguments_butterfly_excluding_this)
 slowPathOp(create_direct_arguments)
 slowPathOp(create_lexical_environment)
 slowPathOp(create_rest)
@@ -2334,7 +2343,7 @@ llintOp(op_loop_hint, OpLoopHint, macro (unused, unused, dispatch)
 end)
 
 
-llintOp(op_check_traps, OpCheckTraps, macro (unused, unused, dispatch)
+macro checkTraps(dispatch)
     loadp CodeBlock[cfr], t1
     loadp CodeBlock::m_vm[t1], t1
     loadi VM::m_traps+VMTraps::m_trapBits[t1], t0
@@ -2347,6 +2356,10 @@ llintOp(op_check_traps, OpCheckTraps, macro (unused, unused, dispatch)
     jmp .afterHandlingTraps
 .throwHandler:
     jmp _llint_throw_from_slow_path_trampoline
+end
+
+llintOp(op_check_traps, OpCheckTraps, macro (unused, unused, dispatch)
+    checkTraps(dispatch)
 end)
 
 
@@ -2370,24 +2383,21 @@ end)
 # we can't use callOp because we can't pass `call` as the opcode name, since it's an instruction name
 commonCallOp(op_call, _llint_slow_path_call, OpCall, prepareForRegularCall, invokeForRegularCall, prepareForPolymorphicRegularCall, prepareForSlowRegularCall, macro (getu, metadata)
     arrayProfileForCall(OpCall, getu)
-end)
+end, dispatchAfterRegularCall)
 
+commonCallOp(op_construct, _llint_slow_path_construct, OpConstruct, prepareForRegularCall, invokeForRegularCall, prepareForPolymorphicRegularCall, prepareForSlowRegularCall, macro (getu, metadata)
+end, dispatchAfterRegularCall)
 
-macro callOp(opcodeName, opcodeStruct, prepareCall, invokeCall, preparePolymorphic, prepareSlowCall, fn)
-    commonCallOp(op_%opcodeName%, _llint_slow_path_%opcodeName%, opcodeStruct, prepareCall, invokeCall, preparePolymorphic, prepareSlowCall, fn)
-end
-
-
-callOp(tail_call, OpTailCall, prepareForTailCall, invokeForTailCall, prepareForPolymorphicTailCall, prepareForSlowTailCall, macro (getu, metadata)
+commonCallOp(op_tail_call, _llint_slow_path_tail_call, OpTailCall, prepareForTailCall, invokeForTailCall, prepareForPolymorphicTailCall, prepareForSlowTailCall, macro (getu, metadata)
     arrayProfileForCall(OpTailCall, getu)
     checkSwitchToJITForEpilogue()
     # reload metadata since checkSwitchToJITForEpilogue() might have trashed t5
     metadata(t5, t0)
-end)
+end, dispatchAfterTailCall)
 
-
-callOp(construct, OpConstruct, prepareForRegularCall, invokeForRegularCall, prepareForPolymorphicRegularCall, prepareForSlowRegularCall, macro (getu, metadata) end)
-
+commonCallOp(op_call_ignore_result, _llint_slow_path_call, OpCallIgnoreResult, prepareForRegularCall, invokeForRegularCallIgnoreResult, prepareForPolymorphicRegularCall, prepareForSlowRegularCall, macro (getu, metadata)
+    arrayProfileForCall(OpCallIgnoreResult, getu)
+end, dispatchAfterRegularCallIgnoreResult)
 
 macro branchIfException(exceptionTarget)
     loadp CodeBlock[cfr], t3
@@ -2399,14 +2409,14 @@ end
 
 
 llintOpWithMetadata(op_call_varargs, OpCallVarargs, macro (size, get, dispatch, metadata, return)
-    doCallVarargs(op_call_varargs, size, get, OpCallVarargs, m_profile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_call_varargs, prepareForRegularCall, invokeForRegularCall, prepareForPolymorphicRegularCall, prepareForSlowRegularCall)
+    doCallVarargs(op_call_varargs, size, get, OpCallVarargs, m_profile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_call_varargs, prepareForRegularCall, invokeForRegularCall, prepareForPolymorphicRegularCall, prepareForSlowRegularCall, dispatchAfterRegularCall)
 end)
 
 llintOpWithMetadata(op_tail_call_varargs, OpTailCallVarargs, macro (size, get, dispatch, metadata, return)
     checkSwitchToJITForEpilogue()
     # We lie and perform the tail call instead of preparing it since we can't
     # prepare the frame for a call opcode
-    doCallVarargs(op_tail_call_varargs, size, get, OpTailCallVarargs, m_profile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_tail_call_varargs, prepareForTailCall, invokeForTailCall, prepareForPolymorphicTailCall, prepareForSlowTailCall)
+    doCallVarargs(op_tail_call_varargs, size, get, OpTailCallVarargs, m_profile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_tail_call_varargs, prepareForTailCall, invokeForTailCall, prepareForPolymorphicTailCall, prepareForSlowTailCall, dispatchAfterTailCall)
 end)
 
 
@@ -2414,12 +2424,12 @@ llintOpWithMetadata(op_tail_call_forward_arguments, OpTailCallForwardArguments, 
     checkSwitchToJITForEpilogue()
     # We lie and perform the tail call instead of preparing it since we can't
     # prepare the frame for a call opcode
-    doCallVarargs(op_tail_call_forward_arguments, size, get, OpTailCallForwardArguments, m_profile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_forward_arguments, _llint_slow_path_tail_call_forward_arguments, prepareForTailCall, invokeForTailCall, prepareForPolymorphicTailCall, prepareForSlowTailCall)
+    doCallVarargs(op_tail_call_forward_arguments, size, get, OpTailCallForwardArguments, m_profile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_forward_arguments, _llint_slow_path_tail_call_forward_arguments, prepareForTailCall, invokeForTailCall, prepareForPolymorphicTailCall, prepareForSlowTailCall, dispatchAfterTailCall)
 end)
 
 
 llintOpWithMetadata(op_construct_varargs, OpConstructVarargs, macro (size, get, dispatch, metadata, return)
-    doCallVarargs(op_construct_varargs, size, get, OpConstructVarargs, m_profile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_construct_varargs, prepareForRegularCall, invokeForRegularCall, prepareForPolymorphicRegularCall, prepareForSlowRegularCall)
+    doCallVarargs(op_construct_varargs, size, get, OpConstructVarargs, m_profile, m_dst, dispatch, metadata, _llint_slow_path_size_frame_for_varargs, _llint_slow_path_construct_varargs, prepareForRegularCall, invokeForRegularCall, prepareForPolymorphicRegularCall, prepareForSlowRegularCall, dispatchAfterRegularCall)
 end)
 
 
@@ -2485,7 +2495,7 @@ _llint_op_call_direct_eval_wide32:
 
 
 commonOp(llint_generic_return_point, macro () end, macro (size)
-    dispatchAfterCall(size, OpCallDirectEval, m_profile, m_dst, macro ()
+    dispatchAfterRegularCall(size, OpCallDirectEval, m_profile, m_dst, macro ()
         dispatchOp(size, op_call_direct_eval)
     end)
 end)
@@ -2744,7 +2754,7 @@ macro notSupported()
         # smallest instructions exist, we should pick the one that is most
         # likely result in execution being halted. Currently that is the break
         # instruction on all architectures we're interested in. (Break is int3
-        # on Intel, which is 1 byte, and bkpt on ARMv7, which is 2 bytes.)
+        # on Intel, which is 1 byte, and udf on ARMv7, which is 2 bytes.)
         break
     end
 end
@@ -2778,6 +2788,7 @@ macro wasmScope()
     # Wrap the script in a macro since it overwrites some of the LLInt macros,
     # but we don't want to interfere with the LLInt opcodes
     include WebAssembly
+    include InPlaceInterpreter
 end
 
 global _wasmLLIntPCRangeStart

@@ -956,7 +956,7 @@ public class JFXPanel extends JComponent {
     public InputMethodRequests getInputMethodRequests() {
         EmbeddedSceneInterface scene = scenePeer;
         if (scene == null) {
-            return null;
+            return new InputMethodSupport.InputMethodRequestsAdapter(null);
         }
         return new InputMethodSupport.InputMethodRequestsAdapter(scene.getInputMethodRequests());
     }

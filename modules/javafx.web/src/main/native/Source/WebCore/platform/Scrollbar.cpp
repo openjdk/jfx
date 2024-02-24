@@ -27,9 +27,10 @@
 #include "Scrollbar.h"
 
 #include "DeprecatedGlobalSettings.h"
-#include "FrameView.h"
 #include "GraphicsContext.h"
+#include "LocalFrameView.h"
 #include "PlatformMouseEvent.h"
+#include "RegionContext.h"
 #include "ScrollAnimator.h"
 #include "ScrollView.h"
 #include "ScrollableArea.h"
@@ -45,9 +46,9 @@
 
 namespace WebCore {
 
-Ref<Scrollbar> Scrollbar::createNativeScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarControlSize size)
+Ref<Scrollbar> Scrollbar::createNativeScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarWidth width)
 {
-    return adoptRef(*new Scrollbar(scrollableArea, orientation, size));
+    return adoptRef(*new Scrollbar(scrollableArea, orientation, width));
 }
 
 static bool s_shouldUseFixedPixelsPerLineStepForTesting;
@@ -68,16 +69,19 @@ int Scrollbar::pixelsPerLineStep(int viewWidthOrHeight)
     return pixelsPerLineStep();
 }
 
+
+
+
 int Scrollbar::maxOverlapBetweenPages()
 {
     static int maxOverlapBetweenPages = ScrollbarTheme::theme().maxOverlapBetweenPages();
     return maxOverlapBetweenPages;
 }
 
-Scrollbar::Scrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarControlSize controlSize, ScrollbarTheme* customTheme, bool isCustomScrollbar)
+Scrollbar::Scrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarWidth widthStyle, ScrollbarTheme* customTheme, bool isCustomScrollbar)
     : m_scrollableArea(scrollableArea)
     , m_orientation(orientation)
-    , m_controlSize(controlSize)
+    , m_widthStyle(widthStyle)
     , m_theme(customTheme ? *customTheme : ScrollbarTheme::theme())
     , m_isCustomScrollbar(isCustomScrollbar)
     , m_scrollTimer(*this, &Scrollbar::autoscrollTimerFired)
@@ -87,8 +91,8 @@ Scrollbar::Scrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orient
     // FIXME: This is ugly and would not be necessary if we fix cross-platform code to actually query for
     // scrollbar thickness and use it when sizing scrollbars (rather than leaving one dimension of the scrollbar
     // alone when sizing).
-    int thickness = theme().scrollbarThickness(controlSize);
-    Widget::setFrameRect(IntRect(0, 0, thickness, thickness));
+    int thickness = theme().scrollbarThickness(widthStyle);
+    setFrameRect(IntRect(0, 0, thickness, thickness));
 
     m_currentPos = static_cast<float>(offsetForOrientation(m_scrollableArea.scrollOffset(), m_orientation));
 }
@@ -160,7 +164,13 @@ void Scrollbar::updateThumbProportion()
     updateThumb();
 }
 
-void Scrollbar::paint(GraphicsContext& context, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy, EventRegionContext*)
+void Scrollbar::setFrameRect(const IntRect& rect)
+{
+    Widget::setFrameRect(rect);
+    m_scrollableArea.scrollbarFrameRectChanged(*this);
+}
+
+void Scrollbar::paint(GraphicsContext& context, const IntRect& damageRect, Widget::SecurityOriginPaintPolicy, RegionContext*)
 {
     if (context.invalidatingControlTints() && theme().supportsControlTints()) {
         invalidate();
@@ -435,12 +445,18 @@ void Scrollbar::setEnabled(bool e)
         return;
     m_enabled = e;
     theme().updateEnabledState(*this);
+    m_scrollableArea.scrollbarsController().updateScrollbarEnabledState(*this);
     invalidate();
 }
 
 bool Scrollbar::isOverlayScrollbar() const
 {
     return theme().usesOverlayScrollbars();
+}
+
+bool Scrollbar::isMockScrollbar() const
+{
+    return theme().isMockTheme();
 }
 
 bool Scrollbar::shouldParticipateInHitTesting()
@@ -504,6 +520,26 @@ NativeScrollbarVisibility Scrollbar::nativeScrollbarVisibility(const Scrollbar* 
     if (DeprecatedGlobalSettings::mockScrollbarsEnabled() || (scrollbar && scrollbar->isCustomScrollbar()))
         return NativeScrollbarVisibility::ReplacedByCustomScrollbar;
     return NativeScrollbarVisibility::Visible;
+}
+
+bool Scrollbar::isHiddenByStyle() const
+{
+    return m_widthStyle == ScrollbarWidth::None;
+}
+
+float Scrollbar::deviceScaleFactor() const
+{
+    return m_scrollableArea.deviceScaleFactor();
+}
+
+bool Scrollbar::shouldRegisterScrollbar() const
+{
+    return m_scrollableArea.scrollbarsController().shouldRegisterScrollbars();
+}
+
+int Scrollbar::minimumThumbLength() const
+{
+    return m_scrollableArea.scrollbarsController().minimumThumbLength(m_orientation);
 }
 
 } // namespace WebCore

@@ -105,12 +105,14 @@ void Visitor::visit(Attribute& attribute)
     }
 }
 
-void Visitor::visit(AST::AlignAttribute&)
+void Visitor::visit(AST::AlignAttribute& attribute)
 {
+    visit(attribute.alignment());
 }
 
-void Visitor::visit(AST::BindingAttribute&)
+void Visitor::visit(AST::BindingAttribute& attribute)
 {
+    visit(attribute.binding());
 }
 
 void Visitor::visit(AST::ConstAttribute&)
@@ -121,12 +123,14 @@ void Visitor::visit(AST::BuiltinAttribute&)
 {
 }
 
-void Visitor::visit(GroupAttribute&)
+void Visitor::visit(GroupAttribute& attribute)
 {
+    visit(attribute.group());
 }
 
-void Visitor::visit(AST::IdAttribute&)
+void Visitor::visit(AST::IdAttribute& attribute)
 {
+    visit(attribute.value());
 }
 
 void Visitor::visit(AST::InterpolateAttribute&)
@@ -137,20 +141,25 @@ void Visitor::visit(AST::InvariantAttribute&)
 {
 }
 
-void Visitor::visit(AST::LocationAttribute&)
+void Visitor::visit(AST::LocationAttribute& attribute)
 {
+    visit(attribute.location());
 }
 
-void Visitor::visit(AST::SizeAttribute&)
+void Visitor::visit(AST::SizeAttribute& attribute)
 {
+    visit(attribute.size());
 }
 
 void Visitor::visit(AST::StageAttribute&)
 {
 }
 
-void Visitor::visit(AST::WorkgroupSizeAttribute&)
+void Visitor::visit(AST::WorkgroupSizeAttribute& attribute)
 {
+    checkErrorAndVisit(attribute.x());
+    maybeCheckErrorAndVisit(attribute.maybeY());
+    maybeCheckErrorAndVisit(attribute.maybeZ());
 }
 
 // Expression
@@ -407,9 +416,11 @@ void Visitor::visit(AST::ForStatement& forStatement)
 
 void Visitor::visit(AST::IfStatement& ifStatement)
 {
+    for (auto& attribute : ifStatement.attributes())
+        checkErrorAndVisit(attribute);
     checkErrorAndVisit(ifStatement.test());
     checkErrorAndVisit(ifStatement.trueBody());
-    checkErrorAndVisit(ifStatement.falseBody());
+    maybeCheckErrorAndVisit(ifStatement.maybeFalseBody());
 }
 
 void Visitor::visit(AST::LoopStatement& loopStatement)
@@ -482,9 +493,6 @@ void Visitor::visit(AST::TypeName& typeName)
     case AST::NodeKind::ReferenceTypeName:
         checkErrorAndVisit(downcast<AST::ReferenceTypeName>(typeName));
         break;
-    case AST::NodeKind::StructTypeName:
-        checkErrorAndVisit(downcast<AST::StructTypeName>(typeName));
-        break;
     default:
         ASSERT_NOT_REACHED("Unhandled TypeName");
     }
@@ -510,10 +518,6 @@ void Visitor::visit(AST::ReferenceTypeName& referenceTypeName)
     checkErrorAndVisit(referenceTypeName.type());
 }
 
-void Visitor::visit(AST::StructTypeName&)
-{
-}
-
 // Variable
 
 void Visitor::visit(AST::Variable& variable)
@@ -527,6 +531,21 @@ void Visitor::visit(AST::Variable& variable)
 
 void Visitor::visit(VariableQualifier&)
 {
+}
+
+std::optional<unsigned> extractInteger(const AST::Expression& expression)
+{
+    switch (expression.kind()) {
+    case AST::NodeKind::AbstractIntegerLiteral:
+        return { static_cast<unsigned>(downcast<AST::AbstractIntegerLiteral>(expression).value()) };
+    case AST::NodeKind::Unsigned32Literal:
+        return { static_cast<unsigned>(downcast<AST::Unsigned32Literal>(expression).value()) };
+    case AST::NodeKind::Signed32Literal:
+        return { static_cast<unsigned>(downcast<AST::Signed32Literal>(expression).value()) };
+    default:
+        // FIXME: handle constants and overrides
+        return std::nullopt;
+    }
 }
 
 } // namespace WGSL::AST

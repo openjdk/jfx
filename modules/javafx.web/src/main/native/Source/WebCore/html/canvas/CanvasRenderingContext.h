@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,9 @@
 #pragma once
 
 #include "CanvasBase.h"
-#include "GraphicsLayer.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "ScriptWrappable.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/Lock.h>
@@ -41,6 +41,7 @@ class CSSStyleImageValue;
 class CachedImage;
 class CanvasPattern;
 class DestinationColorSpace;
+class GraphicsLayer;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
@@ -49,7 +50,7 @@ class SVGImageElement;
 class WebGLObject;
 enum class PixelFormat : uint8_t;
 
-class CanvasRenderingContext : public ScriptWrappable {
+class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<CanvasRenderingContext>, public CanMakeCheckedPtr {
     WTF_MAKE_NONCOPYABLE(CanvasRenderingContext);
     WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext);
 public:
@@ -63,6 +64,7 @@ public:
 
     CanvasBase& canvasBase() const { return m_canvas; }
 
+    virtual bool is2dBase() const { return false; }
     virtual bool is2d() const { return false; }
     virtual bool isWebGL1() const { return false; }
     virtual bool isWebGL2() const { return false; }
@@ -107,7 +109,7 @@ protected:
 
     template<class T> void checkOrigin(const T* arg)
     {
-        if (taintsOrigin(arg))
+        if (m_canvas.originClean() && taintsOrigin(arg))
             m_canvas.setOriginTainted();
     }
     void checkOrigin(const URL&);

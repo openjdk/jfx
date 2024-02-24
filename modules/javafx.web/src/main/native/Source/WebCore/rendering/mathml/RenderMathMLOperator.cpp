@@ -35,6 +35,9 @@
 #include "MathMLOperatorElement.h"
 #include "PaintInfo.h"
 #include "RenderBlockFlow.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderStyleInlines.h"
 #include "RenderText.h"
 #include "ScaleTransformOperation.h"
 #include "TransformOperations.h"
@@ -228,6 +231,8 @@ void RenderMathMLOperator::layoutBlock(bool relayoutChildren, LayoutUnit pageLog
             child->layoutIfNeeded();
         setLogicalWidth(leadingSpaceValue + m_mathOperator.width() + trailingSpaceValue);
         setLogicalHeight(m_mathOperator.ascent() + m_mathOperator.descent());
+
+        layoutPositionedObjects(relayoutChildren);
     } else {
         // We first do the normal layout without spacing.
         recomputeLogicalWidth();

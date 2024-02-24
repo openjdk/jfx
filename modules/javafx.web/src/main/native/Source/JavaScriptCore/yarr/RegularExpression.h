@@ -25,24 +25,22 @@
 
 #pragma once
 
+#include "YarrFlags.h"
+#include <wtf/OptionSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC { namespace Yarr {
 
-enum MultilineMode { MultilineDisabled, MultilineEnabled };
-enum TextCaseSensitivity { TextCaseSensitive, TextCaseInsensitive };
-enum UnicodeMode { UnicodeUnawareMode, UnicodeAwareMode };
-
 class JS_EXPORT_PRIVATE RegularExpression {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit RegularExpression(StringView, TextCaseSensitivity = TextCaseSensitive, MultilineMode = MultilineDisabled, UnicodeMode = UnicodeUnawareMode);
+    explicit RegularExpression(StringView, OptionSet<Flags> = { });
     ~RegularExpression();
 
     RegularExpression(const RegularExpression&);
     RegularExpression& operator=(const RegularExpression&);
 
-    int match(StringView, int startFrom = 0, int* matchLength = nullptr) const;
+    int match(StringView, unsigned startFrom = 0, int* matchLength = nullptr) const;
     int searchRev(StringView) const;
 
     int matchedLength() const;

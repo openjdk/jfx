@@ -117,7 +117,12 @@ EncodedDataStatus BitmapImage::dataChanged(bool allDataReceived)
         m_source->destroyIncompleteDecodedData();
 
     m_currentFrameDecodingStatus = DecodingStatus::Invalid;
-    return m_source->dataChanged(data(), allDataReceived);
+    auto status = m_source->dataChanged(data(), allDataReceived);
+
+    if (allDataReceived && !shouldAnimate() && frameCount() > 1)
+        m_currentFrame = primaryFrameIndex();
+
+    return status;
 }
 
 void BitmapImage::setCurrentFrameDecodingStatusIfNecessary(DecodingStatus decodingStatus)
@@ -298,9 +303,6 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
                 LOG(Images, "BitmapImage::%s - %p - url: %s [waiting for async decoding to finish]", __FUNCTION__, this, sourceURL().string().utf8().data());
             }
             return ImageDrawResult::DidRequestDecoding;
-        } else if (options.decodingMode() == DecodingMode::SynchronousThumbnail) {
-            image = frameImageAtIndexCacheIfNeeded(m_currentFrame, m_currentSubsamplingLevel, { options.decodingMode(), sizeForDrawing });
-            LOG(Images, "BitmapImage::%s - %p - url: %s [an image frame will be decoded synchronously as a thumbnail]", __FUNCTION__, this, sourceURL().string().utf8().data());
         } else {
             image = frameImageAtIndexCacheIfNeeded(m_currentFrame, m_currentSubsamplingLevel, options.decodingMode());
             LOG(Images, "BitmapImage::%s - %p - url: %s [an image frame will be decoded synchronously]", __FUNCTION__, this, sourceURL().string().utf8().data());
@@ -329,8 +331,8 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
 
     m_currentFrameDecodingStatus = frameDecodingStatusAtIndex(m_currentFrame);
 
-    if (imageObserver())
-        imageObserver()->didDraw(*this);
+    if (auto observer = imageObserver())
+        observer->didDraw(*this);
 
     return result;
 }
@@ -355,14 +357,14 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
         if (!buffer)
             return;
 
-        ImageObserver* observer = imageObserver();
+        auto observer = imageObserver();
 
         // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
         setImageObserver(nullptr);
 
         draw(buffer->context(), tileRect, tileRect, { options, DecodingMode::Synchronous, ImageOrientation::Orientation::FromImage });
 
-        setImageObserver(observer);
+        setImageObserver(WTFMove(observer));
         buffer->convertToLuminanceMask();
 
         m_cachedImage = ImageBuffer::sinkIntoImage(WTFMove(buffer), PreserveResolution::Yes);
@@ -539,8 +541,8 @@ void BitmapImage::internalAdvanceAnimation()
 
     callDecodingCallbacks();
 
-    if (imageObserver())
-        imageObserver()->imageFrameAvailable(*this, ImageAnimatingState::Yes, nullptr, decodingStatus);
+    if (auto observer = imageObserver())
+        observer->imageFrameAvailable(*this, ImageAnimatingState::Yes, nullptr, decodingStatus);
 
     LOG(Images, "BitmapImage::%s - %p - url: %s [m_currentFrame = %ld]", __FUNCTION__, this, sourceURL().string().utf8().data(), m_currentFrame);
 }
@@ -562,7 +564,7 @@ void BitmapImage::stopAnimation()
 void BitmapImage::resetAnimation()
 {
     stopAnimation();
-    m_currentFrame = 0;
+    m_currentFrame = primaryFrameIndex();
     m_repetitionsComplete = RepetitionCountNone;
     m_desiredFrameStartTime = { };
     m_animationFinished = false;
@@ -652,8 +654,8 @@ void BitmapImage::imageFrameAvailableAtIndex(size_t index)
     if (frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(m_currentFrame, m_currentSubsamplingLevel, DecodingMode::Asynchronous))
         callDecodingCallbacks();
 
-    if (imageObserver())
-        imageObserver()->imageFrameAvailable(*this, ImageAnimatingState::No, nullptr, decodingStatus);
+    if (auto observer = imageObserver())
+        observer->imageFrameAvailable(*this, ImageAnimatingState::No, nullptr, decodingStatus);
 }
 
 DestinationColorSpace BitmapImage::colorSpace()

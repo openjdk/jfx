@@ -53,15 +53,14 @@ Ref<SVGPathElement> SVGPathElement::create(const QualifiedName& tagName, Documen
     return adoptRef(*new SVGPathElement(tagName, document));
 }
 
-void SVGPathElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGPathElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::dAttr) {
-        if (!m_pathSegList->baseVal()->parse(value))
-            document().accessSVGExtensions().reportError("Problem parsing d=\"" + value + "\"");
-        return;
+        if (!m_pathSegList->baseVal()->parse(newValue))
+            document().accessSVGExtensions().reportError("Problem parsing d=\"" + newValue + "\"");
     }
 
-    SVGGeometryElement::parseAttribute(name, value);
+    SVGGeometryElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGPathElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -97,9 +96,9 @@ void SVGPathElement::invalidateMPathDependencies()
 
 Node::InsertedIntoAncestorResult SVGPathElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    SVGGeometryElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    auto result = SVGGeometryElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     invalidateMPathDependencies();
-    return InsertedIntoAncestorResult::Done;
+    return result;
 }
 
 void SVGPathElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)

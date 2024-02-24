@@ -123,7 +123,6 @@ dirname
 disabled
 disablepictureinpicture
 disableremoteplayback
-disposition
 download
 draggable
 dropzone
@@ -134,6 +133,7 @@ event
 expanded
 exportparts
 face
+fetchpriority
 filename
 focused
 for
@@ -163,11 +163,6 @@ integrity
 interactive
 is
 ismap
-itemid
-itemprop
-itemref
-itemscope
-itemtype
 keytype
 kind
 label
@@ -219,6 +214,7 @@ onbeforeinput
 onbeforeload
 onbeforepaste
 onbeforeprint
+onbeforetoggle
 onbeforeunload
 onblur
 oncancel
@@ -347,9 +343,6 @@ onwebkitmouseforcewillbegin
 onwebkitneedkey
 onwebkitplaybacktargetavailabilitychanged
 onwebkitpresentationmodechanged
-onwebkitsourceclose
-onwebkitsourceended
-onwebkitsourceopen
 onwebkittransitionend
 onwheel
 open
@@ -360,14 +353,12 @@ ping
 placeholder
 playcount
 playsinline
-pluginspage
-pluginurl
 popover
+popovertarget
+popovertargetaction
 poster
 preload
-primary
 progress
-prompt
 pseudo
 readonly
 referrerpolicy
@@ -381,9 +372,9 @@ rows
 rowspan
 rules
 sandbox
+save
 scheme
 scope
-scoped
 scrollamount
 scrolldelay
 scrolling
@@ -395,8 +386,6 @@ shape
 size
 sizes
 slot
-sortable
-sortdirection
 span
 spellcheck
 src
@@ -410,11 +399,9 @@ style
 subtitle
 summary
 tabindex
-tableborder
 target
 text
 title
-top
 topmargin
 translate
 truespeed
@@ -442,7 +429,4 @@ x-apple-data-detectors-type
 x-apple-pdf-annotation
 x-itunes-inherit-uri-query-component
 x-webkit-airplay
-x-webkit-grammar
-x-webkit-imagemenu
-x-webkit-speech
 x-webkit-wirelessvideoplaybackdisabled

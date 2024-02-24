@@ -111,7 +111,7 @@ ExceptionOr<DOMRectInit> parseVisibleRect(const DOMRectInit& defaultRect, const 
 {
     auto sourceRect = defaultRect;
     if (overrideRect) {
-        if (!overrideRect->width || !overrideRect->height)
+        if (overrideRect->width <= 0 || overrideRect->height <= 0 || overrideRect->x < 0 || overrideRect->y < 0)
             return Exception { TypeError, "overrideRect is not valid"_s };
         if (overrideRect->x + overrideRect->width > codedWidth)
             return Exception { TypeError, "overrideRect is not valid"_s };
@@ -128,10 +128,11 @@ size_t videoPixelFormatToPlaneCount(VideoPixelFormat format)
 {
     switch (format) {
     case VideoPixelFormat::I420:
-    case VideoPixelFormat::I420A:
     case VideoPixelFormat::I444:
     case VideoPixelFormat::I422:
         return 3;
+    case VideoPixelFormat::I420A:
+        return 4;
     case VideoPixelFormat::NV12:
         return 2;
     case VideoPixelFormat::RGBA:
@@ -171,11 +172,12 @@ size_t videoPixelFormatToSubSampling(VideoPixelFormat format, size_t planeNumber
 {
     switch (format) {
     case VideoPixelFormat::I420:
-    case VideoPixelFormat::I420A:
     case VideoPixelFormat::I444:
     case VideoPixelFormat::I422:
     case VideoPixelFormat::NV12:
         return planeNumber ? 2 : 1;
+    case VideoPixelFormat::I420A:
+        return (planeNumber == 1 || planeNumber == 2) ? 2 : 1;
     case VideoPixelFormat::RGBA:
     case VideoPixelFormat::RGBX:
     case VideoPixelFormat::BGRA:

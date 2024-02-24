@@ -1,6 +1,6 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -50,7 +50,7 @@ WTF_EXPORT_PRIVATE float charactersToFloat(const UChar*, size_t, bool* ok = null
 WTF_EXPORT_PRIVATE float charactersToFloat(const LChar*, size_t, size_t& parsedLength);
 WTF_EXPORT_PRIVATE float charactersToFloat(const UChar*, size_t, size_t& parsedLength);
 
-template<bool isSpecialCharacter(UChar), typename CharacterType> bool isAllSpecialCharacters(const CharacterType*, size_t);
+template<bool isSpecialCharacter(UChar), typename CharacterType> bool containsOnly(const CharacterType*, size_t);
 
 enum TrailingZerosTruncatingPolicy { KeepTrailingZeros, TruncateTrailingZeros };
 
@@ -62,12 +62,12 @@ public:
 
     // Construct a string with UTF-16 data.
     WTF_EXPORT_PRIVATE String(const UChar* characters, unsigned length);
-    ALWAYS_INLINE String(Span<const UChar> characters) : String(characters.data(), characters.size()) { }
+    ALWAYS_INLINE String(std::span<const UChar> characters) : String(characters.data(), characters.size()) { }
 
     // Construct a string with Latin-1 data.
     WTF_EXPORT_PRIVATE String(const LChar* characters, unsigned length);
     WTF_EXPORT_PRIVATE String(const char* characters, unsigned length);
-    ALWAYS_INLINE String(Span<const LChar> characters) : String(characters.data(), characters.size()) { }
+    ALWAYS_INLINE String(std::span<const LChar> characters) : String(characters.data(), characters.size()) { }
     ALWAYS_INLINE static String fromLatin1(const char* characters) { return String { characters }; }
 
     // Construct a string referencing an existing StringImpl.
@@ -96,8 +96,8 @@ public:
 
     static String adopt(StringBuffer<LChar>&& buffer) { return StringImpl::adopt(WTFMove(buffer)); }
     static String adopt(StringBuffer<UChar>&& buffer) { return StringImpl::adopt(WTFMove(buffer)); }
-    template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity>
-    static String adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity>&& vector) { return StringImpl::adopt(WTFMove(vector)); }
+    template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
+    static String adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity, Malloc>&& vector) { return StringImpl::adopt(WTFMove(vector)); }
 
     bool isNull() const { return !m_impl; }
     bool isEmpty() const { return !m_impl || m_impl->isEmpty(); }
@@ -108,8 +108,8 @@ public:
     unsigned length() const { return m_impl ? m_impl->length() : 0; }
     const LChar* characters8() const { return m_impl ? m_impl->characters8() : nullptr; }
     const UChar* characters16() const { return m_impl ? m_impl->characters16() : nullptr; }
-    Span<const LChar> span8() const { return { characters8(), length() }; }
-    Span<const UChar> span16() const { return { characters16(), length() }; }
+    std::span<const LChar> span8() const { return { characters8(), length() }; }
+    std::span<const UChar> span16() const { return { characters16(), length() }; }
 
     // Return characters8() or characters16() depending on CharacterType.
     template<typename CharacterType> const CharacterType* characters() const;
@@ -124,7 +124,7 @@ public:
     WTF_EXPORT_PRIVATE CString utf8(ConversionMode = LenientConversion) const;
 
     template<typename Func>
-    Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
+    Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> tryGetUTF8(const Func&, ConversionMode = LenientConversion) const;
     WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8(ConversionMode) const;
     WTF_EXPORT_PRIVATE Expected<CString, UTF8ConversionError> tryGetUTF8() const;
 
@@ -142,7 +142,6 @@ public:
 
     WTF_EXPORT_PRIVATE static String numberToStringFixedPrecision(float, unsigned precision = 6, TrailingZerosTruncatingPolicy = TruncateTrailingZeros);
     WTF_EXPORT_PRIVATE static String numberToStringFixedPrecision(double, unsigned precision = 6, TrailingZerosTruncatingPolicy = TruncateTrailingZeros);
-    WTF_EXPORT_PRIVATE static String numberToStringFixedWidth(float, unsigned decimalPlaces);
     WTF_EXPORT_PRIVATE static String numberToStringFixedWidth(double, unsigned decimalPlaces);
 
     AtomString toExistingAtomString() const;
@@ -203,11 +202,9 @@ public:
     WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToLowercaseWithLocale(const AtomString& localeIdentifier) const;
     WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN convertToUppercaseWithLocale(const AtomString& localeIdentifier) const;
 
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN stripWhiteSpace() const;
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN simplifyWhiteSpace() const;
     WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN simplifyWhiteSpace(CodeUnitMatchFunction) const;
 
-    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN stripLeadingAndTrailingCharacters(CodeUnitMatchFunction) const;
+    WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN trim(CodeUnitMatchFunction) const;
     template<typename Predicate> String WARN_UNUSED_RETURN removeCharacters(const Predicate&) const;
 
     // Returns the string with case folded for case insensitive comparison.
@@ -249,13 +246,9 @@ public:
     WTF_EXPORT_PRIVATE RetainPtr<CFStringRef> createCFString() const;
 #endif
 
-#ifdef __OBJC__
-#if HAVE(SAFARI_FOR_WEBKIT_DEVELOPMENT_REQUIRING_EXTRA_SYMBOLS)
-    WTF_EXPORT_PRIVATE String(NSString *);
-#else
+#if USE(FOUNDATION) && defined(__OBJC__)
     String(NSString *string)
         : String((__bridge CFStringRef)string) { }
-#endif
 
     // This conversion converts the null string to an empty NSString rather than to nil.
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the
@@ -300,9 +293,9 @@ public:
     // Determines the writing direction using the Unicode Bidi Algorithm rules P2 and P3.
     std::optional<UCharDirection> defaultWritingDirection() const;
 
-    bool isAllASCII() const { return !m_impl || m_impl->isAllASCII(); }
-    bool isAllLatin1() const { return !m_impl || m_impl->isAllLatin1(); }
-    template<bool isSpecialCharacter(UChar)> bool isAllSpecialCharacters() const { return !m_impl || m_impl->isAllSpecialCharacters<isSpecialCharacter>(); }
+    bool containsOnlyASCII() const { return !m_impl || m_impl->containsOnlyASCII(); }
+    bool containsOnlyLatin1() const { return !m_impl || m_impl->containsOnlyLatin1(); }
+    template<bool isSpecialCharacter(UChar)> bool containsOnly() const { return !m_impl || m_impl->containsOnly<isSpecialCharacter>(); }
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     String(WTF::HashTableDeletedValueType) : m_impl(WTF::HashTableDeletedValue) { }
@@ -339,12 +332,6 @@ inline bool operator==(const String& a, ASCIILiteral b) { return equal(a.impl(),
 inline bool operator==(ASCIILiteral a, const String& b) { return equal(b.impl(), a); }
 template<size_t inlineCapacity> inline bool operator==(const Vector<char, inlineCapacity>& a, const String& b) { return equal(b.impl(), a.data(), a.size()); }
 template<size_t inlineCapacity> inline bool operator==(const String& a, const Vector<char, inlineCapacity>& b) { return b == a; }
-
-inline bool operator!=(const String& a, const String& b) { return !equal(a.impl(), b.impl()); }
-inline bool operator!=(const String& a, ASCIILiteral b) { return !equal(a.impl(), b); }
-inline bool operator!=(ASCIILiteral a, const String& b) { return !equal(b.impl(), a); }
-template<size_t inlineCapacity> inline bool operator!=(const Vector<char, inlineCapacity>& a, const String& b) { return !(a == b); }
-template<size_t inlineCapacity> inline bool operator!=(const String& a, const Vector<char, inlineCapacity>& b) { return b != a; }
 
 bool equalIgnoringASCIICase(const String&, const String&);
 bool equalIgnoringASCIICase(const String&, ASCIILiteral);
@@ -451,7 +438,7 @@ inline String::String(StaticStringImpl* string)
 }
 
 inline String::String(ASCIILiteral characters)
-    : m_impl(characters.isNull() ? nullptr : RefPtr<StringImpl> { StringImpl::create(characters) })
+    : m_impl(characters.isNull() ? nullptr : RefPtr { StringImpl::create(characters) })
 {
 }
 
@@ -488,7 +475,7 @@ ALWAYS_INLINE String WARN_UNUSED_RETURN makeStringByReplacingAll(const String& s
 
 WTF_EXPORT_PRIVATE String WARN_UNUSED_RETURN makeStringByRemoving(const String&, unsigned position, unsigned lengthToRemove);
 
-WTF_EXPORT_PRIVATE String makeStringByJoining(Span<const String> strings, const String& separator);
+WTF_EXPORT_PRIVATE String makeStringByJoining(std::span<const String> strings, const String& separator);
 
 inline std::optional<UCharDirection> String::defaultWritingDirection() const
 {
@@ -515,16 +502,16 @@ inline String String::substring(unsigned position, unsigned length) const
 }
 
 template<typename Func>
-inline Expected<std::invoke_result_t<Func, Span<const char>>, UTF8ConversionError> String::tryGetUTF8(const Func& function, ConversionMode mode) const
+inline Expected<std::invoke_result_t<Func, std::span<const char>>, UTF8ConversionError> String::tryGetUTF8(const Func& function, ConversionMode mode) const
 {
     if (!m_impl) {
         constexpr const char* emptyString = "";
-        return function(Span { emptyString, emptyString });
+        return function(std::span(emptyString, emptyString));
     }
     return m_impl->tryGetUTF8(function, mode);
 }
 
-#ifdef __OBJC__
+#if USE(FOUNDATION) && defined(__OBJC__)
 
 inline String::operator NSString *() const
 {
@@ -580,24 +567,6 @@ inline bool startsWithLettersIgnoringASCIICase(const String& string, ASCIILitera
     return startsWithLettersIgnoringASCIICase(string.impl(), literal);
 }
 
-struct HashTranslatorASCIILiteral {
-    static unsigned hash(ASCIILiteral literal)
-    {
-        return StringHasher::computeHashAndMaskTop8Bits(literal.characters(), literal.length());
-    }
-
-    static bool equal(const String& a, ASCIILiteral b)
-    {
-        return a == b;
-    }
-
-    static void translate(String& location, ASCIILiteral literal, unsigned hash)
-    {
-        location = literal;
-        location.impl()->setHash(hash);
-    }
-};
-
 inline namespace StringLiterals {
 
 inline String operator"" _str(const char* characters, size_t)
@@ -605,11 +574,15 @@ inline String operator"" _str(const char* characters, size_t)
     return ASCIILiteral::fromLiteralUnsafe(characters);
 }
 
+inline String operator"" _str(const UChar* characters, size_t length)
+{
+    return String(characters, length);
+}
+
 } // inline StringLiterals
 
 } // namespace WTF
 
-using WTF::HashTranslatorASCIILiteral;
 using WTF::KeepTrailingZeros;
 using WTF::String;
 using WTF::charactersToDouble;
@@ -621,7 +594,7 @@ using WTF::makeStringByReplacingAll;
 using WTF::nullString;
 using WTF::equal;
 using WTF::find;
-using WTF::isAllSpecialCharacters;
+using WTF::containsOnly;
 using WTF::reverseFind;
 
 #include <wtf/text/AtomString.h>

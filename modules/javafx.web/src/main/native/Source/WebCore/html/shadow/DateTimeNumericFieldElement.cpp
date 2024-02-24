@@ -31,10 +31,11 @@
 
 #include "EventNames.h"
 #include "FontCascade.h"
+#include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include "PlatformLocale.h"
 #include "RenderBlock.h"
-#include "RenderStyle.h"
+#include "RenderStyleSetters.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -117,6 +118,7 @@ void DateTimeNumericFieldElement::setEmptyValue(EventBehavior eventBehavior)
     m_hasValue = false;
     m_typeAheadBuffer.clear();
     updateVisibleValue(eventBehavior);
+    setARIAValueAttributesWithInteger(0);
 }
 
 void DateTimeNumericFieldElement::setValueAsInteger(int value, EventBehavior eventBehavior)
@@ -124,12 +126,19 @@ void DateTimeNumericFieldElement::setValueAsInteger(int value, EventBehavior eve
     m_value = m_range.clampValue(value);
     m_hasValue = true;
     updateVisibleValue(eventBehavior);
+    setARIAValueAttributesWithInteger(value);
 }
 
 void DateTimeNumericFieldElement::setValueAsIntegerByStepping(int value)
 {
     m_typeAheadBuffer.clear();
     setValueAsInteger(value, DispatchInputAndChangeEvents);
+}
+
+void DateTimeNumericFieldElement::setARIAValueAttributesWithInteger(int value)
+{
+    setAttributeWithoutSynchronization(HTMLNames::aria_valuenowAttr, AtomString::number(value));
+    setAttributeWithoutSynchronization(HTMLNames::aria_valuetextAttr, AtomString::number(value));
 }
 
 void DateTimeNumericFieldElement::stepDown()

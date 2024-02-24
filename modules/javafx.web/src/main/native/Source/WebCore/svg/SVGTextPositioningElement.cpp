@@ -23,6 +23,7 @@
 #include "config.h"
 #include "SVGTextPositioningElement.h"
 
+#include "NodeName.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGText.h"
@@ -51,34 +52,29 @@ SVGTextPositioningElement::SVGTextPositioningElement(const QualifiedName& tagNam
     });
 }
 
-void SVGTextPositioningElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGTextPositioningElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::xAttr) {
-        m_x->baseVal()->parse(value);
-        return;
+    switch (name.nodeName()) {
+    case AttributeNames::xAttr:
+        m_x->baseVal()->parse(newValue);
+        break;
+    case AttributeNames::yAttr:
+        m_y->baseVal()->parse(newValue);
+        break;
+    case AttributeNames::dxAttr:
+        m_dx->baseVal()->parse(newValue);
+        break;
+    case AttributeNames::dyAttr:
+        m_dy->baseVal()->parse(newValue);
+        break;
+    case AttributeNames::rotateAttr:
+        m_rotate->baseVal()->parse(newValue);
+        break;
+    default:
+        break;
     }
 
-    if (name == SVGNames::yAttr) {
-        m_y->baseVal()->parse(value);
-        return;
-    }
-
-    if (name == SVGNames::dxAttr) {
-        m_dx->baseVal()->parse(value);
-        return;
-    }
-
-    if (name == SVGNames::dyAttr) {
-        m_dy->baseVal()->parse(value);
-        return;
-    }
-
-    if (name == SVGNames::rotateAttr) {
-        m_rotate->baseVal()->parse(value);
-        return;
-    }
-
-    SVGTextContentElement::parseAttribute(name, value);
+    SVGTextContentElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGTextPositioningElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)

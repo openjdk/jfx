@@ -203,7 +203,7 @@ void PluginWidgetJava::paint(
     GraphicsContext& context,
     const IntRect& rc /*page coordinates*/,
     SecurityOriginPaintPolicy,
-    EventRegionContext*) {
+    RegionContext*) {
     //Widget::paint(context, rc);
     /*
     if (!m_isStarted) {
@@ -212,8 +212,8 @@ void PluginWidgetJava::paint(
         return;
     }
     */
-    if (context.paintingDisabled())
-        return;
+    //if (context.paintingDisabled())
+        //return;
 
     JLObject obj = platformWidget();
     if (obj){
@@ -264,8 +264,6 @@ void PluginWidgetJava::updatePluginWidget()
 {
     if (!parent())
         return;
-
-    ASSERT(parent()->isFrameView());
 
     FrameView* frameView = static_cast<FrameView*>(parent());
     IntRect windowRect(frameView->contentsToWindow(frameRect().location()), frameRect().size());
