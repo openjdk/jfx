@@ -1774,7 +1774,8 @@ public class TreeTableViewTest {
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "updated name2");
     }
 
-    @Test public void testSetChildrenShouldUpdateTheCells() {
+    @Test
+    public void testSetChildrenShouldUpdateTheCells() {
         final TreeTableView<RT_22463_Person> table = new TreeTableView<>();
         TreeTableColumn<RT_22463_Person, ?> c1 = new TreeTableColumn<>("Id");
         TreeTableColumn<RT_22463_Person, ?> c2 = new TreeTableColumn<>("Name");
@@ -2636,6 +2637,7 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
+        int oldCount = rt_31200_count;
         assertEquals(18, rt_31200_count);
 
         // resize the stage
@@ -2643,7 +2645,8 @@ public class TreeTableViewTest {
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(18, rt_31200_count);
+        // Should be the same count as above.
+        assertEquals(oldCount, rt_31200_count);
 
         sl.dispose();
     }

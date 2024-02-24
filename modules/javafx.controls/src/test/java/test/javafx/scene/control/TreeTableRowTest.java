@@ -955,9 +955,8 @@ public class TreeTableRowTest {
         tree.setRowFactory(view -> new TreeTableRow<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-
                 counter.incrementAndGet();
+                super.updateItem(item, empty);
             }
         });
 

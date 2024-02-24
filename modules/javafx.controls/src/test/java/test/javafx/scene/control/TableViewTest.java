@@ -1101,7 +1101,8 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "updated name2");
     }
 
-    @Test public void testSetItemsShouldUpdateTheCells() {
+    @Test
+    public void testSetItemsShouldUpdateTheCells() {
         final TableView<RT_22463_Person> table = new TableView<>();
         TableColumn<RT_22463_Person, ?> c1 = new TableColumn<>("Id");
         TableColumn<RT_22463_Person, ?> c2 = new TableColumn<>("Name");

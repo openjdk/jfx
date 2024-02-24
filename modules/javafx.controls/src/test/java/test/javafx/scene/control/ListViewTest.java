@@ -605,7 +605,8 @@ public class ListViewTest {
         VirtualFlowTestUtils.assertCellTextEquals(list, 1, "updated name2");
     }
 
-    @Test public void testSetItemsShouldUpdateTheCells() {
+    @Test
+    public void testSetItemsShouldUpdateTheCells() {
         final ListView<RT_22463_Person> list = new ListView<>();
 
         RT_22463_Person p1 = new RT_22463_Person();

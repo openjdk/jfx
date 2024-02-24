@@ -171,9 +171,8 @@ public class TableViewRowTest {
         table.setRowFactory(view -> new TableRow<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-
                 counter.incrementAndGet();
+                super.updateItem(item, empty);
             }
         });
 

@@ -1250,9 +1250,8 @@ public class TreeTableCellTest {
         editingColumn.setCellFactory(view -> new TreeTableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-
                 counter.incrementAndGet();
+                super.updateItem(item, empty);
             }
         });
         setupForEditing();

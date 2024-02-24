@@ -1145,9 +1145,8 @@ public class ListCellTest {
         list.setCellFactory(e -> new ListCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-
                 counter.incrementAndGet();
+                super.updateItem(item, empty);
             }
         });
 

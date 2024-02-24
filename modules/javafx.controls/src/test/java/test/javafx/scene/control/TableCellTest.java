@@ -938,9 +938,8 @@ public class TableCellTest {
         editingColumn.setCellFactory(view -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-
                 counter.incrementAndGet();
+                super.updateItem(item, empty);
             }
         });
         setupForEditing();
