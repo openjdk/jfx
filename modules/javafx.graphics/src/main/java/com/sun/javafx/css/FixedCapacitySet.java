@@ -422,12 +422,26 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
      */
     private static final class OpenAddressed<T> extends FixedCapacitySet<T> {
         private final T[] elements;
+        private final int requestedCapacity;
+        private final int mask;
 
         private int size;
 
         @SuppressWarnings("unchecked")
         private OpenAddressed(int capacity) {
-            this.elements = (T[]) new Object[capacity];
+            this.requestedCapacity = capacity;
+
+            int shift = Integer.SIZE - Integer.numberOfLeadingZeros(capacity * 2 - capacity / 2);
+
+            /*
+             * The shift calculated ensures the elements array's size will be a power
+             * of 2, and ensures that the load factor of this hash map will be roughly
+             * between 0.3 and 0.7; high load factors are detrimental to performance,
+             * while low load factors will consume more memory than necessary.
+             */
+
+            this.elements = (T[]) new Object[1 << shift];
+            this.mask = (1 << shift) - 1;
         }
 
         @Override
@@ -512,7 +526,6 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
             ensureNotFrozen();
 
             int bucket = determineBucketIndex(e);  // implicit null check here
-            boolean reset = false;
 
             while (elements[bucket] != null) {
                 if (elements[bucket].equals(e)) {
@@ -522,14 +535,12 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
                 bucket++;  // linear probing for simplicity
 
                 if (bucket >= elements.length) {
-                    bucket = 0;
-
-                    if (reset) {
-                        throw new IllegalStateException("set is full");
-                    }
-
-                    reset = true;
+                    bucket = 0;  // there is no risk of this becoming an infinite loop as there is always spare capacity
                 }
+            }
+
+            if (size == requestedCapacity) {  // this check is "late" so that adding the same element to an already "full" set will correctly return "false"
+                throw new IllegalStateException("set is full");
             }
 
             elements[bucket] = e;
@@ -563,7 +574,9 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
         }
 
         private int determineBucketIndex(Object o) {
-            return (o.hashCode() & 0x7fffffff) % elements.length;  // implicit null check here
+            int h = o.hashCode();
+
+            return (h ^ (h >>> 16)) & mask;  // inspired by HashMap
         }
     }
 }
