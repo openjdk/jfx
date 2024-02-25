@@ -145,7 +145,7 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * styleClasses converted to a set of bit masks
+     * Style class names (immutable).
      */
     private final FixedCapacitySet<String> selectorStyleClassNames;
 
