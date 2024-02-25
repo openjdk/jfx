@@ -139,6 +139,7 @@ final public class SimpleSelector extends Selector {
      * @return a set of style class names, never {@code null}, or contains {@code null}s but can be empty
      * @since 23
      */
+    @Override
     public Set<String> getStyleClassNames() {
         return selectorStyleClassNames;
     }
