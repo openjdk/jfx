@@ -60,8 +60,20 @@ OMGPlan::OMGPlan(VM& vm, Ref<Module>&& module, uint32_t functionIndex, std::opti
     dataLogLnIf(WasmOMGPlanInternal::verbose, "Starting OMG plan for ", functionIndex, " of module: ", RawPointer(&m_module.get()));
 }
 
-void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffer)
+FunctionAllowlist& OMGPlan::ensureGlobalOMGAllowlist()
 {
+    static LazyNeverDestroyed<FunctionAllowlist> omgAllowlist;
+    static std::once_flag initializeAllowlistFlag;
+    std::call_once(initializeAllowlistFlag, [] {
+        const char* functionAllowlistFile = Options::omgAllowlist();
+        omgAllowlist.construct(functionAllowlistFile);
+    });
+    return omgAllowlist;
+}
+
+void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffer, unsigned functionIndex, const TypeDefinition& signature, unsigned functionIndexSpace)
+{
+    dataLogLnIf(context.procedure->shouldDumpIR() || shouldDumpDisassemblyFor(CompilationMode::OMGMode), "Generated OMG code for WebAssembly OMG function[", functionIndex, "] ", signature.toString().ascii().data(), " name ", makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
     if (UNLIKELY(shouldDumpDisassemblyFor(CompilationMode::OMGMode))) {
         auto* disassembler = context.procedure->code().disassembler();
 
@@ -69,17 +81,20 @@ void OMGPlan::dumpDisassembly(CompilationContext& context, LinkBuffer& linkBuffe
         const char* airPrefix = "Air        ";
         const char* asmPrefix = "asm              ";
 
+        B3::Value* prevOrigin = nullptr;
         auto forEachInst = scopedLambda<void(B3::Air::Inst&)>([&] (B3::Air::Inst& inst) {
-            if (inst.origin && context.procedure->code().shouldPreserveB3Origins()) {
+            if (inst.origin && inst.origin != prevOrigin && context.procedure->code().shouldPreserveB3Origins()) {
                 if (String string = inst.origin->compilerConstructionSite(); !string.isNull())
                     dataLogLn("\033[1;37m", string, "\033[0m");
                 dataLog(b3Prefix);
                 inst.origin->deepDump(context.procedure.get(), WTF::dataFile());
                 dataLogLn();
+                prevOrigin = inst.origin;
             }
         });
 
         disassembler->dump(context.procedure->code(), WTF::dataFile(), linkBuffer, airPrefix, asmPrefix, forEachInst);
+        linkBuffer.didAlreadyDisassemble();
     }
 }
 
@@ -103,15 +118,15 @@ void OMGPlan::work(CompilationEffort)
 
     if (UNLIKELY(!parseAndCompileResult)) {
         Locker locker { m_lock };
-        fail(makeString(parseAndCompileResult.error(), "when trying to tier up ", String::number(m_functionIndex)));
+        fail(makeString(parseAndCompileResult.error(), "when trying to tier up "_s, m_functionIndex));
         return;
     }
 
     Entrypoint omgEntrypoint;
-    LinkBuffer linkBuffer(*context.wasmEntrypointJIT, nullptr, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
+    LinkBuffer linkBuffer(*context.wasmEntrypointJIT, nullptr, LinkBuffer::Profile::WasmOMG, JITCompilationCanFail);
     if (UNLIKELY(linkBuffer.didFailToAllocate())) {
         Locker locker { m_lock };
-        Base::fail(makeString("Out of executable memory while tiering up function at index ", String::number(m_functionIndex)));
+        Base::fail(makeString("Out of executable memory while tiering up function at index "_s, m_functionIndex));
         return;
     }
 
@@ -121,11 +136,9 @@ void OMGPlan::work(CompilationEffort)
 
     computePCToCodeOriginMap(context, linkBuffer);
 
-    dataLogLnIf(context.procedure->shouldDumpIR() || shouldDumpDisassemblyFor(CompilationMode::OMGMode), "Generated OMG code for WebAssembly OMG function[", m_functionIndex, "] ", signature.toString().ascii().data(), " name ", makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data());
-    dumpDisassembly(context, linkBuffer);
-    bool dumpDisassemblyAgain = false;
+    dumpDisassembly(context, linkBuffer, m_functionIndex, signature, functionIndexSpace);
     omgEntrypoint.compilation = makeUnique<Compilation>(
-        FINALIZE_CODE_IF(dumpDisassemblyAgain, linkBuffer, JITCompilationPtrTag, "WebAssembly OMG function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
+        FINALIZE_CODE_IF(context.procedure->shouldDumpIR(), linkBuffer, JITCompilationPtrTag, "WebAssembly OMG function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
         WTFMove(context.wasmEntrypointByproducts));
 
     omgEntrypoint.calleeSaveRegisters = WTFMove(internalFunction->entrypoint.calleeSaveRegisters);

@@ -29,6 +29,7 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlow.h"
 #include "RenderInline.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 namespace InlineIterator {
@@ -134,7 +135,7 @@ InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent& content, 
 
 InlineBoxIterator inlineBoxFor(const LayoutIntegration::InlineContent& content, size_t boxIndex)
 {
-    ASSERT(content.boxes[boxIndex].isInlineBox());
+    ASSERT(content.displayContent().boxes[boxIndex].isInlineBox());
     return { BoxModernPath { content, boxIndex } };
 }
 

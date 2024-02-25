@@ -763,7 +763,6 @@ uint64_t IDBServer::diskUsage(const String& rootDirectory, const ClientOrigin& o
     auto newVersionOriginDirectory = IDBDatabaseIdentifier::databaseDirectoryRelativeToRoot(origin, rootDirectory, "v1"_s);
     return SQLiteIDBBackingStore::databasesSizeForDirectory(oldVersionOriginDirectory) + SQLiteIDBBackingStore::databasesSizeForDirectory(newVersionOriginDirectory);
 
-    return 0;
 }
 
 void IDBServer::upgradeFilesIfNecessary()
@@ -791,7 +790,6 @@ String IDBServer::upgradedDatabaseDirectory(const WebCore::IDBDatabaseIdentifier
     }
 
     return newDatabaseDirectory;
-    return nullString();
 }
 
 bool IDBServer::hasDatabaseActivitiesOnMainThread() const

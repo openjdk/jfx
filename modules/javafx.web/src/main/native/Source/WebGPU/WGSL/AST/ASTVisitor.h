@@ -110,7 +110,6 @@ public:
     virtual void visit(AST::NamedTypeName&);
     virtual void visit(AST::ParameterizedTypeName&);
     virtual void visit(AST::ReferenceTypeName&);
-    virtual void visit(AST::StructTypeName&);
 
     virtual void visit(AST::Variable&);
     virtual void visit(AST::VariableQualifier&);
@@ -140,6 +139,8 @@ protected:
 private:
     Result<void> m_expectedError;
 };
+
+std::optional<unsigned> extractInteger(const AST::Expression&);
 
 } // namespace AST
 } // namespace WGSL

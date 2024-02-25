@@ -26,7 +26,9 @@
 #pragma once
 
 #include "FloatRect.h"
+#include "InlineDamage.h"
 #include "InlineFormattingConstraints.h"
+#include "InlineFormattingContext.h"
 #include "InlineIteratorInlineBox.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineIteratorTextBox.h"
@@ -60,21 +62,25 @@ namespace LayoutIntegration {
 struct InlineContent;
 struct LineAdjustment;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(LayoutIntegration_LineLayout);
+
 class LineLayout : public CanMakeCheckedPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(LayoutIntegration_LineLayout);
 public:
     LineLayout(RenderBlockFlow&);
     ~LineLayout();
 
-    static RenderBlockFlow* blockContainer(RenderObject&);
+    static RenderBlockFlow* blockContainer(const RenderObject&);
     static LineLayout* containing(RenderObject&);
     static const LineLayout* containing(const RenderObject&);
 
     static bool isEnabled();
     static bool canUseFor(const RenderBlockFlow&);
+    static bool canUseForPreferredWidthComputation(const RenderBlockFlow&);
     static bool canUseForAfterStyleChange(const RenderBlockFlow&, StyleDifference);
     static bool canUseForAfterInlineBoxStyleChange(const RenderInline&, StyleDifference);
-    static bool shouldInvalidateLineLayoutPathAfterContentChange(const RenderBlockFlow& parent, const RenderObject& newChild, const LineLayout&);
+    static bool shouldInvalidateLineLayoutPathAfterContentChange(const RenderBlockFlow& parent, const RenderObject& rendererWithNewContent, const LineLayout&);
+    static bool shouldInvalidateLineLayoutPathAfterTreeMutation(const RenderBlockFlow& parent, const RenderObject& renderer, const LineLayout&, bool isRemoval);
 
     bool shouldSwitchToLegacyOnInvalidation() const;
 
@@ -82,22 +88,25 @@ public:
     void updateInlineContentDimensions();
     void updateStyle(const RenderBoxModelObject&, const RenderStyle& oldStyle);
     void updateOverflow();
+    // Partial invalidation.
+    void insertedIntoTree(const RenderElement& parent, RenderObject& child);
+    void removedFromTree(const RenderElement& parent, RenderObject& child);
+    void updateTextContent(const RenderText&, size_t offset, int delta);
 
     std::pair<LayoutUnit, LayoutUnit> computeIntrinsicWidthConstraints();
 
-    void layout();
+    std::optional<LayoutRect> layout();
     void paint(PaintInfo&, const LayoutPoint& paintOffset, const RenderInline* layerRenderer = nullptr);
     bool hitTest(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint& accumulatedOffset, HitTestAction, const RenderInline* layerRenderer = nullptr);
     void adjustForPagination();
-
-    // FIXME: Partial content mutation may need to talk to the box tree directly.
-    void insertedIntoTree(const RenderElement& parent, RenderObject& child);
 
     void collectOverflow();
     LayoutRect visualOverflowBoundingBoxRectFor(const RenderInline&) const;
     Vector<FloatRect> collectInlineBoxRects(const RenderInline&) const;
 
-    bool isPaginated() const { return m_isPaginatedContent; }
+    std::optional<LayoutUnit> clampedContentLogicalHeight() const;
+
+    bool isPaginated() const;
     LayoutUnit contentBoxLogicalHeight() const;
     size_t lineCount() const;
     bool hasVisualOverflow() const;
@@ -124,6 +133,14 @@ public:
     void outputLineTree(WTF::TextStream&, size_t depth) const;
 #endif
 
+    // This is temporary, required by partial bailout check.
+    bool hasOutOfFlowContent() const;
+    bool contentNeedsVisualReordering() const;
+    bool isDamaged() const { return m_lineDamage && m_lineDamage->type() != Layout::InlineDamage::Type::Invalid; }
+#ifndef NDEBUG
+    bool hasDetachedContent() const { return m_lineDamage && m_lineDamage->hasDetachedContent(); }
+#endif
+
 private:
     void updateReplacedDimensions(const RenderBox&);
     void updateInlineBlockDimensions(const RenderBlock&);
@@ -135,7 +152,7 @@ private:
 
     void prepareLayoutState();
     void prepareFloatingState();
-    void constructContent();
+    FloatRect constructContent(const Layout::InlineLayoutState&, Layout::InlineLayoutResult&&);
     Vector<LineAdjustment> adjustContent();
     void updateRenderTreePositions(const Vector<LineAdjustment>&);
 
@@ -150,7 +167,6 @@ private:
     Layout::ElementBox& rootLayoutBox();
     void clearInlineContent();
     void releaseCaches();
-    std::optional<size_t> lastLineIndexForContentHeight() const;
 
     LayoutUnit physicalBaselineForLine(const InlineDisplay::Line&) const;
 
@@ -162,7 +178,7 @@ private:
     // FIXME: This should be part of LayoutState.
     std::unique_ptr<Layout::InlineDamage> m_lineDamage;
     std::unique_ptr<InlineContent> m_inlineContent;
-    bool m_isPaginatedContent { false };
+    HashMap<const Layout::ElementBox*, LayoutUnit> m_nestedListMarkerOffsets;
 };
 
 }

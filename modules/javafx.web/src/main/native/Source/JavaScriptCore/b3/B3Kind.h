@@ -216,11 +216,6 @@ public:
             && m_cloningForbidden == other.m_cloningForbidden;
     }
 
-    bool operator!=(const Kind& other) const
-    {
-        return !(*this == other);
-    }
-
     void dump(PrintStream&) const;
 
     unsigned hash() const

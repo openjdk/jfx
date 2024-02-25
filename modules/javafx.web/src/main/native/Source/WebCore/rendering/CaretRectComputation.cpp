@@ -27,11 +27,15 @@
 #include "CaretRectComputation.h"
 
 #include "Editing.h"
+#include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorLineBox.h"
 #include "InlineIteratorTextBox.h"
+#include "InlineIteratorTextBoxInlines.h"
 #include "LayoutIntegrationLineLayout.h"
 #include "LineSelection.h"
 #include "RenderBlockFlow.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
 #include "RenderSVGInlineText.h"
@@ -39,18 +43,16 @@
 
 namespace WebCore {
 
-#if USE(APPLE_INTERNAL_SDK) && PLATFORM(MAC)
-#import <WebKitAdditions/CaretRectComputationAdditions.cpp>
-#else
 int caretWidth()
 {
 #if PLATFORM(IOS_FAMILY)
     return 2; // This value should be kept in sync with UIKit. See <rdar://problem/15580601>.
+#elif PLATFORM(MAC) && HAVE(REDESIGNED_TEXT_CURSOR)
+    return redesignedTextCursorEnabled() ? 2 : 1;
 #else
     return 1;
 #endif
 }
-#endif
 
 static LayoutRect computeCaretRectForEmptyElement(const RenderBoxModelObject& renderer, LayoutUnit width, LayoutUnit textIndentOffset, CaretRectMode caretRectMode)
 {
@@ -187,10 +189,27 @@ static LayoutRect computeCaretRectForText(const InlineBoxAndOffset& boxAndOffset
         return { };
 
     auto& textBox = downcast<InlineIterator::TextBoxIterator>(boxAndOffset.box);
-    auto lineBox = textBox->lineBox();
 
-    float position = textBox->positionForOffset(boxAndOffset.offset);
-    return computeCaretRectForLinePosition(lineBox, position, caretRectMode);
+    auto positionForOffset = [&](auto offset) {
+        ASSERT(offset >= textBox->start());
+        ASSERT(offset <= textBox->end());
+
+        if (textBox->isLineBreak())
+            return textBox->logicalLeftIgnoringInlineDirection();
+
+        auto [startOffset, endOffset] = [&] {
+            if (textBox->direction() == TextDirection::RTL)
+                return std::pair { textBox->selectableRange().clamp(offset), textBox->length() };
+            return std::pair { 0u, textBox->selectableRange().clamp(offset) };
+        }();
+
+        auto selectionRect = LayoutRect { textBox->logicalLeftIgnoringInlineDirection(), 0, 0, 0 };
+        auto textRun = textBox->textRun(InlineIterator::TextRunMode::Editing);
+        textBox->fontCascade().adjustSelectionRectForText(textRun, selectionRect, startOffset, endOffset);
+        return snapRectToDevicePixelsWithWritingDirection(selectionRect, textBox->renderer().document().deviceScaleFactor(), textRun.ltr()).maxX();
+    };
+
+    return computeCaretRectForLinePosition(textBox->lineBox(), positionForOffset(boxAndOffset.offset), caretRectMode);
 }
 
 static LayoutRect computeCaretRectForLineBreak(const InlineBoxAndOffset& boxAndOffset, CaretRectMode caretRectMode)

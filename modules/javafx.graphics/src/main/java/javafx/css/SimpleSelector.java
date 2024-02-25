@@ -51,7 +51,9 @@ import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
  * A simple selector which behaves according to the CSS standard.
  *
  * @since 9
+ * @deprecated This class was exposed erroneously and will be removed in a future version
  */
+@Deprecated(since = "23", forRemoval = true)
 final public class SimpleSelector extends Selector {
 
     /**

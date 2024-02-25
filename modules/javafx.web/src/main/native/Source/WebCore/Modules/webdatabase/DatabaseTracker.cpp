@@ -300,7 +300,7 @@ String DatabaseTracker::originPath(const SecurityOriginData& origin) const
 
 static String generateDatabaseFileName()
 {
-    return makeString(UUID::createVersion4(), ".db"_s);
+    return makeString(WTF::UUID::createVersion4(), ".db"_s);
 }
 
 String DatabaseTracker::fullPathForDatabaseNoLock(const SecurityOriginData& origin, const String& name, bool createIfNotExists)
@@ -797,9 +797,7 @@ void DatabaseTracker::deleteDatabasesModifiedSince(WallTime time)
 // taking place.
 bool DatabaseTracker::deleteOrigin(const SecurityOriginData& origin)
 {
-    UNUSED_PARAM(origin);
-    //return deleteOrigin(origin, DeletionMode::Default);
-    return false;
+    return deleteOrigin(origin, DeletionMode::Default);
 }
 
 bool DatabaseTracker::deleteOrigin(const SecurityOriginData& origin, DeletionMode deletionMode)

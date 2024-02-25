@@ -36,7 +36,7 @@ id parent;
 - (NSRect)accessibilityFrame;
 - (id)accessibilityParent;
 - (BOOL)isAccessibilityElement;
-- (BOOL)performAccessibleAction:(jlong)actionId;
+- (BOOL)performAccessibleAction:(NSString*)actionId;
 + (void) initializeRolesMap;
 @end
 

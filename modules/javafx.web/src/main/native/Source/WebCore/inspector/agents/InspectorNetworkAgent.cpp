@@ -40,21 +40,22 @@
 #include "CachedScript.h"
 #include "CertificateInfo.h"
 #include "CertificateSummary.h"
+#include "CookieJar.h"
 #include "DocumentInlines.h"
 #include "DocumentLoader.h"
 #include "DocumentThreadableLoader.h"
 #include "FormData.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "HTTPHeaderMap.h"
 #include "HTTPHeaderNames.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorTimelineAgent.h"
 #include "InstrumentingAgents.h"
-#include "JSDOMWindowCustom.h"
 #include "JSExecState.h"
+#include "JSLocalDOMWindowCustom.h"
 #include "JSWebSocket.h"
 #include "LoaderStrategy.h"
+#include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "NetworkResourcesData.h"
@@ -69,10 +70,10 @@
 #include "SubresourceLoader.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoaderClient.h"
+#include "ThreadableWebSocketChannel.h"
 #include "WebConsoleAgent.h"
 #include "WebCorePersistentCoders.h"
 #include "WebSocket.h"
-#include "WebSocketChannel.h"
 #include "WebSocketFrame.h"
 #include <JavaScriptCore/ContentSearchUtilities.h>
 #include <JavaScriptCore/IdentifiersFactory.h>
@@ -470,22 +471,6 @@ void InspectorNetworkAgent::willSendRequest(ResourceLoaderIdentifier identifier,
     auto loaderId = loaderIdentifier(loader);
     String targetId = request.initiatorIdentifier();
 
-    if (type == InspectorPageAgent::OtherResource) {
-        if (m_loadingXHRSynchronously || request.requester() == ResourceRequestRequester::XHR)
-            type = InspectorPageAgent::XHRResource;
-        else if (request.requester() == ResourceRequestRequester::Fetch)
-            type = InspectorPageAgent::FetchResource;
-        else if (loader && equalIgnoringFragmentIdentifier(request.url(), loader->url()) && !loader->isCommitted())
-            type = InspectorPageAgent::DocumentResource;
-        else if (loader) {
-            for (auto& linkIcon : loader->linkIcons()) {
-                if (equalIgnoringFragmentIdentifier(request.url(), linkIcon.url)) {
-                    type = InspectorPageAgent::ImageResource;
-                    break;
-                }
-            }
-        }
-    }
 
     m_resourcesData->resourceCreated(requestId, loaderId, type);
 
@@ -527,9 +512,27 @@ static InspectorPageAgent::ResourceType resourceTypeForLoadType(InspectorInstrum
 
 void InspectorNetworkAgent::willSendRequest(ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, const ResourceResponse& redirectResponse, const CachedResource* cachedResource, ResourceLoader* resourceLoader)
 {
+    InspectorPageAgent::ResourceType type = InspectorPageAgent::OtherResource;
+    if (m_loadingXHRSynchronously || request.requester() == ResourceRequestRequester::XHR)
+        type = InspectorPageAgent::XHRResource;
+    else if (request.requester() == ResourceRequestRequester::Fetch)
+        type = InspectorPageAgent::FetchResource;
+    else if (loader && equalIgnoringFragmentIdentifier(request.url(), loader->url()) && !loader->isCommitted())
+        type = InspectorPageAgent::DocumentResource;
+    else if (loader) {
+        for (auto& linkIcon : loader->linkIcons()) {
+            if (equalIgnoringFragmentIdentifier(request.url(), linkIcon.url)) {
+                type = InspectorPageAgent::ImageResource;
+                break;
+            }
+        }
+    }
+    if (type == InspectorPageAgent::OtherResource) {
     if (!cachedResource && loader)
         cachedResource = InspectorPageAgent::cachedResource(loader->frame(), request.url());
-    willSendRequest(identifier, loader, request, redirectResponse, resourceTypeForCachedResource(cachedResource), resourceLoader);
+        type = resourceTypeForCachedResource(cachedResource);
+    }
+    willSendRequest(identifier, loader, request, redirectResponse, type, resourceLoader);
 }
 
 void InspectorNetworkAgent::willSendRequestOfType(ResourceLoaderIdentifier identifier, DocumentLoader* loader, ResourceRequest& request, InspectorInstrumentation::LoadType loadType)
@@ -674,7 +677,7 @@ void InspectorNetworkAgent::didFailLoading(ResourceLoaderIdentifier identifier, 
     String requestId = IdentifiersFactory::requestId(identifier.toUInt64());
 
     if (loader && m_resourcesData->resourceType(requestId) == InspectorPageAgent::DocumentResource) {
-        Frame* frame = loader->frame();
+        auto* frame = loader->frame();
         if (frame && frame->loader().documentLoader() && frame->document()) {
             m_resourcesData->addResourceSharedBuffer(requestId,
                 frame->loader().documentLoader()->mainResourceData(),

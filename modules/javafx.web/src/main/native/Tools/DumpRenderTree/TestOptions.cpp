@@ -91,6 +91,7 @@ const TestFeatures& TestOptions::defaults()
             { "NeedsStorageAccessFromFileURLsQuirk", false },
             { "OfflineWebApplicationCacheEnabled", true },
             { "PaintTimingEnabled", true },
+            { "PushAPIEnabled", true },
             { "ReferrerPolicyAttributeEnabled", true },
             { "RemotePlaybackEnabled", true },
             { "RequiresUserGestureForAudioPlayback", false },
@@ -105,6 +106,9 @@ const TestFeatures& TestOptions::defaults()
             { "UsesBackForwardCache", false },
             { "VisualViewportAPIEnabled", true },
             { "WebAudioEnabled", true },
+#if ENABLE(WEBGL)
+            { "WebGLUsingMetal", true },
+#endif
             { "WebSQLEnabled", true },
             { "XSSAuditorEnabled", false },
 
@@ -132,9 +136,9 @@ const TestFeatures& TestOptions::defaults()
             { "AspectRatioEnabled", true },
             { "AsyncClipboardAPIEnabled", false },
             { "AttachmentElementEnabled", false },
+            { "AttachmentWideLayoutEnabled", false },
             { "CSSContainmentEnabled", false },
             { "CSSCounterStyleAtRuleImageSymbolsEnabled", false },
-            { "CSSCounterStyleAtRulesEnabled", false },
             { "CSSGradientInterpolationColorSpacesEnabled", true },
             { "CSSGradientPremultipliedAlphaInterpolationEnabled", true },
             { "CSSInputSecurityEnabled", true },

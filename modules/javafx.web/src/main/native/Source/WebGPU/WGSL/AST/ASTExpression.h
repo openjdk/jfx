@@ -25,25 +25,44 @@
 
 #pragma once
 
+#include "ASTBuilder.h"
 #include "ASTNode.h"
+#include <wtf/ReferenceWrapperVector.h>
 
-namespace WGSL::AST {
+namespace WGSL {
+class ConstantRewriter;
+class RewriteGlobalVariables;
+class TypeChecker;
+struct Type;
+
+namespace AST {
 
 class Expression : public Node {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    using Ref = UniqueRef<Expression>;
-    using Ptr = std::unique_ptr<Expression>;
-    using List = UniqueRefVector<Expression>;
+    WGSL_AST_BUILDER_NODE(Expression);
+    friend ConstantRewriter;
+    friend RewriteGlobalVariables;
+    friend TypeChecker;
 
+public:
+    using Ref = std::reference_wrapper<Expression>;
+    using Ptr = Expression*;
+    using List = ReferenceWrapperVector<Expression>;
+
+    virtual ~Expression() { }
+
+    const Type* inferredType() const { return m_inferredType; }
+
+protected:
     Expression(SourceSpan span)
         : Node(span)
     { }
 
-    virtual ~Expression() { }
+private:
+    const Type* m_inferredType { nullptr };
 };
 
-} // namespace WGSL::AST
+} // namespace AST
+} // namespace WGSL
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WGSL::AST::Expression)
 static bool isType(const WGSL::AST::Node& node)

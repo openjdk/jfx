@@ -20,16 +20,16 @@
 #include "config.h"
 #include "JSDocument.h"
 
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "JSCSSStyleSheet.h"
 #include "JSDOMConvert.h"
 #include "JSDOMGlobalObjectInlines.h"
-#include "JSDOMWindowCustom.h"
 #include "JSHTMLDocument.h"
+#include "JSLocalDOMWindowCustom.h"
 #include "JSXMLDocument.h"
+#include "LocalFrame.h"
 #include "NodeTraversal.h"
-#include "WebCoreOpaqueRoot.h"
+#include "WebCoreOpaqueRootInlines.h"
 #include <JavaScriptCore/HeapAnalyzer.h>
 
 namespace WebCore {
@@ -60,7 +60,7 @@ JSObject* cachedDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobal
     if (!window)
         return nullptr;
 
-    auto* documentGlobalObject = toJSDOMGlobalObject<JSDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
+    auto* documentGlobalObject = toJSDOMGlobalObject<JSLocalDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
     if (!documentGlobalObject)
         return nullptr;
 

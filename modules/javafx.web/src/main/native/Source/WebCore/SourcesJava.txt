@@ -101,7 +101,6 @@ platform/network/java/NetworkStateNotifierJava.cpp
 platform/network/java/NetworkStorageSessionJava.cpp
 platform/network/java/ResourceHandleJava.cpp
 platform/network/java/ResourceRequestJava.cpp
-platform/network/java/SocketStreamHandleImplJava.cpp
 platform/network/java/SynchronousLoaderClientJava.cpp
 platform/network/java/URLLoader.cpp
 

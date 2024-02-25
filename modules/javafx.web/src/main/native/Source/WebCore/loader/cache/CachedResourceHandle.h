@@ -45,7 +45,8 @@ public:
 
 protected:
     CachedResourceHandleBase();
-    CachedResourceHandleBase(CachedResource*);
+    explicit CachedResourceHandleBase(CachedResource*);
+    explicit CachedResourceHandleBase(CachedResource&);
     CachedResourceHandleBase(const CachedResourceHandleBase&);
 
     void setResource(CachedResource*);
@@ -61,6 +62,7 @@ private:
 template <class R> class CachedResourceHandle : public CachedResourceHandleBase {
 public:
     CachedResourceHandle() { }
+    CachedResourceHandle(R& res) : CachedResourceHandleBase(res) { }
     CachedResourceHandle(R* res) : CachedResourceHandleBase(res) { }
     CachedResourceHandle(const CachedResourceHandle<R>& o) : CachedResourceHandleBase(o) { }
     template<typename U> CachedResourceHandle(const CachedResourceHandle<U>& o) : CachedResourceHandleBase(o.get()) { }
@@ -75,7 +77,6 @@ public:
 
     bool operator==(const CachedResourceHandle& o) const { return operator==(static_cast<const CachedResourceHandleBase&>(o)); }
     bool operator==(const CachedResourceHandleBase& o) const { return get() == o.get(); }
-    bool operator!=(const CachedResourceHandleBase& o) const { return get() != o.get(); }
 };
 
 template <class R, class RR> bool operator==(const CachedResourceHandle<R>& h, const RR* res)
@@ -85,14 +86,6 @@ template <class R, class RR> bool operator==(const CachedResourceHandle<R>& h, c
 template <class R, class RR> bool operator==(const RR* res, const CachedResourceHandle<R>& h)
 {
     return h.get() == res;
-}
-template <class R, class RR> bool operator!=(const CachedResourceHandle<R>& h, const RR* res)
-{
-    return h.get() != res;
-}
-template <class R, class RR> bool operator!=(const RR* res, const CachedResourceHandle<R>& h)
-{
-    return h.get() != res;
 }
 
 } // namespace WebCore

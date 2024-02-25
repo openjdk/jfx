@@ -26,7 +26,6 @@
 #include "config.h"
 #include "ScreenOrientation.h"
 
-#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentInlines.h"
 #include "Element.h"
@@ -35,6 +34,7 @@
 #include "FrameDestructionObserverInlines.h"
 #include "FullscreenManager.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalDOMWindow.h"
 #include "Page.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -185,7 +185,7 @@ uint16_t ScreenOrientation::angle() const
     auto orientation = manager ? manager->currentOrientation() : naturalScreenOrientationType();
 
     // https://w3c.github.io/screen-orientation/#dfn-screen-orientation-values-table
-    if constexpr (isPortait(naturalScreenOrientationType())) {
+    if (isPortrait(naturalScreenOrientationType())) {
         switch (orientation) {
         case Type::PortraitPrimary:
             return 0;
@@ -266,8 +266,11 @@ void ScreenOrientation::stop()
         return;
 
     manager->removeObserver(*this);
-    if (manager->lockRequester() == this)
-        manager->takeLockPromise()->reject(Exception { AbortError, "Document is no longer fully active"_s });
+    if (manager->lockRequester() == this) {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = manager->takeLockPromise()] {
+            promise->reject(Exception { AbortError, "Document is no longer fully active"_s });
+        });
+    }
 }
 
 bool ScreenOrientation::virtualHasPendingActivity() const

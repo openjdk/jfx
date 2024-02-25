@@ -25,8 +25,10 @@
 
 #pragma once
 
-#include <wtf/Assertions.h>
 #include <stdint.h>
+#include <wtf/Assertions.h>
+#include <wtf/DataLog.h>
+#include <wtf/FastMalloc.h>
 
 namespace JSC { namespace ARM64Disassembler {
 
@@ -79,7 +81,8 @@ public:
         , m_opcode(0)
         , m_bufferOffset(0)
     {
-        init();
+        static std::once_flag once;
+        std::call_once(once, init);
         m_formatBuffer[0] = '\0';
     }
 
@@ -241,8 +244,6 @@ protected:
 
 private:
     static OpcodeGroup* opcodeTable[32];
-
-    static bool s_initialized;
 };
 
 #define DEFINE_STATIC_FORMAT(klass, thisObj) \

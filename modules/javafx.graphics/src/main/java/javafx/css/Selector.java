@@ -92,6 +92,15 @@ abstract public class Selector {
     }
 
     /**
+     * Gets the immutable set of style class names of this Selector.
+     *
+     * @return an immutable set with style class names, never {@code null},
+     *     or contains {@code null}s, but can be empty
+     * @since 23
+     */
+    public abstract Set<String> getStyleClassNames();
+
+    /**
      * Creates a {@code Match}.
      *
      * @return a match, never {@code null}

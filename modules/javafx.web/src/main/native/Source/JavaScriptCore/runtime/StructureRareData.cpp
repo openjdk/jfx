@@ -61,7 +61,7 @@ void StructureRareData::destroy(JSCell* cell)
 
 StructureRareData::StructureRareData(VM& vm, Structure* previous)
     : JSCell(vm, vm.structureRareDataStructure.get())
-    , m_previous(vm, this, previous, WriteBarrierStructureID::MayBeNull)
+    , m_previous(previous, WriteBarrierEarlyInit)
     , m_maxOffset(invalidOffset)
     , m_transitionOffset(invalidOffset)
 {
@@ -225,7 +225,7 @@ void StructureRareData::clearCachedSpecialProperty(CachedSpecialPropertyKey key)
         cache.m_value.clear();
 }
 
-void StructureRareData::finalizeUnconditionally(VM& vm)
+void StructureRareData::finalizeUnconditionally(VM& vm, CollectionScope)
 {
     if (m_specialPropertyCache) {
         auto clearCacheIfInvalidated = [&](CachedSpecialPropertyKey key) {

@@ -57,7 +57,7 @@ public:
         ASSERT(m_position + sizeof(jint) <= m_capacity);
         RefPtr<RQRef> repeatable_use_holder(ref);
         m_refList.append(repeatable_use_holder);
-        putInt((jint)*repeatable_use_holder);
+        putInt(static_cast<jint>(*repeatable_use_holder));
     }
 
     void putInt(jint i) {

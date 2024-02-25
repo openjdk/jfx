@@ -16,18 +16,16 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #include "config.h"
 #include "StyleRareNonInheritedData.h"
 
 #include "RenderCounter.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
 #include "ShadowData.h"
-#include "StyleCustomPropertyData.h"
-#include "StyleFilterData.h"
 #include "StyleImage.h"
+#include "StyleReflection.h"
 #include "StyleResolver.h"
 #include <wtf/PointerComparison.h>
 #include <wtf/RefPtr.h>
@@ -84,7 +82,11 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     // scrollSnapType
     // scrollSnapAlign
     // scrollSnapStop
+    // scrollbarGutter
+    , scrollbarWidth(RenderStyle::initialScrollbarWidth())
     , zoom(RenderStyle::initialZoom())
+    , blockStepSize(RenderStyle::initialBlockStepSize())
+    , blockStepInsert(static_cast<unsigned>(RenderStyle::initialBlockStepInsert()))
     , overscrollBehaviorX(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorX()))
     , overscrollBehaviorY(static_cast<unsigned>(RenderStyle::initialOverscrollBehaviorY()))
     , pageSizeType(PAGE_SIZE_AUTO)
@@ -110,7 +112,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , containIntrinsicWidthType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicWidthType()))
     , containIntrinsicHeightType(static_cast<unsigned>(RenderStyle::initialContainIntrinsicHeightType()))
     , containerType(static_cast<unsigned>(RenderStyle::initialContainerType()))
-    , leadingTrim(static_cast<unsigned>(RenderStyle::initialLeadingTrim()))
+    , textBoxTrim(static_cast<unsigned>(RenderStyle::initialTextBoxTrim()))
     , overflowAnchor(static_cast<unsigned>(RenderStyle::initialOverflowAnchor()))
     , hasClip(false)
 {
@@ -133,7 +135,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , clip(o.clip)
     , scrollMargin(o.scrollMargin)
     , scrollPadding(o.scrollPadding)
-    , counterDirectives(o.counterDirectives ? makeUnique<CounterDirectiveMap>(*o.counterDirectives) : nullptr)
+    , counterDirectives(o.counterDirectives)
     , willChange(o.willChange)
     , boxReflect(o.boxReflect)
     , maskBoxImage(o.maskBoxImage)
@@ -164,7 +166,11 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , scrollSnapType(o.scrollSnapType)
     , scrollSnapAlign(o.scrollSnapAlign)
     , scrollSnapStop(o.scrollSnapStop)
+    , scrollbarGutter(o.scrollbarGutter)
+    , scrollbarWidth(o.scrollbarWidth)
     , zoom(o.zoom)
+    , blockStepSize(o.blockStepSize)
+    , blockStepInsert(o.blockStepInsert)
     , overscrollBehaviorX(o.overscrollBehaviorX)
     , overscrollBehaviorY(o.overscrollBehaviorY)
     , pageSizeType(o.pageSizeType)
@@ -190,7 +196,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , containIntrinsicWidthType(o.containIntrinsicWidthType)
     , containIntrinsicHeightType(o.containIntrinsicHeightType)
     , containerType(o.containerType)
-    , leadingTrim(o.leadingTrim)
+    , textBoxTrim(o.textBoxTrim)
     , overflowAnchor(o.overflowAnchor)
     , hasClip(o.hasClip)
 {
@@ -220,7 +226,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && clip == o.clip
         && scrollMargin == o.scrollMargin
         && scrollPadding == o.scrollPadding
-        && arePointingToEqualData(counterDirectives, o.counterDirectives)
+        && counterDirectives.map == o.counterDirectives.map
         && arePointingToEqualData(willChange, o.willChange)
         && arePointingToEqualData(boxReflect, o.boxReflect)
         && maskBoxImage == o.maskBoxImage
@@ -251,7 +257,11 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && scrollSnapType == o.scrollSnapType
         && scrollSnapAlign == o.scrollSnapAlign
         && scrollSnapStop == o.scrollSnapStop
+        && scrollbarGutter == o.scrollbarGutter
+        && scrollbarWidth == o.scrollbarWidth
         && zoom == o.zoom
+        && blockStepSize == o.blockStepSize
+        && blockStepInsert == o.blockStepInsert
         && overscrollBehaviorX == o.overscrollBehaviorX
         && overscrollBehaviorY == o.overscrollBehaviorY
         && pageSizeType == o.pageSizeType
@@ -277,7 +287,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && containIntrinsicWidthType == o.containIntrinsicWidthType
         && containIntrinsicHeightType == o.containIntrinsicHeightType
         && containerType == o.containerType
-        && leadingTrim == o.leadingTrim
+        && textBoxTrim == o.textBoxTrim
         && overflowAnchor == o.overflowAnchor
         && hasClip == o.hasClip;
 }

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2006 Bjoern Graf (bjoern.graf@gmail.com)
  *
  *  This library is free software; you can redistribute it and/or
@@ -38,6 +38,7 @@
 #include "Disassembler.h"
 #include "Exception.h"
 #include "ExceptionHelpers.h"
+#include "GlobalObjectMethodTable.h"
 #include "HeapSnapshotBuilder.h"
 #include "InitializeThreading.h"
 #include "Interpreter.h"
@@ -80,6 +81,7 @@
 #include "WasmCapabilities.h"
 #include "WasmFaultSignalHandler.h"
 #include "WasmMemory.h"
+#include <span>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,9 +95,9 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/SafeStrerror.h>
 #include <wtf/Scope.h>
-#include <wtf/Span.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/URL.h>
+#include <wtf/WTFProcess.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringBuilder.h>
@@ -193,7 +195,7 @@ NO_RETURN_WITH_VALUE static void jscExit(int status)
         }
     }
 #endif // ENABLE(DFG_JIT)
-    exit(status);
+    exitProcess(status);
 }
 
 static unsigned asyncTestPasses { 0 };
@@ -794,8 +796,8 @@ JSC_DEFINE_CUSTOM_SETTER(testCustomAccessorSetter, (JSGlobalObject* lexicalGloba
 {
     RELEASE_ASSERT(JSValue::decode(thisValue).isCell());
     JSCell* thisCell = JSValue::decode(thisValue).asCell();
-    RELEASE_ASSERT(thisCell->type() == PureForwardingProxyType);
-    GlobalObject* thisObject = jsDynamicCast<GlobalObject*>(jsCast<JSProxy*>(thisCell)->target());
+    RELEASE_ASSERT(thisCell->type() == GlobalProxyType);
+    GlobalObject* thisObject = jsDynamicCast<GlobalObject*>(jsCast<JSGlobalProxy*>(thisCell)->target());
     RELEASE_ASSERT(thisObject);
     return GlobalObject::testCustomSetterImpl(lexicalGlobalObject, thisObject, encodedValue, "_testCustomAccessorSetter"_s);
 }
@@ -916,8 +918,8 @@ JSInternalPromise* GlobalObject::moduleLoaderImportModule(JSGlobalObject* global
     auto specifier = moduleNameValue->value(globalObject);
     RETURN_IF_EXCEPTION(scope, promise->rejectWithCaughtException(globalObject, scope));
 
-    if (!referrer.isLocalFile())
-        RELEASE_AND_RETURN(scope, rejectWithError(createError(globalObject, makeString("Could not resolve the referrer's path '", referrer.string(), "', while trying to resolve module '", specifier, "'."))));
+    if (!referrer.protocolIsFile())
+        RELEASE_AND_RETURN(scope, rejectWithError(createError(globalObject, makeString("Could not resolve the referrer's path '"_s, referrer.string(), "', while trying to resolve module '"_s, specifier, "'."_s))));
 
     auto assertions = JSC::retrieveAssertionsFromDynamicImportOptions(globalObject, parameters, { vm.propertyNames->type.impl() });
     RETURN_IF_EXCEPTION(scope, promise->rejectWithCaughtException(globalObject, scope));
@@ -955,17 +957,17 @@ Identifier GlobalObject::moduleLoaderResolve(JSGlobalObject* globalObject, JSMod
             return { };
         }
 
-        if (!directoryURL.isLocalFile()) {
-            throwException(globalObject, scope, createError(globalObject, makeString("Could not resolve the referrer's path: ", directoryURL.string())));
+        if (!directoryURL.protocolIsFile()) {
+            throwException(globalObject, scope, createError(globalObject, makeString("Could not resolve the referrer's path: "_s, directoryURL.string())));
             return { };
         }
 
         auto resolvedURL = specifierIsAbsolute ? URL::fileURLWithFileSystemPath(specifier) : URL(directoryURL, specifier);
         if (!resolvedURL.isValid()) {
-            throwException(globalObject, scope, createError(globalObject, makeString("Resolved module url is not valid: ", resolvedURL.string())));
+            throwException(globalObject, scope, createError(globalObject, makeString("Resolved module url is not valid: "_s, resolvedURL.string())));
             return { };
         }
-        ASSERT(resolvedURL.isLocalFile());
+        ASSERT(resolvedURL.protocolIsFile());
 
         return Identifier::fromString(vm, resolvedURL.string());
     };
@@ -981,7 +983,7 @@ Identifier GlobalObject::moduleLoaderResolve(JSGlobalObject* globalObject, JSMod
 
     // If the referrer exists, we assume that the referrer is the correct file url.
     URL url = URL({ }, referrer.impl());
-    ASSERT(url.isLocalFile());
+    ASSERT(url.protocolIsFile());
     return resolvePath(url);
 }
 
@@ -1217,6 +1219,9 @@ static bool fetchModuleFromLocalFileSystem(const URL& fileURL, Vector& buffer)
 #if OS(WINDOWS)
     // https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247.aspx#maxpath
     // Use long UNC to pass the long path name to the Windows APIs.
+    // These also appear to turn off handling forward slashes as
+    // directory separators as it disables all string parsing on names.
+    fileName = makeStringByReplacingAll(fileName, '/', '\\');
     auto pathName = makeString("\\\\?\\", fileName).wideCharacters();
     struct _stat status { };
     if (_wstat(pathName.data(), &status))
@@ -1264,7 +1269,7 @@ JSInternalPromise* GlobalObject::moduleLoaderFetch(JSGlobalObject* globalObject,
     RETURN_IF_EXCEPTION(scope, promise->rejectWithCaughtException(globalObject, scope));
 
     URL moduleURL({ }, moduleKey);
-    ASSERT(moduleURL.isLocalFile());
+    ASSERT(moduleURL.protocolIsFile());
     // Strip the URI from our key so Errors print canonical system paths.
     moduleKey = moduleURL.fileSystemPath();
 
@@ -1274,7 +1279,7 @@ JSInternalPromise* GlobalObject::moduleLoaderFetch(JSGlobalObject* globalObject,
 
     Vector<uint8_t> buffer;
     if (!fetchModuleFromLocalFileSystem(moduleURL, buffer))
-        RELEASE_AND_RETURN(scope, rejectWithError(createError(globalObject, makeString("Could not open file '", moduleKey, "'."))));
+        RELEASE_AND_RETURN(scope, rejectWithError(createError(globalObject, makeString("Could not open file '"_s, moduleKey, "'."_s))));
 
 #if ENABLE(WEBASSEMBLY)
     // FileSystem does not have mime-type header. The JSC shell recognizes WebAssembly's magic header.
@@ -1397,19 +1402,17 @@ JSC_DEFINE_HOST_FUNCTION(functionAtob, (JSGlobalObject* globalObject, CallFrame*
     if (jsValue.isUndefined())
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in argument for atob."_s)));
 
-    auto* string = jsValue.toString(globalObject);
+    String encodedString = jsValue.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-
-    String encodedString = string->value(globalObject);
 
     if (encodedString.isNull())
         return JSValue::encode(jsEmptyString(vm));
 
-    auto decodedData = base64Decode(encodedString, { Base64DecodeOptions::ValidatePadding, Base64DecodeOptions::IgnoreSpacesAndNewLines, Base64DecodeOptions::DiscardVerticalTab });
-    if (!decodedData)
+    auto decodedString = base64DecodeToString(encodedString, Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace);
+    if (decodedString.isNull())
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in argument for atob."_s)));
 
-    return JSValue::encode(jsString(vm, String(decodedData->data(), decodedData->size())));
+    return JSValue::encode(jsString(vm, decodedString));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionBtoa, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -1420,18 +1423,19 @@ JSC_DEFINE_HOST_FUNCTION(functionBtoa, (JSGlobalObject* globalObject, CallFrame*
     if (!callFrame->argumentCount())
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Missing input for btoa."_s)));
 
-    auto* string = callFrame->argument(0).toString(globalObject);
+    String stringToEncode = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-
-    String stringToEncode = string->value(globalObject);
 
     if (stringToEncode.isNull())
         return JSValue::encode(jsEmptyString(vm));
 
-    if (!stringToEncode.isAllLatin1())
+    if (!stringToEncode.containsOnlyLatin1())
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Invalid character in argument for btoa."_s)));
 
-    String encodedString = base64EncodeToString(stringToEncode.latin1());
+    String encodedString = base64EncodeToStringReturnNullIfOverflow(stringToEncode.latin1());
+    if (!encodedString)
+        return JSValue::encode(throwException(globalObject, scope, createOutOfMemoryError(globalObject)));
+
     return JSValue::encode(jsString(vm, encodedString));
 }
 
@@ -1493,7 +1497,7 @@ public:
 
     IterationStatus operator()(StackVisitor& visitor) const
     {
-        m_trace.append(makeString("    ", visitor->index(), "   ", visitor->toString(), '\n'));
+        m_trace.append(makeString("    "_s, visitor->index(), "   "_s, visitor->toString(), '\n'));
         return IterationStatus::Continue;
     }
 
@@ -1717,8 +1721,8 @@ static URL computeFilePath(VM& vm, JSGlobalObject* globalObject, CallFrame* call
     URL path;
     if (callerRelative) {
         path = URL(callFrame->callerSourceOrigin(vm).url(), fileName);
-        if (!path.isLocalFile()) {
-            throwException(globalObject, scope, createURIError(globalObject, makeString("caller relative URL path is not a local file: ", path.string())));
+        if (!path.protocolIsFile()) {
+            throwException(globalObject, scope, createURIError(globalObject, makeString("caller relative URL path is not a local file: "_s, path.string())));
             return URL();
         }
     } else
@@ -1805,7 +1809,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
     String fileName = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    std::variant<String, Span<const uint8_t>> data;
+    std::variant<String, std::span<const uint8_t>> data;
     JSValue dataValue = callFrame->argument(1);
 
     if (dataValue.isString()) {
@@ -1816,13 +1820,13 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
         if (arrayBuffer->impl()->isDetached())
             data = emptyString();
         else
-            data = Span { static_cast<const uint8_t*>(arrayBuffer->impl()->data()), arrayBuffer->impl()->byteLength() };
+            data = std::span(static_cast<const uint8_t*>(arrayBuffer->impl()->data()), arrayBuffer->impl()->byteLength());
     } else if (dataValue.inherits<JSArrayBufferView>()) {
         auto* view = jsCast<JSArrayBufferView*>(dataValue);
         if (view->isDetached())
             data = emptyString();
         else
-            data = Span { static_cast<const uint8_t*>(view->vector()), view->byteLength() };
+            data = std::span(static_cast<const uint8_t*>(view->vector()), view->byteLength());
     } else {
         data = dataValue.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
@@ -1835,7 +1839,7 @@ JSC_DEFINE_HOST_FUNCTION(functionWriteFile, (JSGlobalObject* globalObject, CallF
     int size = std::visit(WTF::makeVisitor([&](const String& string) {
         CString utf8 = string.utf8();
         return FileSystem::writeToFile(handle, utf8.data(), utf8.length());
-    }, [&] (const Span<const uint8_t>& data) {
+    }, [&] (const std::span<const uint8_t>& data) {
         return FileSystem::writeToFile(handle, data.data(), data.size());
     }), data);
 
@@ -2206,8 +2210,8 @@ JSC_DEFINE_HOST_FUNCTION(functionDollarEvalScript, (JSGlobalObject* globalObject
 
     JSValue global = callFrame->thisValue().get(globalObject, Identifier::fromString(vm, "global"_s));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    while (global.inherits<JSProxy>())
-        global = jsCast<JSProxy*>(global)->target();
+    while (global.inherits<JSGlobalProxy>())
+        global = jsCast<JSGlobalProxy*>(global)->target();
     GlobalObject* realm = jsDynamicCast<GlobalObject*>(global);
     if (!realm)
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Expected global to point to a global object"_s)));
@@ -2313,7 +2317,7 @@ JSC_DEFINE_HOST_FUNCTION(functionDollarAgentStart, (JSGlobalObject* globalObject
                         result = evaluationException->value();
                     checkException(globalObject, true, evaluationException, result, commandLine, success);
                     if (!success)
-                        exit(1);
+                        exitProcess(EXIT_FAILURE);
                 });
         })->detach();
 
@@ -2591,7 +2595,7 @@ JSC_DEFINE_HOST_FUNCTION(functionQuit, (JSGlobalObject* globalObject, CallFrame*
 
     jscExit(EXIT_SUCCESS);
 
-#if COMPILER(MSVC)
+#if COMPILER(MSVC) && !COMPILER(CLANG)
     // Without this, Visual Studio will complain that this method does not return a value.
     return JSValue::encode(jsUndefined());
 #endif
@@ -2972,8 +2976,9 @@ JSC_DEFINE_HOST_FUNCTION(functionSamplingProfilerStackTraces, (JSGlobalObject* g
     if (!vm.samplingProfiler())
         return JSValue::encode(throwException(globalObject, scope, createError(globalObject, "Sampling profiler was never started"_s)));
 
-    String jsonString = vm.samplingProfiler()->stackTracesAsJSON();
-    EncodedJSValue result = JSValue::encode(JSONParse(globalObject, jsonString));
+    auto json = vm.samplingProfiler()->stackTracesAsJSON();
+    auto jsonString = json->toJSONString();
+    EncodedJSValue result = JSValue::encode(JSONParse(globalObject, WTFMove(jsonString)));
     scope.releaseAssertNoException();
     return result;
 }
@@ -3072,6 +3077,10 @@ JSC_DEFINE_HOST_FUNCTION(functionDropAllLocks, (JSGlobalObject* globalObject, Ca
 #define EXCEPT(x)
 #endif
 
+#if OS(UNIX)
+static BinarySemaphore waitToExit;
+#endif
+
 int jscmain(int argc, char** argv);
 
 #if OS(DARWIN) || OS(LINUX)
@@ -3136,7 +3145,7 @@ static void startTimeoutTimer(Seconds duration)
                 Seconds hardTimeout { hardTimeoutInDouble };
                 sleep(hardTimeout);
                 dataLogLn("HARD TIMEOUT after ", hardTimeout);
-                exit(EXIT_FAILURE);
+                exitProcess(EXIT_FAILURE);
             }
         }
     });
@@ -3185,6 +3194,12 @@ int main(int argc, char** argv)
     fegetenv( &env );
     env.__fpscr &= ~0x01000000u;
     fesetenv( &env );
+
+    // Let the kernel kill us when OOM
+    {
+        int retval = proc_setpcontrol(PC_KILL);
+        ASSERT_UNUSED(retval, !retval);
+    }
 #endif
 
 #if OS(WINDOWS)
@@ -3222,9 +3237,8 @@ int main(int argc, char** argv)
 #endif
 
 #if OS(UNIX)
-    BinarySemaphore waitToExit;
-
     if (getenv("JS_SHELL_WAIT_FOR_SIGUSR2_TO_EXIT")) {
+        initializeSignalHandling();
         addSignalHandler(Signal::Usr, SignalHandler([&] (Signal, SigInfo&, PlatformRegisters&) {
             dataLogLn("Signal handler hit, we can exit now.");
             waitToExit.signal();
@@ -3320,6 +3334,7 @@ static void dumpException(GlobalObject* globalObject, JSValue exception)
             printf("%s\n", stackString.utf8().data());
     }
 
+    fflush(stdout);
 #undef CHECK_EXCEPTION
 }
 
@@ -3435,7 +3450,7 @@ static void runWithOptions(GlobalObject* globalObject, CommandLine& options, boo
         } else {
             size_t commandLineLength = strlen(scripts[i].argument);
             scriptBuffer.resize(commandLineLength);
-            std::copy(scripts[i].argument, scripts[i].argument + commandLineLength, scriptBuffer.begin());
+            std::copy_n(scripts[i].argument, commandLineLength, scriptBuffer.begin());
             fileName = "[Command Line]"_s;
         }
 
@@ -3672,9 +3687,11 @@ void CommandLine::parseArguments(int argc, char** argv)
         }
         if (!strcmp(arg, "-s")) {
 #if OS(UNIX)
+            initializeSignalHandling();
+
             SignalAction (*exit)(Signal, SigInfo&, PlatformRegisters&) = [] (Signal, SigInfo&, PlatformRegisters&) {
                 dataLogLn("Signal handler hit. Exiting with status 0");
-                _exit(0);
+                terminateProcess(EXIT_SUCCESS);
                 return SignalAction::ForceDefault;
             };
 
@@ -3955,6 +3972,12 @@ int jscmain(int argc, char** argv)
     // comes first.
     mainCommandLine.construct(argc, argv);
 
+#if OS(WINDOWS)
+    // Needed for complex.yaml tests.
+    if (char* tz = getenv("TZ"))
+        setTimeZoneOverride(StringView::fromLatin1(tz));
+#endif
+
     {
         Options::AllowUnfinalizedAccessScope scope;
         processConfigFile(Options::configFile(), "jsc");
@@ -4053,10 +4076,3 @@ int jscmain(int argc, char** argv)
 
     return result;
 }
-
-#if OS(WINDOWS)
-extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, const char* argv[])
-{
-    return main(argc, const_cast<char**>(argv));
-}
-#endif
