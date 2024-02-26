@@ -91,8 +91,6 @@ static NSArray *allModes = nil;
     [self->_painterOffscreen release];
     self->_painterOffscreen = nil;
 
-    CGColorSpaceRelease(self.colorspace);
-
     [super dealloc];
 }
 
