@@ -224,7 +224,7 @@ import javafx.scene.shape.TriangleMesh;
  * <i>S=Σ<sub>i</sub>((R<sub>i</sub>⋅V)<sup>P</sup> * C<sub>Li</sub>)</i>,
  * the total specular component contribution is <i>S * C<sub>SM</sub></i>.
  *
- * <h3>Slef-Illumination</h3>
+ * <h3>Self-Illumination</h3>
  * The self-illumination component represents light emanating from the surface, hence, it is not affected by lights, the
  * geometry, or the viewer position. Its contribution is just the material's self-illumination color,
  * <i>C<sub>LM</sub></i>.
