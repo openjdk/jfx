@@ -500,8 +500,9 @@ public class PrismTextLayout implements TextLayout {
                 boolean textFound = false;
                 for (int i = 0; i <= runIdx; i++) {
                     TextRun r = runs[i];
+                    int textWidth = run.getStart() + run.getTextSpan().getText().length();
                     if (r.getStart() != curRunStart && x > r.getWidth() && textWidthPrevLine == 0
-                            && r.getTextSpan().getText().equals(text)) {
+                            && r.getStart() < textWidth && r.getTextSpan().getText().equals(text)) {
                         x -= r.getWidth();
                         textFound = true;
                         continue;
@@ -601,7 +602,8 @@ public class PrismTextLayout implements TextLayout {
         int ltrTextWidth = 0;
         for (int i = runs.length - 1; i > runIdx; i--) {
             TextRun r = runs[i];
-            boolean addLtrIdx = run.getTextSpan().getText().length() != run.length;
+            boolean addLtrIdx = run.getTextSpan().getText().length() != run.length
+                                    && (r.length + ltrTextWidth) < run.getTextSpan().getText().length();
             if (r.getStart() != curRunStart && !r.isLinebreak() && addLtrIdx
                     && r.getTextSpan().getText().equals(text)) {
                 ltrTextWidth += r.getLength();
