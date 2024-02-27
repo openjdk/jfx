@@ -30,6 +30,7 @@
 #include "TreeScopeOrderedMap.h"
 #include <memory>
 #include <wtf/Forward.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 
@@ -53,7 +54,11 @@ class LayoutPoint;
 class IdTargetObserverRegistry;
 class Node;
 class RadioButtonGroups;
+class RenderSVGResourceContainer;
+class SVGElement;
 class ShadowRoot;
+class WeakPtrImplWithEventTargetData;
+struct SVGResourcesMap;
 
 class TreeScope {
     friend class Document;
@@ -101,7 +106,7 @@ public:
     bool shouldCacheLabelsByForAttribute() const { return !!m_labelsByForAttribute; }
     void addLabel(const AtomStringImpl& forAttributeValue, HTMLLabelElement&);
     void removeLabel(const AtomStringImpl& forAttributeValue, HTMLLabelElement&);
-    HTMLLabelElement* labelElementForId(const AtomString& forAttributeValue);
+    const Vector<Element*>* labelElementsForId(const AtomString& forAttributeValue);
 
     WEBCORE_EXPORT RefPtr<Element> elementFromPoint(double clientX, double clientY);
     WEBCORE_EXPORT Vector<RefPtr<Element>> elementsFromPoint(double clientX, double clientY);
@@ -116,13 +121,27 @@ public:
 
     ContainerNode& rootNode() const { return m_rootNode; }
 
-    IdTargetObserverRegistry& idTargetObserverRegistry() const { return *m_idTargetObserverRegistry.get(); }
+    IdTargetObserverRegistry& idTargetObserverRegistry() { return m_idTargetObserverRegistry.get(); }
+    const IdTargetObserverRegistry& idTargetObserverRegistry() const { return m_idTargetObserverRegistry.get(); }
 
     RadioButtonGroups& radioButtonGroups();
 
     JSC::JSValue adoptedStyleSheetWrapper(JSDOMGlobalObject&);
-    const Vector<RefPtr<CSSStyleSheet>>& adoptedStyleSheets() const;
+    std::span<const RefPtr<CSSStyleSheet>> adoptedStyleSheets() const;
     ExceptionOr<void> setAdoptedStyleSheets(Vector<RefPtr<CSSStyleSheet>>&&);
+
+    void addSVGResource(const AtomString& id, RenderSVGResourceContainer&);
+    void removeSVGResource(const AtomString& id);
+    RenderSVGResourceContainer* svgResourceById(const AtomString& id) const;
+
+    void addPendingSVGResource(const AtomString& id, SVGElement&);
+    bool isIdOfPendingSVGResource(const AtomString& id) const;
+    bool isPendingSVGResource(SVGElement&, const AtomString& id) const;
+    void clearHasPendingSVGResourcesIfPossible(SVGElement&);
+    void removeElementFromPendingSVGResources(SVGElement&);
+    WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData> removePendingSVGResource(const AtomString&);
+    void markPendingSVGResourcesForRemoval(const AtomString&);
+    RefPtr<SVGElement> takeElementFromPendingSVGResourcesForRemovalMap(const AtomString&);
 
 protected:
     TreeScope(ShadowRoot&, Document&);
@@ -138,6 +157,10 @@ protected:
     RefPtr<Node> nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
 
 private:
+    CSSStyleSheetObservableArray& ensureAdoptedStyleSheets();
+
+    SVGResourcesMap& svgResourcesMap() const;
+    bool isElementWithPendingSVGResources(SVGElement&) const;
 
     ContainerNode& m_rootNode;
     std::reference_wrapper<Document> m_documentScope;
@@ -149,10 +172,12 @@ private:
     std::unique_ptr<TreeScopeOrderedMap> m_imagesByUsemap;
     std::unique_ptr<TreeScopeOrderedMap> m_labelsByForAttribute;
 
-    std::unique_ptr<IdTargetObserverRegistry> m_idTargetObserverRegistry;
+    UniqueRef<IdTargetObserverRegistry> m_idTargetObserverRegistry;
 
     std::unique_ptr<RadioButtonGroups> m_radioButtonGroups;
-    Ref<CSSStyleSheetObservableArray> m_adoptedStyleSheets;
+    RefPtr<CSSStyleSheetObservableArray> m_adoptedStyleSheets;
+
+    std::unique_ptr<SVGResourcesMap> m_svgResourcesMap;
 };
 
 inline bool TreeScope::hasElementWithId(const AtomStringImpl& id) const

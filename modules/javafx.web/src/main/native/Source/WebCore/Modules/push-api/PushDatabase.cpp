@@ -110,7 +110,7 @@ static constexpr ASCIILiteral pushDatabaseSchemaV5Statements[] = {
     "DROP TABLE SubscriptionSetsOld"_s,
 };
 
-static constexpr Span<const ASCIILiteral> pushDatabaseSchemaStatements[] = {
+static constexpr std::span<const ASCIILiteral> pushDatabaseSchemaStatements[] = {
     { pushDatabaseSchemaV1Statements },
     { pushDatabaseSchemaV2Statements },
     { pushDatabaseSchemaV3Statements },
@@ -176,7 +176,7 @@ PushTopics PushTopics::isolatedCopy() &&
     return { crossThreadCopy(WTFMove(enabledTopics)), crossThreadCopy(WTFMove(ignoredTopics)) };
 }
 
-enum class ShouldDeleteAndRetry { No, Yes };
+enum class ShouldDeleteAndRetry : bool { No, Yes };
 
 static Expected<UniqueRef<SQLiteDatabase>, ShouldDeleteAndRetry> openAndMigrateDatabaseImpl(const String& path)
 {
@@ -337,7 +337,7 @@ WebCore::SQLiteStatementAutoResetScope PushDatabase::bindStatementOnQueue(ASCIIL
     return sql;
 }
 
-static Span<const uint8_t> uuidToSpan(const std::optional<UUID>& uuid)
+static std::span<const uint8_t> uuidToSpan(const std::optional<WTF::UUID>& uuid)
 {
     if (!uuid) {
         // We store a null UUID as a zero-length blob rather than a SQL NULL. This is because the
@@ -348,18 +348,18 @@ static Span<const uint8_t> uuidToSpan(const std::optional<UUID>& uuid)
         // because calling sqlite3_bind_blob with a nullptr causes a SQL NULL to be stored in the
         // column rather than a zero-length blob.
         static const uint8_t junk = 0;
-        return Span(&junk, static_cast<size_t>(0));
+        return std::span(&junk, static_cast<size_t>(0));
     }
 
     return uuid->toSpan();
 }
 
-static std::optional<UUID> uuidFromSpan(Span<const uint8_t> span)
+static std::optional<WTF::UUID> uuidFromSpan(std::span<const uint8_t> span)
 {
     if (span.size() != 16)
         return std::nullopt;
 
-    return UUID(span.first<16>());
+    return WTF::UUID(span.first<16>());
 }
 
 static SQLValue expirationTimeToValue(std::optional<EpochTimeStamp> timestamp)
@@ -387,7 +387,7 @@ static void completeOnMainQueue(CompletionHandler<void(T)>&& completionHandler, 
     });
 }
 
-void PushDatabase::updatePublicToken(Span<const uint8_t> publicToken, CompletionHandler<void(PublicTokenChanged)>&& completionHandler)
+void PushDatabase::updatePublicToken(std::span<const uint8_t> publicToken, CompletionHandler<void(PublicTokenChanged)>&& completionHandler)
 {
     dispatchOnWorkQueue([this, newPublicToken = Vector<uint8_t> { publicToken }, completionHandler = WTFMove(completionHandler)]() mutable {
         SQLiteTransaction transaction(m_db);
@@ -503,7 +503,7 @@ void PushDatabase::insertRecord(const PushRecord& record, CompletionHandler<void
             if (!sql || sql->step() != SQLITE_DONE)
                 return completeOnMainQueue(WTFMove(completionHandler), std::optional<PushRecord> { });
 
-            record.identifier = makeObjectIdentifier<PushSubscriptionIdentifierType>(m_db->lastInsertRowID());
+            record.identifier = ObjectIdentifier<PushSubscriptionIdentifierType>(m_db->lastInsertRowID());
         }
 
         transaction.commit();
@@ -561,7 +561,7 @@ void PushDatabase::removeRecordByIdentifier(PushSubscriptionIdentifier identifie
 static PushRecord makePushRecordFromRow(SQLiteStatementAutoResetScope& sql, int columnIndex)
 {
     return PushRecord {
-        .identifier = makeObjectIdentifier<PushSubscriptionIdentifierType>(sql->columnInt64(columnIndex)),
+        .identifier = ObjectIdentifier<PushSubscriptionIdentifierType>(sql->columnInt64(columnIndex)),
         .subscriptionSetIdentifier = {
             .bundleIdentifier = sql->columnText(columnIndex + 1),
             .pushPartition = sql->columnText(columnIndex + 2),
@@ -621,7 +621,7 @@ void PushDatabase::getIdentifiers(CompletionHandler<void(HashSet<PushSubscriptio
         HashSet<PushSubscriptionIdentifier> result;
         auto sql = cachedStatementOnQueue("SELECT rowid FROM Subscriptions"_s);
         while (sql && sql->step() == SQLITE_ROW)
-            result.add(makeObjectIdentifier<PushSubscriptionIdentifierType>(sql->columnInt64(0)));
+            result.add(ObjectIdentifier<PushSubscriptionIdentifierType>(sql->columnInt64(0)));
 
         completeOnMainQueue(WTFMove(completionHandler), WTFMove(result));
     });
@@ -716,7 +716,7 @@ void PushDatabase::removeRecordsBySubscriptionSet(const PushSubscriptionSetIdent
             return;
 
         while (sql->step() == SQLITE_ROW) {
-                auto identifier = makeObjectIdentifier<PushSubscriptionIdentifierType>(sql->columnInt(1));
+                auto identifier = ObjectIdentifier<PushSubscriptionIdentifierType>(sql->columnInt(1));
                 auto topic = sql->columnText(2);
                 auto serverVAPIDPublicKey = sql->columnBlob(3);
                 removedPushRecords.append({ identifier, WTFMove(topic), WTFMove(serverVAPIDPublicKey) });
@@ -779,7 +779,7 @@ void PushDatabase::removeRecordsBySubscriptionSetAndSecurityOrigin(const PushSub
 
             while (sql->step() == SQLITE_ROW) {
                 subscriptionSetID = sql->columnInt(0);
-                auto identifier = makeObjectIdentifier<PushSubscriptionIdentifierType>(sql->columnInt(1));
+                auto identifier = ObjectIdentifier<PushSubscriptionIdentifierType>(sql->columnInt(1));
                 auto topic = sql->columnText(2);
                 auto serverVAPIDPublicKey = sql->columnBlob(3);
                 removedPushRecords.append({ identifier, WTFMove(topic), WTFMove(serverVAPIDPublicKey) });

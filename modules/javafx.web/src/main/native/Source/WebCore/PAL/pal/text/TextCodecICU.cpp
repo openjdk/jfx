@@ -286,16 +286,6 @@ Vector<uint8_t> TextCodecICU::encode(StringView string, UnencodableHandling hand
 
     UErrorCode error;
     switch (handling) {
-    case UnencodableHandling::QuestionMarks:
-        error = U_ZERO_ERROR;
-        ucnv_setSubstChars(m_converter.get(), "?", 1, &error);
-        if (U_FAILURE(error))
-            return { };
-        error = U_ZERO_ERROR;
-        ucnv_setFromUCallBack(m_converter.get(), UCNV_FROM_U_CALLBACK_SUBSTITUTE, 0, 0, 0, &error);
-        if (U_FAILURE(error))
-            return { };
-        break;
     case UnencodableHandling::Entities:
         error = U_ZERO_ERROR;
         ucnv_setFromUCallBack(m_converter.get(), UCNV_FROM_U_CALLBACK_ESCAPE, UCNV_ESCAPE_XML_DEC, 0, 0, &error);

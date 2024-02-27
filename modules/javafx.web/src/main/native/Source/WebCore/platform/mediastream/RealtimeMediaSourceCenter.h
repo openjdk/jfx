@@ -37,7 +37,6 @@
 #include "ExceptionOr.h"
 #include "MediaStreamRequest.h"
 #include "RealtimeMediaSource.h"
-#include "RealtimeMediaSourceFactory.h"
 #include "RealtimeMediaSourceSupportedConstraints.h"
 #include <wtf/Function.h>
 #include <wtf/RefPtr.h>
@@ -66,6 +65,7 @@ public:
         virtual ~Observer();
 
         virtual void devicesChanged() = 0;
+        virtual void deviceWillBeRemoved(const String& persistentId) = 0;
     };
 
     ~RealtimeMediaSourceCenter();
@@ -76,10 +76,11 @@ public:
     using InvalidConstraintsHandler = Function<void(const String& invalidConstraint)>;
     WEBCORE_EXPORT void validateRequestConstraints(ValidConstraintsHandler&&, InvalidConstraintsHandler&&, const MediaStreamRequest&, MediaDeviceHashSalts&&);
 
-    using NewMediaStreamHandler = Function<void(Expected<Ref<MediaStreamPrivate>, String>&&)>;
+    using NewMediaStreamHandler = Function<void(Expected<Ref<MediaStreamPrivate>, CaptureSourceError>&&)>;
     void createMediaStream(Ref<const Logger>&&, NewMediaStreamHandler&&, MediaDeviceHashSalts&&, CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, const MediaStreamRequest&);
 
     WEBCORE_EXPORT void getMediaStreamDevices(CompletionHandler<void(Vector<CaptureDevice>&&)>&&);
+    WEBCORE_EXPORT std::optional<RealtimeMediaSourceCapabilities> getCapabilities(const CaptureDevice&);
 
     const RealtimeMediaSourceSupportedConstraints& supportedConstraints() { return m_supportedConstraints; }
 
@@ -101,6 +102,7 @@ public:
     WEBCORE_EXPORT void removeDevicesChangedObserver(Observer&);
 
     void captureDevicesChanged();
+    void captureDeviceWillBeRemoved(const String& persistentId);
 
     WEBCORE_EXPORT static bool shouldInterruptAudioOnPageVisibilityChange();
 

@@ -45,7 +45,6 @@ public:
     FilterData() = default;
 
     RefPtr<SVGFilter> filter;
-    FilterResults results;
 
     std::unique_ptr<FilterTargetSwitcher> targetSwitcher;
     FloatRect sourceImageRect;
@@ -63,7 +62,7 @@ public:
     inline SVGFilterElement& filterElement() const;
     bool isIdentity() const;
 
-    void removeAllClientsFromCache(bool markForInvalidation = true) override;
+    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers) override;
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;

@@ -96,7 +96,7 @@ static WorkQueue& sharedFileSystemStorageQueue()
 WTF_MAKE_ISO_ALLOCATED_IMPL(WorkerGlobalScope);
 
 WorkerGlobalScope::WorkerGlobalScope(WorkerThreadType type, const WorkerParameters& params, Ref<SecurityOrigin>&& origin, WorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, std::unique_ptr<WorkerClient>&& workerClient)
-    : WorkerOrWorkletGlobalScope(type, params.sessionID, isMainThread() ? Ref { commonVM() } : JSC::VM::create(), params.referrerPolicy, &thread, params.clientIdentifier)
+    : WorkerOrWorkletGlobalScope(type, params.sessionID, isMainThread() ? Ref { commonVM() } : JSC::VM::create(), params.referrerPolicy, &thread, params.noiseInjectionHashSalt, params.clientIdentifier)
     , m_url(params.scriptURL)
     , m_ownerURL(params.ownerURL)
     , m_inspectorIdentifier(params.inspectorIdentifier)
@@ -142,7 +142,8 @@ WorkerGlobalScope::~WorkerGlobalScope()
     m_crypto = nullptr;
 
     // Notify proxy that we are going away. This can free the WorkerThread object, so do not access it after this.
-    thread().workerReportingProxy().workerGlobalScopeDestroyed();
+    if (auto* workerReportingProxy = thread().workerReportingProxy())
+        workerReportingProxy->workerGlobalScopeDestroyed();
 }
 
 String WorkerGlobalScope::origin() const
@@ -217,7 +218,8 @@ RefPtr<RTCDataChannelRemoteHandlerConnection> WorkerGlobalScope::createRTCDataCh
 {
     RefPtr<RTCDataChannelRemoteHandlerConnection> connection;
     callOnMainThreadAndWait([workerThread = Ref { thread() }, &connection]() mutable {
-        connection = workerThread->workerLoaderProxy().createRTCDataChannelRemoteHandlerConnection();
+        if (auto* workerLoaderProxy = workerThread->workerLoaderProxy())
+            connection = workerLoaderProxy->createRTCDataChannelRemoteHandlerConnection();
     });
     ASSERT(connection);
 
@@ -307,7 +309,8 @@ void WorkerGlobalScope::close()
         ASSERT_WITH_SECURITY_IMPLICATION(is<WorkerGlobalScope>(context));
         WorkerGlobalScope& workerGlobalScope = downcast<WorkerGlobalScope>(context);
         // Notify parent that this context is closed. Parent is responsible for calling WorkerThread::stop().
-        workerGlobalScope.thread().workerReportingProxy().workerGlobalScopeClosed();
+        if (auto* workerReportingProxy = workerGlobalScope.thread().workerReportingProxy())
+            workerReportingProxy->workerGlobalScopeClosed();
     } });
 }
 
@@ -335,7 +338,7 @@ ExceptionOr<int> WorkerGlobalScope::setTimeout(std::unique_ptr<ScheduledAction> 
 
     action->addArguments(WTFMove(arguments));
 
-    return DOMTimer::install(*this, WTFMove(action), Seconds::fromMilliseconds(timeout), true);
+    return DOMTimer::install(*this, WTFMove(action), Seconds::fromMilliseconds(timeout), DOMTimer::Type::SingleShot);
 }
 
 void WorkerGlobalScope::clearTimeout(int timeoutId)
@@ -353,7 +356,7 @@ ExceptionOr<int> WorkerGlobalScope::setInterval(std::unique_ptr<ScheduledAction>
 
     action->addArguments(WTFMove(arguments));
 
-    return DOMTimer::install(*this, WTFMove(action), Seconds::fromMilliseconds(timeout), false);
+    return DOMTimer::install(*this, WTFMove(action), Seconds::fromMilliseconds(timeout), DOMTimer::Type::Repeating);
 }
 
 void WorkerGlobalScope::clearInterval(int timeoutId)
@@ -436,7 +439,8 @@ EventTarget* WorkerGlobalScope::errorEventTarget()
 
 void WorkerGlobalScope::logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, RefPtr<ScriptCallStack>&&)
 {
-    thread().workerReportingProxy().postExceptionToWorkerObject(errorMessage, lineNumber, columnNumber, sourceURL);
+    if (auto* workerReportingProxy = thread().workerReportingProxy())
+        workerReportingProxy->postExceptionToWorkerObject(errorMessage, lineNumber, columnNumber, sourceURL);
 }
 
 void WorkerGlobalScope::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&& message)
@@ -474,9 +478,13 @@ void WorkerGlobalScope::addMessage(MessageSource source, MessageLevel level, con
 bool WorkerGlobalScope::wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t>& wrappedKey)
 {
     Ref protectedThis { *this };
+    auto* workerLoaderProxy = thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return false;
+
     bool success = false;
     BinarySemaphore semaphore;
-    thread().workerLoaderProxy().postTaskToLoader([&semaphore, &success, &key, &wrappedKey](auto& context) {
+    workerLoaderProxy->postTaskToLoader([&semaphore, &success, &key, &wrappedKey](auto& context) {
         success = context.wrapCryptoKey(key, wrappedKey);
         semaphore.signal();
     });
@@ -487,9 +495,13 @@ bool WorkerGlobalScope::wrapCryptoKey(const Vector<uint8_t>& key, Vector<uint8_t
 bool WorkerGlobalScope::unwrapCryptoKey(const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key)
 {
     Ref protectedThis { *this };
+    auto* workerLoaderProxy = thread().workerLoaderProxy();
+    if (!workerLoaderProxy)
+        return false;
+
     bool success = false;
     BinarySemaphore semaphore;
-    thread().workerLoaderProxy().postTaskToLoader([&semaphore, &success, &key, &wrappedKey](auto& context) {
+    workerLoaderProxy->postTaskToLoader([&semaphore, &success, &key, &wrappedKey](auto& context) {
         success = context.unwrapCryptoKey(wrappedKey, key);
         semaphore.signal();
     });

@@ -25,28 +25,30 @@
 
 #include "config.h"
 #include "TextManipulationController.h"
-#include "TextManipulationItem.h"
 
 #include "AccessibilityObject.h"
 #include "CharacterData.h"
 #include "Editing.h"
-#include "ElementAncestorIterator.h"
+#include "ElementAncestorIteratorInlines.h"
+#include "ElementRareData.h"
 #include "EventLoop.h"
-#include "FrameView.h"
 #include "HTMLBRElement.h"
 #include "HTMLElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "InputTypeNames.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "PseudoElement.h"
 #include "RenderBox.h"
 #include "ScriptDisallowedScope.h"
+#include "ShadowRoot.h"
 #include "Text.h"
 #include "TextIterator.h"
+#include "TextManipulationItem.h"
 #include "VisibleUnits.h"
 
 namespace WebCore {
@@ -151,7 +153,7 @@ static bool isNotSpace(UChar character)
     if (character == noBreakSpace)
         return false;
 
-    return isNotHTMLSpace(character);
+    return !isASCIIWhitespace(character);
 }
 
 class ParagraphContentIterator {
@@ -195,7 +197,7 @@ public:
         return content;
     }
 
-    bool atEnd() const { return !m_text && m_iterator.atEnd() && m_node == m_pastEndNode; }
+    bool atEnd() const { return !m_text && m_node == m_pastEndNode; }
 
 private:
     bool shouldAdvanceIteratorPastCurrentNode() const
@@ -285,11 +287,6 @@ static bool canPerformTextManipulationByReplacingEntireTextContent(const Element
     return element.hasTagName(HTMLNames::titleTag) || element.hasTagName(HTMLNames::optionTag);
 }
 
-static bool areEqualIgnoringLeadingAndTrailingWhitespaces(const String& content, const String& originalContent)
-{
-    return content.stripWhiteSpace() == originalContent.stripWhiteSpace();
-}
-
 static std::optional<TextManipulationTokenInfo> tokenInfo(Node* node)
 {
     if (!node)
@@ -325,14 +322,23 @@ static bool isEnclosingItemBoundaryElement(const Element& element)
         return true;
 
     auto displayType = renderer->style().display();
-    if (element.hasTagName(HTMLNames::liTag) || element.hasTagName(HTMLNames::aTag)) {
+    bool isListItem = element.hasTagName(HTMLNames::liTag);
+    if (isListItem || element.hasTagName(HTMLNames::aTag)) {
         if (displayType == DisplayType::Block || displayType == DisplayType::InlineBlock)
+            return true;
+
+        auto floating = renderer->style().floating();
+        if (isListItem && (floating == Float::Left || floating == Float::Right))
             return true;
 
         for (RefPtr parent = element.parentElement(); parent; parent = parent->parentElement()) {
             if (parent->hasTagName(HTMLNames::navTag) || role(*parent) == AccessibilityRole::LandmarkNavigation)
                 return true;
         }
+
+        // Treat a or li with text-wrap: nowrap as its own paragraph so that wrapping whitespace between them will be preserved.
+        if (renderer->style().textWrap() == TextWrap::NoWrap)
+            return true;
     }
 
     if (displayType == DisplayType::TableCell)
@@ -402,7 +408,7 @@ void TextManipulationController::parse(ManipulationUnit& unit, const String& tex
                 startPositionOfCurrentToken = positionOfLastNonHTMLSpace + 1;
             }
 
-            while (index < text.length() && (isHTMLSpace(text[index]) || isInPrivateUseArea(text[index])))
+            while (index < text.length() && (isASCIIWhitespace(text[index]) || isInPrivateUseArea(text[index])))
                 ++index;
 
             --index;
@@ -471,6 +477,9 @@ void TextManipulationController::observeParagraphs(const Position& start, const 
         auto content = iterator.currentContent();
         auto* contentNode = content.node.get();
         ASSERT(contentNode);
+
+        if (RefPtr shadowRoot = contentNode->shadowRoot(); shadowRoot && shadowRoot->mode() != ShadowRootMode::UserAgent)
+            observeParagraphs(firstPositionInNode(shadowRoot.get()), lastPositionInNode(shadowRoot.get()));
 
         while (!enclosingItemBoundaryElements.isEmpty() && !enclosingItemBoundaryElements.last()->contains(contentNode)) {
             addItemIfPossible(std::exchange(unitsInCurrentParagraph, { }));
@@ -632,6 +641,9 @@ void TextManipulationController::addItem(ManipulationItemData&& itemData)
     ASSERT(!itemData.tokens.isEmpty());
     auto newID = m_itemIdentifier.generate();
     m_pendingItemsForCallback.append(TextManipulationItem {
+        m_document->frame()->frameID(),
+        !m_document->frame()->isMainFrame(),
+        !m_document->topOrigin().isSameSiteAs(m_document->securityOrigin()),
         newID,
         itemData.tokens.map([](auto& token) { return token; })
     });
@@ -656,15 +668,21 @@ auto TextManipulationController::completeManipulation(const Vector<WebCore::Text
     HashSet<Ref<Node>> containersWithoutVisualOverflowBeforeReplacement;
     for (unsigned i = 0; i < completionItems.size(); ++i) {
         auto& itemToComplete = completionItems[i];
-        auto identifier = itemToComplete.identifier;
-        if (!identifier) {
-            failures.append(ManipulationFailure { identifier, i, ManipulationFailure::Type::InvalidItem });
+        auto frameID = itemToComplete.frameID;
+        auto itemID = itemToComplete.identifier;
+        if (!frameID || !m_document || !m_document->frame() || frameID != m_document->frame()->frameID()) {
+            failures.append(ManipulationFailure { frameID, itemID, i, ManipulationFailure::Type::NotAvailable });
             continue;
         }
 
-        auto itemDataIterator = m_items.find(identifier);
+        if (!itemID) {
+            failures.append(ManipulationFailure { frameID, itemID, i, ManipulationFailure::Type::InvalidItem });
+            continue;
+        }
+
+        auto itemDataIterator = m_items.find(itemID);
         if (itemDataIterator == m_items.end()) {
-            failures.append(ManipulationFailure { identifier, i, ManipulationFailure::Type::InvalidItem });
+            failures.append(ManipulationFailure { frameID, itemID, i, ManipulationFailure::Type::InvalidItem });
             continue;
         }
 
@@ -672,9 +690,8 @@ auto TextManipulationController::completeManipulation(const Vector<WebCore::Text
         std::exchange(itemData, itemDataIterator->value);
         m_items.remove(itemDataIterator);
 
-        auto failureOrNullopt = replace(itemData, itemToComplete.tokens, containersWithoutVisualOverflowBeforeReplacement);
-        if (failureOrNullopt)
-            failures.append(ManipulationFailure { identifier, i, *failureOrNullopt });
+        if (auto failureOrNullopt = replace(itemData, itemToComplete.tokens, containersWithoutVisualOverflowBeforeReplacement))
+            failures.append(ManipulationFailure { frameID, itemID, i, *failureOrNullopt });
     }
 
     if (!containersWithoutVisualOverflowBeforeReplacement.isEmpty()) {
@@ -820,7 +837,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
                 return ManipulationFailure::Type::ContentChanged;
 
             auto& currentToken = item.tokens[currentTokenIndex++];
-            bool isContentUnchanged = areEqualIgnoringLeadingAndTrailingWhitespaces(currentToken.content, token.content);
+            bool isContentUnchanged = StringView(currentToken.content).trim(deprecatedIsSpaceOrNewline) == StringView(token.content).trim(deprecatedIsSpaceOrNewline);
             if (!content.isReplacedContent && !isContentUnchanged)
                 return ManipulationFailure::Type::ContentChanged;
 

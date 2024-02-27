@@ -26,8 +26,10 @@
 #include "config.h"
 #include "InlineLineBox.h"
 
+#include "InlineLevelBoxInlines.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutElementBox.h"
+#include "RenderStyleInlines.h"
 
 namespace WebCore {
 namespace Layout {
@@ -52,13 +54,13 @@ InlineRect LineBox::logicalRectForTextRun(const Line::Run& run) const
     ASSERT(run.isText() || run.isSoftLineBreak());
     auto* ancestorInlineBox = &parentInlineBox(run);
     ASSERT(ancestorInlineBox->isInlineBox());
-    auto runlogicalTop = ancestorInlineBox->logicalTop() - ancestorInlineBox->inlineBoxContentOffsetForLeadingTrim();
+    auto runlogicalTop = ancestorInlineBox->logicalTop() - ancestorInlineBox->inlineBoxContentOffsetForTextBoxTrim();
     InlineLayoutUnit logicalHeight = ancestorInlineBox->primarymetricsOfPrimaryFont().height();
 
     while (ancestorInlineBox != &m_rootInlineBox && !ancestorInlineBox->hasLineBoxRelativeAlignment()) {
         ancestorInlineBox = &parentInlineBox(*ancestorInlineBox);
         ASSERT(ancestorInlineBox->isInlineBox());
-        runlogicalTop += (ancestorInlineBox->logicalTop() - ancestorInlineBox->inlineBoxContentOffsetForLeadingTrim());
+        runlogicalTop += (ancestorInlineBox->logicalTop() - ancestorInlineBox->inlineBoxContentOffsetForTextBoxTrim());
     }
     return { runlogicalTop, m_rootInlineBox.logicalLeft() + run.logicalLeft(), run.logicalWidth(), logicalHeight };
 }
@@ -110,6 +112,11 @@ InlineRect LineBox::logicalBorderBoxForAtomicInlineLevelBox(const Box& layoutBox
     logicalRect.moveVertically(boxGeometry.marginBefore());
     auto verticalMargin = boxGeometry.marginBefore() + boxGeometry.marginAfter();
     logicalRect.expandVertically(-verticalMargin);
+
+    // FIXME: The overhang adjustment should be based on the computed value.
+    if (auto* rubyAdjustments = layoutBox.rubyAdjustments())
+        logicalRect.moveHorizontally(-rubyAdjustments->overhang.start);
+
     return logicalRect;
 }
 

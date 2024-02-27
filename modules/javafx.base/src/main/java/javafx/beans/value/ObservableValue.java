@@ -272,8 +272,8 @@ public interface ObservableValue<T> extends Observable {
      * <p>
      * For example:
      * <pre>{@code
-     * ObservableValue<Boolean> condition = new SimpleBooleanProperty(true);
-     * ObservableValue<String> longLivedProperty = new SimpleStringProperty("A");
+     * Property<Boolean> condition = new SimpleBooleanProperty(true);
+     * Property<String> longLivedProperty = new SimpleStringProperty("A");
      * ObservableValue<String> whenProperty = longLivedProperty.when(condition);
      *
      * // observe whenProperty, which will in turn observe longLivedProperty

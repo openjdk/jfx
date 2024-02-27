@@ -25,17 +25,17 @@
 #include "ScheduledAction.h"
 
 #include "ContentSecurityPolicy.h"
-#include "DOMWindow.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "JSDOMExceptionHandling.h"
-#include "JSDOMWindow.h"
 #include "JSExecState.h"
 #include "JSExecStateInstrumentation.h"
+#include "JSLocalDOMWindow.h"
 #include "JSWorkerGlobalScope.h"
+#include "LocalDOMWindow.h"
+#include "LocalFrame.h"
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptSourceCode.h"
@@ -127,12 +127,12 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
 
 void ScheduledAction::execute(Document& document)
 {
-    JSDOMWindow* window = toJSDOMWindow(document.frame(), m_isolatedWorld);
+    auto* window = toJSLocalDOMWindow(document.frame(), m_isolatedWorld);
     if (!window)
         return;
 
-    RefPtr<Frame> frame = window->wrapped().frame();
-    if (!frame || !frame->script().canExecuteScripts(AboutToExecuteScript))
+    RefPtr frame = window->wrapped().frame();
+    if (!frame || !frame->script().canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToExecuteScript))
         return;
 
     if (m_function)

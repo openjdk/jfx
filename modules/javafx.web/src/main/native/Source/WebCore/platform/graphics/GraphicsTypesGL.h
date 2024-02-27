@@ -26,6 +26,8 @@
 #pragma once
 
 #include <cstdint>
+#include <wtf/EnumTraits.h>
+#include <wtf/OptionSet.h>
 
 // GCGL types match the corresponding GL types as defined in OpenGL ES 2.0
 // header file gl2.h from khronos.org.
@@ -55,10 +57,46 @@ typedef int64_t GCGLint64;
 typedef uint64_t GCGLuint64;
 
 typedef GCGLuint PlatformGLObject;
+
+// GCGL types match the corresponding EGL types as defined in Khronos Native
+// Platform Graphics Interface - EGL Version 1.5 header file egl.h from
+// khronos.org.
+
+// FIXME: These should be renamed to GCEGLxxx
 using GCGLDisplay = void*;
 using GCGLConfig = void*;
 using GCGLContext = void*;
+using GCEGLImage = void*;
+using GCEGLSuface = void*;
+using GCEGLSync = void*;
 
 #if !PLATFORM(COCOA)
 typedef unsigned GLuint;
 #endif
+
+// Order in inverse of in GL specification, so that iteration is in GL specification order.
+enum class GCGLErrorCode : uint8_t {
+    ContextLost = 1,
+    InvalidFramebufferOperation = 1 << 2,
+    OutOfMemory = 1 << 3,
+    InvalidOperation = 1 << 4,
+    InvalidValue = 1 << 5,
+    InvalidEnum = 1 << 6
+};
+using GCGLErrorCodeSet = OptionSet<GCGLErrorCode>;
+
+namespace WTF {
+
+template <> struct EnumTraits<GCGLErrorCode> {
+    using values = EnumValues <
+    GCGLErrorCode,
+    GCGLErrorCode::ContextLost,
+    GCGLErrorCode::InvalidFramebufferOperation,
+    GCGLErrorCode::OutOfMemory,
+    GCGLErrorCode::InvalidOperation,
+    GCGLErrorCode::InvalidValue,
+    GCGLErrorCode::InvalidEnum
+    >;
+};
+
+}

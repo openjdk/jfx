@@ -92,7 +92,7 @@ void LLIntPlan::compileFunction(uint32_t functionIndex)
         Locker locker { m_lock };
         if (!m_errorMessage) {
             // Multiple compiles could fail simultaneously. We arbitrarily choose the first.
-            fail(makeString(parseAndCompileResult.error(), ", in function at index ", String::number(functionIndex))); // FIXME make this an Expected.
+            fail(makeString(parseAndCompileResult.error(), ", in function at index "_s, functionIndex)); // FIXME make this an Expected.
         }
         m_currentIndex = m_moduleInformation->functions.size();
         return;
@@ -127,7 +127,7 @@ void LLIntPlan::didCompleteCompilation()
             m_calleesVector[i] = LLIntCallee::create(*m_wasmInternalFunctions[i], functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace));
             ASSERT(!m_calleesVector[i]->entrypoint());
             entrypoints[i] = jit.label();
-            if (m_moduleInformation->isSIMDFunction(i))
+            if (m_moduleInformation->usesSIMD(i))
                 JIT_COMMENT(jit, "SIMD function entrypoint");
             JIT_COMMENT(jit, "Entrypoint for function[", i, "]");
             CCallHelpers::Address calleeSlot(CCallHelpers::stackPointerRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register)) - prologueStackPointerDelta());
@@ -138,7 +138,7 @@ void LLIntPlan::didCompleteCompilation()
             jumps[i] = jit.jump();
         }
 
-        LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
+        LinkBuffer linkBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::WasmThunk, JITCompilationCanFail);
         if (UNLIKELY(linkBuffer.didFailToAllocate())) {
             Base::fail("Out of executable memory in Wasm LLInt entry thunks"_s);
             return;
@@ -146,13 +146,13 @@ void LLIntPlan::didCompleteCompilation()
 
         for (unsigned i = 0; i < functionCount; ++i) {
             m_calleesVector[i]->setEntrypoint(linkBuffer.locationOf<WasmEntryPtrTag>(entrypoints[i]));
-            if (m_moduleInformation->isSIMDFunction(i))
+            if (m_moduleInformation->usesSIMD(i))
                 linkBuffer.link<JITThunkPtrTag>(jumps[i], CodeLocationLabel<JITThunkPtrTag>(LLInt::wasmFunctionEntryThunkSIMD().code()));
             else
             linkBuffer.link<JITThunkPtrTag>(jumps[i], CodeLocationLabel<JITThunkPtrTag>(LLInt::wasmFunctionEntryThunk().code()));
         }
 
-        m_entryThunks = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Wasm LLInt entry thunks");
+        m_entryThunks = FINALIZE_WASM_CODE(linkBuffer, JITCompilationPtrTag, "Wasm LLInt entry thunks");
         m_callees = m_calleesVector.data();
         if (!m_moduleInformation->clobberingTailCalls().isEmpty())
             computeTransitiveTailCalls();
@@ -172,14 +172,14 @@ void LLIntPlan::didCompleteCompilation()
             Ref<JSEntrypointCallee> callee = JSEntrypointCallee::create();
             std::unique_ptr<InternalFunction> function = createJSToWasmWrapper(jit, callee.get(), signature, &m_unlinkedWasmToWasmCalls[functionIndex], m_moduleInformation.get(), mode, functionIndex);
 
-            LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::Wasm, JITCompilationCanFail);
+            LinkBuffer linkBuffer(jit, nullptr, LinkBuffer::Profile::WasmThunk, JITCompilationCanFail);
             if (UNLIKELY(linkBuffer.didFailToAllocate())) {
-                Base::fail(makeString("Out of executable memory in function entrypoint at index ", String::number(functionIndex)));
+                Base::fail(makeString("Out of executable memory in function entrypoint at index "_s, functionIndex));
                 return;
             }
 
             function->entrypoint.compilation = makeUnique<Compilation>(
-                FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "JS->WebAssembly entrypoint[%i] %s", functionIndex, signature.toString().ascii().data()),
+                FINALIZE_WASM_CODE(linkBuffer, JITCompilationPtrTag, "JS->WebAssembly entrypoint[%i] %s", functionIndex, signature.toString().ascii().data()),
                 nullptr);
 
             callee->setEntrypoint(WTFMove(function->entrypoint));

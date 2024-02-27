@@ -160,7 +160,7 @@ JSValueRef Java_Object_to_JSValue(
             {
                 JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(
                     ((peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                        ? *static_cast<DOMWindow*>(jlong_to_ptr(peer))->document()
+                        ? *static_cast<LocalDOMWindow*>(jlong_to_ptr(peer))->document()
                         : static_cast<Node*>(jlong_to_ptr(peer))->document()),
                     normalWorld(lexicalGlobalObject->vm()));
                 return toRef(lexicalGlobalObject,
@@ -290,15 +290,17 @@ RefPtr<JSC::Bindings::RootObject> checkJSPeer(
     case com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT:
         {
             WebCore::Frame* frame = (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                ? static_cast<WebCore::DOMWindow*>(jlong_to_ptr(peer))->document()->frame()
+                ? static_cast<WebCore::LocalDOMWindow*>(jlong_to_ptr(peer))->document()->frame()
                 : static_cast<WebCore::Node*>(jlong_to_ptr(peer))->document().frame();
 
             if (!frame) {
                 return rootObject;
             }
-            rootObject = &(frame->script().createRootObject(frame).leakRef());
+
+            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+            rootObject = &(localFrame->script().createRootObject(frame).leakRef());
             if (rootObject) {
-                context = WebCore::getGlobalContext(&frame->script());
+                context = WebCore::getGlobalContext(&localFrame->script());
                 JSC::JSGlobalObject* JSGlobalObject = toJS(context);
                 JSC::JSLockHolder lock(JSGlobalObject);
 

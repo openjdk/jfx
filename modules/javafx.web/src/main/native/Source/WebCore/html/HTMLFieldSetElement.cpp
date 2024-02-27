@@ -25,7 +25,7 @@
 #include "config.h"
 #include "HTMLFieldSetElement.h"
 
-#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "GenericCachedHTMLCollection.h"
 #include "HTMLFormControlsCollection.h"
 #include "HTMLLegendElement.h"
@@ -35,6 +35,7 @@
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
+#include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 
@@ -61,6 +62,24 @@ Ref<HTMLFieldSetElement> HTMLFieldSetElement::create(const QualifiedName& tagNam
     return adoptRef(*new HTMLFieldSetElement(tagName, document, form));
 }
 
+bool HTMLFieldSetElement::isDisabledFormControl() const
+{
+    if (document().settings().sendMouseEventsToDisabledFormControlsEnabled()) {
+        // The fieldset element itself should never be considered disabled, it is
+        // only supposed to affect its descendants:
+        // https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#concept-fe-disabled
+        return false;
+    }
+    return HTMLFormControlElement::isDisabledFormControl();
+}
+
+// https://html.spec.whatwg.org/#concept-element-disabled
+// https://html.spec.whatwg.org/#concept-fieldset-disabled
+bool HTMLFieldSetElement::isActuallyDisabled() const
+{
+    return HTMLFormControlElement::isDisabledFormControl();
+}
+
 static void updateFromControlElementsAncestorDisabledStateUnder(HTMLElement& startNode, bool isDisabled)
 {
     auto range = inclusiveDescendantsOfType<Element>(startNode);
@@ -82,11 +101,11 @@ static void updateFromControlElementsAncestorDisabledStateUnder(HTMLElement& sta
     }
 }
 
-void HTMLFieldSetElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void HTMLFieldSetElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     bool oldHasDisabledAttribute = hasDisabledAttribute();
 
-    HTMLFormControlElement::parseAttribute(name, value);
+    HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
     if (hasDisabledAttribute() != oldHasDisabledAttribute) {
         if (hasDisabledAttribute())
@@ -176,7 +195,7 @@ HTMLLegendElement* HTMLFieldSetElement::legend() const
 
 Ref<HTMLCollection> HTMLFieldSetElement::elements()
 {
-    return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<FieldSetElements>::traversalType>>(*this, FieldSetElements);
+    return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<CollectionType::FieldSetElements>::traversalType>>(*this, CollectionType::FieldSetElements);
 }
 
 void HTMLFieldSetElement::addInvalidDescendant(const HTMLElement& invalidFormControlElement)
@@ -187,7 +206,7 @@ void HTMLFieldSetElement::addInvalidDescendant(const HTMLElement& invalidFormCon
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (m_invalidDescendants.isEmptyIgnoringNullReferences())
-        emplace(styleInvalidation, *this, { { CSSSelector::PseudoClassValid, false }, { CSSSelector::PseudoClassInvalid, true } });
+        emplace(styleInvalidation, *this, { { CSSSelector::PseudoClassType::Valid, false }, { CSSSelector::PseudoClassType::Invalid, true } });
 
     m_invalidDescendants.add(invalidFormControlElement);
 }
@@ -199,7 +218,7 @@ void HTMLFieldSetElement::removeInvalidDescendant(const HTMLElement& formControl
 
     std::optional<Style::PseudoClassChangeInvalidation> styleInvalidation;
     if (m_invalidDescendants.computeSize() == 1)
-        emplace(styleInvalidation, *this, { { CSSSelector::PseudoClassValid, true }, { CSSSelector::PseudoClassInvalid, false } });
+        emplace(styleInvalidation, *this, { { CSSSelector::PseudoClassType::Valid, true }, { CSSSelector::PseudoClassType::Invalid, false } });
 
     m_invalidDescendants.remove(formControlElement);
 }

@@ -27,7 +27,6 @@
 
 #include "ChromeClient.h"
 #include "GraphicsLayerClient.h"
-#include "GraphicsLayerUpdater.h"
 #include "LayerAncestorClippingStack.h"
 #include "RenderLayer.h"
 #include <wtf/HashMap.h>
@@ -38,7 +37,6 @@ namespace WebCore {
 class DisplayRefreshMonitorFactory;
 class FixedPositionViewportConstraints;
 class GraphicsLayer;
-class GraphicsLayerUpdater;
 class LayerOverlapMap;
 class RenderEmbeddedObject;
 class RenderVideo;
@@ -147,7 +145,7 @@ private:
 //
 // There is one RenderLayerCompositor per RenderView.
 
-class RenderLayerCompositor final : public GraphicsLayerClient, public GraphicsLayerUpdaterClient {
+class RenderLayerCompositor final : public GraphicsLayerClient {
     WTF_MAKE_FAST_ALLOCATED;
     friend class LegacyWebKitScrollingLayerCoordinator;
 public:
@@ -179,6 +177,7 @@ public:
     // GraphicsLayers buffer state, which gets pushed to the underlying platform layers
     // at specific times.
     void notifyFlushRequired(const GraphicsLayer*) override;
+    void notifySubsequentFlushRequired(const GraphicsLayer*) override;
     void flushPendingLayerChanges(bool isFlushRoot = true);
 
     // Called when the GraphicsLayer for the given RenderLayer has flushed changes inside of flushPendingLayerChanges().
@@ -197,10 +196,6 @@ public:
 
     // Update event regions, which only needs to happen once per rendering update.
     void updateEventRegions();
-
-    enum class LayoutUpToDate {
-        Yes, No
-    };
 
     struct RequiresCompositingData {
         LayoutUpToDate layoutUpToDate { LayoutUpToDate::Yes };
@@ -322,7 +317,6 @@ public:
     float pageScaleFactor() const override;
     float zoomedOutPageScaleFactor() const override;
     void didChangePlatformLayerForLayer(const GraphicsLayer*) override { }
-    void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) override;
 
     void layerTiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/);
 
@@ -330,8 +324,6 @@ public:
     bool displayListDrawingEnabled() const { return m_displayListDrawingEnabled; }
 
     void deviceOrPageScaleFactorChanged();
-
-    void windowScreenDidChange(PlatformDisplayID);
 
     GraphicsLayer* layerForHorizontalScrollbar() const { return m_layerForHorizontalScrollbar.get(); }
     GraphicsLayer* layerForVerticalScrollbar() const { return m_layerForVerticalScrollbar.get(); }
@@ -378,7 +370,7 @@ public:
 
     void updateRootContentLayerClipping();
 
-    void updateScrollSnapPropertiesWithFrameView(const FrameView&) const;
+    void updateScrollSnapPropertiesWithFrameView(const LocalFrameView&) const;
 
     // For testing.
     void startTrackingLayerFlushes() { m_layerFlushCount = 0; }
@@ -387,8 +379,9 @@ public:
     void startTrackingCompositingUpdates() { m_compositingUpdateCount = 0; }
     unsigned compositingUpdateCount() const { return m_compositingUpdateCount; }
 
-private:
     class BackingSharingState;
+
+private:
     struct CompositingState;
     struct OverlapExtent;
     struct UpdateBackingTraversalState;
@@ -397,14 +390,10 @@ private:
     bool updateCompositingPolicy();
 
     // GraphicsLayerClient implementation
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, OptionSet<GraphicsLayerPaintBehavior>) override;
     void customPositionForVisibleRectComputation(const GraphicsLayer*, FloatPoint&) const override;
     bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char* propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
     bool isTrackingRepaints() const override { return m_isTrackingRepaints; }
-
-    // GraphicsLayerUpdaterClient implementation
-    void flushLayersSoon(GraphicsLayerUpdater&) final;
-    DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() final;
 
     // Copy the accelerated compositing related flags from Settings
     void cacheAcceleratedCompositingFlags();
@@ -533,6 +522,9 @@ private:
     void detachScrollCoordinatedLayer(RenderLayer&, OptionSet<ScrollCoordinationRole>);
     void detachScrollCoordinatedLayerWithRole(RenderLayer&, ScrollingCoordinator&, ScrollCoordinationRole);
 
+    void resolveScrollingTreeRelationships();
+    bool setupScrollProxyRelatedOverflowScrollingNode(ScrollingCoordinator&, ScrollingNodeID, RenderLayer&);
+
     void updateSynchronousScrollingNodes();
 
     FixedPositionViewportConstraints computeFixedViewportConstraints(RenderLayer&) const;
@@ -567,12 +559,13 @@ private:
 #endif
 
     bool documentUsesTiledBacking() const;
-    bool isMainFrameCompositor() const;
+    bool isRootFrameCompositor() const;
 
     void updateCompositingForLayerTreeAsTextDump();
 
     RenderView& m_renderView;
     Timer m_updateCompositingLayersTimer;
+    Timer m_updateRenderingTimer;
 
     ChromeClient::CompositingTriggerFlags m_compositingTriggers { static_cast<ChromeClient::CompositingTriggerFlags>(ChromeClient::AllTriggers) };
     bool m_hasAcceleratedCompositing { true };
@@ -621,8 +614,6 @@ private:
     RefPtr<GraphicsLayer> m_layerForFooter;
 #endif
 
-    std::unique_ptr<GraphicsLayerUpdater> m_layerUpdater; // Updates tiled layer visible area periodically while animations are running.
-
     bool m_viewBackgroundIsTransparent { false };
 
 #if !LOG_DISABLED
@@ -637,6 +628,7 @@ private:
     Color m_rootExtendedBackgroundColor;
 
     HashMap<ScrollingNodeID, WeakPtr<RenderLayer>> m_scrollingNodeToLayerMap;
+    WeakHashSet<RenderLayer> m_layersWithUnresolvedRelations;
 #if PLATFORM(IOS_FAMILY)
     std::unique_ptr<LegacyWebKitScrollingLayerCoordinator> m_legacyScrollingLayerCoordinator;
 #endif

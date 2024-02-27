@@ -22,12 +22,13 @@
 #include "config.h"
 #include "RenderSVGResourcePattern.h"
 
-#include "ElementChildIterator.h"
-#include "FrameView.h"
+#include "ElementChildIteratorInlines.h"
 #include "GraphicsContext.h"
 #include "LegacyRenderSVGRoot.h"
+#include "LocalFrameView.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGFitToViewBox.h"
+#include "SVGRenderStyle.h"
 #include "SVGRenderingContext.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
@@ -47,11 +48,11 @@ SVGPatternElement& RenderSVGResourcePattern::patternElement() const
     return downcast<SVGPatternElement>(RenderSVGResourceContainer::element());
 }
 
-void RenderSVGResourcePattern::removeAllClientsFromCache(bool markForInvalidation)
+void RenderSVGResourcePattern::removeAllClientsFromCacheIfNeeded(bool markForInvalidation, WeakHashSet<RenderObject>* visitedRenderers)
 {
     m_patternMap.clear();
     m_shouldCollectPatternAttributes = true;
-    markAllClientsForInvalidation(markForInvalidation ? RepaintInvalidation : ParentOnlyInvalidation);
+    markAllClientsForInvalidationIfNeeded(markForInvalidation ? RepaintInvalidation : ParentOnlyInvalidation, visitedRenderers);
 }
 
 void RenderSVGResourcePattern::removeClientFromCache(RenderElement& client, bool markForInvalidation)

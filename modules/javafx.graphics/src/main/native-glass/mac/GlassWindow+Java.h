@@ -33,6 +33,7 @@
 - (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded;
 - (void)_sendJavaWindowMoveEventForFrame:(NSRect)frame;
 - (void)_sendJavaWindowResizeEvent:(int)type forFrame:(NSRect)frame;
+- (void)_sendJavaWindowNotifyScaleChanged:(CGFloat)newScale;
 
 - (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow;
 - (NSWindow*)_getCurrentWindow;

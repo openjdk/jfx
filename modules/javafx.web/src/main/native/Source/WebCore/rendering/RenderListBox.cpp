@@ -36,18 +36,21 @@
 #include "DocumentInlines.h"
 #include "EventHandler.h"
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameView.h"
 #include "GraphicsContext.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLSelectElement.h"
 #include "HitTestResult.h"
+#include "LocalFrame.h"
+#include "LocalFrameView.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
 #include "PaintInfo.h"
+#include "RenderBoxInlines.h"
+#include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerScrollableArea.h"
 #include "RenderLayoutState.h"
@@ -62,6 +65,7 @@
 #include "SpatialNavigation.h"
 #include "StyleResolver.h"
 #include "StyleTreeResolver.h"
+#include "UnicodeBidi.h"
 #include "WheelEventTestMonitor.h"
 #include <math.h>
 #include <wtf/IsoMallocInlines.h>
@@ -202,7 +206,7 @@ void RenderListBox::scrollToRevealSelection()
 
 void RenderListBox::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    if (shouldApplySizeContainment()) {
+    if (shouldApplySizeOrInlineSizeContainment()) {
         if (auto width = explicitIntrinsicInnerLogicalWidth())
             maxLogicalWidth = width.value();
         else
@@ -580,7 +584,7 @@ void RenderListBox::panScroll(const IntPoint& panStartMousePosition)
     // If the point is too far from the center we limit the speed
     yDelta = std::max<int>(std::min<int>(yDelta, maxSpeed), -maxSpeed);
 
-    if (abs(yDelta) < iconRadius) // at the center we let the space for the icon
+    if (std::abs(yDelta) < iconRadius) // at the center we let the space for the icon
         return;
 
     if (yDelta > 0)
@@ -971,11 +975,11 @@ void RenderListBox::didStartScrollAnimation()
 Ref<Scrollbar> RenderListBox::createScrollbar()
 {
     RefPtr<Scrollbar> widget;
-    bool hasCustomScrollbarStyle = style().hasPseudoStyle(PseudoId::Scrollbar);
-    if (hasCustomScrollbarStyle)
+    bool usesLegacyScrollbarStyle = style().usesLegacyScrollbarStyle();
+    if (usesLegacyScrollbarStyle)
         widget = RenderScrollbar::createCustomScrollbar(*this, ScrollbarOrientation::Vertical, &selectElement());
     else {
-        widget = Scrollbar::createNativeScrollbar(*this, ScrollbarOrientation::Vertical, theme().scrollbarControlSizeForPart(StyleAppearance::Listbox));
+        widget = Scrollbar::createNativeScrollbar(*this, ScrollbarOrientation::Vertical, theme().scrollbarWidthStyleForPart(StyleAppearance::Listbox));
         didAddScrollbar(widget.get(), ScrollbarOrientation::Vertical);
         if (page().isMonitoringWheelEvents())
             scrollAnimator().setWheelEventTestMonitor(page().wheelEventTestMonitor());
@@ -1038,6 +1042,16 @@ bool RenderListBox::scrolledToRight() const
     // We do not scroll horizontally in a select element, so always report
     // that we are at the full extent of the scroll.
     return true;
+}
+
+float RenderListBox::deviceScaleFactor() const
+{
+    return page().deviceScaleFactor();
+}
+
+bool RenderListBox::isVisibleToHitTesting() const
+{
+    return visibleToHitTesting();
 }
 
 } // namespace WebCore

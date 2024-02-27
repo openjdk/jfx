@@ -23,7 +23,8 @@
 #include "config.h"
 #include "SVGFELightElement.h"
 
-#include "ElementIterator.h"
+#include "ElementChildIteratorInlines.h"
+#include "NodeName.h"
 #include "RenderObject.h"
 #include "RenderSVGResource.h"
 #include "SVGElementTypeHelpers.h"
@@ -68,59 +69,44 @@ SVGFELightElement* SVGFELightElement::findLightElement(const SVGElement* svgElem
     return nullptr;
 }
 
-void SVGFELightElement::parseAttribute(const QualifiedName& name, const AtomString& value)
+void SVGFELightElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == SVGNames::azimuthAttr) {
-        m_azimuth->setBaseValInternal(value.toFloat());
-        return;
+    switch (name.nodeName()) {
+    case AttributeNames::azimuthAttr:
+        m_azimuth->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::elevationAttr:
+        m_elevation->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::xAttr:
+        m_x->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::yAttr:
+        m_y->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::zAttr:
+        m_z->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::pointsAtXAttr:
+        m_pointsAtX->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::pointsAtYAttr:
+        m_pointsAtY->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::pointsAtZAttr:
+        m_pointsAtZ->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::specularExponentAttr:
+        m_specularExponent->setBaseValInternal(newValue.toFloat());
+        break;
+    case AttributeNames::limitingConeAngleAttr:
+        m_limitingConeAngle->setBaseValInternal(newValue.toFloat());
+        break;
+    default:
+        break;
     }
 
-    if (name == SVGNames::elevationAttr) {
-        m_elevation->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::xAttr) {
-        m_x->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::yAttr) {
-        m_y->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::zAttr) {
-        m_z->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::pointsAtXAttr) {
-        m_pointsAtX->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::pointsAtYAttr) {
-        m_pointsAtY->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::pointsAtZAttr) {
-        m_pointsAtZ->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::specularExponentAttr) {
-        m_specularExponent->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    if (name == SVGNames::limitingConeAngleAttr) {
-        m_limitingConeAngle->setBaseValInternal(value.toFloat());
-        return;
-    }
-
-    SVGElement::parseAttribute(name, value);
+    SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
 void SVGFELightElement::svgAttributeChanged(const QualifiedName& attrName)

@@ -28,10 +28,10 @@
 
 #include "MediaPlayerPrivate.h"
 #include <jni.h>
-#include "RQRef.h"
 #include "TimeRanges.h"
 
 namespace WebCore {
+    extern void resetErrorCodeInMediaPlayer(unsigned int err);
     class MediaPlayerPrivate : public MediaPlayerPrivateInterface {
     public:
         //typedef MediaPlayerPrivateInterface* (*CreateMediaEnginePlayer)(MediaPlayer*);
@@ -100,7 +100,7 @@ namespace WebCore {
 
         virtual float maxTimeSeekable() const;
         virtual bool didLoadingProgress() const;
-        virtual std::unique_ptr<PlatformTimeRanges> buffered() const;
+        virtual const PlatformTimeRanges& buffered() const override;
 
         virtual unsigned bytesLoaded() const;
 

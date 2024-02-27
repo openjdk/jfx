@@ -35,6 +35,7 @@
 #include "Logging.h"
 #include "MediaPlayer.h"
 #include <wtf/HexNumber.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/text/StringBuilder.h>
@@ -352,12 +353,14 @@ std::optional<KeyHandleValueVariant> CDMProxy::getOrWaitForKeyValue(const KeyIDT
 void CDMInstanceProxy::startedWaitingForKey()
 {
     ASSERT(!isMainThread());
-    ASSERT(m_player);
+    if (!m_player.get())
+        return;
 
     bool wasWaitingForKey = m_numDecryptorsWaitingForKey > 0;
     m_numDecryptorsWaitingForKey++;
 
-    callOnMainThread([player = m_player, wasWaitingForKey] {
+    callOnMainThread([weakPlayer = m_player, wasWaitingForKey] {
+        auto player = weakPlayer.get();
         if (player && !wasWaitingForKey)
             player->waitingForKeyChanged();
     });
@@ -366,12 +369,15 @@ void CDMInstanceProxy::startedWaitingForKey()
 void CDMInstanceProxy::stoppedWaitingForKey()
 {
     ASSERT(!isMainThread());
-    ASSERT(m_player);
+    if (!m_player.get())
+        return;
+
     ASSERT(m_numDecryptorsWaitingForKey > 0);
     m_numDecryptorsWaitingForKey--;
     bool isNobodyWaitingForKey = !m_numDecryptorsWaitingForKey;
 
-    callOnMainThread([player = m_player, isNobodyWaitingForKey] {
+    callOnMainThread([weakPlayer = m_player, isNobodyWaitingForKey] {
+        auto player = weakPlayer.get();
         if (player && isNobodyWaitingForKey)
             player->waitingForKeyChanged();
     });

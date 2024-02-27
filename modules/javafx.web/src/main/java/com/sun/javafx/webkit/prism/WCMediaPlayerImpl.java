@@ -121,12 +121,20 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                     locator.setConnectionProperty("User-Agent", userAgent);
                 }
                 locator.init();
-                    log.fine("CreateThread: locator created");
+                log.fine("CreateThread: locator created");
 
                 p = MediaManager.getPlayer(locator);
             } catch (Exception ex) {
                 log.warning("CreateThread ERROR: {0}", ex.toString());
-                onError(this, 0, ex.getMessage());
+                String errorString = "Unsupported protocol";
+                String mesg = ex.toString();
+                int index = mesg.indexOf(errorString);
+                if (index != -1) {
+                    log.warning("Unsupported protocol");
+                    onError(this, 4, ex.getMessage());
+                } else {
+                    onError(this, 0, ex.getMessage());
+                }
                 return;
             }
 
@@ -462,10 +470,14 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
     public void onError(Object source, int errCode, String message) {
         //MediaPlayer p = getPlayer();
         log.warning("onError, errCode={0}, msg={1}", new Object[]{errCode, message});
-        // TODO: parse errCode to detect NETWORK_STATE_FORMAT_ERROR/
-        // NETWORK_STATE_NETWORK_ERROR/NETWORK_STATE_DECODE_ERROR
-        notifyNetworkStateChanged(NETWORK_STATE_NETWORK_ERROR);
-        notifyReadyStateChanged(READY_STATE_HAVE_NOTHING);
+        if (errCode == 4) {
+            notifyNetworkStateChanged(NETWORK_STATE_FORMAT_ERROR);
+            notifyReadyStateChanged(READY_STATE_HAVE_NOTHING);
+        }
+        else {
+            notifyNetworkStateChanged(NETWORK_STATE_NETWORK_ERROR);
+            notifyReadyStateChanged(READY_STATE_HAVE_NOTHING);
+        }
     }
 
     //PlayerTimeListener

@@ -32,6 +32,7 @@
 #include "JSCJSValue.h"
 #include "WasmExceptionType.h"
 #include "WasmOSREntryData.h"
+#include "WasmTypeDefinition.h"
 
 namespace JSC {
 
@@ -51,6 +52,7 @@ typedef int64_t EncodedWasmValue;
 #if ENABLE(WEBASSEMBLY_B3JIT)
 void loadValuesIntoBuffer(Probe::Context&, const StackMap&, uint64_t* buffer, SavedFPWidth);
 JSC_DECLARE_JIT_OPERATION(operationWasmTriggerOSREntryNow, void, (Probe::Context&));
+JSC_DECLARE_JIT_OPERATION(operationWasmLoopOSREnterBBQJIT, void, (Probe::Context&));
 JSC_DECLARE_JIT_OPERATION(operationWasmTriggerTierUpNow, void, (Instance*, uint32_t functionIndex));
 #endif
 JSC_DECLARE_JIT_OPERATION(operationWasmUnwind, void*, (Instance*));
@@ -104,8 +106,16 @@ struct ThrownExceptionInfo {
 };
 
 JSC_DECLARE_JIT_OPERATION(operationWasmArrayNew, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t size, EncodedJSValue encValue));
+JSC_DECLARE_JIT_OPERATION(operationWasmArrayNewData, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t dataSegmentIndex, uint32_t arraySize, uint32_t offset));
+JSC_DECLARE_JIT_OPERATION(operationWasmArrayNewElem, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t elemSegmentIndex, uint32_t arraySize, uint32_t offset));
+JSC_DECLARE_JIT_OPERATION(operationWasmArrayNewEmpty, EncodedJSValue, (Instance* instance, uint32_t typeIndex, uint32_t size));
 JSC_DECLARE_JIT_OPERATION(operationWasmArrayGet, EncodedJSValue, (Instance* instance, uint32_t typeIndex, EncodedJSValue encValue, uint32_t index));
 JSC_DECLARE_JIT_OPERATION(operationWasmArraySet, void, (Instance* instance, uint32_t typeIndex, EncodedJSValue encValue, uint32_t index, EncodedJSValue value));
+JSC_DECLARE_JIT_OPERATION(operationWasmIsSubRTT, bool, (Wasm::RTT*, Wasm::RTT*));
+JSC_DECLARE_JIT_OPERATION(operationWasmExternInternalize, EncodedJSValue, (EncodedJSValue));
+
+JSC_DECLARE_JIT_OPERATION(operationWasmRefTest, int32_t, (Instance*, EncodedJSValue, uint32_t, int32_t));
+JSC_DECLARE_JIT_OPERATION(operationWasmRefCast, EncodedJSValue, (Instance*, EncodedJSValue, uint32_t, int32_t));
 
 #if USE(JSVALUE64)
 JSC_DECLARE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable, ThrownExceptionInfo, (Instance*));
@@ -114,7 +124,7 @@ JSC_DECLARE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable, Thr
  * together (not enough return registers are available in the ABI and we don't
  * handle stack arguments when calling C functions), so, instead, return the
  * payload and return the thrown value via an out pointer */
-JSC_DECLARE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable, void*, (Instance*, EncodedJSValue*));
+JSC_DECLARE_JIT_OPERATION(operationWasmRetrieveAndClearExceptionIfCatchable32, void*, (Instance*, EncodedJSValue*));
 #endif // USE(JSVALUE64)
 
 } } // namespace JSC::Wasm
