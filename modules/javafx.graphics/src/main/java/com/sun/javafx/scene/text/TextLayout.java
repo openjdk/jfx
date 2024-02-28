@@ -212,7 +212,7 @@ public interface TextLayout {
      * @param curRunStart Start position of text run where hit info is requested.
      * @return returns a {@link Hit} object containing character index, insertion index and position of cursor on the character.
      */
-    public Hit getHitInfo(float x, float y, String text, int textRunStart, int curRunStart);
+    public Hit getHitInfo(float x, float y);
 
     public PathElement[] getCaretShape(int offset, boolean isLeading,
                                        float x, float y);
