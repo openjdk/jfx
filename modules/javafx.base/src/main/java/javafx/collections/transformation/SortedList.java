@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.collections.ObservableList;
  * Note: invalid SortedList (as a result of broken comparison) doesn't send any notification to listeners on becoming
  * valid again.
  *
+ * @param <E> the list element type
  * @see TransformationList
  * @since JavaFX 8.0
  */

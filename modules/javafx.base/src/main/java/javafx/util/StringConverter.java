@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ package javafx.util;
  * Converter defines conversion behavior between strings and objects.
  * The type of objects and formats of strings are defined by the subclasses
  * of Converter.
+ * @param <T> the type of an object being converted
  * @since JavaFX 2.0
  */
 public abstract class StringConverter<T> {
