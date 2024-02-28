@@ -162,7 +162,6 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      *
      * @param  index index of the element to return
      * @return the element at the specified position in this list
-     * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     @Override
     public E get(int index) {
