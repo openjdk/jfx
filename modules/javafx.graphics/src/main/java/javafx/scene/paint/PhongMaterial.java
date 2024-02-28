@@ -54,8 +54,8 @@ import javafx.scene.shape.TriangleMesh;
  * <img style="vertical-align:middle;height:128px" src="doc-files/color and map/green gradient.svg" alt="Green gradient">
  * <p>
  * {@link javafx.scene.paint.Color#CYAN Color#CYAN} *
- * <img style="vertical-align:middle;height:128px" src="doc-files/color and map/map.png" alt="Map"> =
- * <img style="vertical-align:middle;height:128px" src="doc-files/color and map/map tint.png" alt="Tinted map">
+ * <img style="vertical-align:middle;height:128px" src="doc-files/color and map/map.jpg" alt="Map"> =
+ * <img style="vertical-align:middle;height:128px" src="doc-files/color and map/map tint.jpg" alt="Tinted map">
  * <p>
  * Note: the <i>self-illumination</i> component can not currently be specified as a color. However, a color behaves like
  * a map (of any size) of a single color. Creating a 1x1 pixel map of that color will have the same effect.
@@ -247,8 +247,8 @@ import javafx.scene.shape.TriangleMesh;
  *   <caption>Materials values</caption>
  *   <tr>
  *     <td>Image</td>
- *     <td><img style="height:180px" src="doc-files/gloss/yellow low spec.png" alt="Yellow ball with low specular power"></td>
- *     <td><img style="height:180px" src="doc-files/gloss/red high spec.png" alt="Red ball with high specular power"></td>
+ *     <td><img style="height:220px" src="doc-files/gloss/yellow low spec.png" alt="Yellow ball with low specular power"></td>
+ *     <td><img style="height:220px" src="doc-files/gloss/red high spec.png" alt="Red ball with high specular power"></td>
  *   </tr>
  *   <tr>
  *     <td>Diffuse color</td>
@@ -278,21 +278,24 @@ import javafx.scene.shape.TriangleMesh;
  *   <caption>Material values</caption>
  *   <tr>
  *     <td>Image</td>
- *     <td><img style="height:180px" src="doc-files/transparency/high spec.png" alt="Transparency with high specular reflection"></td>
- *     <td><img style="height:180px" src="doc-files/transparency/low spec.png" alt="Transparency with low specular reflection"></td>
- *     <td><img style="height:180px" src="doc-files/transparency/low spec tint.png" alt="Tinted transparency with low specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/transparency/no spec.png" alt="Transparency with no specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/transparency/low spec.png" alt="Transparency with low specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/transparency/high spec.png" alt="Transparency with high specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/transparency/low spec tint.png" alt="Tinted transparency with low specular reflection"></td>
  *   </tr>
  *   <tr>
  *     <td>Diffuse color</td>
- *     <td>{@code Color.rgb(0, 0, 0, 0.1)}</td>
- *     <td>{@code Color.rgb(0, 0, 0, 0.1)}</td>
- *     <td>{@code Color.rgb(0, 100, 0, 0.1)}</td>
+ *     <td>{@code Color.rgb(0, 0, 0, 0.3)}</td>
+ *     <td>{@code Color.rgb(0, 0, 0, 0.3)}</td>
+ *     <td>{@code Color.rgb(0, 0, 0, 0.3)}</td>
+ *     <td>{@code Color.rgb(75, 0, 0, 0.15)}</td>
  *   </tr>
  *   <tr>
  *     <td>Specular color</td>
+ *     <td>{@code Color.hsb(0, 0, 0)}</td>
+ *     <td>{@code Color.hsb(0, 0, 45)}</td>
  *     <td>{@code Color.hsb(0, 0, 90)}</td>
- *     <td>{@code Color.hsb(0, 0, 40)}</td>
- *     <td>{@code Color.hsb(0, 0, 40)}</td>
+ *     <td>{@code Color.hsb(0, 0, 45)}</td>
  *   </tr>
  * </table>
  *
@@ -304,11 +307,11 @@ import javafx.scene.shape.TriangleMesh;
  *   <caption>Material values</caption>
  *   <tr>
  *     <td>Image</td>
- *     <td><img style="height:180px" src="doc-files/specular color/copper low.png" alt="Copper with low specular reflection"></td>
- *     <td><img style="height:180px" src="doc-files/specular color/copper medium.png" alt="Copper with medium specular reflection"></td>
- *     <td><img style="height:180px" src="doc-files/specular color/copper high.png" alt="Copper with high specular reflection"></td>
- *     <td><img style="height:180px" src="doc-files/specular color/gold low.png" alt="Gold with low specular reflection"></td>
- *     <td><img style="height:180px" src="doc-files/specular color/gold high.png" alt="Gold with high specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/specular color/copper low.png" alt="Copper with low specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/specular color/copper medium.png" alt="Copper with medium specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/specular color/copper high.png" alt="Copper with high specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/specular color/gold low.png" alt="Gold with low specular reflection"></td>
+ *     <td><img style="height:220px" src="doc-files/specular color/gold high.png" alt="Gold with high specular reflection"></td>
  *   </tr>
  *   <tr>
  *     <td>Diffuse color</td>
@@ -377,10 +380,10 @@ import javafx.scene.shape.TriangleMesh;
  * <table style="text-align:center">
  *   <caption>Model with maps applied</caption>
  *   <tr>
- *     <td><img style="height:180px" src="doc-files/map detail/spec/diff.png" alt="Finished wood with diffuse map"></td>
- *     <td><img style="height:180px" src="doc-files/map detail/spec/diff+spec.png" alt="Finished wood with diffuse and specular maps"></td>
- *     <td><img style="height:180px" src="doc-files/map detail/spec/diff+bump.png" alt="Finished wood with diffuse and bump maps"></td>
- *     <td><img style="height:180px" src="doc-files/map detail/spec/diff+spec+bump.png" alt="Finished wood with diffuse, specular, and bump maps"></td>
+ *     <td><img style="height:220px" src="doc-files/map detail/spec/diff.png" alt="Finished wood with diffuse map"></td>
+ *     <td><img style="height:220px" src="doc-files/map detail/spec/diff+spec.png" alt="Finished wood with diffuse and specular maps"></td>
+ *     <td><img style="height:220px" src="doc-files/map detail/spec/diff+bump.png" alt="Finished wood with diffuse and bump maps"></td>
+ *     <td><img style="height:220px" src="doc-files/map detail/spec/diff+spec+bump.png" alt="Finished wood with diffuse, specular, and bump maps"></td>
  *   </tr>
  *   <tr>
  *     <td>Diffuse</td>
@@ -394,13 +397,13 @@ import javafx.scene.shape.TriangleMesh;
  * <h3>Texture Animation</h3>
  * Texture animation and runtime effects can be achieved in different ways. Firstly, an animated GIF can be used as the
  * {@code Image} for texture maps, as demonstrated here when used as a diffuse map:<br>
- * <img style="height:180px" src="doc-files/texture animation/animated gif.gif" alt="Animation gif">
- * <img style="height:180px" src="doc-files/texture animation/animated gif map.gif" alt="Animation gif as map">
+ * <img style="height:220px" src="doc-files/texture animation/animated gif.gif" alt="Animation gif">
+ * <img style="height:220px" src="doc-files/texture animation/animated gif map.gif" alt="Animation gif as map">
  * <p>
  * Secondly, by using a {@link WritableImage}, the pixel values can be changed programmatically, creating a live texture
  * as demonstrated for the diffuse map by this code snippet that repaints the image left to right and top to bottom:
  * <div style="overflow:auto">
- * <img style="float:right;height:180px" src="doc-files/texture animation/animated writable.gif" alt="Writable image as map">
+ * <img style="float:right;height:220px" src="doc-files/texture animation/animated writable.gif" alt="Writable image as map">
  * <pre>{@code WritableImage diffuseMap = ...
  * material.setDiffuseMap(diffuseMap);
  * var timer = new AnimationTimer() {
