@@ -62,7 +62,7 @@ import javafx.scene.shape.TriangleMesh;
  * <p>
  * {@code PhongMaterial} is not suitable for surfaces that act like mirrors and reflect their environment, such as
  * reflective metals, water, and reflective ceramics. Neither does light refract (bend) when passing through transparent
- * or translucnet materials such as water, glass, or ice. These materials rely on <i>Fresnel effects</i> that are not
+ * or translucent materials such as water, glass, or ice. These materials rely on <i>Fresnel effects</i> that are not
  * implemented for this material.
  *
  * <h2>Components</h2>
@@ -75,7 +75,6 @@ import javafx.scene.shape.TriangleMesh;
  * components of the material: rays that are either transmitted through the material (green) or reflected in all
  * directions via scattering (purple) depend on the diffuse component; rays that are reflected (orange), which depend on
  * the incident angle, are controlled by the specular component.
- * <p>
  * <div style="overflow:auto">
  * <table style="float:right;text-align:center">
  *   <caption>Material types</caption>
@@ -90,6 +89,7 @@ import javafx.scene.shape.TriangleMesh;
  *     <td>Reflective</td>
  *   </tr>
  * </table>
+ * <p>
  * Materials whose diffuse component allows only transmitted rays are transparent. These still have a specular component,
  * otherwise they will be invisible (no such material exists). Materials without a specular component and whose diffuse
  * component allows only reflected rays exhibit <i>Lambertian reflectance</i>. Lambertian materials reflect light in all
@@ -100,9 +100,9 @@ import javafx.scene.shape.TriangleMesh;
  * <h3>Diffuse</h3>
  * The diffuse component, sometimes called <i>albedo</i>, serves as the base color of the surface. It represents light
  * that is not reflected directly from the surface and instead enters the material.<br>
- * The alpha channel of the diffuse component controls the light that passes through it (transmitted). Decreasing this
- * value increases the transparency of the material and causes the object to appear translucent, and ultimately makes
- * it transparent. Materials such as glass and plastics can be simulated with a low alpha value.<br>
+ * The alpha channel of the diffuse component controls the light that passes through it (transmitted). Decreasing the
+ * alpha value increases the transparency of the material and causes the object to appear translucent, and ultimately
+ * makes it transparent. Materials such as glass and plastics can be simulated with a low alpha value.<br>
  * Light that isn't transmitted undergoes <i>subsurface scattering</i> that causes it to be absorbed in the material or
  * be reflected back to the surface, exiting in (approximately) all directions (irrespective of the incident angle). The
  * RGB channels of the diffuse component controls which colors are absorbed and which are reflected, giving the material
@@ -127,12 +127,10 @@ import javafx.scene.shape.TriangleMesh;
  * that results in a glossy look, such as plastics, finished wood, and polished metals. Conversely, rough surfaces have
  * a varying microgeometry, weak specular component, and a matte look, such as unfinished wood, fabric, and cardboard.
  * This spread is controlled by the specular power, sometimes called <i>smoothness</i> or, conversely, <i>roughness</i>.
- *
- * A larger specular power simulates a smoother object, which
- * results in a smaller reflection.
+ * A larger specular power simulates a smoother object, which results in a smaller reflection.
  * <p>
  * The specular component interacts only with lights that have directionality (not {@code AmbientLight}) as it depends
- * on the incident ray direction, and also on the viewer position since it depends on the reflectance direction.
+ * on the incident ray direction, and also on the viewer (camera) position since it depends on the reflectance direction.
  * <p>
  * The alpha component of the specular color is not used at this time.
  *
@@ -169,10 +167,10 @@ import javafx.scene.shape.TriangleMesh;
  * <i>R</i> - the reflection vector of <i>L</i> from the surface. <i>R</i> can be calculated from <i>L</i> and <i>N</i>:
  * <i>R=2(L⋅N)N - L</i>.
  * <p>
- * The diffuse and and specular components are comprised of 3 factors: the geometry, the light's color, and the
- * material's color, each considered at every point on the surface. The light's color computation is described in
- * {@link LightBase} (and its subclasses). The material's color computation, as described above, is the multiplication
- * of the color and map properties. These factors are multiplied to get the final color.
+ * The diffuse and specular components are comprised of 3 factors: the geometry, the light's color, and the material's
+ * color, each considered at every point on the surface. The light's color computation is described in {@link LightBase}
+ * (and its subclasses). The material's color computation, as described above, is the multiplication of the color and
+ * map properties. These factors are multiplied to get the final color.
  * </div>
  *
  * <h3>Bump</h3>
@@ -208,7 +206,7 @@ import javafx.scene.shape.TriangleMesh;
  * The specular component represents light reflected from the surface in a mirror-like reflection, hence, it depends on
  * the interaction between the reflected light and the viewer position: <i>R⋅V</i>. As similarly explained in the
  * diffuse component section, the geometric contribution is strongest when the viewer is aligned with the reflection
- * vector and is non-existant when they are perpendicular.
+ * vector and is non-existent when they are perpendicular.
  * <p>
  * <img style="float:right;height:100px" src="doc-files/math/specular power high.svg" alt="High specular power">
  * <img style="float:right;height:100px" src="doc-files/math/specular power low.svg" alt="Low specular power">
