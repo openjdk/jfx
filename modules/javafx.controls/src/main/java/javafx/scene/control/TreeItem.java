@@ -988,7 +988,6 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * @param <T> The TreeModificationEvent
      * @since JavaFX 2.0
      */
-    @SuppressWarnings("doclint")
     public static class TreeModificationEvent<T> extends Event {
         private static final long serialVersionUID = 4741889985221719579L;
 
@@ -999,14 +998,21 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         public static final EventType<?> ANY = TREE_NOTIFICATION_EVENT;
 
         private transient final TreeItem<T> treeItem;
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
 
+        @SuppressWarnings("doclint:missing")
         private final List<? extends TreeItem<T>> added;
+        @SuppressWarnings("doclint:missing")
         private final List<? extends TreeItem<T>> removed;
+        @SuppressWarnings("doclint:missing")
         private final ListChangeListener.Change<? extends TreeItem<T>> change;
 
+        @SuppressWarnings("doclint:missing")
         private final boolean wasExpanded;
+        @SuppressWarnings("doclint:missing")
         private final boolean wasCollapsed;
+        @SuppressWarnings("doclint:missing")
         private boolean wasPermutated;
 
         /**

@@ -1183,10 +1183,12 @@ public class ListView<T> extends Control {
      *      itself.
      * @since JavaFX 2.0
      */
-    @SuppressWarnings("doclint")
     public static class EditEvent<T> extends Event {
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
+        @SuppressWarnings("doclint:missing")
         private final int editIndex;
+        @SuppressWarnings("doclint:missing")
         private final ListView<T> source;
 
         private static final long serialVersionUID = 20130724L;

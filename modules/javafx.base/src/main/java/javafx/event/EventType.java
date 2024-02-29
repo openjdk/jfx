@@ -57,7 +57,6 @@ import java.util.WeakHashMap;
  * @param <T> the event class to which this type applies
  * @since JavaFX 2.0
  */
-@SuppressWarnings("doclint")
 public final class EventType<T extends Event> implements Serializable{
 
     /**
@@ -68,10 +67,13 @@ public final class EventType<T extends Event> implements Serializable{
     public static final EventType<Event> ROOT =
             new EventType<>("EVENT", null);
 
+    @SuppressWarnings("doclint:missing")
     private WeakHashMap<EventType<? extends T>, Void> subTypes;
 
+    @SuppressWarnings("doclint:missing")
     private final EventType<? super T> superType;
 
+    @SuppressWarnings("doclint:missing")
     private final String name;
 
     /**
@@ -190,6 +192,7 @@ public final class EventType<T extends Event> implements Serializable{
         subTypes.put(subType, null);
     }
 
+    @SuppressWarnings("doclint:missing")
     private Object writeReplace() {
         Deque<String> path = new LinkedList<>();
         EventType<?> t = this;

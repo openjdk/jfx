@@ -125,7 +125,6 @@ import java.io.IOException;
  * </ul>
  * @since JavaFX 2.0
  */
-@SuppressWarnings("doclint")
 public class MouseEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -552,6 +551,8 @@ public class MouseEvent extends InputEvent {
         ev.recomputeCoordinatesToSource(e, source);
         return ev;
     }
+
+    @SuppressWarnings("doclint:missing")
     private final Flags flags = new Flags();
 
     /**
@@ -821,6 +822,7 @@ public class MouseEvent extends InputEvent {
         return metaDown;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final boolean synthesized;
 
     /**
@@ -1103,6 +1105,7 @@ public class MouseEvent extends InputEvent {
         }
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();

@@ -55,7 +55,6 @@ import javafx.event.EventType;
  *
  * @since JavaFX 2.2
  */
-@SuppressWarnings("doclint")
 public final class TouchEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -194,6 +193,7 @@ public final class TouchEvent extends InputEvent {
         return (EventType<TouchEvent>) super.getEventType();
     }
 
+    @SuppressWarnings("doclint:missing")
     private final int eventSetId;
 
     /**
@@ -265,6 +265,7 @@ public final class TouchEvent extends InputEvent {
         return metaDown;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final TouchPoint touchPoint;
 
     /**
@@ -275,6 +276,7 @@ public final class TouchEvent extends InputEvent {
         return touchPoint;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final List<TouchPoint> touchPoints;
 
     /**

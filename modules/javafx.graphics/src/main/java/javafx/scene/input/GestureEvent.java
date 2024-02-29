@@ -43,7 +43,6 @@ import javafx.geometry.Point3D;
  * </p>
  * @since JavaFX 2.2
  */
-@SuppressWarnings("doclint")
 public class GestureEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -224,6 +223,7 @@ public class GestureEvent extends InputEvent {
         return z;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double screenX;
 
     /**
@@ -236,6 +236,7 @@ public class GestureEvent extends InputEvent {
         return screenX;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double screenY;
 
     /**
@@ -248,6 +249,7 @@ public class GestureEvent extends InputEvent {
         return screenY;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double sceneX;
 
     /**
@@ -267,6 +269,7 @@ public class GestureEvent extends InputEvent {
         return sceneX;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double sceneY;
 
     /**
@@ -286,6 +289,7 @@ public class GestureEvent extends InputEvent {
         return sceneY;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final boolean shiftDown;
 
     /**
@@ -296,6 +300,7 @@ public class GestureEvent extends InputEvent {
         return shiftDown;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final boolean controlDown;
 
     /**
@@ -306,6 +311,7 @@ public class GestureEvent extends InputEvent {
         return controlDown;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final boolean altDown;
 
     /**
@@ -316,6 +322,7 @@ public class GestureEvent extends InputEvent {
         return altDown;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final boolean metaDown;
 
     /**
@@ -326,6 +333,7 @@ public class GestureEvent extends InputEvent {
         return metaDown;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final boolean direct;
 
     /**
@@ -341,6 +349,7 @@ public class GestureEvent extends InputEvent {
         return direct;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final boolean inertia;
 
     /**
@@ -436,6 +445,7 @@ public class GestureEvent extends InputEvent {
         return sb.append("]").toString();
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();

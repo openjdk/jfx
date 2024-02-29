@@ -37,7 +37,6 @@ import javafx.event.EventType;
  * @see WebEngine#onErrorProperty WebEngine.onError
  * @since JavaFX 8.0
  */
-@SuppressWarnings("doclint")
 public final class WebErrorEvent extends Event {
 
     /**
@@ -122,8 +121,9 @@ public final class WebErrorEvent extends Event {
             USER_DATA_DIRECTORY_SECURITY_ERROR = new EventType<>(
                     WebErrorEvent.ANY, "USER_DATA_DIRECTORY_SECURITY_ERROR");
 
-
+    @SuppressWarnings("doclint:missing")
     private final String message;
+    @SuppressWarnings("doclint:missing")
     private final Throwable exception;
 
 

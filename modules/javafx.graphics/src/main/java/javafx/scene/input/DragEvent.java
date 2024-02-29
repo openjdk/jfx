@@ -200,7 +200,6 @@ rect.setOnDragDropped(new EventHandler&lt;DragEvent&gt;() {
  * </p>
  * @since JavaFX 2.0
  */
-@SuppressWarnings("doclint")
 public final class DragEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -591,6 +590,7 @@ public final class DragEvent extends InputEvent {
      * @return the source object of the drag and drop gesture
      */
     public final Object getGestureSource() { return gestureSource; }
+    @SuppressWarnings("doclint:missing")
     private Object gestureSource;
 
     /**
@@ -602,6 +602,7 @@ public final class DragEvent extends InputEvent {
      * @return the target object of the drag and drop gesture
      */
     public final Object getGestureTarget() { return gestureTarget; }
+    @SuppressWarnings("doclint:missing")
     private Object gestureTarget;
 
     /**
@@ -615,8 +616,10 @@ public final class DragEvent extends InputEvent {
      * @return the data transfer mode
      */
     public final TransferMode getTransferMode() { return transferMode; }
+    @SuppressWarnings("doclint:missing")
     private TransferMode transferMode;
 
+    @SuppressWarnings("doclint:missing")
     private final State state = new State();
 
     /**
@@ -749,6 +752,7 @@ public final class DragEvent extends InputEvent {
         return state.dropCompleted;
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();

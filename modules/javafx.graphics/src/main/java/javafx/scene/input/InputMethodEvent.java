@@ -54,7 +54,6 @@ import javafx.scene.Node;
  * for more information.
  * @since JavaFX 2.0
  */
-@SuppressWarnings("doclint")
 public final class InputMethodEvent extends InputEvent{
 
     private static final long serialVersionUID = 20121107L;
@@ -190,11 +189,13 @@ public final class InputMethodEvent extends InputEvent{
         return (EventType<InputMethodEvent>) super.getEventType();
     }
 
+    @SuppressWarnings("doclint:missing")
     private void writeObject(ObjectOutputStream oos) throws IOException {
         oos.defaultWriteObject();
         oos.writeObject(new ArrayList(composed));
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(ObjectInputStream ois) throws IOException,
             ClassNotFoundException {
         ois.defaultReadObject();

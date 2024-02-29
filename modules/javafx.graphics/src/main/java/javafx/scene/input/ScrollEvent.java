@@ -98,7 +98,6 @@ import javafx.event.EventType;
  *
  * @since JavaFX 2.0
  */
-@SuppressWarnings("doclint")
 public final class ScrollEvent extends GestureEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -315,6 +314,7 @@ public final class ScrollEvent extends GestureEvent {
                 textDeltaYUnits, textDeltaY, touchCount, pickResult);
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double deltaX;
 
     /**
@@ -334,6 +334,7 @@ public final class ScrollEvent extends GestureEvent {
         return deltaX;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double deltaY;
 
     /**
@@ -353,6 +354,7 @@ public final class ScrollEvent extends GestureEvent {
         return deltaY;
     }
 
+    @SuppressWarnings("doclint:missing")
     private double totalDeltaX;
 
     /**
@@ -373,6 +375,7 @@ public final class ScrollEvent extends GestureEvent {
         return totalDeltaX;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double totalDeltaY;
 
     /**
@@ -393,6 +396,7 @@ public final class ScrollEvent extends GestureEvent {
         return totalDeltaY;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final HorizontalTextScrollUnits textDeltaXUnits;
 
     /**
@@ -408,6 +412,7 @@ public final class ScrollEvent extends GestureEvent {
         return textDeltaXUnits;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final VerticalTextScrollUnits textDeltaYUnits;
 
     /**
@@ -423,6 +428,7 @@ public final class ScrollEvent extends GestureEvent {
         return textDeltaYUnits;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double textDeltaX;
 
     /**
@@ -437,6 +443,7 @@ public final class ScrollEvent extends GestureEvent {
         return textDeltaX;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double textDeltaY;
 
     /**
@@ -451,6 +458,7 @@ public final class ScrollEvent extends GestureEvent {
         return textDeltaY;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final int touchCount;
 
     /**
@@ -464,6 +472,7 @@ public final class ScrollEvent extends GestureEvent {
         return touchCount;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double multiplierX;
 
     /**
@@ -475,6 +484,7 @@ public final class ScrollEvent extends GestureEvent {
         return multiplierX;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double multiplierY;
 
     /**

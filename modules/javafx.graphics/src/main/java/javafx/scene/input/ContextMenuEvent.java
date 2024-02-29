@@ -46,7 +46,6 @@ import javafx.geometry.Point3D;
  * inside of bounds of current focus owner (which is the event's target).
  * @since JavaFX 2.1
  */
-@SuppressWarnings("doclint")
 public class ContextMenuEvent extends InputEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -329,6 +328,7 @@ public class ContextMenuEvent extends InputEvent {
         return sb.append("]").toString();
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();

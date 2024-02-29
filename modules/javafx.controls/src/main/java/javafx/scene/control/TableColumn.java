@@ -753,7 +753,6 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * @param <T> The type of the content in all cells in this TableColumn
      * @since JavaFX 2.0
      */
-    @SuppressWarnings("doclint")
     public static class CellEditEvent<S,T> extends Event {
         private static final long serialVersionUID = -609964441682677579L;
 
@@ -767,6 +766,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         // to go back into the TableView.items list - this new value represents
         // just the input for a single cell, so it is likely that it needs to go
         // back into a property within an item in the TableView.items list.
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
 
         // The location of the edit event

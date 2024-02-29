@@ -57,7 +57,6 @@ import javafx.event.EventType;
  *
  * @since JavaFX 2.2
  */
-@SuppressWarnings("doclint")
 public final class SwipeEvent extends GestureEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -162,6 +161,7 @@ public final class SwipeEvent extends GestureEvent {
                 altDown, metaDown, direct, touchCount, pickResult);
     }
 
+    @SuppressWarnings("doclint:missing")
     private final int touchCount;
 
     /**

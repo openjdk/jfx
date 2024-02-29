@@ -41,7 +41,6 @@ import javafx.beans.NamedArg;
  * to events of the same {@code Event} class.
  * @since JavaFX 2.0
  */
-@SuppressWarnings("doclint")
 public class Event extends EventObject implements Cloneable {
 
     private static final long serialVersionUID = 20121107L;
@@ -171,6 +170,7 @@ public class Event extends EventObject implements Cloneable {
         }
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         source = NULL_SOURCE_TARGET;

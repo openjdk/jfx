@@ -353,11 +353,11 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      *      {@link CheckBoxTreeItem#valueProperty() value} property.
      * @since JavaFX 2.2
      */
-    @SuppressWarnings("doclint")
     public static class TreeModificationEvent<T> extends Event {
         private static final long serialVersionUID = -8445355590698862999L;
 
         private transient final CheckBoxTreeItem<T> treeItem;
+        @SuppressWarnings("doclint:missing")
         private final boolean selectionChanged;
 
         /**

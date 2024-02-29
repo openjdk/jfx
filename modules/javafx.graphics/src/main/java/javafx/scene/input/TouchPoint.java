@@ -54,7 +54,6 @@ import javafx.scene.Scene;
  *
  * @since JavaFX 2.2
  */
-@SuppressWarnings("doclint")
 public final class TouchPoint implements Serializable{
 
     static {
@@ -157,6 +156,7 @@ public final class TouchPoint implements Serializable{
         z = p.getZ();
     }
 
+    @SuppressWarnings("doclint:missing")
     private EventTarget grabbed = null;
 
     /**
@@ -199,6 +199,7 @@ public final class TouchPoint implements Serializable{
         grabbed = null;
     }
 
+    @SuppressWarnings("doclint:missing")
     private int id;
 
     /**
@@ -213,6 +214,7 @@ public final class TouchPoint implements Serializable{
         return id;
     }
 
+    @SuppressWarnings("doclint:missing")
     private State state;
 
     /**
@@ -268,6 +270,7 @@ public final class TouchPoint implements Serializable{
         return z;
     }
 
+    @SuppressWarnings("doclint:missing")
     private double screenX;
 
     /**
@@ -278,6 +281,7 @@ public final class TouchPoint implements Serializable{
         return screenX;
     }
 
+    @SuppressWarnings("doclint:missing")
     private double screenY;
 
     /**
@@ -288,6 +292,7 @@ public final class TouchPoint implements Serializable{
         return screenY;
     }
 
+    @SuppressWarnings("doclint:missing")
     private double sceneX;
 
     /**
@@ -305,6 +310,7 @@ public final class TouchPoint implements Serializable{
         return sceneX;
     }
 
+    @SuppressWarnings("doclint:missing")
     private double sceneY;
 
     /**
@@ -364,6 +370,7 @@ public final class TouchPoint implements Serializable{
         return sb.append("]").toString();
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();

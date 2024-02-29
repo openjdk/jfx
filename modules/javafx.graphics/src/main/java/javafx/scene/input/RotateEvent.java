@@ -57,7 +57,6 @@ import javafx.event.EventType;
  *
  * @since JavaFX 2.2
  */
-@SuppressWarnings("doclint")
 public final class RotateEvent extends GestureEvent {
 
     private static final long serialVersionUID = 20121107L;
@@ -162,6 +161,7 @@ public final class RotateEvent extends GestureEvent {
                 altDown, metaDown, direct, inertia, angle, totalAngle, pickResult);
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double angle;
 
     /**
@@ -174,6 +174,7 @@ public final class RotateEvent extends GestureEvent {
         return angle;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final double totalAngle;
 
     /**

@@ -37,11 +37,11 @@ import javafx.util.Pair;
  * @see MediaPlayer#onMarkerProperty()
  * @since JavaFX 2.0
  */
-@SuppressWarnings("doclint")
 public class MediaMarkerEvent extends ActionEvent {
 
     private static final long serialVersionUID = 20121107L;
 
+    @SuppressWarnings("doclint:missing")
     private Pair<String,Duration> marker;
 
     MediaMarkerEvent(Pair<String,Duration> marker) {
