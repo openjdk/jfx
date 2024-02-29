@@ -137,12 +137,9 @@ import com.sun.javafx.embed.swing.newimpl.JFXPanelInteropN;
  * </pre>
  * <strong>Warning:</strong>
  * Serialized objects of this class will not be compatible with
- * future Swing releases. The current serialization support is
+ * future Swing or JavaFX releases. The current serialization support is
  * appropriate for short term storage or RMI between applications running
- * the same version of Swing.  As of 1.4, support for long term storage
- * of all JavaBeans
- * has been added to the <code>java.beans</code> package.
- * Please see {@link java.beans.XMLEncoder}.
+ * the same version of Swing and the same version of JavaFX.
  *
  * @since JavaFX 2.0
  */
