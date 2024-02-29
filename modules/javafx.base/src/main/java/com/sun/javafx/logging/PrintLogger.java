@@ -271,7 +271,7 @@ class PrintLogger extends Logger {
         }
         pulseData.message
             .append("T")
-            .append(Thread.currentThread().getId())
+            .append(Thread.currentThread().threadId())
             .append(" : ")
             .append(message)
             .append("\n");
@@ -315,7 +315,7 @@ class PrintLogger extends Logger {
             if (pulseData != null) {
                 pulseData.message
                     .append("T")
-                    .append(Thread.currentThread().getId())
+                    .append(Thread.currentThread().threadId())
                     .append(" (").append((curPhase.phaseStart-pulseData.startTime)/1000000L)
                     .append(" +").append((curTime - curPhase.phaseStart)/1000000L).append("ms): ")
                     .append(curPhase.phaseName)
