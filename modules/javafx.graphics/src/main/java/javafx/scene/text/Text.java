@@ -1033,7 +1033,7 @@ public class Text extends Shape {
         double px = x;
         double py = y;
 
-        if(isSpan()) {
+        if (isSpan()) {
             Point2D pPoint = localToParent(point);
             px = pPoint.getX();
             py = pPoint.getY();

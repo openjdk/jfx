@@ -437,12 +437,15 @@ public class PrismTextLayout implements TextLayout {
             RectBounds bounds = line.getBounds();
             TextRun run = null;
             x -= bounds.getMinX();
-            //TODO binary search
             for (int i = 0; i < runs.length; i++) {
                 run = runs[i];
-                if (x < run.getWidth()) break;
+                if (x < run.getWidth()) {
+                    break;
+                }
                 if (i + 1 < runs.length) {
-                    if (runs[i + 1].isLinebreak()) break;
+                    if (runs[i + 1].isLinebreak()) {
+                        break;
+                    }
                     x -= run.getWidth();
                 }
             }
@@ -707,8 +710,12 @@ public class PrismTextLayout implements TextLayout {
         int lineCount = getLineCount();
         while (index < lineCount) {
             bottom += lines[index].getBounds().getHeight() + spacing;
-            if (index + 1 == lineCount) bottom -= lines[index].getLeading();
-            if (bottom > y) break;
+            if (index + 1 == lineCount) {
+                bottom -= lines[index].getLeading();
+            }
+            if (bottom > y) {
+                break;
+            }
             index++;
         }
         return index;

@@ -205,11 +205,6 @@ public interface TextLayout {
      *
      * @param x x coordinate value.
      * @param y y coordinate value.
-     * @param text text for which HitInfo needs to be calculated.
-     *             It is expected to be null in the case of {@link javafx.scene.text.TextFlow}
-     *             and non-null in the case of {@link javafx.scene.text.Text}
-     * @param textRunStart Start position of first Text run where hit info is requested.
-     * @param curRunStart Start position of text run where hit info is requested.
      * @return returns a {@link Hit} object containing character index, insertion index and position of cursor on the character.
      */
     public Hit getHitInfo(float x, float y);
