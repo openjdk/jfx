@@ -1085,10 +1085,10 @@ public final class QuantumToolkit extends Toolkit {
         return 2;
     }
 
-    @Override public int getKeyCodeForChar(String character) {
+    @Override public int getKeyCodeForChar(String character, int hint) {
         return (character.length() == 1)
                 ? com.sun.glass.events.KeyEvent.getKeyCodeForChar(
-                          character.charAt(0))
+                          character.charAt(0), hint)
                 : com.sun.glass.events.KeyEvent.VK_UNDEFINED;
     }
 
