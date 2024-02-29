@@ -738,6 +738,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * An event that is fired when a user performs an edit on a table cell.
      * @since JavaFX 8.0
      */
+    @SuppressWarnings("doclint")
     public static class CellEditEvent<S,T> extends Event {
         private static final long serialVersionUID = -609964441682677579L;
 

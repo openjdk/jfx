@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -988,6 +988,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * @param <T> The TreeModificationEvent
      * @since JavaFX 2.0
      */
+    @SuppressWarnings("doclint")
     public static class TreeModificationEvent<T> extends Event {
         private static final long serialVersionUID = 4741889985221719579L;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1254,6 +1254,7 @@ public class TreeView<T> extends Control {
      *      itself.
      * @since JavaFX 2.0
      */
+    @SuppressWarnings("doclint")
     public static class EditEvent<T> extends Event {
         private static final long serialVersionUID = -4437033058917528976L;
 

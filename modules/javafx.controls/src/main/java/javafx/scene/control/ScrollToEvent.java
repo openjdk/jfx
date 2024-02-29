@@ -35,6 +35,7 @@ import javafx.event.EventType;
  * {@link ListView}, {@link TableView}, {@link TreeView} and {@link TreeTableView}.
  * @since JavaFX 8.0
  */
+@SuppressWarnings("doclint")
 public class ScrollToEvent<T> extends Event {
 //    /**
 //     * This event occurs if the user requests scrolling a node into view.

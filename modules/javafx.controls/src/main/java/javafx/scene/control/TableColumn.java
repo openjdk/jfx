@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -753,6 +753,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * @param <T> The type of the content in all cells in this TableColumn
      * @since JavaFX 2.0
      */
+    @SuppressWarnings("doclint")
     public static class CellEditEvent<S,T> extends Event {
         private static final long serialVersionUID = -609964441682677579L;
 

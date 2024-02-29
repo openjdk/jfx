@@ -2380,6 +2380,7 @@ public class TreeTableView<S> extends Control {
      *      itself.
      * @since JavaFX 8.0
      */
+    @SuppressWarnings("doclint")
     public static class EditEvent<S> extends Event {
         private static final long serialVersionUID = -4437033058917528976L;
 
