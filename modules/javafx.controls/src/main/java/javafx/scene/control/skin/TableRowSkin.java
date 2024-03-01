@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,7 @@ import javafx.scene.control.TableView.TableViewFocusModel;
 /**
  * Default skin implementation for the {@link TableRow} control.
  *
+ * @param <T> the type of the item contained within the row
  * @see TableRow
  * @since 9
  */

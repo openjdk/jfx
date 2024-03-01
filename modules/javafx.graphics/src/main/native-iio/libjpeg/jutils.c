@@ -2,7 +2,7 @@
  * jutils.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * Modified 2009-2019 by Guido Vollbeding.
+ * Modified 2009-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -178,8 +178,8 @@ jcopy_sample_rows (JSAMPARRAY input_array,
            JSAMPARRAY output_array,
            int num_rows, JDIMENSION num_cols)
 /* Copy some rows of samples from one place to another.
- * num_rows rows are copied from input_array[source_row++]
- * to output_array[dest_row++]; these areas may overlap for duplication.
+ * num_rows rows are copied from *input_array++ to *output_array++;
+ * these areas may overlap for duplication.
  * The source and destination arrays must be at least as wide as num_cols.
  */
 {
