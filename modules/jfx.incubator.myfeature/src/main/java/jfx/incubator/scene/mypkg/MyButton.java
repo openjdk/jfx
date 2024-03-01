@@ -41,8 +41,13 @@ public class MyButton extends Button {
 
     private final int myField;
 
-    public MyButton(int myField, String name) {
-        super(name);
+    /**
+     * Constructs my button.
+     * @param myField my field
+     * @param text the text string for the button
+     */
+    public MyButton(int myField, String text) {
+        super(text);
         this.myField = myField;
     }
 
