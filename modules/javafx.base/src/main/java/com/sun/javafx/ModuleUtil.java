@@ -23,7 +23,7 @@
  * questions.
  */
 
-// TODO: incubator template
+// TODO: incubator dependency
 package com.sun.javafx;
 
 import java.security.AccessController;
