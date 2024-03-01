@@ -22,6 +22,8 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
+// TODO: incubator template
 package com.sun.javafx;
 
 import java.security.AccessController;
@@ -56,7 +58,7 @@ public class ModuleUtil {
 
             // If we are using incubating API from the unnamed module, issue
             // a warning one time for each package. This is not a supported
-            // mode, but can happen if the module is placed on the classpath.
+            // mode, but can happen if the modular jar is put on the classpath.
             if (!callerModule.isNamed()) {
                 var callerPackage = callerClass.getPackage();
                 if (!warnedPackages.contains(callerPackage)) {
@@ -66,10 +68,11 @@ public class ModuleUtil {
                 return null;
             }
 
-            // TODO: Check whether this module is jlinked into the runtime and
-            // thus has already printed a warning.
             // Issue warning one time for this module
             if (!warnedModules.contains(callerModule)) {
+                // FIXME: Check whether this module is jlinked into the runtime
+                // and thus has already printed a warning. Skip the warning in that
+                // case to avoid duplicate warnings.
                 System.err.println("WARNING: Using incubator modules: " + callerModule.getName());
                 warnedModules.add(callerModule);
             }
