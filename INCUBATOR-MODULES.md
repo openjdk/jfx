@@ -29,8 +29,11 @@ JavaFX incubator modules have a few differences from JDK incubator modules:
     - An incubating API that spans beyond a 24-month period (4 feature releases), and is not yet ready to be finalized, will need explicit approval from a Project Lead to remain incubating for some additional period at the discretion of a Project Lead. Otherwise, a Project Lead will submit a removal JEP.
     - The submitter of the original JEP can propose to remove it at any time.
 
-## How to add a new incubator modules
+## How to add a new incubator module
 
-In addition to creating the new modules under `modules/jfx.incubator.myfeature`, you need to update `build.gradle` and `settings.gradle` to add the new module.
+Use [this patch](https://github.com/openjdk/jfx/pull/1375.diff) as a starting point for your incubator module. Then do the following:
+- Rename `modules/jfx.incubator.myfeature` to the desired name of your module, keeping the `jfx.incubator. prefix`
+- Modify `build.gradle`, `settings.gradle`, and `modules/javafx.base/src/main/java/module-info.java` to update the name of your module. Look for comments of the form `// TODO: incubator template` for where to make the changes.
+- Develop your module as you would with any JavaFX module, keeping in mind the rules in this JEP about public exports and dependencies.
 
-FIXME: finish this
+FIXME: find a permanent home for the incubator module template patch, possibly in the jfx-sandbox repo.
