@@ -979,6 +979,7 @@ public abstract class Axis<T> extends Region {
     /**
      * TickMark represents the label text, its associated properties for each tick
      * along the Axis.
+     *
      * @param <T> the axis data type
      * @since JavaFX 2.0
      */

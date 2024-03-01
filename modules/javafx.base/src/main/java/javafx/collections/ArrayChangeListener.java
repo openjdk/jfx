@@ -26,6 +26,7 @@ package javafx.collections;
 
 /**
  * Interface that receives notifications of changes to an ObservableArray.
+ *
  * @param <T> the array element type
  * @since JavaFX 8.0
  */

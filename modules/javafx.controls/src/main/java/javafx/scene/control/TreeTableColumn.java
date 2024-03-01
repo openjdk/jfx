@@ -736,6 +736,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
     /**
      * An event that is fired when a user performs an edit on a table cell.
+     *
      * @param <S> the type of the TreeItem instances contained within the TreeTableView
      * @param <T> the type of the items contained within the TreeTableColumn
      * @since JavaFX 8.0

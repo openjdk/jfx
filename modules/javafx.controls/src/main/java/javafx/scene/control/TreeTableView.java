@@ -2320,6 +2320,7 @@ public class TreeTableView<S> extends Control {
     /**
      * An immutable wrapper class for use in the TableView
      * {@link TreeTableView#columnResizePolicyProperty() column resize} functionality.
+     *
      * @param <S> the type of the TreeItem instances used in this TreeTableView
      * @since JavaFX 8.0
      */

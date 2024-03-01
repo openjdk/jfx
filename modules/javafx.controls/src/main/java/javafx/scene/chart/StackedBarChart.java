@@ -58,6 +58,7 @@ import javafx.css.StyleableProperty;
  * data values for a category. The bars can be vertical or horizontal depending
  * on which axis is a category axis.
  * The bar for each series is stacked on top of the previous series.
+ *
  * @param <X> the X axis value type
  * @param <Y> the Y axis value type
  * @since JavaFX 2.1

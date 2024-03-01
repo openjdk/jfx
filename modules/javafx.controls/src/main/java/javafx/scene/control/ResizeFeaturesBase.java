@@ -31,7 +31,8 @@ import javafx.beans.NamedArg;
 /**
  * A wrapper class for use by the column resize policies offered by
  * controls such as {@link TableView} and {@link TreeTableView}.
- * @param <S> the type of the objects contained within the TableView items list
+ *
+ * @param <S> the type of the objects contained within the control's items list
  * @since JavaFX 8.0
  */
 public abstract class ResizeFeaturesBase<S> {

@@ -1255,6 +1255,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * A single data item with data for 2 axis charts
+     *
      * @param <X> the data X value type
      * @param <Y> the data Y value type
      * @since JavaFX 2.0
@@ -1494,6 +1495,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
     /**
      * A named series of data items
+     *
      * @param <X> the series X value type
      * @param <Y> the series Y value type
      * @since JavaFX 2.0

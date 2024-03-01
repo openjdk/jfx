@@ -1967,6 +1967,7 @@ public class TableView<S> extends Control {
     /**
      * An immutable wrapper class for use in the TableView
      * {@link TableView#columnResizePolicyProperty() column resize} functionality.
+     *
      * @param <S> the type of the objects contained within the TableView items list
      * @since JavaFX 2.0
      */
@@ -2030,6 +2031,7 @@ public class TableView<S> extends Control {
     /**
      * A simple extension of the {@link SelectionModel} abstract class to
      * allow for special support for TableView controls.
+     *
      * @param <S> the type of the item contained within the TableView
      * @since JavaFX 2.0
      */
