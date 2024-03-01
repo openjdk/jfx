@@ -29,7 +29,7 @@ package javafx.util;
  * Interface representing a builder. Builders are objects that are used to
  * construct other objects.
  *
- * @param <T> the type of an object being built
+ * @param <T> the type of the object being built
  * @since JavaFX 2.0
  */
 @FunctionalInterface

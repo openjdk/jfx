@@ -807,7 +807,7 @@ public class When {
     /**
      * An intermediate class needed while assembling the ternary expression. It
      * should not be used in another context.
-     * @param <T> the type of an object being built
+     * @param <T> the type of the object being built
      * @since JavaFX 2.0
      */
     public class ObjectConditionBuilder<T> {

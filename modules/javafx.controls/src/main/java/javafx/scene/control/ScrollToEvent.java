@@ -34,7 +34,7 @@ import javafx.event.EventType;
  * Event related to {@link ScrollPane} and virtualised controls such as
  * {@link ListView}, {@link TableView}, {@link TreeView} and {@link TreeTableView}.
  *
- * @param <T> the scroll to event type
+ * @param <T> the scroll-to event type
  * @since JavaFX 8.0
  */
 public class ScrollToEvent<T> extends Event {

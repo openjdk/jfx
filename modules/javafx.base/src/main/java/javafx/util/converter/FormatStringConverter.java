@@ -33,7 +33,7 @@ import javafx.util.StringConverter;
  * <p>{@link StringConverter} implementation that can use a {@link Format}
  * instance.</p>
  *
- * @param <T> the type of an object being converted
+ * @param <T> the type of the object being converted
  * @since JavaFX 2.2
  */
 public class FormatStringConverter<T> extends StringConverter<T> {
