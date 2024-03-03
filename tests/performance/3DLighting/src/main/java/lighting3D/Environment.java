@@ -23,11 +23,12 @@
  * questions.
  */
 
-package attenuation;
+package lighting3D;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Insets;
 import javafx.geometry.Point3D;
 import javafx.scene.AmbientLight;
 import javafx.scene.DirectionalLight;
@@ -36,48 +37,64 @@ import javafx.scene.LightBase;
 import javafx.scene.Node;
 import javafx.scene.PointLight;
 import javafx.scene.SpotLight;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundImage;
+import javafx.scene.layout.BackgroundSize;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
-import javafx.scene.shape.TriangleMesh;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
+import lighting3D.CaptureUtils.Format;
 
+/**
+ * The 3D environment. Includes the lights and shapes.
+ */
 class Environment extends CameraScene3D {
 
-    private final static double LIGHT_REP_RADIUS = 2;
-    private final static double LIGHT_Z_DIST = 50;
-    private final static double LIGHT_X_DIST = 50;
-
-    private final static double SPHERE_RADIUS = 50;
+    static final Image BACKGROUND_IMAGE = new Image(CameraScene3D.class.getResourceAsStream("background.jpg"));
+    private static final double LIGHT_REP_RADIUS = 2;
+    private static final double LIGHT_X_DIST = 50;
+    static final double LIGHT_Z_DIST = 50;
 
     private final AmbientLight ambientLight1 = new AmbientLight(Color.WHITE);
     private final AmbientLight ambientLight2 = new AmbientLight(Color.RED);
     private final AmbientLight ambientLight3 = new AmbientLight(Color.BLACK);
-    final List<AmbientLight> ambientLights = List.of(ambientLight1, ambientLight2, ambientLight3);
+    private final List<AmbientLight> ambientLights = List.of(ambientLight1, ambientLight2, ambientLight3);
 
     private final DirectionalLight directionalLight1 = new DirectionalLight(Color.RED);
     private final DirectionalLight directionalLight2 = new DirectionalLight(Color.BLUE);
     private final DirectionalLight directionalLight3 = new DirectionalLight(Color.MAGENTA);
-    final List<DirectionalLight> directionalLights = List.of(directionalLight1, directionalLight2, directionalLight3);
+    private final List<DirectionalLight> directionalLights = List.of(directionalLight1, directionalLight2, directionalLight3);
 
     private final PointLight pointLight1 = new PointLight(Color.RED);
     private final PointLight pointLight2 = new PointLight(Color.BLUE);
     private final PointLight pointLight3 = new PointLight(Color.MAGENTA);
-    final List<PointLight> pointLights = List.of(pointLight1, pointLight2, pointLight3);
+    private final List<PointLight> pointLights = List.of(pointLight1, pointLight2, pointLight3);
 
     private final SpotLight spotLight1 = new SpotLight(Color.RED);
     private final SpotLight spotLight2 = new SpotLight(Color.BLUE);
     private final SpotLight spotLight3 = new SpotLight(Color.MAGENTA);
-    final List<SpotLight> spotLights = List.of(spotLight1, spotLight2, spotLight3);
+    private final List<SpotLight> spotLights = List.of(spotLight1, spotLight2, spotLight3);
 
-    private Group shapeGroup = new Group();
-    private Group lightsGroup = new Group();
+    private final Group shapeGroup = new Group();
+    private final Group lightsGroup = new Group();
 
     Environment() {
-        setStyle("-fx-background-color: teal");
+        setPrefWidth(BACKGROUND_IMAGE.getWidth() / 2.5);
+        setPrefHeight(BACKGROUND_IMAGE.getHeight() / 2.5);
 
         farClip.set(1000);
-        zoom.set(-350);
+        zoom.set(-570);
 
         ambientLights.forEach(this::addLight);
         directionalLights.forEach(this::addLight);
@@ -102,7 +119,7 @@ class Environment extends CameraScene3D {
 
         var lightRep = new Sphere(LIGHT_REP_RADIUS);
         var lightRepMat = new PhongMaterial();
-        lightRepMat.setSelfIlluminationMap(Boxes.createMapImage(light.colorProperty()));
+        lightRepMat.selfIlluminationMapProperty().bind(light.colorProperty().map(MaterialControls::imageOf));
         lightRep.setMaterial(lightRepMat);
         lightRep.translateXProperty().bind(light.translateXProperty());
         lightRep.translateYProperty().bind(light.translateYProperty());
@@ -116,57 +133,50 @@ class Environment extends CameraScene3D {
         lightsGroup.getChildren().add(light);
     }
 
-    void forceDefaultLight(boolean force) {
-        if (force) {
-            rootGroup.getChildren().remove(lightsGroup);
-        } else {
-            rootGroup.getChildren().add(lightsGroup);
-        }
+    Node createLightsControls() {
+        var controls = new VBox();
+        ambientLights.forEach(light -> controls.getChildren().add(Controls.createLightControls(light)));
+        pointLights.forEach(light -> controls.getChildren().add(Controls.createLightControls(light)));
+        spotLights.forEach(light -> controls.getChildren().add(Controls.createLightControls(light)));
+        directionalLights.forEach(light -> controls.getChildren().add(Controls.createLightControls(light)));
+        return controls;
+    }
+    
+    Node createBackgroundControls() {
+        var bgProp = new SimpleObjectProperty<Image>();
+        var bgSize = new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, false, true);
+        backgroundProperty().bind(bgProp.map(image -> new Background(new BackgroundImage(image, null, null, null, bgSize))));
+        Node controls = MaterialControls.createMapControls(bgProp, MaterialControls.createFileChooser());
+        return new HBox(new Label("Background"), controls);
     }
 
-    Group createBoxes() {
-        return new Boxes(LIGHT_Z_DIST);
+    Node createScreenshotControls() {
+        var formats = new ChoiceBox<Format>();
+        formats.getItems().addAll(Format.values());
+        formats.setValue(Format.PNG);
+
+        var graphic = new Text("📷");
+        graphic.setBoundsType(TextBoundsType.VISUAL);
+        graphic.setFont(Font.font(32));
+
+        var screenshotButton = new Button("", graphic);
+        screenshotButton.setPadding(new Insets(2));
+        screenshotButton.setTooltip(new Tooltip("Capture screenshot"));
+        screenshotButton.setOnAction(e -> CaptureUtils.capture(snapshot(null, null), formats.getValue()));
+
+        return new HBox(2, screenshotButton, formats);
     }
 
-    Sphere createSphere(int subdivisions) {
-        return new Sphere(SPHERE_RADIUS, subdivisions);
-    }
-
-    MeshView createMeshView(int quadNum) {
-        // Points and texCoords array defining a single quad that will
-        // be referenced by all pairs of triangles in the faces array
-        final float[] points = {
-            -75.0f,  75.0f, 0.0f,
-             75.0f,  75.0f, 0.0f,
-             75.0f, -75.0f, 0.0f,
-            -75.0f, -75.0f, 0.0f
-        };
-        final float[] texCoords = {
-            0.0f, 0.0f,
-            1.0f, 0.0f,
-            1.0f, 1.0f,
-            0.0f, 1.0f
-        };
-        // List of faces defining a single quad (pair of triangles).
-        // This is replicated for the desired number of quads
-        var face = List.of(
-            0, 0, 1, 1, 2, 2,
-            0, 0, 2, 2, 3, 3
-        );
-
-        var faces = new ArrayList<Integer>(quadNum * face.size());
-        for (int i = 0; i < quadNum; i++) {
-            faces.addAll(face);
-        }
-
-        var mesh = new TriangleMesh();
-        mesh.getPoints().setAll(points);
-        mesh.getTexCoords().setAll(texCoords);
-        int[] array = faces.stream().mapToInt(i -> i).toArray();
-        mesh.getFaces().setAll(array);
-
-        var mv = new MeshView(mesh);
-        return mv;
+    Node createDefaultLightControl() {
+        var checkBox = new CheckBox("Force default light");
+        checkBox.setOnAction(e -> {
+            if (checkBox.isSelected()) {
+                rootGroup.getChildren().remove(lightsGroup);
+            } else {
+                rootGroup.getChildren().add(lightsGroup);
+            }
+        });
+        return checkBox;
     }
 
     void switchTo(Node node) {

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenuation;
+package lighting3D;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -31,7 +31,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
-import javafx.scene.PointLight;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
 import javafx.scene.input.MouseButton;
@@ -40,6 +39,9 @@ import javafx.scene.layout.Pane;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 
+/**
+ * Camera controls for a 3D environment.
+ */
 class CameraScene3D extends Pane {
 
     public DoubleProperty xPan = new SimpleDoubleProperty();
