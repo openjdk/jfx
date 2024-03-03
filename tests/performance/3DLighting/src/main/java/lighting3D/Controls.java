@@ -61,7 +61,7 @@ final class Controls {
 
     static Node createLightControls(AmbientLight light) {
         return createTitlePane(light, null);
-    } 
+    }
 
     static Node createLightControls(PointLight light) {
         var controls = createPointLightControls(light);
@@ -115,7 +115,7 @@ final class Controls {
         gridPane.addRow(gridPane.getRowCount(), createLabel("const", "Constant attenuation factor"), ca);
         gridPane.addRow(gridPane.getRowCount(), createLabel("linear", "Linear attenuation factor"), la);
         gridPane.addRow(gridPane.getRowCount(), createLabel("quad", "Quadratic attenuation factor"), qa);
-        
+
         return gridPane;
     }
 

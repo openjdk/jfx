@@ -141,7 +141,7 @@ class Environment extends CameraScene3D {
         directionalLights.forEach(light -> controls.getChildren().add(Controls.createLightControls(light)));
         return controls;
     }
-    
+
     Node createBackgroundControls() {
         var bgProp = new SimpleObjectProperty<Image>();
         var bgSize = new BackgroundSize(BackgroundSize.AUTO, BackgroundSize.AUTO, false, false, false, true);
