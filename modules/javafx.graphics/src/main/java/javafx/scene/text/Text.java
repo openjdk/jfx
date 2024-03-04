@@ -1024,11 +1024,8 @@ public class Text extends Shape {
 
         double x = point.getX() - getX();
         double y = point.getY() - getY() + getYRendering();
-        GlyphList[] runs = getRuns();
-        int textRunStart = 0;
-        if (runs.length != 0) {
-            textRunStart = findFirstRunStart(runs);
-        }
+
+        int textRunStart = findFirstRunStart();
 
         double px = x;
         double py = y;
@@ -1042,11 +1039,12 @@ public class Text extends Shape {
         return new HitInfo(h.getCharIndex() - textRunStart, h.getInsertionIndex() - textRunStart, h.isLeading());
     }
 
-    private int findFirstRunStart(GlyphList[] runs) {
+    private int findFirstRunStart() {
         int start = Integer.MAX_VALUE;
-        for (GlyphList r: runs) {
-            if (((TextRun) r).getStart() < start) {
-                start = ((TextRun) r).getStart();
+        for (GlyphList r: getRuns()) {
+            int runStart = ((TextRun) r).getStart();
+            if (runStart < start) {
+                start = runStart;
             }
         }
         return start;
