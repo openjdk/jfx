@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,11 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.NodeHelper;
-import javafx.css.converter.BooleanConverter;
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.InsetsConverter;
-import javafx.css.converter.PaintConverter;
-import javafx.css.converter.SizeConverter;
-import javafx.css.converter.StringConverter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
+import javafx.beans.DefaultProperty;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -45,7 +37,23 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.InsetsConverter;
+import javafx.css.converter.PaintConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.css.converter.StringConverter;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -56,16 +64,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
-import javafx.beans.DefaultProperty;
-import javafx.css.CssMetaData;
-import javafx.css.FontCssMetaData;
-import javafx.css.StyleOrigin;
-import javafx.css.Styleable;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableProperty;
-import javafx.css.StyleableStringProperty;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
 
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
@@ -816,6 +816,48 @@ public abstract class Labeled extends Control {
             mnemonicParsing = new SimpleBooleanProperty(this, "mnemonicParsing");
         }
         return mnemonicParsing;
+    }
+
+    /**
+     * Truncated read-only property indicates whether the text has been truncated
+     * when it cannot fit into the available width.
+     * <p>
+     * When truncated, the {@link #ellipsisStringProperty() ellipsis string}
+     * gets inserted in the place dictated by the
+     * {@link #textOverrun} property.
+     *
+     * @since 23
+     * @defaultValue false
+     */
+    private ObservableBooleanValue truncated;
+
+    public final ObservableBooleanValue truncatedProperty() {
+        if (truncated == null) {
+            truncated = new BooleanBinding() {
+                {
+                    bind(
+                        ellipsisStringProperty(),
+                        fontProperty(),
+                        textProperty(),
+                        widthProperty(),
+                        wrapTextProperty()
+                    );
+                }
+
+                @Override
+                protected boolean computeValue() {
+                    if (isWrapText()) {
+                        return false;
+                    }
+                    return (getWidth() < prefWidth(-1));
+                }
+            };
+        }
+        return truncated;
+    }
+    // FIX why does this method emit "warning: no comment" javadoc warning?
+    public final boolean isTruncated() {
+        return truncatedProperty().get();
     }
 
     //    /**
