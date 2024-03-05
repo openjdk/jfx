@@ -116,14 +116,9 @@ public final class EventLoop {
 
             if (!stack.isEmpty()) {
                 EventLoop loop = stack.peek();
-                // we might have already entered another loop, so check again
+                // (Re)Trigger the leave procedure so that the outer loop will be finished.
                 if (loop != null && loop.state.equals(State.LEAVING)) {
-                    Application.invokeLater(() -> {
-                        // we might have already entered another loop, so check again
-                        if (loop.state.equals(State.LEAVING)) {
-                            Application.leaveNestedEventLoop();
-                        }
-                    });
+                    Application.leaveNestedEventLoop();
                 }
             }
         }
