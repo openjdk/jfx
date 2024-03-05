@@ -173,9 +173,9 @@ class GlassSystemMenu implements TKSystemMenu {
         listenerItems.put(menuItemListener, filteredItems);
 
         for (MenuItemBase item : items) {
-            if (item instanceof MenuBase) {
+            if (item instanceof MenuBase baseItem) {
                 // submenu
-                addMenu(glassMenu, (MenuBase)item);
+                addMenu(glassMenu, baseItem);
             } else {
                 // menu item
                 addMenuItem(glassMenu, item);
