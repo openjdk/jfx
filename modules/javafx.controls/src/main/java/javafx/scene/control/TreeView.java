@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1263,8 +1263,11 @@ public class TreeView<T> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
+        @SuppressWarnings("doclint:missing")
         private final TreeView<T> source;
+        @SuppressWarnings("doclint:missing")
         private final T oldValue;
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
         private transient final TreeItem<T> treeItem;
 

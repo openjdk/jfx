@@ -77,6 +77,7 @@ final public class WebEvent<T> extends Event {
     public static final EventType<WebEvent> ALERT =
             new EventType<>(WebEvent.ANY, "WEB_ALERT");
 
+    @SuppressWarnings("doclint:missing")
     private final T data;
 
     /**

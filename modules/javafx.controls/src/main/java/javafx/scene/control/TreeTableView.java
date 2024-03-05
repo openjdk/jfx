@@ -2390,8 +2390,11 @@ public class TreeTableView<S> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
+        @SuppressWarnings("doclint:missing")
         private final TreeTableView<S> source;
+        @SuppressWarnings("doclint:missing")
         private final S oldValue;
+        @SuppressWarnings("doclint:missing")
         private final S newValue;
         private transient final TreeItem<S> treeItem;
 
