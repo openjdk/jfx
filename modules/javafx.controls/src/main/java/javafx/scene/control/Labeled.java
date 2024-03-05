@@ -29,15 +29,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.DefaultProperty;
-import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
@@ -819,7 +820,7 @@ public abstract class Labeled extends Control {
     }
 
     /**
-     * Truncated read-only property indicates whether the text has been truncated
+     * Indicates whether the text has been truncated
      * when it cannot fit into the available width.
      * <p>
      * When truncated, the {@link #ellipsisStringProperty() ellipsis string}
@@ -827,37 +828,31 @@ public abstract class Labeled extends Control {
      * {@link #textOverrun} property.
      *
      * @since 23
-     * @defaultValue false
      */
-    private ObservableBooleanValue truncated;
+    private ReadOnlyBooleanWrapper textTruncated;
 
-    public final ObservableBooleanValue truncatedProperty() {
-        if (truncated == null) {
-            truncated = new BooleanBinding() {
-                {
-                    bind(
-                        ellipsisStringProperty(),
-                        fontProperty(),
-                        textProperty(),
-                        widthProperty(),
-                        wrapTextProperty()
-                    );
-                }
-
-                @Override
-                protected boolean computeValue() {
+    public final ReadOnlyBooleanProperty textTruncatedProperty() {
+        if (textTruncated == null) {
+            textTruncated = new ReadOnlyBooleanWrapper(this, "textTruncated");
+            textTruncated.bind(Bindings.createBooleanBinding(() -> {
                     if (isWrapText()) {
-                        return false;
+                        return (getHeight() < prefHeight(getWidth()));
                     }
                     return (getWidth() < prefWidth(-1));
-                }
-            };
+                },
+                ellipsisStringProperty(),
+                fontProperty(),
+                heightProperty(),
+                textProperty(),
+                widthProperty(),
+                wrapTextProperty()
+            ));
         }
-        return truncated;
+        return textTruncated.getReadOnlyProperty();
     }
-    // FIX why does this method emit "warning: no comment" javadoc warning?
-    public final boolean isTruncated() {
-        return truncatedProperty().get();
+
+    public final boolean isTextTruncated() {
+        return textTruncatedProperty().get();
     }
 
     //    /**
