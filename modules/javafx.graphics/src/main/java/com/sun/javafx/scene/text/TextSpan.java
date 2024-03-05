@@ -27,6 +27,13 @@ package com.sun.javafx.scene.text;
 
 import com.sun.javafx.geom.RectBounds;
 
+/**
+ * Represents a sequence of characters all using the same font, or
+ * an embedded object if no font is supplied.
+ * <p>
+ * A text span can contain line breaks if the text should span multiple
+ * lines.
+ */
 public interface TextSpan {
     /**
      * The text for the span, can be empty but not null.

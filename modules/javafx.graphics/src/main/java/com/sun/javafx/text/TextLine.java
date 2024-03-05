@@ -28,11 +28,13 @@ package com.sun.javafx.text;
 import com.sun.javafx.geom.RectBounds;
 
 public class TextLine implements com.sun.javafx.scene.text.TextLine {
-    TextRun[] runs;
-    RectBounds bounds;
-    float lsb, rsb, leading;
-    int start;
-    int length;
+    private final TextRun[] runs;
+    private final RectBounds bounds;
+    private final int start;
+    private final int length;
+    private final float leading;
+
+    private float lsb, rsb;
 
     public TextLine(int start, int length, TextRun[] runs,
                     float width, float ascent, float descent, float leading) {
