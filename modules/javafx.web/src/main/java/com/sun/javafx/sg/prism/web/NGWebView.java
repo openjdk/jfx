@@ -68,7 +68,6 @@ public final class NGWebView extends NGGroup {
     public void update() {
         if (page != null) {
             BaseBounds clip = getClippedBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
-
             if (!clip.isEmpty()) {
                 log.finest("updating rectangle: {0}", clip);
                 page.updateContent(new WCRectangle(clip.getMinX(), clip.getMinY(),
