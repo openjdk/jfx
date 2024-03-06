@@ -184,6 +184,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         properties.remove(Properties.RECREATE);
         properties.addListener(propertiesMapListener);
 
+        // FIX unnecessary, make the behavior class abstract
         // init the behavior 'closures'
         behavior.setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
         behavior.setOnFocusNextRow(() -> { onFocusNextCell(); });
@@ -193,6 +194,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         behavior.setOnScrollPageUp(this::onScrollPageUp);
         behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
         behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
+        behavior.setOnUnitScroll((v) -> unitScroll(v));
 
         registerChangeListener(control.rootProperty(), e -> setRoot(getSkinnable().getRoot()));
         registerChangeListener(control.showRootProperty(), e -> {
@@ -610,5 +612,14 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.scrollTo(firstVisibleCell);
         return newSelectionIndex;
+    }
+
+    private void unitScroll(boolean right) {
+        ScrollBar sb = flow.getHbar();
+        if (right) {
+            sb.increment();
+        } else {
+            sb.decrement();
+        }
     }
 }

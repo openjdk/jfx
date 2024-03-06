@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,28 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.inputmap.InputMap;
+import static javafx.scene.input.KeyCode.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
-import javafx.scene.control.*;
-import javafx.scene.input.*;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
-
-import java.util.ArrayList;
-import java.util.List;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
-
-import static javafx.scene.input.KeyCode.*;
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 
 public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
@@ -92,6 +96,9 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
     private Runnable onFocusNextRow;
     public void setOnFocusNextRow(Runnable r) { onFocusNextRow = r; }
+
+    private Consumer<Boolean> onUnitScroll;
+    public void setOnUnitScroll(Consumer<Boolean> v) { onUnitScroll = v; }
 
     private boolean selectionChanging = false;
 
@@ -195,6 +202,8 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             new KeyMapping(KP_LEFT, e -> rtl(control, this::expandRow, this::collapseRow)),
             new KeyMapping(RIGHT, e -> rtl(control, this::collapseRow, this::expandRow)),
             new KeyMapping(KP_RIGHT, e -> rtl(control, this::collapseRow, this::expandRow)),
+            new KeyMapping(new KeyBinding(RIGHT).alt(), e -> unitScroll(true)),
+            new KeyMapping(new KeyBinding(LEFT).alt(), e -> unitScroll(false)),
 
             new KeyMapping(MULTIPLY, e -> expandAll()),
             new KeyMapping(ADD, e -> expandRow()),
@@ -847,5 +856,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         sm.selectRange(index, getNode().getExpandedItemCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }
+
+    private void unitScroll(boolean right) {
+        if (onUnitScroll != null) {
+            onUnitScroll.accept(right);
+        }
     }
 }
