@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import static javafx.scene.input.KeyCode.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -47,13 +48,7 @@ import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
-public abstract class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
-    /**
-     * Performs horizontal unit scroll right or left.
-     * @param right whether to scroll right (true) of left (false)
-     */
-    protected abstract void horizontalUnitScroll(boolean right);
-
+public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private final InputMap<TreeView<T>> treeViewInputMap;
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
@@ -265,6 +260,17 @@ public abstract class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
         getNode().removeEventFilter(KeyEvent.ANY, keyEventListener);
         TreeCellBehavior.removeAnchor(getNode());
+
+        onScrollPageUp = null;
+        onScrollPageDown = null;
+        onSelectPreviousRow = null;
+        onSelectNextRow = null;
+        onMoveToFirstCell = null;
+        onMoveToLastCell = null;
+        onFocusPreviousRow = null;
+        onFocusNextRow = null;
+        onHorizontalUnitScroll = null;
+
         super.dispose();
     }
 
@@ -858,5 +864,18 @@ public abstract class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         sm.selectRange(index, getNode().getExpandedItemCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }
+
+    // TODO not necessary with the new InputMap V2
+    private Consumer<Boolean> onHorizontalUnitScroll;
+
+    public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
+        onHorizontalUnitScroll = f;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (onHorizontalUnitScroll != null) {
+            onHorizontalUnitScroll.accept(right);
+        }
     }
 }

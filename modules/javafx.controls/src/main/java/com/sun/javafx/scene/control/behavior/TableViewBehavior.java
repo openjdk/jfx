@@ -40,7 +40,7 @@ import javafx.scene.control.TableView.TableViewSelectionModel;
 import com.sun.javafx.scene.control.skin.Utils;
 
 
-public abstract class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T, TableColumn<T, ?>> {
+public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T, TableColumn<T, ?>> {
 
     /**************************************************************************
      *                                                                        *

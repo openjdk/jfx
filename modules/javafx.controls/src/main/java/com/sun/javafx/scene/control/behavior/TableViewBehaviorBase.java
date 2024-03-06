@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import static javafx.scene.input.KeyCode.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
@@ -49,11 +50,6 @@ import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
 public abstract class TableViewBehaviorBase<C extends Control, T, TC extends TableColumnBase<T,?>> extends BehaviorBase<C> {
-    /**
-     * Performs horizontal unit scroll right or left.
-     * @param right whether to scroll right (true) of left (false)
-     */
-    protected abstract void horizontalUnitScroll(boolean right);
 
     /**************************************************************************
      *                                                                        *
@@ -436,6 +432,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         onSelectLeftCell = null;
         onFocusRightCell = null;
         onFocusLeftCell = null;
+        onHorizontalUnitScroll = null;
 
         super.dispose();
     }
@@ -1367,5 +1364,18 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     private EventHandler<KeyEvent> focusTraverseRight() {
         return FocusTraversalInputMap::traverseRight;
+    }
+
+    // TODO not necessary with the new InputMap V2
+    private Consumer<Boolean> onHorizontalUnitScroll;
+
+    public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
+        onHorizontalUnitScroll = f;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (onHorizontalUnitScroll != null) {
+            onHorizontalUnitScroll.accept(right);
+        }
     }
 }

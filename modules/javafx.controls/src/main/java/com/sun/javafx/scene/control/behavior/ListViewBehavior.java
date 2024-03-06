@@ -24,26 +24,10 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.BACK_SLASH;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.F2;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PAGE_DOWN;
-import static javafx.scene.input.KeyCode.PAGE_UP;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyCode.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javafx.beans.value.ChangeListener;
@@ -68,13 +52,7 @@ import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.scene.control.skin.Utils;
 
-public abstract class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
-    /**
-     * Performs horizontal unit scroll right or left.
-     * @param right whether to scroll right (true) of left (false)
-     */
-    protected abstract void horizontalUnitScroll(boolean right);
-
+public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private final InputMap<ListView<T>> listViewInputMap;
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
@@ -256,6 +234,17 @@ public abstract class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         if (tlFocus != null) tlFocus.dispose();
         control.removeEventFilter(KeyEvent.ANY, keyEventListener);
+
+        onScrollPageUp = null;
+        onScrollPageDown = null;
+        onFocusPreviousRow = null;
+        onFocusNextRow = null;
+        onSelectPreviousRow = null;
+        onSelectNextRow = null;
+        onMoveToFirstCell = null;
+        onMoveToLastCell = null;
+        onHorizontalUnitScroll = null;
+
         super.dispose();
     }
 
@@ -936,5 +925,18 @@ public abstract class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         sm.selectRange(index, getRowCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }
+
+    // TODO not necessary with the new InputMap V2
+    private Consumer<Boolean> onHorizontalUnitScroll;
+
+    public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
+        onHorizontalUnitScroll = f;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (onHorizontalUnitScroll != null) {
+            onHorizontalUnitScroll.accept(right);
+        }
     }
 }

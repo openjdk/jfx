@@ -92,18 +92,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         super(control);
 
         // install default input map for the TreeTableView control
-        behavior = new TreeTableViewBehavior<>(control) {
-            // TODO this should have beem a public method in VirtualFlow
-            @Override
-            protected void horizontalUnitScroll(boolean right) {
-                ScrollBar sb = flow.getHbar();
-                if(right) {
-                    sb.increment();
-                } else {
-                    sb.decrement();
-                }
-            }
-        };
+        behavior = new TreeTableViewBehavior<>(control);
 
         flow.setFixedCellSize(control.getFixedCellSize());
         flow.setCellFactory(flow -> createCell());
@@ -138,6 +127,15 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         behavior.setOnSelectRightCell(() -> onSelectRightCell());
         behavior.setOnFocusLeftCell(() -> onFocusLeftCell());
         behavior.setOnFocusRightCell(() -> onFocusRightCell());
+        behavior.setOnHorizontalUnitScroll((right) -> {
+            // TODO this should have beem a public method in VirtualFlow
+            ScrollBar sb = flow.getHbar();
+            if(right) {
+                sb.increment();
+            } else {
+                sb.decrement();
+            }
+        });
 
         lh.addChangeListener(control.rootProperty(), (ev) -> {
             // fix for RT-37853

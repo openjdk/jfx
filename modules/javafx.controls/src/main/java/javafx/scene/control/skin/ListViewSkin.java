@@ -191,30 +191,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         super(control);
 
         // install default input map for the ListView control
-        behavior = new ListViewBehavior<>(control) {
-            @Override
-            protected void horizontalUnitScroll(boolean right) {
-                // TODO this should have beem a public method in VirtualFlow
-                ScrollBar sb = flow.getHbar();
-                if (right) {
-                    sb.increment();
-                } else {
-                    sb.decrement();
-                }
-            }
-        };
+        behavior = new ListViewBehavior<>(control);
 //        control.setInputMap(behavior.getInputMap());
-
-        // FIX unnecessary, make the behavior class abstract
-        // init the behavior 'closures'
-        behavior.setOnFocusPreviousRow(() -> onFocusPreviousCell());
-        behavior.setOnFocusNextRow(() -> onFocusNextCell());
-        behavior.setOnMoveToFirstCell(() -> onMoveToFirstCell());
-        behavior.setOnMoveToLastCell(() -> onMoveToLastCell());
-        behavior.setOnSelectPreviousRow(() -> onSelectPreviousCell());
-        behavior.setOnSelectNextRow(() -> onSelectNextCell());
-        behavior.setOnScrollPageDown(this::onScrollPageDown);
-        behavior.setOnScrollPageUp(this::onScrollPageUp);
 
         updateListViewItems();
 
@@ -226,6 +204,25 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setCellFactory(flow -> createCell());
         flow.setFixedCellSize(control.getFixedCellSize());
         getChildren().add(flow);
+
+        // init the behavior 'closures'
+        behavior.setOnFocusPreviousRow(() -> onFocusPreviousCell());
+        behavior.setOnFocusNextRow(() -> onFocusNextCell());
+        behavior.setOnMoveToFirstCell(() -> onMoveToFirstCell());
+        behavior.setOnMoveToLastCell(() -> onMoveToLastCell());
+        behavior.setOnSelectPreviousRow(() -> onSelectPreviousCell());
+        behavior.setOnSelectNextRow(() -> onSelectNextCell());
+        behavior.setOnScrollPageDown(this::onScrollPageDown);
+        behavior.setOnScrollPageUp(this::onScrollPageUp);
+        behavior.setOnHorizontalUnitScroll((right) -> {
+            // TODO this should have beem a public method in VirtualFlow
+            ScrollBar sb = flow.getHbar();
+            if(right) {
+                sb.increment();
+            } else {
+                sb.decrement();
+            }
+        });
 
         EventHandler<MouseEvent> ml = event -> {
             // This ensures that the list maintains the focus, even when the vbar

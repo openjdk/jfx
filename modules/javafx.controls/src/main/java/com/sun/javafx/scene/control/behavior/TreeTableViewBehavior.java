@@ -42,7 +42,7 @@ import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 import javafx.util.Callback;
 import com.sun.javafx.scene.control.inputmap.InputMap;
 
-public abstract class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableView<T>, TreeItem<T>, TreeTableColumn<T, ?>> {
+public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableView<T>, TreeItem<T>, TreeTableColumn<T, ?>> {
 
     /**************************************************************************
      *                                                                        *

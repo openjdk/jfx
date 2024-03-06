@@ -82,18 +82,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         super(control);
 
         // install default input map for the TableView control
-        behavior = new TableViewBehavior<>(control) {
-            // TODO this should have beem a public method in VirtualFlow
-            @Override
-            protected void horizontalUnitScroll(boolean right) {
-                ScrollBar sb = flow.getHbar();
-                if(right) {
-                    sb.increment();
-                } else {
-                    sb.decrement();
-                }
-            }
-        };
+        behavior = new TableViewBehavior<>(control);
 
         flow.setFixedCellSize(control.getFixedCellSize());
         flow.setCellFactory(flow -> createCell());
@@ -126,6 +115,15 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         behavior.setOnSelectRightCell(() -> onSelectRightCell());
         behavior.setOnFocusLeftCell(() -> onFocusLeftCell());
         behavior.setOnFocusRightCell(() -> onFocusRightCell());
+        behavior.setOnHorizontalUnitScroll((right) -> {
+            // TODO this should have beem a public method in VirtualFlow
+            ScrollBar sb = flow.getHbar();
+            if(right) {
+                sb.increment();
+            } else {
+                sb.decrement();
+            }
+        });
 
         lh.addChangeListener(control.fixedCellSizeProperty(), (ev) -> {
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());

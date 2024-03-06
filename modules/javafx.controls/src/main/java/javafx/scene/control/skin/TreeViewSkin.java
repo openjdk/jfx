@@ -161,18 +161,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         super(control);
 
         // install default input map for the TreeView control
-        behavior = new TreeViewBehavior<>(control) {
-            // TODO this should have beem a public method in VirtualFlow
-            @Override
-            protected void horizontalUnitScroll(boolean right) {
-                ScrollBar sb = flow.getHbar();
-                if(right) {
-                    sb.increment();
-                } else {
-                    sb.decrement();
-                }
-            }
-        };
+        behavior = new TreeViewBehavior<>(control);
 //        control.setInputMap(behavior.getInputMap());
 
         // init the VirtualFlow
@@ -211,6 +200,15 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
         behavior.setOnScrollPageUp(this::onScrollPageUp);
         behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
         behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
+        behavior.setOnHorizontalUnitScroll((right) -> {
+            // TODO this should have beem a public method in VirtualFlow
+            ScrollBar sb = flow.getHbar();
+            if(right) {
+                sb.increment();
+            } else {
+                sb.decrement();
+            }
+        });
 
         registerChangeListener(control.rootProperty(), e -> setRoot(getSkinnable().getRoot()));
         registerChangeListener(control.showRootProperty(), e -> {
