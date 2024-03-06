@@ -191,7 +191,18 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         super(control);
 
         // install default input map for the ListView control
-        behavior = new ListViewBehavior<>(control);
+        behavior = new ListViewBehavior<>(control) {
+            @Override
+            protected void horizontalUnitScroll(boolean right) {
+                // TODO this should have beem a public method in VirtualFlow
+                ScrollBar sb = flow.getHbar();
+                if (right) {
+                    sb.increment();
+                } else {
+                    sb.decrement();
+                }
+            }
+        };
 //        control.setInputMap(behavior.getInputMap());
 
         // FIX unnecessary, make the behavior class abstract
@@ -204,7 +215,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         behavior.setOnSelectNextRow(() -> onSelectNextCell());
         behavior.setOnScrollPageDown(this::onScrollPageDown);
         behavior.setOnScrollPageUp(this::onScrollPageUp);
-        behavior.setOnUnitScroll((v) -> unitScroll(v));
 
         updateListViewItems();
 
@@ -677,14 +687,5 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.scrollTo(firstVisibleCell);
         return newSelectionIndex;
-    }
-
-    private void unitScroll(boolean right) {
-        ScrollBar sb = flow.getHbar();
-        if (right) {
-            sb.increment();
-        } else {
-            sb.decrement();
-        }
     }
 }

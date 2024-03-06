@@ -24,10 +24,26 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
-import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyCode.A;
+import static javafx.scene.input.KeyCode.BACK_SLASH;
+import static javafx.scene.input.KeyCode.DOWN;
+import static javafx.scene.input.KeyCode.END;
+import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.ESCAPE;
+import static javafx.scene.input.KeyCode.F2;
+import static javafx.scene.input.KeyCode.HOME;
+import static javafx.scene.input.KeyCode.KP_DOWN;
+import static javafx.scene.input.KeyCode.KP_LEFT;
+import static javafx.scene.input.KeyCode.KP_RIGHT;
+import static javafx.scene.input.KeyCode.KP_UP;
+import static javafx.scene.input.KeyCode.LEFT;
+import static javafx.scene.input.KeyCode.PAGE_DOWN;
+import static javafx.scene.input.KeyCode.PAGE_UP;
+import static javafx.scene.input.KeyCode.RIGHT;
+import static javafx.scene.input.KeyCode.SPACE;
+import static javafx.scene.input.KeyCode.UP;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javafx.beans.value.ChangeListener;
@@ -52,7 +68,13 @@ import com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.scene.control.skin.Utils;
 
-public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
+public abstract class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
+    /**
+     * Performs horizontal unit scroll right or left.
+     * @param right whether to scroll right (true) of left (false)
+     */
+    protected abstract void horizontalUnitScroll(boolean right);
+
     private final InputMap<ListView<T>> listViewInputMap;
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
@@ -142,8 +164,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(DOWN, e -> selectNextRow()),
             new KeyMapping(KP_DOWN, e -> selectNextRow()),
 
-            new KeyMapping(new KeyBinding(RIGHT).alt(), e -> unitScroll(true)),
-            new KeyMapping(new KeyBinding(LEFT).alt(), e -> unitScroll(false)),
+            new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
+            new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
 
             new KeyMapping(new KeyBinding(UP).shift(), e -> alsoSelectPreviousRow()),
             new KeyMapping(new KeyBinding(KP_UP).shift(), e -> alsoSelectPreviousRow()),
@@ -252,7 +274,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private Runnable onSelectNextRow;
     private Runnable onMoveToFirstCell;
     private Runnable onMoveToLastCell;
-    private Consumer<Boolean> onUnitScroll;
 
     public void setOnScrollPageUp(Callback<Boolean, Integer> c) { onScrollPageUp = c; }
     public void setOnScrollPageDown(Callback<Boolean, Integer> c) { onScrollPageDown = c; }
@@ -262,7 +283,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     public void setOnSelectNextRow(Runnable r) { onSelectNextRow = r; }
     public void setOnMoveToFirstCell(Runnable r) { onMoveToFirstCell = r; }
     public void setOnMoveToLastCell(Runnable r) { onMoveToLastCell = r; }
-    public void setOnUnitScroll(Consumer<Boolean> v) { onUnitScroll = v; }
 
     private boolean selectionChanging = false;
 
@@ -916,11 +936,5 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         sm.selectRange(index, getRowCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
-    }
-
-    private void unitScroll(boolean right) {
-        if (onUnitScroll != null) {
-            onUnitScroll.accept(right);
-        }
     }
 }

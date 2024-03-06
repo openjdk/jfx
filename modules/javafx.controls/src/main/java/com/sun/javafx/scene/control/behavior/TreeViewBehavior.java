@@ -28,7 +28,6 @@ package com.sun.javafx.scene.control.behavior;
 import static javafx.scene.input.KeyCode.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -48,7 +47,12 @@ import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
-public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
+public abstract class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
+    /**
+     * Performs horizontal unit scroll right or left.
+     * @param right whether to scroll right (true) of left (false)
+     */
+    protected abstract void horizontalUnitScroll(boolean right);
 
     private final InputMap<TreeView<T>> treeViewInputMap;
 
@@ -96,9 +100,6 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
     private Runnable onFocusNextRow;
     public void setOnFocusNextRow(Runnable r) { onFocusNextRow = r; }
-
-    private Consumer<Boolean> onUnitScroll;
-    public void setOnUnitScroll(Consumer<Boolean> v) { onUnitScroll = v; }
 
     private boolean selectionChanging = false;
 
@@ -202,8 +203,9 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             new KeyMapping(KP_LEFT, e -> rtl(control, this::expandRow, this::collapseRow)),
             new KeyMapping(RIGHT, e -> rtl(control, this::collapseRow, this::expandRow)),
             new KeyMapping(KP_RIGHT, e -> rtl(control, this::collapseRow, this::expandRow)),
-            new KeyMapping(new KeyBinding(RIGHT).alt(), e -> unitScroll(true)),
-            new KeyMapping(new KeyBinding(LEFT).alt(), e -> unitScroll(false)),
+
+            new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
+            new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
 
             new KeyMapping(MULTIPLY, e -> expandAll()),
             new KeyMapping(ADD, e -> expandRow()),
@@ -856,11 +858,5 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         sm.selectRange(index, getNode().getExpandedItemCount());
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
-    }
-
-    private void unitScroll(boolean right) {
-        if (onUnitScroll != null) {
-            onUnitScroll.accept(right);
-        }
     }
 }
