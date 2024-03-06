@@ -480,8 +480,12 @@ void FrameSelection::setSelection(const VisibleSelection& selection, OptionSet<S
     if (frameView && frameView->layoutContext().isLayoutPending())
         return;
 
-    if (!(options & SetSelectionOption::IsUserTriggered))
+    if (!(options & SetSelectionOption::IsUserTriggered)) {
+#if PLATFORM(JAVA)
+        updateSelectionAppearanceNow();
+#endif
         return;
+    }
 
     updateAndRevealSelection(intent, options.contains(SetSelectionOption::SmoothScroll) ? ScrollBehavior::Smooth : ScrollBehavior::Instant,
         options.contains(SetSelectionOption::RevealSelectionBounds) ? RevealExtentOption::DoNotRevealExtent : RevealExtentOption::RevealExtent,
