@@ -231,7 +231,7 @@ public class SystemMenuBarTest {
             for (WeakReference<com.sun.glass.ui.Menu> wr : u2) {
                 if (!JMemoryBuddy.checkCollectable(wr)) {
                     strongCount++;
-                    assertTrue("Too much refs", strongCount < 2);
+                    assertTrue("Too many references", strongCount < 2);
                 }
             }
             assertEquals(1, strongCount, "Exactly one reference should be reachable");
@@ -348,5 +348,4 @@ public class SystemMenuBarTest {
             fail(throwableRef.get());
         }
     }
-
 }
