@@ -67,6 +67,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.TableCellHelper;
 
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
@@ -834,11 +835,20 @@ public abstract class Labeled extends Control {
     public final ReadOnlyBooleanProperty textTruncatedProperty() {
         if (textTruncated == null) {
             textTruncated = new ReadOnlyBooleanWrapper(this, "textTruncated");
-            textTruncated.bind(Bindings.createBooleanBinding(() -> {
-                    if (isWrapText()) {
-                        return (getHeight() < prefHeight(getWidth()));
+            textTruncated.bind(
+                Bindings.createBooleanBinding(() -> {
+                    // make sure prefWidth always returns the actual content width
+                    // rather than the column width if inside a table
+                    TableCellHelper.useContentWidth = true;
+                    try {
+                        if (isWrapText()) {
+                            return (getHeight() < prefHeight(getWidth()));
+                        }
+
+                        return (getWidth() < prefWidth(getHeight()));
+                    } finally {
+                        TableCellHelper.useContentWidth = false;
                     }
-                    return (getWidth() < prefWidth(-1));
                 },
                 ellipsisStringProperty(),
                 fontProperty(),
