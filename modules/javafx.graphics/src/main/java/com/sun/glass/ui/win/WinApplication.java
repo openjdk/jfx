@@ -207,7 +207,13 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyEnteringNestedEventLoop();
         }
-        _enterNestedEventLoopImpl();
+        try {
+            _enterNestedEventLoopImpl();
+        } finally {
+            if (invokeLaterDispatcher != null) {
+                invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            }
+        }
     }
 
     @Override protected void _leaveNestedEventLoop() {
@@ -215,10 +221,6 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             invokeLaterDispatcher.notifyLeavingNestedEventLoop();
         }
         _leaveNestedEventLoopImpl();
-
-        if (invokeLaterDispatcher != null) {
-            invokeLaterDispatcher.notifyLeftNestedEventLoop();
-        }
     }
 
     // FACTORY METHODS

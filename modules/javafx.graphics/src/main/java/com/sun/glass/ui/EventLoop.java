@@ -116,7 +116,8 @@ public final class EventLoop {
 
             if (!stack.isEmpty()) {
                 EventLoop loop = stack.peek();
-                // (Re)Trigger the leave procedure so that the outer loop will be finished.
+                // If the next (outer) EventLoop was put into the leaving state before,
+                // we need to make sure to leave it as well.
                 if (loop != null && loop.state.equals(State.LEAVING)) {
                     Application.leaveNestedEventLoop();
                 }
@@ -132,7 +133,7 @@ public final class EventLoop {
      * LEAVING}.
      *
      * After calling this method and returning from the current event handler,
-     * the execusion returns to the point where the {@link #enter()} method
+     * the execution returns to the point where the {@link #enter()} method
      * was called previously. You may specify a return value for the
      * enter() method by passing the argument {@code retValue} to
      * the leave().
@@ -146,6 +147,10 @@ public final class EventLoop {
      *
      * Note that this method must only be invoked on the main (event handling)
      * thread.
+     *
+     * <p></p><b>Note:</b> The event loop is not left immediately, but in the next event cycle.
+     * When entering a new event loop right after calling this method, this event loop will wait
+     * until the new inner event loop is left as well (see also {@link #enter()}.
      *
      * @throws RuntimeException if the current thread is not the main thread
      * @throws IllegalStateException if the nested event loop isn't ACTIVE

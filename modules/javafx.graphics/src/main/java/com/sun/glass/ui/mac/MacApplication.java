@@ -166,7 +166,13 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyEnteringNestedEventLoop();
         }
-        _enterNestedEventLoopImpl();
+        try {
+            _enterNestedEventLoopImpl();
+        } finally {
+            if (invokeLaterDispatcher != null) {
+                invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            }
+        }
     }
 
     native private void _leaveNestedEventLoopImpl();
@@ -175,10 +181,6 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             invokeLaterDispatcher.notifyLeavingNestedEventLoop();
         }
         _leaveNestedEventLoopImpl();
-
-        if (invokeLaterDispatcher != null) {
-            invokeLaterDispatcher.notifyLeftNestedEventLoop();
-        }
     }
 
     native private void _hide();

@@ -125,6 +125,13 @@ public class NestedEventLoopTest {
         );
     }
 
+    /**
+     * Tests that we can enter and exit two nested event loops in a row.
+     * We expect that the nested first event loop will wait until the second nested event loop is done
+     * when entering a second event loop while we requested the first event loop to leave.
+     * <p>
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8285893">JDK-8285893</a>
+     */
     @Test
     public void testCanEnterAndExitTwoNestedEventLoop() {
         final long key1 = 1;

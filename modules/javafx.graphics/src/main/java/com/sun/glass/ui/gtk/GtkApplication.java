@@ -328,7 +328,13 @@ final class GtkApplication extends Application implements
         if (invokeLaterDispatcher != null) {
             invokeLaterDispatcher.notifyEnteringNestedEventLoop();
         }
-        enterNestedEventLoopImpl();
+        try {
+            enterNestedEventLoopImpl();
+        } finally {
+            if (invokeLaterDispatcher != null) {
+                invokeLaterDispatcher.notifyLeftNestedEventLoop();
+            }
+        }
     }
 
     @Override
@@ -337,10 +343,6 @@ final class GtkApplication extends Application implements
             invokeLaterDispatcher.notifyLeavingNestedEventLoop();
         }
         leaveNestedEventLoopImpl();
-
-        if (invokeLaterDispatcher != null) {
-            invokeLaterDispatcher.notifyLeftNestedEventLoop();
-        }
     }
 
     @Override
