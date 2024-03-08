@@ -27,7 +27,6 @@ package javafx.scene.control.skin;
 
 import java.util.List;
 import java.util.function.Supplier;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
@@ -54,7 +53,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
-
 import com.sun.javafx.scene.control.IDisconnectable;
 import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
@@ -101,7 +99,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean listSelectionLock = false;
     private boolean listViewSelectionDirty = false;
 
-    private final ComboBoxListViewBehavior behavior;
+    private final ComboBoxListViewBehavior<T> behavior;
     private IDisconnectable selectedItemWatcher;
 
 
@@ -139,9 +137,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     public ComboBoxListViewSkin(final ComboBox<T> control) {
         super(control);
 
-        // install default input map for the control
-        this.behavior = new ComboBoxListViewBehavior<>(control);
-
         this.comboBox = control;
         updateComboBoxItems();
 
@@ -167,6 +162,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
+
+        behavior = new ComboBoxListViewBehavior<>(control);
 
         lh.addChangeListener(control.itemsProperty(), e -> {
             updateComboBoxItems();
@@ -235,13 +232,18 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
+    @Override
+    public void install() {
+        super.install();
+        setSkinInputMap(behavior.getSkinInputMap());
+    }
 
+    @Override
+    public void dispose() {
         if (behavior != null) {
             behavior.dispose();
         }
+        super.dispose();
     }
 
     /** {@inheritDoc} */

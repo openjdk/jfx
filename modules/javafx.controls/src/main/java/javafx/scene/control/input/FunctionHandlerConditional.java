@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,31 +22,24 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene.control.input;
+
+import javafx.scene.control.Skinnable;
 
 /**
- * Defines the UI controls, charts, and skins that are available
- * for the JavaFX UI toolkit.
+ * A functional interface which denotes code associated with a {@code FunctionTag} or a key binding.
+ * Unlike {@link FunctionHandler}, this handler allows for controlling whether the matching KeyEvent
+ * will be consumed or not.
  *
- * @moduleGraph
- * @since 9
+ * @param <C> the type of the skinnable
+ * @since 999 TODO
  */
-module javafx.controls {
-    requires transitive javafx.base;
-    requires transitive javafx.graphics;
-
-    exports javafx.scene.chart;
-    exports javafx.scene.control;
-    exports javafx.scene.control.cell;
-    exports javafx.scene.control.input;
-    exports javafx.scene.control.skin;
-
-    exports com.sun.javafx.scene.control to
-        javafx.web;
-    exports com.sun.javafx.scene.control.behavior to
-        javafx.web;
-    exports com.sun.javafx.scene.control.inputmap to
-        javafx.web;
-    exports com.sun.javafx.scene.control.skin to
-        javafx.graphics,
-        javafx.web;
+@FunctionalInterface
+public interface FunctionHandlerConditional<C extends Skinnable> {
+    /**
+     * Handles the event associated with a function tag or a key binding.
+     * @param control the control instance
+     * @return true to consume the key event, false otherwise
+     */
+    public boolean handle(C control);
 }

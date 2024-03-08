@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,7 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
 import javafx.css.converter.SizeConverter;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.skin.TabPaneSkin;
 
 import javafx.beans.DefaultProperty;
@@ -90,6 +91,24 @@ import javafx.scene.Node;
  */
 @DefaultProperty("tabs")
 public class TabPane extends Control {
+    /** Identifiers for methods available for customization via the InputMap. */
+    public static final class Tag {
+        /** Selects the first tab. */
+        public static final FunctionTag SELECT_FIRST_TAB = new FunctionTag();
+        /** Selects the last tab. */
+        public static final FunctionTag SELECT_LAST_TAB = new FunctionTag();
+        /** Selects the left tab: previous in LTR mode, next in RTL mode. */
+        public static final FunctionTag SELECT_LEFT_TAB = new FunctionTag();
+        /** Selects the next tab. */
+        public static final FunctionTag SELECT_NEXT_TAB = new FunctionTag();
+        /** Selects the previous tab. */
+        public static final FunctionTag SELECT_PREV_TAB = new FunctionTag();
+        /** Selects the right tab: next in LTR mode, previous in RTL mode. */
+        public static final FunctionTag SELECT_RIGHT_TAB = new FunctionTag();
+
+        private Tag() { }
+    }
+
     private static final double DEFAULT_TAB_MIN_WIDTH = 0;
 
     private static final double DEFAULT_TAB_MAX_WIDTH = Double.MAX_VALUE;
@@ -166,6 +185,36 @@ public class TabPane extends Control {
      */
     public final ObservableList<Tab> getTabs() {
         return tabs;
+    }
+
+    /** Selects the first tab. */
+    public void selectFirstTab() {
+        execute(Tag.SELECT_FIRST_TAB);
+    }
+
+    /** Selects the last tab. */
+    public void selectLastTab() {
+        execute(Tag.SELECT_LAST_TAB);
+    }
+
+    /** Selects the left tab: previous in LTR mode, next in RTL mode. */
+    public void selectLeftTab() {
+        execute(Tag.SELECT_LEFT_TAB);
+    }
+
+    /** Selects the next tab. */
+    public void selectNextTab() {
+        execute(Tag.SELECT_NEXT_TAB);
+    }
+
+    /** Selects the previous tab. */
+    public void selectPreviousTab() {
+        execute(Tag.SELECT_PREV_TAB);
+    }
+
+    /** Selects the right tab: next in LTR mode, previous in RTL mode. */
+    public void selectRightTab() {
+        execute(Tag.SELECT_RIGHT_TAB);
     }
 
     /**
