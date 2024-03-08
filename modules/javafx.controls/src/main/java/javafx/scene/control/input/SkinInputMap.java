@@ -49,7 +49,7 @@ public class SkinInputMap<C extends Skinnable> {
     // FunctionTag -> FunctionHandler
     // ON_KEY_ENTER/ON_KEY_EXIT -> Runnable
     // EventType -> PHList
-    final HashMap<Object,Object> map = new HashMap<>();
+    final HashMap<Object, Object> map = new HashMap<>();
     final KeyEventMapper kmapper = new KeyEventMapper();
 
     /**
@@ -57,7 +57,7 @@ public class SkinInputMap<C extends Skinnable> {
      */
     public SkinInputMap() {
     }
-    
+
     /**
      * Adds an event handler for the specified event type, in the context of this skin.
      *
@@ -132,8 +132,8 @@ public class SkinInputMap<C extends Skinnable> {
         EventCriteria<T> criteria,
         boolean consume,
         EventHandlerPriority pri,
-        EventHandler<T> handler
-    ) {
+        EventHandler<T> handler)
+    {
         EventType<T> type = criteria.getEventType();
         putHandler(type, pri, new EventHandler<T>() {
             @Override
@@ -150,11 +150,10 @@ public class SkinInputMap<C extends Skinnable> {
 
     // adds the specified handler to input map with the given priority
     // and event type.
-    private <T extends Event> void putHandler(EventType<T> type, EventHandlerPriority pri, EventHandler<T> handler)
-    {
+    private <T extends Event> void putHandler(EventType<T> type, EventHandlerPriority pri, EventHandler<T> handler) {
         Object x = map.get(type);
         PHList hs;
-        if(x instanceof PHList h) {
+        if (x instanceof PHList h) {
             hs = h;
         } else {
             hs = new PHList();
@@ -173,7 +172,7 @@ public class SkinInputMap<C extends Skinnable> {
         map.put(k, tag);
         kmapper.addType(k);
     }
-    
+
     /**
      * Maps a key binding to the specified function tag.
      *
@@ -204,7 +203,7 @@ public class SkinInputMap<C extends Skinnable> {
     public final void registerFunction(FunctionTag tag, FunctionHandlerConditional<C> function) {
         map.put(tag, InputMap.toFunctionHandler(function));
     }
-    
+
     /**
      * This convenience method maps the function tag to the specified function, and at the same time
      * maps the specified key binding to that function tag.
@@ -228,7 +227,7 @@ public class SkinInputMap<C extends Skinnable> {
         registerFunction(tag, func);
         registerKey(KeyBinding.of(code), tag);
     }
-    
+
     Object resolve(KeyBinding k) {
         return map.get(k);
     }

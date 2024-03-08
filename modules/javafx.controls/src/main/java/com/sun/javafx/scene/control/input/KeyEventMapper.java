@@ -37,7 +37,7 @@ public class KeyEventMapper {
     private static final int TYPED = 0x04;
 
     private int types;
-    
+
     public KeyEventMapper() {
     }
 
@@ -57,11 +57,11 @@ public class KeyEventMapper {
     public boolean hasKeyPressed() {
         return (types & PRESSED) != 0;
     }
-    
+
     public boolean hasKeyReleased() {
         return (types & RELEASED) != 0;
     }
-    
+
     public boolean hasKeyTyped() {
         return (types & TYPED) != 0;
     }

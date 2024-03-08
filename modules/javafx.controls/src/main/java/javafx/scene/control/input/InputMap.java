@@ -57,7 +57,7 @@ public final class InputMap {
     // KeyBinding -> FunctionTag or FunctionHandler
     // FunctionTag -> FunctionHandler
     // EventType -> PHList
-    private final HashMap<Object,Object> map = new HashMap<>();
+    private final HashMap<Object, Object> map = new HashMap<>();
     private SkinInputMap skinInputMap;
     private final KeyEventMapper kmapper = new KeyEventMapper();
     private final EventHandler<Event> eventHandler = this::handleEvent;
@@ -111,7 +111,7 @@ public final class InputMap {
             }
         }
     }
-    
+
     private <T extends Event> void removeHandler(EventType<T> type, EventHandlerPriority pri) {
         Object x = map.get(type);
         if (x instanceof PHList hs) {
@@ -125,7 +125,7 @@ public final class InputMap {
     private <T extends Event> void extendHandler(EventType<T> t, EventHandler<T> handler, EventHandlerPriority pri) {
         Object x = map.get(t);
         PHList hs;
-        if(x instanceof PHList h) {
+        if (x instanceof PHList h) {
             hs = h;
         } else {
             // first entry for this event type
@@ -133,7 +133,7 @@ public final class InputMap {
             map.put(t, hs);
             control.addEventHandler(t, eventHandler);
         }
-        
+
         hs.add(pri, handler);
     }
 

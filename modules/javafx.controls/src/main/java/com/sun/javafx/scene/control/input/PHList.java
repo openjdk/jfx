@@ -44,7 +44,7 @@ public class PHList {
      * [ USER_HIGH, handler1, handler2, SKIN_KB, SKIN_LOW, handler3 ]
      */
     private final ArrayList<Object> items = new ArrayList(4);
-    
+
     public PHList() {
     }
 
@@ -218,7 +218,7 @@ public class PHList {
      * @param expected the expected internal structure
      */
     public void validateInternalState(Object... expected) {
-        if(!Arrays.equals(expected, items.toArray())) {
+        if (!Arrays.equals(expected, items.toArray())) {
             throw new RuntimeException("internal mismatch:\nitems=" + items + "\nexpected=" + List.of(expected));
         }
     }

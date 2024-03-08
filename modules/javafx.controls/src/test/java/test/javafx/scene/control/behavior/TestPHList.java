@@ -95,7 +95,7 @@ public class TestPHList {
             EventHandlerPriority.SKIN_KB, null,
             EventHandlerPriority.USER_LOW, h3
         );
-        
+
         hs.remove(h3);
         checkForEach(
             hs,
@@ -122,7 +122,7 @@ public class TestPHList {
             EventHandlerPriority.SKIN_HIGH, h2,
             EventHandlerPriority.USER_LOW, h3
         );
-        
+
         boolean empty = hs.removeHandlers(Set.of(
             EventHandlerPriority.USER_HIGH,
             EventHandlerPriority.USER_LOW,
@@ -131,7 +131,7 @@ public class TestPHList {
         checkForEach(hs);
         Assertions.assertTrue(empty);
     }
-    
+
     private void checkForEach(PHList hs, Object ... expected) {
         ArrayList<Object> items = new ArrayList<>();
         hs.forEach((p, h) -> {
