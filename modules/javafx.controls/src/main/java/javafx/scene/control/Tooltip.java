@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -119,6 +119,7 @@ public class Tooltip extends PopupControl {
     private static int TOOLTIP_YOFFSET = 7;
 
     private static TooltipBehavior BEHAVIOR = new TooltipBehavior(false);
+    private boolean cssForced;
 
     /**
      * Associates the given {@link Tooltip} with the given {@link Node}. The tooltip
@@ -859,7 +860,6 @@ public class Tooltip extends PopupControl {
         private double lastMouseY;
 
         private boolean hideOnExit;
-        private boolean cssForced = false;
 
         TooltipBehavior(final boolean hideOnExit) {
             this.hideOnExit = hideOnExit;
@@ -998,13 +998,9 @@ public class Tooltip extends PopupControl {
                     } else {
                         // Force the CSS to be processed for the tooltip so that it uses the
                         // appropriate timings for showDelay, showDuration, and hideDelay.
-                        if (!cssForced) {
-                            double opacity = t.getOpacity();
-                            t.setOpacity(0);
-                            t.show(owner);
-                            t.hide();
-                            t.setOpacity(opacity);
-                            cssForced = true;
+                        if (!t.cssForced) {
+                            t.bridge.applyCss();
+                            t.cssForced = true;
                         }
 
                         // Start / restart the timer and make sure the tooltip

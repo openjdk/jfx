@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package test.javafx.scene.control;
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
+import javafx.scene.input.MouseEvent;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
@@ -53,6 +54,8 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class TooltipTest {
     private TooltipShim toolTip;//Empty string
@@ -318,7 +321,7 @@ public class TooltipTest {
 
     @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyWrapTextViaCSS() {
@@ -328,15 +331,15 @@ public class TooltipTest {
 
     @Test public void whenFontIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<Font> other = new SimpleObjectProperty<>();
         toolTip.fontProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyFontViaCSS() {
@@ -349,12 +352,12 @@ public class TooltipTest {
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<Node> other = new SimpleObjectProperty<>();
         toolTip.graphicProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Ignore("CSS sets graphicProperty indirectly")
@@ -366,14 +369,14 @@ public class TooltipTest {
 
     @Test public void whenContentDisplayIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<>();
         toolTip.contentDisplayProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
-     @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
+    @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyContentDisplayViaCSS() {
@@ -383,15 +386,15 @@ public class TooltipTest {
 
     @Test public void whenGraphicTextGapIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
         DoubleProperty other = new SimpleDoubleProperty();
         toolTip.graphicTextGapProperty().bind(other);
-          assertFalse(styleable.isSettable(toolTip.get_bridge()));
+        assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
-          assertTrue(styleable.isSettable(toolTip.get_bridge()));
+        assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
 
     @Test public void canSpecifyGraphicTextGapViaCSS() {
@@ -531,5 +534,24 @@ public class TooltipTest {
         }
     }
 
+    /**
+     * A {@link Tooltip} once was showing and quickly hiding itself in order to process the CSS.
+     * This was changed in <a href="https://bugs.openjdk.org/browse/JDK-8296387">JDK-8296387</a>
+     * and this test ensure that this is the case.
+     */
+    @Test
+    public void testTooltipShouldNotBeShownBeforeDelayIsUp() {
+        toolTip.showingProperty().addListener(inv -> fail());
+        Rectangle rect1 = new Rectangle(0, 0, 100, 100);
+
+        StageLoader stageLoader = new StageLoader(rect1);
+
+        Tooltip.install(rect1, toolTip);
+
+        MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
+        rect1.fireEvent(mouseEvent);
+
+        stageLoader.dispose();
+    }
 
 }
