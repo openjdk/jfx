@@ -24,22 +24,40 @@
  */
 package com.sun.javafx.scene.control;
 
+import javafx.scene.control.Labeled;
+import com.sun.javafx.util.Utils;
+
 /**
- * Table Cell Helper
+ * Labeled Helper.
  */
-public class TableCellHelper {
+public class LabeledHelper {
+    /** Accessor */
+    public interface Accessor {
+        /**
+         * Returns true when the Labeled must compute the actual content width in computePrefWidth().
+         * @return whether computePrefWidth() must compute the actual content width
+         */
+        public boolean isUseContentWidth();
+    }
+
+    private static Accessor accessor;
+
+    static {
+        Utils.forceInit(Labeled.class);
+    }
+
+    private LabeledHelper() {
+    }
+
+    public static void setAccessor(Accessor a) {
+        accessor = a;
+    }
+
     /**
-     * Setting this flag to true causes
-     * TableCellSkinBase.computePrefWidth() and
-     * TreeTableCellSkin.computePrefWidth()
-     * to compute the actual content width rather than table column width.
-     * (We should have never used such a logic without exposing the way to obtain
-     * the content width!).
-     * It is safe to use a public global flag because:
-     * a) it's an implementation detail and
-     * b) we are always in the content of the FX app thread
-     * This functionality is made separate from Properties.DEFER_TO_PARENT_PREF_WIDTH which
-     * by itself looks rather weird.
+     * Returns true when the Labeled must compute the actual content width in computePrefWidth().
+     * @return whether computePrefWidth() must compute the actual content width
      */
-    public static boolean useContentWidth;
+    public static boolean isUseContentWidth() {
+        return accessor.isUseContentWidth();
+    }
 }

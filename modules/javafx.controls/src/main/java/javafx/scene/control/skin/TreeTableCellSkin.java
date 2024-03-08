@@ -35,7 +35,7 @@ import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
-import com.sun.javafx.scene.control.TableCellHelper;
+import com.sun.javafx.scene.control.LabeledHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 
@@ -130,7 +130,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
     @Override
     protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset,
             double leftInset) {
-        if (TableCellHelper.useContentWidth || isDeferToParentForPrefWidth) {
+        if (LabeledHelper.isUseContentWidth() || isDeferToParentForPrefWidth) {
             return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + calculateIndentation();
         }
 

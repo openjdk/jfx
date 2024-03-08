@@ -33,7 +33,7 @@ import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.shape.Rectangle;
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.TableCellHelper;
+import com.sun.javafx.scene.control.LabeledHelper;
 
 /**
  * Base skin for table cell controls, for example:
@@ -152,7 +152,7 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
     /** {@inheritDoc} */
     @Override
     protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (TableCellHelper.useContentWidth || isDeferToParentForPrefWidth) {
+        if (LabeledHelper.isUseContentWidth() || isDeferToParentForPrefWidth) {
             return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
         }
 

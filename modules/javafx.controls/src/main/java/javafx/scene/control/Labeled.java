@@ -67,7 +67,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.TableCellHelper;
+import com.sun.javafx.scene.control.LabeledHelper;
 
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
@@ -98,6 +98,29 @@ public abstract class Labeled extends Control {
 
     private final static String DEFAULT_ELLIPSIS_STRING = "...";
 
+    /**
+     * Setting this flag to true causes
+     * TableCellSkinBase.computePrefWidth() and
+     * TreeTableCellSkin.computePrefWidth()
+     * to compute the actual content width rather than table column width.
+     * (We should have never used such a logic without exposing the way to obtain
+     * the content width!).
+     * It is safe to use a public global flag because:
+     * a) it's an implementation detail and
+     * b) we are always in the content of the FX app thread
+     * This functionality is made separate from Properties.DEFER_TO_PARENT_PREF_WIDTH which
+     * by itself looks rather weird.
+     */
+    private static boolean useContentWidth;
+
+    static {
+        LabeledHelper.setAccessor(new LabeledHelper.Accessor() {
+            @Override
+            public boolean isUseContentWidth() {
+                return useContentWidth;
+            }
+        });
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -839,7 +862,7 @@ public abstract class Labeled extends Control {
                 Bindings.createBooleanBinding(() -> {
                     // make sure prefWidth always returns the actual content width
                     // rather than the column width if inside a table
-                    TableCellHelper.useContentWidth = true;
+                    useContentWidth = true;
                     try {
                         if (isWrapText()) {
                             return (getHeight() < prefHeight(getWidth()));
@@ -847,7 +870,7 @@ public abstract class Labeled extends Control {
 
                         return (getWidth() < prefWidth(getHeight()));
                     } finally {
-                        TableCellHelper.useContentWidth = false;
+                        useContentWidth = false;
                     }
                 },
                 ellipsisStringProperty(),
