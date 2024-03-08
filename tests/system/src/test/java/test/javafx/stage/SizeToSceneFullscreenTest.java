@@ -32,13 +32,14 @@ import javafx.scene.control.Button;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SizeToSceneFullscreenTest {
 
@@ -58,12 +59,12 @@ public class SizeToSceneFullscreenTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
         Util.shutdown(stage);
     }
@@ -75,7 +76,8 @@ public class SizeToSceneFullscreenTest {
 
         Rectangle2D bounds = Screen.getPrimary().getBounds();
 
-        Assert.assertEquals("Stage height", bounds.getHeight(), stage.getHeight(), 1d);
-        Assert.assertEquals("Stage width", bounds.getWidth(), stage.getWidth(), 1d);
+        // There might be small inconsistencies because of decoration, so we expect the bounds to be equals or bigger.
+        assertTrue(stage.getHeight() >= bounds.getHeight());
+        assertTrue(stage.getWidth() >= bounds.getWidth());
     }
 }
