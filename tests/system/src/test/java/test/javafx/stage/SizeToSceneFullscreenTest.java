@@ -76,8 +76,8 @@ public class SizeToSceneFullscreenTest {
 
         Rectangle2D bounds = Screen.getPrimary().getBounds();
 
-        // There might be small inconsistencies because of decoration, so we expect the bounds to be equals or bigger.
-        assertTrue(stage.getHeight() >= bounds.getHeight());
-        assertTrue(stage.getWidth() >= bounds.getWidth());
+        // There might be small inconsistencies because of decoration, so we expect the bounds to be equal or bigger.
+        assertTrue(stage.getWidth() >= bounds.getWidth(), stage.getWidth() + " >= " + bounds.getWidth());
+        assertTrue(stage.getHeight() >= bounds.getHeight(), stage.getHeight() + " >= " + bounds.getHeight());
     }
 }
