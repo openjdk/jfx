@@ -6085,4 +6085,48 @@ public class TableViewTest {
         // Should not throw an NPE.
         table.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
     }
+
+    @Test
+    public void testChangeRowFactoryShouldRecreateRows() {
+        String propertyKey = "key";
+        String firstRowKey = "table_row_key1";
+        String secondRowKey = "table_row_key2";
+
+        final TableColumn<String, String> c = new TableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+        table.getColumns().add(c);
+
+        table.getItems().addAll("1", "2", "3");
+
+        table.setRowFactory(e -> {
+            TableRow<String> row = new TableRow<>();
+            row.getProperties().put(propertyKey, firstRowKey);
+            return row;
+        });
+
+        stageLoader = new StageLoader(table);
+        stageLoader.getStage().setWidth(300);
+        stageLoader.getStage().setHeight(300);
+
+        for (int index = 0; index < table.getItems().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(table, 0);
+
+            assertEquals(firstRowKey, cell.getProperties().get(propertyKey));
+        }
+
+        // Change the row factory and verify cells again.
+        table.setRowFactory(e -> {
+            TableRow<String> row = new TableRow<>();
+            row.getProperties().put(propertyKey, secondRowKey);
+            return row;
+        });
+
+        Toolkit.getToolkit().firePulse();
+
+        for (int index = 0; index < table.getItems().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(table, 0);
+
+            assertEquals(secondRowKey, cell.getProperties().get(propertyKey));
+        }
+    }
 }

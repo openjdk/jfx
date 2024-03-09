@@ -7276,4 +7276,53 @@ public class TreeTableViewTest {
         // Should not throw an NPE.
         treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_COUNT);
     }
+
+    @Test
+    public void testChangeRowFactoryShouldRecreateRows() {
+        String propertyKey = "key";
+        String firstRowKey = "table_row_key1";
+        String secondRowKey = "table_row_key2";
+
+        TreeTableColumn<String, String> c = new TreeTableColumn<>("C");
+        c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+        treeTableView.getColumns().add(c);
+
+        treeTableView.setRoot(new TreeItem<>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+        for (int i = 0; i < 4; i++) {
+            TreeItem<String> parent = new TreeItem<String>("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        treeTableView.setRowFactory(e -> {
+            TreeTableRow<String> row = new TreeTableRow<>();
+            row.getProperties().put(propertyKey, firstRowKey);
+            return row;
+        });
+
+        stageLoader = new StageLoader(treeTableView);
+        stageLoader.getStage().setWidth(300);
+        stageLoader.getStage().setHeight(300);
+
+        for (int index = 0; index < treeTableView.getRoot().getChildren().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
+
+            assertEquals(firstRowKey, cell.getProperties().get(propertyKey));
+        }
+
+        // Change the row factory and verify cells again.
+        treeTableView.setRowFactory(e -> {
+            TreeTableRow<String> row = new TreeTableRow<>();
+            row.getProperties().put(propertyKey, secondRowKey);
+            return row;
+        });
+
+        Toolkit.getToolkit().firePulse();
+
+        for (int index = 0; index < treeTableView.getRoot().getChildren().size(); index++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeTableView, 0);
+
+            assertEquals(secondRowKey, cell.getProperties().get(propertyKey));
+        }
+    }
 }

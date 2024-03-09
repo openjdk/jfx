@@ -146,10 +146,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             updateItemCount();
         });
 
-        lh.addChangeListener(control.rowFactoryProperty(), (ev) -> {
-            flow.recreateCells();
-        });
-
         lh.addChangeListener(control.expandedItemCountProperty(), (ev) -> {
             markItemCountDirty();
         });
