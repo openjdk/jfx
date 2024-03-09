@@ -138,27 +138,6 @@ public class BitSetTest {
         assertEquals(0, changed.getAndSet(0));  // not called
     }
 
-// This test can be reinstated if there ever is another implementation of com.sun.javafx.css.BitSet
-//    @Test
-//    void twoNonEmptyBitSetsWithSamePatternAndSizeShouldNotBeConsideredEqualsWhenElementTypesAreDifferent() {
-//        StyleClassSet set1 = new StyleClassSet();
-//        PseudoClassState set2 = new PseudoClassState();
-//
-//        PseudoClass pseudoClass = PseudoClass.getPseudoClass("abc");
-//
-//        int index = PseudoClassStateShim.pseudoClassMap.get(pseudoClass.getPseudoClassName());
-//
-//        set1.add(new StyleClass("xyz", index));  // no idea why this is public API, but I'll take it
-//        set2.add(pseudoClass);
-//
-//        /*
-//         * The two sets above contain elements of different types (PseudoClass and StyleClass)
-//         * and therefore should never be equal, despite their bit pattern being the same:
-//         */
-//
-//        assertNotEquals(set1, set2);
-//    }
-
     @Test
     void shouldBeEqualAfterGrowAndShrink() {
         PseudoClassState set1 = new PseudoClassState();
