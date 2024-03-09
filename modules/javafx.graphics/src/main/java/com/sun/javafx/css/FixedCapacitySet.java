@@ -200,17 +200,6 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
         }
 
         @Override
-        public boolean addAll(Collection<? extends T> c) {
-            boolean modified = false;
-
-            for (T element : c) {
-                modified |= add(element);
-            }
-
-            return modified;
-        }
-
-        @Override
         public int hashCode() {
             return element == null ? 0 : element.hashCode();
         }
@@ -284,17 +273,6 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
             size++;
 
             return true;
-        }
-
-        @Override
-        public boolean addAll(Collection<? extends T> c) {
-            boolean modified = false;
-
-            for (T element : c) {
-                modified |= add(element);
-            }
-
-            return modified;
         }
 
         @Override
@@ -385,17 +363,6 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
             elements[size++] = e;
 
             return true; // not present, set changed
-        }
-
-        @Override
-        public boolean addAll(Collection<? extends T> c) {
-            boolean modified = false;
-
-            for (T element : c) {
-                modified |= add(element);
-            }
-
-            return modified;
         }
 
         @Override
@@ -547,17 +514,6 @@ public sealed abstract class FixedCapacitySet<T> extends AbstractSet<T> {
             size++;
 
             return true; // not present, set changed
-        }
-
-        @Override
-        public boolean addAll(Collection<? extends T> c) {
-            boolean modified = false;
-
-            for (T element : c) {
-                modified |= add(element);
-            }
-
-            return modified;
         }
 
         @Override
