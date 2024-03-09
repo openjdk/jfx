@@ -67,8 +67,19 @@ class TooltipTest {
         long tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
-        assertTrue(tooltipShowTime >= 1000);
-        assertTrue(tooltipShowTime <= 1100);
+        assertTooltipShowDelay(tooltipShowTime, 1000);
+    }
+
+    @Test
+    public void testCssStylesheetTooltip() {
+        scene.getStylesheets().add(getClass().getResource("Tooltip.css").toExternalForm());
+
+        assertFalse(tooltip.isShowing());
+
+        long tooltipShowTime = waitForTooltip();
+
+        assertTrue(tooltip.isShowing());
+        assertTooltipShowDelay(tooltipShowTime, 50);
     }
 
     @Test
@@ -80,8 +91,7 @@ class TooltipTest {
         long tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
-        assertTrue(tooltipShowTime >= 100);
-        assertTrue(tooltipShowTime <= 200);
+        assertTooltipShowDelay(tooltipShowTime, 100);
     }
 
     @Test
@@ -93,9 +103,7 @@ class TooltipTest {
         long tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
-
-        assertTrue(tooltipShowTime >= 100);
-        assertTrue(tooltipShowTime <= 200);
+        assertTooltipShowDelay(tooltipShowTime, 100);
     }
 
     @Test
@@ -107,9 +115,7 @@ class TooltipTest {
         long tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
-
-        assertTrue(tooltipShowTime >= 100);
-        assertTrue(tooltipShowTime <= 200);
+        assertTooltipShowDelay(tooltipShowTime, 100);
 
         // Try again with a bigger show delay.
         tooltip.setShowDelay(Duration.millis(2000));
@@ -117,8 +123,7 @@ class TooltipTest {
         tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
-        assertTrue(tooltipShowTime >= 2000);
-        assertTrue(tooltipShowTime <= 2100);
+        assertTooltipShowDelay(tooltipShowTime, 2000);
     }
 
     @Test
@@ -130,8 +135,7 @@ class TooltipTest {
         long tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
-        assertTrue(tooltipShowTime >= 100);
-        assertTrue(tooltipShowTime <= 200);
+        assertTooltipShowDelay(tooltipShowTime, 100);
 
         // Try again with a bigger show delay.
         tooltip.setStyle("-fx-show-delay: 2000ms;");
@@ -139,8 +143,7 @@ class TooltipTest {
         tooltipShowTime = waitForTooltip();
 
         assertTrue(tooltip.isShowing());
-        assertTrue(tooltipShowTime >= 2000);
-        assertTrue(tooltipShowTime <= 2100);
+        assertTooltipShowDelay(tooltipShowTime, 2000);
     }
 
     @Test
@@ -155,8 +158,7 @@ class TooltipTest {
 
         assertTrue(tooltip.isShowing());
 
-        assertTrue(tooltipShowTime >= 100);
-        assertTrue(tooltipShowTime <= 200);
+        assertTooltipShowDelay(tooltipShowTime, 100);
 
         // Try again.
         tooltipShownLatch = new CountDownLatch(1);
@@ -166,8 +168,7 @@ class TooltipTest {
 
         System.out.println(tooltipShowTime);
 
-        assertTrue(tooltipShowTime >= 100);
-        assertTrue(tooltipShowTime <= 200);
+        assertTooltipShowDelay(tooltipShowTime, 100);
     }
 
     private long waitForTooltip() {
@@ -199,6 +200,14 @@ class TooltipTest {
         Util.sleep(250);
 
         return finalTime;
+    }
+
+    private static void assertTooltipShowDelay(long tooltipShowTime, long expectedTime) {
+        // To avoid any small timing error we rather check if the value is between.
+        long maximumTime = expectedTime + 50;
+
+        assertTrue(tooltipShowTime >= expectedTime, tooltipShowTime + " < " + expectedTime);
+        assertTrue(tooltipShowTime <= maximumTime, tooltipShowTime + " > " + maximumTime);
     }
 
     public static class TestApp extends Application {
@@ -234,6 +243,8 @@ class TooltipTest {
         Util.runAndWait(() -> {
             button.setTooltip(null);
             tooltip = null;
+
+            scene.getStylesheets().clear();
         });
     }
 

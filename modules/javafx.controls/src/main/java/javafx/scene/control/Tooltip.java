@@ -171,6 +171,16 @@ public class Tooltip extends PopupControl {
         getStyleClass().setAll("tooltip");
     }
 
+    @Override
+    protected void show() {
+        // The very first show call is just for us to do the correct CSS processing, so we ignore the request here.
+        if (!cssForced) {
+            return;
+        }
+
+        super.show();
+    }
+
     /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -999,6 +1009,11 @@ public class Tooltip extends PopupControl {
                         // Force the CSS to be processed for the tooltip so that it uses the
                         // appropriate timings for showDelay, showDuration, and hideDelay.
                         if (!t.cssForced) {
+                            // Note that we do not really show the tooltip but rather do all the necessary setup for
+                            // the correct CSS processing.
+                            // In this case we especially need the show method to attach all the stylesheets to us
+                            // from the owner root window.
+                            t.show(owner);
                             t.bridge.applyCss();
                             t.cssForced = true;
                         }
