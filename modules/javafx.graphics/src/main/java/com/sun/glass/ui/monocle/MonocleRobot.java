@@ -143,7 +143,9 @@ class MonocleRobot extends GlassRobot {
         MouseState state = new MouseState();
         MouseInput mouse = MouseInput.getInstance();
         mouse.getState(state);
-        int direction = wheelAmt < 0
+        // org.testfx.robot.impl.ScrollRobotImpl defines SCROLL_ONE_UP_OR_LEFT = -1 and
+        // SCROLL_ONE_DOWN_OR_RIGHT = 1.
+        int direction = wheelAmt > 0
                         ? MouseState.WHEEL_DOWN
                         : MouseState.WHEEL_UP;
         for (int i = 0; i < Math.abs(wheelAmt); i++) {
