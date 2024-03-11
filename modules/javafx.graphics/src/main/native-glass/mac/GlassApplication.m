@@ -41,6 +41,8 @@
 #import <Security/SecRequirement.h>
 #import <Carbon/Carbon.h>
 
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
@@ -293,13 +295,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-     if (!NSApp.isActive && requiresActivation) {
+    if (!NSApp.isActive && requiresActivation) {
         // As of macOS 14, application gets to the foreground,
         // but it doesn't get activated, so this is needed:
         LOG("-> need to active application");
         dispatch_async(dispatch_get_main_queue(), ^{
-            [NSApp activate];
+            [NSApp performSelector: @selector(activate)];
         });
+        // TODO: performSelector is used only to avoid a compiler
+        // warning with the 13.3 SDK. After updating to SDK 14
+        // this can be converted to a standard call.
     }
 }
 
@@ -642,28 +647,25 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 char *path = getenv([property UTF8String]);
                 if (path != NULL)
                 {
+                    BOOL isFolder = NO;
                     NSString *overridenPath = [NSString stringWithFormat:@"%s", path];
-                    if ([[NSFileManager defaultManager] fileExistsAtPath:overridenPath isDirectory:NO] == YES)
+                    if ([[NSFileManager defaultManager] fileExistsAtPath:overridenPath isDirectory:&isFolder] && !isFolder)
                     {
                         iconPath = overridenPath;
                     }
                 }
-                if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath isDirectory:NO] == NO)
-                {
-                    // try again using Java generic icon (this icon might go away eventually ?)
-                    iconPath = [NSString stringWithFormat:@"%s", "/System/Library/Frameworks/JavaVM.framework/Resources/GenericApp.icns"];
-                }
 
                 NSImage *image = nil;
                 {
-                    if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath isDirectory:NO] == YES)
+                    BOOL isFolder = NO;
+                    if ([[NSFileManager defaultManager] fileExistsAtPath:iconPath isDirectory:&isFolder] && !isFolder)
                     {
                         image = [[NSImage alloc] initWithContentsOfFile:iconPath];
                     }
                     if (image == nil)
                     {
-                        // last resort - if still no icon, then ask for an empty standard app icon, which is guranteed to exist
-                        image = [[NSImage imageNamed:@"NSApplicationIcon"] retain];
+                        // last resort - if still no icon, then ask for an empty standard app icon, which is guaranteed to exist
+                        image = [[NSImage imageNamed:@"NSImageNameApplicationIcon"] retain];
                     }
                 }
                 [app setApplicationIconImage:image];
@@ -745,7 +747,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         else // event loop is not started
         {
             if ([NSThread isMainThread] == YES) {
-                [glassApp applicationWillFinishLaunching: NULL];
+                // The NSNotification is ignored but the compiler insists on a non-NULL argument.
+                NSNotification* notification = [NSNotification notificationWithName: NSApplicationWillFinishLaunchingNotification
+                    object: NSApp
+                    userInfo: nil];
+                [glassApp applicationWillFinishLaunching: notification];
             } else {
                 [glassApp performSelectorOnMainThread:@selector(applicationWillFinishLaunching:) withObject:NULL waitUntilDone:NO];
             }

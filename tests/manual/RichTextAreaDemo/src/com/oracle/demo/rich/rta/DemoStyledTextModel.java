@@ -25,11 +25,11 @@
 package com.oracle.demo.rich.rta;
 
 import java.text.DecimalFormat;
-import javafx.incubator.scene.control.rich.StyleResolver;
-import javafx.incubator.scene.control.rich.TextPos;
-import javafx.incubator.scene.control.rich.model.RichParagraph;
-import javafx.incubator.scene.control.rich.model.StyleAttrs;
-import javafx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase;
+import jfx.incubator.scene.control.rich.StyleResolver;
+import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.RichParagraph;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyledTextModelViewOnlyBase;
 import javafx.scene.Node;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;

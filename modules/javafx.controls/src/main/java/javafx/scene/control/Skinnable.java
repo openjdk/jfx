@@ -52,7 +52,9 @@ public interface Skinnable {
      */
     public ObjectProperty<Skin<?>> skinProperty();
 
+    @SuppressWarnings("doclint:missing")
     public void setSkin(Skin<?> value);
 
+    @SuppressWarnings("doclint:missing")
     public Skin<?> getSkin();
 }

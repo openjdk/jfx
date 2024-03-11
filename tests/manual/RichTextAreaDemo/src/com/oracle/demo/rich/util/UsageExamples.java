@@ -25,21 +25,33 @@
 
 package com.oracle.demo.rich.util;
 
-import javafx.incubator.scene.control.input.FunctionTag;
-import javafx.incubator.scene.control.input.KeyBinding;
-import javafx.incubator.scene.control.rich.ConfigurationParameters;
-import javafx.incubator.scene.control.rich.RichTextArea;
-import javafx.incubator.scene.control.rich.TextPos;
-import javafx.incubator.scene.control.rich.RichTextArea.Tags;
-import javafx.incubator.scene.control.rich.model.StyleAttrs;
-import javafx.incubator.scene.control.rich.skin.LineNumberDecorator;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.input.KeyCode;
+import jfx.incubator.scene.control.input.FunctionTag;
+import jfx.incubator.scene.control.input.KeyBinding;
+import jfx.incubator.scene.control.rich.ConfigurationParameters;
+import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.skin.LineNumberDecorator;
 
 /**
  * The usage examples used in the documentation.
  */
 class UsageExamples {
+    void createViewOnly() {
+        SimpleViewOnlyStyledModel m = new SimpleViewOnlyStyledModel();
+        // add text segment using CSS style name (requires a style sheet)
+        m.addSegment("RichTextArea ", null, "HEADER");
+        // add text segment using direct style
+        m.addSegment("Demo", "-fx-font-size:200%;", null);
+        // newline
+        m.nl();
+
+        RichTextArea t = new RichTextArea(m);
+    }
+
     void appendStyledText() {
         // create styles
         StyleAttrs heading = StyleAttrs.builder().setBold(true).setFontSize(24).build();
@@ -62,7 +74,7 @@ class UsageExamples {
         RichTextArea richTextArea = new RichTextArea(cp, null);
 
         // creates a new key binding mapped to an external function
-        richTextArea.getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), () -> {
+        richTextArea.getInputMap().register(KeyBinding.shortcut(KeyCode.W), (c) -> {
             System.out.println("console!");
         });
 
@@ -75,7 +87,7 @@ class UsageExamples {
         richTextArea.getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), RichTextArea.Tags.PASTE_PLAIN_TEXT);
 
         // redefine a function
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT, () -> { });
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT, (c) -> { });
         richTextArea.pastePlainText(); // becomes a no-op
         // revert back to the default behavior
         richTextArea.getInputMap().restoreDefaultFunction(RichTextArea.Tags.PASTE_PLAIN_TEXT);
@@ -83,13 +95,13 @@ class UsageExamples {
         // sets a side decorator
         richTextArea.setLeftDecorator(new LineNumberDecorator());
 
-        richTextArea.getInputMap().registerFunction(PRINT_TO_CONSOLE, () -> {
+        richTextArea.getInputMap().registerFunction(PRINT_TO_CONSOLE, (c) -> {
             // new functionality
             System.out.println("PRINT_TO_CONSOLE executed");
         });
 
         // change the functionality of an existing key binding
-        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT, () -> {
+        richTextArea.getInputMap().registerFunction(RichTextArea.Tags.MOVE_WORD_NEXT, (c) -> {
             // refers to custom logic
             TextPos p = getCustomNextWordPosition(richTextArea);
             richTextArea.select(p);
@@ -111,7 +123,7 @@ class UsageExamples {
             getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), MY_TAG);
         }
 
-        private void newFunctionImpl() {
+        private void newFunctionImpl(MyControl c) {
             // custom functionality
         }
     }

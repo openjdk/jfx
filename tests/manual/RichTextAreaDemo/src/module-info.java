@@ -40,5 +40,5 @@ module RichTextAreaDemo {
     requires javafx.base;
     requires javafx.controls;
     requires javafx.graphics;
-    requires javafx.incubator.richtext;
+    requires jfx.incubator.richtext;
 }

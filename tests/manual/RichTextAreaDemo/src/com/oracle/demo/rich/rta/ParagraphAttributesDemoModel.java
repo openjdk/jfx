@@ -25,9 +25,9 @@
 
 package com.oracle.demo.rich.rta;
 
-import javafx.incubator.scene.control.rich.model.RtfFormatHandler;
-import javafx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
-import javafx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.RtfFormatHandler;
+import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import com.oracle.demo.rich.util.FX;

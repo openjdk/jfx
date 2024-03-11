@@ -25,8 +25,8 @@
 package com.oracle.demo.rich.editor;
 
 import java.util.List;
-import javafx.incubator.scene.control.input.KeyBinding;
-import javafx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.input.KeyBinding;
+import jfx.incubator.scene.control.rich.RichTextArea;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
@@ -51,7 +51,7 @@ public class RichEditorDemoPane extends BorderPane {
 
         control = new RichTextArea();
         // custom function
-        control.getInputMap().registerKey(KeyBinding.shortcut(KeyCode.W), () -> {
+        control.getInputMap().register(KeyBinding.shortcut(KeyCode.W), (c) -> {
             System.out.println("console!");
         });
 

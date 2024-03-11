@@ -28,7 +28,7 @@ include "base", "graphics", "controls", "incubator.richtext", "swing", "swt", "f
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
-project(":incubator.richtext").projectDir = file("modules/javafx.incubator.richtext")
+project(":incubator.richtext").projectDir = file("modules/jfx.incubator.richtext")
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")

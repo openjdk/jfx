@@ -27,13 +27,13 @@ package com.oracle.demo.rich.rta;
 
 import java.util.ArrayList;
 import java.util.function.Supplier;
-import javafx.incubator.scene.control.rich.RichTextArea;
-import javafx.incubator.scene.control.rich.StyleResolver;
-import javafx.incubator.scene.control.rich.TextPos;
-import javafx.incubator.scene.control.rich.model.PlainTextModel;
-import javafx.incubator.scene.control.rich.model.RichParagraph;
-import javafx.incubator.scene.control.rich.model.StyleAttrs;
-import javafx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.rich.RichTextArea;
+import jfx.incubator.scene.control.rich.StyleResolver;
+import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.PlainTextModel;
+import jfx.incubator.scene.control.rich.model.RichParagraph;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.Region;
 

@@ -2753,7 +2753,7 @@ project(":incubator.richtext") {
     project.ext.buildModule = true
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
-    project.ext.moduleName = "javafx.incubator.richtext"
+    project.ext.moduleName = "jfx.incubator.richtext"
     project.ext.incubating = true
 
     sourceSets {
@@ -5753,9 +5753,7 @@ compileTargets { t ->
                         }
                         args("--legal-notices")
                         args(srcLegalDir)
-                        // https://bugs.openjdk.org/browse/JDK-8278766
-                        def status = compareJdkVersion(jdkVersion, "19")
-                        if (sourceDateEpoch != null && status >= 0) {
+                        if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
                         }
                         if (incubating) {

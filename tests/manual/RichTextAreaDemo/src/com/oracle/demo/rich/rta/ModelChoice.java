@@ -25,14 +25,14 @@
 package com.oracle.demo.rich.rta;
 
 import java.io.IOException;
-import javafx.incubator.scene.control.rich.TextPos;
-import javafx.incubator.scene.control.rich.model.PlainTextModel;
-import javafx.incubator.scene.control.rich.model.EditableRichTextModel;
-import javafx.incubator.scene.control.rich.model.RichParagraph;
-import javafx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
-import javafx.incubator.scene.control.rich.model.StyleAttrs;
-import javafx.incubator.scene.control.rich.model.StyledInput;
-import javafx.incubator.scene.control.rich.model.StyledTextModel;
+import jfx.incubator.scene.control.rich.TextPos;
+import jfx.incubator.scene.control.rich.model.PlainTextModel;
+import jfx.incubator.scene.control.rich.model.EditableRichTextModel;
+import jfx.incubator.scene.control.rich.model.RichParagraph;
+import jfx.incubator.scene.control.rich.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.model.StyledInput;
+import jfx.incubator.scene.control.rich.model.StyledTextModel;
 import javafx.scene.paint.Color;
 
 public enum ModelChoice {

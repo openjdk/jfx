@@ -25,11 +25,11 @@
 package com.oracle.demo.rich.rta;
 
 import javafx.scene.Node;
-import javafx.incubator.scene.control.rich.SideDecorator;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import jfx.incubator.scene.control.rich.SideDecorator;
 
 public class DemoColorSideDecorator implements SideDecorator {
     public DemoColorSideDecorator() {

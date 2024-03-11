@@ -26,10 +26,10 @@ package com.oracle.demo.rich.codearea;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javafx.incubator.scene.control.rich.CodeTextModel;
-import javafx.incubator.scene.control.rich.SyntaxDecorator;
-import javafx.incubator.scene.control.rich.model.RichParagraph;
-import javafx.incubator.scene.control.rich.model.StyleAttrs;
+import jfx.incubator.scene.control.rich.CodeTextModel;
+import jfx.incubator.scene.control.rich.SyntaxDecorator;
+import jfx.incubator.scene.control.rich.model.RichParagraph;
+import jfx.incubator.scene.control.rich.model.StyleAttrs;
 import javafx.scene.paint.Color;
 
 /**
