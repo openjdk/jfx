@@ -72,7 +72,7 @@ import jfx.incubator.scene.control.rich.TextPos;
  * and delegate these to subclasses.
  * <p>
  * At the end of this process, an event is sent to all the {@link ChangeListener}s, followed by the
- * skin requesting the updated paragraphs when required. 
+ * skin requesting the updated paragraphs when required.
  *
  * <h2>Creating a Paragraph</h2>
  * The model presents its content to the view(s) via immutable {@link RichParagraph}.
