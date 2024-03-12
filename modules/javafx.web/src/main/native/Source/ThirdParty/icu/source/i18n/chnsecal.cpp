@@ -493,7 +493,7 @@ double ChineseCalendar::daysToMillis(double days) const {
         UErrorCode status = U_ZERO_ERROR;
         fZoneAstroCalc->getOffset(millis, false, rawOffset, dstOffset, status);
         if (U_SUCCESS(status)) {
-        	return millis - (double)(rawOffset + dstOffset);
+                return millis - (double)(rawOffset + dstOffset);
         }
     }
     return millis - (double)CHINA_OFFSET;
@@ -510,7 +510,7 @@ double ChineseCalendar::millisToDays(double millis) const {
         UErrorCode status = U_ZERO_ERROR;
         fZoneAstroCalc->getOffset(millis, false, rawOffset, dstOffset, status);
         if (U_SUCCESS(status)) {
-        	return ClockMath::floorDivide(millis + (double)(rawOffset + dstOffset), kOneDay);
+                return ClockMath::floorDivide(millis + (double)(rawOffset + dstOffset), kOneDay);
         }
     }
     return ClockMath::floorDivide(millis + (double)CHINA_OFFSET, kOneDay);

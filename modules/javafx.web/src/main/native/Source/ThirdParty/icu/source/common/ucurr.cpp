@@ -2430,7 +2430,7 @@ ucurr_forLocaleAndDate(const char* locale,
                 UErrorCode* ec)
 {
     int32_t resLen = 0;
-	int32_t currIndex = 0;
+        int32_t currIndex = 0;
     const char16_t* s = nullptr;
 
     if (ec != nullptr && U_SUCCESS(*ec))
@@ -2652,11 +2652,11 @@ U_CAPI UEnumeration *U_EXPORT2 ucurr_getKeywordValuesForLocale(const char *key, 
             {
                        const char16_t* defString = ures_getStringByKey(&curbndl, "id", &curIDLength, status);
                        if(U_SUCCESS(*status)) {
-			   if(curIDLength+1 > ULOC_KEYWORDS_CAPACITY) {
-				*status = U_BUFFER_OVERFLOW_ERROR;
-			   } else {
-                           	u_UCharsToChars(defString, curID, curIDLength+1);
-			   }
+                           if(curIDLength+1 > ULOC_KEYWORDS_CAPACITY) {
+                                *status = U_BUFFER_OVERFLOW_ERROR;
+                           } else {
+                                u_UCharsToChars(defString, curID, curIDLength+1);
+                           }
                        }
             }
 #endif

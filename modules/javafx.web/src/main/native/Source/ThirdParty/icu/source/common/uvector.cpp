@@ -332,7 +332,7 @@ UBool UVector::ensureCapacity(int32_t minimumCapacity, UErrorCode &status) {
         return false;
     }
     if (capacity < minimumCapacity) {
-        if (capacity > (INT32_MAX - 1) / 2) {        	// integer overflow check
+        if (capacity > (INT32_MAX - 1) / 2) {           // integer overflow check
             status = U_ILLEGAL_ARGUMENT_ERROR;
             return false;
         }
@@ -340,7 +340,7 @@ UBool UVector::ensureCapacity(int32_t minimumCapacity, UErrorCode &status) {
         if (newCap < minimumCapacity) {
             newCap = minimumCapacity;
         }
-        if (newCap > (int32_t)(INT32_MAX / sizeof(UElement))) {	// integer overflow check
+        if (newCap > (int32_t)(INT32_MAX / sizeof(UElement))) { // integer overflow check
             // We keep the original memory contents on bad minimumCapacity.
             status = U_ILLEGAL_ARGUMENT_ERROR;
             return false;

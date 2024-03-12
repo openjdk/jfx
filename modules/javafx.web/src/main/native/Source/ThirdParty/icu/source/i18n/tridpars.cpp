@@ -153,10 +153,10 @@ TransliteratorIDParser::parseSingleID(const UnicodeString& id, int32_t& pos,
             single = specsToID(specsA, FORWARD);
             // Null pointers check
             if (b == nullptr || single == nullptr) {
-            	delete b;
-            	delete single;
-            	status = U_MEMORY_ALLOCATION_ERROR;
-            	return nullptr;
+                delete b;
+                delete single;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                return nullptr;
             }
             single->canonID.append(OPEN_REV)
                 .append(b->canonID).append(CLOSE_REV);
@@ -169,10 +169,10 @@ TransliteratorIDParser::parseSingleID(const UnicodeString& id, int32_t& pos,
             single = specsToID(specsB, FORWARD);
             // Check for null pointer.
             if (a == nullptr || single == nullptr) {
-            	delete a;
-            	delete single;
-            	status = U_MEMORY_ALLOCATION_ERROR;
-            	return nullptr;
+                delete a;
+                delete single;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                return nullptr;
             }
             single->canonID.append(OPEN_REV)
                 .append(a->canonID).append(CLOSE_REV);
@@ -193,8 +193,8 @@ TransliteratorIDParser::parseSingleID(const UnicodeString& id, int32_t& pos,
         }
         // Check for nullptr pointer
         if (single == nullptr) {
-        	status = U_MEMORY_ALLOCATION_ERROR;
-        	return nullptr;
+                status = U_MEMORY_ALLOCATION_ERROR;
+                return nullptr;
         }
         single->filter = specsA->filter;
     }
@@ -661,16 +661,16 @@ void TransliteratorIDParser::registerSpecialInverse(const UnicodeString& target,
 
     UnicodeString *tempus = new UnicodeString(inverseTarget);  // Used for null pointer check before usage.
     if (tempus == nullptr) {
-    	status = U_MEMORY_ALLOCATION_ERROR;
-    	return;
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
     SPECIAL_INVERSES->put(target, tempus, status);
     if (bidirectional) {
-    	tempus = new UnicodeString(target);
-    	if (tempus == nullptr) {
-    		status = U_MEMORY_ALLOCATION_ERROR;
-    		return;
-    	}
+        tempus = new UnicodeString(target);
+        if (tempus == nullptr) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+                return;
+        }
         SPECIAL_INVERSES->put(inverseTarget, tempus, status);
     }
 }
@@ -908,8 +908,8 @@ void U_CALLCONV TransliteratorIDParser::init(UErrorCode &status) {
 
     SPECIAL_INVERSES = new Hashtable(true, status);
     if (SPECIAL_INVERSES == nullptr) {
-    	status = U_MEMORY_ALLOCATION_ERROR;
-    	return;
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
     }
     SPECIAL_INVERSES->setValueDeleter(uprv_deleteUObject);
 }
