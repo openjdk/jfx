@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -616,6 +616,8 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *         }
  *     };
  * </code></pre>
+ *
+ * @param <V> The result type returned by this Task's {@code getValue} method
  * @since JavaFX 2.0
  */
 public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventTarget {

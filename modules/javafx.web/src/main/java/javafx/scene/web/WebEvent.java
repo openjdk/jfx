@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.event.EventType;
  * with a {@link WebEngine} by JavaScript running on a Web page. An event holds
  * a single data item of type {@code T}.
  *
+ * @param <T> the type of the web event
  * @see WebEngine
  * @see WebEngine#setOnAlert
  * @see WebEngine#setOnResized
@@ -76,6 +77,7 @@ final public class WebEvent<T> extends Event {
     public static final EventType<WebEvent> ALERT =
             new EventType<>(WebEvent.ANY, "WEB_ALERT");
 
+    @SuppressWarnings("doclint:missing")
     private final T data;
 
     /**
