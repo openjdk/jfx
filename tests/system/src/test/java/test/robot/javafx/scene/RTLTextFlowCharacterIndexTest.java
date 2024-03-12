@@ -113,7 +113,7 @@ public class RTLTextFlowCharacterIndexTest {
     static volatile Stage stage;
     static volatile Scene scene;
 
-    static final int WIDTH = 500;
+    static final int WIDTH = 600;
     static final int HEIGHT = 200;
 
     static final int Y_OFFSET = 30;
