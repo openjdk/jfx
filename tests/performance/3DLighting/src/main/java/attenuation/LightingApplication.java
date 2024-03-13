@@ -59,7 +59,7 @@ public class LightingApplication extends Application {
         Node defaultLightControl = environment.createDefaultLightControl();
         Node lightsControls = environment.createLightsControls();
 
-        var controls = new VBox(perfControls, modelsControls, backgroundControls, screenshotControls,
+        var controls = new VBox(5, perfControls, modelsControls, backgroundControls, screenshotControls,
                 defaultLightControl, lightsControls);
 
         var hBox = new HBox(new ScrollPane(controls), environment);
