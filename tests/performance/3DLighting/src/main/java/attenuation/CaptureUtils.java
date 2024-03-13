@@ -51,7 +51,7 @@ final class CaptureUtils {
         TIF
     }
 
-    private static final Path FOLDER = Path.of("screenshots");
+    private static final Path DIRECTORY = Path.of("screenshots");
 
     private static int imageNum = 1;
 
@@ -61,13 +61,13 @@ final class CaptureUtils {
         rgbImage.getGraphics().drawImage(image, 0, 0, null);
 
         String formatName = extension.name().toLowerCase();
-        var file = FOLDER.resolve(Path.of("screenshot" + imageNum + "." + formatName)).toAbsolutePath().toFile();
+        var file = DIRECTORY.resolve(Path.of("screenshot" + imageNum + "." + formatName)).toAbsolutePath().toFile();
         try {
-            Files.createDirectories(FOLDER);
+            Files.createDirectories(DIRECTORY);
             if (!ImageIO.write(rgbImage, formatName, file)) {
                 throw new IOException("No writer found for " + formatName);
             }
-            Desktop.getDesktop().open(FOLDER.toAbsolutePath().toFile());
+            Desktop.getDesktop().open(DIRECTORY.toAbsolutePath().toFile());
         } catch (IOException e) {
             e.printStackTrace();
             var alert = new Alert(AlertType.ERROR);
