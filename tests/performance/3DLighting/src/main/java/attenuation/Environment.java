@@ -23,10 +23,11 @@
  * questions.
  */
 
-package lighting3D;
+package attenuation;
 
 import java.util.List;
 
+import attenuation.CaptureUtils.Format;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Point3D;
@@ -54,7 +55,6 @@ import javafx.scene.shape.Sphere;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
-import lighting3D.CaptureUtils.Format;
 
 /**
  * The 3D environment. Includes the lights and shapes.

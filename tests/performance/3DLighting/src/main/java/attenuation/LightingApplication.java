@@ -23,8 +23,9 @@
  * questions.
  */
 
-package lighting3D;
+package attenuation;
 
+import attenuation.Models.Model;
 import javafx.application.Application;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -36,7 +37,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import lighting3D.Models.Model;
 
 /**
  * A utility application for testing 3D features, including lighting, materials, and performance.

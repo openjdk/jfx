@@ -23,7 +23,7 @@
  * questions.
  */
 
-package lighting3D;
+package attenuation;
 
 import java.util.List;
 

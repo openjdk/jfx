@@ -1,4 +1,4 @@
-package lighting3D;
+package attenuation;
 
 import java.awt.Desktop;
 import java.awt.image.BufferedImage;

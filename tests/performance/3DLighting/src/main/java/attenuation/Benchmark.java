@@ -1,4 +1,4 @@
-package lighting3D;
+package attenuation;
 
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;

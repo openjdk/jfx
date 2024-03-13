@@ -23,7 +23,7 @@
  * questions.
  */
 
-package lighting3D;
+package attenuation;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
