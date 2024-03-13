@@ -48,8 +48,6 @@ import javafx.util.converter.NumberStringConverter;
  */
 final class Benchmark {
 
-    private final static double SPHERE_RADIUS = 50;
-
     private final Environment environment;
     private final FPSCounter fpsCouner = new FPSCounter();
     private final TranslateTransition animation = createAnimation();
@@ -103,7 +101,7 @@ final class Benchmark {
         subdivisionLabel.textProperty().bindBidirectional(subdivisionSlider.valueProperty(), new NumberStringConverter("#"));
 
         var sphere = new Button("Sphere");
-        sphere.setOnAction(e -> switchTo(Models.createSphere(SPHERE_RADIUS, (int) subdivisionSlider.getValue())));
+        sphere.setOnAction(e -> switchTo(Models.createSphere((int) subdivisionSlider.getValue())));
 
         return new HBox(sphere, subdivisionSlider, subdivisionLabel);
     }

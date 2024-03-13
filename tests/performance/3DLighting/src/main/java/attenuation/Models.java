@@ -42,6 +42,11 @@ import javafx.scene.transform.Rotate;
  */
 final class Models {
 
+    private final static double SPHERE_RADIUS = 50;
+    private final static int DEFAULT_SPHERE_SUBDIVISIONS = 50;
+    private final static double CYLINDER_RADIUS = 30;
+    private final static double CYLINDER_HEIGHT = 150;
+
     enum Model {
         NONE,
         BOXES,
@@ -51,13 +56,15 @@ final class Models {
     }
 
     static Node createModel(Model model) {
-        return switch (model) {
+        Node node = switch (model) {
             case NONE -> new Group();
             case BOXES -> createBoxes(Environment.LIGHT_Z_DIST);
-            case BOX -> createBox(Environment.LIGHT_Z_DIST, Environment.LIGHT_Z_DIST);
-            case CYLINDER -> createCylinder(30, 150, Environment.LIGHT_Z_DIST);
-            case SPHERE -> createSphere(50, Environment.LIGHT_Z_DIST);
+            case BOX -> createBox(Environment.LIGHT_Z_DIST);
+            case CYLINDER -> createCylinder(CYLINDER_RADIUS, CYLINDER_HEIGHT);
+            case SPHERE -> createSphere(DEFAULT_SPHERE_SUBDIVISIONS);
         };
+        node.setTranslateZ(Environment.LIGHT_Z_DIST);
+        return node;
     }
 
     /**
@@ -66,35 +73,34 @@ final class Models {
      * @param size distance from the center of the box to an edge
      */
     private static Group createBoxes(double size) {
-        var back = createBox(size, size);
-        var right = createBox(size, -size);
+        var back = createBox(size);
+        var right = createBox(size);
         right.setRotationAxis(Rotate.Y_AXIS);
         right.setRotate(90);
         right.setTranslateX(size * 2);
-        var left = createBox(size, -size);
+        right.setTranslateZ(-size * 2);
+        var left = createBox(size);
         left.setRotationAxis(Rotate.Y_AXIS);
         left.setRotate(90);
         left.setTranslateX(-size * 2);
+        left.setTranslateZ(-size * 2);
         return new Group(left, back , right);
     }
 
-    private static Box createBox(double size, double distance) {
+    private static Box createBox(double size) {
         var shape = new Box(size * 4, size * 4, 1);
-        shape.setTranslateZ(distance);
         shape.setMaterial(MaterialControls.MATERIAL);
         return shape;
     }
 
-    private static Cylinder createCylinder(double radius, double height, double distance) {
+    private static Cylinder createCylinder(double radius, double height) {
         var shape = new Cylinder(radius, height);
-        shape.setTranslateZ(distance);
         shape.setMaterial(MaterialControls.MATERIAL);
         return shape;
     }
 
-    static Sphere createSphere(double radius, double distance) {
-        var shape = new Sphere(radius);
-        shape.setTranslateZ(distance);
+    static Sphere createSphere(int subdivisions) {
+        var shape = new Sphere(SPHERE_RADIUS, subdivisions);
         shape.setMaterial(MaterialControls.MATERIAL);
         return shape;
     }
