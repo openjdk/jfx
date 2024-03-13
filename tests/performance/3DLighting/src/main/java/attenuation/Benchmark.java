@@ -199,7 +199,7 @@ final class Benchmark {
             totalElapsedTime = 0;
             totalElapsedFrames = 0;
             System.out.println();
-            System.out.println(" --------------------- ");
+            System.out.println("reset benchmark");
         }
     }
 }
