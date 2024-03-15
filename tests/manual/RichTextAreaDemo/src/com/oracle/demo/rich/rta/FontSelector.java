@@ -57,10 +57,17 @@ public class FontSelector {
             10,
             11,
             12,
+            14,
             16,
+            20,
+            22,
             24,
+            28,
+            32,
             48,
+            56,
             72,
+            96,
             144
         );
         sizeField.getSelectionModel().selectedItemProperty().addListener((x) -> {

@@ -247,6 +247,7 @@ public class JavaSyntaxAnalyzer {
             "transient",
             "true",
             "try",
+            "var",
             "void",
             "volatile",
             "while"
