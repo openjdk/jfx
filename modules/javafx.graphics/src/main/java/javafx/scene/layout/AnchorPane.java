@@ -127,9 +127,9 @@ public class AnchorPane extends Pane {
     /**
      * Sets the top anchor for the child when contained by an anchor pane.
      * If set, the anchor pane will maintain the child's size and position so
-     * that it's top is always offset by that amount from the anchor pane's top
+     * that its top is always offset by that amount from the anchor pane's top
      * content edge.
-     * Setting the value to null will remove the constraint.
+     * Setting the value to {@code null} will remove the constraint.
      * @param child the child node of an anchor pane
      * @param value the offset from the top of the anchor pane
      */
@@ -138,9 +138,9 @@ public class AnchorPane extends Pane {
     }
 
     /**
-     * Returns the child's top anchor constraint if set.
+     * Returns the child's top anchor constraint, if set.
      * @param child the child node of an anchor pane
-     * @return the offset from the top of the anchor pane or null if no top anchor was set
+     * @return the offset from the top of the anchor pane, or {@code null} if no top anchor was set
      */
     public static Double getTopAnchor(Node child) {
         return (Double)getConstraint(child, TOP_ANCHOR);
@@ -149,9 +149,9 @@ public class AnchorPane extends Pane {
     /**
      * Sets the left anchor for the child when contained by an anchor pane.
      * If set, the anchor pane will maintain the child's size and position so
-     * that it's left is always offset by that amount from the anchor pane's left
+     * that its left is always offset by that amount from the anchor pane's left
      * content edge.
-     * Setting the value to null will remove the constraint.
+     * Setting the value to {@code null} will remove the constraint.
      * @param child the child node of an anchor pane
      * @param value the offset from the left of the anchor pane
      */
@@ -160,9 +160,9 @@ public class AnchorPane extends Pane {
     }
 
     /**
-     * Returns the child's left anchor constraint if set.
+     * Returns the child's left anchor constraint, if set.
      * @param child the child node of an anchor pane
-     * @return the offset from the left of the anchor pane or null if no left anchor was set
+     * @return the offset from the left of the anchor pane, or {@code null} if no left anchor was set
      */
     public static Double getLeftAnchor(Node child) {
         return (Double)getConstraint(child, LEFT_ANCHOR);
@@ -171,9 +171,9 @@ public class AnchorPane extends Pane {
     /**
      * Sets the bottom anchor for the child when contained by an anchor pane.
      * If set, the anchor pane will maintain the child's size and position so
-     * that it's bottom is always offset by that amount from the anchor pane's bottom
+     * that its bottom is always offset by that amount from the anchor pane's bottom
      * content edge.
-     * Setting the value to null will remove the constraint.
+     * Setting the value to {@code null} will remove the constraint.
      * @param child the child node of an anchor pane
      * @param value the offset from the bottom of the anchor pane
      */
@@ -182,9 +182,9 @@ public class AnchorPane extends Pane {
     }
 
     /**
-     * Returns the child's bottom anchor constraint if set.
+     * Returns the child's bottom anchor constraint, if set.
      * @param child the child node of an anchor pane
-     * @return the offset from the bottom of the anchor pane or null if no bottom anchor was set
+     * @return the offset from the bottom of the anchor pane, or {@code null} if no bottom anchor was set
      */
     public static Double getBottomAnchor(Node child) {
         return (Double)getConstraint(child, BOTTOM_ANCHOR);
@@ -193,9 +193,9 @@ public class AnchorPane extends Pane {
     /**
      * Sets the right anchor for the child when contained by an anchor pane.
      * If set, the anchor pane will maintain the child's size and position so
-     * that it's right is always offset by that amount from the anchor pane's right
+     * that its right is always offset by that amount from the anchor pane's right
      * content edge.
-     * Setting the value to null will remove the constraint.
+     * Setting the value to {@code null} will remove the constraint.
      * @param child the child node of an anchor pane
      * @param value the offset from the right of the anchor pane
      */
@@ -204,9 +204,9 @@ public class AnchorPane extends Pane {
     }
 
     /**
-     * Returns the child's right anchor constraint if set.
+     * Returns the child's right anchor constraint, if set.
      * @param child the child node of an anchor pane
-     * @return the offset from the right of the anchor pane or null if no right anchor was set
+     * @return the offset from the right of the anchor pane, or {@code null} if no right anchor was set
      */
     public static Double getRightAnchor(Node child) {
         return (Double)getConstraint(child, RIGHT_ANCHOR);
@@ -228,15 +228,15 @@ public class AnchorPane extends Pane {
      ********************************************************************/
 
     /**
-     * Creates an AnchorPane layout.
+     * Creates an {@code AnchorPane} layout.
      */
     public AnchorPane() {
         super();
     }
 
     /**
-     * Creates an AnchorPane layout with the given children.
-     * @param children    The initial set of children for this pane.
+     * Creates an {@code AnchorPane} layout with the given children.
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public AnchorPane(Node... children) {

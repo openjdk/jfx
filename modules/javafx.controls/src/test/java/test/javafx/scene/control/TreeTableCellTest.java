@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene.control;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -44,6 +45,8 @@ import javafx.scene.control.TreeTableView;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.After;
 import org.junit.Before;
@@ -1235,6 +1238,57 @@ public class TreeTableCellTest {
         cell.commitEdit("ABCDEF");
 
         assertEquals("ABCDEF [Changed]", cell.getItem());
+    }
+
+    /**
+     * Same index and underlying item should not cause the updateItem(..) method to be called.
+     */
+    @Test
+    public void testSameIndexAndItemShouldNotUpdateItem() {
+        AtomicInteger counter = new AtomicInteger();
+
+        editingColumn.setCellFactory(view -> new TreeTableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                counter.incrementAndGet();
+                super.updateItem(item, empty);
+            }
+        });
+        setupForEditing();
+
+        stageLoader = new StageLoader(tree);
+
+        counter.set(0);
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(tree, 0, 0);
+        cell.updateIndex(0);
+
+        assertEquals(0, counter.get());
+    }
+
+    /**
+     * The contract of a {@link TreeTableCell} is that isItemChanged(..)
+     * is called when the index is 'changed' to the same number as the old one, to evaluate if we need to call
+     * updateItem(..).
+     */
+    @Test
+    public void testSameIndexIsItemsChangedShouldBeCalled() {
+        AtomicBoolean isItemChangedCalled = new AtomicBoolean();
+
+        editingColumn.setCellFactory(view -> new TreeTableCell<>() {
+            @Override
+            protected boolean isItemChanged(String oldItem, String newItem) {
+                isItemChangedCalled.set(true);
+                return super.isItemChanged(oldItem, newItem);
+            }
+        });
+        setupForEditing();
+
+        stageLoader = new StageLoader(tree);
+
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(tree, 0, 0);
+        cell.updateIndex(0);
+
+        assertTrue(isItemChangedCalled.get());
     }
 
     public static class MisbehavingOnCancelTreeTableCell<S, T> extends TreeTableCell<S, T> {
