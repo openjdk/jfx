@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,32 +32,32 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Skin;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TableView;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
-
-import org.junit.Before;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
-import javafx.scene.control.skin.TableColumnHeaderShim;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class TableColumnHeaderTest {
+public class TableColumnHeaderTreeTableTest {
 
     private TableColumnHeader firstColumnHeader;
-    private TableView<Person> tableView;
+    private TreeTableView<Person> tableView;
     private StageLoader sl;
     private static String NAME0 = "Humphrey McPhee";
     private static String NAME1 = "Justice Caldwell";
@@ -72,10 +72,16 @@ public class TableColumnHeaderTest {
                 new Person(NAME2, 30),
                 new Person(NAME3, 8)
         );
-        TableColumn<Person, String> column = new TableColumn<>("Col ");
-        column.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        TreeTableColumn<Person, String> column = new TreeTableColumn<>("Col ");
+        column.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
 
-        tableView = new TableView<>(model);
+        TreeItem<Person> root = new TreeItem<>();
+        for (Person person : model) {
+            root.getChildren().add(new TreeItem<>(person));
+        }
+
+        tableView = new TreeTableView<>(root);
+        tableView.setShowRoot(false);
 
         tableView.getColumns().add(column);
 
@@ -138,7 +144,7 @@ public class TableColumnHeaderTest {
      */
     @Test
     public void test_resizeColumnToFitContent() {
-        TableColumn column = tableView.getColumns().get(0);
+        TreeTableColumn column = tableView.getColumns().get(0);
         double width = column.getWidth();
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
 
@@ -153,10 +159,10 @@ public class TableColumnHeaderTest {
      */
     @Test
     public void test_resizeColumnToFitContentIncrease() {
-        TableColumn column = tableView.getColumns().get(0);
+        TreeTableColumn column = tableView.getColumns().get(0);
         double width = column.getWidth();
 
-        tableView.getItems().get(0).setFirstName("This is a big text inside that column");
+        tableView.getRoot().getChildren().get(0).getValue().setFirstName("This is a big text inside that column");
 
         assertEquals("Width must be the same",
                 width, column.getWidth(), 0.001);
@@ -166,7 +172,7 @@ public class TableColumnHeaderTest {
                 width < column.getWidth());
 
         //Back to initial value
-        tableView.getItems().get(0).setFirstName(NAME0);
+        tableView.getRoot().getChildren().get(0).getValue().setFirstName(NAME0);
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
         assertEquals("Width must be equal to initial value",
@@ -180,13 +186,13 @@ public class TableColumnHeaderTest {
      */
     @Test
     public void test_resizeColumnToFitContentDecrease() {
-        TableColumn column = tableView.getColumns().get(0);
+        TreeTableColumn column = tableView.getColumns().get(0);
         double width = column.getWidth();
 
-        tableView.getItems().get(0).setFirstName("small");
-        tableView.getItems().get(1).setFirstName("small");
-        tableView.getItems().get(2).setFirstName("small");
-        tableView.getItems().get(3).setFirstName("small");
+        tableView.getRoot().getChildren().get(0).getValue().setFirstName("small");
+        tableView.getRoot().getChildren().get(1).getValue().setFirstName("small");
+        tableView.getRoot().getChildren().get(2).getValue().setFirstName("small");
+        tableView.getRoot().getChildren().get(3).getValue().setFirstName("small");
 
         assertEquals("Width must be the same",
                 width, column.getWidth(), 0.001);
@@ -196,10 +202,10 @@ public class TableColumnHeaderTest {
                 width > column.getWidth());
 
         //Back to initial value
-        tableView.getItems().get(0).setFirstName(NAME0);
-        tableView.getItems().get(1).setFirstName(NAME1);
-        tableView.getItems().get(2).setFirstName(NAME2);
-        tableView.getItems().get(3).setFirstName(NAME3);
+        tableView.getRoot().getChildren().get(0).getValue().setFirstName(NAME0);
+        tableView.getRoot().getChildren().get(1).getValue().setFirstName(NAME1);
+        tableView.getRoot().getChildren().get(2).getValue().setFirstName(NAME2);
+        tableView.getRoot().getChildren().get(3).getValue().setFirstName(NAME3);
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
         assertEquals("Width must be equal to initial value",
@@ -213,7 +219,7 @@ public class TableColumnHeaderTest {
      */
     @Test
     public void test_resizeColumnToFitContentHeader() {
-        TableColumn column = tableView.getColumns().get(0);
+        TreeTableColumn column = tableView.getColumns().get(0);
         double width = column.getWidth();
 
         column.setText("This is a big text inside that column");
@@ -239,10 +245,10 @@ public class TableColumnHeaderTest {
      */
     @Test
     public void test_resizeColumnToFitContentMaxRow() {
-        TableColumn column = tableView.getColumns().get(0);
+        TreeTableColumn column = tableView.getColumns().get(0);
         double width = column.getWidth();
 
-        tableView.getItems().get(3).setFirstName("This is a big text inside that column");
+        tableView.getRoot().getChildren().get(3).getValue().setFirstName("This is a big text inside that column");
 
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);
@@ -251,7 +257,7 @@ public class TableColumnHeaderTest {
 
 
         //Back to initial value
-        tableView.getItems().get(3).setFirstName(NAME3);
+        tableView.getRoot().getChildren().get(3).getValue().setFirstName(NAME3);
 
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);
@@ -262,7 +268,7 @@ public class TableColumnHeaderTest {
     /** Row style must affect the required column width */
     @Test
     public void test_resizeColumnToFitContentRowStyle() {
-        TableColumn column = tableView.getColumns().get(0);
+        TreeTableColumn column = tableView.getColumns().get(0);
 
         tableView.setRowFactory(this::createSmallRow);
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
@@ -276,7 +282,7 @@ public class TableColumnHeaderTest {
     /** Test resizeColumnToFitContent in the presence of a non-standard row skin */
     @Test
     public void test_resizeColumnToFitContentCustomRowSkin() {
-        TableColumn column = tableView.getColumns().get(0);
+        TreeTableColumn column = tableView.getColumns().get(0);
 
         tableView.setRowFactory(this::createCustomRow);
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
@@ -295,8 +301,8 @@ public class TableColumnHeaderTest {
         assertEquals(24, label.getFont().getSize(), 0);
     }
 
-    private TableRow<Person> createCustomRow(TableView<Person> tableView) {
-        TableRow<Person> row = new TableRow<>() {
+    private TreeTableRow<Person> createCustomRow(TreeTableView<Person> tableView) {
+        TreeTableRow<Person> row = new TreeTableRow<>() {
             protected Skin<?> createDefaultSkin() {
                 return new CustomSkin(this);
             }
@@ -304,17 +310,17 @@ public class TableColumnHeaderTest {
         return row;
     }
 
-    private static class CustomSkin implements Skin<TableRow<?>> {
+    private static class CustomSkin implements Skin<TreeTableRow<?>> {
 
-        private TableRow<?> row;
+        private TreeTableRow<?> row;
         private Node node = new HBox();
 
-        CustomSkin(TableRow<?> row) {
+        CustomSkin(TreeTableRow<?> row) {
             this.row = row;
         }
 
         @Override
-        public TableRow<?> getSkinnable() {
+        public TreeTableRow<?> getSkinnable() {
             return row;
         }
 
@@ -329,14 +335,14 @@ public class TableColumnHeaderTest {
         }
     }
 
-    private TableRow<Person> createSmallRow(TableView<Person> tableView) {
-        TableRow<Person> row = new TableRow<>();
+    private TreeTableRow<Person> createSmallRow(TreeTableView<Person> tableView) {
+        TreeTableRow<Person> row = new TreeTableRow<>();
         row.setStyle("-fx-font: 24 Amble");
         return row;
     }
 
-    private TableRow<Person> createLargeRow(TableView<Person> param) {
-        TableRow<Person> row = new TableRow<>();
+    private TreeTableRow<Person> createLargeRow(TreeTableView<Person> param) {
+        TreeTableRow<Person> row = new TreeTableRow<>();
         row.setStyle("-fx-font: 48 Amble");
         return row;
     }
