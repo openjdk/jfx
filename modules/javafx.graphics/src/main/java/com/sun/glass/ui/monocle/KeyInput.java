@@ -195,7 +195,7 @@ class KeyInput {
         return c == '\000' ? NO_CHAR : new char[] { c };
     }
 
-    int getKeyCodeForChar(char c) {
+    int getKeyCodeForChar(char c, int hint) {
         c = Character.toUpperCase(c);
         // remove shift modification
         switch (c) {

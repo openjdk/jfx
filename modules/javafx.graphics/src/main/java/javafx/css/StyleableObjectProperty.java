@@ -43,6 +43,7 @@ import java.util.Objects;
  * that would otherwise be implemented as a {@link ObjectPropertyBase},
  * styleable by CSS.
  *
+ * @param <T> the property value type
  * @see javafx.beans.property.ObjectPropertyBase
  * @see CssMetaData
  * @see StyleableProperty

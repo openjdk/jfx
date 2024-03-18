@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
 /**
  * Default skin implementation for the {@link TreeTableView} control.
  *
+ * @param <T> the tree table item type
  * @see TreeTableView
  * @since 9
  */
@@ -143,10 +144,6 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             }
             // update the item count in the flow and behavior instances
             updateItemCount();
-        });
-
-        lh.addChangeListener(control.rowFactoryProperty(), (ev) -> {
-            flow.recreateCells();
         });
 
         lh.addChangeListener(control.expandedItemCountProperty(), (ev) -> {

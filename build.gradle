@@ -413,7 +413,7 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/17/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/21/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
@@ -425,7 +425,7 @@ defineProperty("libAVRepositoryURL", "https://github.com/libav/libav/archive")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
 
-defineProperty("icuVersion", "73.1")
+defineProperty("icuVersion", "74.2")
 
 loadProperties("$projectDir/build.properties")
 
@@ -5667,9 +5667,7 @@ compileTargets { t ->
                         }
                         args("--legal-notices")
                         args(srcLegalDir)
-                        // https://bugs.openjdk.org/browse/JDK-8278766
-                        def status = compareJdkVersion(jdkVersion, "19")
-                        if (sourceDateEpoch != null && status >= 0) {
+                        if (sourceDateEpoch != null) {
                             args("--date", extendedTimestamp)
                         }
                         args(jmodFile)
