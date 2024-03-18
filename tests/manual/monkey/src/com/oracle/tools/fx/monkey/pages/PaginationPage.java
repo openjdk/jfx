@@ -47,9 +47,9 @@ public class PaginationPage extends TestPaneBase implements HasSkinnable {
 
     public PaginationPage() {
         super("PaginationPage");
-        
+
         control = new Pagination();
-        
+
         OptionPane op = new OptionPane();
         op.section("Pagination");
         op.option("Current Page Index:", new IntOption("currentPageIndex", 0, Integer.MAX_VALUE, control.currentPageIndexProperty()));
@@ -57,13 +57,13 @@ public class PaginationPage extends TestPaneBase implements HasSkinnable {
         // TODO INDETERMINATE
         op.option("Page Count:", new IntOption("pageCount", 1, Integer.MAX_VALUE, control.pageCountProperty()));
         op.option("Page Factory:", createPageFactoryOptions("pageFactory", control.pageFactoryProperty()));
-        
+
         ControlPropertySheet.appendTo(op, control);
-        
+
         setContent(control);
         setOptions(op);
     }
-    
+
     private Callback<Integer, Node> createImagesFactory() {
         return (ix) -> {
             String s = String.valueOf(ix);
@@ -73,7 +73,7 @@ public class PaginationPage extends TestPaneBase implements HasSkinnable {
 
     private Node createPageFactoryOptions(String name, ObjectProperty<Callback<Integer, Node>> p) {
         ObjectOption<Callback<Integer, Node>> op = new ObjectOption<>(name, p);
-        op.addChoice("Images", createImagesFactory()); 
+        op.addChoice("Images", createImagesFactory());
         op.addChoice("<null>", null);
         return op;
     }

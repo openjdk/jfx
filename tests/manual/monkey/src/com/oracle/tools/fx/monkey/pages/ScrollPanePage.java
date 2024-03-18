@@ -24,14 +24,20 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import javafx.geometry.Dimension2D;
-import javafx.geometry.Pos;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
+import java.util.function.Supplier;
+import javafx.beans.property.ObjectProperty;
+import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.skin.ScrollPaneSkin;
-import com.oracle.tools.fx.monkey.util.FX;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.options.EnumOption;
+import com.oracle.tools.fx.monkey.options.ObjectOption;
+import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.ImageTools;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
@@ -40,45 +46,50 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
  */
 public class ScrollPanePage extends TestPaneBase implements HasSkinnable {
     private final ScrollPane control;
-    private final Label content;
 
     public ScrollPanePage() {
         super("ScrollPanePage");
 
-        content = new Label();
-        content.setAlignment(Pos.CENTER);
-        
-        control = new ScrollPane(content);
+        control = new ScrollPane();
 
-        ComboBox<Dimension2D> prefSize = new ComboBox<>();
-        FX.name(prefSize, "prefSize");
-        prefSize.getItems().setAll(
-            new Dimension2D(50, 50),
-            new Dimension2D(100, 100),
-            new Dimension2D(1000, 1000),
-            new Dimension2D(5000, 5000),
-            new Dimension2D(5000, 50)
-        );
-        prefSize.getSelectionModel().selectedItemProperty().addListener((s, p, c) -> {
-            updatePrefSize(c);
-        });
-
-        OptionPane p = new OptionPane();
-        p.option("Preferred size:", prefSize);
+        OptionPane op = new OptionPane();
+        op.section("ScrollPane");
+        op.option("Content:", createContentOptions("content", control.contentProperty()));
+        op.option(new BooleanOption("fitToHeight", "fit to height", control.fitToHeightProperty()));
+        op.option(new BooleanOption("fitToWidth", "fit to width", control.fitToHeightProperty()));
+        op.option("HBar Policy:", new EnumOption<ScrollBarPolicy>("hbarPolicy", true, ScrollBarPolicy.class, control.hbarPolicyProperty()));
+        op.option("HMax: TODO", null); // TODO
+        op.option("HMin: TODO", null); // TODO
+        op.option("HValue: TODO", null); // TODO
+        op.option("Min Viewport Height: TODO", null); // TODO
+        op.option("Min Viewport Width: TODO", null); // TODO
+        op.option(new BooleanOption("pannable", "pannable", control.pannableProperty()));
+        op.option("Pref Viewport Height: TODO", null); // TODO
+        op.option("Pref Viewport Width: TODO", null); // TODO
+        op.option("VBar Policy:", new EnumOption<ScrollBarPolicy>("vbarPolicy", true, ScrollBarPolicy.class, control.vbarPolicyProperty()));
+        op.option("Viewport Bounds: TODO", null); // TODO
+        op.option("VMax: TODO", null); // TODO
+        op.option("VMin: TODO", null); // TODO
+        op.option("VValue: TODO", null); // TODO
+        ControlPropertySheet.appendTo(op, control);
 
         setContent(control);
-        setOptions(p);
-
-//        min.getSelectionModel().select(0L);
+        setOptions(op);
     }
 
-    private void updatePrefSize(Dimension2D d) {
-        double w = d.getWidth();
-        double h = d.getHeight();
-        content.setPrefSize(w, h);
-        String s = "Preferred size: " + w + " x " + h;
-        content.setText(s);
-    }
+//        new Dimension2D(50, 50),
+//        new Dimension2D(100, 100),
+//        new Dimension2D(1000, 1000),
+//        new Dimension2D(5000, 5000),
+//        new Dimension2D(5000, 50)
+
+//    private void updatePrefSize(Dimension2D d) {
+//        double w = d.getWidth();
+//        double h = d.getHeight();
+//        content.setPrefSize(w, h);
+//        String s = "Preferred size: " + w + " x " + h;
+//        content.setText(s);
+//    }
 
     @Override
     public void nullSkin() {
@@ -88,5 +99,26 @@ public class ScrollPanePage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new ScrollPaneSkin(control));
+    }
+
+    private Supplier<Node> mk(int w, int h) {
+        return () -> {
+            // TODO maybe a Rectangle with a gradient paint and/or grid?
+            String s = w + "x" + h;
+            Image im = ImageTools.createImage(s, w, h);
+            return new ImageView(im);
+        };
+    }
+
+    private Node createContentOptions(String name, ObjectProperty<Node> p) {
+        ObjectOption<Node> op = new ObjectOption<>(name, p);
+        op.addChoiceSupplier("50 x 50", mk(50, 50));
+        op.addChoiceSupplier("100 x 100", mk(100, 100));
+        op.addChoiceSupplier("1,000 x 1,000", mk(1_000, 1_000));
+        op.addChoiceSupplier("1,000 x 50", mk(1_000, 50));
+        op.addChoiceSupplier("50 x 1,000", mk(50, 1_000));
+        op.addChoice("<null>", null);
+        op.select(3);
+        return op;
     }
 }

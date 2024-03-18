@@ -47,7 +47,7 @@ public class BorderOption extends ObjectOption<Border> {
 
         selectInitialValue();
     }
-    
+
     private static Border createBorder(Color color, double width, Double radius) {
         BorderStrokeStyle style = BorderStrokeStyle.SOLID;
         CornerRadii radii = radius == null ? null : new CornerRadii(radius);

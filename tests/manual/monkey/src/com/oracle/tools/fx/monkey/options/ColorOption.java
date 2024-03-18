@@ -33,7 +33,7 @@ import javafx.scene.paint.Color;
 public class ColorOption extends ObjectOption<Color> {
     public ColorOption(String name, Property<Color> p) {
         super(name, p);
-        
+
         addChoice("Red", Color.RED);
         addChoice("Green", Color.GREEN);
         addChoice("Blue", Color.BLUE);

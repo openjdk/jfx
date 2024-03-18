@@ -61,7 +61,7 @@ public class TextFieldPage extends TestPaneBase implements HasSkinnable {
         op.option("Preferred Column Count:", new IntOption("prefColumnCount", -1, Integer.MAX_VALUE, control.prefColumnCountProperty()));
         op.separator();
         op.option(inScroll);
-        
+
         TextInputControlPropertySheet.appendTo(op, false, control);
 
         setContent(control);

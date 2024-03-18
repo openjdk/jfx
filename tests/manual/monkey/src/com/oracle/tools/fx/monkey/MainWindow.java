@@ -267,7 +267,7 @@ public class MainWindow extends Stage {
             EmbeddedJTextAreaWindow::new
         );
     }
-    
+
     private void openJFXPanel() {
         EmbeddedFxTextArea.start();
     }

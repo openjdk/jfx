@@ -164,7 +164,7 @@ public class TextFlowPage extends TestPaneBase {
             t(TextTemplates.RIGHT_TO_LEFT, f)
         };
     }
-    
+
     private Node[] createRichTextComplex() {
         Font f = getFont();
         return new Node[] {

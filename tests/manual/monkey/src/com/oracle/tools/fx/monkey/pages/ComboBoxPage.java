@@ -148,7 +148,7 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
                 public String toString(Object x) {
                     return "\"" + x + "\"";
                 }
-                
+
                 @Override
                 public Object fromString(String s) {
                     return s;

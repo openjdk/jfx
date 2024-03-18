@@ -282,24 +282,24 @@ public class PaneContentOptions {
         protected abstract void setMax(Region r, double v);
 
         protected abstract void setGrow(Node n, Priority p);
-        
+
         private final Function<List<Node>, Region> creator;
         private final ArrayList<Node> children = new ArrayList<>();
-    
+
         public Builder(Function<List<Node>, Region> creator) {
             this.creator = creator;
         }
-    
+
         public Builder d() {
             creator.apply(children);
             return this;
         }
-    
+
         public Builder max(double v) {
             setMax(last(), v);
             return this;
         }
-    
+
         public Builder min(double v) {
             setMin(last(), v);
             return this;
@@ -309,7 +309,7 @@ public class PaneContentOptions {
             setPref(last(), v);
             return this;
         }
-        
+
         public Builder fill() {
             setGrow(last(), Priority.ALWAYS);
             return this;
@@ -318,7 +318,7 @@ public class PaneContentOptions {
         private Region last() {
             return (Region)children.get(children.size() - 1);
         }
-    
+
         public List<Node> build() {
             return children;
         }

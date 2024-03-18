@@ -24,7 +24,6 @@
  */
 package com.oracle.tools.fx.monkey.options;
 
-import javafx.beans.NamedArg;
 import javafx.beans.property.Property;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
@@ -38,7 +37,7 @@ import javafx.scene.paint.Stop;
 public class PaintOption extends ObjectOption<Paint> {
     public PaintOption(String name, Property<Paint> p) {
         super(name, p);
-        
+
         addChoice("Red", Color.RED);
         addChoice("Green", Color.GREEN);
         addChoice("Blue", Color.BLUE);

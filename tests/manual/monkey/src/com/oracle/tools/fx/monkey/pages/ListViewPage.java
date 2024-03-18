@@ -209,7 +209,7 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
         s.selectFirst();
         return s;
     }
-    
+
     private Node createSelectionModelOptions(String name) {
         var original = control.getSelectionModel();
         ObjectSelector<Boolean> s = new ObjectSelector<>(name, (v) -> {
