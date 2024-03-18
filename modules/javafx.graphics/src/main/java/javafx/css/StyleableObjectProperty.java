@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
-import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.Interpolatable;
 import javafx.beans.property.ObjectPropertyBase;
@@ -70,32 +70,30 @@ public abstract class StyleableObjectProperty<T>
 
     /** {@inheritDoc} */
     @Override
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public void applyStyle(StyleOrigin origin, T v) {
+    public void applyStyle(StyleOrigin origin, T newValue) {
         T oldValue;
 
-        if (v == null) {
+        if (newValue == null) {
             set(null);
-        } else if (!(v instanceof Interpolatable<?>)
+        } else if (!(newValue instanceof Interpolatable<?>)
                    || ((oldValue = get()) == null)
-                   || !(v.getClass().isInstance(oldValue))) {
-            // Consider a case where T := Paint. Now 'oldValue' could be a Color instance, while 'v' could
-            // be a LinearGradient instance. Both types implement Interpolatable, but with different type
-            // arguments. We detect this case by checking whether 'v' is an instance of 'oldValue' (so that
-            // oldValue.interpolate(v, t) succeeds), and skipping the transition when the test fails.
-            set(v);
+                   || !(newValue.getClass().isInstance(oldValue))) {
+            // Consider a case where T := Paint. Now 'oldValue' could be a Color instance, while 'newValue' could
+            // be a LinearGradient instance. Both types implement Interpolatable, but with different type arguments.
+            // We detect this case by checking whether 'newValue' is an instance of 'oldValue' (so that
+            // oldValue.interpolate(newValue, t) succeeds), and skipping the transition when the test fails.
+            set(newValue);
         } else {
             // If this.origin == null, we're setting the value for the first time.
             // No transition should be started in this case.
             TransitionDefinition transition = this.origin != null && getBean() instanceof Node node ?
-                    NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+                NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
             if (transition != null) {
-                // At this point we know that T implements Interpolatable, so the unchecked cast will succeed.
-                var timerImpl = new TransitionTimerImpl(this, (Interpolatable)oldValue, (Interpolatable)v);
-                timer = TransitionTimer.run(timerImpl, transition);
+                mediator = new TransitionMediatorImpl(oldValue, newValue);
+                mediator.run(transition);
             } else {
-                set(v);
+                set(newValue);
             }
         }
 
@@ -109,7 +107,9 @@ public abstract class StyleableObjectProperty<T>
         origin = StyleOrigin.USER;
 
         // Calling the 'bind' method always cancels a transition timer.
-        TransitionTimer.cancel(timer, true);
+        if (mediator != null) {
+            mediator.cancel(true);
+        }
     }
 
     /** {@inheritDoc} */
@@ -122,7 +122,7 @@ public abstract class StyleableObjectProperty<T>
         // Note that indirect cancellation is still possible: a timer may fire a transition event,
         // which could cause user code to be executed that invokes this 'set' method. In that case,
         // the call will cancel the timer.
-        if (TransitionTimer.cancel(timer, false)) {
+        if (mediator == null || mediator.cancel(false)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -132,33 +132,37 @@ public abstract class StyleableObjectProperty<T>
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private TransitionTimer<?, ?> timer = null;
+    private TransitionMediatorImpl mediator = null;
 
-    private static class TransitionTimerImpl<T extends Interpolatable<T>>
-            extends TransitionTimer<T, StyleableObjectProperty<T>> {
-        final T oldValue;
-        final T newValue;
+    private final class TransitionMediatorImpl extends TransitionMediator {
+        private final T oldValue;
+        private final T newValue;
 
-        TransitionTimerImpl(StyleableObjectProperty<T> property, T oldValue, T newValue) {
-            super(property);
+        TransitionMediatorImpl(T oldValue, T newValue) {
             this.oldValue = oldValue;
             this.newValue = newValue;
         }
 
         @Override
-        protected void onUpdate(StyleableObjectProperty<T> property, double progress) {
-            property.set(progress < 1 ? oldValue.interpolate(newValue, progress) : newValue);
+        @SuppressWarnings("unchecked")
+        public void onUpdate(double progress) {
+            set(progress < 1 ? ((Interpolatable<T>)oldValue).interpolate(newValue, progress) : newValue);
         }
 
         @Override
-        public void onStop(StyleableObjectProperty<T> property) {
-            property.timer = null;
+        public void onStop() {
+            mediator = null;
         }
 
         @Override
-        protected boolean equalsTargetValue(TransitionTimer<T, StyleableObjectProperty<T>> timer) {
-            return Objects.equals(newValue, ((TransitionTimerImpl<T>)timer).newValue);
+        public StyleableProperty<?> getStyleableProperty() {
+            return StyleableObjectProperty.this;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean equalsTargetValue(TransitionMediator mediator) {
+            return Objects.equals(newValue, ((TransitionMediatorImpl)mediator).newValue);
         }
     }
-
 }

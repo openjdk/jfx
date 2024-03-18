@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,6 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
@@ -635,7 +634,7 @@ public abstract class Node implements EventTarget, Styleable {
             @Override
             public StyleableProperty<TransitionDefinition[]> getTransitionProperty(Node node) {
                 if (node.transitions == null) {
-                    node.transitions = node.new Transitions();
+                    node.transitions = node.new TransitionDefinitionCollection();
                 }
 
                 return node.transitions;
@@ -648,17 +647,17 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
-            public void addTransitionTimer(Node node, TransitionTimer<?, ?> timer) {
+            public void addTransitionTimer(Node node, TransitionTimer timer) {
                 node.addTransitionTimer(timer);
             }
 
             @Override
-            public void removeTransitionTimer(Node node, TransitionTimer<?, ?> timer) {
+            public void removeTransitionTimer(Node node, TransitionTimer timer) {
                 node.removeTransitionTimer(timer);
             }
 
             @Override
-            public TransitionTimer<?, ?> findTransitionTimer(Node node, Property<?> property) {
+            public TransitionTimer findTransitionTimer(Node node, Property<?> property) {
                 return node.findTransitionTimer(property);
             }
         });
@@ -8942,7 +8941,7 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
-    private List<TransitionTimer<?, ?>> transitionTimers;
+    private List<TransitionTimer> transitionTimers;
 
     /**
      * Called by animatable {@link StyleableProperty} implementations in order to register
@@ -8951,7 +8950,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param timer the transition timer
      */
-    private void addTransitionTimer(TransitionTimer<?, ?> timer) {
+    private void addTransitionTimer(TransitionTimer timer) {
         if (transitionTimers == null) {
             transitionTimers = new ArrayList<>(4);
         }
@@ -8966,7 +8965,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @param timer the transition timer
      */
-    private void removeTransitionTimer(TransitionTimer<?, ?> timer) {
+    private void removeTransitionTimer(TransitionTimer timer) {
         if (transitionTimers != null) {
             transitionTimers.remove(timer);
         }
@@ -8979,15 +8978,17 @@ public abstract class Node implements EventTarget, Styleable {
      * @return the transition timer, or {@code null} if the property is not
      *         targeted by a transition timer
      */
-    private TransitionTimer<?, ?> findTransitionTimer(Property<?> property) {
-        if (transitionTimers == null || transitionTimers.isEmpty()) {
+    private TransitionTimer findTransitionTimer(Property<?> property) {
+        if (transitionTimers == null) {
             return null;
         }
 
-        for (TransitionTimer<?, ?> timer : transitionTimers) {
+        for (int i = 0, max = transitionTimers.size(); i < max; ++i) {
+            TransitionTimer timer = transitionTimers.get(i);
+
             // We use an identity comparison here because we're looking for the exact property
             // instance that was targeted by the transition timer on this node.
-            if (timer.getProperty() == property) {
+            if (timer.getTargetProperty() == property) {
                 return timer;
             }
         }
@@ -9007,13 +9008,13 @@ public abstract class Node implements EventTarget, Styleable {
 
         // Make a copy of the list, because completing the timers causes them to be removed
         // from the list, which would result in a ConcurrentModificationException.
-        for (TransitionTimer<?, ?> timer : List.copyOf(transitionTimers)) {
+        for (TransitionTimer timer : List.copyOf(transitionTimers)) {
             timer.complete();
         }
     }
 
     // package-private for testing
-    List<TransitionTimer<?, ?>> getTransitionTimers() {
+    List<TransitionTimer> getTransitionTimers() {
         return transitionTimers;
     }
 
@@ -9025,7 +9026,7 @@ public abstract class Node implements EventTarget, Styleable {
      * the CSS subsystem when a property value is changed. Explicit property changes, such as
      * by calling {@link Property#setValue(Object)}, do not trigger an animated transition.
      */
-    private class Transitions
+    private class TransitionDefinitionCollection
             extends ArrayList<TransitionDefinition>
             implements StyleableProperty<TransitionDefinition[]> {
         private StyleOrigin origin;
@@ -9104,12 +9105,12 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    private Transitions transitions;
+    private TransitionDefinitionCollection transitions;
 
     // package-private for testing
-    List<TransitionDefinition> getTransitions() {
+    List<TransitionDefinition> getTransitionDefinitions() {
         if (transitions == null) {
-            transitions = new Transitions();
+            transitions = new TransitionDefinitionCollection();
         }
 
         return transitions;

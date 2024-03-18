@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ public class Node_transition_Test {
         node.setStyle("transition: -fx-fill 1s, ALL 2s ease-in-out;");
         node.applyCss();
 
-        List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
+        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
         assertEquals(2, transitions.size());
         assertTransitionEquals("-fx-fill", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
         assertTransitionEquals("all", Duration.seconds(2), Duration.ZERO, CSS_EASE_IN_OUT, transitions.get(1));
@@ -113,13 +113,13 @@ public class Node_transition_Test {
     public void testAllIdentifierIsCaseInsensitive() {
         node.setStyle("transition: ALL 1s");
         node.applyCss();
-        List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
+        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
         assertEquals(1, transitions.size());
         assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
 
         node.setStyle("transition: all 1s");
         node.applyCss();
-        transitions = NodeShim.getTransitions(node);
+        transitions = NodeShim.getTransitionDefinitions(node);
         assertEquals(1, transitions.size());
         assertTransitionEquals("all", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
     }
@@ -157,7 +157,7 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionDefinition> transitions = NodeShim.getTransitions(node);
+        List<TransitionDefinition> transitions = NodeShim.getTransitionDefinitions(node);
         assertEquals(3, transitions.size());
         assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.seconds(0.5), CSS_EASE, transitions.get(0));
         assertTransitionEquals("-fx-scale-x", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(1));
@@ -166,7 +166,7 @@ public class Node_transition_Test {
         node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
         node.applyCss();
 
-        transitions = NodeShim.getTransitions(node);
+        transitions = NodeShim.getTransitionDefinitions(node);
         assertEquals(1, transitions.size());
         assertTransitionEquals("-fx-background-color", Duration.seconds(1), Duration.ZERO, CSS_EASE, transitions.get(0));
     }
@@ -183,7 +183,7 @@ public class Node_transition_Test {
         node.getStyleClass().add("testClass");
         node.applyCss();
 
-        List<TransitionTimer<?, ?>> timers = NodeShim.getTransitionTimers(node);
+        List<TransitionTimer> timers = NodeShim.getTransitionTimers(node);
         assertNull(timers);
 
         // The hover state starts the timer.

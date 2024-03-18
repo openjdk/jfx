@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,11 +89,11 @@ public class NodeShim {
         n.setTreeVisible(visible);
     }
 
-    public static List<TransitionDefinition> getTransitions(Node n) {
-        return n.getTransitions();
+    public static List<TransitionDefinition> getTransitionDefinitions(Node n) {
+        return n.getTransitionDefinitions();
     }
 
-    public static List<TransitionTimer<?, ?>> getTransitionTimers(Node n) {
+    public static List<TransitionTimer> getTransitionTimers(Node n) {
         return n.getTransitionTimers();
     }
 

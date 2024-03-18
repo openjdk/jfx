@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
-import com.sun.javafx.css.TransitionTimer;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.LongPropertyBase;
 import javafx.beans.value.ObservableValue;
@@ -75,7 +75,8 @@ public abstract class StyleableLongProperty
             NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
 
         if (transition != null) {
-            timer = TransitionTimer.run(new TransitionTimerImpl(this, v), transition);
+            mediator = new TransitionMediatorImpl(get(), v != null ? v.longValue() : 0);
+            mediator.run(transition);
         } else {
             setValue(v);
         }
@@ -88,7 +89,11 @@ public abstract class StyleableLongProperty
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
         origin = StyleOrigin.USER;
-        TransitionTimer.cancel(timer, true);
+
+        // Calling the 'bind' method always cancels a transition timer.
+        if (mediator != null) {
+            mediator.cancel(true);
+        }
     }
 
     /** {@inheritDoc} */
@@ -96,7 +101,7 @@ public abstract class StyleableLongProperty
     public void set(long v) {
         super.set(v);
 
-        if (TransitionTimer.cancel(timer, false)) {
+        if (mediator == null || mediator.cancel(false)) {
             origin = StyleOrigin.USER;
         }
     }
@@ -106,32 +111,35 @@ public abstract class StyleableLongProperty
     public StyleOrigin getStyleOrigin() { return origin; }
 
     private StyleOrigin origin = null;
-    private TransitionTimer<?, ?> timer = null;
+    private TransitionMediatorImpl mediator = null;
 
-    private static class TransitionTimerImpl extends TransitionTimer<Number, StyleableLongProperty> {
-        final long oldValue;
-        final long newValue;
+    private final class TransitionMediatorImpl extends TransitionMediator {
+        private final long oldValue;
+        private final long newValue;
 
-        TransitionTimerImpl(StyleableLongProperty property, Number value) {
-            super(property);
-            this.oldValue = property.get();
-            this.newValue = value != null ? value.longValue() : 0;
+        public TransitionMediatorImpl(long oldValue, long newValue) {
+            this.oldValue = oldValue;
+            this.newValue = newValue;
         }
 
         @Override
-        protected void onUpdate(StyleableLongProperty property, double progress) {
-            property.set(progress < 1 ? oldValue + (long)((newValue - oldValue) * progress) : newValue);
+        public void onUpdate(double progress) {
+            set(progress < 1 ? oldValue + (long)((newValue - oldValue) * progress) : newValue);
         }
 
         @Override
-        public void onStop(StyleableLongProperty property) {
-            property.timer = null;
+        public void onStop() {
+            mediator = null;
         }
 
         @Override
-        protected boolean equalsTargetValue(TransitionTimer<Number, StyleableLongProperty> timer) {
-            return newValue == ((TransitionTimerImpl)timer).newValue;
+        public StyleableProperty<?> getStyleableProperty() {
+            return StyleableLongProperty.this;
+        }
+
+        @Override
+        public boolean equalsTargetValue(TransitionMediator mediator) {
+            return newValue == ((TransitionMediatorImpl) mediator).newValue;
         }
     }
-
 }
