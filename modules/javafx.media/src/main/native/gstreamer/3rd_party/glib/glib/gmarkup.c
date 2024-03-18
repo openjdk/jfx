@@ -3,6 +3,8 @@
  *  Copyright 2000, 2003 Red Hat, Inc.
  *  Copyright 2007, 2008 Ryan Lortie <desrt@desrt.ca>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -83,6 +85,11 @@
  * - Character references
  *
  * - Sections marked as CDATA
+
+ * ## An example parser # {#example}
+ *
+ * Here is an example for a markup parser:
+ * [markup-example.c](https://gitlab.gnome.org/GNOME/glib/-/blob/HEAD/glib/tests/markup-example.c)
  */
 
 G_DEFINE_QUARK (g-markup-error-quark, g_markup_error)
@@ -191,13 +198,6 @@ free_list_node (GMarkupParseContext *context, GSList *node)
 {
   node->data = NULL;
   context->spare_list_nodes = g_slist_concat (node, context->spare_list_nodes);
-}
-
-static inline void
-string_blank (GString *string)
-{
-  string->str[0] = '\0';
-  string->len = 0;
 }
 
 /**
@@ -854,7 +854,7 @@ release_chunk (GMarkupParseContext *context, GString *str)
       g_string_free (str, TRUE);
       return;
     }
-  string_blank (str);
+  g_string_truncate (str, 0);
   node = get_list_node (context, str);
   context->spare_chunks = g_slist_concat (node, context->spare_chunks);
 }
@@ -879,7 +879,7 @@ add_to_partial (GMarkupParseContext *context,
     }
 
   if (text_start != text_end)
-    g_string_insert_len (context->partial_chunk, -1,
+    g_string_append_len (context->partial_chunk,
                          text_start, text_end - text_start);
 }
 
@@ -887,7 +887,7 @@ static inline void
 truncate_partial (GMarkupParseContext *context)
 {
   if (context->partial_chunk != NULL)
-    string_blank (context->partial_chunk);
+    g_string_truncate (context->partial_chunk, 0);
 }
 
 static inline const gchar*
@@ -2541,7 +2541,7 @@ g_markup_vprintf_escaped (const gchar *format,
 
   /* Use them to format the arguments
    */
-  G_VA_COPY (args2, args);
+  va_copy (args2, args);
 
   output1 = g_strdup_vprintf (format1->str, args);
 

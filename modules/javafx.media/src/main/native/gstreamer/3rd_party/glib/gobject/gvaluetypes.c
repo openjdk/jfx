@@ -2,6 +2,8 @@
  * Copyright (C) 1997-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  * Copyright (C) 2010 Christian Persch
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
@@ -386,12 +388,8 @@ value_collect_variant (GValue     *value,
 {
   if (!collect_values[0].v_pointer)
     value->data[0].v_pointer = NULL;
-  else if (collect_flags & G_VALUE_NOCOPY_CONTENTS)
-    {
-      value->data[0].v_pointer = collect_values[0].v_pointer;
-      value->data[1].v_uint = G_VALUE_NOCOPY_CONTENTS;
-    }
   else
+    /* never honour G_VALUE_NOCOPY_CONTENTS for ref-counted types */
     value->data[0].v_pointer = g_variant_ref_sink (collect_values[0].v_pointer);
 
   return NULL;
@@ -1110,7 +1108,7 @@ g_value_set_string_take_ownership (GValue *value,
 /**
  * g_value_take_string:
  * @value: a valid #GValue of type %G_TYPE_STRING
- * @v_string: (nullable): string to take ownership of
+ * @v_string: (nullable) (transfer full): string to take ownership of
  *
  * Sets the contents of a %G_TYPE_STRING #GValue to @v_string.
  *
@@ -1135,7 +1133,7 @@ g_value_take_string (GValue *value,
  *
  * Get the contents of a %G_TYPE_STRING #GValue.
  *
- * Returns: string content of @value
+ * Returns: (nullable) (transfer none): string content of @value
  */
 const gchar*
 g_value_get_string (const GValue *value)
@@ -1151,7 +1149,7 @@ g_value_get_string (const GValue *value)
  *
  * Get a copy the contents of a %G_TYPE_STRING #GValue.
  *
- * Returns: a newly allocated copy of the string content of @value
+ * Returns: (nullable) (transfer full): a newly allocated copy of the string content of @value
  */
 gchar*
 g_value_dup_string (const GValue *value)

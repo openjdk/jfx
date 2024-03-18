@@ -39,7 +39,9 @@
 #include "PointerEventsHitRules.h"
 #include "RenderSVGResourceMarker.h"
 #include "RenderSVGResourceSolidColor.h"
+#include "RenderStyleInlines.h"
 #include "SVGPathData.h"
+#include "SVGRenderStyle.h"
 #include "SVGRenderingContext.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
@@ -231,7 +233,7 @@ void LegacyRenderSVGShape::fillShape(const RenderStyle& style, GraphicsContext& 
     }
 }
 
-void LegacyRenderSVGShape::strokeShape(const RenderStyle& style, GraphicsContext& originalContext)
+void LegacyRenderSVGShape::strokeShapeInternal(const RenderStyle& style, GraphicsContext& originalContext)
 {
     GraphicsContext* context = &originalContext;
     Color fallbackColor;
@@ -247,9 +249,9 @@ void LegacyRenderSVGShape::strokeShape(const RenderStyle& style, GraphicsContext
     }
 }
 
-void LegacyRenderSVGShape::strokeShape(GraphicsContext& context)
+void LegacyRenderSVGShape::strokeShape(const RenderStyle& style, GraphicsContext& context)
 {
-    if (!style().hasVisibleStroke())
+    if (!style.hasVisibleStroke())
         return;
 
     GraphicsContextStateSaver stateSaver(context, false);
@@ -258,19 +260,18 @@ void LegacyRenderSVGShape::strokeShape(GraphicsContext& context)
         if (!setupNonScalingStrokeContext(nonScalingTransform, stateSaver))
             return;
     }
-    strokeShape(style(), context);
+    strokeShapeInternal(style, context);
 }
 
 void LegacyRenderSVGShape::fillStrokeMarkers(PaintInfo& childPaintInfo)
 {
-    auto paintOrder = RenderStyle::paintTypesForPaintOrder(style().paintOrder());
-    for (unsigned i = 0; i < paintOrder.size(); ++i) {
-        switch (paintOrder.at(i)) {
+    for (auto type : RenderStyle::paintTypesForPaintOrder(style().paintOrder())) {
+        switch (type) {
         case PaintType::Fill:
             fillShape(style(), childPaintInfo.context());
             break;
         case PaintType::Stroke:
-            strokeShape(childPaintInfo.context());
+            strokeShape(style(), childPaintInfo.context());
             break;
         case PaintType::Markers:
             if (!m_markerPositions.isEmpty())
@@ -460,9 +461,9 @@ bool LegacyRenderSVGShape::hasSmoothStroke() const
 {
     const SVGRenderStyle& svgStyle = style().svgStyle();
     return svgStyle.strokeDashArray().isEmpty()
-        && style().strokeMiterLimit() == style().initialStrokeMiterLimit()
-        && style().joinStyle() == style().initialJoinStyle()
-        && style().capStyle() == style().initialCapStyle();
+        && style().strokeMiterLimit() == defaultMiterLimit
+        && style().joinStyle() == LineJoin::Miter
+        && style().capStyle() == LineCap::Butt;
 }
 
 void LegacyRenderSVGShape::drawMarkers(PaintInfo& paintInfo)
@@ -502,7 +503,7 @@ void LegacyRenderSVGShape::processMarkerPositions()
     ASSERT(m_path);
 
     SVGMarkerData markerData(m_markerPositions, SVGResourcesCache::cachedResourcesForRenderer(*this)->markerReverseStart());
-    m_path->apply([&markerData](const PathElement& pathElement) {
+    m_path->applyElements([&markerData](const PathElement& pathElement) {
         SVGMarkerData::updateFromPathElement(markerData, pathElement);
     });
     markerData.pathIsDone();

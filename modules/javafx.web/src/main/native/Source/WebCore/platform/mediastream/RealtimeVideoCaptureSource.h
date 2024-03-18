@@ -39,36 +39,39 @@ class ImageTransferSessionVT;
 
 enum class VideoFrameRotation : uint16_t;
 
-class WEBCORE_EXPORT RealtimeVideoCaptureSource : public RealtimeMediaSource {
+class WEBCORE_EXPORT RealtimeVideoCaptureSource : public RealtimeMediaSource, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeVideoCaptureSource, WTF::DestructionThread::MainRunLoop> {
 public:
     virtual ~RealtimeVideoCaptureSource();
 
-    void clientUpdatedSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate);
+    void clientUpdatedSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate, std::optional<double> zoom);
 
-    bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
+    bool supportsSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>) override;
     virtual void generatePresets() = 0;
-    virtual VideoFrameRotation videoFrameRotation() const;
 
-    double observedFrameRate() const { return m_observedFrameRate; }
+    double observedFrameRate() const final { return m_observedFrameRate; }
     Vector<VideoPresetData> presetsData();
 
     void ensureIntrinsicSizeMaintainsAspectRatio();
 
-    const VideoPreset* currentPreset() const { return m_currentPreset.get(); }
+    const std::optional<VideoPreset> currentPreset() const { return m_currentPreset; }
+
+    void ref() const final;
+    void deref() const final;
+    ThreadSafeWeakPtrControlBlock& controlBlock() const final;
 
 protected:
     RealtimeVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, PageIdentifier);
 
-    void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) override;
+    void setSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>) override;
 
-    virtual bool prefersPreset(VideoPreset&) { return true; }
-    virtual void setFrameRateWithPreset(double, RefPtr<VideoPreset>) { };
+    virtual bool prefersPreset(const VideoPreset&) { return true; }
+    virtual void setFrameRateAndZoomWithPreset(double, double, std::optional<VideoPreset>&&) { };
     virtual bool canResizeVideoFrames() const { return false; }
-    bool shouldUsePreset(VideoPreset& current, VideoPreset& candidate);
+    bool shouldUsePreset(const VideoPreset& current, const VideoPreset& candidate);
 
-    void setSupportedPresets(const Vector<Ref<VideoPreset>>&);
+    void setSupportedPresets(Vector<VideoPreset>&&);
     void setSupportedPresets(Vector<VideoPresetData>&&);
-    const Vector<Ref<VideoPreset>>& presets();
+    virtual const Vector<VideoPreset>& presets();
 
     bool frameRateRangeIncludesRate(const FrameRateRange&, double);
 
@@ -76,32 +79,38 @@ protected:
 
     void dispatchVideoFrameToObservers(VideoFrame&, VideoFrameTimeMetadata);
 
-    static Span<const IntSize> standardVideoSizes();
+    static std::span<const IntSize> standardVideoSizes();
 
 private:
-    struct CaptureSizeAndFrameRate {
-        RefPtr<VideoPreset> encodingPreset;
+    struct CaptureSizeFrameRateAndZoom {
+        std::optional<VideoPreset> encodingPreset;
         IntSize requestedSize;
         double requestedFrameRate { 0 };
+        double requestedZoom { 0 };
     };
     bool supportsCaptureSize(std::optional<int>, std::optional<int>, const Function<bool(const IntSize&)>&&);
-    std::optional<CaptureSizeAndFrameRate> bestSupportedSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>);
-    bool presetSupportsFrameRate(RefPtr<VideoPreset>, double);
+
+    enum class TryPreservingSize { No, Yes };
+    std::optional<CaptureSizeFrameRateAndZoom> bestSupportedSizeFrameRateAndZoom(std::optional<int> width, std::optional<int> height, std::optional<double>, std::optional<double>, TryPreservingSize = TryPreservingSize::Yes);
+
+    bool presetSupportsFrameRate(const VideoPreset&, double);
+    bool presetSupportsZoom(const VideoPreset&, double);
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "RealtimeVideoCaptureSource"; }
 #endif
 
-    RefPtr<VideoPreset> m_currentPreset;
-    Vector<Ref<VideoPreset>> m_presets;
+    std::optional<VideoPreset> m_currentPreset;
+    Vector<VideoPreset> m_presets;
     Deque<double> m_observedFrameTimeStamps;
     double m_observedFrameRate { 0 };
 };
 
-struct SizeAndFrameRate {
+struct SizeFrameRateAndZoom {
     std::optional<int> width;
     std::optional<int> height;
     std::optional<double> frameRate;
+    std::optional<double> zoom;
 
     String toJSONString() const;
     Ref<JSON::Object> toJSONObject() const;
@@ -112,8 +121,8 @@ struct SizeAndFrameRate {
 namespace WTF {
 template<typename Type> struct LogArgument;
 template <>
-struct LogArgument<WebCore::SizeAndFrameRate> {
-    static String toString(const WebCore::SizeAndFrameRate& size)
+struct LogArgument<WebCore::SizeFrameRateAndZoom> {
+    static String toString(const WebCore::SizeFrameRateAndZoom& size)
     {
         return size.toJSONString();
     }

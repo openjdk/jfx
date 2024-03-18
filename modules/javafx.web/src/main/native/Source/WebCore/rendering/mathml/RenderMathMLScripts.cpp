@@ -32,6 +32,7 @@
 
 #include "MathMLElement.h"
 #include "MathMLScriptsElement.h"
+#include "RenderMathMLBlockInlines.h"
 #include "RenderMathMLOperator.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -360,8 +361,13 @@ void RenderMathMLScripts::layoutBlock(bool relayoutChildren, LayoutUnit)
     auto& reference = possibleReference.value();
 
     recomputeLogicalWidth();
-    for (auto child = firstChildBox(); child; child = child->nextSiblingBox())
+    for (auto child = firstChildBox(); child; child = child->nextSiblingBox()) {
+        if (child->isOutOfFlowPositioned()) {
+            child->containingBlock()->insertPositionedObject(*child);
+            continue;
+        }
         child->layoutIfNeeded();
+    }
 
     LayoutUnit space = spaceAfterScript();
 

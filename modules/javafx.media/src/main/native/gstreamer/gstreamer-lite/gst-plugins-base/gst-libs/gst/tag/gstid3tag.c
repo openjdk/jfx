@@ -122,7 +122,7 @@ static const GstTagEntryMatch tag_matches[] = {
  *
  * Looks up the GStreamer tag for a ID3v2 tag.
  *
- * Returns: The corresponding GStreamer tag or NULL if none exists.
+ * Returns: (nullable): The corresponding GStreamer tag or NULL if none exists.
  */
 const gchar *
 gst_tag_from_id3_tag (const gchar * id3_tag)
@@ -190,7 +190,7 @@ static const GstTagEntryMatch user_tag_matches[] = {
  * Looks up the GStreamer tag for an ID3v2 user tag (e.g. description in
  * TXXX frame or owner in UFID frame).
  *
- * Returns: The corresponding GStreamer tag or NULL if none exists.
+ * Returns: (nullable): The corresponding GStreamer tag or NULL if none exists.
  */
 const gchar *
 gst_tag_from_id3_user_tag (const gchar * type, const gchar * id3_user_tag)
@@ -222,7 +222,7 @@ gst_tag_from_id3_user_tag (const gchar * type, const gchar * id3_user_tag)
  *
  * Looks up the ID3v2 tag for a GStreamer tag.
  *
- * Returns: The corresponding ID3v2 tag or NULL if none exists.
+ * Returns: (nullable): The corresponding ID3v2 tag or NULL if none exists.
  */
 const gchar *
 gst_tag_to_id3_tag (const gchar * gst_tag)
@@ -265,7 +265,7 @@ gst_tag_extract_id3v1_string (GstTagList * list, const gchar * tag,
  * Parses the data containing an ID3v1 tag and returns a #GstTagList from the
  * parsed data.
  *
- * Returns: A new tag list or NULL if the data was not an ID3v1 tag.
+ * Returns: (transfer full) (nullable): A new tag list or NULL if the data was not an ID3v1 tag.
  */
 GstTagList *
 gst_tag_list_new_from_id3v1 (const guint8 * data)
@@ -328,7 +328,7 @@ gst_tag_id3_genre_count (void)
  *
  * Gets the ID3v1 genre name for a given ID.
  *
- * Returns: the genre or NULL if no genre is associated with that ID.
+ * Returns: (nullable): the genre or NULL if no genre is associated with that ID.
  */
 const gchar *
 gst_tag_id3_genre_get (const guint id)

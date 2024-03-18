@@ -32,8 +32,10 @@
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutPhase.h"
 #include "LayoutState.h"
-#include "RenderStyle.h"
+#include "RenderStyleInlines.h"
+#include "Shape.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 namespace Layout {
@@ -440,6 +442,30 @@ std::optional<LayoutUnit> Box::columnWidth() const
     if (!hasRareData())
         return { };
     return rareData().columnWidth;
+}
+
+const Shape* Box::shape() const
+{
+    if (!hasRareData())
+        return nullptr;
+    return rareData().shape.get();
+}
+
+void Box::setShape(RefPtr<const Shape> shape)
+{
+    ensureRareData().shape = WTFMove(shape);
+}
+
+const RubyAdjustments* Box::rubyAdjustments() const
+{
+    if (!hasRareData())
+        return nullptr;
+    return rareData().rubyAdjustments.get();
+}
+
+void Box::setRubyAdjustments(std::unique_ptr<RubyAdjustments> rubyAdjustments)
+{
+    ensureRareData().rubyAdjustments = WTFMove(rubyAdjustments);
 }
 
 void Box::setCachedGeometryForLayoutState(LayoutState& layoutState, std::unique_ptr<BoxGeometry> geometry) const

@@ -92,7 +92,6 @@ void initializeMainThreadPlatform()
     s_mainThread = pthread_self();
 #elif OS(WINDOWS)
     s_mainThread = Thread::currentID();
-    RunLoop::registerRunLoopMessageWindowClass();
 #endif
 }
 

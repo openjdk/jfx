@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,12 +32,28 @@ using JSC::DataView;
 
 namespace WebCore {
 
+ISOTrackEncryptionBox::ISOTrackEncryptionBox() = default;
+ISOTrackEncryptionBox::~ISOTrackEncryptionBox() = default;
+
+bool ISOTrackEncryptionBox::parseWithoutTypeAndSize(DataView& view)
+{
+    // Clients may want to parse the contents of a `tenc` box without the
+    // leading size and name fields.
+    unsigned offset = 0;
+    return parseVersionAndFlags(view, offset) && parsePayload(view, offset);
+}
+
 bool ISOTrackEncryptionBox::parse(DataView& view, unsigned& offset)
 {
     // ISO/IEC 23001-7-2015 Section 8.2.2
     if (!ISOFullBox::parse(view, offset))
         return false;
 
+    return parsePayload(view, offset);
+}
+
+bool ISOTrackEncryptionBox::parsePayload(DataView& view, unsigned& offset)
+{
     // unsigned int(8) reserved = 0;
     offset += 1;
 
@@ -74,7 +90,7 @@ bool ISOTrackEncryptionBox::parse(DataView& view, unsigned& offset)
 
     if (m_defaultIsProtected == 1 && !m_defaultPerSampleIVSize) {
         int8_t defaultConstantIVSize = 0;
-        if (!checkedRead<int8_t>(defaultConstantIVSize, view, offset, BigEndian))
+        if (!checkedRead<int8_t>(defaultConstantIVSize, view, offset, BigEndian) || defaultConstantIVSize < 0)
             return false;
 
         Vector<uint8_t> defaultConstantIV;

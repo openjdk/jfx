@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -182,4 +182,25 @@ void fsample(jfloat *map,
             }
         }
     }
+}
+
+/*
+ * checkRange function returns true if source or destination
+ * dimensions are not in the required bounds and returns false
+ * if dimensions are within required bounds.
+ */
+bool checkRange(JNIEnv *env,
+                jintArray dstPixels_arr, jint dstw, jint dsth,
+                jintArray srcPixels_arr, jint srcw, jint srch)
+{
+    return (srcPixels_arr == NULL ||
+            dstPixels_arr == NULL ||
+            srcw <= 0 ||
+            srch <= 0 ||
+            srcw > INT_MAX / srch ||
+            dstw <= 0 ||
+            dsth <= 0 ||
+            dstw > INT_MAX / dsth ||
+            (srcw * srch) > env->GetArrayLength(srcPixels_arr) ||
+            (dstw * dsth) > env->GetArrayLength(dstPixels_arr));
 }

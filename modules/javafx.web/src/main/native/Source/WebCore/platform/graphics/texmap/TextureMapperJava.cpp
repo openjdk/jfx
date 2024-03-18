@@ -126,4 +126,5 @@ void TextureMapperJava::setDepthRange(double, double)
 }
 
 }
+
 #endif

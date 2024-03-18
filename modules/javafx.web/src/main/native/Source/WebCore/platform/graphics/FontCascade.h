@@ -115,11 +115,9 @@ public:
     WEBCORE_EXPORT FontCascade& operator=(const FontCascade&);
 
     WEBCORE_EXPORT bool operator==(const FontCascade& other) const;
-    bool operator!=(const FontCascade& other) const { return !(*this == other); }
 
     const FontCascadeDescription& fontDescription() const { return m_fontDescription; }
 
-    int pixelSize() const { return fontDescription().computedPixelSize(); }
     float size() const { return fontDescription().computedSize(); }
 
     bool isCurrent(const FontSelector&) const;
@@ -147,15 +145,15 @@ public:
     int offsetForPosition(const TextRun&, float position, bool includePartialGlyphs) const;
     void adjustSelectionRectForText(const TextRun&, LayoutRect& selectionRect, unsigned from = 0, std::optional<unsigned> to = std::nullopt) const;
 
+    Vector<LayoutRect> characterSelectionRectsForText(const TextRun&, const LayoutRect& selectionRect, unsigned from, std::optional<unsigned> to) const;
+
     bool isSmallCaps() const { return m_fontDescription.variantCaps() == FontVariantCaps::Small; }
 
     float wordSpacing() const { return m_wordSpacing; }
-    float letterSpacing() const { return m_letterSpacing; }
+    float letterSpacing() const { return std::isnan(m_letterSpacing) ? 0.0f : m_letterSpacing; }
     void setWordSpacing(float s) { m_wordSpacing = s; }
     void setLetterSpacing(float s) { m_letterSpacing = s; }
     bool isFixedPitch() const;
-
-    FontRenderingMode renderingMode() const { return m_fontDescription.renderingMode(); }
 
     bool enableKerning() const { return m_enableKerning; }
     bool requiresShaping() const { return m_requiresShaping; }
@@ -264,13 +262,11 @@ public:
     {
         // https://drafts.csswg.org/css-text-3/#white-space-processing
         // "Unsupported Default_ignorable characters must be ignored for text rendering."
-        return (character == objectReplacementCharacter
-            || isControlCharacter(character)
-            || isDefaultIgnorableCodePoint(character));
+        return isControlCharacter(character) || isDefaultIgnorableCodePoint(character);
     }
     // FIXME: Callers of treatAsZeroWidthSpace() and treatAsZeroWidthSpaceInComplexScript() should probably be calling isCharacterWhoseGlyphsShouldBeDeletedForTextRendering() instead.
     static bool treatAsZeroWidthSpace(UChar32 c) { return treatAsZeroWidthSpaceInComplexScript(c) || c == zeroWidthNonJoiner || c == zeroWidthJoiner; }
-    static bool treatAsZeroWidthSpaceInComplexScript(UChar32 c) { return c < space || (c >= deleteCharacter && c < noBreakSpace) || c == softHyphen || c == zeroWidthSpace || (c >= leftToRightMark && c <= rightToLeftMark) || (c >= leftToRightEmbed && c <= rightToLeftOverride) || c == zeroWidthNoBreakSpace || c == objectReplacementCharacter; }
+    static bool treatAsZeroWidthSpaceInComplexScript(UChar32 c) { return c < space || (c >= deleteCharacter && c < noBreakSpace) || c == softHyphen || c == zeroWidthSpace || (c >= leftToRightMark && c <= rightToLeftMark) || (c >= leftToRightEmbed && c <= rightToLeftOverride) || c == zeroWidthNoBreakSpace; }
     static bool canReceiveTextEmphasis(UChar32);
 
     static inline UChar normalizeSpaces(UChar character)
@@ -291,20 +287,13 @@ public:
     FontCascadeFonts* fonts() const { return m_fonts.get(); }
     bool isLoadingCustomFonts() const;
 
+    static ResolvedEmojiPolicy resolveEmojiPolicy(FontVariantEmoji, UChar32);
+
 private:
 
     bool advancedTextRenderingMode() const
     {
-        auto textRenderingMode = m_fontDescription.textRenderingMode();
-        if (textRenderingMode == TextRenderingMode::GeometricPrecision || textRenderingMode == TextRenderingMode::OptimizeLegibility)
-            return true;
-        if (textRenderingMode == TextRenderingMode::OptimizeSpeed)
-            return false;
-#if PLATFORM(COCOA) || USE(FREETYPE)
-        return true;
-#else
-        return false;
-#endif
+        return m_fontDescription.textRenderingMode() != TextRenderingMode::OptimizeSpeed;
     }
 
     bool computeEnableKerning() const
@@ -319,12 +308,10 @@ private:
 
     bool computeRequiresShaping() const
     {
-#if PLATFORM(COCOA) || USE(FREETYPE)
         if (!m_fontDescription.variantSettings().isAllNormal())
             return true;
         if (m_fontDescription.featureSettings().size())
             return true;
-#endif
         return advancedTextRenderingMode();
     }
 
@@ -368,8 +355,9 @@ inline float FontCascade::tabWidth(const Font& font, const TabSize& tabSize, flo
     if (!baseTabWidth)
         result = letterSpacing();
     else {
-        float tabDeltaWidth = baseTabWidth - fmodf(position, baseTabWidth);
-        result = (tabDeltaWidth < font.spaceWidth() / 2) ? baseTabWidth : tabDeltaWidth;
+        result = baseTabWidth - fmodf(position, baseTabWidth);
+        if (result < font.spaceWidth() / 2)
+            result += baseTabWidth;
     }
     // If our caller passes in SyntheticBoldInclusion::Exclude, that means they're going to apply synthetic bold themselves later.
     // However, regardless of that, the space characters that are fed into the width calculation need to have their correct width, including the synthetic bold.
@@ -377,4 +365,4 @@ inline float FontCascade::tabWidth(const Font& font, const TabSize& tabSize, flo
     return result - (syntheticBoldInclusion == Font::SyntheticBoldInclusion::Exclude ? font.syntheticBoldOffset() : 0);
 }
 
-}
+} // namespace WebCore

@@ -38,7 +38,6 @@
 #include "DFGSilentRegisterSavePlan.h"
 #include "JITMathIC.h"
 #include "JITOperations.h"
-#include "PutKind.h"
 #include "SpillRegistersMode.h"
 #include "StructureStubInfo.h"
 #include "ValueRecovery.h"
@@ -698,7 +697,7 @@ public:
     void compileCheckDetached(Node*);
 
     void cachedGetById(Node*, CodeOrigin, JSValueRegs base, JSValueRegs result, GPRReg stubInfoGPR, GPRReg scratchGPR, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
-    void cachedPutById(Node*, CodeOrigin, GPRReg baseGPR, JSValueRegs valueRegs, GPRReg stubInfoGPR, GPRReg scratchGPR, GPRReg scratch2GPR, CacheableIdentifier, PutKind, ECMAMode, JITCompiler::Jump slowPathTarget = JITCompiler::Jump(), SpillRegistersMode = NeedToSpill);
+    void cachedPutById(Node*, CodeOrigin, GPRReg baseGPR, JSValueRegs valueRegs, GPRReg stubInfoGPR, GPRReg scratchGPR, GPRReg scratch2GPR, CacheableIdentifier, AccessType, ECMAMode, JITCompiler::Jump slowPathTarget = JITCompiler::Jump(), SpillRegistersMode = NeedToSpill);
 
 #if USE(JSVALUE64)
     void cachedGetById(Node*, CodeOrigin, GPRReg baseGPR, GPRReg resultGPR, GPRReg stubInfoGPR, GPRReg scratchGPR, CacheableIdentifier, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
@@ -713,6 +712,8 @@ public:
     void compilePushWithScope(Node*);
     void compileGetById(Node*, AccessType);
     void compileGetByIdFlush(Node*, AccessType);
+    void compileGetByIdMegamorphic(Node*);
+    void compileGetByIdWithThisMegamorphic(Node*);
     void compileInById(Node*);
     void compileInByVal(Node*);
     void compileHasPrivate(Node*, AccessType);
@@ -907,6 +908,32 @@ public:
         generationInfo(node).initConstant(node, node->refCount());
     }
 
+    void strictInt32TupleResultWithoutUsingChildren(GPRReg reg, Node* node, unsigned index, DataFormat format = DataFormatInt32)
+    {
+        ASSERT(index < node->tupleSize());
+        unsigned refCount = m_graph.m_tupleData.at(node->tupleOffset() + index).refCount;
+        if (!refCount)
+            return;
+        ASSERT(refCount == 1);
+        VirtualRegister virtualRegister = m_graph.m_tupleData.at(node->tupleOffset() + index).virtualRegister;
+        GenerationInfo& info = generationInfoFromVirtualRegister(virtualRegister);
+
+        if (format == DataFormatInt32) {
+            jitAssertIsInt32(reg);
+            m_gprs.retain(reg, virtualRegister, SpillOrderInteger);
+            info.initInt32(node, refCount, reg);
+        } else {
+#if USE(JSVALUE64)
+            RELEASE_ASSERT(format == DataFormatJSInt32);
+            jitAssertIsJSInt32(reg);
+            m_gprs.retain(reg, virtualRegister, SpillOrderJS);
+            info.initJSValue(node, refCount, reg, format);
+#elif USE(JSVALUE32_64)
+            RELEASE_ASSERT_NOT_REACHED();
+#endif
+        }
+    }
+
     template<typename OperationType, typename ResultRegType, typename... Args>
     std::enable_if_t<
         FunctionTraits<OperationType>::hasResult,
@@ -981,12 +1008,30 @@ public:
         return Base::appendCall(function);
     }
 
+#if OS(WINDOWS) && CPU(X86_64)
+    JITCompiler::Call appendCallWithUGPRPair(const CodePtr<CFunctionPtrTag> function)
+    {
+        prepareForExternalCall();
+        emitStoreCodeOrigin(m_currentNode->origin.semantic);
+        return Base::appendCallWithUGPRPair(function);
+    }
+#endif
+
     void appendCall(Address address)
     {
         prepareForExternalCall();
         emitStoreCodeOrigin(m_currentNode->origin.semantic);
         Base::appendCall(address);
     }
+
+#if OS(WINDOWS) && CPU(X86_64)
+    void appendCallWithUGPRPair(Address address)
+    {
+        prepareForExternalCall();
+        emitStoreCodeOrigin(m_currentNode->origin.semantic);
+        Base::appendCallWithUGPRPair(address);
+    }
+#endif
 
     JITCompiler::Call appendOperationCall(const CodePtr<OperationPtrTag> function)
     {
@@ -1004,7 +1049,11 @@ public:
 
     void appendCallSetResult(Address address, GPRReg result1, GPRReg result2)
     {
+#if OS(WINDOWS) && CPU(X86_64)
+        appendCallWithUGPRPair(address);
+#else
         appendCall(address);
+#endif
         setupResults(result1, result2);
     }
 
@@ -1027,7 +1076,11 @@ public:
 
     JITCompiler::Call appendCallSetResult(const CodePtr<CFunctionPtrTag> function, GPRReg result1, GPRReg result2)
     {
+#if OS(WINDOWS) && CPU(X86_64)
+        JITCompiler::Call call = appendCallWithUGPRPair(function);
+#else
         JITCompiler::Call call = appendCall(function);
+#endif
         setupResults(result1, result2);
         return call;
     }
@@ -1257,6 +1310,7 @@ public:
 
     void compileToStringOrCallStringConstructorOrStringValueOf(Node*);
     void compileFunctionToString(Node*);
+    void compileFunctionBind(Node*);
     void compileNumberToStringWithRadix(Node*);
     void compileNumberToStringWithValidRadixConstant(Node*);
     void compileNumberToStringWithValidRadixConstant(Node*, int32_t radix);
@@ -1319,14 +1373,16 @@ public:
     }
 
     void compilePutByVal(Node*);
+    void compilePutByValMegamorphic(Node*);
 
     // We use a scopedLambda to placate register allocation validation.
-    enum class CanUseFlush { Yes, No };
+    enum class CanUseFlush : bool { No, Yes };
     void compileGetByVal(Node*, const ScopedLambda<std::tuple<JSValueRegs, DataFormat, CanUseFlush>(DataFormat preferredFormat)>& prefix);
 
     void compileGetCharCodeAt(Node*);
     void compileGetByValOnString(Node*, const ScopedLambda<std::tuple<JSValueRegs, DataFormat, CanUseFlush>(DataFormat preferredFormat)>& prefix);
     void compileFromCharCode(Node*);
+    void compileGetByValMegamorphic(Node*);
 
     void compileGetByValOnDirectArguments(Node*, const ScopedLambda<std::tuple<JSValueRegs, DataFormat, CanUseFlush>(DataFormat preferredFormat)>& prefix);
     void compileGetByValOnScopedArguments(Node*, const ScopedLambda<std::tuple<JSValueRegs, DataFormat, CanUseFlush>(DataFormat preferredFormat)>& prefix);
@@ -1347,6 +1403,7 @@ public:
 
     void compileCheckTypeInfoFlags(Node*);
     void compileCheckIdent(Node*);
+    void compileHasStructureWithFlags(Node*);
 
     void compileParseInt(Node*);
 
@@ -1380,6 +1437,7 @@ public:
     void compileValueSub(Node*);
     void compileArithAdd(Node*);
     void compileMakeRope(Node*);
+    void compileMakeAtomString(Node*);
     void compileArithAbs(Node*);
     void compileArithClz32(Node*);
     void compileArithSub(Node*);
@@ -1419,6 +1477,7 @@ public:
     void compilePutByValForCellWithString(Node*);
     void compilePutByValForCellWithSymbol(Node*);
     void compileGetByValWithThis(Node*);
+    void compileGetByValWithThisMegamorphic(Node*);
     void compilePutPrivateName(Node*);
     void compilePutPrivateNameById(Node*);
     void compileCheckPrivateBrand(Node*);
@@ -1448,6 +1507,7 @@ public:
     template <typename ClassType> void compileNewFunctionCommon(GPRReg, RegisteredStructure, GPRReg, GPRReg, GPRReg, JumpList&, size_t, FunctionExecutable*);
     void compileNewFunction(Node*);
     void compileSetFunctionName(Node*);
+    void compileNewBoundFunction(Node*);
     void compileNewRegexp(Node*);
     void compileForwardVarargs(Node*);
     void compileVarargsLength(Node*);
@@ -1459,13 +1519,13 @@ public:
     void compileGetArgument(Node*);
     void compileCreateScopedArguments(Node*);
     void compileCreateClonedArguments(Node*);
-    void compileCreateArgumentsButterflyExcludingThis(Node*);
     void compileCreateRest(Node*);
     void compileSpread(Node*);
     void compileNewArray(Node*);
     void compileNewArrayWithSpread(Node*);
     void compileGetRestLength(Node*);
     void compileArraySlice(Node*);
+    void compileArraySpliceExtract(Node*);
     void compileArrayIndexOf(Node*);
     void compileArrayPush(Node*);
     void compileNotifyWrite(Node*);
@@ -1514,20 +1574,21 @@ public:
     void compileThrow(Node*);
     void compileThrowStaticError(Node*);
 
+    void compileExtractFromTuple(Node*);
     void compileEnumeratorNextUpdateIndexAndMode(Node*);
-    void compileEnumeratorNextExtractMode(Node*);
-    void compileEnumeratorNextExtractIndex(Node*);
     void compileEnumeratorNextUpdatePropertyName(Node*);
     void compileEnumeratorGetByVal(Node*);
     template<typename SlowPathFunctionType>
     void compileEnumeratorHasProperty(Node*, SlowPathFunctionType);
     void compileEnumeratorInByVal(Node*);
     void compileEnumeratorHasOwnProperty(Node*);
+    void compileEnumeratorPutByVal(Node*);
 
     void compilePutByIdFlush(Node*);
     void compilePutById(Node*);
     void compilePutByIdDirect(Node*);
     void compilePutByIdWithThis(Node*);
+    void compilePutByIdMegamorphic(Node*);
     void compileGetPropertyEnumerator(Node*);
     void compileGetExecutable(Node*);
     void compileGetGetter(Node*);
@@ -1539,10 +1600,11 @@ public:
     void compileStrCat(Node*);
     void compileNewArrayBuffer(Node*);
     void compileNewArrayWithSize(Node*);
+    void compileNewArrayWithConstantSize(Node*);
     void compileNewArrayWithSpecies(Node*);
     void compileNewTypedArray(Node*);
     void compileToThis(Node*);
-    void compileObjectKeysOrObjectGetOwnPropertyNames(Node*);
+    void compileOwnPropertyKeysVariant(Node*);
     void compileObjectAssign(Node*);
     void compileObjectCreate(Node*);
     void compileObjectToString(Node*);
@@ -1566,7 +1628,11 @@ public:
     void compileProfileType(Node*);
     void compileStringCodePointAt(Node*);
     void compileStringLocaleCompare(Node*);
+    void compileStringIndexOf(Node*);
     void compileDateGet(Node*);
+    void compileDateSet(Node*);
+    void compileGlobalIsNaN(Node*);
+    void compileNumberIsNaN(Node*);
 
     template<typename JSClass, typename Operation>
     void compileCreateInternalFieldObject(Node*, Operation);
@@ -1582,9 +1648,9 @@ public:
     template <typename StructureType> // StructureType can be GPR or ImmPtr.
     void emitAllocateJSCell(
         GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, StructureType structure,
-        GPRReg scratchGPR, JumpList& slowPath)
+        GPRReg scratchGPR, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
-        Base::emitAllocateJSCell(resultGPR, allocator, allocatorGPR, structure, scratchGPR, slowPath);
+        Base::emitAllocateJSCell(resultGPR, allocator, allocatorGPR, structure, scratchGPR, slowPath, slowAllocationResult);
     }
 
     using Base::emitAllocateJSObject;
@@ -1592,34 +1658,34 @@ public:
     template <typename StructureType, typename StorageType> // StructureType and StorageType can be GPR or ImmPtr.
     void emitAllocateJSObject(
         GPRReg resultGPR, const JITAllocator& allocator, GPRReg allocatorGPR, StructureType structure,
-        StorageType storage, GPRReg scratchGPR, JumpList& slowPath)
+        StorageType storage, GPRReg scratchGPR, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
         Base::emitAllocateJSObject(
-            resultGPR, allocator, allocatorGPR, structure, storage, scratchGPR, slowPath);
+            resultGPR, allocator, allocatorGPR, structure, storage, scratchGPR, slowPath, slowAllocationResult);
     }
 
     using Base::emitAllocateJSObjectWithKnownSize;
     template <typename ClassType, typename StructureType, typename StorageType> // StructureType and StorageType can be GPR or ImmPtr.
     void emitAllocateJSObjectWithKnownSize(
         GPRReg resultGPR, StructureType structure, StorageType storage, GPRReg scratchGPR1,
-        GPRReg scratchGPR2, JumpList& slowPath, size_t size)
+        GPRReg scratchGPR2, JumpList& slowPath, size_t size, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
-        emitAllocateJSObjectWithKnownSize<ClassType>(vm(), resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath, size);
+        emitAllocateJSObjectWithKnownSize<ClassType>(vm(), resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath, size, slowAllocationResult);
     }
 
     // Convenience allocator for a built-in object.
     template <typename ClassType, typename StructureType, typename StorageType> // StructureType and StorageType can be GPR or ImmPtr.
     void emitAllocateJSObject(GPRReg resultGPR, StructureType structure, StorageType storage,
-        GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath)
+        GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
-        emitAllocateJSObject<ClassType>(vm(), resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath);
+        emitAllocateJSObject<ClassType>(vm(), resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath, slowAllocationResult);
     }
 
     using Base::emitAllocateVariableSizedJSObject;
     template <typename ClassType, typename StructureType> // StructureType and StorageType can be GPR or ImmPtr.
-    void emitAllocateVariableSizedJSObject(GPRReg resultGPR, StructureType structure, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath)
+    void emitAllocateVariableSizedJSObject(GPRReg resultGPR, StructureType structure, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, JumpList& slowPath, SlowAllocationResult slowAllocationResult = SlowAllocationResult::ClearToNull)
     {
-        emitAllocateVariableSizedJSObject<ClassType>(vm(), resultGPR, structure, allocationSize, scratchGPR1, scratchGPR2, slowPath);
+        emitAllocateVariableSizedJSObject<ClassType>(vm(), resultGPR, structure, allocationSize, scratchGPR1, scratchGPR2, slowPath, slowAllocationResult);
     }
 
     void emitAllocateRawObject(GPRReg resultGPR, RegisteredStructure, GPRReg storageGPR, unsigned numElements, unsigned vectorLength);
@@ -2236,7 +2302,6 @@ public:
     }
 };
 
-#if USE(JSVALUE32_64)
 class GPRFlushedCallResult2 : public GPRTemporary {
 public:
     GPRFlushedCallResult2(SpeculativeJIT* jit)
@@ -2244,7 +2309,6 @@ public:
     {
     }
 };
-#endif
 
 class FPRResult : public FPRTemporary {
 public:

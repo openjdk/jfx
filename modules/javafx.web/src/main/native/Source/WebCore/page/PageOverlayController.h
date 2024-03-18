@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-class Frame;
+class LocalFrame;
 class Page;
 class PlatformMouseEvent;
 
@@ -65,7 +65,7 @@ public:
     void didChangeSettings();
     WEBCORE_EXPORT void didChangeDeviceScaleFactor();
     void didChangeViewExposedRect();
-    void didScrollFrame(Frame&);
+    void didScrollFrame(LocalFrame&);
 
     void didChangeOverlayFrame(PageOverlay&);
     void didChangeOverlayBackgroundColor(PageOverlay&);
@@ -93,7 +93,7 @@ private:
 
     // GraphicsLayerClient
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clipRect, GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clipRect, OptionSet<GraphicsLayerPaintBehavior>) override;
     float deviceScaleFactor() const override;
     bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const override;
     bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char* propertyName, OptionSet<LayerTreeAsTextOptions>) const override;

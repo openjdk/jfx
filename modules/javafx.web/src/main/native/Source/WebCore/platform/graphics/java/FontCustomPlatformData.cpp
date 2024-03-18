@@ -64,7 +64,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription&
     return FontPlatformData(RQRef::create(font), size);
 }
 
-std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& /* index */)
+RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& /* index */)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -97,7 +97,7 @@ std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffe
             (jobject) sharedBuffer));
     WTF::CheckAndClearException(env);
 
-    return data ? std::make_unique<FontCustomPlatformData>(data) : nullptr;
+    return data ? adoptRef(new FontCustomPlatformData(data)) : nullptr;
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)
@@ -105,6 +105,12 @@ bool FontCustomPlatformData::supportsFormat(const String& format)
     return equalLettersIgnoringASCIICase(format, "truetype"_s)
             || equalLettersIgnoringASCIICase(format, "opentype"_s)
             || equalLettersIgnoringASCIICase(format, "woff"_s);
+}
+
+bool FontCustomPlatformData::supportsTechnology(const FontTechnology&)
+{
+    // FIXME: define supported technologies for this platform (webkit.org/b/256310).
+    return true;
 }
 
 }

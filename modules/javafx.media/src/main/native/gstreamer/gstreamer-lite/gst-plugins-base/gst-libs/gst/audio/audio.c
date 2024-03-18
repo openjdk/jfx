@@ -69,7 +69,7 @@ ensure_debug_category (void)
  * After calling this function the caller does not own a reference to
  * @buffer anymore.
  *
- * Returns: (transfer full): %NULL if the buffer is completely outside the configured segment,
+ * Returns: (transfer full) (nullable): %NULL if the buffer is completely outside the configured segment,
  * otherwise the clipped buffer is returned.
  *
  * If the buffer has no timestamp, it is assumed to be inside the segment and
@@ -267,8 +267,7 @@ gst_audio_buffer_clip (GstBuffer * buffer, const GstSegment * segment,
  * After calling this function the caller does not own a reference to
  * @buffer anymore.
  *
- * Returns: (transfer full): the truncated buffer or %NULL if the arguments
- *   were invalid
+ * Returns: (transfer full): the truncated buffer
  *
  * Since: 1.16
  */

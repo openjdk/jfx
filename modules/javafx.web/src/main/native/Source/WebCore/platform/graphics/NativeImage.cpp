@@ -27,8 +27,6 @@
 #include "NativeImage.h"
 #include "GraphicsContext.h"
 
-#include <wtf/NeverDestroyed.h>
-
 namespace WebCore {
 
 RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
@@ -39,27 +37,24 @@ RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, Render
 }
 
 NativeImage::NativeImage(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
-    : m_platformImage(WTFMove(platformImage))
-    , m_renderingResourceIdentifier(renderingResourceIdentifier)
+    : RenderingResource(renderingResourceIdentifier)
+    , m_platformImage(WTFMove(platformImage))
 {
     ASSERT(m_platformImage);
 }
 
-NativeImage::~NativeImage()
-{
-    for (auto observer : m_observers)
-        observer->releaseNativeImage(m_renderingResourceIdentifier);
-}
-
+#if PLATFORM(JAVA)
 void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options)
 {
     context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
 }
-
+#endif
 void NativeImage::setPlatformImage(PlatformImagePtr&& platformImage)
 {
     ASSERT(platformImage);
     m_platformImage = WTFMove(platformImage);
 }
+
+
 
 } // namespace WebCore

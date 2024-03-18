@@ -192,7 +192,7 @@ public abstract class NGShape3D extends NGNode {
     }
 
     private boolean noLights(NGLightBase[] lights) {
-        return lights == null || lights[0] == null;
+        return lights == null || lights.length == 0 || lights[0] == null;
     }
 
     /**

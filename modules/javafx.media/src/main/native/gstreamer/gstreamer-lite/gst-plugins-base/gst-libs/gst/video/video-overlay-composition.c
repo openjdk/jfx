@@ -426,7 +426,7 @@ gst_video_overlay_composition_n_rectangles (GstVideoOverlayComposition * comp)
  *
  * Returns the @n-th #GstVideoOverlayRectangle contained in @comp.
  *
- * Returns: (transfer none): the @n-th rectangle, or NULL if @n is out of
+ * Returns: (transfer none) (nullable): the @n-th rectangle, or NULL if @n is out of
  *     bounds. Will not return a new reference, the caller will need to
  *     obtain her own reference using gst_video_overlay_rectangle_ref()
  *     if needed.

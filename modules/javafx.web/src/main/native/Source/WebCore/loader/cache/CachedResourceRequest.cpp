@@ -28,6 +28,7 @@
 
 #include "CachePolicy.h"
 #include "CachedResourceLoader.h"
+#include "CachedResourceRequestInitiatorTypes.h"
 #include "ContentExtensionsBackend.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
@@ -35,8 +36,10 @@
 #include "FrameLoader.h"
 #include "HTTPHeaderValues.h"
 #include "ImageDecoder.h"
+#include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
+#include "OriginAccessPatterns.h"
 #include "SecurityPolicy.h"
 #include "ServiceWorkerRegistrationData.h"
 #include <wtf/NeverDestroyed.h>
@@ -145,8 +148,17 @@ static constexpr ASCIILiteral acceptHeaderValueForAVIFImageResource()
 
 static constexpr ASCIILiteral acceptHeaderValueForJPEGXLImageResource()
 {
-#if USE(JPEGXL)
+#if HAVE(JPEGXL) || USE(JPEGXL)
     return "image/jxl,"_s;
+#else
+    return ""_s;
+#endif
+}
+
+static constexpr ASCIILiteral acceptHeaderValueForHEICImageResource()
+{
+#if HAVE(HEIC)
+    return "image/heic,image/heic-sequence,"_s;
 #else
     return ""_s;
 #endif
@@ -172,6 +184,7 @@ static String acceptHeaderValueForImageResource()
     return String(acceptHeaderValueForWebPImageResource())
         + acceptHeaderValueForAVIFImageResource()
         + acceptHeaderValueForJPEGXLImageResource()
+        + acceptHeaderValueForHEICImageResource()
         + acceptHeaderValueForAdditionalSupportedImageMIMETypes()
         + acceptHeaderValueForVideoImageResource(ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video))
         + "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
@@ -291,15 +304,19 @@ void CachedResourceRequest::updateReferrerAndOriginHeaders(FrameLoader& frameLoa
     String outgoingReferrer = frameLoader.outgoingReferrer();
     if (m_resourceRequest.hasHTTPReferrer())
         outgoingReferrer = m_resourceRequest.httpReferrer();
-    updateRequestReferrer(m_resourceRequest, m_options.referrerPolicy, outgoingReferrer);
+    updateRequestReferrer(m_resourceRequest, m_options.referrerPolicy, outgoingReferrer, OriginAccessPatternsForWebProcess::singleton());
 
     if (!m_resourceRequest.httpOrigin().isEmpty())
         return;
+
+    auto* document = frameLoader.frame().document();
+    auto actualOrigin = (document && m_options.destination == FetchOptionsDestination::EmptyString && m_initiatorType == cachedResourceRequestInitiatorTypes().fetch) ? Ref { document->securityOrigin() } : SecurityOrigin::createFromString(outgoingReferrer);
     String outgoingOrigin;
     if (m_options.mode == FetchOptions::Mode::Cors)
-        outgoingOrigin = SecurityOrigin::createFromString(outgoingReferrer)->toString();
+        outgoingOrigin = actualOrigin->toString();
     else
-        outgoingOrigin = SecurityPolicy::generateOriginHeader(m_options.referrerPolicy, m_resourceRequest.url(), SecurityOrigin::createFromString(outgoingReferrer));
+        outgoingOrigin = SecurityPolicy::generateOriginHeader(m_options.referrerPolicy, m_resourceRequest.url(), actualOrigin, OriginAccessPatternsForWebProcess::singleton());
+
     FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
 }
 
@@ -321,7 +338,7 @@ bool isRequestCrossOrigin(SecurityOrigin* origin, const URL& requestURL, const R
     if (requestURL.protocolIsData() && options.sameOriginDataURLFlag == SameOriginDataURLFlag::Set)
         return false;
 
-    return !origin->canRequest(requestURL);
+    return !origin->canRequest(requestURL, OriginAccessPatternsForWebProcess::singleton());
 }
 
 void CachedResourceRequest::setDestinationIfNotSet(FetchOptions::Destination destination)

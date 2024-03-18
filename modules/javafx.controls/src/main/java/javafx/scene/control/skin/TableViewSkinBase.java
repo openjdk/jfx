@@ -906,7 +906,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             contentWidth -= flow.getVbar().getWidth();
         }
 
-        if ((contentWidth <= 0) || (TableSkinUtils.getItemCount(this) == 0)) {
+        if ((contentWidth <= 0) || (getItemCount() == 0)) {
             // when there is no content in the TableView.
             Control c = getSkinnable();
             contentWidth = c.getWidth() - (snappedLeftInset() + snappedRightInset());

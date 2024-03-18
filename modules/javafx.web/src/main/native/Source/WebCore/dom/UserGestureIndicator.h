@@ -30,6 +30,7 @@
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
+#include <wtf/UUID.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -45,7 +46,8 @@ enum ProcessingUserGestureState {
     NotProcessingUserGesture
 };
 
-enum class UserGestureType { EscapeKey, Other };
+enum class CanRequestDOMPaste : bool { No, Yes };
+enum class UserGestureType : uint8_t { EscapeKey, ActivationTriggering, Other };
 
 class UserGestureToken : public RefCounted<UserGestureToken>, public CanMakeWeakPtr<UserGestureToken> {
 public:
@@ -53,9 +55,9 @@ public:
     static const Seconds& maximumIntervalForUserGestureForwardingForFetch();
     WEBCORE_EXPORT static void setMaximumIntervalForUserGestureForwardingForFetchForTesting(Seconds);
 
-    static Ref<UserGestureToken> create(ProcessingUserGestureState state, UserGestureType gestureType, Document* document = nullptr)
+    static Ref<UserGestureToken> create(ProcessingUserGestureState state, UserGestureType gestureType, Document* document = nullptr, std::optional<WTF::UUID> authorizationToken = std::nullopt, CanRequestDOMPaste canRequestDOMPaste = CanRequestDOMPaste::Yes)
     {
-        return adoptRef(*new UserGestureToken(state, gestureType, document));
+        return adoptRef(*new UserGestureToken(state, gestureType, document, authorizationToken, canRequestDOMPaste));
     }
 
     WEBCORE_EXPORT ~UserGestureToken();
@@ -91,7 +93,7 @@ public:
     void resetScope() { m_scope = GestureScope::All; }
 
     // Expand the following methods if more propagation sources are added later.
-    enum class IsPropagatedFromFetch { Yes, No };
+    enum class IsPropagatedFromFetch : bool { No, Yes };
     void setIsPropagatedFromFetch(IsPropagatedFromFetch is) { m_isPropagatedFromFetch = is; }
     void resetIsPropagatedFromFetch() { m_isPropagatedFromFetch = IsPropagatedFromFetch::No; }
     bool isPropagatedFromFetch() const { return m_isPropagatedFromFetch == IsPropagatedFromFetch::Yes; }
@@ -103,21 +105,27 @@ public:
 
     MonotonicTime startTime() const { return m_startTime; }
 
+    std::optional<WTF::UUID> authorizationToken() const { return m_authorizationToken; }
+
+    bool canRequestDOMPaste() const { return m_canRequestDOMPaste == CanRequestDOMPaste::Yes; }
+
     bool isValidForDocument(const Document&) const;
 
     void forEachImpactedDocument(Function<void(Document&)>&&);
 
 private:
-    UserGestureToken(ProcessingUserGestureState, UserGestureType, Document*);
+    UserGestureToken(ProcessingUserGestureState, UserGestureType, Document*, std::optional<WTF::UUID> authorizationToken, CanRequestDOMPaste);
 
     ProcessingUserGestureState m_state = NotProcessingUserGesture;
     Vector<Function<void(UserGestureToken&)>> m_destructionObservers;
     UserGestureType m_gestureType;
     WeakHashSet<Document, WeakPtrImplWithEventTargetData> m_documentsImpactedByUserGesture;
+    CanRequestDOMPaste m_canRequestDOMPaste { CanRequestDOMPaste::No };
     DOMPasteAccessPolicy m_domPasteAccessPolicy { DOMPasteAccessPolicy::NotRequestedYet };
     GestureScope m_scope { GestureScope::All };
     MonotonicTime m_startTime { MonotonicTime::now() };
     IsPropagatedFromFetch m_isPropagatedFromFetch { IsPropagatedFromFetch::No };
+    std::optional<WTF::UUID> m_authorizationToken;
 };
 
 class UserGestureIndicator {
@@ -131,9 +139,11 @@ public:
 
     // If a document is provided, its last known user gesture timestamp is updated.
     enum class ProcessInteractionStyle { Immediate, Delayed };
-    WEBCORE_EXPORT explicit UserGestureIndicator(std::optional<ProcessingUserGestureState>, Document* = nullptr, UserGestureType = UserGestureType::Other, ProcessInteractionStyle = ProcessInteractionStyle::Immediate);
+    WEBCORE_EXPORT explicit UserGestureIndicator(std::optional<ProcessingUserGestureState>, Document* = nullptr, UserGestureType = UserGestureType::ActivationTriggering, ProcessInteractionStyle = ProcessInteractionStyle::Immediate, std::optional<WTF::UUID> authorizationToken = std::nullopt, CanRequestDOMPaste = CanRequestDOMPaste::Yes);
     WEBCORE_EXPORT explicit UserGestureIndicator(RefPtr<UserGestureToken>, UserGestureToken::GestureScope = UserGestureToken::GestureScope::All, UserGestureToken::IsPropagatedFromFetch = UserGestureToken::IsPropagatedFromFetch::No);
     WEBCORE_EXPORT ~UserGestureIndicator();
+
+    WEBCORE_EXPORT std::optional<WTF::UUID> authorizationToken() const;
 
 private:
     RefPtr<UserGestureToken> m_previousToken;

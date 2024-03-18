@@ -66,6 +66,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getFormI
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
+
     return JavaReturn<String>(env, IMPL->getNameAttribute());
 }
 

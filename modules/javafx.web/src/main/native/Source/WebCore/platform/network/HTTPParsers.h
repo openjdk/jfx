@@ -77,6 +77,8 @@ enum class ClearSiteDataValue : uint8_t {
     Storage = 1 << 3,
 };
 
+enum class RangeAllowWhitespace : bool { No, Yes };
+
 bool isValidReasonPhrase(const String&);
 bool isValidHTTPHeaderValue(const String&);
 bool isValidAcceptHeaderValue(const String&);
@@ -96,7 +98,7 @@ WEBCORE_EXPORT XFrameOptionsDisposition parseXFrameOptionsHeader(StringView);
 WEBCORE_EXPORT OptionSet<ClearSiteDataValue> parseClearSiteDataHeader(const ResourceResponse&);
 
 // -1 could be set to one of the return parameters to indicate the value is not specified.
-WEBCORE_EXPORT bool parseRange(StringView, long long& rangeOffset, long long& rangeEnd, long long& rangeSuffixLength);
+WEBCORE_EXPORT bool parseRange(StringView, RangeAllowWhitespace, long long& rangeStart, long long& rangeEnd);
 
 ContentTypeOptionsDisposition parseContentTypeOptionsHeader(StringView header);
 
@@ -121,22 +123,6 @@ bool isSafeMethod(const String&);
 
 WEBCORE_EXPORT CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView);
 
-inline bool isHTTPSpace(UChar character)
-{
-    return character <= ' ' && (character == ' ' || character == '\n' || character == '\t' || character == '\r');
-}
-
-// Strip leading and trailing whitespace as defined in https://fetch.spec.whatwg.org/#concept-header-value-normalize.
-inline String stripLeadingAndTrailingHTTPSpaces(const String& string)
-{
-    return string.stripLeadingAndTrailingCharacters(isHTTPSpace);
-}
-
-inline StringView stripLeadingAndTrailingHTTPSpaces(StringView string)
-{
-    return string.stripLeadingAndTrailingMatchedCharacters(isHTTPSpace);
-}
-
 template<class HashType>
 bool addToAccessControlAllowList(const String& string, unsigned start, unsigned end, HashSet<String, HashType>& set)
 {
@@ -145,7 +131,7 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
         return true;
 
     // Skip white space from start.
-    while (start <= end && isHTTPSpace((*stringImpl)[start]))
+    while (start <= end && isASCIIWhitespaceWithoutFF((*stringImpl)[start]))
         ++start;
 
     // only white space
@@ -153,7 +139,7 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
         return true;
 
     // Skip white space from end.
-    while (end && isHTTPSpace((*stringImpl)[end]))
+    while (end && isASCIIWhitespaceWithoutFF((*stringImpl)[end]))
         --end;
 
     auto token = string.substring(start, end - start + 1);

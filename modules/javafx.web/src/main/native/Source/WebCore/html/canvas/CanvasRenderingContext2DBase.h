@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,6 +47,7 @@
 #include "ImageSmoothingQuality.h"
 #include "Path.h"
 #include "PlatformLayer.h"
+#include "Timer.h"
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -236,6 +237,8 @@ public:
     using Direction = CanvasDirection;
     void setDirection(Direction);
 
+    const HashSet<uint32_t>& suppliedColors() const { return m_suppliedColors; }
+
     class FontProxy final : public FontSelectorClient {
     public:
         FontProxy() = default;
@@ -323,6 +326,14 @@ protected:
     bool usesCSSCompatibilityParseMode() const { return m_usesCSSCompatibilityParseMode; }
 
 private:
+    struct CachedImageData {
+        CachedImageData(CanvasRenderingContext2DBase&);
+
+        RefPtr<ImageData> imageData;
+        DeferrableOneShotTimer evictionTimer;
+        unsigned requestCount = 0;
+    };
+
     void applyLineDash() const;
     void setShadow(const FloatSize& offset, float blur, const Color&);
     void applyShadow();
@@ -332,12 +343,15 @@ private:
         ApplyTransform = 1 << 0,
         ApplyShadow = 1 << 1,
         ApplyClip = 1 << 2,
+        ApplyPostProcessing = 1 << 3,
+        PreserveCachedImageData = 1 << 4,
     };
-    void didDraw(std::optional<FloatRect>, OptionSet<DidDrawOption> = { DidDrawOption::ApplyTransform, DidDrawOption::ApplyShadow, DidDrawOption::ApplyClip });
+    void didDraw(std::optional<FloatRect>, OptionSet<DidDrawOption> = { DidDrawOption::ApplyTransform, DidDrawOption::ApplyShadow, DidDrawOption::ApplyClip, DidDrawOption::ApplyPostProcessing });
     void didDrawEntireCanvas();
     void didDraw(bool entireCanvas, const FloatRect&);
     template<typename RectProvider> void didDraw(bool entireCanvas, RectProvider);
 
+    bool is2dBase() const final { return true; }
     void paintRenderingResultsToCanvas() override;
     bool needsPreparationForDisplay() const final;
     void prepareForDisplay() final;
@@ -414,6 +428,10 @@ private:
 
     FloatPoint textOffset(float width, TextDirection);
 
+    bool cacheImageDataIfPossible(ImageData&, const IntPoint& destinationPosition, const IntRect& sourceRect);
+    RefPtr<ImageData> takeCachedImageDataIfPossible(const IntRect& sourceRect, PredefinedColorSpace) const;
+    void evictCachedImageData();
+
     static constexpr unsigned MaxSaveCount = 1024 * 16;
     Vector<State, 1> m_stateStack;
     FloatRect m_dirtyRect;
@@ -421,7 +439,11 @@ private:
     bool m_usesCSSCompatibilityParseMode;
     bool m_usesDisplayListDrawing { false };
     mutable std::unique_ptr<DisplayList::DrawingContext> m_recordingContext;
+    HashSet<uint32_t> m_suppliedColors;
+    mutable std::optional<CachedImageData> m_cachedImageData;
     CanvasRenderingContext2DSettings m_settings;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::CanvasRenderingContext2DBase, is2dBase())
