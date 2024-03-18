@@ -89,7 +89,7 @@ public class TooltipPage extends TestPaneBase {
     private Node createInteractiveContent() {
         boolean autoHide = control.isAutoHide();
         control.setAutoHide(false);
-        
+
         TextField f = new TextField();
         return f;
     }

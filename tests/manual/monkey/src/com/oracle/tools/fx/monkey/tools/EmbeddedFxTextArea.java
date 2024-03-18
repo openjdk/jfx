@@ -45,7 +45,7 @@ import javafx.scene.control.TextArea;
 public class EmbeddedFxTextArea {
     private static JFXPanel jfxPanel;
     private static TextArea textArea;
-    
+
     enum CompOri {
         UNKNOWN(ComponentOrientation.UNKNOWN),
         LEFT_TO_RIGHT(ComponentOrientation.LEFT_TO_RIGHT),

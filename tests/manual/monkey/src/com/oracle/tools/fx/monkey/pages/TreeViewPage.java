@@ -94,17 +94,13 @@ public class TreeViewPage extends TestPaneBase implements HasSkinnable {
         op.option(Utils.buttons(addButton, removeButton));
         op.option("Selection Model:", createSelectionModelOptions("selectionModel"));
         op.option(new BooleanOption("showRoot", "show root", control.showRootProperty()));
-
         op.separator();
         op.option(indeterminate);
         op.option(selected);
-
         ControlPropertySheet.appendTo(op, control);
-        
+
         setContent(control);
         setOptions(op);
-
-        //control.getSelectionModel().select(control.getRoot());
     }
 
     private void addChild(boolean indeterminate, boolean selected) {

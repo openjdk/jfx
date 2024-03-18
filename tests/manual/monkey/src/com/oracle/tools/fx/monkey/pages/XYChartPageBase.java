@@ -47,7 +47,7 @@ public abstract class XYChartPageBase extends TestPaneBase {
     public XYChartPageBase(String name) {
         super(name);
     }
-    
+
     protected CategoryAxis createCategoryAxis(String text) {
         CategoryAxis a = new CategoryAxis();
         a.setLabel(text);
