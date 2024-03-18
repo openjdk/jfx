@@ -32,12 +32,16 @@ import java.util.List;
 import java.util.Set;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
@@ -57,6 +61,8 @@ public class ClipboardViewer extends BorderPane {
         control = new TreeTableView<>(root);
         control.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
         control.getSelectionModel().setCellSelectionEnabled(true);
+        control.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        // TODO disable column reordering
         control.setShowRoot(false);
         {
             TreeTableColumn<Entry, String> c = new TreeTableColumn<>();
@@ -104,6 +110,7 @@ public class ClipboardViewer extends BorderPane {
             });
             control.getColumns().add(c);
         }
+        FX.setPopupMenu(control, this::createPopupMenu);
 
         Button addButton = new Button("Reload");
         addButton.setOnAction((ev) -> reload());
@@ -114,6 +121,38 @@ public class ClipboardViewer extends BorderPane {
         setTop(tp);
 
         reload();
+    }
+
+    private ContextMenu createPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Copy", this::copy);
+        return m;
+    }
+
+    private void copy() {
+        StringBuilder sb = null;
+        List<TreeTablePosition<Entry, ?>> sel = control.getSelectionModel().getSelectedCells();
+        for (TreeTablePosition<Entry, ?> p : sel) {
+            Entry en = p.getTreeItem().getValue();
+            if (en != null) {
+                int col = p.getColumn();
+
+                if (sb == null) {
+                    sb = new StringBuilder();
+                }
+
+                String s = (col == 0) ? en.text.get() : en.text2.get();
+                sb.append(s);
+                sb.append("\n");
+            }
+        }
+
+        if (sb != null) {
+            String text = sb.toString();
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString(text);
+            Clipboard.getSystemClipboard().setContent(cc);
+        }
     }
 
     private void reload() {

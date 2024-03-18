@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,17 +26,18 @@ package com.oracle.tools.fx.monkey.pages;
 
 import java.text.DecimalFormat;
 import java.text.ParseException;
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.OptionPane;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Spinner;
 import javafx.util.StringConverter;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- * Spinner Page
+ * Spinner Page.
  */
+// TODO convert to final control (use value factory)
 public class SpinnerPage extends TestPaneBase {
     enum Mode {
         DOUBLE,
@@ -50,7 +51,7 @@ public class SpinnerPage extends TestPaneBase {
         ;
         private final String text;
         Converter(String text) { this.text = text; }
-        public String toString() { return text; }
+        @Override public String toString() { return text; }
     }
 
     private final ComboBox<Mode> modeChoice;
@@ -59,7 +60,7 @@ public class SpinnerPage extends TestPaneBase {
     private Spinner<Number> control;
 
     public SpinnerPage() {
-        FX.name(this, "SpinnerPage");
+        super("SpinnerPage");
 
         modeChoice = new ComboBox<>();
         FX.name(modeChoice, "modeChoice");
@@ -86,18 +87,16 @@ public class SpinnerPage extends TestPaneBase {
         });
 
         OptionPane p = new OptionPane();
-        p.label("Mode:");
-        p.option(modeChoice);
+        p.option("Mode:", modeChoice);
         p.option(editable);
-        p.label("Converter:");
-        p.option(converterChoice);
+        p.option("Converter:", converterChoice);
 
         setOptions(p);
         updateControl();
         FX.select(modeChoice, Mode.DOUBLE);
     }
 
-    protected void updateControl() {
+    private void updateControl() {
         Mode m = modeChoice.getSelectionModel().getSelectedItem();
         if (m == null) {
             m = Mode.DOUBLE;
@@ -120,7 +119,7 @@ public class SpinnerPage extends TestPaneBase {
         setContent(control);
     }
 
-    protected StringConverter<Number> createConverter(Converter c) {
+    private StringConverter<Number> createConverter(Converter c) {
         if (c != null) {
             switch (c) {
             case PERCENT:

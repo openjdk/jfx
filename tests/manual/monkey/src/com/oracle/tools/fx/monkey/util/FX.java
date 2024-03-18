@@ -25,9 +25,13 @@
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.List;
+import java.util.function.Supplier;
+import javafx.application.Platform;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -35,6 +39,7 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -104,6 +109,14 @@ public class FX {
         mi.setAccelerator(accelerator);
         mi.setToggleGroup(g);
         lastMenu(b).getItems().add(mi);
+        return mi;
+    }
+
+    public static MenuItem item(ContextMenu cm, String text, Runnable action) {
+        MenuItem mi = new MenuItem(text);
+        applyMnemonic(mi);
+        mi.setOnAction((ev) -> action.run());
+        cm.getItems().add(mi);
         return mi;
     }
 
@@ -192,5 +205,46 @@ public class FX {
 
     public static boolean isMac() {
         return MAC;
+    }
+
+    /** 
+     * attach a popup menu to a node.
+     * WARNING: sometimes, as the case is with TableView/FxTable header, 
+     * the requested node gets created by the skin at some later time.
+     * In this case, additional dance must be performed, see for example
+     * FxTable.setHeaderPopupMenu()   
+     */
+    // https://github.com/andy-goryachev/MP3Player/blob/8b0ff12460e19850b783b961f214eacf5e1cdaf8/src/goryachev/fx/FX.java#L1251
+    public static void setPopupMenu(Node owner, Supplier<ContextMenu> generator) {
+        if (owner == null) {
+            throw new NullPointerException("cannot attach popup menu to null");
+        }
+
+        owner.setOnContextMenuRequested((ev) -> {
+            if (generator != null) {
+                ContextMenu m = generator.get();
+                if (m != null) {
+                    if (m.getItems().size() > 0) {
+                        Platform.runLater(() -> {
+                            // javafx does not dismiss the popup when the user
+                            // clicks on the owner node
+                            EventHandler<MouseEvent> li = new EventHandler<MouseEvent>() {
+                                @Override
+                                public void handle(MouseEvent event) {
+                                    m.hide();
+                                    owner.removeEventFilter(MouseEvent.MOUSE_PRESSED, this);
+                                    event.consume();
+                                }
+                            };
+
+                            owner.addEventFilter(MouseEvent.MOUSE_PRESSED, li);
+                            m.show(owner, ev.getScreenX(), ev.getScreenY());
+                        });
+                        ev.consume();
+                    }
+                }
+            }
+            ev.consume();
+        });
     }
 }

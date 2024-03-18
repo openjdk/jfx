@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,33 +22,38 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.fx.monkey.util;
+package com.oracle.tools.fx.monkey.pages;
 
-import java.util.function.Consumer;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
-import javafx.scene.control.ComboBox;
+import javafx.scene.chart.StackedAreaChart;
+import javafx.scene.chart.XYChart;
+import com.oracle.tools.fx.monkey.options.BooleanOption;
+import com.oracle.tools.fx.monkey.sheets.XYChartPropertySheet;
+import com.oracle.tools.fx.monkey.util.OptionPane;
 
 /**
- * Alignment Option Selector.
+ * Stacked Area Chart Page.
  */
-public class PosSelector {
-    private final ComboBox<Pos> field = new ComboBox<>();
+public class StackedAreaChartPage extends XYChartPageBase {
+    private final StackedAreaChart<Number, Number> chart;
 
-    public PosSelector(Consumer<Pos> client) {
-        FX.name(field, "PosSelector");
-        field.getItems().setAll(Pos.values());
-        field.getSelectionModel().selectedItemProperty().addListener((p) -> {
-            Pos v = field.getSelectionModel().getSelectedItem();
-            client.accept(v);
-        });
+    public StackedAreaChartPage() {
+        super("StackedAreaChartPage");
+
+        chart = new StackedAreaChart<>(createNumberAxis("X Axis"), createNumberAxis("Y Axis"));
+        chart.setTitle("Stacked Area Chart");
+        addSeries();
+
+        OptionPane op = new OptionPane();
+        op.section("StackedAreaChart");
+        op.option(new BooleanOption("createSymbols", "create symbols", chart.createSymbolsProperty()));
+        XYChartPropertySheet.appendTo(this, op, chart);
+
+        setContent(chart);
+        setOptions(op);
     }
 
-    public Node node() {
-        return field;
-    }
-
-    public void select(Pos v) {
-        field.getSelectionModel().select(v);
+    @Override
+    public XYChart<?, Number> chart() {
+        return chart;
     }
 }

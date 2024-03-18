@@ -22,27 +22,37 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.oracle.tools.fx.monkey.util;
+package com.oracle.tools.fx.monkey.options;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
-import javafx.scene.Node;
+import java.util.function.Supplier;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.geometry.Insets;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.layout.BorderPane;
 import javafx.util.StringConverter;
+import com.oracle.tools.fx.monkey.util.EnterTextDialog;
+import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.NamedValue;
 
 /**
- * General purpose text selector.
+ * Text Choice Option Bound to a Property.
  */
-public class TextSelector {
-    public static record Pair(String display, String value) { }
+public class TextChoiceOption extends BorderPane {
+    private final SimpleStringProperty property = new SimpleStringProperty();
+    private final ComboBox<Object> field;
 
-    private final ComboBox<Object> field = new ComboBox<>();
+    public TextChoiceOption(String name, boolean allowEditButton, StringProperty p) {
+        FX.name(this, name);
+        if (p != null) {
+            property.bindBidirectional(p);
+        }
 
-    public TextSelector(String id, Consumer<String> client, Object... items) {
-        FX.name(field, id);
-        field.getItems().setAll(items);
+        field = new ComboBox<>();
+        field.setMaxWidth(Double.MAX_VALUE);
         field.setConverter(new StringConverter<Object>() {
             @Override
             public String toString(Object x) {
@@ -54,43 +64,66 @@ public class TextSelector {
                 return text;
             }
         });
-        field.getSelectionModel().selectedItemProperty().addListener((p) -> {
+        field.getSelectionModel().selectedItemProperty().addListener((pr) -> {
             String text = getSelectedText();
-            client.accept(text);
+            property.set(text);
+        });
+
+        if (allowEditButton) {
+            Button editButton = new Button("Edit");
+            editButton.setOnAction((ev) -> editValue());
+            setRight(editButton);
+            setMargin(editButton, new Insets(0, 0, 0, 2));
+        }
+
+        setCenter(field);
+        setMaxWidth(Double.MAX_VALUE);
+    }
+
+    public SimpleStringProperty property() {
+        return property;
+    }
+
+    private void editValue() {
+        String text = property.get();
+        new EnterTextDialog(this, text, (v) -> {
+            property.set(v);
+        }).show();
+    }
+
+    public void clearChoices() {
+        field.getItems().clear();
+    }
+
+    public void addChoice(String name, String item) {
+        field.getItems().add(new NamedValue<>(name, item));
+    }
+
+    public void addChoiceSupplier(String name, Supplier<String> gen) {
+        field.getItems().add(new NamedValue<>(name, null) {
+            @Override
+            public String getValue() {
+                return gen.get();
+            }
         });
     }
 
-    public static TextSelector fromPairs(String id, Consumer<String> client, Object... pairs) {
-        ArrayList<Pair> a = new ArrayList<>();
-        for (int i = 0; i < pairs.length;) {
-            String display = (String)pairs[i++];
-            String value = (String)pairs[i++];
-            a.add(new Pair(display, value));
-        }
-
-        return new TextSelector(id, client, a.toArray());
-    }
-
-    public Node node() {
-        return field;
-    }
-
-    public void select(Object item) {
+    public void select(String item) {
         int ix = indexOf(item);
         if (ix >= 0) {
             field.getSelectionModel().select(ix);
         }
     }
 
-    private int indexOf(Object item) {
+    private int indexOf(String item) {
         List<Object> list = field.getItems();
         int sz = list.size();
         for (int i = 0; i < sz; i++) {
             Object x = list.get(i);
             if (eq(item, x)) {
                 return i;
-            } else if (x instanceof Pair p) {
-                if (eq(item, p.display()) || eq(item, p.value())) {
+            } else if (x instanceof NamedValue p) {
+                if (eq(item, p.getDisplay()) || eq(item, p.getValue())) {
                     return i;
                 }
             }
@@ -110,28 +143,24 @@ public class TextSelector {
         field.getSelectionModel().selectFirst();
     }
 
-    protected String toDisplay(Object x) {
+    private String toDisplay(Object x) {
         if (x == null) {
             return null;
-        } else if (x instanceof Pair p) {
-            return p.display();
+        } else if (x instanceof NamedValue p) {
+            return p.getDisplay();
         } else {
             return x.toString();
         }
     }
 
-    protected String toValue(Object x) {
+    private String toValue(Object x) {
         if (x == null) {
             return null;
-        } else if (x instanceof Pair p) {
-            return p.value();
+        } else if (x instanceof NamedValue p) {
+            return (String)p.getValue();
         } else {
             return x.toString();
         }
-    }
-
-    public void addPair(String display, String value) {
-        field.getItems().add(new Pair(display, value));
     }
 
     public String getSelectedText() {

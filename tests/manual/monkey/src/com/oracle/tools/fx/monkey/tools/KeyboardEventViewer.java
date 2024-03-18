@@ -66,7 +66,7 @@ public class KeyboardEventViewer extends BorderPane {
         StringBuilder sb = new StringBuilder();
         sb.append("KeyEvent{");
         sb.append("type=").append(ev.getEventType());
-        sb.append(", character=").append(ev.getCharacter());
+        sb.append(", character=").append(fmt(ev.getCharacter()));
         sb.append(", text=").append(ev.getText());
         sb.append(", code=").append(ev.getCode());
 
@@ -118,5 +118,31 @@ public class KeyboardEventViewer extends BorderPane {
 
         sb.append("}\n");
         addToLog(sb.toString());
+    }
+
+    private static String fmt(String s) {
+        if (s == null) {
+            return "<null>";
+        } else if (s.length() == 1) {
+            char c = s.charAt(0);
+            if (c > 0x20) {
+                return s;
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append('<');
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            sb.append("\\u");
+            sb.append(hex(c >> 4));
+            sb.append(hex(c));
+        }
+        sb.append('>');
+        return sb.toString();
+    }
+
+    private static char hex(int nibble) {
+        return "0123456789ABCDEF".charAt(nibble & 0x0f);
     }
 }

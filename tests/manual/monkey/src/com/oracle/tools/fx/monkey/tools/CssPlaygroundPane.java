@@ -25,7 +25,6 @@
 package com.oracle.tools.fx.monkey.tools;
 
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Base64;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -34,6 +33,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
@@ -44,6 +44,7 @@ import javafx.stage.Window;
  */
 public class CssPlaygroundPane extends BorderPane {
     private final ColorPicker colorPicker;
+    private final TextArea cssField;
     private static String oldStylesheet;
     private int fontSize = 12;
     private static final int[] SIZES = {
@@ -63,6 +64,9 @@ public class CssPlaygroundPane extends BorderPane {
     private final Label fontSizeLabel;
 
     public CssPlaygroundPane() {
+        cssField = new TextArea();
+        cssField.setId("CssPlaygroundPaneCss");
+
         colorPicker = new ColorPicker();
 
         Button fsLarger = new Button("+");
@@ -77,6 +81,8 @@ public class CssPlaygroundPane extends BorderPane {
         BorderPane fs = new BorderPane(fontSizeLabel);
         fs.setLeft(fsSmaller);
         fs.setRight(fsLarger);
+        
+        Button updateButton = new Button("Update");
 
         GridPane p = new GridPane();
         p.setPadding(new Insets(10));
@@ -88,9 +94,17 @@ public class CssPlaygroundPane extends BorderPane {
         r++;
         p.add(new Label("Font Size:"), 0, r);
         p.add(fs, 1, r);
-        setCenter(p);
+        r++;
+        p.add(new Label("Custom CSS:"), 0, r);
+        p.add(updateButton, 1, r);
+        
+        setTop(p);
+        setCenter(cssField);
 
         colorPicker.setOnAction((ev) -> {
+            update();
+        });
+        updateButton.setOnAction((ev) -> {
             update();
         });
     }
@@ -138,6 +152,8 @@ public class CssPlaygroundPane extends BorderPane {
     }
 
     private String generate(Color bg) {
+        String css = cssField.getText();
+
         StringBuilder sb = new StringBuilder();
         sb.append(".root {\n");
 
@@ -148,6 +164,10 @@ public class CssPlaygroundPane extends BorderPane {
         sb.append("%;\n");
 
         sb.append("}\n");
+
+        sb.append(css);
+        sb.append("\n");
+
         return sb.toString();
     }
 

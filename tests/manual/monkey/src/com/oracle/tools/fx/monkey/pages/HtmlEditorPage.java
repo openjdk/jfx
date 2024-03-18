@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,17 +24,54 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
-import com.oracle.tools.fx.monkey.util.FX;
-import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import javafx.scene.Node;
 import javafx.scene.web.HTMLEditor;
+import javafx.scene.web.HTMLEditorSkin;
+import com.oracle.tools.fx.monkey.options.TextChoiceOption;
+import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
+import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.OptionPane;
+import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
 /**
- *
+ * HTMLEditor Page.
  */
-public class HtmlEditorPage extends TestPaneBase {
-    public HtmlEditorPage() {
-        FX.name(this, "HtmlEditorPage");
-        HTMLEditor ed = new HTMLEditor();
-        setContent(ed);
+public class HTMLEditorPage extends TestPaneBase implements HasSkinnable {
+    private final HTMLEditor control;
+
+    public HTMLEditorPage() {
+        super("HTMLEditorPage");
+
+        control = new HTMLEditor();
+
+        OptionPane op = new OptionPane();
+        op.section("HTMLEditor");
+        op.option("HTML Text:", createHtmlTextOption());
+        ControlPropertySheet.appendTo(op, control);
+
+        setOptions(op);
+        setContent(control);
+        // TODO set html text
+    }
+
+    private Node createHtmlTextOption() {
+        TextChoiceOption op = new TextChoiceOption("htmlText", true, null);
+        op.addChoice("Simple", "<html><body><h1>Simple HTML</h1>This is a <b>test</b>.</body></html>");
+        op.addChoice("<empty HTML>", "<html><body/></html>");
+        op.addChoice("<null>", null);
+        op.property().addListener((s, p, htmlText) -> {
+            control.setHtmlText(htmlText);
+        });
+        return op;
+    }
+
+    @Override
+    public void nullSkin() {
+        control.setSkin(null);
+    }
+
+    @Override
+    public void newSkin() {
+        control.setSkin(new HTMLEditorSkin(control));
     }
 }

@@ -40,11 +40,11 @@ import javafx.stage.Stage;
 public class EnterTextDialog extends Stage {
     private final TextArea textField;
 
-    public EnterTextDialog(Object owner, Consumer<String> onEdit) {
+    public EnterTextDialog(Object owner, String initialText, Consumer<String> onEdit) {
         initOwner(FX.getParentWindow(owner));
         initModality(Modality.APPLICATION_MODAL);
 
-        textField = new TextArea();
+        textField = new TextArea(initialText);
 
         Button ok = new Button("OK");
         ok.setOnAction((ev) -> {

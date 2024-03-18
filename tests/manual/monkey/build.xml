@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-This build requires javafx.home property, pointing to JavaFX SDK (20+) directory, e.g.:
+This build requires javafx.home property, pointing to JavaFX SDK (21+) directory, e.g.:
   ant -Djavafx.home=<DIR>
 -->
 <project default="build-all" basedir=".">
@@ -39,8 +39,8 @@ This build requires javafx.home property, pointing to JavaFX SDK (20+) directory
 			fork="true"
 			nowarn="true"
 			optimize="false"
-			source="17"
-			target="17"
+			source="21"
+			target="21"
 			includeantruntime="false"
 		>
 			<compilerarg value="-Xlint:none"/>
