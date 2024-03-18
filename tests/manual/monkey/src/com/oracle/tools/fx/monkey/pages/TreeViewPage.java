@@ -62,7 +62,7 @@ public class TreeViewPage extends TestPaneBase implements HasSkinnable {
         control = new TreeView<>(new CheckBoxTreeItem<>("root"));
         control.getRoot().setExpanded(true);
         addChild(true, true);
-        
+
         control.setOnEditCommit((ev) -> {
             TreeItem<Object> item = ev.getTreeItem();
             item.setValue(ev.getNewValue());

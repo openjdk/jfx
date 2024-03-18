@@ -123,7 +123,6 @@ public class Options {
 //        op.addChoiceSupplier("Focus(Green), NoFocus(Gray)", () -> {
 //            BooleanBinding b = Bindings.createBooleanBinding(
 //                () -> {
-//                    
 //                },
 //                owner.focusTraversableProperty(),
 //                owner.focusedProperty(),

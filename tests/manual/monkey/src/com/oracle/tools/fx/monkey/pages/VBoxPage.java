@@ -69,7 +69,7 @@ public class VBoxPage extends TestPaneBase {
         clearButton.setOnAction((ev) -> {
             box.getChildren().clear();
         });
-        
+
         OptionPane op = new OptionPane();
         op.section("VBox");
         op.option("Alignment:", new EnumOption<Pos>("alignment", Pos.class, box.alignmentProperty()));
@@ -77,7 +77,6 @@ public class VBoxPage extends TestPaneBase {
         op.option(Utils.buttons(addButton, clearButton));
         op.option(new BooleanOption("fillHWidth", "fill width", box.fillWidthProperty()));
         op.option("Spacing:", Options.spacing("spacing", box.spacingProperty()));
-
         RegionPropertySheet.appendTo(op, box);
 
         BorderPane bp = new BorderPane(box);

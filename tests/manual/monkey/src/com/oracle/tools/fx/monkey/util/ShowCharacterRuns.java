@@ -64,7 +64,7 @@ public class ShowCharacterRuns extends Group {
                         caret[1]
                     };
                 }
-    
+
                 Bounds caretBounds = new Path(caret).getLayoutBounds();
                 double x = caretBounds.getMaxX();
                 double y = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
@@ -97,7 +97,7 @@ public class ShowCharacterRuns extends Group {
                         caret[1]
                     };
                 }
-    
+
                 Bounds caretBounds = new Path(caret).getLayoutBounds();
                 double x = caretBounds.getMaxX();
                 double y = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;

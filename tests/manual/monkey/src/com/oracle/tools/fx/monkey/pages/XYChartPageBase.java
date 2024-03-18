@@ -59,7 +59,7 @@ public abstract class XYChartPageBase extends TestPaneBase {
         a.setLabel(text);
         return a;
     }
-    
+
     protected Series<Number, Number> createNumberSeries() {
         String name = "S" + (seq++);
         XYChart.Series s = new XYChart.Series();

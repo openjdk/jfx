@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,7 +81,7 @@ public class CssPlaygroundPane extends BorderPane {
         BorderPane fs = new BorderPane(fontSizeLabel);
         fs.setLeft(fsSmaller);
         fs.setRight(fsLarger);
-        
+
         Button updateButton = new Button("Update");
 
         GridPane p = new GridPane();
@@ -97,7 +97,7 @@ public class CssPlaygroundPane extends BorderPane {
         r++;
         p.add(new Label("Custom CSS:"), 0, r);
         p.add(updateButton, 1, r);
-        
+
         setTop(p);
         setCenter(cssField);
 

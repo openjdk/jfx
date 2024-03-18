@@ -484,7 +484,7 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         return s;
     }
 
-    private static record SelectionChoice(boolean isNull, boolean isMultiple, boolean isCells) { } 
+    private static record SelectionChoice(boolean isNull, boolean isMultiple, boolean isCells) { }
 
     private Node createSelectionModelOptions(String name) {
         var original = control.getSelectionModel();

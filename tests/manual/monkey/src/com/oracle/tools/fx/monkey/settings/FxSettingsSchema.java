@@ -216,7 +216,7 @@ public class FxSettingsSchema {
         }
         return null;
     }
-    
+
     private static List<? extends Node> getChildren(Node n) {
         if(n instanceof Accordion a) {
             return a.getPanes();
@@ -225,7 +225,7 @@ public class FxSettingsSchema {
         if (n instanceof Parent p) {
             return p.getChildrenUnmodifiable();
         }
-        
+
         return null;
     }
 

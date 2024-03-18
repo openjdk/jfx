@@ -147,7 +147,7 @@ public class TextFlowPage extends TestPaneBase {
             t("trailing", f)
         };
     }
-    
+
     private Node[] createRichText() {
         Font f = getFont();
         return new Node[] {

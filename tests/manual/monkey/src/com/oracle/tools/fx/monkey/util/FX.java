@@ -207,12 +207,12 @@ public class FX {
         return MAC;
     }
 
-    /** 
+    /**
      * attach a popup menu to a node.
-     * WARNING: sometimes, as the case is with TableView/FxTable header, 
+     * WARNING: sometimes, as the case is with TableView/FxTable header,
      * the requested node gets created by the skin at some later time.
      * In this case, additional dance must be performed, see for example
-     * FxTable.setHeaderPopupMenu()   
+     * FxTable.setHeaderPopupMenu()
      */
     // https://github.com/andy-goryachev/MP3Player/blob/8b0ff12460e19850b783b961f214eacf5e1cdaf8/src/goryachev/fx/FX.java#L1251
     public static void setPopupMenu(Node owner, Supplier<ContextMenu> generator) {

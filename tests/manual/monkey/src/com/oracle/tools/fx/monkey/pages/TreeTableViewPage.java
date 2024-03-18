@@ -84,7 +84,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
             control.setRoot(new TreeItem(null));
             control.setShowRoot(false);
         });
-        
+
         SplitMenuButton addColumnButton = new SplitMenuButton(
             menuItem("at the beginning", () -> addColumn(0)),
             menuItem("in the middle", () -> addColumn(1)),
@@ -123,16 +123,14 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         op.option("Sort Policy: TODO", null); // TODO
         op.option(new BooleanOption("tableMenuButtonVisible", "table menu button visible", control.tableMenuButtonVisibleProperty()));
         op.option("Tree Column: TODO", null); // TODO
-        
+        ControlPropertySheet.appendTo(op, control);
+
         // TODO op.option("Cell Factory:", cellFactorySelector);
         //op.option(addGraphics);
         //op.option(addSubNodes);
 
         op.separator();
         op.option(refresh);
-
-        // control
-        ControlPropertySheet.appendTo(op, control);
 
         setContent(control);
         setOptions(op);
@@ -437,7 +435,7 @@ public class TreeTableViewPage extends TestPaneBase implements HasSkinnable {
         return s;
     }
 
-    private static record SelectionChoice(boolean isNull, boolean isMultiple, boolean isCells) { } 
+    private static record SelectionChoice(boolean isNull, boolean isMultiple, boolean isCells) { }
 
     private Node createSelectionModelOptions(String name) {
         var original = control.getSelectionModel();

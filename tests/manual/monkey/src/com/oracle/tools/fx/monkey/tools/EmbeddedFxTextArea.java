@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,9 +50,9 @@ public class EmbeddedFxTextArea {
         UNKNOWN(ComponentOrientation.UNKNOWN),
         LEFT_TO_RIGHT(ComponentOrientation.LEFT_TO_RIGHT),
         RIGHT_TO_LEFT(ComponentOrientation.RIGHT_TO_LEFT);
-        
+
         public final ComponentOrientation ori;
-        
+
         CompOri(ComponentOrientation ori) {
             this.ori = ori;
         }
@@ -72,9 +72,9 @@ public class EmbeddedFxTextArea {
         JFrame frame = new JFrame();
 
         jfxPanel = new JFXPanel();
-        
+
         Platform.runLater(EmbeddedFxTextArea::initFX);
-        
+
         JComboBox<CompOri> rtl = new JComboBox<CompOri>(new CompOri[] {
             CompOri.UNKNOWN,
             CompOri.LEFT_TO_RIGHT,
