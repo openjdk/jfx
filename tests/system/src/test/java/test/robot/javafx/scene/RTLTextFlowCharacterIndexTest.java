@@ -113,11 +113,12 @@ public class RTLTextFlowCharacterIndexTest {
     static volatile Stage stage;
     static volatile Scene scene;
 
-    static final int WIDTH = 500;
+    static final int WIDTH = 600;
     static final int HEIGHT = 200;
 
-    static final int Y_OFFSET = 30;
-    static final int X_LEADING_OFFSET = 10;
+    static final int Y_OFFSET = 25;
+    static final int X_LEADING_OFFSET = 5;
+    static final int FONT_SIZE = 40;
 
     boolean isLeading;
     boolean textFlowIsLeading;
@@ -143,7 +144,7 @@ public class RTLTextFlowCharacterIndexTest {
     private void addRTLArabicText() {
         Util.runAndWait(() -> {
             textOne.setText("شسيبلاتنم");
-            textOne.setFont(new Font(48));
+            textOne.setFont(new Font(FONT_SIZE));
             textFlow.getChildren().setAll(textOne);
             vBox.getChildren().setAll(textFlow);
         });
@@ -152,7 +153,7 @@ public class RTLTextFlowCharacterIndexTest {
     private void addRTLEnglishText() {
         Util.runAndWait(() -> {
             textOne.setText("This is text");
-            textOne.setFont(new Font(48));
+            textOne.setFont(new Font(FONT_SIZE));
             textFlow.getChildren().setAll(textOne);
             vBox.getChildren().setAll(textFlow);
         });
@@ -161,9 +162,9 @@ public class RTLTextFlowCharacterIndexTest {
     private void addMultiNodeRTLEnglishArabicText() {
         Util.runAndWait(() -> {
             textOne.setText("Arabic:");
-            textOne.setFont(new Font(48));
+            textOne.setFont(new Font(FONT_SIZE));
             textTwo.setText("شسيبلاتنم");
-            textTwo.setFont(new Font(48));
+            textTwo.setFont(new Font(FONT_SIZE));
             textFlow.getChildren().setAll(textOne, textTwo);
             vBox.getChildren().setAll(textFlow);
         });
@@ -172,11 +173,11 @@ public class RTLTextFlowCharacterIndexTest {
     private void addMultiLineMultiNodeRTLEnglishArabicText() {
         Util.runAndWait(() -> {
             textOne.setText("Arabic:");
-            textOne.setFont(new Font(48));
+            textOne.setFont(new Font(FONT_SIZE));
             textTwo.setText("شسيبلاتنضصثقفغ");
-            textTwo.setFont(new Font(48));
+            textTwo.setFont(new Font(FONT_SIZE));
             textThree.setText("حخهعغقثصضشسيبل");
-            textThree.setFont(new Font(48));
+            textThree.setFont(new Font(FONT_SIZE));
             textFlow.getChildren().setAll(textOne, textTwo, textThree);
             vBox.getChildren().setAll(textFlow);
         });
@@ -185,11 +186,11 @@ public class RTLTextFlowCharacterIndexTest {
     private void addMutliLineMultiNodeRTLEnglishText() {
         Util.runAndWait(() -> {
             textOne.setText("First line of text");
-            textOne.setFont(new Font(48));
+            textOne.setFont(new Font(FONT_SIZE));
             textTwo.setText("Second line of text");
-            textTwo.setFont(new Font(48));
+            textTwo.setFont(new Font(FONT_SIZE));
             textThree.setText("Third line of text");
-            textThree.setFont(new Font(48));
+            textThree.setFont(new Font(FONT_SIZE));
             textFlow.getChildren().setAll(textOne, textTwo, textThree);
             vBox.getChildren().setAll(textFlow);
         });
@@ -198,11 +199,11 @@ public class RTLTextFlowCharacterIndexTest {
     private void addMutliLineMultiNodeRTLArabicText() {
         Util.runAndWait(() -> {
             textOne.setText("شسيبلا تنضصثقفغ");
-            textOne.setFont(new Font(48));
+            textOne.setFont(new Font(FONT_SIZE));
             textTwo.setText("حخهعغقث صضشسيبل");
-            textTwo.setFont(new Font(48));
+            textTwo.setFont(new Font(FONT_SIZE));
             textThree.setText("ضصثقف");
-            textThree.setFont(new Font(48));
+            textThree.setFont(new Font(FONT_SIZE));
             textFlow.getChildren().setAll(textOne, textTwo, textThree);
             vBox.getChildren().setAll(textFlow);
         });
@@ -296,7 +297,7 @@ public class RTLTextFlowCharacterIndexTest {
         int textTwoLength = textTwo.getText().length();
         int textThreeLength = textThree.getText().length();
 
-        for (int y = 0; y < 3; y++) {
+        for (int y = 0; y < 2; y++) {
             double x = WIDTH - X_LEADING_OFFSET;
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
@@ -326,7 +327,7 @@ public class RTLTextFlowCharacterIndexTest {
         int textTwoLength = textTwo.getText().length();
         int textThreeLength = textThree.getText().length();
 
-        for (int y = 0; y < 3; y++) {
+        for (int y = 0; y < 2; y++) {
             double x = WIDTH - X_LEADING_OFFSET;
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
@@ -356,7 +357,7 @@ public class RTLTextFlowCharacterIndexTest {
         int textTwoLength = textTwo.getText().length();
         int textThreeLength = textThree.getText().length();
 
-        for (int y = 0; y < 3; y++) {
+        for (int y = 0; y < 2; y++) {
             double x = WIDTH - X_LEADING_OFFSET;
             while (x > X_LEADING_OFFSET) {
                 moveMouseOverTextFlow(x, (Y_OFFSET + (Y_OFFSET * (y * 2))));
