@@ -301,11 +301,11 @@ public final class TransitionTimer extends AnimationTimer {
         }
 
         if (delay < 0) {
-            delay = millisToNanos(nanosToMillis(delay) * reversingShorteningFactor);
+            delay = (long)(delay * reversingShorteningFactor);
             startTime = currentTime + delay;
         }
 
-        duration = millisToNanos(nanosToMillis(duration) * reversingShorteningFactor);
+        duration = (long)(duration * reversingShorteningFactor);
         endTime = startTime + duration;
     }
 
@@ -317,20 +317,24 @@ public final class TransitionTimer extends AnimationTimer {
      */
     private void fireTransitionEvent(EventType<TransitionEvent> eventType) {
         try {
-            Duration elapsedTime;
+            long elapsedTime; // nanoseconds
 
             // Elapsed time specification: https://www.w3.org/TR/css-transitions-1/#event-transitionevent
             if (eventType == TransitionEvent.RUN || eventType == TransitionEvent.START) {
-                elapsedTime = Duration.millis(nanosToMillis(Math.min(Math.max(-delay, 0), duration)));
+                elapsedTime = Math.min(Math.max(-delay, 0), duration);
             } else if (eventType == TransitionEvent.CANCEL) {
-                elapsedTime = Duration.millis(nanosToMillis(Math.max(0, currentTime - startTime)));
+                elapsedTime = Math.max(0, currentTime - startTime);
             } else if (eventType == TransitionEvent.END) {
-                elapsedTime = Duration.millis(nanosToMillis(duration));
+                elapsedTime = duration;
             } else {
                 throw new IllegalArgumentException("eventType");
             }
 
-            targetNode.fireEvent(new TransitionEvent(eventType, mediator.getStyleableProperty(), elapsedTime));
+            targetNode.fireEvent(
+                new TransitionEvent(
+                    eventType,
+                    mediator.getStyleableProperty(),
+                    Duration.millis(nanosToMillis(elapsedTime))));
         } catch (Throwable ex) {
             Thread currentThread = Thread.currentThread();
             currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
@@ -344,9 +348,7 @@ public final class TransitionTimer extends AnimationTimer {
      * @return the duration in fractional milliseconds
      */
     private static double nanosToMillis(long nanos) {
-        long millis = nanos / 1_000_000L;
-        double frac = (double)(nanos - (millis * 1_000_000L)) / 1_000_000D;
-        return (double)millis + frac;
+        return nanos / 1_000_000.0;
     }
 
     /**
@@ -356,8 +358,6 @@ public final class TransitionTimer extends AnimationTimer {
      * @return the duration in nanoseconds
      */
     private static long millisToNanos(double millis) {
-        long wholeMillis = (long)millis;
-        double frac = millis - (double)wholeMillis;
-        return wholeMillis * 1_000_000L + (long)(frac * 1_000_000D);
+        return (long)(millis * 1_000_000.0);
     }
 }
