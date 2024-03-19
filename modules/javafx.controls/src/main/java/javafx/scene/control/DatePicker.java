@@ -121,8 +121,8 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             if (validateDate(chrono, date)) {
                 lastValidDate = date;
             } else {
-                System.err.println("Restoring value to " +
-                        ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
+                //System.err.println("Restoring value to " +
+                //        ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
                 setValue(lastValidDate);
             }
         });
@@ -135,7 +135,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 lastValidChronology = chrono;
                 defaultConverter = new LocalDateStringConverter(FormatStyle.SHORT, null, chrono);
             } else {
-                System.err.println("Restoring value to " + lastValidChronology);
+                //System.err.println("Restoring value to " + lastValidChronology);
                 setChronology(lastValidChronology);
             }
         });
@@ -163,7 +163,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             }
             return true;
         } catch (DateTimeException ex) {
-            System.err.println(ex);
+            //System.err.println(ex);
             return false;
         }
     }
@@ -247,7 +247,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             try {
                 chrono = Chronology.ofLocale(Locale.getDefault(Locale.Category.FORMAT));
             } catch (Exception ex) {
-                System.err.println(ex);
+                //System.err.println(ex);
             }
             if (chrono == null) {
                 chrono = IsoChronology.INSTANCE;
