@@ -379,9 +379,9 @@ public class Util {
      */
     public static void shutdown() {
         runAndWait(() -> {
-            for (Window w : new ArrayList<>(Window.getWindows())) {
-                w.hide();
-            }
+            List.
+                copyOf(Window.getWindows()).
+                forEach(Window::hide);
             Platform.exit();
         });
     }
