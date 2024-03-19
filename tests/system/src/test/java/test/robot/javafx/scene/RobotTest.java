@@ -755,12 +755,12 @@ public class RobotTest {
         // this is redundant.
         // Below calculations follow how getScreenCapture should calculate screen capture dimensions. This
         // is to make this code consistent and stable on HiDPI systems.
-        int stageX = (int)stage.getX();
-        int stageY = (int)stage.getY();
-        int shouldBeMinX = (int)Math.floor(stageX * screenScaleX);
-        int shouldBeMinY = (int)Math.floor(stageY * screenScaleY);
-        int shouldBeMaxX = (int)Math.ceil((stageX + WIDTH) * screenScaleX);
-        int shouldBeMaxY = (int)Math.ceil((stageY + HEIGHT) * screenScaleY);
+        int stageX = (int) stage.getX();
+        int stageY = (int) stage.getY();
+        int shouldBeMinX = (int) Math.floor(stageX * screenScaleX);
+        int shouldBeMinY = (int) Math.floor(stageY * screenScaleY);
+        int shouldBeMaxX = (int) Math.ceil((stageX + WIDTH) * screenScaleX);
+        int shouldBeMaxY = (int) Math.ceil((stageY + HEIGHT) * screenScaleY);
         int shouldBeWidth = shouldBeMaxX - shouldBeMinX;
         int shouldBeHeight = shouldBeMaxY - shouldBeMinY;
         Assert.assertEquals((double) shouldBeWidth, screenCaptureNotScaledToFit.get().getWidth(), 0.0001);
