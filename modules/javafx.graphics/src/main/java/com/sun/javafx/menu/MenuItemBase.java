@@ -65,7 +65,7 @@ public interface MenuItemBase {
     /**
      * The action, which is invoked whenever the MenuItemBase is fired. This
      * may be due to the user clicking on the button with the mouse, or by
-     * a touch event, or by a key press, or if the developer programatically
+     * a touch event, or by a key press, or if the developer programmatically
      * invokes the {@link #fire()} method.
      */
     public void setOnAction(EventHandler<ActionEvent> value);

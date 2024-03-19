@@ -231,7 +231,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
         // if shift is down, and we don't already have the initial focus index
         // recorded, we record the focus index now so that subsequent shift+clicks
-        // result in the correct selection occuring (whilst the focus index moves
+        // result in the correct selection occurring (whilst the focus index moves
         // about).
         if (shiftDown) {
             if (! hasNonDefaultAnchor(cellContainer)) {

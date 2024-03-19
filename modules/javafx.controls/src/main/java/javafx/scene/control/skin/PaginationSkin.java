@@ -1095,7 +1095,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 fromIndex = toIndex - lastIndicatorButtonIndex;
             } else {
                 // We need to get the new page set if the currentIndex is out of range.
-                // This can happen if setPageIndex() is called programatically.
+                // This can happen if setPageIndex() is called programmatically.
                 if (currentIndex < fromIndex || currentIndex > toIndex) {
                     fromIndex = currentIndex - index;
                     toIndex = fromIndex + lastIndicatorButtonIndex;

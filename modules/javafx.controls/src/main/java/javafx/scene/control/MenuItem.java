@@ -294,7 +294,7 @@ public class MenuItem implements EventTarget, Styleable {
     /**
      * The action, which is invoked whenever the MenuItem is fired. This
      * may be due to the user clicking on the button with the mouse, or by
-     * a touch event, or by a key press, or if the developer programatically
+     * a touch event, or by a key press, or if the developer programmatically
      * invokes the {@link #fire()} method.
      */
     private ObjectProperty<EventHandler<ActionEvent>> onAction;

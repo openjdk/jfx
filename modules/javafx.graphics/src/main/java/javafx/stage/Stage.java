@@ -887,7 +887,7 @@ public class Stage extends Window {
 
     /**
      * Defines whether the {@code Stage} is resizable or not by the user.
-     * Programatically you may still change the size of the Stage. This is
+     * Programmatically you may still change the size of the Stage. This is
      * a hint which allows the implementation to optionally make the Stage
      * resizable by the user.
      * <p>

@@ -297,7 +297,7 @@ public class DisplacementMap extends CoreEffect<RenderState> {
         float x = (p.x - r.getMinX()) / rw;
         float y = (p.y - r.getMinY()) / rh;
         // If the coordinates are outside of the effect there is no
-        // displacement effect occuring so we do not transform the point.
+        // displacement effect occurring so we do not transform the point.
         if (x >= 0 && y >= 0 && x < 1 && y < 1) {
             int mx = (int) (x * mapData.getWidth());
             int my = (int) (y * mapData.getHeight());

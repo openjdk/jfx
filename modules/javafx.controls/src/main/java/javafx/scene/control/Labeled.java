@@ -462,7 +462,7 @@ public abstract class Labeled extends Control {
 
                 //
                 // If imageUrlProperty is invalidated, this is the origin of the style that
-                // triggered the invalidation. This is used in the invaildated() method where the
+                // triggered the invalidation. This is used in the invalidated() method where the
                 // value of super.getStyleOrigin() is not valid until after the call to set(v) returns,
                 // by which time invalidated will have been called.
                 // This value is initialized to USER in case someone calls set on the imageUrlProperty, which

@@ -137,7 +137,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
 
     /* *************************************************************************
      *                                                                         *
-     * Pirvate implementation                                                  *
+     * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
 

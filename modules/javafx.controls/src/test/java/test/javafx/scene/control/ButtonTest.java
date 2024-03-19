@@ -400,7 +400,7 @@ public class ButtonTest {
     }
 
 
-    @Test public void conextMenuShouldntShowOnAction() {
+    @Test public void contextMenuShouldntShowOnAction() {
         ContextMenu popupMenu = new ContextMenu();
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);

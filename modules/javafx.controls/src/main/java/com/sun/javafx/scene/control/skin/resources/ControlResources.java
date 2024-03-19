@@ -32,7 +32,7 @@ public final class ControlResources {
     // Translatable properties
     private static final String BASE_NAME = "com/sun/javafx/scene/control/skin/resources/controls";
 
-    // Non-translateable properties
+    // Non-translatable properties
     private static final String NT_BASE_NAME = "com/sun/javafx/scene/control/skin/resources/controls-nt";
 
     // Do not cache the bundle here. It is cached by the ResourceBundle
