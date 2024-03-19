@@ -37,19 +37,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
-import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
+import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
-import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.junit.Assert;
-
 import junit.framework.AssertionFailedError;
 
 /**
@@ -382,7 +379,7 @@ public class Util {
      */
     public static void shutdown() {
         runAndWait(() -> {
-            for (Window w : Window.getWindows()) {
+            for (Window w : new ArrayList<>(Window.getWindows())) {
                 w.hide();
             }
             Platform.exit();
