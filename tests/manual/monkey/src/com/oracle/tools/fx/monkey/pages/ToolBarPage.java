@@ -73,7 +73,7 @@ public class ToolBarPage extends TestPaneBase {
         op.option("Orientation:", new EnumOption<>("orientation", Orientation.class, control.orientationProperty()));
         // TODO this control needs spacing property (in the skin)
         ControlPropertySheet.appendTo(op, control);
-        
+
         setContent(control);
         setOptions(op);
     }
@@ -122,7 +122,7 @@ public class ToolBarPage extends TestPaneBase {
         setContextMenu(n);
         return n;
     }
-    
+
     private Node label(String text) {
         Label n = new Label(text);
         setContextMenu(n);
