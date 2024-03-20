@@ -26,7 +26,11 @@
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.function.Consumer;
+import javafx.beans.property.Property;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -70,5 +74,27 @@ public class EnterTextDialog extends Stage {
         setWidth(400);
         setHeight(300);
         setTitle("Enter Text");
+    }
+
+    public static Runnable getRunnable(Node owner, Property<String> p) {
+        if (p == null) {
+            return null;
+        }
+        return () -> {
+            String text = p.getValue();
+            new EnterTextDialog(owner, text, (v) -> {
+                p.setValue(v);
+            }).show();
+        };
+    }
+
+    public static EventHandler<ActionEvent> action(Node owner, Property<String> p) {
+        Runnable r = getRunnable(owner, p);
+        if (r == null) {
+            return null;
+        }
+        return (ev) -> {
+            r.run();
+        };
     }
 }

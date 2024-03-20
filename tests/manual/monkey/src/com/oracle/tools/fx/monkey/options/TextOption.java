@@ -65,18 +65,11 @@ public class TextOption extends BorderPane {
         });
 
         Button editButton = new Button("Edit");
-        editButton.setOnAction((ev) -> editValue());
+        editButton.setOnAction(EnterTextDialog.action(this, property));
 
         setCenter(textField);
         setRight(editButton);
         setMargin(editButton, new Insets(0, 0, 0, 2));
         setMaxWidth(Double.MAX_VALUE);
-    }
-
-    private void editValue() {
-        String text = property.get();
-        new EnterTextDialog(this, text, (v) -> {
-            property.set(v);
-        }).show();
     }
 }

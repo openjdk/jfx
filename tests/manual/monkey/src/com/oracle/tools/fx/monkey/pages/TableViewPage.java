@@ -33,7 +33,6 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ConstrainedColumnResizeBase;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.TableColumn;
@@ -52,6 +51,7 @@ import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.util.ColumnBuilder;
 import com.oracle.tools.fx.monkey.util.DataRow;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
@@ -80,17 +80,17 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
         });
 
         SplitMenuButton addColumnButton = new SplitMenuButton(
-            menuItem("at the beginning", () -> addColumn(0)),
-            menuItem("in the middle", () -> addColumn(1)),
-            menuItem("at the end", () -> addColumn(2))
+            FX.menuItem("at the beginning", () -> addColumn(0)),
+            FX.menuItem("in the middle", () -> addColumn(1)),
+            FX.menuItem("at the end", () -> addColumn(2))
         );
         addColumnButton.setText("Add Column");
 
         SplitMenuButton removeColumnButton = new SplitMenuButton(
-            menuItem("at the beginning", () -> removeColumn(0)),
-            menuItem("in the middle", () -> removeColumn(1)),
-            menuItem("at the end", () -> removeColumn(2)),
-            menuItem("all", () -> removeAllColumns())
+            FX.menuItem("at the beginning", () -> removeColumn(0)),
+            FX.menuItem("in the middle", () -> removeColumn(1)),
+            FX.menuItem("at the end", () -> removeColumn(2)),
+            FX.menuItem("all", () -> removeAllColumns())
         );
         removeColumnButton.setText("Remove Column");
 
@@ -139,12 +139,6 @@ public class TableViewPage extends TestPaneBase implements HasSkinnable {
 
         setContent(control);
         setOptions(op);
-    }
-
-    private MenuItem menuItem(String text, Runnable r) {
-        MenuItem m = new MenuItem(text);
-        m.setOnAction((ev) -> r.run());
-        return m;
     }
 
     private void addColumn(int where) {

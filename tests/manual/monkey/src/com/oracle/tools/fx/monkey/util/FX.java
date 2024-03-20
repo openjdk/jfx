@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,14 @@ public class FX {
         return m;
     }
 
+    public static final MenuItem menuItem(String text, Runnable r) {
+        MenuItem m = new MenuItem(text);
+        if (r != null) {
+            m.setOnAction((ev) -> r.run());
+        }
+        return m;
+    }
+
     public static MenuItem item(MenuBar b, String text, Runnable action) {
         MenuItem mi = new MenuItem(text);
         applyMnemonic(mi);
@@ -104,6 +112,12 @@ public class FX {
         return s;
     }
 
+    public static final SeparatorMenuItem separator(ContextMenu m) {
+        SeparatorMenuItem s = new SeparatorMenuItem();
+        m.getItems().add(s);
+        return s;
+    }
+
     public static RadioMenuItem radio(MenuBar b, String text, KeyCombination accelerator, ToggleGroup g) {
         RadioMenuItem mi = new RadioMenuItem(text);
         mi.setAccelerator(accelerator);
@@ -115,9 +129,15 @@ public class FX {
     public static MenuItem item(ContextMenu cm, String text, Runnable action) {
         MenuItem mi = new MenuItem(text);
         applyMnemonic(mi);
-        mi.setOnAction((ev) -> action.run());
+        if (action != null) {
+            mi.setOnAction((ev) -> action.run());
+        }
         cm.getItems().add(mi);
         return mi;
+    }
+
+    public static final void item(ContextMenu m, String name) {
+        item(m, name, null);
     }
 
     public static void add(GridPane p, Node n, int col, int row) {

@@ -71,7 +71,7 @@ public class TextChoiceOption extends BorderPane {
 
         if (allowEditButton) {
             Button editButton = new Button("Edit");
-            editButton.setOnAction((ev) -> editValue());
+            editButton.setOnAction(EnterTextDialog.action(this, property));
             setRight(editButton);
             setMargin(editButton, new Insets(0, 0, 0, 2));
         }
@@ -82,13 +82,6 @@ public class TextChoiceOption extends BorderPane {
 
     public SimpleStringProperty property() {
         return property;
-    }
-
-    private void editValue() {
-        String text = property.get();
-        new EnterTextDialog(this, text, (v) -> {
-            property.set(v);
-        }).show();
     }
 
     public void clearChoices() {

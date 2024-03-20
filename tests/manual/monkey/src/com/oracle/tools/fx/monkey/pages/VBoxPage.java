@@ -30,8 +30,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Priority;
@@ -43,6 +41,7 @@ import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.PaneContentOptions;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.Utils;
@@ -99,14 +98,13 @@ public class VBoxPage extends TestPaneBase {
         r.setPrefHeight(30);
         r.setMinHeight(10);
 
-        ContextMenu m = new ContextMenu();
         r.setOnContextMenuRequested((ev) -> {
-            m.getItems().setAll(
-                new MenuItem("height=" + r.getHeight()),
-                new SeparatorMenuItem(),
-                new MenuItem("min height=" + r.getMinHeight()),
-                new MenuItem("pref height=" + r.getPrefHeight()),
-                new MenuItem("max height=" + r.getMaxHeight()));
+            ContextMenu m = new ContextMenu();
+            FX.item(m, "height=" + r.getHeight());
+            FX.separator(m);
+            FX.item(m, "min height=" + r.getMinHeight());
+            FX.item(m, "pref height=" + r.getPrefHeight());
+            FX.item(m, "max height=" + r.getMaxHeight());
             m.show(r, ev.getScreenX(), ev.getScreenY());
         });
         return r;

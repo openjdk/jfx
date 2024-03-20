@@ -30,8 +30,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -43,6 +41,7 @@ import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.PaneContentOptions;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.sheets.RegionPropertySheet;
+import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 import com.oracle.tools.fx.monkey.util.Utils;
@@ -99,15 +98,13 @@ public class HBoxPage extends TestPaneBase {
         Region r = new Region();
         r.setPrefWidth(30);
         r.setMinWidth(10);
-
-        ContextMenu m = new ContextMenu();
         r.setOnContextMenuRequested((ev) -> {
-            m.getItems().setAll(
-                new MenuItem("width=" + r.getWidth()),
-                new SeparatorMenuItem(),
-                new MenuItem("min width=" + r.getMinWidth()),
-                new MenuItem("pref width=" + r.getPrefWidth()),
-                new MenuItem("max width=" + r.getMaxWidth()));
+            ContextMenu m = new ContextMenu();
+            FX.item(m, "width=" + r.getWidth());
+            FX.separator(m);
+            FX.item(m, "min width=" + r.getMinWidth());
+            FX.item(m, "pref width=" + r.getPrefWidth());
+            FX.item(m, "max width=" + r.getMaxWidth());
             m.show(r, ev.getScreenX(), ev.getScreenY());
         });
         return r;
