@@ -434,7 +434,7 @@ public class RTLTextFlowCharacterIndexTest {
 
     @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     public static class TestApp extends Application {
