@@ -36,10 +36,10 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
 /**
  * HTMLEditor Page.
  */
-public class HTMLEditorPage extends TestPaneBase implements HasSkinnable {
+public class HTMLEditor_Page extends TestPaneBase implements HasSkinnable {
     private final HTMLEditor control;
 
-    public HTMLEditorPage() {
+    public HTMLEditor_Page() {
         super("HTMLEditorPage");
 
         control = new HTMLEditor();
