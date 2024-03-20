@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,7 +92,17 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
-        final double fontSize = (font == null ? nullFontSize : font.getSize());
+        double fontSize = nullFontSize;
+        if (font != null) {
+            fontSize = font.getSize();
+
+            // For better testing, we make bold text a little bit bigger.
+            boolean bold = font.getStyle().toLowerCase().contains("bold");
+            if (bold) {
+                fontSize++;
+            }
+        }
+
         final String[] lines = getText().split("\n");
         double width = 0.0;
         double height = fontSize * lines.length + spacing * (lines.length - 1);
