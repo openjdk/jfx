@@ -194,7 +194,7 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals("Italic", C.getFont().getStyle());
         assertEquals("Italic", D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
 
         A.getChildren().remove(D); //move D
         Toolkit.getToolkit().firePulse();
@@ -202,8 +202,8 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
 
         assertEquals("Italic", C.getFont().getStyle());
-        assertNull(D.getFont().getStyle());
-        assertNull(E.getFont().getStyle());
+        assertEquals("Regular", D.getFont().getStyle());
+        assertEquals("Regular", E.getFont().getStyle());
     }
 
     @Test
@@ -482,7 +482,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -518,7 +518,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
@@ -553,7 +553,7 @@ public class CssStyleHelperTest {
         A.getChildren().add(C);
         Toolkit.getToolkit().firePulse();
 
-        assertNull(C.getFont().getStyle());
+        assertEquals("Regular", C.getFont().getStyle());
     }
 
     @Test
