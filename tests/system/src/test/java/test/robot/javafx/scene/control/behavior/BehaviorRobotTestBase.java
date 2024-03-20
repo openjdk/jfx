@@ -109,7 +109,7 @@ public abstract class BehaviorRobotTestBase<C extends Control> {
 
     @AfterAll
     public static void teardownOnce() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     /**
