@@ -83,8 +83,6 @@ public class TableColumnHeaderTest {
         Toolkit tk = Toolkit.getToolkit();
 
         tk.firePulse();
-        //Force the column to have default font, otherwise font Amble is applied and mess with header width size
-        column.setStyle("-fx-font: System;");
         firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(tableView, column);
     }
 

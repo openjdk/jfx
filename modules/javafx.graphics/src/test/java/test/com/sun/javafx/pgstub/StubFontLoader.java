@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,8 +48,14 @@ public class StubFontLoader extends FontLoader {
         StubFont nativeFont = new StubFont();
         nativeFont.font = font;
         String name = font.getName().trim().toLowerCase(Locale.ROOT);
-        if (name.equals("system") || name.equals("system regular")) {
+        if (name.equals("system regular")) {
             FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Regular");
+        } else if (name.equals("system bold")) {
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Bold");
+        } else if (name.equals("system italic")) {
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Italic");
+        } else if (name.equals("system bold italic")) {
+            FontHelper.setNativeFont(font, nativeFont, font.getName(), "System", "Bold Italic");
         } else if (name.equals("amble regular")) {
             FontHelper.setNativeFont(font, nativeFont, font.getName(), "Amble", "Regular");
         } else if (name.equals("amble bold")) {
@@ -83,32 +89,32 @@ public class StubFontLoader extends FontLoader {
 
     @Override
     public List<String> getFamilies() {
-        return Arrays.asList("Amble", "Amble Cn", "Amble Lt", "Amble LtCn");
+        return Arrays.asList("System", "Amble", "Amble Cn", "Amble Lt", "Amble LtCn");
     }
 
     @Override
     public List<String> getFontNames() {
-        return Arrays.asList("Amble Regular", "Amble Bold", "Amble Italic",
-                "Amble Bold Italic", "Amble Condensed", "Amble Bold Condensed",
-                "Amble Condensed Italic", "Amble Bold Condensed Italic",
-                "Amble Light", "Amble Light Italic", "Amble Light Condensed",
-                "Amble Light Condensed Italic");
+        return Arrays.asList("System Regular", "System Bold", "System Italic", "System Bold Italic",
+                "Amble Regular", "Amble Bold", "Amble Italic", "Amble Bold Italic",
+                "Amble Condensed", "Amble Bold Condensed", "Amble Condensed Italic", "Amble Bold Condensed Italic",
+                "Amble Light", "Amble Light Italic", "Amble Light Condensed", "Amble Light Condensed Italic");
     }
 
     @Override
     public List<String> getFontNames(String family) {
         String lower = family.trim().toLowerCase(Locale.ROOT);
+        if ("system".equals(lower)) {
+            return List.of("System Regular", "System Bold", "System Italic", "System Bold Italic");
+        }
+
         if ("amble".equals(lower)) {
-            return Arrays.asList("Amble Regular", "Amble Bold", "Amble Italic",
-                    "Amble Bold Italic");
+            return Arrays.asList("Amble Regular", "Amble Bold", "Amble Italic", "Amble Bold Italic");
         } else if ("amble cn".equals(lower)) {
-            return Arrays.asList("Amble Condensed", "Amble Bold Condensed",
-                    "Amble Condensed Italic", "Amble Bold Condensed Italic");
+            return Arrays.asList("Amble Condensed", "Amble Bold Condensed", "Amble Condensed Italic", "Amble Bold Condensed Italic");
         } else if ("amble lt".equals(lower)) {
             return Arrays.asList("Amble Light", "Amble Light Italic");
         } else if ("amble ltcn".equals(lower)) {
-            return Arrays.asList("Amble Light Condensed",
-                    "Amble Light Condensed Italic");
+            return Arrays.asList("Amble Light Condensed", "Amble Light Condensed Italic");
         } else {
             return Arrays.asList();
         }
@@ -119,8 +125,14 @@ public class StubFontLoader extends FontLoader {
             float size) {
         family = family.trim();
         String fam = family.toLowerCase(Locale.ROOT);
-        String name = "";
-        if ("amble".equals(fam)) {
+        String name;
+        if ("system".equals(fam)) {
+            name = "System";
+        } else {
+            name = "Amble";
+        }
+
+        if ("amble".equals(fam) || "system".equals(fam)) {
             if (weight != null
                     && weight.ordinal() < FontWeight.NORMAL.ordinal()) {
                 name = name + " Light";
@@ -162,8 +174,7 @@ public class StubFontLoader extends FontLoader {
         if (posture == FontPosture.ITALIC) {
             name = name + " Italic";
         }
-        String fn = "Amble" + name;
-        return new Font(fn, size);
+        return new Font(name, size);
     }
 
     @Override
