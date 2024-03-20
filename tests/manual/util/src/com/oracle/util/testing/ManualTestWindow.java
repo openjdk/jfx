@@ -97,7 +97,7 @@ public class ManualTestWindow {
 
     private ManualTestWindow() {
     }
-    
+
     public static Builder builder() {
         title = "Manual Test: " + extractClassName();
         return new Builder();
@@ -220,7 +220,7 @@ public class ManualTestWindow {
                 Platform.exit();
                 throw new AssertionError("Failed Manual Test: " + title);
             });
-            
+
             Button passButton = new Button("✔ Pass");
             passButton.setMinWidth(100);
             passButton.setOnAction((ev) -> {
@@ -235,7 +235,7 @@ public class ManualTestWindow {
                 passButton
             );
             HBox.setHgrow(fill, Priority.ALWAYS);
-            
+
             VBox vb = new VBox(
                 10,
                 instructionField,
