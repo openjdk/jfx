@@ -30,8 +30,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.scene.Node;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.Skin;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
@@ -42,6 +44,7 @@ import javafx.scene.control.skin.TableColumnHeaderShim;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.text.Text;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -297,6 +300,63 @@ public class TableColumnHeaderTreeTableTest {
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
 
         assertEquals(24, label.getFont().getSize(), 0);
+    }
+
+    @Test
+    public void testResizeColumnToFitContentWithGraphicText() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Text("longlonglonglong"));
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        tableColumn.setGraphic(null);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
+    }
+
+    @Test
+    public void testResizeColumnToFitContentWithGraphicLabel() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Label("longlonglonglong"));
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        tableColumn.setGraphic(null);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
+    }
+
+    @Test
+    public void testResizeColumnToFitContentWithGraphicAlignment() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Text("longlonglonglong"));
+
+        Label label = TableColumnHeaderShim.getLabel(firstColumnHeader);
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        label.setContentDisplay(ContentDisplay.BOTTOM);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
     }
 
     private TreeTableRow<Person> createCustomRow(TreeTableView<Person> tableView) {

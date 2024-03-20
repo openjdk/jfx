@@ -30,9 +30,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.scene.Node;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -41,6 +43,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 
+import javafx.scene.text.Text;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -257,7 +260,9 @@ public class TableColumnHeaderTest {
                 width, column.getWidth(), 0.001);
     }
 
-    /** Row style must affect the required column width */
+    /**
+     * Row style must affect the required column width
+     */
     @Test
     public void test_resizeColumnToFitContentRowStyle() {
         TableColumn column = tableView.getColumns().get(0);
@@ -271,7 +276,9 @@ public class TableColumnHeaderTest {
         assertTrue("Column width must be greater", width < column.getWidth());
     }
 
-    /** Test resizeColumnToFitContent in the presence of a non-standard row skin */
+    /**
+     * Test resizeColumnToFitContent in the presence of a non-standard row skin
+     */
     @Test
     public void test_resizeColumnToFitContentCustomRowSkin() {
         TableColumn column = tableView.getColumns().get(0);
@@ -291,6 +298,63 @@ public class TableColumnHeaderTest {
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
 
         assertEquals(24, label.getFont().getSize(), 0);
+    }
+
+    @Test
+    public void testResizeColumnToFitContentWithGraphicText() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Text("longlonglonglong"));
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        tableColumn.setGraphic(null);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
+    }
+
+    @Test
+    public void testResizeColumnToFitContentWithGraphicLabel() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Label("longlonglonglong"));
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        tableColumn.setGraphic(null);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
+    }
+
+    @Test
+    public void testResizeColumnToFitContentWithGraphicAlignment() {
+        TableColumnBase<?, ?> tableColumn = firstColumnHeader.getTableColumn();
+
+        tableColumn.setText("longlonglonglonglonglonglonglong");
+        tableColumn.setGraphic(new Text("longlonglonglong"));
+
+        Label label = TableColumnHeaderShim.getLabel(firstColumnHeader);
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double widthWithGraphic = tableColumn.getWidth();
+
+        label.setContentDisplay(ContentDisplay.BOTTOM);
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        double width = tableColumn.getWidth();
+
+        assertTrue(widthWithGraphic > width);
     }
 
     private TableRow<Person> createCustomRow(TableView<Person> tableView) {
